@@ -374,6 +374,38 @@ async def test_a_passing_preflight_half_opens_an_authentication_opened_circuit()
     assert result.circuit == "half_open"
 
 
+async def test_a_failing_preflight_reopens_a_half_opened_circuit() -> None:
+    """Half-open is a probation, not a pardon, and the probe reads both ways.
+
+    The re-open condition fires on `half_open` for the same reason the
+    half-open one fires on `open`: a credential that stops working again has
+    to put the engine back out of rotation. Matching only `circuit == "open"`
+    would leave a second failed preflight matching nothing, so
+    `record_preflight` would preserve `half_open` -- and the old `auth_ok_at`
+    with it -- and the selector would keep choosing a credential-invalid
+    engine for the rest of the auth TTL. That is the window this circuit
+    exists to close.
+    """
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="half_open",
+            capacity_state="AuthenticationFailed",
+        )
+    )
+
+    svc = EngineHealthService(repo)
+    result = await svc.record_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=False),
+    )
+
+    assert result.circuit == "open"
+
+
 async def test_doctor_also_half_opens_an_authentication_opened_circuit() -> None:
     repo = FakeEngineHealthRepository()
     project_id = uuid4()
