@@ -16,7 +16,11 @@ from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
 from vibey.application.build_implement_handler import BuildImplementHandler
 from vibey.application.build_integrate_handler import BuildIntegrateHandler
-from vibey.application.build_verify_handler import BuildVerifyHandler, VerifyRepairPolicy
+from vibey.application.build_verify_handler import (
+    BuildVerifyHandler,
+    VerifyIndependencePolicy,
+    VerifyRepairPolicy,
+)
 from vibey.application.deploy_acceptance_handler import DeployAcceptanceHandler
 from vibey.application.deploy_design_bridge import DeployDesignBridgeHandler
 from vibey.application.deploy_design_handler import (
@@ -340,6 +344,9 @@ def build_full_worker(
             repair=VerifyRepairPolicy(
                 ledger_reader=resources.ledger, clock=clock, gates=resources.gates
             ),
+            # A pool with nobody but the implementer in it verifies its own
+            # work and says so in the ledger, rather than deferring forever.
+            independence=VerifyIndependencePolicy(pool=engine_provider.pool, clock=clock),
         )
         return _recording(handler, adapter)
 

@@ -48,12 +48,37 @@ from vibey.domain.phase import Phase
 class SelectionInputs:
     requirement: JobRequirement
     affinity: EngineId | None
+    independence_waived: bool = False
+    """True when a ``build.verify`` job's implementer-exclusion was dropped
+    because honoring it would have left the configured pool with nobody to
+    review at all. The reviewing engine is then the implementer, and
+    ``BuildVerifyHandler`` must say so on the ledger -- a non-independent
+    diff review is allowed here, never hidden."""
 
 
-def selection_inputs_for_job(job: JobRecord) -> SelectionInputs:
-    """Pure derivation of what this job's engine selection must honor."""
+def selection_inputs_for_job(
+    job: JobRecord, *, pool: frozenset[EngineId] | None = None
+) -> SelectionInputs:
+    """Pure derivation of what this job's engine selection must honor.
+
+    Module-level rather than a class (ADR-0016) because it is a pure
+    function of one ``JobRecord`` with no collaborators and no state: a
+    class would add a constructor and nothing else. It is deliberately the
+    *only* definition of the verify-independence rule -- ``BuildVerifyHandler``
+    asks it rather than re-deriving, because the two rules disagreeing is
+    exactly what deadlocked a single-engine pool (selection produced an
+    empty eligible set and deferred forever; the handler hard-failed).
+
+    ``pool`` is the set of engines this worker can actually dispatch to --
+    its configured adapters, narrowed by the ``--engines`` allow-list. It is
+    configuration, never live health: basing the waiver on health would
+    silently drop independence whenever the second engine happened to be
+    circuit-open, which is a much worse trade. ``None`` means the pool is
+    unknown to this caller, and independence then stays absolute.
+    """
     excluded: set[EngineId] = set()
     affinity: EngineId | None = None
+    independence_waived = False
 
     # A durable per-job exclusion list -- the wind-down follow-up's "must
     # not go back to the engine that wound down" constraint rides here.
@@ -66,7 +91,21 @@ def selection_inputs_for_job(job: JobRecord) -> SelectionInputs:
         # than the implementer (phase-protocols.md 2.3).
         implementer = str(job.requirement.get("implementer_engine_id", "") or "")
         if implementer:
-            excluded.add(EngineId(implementer))
+            # ...but independence is the default, not an absolute. A pool
+            # that cannot supply a second reviewer gets a self-review that
+            # says so, because the alternative measured on a one-engine
+            # pool was worse in every way: the eligible set went empty,
+            # NoEligibleEngine became a CapacityDeferred, and BUILD retried
+            # forever with no park, no failure and nothing in the ledger.
+            # Phrased as "would this exclusion empty the pool" rather than
+            # "is the pool exactly one engine" so it also holds when a
+            # durable excluded_engine_ids list has already taken the other
+            # candidates -- a rule, not a special case (ADR-0018).
+            remaining = None if pool is None else pool - excluded - {EngineId(implementer)}
+            if remaining is None or remaining:
+                excluded.add(EngineId(implementer))
+            else:
+                independence_waived = True
         effort = Effort.LOW
     else:
         base = PHASE_BASE_EFFORT[Phase.BUILD]
@@ -92,6 +131,7 @@ def selection_inputs_for_job(job: JobRecord) -> SelectionInputs:
     return SelectionInputs(
         requirement=JobRequirement(effort=effort, excluded=frozenset(excluded)),
         affinity=affinity,
+        independence_waived=independence_waived,
     )
 
 
@@ -118,9 +158,19 @@ class SelectingEngineProvider:
         self._allow_list = allow_list
         self._backoff = backoff
         self._standby_engine = standby_engine
+        self._pool = frozenset(adapters) if allow_list is None else frozenset(adapters) & allow_list
+
+    @property
+    def pool(self) -> frozenset[EngineId]:
+        """The engines this worker can actually dispatch to: its configured
+        adapters narrowed by the ``--engines`` allow-list. Handlers that
+        have to apply a pool-shaped rule (``BuildVerifyHandler`` and the
+        verify-independence waiver) read it from here, so there is one
+        answer to "what engines does this worker have" rather than two."""
+        return self._pool
 
     async def select_for(self, job: JobRecord) -> EngineAdapter:
-        inputs = selection_inputs_for_job(job)
+        inputs = selection_inputs_for_job(job, pool=self._pool)
         if self._standby_engine is not None:
             standby = self._adapters.get(self._standby_engine)
             if standby is not None:

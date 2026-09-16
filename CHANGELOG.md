@@ -12,6 +12,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **build:** a one-engine pool (`vibey work --engines qwenloop`) can verify its own work instead of stalling BUILD forever. The `build.verify` independence rule excluded the implementer unconditionally, so a single-engine pool had nothing eligible left, `NoEligibleEngine` became a capacity defer, and the job retried with no park and nothing in the ledger. The exclusion is now waived only when honoring it would leave the configured pool with no reviewer at all, and the waiver is written to the ledger as a decision and to the job result as `independent_review: false` — a non-independent diff review is allowed there, never hidden. With two or more usable engines the rule is unchanged.
+
 ## [0.7.0] (2026-09-15)
 
 ### Features

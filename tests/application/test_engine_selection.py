@@ -126,6 +126,77 @@ def test_verify_without_an_implementer_excludes_nothing() -> None:
     assert inputs.requirement.excluded == frozenset()
 
 
+# ── the one-engine pool's verify-independence waiver ─────────────────────────
+
+
+def _verify_job(implementer: str, **overrides: object) -> JobRecord:
+    requirement: dict[str, object] = {"implementer_engine_id": implementer}
+    requirement.update(overrides)
+    return replace(make_job(uuid4(), attempts=1), kind="build.verify", requirement=requirement)
+
+
+def test_an_unknown_pool_keeps_verify_independence_absolute() -> None:
+    """The default: a caller that cannot say what engines exist gets the
+    strict rule, exclusion and all."""
+    inputs = selection_inputs_for_job(_verify_job("codexloop"))
+
+    assert inputs.requirement.excluded == frozenset({EngineId.CODEXLOOP})
+    assert inputs.independence_waived is False
+
+
+def test_a_pool_with_a_second_engine_still_excludes_the_implementer() -> None:
+    inputs = selection_inputs_for_job(
+        _verify_job("codexloop"),
+        pool=frozenset({EngineId.CODEXLOOP, EngineId.CLAUDELOOP}),
+    )
+
+    assert inputs.requirement.excluded == frozenset({EngineId.CODEXLOOP})
+    assert inputs.independence_waived is False
+
+
+def test_a_one_engine_pool_lets_the_implementer_verify_its_own_work() -> None:
+    """The wave-0 blocker: with `--engines qwenloop` the exclusion emptied
+    the eligible set, NoEligibleEngine became a CapacityDeferred, and BUILD
+    retried forever with no park and nothing in the ledger."""
+    inputs = selection_inputs_for_job(_verify_job("qwenloop"), pool=frozenset({EngineId.QWENLOOP}))
+
+    assert inputs.requirement.excluded == frozenset()
+    assert inputs.requirement.effort is Effort.LOW
+    assert inputs.independence_waived is True
+
+
+def test_a_durable_exclusion_that_empties_the_pool_waives_independence_too() -> None:
+    """The rule is "would this exclusion leave nobody", not "is the pool
+    exactly one engine": a wind-down exclusion can take the last reviewer
+    just as effectively as a small pool."""
+    inputs = selection_inputs_for_job(
+        _verify_job("claudeloop", excluded_engine_ids=["codexloop"]),
+        pool=frozenset({EngineId.CLAUDELOOP, EngineId.CODEXLOOP}),
+    )
+
+    assert inputs.requirement.excluded == frozenset({EngineId.CODEXLOOP})
+    assert inputs.independence_waived is True
+
+
+def test_a_pool_that_does_not_contain_the_implementer_keeps_the_exclusion() -> None:
+    """A stale implementer id (the engine has since been removed from the
+    pool) leaves real reviewers available, so nothing is waived."""
+    inputs = selection_inputs_for_job(_verify_job("agyloop"), pool=frozenset({EngineId.CLAUDELOOP}))
+
+    assert inputs.requirement.excluded == frozenset({EngineId.AGYLOOP})
+    assert inputs.independence_waived is False
+
+
+def test_implement_jobs_never_waive_anything() -> None:
+    inputs = selection_inputs_for_job(
+        _implement_job(attempts=3, assigned_engine="claudeloop"),
+        pool=frozenset({EngineId.CLAUDELOOP}),
+    )
+
+    assert inputs.requirement.excluded == frozenset({EngineId.CLAUDELOOP})
+    assert inputs.independence_waived is False
+
+
 # ── SelectingEngineProvider ──────────────────────────────────────────────────
 
 
@@ -197,6 +268,53 @@ async def test_no_eligible_engine_becomes_capacity_deferred() -> None:
         await provider.select_for(job)
 
     assert excinfo.value.retry_at == NOW + timedelta(minutes=5)
+
+
+async def test_the_pool_is_the_adapters_narrowed_by_the_allow_list() -> None:
+    provider, _, _, _ = await _provider(
+        [EngineId.CLAUDELOOP, EngineId.CODEXLOOP],
+        allow_list=frozenset({EngineId.CLAUDELOOP}),
+    )
+
+    assert provider.pool == frozenset({EngineId.CLAUDELOOP})
+
+
+async def test_an_unrestricted_pool_is_every_configured_adapter() -> None:
+    provider, _, _, _ = await _provider([EngineId.CLAUDELOOP, EngineId.CODEXLOOP])
+
+    assert provider.pool == frozenset({EngineId.CLAUDELOOP, EngineId.CODEXLOOP})
+
+
+async def test_a_one_engine_pool_selects_the_implementer_for_verify() -> None:
+    """Regression: `--engines qwenloop` deferred every build.verify job
+    forever, because the implementer exclusion left nothing eligible."""
+    provider, _, _, project_id = await _provider(
+        [EngineId.QWENLOOP], allow_list=frozenset({EngineId.QWENLOOP})
+    )
+    job = replace(
+        make_job(project_id, attempts=1),
+        project_id=project_id,
+        kind="build.verify",
+        requirement={"implementer_engine_id": "qwenloop"},
+    )
+
+    adapter = await provider.select_for(job)
+
+    assert adapter.descriptor.engine_id is EngineId.QWENLOOP
+
+
+async def test_a_two_engine_pool_still_rotates_the_verify_away() -> None:
+    provider, _, _, project_id = await _provider([EngineId.CLAUDELOOP, EngineId.CODEXLOOP])
+    job = replace(
+        make_job(project_id, attempts=1),
+        project_id=project_id,
+        kind="build.verify",
+        requirement={"implementer_engine_id": "codexloop"},
+    )
+
+    adapter = await provider.select_for(job)
+
+    assert adapter.descriptor.engine_id is EngineId.CLAUDELOOP
 
 
 async def test_selected_engine_without_a_configured_adapter_defers() -> None:

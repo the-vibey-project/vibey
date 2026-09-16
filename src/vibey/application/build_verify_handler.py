@@ -15,6 +15,12 @@ Verification is not "the model says it's fine." In order:
 3. Only then, a diff review by a rotated engine at LOW effort, judged by
    the same VerdictRendered.complete convention build.implement uses.
 
+The rotation in step 3 is the default, not an absolute: a configured pool
+with nobody else to review lets the implementer review its own diff, and
+the waiver is written to the ledger as a decision (see
+``VerifyIndependencePolicy``). See ``selection_inputs_for_job`` for why the
+rule lives there and is merely consulted here.
+
 On success, enqueues build.integrate (task 6.8), keyed to this verify job's
 own id so a repair verify job (a fresh row, not a retry of this one) always
 gets its own integrate job rather than colliding with a prior attempt's
@@ -29,6 +35,7 @@ from uuid import uuid4
 
 from vibey.application.build_engine_run import BuildLedger, run_and_record
 from vibey.application.dto import EngineEvent, EnqueueRequest, HumanGateRequest, JobRecord, RunSpec
+from vibey.application.engine_selection import selection_inputs_for_job
 from vibey.application.interfaces import (
     GateResult,
     GateRunner,
@@ -38,7 +45,7 @@ from vibey.application.interfaces import (
 from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
 from vibey.domain.effort import Effort
-from vibey.domain.engine import IsolationLevel
+from vibey.domain.engine import EngineId, IsolationLevel
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
@@ -123,6 +130,22 @@ class VerifyRepairPolicy:
     the round bound (see granted_max_rounds)."""
 
 
+@dataclass(frozen=True, slots=True)
+class VerifyIndependencePolicy:
+    """What lets a one-engine pool verify its own work, on the record.
+
+    ``pool`` is the worker's dispatchable engines (``SelectingEngineProvider.pool``)
+    and ``clock`` timestamps the ledger decision. They travel together
+    because neither is any use alone: the waiver is only ever granted when
+    it can also be *written down*, so a non-independent diff review can
+    never be a silent one. Without this policy the handler keeps the strict
+    rule, which is the right default for any pool it does not know about.
+    """
+
+    pool: frozenset[EngineId]
+    clock: Clock
+
+
 class BuildVerifyHandler:
     def __init__(
         self,
@@ -133,6 +156,7 @@ class BuildVerifyHandler:
         ledger: BuildLedger,
         jobs: JobRepository,
         repair: VerifyRepairPolicy | None = None,
+        independence: VerifyIndependencePolicy | None = None,
     ) -> None:
         self._worktrees = worktrees
         self._gates = gates
@@ -140,6 +164,7 @@ class BuildVerifyHandler:
         self._ledger = ledger
         self._jobs = jobs
         self._repair = repair
+        self._independence = independence
 
     async def handle(self, job: JobRecord) -> Outcome:
         if job.kind != "build.verify":
@@ -148,8 +173,22 @@ class BuildVerifyHandler:
             return Failure(FailureClass.VIBEY, "build.verify job is missing work_item_id")
 
         implementer = job.requirement.get("implementer_engine_id")
+        independent = True
         if implementer is not None and implementer == self._reviewer.descriptor.engine_id.value:
-            return Failure(FailureClass.VIBEY, "verifier must differ from the implementer")
+            # Selection has already decided whether independence could be
+            # honored at all; ask it rather than re-deriving the rule here.
+            # Two copies of it disagreeing is the actual defect: on a
+            # one-engine pool selection produced an empty eligible set and
+            # deferred forever while this check hard-failed, so BUILD
+            # stalled with no park and nothing in the ledger.
+            policy = self._independence
+            if (
+                policy is None
+                or not selection_inputs_for_job(job, pool=policy.pool).independence_waived
+            ):
+                return Failure(FailureClass.VIBEY, "verifier must differ from the implementer")
+            independent = False
+            await self._record_independence_waiver(job, job.work_item_id, policy)
 
         worktree = self._worktrees.path_for(job.work_item_id)
         verification = job.payload.get("verification", {})
@@ -209,7 +248,60 @@ class BuildVerifyHandler:
                 depends_on=(job.id,),
             )
         )
-        return Success({"work_item_id": job.work_item_id, "gates_run": len(commands)})
+        return Success(
+            {
+                "work_item_id": job.work_item_id,
+                "gates_run": len(commands),
+                # Always present, both ways round: a reader of the job
+                # result never has to know the waiver exists to notice
+                # that a review was not independent.
+                "independent_review": independent,
+            }
+        )
+
+    async def _record_independence_waiver(
+        self, job: JobRecord, item_id: str, policy: VerifyIndependencePolicy
+    ) -> None:
+        """Put the weakened independence in the ledger as a decision.
+
+        A decision, not a finding: nothing is wrong with the work, a rule
+        was consciously relaxed, and decisions are what the handoff brief
+        and ``vibey ledger`` carry forward to whoever reads this project
+        next. The id is derived from the work item rather than minted, so a
+        replayed verify job restates the same decision instead of growing a
+        new one per attempt.
+        """
+        engine = self._reviewer.descriptor.engine_id.value
+        await self._ledger.record(
+            project_id=job.project_id,
+            cycle=job.cycle,
+            job_id=job.id,
+            engine_id=self._reviewer.descriptor.engine_id,
+            correlation_id=uuid4(),
+            event=EngineEvent(
+                kind=EventKind.DECISION_RECORDED.value,
+                at=policy.clock.now(),
+                payload={
+                    "decision_id": f"d_verify_independence_{item_id}",
+                    "title": (
+                        f"work item {item_id!r} was verified by its own implementer ({engine})"
+                    ),
+                    "choice": f"{engine} reviewed the diff it wrote; the review was NOT independent",
+                    "rationale": (
+                        "the configured engine pool has no other engine able to "
+                        "review this item, so the phase-protocols 2.3 independence "
+                        "rule was waived rather than stalling BUILD forever"
+                    ),
+                    "alternatives": [
+                        "park for a human",
+                        "configure a second engine and re-verify",
+                    ],
+                    "independent_review": False,
+                    "work_item_id": item_id,
+                    "pool": sorted(engine_id.value for engine_id in policy.pool),
+                },
+            ),
+        )
 
     async def _verify_findings(
         self, job: JobRecord, item_id: str, repair: VerifyRepairPolicy
