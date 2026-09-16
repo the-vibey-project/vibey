@@ -71,19 +71,18 @@ Known gaps in unknown-project handling:
 
 ### Next-step hints
 
-`guard()` appends a hint for these error types. Two hints name a command
-that does not exist, and one gives guidance that does not work today; the
-right-hand column says what to do instead.
+`guard()` appends a hint for these error types. Every command a hint names
+exists, and a test asserts it (`tests/cli/test_errors_and_logging.py`).
 
-| Error | Hint printed | What actually works |
+| Error | Hint printed | Notes |
 |---|---|---|
-| `NoEligibleEngine` | Every engine is excluded, circuit-open, or missing a capability; run `vibey engines` or `vibey doctor`. | As printed. |
-| `BudgetExceeded` | Raise the cap in `vibey.toml` under `[budget]`, or run `vibey cost`. | Nothing in `src/vibey` raises this error, and no runtime code reads `[budget]` from `vibey.toml`. A tripped per-cycle cap parks a `budget_exhausted` gate; raise it with `vibey answer GATE_ID --raw '{"max_dollars": N}'` (or `"max_turns"`). |
-| `EscalationExhausted` | `vibey gates` lists the human gate it raised. | There is no `vibey gates` command, and no command lists gates. See [Finding a gate id](#finding-a-gate-id), then `vibey answer` it. |
-| `HandoffRejected` | `vibey gates` shows what the no-loss gate could not carry over. | Same: see [Finding a gate id](#finding-a-gate-id); the gate's `prompt` says what could not be carried over. |
-| `IllegalTransitionError` | The project is not in a phase this command applies to; `vibey status` shows the phase. | As printed. |
-| `InvalidSpecError` | Run `vibey design` to finish the spec before building. | As printed. |
-| `InvalidPhaseError` | Likely a bug in vibey rather than the project. | As printed. |
+| `NoEligibleEngine` | Every engine is excluded, circuit-open, or missing a capability; run `vibey engines` or `vibey doctor`. | |
+| `BudgetExceeded` | A tripped cap parks a `budget_exhausted` gate; raise it with `vibey answer GATE_ID --raw '{"max_dollars": 25}'` (or `"max_turns"`), and `vibey cost` shows where the spend went. Ends with the [gate query](#finding-a-gate-id). | Nothing in `src/vibey` raises this error today, and no runtime code reads `[budget]` from `vibey.toml` — which is why the hint names neither. |
+| `EscalationExhausted` | The work item failed at every rung of the effort ladder and parked a human gate; `vibey answer GATE_ID` it. Ends with the [gate query](#finding-a-gate-id). | |
+| `HandoffRejected` | The no-loss gate refused the handoff and parked a human gate whose `prompt` says what could not be carried over; `vibey answer GATE_ID` it. Ends with the [gate query](#finding-a-gate-id). | |
+| `IllegalTransitionError` | The project is not in a phase this command applies to; `vibey status` shows the phase. | |
+| `InvalidSpecError` | Run `vibey design` to finish the spec before building. | |
+| `InvalidPhaseError` | Likely a bug in vibey rather than the project. | |
 
 ## `vibey new NAME`
 
@@ -208,9 +207,8 @@ assigned engine are cleared.
 One of `--project` or `--all` is required; with neither, it prints
 `Must specify either --project <id> or --all` and exits 1.
 
-The printed `Recovered N stuck job(s).` count is currently always `0`, even
-when rows were reset (the status-string regex in `main.py` never matches).
-Check the queue depth in `vibey status` to confirm the result.
+Prints `Recovered N stuck job(s).`, where N is the number of rows actually
+reset, read from PostgreSQL's `UPDATE n` status tag.
 
 ## `vibey status [PROJECT_ID]`
 

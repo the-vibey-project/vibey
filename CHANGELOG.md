@@ -12,6 +12,11 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **cli:** `vibey recover` reports how many jobs it actually put back — the status-string pattern carried a doubled backslash, so the count was always `0`
+* **cli:** the next-step hints after `EscalationExhausted`, `HandoffRejected` and `BudgetExceeded` name commands that exist — they pointed at a `vibey gates` command that has never existed, and at a `[budget]` table nothing reads
+
 ## [0.7.0] (2026-09-15)
 
 ### Features
