@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any, ClassVar
@@ -198,7 +199,14 @@ def test_build_refuses_a_member_answering_to_the_roots_own_name(tmp_path: Path):
     """
     _member(tmp_path, "m", "the-root", [_plugin("p")])
     cfg = GhConfig(root=tmp_path, marketplace=MarketplaceConfig(name="the-root", members=("m",)))
-    with pytest.raises(MarketplaceError, match="collides with the root marketplace name"):
+    # The whole message, not just its suffix. Naming WHICH member collided is the
+    # guard's contract -- an adopter with a dozen members and a bare "names collide"
+    # has been told only that something is wrong -- and a matcher on the generic tail
+    # would keep passing if the member and the name were dropped from the wording.
+    with pytest.raises(
+        MarketplaceError,
+        match=re.escape("m: member marketplace name 'the-root' collides with the root"),
+    ):
         MarketplaceRenderer().build(cfg)
 
 
