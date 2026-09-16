@@ -166,6 +166,19 @@ class CorrelationLogContext:
     attaches to stdlib ``LogRecord`` attributes, which this module's
     ``ProcessorFormatter`` pipeline does not render. Reaching for it here would
     add a dependency graph to gain nothing.
+
+    **Nothing in production enters this scope yet, and that is disclosed rather
+    than implied.** Issue #89 has two halves: every event of a delivery carrying
+    one id, and every log line carrying it too. The first is live at every write
+    site; this is the second, and it is built, conformance-checked and tested
+    but not yet entered -- so today's log lines still carry no
+    ``correlation_id``. The scope belongs at the job execution boundary in
+    ``WorkerLoop``, which cannot reach this class directly: ``application/`` may
+    not import ``infrastructure/``, so wiring it needs an application-side port
+    and a binding in the composition root, and that is its own change rather
+    than a line added here. Recording the gap keeps two readings apart -- "this
+    delivery emitted no correlated lines" and "nothing emits correlated lines
+    yet" are different facts, and only the second is true.
     """
 
     def __init__(self, field: str = CORRELATION_LOG_FIELD) -> None:
