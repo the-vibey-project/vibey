@@ -5,6 +5,14 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Stop `doctor` calling `[install] self_source` an error. The loader reads it, this repository
+  declares it, and the hand-written known-keys map in `doctor` did not list it — so the
+  adoption preflight reported *"not a key vibey-gh reads; it is silently ignored"* at **error**
+  severity, which exits nonzero and tells an adopter to delete a setting that works. That key
+  is specifically the one that stops a workflow searching a pull request's own files for a
+  `pyproject.toml` to install, so the advice was actively harmful. The regression test asserts
+  the loader and the map agree about it.
+
 - Find the other documentation channel by ARTIFACT NAME, not by searching runs. Each publish
   deploys the whole site, so the run for one channel restores the other from that channel's
   last artifact — and both previous lookups searched runs, both failing. `gh run list --limit

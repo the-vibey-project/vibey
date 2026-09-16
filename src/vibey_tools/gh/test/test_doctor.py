@@ -27,6 +27,18 @@ def test_a_key_in_the_wrong_section_is_named(tmp_path):
     assert any("google_analytics_id" in f.message and f.severity == "error" for f in findings)
 
 
+def test_every_key_the_loader_reads_is_a_key_doctor_knows(tmp_path):
+    """The map in doctor is hand-written for the sections whose keys load onto `GhConfig`
+    itself, so it drifts from the loader silently — and drift here is not a missing hint, it
+    is an ERROR telling an adopter to delete a setting that works. `install.self_source` was
+    exactly that: read by the loader, used by this repository, and reported as ignored."""
+    _repo(tmp_path, '[install]\nself_source = "src/vibey_tools/gh"\n')
+    findings = doctor.diagnose(root=tmp_path)
+    assert not [f for f in findings if "self_source" in f.message], (
+        "install.self_source is read by config.load; doctor must not call it unknown"
+    )
+
+
 def test_an_unknown_section_is_named(tmp_path):
     _repo(tmp_path, "[documentaton]\nenabled = true\n")
     findings = doctor.diagnose(root=tmp_path)
