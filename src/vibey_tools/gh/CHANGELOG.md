@@ -5,6 +5,23 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Let the clean-repo survey inside `check --ci` actually ask the forge, and stop it reading
+  an object as an empty listing. Two defects, one story. The `Provenance` workflow granted
+  `contents: read` and set no `GH_TOKEN`, so every `gh pr list` and `gh release list` the
+  survey makes failed with gh's own "set the GH_TOKEN environment variable" text as the
+  reason — the survey shipped in the previous entry ran nowhere it was built to run, and
+  reported `not surveyed` on every pull request while looking like a forge outage. The
+  template now declares `pull-requests: read` alongside `contents: read` and passes the
+  job's own `github.token`. Separately, `_gh_json` answered `(value, "")` for a JSON
+  *object* as readily as for a list, and both of its call sites are listing endpoints;
+  iterating a dict yields its keys, so an error envelope such as
+  `{"message": "Bad credentials"}` would enumerate field names, match no branch and no
+  release, and report a clean survey with no problem recorded — "could not look" wearing
+  the face of "nothing there", which is the one collapse that seam exists to prevent.
+  Listings now go through `_gh_list`, which names a non-list answer as the non-answer it
+  is. `_gh_json` keeps its general contract for any future endpoint that does return an
+  object.
+
 - Make the clean-repo survey inside `check --ci` safe where the forge cannot be reached.
   `_gh_json` now distinguishes "the forge answered" from "the forge could not be asked":
   a missing `gh` binary no longer raises an uncaught `FileNotFoundError`, and a non-zero
