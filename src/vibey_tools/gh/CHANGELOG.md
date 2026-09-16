@@ -5,6 +5,15 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Make the package's own 100% branch floor reachable without a network. `apply_version`
+  now takes the post-bump re-lock through an injected `LockfileInterface` (default
+  `UvLockfile`, still `uv lock`) instead of shelling out inline, so the branch that
+  records a re-locked lockfile no longer has exactly one reader — a test that downloads
+  from PyPI. Offline the suite reaches 100.00%; the real-resolver test survives, marked
+  `network`, and `-m "not network"` is a supported way to run the suite rather than a
+  weakened one. Both the lockfile name and the resolver command are fields, so a project
+  that locks with another tool configures it instead of forking the module.
+
 - Add `vibey-gh book --site-dir site --title T --author A`, which exports the already-built
   documentation site as a book: a valid EPUB 3.0 package with Dublin Core metadata, and a
   print-ready HTML sized to the standard 6in x 9in KDP paperback trim. Chapters come from

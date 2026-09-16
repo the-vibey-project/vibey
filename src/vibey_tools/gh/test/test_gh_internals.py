@@ -12,12 +12,13 @@ import json
 import os
 import stat
 import subprocess
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
 
 import vibey_gh.pr_automation as pa
-from vibey_gh import fingerprints, install, merge_train, realign, versioning
+from vibey_gh import fingerprints, install, lockfile, merge_train, realign, versioning
 from vibey_gh.config import GhConfig, PrAutomationConfig
 
 
@@ -606,12 +607,102 @@ def test_bumping_a_toml_touches_only_the_project_table(tmp_path):
     assert versioning.read_version(cfg) == "1.3.0"
 
 
-def test_bumping_a_toml_relocks_uv_when_a_lockfile_is_present(tmp_path):
-    """A uv.lock pins its own project's version (editable-installed, so it is
+@dataclass
+class RecordingLockfile:
+    """A `LockfileInterface` that re-locks by writing a file, with no resolver.
+
+    The point of the seam: `apply_version`'s re-lock branch is reachable with no index,
+    no network and no `uv` on PATH, so the package's 100% floor holds offline.
+    """
+
+    filename: str = "demo.lock"
+    relocked: list[Path] = field(default_factory=list)
+
+    def present(self, root: Path) -> bool:
+        return (root / self.filename).is_file()
+
+    def relock(self, root: Path) -> None:
+        self.relocked.append(root)
+        (root / self.filename).write_text("fresh\n")
+
+
+@pytest.fixture
+def fake_uv(tmp_path: Path, monkeypatch) -> Path:
+    """A `uv` on PATH that records its argv and writes the lockfile itself.
+
+    Real `uv lock` resolves against PyPI. This one does not, so `UvLockfile.relock`'s
+    success path is exercised as a real subprocess -- argv, cwd and exit code included --
+    without leaving the machine.
+    """
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    uv = bin_dir / "uv"
+    uv.write_text(f"""#!/usr/bin/env python3
+import pathlib, sys
+here = pathlib.Path({str(bin_dir)!r})
+with (here / "calls.txt").open("a") as fh:
+    fh.write(" ".join(sys.argv[1:]) + "\\n")
+(here / "cwd.txt").write_text(str(pathlib.Path.cwd()))
+pathlib.Path("uv.lock").write_text('version = "1.3.0"\\n')
+""")
+    uv.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    return bin_dir
+
+
+def test_bumping_a_toml_relocks_when_a_lockfile_is_present(tmp_path):
+    """A lockfile pins its own project's version (editable-installed, so it is
     self-referencing) -- leave it stale and `uv lock --check` fails on this
     commit and only this commit, which is exactly the one promotion just
     produced. Reproduced live: vibey's own 0.5.0 and 0.6.0 releases both
     shipped a uv.lock still reading the prior version."""
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "demo"\nversion = "1.2.3"\n')
+    (tmp_path / "demo.lock").write_text("stale\n")
+    cfg = cfg_with_versions(tmp_path, "pyproject.toml")
+    recorder = RecordingLockfile()
+
+    written = versioning.apply_version(cfg, "1.3.0", lockfile=recorder)
+
+    assert written == ["pyproject.toml", "demo.lock"]
+    assert recorder.relocked == [tmp_path]
+    assert (tmp_path / "demo.lock").read_text() == "fresh\n"
+
+
+def test_the_default_relock_runs_uv_lock_in_the_project_root(tmp_path, fake_uv):
+    """The default seam is `uv lock`, run in the project root -- asserted against a real
+    subprocess rather than a mocked one, because a mock cannot catch a wrong argv."""
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "demo"\nversion = "1.2.3"\n')
+    (tmp_path / "uv.lock").write_text("stale\n")
+    cfg = cfg_with_versions(tmp_path, "pyproject.toml")
+
+    assert versioning.apply_version(cfg, "1.3.0") == ["pyproject.toml", "uv.lock"]
+    assert (fake_uv / "calls.txt").read_text().splitlines() == ["lock"]
+    assert Path((fake_uv / "cwd.txt").read_text()).resolve() == tmp_path.resolve()
+    assert (tmp_path / "uv.lock").read_text() == 'version = "1.3.0"\n'
+
+
+def test_a_lockfile_names_its_own_resolver_in_a_failure(tmp_path, monkeypatch):
+    """The resolver command is a field, not a literal, so the diagnostic follows it."""
+    (tmp_path / "pdm.lock").write_text("stale")
+    other = lockfile.UvLockfile(filename="pdm.lock", command=("pdm", "lock", "--strategy"))
+
+    def fake_run(cmd, **kwargs):
+        assert cmd == ["pdm", "lock", "--strategy"]
+        return subprocess.CompletedProcess(cmd, 2, stdout="", stderr="nope")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    assert other.present(tmp_path)
+    with pytest.raises(RuntimeError, match="pdm lock --strategy: nope"):
+        other.relock(tmp_path)
+
+
+@pytest.mark.network
+def test_a_real_uv_lock_rewrites_the_pinned_version(tmp_path):
+    """The one test that drives a genuine `uv lock`, which resolves against PyPI.
+
+    Marked `network` and deselectable: everything it covers is covered offline above, so
+    dropping it costs no coverage. It stays because only a real resolver proves the
+    command this tool invokes still does what the rest of the suite assumes."""
     path = tmp_path / "pyproject.toml"
     path.write_text('[project]\nname = "demo"\nversion = "1.2.3"\nrequires-python = ">=3.12"\n')
     subprocess.run(["uv", "lock"], cwd=tmp_path, check=True, capture_output=True)

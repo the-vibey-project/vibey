@@ -22,6 +22,8 @@ import subprocess
 import tomllib
 
 from vibey_gh.config import GhConfig
+from vibey_gh.interfaces.lockfile_interface import LockfileInterface
+from vibey_gh.lockfile import UvLockfile
 
 VERSION_RE = re.compile(r'^(__version__\s*=\s*")([^"]+)(")', re.MULTILINE)
 JSON_VERSION_KEYS = ("version",)
@@ -203,9 +205,15 @@ def _classify(cfg: GhConfig, since: str, head: str, working: str) -> tuple[str |
     )
 
 
-def apply_version(cfg: GhConfig, new: str) -> list[str]:
+def apply_version(cfg: GhConfig, new: str, lockfile: LockfileInterface | None = None) -> list[str]:
     """Write `new` into every configured version file. All of them, or the tree is
-    inconsistent and its own validator will reject it."""
+    inconsistent and its own validator will reject it.
+
+    `lockfile` is the re-lock seam (ADR-0016); it defaults to `UvLockfile`, which shells
+    out to a real `uv lock`. Substituting it is how a caller — a test above all — gets
+    the post-bump re-lock without a network round trip.
+    """
+    lock: LockfileInterface = UvLockfile() if lockfile is None else lockfile
     written = []
     for rel in cfg.version_files:
         path = cfg.root / rel
@@ -231,19 +239,16 @@ def apply_version(cfg: GhConfig, new: str) -> list[str]:
             path.write_text(patched, encoding="utf-8")
         written.append(rel)
 
-    # A uv-managed project's lockfile pins its own package at the version just
-    # replaced above -- self-referencing, since `uv sync` installs the project
-    # editable. Leaving it stale doesn't fail quietly: uv.lock desync on this
-    # commit and *only* this commit, then blocks the very promotion that just
-    # produced it (`uv lock --check` fails, and CI never runs it any other
-    # time). Re-lock whenever a pyproject.toml changed and a lockfile exists.
-    if any(rel.endswith("pyproject.toml") for rel in written) and (cfg.root / "uv.lock").is_file():
-        r = subprocess.run(
-            ["uv", "lock"], cwd=cfg.root, capture_output=True, text=True, check=False
-        )
-        if r.returncode:
-            raise RuntimeError(f"uv lock: {r.stderr.strip()}")
-        written.append("uv.lock")
+    # The lockfile pins its own package at the version just replaced above --
+    # self-referencing, since `uv sync` installs the project editable. Leaving it
+    # stale doesn't fail quietly: uv.lock desync on this commit and *only* this
+    # commit, then blocks the very promotion that just produced it (`uv lock
+    # --check` fails, and CI never runs it any other time). Re-lock whenever a
+    # pyproject.toml changed and a lockfile exists. See vibey_gh.lockfile for why
+    # the resolver is injected rather than invoked inline.
+    if any(rel.endswith("pyproject.toml") for rel in written) and lock.present(cfg.root):
+        lock.relock(cfg.root)
+        written.append(lock.filename)
 
     return written
 

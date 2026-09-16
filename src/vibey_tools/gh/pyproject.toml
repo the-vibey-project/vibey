@@ -69,13 +69,26 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-fail-under=100",
 ]
+markers = [
+    # Tests that reach the network. The 100% floor above has to hold without them, so
+    # every branch a `network` test touches is reached offline too: `-m "not network"` is
+    # a supported way to run this suite, not a way to lower the bar.
+    "network: needs outbound network access (a real package index, a real remote)",
+]
 
 [tool.coverage.run]
 source = ["vibey_gh"]
 omit = ["test/*"]
 
 [tool.coverage.report]
-exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "if __name__ == .__main__.:"]
+# A Protocol declares a seam (vibey ADR-0016); its `...` bodies are declarations, not code,
+# and nothing legitimately executes them.
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+]
 
 [tool.black]
 line-length = 100
