@@ -2,6 +2,7 @@
 """The declared seams of `vibey_gh` (vibey ADR-0016).
 
 Interfaces declare; they never consume. A module here may import the standard library,
-other interfaces, and the frozen data records a seam is stated in terms of — nothing
-else from this tree. `.importlinter` enforces it.
+other interfaces, and the frozen data records a seam is stated in terms of — including
+`vibey_gh.config` — nothing else from this tree, and nothing that is behaviour rather
+than data. `.importlinter` enforces it.
 """

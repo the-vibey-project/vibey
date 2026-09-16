@@ -384,13 +384,39 @@ def test_a_cgroup_ceiling_at_or_above_the_host_is_not_a_ceiling():
     assert machine.swap_total_gb == 2.15  # still the host's paging space
 
 
-def test_a_cgroup_limit_without_a_usage_reading_caps_free_memory_at_the_limit():
-    """No `memory.current` to subtract, so the honest ceiling on free memory is the limit
-    itself — never the host's larger free figure."""
+def test_a_cgroup_limit_without_a_usage_reading_reports_no_free_memory():
+    """No `memory.current` to subtract, so free memory inside this cgroup was never
+    measured. Unmeasured is zero: the host's MemAvailable describes the host's accounting
+    scope, and capping it at the limit would say a full 4 GiB container has 4 GiB free."""
     machine = linux(**{V2_LIMIT: "4294967296\n"})
-    assert machine.total_gb == 4.29 and machine.free_gb == 4.29
+    assert machine.total_gb == 4.29 and machine.free_gb == 0.0
     # The host's swap is not this container's to claim.
     assert machine.swap_total_gb == 0.0 and machine.swap_used_gb == 0.0
+
+
+def test_a_hybrid_host_reads_usage_from_the_same_cgroup_version_as_the_limit():
+    """Both hierarchies mounted, v2 states the limit, v2's `memory.current` is unreadable
+    and v1's `memory.usage_in_bytes` is not. Subtracting the v1 figure from the v2 limit
+    mixes two accounting scopes and overstates free memory, so it is not done."""
+    machine = linux(**{V2_LIMIT: "4294967296\n", V1_USAGE: "1073741824\n"})
+    assert machine.total_gb == 4.29 and machine.free_gb == 0.0
+
+
+def test_a_usage_file_that_states_no_number_is_no_reading_at_all():
+    """`memory.current` reads `max` on a cgroup with no memory accounting; that is not a
+    usage figure, and inventing one from it would be a guess."""
+    machine = linux(**{V2_LIMIT: "4294967296\n", V2_USAGE: "max\n"})
+    assert machine.total_gb == 4.29 and machine.free_gb == 0.0
+
+
+def test_an_override_that_leaves_no_usage_path_for_this_hierarchy_reads_none():
+    """A caller may override one path tuple and not the other (ADR-0018 keeps both keys):
+    a hierarchy with no usage file at the limit's index simply states no usage."""
+    machine = LinuxMemorySampler(
+        FakeFiles({fit.LINUX_MEMINFO_PATH: HOST_MEMINFO, V2_LIMIT: "4294967296\n"}),
+        cgroup_usage_paths=(),
+    ).sample()
+    assert machine.total_gb == 4.29 and machine.free_gb == 0.0
 
 
 def test_a_cgroup_limit_is_read_even_when_proc_meminfo_is_not():

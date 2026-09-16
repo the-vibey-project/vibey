@@ -288,19 +288,30 @@ class LinuxMemorySampler(MemorySamplerInterface):
         swap_total = fields.get("SwapTotal", 0)
         swap_used = max(swap_total - fields.get("SwapFree", 0), 0)
 
-        limit = self._first_int(self._cgroup_limit_paths)
+        limit, version = self._first_int(self._cgroup_limit_paths)
         if limit is not None and (total <= 0 or limit < total):
-            usage = self._first_int(self._cgroup_usage_paths)
+            # Limit and usage are read as a matched pair: index n of each tuple is the
+            # same cgroup version, so a v2 limit is only ever reduced by a v2 usage. Read
+            # independently, a hybrid host with both hierarchies mounted could subtract a
+            # v1 cgroup's usage from a v2 cgroup's limit -- two different accounting
+            # scopes, and the error runs towards a larger free figure.
+            usage = self._paired_int(self._cgroup_usage_paths, version)
             if usage is None:
-                # Without a usage reading the host's free memory is still a ceiling on
-                # what this cgroup can be holding free, so take the smaller of the two.
-                free = min(free, limit)
+                # No usage reading means free memory inside this cgroup was never
+                # measured, and an unmeasured figure is zero rather than the whole limit.
+                # The host's MemAvailable is not a smaller ceiling to fall back on: it
+                # describes the host's accounting scope, not this cgroup's, so capping it
+                # at the limit would report a full container as entirely free -- which
+                # inflates the ceiling, the one direction doctrine 10 forbids, and which
+                # `test_a_cgroup_limit_is_read_even_when_proc_meminfo_is_not` already
+                # answers with zero for the same reason.
+                free = 0
             else:
                 free = max(limit - usage, 0)
             total = limit
             # The host's paging space is not this container's to claim.
-            swap_total = self._first_int(self._cgroup_swap_limit_paths) or 0
-            swap_used = min(self._first_int(self._cgroup_swap_usage_paths) or 0, swap_total)
+            swap_total = self._first_int(self._cgroup_swap_limit_paths)[0] or 0
+            swap_used = min(self._first_int(self._cgroup_swap_usage_paths)[0] or 0, swap_total)
 
         return Machine(
             total_gb=round(total / 1e9, 2),
@@ -328,18 +339,35 @@ class LinuxMemorySampler(MemorySamplerInterface):
             fields[name] = value
         return fields
 
-    def _first_int(self, paths: tuple[str, ...]) -> int | None:
-        """The first of these files that holds a plain integer, or `None`.
+    def _first_int(self, paths: tuple[str, ...]) -> tuple[int | None, int]:
+        """The first of these files that holds a plain integer, with its index in `paths`,
+        or `(None, -1)`.
 
         cgroup v2 writes `max` for "no limit", which is not an integer and so falls
         through to the next path and finally to `None` -- which is the honest answer:
-        this hierarchy states no number here.
+        this hierarchy states no number here. The index comes back with the value so a
+        caller can read the file that pairs with it (`_paired_int`) rather than searching
+        the companion tuple from the top and landing on a different cgroup version.
         """
-        for path in paths:
+        for index, path in enumerate(paths):
             raw = self._reader.read(path)
             if raw is not None and raw.strip().isdigit():
-                return int(raw.strip())
-        return None
+                return int(raw.strip()), index
+        return None, -1
+
+    def _paired_int(self, paths: tuple[str, ...], index: int) -> int | None:
+        """The integer at `index` of `paths` -- the file belonging to the same cgroup
+        version as the one a limit was just read from -- or `None`.
+
+        A caller that overrides one path tuple and not the other can leave `index` past
+        the end of this one; that hierarchy simply publishes no such file here.
+        """
+        if index >= len(paths):
+            return None
+        raw = self._reader.read(paths[index])
+        if raw is None or not raw.strip().isdigit():
+            return None
+        return int(raw.strip())
 
 
 def machine_sampler(platform_name: str = "") -> MemorySamplerInterface:
