@@ -72,17 +72,27 @@ def _git(root: Path, *args: str) -> str:
     return run.stdout if run.returncode == 0 else ""
 
 
-def _gh_json(root: Path, *args: str) -> list | dict:
-    run = subprocess.run(["gh", *args], cwd=root, capture_output=True, text=True, check=False)
+def _gh_json(root: Path, *args: str) -> tuple[list | dict, str]:
+    """Ask the forge, and say which of the two things happened: it answered, or it
+    could not be asked. Collapsing those is the defect this shape exists to prevent —
+    a seam that reads a missing `gh`, an unauthenticated runner or a rate-limited
+    token as an empty answer reports "could not look" as "nothing there". Returns the
+    decoded JSON and a problem string that is empty exactly when the forge answered."""
+    label = " ".join(("gh", *args[:2]))
+    try:
+        run = subprocess.run(["gh", *args], cwd=root, capture_output=True, text=True, check=False)
+    except FileNotFoundError:
+        return [], "the GitHub CLI (`gh`) is not installed"
     if run.returncode != 0:
-        return []
+        detail = (run.stderr or run.stdout).strip().splitlines()
+        return [], f"`{label}` failed: {detail[-1] if detail else 'no output'}"
     try:
         value = json.loads(run.stdout)
     except json.JSONDecodeError:
-        return []
+        return [], f"`{label}` returned output that is not JSON"
     if isinstance(value, (list, dict)):
-        return value
-    return []
+        return value, ""
+    return [], f"`{label}` returned JSON that is neither a list nor an object"
 
 
 def _kept(cfg: GhConfig) -> tuple[str, ...]:
@@ -91,9 +101,9 @@ def _kept(cfg: GhConfig) -> tuple[str, ...]:
     )
 
 
-def _open_pr_heads(root: Path) -> set[str]:
-    prs = _gh_json(root, "pr", "list", "--json", "headRefName", "--limit", "200")
-    return {p.get("headRefName", "") for p in prs if isinstance(p, dict)}
+def _open_pr_heads(root: Path) -> tuple[set[str], str]:
+    prs, problem = _gh_json(root, "pr", "list", "--json", "headRefName", "--limit", "200")
+    return {p.get("headRefName", "") for p in prs if isinstance(p, dict)}, problem
 
 
 def _contained(root: Path, tip: str, kept_remote: list[str]) -> bool:
@@ -109,35 +119,58 @@ def _contained(root: Path, tip: str, kept_remote: list[str]) -> bool:
     return False
 
 
-def survey(cfg: GhConfig, local: bool = True) -> TidyReport:
+def survey(cfg: GhConfig, local: bool = True, refresh: bool = True) -> TidyReport:
     """Enumerate the mess. `local=False` (CI) surveys only the cloud classes —
-    an ephemeral runner's clone has no stashes or worktrees worth judging."""
+    an ephemeral runner's clone has no stashes or worktrees worth judging.
+
+    `refresh` fetches and prunes the remote-tracking refs first, so a survey that
+    precedes a deletion judges what origin holds now rather than what this clone last
+    saw. It is a parameter and deliberately not a configuration key: a read-only
+    caller passes False because it must not write to the clone at all, and that is a
+    property of the caller, not a preference an adopter should be able to invert into
+    a mutating `check`. A survey that did not refresh can only be wrong about refs
+    that moved upstream since the last fetch, which is a report, never a deletion.
+
+    Every class the survey could not look at becomes a `problems` entry and is left
+    out of the verdict, because finding nothing because you could not ask is not the
+    same as finding nothing."""
     root = cfg.root
     kept = _kept(cfg)
     problems: list[str] = []
-    _git(root, "fetch", "--prune", "--quiet", "origin")
+    if refresh:
+        _git(root, "fetch", "--prune", "--quiet", "origin")
     kept_remote = [f"origin/{b}" for b in kept if _git(root, "rev-parse", f"origin/{b}")]
     if not kept_remote:
         return TidyReport(problems=("no kept branch resolves on origin; refusing to judge",))
-    pr_heads = _open_pr_heads(root)
+    pr_heads, forge_problem = _open_pr_heads(root)
+    judged = not forge_problem
+    if forge_problem:
+        problems.append(f"{forge_problem}; merged branches were not judged")
 
+    # A merged-branch verdict needs the open pull requests to keep live heads out of
+    # it. Without them the class is not judged at all: naming a branch someone is
+    # working on as clutter is worse than saying nothing about the class.
     remote_merged: list[str] = []
-    for line in _git(root, "branch", "-r", "--format=%(refname:short)").splitlines():
-        name = line.strip()
-        short = name.removeprefix("origin/")
-        if not name.startswith("origin/") or "HEAD" in short:
-            continue
-        if short in kept or short in pr_heads:
-            continue
-        tip = _git(root, "rev-parse", name).strip()
-        if tip and _contained(root, tip, kept_remote):
-            remote_merged.append(short)
+    if judged:
+        for line in _git(root, "branch", "-r", "--format=%(refname:short)").splitlines():
+            name = line.strip()
+            short = name.removeprefix("origin/")
+            if not name.startswith("origin/") or "HEAD" in short:
+                continue
+            if short in kept or short in pr_heads:
+                continue
+            tip = _git(root, "rev-parse", name).strip()
+            if tip and _contained(root, tip, kept_remote):
+                remote_merged.append(short)
 
+    releases, release_problem = _gh_json(
+        root, "release", "list", "--json", "tagName,name,isDraft", "--limit", "100"
+    )
+    if release_problem:
+        problems.append(f"{release_problem}; draft releases were not judged")
     drafts = [
         str(r.get("tagName") or r.get("name") or "")
-        for r in _gh_json(
-            root, "release", "list", "--json", "tagName,name,isDraft", "--limit", "100"
-        )
+        for r in releases
         if isinstance(r, dict) and r.get("isDraft")
     ]
 
@@ -166,7 +199,7 @@ def survey(cfg: GhConfig, local: bool = True) -> TidyReport:
             if "[gone]" in track:
                 local_gone.append(name)
                 continue
-            if name in pr_heads:
+            if not judged or name in pr_heads:
                 continue
             tip = _git(root, "rev-parse", name).strip()
             if tip and _contained(root, tip, kept_remote):
