@@ -16,6 +16,18 @@ This file follows Keep a Changelog and semantic versioning conventions.
   with the reason, and the CLI says the reading is unknown rather than empty. The samplers
   sit behind `vibey_gh/interfaces/` (ADR-0016) and read through an injected file-reader
   seam, so the Linux paths are covered by fixtures on any platform.
+
+  The cgroup files are read where this process's limit actually lives, not only at the
+  hierarchy root. A container on a host-mounted hierarchy -- Docker, Kubernetes -- is not
+  at the root: `/sys/fs/cgroup/memory.max` reads `max` there while the real ceiling sits
+  under the path `/proc/self/cgroup` reports, so reading only the root fell through to
+  `/proc/meminfo` and projected on the HOST's memory, which is the one mistake preferring
+  the cgroup exists to avoid. Each configured path now gains its nested equivalent AHEAD
+  of the root: ahead, not instead, so a derived path that does not exist simply falls
+  through and a host at the root behaves exactly as before. The memory controller's own
+  line is preferred over the unified v2 line, because under v1 a sibling controller can
+  sit at a different path entirely. `proc_self_cgroup_path` is a constructor argument
+  like every other path here (ADR-0018).
 - Declare a branch's merge queue in `.vibey-gh.toml` and reconcile it like every other
   rule. `rulesets.py` already owned `deletion`, `non_fast_forward`,
   `required_linear_history`, `pull_request` and `required_status_checks`; a merge queue

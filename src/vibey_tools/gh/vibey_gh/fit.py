@@ -82,6 +82,12 @@ _PAGE_KEYS = (
 # own (ADR-0018 -- a hard-coded value that could have been a key is a decision taken away
 # from the next adopter).
 LINUX_MEMINFO_PATH = "/proc/meminfo"
+# This process's own cgroup, which is where its limit actually lives. The files above name
+# the ROOT of each hierarchy, and a container on a host-mounted hierarchy is not at the
+# root: its `memory.max` sits under the path this file reports, while the root's reads
+# `max`. Reading only the root therefore falls through to `/proc/meminfo` and reports the
+# HOST's memory -- the exact mistake the cgroup preference exists to avoid.
+LINUX_PROC_SELF_CGROUP = "/proc/self/cgroup"
 LINUX_CGROUP_MEMORY_LIMIT_PATHS = (
     "/sys/fs/cgroup/memory.max",  # cgroup v2
     "/sys/fs/cgroup/memory/memory.limit_in_bytes",  # cgroup v1
@@ -97,6 +103,26 @@ LINUX_CGROUP_MEMORY_USAGE_PATHS = (
 LINUX_CGROUP_SWAP_LIMIT_PATHS = ("/sys/fs/cgroup/memory.swap.max",)
 LINUX_CGROUP_SWAP_USAGE_PATHS = ("/sys/fs/cgroup/memory.swap.current",)
 _MEMINFO_KEYS = ("MemTotal", "MemAvailable", "MemFree", "SwapTotal", "SwapFree")
+
+
+def _with_nested(paths: tuple[str, ...], relative: str) -> tuple[str, ...]:
+    """Each path preceded by its equivalent inside `relative`, the caller's own cgroup.
+
+    `/sys/fs/cgroup/memory.max` with `/docker/abc` becomes
+    `/sys/fs/cgroup/docker/abc/memory.max`, which is where a container's real limit sits;
+    the original follows it, so a host that is at the hierarchy root is unaffected and a
+    derived path that does not exist simply falls through.
+
+    Derived from the CONFIGURED paths rather than from constants, so a caller that mounts
+    its hierarchy elsewhere keeps that choice and gains this one (ADR-0018).
+    """
+    if not relative:
+        return paths
+    nested: list[str] = []
+    for path in paths:
+        directory, _, name = path.rpartition("/")
+        nested.extend((f"{directory}/{relative.strip('/')}/{name}", path))
+    return tuple(nested)
 
 
 @dataclass(frozen=True)
@@ -270,13 +296,52 @@ class LinuxMemorySampler(MemorySamplerInterface):
         cgroup_usage_paths: tuple[str, ...] = LINUX_CGROUP_MEMORY_USAGE_PATHS,
         cgroup_swap_limit_paths: tuple[str, ...] = LINUX_CGROUP_SWAP_LIMIT_PATHS,
         cgroup_swap_usage_paths: tuple[str, ...] = LINUX_CGROUP_SWAP_USAGE_PATHS,
+        proc_self_cgroup_path: str = LINUX_PROC_SELF_CGROUP,
     ) -> None:
         self._reader: TextFileReaderInterface = TextFileReader() if reader is None else reader
         self._meminfo_path = meminfo_path
-        self._cgroup_limit_paths = cgroup_limit_paths
-        self._cgroup_usage_paths = cgroup_usage_paths
-        self._cgroup_swap_limit_paths = cgroup_swap_limit_paths
-        self._cgroup_swap_usage_paths = cgroup_swap_usage_paths
+        # Each tuple gains this process's OWN cgroup ahead of the hierarchy root, so a
+        # container that is not at the root is read where its limit actually is. Ahead,
+        # not instead: `_first_int` walks the tuple in order, so a derived path that does
+        # not exist or holds `max` falls through to the root exactly as before. The
+        # addition can therefore only replace a missing answer with a real one -- never
+        # a real answer with a wrong one, which is the trade this module refuses.
+        #
+        # Both tuples are expanded the same way, which is what keeps `_paired_int`'s
+        # index pairing honest: index n of limit and usage stay the same cgroup.
+        relative = self._relative_cgroup(proc_self_cgroup_path)
+        self._cgroup_limit_paths = _with_nested(cgroup_limit_paths, relative)
+        self._cgroup_usage_paths = _with_nested(cgroup_usage_paths, relative)
+        self._cgroup_swap_limit_paths = _with_nested(cgroup_swap_limit_paths, relative)
+        self._cgroup_swap_usage_paths = _with_nested(cgroup_swap_usage_paths, relative)
+
+    def _relative_cgroup(self, path: str) -> str:
+        """This process's cgroup path relative to its hierarchy root, or `""`.
+
+        `/proc/self/cgroup` lists one line per hierarchy: cgroup v2 writes a single
+        `0::/some/path`, v1 writes `N:controller,controller:/some/path`. The memory
+        controller's line is preferred and the v2 line is the fallback, because a v1
+        memory path is the one that belongs under a v1 memory mount.
+
+        `""` for the root, for an unreadable file, and for anything unparsed -- all of
+        which mean "add nothing", leaving the configured paths exactly as they were.
+        """
+        raw = self._reader.read(path)
+        if raw is None:
+            return ""
+        unified = ""
+        for line in raw.splitlines():
+            parts = line.split(":", 2)
+            if len(parts) != 3:
+                continue
+            controllers, relative = parts[1], parts[2].strip()
+            if relative in ("", "/"):
+                continue
+            if "memory" in controllers.split(","):
+                return relative
+            if controllers == "" and not unified:
+                unified = relative
+        return unified
 
     def sample(self) -> Machine:
         fields = self._meminfo()

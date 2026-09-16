@@ -376,6 +376,63 @@ def test_a_cgroup_v1_limit_is_read_when_v2_says_max():
     assert machine.total_gb == 4.29 and machine.free_gb == 2.15
 
 
+def test_a_container_below_the_hierarchy_root_is_read_where_its_limit_lives():
+    """The ROOT files are not this process's files when it sits in a nested cgroup.
+
+    On a host-mounted hierarchy -- Docker, Kubernetes -- `/sys/fs/cgroup/memory.max`
+    reads `max` while the container's own `memory.max`, under the path
+    `/proc/self/cgroup` reports, holds the real ceiling. Reading only the root falls
+    through to `/proc/meminfo` and projects on the HOST's memory, which is the exact
+    mistake preferring the cgroup exists to avoid.
+    """
+    machine = linux(
+        **{
+            "/proc/self/cgroup": "0::/docker/abc123\n",
+            V2_LIMIT: "max\n",  # the root says "no limit", as it does in a container
+            "/sys/fs/cgroup/docker/abc123/memory.max": "4294967296\n",
+            "/sys/fs/cgroup/docker/abc123/memory.current": "1073741824\n",
+        }
+    )
+    assert machine.total_gb == 4.29  # the container's 4 GiB, not the host's 32 GB
+    assert machine.free_gb == 3.22  # limit - current, both read from the SAME cgroup
+
+
+def test_a_cgroup_v1_memory_controller_names_its_own_path():
+    """v1 writes one line per controller, and the memory line is the one that governs a
+    memory limit -- a sibling controller can sit at a different path entirely."""
+    machine = linux(
+        **{
+            "/proc/self/cgroup": "5:cpu,cpuacct:/elsewhere\n4:memory:/docker/xyz\n",
+            V1_LIMIT: "max\n",
+            "/sys/fs/cgroup/memory/docker/xyz/memory.limit_in_bytes": "2147483648\n",
+            "/sys/fs/cgroup/memory/docker/xyz/memory.usage_in_bytes": "1073741824\n",
+        }
+    )
+    assert machine.total_gb == 2.15 and machine.free_gb == 1.07
+
+
+@pytest.mark.parametrize(
+    "contents",
+    [
+        "0::/\n",  # already at the root: nothing to add
+        "",  # an empty file
+        "garbage without enough colons\n",  # nothing parseable
+    ],
+)
+def test_a_process_at_the_root_reads_exactly_the_configured_paths(contents: str):
+    """Deriving nothing must leave the configured paths untouched, so a plain host and a
+    caller that mounts its hierarchy elsewhere both behave exactly as before."""
+    machine = linux(**{"/proc/self/cgroup": contents, V2_LIMIT: "4294967296\n"})
+    assert machine.total_gb == 4.29
+
+
+def test_an_unreadable_proc_self_cgroup_changes_nothing():
+    """The file is absent on anything that is not Linux-with-cgroups, and its absence is
+    not a reason to stop reading the hierarchy roots."""
+    machine = linux(**{V2_LIMIT: "4294967296\n"})
+    assert machine.total_gb == 4.29
+
+
 def test_a_cgroup_ceiling_at_or_above_the_host_is_not_a_ceiling():
     """v1 spells "no limit" as a sentinel near 2**63. A limit that large is not a limit,
     and the host's own numbers stand."""
