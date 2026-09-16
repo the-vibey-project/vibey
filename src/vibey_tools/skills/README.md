@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is still published on PyPI as [`vibey-skills`](https://pypi.org/project/vibey-skills/).
 
-> **127 Claude Code plugins. 644 Agent Skills.** Long-form, source-cited practitioner
+> **130 Claude Code plugins. 665 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -41,11 +41,11 @@ fast *and* correct. These skills are the reference layer for that.
 /plugin                                    # browse everything
 ```
 
-That one address serves every plugin in the family: these 127 and vibey-gh's four. The
+That one address serves every plugin in the family: these 130 and vibey-gh's four. The
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 
-**From the PyPI package instead** — the same 127 plugins under the name `vibey-skills`,
+**From the PyPI package instead** — the same 130 plugins under the name `vibey-skills`,
 with no clone of the monorepo:
 
 ```bash
@@ -61,7 +61,7 @@ standalone repository, which has been retired.
 
 ```bash
 uvx vibey-skills list                      # try it without installing
-uvx vibey-skills install --all             # copy all 644 skills into ~/.claude/skills
+uvx vibey-skills install --all             # copy all 665 skills into ~/.claude/skills
 uvx vibey-skills install security-principles azure-cloud-infra
 ```
 

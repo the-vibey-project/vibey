@@ -4,7 +4,7 @@ Guidance for Claude Code when working in this repository.
 
 ## What this repo is
 
-This is a **Claude Code plugin marketplace**: 127 plugins composed of 644 Agent Skills,
+This is a **Claude Code plugin marketplace**: 130 plugins composed of 665 Agent Skills,
 published to PyPI as `vibey-skills` under the MIT license. The application code is the
 packaging CLI plus the retrieval context engine (`src/vibey_skills/context_engine.py`,
 behind `vibey-skills index / search / packet / evaluate`) — but the deliverable is still
@@ -415,7 +415,7 @@ Pushing a `v*` tag triggers `.github/workflows/release.yml`, which builds, then 
 this order:
 
 1. **TestPyPI** — separate instance, separate trusted publisher.
-2. **Verify** — installs that exact version from TestPyPI and asserts all 644 skills land.
+2. **Verify** — installs that exact version from TestPyPI and asserts all 665 skills land.
 3. **PyPI** — only if the verify step passed.
 4. **GitHub Release** — sdist and wheel attached.
 

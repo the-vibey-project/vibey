@@ -165,7 +165,7 @@ Part of the same open-source family — MIT, on PyPI:
 
 - **[claudeloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude)** · **[codexloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex)** · **[cursorloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor)** · **[agyloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy)** — autonomous coding-session runners with the same contract, different vendor
 - **[vibey](https://github.com/the-vibey-project/vibey)** — six-phase queue conductor over the loop runners — background reading: the [vibey research paper](https://the-vibey-project.github.io/vibey/main/paper/) ([PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf)) and the vibey book ([PDF](https://the-vibey-project.github.io/vibey/main/book.pdf), [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub), [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html)).
-- **[vibey-skills](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills)** — Claude Code plugin marketplace: 127 plugins / 644 Agent Skills (includes a plugin for this library)
+- **[vibey-skills](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills)** — Claude Code plugin marketplace: 130 plugins / 665 Agent Skills (includes a plugin for this library)
 - **[homebrew-tap](https://github.com/adammatthewsteinberger/homebrew-tap)** — `brew tap adammatthewsteinberger/tap`
 - **[clippy-pet](https://github.com/adammatthewsteinberger/clippy-pet)** — the fun one
 

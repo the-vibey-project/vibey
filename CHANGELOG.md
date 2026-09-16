@@ -12,6 +12,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+## [0.8.0] (2026-09-16)
+
 ### Features
 
 * **ci:** `develop` admits changes through a declared merge queue, and CI answers `merge_group` events so the queue can see its own checks. A pull request whose checks passed against an older base proves only that combination was green; nothing between that base and `develop`'s tip was ever built with it, and `strict_required_status_checks_policy` buys that proof by hand, one rebase at a time, with the base moving underneath. The queue is declared in `.vibey-gh.toml` rather than clicked, so it can be reviewed and restored like any other branch rule, and it is off by default for everyone else ([ADR-0036](docs/architecture/decisions/0036-the-merge-queue-is-declared-not-clicked.md))
