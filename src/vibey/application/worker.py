@@ -20,10 +20,12 @@ from vibey.application.interfaces import (
     Defer,
     Failure,
     JobHandler,
+    Logger,
     Outcome,
     Park,
     Success,
 )
+from vibey.application.observability import StandardLibraryLogger
 from vibey.application.ports import HumanGateRepository, JobRepository
 from vibey.domain.job import FailureClass
 
@@ -53,6 +55,7 @@ class WorkerLoop:
         lease: timedelta = timedelta(seconds=30),
         lease_for_kind: Callable[[str], timedelta] | None = None,
         attempts_grant_step: int = 3,
+        logger: Logger | None = None,
     ) -> None:
         self._jobs = jobs
         self._gates = gates
@@ -65,6 +68,9 @@ class WorkerLoop:
         # literal (ADR-0018); the default matches the one build.implement's
         # `escalation_exhausted` prompt has always printed.
         self._attempts_grant_step = attempts_grant_step
+        self._log: Logger = (
+            logger if logger is not None else StandardLibraryLogger(__name__, owner=owner)
+        )
 
     async def run_once(self, project_id: UUID) -> bool:
         """Claims and executes at most one job. Returns False if there was
@@ -107,11 +113,52 @@ class WorkerLoop:
         elif isinstance(outcome, Park):
             await self._raise_and_park(job, outcome.request)
         elif isinstance(outcome, Defer):
-            await self._jobs.defer(
+            # A defer used to leave no trace outside `job.last_error`: the
+            # queue showed 0 failed, 0 parked and a job quietly sliding its
+            # run_after, so a BUILD that could never select an engine was
+            # indistinguishable from an idle worker, and the only way to see
+            # why was a hand-written SQL query. Say it out loud instead.
+            #
+            # The line is emitted AFTER the transition, never before. `defer`
+            # returns False when this worker no longer holds the lease -- it
+            # expired mid-handler and another worker claimed the row -- and it
+            # can fail before committing. Announcing first would assert a
+            # `retry_at` that never moved, and a reader chasing that line finds
+            # a job whose run_after disagrees with the log: a false record is
+            # worse than the silence this block exists to end.
+            deferred = await self._jobs.defer(
                 job.id,
                 owner=self._owner,
                 retry_at=outcome.retry_at,
                 error={"class": FailureClass.CAPACITY.value, "detail": outcome.detail},
+            )
+            if not deferred:
+                # Warning, not info: nothing was deferred, the work this worker
+                # just did was discarded, and something else now owns the job.
+                self._log.warning(
+                    "job.defer_rejected",
+                    job_id=str(job.id),
+                    project_id=str(job.project_id),
+                    phase=job.phase.value,
+                    kind=job.kind,
+                    reason="lease no longer held by this worker",
+                )
+                return
+            # Capacity is the one that warrants a warning. Routine
+            # verify-repair waits are Defers too (see `Defer.capacity`), and
+            # crying wolf on every one of those is how a warning stops being
+            # read at all.
+            say = self._log.warning if outcome.capacity else self._log.info
+            say(
+                "job.deferred",
+                job_id=str(job.id),
+                project_id=str(job.project_id),
+                phase=job.phase.value,
+                kind=job.kind,
+                work_item=job.work_item_id,
+                capacity=outcome.capacity,
+                reason=outcome.detail,
+                retry_at=outcome.retry_at.isoformat(),
             )
 
     async def _settle_failure(self, job: JobRecord, outcome: Failure) -> None:

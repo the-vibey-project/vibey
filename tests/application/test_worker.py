@@ -1,11 +1,23 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import asyncio
+import logging
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+import pytest
+
 from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, make_job
 from vibey.application.dto import HumanGateRequest, JobRecord
-from vibey.application.worker import CapacityDeferred, Failure, Outcome, Park, Success, WorkerLoop
+from vibey.application.worker import (
+    CapacityDeferred,
+    Defer,
+    Failure,
+    Outcome,
+    Park,
+    Success,
+    WorkerLoop,
+)
 from vibey.domain.job import FailureClass, JobState
 
 PROJECT_ID = uuid4()
@@ -424,3 +436,148 @@ async def test_park_raises_a_fresh_gate_when_the_last_one_is_answered() -> None:
     await loop.run_once(PROJECT_ID)
 
     assert len(gates.raised) == 2
+
+
+class _RecordingLogger:
+    """Captures what the loop said, so a test can assert on the line itself
+    rather than on the side effect it was supposed to explain."""
+
+    def __init__(self) -> None:
+        self.lines: list[tuple[str, str, dict[str, object]]] = []
+
+    def bind(self, **kwargs: object) -> "_RecordingLogger":
+        return self
+
+    def debug(self, event: str, **kwargs: object) -> None:
+        self.lines.append(("debug", event, dict(kwargs)))
+
+    def info(self, event: str, **kwargs: object) -> None:
+        self.lines.append(("info", event, dict(kwargs)))
+
+    def warning(self, event: str, **kwargs: object) -> None:
+        self.lines.append(("warning", event, dict(kwargs)))
+
+    def error(self, event: str, **kwargs: object) -> None:
+        self.lines.append(("error", event, dict(kwargs)))
+
+
+async def test_capacity_defer_is_logged_with_the_reason_and_the_retry_time() -> None:
+    """The livelock this fixes was invisible: 0 failed, 0 parked, and a job
+    quietly sliding its run_after. A defer has to say why, and until when."""
+    job = replace(make_job(PROJECT_ID, attempts=2), work_item_id="WI-7")
+    jobs = FakeJobRepository([job])
+    retry_at = datetime(2026, 8, 14, 20, 10, tzinfo=UTC)
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(CapacityDeferred(retry_at, "no engine had capacity")),
+        owner="w1",
+        logger=logger,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert logger.lines == [
+        (
+            "warning",
+            "job.deferred",
+            {
+                "job_id": str(job.id),
+                "project_id": str(PROJECT_ID),
+                "phase": "build",
+                "kind": "build.implement",
+                "work_item": "WI-7",
+                "capacity": True,
+                "reason": "no engine had capacity",
+                "retry_at": retry_at.isoformat(),
+            },
+        )
+    ]
+
+
+async def test_non_capacity_defer_is_logged_at_info_not_warning() -> None:
+    """Verify-repair waits are Defers too; logging every one of them at
+    WARNING is how a warning stops being read at all."""
+    job = make_job(PROJECT_ID)
+    jobs = FakeJobRepository([job])
+    retry_at = datetime(2026, 8, 14, 20, 10, tzinfo=UTC)
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(Defer(retry_at, "waiting on the repair window")),
+        owner="w1",
+        logger=logger,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert [(level, event) for level, event, _ in logger.lines] == [("info", "job.deferred")]
+    assert logger.lines[0][2]["capacity"] is False
+
+
+async def test_a_defer_the_queue_refused_is_never_announced_as_one() -> None:
+    """The announcement follows the transition; it does not precede it.
+
+    `defer` returns False when the lease expired mid-handler and another worker
+    claimed the row: nothing moved, and a `job.deferred` line would assert a
+    `retry_at` the job never took. A reader chasing that line would find a
+    run_after disagreeing with the log -- a false record, which is worse than the
+    silence this whole block exists to end. The true thing is that this worker
+    lost the job, and it is said at warning because the work it just did was
+    discarded.
+    """
+
+    class LostLeaseJobRepository(FakeJobRepository):
+        async def defer(self, job_id, *, owner, retry_at, error) -> bool:
+            self.calls.append("defer")
+            return False
+
+    job = make_job(PROJECT_ID)
+    jobs = LostLeaseJobRepository([job])
+    retry_at = datetime(2026, 8, 14, 20, 10, tzinfo=UTC)
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(CapacityDeferred(retry_at, "no engine had capacity")),
+        owner="w1",
+        logger=logger,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert [(level, event) for level, event, _ in logger.lines] == [
+        ("warning", "job.defer_rejected")
+    ]
+    assert "job.deferred" not in [event for _, event, _ in logger.lines]
+    assert logger.lines[0][2]["reason"] == "lease no longer held by this worker"
+    # The transition was still attempted -- the guard is on the announcement.
+    assert "defer" in jobs.calls
+
+
+async def test_a_worker_with_no_injected_logger_still_speaks(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Until a composition root injects the structlog adapter, the default
+    stdlib-backed logger is what keeps a deferring worker from looking idle."""
+    job = make_job(PROJECT_ID)
+    jobs = FakeJobRepository([job])
+    retry_at = datetime(2026, 8, 14, 20, 10, tzinfo=UTC)
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(CapacityDeferred(retry_at, "five-hour window exhausted")),
+        owner="w1",
+    )
+
+    with caplog.at_level(logging.WARNING, logger="vibey.application.worker"):
+        await loop.run_once(PROJECT_ID)
+
+    assert len(caplog.records) == 1
+    message = caplog.records[0].getMessage()
+    assert message.startswith("job.deferred ")
+    assert "reason=five-hour window exhausted" in message
+    assert f"retry_at={retry_at.isoformat()}" in message
+    assert "owner=w1" in message
