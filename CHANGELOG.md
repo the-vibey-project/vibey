@@ -26,6 +26,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   scripted one) and the composition root reads it; the `design.synthesize` exclusion follows the
   same derived value ([#115](https://github.com/the-vibey-project/vibey/issues/115))
 
+* **review:** REVIEW no longer runs a hard-coded security scan. `bandit -q -r src` walked the
+  absorbed workspace members and failed every cycle, looping REVIEW back into BUILD forever; no
+  narrower path is right for anyone else either, because `bandit` exits 0 on a path that does not
+  exist, so a baked-in default would report a passing security check that examined zero files.
+  Both the security and code-review command lists are now project configuration
+  (`review.security_commands`, `review.code_review_commands`), and `security_commands` defaults to
+  empty — a project that wants the check configures it
 ### Documentation
 * stop tracking the two built documentation sites (`site/` and `src/vibey_tools/gh/site/`): 5.8 MB of stale rendered HTML — a second, drifting copy of the docs, the ADRs and the runbooks — that `properdocs build` regenerates and that CI never reads ([#155](https://github.com/the-vibey-project/vibey/issues/155))
 
