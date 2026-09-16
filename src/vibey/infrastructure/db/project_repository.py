@@ -58,6 +58,19 @@ class PhaseTransitionedDraftBuilder:
     """
 
     def build(self, settled: ProjectRecord, expected: Phase, guard: str | None) -> LedgerEventDraft:
+        """Build the draft for one settled transition.
+
+        `guard` is carried end to end -- port, interface and payload -- but no
+        application call site passes one today, so every event this writes in
+        production records `guard: null`. That is disclosed rather than tidied
+        away, because on an append-only ledger the two readings of a null are
+        not the same claim: "this move was made with no guard in force" and
+        "guards are not wired up yet" are different facts, and only the second
+        is true. The parameter stays because removing it would make the seam
+        less configurable than it is (ADR-0018) and because the guard is the
+        caller's to name, not this builder's to invent; what is missing is the
+        call sites, and that is the work, not the signature.
+        """
         payload: dict[str, object] = {
             "from": expected.value,
             "to": settled.phase.value,
