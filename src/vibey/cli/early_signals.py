@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import signal
 import types
+from collections.abc import Callable
 
 
 class SigtermLatch:
@@ -31,6 +32,11 @@ class SigtermLatch:
     def __init__(self) -> None:
         self._fired = False
         self._armed = False
+        # The exact object handed to `signal.signal`, kept so `release` can ask whether it
+        # is still installed. `self._remember` cannot answer that: it is a bound method,
+        # and every attribute access builds a NEW one, so an identity check against it is
+        # false even when this latch's handler is the one in place.
+        self._installed: Callable[[int, types.FrameType | None], None] | None = None
 
     @property
     def fired(self) -> bool:
@@ -46,24 +52,38 @@ class SigtermLatch:
         """
         if self._armed:
             return True
+        handler = self._remember
         try:
-            signal.signal(signal.SIGTERM, self._remember)
+            signal.signal(signal.SIGTERM, handler)
         except ValueError:
             return False
+        self._installed = handler
         self._armed = True
         return True
 
     def release(self) -> None:
-        """Give SIGTERM back to the default disposition.
+        """Give SIGTERM back to the default disposition -- but only while this latch's own
+        handler is still the one installed.
 
-        Called once the real handler is installed. Not strictly required -- the real
-        handler replaces this one -- but a latch that outlives its purpose is a handler
-        nobody is looking at, and this keeps the disposition honest.
+        The guard is the whole point, and its absence was a live defect. `release()` is
+        called once the real handler is installed, and the real handler goes in FIRST: the
+        worker calls `loop.add_signal_handler(SIGTERM, ...)` and releases the latch
+        afterwards. An unconditional `signal.signal(SIGTERM, SIG_DFL)` here therefore did
+        not tidy THIS handler away -- it destroyed THAT one, and left the process on the
+        default disposition. A pod sent SIGTERM then died where it stood instead of
+        draining: the exact scale-in failure the latch exists to make survivable, caused
+        by the line meant to clean up after it.
+
+        Handing the signal back is only ever correct while nobody else has claimed it. A
+        latch that outlives its purpose is a handler nobody is looking at; a latch that
+        outlives somebody else's handler is worse.
         """
         if not self._armed:
             return
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
         self._armed = False
+        if signal.getsignal(signal.SIGTERM) is self._installed:
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        self._installed = None
 
     def _remember(self, _signum: int, _frame: types.FrameType | None) -> None:
         # Deliberately only this. A signal handler runs between bytecodes, on whatever
