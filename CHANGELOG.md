@@ -25,6 +25,9 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   an append-only record. Each `DesignProvider` now declares its own `engine_id` (`None` for the
   scripted one) and the composition root reads it; the `design.synthesize` exclusion follows the
   same derived value ([#115](https://github.com/the-vibey-project/vibey/issues/115))
+* **ledger:** every phase move now writes the `PhaseTransitioned` event the ledger always declared,
+  in the same transaction as the compare-and-set that moves the phase — so a project's path through
+  the six phases is reconstructable from its own history, and no move can commit without its event
 
 * **review:** REVIEW no longer runs a hard-coded security scan. `bandit -q -r src` walked the
   absorbed workspace members and failed every cycle, looping REVIEW back into BUILD forever; no
