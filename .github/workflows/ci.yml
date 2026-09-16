@@ -106,7 +106,8 @@ jobs:
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.11",
              install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.12",
-             install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
+             install: 'pip install -e ".[dev]"', test: 'python -m pytest -q',
+             network_test: 'python -m pytest -q -m network --no-cov'}
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.13",
              install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
           - {package: vibey-skills, dir: src/vibey_tools/skills, python: "3.10",
@@ -129,14 +130,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      # vibey-gh's suite drives a real `uv` in exactly one place, where it verifies that a
-      # version bump also re-locks: `test_a_real_uv_lock_rewrites_the_pinned_version`.
-      # It is marked `network` and skipped unless VIBEY_GH_NETWORK_TESTS=1, so the step
-      # below no longer needs the binary -- but the step after it does, and a runner that
-      # CAN reach an index should exercise the real resolver rather than only a fake one.
-      # Its own repository's CI never needed this because nothing there ran the suite on a
-      # runner without uv already present.
+      # Only the network step below drives a real `uv`, in the one test that verifies a
+      # version bump also re-locks: `test_a_real_uv_lock_rewrites_the_pinned_version`. That
+      # test is marked `network`, so the offline step needs no binary -- measured, not
+      # assumed: with `uv` off PATH entirely the suite is 1019 passed, 4 skipped, 100%
+      # branch. So the install is scoped to the row that actually asks for it, instead of
+      # being paid by all seven.
       - uses: astral-sh/setup-uv@v3
+        if: matrix.network_test
       - name: Install
         working-directory: ${{ matrix.dir }}
         run: ${{ matrix.install }}
@@ -148,16 +149,27 @@ jobs:
       - name: Its own suite, unchanged
         working-directory: ${{ matrix.dir }}
         run: ${{ matrix.test }}
-      # And the other half: the tests that DO leave the machine, run where one can. They
-      # are excluded from coverage reporting because they are selected, not complete --
-      # the floor is the step above's job, and asking a subset to meet it would only
-      # teach us to lower it.
-      - name: vibey-gh - the tests that leave the machine
-        if: matrix.package == 'vibey-gh'
+      # And the other half: the tests that DO leave the machine. These observe the world
+      # rather than this repository -- that PyPI still has no yank API, that a real `uv
+      # lock` still rewrites the pin -- so a failure here is news about someone else's
+      # service, and nothing a pull request author can fix. `continue-on-error` keeps that
+      # news visible without letting a PyPI outage or a rate-limit block an unrelated
+      # merge; the floor above is the gate, and this is the report.
+      #
+      # Declared as a row's own command, like `install` and `test`, so any tenant can opt
+      # in by adding the key -- and scoped to one row, because this posts unauthenticated
+      # to a third party's upload endpoint and running it on all three Python rows tripled
+      # that for no extra signal.
+      #
+      # Coverage is off because this selection is partial by construction; asking a subset
+      # to meet the floor would only teach us to lower it.
+      - name: The tests that leave the machine
+        if: matrix.network_test
+        continue-on-error: true
         working-directory: ${{ matrix.dir }}
         env:
           VIBEY_GH_NETWORK_TESTS: "1"
-        run: python -m pytest -q -m network --no-cov
+        run: ${{ matrix.network_test }}
 
   tools-lint:
     name: Absorbed tools - their own linters

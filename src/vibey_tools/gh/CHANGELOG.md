@@ -13,8 +13,10 @@ This file follows Keep a Changelog and semantic versioning conventions.
   no network reaches 100.00% with no flag to remember. Tests that leave the machine are
   marked `network` and skipped unless `VIBEY_GH_NETWORK_TESTS=1`; that replaces the
   second, incompatible convention this package had grown for the same job, so there is one
-  marker, one environment variable and one skip rule. CI runs the offline suite as the
-  floor gate and the `network` tests separately, where a runner has an index.
+  marker, one environment variable and one skip rule. CI gates on the offline suite; the
+  `network` tests run as a separate, non-blocking report on one matrix row, because a
+  failure there is news about somebody else's service and not something a pull request
+  author can fix.
 
 - Add `vibey-gh book --site-dir site --title T --author A`, which exports the already-built
   documentation site as a book: a valid EPUB 3.0 package with Dublin Core metadata, and a
