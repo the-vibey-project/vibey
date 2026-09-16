@@ -52,6 +52,11 @@ class MarketplaceRenderer:
         owner: dict[str, Any] = {}
         for member in members:
             manifest = self._member(cfg, member)
+            if manifest["name"] == cfg.marketplace.name:
+                raise MarketplaceError(
+                    f"{member}: member marketplace name {manifest['name']!r} collides with"
+                    " the root marketplace name"
+                )
             if not owner:
                 owner = manifest["owner"]
             # The schema keeps a marketplace's version under `metadata`; older manifests
