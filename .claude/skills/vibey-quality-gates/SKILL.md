@@ -171,6 +171,30 @@ python3 tools/validate_manifests.py && python3 tools/check_links.py \
 cd src/vibey_tools/bootstrap
 pip install -e ".[test,all]"
 pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term
+
+# claudeloop (CI: Python 3.10, 3.11, 3.12, 3.13 -- the only 3.10 floor in the tree)
+cd src/vibey_runners/claude
+pip install -e ../common && pip install -e ".[dev]"
+pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100
+pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100
+pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100
+pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+
+# codexloop (CI: Python 3.12, 3.13). cursorloop and agyloop are the same with the package
+# name swapped, minus `pip install -e ../common` (neither depends on it) and with
+# `pytest tests` in place of `pytest -q`; agyloop then ends on `pytest -m system`.
+cd src/vibey_runners/codex
+pip install -e ../common && pip install -e ".[dev]"
+pytest -q --cov=codexloop --cov-branch --cov-report=
+coverage report --include='src/codexloop/domain/*' --fail-under=100
+coverage report --include='src/codexloop/application/*' --fail-under=100
+coverage report --include='src/codexloop/infrastructure/*' --fail-under=100
+coverage report --include='src/codexloop/cli/*' --fail-under=100
+
+# qwenloop (CI: Python 3.12, 3.13, 3.14; its floor is already in its addopts)
+cd src/vibey_runners/qwen
+pip install -e ".[dev]"
+python -m pytest -q
 ```
 
 vibey-gh's suite drives real git history and shells out to `gh`, so it needs
@@ -195,11 +219,18 @@ CI runs that on one matrix row with `continue-on-error`: it reports on somebody
 else's service, so it must never gate a merge.
 
 The runners (`src/vibey_runners/{claude,codex,cursor,agy,qwen}`) carry their own
-`tests/`, ruff, mypy and import-linter configuration in their `pyproject.toml`,
-but **no CI job runs them as of 2026-09-15**. When you change a runner, run its
-suite yourself from its directory (`pip install -e ".[dev]" && python -m pytest`)
-and read its `[tool.pytest.ini_options]` first: agyloop's and cursorloop's addopts
-exclude `live` and `system` tests, and qwenloop's enforce a 100% branch floor.
+`tests/`, ruff, mypy and import-linter configuration in their `pyproject.toml`.
+Since 2026-09-15 the root `tools` matrix runs all five -- thirteen rows of it -- so a
+runner regression turns the `tools` job red. It reports rather than blocks: `tools`
+is not named in `required_checks` in `.vibey-gh.toml`, and no tools row ever has been.
+Read a runner's `[tool.pytest.ini_options]` before running anything by hand. agyloop's
+and cursorloop's addopts exclude `live` and `system` tests (agyloop's system harness is
+re-selected with `pytest -m system`, which is what the matrix does), and only qwenloop's
+addopts carry a coverage floor. The other four deliberately leave `--cov=` and
+`--cov-fail-under` out, because pytest-cov unions every `--cov=` it sees and one baked
+in there would widen the explicitly-scoped per-layer runs back out to the whole package
+-- so for them a bare `pytest` runs the tests but enforces no floor. Use the commands
+above, which are their own.
 
 ## What each gate catches
 
