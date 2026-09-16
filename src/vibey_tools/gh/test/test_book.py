@@ -236,6 +236,49 @@ def test_parser_handles_end_of_void_and_unclosed_capture():
     assert "tail-content" in book.extract_main("<main><p>tail-content</p>")
 
 
+def test_an_omitted_end_tag_is_synthesized_so_the_chapter_is_xml():
+    """HTML lets an end tag be omitted. XML does not, and one unbalanced chapter
+    invalidates the whole package rather than the page it came from.
+
+    `<ul><li>one<li>two</ul>` is valid HTML -- the second <li> closes the first -- and
+    `HTMLParser` reports both start tags with a single `</ul>`, synthesizing nothing. A
+    walk that counted depth emitted two <li>s it never closed.
+    """
+    body = book.extract_main("<main><ul><li>one<li>two</ul></main>")
+    assert body.count("<li>") == 2 and body.count("</li>") == 2
+    # Siblings, not one nested in the other: closing them anywhere satisfies XML and
+    # still renders a list inside its own first item.
+    assert body == "<ul><li>one</li><li>two</li></ul>"
+    ET.fromstring(f"<root>{body}</root>")
+
+
+def test_elements_still_open_at_end_of_input_are_closed():
+    """A truncated page is unbalanced, and unbalanced fails the parse for the package."""
+    body = book.extract_main("<main><div><p>truncated")
+    assert "truncated" in body
+    ET.fromstring(f"<root>{body}</root>")
+
+
+def test_a_stray_end_tag_inside_capture_closes_nothing():
+    """It matches no open element, so emitting it would be the mismatch this guards."""
+    body = book.extract_main("<main><p>kept</p></section></main>")
+    assert "kept" in body and "</section>" not in body
+    ET.fromstring(f"<root>{body}</root>")
+
+
+def test_a_literal_xml_forbidden_character_is_dropped_from_prose():
+    """`character_reference` already refuses `&#0;`; a LITERAL one reached the output.
+
+    NUL and form feed cannot be written in XML in any form -- `&#0;` is as illegal as
+    the character itself -- so removal is the only thing that leaves a parseable
+    document.
+    """
+    body = book.extract_main("<main><p>before\x00\x0cafter</p></main>")
+    assert "\x00" not in body and "\x0c" not in body
+    assert "before" in body and "after" in body
+    ET.fromstring(f"<root>{body}</root>")
+
+
 # --- #162: the book has to be valid before it can be beautiful ---------------------
 
 # What mkdocs actually renders: a permalink anchor after every heading whose text is

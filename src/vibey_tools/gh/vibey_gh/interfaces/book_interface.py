@@ -20,3 +20,13 @@ class MainExtractorInterface(Protocol):
 
     def feed(self, data: str) -> None:
         """Push a page's markup through the walk, appending what survives to `out`."""
+
+    def close(self) -> None:
+        """Finish the walk, closing whatever the document left open.
+
+        Declared rather than left to the implementation: `out` is only well-formed once
+        the caller has said no more markup is coming. HTML permits an end tag to be
+        omitted, so until then the collected pieces may have elements still open -- and
+        an unbalanced fragment fails the XHTML parse for the whole package, not just for
+        the chapter it came from.
+        """

@@ -109,6 +109,22 @@ _XML_CHARACTER_RANGES: tuple[tuple[int, int], ...] = (
 )
 
 
+def _is_xml_character(codepoint: int) -> bool:
+    return any(low <= codepoint <= high for low, high in _XML_CHARACTER_RANGES)
+
+
+def _without_forbidden_characters(data: str) -> str:
+    """Drop the code points XML 1.0 cannot carry in any form.
+
+    Not escapable and not representable as a reference either -- `&#0;` is as illegal as
+    a literal NUL -- so removal is the only thing that leaves a parseable document. Fast
+    path first because chapter text almost never contains one.
+    """
+    if all(_is_xml_character(ord(character)) for character in data):
+        return data
+    return "".join(c for c in data if _is_xml_character(ord(c)))
+
+
 class ChapterSanitizer:
     """Emits one rendered page's content as XHTML an EPUB reader will open."""
 
@@ -175,7 +191,12 @@ class ChapterSanitizer:
         return f"</{self.canonical_name(tag)}>"
 
     def text(self, data: str) -> str:
-        return html_lib.escape(data, quote=False)
+        # Escaping handles the three characters that are MARKUP; it does nothing about
+        # the ones XML forbids outright. `character_reference` already drops a numeric
+        # reference to U+0000 or U+000C, but a LITERAL one sitting in the built HTML
+        # reached the output untouched and made `ET.fromstring` reject the chapter --
+        # and with it the package. Same predicate, applied to character data.
+        return html_lib.escape(_without_forbidden_characters(data), quote=False)
 
     def entity_reference(self, name: str) -> str:
         reference = f"{name};"
@@ -190,6 +211,6 @@ class ChapterSanitizer:
 
     def character_reference(self, name: str) -> str:
         codepoint = int(name[1:], 16) if name[:1].lower() == "x" else int(name)
-        if not any(low <= codepoint <= high for low, high in _XML_CHARACTER_RANGES):
+        if not _is_xml_character(codepoint):
             return ""
         return f"&#{codepoint};"

@@ -92,7 +92,14 @@ def test_the_pieces_compose_into_something_an_xml_parser_reads():
 def test_svg_camel_case_names_survive_the_lowercasing_html_did():
     """SVG is XML: `viewBox` lowercased is an attribute no renderer knows."""
     s = ChapterSanitizer()
-    assert s.start_tag("svg", [("viewbox", "0 0 24 24")]) == '<svg viewBox="0 0 24 24">'
+    # The root <svg> also carries the SVG namespace: an HTML `<svg>` has none of its
+    # own, and once serialized under the chapter's default XHTML namespace a reader
+    # treats it as an unknown XHTML element rather than a drawing.
+    assert s.start_tag("svg", [("viewbox", "0 0 24 24")]) == (
+        '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'
+    )
+    # A document that declares its own namespace keeps it rather than being overridden.
+    assert s.start_tag("svg", [("xmlns", "urn:custom")]) == '<svg xmlns="urn:custom">'
     assert s.start_tag("lineargradient", [("id", "g")]) == '<linearGradient id="g">'
     # the end tag reads the same table, so the two halves can never disagree
     assert s.end_tag("lineargradient") == "</linearGradient>"

@@ -113,6 +113,24 @@ def chapters_from_nav(config_text: str) -> list[BookChapter]:
     return chapters
 
 
+# Start tags that end an open element in HTML, as `tag -> the tags it closes`. HTML lets
+# these end tags be omitted and `HTMLParser` synthesizes nothing, so without this a
+# document's siblings become each other's children: well-formed XML, and a book showing a
+# list nested inside its own first item. Deliberately the small set a documentation site
+# emits rather than HTML's whole optional-end-tag table -- every entry here is one whose
+# absence is visible on a rendered page.
+_IMPLIED_END_TAGS: dict[str, frozenset[str]] = {
+    "li": frozenset({"li"}),
+    "dt": frozenset({"dt", "dd"}),
+    "dd": frozenset({"dt", "dd"}),
+    "td": frozenset({"td", "th"}),
+    "th": frozenset({"td", "th"}),
+    "tr": frozenset({"td", "th", "tr"}),
+    "option": frozenset({"option"}),
+    "p": frozenset({"p"}),
+}
+
+
 class MainExtractor(html_parser.HTMLParser):
     """Capture the subtree of the first <main>, <article>, or role="main" element.
 
@@ -129,12 +147,46 @@ class MainExtractor(html_parser.HTMLParser):
         super().__init__(convert_charrefs=False)
         self._sanitizer = sanitizer
         self.out: list[str] = []
-        self.depth = 0  # nesting inside the captured element; 0 = not capturing
+        # The OPEN ELEMENTS, innermost last -- not a depth count. HTML permits an end tag
+        # to be omitted (`<ul><li>one<li>two</ul>` is valid HTML), and `HTMLParser` does
+        # not synthesize the missing ones, so a counter decremented per end tag closes
+        # the wrong number of elements and emits a fragment XML cannot parse. Holding the
+        # names lets an end tag close whatever it actually closes. Empty = not capturing;
+        # the first entry is the content element itself, which is never emitted.
+        self.open: list[str] = []
         self.strip_depth = 0  # nesting inside a chrome subtree being discarded
         self.done = False
 
+    @property
+    def depth(self) -> int:
+        """How deep the walk is inside the content element.
+
+        Kept as a read-only view over `open` because it reads better at the call sites
+        that only ask "are we capturing" -- and because a second writable counter beside
+        the stack is exactly the pair that would drift apart.
+        """
+        return len(self.open)
+
     def _is_target(self, tag: str, attrs: list[tuple[str, str | None]]) -> bool:
         return tag in ("main", "article") or ("role", "main") in [(k, v) for k, v in attrs]
+
+    def _close_implied_by(self, tag: str) -> None:
+        """Close the open element this start tag ends, where HTML says it ends one.
+
+        `<li>one<li>two` is two SIBLINGS in HTML -- the second start tag closes the
+        first item -- but `HTMLParser` reports both start tags and leaves the closing to
+        the caller. Stacking them blindly would still be well-formed XML, so the EPUB
+        would open; it would just show a list nested inside its own first item. Valid
+        and wrong is not the bar, so the pairs below are honoured.
+
+        Deliberately the small set a documentation site actually emits, not HTML's whole
+        optional-end-tag table: each entry is a case that has a visible consequence in a
+        rendered book.
+        """
+        closed_by = _IMPLIED_END_TAGS.get(tag)
+        if not closed_by or len(self.open) <= 1 or self.open[-1] not in closed_by:
+            return
+        self.out.append(self._sanitizer.end_tag(self.open.pop()))
 
     def _emit(self, text: str) -> None:
         if self.depth and not self.strip_depth and not self.done:
@@ -145,7 +197,7 @@ class MainExtractor(html_parser.HTMLParser):
             return
         if self.depth == 0:
             if self._is_target(tag, attrs):
-                self.depth = 1
+                self.open.append(tag)
             return
         if self.strip_depth:
             # Count every element, not only the chrome tags: a discarded subtree ends
@@ -157,9 +209,10 @@ class MainExtractor(html_parser.HTMLParser):
             if not self._sanitizer.is_void(tag):
                 self.strip_depth = 1
             return
+        self._close_implied_by(tag)
         self.out.append(self._sanitizer.start_tag(tag, attrs))
         if not self._sanitizer.is_void(tag):
-            self.depth += 1
+            self.open.append(tag)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if self.done or self.depth == 0 or self.strip_depth:
@@ -177,11 +230,42 @@ class MainExtractor(html_parser.HTMLParser):
             return
         if self._sanitizer.is_void(tag):
             return
-        self.depth -= 1
-        if self.depth == 0:
-            self.done = True
+        if tag not in self.open:
+            # A stray end tag closing nothing this walk opened. Emitting it would put a
+            # mismatched tag into the fragment; dropping it costs nothing, because there
+            # is no open element it could have been meant for.
             return
-        self.out.append(self._sanitizer.end_tag(tag))
+        # Close everything this end tag implicitly closes, innermost first. For
+        # `<ul><li>one<li>two</ul>` the `</ul>` arrives with two <li>s still open, and
+        # both get the end tag HTML let the author omit.
+        #
+        # `while True` rather than `while self.open`, because the check above already
+        # proved `tag` is on the stack: the loop always leaves through one of the two
+        # returns below, and a condition that can never be false would be a branch no
+        # test could ever take.
+        while True:
+            unclosed = self.open.pop()
+            if not self.open:
+                # The content element itself: its end tag ends the capture and is never
+                # emitted, because the chapter is its CONTENTS, not the element.
+                self.done = True
+                return
+            self.out.append(self._sanitizer.end_tag(unclosed))
+            if unclosed == tag:
+                return
+
+    def close(self) -> None:
+        """Finish the walk, closing anything the document left open.
+
+        A truncated page -- or one whose final elements simply omit their end tags --
+        would otherwise leave the fragment unbalanced, which fails the XHTML parse for
+        the whole package rather than for the one chapter. Closing them here is the same
+        repair `handle_endtag` makes, applied at end of input.
+        """
+        super().close()
+        while len(self.open) > 1 and not self.done:
+            self.out.append(self._sanitizer.end_tag(self.open.pop()))
+        self.open.clear()
 
     def handle_data(self, data: str) -> None:
         self._emit(self._sanitizer.text(data))
@@ -214,6 +298,9 @@ def extract_main(page_html: str, sanitizer: ChapterSanitizerInterface | None = N
         sanitizer if sanitizer is not None else ChapterSanitizer()
     )
     parser.feed(page_html)
+    # Nothing more is coming, so anything still open is an omitted end tag rather than a
+    # continuation. Closing before reading is what keeps the fragment parseable.
+    parser.close()
     body = "".join(parser.out).strip()
     if not body:
         raise BookError(

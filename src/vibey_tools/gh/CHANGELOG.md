@@ -17,6 +17,21 @@ This file follows Keep a Changelog and semantic versioning conventions.
   tags so boolean attributes and attribute values are legal. Which tags and classes count
   as chrome are constructor arguments, so a theme that marks its permalinks differently
   configures the sanitizer instead of forking it.
+
+  Three further ways a chapter could reach the package unparseable, all of which fail the
+  whole book rather than the page they came from. The walk tracked NESTING DEPTH as a
+  count, but HTML lets an end tag be omitted -- `<ul><li>one<li>two</ul>` is valid -- and
+  `HTMLParser` synthesizes nothing, so a counter closed the wrong number of elements; it
+  now holds the open elements by name, closes whatever an end tag actually closes, and
+  closes what the document leaves open at end of input (`close()`, declared on the
+  interface, because `out` is only well-formed once the caller says no more markup is
+  coming). Elements HTML implicitly closes -- a second `<li>`, `<dd>`, `<td>`, `<tr>`,
+  `<option>`, `<p>` -- are closed as siblings rather than stacked, because a list nested
+  inside its own first item is well-formed XML and still the wrong book. And `text()`
+  escaped the three markup characters while letting XML's FORBIDDEN code points through:
+  `character_reference` already refused `&#0;`, but a literal NUL or form feed from the
+  built HTML reached the output and made the chapter unparseable, so the same predicate
+  now applies to character data.
 - Declare a branch's merge queue in `.vibey-gh.toml` and reconcile it like every other
   rule. `rulesets.py` already owned `deletion`, `non_fast_forward`,
   `required_linear_history`, `pull_request` and `required_status_checks`; a merge queue
