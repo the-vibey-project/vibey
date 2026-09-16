@@ -131,6 +131,31 @@ def test_a_field_cannot_sit_in_both_halves():
         )
 
 
+@pytest.mark.parametrize(
+    "half, other",
+    [
+        ("diff_groundable", "requires_wider_context"),
+        ("requires_wider_context", "diff_groundable"),
+    ],
+)
+def test_a_half_cannot_name_the_same_field_twice(half: str, other: str):
+    """A duplicate inside ONE half, which the cross-half check above cannot see.
+
+    `ReviewContract` is constructible by embedding repositories, so the halves are a
+    caller's input rather than this module's own constant. A repeated name produces a
+    duplicated entry in `fields` and in a JSON Schema's `required` list while
+    `placeholders()` silently collapses it back to one -- so the count a reader takes
+    from the schema and the count a verdict carries would disagree.
+
+    Both halves are exercised because the guard is a loop over the two, and a loop only
+    ever entered once would leave the other half unguarded.
+    """
+    label = DIFF_GROUNDABLE if half == "diff_groundable" else REQUIRES_WIDER_CONTEXT
+    kwargs = {half: ("pass", "summary", "summary"), other: ()}
+    with pytest.raises(ValueError, match=f"{label} review fields must be unique"):
+        ReviewContract(**kwargs)  # type: ignore[arg-type]
+
+
 def test_the_placeholders_are_shape_compatibility_and_say_so():
     """`audience_order` is unevaluated AND emitted as `true`. Both are true at once, and
     the reconciliation has to be readable from the code rather than inferred from a
