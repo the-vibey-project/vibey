@@ -1587,10 +1587,39 @@ def test_conventional_commits_installs_the_published_package_not_the_adopting_re
     # The step that actually decides whether commits conform must fail loudly, not
     # treat "vibey-gh: command not found" as a false `if` condition that then barrels
     # ahead into a doomed git filter-branch.
-    normalize = text.split("name: Normalize every nonconforming commit message", 1)[1]
-    guard = normalize.split("if vibey-gh conventional-check", 1)[0]
+    deciding = text.split("name: Check every commit subject", 1)[1]
+    guard = deciding.split("if vibey-gh conventional-check", 1)[0]
     assert "command -v vibey-gh" in guard
     assert "exit 1" in guard
+
+
+def test_normalising_a_subject_is_a_key_and_the_check_runs_either_way(tmp_path: Path):
+    """Rewriting is opt-out; checking is not.
+
+    An explicitly-default config, NOT `load_config()`: that would read this repository's
+    own `.vibey-gh.toml`, which sets the key false, so the default arm would silently
+    assert repo state rather than the default an adopter gets.
+    """
+    from vibey_gh.config import PrAutomationConfig
+
+    default = render_workflow(WORKFLOWS / "conventional-commits.yml", GhConfig(root=tmp_path))
+    off = render_workflow(
+        WORKFLOWS / "conventional-commits.yml",
+        GhConfig(root=tmp_path, pr_automation=PrAutomationConfig(normalise_commit_subjects=False)),
+    )
+
+    assert "__VIBEY_GH_NORMALISE_SUBJECTS__" not in default + off
+    # Default keeps the behaviour adopters already have: rewrite on, refusal off.
+    assert "conforms == 'false' && true" in default
+    assert "conforms == 'false' && !true" in default
+    # Off inverts exactly those two, and nothing else.
+    assert "conforms == 'false' && false" in off
+    assert "conforms == 'false' && !false" in off
+    # The check itself is not behind the switch in either rendering -- a repository that
+    # declines the rewrite still has its subjects judged, which is the point of the job.
+    for rendered in (default, off):
+        assert "name: Check every commit subject" in rendered
+        assert "vibey-gh conventional-check --commits" in rendered
 
 
 def test_pr_automation_never_assumes_the_adopting_repos_own_package_is_vibey_gh():

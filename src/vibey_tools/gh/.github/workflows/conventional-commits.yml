@@ -81,7 +81,33 @@ jobs:
           path: target
           fetch-depth: 0
           token: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+      # Checking and REWRITING are separate steps, because they are separate decisions.
+      # The check is the point of the job and always runs; the rewrite is a convenience a
+      # repository opts into with `[pr_automation] normalise_commit_subjects`.
+      - name: Check every commit subject
+        id: subjects
+        working-directory: target
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          command -v vibey-gh >/dev/null || {
+            echo "::error::vibey-gh is not on PATH; cannot check or normalize commit subjects" >&2
+            exit 1
+          }
+          # Reported, not failed, here: whether a nonconforming subject is an error or
+          # something to repair is the next two steps' business, and exactly one of them
+          # runs. Failing here would make the choice for both.
+          if vibey-gh conventional-check --commits "${BASE_SHA}..${HEAD_SHA}"; then
+            echo "Every commit already conforms."
+            echo "conforms=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "conforms=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Normalize every nonconforming commit message
+        if: steps.subjects.outputs.conforms == 'false' && true
         working-directory: target
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -89,14 +115,6 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           set -euo pipefail
-          command -v vibey-gh >/dev/null || {
-            echo "::error::vibey-gh is not on PATH; cannot check or normalize commit subjects" >&2
-            exit 1
-          }
-          if vibey-gh conventional-check --commits "${BASE_SHA}..${HEAD_SHA}"; then
-            echo "Every commit already conforms."
-            exit 0
-          fi
           test "$(git rev-list --merges --count "${BASE_SHA}..${HEAD_SHA}")" = 0 || {
             echo "Refusing automatic rewrite of merge commits"
             exit 1
@@ -108,3 +126,18 @@ jobs:
           test "$current" = "$HEAD_SHA"
           git push --force-with-lease="refs/heads/${HEAD_REF}:${HEAD_SHA}" \
             origin "HEAD:refs/heads/${HEAD_REF}"
+
+      - name: Refuse a nonconforming commit subject
+        if: steps.subjects.outputs.conforms == 'false' && !true
+        working-directory: target
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # The offenders by name, so the author can act without re-running anything
+          # locally. `conventional-check` already printed them; this repeats them under
+          # the annotation that fails the job.
+          vibey-gh conventional-check --commits "${BASE_SHA}..${HEAD_SHA}" || true
+          echo "::error::A commit on this branch has a subject that is not a Conventional Commit. This repository does not rewrite them automatically: the automatic form is 'chore: <your subject>', which conforms without choosing a type, and a fix filed as a chore is a wrong label rather than a missing one. Amend the subject yourself, with the type the change actually has."
+          exit 1

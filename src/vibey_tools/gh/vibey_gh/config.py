@@ -444,6 +444,17 @@ class PrAutomationConfig:
     # request's own tree, so a contributor cannot choose the plugins that review them.
     plugin_marketplaces: tuple[str, ...] = ()
     plugins: tuple[str, ...] = ()
+    # Whether `conventional-commits.yml` REWRITES a nonconforming subject, or only
+    # reports it. True by default because that is what the workflow has always done and
+    # ADR-0018 forbids quietly taking a working capability away from an adopter.
+    #
+    # The trade a repository is choosing here is real: normalisation produces
+    # `chore: <the original subject>`, which conforms without choosing a meaningful type,
+    # so a bug fix normalised this way is filed as a chore -- and in a repository whose
+    # changelog sections are derived from the type, that is a wrong label rather than a
+    # missing one. Set it false where the author should pick the type themselves; the
+    # check still runs and still fails, just without rewriting anybody's history.
+    normalise_commit_subjects: bool = True
     observability: PrAutomationObservabilityConfig = PrAutomationObservabilityConfig()
     fallback: PrAutomationFallbackConfig = PrAutomationFallbackConfig()
 
@@ -1398,6 +1409,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         repair_untrusted_authors=auto.get("repair_untrusted_authors", True),
         replace_fork_prs=auto.get("replace_fork_prs", True),
         retain_schedule_backstop=auto.get("retain_schedule_backstop", True),
+        normalise_commit_subjects=auto.get("normalise_commit_subjects", True),
         plugin_marketplaces=tuple(auto.get("plugin_marketplaces", ())),
         plugins=tuple(auto.get("plugins", ())),
         observability=PrAutomationObservabilityConfig(

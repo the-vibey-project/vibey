@@ -120,6 +120,13 @@ plugins = [
 # every check green and nothing to rerun. That deadlock has happened here before; the two
 # lines move together.
 scan_workflows = ["CI", "Provenance", "Conventional Commits"]
+# Report a nonconforming subject; do not rewrite it. The automatic form is
+# `chore: <the original subject>` -- measured, not assumed -- which conforms without
+# choosing a type. This repository derives its changelog sections from the type, so a
+# normalised bug fix would be filed as a chore: a wrong label rather than a missing one,
+# and wrong is the more expensive of the two to notice later. The check still runs and
+# still fails; the author picks the type, which is the part a machine should not guess.
+normalise_commit_subjects = false
 
 [pr_automation.fallback]
 # Reviews with a local model when the paid path returns NO VERDICT AT ALL. It never
