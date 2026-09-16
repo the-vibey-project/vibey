@@ -18,6 +18,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **worker:** `vibey worker --engines <list>` that matches none of the worker's engines — `--engines qwenloop` without `VIBEY_FEATURE_QWENLOOP`, say — is refused at startup with the reason and the switch that fixes it, instead of starting a worker with no engine adapters that deferred every engine-driven job forever, silently. With the feature on, `qwenloop` now joins the startup preflight sweep, so its conformance warning appears like every other engine's.
+* **codexloop:** adopt the OpenAI SDK 3.14.1 surface deliberately, and bound the dependency so it cannot drift again. `openai>=1.40` had no upper bound, so CI installed 3.14.1 while `api_baseline.json` was frozen at 3.0.0's 320 methods; the drift gate fired correctly on 374 and turned every open pull request in the repository red over 54 endpoints nobody here had touched. The floor was also already a fiction — an install at 1.40 could never have matched a 3.0.0 baseline. The dependency is now PINNED at `==3.14.1`, not merely bounded: the gate compares the exact method set and OpenAI adds endpoints within a major — 3.11.0 to 3.14.1 added 54 — so a range only moves the next unplanned breakage a few releases out. The pin and the baseline are one fact in two files and advance together. The added surface is purely additive (43 `beta.agents.*`, 10 `live.*`, 1 `safety.alerts.*`; nothing removed, local helpers unchanged), so no `codexloop api` command disappears. `tools/refresh_api_baseline.py` replaces the `pytest --update-baseline` flag the skills documented and which never existed: it prints the delta, refuses a no-op, and is named on all four agent surfaces
 * **build:** a one-engine pool (`vibey work --engines qwenloop`) can verify its own work instead of stalling BUILD forever. The `build.verify` independence rule excluded the implementer unconditionally, so a single-engine pool had nothing eligible left, `NoEligibleEngine` became a capacity defer, and the job retried with no park and nothing in the ledger. The exclusion is now waived only when honoring it would leave the configured pool with no reviewer at all, and the waiver is written to the ledger as a decision and to the job result as `independent_review: false` — a non-independent diff review is allowed there, never hidden. With two or more usable engines the rule is unchanged. The waiver decision is written only once the item really passed verification — the ledger is append-only, so a failing gate must not leave behind an entry saying the item was verified — and `verify.require_independent_review = true` in the project config restores the strict rule for projects that would rather stall than accept a self-review ([ADR-0035](docs/architecture/decisions/0035-independence-is-the-default-not-an-absolute.md)).
 * **design:** the ledger names the engine that actually did the DESIGN work. `design.interview` and
   `design.research` events were attributed to claudeloop whatever `--provider` was in force, so a
@@ -29,6 +31,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   in the same transaction as the compare-and-set that moves the phase — so a project's path through
   the six phases is reconstructable from its own history, and no move can commit without its event
 
+* **cli:** `vibey recover` reports how many jobs it actually put back — the status-string pattern carried a doubled backslash, so the count was always `0`
+* **cli:** the next-step hints after `EscalationExhausted`, `HandoffRejected` and `BudgetExceeded` name commands that exist — they pointed at a `vibey gates` command that has never existed, and at a `[budget]` table nothing reads
 * **review:** REVIEW no longer runs a hard-coded security scan. `bandit -q -r src` walked the
   absorbed workspace members and failed every cycle, looping REVIEW back into BUILD forever; no
   narrower path is right for anyone else either, because `bandit` exits 0 on a path that does not
@@ -38,6 +42,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   empty — a project that wants the check configures it
 ### Documentation
 * stop tracking the two built documentation sites (`site/` and `src/vibey_tools/gh/site/`): 5.8 MB of stale rendered HTML — a second, drifting copy of the docs, the ADRs and the runbooks — that `properdocs build` regenerates and that CI never reads ([#155](https://github.com/the-vibey-project/vibey/issues/155))
+
+* **rotation:** an engine that ran out of credits is probed again once its backoff elapses, instead of being excluded for the rest of the project until someone edited `engine_health` by hand; the selector now half-opens on `probe_next_at` as well as `resets_at`. An engine opened by `AuthenticationFailed` still gets no clock-based probe -- waiting cannot fix a credential -- but a preflight whose auth succeeds half-opens it, so re-authenticating is enough to bring it back.
 
 ## [0.7.0] (2026-09-15)
 
