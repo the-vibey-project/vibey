@@ -235,6 +235,21 @@ async def preflight_sweep(
     )
 
 
+def _independent_review_required(config: Mapping[str, object]) -> bool:
+    """Whether this project refuses a verify the implementer reviews itself.
+
+    Default False: independence is waived when the pool cannot supply a second
+    reviewer, because the measured alternative on a one-engine pool was BUILD
+    deferring forever with no park and nothing in the ledger. A project that
+    would rather stall than accept a self-review sets
+    ``verify.require_independent_review = true`` and gets the strict rule back
+    (ADR-0018: the choice belongs to the adopter, not to this file; ADR-0034
+    records why the permissive reading is the default).
+    """
+    verify = config.get("verify")
+    return isinstance(verify, Mapping) and verify.get("require_independent_review") is True
+
+
 def _qwenloop_enabled(config: Mapping[str, object]) -> bool:
     override = os.environ.get("VIBEY_FEATURE_QWENLOOP")
     if override is not None:
@@ -345,8 +360,14 @@ def build_full_worker(
                 ledger_reader=resources.ledger, clock=clock, gates=resources.gates
             ),
             # A pool with nobody but the implementer in it verifies its own
-            # work and says so in the ledger, rather than deferring forever.
-            independence=VerifyIndependencePolicy(pool=engine_provider.pool, clock=clock),
+            # work and says so in the ledger, rather than deferring forever --
+            # unless this project asked for the strict rule, in which case no
+            # policy is wired and the handler keeps failing such a verify.
+            independence=(
+                None
+                if _independent_review_required(project.config)
+                else VerifyIndependencePolicy(pool=engine_provider.pool, clock=clock)
+            ),
         )
         return _recording(handler, adapter)
 

@@ -500,3 +500,15 @@ async def test_non_capacity_defer_never_opens_the_circuit() -> None:
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
     assert record.circuit == "closed"
     assert record.resets_at is None
+
+
+async def test_the_selecting_provider_satisfies_the_engine_provider_protocol() -> None:
+    """ADR-0016: `pool` -- the surface `BuildVerifyHandler` reads to apply the
+    independence waiver -- is declared on a protocol in
+    `application/interfaces/`, not invented by its one implementation."""
+    from vibey.application.interfaces.engines import EngineProvider
+
+    provider, _, _, _ = await _provider([EngineId.CLAUDELOOP])
+
+    assert isinstance(provider, EngineProvider)
+    assert provider.pool == frozenset({EngineId.CLAUDELOOP})

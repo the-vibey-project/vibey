@@ -112,6 +112,14 @@ for the same disclosure.
 | `max_dollars_total` | float or unset | unset (no cap) | Intended total spend cap across the project's lifetime. Not validated. |
 | `max_turns_per_item` | integer or unset | unset (no cap) | Intended per-work-item turn cap; the implemented cap (`max_cycle_turns`) is per cycle. Not validated. |
 
+### `verify.require_independent_review`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `verify.require_independent_review` | bool | `false` | When `true`, `build.verify` always fails as `VIBEY` if the reviewing engine is the implementer, even when the configured pool has nobody else. When `false` (the default) a pool that cannot supply a second reviewer gets a self-review that is recorded as a `DecisionRecorded` in the ledger. See [ADR-0034](../architecture/decisions/0034-independence-is-the-default-not-an-absolute.md). |
+
+Read at runtime by `bootstrap.build_full_worker`.
+
 None of these keys is read at runtime. The live brake is the project's stored
 `max_cycle_dollars` / `max_cycle_turns` (set by `vibey new --max-cycle-dollars`
 / `--max-cycle-turns`, or the operator's `spec.maxCycleDollars` /

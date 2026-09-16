@@ -536,6 +536,31 @@ async def test_an_answered_gate_can_grant_more_repair_rounds(tmp_path: Path) -> 
     assert isinstance(still_parked, Park)
 
 
+async def test_a_failing_gate_on_a_solo_pool_records_no_waiver(tmp_path: Path) -> None:
+    """The ledger is append-only, so the waiver decision may only be written
+    once the item really was verified. A solo-pool verify whose gate fails is
+    not a verification; if the decision were written before the gates ran it
+    would say `item-1` "was verified by its own implementer" forever, with no
+    way to take it back."""
+    ledger = FakeLedger()
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(returncode=1, stderr="assertion failed"),
+        reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        independence=VerifyIndependencePolicy(
+            pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
+        ),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.WORK
+    assert [e for e in ledger.recorded if e.kind == "DecisionRecorded"] == []
+
+
 def test_granted_max_rounds_parses_both_forms_and_rejects_junk() -> None:
     from vibey.application.build_verify_handler import granted_max_rounds
 

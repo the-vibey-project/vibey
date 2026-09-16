@@ -134,6 +134,12 @@ class VerifyRepairPolicy:
 class VerifyIndependencePolicy:
     """What lets a one-engine pool verify its own work, on the record.
 
+    No interface beside this class (ADR-0016): it declares no behaviour to
+    implement -- it is a frozen value the composition root hands the handler,
+    like its sibling ``VerifyRepairPolicy`` above. The behavioural seam it
+    rides on is ``EngineProvider`` in ``application/interfaces/engines.py``,
+    which is where ``pool`` is declared.
+
     ``pool`` is the worker's dispatchable engines (``SelectingEngineProvider.pool``)
     and ``clock`` timestamps the ledger decision. They travel together
     because neither is any use alone: the waiver is only ever granted when
@@ -174,6 +180,7 @@ class BuildVerifyHandler:
 
         implementer = job.requirement.get("implementer_engine_id")
         independent = True
+        waiver: VerifyIndependencePolicy | None = None
         if implementer is not None and implementer == self._reviewer.descriptor.engine_id.value:
             # Selection has already decided whether independence could be
             # honored at all; ask it rather than re-deriving the rule here.
@@ -188,7 +195,12 @@ class BuildVerifyHandler:
             ):
                 return Failure(FailureClass.VIBEY, "verifier must differ from the implementer")
             independent = False
-            await self._record_independence_waiver(job, job.work_item_id, policy)
+            # The ledger entry waits for the success path below. Written
+            # here it would assert "this item was verified by its own
+            # implementer" before a single gate had run -- and the ledger is
+            # append-only, so a failing gate or a rejected diff review would
+            # leave a false statement that nothing can ever delete.
+            waiver = policy
 
         worktree = self._worktrees.path_for(job.work_item_id)
         verification = job.payload.get("verification", {})
@@ -234,6 +246,12 @@ class BuildVerifyHandler:
             # needless loop-back long after the code was fixed.
             await self._resolve_open_findings(job, job.work_item_id, self._repair)
 
+        if waiver is not None:
+            # Only here is the claim true: every gate passed and the diff
+            # review approved. Once per *successful* verify rather than once
+            # per attempt -- an attempt that fails writes nothing at all.
+            await self._record_independence_waiver(job, job.work_item_id, waiver)
+
         await self._jobs.enqueue(
             EnqueueRequest(
                 project_id=job.project_id,
@@ -270,6 +288,10 @@ class BuildVerifyHandler:
         next. The id is derived from the work item rather than minted, so a
         replayed verify job restates the same decision instead of growing a
         new one per attempt.
+
+        Called only from the success path. The entry says the item *was*
+        verified, and the ledger is append-only: writing it before the gates
+        ran would make a failing verify leave behind an uncorrectable lie.
         """
         engine = self._reviewer.descriptor.engine_id.value
         await self._ledger.record(

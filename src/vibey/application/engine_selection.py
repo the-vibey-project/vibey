@@ -136,6 +136,8 @@ def selection_inputs_for_job(
 
 
 class SelectingEngineProvider:
+    """The production ``EngineProvider`` (``application/interfaces/engines.py``)."""
+
     def __init__(
         self,
         *,
