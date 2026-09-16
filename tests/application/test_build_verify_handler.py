@@ -5,9 +5,14 @@ from pathlib import Path
 from uuid import uuid4
 
 from tests.application.fakes import FakeJobRepository, make_job
-from vibey.application.build_verify_handler import BuildVerifyHandler, GateResult
+from vibey.application.build_verify_handler import (
+    BuildVerifyHandler,
+    GateResult,
+    VerifyIndependencePolicy,
+)
 from vibey.application.dto import EngineEvent
 from vibey.application.worker import Failure, Success
+from vibey.domain.engine import EngineId
 from vibey.domain.job import FailureClass
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP
 from vibey.infrastructure.engines.scripted import ScriptedEngine
@@ -30,6 +35,11 @@ class FakeGateRunner:
     async def run(self, argv: tuple[str, ...], *, cwd: Path) -> GateResult:
         self.calls.append(argv)
         return GateResult(self.returncode, "", self.stderr)
+
+
+class FixedClock:
+    def now(self) -> datetime:
+        return datetime(2026, 8, 19, tzinfo=UTC)
 
 
 class FakeLedger:
@@ -70,7 +80,11 @@ async def test_successful_verify_runs_gates_reviews_the_diff_and_enqueues_integr
     outcome = await handler.handle(job)
 
     assert isinstance(outcome, Success)
-    assert outcome.result == {"work_item_id": "item-1", "gates_run": 1}
+    assert outcome.result == {
+        "work_item_id": "item-1",
+        "gates_run": 1,
+        "independent_review": True,
+    }
     assert gates.calls[0] == ("pytest",)
     assert gates.calls[-1] == ("git", "diff", "HEAD")
     assert any(event.kind == "VerdictRendered" for event in ledger.recorded)
@@ -115,6 +129,89 @@ async def test_rejects_a_reviewer_that_matches_the_implementer(tmp_path: Path) -
     outcome = await handler.handle(job)
 
     assert outcome == Failure(FailureClass.VIBEY, "verifier must differ from the implementer")
+
+
+async def test_a_one_engine_pool_verifies_its_own_work_and_says_so(tmp_path: Path) -> None:
+    """The wave-0 blocker: with only one engine configured there is nobody
+    else to review, and refusing meant BUILD never finished. The review is
+    allowed -- and the weakened independence goes into the ledger as a
+    decision and into the job result, so nobody has to guess."""
+    ledger = FakeLedger()
+    jobs = FakeJobRepository()
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+        ledger=ledger,
+        jobs=jobs,
+        independence=VerifyIndependencePolicy(
+            pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
+        ),
+    )
+
+    job = _job(requirement={"implementer_engine_id": "claudeloop"})
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Success)
+    assert outcome.result == {
+        "work_item_id": "item-1",
+        "gates_run": 1,
+        "independent_review": False,
+    }
+    (decision,) = [e for e in ledger.recorded if e.kind == "DecisionRecorded"]
+    # Derived from the work item, not minted: a replayed verify job
+    # restates this decision instead of growing a new one per attempt.
+    assert decision.payload["decision_id"] == "d_verify_independence_item-1"
+    assert decision.payload["independent_review"] is False
+    assert decision.payload["pool"] == ["claudeloop"]
+    assert "claudeloop" in str(decision.payload["title"])
+    assert decision.at == datetime(2026, 8, 19, tzinfo=UTC)
+    # The work still went all the way through.
+    enqueued = await jobs.claim(job.project_id, owner="t", lease=timedelta(seconds=5))
+    assert enqueued is not None
+    assert enqueued.kind == "build.integrate"
+
+
+async def test_a_pool_with_a_second_engine_still_rejects_a_self_review(tmp_path: Path) -> None:
+    """The independence rule is untouched wherever it can be honored."""
+    ledger = FakeLedger()
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        independence=VerifyIndependencePolicy(
+            pool=frozenset({EngineId.CLAUDELOOP, EngineId.CODEXLOOP}), clock=FixedClock()
+        ),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert outcome == Failure(FailureClass.VIBEY, "verifier must differ from the implementer")
+    assert ledger.recorded == []
+
+
+async def test_a_rotated_reviewer_records_no_waiver(tmp_path: Path) -> None:
+    """A solo-pool policy must not make every verify look non-independent:
+    the waiver only ever fires when the reviewer *is* the implementer."""
+    ledger = FakeLedger()
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        independence=VerifyIndependencePolicy(
+            pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
+        ),
+    )
+
+    outcome = await handler.handle(_job())
+
+    assert isinstance(outcome, Success)
+    assert outcome.result["independent_review"] is True
+    assert [e for e in ledger.recorded if e.kind == "DecisionRecorded"] == []
 
 
 async def test_a_failing_gate_command_fails_as_work(tmp_path: Path) -> None:
@@ -437,6 +534,60 @@ async def test_an_answered_gate_can_grant_more_repair_rounds(tmp_path: Path) -> 
     await gates.answer(gate.gate_id, answer={"answers": {"max_rounds": "2"}}, answered_by="op")
     still_parked = await _handler_with(policy).handle(job)
     assert isinstance(still_parked, Park)
+
+
+async def test_a_failing_gate_on_a_solo_pool_records_no_waiver(tmp_path: Path) -> None:
+    """The ledger is append-only, so the waiver decision may only be written
+    once the item really was verified. A solo-pool verify whose gate fails is
+    not a verification; if the decision were written before the gates ran it
+    would say `item-1` "was verified by its own implementer" forever, with no
+    way to take it back."""
+    ledger = FakeLedger()
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(returncode=1, stderr="assertion failed"),
+        reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        independence=VerifyIndependencePolicy(
+            pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
+        ),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert isinstance(outcome, Failure)
+    assert outcome.failure_class is FailureClass.WORK
+    assert [e for e in ledger.recorded if e.kind == "DecisionRecorded"] == []
+
+
+async def test_a_rejected_self_review_on_a_solo_pool_records_no_waiver(tmp_path: Path) -> None:
+    """The other way a solo-pool verify can fail: the gates all pass, and the
+    diff review itself says no. The waiver claims the item "was verified by its
+    own implementer"; a rejected review verified nothing, so the append-only
+    ledger must stay empty here too. This is the path the failing-gate test
+    cannot reach -- it returns before the review ever runs."""
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    ledger = FakeLedger()
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=ScriptedEngine(
+            descriptor=CLAUDELOOP,
+            base_dir=tmp_path / "engine",
+            script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
+        ),
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        independence=VerifyIndependencePolicy(
+            pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
+        ),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert outcome == Failure(FailureClass.WORK, "diff review did not approve this work item")
+    assert [e for e in ledger.recorded if e.kind == "DecisionRecorded"] == []
 
 
 def test_granted_max_rounds_parses_both_forms_and_rejects_junk() -> None:
