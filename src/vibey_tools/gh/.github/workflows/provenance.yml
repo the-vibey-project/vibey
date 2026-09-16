@@ -23,6 +23,14 @@ on:
   # its own pull request (ADR-0036).
   merge_group:
 
+# Deliberately minimal, and deliberately WITHOUT a forge credential. `check --ci` also
+# surveys cloud clutter through `gh pr list` and `gh release list`, and it is tempting to
+# add `pull-requests: read` and a `GH_TOKEN` here so that survey can run. Do not: the job
+# below installs the tooling from the CHECKED-OUT TREE when a repository self-hosts, so on
+# a pull request the credentialed step would be running the contributor's own code. A
+# token in this job is a token handed to whatever that pull request contains. The survey
+# reporting "not surveyed" here is the correct outcome, not a bug to fix with a secret --
+# it belongs in a job whose checkout is trusted.
 permissions:
   contents: read
 
@@ -73,6 +81,9 @@ jobs:
       # injection surface even though it comes from github.event.
       - name: Check provenance
         env:
+          # No GH_TOKEN here, on purpose -- see `permissions:` above. This step runs the
+          # tooling installed from the checkout, which on a pull request is the
+          # contributor's code; a credential in this environment would be readable by it.
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
