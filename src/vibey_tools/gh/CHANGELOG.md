@@ -5,22 +5,26 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
-- Let the clean-repo survey inside `check --ci` actually ask the forge, and stop it reading
-  an object as an empty listing. Two defects, one story. The `Provenance` workflow granted
-  `contents: read` and set no `GH_TOKEN`, so every `gh pr list` and `gh release list` the
-  survey makes failed with gh's own "set the GH_TOKEN environment variable" text as the
-  reason — the survey shipped in the previous entry ran nowhere it was built to run, and
-  reported `not surveyed` on every pull request while looking like a forge outage. The
-  template now declares `pull-requests: read` alongside `contents: read` and passes the
-  job's own `github.token`. Separately, `_gh_json` answered `(value, "")` for a JSON
-  *object* as readily as for a list, and both of its call sites are listing endpoints;
-  iterating a dict yields its keys, so an error envelope such as
-  `{"message": "Bad credentials"}` would enumerate field names, match no branch and no
-  release, and report a clean survey with no problem recorded — "could not look" wearing
-  the face of "nothing there", which is the one collapse that seam exists to prevent.
-  Listings now go through `_gh_list`, which names a non-list answer as the non-answer it
-  is. `_gh_json` keeps its general contract for any future endpoint that does return an
-  object.
+- Stop the clean-repo survey reading a JSON object as an empty listing, and record why it
+  must stay uncredentialed in CI. `_gh_json` answered `(value, "")` for a JSON *object* as
+  readily as for a list, and both of its call sites are listing endpoints; iterating a dict
+  yields its keys, so an error envelope such as `{"message": "Bad credentials"}` would
+  enumerate field names, match no branch and no release, and report a clean survey with no
+  problem recorded — "could not look" wearing the face of "nothing there", which is the one
+  collapse that seam exists to prevent. Listings now go through `_gh_list`, which names a
+  non-list answer as the non-answer it is; `_gh_json` keeps its general contract for any
+  future endpoint that does return an object.
+
+  The survey still reports `not surveyed` inside `Provenance`, and that is now a decision
+  rather than an oversight. Supplying `GH_TOKEN` there was tried and reverted: the job
+  installs the tooling from the *checked-out tree* where a repository self-hosts, so on a
+  pull request the credentialed step would be running the contributor's own code, and a
+  token in that environment is a token handed to whatever the pull request contains. The
+  template now says so where the mistake would be made, and a new template contract test
+  asserts structurally that no step of that job declares `GH_TOKEN` or any `secrets.`
+  value — structurally, because the warning comment names `GH_TOKEN` and a text search
+  would read the warning as the fault. A credentialed survey belongs in a job whose
+  checkout is trusted, which is its own change.
 - Declare a branch's merge queue in `.vibey-gh.toml` and reconcile it like every other
   rule. `rulesets.py` already owned `deletion`, `non_fast_forward`,
   `required_linear_history`, `pull_request` and `required_status_checks`; a merge queue
