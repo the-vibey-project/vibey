@@ -107,7 +107,7 @@ jobs:
           fi
 
       - name: Normalize every nonconforming commit message
-        if: steps.subjects.outputs.conforms == 'false' && false
+        if: steps.subjects.outputs.conforms == 'false' && true
         working-directory: target
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -128,7 +128,7 @@ jobs:
             origin "HEAD:refs/heads/${HEAD_REF}"
 
       - name: Refuse a nonconforming commit subject
-        if: steps.subjects.outputs.conforms == 'false' && !false
+        if: steps.subjects.outputs.conforms == 'false' && !true
         working-directory: target
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
