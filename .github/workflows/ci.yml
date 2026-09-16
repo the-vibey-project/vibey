@@ -130,20 +130,34 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       # vibey-gh's suite drives a real `uv` in exactly one place, where it verifies that a
-      # version bump also re-locks: `test_a_real_uv_lock_rewrites_the_pinned_version`,
-      # marked `network`, fails with FileNotFoundError without the binary. Everything that
-      # test covers is also covered offline through the injected lockfile seam, so
-      # `-m "not network"` still reaches the 100% floor -- but a runner that CAN reach an
-      # index should exercise the real resolver, so the binary is provided rather than the
-      # test skipped. Its own repository's CI never needed this because nothing there ran
-      # the suite on a runner without uv already present.
+      # version bump also re-locks: `test_a_real_uv_lock_rewrites_the_pinned_version`.
+      # It is marked `network` and skipped unless VIBEY_GH_NETWORK_TESTS=1, so the step
+      # below no longer needs the binary -- but the step after it does, and a runner that
+      # CAN reach an index should exercise the real resolver rather than only a fake one.
+      # Its own repository's CI never needed this because nothing there ran the suite on a
+      # runner without uv already present.
       - uses: astral-sh/setup-uv@v3
       - name: Install
         working-directory: ${{ matrix.dir }}
         run: ${{ matrix.install }}
+      # VIBEY_GH_NETWORK_TESTS is unset here, so every `network` test is skipped and the
+      # package's own --cov-fail-under=100 is enforced on what remains. That makes this
+      # step the gate on a property the package would otherwise only assert: its 100%
+      # branch floor is reachable with no index, no remote and no socket. Put a branch
+      # behind a network-only test again and this fails, which is the whole point.
       - name: Its own suite, unchanged
         working-directory: ${{ matrix.dir }}
         run: ${{ matrix.test }}
+      # And the other half: the tests that DO leave the machine, run where one can. They
+      # are excluded from coverage reporting because they are selected, not complete --
+      # the floor is the step above's job, and asking a subset to meet it would only
+      # teach us to lower it.
+      - name: vibey-gh - the tests that leave the machine
+        if: matrix.package == 'vibey-gh'
+        working-directory: ${{ matrix.dir }}
+        env:
+          VIBEY_GH_NETWORK_TESTS: "1"
+        run: python -m pytest -q -m network --no-cov
 
   tools-lint:
     name: Absorbed tools - their own linters

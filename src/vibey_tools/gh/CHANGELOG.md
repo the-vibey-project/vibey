@@ -5,14 +5,16 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
-- Make the package's own 100% branch floor reachable without a network. `apply_version`
-  now takes the post-bump re-lock through an injected `LockfileInterface` (default
-  `UvLockfile`, still `uv lock`) instead of shelling out inline, so the branch that
-  records a re-locked lockfile no longer has exactly one reader — a test that downloads
-  from PyPI. Offline the suite reaches 100.00%; the real-resolver test survives, marked
-  `network`, and `-m "not network"` is a supported way to run the suite rather than a
-  weakened one. Both the lockfile name and the resolver command are fields, so a project
-  that locks with another tool configures it instead of forking the module.
+- Make the package's own 100% branch floor reachable without a network, and gate it in CI.
+  The branch that records a re-locked `uv.lock` after a version bump had exactly one
+  reader: a test that resolves against a real package index. Offline the suite landed at
+  99.97%, so the floor only held where PyPI did. It is now driven by a fake `uv` on PATH —
+  a real subprocess, asserting argv and cwd, not a mocked one — and a plain `pytest` with
+  no network reaches 100.00% with no flag to remember. Tests that leave the machine are
+  marked `network` and skipped unless `VIBEY_GH_NETWORK_TESTS=1`; that replaces the
+  second, incompatible convention this package had grown for the same job, so there is one
+  marker, one environment variable and one skip rule. CI runs the offline suite as the
+  floor gate and the `network` tests separately, where a runner has an index.
 
 - Add `vibey-gh book --site-dir site --title T --author A`, which exports the already-built
   documentation site as a book: a valid EPUB 3.0 package with Dublin Core metadata, and a
