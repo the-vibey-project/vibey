@@ -5,6 +5,19 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- State in one place which review judgments a diff can carry. The pull-request review asks
+  for nineteen answers, but two reviewers answer it from different evidence: the paid
+  exact-head reviewer reads the whole proposed repository, while the local fallback sees
+  one diff. Which half is which lived implicitly in three places, and one of them was
+  already misread -- `audience_order` is reported unevaluated and yet emitted as `true`.
+  The new `vibey_gh.review_contract.ReviewContract` (declared by
+  `vibey_gh.interfaces.ReviewContractPort`) names the diff-groundable fields, names the
+  documentation-contract fields that need wider context, and says plainly that the `true`
+  is a shape-compatibility placeholder rather than an answer. `local_review` now reads its
+  schema's `required` list and its `UNEVALUATED_FIELDS` from the contract instead of
+  restating them, and a test holds the contract against the review schema shipped in
+  `templates/workflows/pr-automation.yml`.
+
 - Add `vibey-gh book --site-dir site --title T --author A`, which exports the already-built
   documentation site as a book: a valid EPUB 3.0 package with Dublin Core metadata, and a
   print-ready HTML sized to the standard 6in x 9in KDP paperback trim. Chapters come from
