@@ -343,3 +343,113 @@ async def test_record_preflight_keeps_prior_auth_timestamp_on_auth_failure() -> 
 
     assert second.auth_ok_at == first.auth_ok_at
     assert second.conformance_ok is False
+
+
+# --- authentication recovery: the preflight is the probe ---
+
+
+async def test_a_passing_preflight_half_opens_an_authentication_opened_circuit() -> None:
+    """AuthenticationFailed schedules no probe on purpose -- waiting cannot
+    fix a credential. The human's re-authentication is the trigger instead,
+    and a preflight that sees it puts the engine back in rotation without
+    anyone editing engine_health by hand."""
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="open",
+            capacity_state="AuthenticationFailed",
+        )
+    )
+
+    svc = EngineHealthService(repo)
+    result = await svc.record_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=True),
+    )
+
+    assert result.circuit == "half_open"
+
+
+async def test_doctor_also_half_opens_an_authentication_opened_circuit() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="open",
+            capacity_state="AuthenticationFailed",
+        )
+    )
+
+    svc = EngineHealthService(repo)
+    result = await svc.update_from_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=True),
+        conformance_ok=True,
+    )
+
+    assert result.circuit == "half_open"
+
+
+async def test_a_failing_preflight_leaves_an_authentication_opened_circuit_open() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="open",
+            capacity_state="AuthenticationFailed",
+        )
+    )
+
+    svc = EngineHealthService(repo)
+    result = await svc.record_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=False),
+    )
+
+    assert result.circuit == "open"
+
+
+async def test_a_credits_opened_circuit_is_not_reopened_by_working_credentials() -> None:
+    """Working credentials say nothing about a credits balance or a rate
+    limit window; only those states' own probe times may half-open them."""
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="open",
+            capacity_state="CreditsExhausted",
+            probe_next_at=datetime.now(UTC) + timedelta(minutes=10),
+        )
+    )
+
+    svc = EngineHealthService(repo)
+    result = await svc.record_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=True),
+    )
+
+    assert result.circuit == "open"
+
+
+async def test_a_closed_circuit_is_untouched_by_a_passing_preflight() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_make_record(project_id=project_id, circuit="closed"))
+
+    svc = EngineHealthService(repo)
+    result = await svc.record_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=True),
+    )
+
+    assert result.circuit == "closed"

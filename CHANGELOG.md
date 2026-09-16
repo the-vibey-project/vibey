@@ -12,6 +12,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **rotation:** an engine that ran out of credits is probed again once its backoff elapses, instead of being excluded for the rest of the project until someone edited `engine_health` by hand; the selector now half-opens on `probe_next_at` as well as `resets_at`. An engine opened by `AuthenticationFailed` still gets no clock-based probe -- waiting cannot fix a credential -- but a preflight whose auth succeeds half-opens it, so re-authenticating is enough to bring it back.
+
 ## [0.7.0] (2026-09-15)
 
 ### Features
