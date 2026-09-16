@@ -40,14 +40,20 @@ dependencies = [
     "typer>=0.12",
     "structlog>=24.1",
     "anyio>=4.0",
-    # Bounded, and the floor matches `api_baseline.json`. The drift gate freezes the
-    # SDK's method surface, so an unbounded range makes that gate fire on OpenAI's
-    # release schedule rather than on a change here -- `>=1.40` floated to 3.14.1 and
-    # turned every pull request in the repository red over 54 endpoints nobody in this
-    # package had touched. The floor was also already a fiction: the baseline was
-    # captured at 3.0.0, so an install at 1.40 could never have passed the gate.
-    # Raise both together, deliberately, and never just one.
-    "openai>=3.14.1,<4",
+    # PINNED, not merely bounded, because `api_baseline.json` records this SDK's EXACT
+    # method set and the drift gate compares against it exactly. Any release that adds
+    # one endpoint fails that gate, and OpenAI adds endpoints within a major: 3.11.0 to
+    # 3.14.1 added 54. So a range -- even `>=3.14.1,<4` -- only moves the next unplanned
+    # breakage a few releases out; it does not prevent it, which is what an unbounded
+    # `>=1.40` already demonstrated by turning every pull request in the repository red
+    # over endpoints nobody in this package had touched.
+    #
+    # The pin and the baseline are one fact written in two files. Advance them in the
+    # same commit, via `python tools/refresh_api_baseline.py`, having read the delta --
+    # that review is the whole purpose of the gate. `uv.lock` cannot stand in for this:
+    # the tools matrix installs each tenant with plain pip (ADR-0022), so this line is
+    # the only thing that reaches that job.
+    "openai==3.14.1",
     "textual>=1.0",
     "vibey-runners-common",
 ]

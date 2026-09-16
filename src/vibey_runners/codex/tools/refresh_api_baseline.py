@@ -43,6 +43,12 @@ def main() -> int:
     added = sorted(set(current["methods"]) - set(previous["methods"]))
     removed = sorted(set(previous["methods"]) - set(current["methods"]))
     helpers_changed = set(current["local_helpers"]) != set(previous["local_helpers"])
+    # The recorded version counts as a difference in its own right. A release can leave
+    # the method set untouched, and treating that as "nothing changed" would leave the
+    # snapshot naming an SDK nobody is running -- the baseline's first field says which
+    # version it describes, so a stale one is a stale baseline even when the surface
+    # happens to match.
+    version_changed = current["openai_version"] != previous["openai_version"]
 
     print(f"openai {previous['openai_version']} -> {current['openai_version']}")
     print(f"methods {previous['method_count']} -> {current['method_count']}")
@@ -53,9 +59,11 @@ def main() -> int:
     if helpers_changed:
         print("  ! local_helpers changed -- update LOCAL_HELPER_PATHS to match")
 
-    if not added and not removed and not helpers_changed:
+    if not added and not removed and not helpers_changed and not version_changed:
         print("baseline already matches the installed SDK; nothing written")
         return 1
+    if not added and not removed and not helpers_changed:
+        print("  (surface unchanged; refreshing the recorded version only)")
 
     BASELINE.write_text(json.dumps(current, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {BASELINE.relative_to(BASELINE.parents[2])}")

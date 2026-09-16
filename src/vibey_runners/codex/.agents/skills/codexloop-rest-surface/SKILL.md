@@ -1,7 +1,7 @@
 ---
 name: codexloop-rest-surface
 description: Generated `codexloop api` command tree, api_baseline.json drift gate, and how to refresh the baseline. Use when SDK upgrades change the surface.
-allowed-tools: Read Bash(codexloop api *)
+allowed-tools: Read Bash(codexloop api *) Bash(python tools/refresh_api_baseline.py)
 ---
 
 # codexloop REST surface

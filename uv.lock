@@ -1142,7 +1142,7 @@ requires-dist = [
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.0" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
-    { name = "openai", specifier = ">=3.14.1,<4" },
+    { name = "openai", specifier = "==3.14.1" },
     { name = "packaging", marker = "extra == 'dev'", specifier = ">=24.0" },
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7" },
