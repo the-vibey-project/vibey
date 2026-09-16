@@ -27,8 +27,12 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from vibey_gh.review_contract import REVIEW_CONTRACT
+
 # What the model is actually asked to decide. Kept small on purpose: every field here is
-# one the model can ground in the diff it was given.
+# one the model can ground in the diff it was given -- `REVIEW_CONTRACT.diff_groundable`
+# is where "groundable in a diff" is defined, and `required` is taken from it rather than
+# restated, so the two cannot drift apart.
 REVIEW_SCHEMA = {
     "type": "object",
     "properties": {
@@ -48,31 +52,16 @@ REVIEW_SCHEMA = {
             },
         },
     },
-    "required": ["pass", "summary", "findings"],
+    "required": list(REVIEW_CONTRACT.diff_groundable),
 }
 
 # The documentation-contract half of the primary review's schema. A local model cannot
 # meaningfully certify these from a diff, so they are reported as unevaluated rather than
 # asserted. Emitted as `true` only to keep the payload shape-compatible with whatever
 # consumes `.pass` downstream; the summary states plainly that they were not checked.
-UNEVALUATED_FIELDS = (
-    "complete",
-    "accurate",
-    "human_readable",
-    "opening_accessible",
-    "opening_bluf",
-    "audience_order",
-    "architecture_diagram_complete",
-    "all_capabilities_documented",
-    "all_commands_documented",
-    "all_configuration_documented",
-    "examples_sufficient",
-    "onboarding_sufficient",
-    "operations_sufficient",
-    "security_sufficient",
-    "release_process_sufficient",
-    "links_valid",
-)
+# Both facts -- which fields, and that the `true` is a placeholder rather than an answer --
+# live in `vibey_gh.review_contract`; this is the name the local path knows them by.
+UNEVALUATED_FIELDS = REVIEW_CONTRACT.requires_wider_context
 
 SYSTEM_PROMPT = """\
 You are a code reviewer examining a pull request diff. You are a FALLBACK reviewer running \
@@ -210,11 +199,9 @@ def review(argv: list[str] | None = None) -> int:
 
     verdict["summary"] = (
         f"[LOCAL FALLBACK — {args.model}] {verdict.get('summary', '').strip()} "
-        "The documentation-contract fields were NOT evaluated by this reviewer; "
-        "only the diff itself was reviewed."
+        f"{REVIEW_CONTRACT.unevaluated_notice}"
     ).strip()
-    for field in UNEVALUATED_FIELDS:
-        verdict[field] = True
+    verdict.update(REVIEW_CONTRACT.placeholders())
 
     json.dump(verdict, sys.stdout, indent=2)
     sys.stdout.write("\n")

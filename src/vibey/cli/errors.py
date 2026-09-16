@@ -34,6 +34,14 @@ from vibey.domain.errors import (
 EXIT_USAGE = 2
 EXIT_BLOCKED = 3
 
+# No command lists open gates today, so the honest instruction is the query that
+# does. Kept in one place because three hints end with it.
+_FINDING_A_GATE = (
+    "No command lists open gates yet; find the id with:\n"
+    "  SELECT gate_id, kind, prompt FROM human_gate\n"
+    "  WHERE answered_at IS NULL ORDER BY raised_at;"
+)
+
 # What to suggest next, per error type. Absent means "no honest suggestion" --
 # better to say nothing than to invent a remedy that does not work.
 _NEXT_STEP: dict[type[BaseException], str] = {
@@ -42,16 +50,19 @@ _NEXT_STEP: dict[type[BaseException], str] = {
         "Run `vibey engines` to see why, or `vibey doctor` to check installs and auth."
     ),
     BudgetExceeded: (
-        "Raise the cap in vibey.toml under [budget], or run `vibey cost` to see\n"
-        "where the spend went."
+        "A tripped cap parks a budget_exhausted gate rather than spending more.\n"
+        'Raise it with `vibey answer GATE_ID --raw {"max_dollars": 25}`, quoted\n'
+        'for your shell, or "max_turns" for the turn cap; `vibey cost` shows\n'
+        "where the spend went.\n" + _FINDING_A_GATE
     ),
     EscalationExhausted: (
-        "The work item failed at every rung of the effort ladder. `vibey gates`\n"
-        "lists the human gate it raised."
+        "The work item failed at every rung of the effort ladder and parked a\n"
+        "human gate. Answer it with `vibey answer GATE_ID`.\n" + _FINDING_A_GATE
     ),
     HandoffRejected: (
         "The no-loss gate refused the handoff, so nothing was lost -- the run is\n"
-        "parked instead. `vibey gates` shows what the gate could not carry over."
+        "parked on a human gate instead, whose prompt says what could not be\n"
+        "carried over. Answer it with `vibey answer GATE_ID`.\n" + _FINDING_A_GATE
     ),
     IllegalTransitionError: (
         "The project is not in a phase this command applies to. `vibey status`\n"
