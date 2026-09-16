@@ -2141,3 +2141,76 @@ def test_a_decline_with_nothing_to_point_at_is_not_called_a_defect():
     assert "WITHOUT reporting any finding" in cannot
     assert "not a defect claim about the change" in cannot
     assert "split the pull request" in cannot
+
+
+def _restore_decision_block() -> str:
+    """The `restored != true` branch of release-surfaces' channel-restore step.
+
+    Taken from the RENDERED workflow rather than the template, because the rendered file is
+    what actually runs, and extracted by its own markers so that a rewrite of the block
+    fails this extraction loudly instead of silently testing nothing.
+    """
+    rendered = Path(__file__).resolve().parent.parent / ".github/workflows/release-surfaces.yml"
+    parsed = yaml.safe_load(rendered.read_text(encoding="utf-8"))
+    script = next(
+        step["run"]
+        for job in parsed["jobs"].values()
+        for step in job.get("steps", [])
+        if step.get("name", "").startswith("Restore the other release channel")
+    )
+    lines = script.split("\n")
+    start = next(i for i, line in enumerate(lines) if 'if [ "$restored" != true ]' in line)
+    depth = 0
+    for end, line in enumerate(lines[start:], start):
+        stripped = line.strip()
+        depth += stripped.startswith("if ")
+        depth -= stripped == "fi"
+        if depth == 0:
+            break
+    else:  # pragma: no cover - the extraction below asserts this never happens
+        raise AssertionError("the restore decision block is not closed")
+    return "\n".join(lines[start : end + 1])
+
+
+@pytest.mark.parametrize(
+    "probe, curl_exit, expect_exit, expect_removed",
+    [
+        ("200", 0, 1, False),  # live — refuse, this deploy would destroy it
+        ("301", 0, 1, False),  # redirect is still something being served
+        ("403", 0, 1, False),  # reachable but not readable: not proof of absence
+        ("500", 0, 1, False),  # the server is unwell, which proves nothing
+        ("000", 7, 1, False),  # transport failure: no answer at all
+        ("404", 0, 0, True),  # the only answer that proves it was never published
+    ],
+)
+def test_the_channel_restore_only_treats_an_explicit_404_as_absence(
+    tmp_path, probe, curl_exit, expect_exit, expect_removed
+):
+    """`curl -f` exits non-zero for a timeout, a DNS or TLS failure, a 403 and a 500 alike,
+    so keying the decision on its exit status reads a transient blip as "never published"
+    and deletes a live channel — failing OPEN in the guard whose whole job is to fail
+    closed. Only an explicit 404 may reach the `rmdir`."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "curl").write_text(f'#!/bin/sh\nprintf %s "{probe}"\nexit {curl_exit}\n')
+    (bin_dir / "curl").chmod(0o755)
+    (tmp_path / "pages" / "main").mkdir(parents=True)
+
+    script = "set -euo pipefail\nrestored=false\n" + _restore_decision_block()
+    result = subprocess.run(
+        ["bash", "-c", script],
+        check=False,  # the exit status IS the assertion
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        env={
+            "PATH": f"{bin_dir}:/usr/bin:/bin",
+            "OTHER_CHANNEL": "main",
+            "OTHER_BRANCH": "main",
+            "OTHER_CHANNEL_URL": "https://example.invalid/vibey/main/",
+        },
+    )
+    assert result.returncode == expect_exit, result.stderr or result.stdout
+    assert (not (tmp_path / "pages" / "main").exists()) is expect_removed
+    if expect_exit:
+        assert "refusing to replace it with an empty directory" in result.stdout
