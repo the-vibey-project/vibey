@@ -236,6 +236,40 @@ def test_gh_failures_and_garbage_are_survivable(repos, monkeypatch):
     assert report.draft_releases == ()
 
 
+def test_a_json_object_is_never_read_as_an_empty_listing(repos, monkeypatch):
+    """A listing that answers with an object is a non-answer, and must say so.
+
+    `gh` exits zero and prints an error envelope -- `{"message": "Bad credentials"}` --
+    often enough that this is not a hypothetical. Iterating a dict yields its KEYS, so
+    a caller handed one enumerates field names, matches no branch and no release, and
+    reports a clean survey with no problem recorded: "could not look" wearing the face
+    of "nothing there", which is the one collapse this module exists to prevent.
+    """
+    _work, cfg = repos
+
+    real_run = subprocess.run
+
+    def object_answering_gh(cmd, **kw):
+        if cmd and cmd[0] == "gh":
+
+            class R:
+                returncode = 0
+                stdout = '{"message": "Bad credentials", "status": "401"}'
+
+            return R()
+        return real_run(cmd, **kw)
+
+    monkeypatch.setattr(tidy.subprocess, "run", object_answering_gh)
+    report = tidy.survey(cfg)
+
+    assert report.draft_releases == ()
+    # Both listings are unsurveyable, and both say so rather than reading as clean.
+    assert len(report.problems) == 2
+    assert all("object where a listing was expected" in problem for problem in report.problems)
+    assert any("merged branches were not judged" in problem for problem in report.problems)
+    assert any("draft releases were not judged" in problem for problem in report.problems)
+
+
 def test_tidy_config_loads_from_toml(tmp_path: Path):
     (tmp_path / ".vibey-gh.toml").write_text(
         '[tidy]\nenabled = false\nkeep_branches = ["lts"]\ntrust_forge_deletions = false\n',
