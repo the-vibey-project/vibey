@@ -1616,6 +1616,44 @@ def test_promotion_checks_provenance_without_rewriting_or_reauditing_history():
     assert 'vibey-gh check --ci --commits "${BASE_SHA}..${HEAD_SHA}"' in text
 
 
+def test_the_provenance_job_carries_no_forge_credential():
+    """The job that runs contributor-controlled code must never hold a token.
+
+    `provenance.yml` installs the tooling from the CHECKED-OUT TREE where a repository
+    self-hosts (`self_source`), and it runs on `pull_request`. So the step that invokes
+    `vibey-gh` is running the contributor's own code, and any credential in that
+    environment is a credential handed to whatever the pull request contains.
+
+    This was almost lost once: `check --ci` also surveys cloud clutter through `gh`, that
+    survey reports "not surveyed" without a token, and the obvious repair is to add
+    `GH_TOKEN` and `pull-requests: read` right here. The obvious repair is the
+    vulnerability. This test exists so the next person making that fix is stopped by a
+    red suite rather than by a reviewer who happens to notice -- the survey belongs in a
+    job whose checkout is trusted, not in this one.
+    """
+    text = (WORKFLOWS / "provenance.yml").read_text(encoding="utf-8")
+    workflow = yaml.safe_load(text)
+
+    # Structural, not textual: the comment above the permissions block names `GH_TOKEN`
+    # precisely so nobody re-adds it, and a raw substring search would read that warning
+    # as the very thing it warns about. What matters is what is ASSIGNED.
+    declared: list[dict] = [workflow.get("env") or {}]
+    for job in workflow["jobs"].values():
+        declared.append(job.get("env") or {})
+        declared.extend(step.get("env") or {} for step in job.get("steps", []))
+
+    for env in declared:
+        assert "GH_TOKEN" not in env, "the provenance job must not receive a forge credential"
+        secrets = [value for value in env.values() if "secrets." in str(value)]
+        assert not secrets, "the provenance job must not receive any secret"
+
+    # Read-only on contents alone. Anything wider is a wider grant to that same code.
+    assert workflow["permissions"] == {"contents": "read"}
+    # The premise the assertions above rest on: this job really does install and run the
+    # checkout's own tooling, so if that ever stops being true these can be revisited.
+    assert 'python -m pip install --quiet -e "$self"' in text
+
+
 def test_pin_version_pins_every_managed_templates_tooling_install(tmp_path: Path):
     """`install.pin_version` must reach every managed workflow, not just the ones the
     issue happened to confirm — a config key that only fixes some templates leaves the
