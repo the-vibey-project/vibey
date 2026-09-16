@@ -1275,6 +1275,17 @@
       }
     },
     {
+      "name": "tor-and-onion-networks",
+      "source": "./plugins/tor-and-onion-networks",
+      "description": "Tor and Onion Networks: what Tor promises and what it deliberately does not, the history from NRL onion routing to Arti, cells and channels and the telescoping circuit handshake, ntor and ntor-v3, the tor1 to CGO cell-cryptography migration, SENDME flow control, congestion control and Conflux, relays and flags and the nine directory authorities, the hourly consensus and bandwidth weights, guard pinning and path restrictions and happy families, v3 onion services end to end, blinded descriptor keys, introduction and rendezvous points, client authorization, vanguards and proof-of-work and Onionbalance, bridges and pluggable transports, obfs4 and Snowflake and WebTunnel and Conjure, the 2026 DTLS fingerprinting campaign, the attack literature from end-to-end confirmation through website fingerprinting to client-side compromise, the 2026 software ecosystem, Tor against I2P and mixnets and VPNs, governance and funding, and an operations handbook covering SOCKS integration, the control port, ephemeral and long-lived onion services, relays and bridges and exits, transparent-proxy gateways, hardware builds, verification and abuse handling.",
+      "version": "0.1.0",
+      "category": "security",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
       "name": "trading-mechanics",
       "source": "./plugins/trading-mechanics",
       "description": "Trading Mechanics: what the outcome evidence actually shows about retail trading, market microstructure, orders and execution, the asset classes, derivatives, technical analysis assessed honestly, quantitative and factor approaches, swing and day trading, real versus apparent arbitrage, forex, DeFi mechanics, risk and position sizing, costs and frictions, backtesting pitfalls, psychology and harm, and regulation and tax. A mechanics reference, not investment advice or a strategy.",
