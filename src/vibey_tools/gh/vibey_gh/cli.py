@@ -516,6 +516,8 @@ def _fit(args) -> int:
         f" swap {machine.swap_used_gb}/{machine.swap_total_gb} GB —"
         f" {machine.available_gb} GB available"
     )
+    if not machine.readable:
+        print("vibey-gh fit: machine memory could not be read — that reading is unknown, not empty")
     if model is None:
         print(f"vibey-gh fit: model {args.model} could not be read from the runner")
     else:

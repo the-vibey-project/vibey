@@ -34,20 +34,28 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass, field
+
+from vibey_gh.interfaces.memory_sampler_interface import MemorySamplerInterface
+from vibey_gh.interfaces.text_file_reader_interface import TextFileReaderInterface
 
 __all__ = [
     "ADMIT",
     "DEFER",
     "FLOOR",
+    "DarwinMemorySampler",
     "Estimate",
     "Fit",
+    "LinuxMemorySampler",
     "Machine",
     "Model",
     "Observation",
+    "TextFileReader",
     "decide",
     "estimate_from",
     "headroom_gb",
+    "machine_sampler",
     "sample_machine",
     "sample_model",
     "saturating_wait",
@@ -65,6 +73,31 @@ _PAGE_KEYS = (
     "Pages occupied by compressor",
 )
 
+# Linux states its memory in files rather than in `sysctl`, and inside a container the
+# host's file is the wrong answer: `/proc/meminfo` is the *host's* memory even when the
+# cgroup will kill this process long before it reaches that much. So the cgroup limit is
+# preferred when one exists, v2 first and v1 after it, and `/proc/meminfo` is the fallback
+# for a machine that is not in a container at all. Every path is a default, not a
+# constant: a caller on a machine that mounts its cgroup hierarchy elsewhere passes its
+# own (ADR-0018 -- a hard-coded value that could have been a key is a decision taken away
+# from the next adopter).
+LINUX_MEMINFO_PATH = "/proc/meminfo"
+LINUX_CGROUP_MEMORY_LIMIT_PATHS = (
+    "/sys/fs/cgroup/memory.max",  # cgroup v2
+    "/sys/fs/cgroup/memory/memory.limit_in_bytes",  # cgroup v1
+)
+LINUX_CGROUP_MEMORY_USAGE_PATHS = (
+    "/sys/fs/cgroup/memory.current",
+    "/sys/fs/cgroup/memory/memory.usage_in_bytes",
+)
+# v2 only, deliberately. v1's `memory.memsw.*` counts memory *plus* swap in one number, so
+# reading it as swap would overstate the ceiling -- the one direction doctrine 10 forbids.
+# A v1 container therefore reports no paging space of its own, which understates the
+# ceiling and fails towards the floor rather than towards a confident wrong admission.
+LINUX_CGROUP_SWAP_LIMIT_PATHS = ("/sys/fs/cgroup/memory.swap.max",)
+LINUX_CGROUP_SWAP_USAGE_PATHS = ("/sys/fs/cgroup/memory.swap.current",)
+_MEMINFO_KEYS = ("MemTotal", "MemAvailable", "MemFree", "SwapTotal", "SwapFree")
+
 
 @dataclass(frozen=True)
 class Machine:
@@ -74,6 +107,12 @@ class Machine:
     free_gb: float
     swap_used_gb: float
     swap_total_gb: float
+    # Whether this machine stated its own size at all. A machine that could not be read
+    # reports zeros -- and zero is not a measurement, it is the absence of one. Without
+    # this flag the two are indistinguishable, and an unreadable machine looks like a
+    # machine with room for nothing, which is exactly the silent failure doctrine 10
+    # forbids. `decide()` turns a false here into a loud FLOOR.
+    readable: bool = True
 
     @property
     def available_gb(self) -> float:
@@ -137,47 +176,197 @@ def _run(*cmd: str) -> str:
     return proc.stdout if proc.returncode == 0 else ""
 
 
-def sample_machine() -> Machine:
-    """Read the hardware side. Unreadable fields report zero rather than a guess —
-    a projection built on invented numbers is worse than no projection."""
-    total_bytes = 0
-    raw = _run("sysctl", "-n", "hw.memsize").strip()
-    if raw.isdigit():
-        total_bytes = int(raw)
+class TextFileReader(TextFileReaderInterface):
+    """Reads a file the kernel writes, or says it could not be read.
 
-    free_gb = 0.0
-    stat = _run("vm_stat")
-    if stat:
-        page_size = 4096
-        first = stat.splitlines()[0] if stat.splitlines() else ""
-        for token in first.replace(")", " ").split():
-            if token.isdigit():
-                page_size = int(token)
-                break
-        pages: dict[str, int] = {}
-        for line in stat.splitlines():
-            key, _, value = line.partition(":")
-            digits = value.strip().rstrip(".")
-            if key.strip() in _PAGE_KEYS and digits.isdigit():
-                pages[key.strip()] = int(digits)
-        free_pages = pages.get("Pages free", 0) + pages.get("Pages inactive", 0)
-        free_gb = round(free_pages * page_size / 1e9, 2)
+    Nothing here interprets the contents; that belongs to whichever sampler asked. An
+    unreadable file is `None` rather than an empty string, because "this machine has no
+    such file" and "this file is empty" lead to different verdicts.
+    """
 
-    swap_used = swap_total = 0.0
-    swap = _run("sysctl", "-n", "vm.swapusage")
-    for token in swap.replace("=", " ").split():
-        if token.endswith("M") and token[:-1].replace(".", "", 1).isdigit():
-            gb = float(token[:-1]) / 1024
-            if swap_total == 0.0:
-                swap_total = round(gb, 2)
-            elif swap_used == 0.0:
-                swap_used = round(gb, 2)
-    return Machine(
-        total_gb=round(total_bytes / 1e9, 2),
-        free_gb=free_gb,
-        swap_used_gb=swap_used,
-        swap_total_gb=swap_total,
-    )
+    def read(self, path: str) -> str | None:
+        try:
+            with open(path, encoding="utf-8") as handle:
+                return handle.read()
+        except OSError:
+            return None
+
+
+class DarwinMemorySampler(MemorySamplerInterface):
+    """The hardware side on macOS, read from `sysctl` and `vm_stat`.
+
+    Unreadable fields report zero rather than a guess -- a projection built on invented
+    numbers is worse than no projection -- and a machine that would not state its own
+    size reports `readable=False` so the caller can fail loudly instead.
+    """
+
+    def sample(self) -> Machine:
+        total_bytes = 0
+        raw = _run("sysctl", "-n", "hw.memsize").strip()
+        if raw.isdigit():
+            total_bytes = int(raw)
+
+        free_gb = 0.0
+        stat = _run("vm_stat")
+        if stat:
+            page_size = 4096
+            first = stat.splitlines()[0] if stat.splitlines() else ""
+            for token in first.replace(")", " ").split():
+                if token.isdigit():
+                    page_size = int(token)
+                    break
+            pages: dict[str, int] = {}
+            for line in stat.splitlines():
+                key, _, value = line.partition(":")
+                digits = value.strip().rstrip(".")
+                if key.strip() in _PAGE_KEYS and digits.isdigit():
+                    pages[key.strip()] = int(digits)
+            free_pages = pages.get("Pages free", 0) + pages.get("Pages inactive", 0)
+            free_gb = round(free_pages * page_size / 1e9, 2)
+
+        swap_used = swap_total = 0.0
+        swap = _run("sysctl", "-n", "vm.swapusage")
+        for token in swap.replace("=", " ").split():
+            if token.endswith("M") and token[:-1].replace(".", "", 1).isdigit():
+                gb = float(token[:-1]) / 1024
+                if swap_total == 0.0:
+                    swap_total = round(gb, 2)
+                elif swap_used == 0.0:
+                    swap_used = round(gb, 2)
+        return Machine(
+            total_gb=round(total_bytes / 1e9, 2),
+            free_gb=free_gb,
+            swap_used_gb=swap_used,
+            swap_total_gb=swap_total,
+            readable=total_bytes > 0,
+        )
+
+
+class LinuxMemorySampler(MemorySamplerInterface):
+    """The hardware side on Linux, read from the kernel's own files.
+
+    `/proc/meminfo` describes the machine; inside a container it describes the *host*,
+    which is the wrong machine -- the process is killed at the cgroup limit long before
+    it reaches the host's total. So a cgroup limit, when one exists, wins over
+    `/proc/meminfo`: v2 (`memory.max`) first, then v1 (`memory.limit_in_bytes`). A value
+    of `max`, or a limit at or above what the host itself has, is not a limit at all --
+    that is how both cgroup versions spell "unlimited" -- and the host's own numbers
+    stand.
+
+    When neither answers, every field is zero and `readable` is false: doctrine 10's
+    floor, stated loudly, rather than a machine that silently appears to have no memory.
+
+    Every path is injected and every read goes through `TextFileReaderInterface`, so a
+    test on any platform hands this sampler exact file contents instead of patching
+    module attributes (sub-doctrine 9.b).
+    """
+
+    def __init__(
+        self,
+        reader: TextFileReaderInterface | None = None,
+        *,
+        meminfo_path: str = LINUX_MEMINFO_PATH,
+        cgroup_limit_paths: tuple[str, ...] = LINUX_CGROUP_MEMORY_LIMIT_PATHS,
+        cgroup_usage_paths: tuple[str, ...] = LINUX_CGROUP_MEMORY_USAGE_PATHS,
+        cgroup_swap_limit_paths: tuple[str, ...] = LINUX_CGROUP_SWAP_LIMIT_PATHS,
+        cgroup_swap_usage_paths: tuple[str, ...] = LINUX_CGROUP_SWAP_USAGE_PATHS,
+    ) -> None:
+        self._reader: TextFileReaderInterface = TextFileReader() if reader is None else reader
+        self._meminfo_path = meminfo_path
+        self._cgroup_limit_paths = cgroup_limit_paths
+        self._cgroup_usage_paths = cgroup_usage_paths
+        self._cgroup_swap_limit_paths = cgroup_swap_limit_paths
+        self._cgroup_swap_usage_paths = cgroup_swap_usage_paths
+
+    def sample(self) -> Machine:
+        fields = self._meminfo()
+        total = fields.get("MemTotal", 0)
+        # MemAvailable is the kernel's own answer to "what could a new process get?" and
+        # is the right number here; MemFree, which ignores reclaimable cache, is only the
+        # fallback for a kernel too old to publish it.
+        free = fields.get("MemAvailable", fields.get("MemFree", 0))
+        swap_total = fields.get("SwapTotal", 0)
+        swap_used = max(swap_total - fields.get("SwapFree", 0), 0)
+
+        limit = self._first_int(self._cgroup_limit_paths)
+        if limit is not None and (total <= 0 or limit < total):
+            usage = self._first_int(self._cgroup_usage_paths)
+            if usage is None:
+                # Without a usage reading the host's free memory is still a ceiling on
+                # what this cgroup can be holding free, so take the smaller of the two.
+                free = min(free, limit)
+            else:
+                free = max(limit - usage, 0)
+            total = limit
+            # The host's paging space is not this container's to claim.
+            swap_total = self._first_int(self._cgroup_swap_limit_paths) or 0
+            swap_used = min(self._first_int(self._cgroup_swap_usage_paths) or 0, swap_total)
+
+        return Machine(
+            total_gb=round(total / 1e9, 2),
+            free_gb=round(free / 1e9, 2),
+            swap_used_gb=round(swap_used / 1e9, 2),
+            swap_total_gb=round(swap_total / 1e9, 2),
+            readable=total > 0,
+        )
+
+    def _meminfo(self) -> dict[str, int]:
+        """The `/proc/meminfo` keys this calculus needs, in bytes."""
+        text = self._reader.read(self._meminfo_path)
+        if text is None:
+            return {}
+        fields: dict[str, int] = {}
+        for line in text.splitlines():
+            key, _, rest = line.partition(":")
+            name = key.strip()
+            parts = rest.split()
+            if name not in _MEMINFO_KEYS or not parts or not parts[0].isdigit():
+                continue
+            value = int(parts[0])
+            if len(parts) > 1 and parts[1].lower() == "kb":
+                value *= 1024
+            fields[name] = value
+        return fields
+
+    def _first_int(self, paths: tuple[str, ...]) -> int | None:
+        """The first of these files that holds a plain integer, or `None`.
+
+        cgroup v2 writes `max` for "no limit", which is not an integer and so falls
+        through to the next path and finally to `None` -- which is the honest answer:
+        this hierarchy states no number here.
+        """
+        for path in paths:
+            raw = self._reader.read(path)
+            if raw is not None and raw.strip().isdigit():
+                return int(raw.strip())
+        return None
+
+
+def machine_sampler(platform_name: str = "") -> MemorySamplerInterface:
+    """The sampler that can actually read this machine.
+
+    Module-level for the reason given on `sample_machine`; it is the selection itself,
+    kept nameable so the choice can be asserted directly instead of inferred from a
+    reading that differs on every machine the suite runs on.
+
+    `platform_name` defaults to this interpreter's own `sys.platform`, and is a parameter
+    so either sampler can be asked for from either kind of machine.
+    """
+    system = platform_name or sys.platform
+    if system.startswith("linux"):
+        return LinuxMemorySampler()
+    return DarwinMemorySampler()
+
+
+def sample_machine(platform_name: str = "") -> Machine:
+    """Read the hardware side on whichever machine this actually is.
+
+    Module-level, and deliberately so under ADR-0016: this name is `vibey_gh`'s published
+    entry point into the fit calculus -- `cli.py` and `fitloop.py` already import it by
+    name, and adopters call it -- so it stays a function and does nothing but ask the
+    right sampler. Every measurement lives in a class with a declared seam.
+    """
+    return machine_sampler(platform_name).sample()
 
 
 def sample_model(name: str, base_url: str = "http://127.0.0.1:11434") -> Model | None:
@@ -290,6 +479,22 @@ def decide(
                 "the model's own specs could not be read — doctrine 10 forbids"
                 " proceeding on an assumed model; start the runner or name a model"
                 " it holds"
+            ),
+            projected_wait_s=0.0,
+            projected_service_s=0.0,
+            headroom_gb=0.0,
+            estimate=est,
+        )
+
+    if not machine.readable:
+        return Fit(
+            verdict=FLOOR,
+            reason=(
+                "this machine would not state its own memory — doctrine 10 forbids"
+                " projecting onto a machine whose specs could not be read, and a zero"
+                " here is the absence of a measurement rather than an empty machine"
+                " (Linux: neither /proc/meminfo nor a cgroup limit was readable;"
+                " macOS: sysctl and vm_stat answered nothing)"
             ),
             projected_wait_s=0.0,
             projected_service_s=0.0,

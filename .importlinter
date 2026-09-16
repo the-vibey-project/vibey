@@ -1,6 +1,7 @@
 [importlinter]
 root_packages =
     vibey
+    vibey_gh
 include_external_packages = True
 
 [importlinter:contract:onion-layers]
@@ -66,3 +67,21 @@ forbidden_modules =
     vibey.cli
     vibey.tui
     vibey.bootstrap
+
+# The same rule for the first `interfaces/` package in the absorbed vibey-gh (ADR-0016:
+# tenants converge module by module, and a new module arrives with its seam declared).
+# `vibey_gh.fit` is not forbidden here and cannot be: the memory-sampler seam is stated in
+# terms of `fit.Machine`, a frozen data record, imported under `TYPE_CHECKING` only -- the
+# same standing `vibey.config`'s settings have. Naming the shape a seam speaks in is
+# declaring; importing the code that implements it is consuming, and that is what this
+# list forbids.
+[importlinter:contract:vibey-gh-interfaces-declare-only]
+name = vibey_gh interfaces declare seams, never consume them
+type = forbidden
+source_modules =
+    vibey_gh.interfaces
+forbidden_modules =
+    vibey_gh.cli
+    vibey_gh.fitloop
+    vibey_gh.doctor
+    vibey_gh.install

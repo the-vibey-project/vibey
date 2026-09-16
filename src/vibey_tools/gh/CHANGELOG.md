@@ -5,6 +5,18 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Read the machine's memory on Linux, and fail loudly on a machine that cannot be read.
+  `vibey-gh fit` sampled memory only through macOS's `sysctl` and `vm_stat`, so on Linux
+  every field came back zero and a machine with 32 GB free was reported as having none —
+  a silent wrong answer where doctrine 10 requires a loud one. A `LinuxMemorySampler` now
+  reads `/proc/meminfo`, and prefers the cgroup limit when one exists
+  (`/sys/fs/cgroup/memory.max`, then `memory/memory.limit_in_bytes`) because inside a
+  container `/proc/meminfo` describes the host rather than the machine the work will run
+  on. When neither can be read, `Machine.readable` is false, `decide()` returns `floor`
+  with the reason, and the CLI says the reading is unknown rather than empty. The samplers
+  sit behind `vibey_gh/interfaces/` (ADR-0016) and read through an injected file-reader
+  seam, so the Linux paths are covered by fixtures on any platform.
+
 - Add `vibey-gh book --site-dir site --title T --author A`, which exports the already-built
   documentation site as a book: a valid EPUB 3.0 package with Dublin Core metadata, and a
   print-ready HTML sized to the standard 6in x 9in KDP paperback trim. Chapters come from
