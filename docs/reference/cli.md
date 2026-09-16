@@ -44,7 +44,7 @@ with payloads.
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
 | `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, `--provider`, or `--azure` value. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 
@@ -333,8 +333,8 @@ every phase for one project.
 
 | Option | Default | What it does |
 |---|---|---|
-| `--engines LIST` | the four paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). |
-| `--parallelism N` / `-j N` | `1` | Concurrent job loops, 1–16. The effective count is clamped to twice the number of allowed paid engines and to the CPU count, and is never below 1. |
+| `--engines LIST` | the four paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). A list that matches none of the worker's engines — `--engines qwenloop` with the feature off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)` and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. |
+| `--parallelism N` / `-j N` | `1` | Concurrent job loops, 1–16. The effective count is clamped to twice the number of allowed engines and to the CPU count, and is never below 1. |
 | `--once` | off | Process one job and exit (`processed one job` or `no ready job`), instead of running forever. |
 | `--provider {scripted,claudeloop,qwenloop}` | `scripted` | DESIGN and decomposition providers. `scripted` is fully offline. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `qwenloop` uses the sovereign local DESIGN provider (reads `$VIBEY_EVIDENCE_DIR`) with scripted decomposition. Any other value exits 2. |
 | `--max-turns N` | `25` | Turn cap per claudeloop DESIGN or decomposition session (min 1). |
@@ -345,8 +345,9 @@ every phase for one project.
 
 The VISUAL_DESIGN stage always uses the scripted visual provider.
 
-On start the worker preflights every allowed engine. Engines with no passing
-recorded conformance produce
+On start the worker preflights every allowed engine — including `qwenloop`
+when the feature is on, so the standby engine is visible in `vibey engines`
+like every other. Engines with no passing recorded conformance produce
 ``warning: no recorded conformance for <names> -- engine-driven jobs will not select them until `vibey doctor --conformance --record` passes``.
 It then prints
 `worker started: project=<name> engines=<list or all> parallelism=<n> provider=<p>`.
