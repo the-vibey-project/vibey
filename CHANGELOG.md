@@ -15,6 +15,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 ### Bug Fixes
 
 * **rotation:** an engine that ran out of credits is probed again once its backoff elapses, instead of being excluded for the rest of the project until someone edited `engine_health` by hand; the selector now half-opens on `probe_next_at` as well as `resets_at`. An engine opened by `AuthenticationFailed` still gets no clock-based probe -- waiting cannot fix a credential -- but a preflight whose auth succeeds half-opens it, so re-authenticating is enough to bring it back.
+* **design:** the ledger names the engine that actually did the DESIGN work. `design.interview` and
+  `design.research` events were attributed to claudeloop whatever `--provider` was in force, so a
+  sovereign run on qwenloop -- and a scripted run with no engine at all -- wrote a false actor into
+  an append-only record. Each `DesignProvider` now declares its own `engine_id` (`None` for the
+  scripted one) and the composition root reads it; the `design.synthesize` exclusion follows the
+  same derived value ([#115](https://github.com/the-vibey-project/vibey/issues/115))
 
 ## [0.7.0] (2026-09-15)
 
