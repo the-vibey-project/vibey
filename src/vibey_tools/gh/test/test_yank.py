@@ -10,7 +10,6 @@ would have caught it, and it talks to the network on purpose.
 from __future__ import annotations
 
 import json
-import os
 import urllib.error
 from pathlib import Path
 
@@ -210,10 +209,7 @@ def test_the_cli_reports_a_skip(monkeypatch, capsys):
     assert "disabled" in capsys.readouterr().out
 
 
-@pytest.mark.skipif(
-    os.environ.get("VIBEY_GH_NETWORK_TESTS") != "1",
-    reason="talks to PyPI; set VIBEY_GH_NETWORK_TESTS=1",
-)
+@pytest.mark.network
 @pytest.mark.parametrize(
     "url", ["https://test.pypi.org/legacy/", "https://upload.pypi.org/legacy/"]
 )
