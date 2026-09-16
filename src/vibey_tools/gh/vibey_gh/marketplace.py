@@ -52,6 +52,16 @@ class MarketplaceRenderer:
         owner: dict[str, Any] = {}
         for member in members:
             manifest = self._member(cfg, member)
+            if manifest["name"] == cfg.marketplace.name:
+                # Claude Code registers one marketplace per NAME per user, so a member
+                # that answers to the root's name is not a duplicate entry -- it is the
+                # same registration twice, and whichever is added second silently
+                # replaces the first. The root is rendered from the members, so the
+                # collision is between a thing and its own source.
+                raise MarketplaceError(
+                    f"{member}: member marketplace name {manifest['name']!r} collides "
+                    "with the root marketplace name"
+                )
             if not owner:
                 owner = manifest["owner"]
             # The schema keeps a marketplace's version under `metadata`; older manifests
