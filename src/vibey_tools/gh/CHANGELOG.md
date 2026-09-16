@@ -15,6 +15,26 @@ This file follows Keep a Changelog and semantic versioning conventions.
   behaviour they have) splits the job into a check that always runs, a rewrite behind the
   key, and a refusal that names the offending subjects when the key is off.
 
+- Stop the clean-repo survey reading a JSON object as an empty listing, and record why it
+  must stay uncredentialed in CI. `_gh_json` answered `(value, "")` for a JSON *object* as
+  readily as for a list, and both of its call sites are listing endpoints; iterating a dict
+  yields its keys, so an error envelope such as `{"message": "Bad credentials"}` would
+  enumerate field names, match no branch and no release, and report a clean survey with no
+  problem recorded — "could not look" wearing the face of "nothing there", which is the one
+  collapse that seam exists to prevent. Listings now go through `_gh_list`, which names a
+  non-list answer as the non-answer it is; `_gh_json` keeps its general contract for any
+  future endpoint that does return an object.
+
+  The survey still reports `not surveyed` inside `Provenance`, and that is now a decision
+  rather than an oversight. Supplying `GH_TOKEN` there was tried and reverted: the job
+  installs the tooling from the *checked-out tree* where a repository self-hosts, so on a
+  pull request the credentialed step would be running the contributor's own code, and a
+  token in that environment is a token handed to whatever the pull request contains. The
+  template now says so where the mistake would be made, and a new template contract test
+  asserts structurally that no step of that job declares `GH_TOKEN` or any `secrets.`
+  value — structurally, because the warning comment names `GH_TOKEN` and a text search
+  would read the warning as the fault. A credentialed survey belongs in a job whose
+  checkout is trusted, which is its own change.
 - Make the package's own 100% branch floor reachable without a network, and gate it in CI.
   The branch that records a re-locked `uv.lock` after a version bump had exactly one
   reader: a test that resolves against a real package index. Offline the suite landed at
