@@ -34,6 +34,7 @@ from vibey.application.design import (
     ResearchResult,
     build_question_batch,
 )
+from vibey.domain.engine import EngineId
 from vibey.domain.spec import (
     AcceptanceCriterion,
     Constraint,
@@ -176,6 +177,10 @@ class SovereignResearchUnavailable(RuntimeError):
 
 class QwenloopDesignProvider:
     """DESIGN on a local model, over Ollama's chat API with a compiled grammar."""
+
+    #: The sovereign path's actor. Doctrine 8.a is only auditable if the
+    #: ledger says qwenloop when qwenloop is what ran.
+    engine_id: EngineId | None = EngineId.QWENLOOP
 
     def __init__(
         self,
