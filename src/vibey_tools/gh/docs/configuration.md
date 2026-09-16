@@ -576,7 +576,7 @@ a workflow run applies it.
 
 ## `[workflow_names]`
 
-The display names of the managed workflows. They are keys rather than constants because
+The display names of workflows that the rendered templates depend on.
 several features match on them — `release-surfaces.yml` triggers on the `Release` workflow
 completing, and `[pr_automation] scan_workflows` names workflows by their display name — so a
 repository that renames one has to be able to say so.
