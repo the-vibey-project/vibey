@@ -16,7 +16,11 @@ from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
 from vibey.application.build_implement_handler import BuildImplementHandler
 from vibey.application.build_integrate_handler import BuildIntegrateHandler
-from vibey.application.build_verify_handler import BuildVerifyHandler, VerifyRepairPolicy
+from vibey.application.build_verify_handler import (
+    BuildVerifyHandler,
+    VerifyIndependencePolicy,
+    VerifyRepairPolicy,
+)
 from vibey.application.deploy_acceptance_handler import DeployAcceptanceHandler
 from vibey.application.deploy_design_bridge import DeployDesignBridgeHandler
 from vibey.application.deploy_design_handler import (
@@ -239,6 +243,41 @@ async def preflight_sweep(
     )
 
 
+def _independent_review_required(config: Mapping[str, object]) -> bool:
+    """Whether this project refuses a verify the implementer reviews itself.
+
+    Default False: independence is waived when the pool cannot supply a second
+    reviewer, because the measured alternative on a one-engine pool was BUILD
+    deferring forever with no park and nothing in the ledger. A project that
+    would rather stall than accept a self-review sets
+    ``verify.require_independent_review = true`` and gets the strict rule back
+    (ADR-0018: the choice belongs to the adopter, not to this file; ADR-0035
+    records why the permissive reading is the default).
+    """
+    verify = config.get("verify")
+    return isinstance(verify, Mapping) and verify.get("require_independent_review") is True
+
+
+def _independence_policy(
+    config: Mapping[str, object], pool: frozenset[EngineId], clock: Clock
+) -> VerifyIndependencePolicy | None:
+    """The verify-independence policy this project's config asks for, or None.
+
+    A pool with nobody but the implementer in it verifies its own work and says
+    so in the ledger, rather than deferring forever -- unless the project asked
+    for the strict rule, in which case no policy is wired and the handler keeps
+    failing such a verify (ADR-0035).
+
+    Named rather than inlined at the call site so both arms are reachable from a
+    test: the composition root builds its handlers inside closures that only run
+    once a real job is dispatched, which would otherwise leave the strict arm
+    exercised only by an end-to-end run against a live database.
+    """
+    if _independent_review_required(config):
+        return None
+    return VerifyIndependencePolicy(pool=pool, clock=clock)
+
+
 def _qwenloop_enabled(config: Mapping[str, object]) -> bool:
     override = os.environ.get("VIBEY_FEATURE_QWENLOOP")
     if override is not None:
@@ -348,6 +387,7 @@ def build_full_worker(
             repair=VerifyRepairPolicy(
                 ledger_reader=resources.ledger, clock=clock, gates=resources.gates
             ),
+            independence=_independence_policy(project.config, engine_provider.pool, clock),
         )
         return _recording(handler, adapter)
 
