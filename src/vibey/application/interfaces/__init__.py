@@ -44,7 +44,9 @@ from vibey.application.interfaces.design import (
 from vibey.application.interfaces.engines import (
     EngineAdapter,
     EngineHealthRepository,
+    EngineHealthServiceInterface,
     EngineProvider,
+    EngineSelectorInterface,
     RotationCursorRepository,
 )
 from vibey.application.interfaces.gates import (
@@ -115,7 +117,9 @@ __all__ = [
     "DesignSpecRepository",
     "EngineAdapter",
     "EngineHealthRepository",
+    "EngineHealthServiceInterface",
     "EngineProvider",
+    "EngineSelectorInterface",
     "RotationCursorRepository",
     "Failure",
     "GateResult",

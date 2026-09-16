@@ -2,7 +2,7 @@
 import asyncio
 import json
 import os
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
@@ -801,7 +801,7 @@ def test_the_feature_flag_reads_the_environment_first(
 def test_the_feature_flag_falls_back_to_project_config(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Same precedence as `bootstrap._qwenloop_enabled`, so the health check and the
+    """Same precedence as `bootstrap.qwenloop_enabled`, so the health check and the
     worker can never disagree about which engines exist."""
     from vibey.cli.main import _qwenloop_feature_enabled
 
@@ -1209,6 +1209,67 @@ def test_worker_engines_allow_list_without_claudeloop(tmp_path: Path) -> None:
         res = runner.invoke(app, ["worker", "--once", "--engines", "agyloop"])
     assert res.exit_code == 0, res.output
     assert "no ready job" in res.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_refuses_an_allow_list_that_matches_no_engine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--engines qwenloop` without the feature switch used to start a worker holding
+    zero adapters, which then deferred every engine-driven job every five minutes,
+    silently, forever. Nothing downstream can recover from that, so the allow-list has
+    to be refused at startup -- with the reason and the switch that fixes it."""
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("no-engine-proj", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once", "--engines", "qwenloop"])
+    assert res.exit_code == 2, res.output
+    assert "matches none of this worker's engines" in res.output
+    assert "claudeloop" in res.output
+    assert "VIBEY_FEATURE_QWENLOOP=1" in res.output
+    assert "worker started" not in res.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_sweeps_qwenloop_when_the_feature_is_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With the feature on, qwenloop is an engine this worker really runs, so it has to
+    be preflighted and warned about like every other one. It was the single engine the
+    startup sweep could not see: the worker selected it while its health row stayed
+    empty, so the operator depending on it had no way to learn it was ineligible."""
+    monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "1")
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("standby-proj", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once", "--engines", "qwenloop"])
+    assert res.exit_code == 0, res.output
+    assert "no recorded conformance for qwenloop" in res.output
+    assert "no ready job" in res.output
+
+    async def check() -> tuple[str, ...]:
+        async with build_app() as resources:
+            latest = await resources.projects.get_latest()
+            assert latest is not None
+            records = await resources.engine_health_service.list_for_project(latest.project_id)
+            return tuple(sorted(r.engine_id.value for r in records))
+
+    assert asyncio.run(check()) == ("qwenloop",)
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1730,6 +1791,45 @@ def test_recover_all_projects(tmp_path: Path) -> None:
     result = runner.invoke(app, ["recover", "--all"])
     assert result.exit_code == 0
     assert "Recovered 0 stuck job(s)." in result.stdout
+
+
+def test_recover_counts_the_jobs_it_put_back(tmp_path: Path) -> None:
+    """The bug this guards: the count came from a pattern written
+    r"UPDATE (\\d+)" -- a doubled backslash, so it looked for a literal
+    backslash and never matched asyncpg's "UPDATE 1" status tag. Every
+    recovery, however many rows it reset, reported `Recovered 0 stuck job(s).`
+    """
+
+    async def seed() -> UUID:
+        async with build_app() as resources:
+            project = await resources.projects.create(
+                "recover-count", tmp_path, max_cycles=1, config={}
+            )
+            await resources.jobs.enqueue(
+                EnqueueRequest(
+                    project_id=project.project_id,
+                    cycle=project.cycle,
+                    phase=Phase.INTAKE,
+                    kind="test.work",
+                    idempotency_key=idempotency_key(
+                        project.project_id, project.cycle, "test.work", "1"
+                    ),
+                    requirement={},
+                )
+            )
+            # A worker that crashed mid-job leaves exactly this behind: a job
+            # in `leased`, with a lease nobody will ever heartbeat again.
+            leased = await resources.jobs.claim(
+                project.project_id, owner="crashed-worker", lease=timedelta(minutes=5)
+            )
+            assert leased is not None
+            return project.project_id
+
+    project_id = asyncio.run(seed())
+
+    result = runner.invoke(app, ["recover", "--project", str(project_id)])
+    assert result.exit_code == 0
+    assert "Recovered 1 stuck job(s)." in result.stdout
 
 
 def test_recover_with_project(tmp_path: Path) -> None:
