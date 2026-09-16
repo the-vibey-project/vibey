@@ -380,11 +380,16 @@ class PrAutomationFallbackConfig:
     request. This runs a local model on a self-hosted runner in that case only — never in
     place of a review that actually ran and returned findings.
 
-    Off by default, deliberately. It requires a self-hosted runner, which GitHub says
-    should "almost never be used for public repositories" because any user can open a pull
-    request against them, so no repository should inherit this path without asking for it.
-    `trusted_only` keeps fork pull requests away from the runner entirely; leaving it true
-    is what makes the configuration defensible on a public repository.
+    ON by default, per sub-doctrine 8.a: the sovereign path is the PREFERENCE, so it may not
+    be the one that has to be opted into while the paid lane runs automatically. That is safe
+    without a self-hosted runner because the HEARTBEAT gates scheduling, not this flag — a
+    repository with no fresh `heartbeat_ref` simply never offers the lane, so a default of
+    true costs an adopter nothing until they stand a runner up deliberately.
+
+    The runner still deserves care once it exists: GitHub says self-hosted runners should
+    "almost never be used for public repositories" because any user can open a pull request
+    against them. `trusted_only` keeps fork pull requests away from it entirely, and leaving
+    that true is what makes the configuration defensible on a public repository.
     """
 
     enabled: bool = True
