@@ -22,12 +22,21 @@ KNOWN_REMAINING = frozenset({"cli/main.py"})
 
 
 def _mints_a_random_uuid(node: ast.expr | None) -> bool:
-    return (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "uuid4"
-        and not node.args
-    )
+    """True for a call that mints a fresh random uuid, however it is spelled.
+
+    Both import styles have to be caught or the check is advisory: the bare
+    `uuid4()` of `from uuid import uuid4`, and the dotted `uuid.uuid4()` of
+    `import uuid`. Matching only the first would let the second through, and
+    the failure this guards is silent -- an untraceable delivery, with nothing
+    crashing to announce it. The attribute form is matched on its tail, so
+    an aliased `import uuid as u` is caught too.
+    """
+    if not isinstance(node, ast.Call) or node.args or node.keywords:
+        return False
+    func = node.func
+    if isinstance(func, ast.Name):
+        return func.id == "uuid4"
+    return isinstance(func, ast.Attribute) and func.attr == "uuid4"
 
 
 def _violations_in(tree: ast.AST) -> bool:
@@ -67,5 +76,11 @@ def test_the_checker_would_catch_a_planted_violation() -> None:
     assert _violations_in(ast.parse("correlation_id = uuid4()"))
     assert _violations_in(ast.parse("correlation_id: UUID = uuid4()"))
     assert not _violations_in(ast.parse("correlation_id = derive(project_id)"))
+    assert _violations_in(ast.parse("append(correlation_id=uuid.uuid4())"))
+    assert _violations_in(ast.parse("correlation_id = uuid.uuid4()"))
+    assert _violations_in(ast.parse("correlation_id: UUID = u.uuid4()"))
     assert not _violations_in(ast.parse("causation_id = uuid4()"))
+    assert not _violations_in(ast.parse("causation_id = uuid.uuid4()"))
     assert not _violations_in(ast.parse("append(correlation_id=uuid4)"))
+    assert not _violations_in(ast.parse("append(correlation_id=uuid.uuid4)"))
+    assert not _violations_in(ast.parse("correlation_id = uuid5(ns, name)"))

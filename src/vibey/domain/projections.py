@@ -135,14 +135,35 @@ class WorkLedgerEntry:
 
 
 def build_work_ledger(events: Sequence[LedgerEvent]) -> tuple[WorkLedgerEntry, ...]:
+    """Work threads by causing engine run, latest verdict per thread.
+
+    Scope, stated because the key change narrowed it: this reports only
+    verdicts that name a causing run. DESIGN and REVIEW verdicts never do --
+    `infrastructure/db/design_ledger.py` and `review_ledger.py` both write
+    `causation_id=None` unconditionally -- so every one of them is invisible
+    here. Only BUILD verdicts, which carry the run that produced them, appear.
+
+    That is a real narrowing and it is accepted deliberately, on a condition
+    that can be checked rather than assumed: nothing in production reads this
+    projection. `build_work_ledger` and `WorkLedgerEntry` are referenced by
+    tests/domain/test_projections.py and by nothing else under src/vibey --
+    no handler, no CLI command, no TUI view. So the events it omits are not
+    omitted from anything a user or a worker sees.
+
+    The condition is the thing to re-check, not the behaviour. The moment a
+    caller appears, decide first whether it wants BUILD threads only. If it
+    wants DESIGN and REVIEW too, the fix belongs in those two ledgers -- give
+    their verdicts a real causing id -- and not here, because bucketing them
+    under the string "None" would silently merge unrelated work into one row,
+    which is the bug this replaced.
+    """
     latest: dict[str, LedgerEvent] = {}
     for event in sorted(events, key=lambda e: e.seq):
         if event.kind is not EventKind.VERDICT_RENDERED:
             continue
         if event.causation_id is None:
-            # A verdict with no causing run is not a work thread -- and
-            # bucketing every such event under the string "None" would
-            # silently merge unrelated ones.
+            # See the docstring: DESIGN and REVIEW verdicts land here, and are
+            # dropped rather than merged under a shared "None" bucket.
             continue
         latest[str(event.causation_id)] = event
 
