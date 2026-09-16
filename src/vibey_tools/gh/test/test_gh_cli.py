@@ -277,9 +277,7 @@ def test_merge_train_restacks_nothing_when_the_repository_says_not_to(repo, caps
     branches it does not own. The report goes back to exactly what it was."""
     config = repo / ".vibey-gh.toml"
     config.write_text(
-        config.read_text().replace(
-            "[merge_train]\n", "[merge_train]\nrestack_conflicts = false\n"
-        )
+        config.read_text().replace("[merge_train]\n", "[merge_train]\nrestack_conflicts = false\n")
     )
     pr, verdict = _conflicting()
     monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [pr])
