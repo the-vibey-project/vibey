@@ -5,6 +5,19 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Stop the documentation site deleting its own other channel. Each publish deploys the
+  WHOLE site, so the run for one channel restores the other from that channel's last
+  artifact — except it searched `gh run list --limit 20` with no `--branch` filter, while
+  the branch it needed was the only one that ever produces the artifact. Every integration
+  publish takes one of those twenty slots, so after twenty merges the last release run
+  falls out of the window, the restore silently fails, and the deploy publishes the other
+  channel as an EMPTY directory that the channel chooser still links to. Observed as a 404
+  on every documented `main/` URL — the book, the paper, the governance corpus — after one
+  day of merges, with nothing red anywhere to say so. `other_branch` was already computed
+  and already passed into the step's environment; it was simply never used. The listing is
+  now filtered to it, so twenty runs spans months, and a restore that still finds nothing
+  raises a `::warning::` naming the branch it searched instead of a notice nobody reads.
+
 - Make the package's own 100% branch floor reachable without a network, and gate it in CI.
   The branch that records a re-locked `uv.lock` after a version bump had exactly one
   reader: a test that resolves against a real package index. Offline the suite landed at
