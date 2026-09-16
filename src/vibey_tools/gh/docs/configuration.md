@@ -291,6 +291,7 @@ progress. The clutter this wars on is machine-state clutter only.
 | `enabled` | boolean / `true` | The doctrine's bar; disabling records a deliberate exception in review. |
 | `keep_branches` | string list / empty | Kept beyond the integration and release branches (an LTS line, say). |
 | `trust_forge_deletions` | boolean / `true` | Squash and rebase merges rewrite SHAs, so ancestry cannot prove a merged branch landed — the forge deleting its remote at merge time is the proof instead. Set false where remote branches die for other reasons. |
+| `fail_check` | boolean / `false` | Does the cloud clutter `vibey-gh check --ci` surveys — merged-and-undeleted remote branches, draft releases, orphan tags — fail the build, or print as an advisory line? Advisory by default: the survey judges a repository's accumulated past, so an adopter's CI must not go red for branches that were already there. Turn it on once the repository is clean. `check` only ever reports; `vibey-gh tidy --apply` is the only thing that removes anything. |
 
 Losslessness governs every deletion: ancestry-contained refs and forge-deleted
 upstreams only. Anything not provably redundant — draft releases, orphan tags,

@@ -230,6 +230,14 @@ class TidyConfig:
 
     enabled: bool = True
     keep_branches: tuple[str, ...] = ()
+    # Does clutter found by `check --ci` FAIL the build, or is it an advisory line?
+    # The verdict is a key rather than a hard-coded judgment (ADR-0018), and it
+    # defaults to advisory because the survey judges a repository's ACCUMULATED
+    # past: an adopter upgrading into the release that added it would otherwise
+    # find its CI red for branches that were already there, over a class of mess
+    # no commit in the pull request created. Turn it on once the repository is
+    # clean, and clutter can never come back.
+    fail_check: bool = False
     # Squash/rebase flows rewrite SHAs, so ancestry cannot prove a merged branch's
     # content landed — the forge deleting the remote branch at merge time is the
     # proof instead. True admits that proof for [gone] locals; false reports them
@@ -1330,6 +1338,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             enabled=data.get("tidy", {}).get("enabled", True),
             keep_branches=tuple(data.get("tidy", {}).get("keep_branches", ())),
             trust_forge_deletions=data.get("tidy", {}).get("trust_forge_deletions", True),
+            fail_check=data.get("tidy", {}).get("fail_check", False),
         ),
         yank=YankConfig(
             pypi=yanking.get("pypi", False),

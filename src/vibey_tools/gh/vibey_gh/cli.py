@@ -30,15 +30,48 @@ from vibey_gh import (
 from vibey_gh.config import load_config
 
 
+def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Sub-doctrine 9.a's cloud clutter classes, named for `check`: merged-and-undeleted
+    remote branches (a closed pull request's head among them, once its work landed),
+    draft releases, orphan tags. Returns `(clutter, unsurveyable)` — the second is why
+    the survey could not judge, which is a notice and never a verdict.
+
+    Reporting only. `check` is what a hook and every pull request run, so it deletes
+    nothing, ever; `vibey-gh tidy --apply` is the only thing that removes anything.
+
+    Surveyed under `--ci` alone: one survey costs a fetch and two `gh` calls, which a
+    pre-commit hook must not pay, and the local classes need a durable clone to mean
+    anything. Module-level to match every other `check` collaborator here, which argparse
+    dispatch already makes module-level functions.
+    """
+    if not surveyed or not cfg.tidy.enabled:
+        return (), ()
+    from vibey_gh import tidy
+
+    report = tidy.survey(cfg, local=False)
+    clutter = tuple(
+        f"{label}: {', '.join(items)}"
+        for label, items in (
+            ("merged remote branches, never deleted", report.remote_merged),
+            ("draft releases", report.draft_releases),
+            ("orphan tags", report.orphan_tags),
+        )
+        if items
+    )
+    return clutter, report.problems
+
+
 def _check(args) -> int:
     cfg = load_config()
     ok, problems = install.installed(cfg, local=not args.ci)
     report = fingerprints.check(cfg, rev_range=args.commits, apply=args.apply)
     docs = documentation.check(cfg)
     scan = pr_automation.check_scan_workflows(cfg)
+    clutter, unsurveyable = _cloud_clutter(cfg, surveyed=args.ci)
+    clutter_ok = not clutter or not cfg.tidy.fail_check
 
     if args.quiet:
-        return 0 if (ok and report.ok and docs.ok and scan.ok) else 1
+        return 0 if (ok and report.ok and docs.ok and scan.ok and clutter_ok) else 1
 
     for problem in problems:
         print(f"  hooks: {problem}", file=sys.stderr)
@@ -65,8 +98,18 @@ def _check(args) -> int:
         print(f"  documentation: {problem}", file=sys.stderr)
     for problem in scan.problems:
         print(f"  {problem}", file=sys.stderr)
+    for problem in unsurveyable:
+        print(f"  clutter: not surveyed — {problem}", file=sys.stderr)
+    for item in clutter:
+        print(f"  clutter: {item}", file=sys.stderr)
+    if clutter:
+        print(
+            "  clutter: `vibey-gh tidy --apply` removes the provably-lossless classes"
+            + ("" if cfg.tidy.fail_check else " (advisory; `[tidy] fail_check = true` fails)"),
+            file=sys.stderr,
+        )
 
-    if ok and report.ok and docs.ok and scan.ok:
+    if ok and report.ok and docs.ok and scan.ok and clutter_ok:
         scope = f"{report.checked_files} source file(s)"
         if args.commits:
             scope += f" and every commit in {args.commits}"

@@ -5,6 +5,20 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Run the clean-repo survey inside `vibey-gh check --ci`. Sub-doctrine 9.a promised the
+  cloud clutter classes were surveyed there, and they were not: `tidy.py` exposed the
+  survey and `check` never called it, so clutter was only ever found by someone who
+  remembered to run `vibey-gh tidy`. `check --ci` now reports merged-and-undeleted remote
+  branches, draft releases, and orphan tags as named problems. It only reports — `check`
+  runs on every commit and in every pull request, so it deletes nothing, ever, and
+  `vibey-gh tidy --apply` remains the only thing that removes anything. The verdict is a
+  key rather than a hard-coded judgment: new `[tidy] fail_check`, default `false`, prints
+  the clutter as an advisory line, because the survey judges a repository's accumulated
+  past and an adopter upgrading into this release must not find its CI red over branches
+  that were already there. Set it true once the repository is clean, and clutter can never
+  come back. `[tidy] enabled = false` turns the survey off entirely, and no survey runs
+  under a local hook, which must not pay for a fetch and two `gh` calls.
+
 - Add `vibey-gh book --site-dir site --title T --author A`, which exports the already-built
   documentation site as a book: a valid EPUB 3.0 package with Dublin Core metadata, and a
   print-ready HTML sized to the standard 6in x 9in KDP paperback trim. Chapters come from

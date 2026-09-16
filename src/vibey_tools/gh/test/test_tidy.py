@@ -318,6 +318,93 @@ def test_tidy_cli_clean_repo_says_so(tmp_path, monkeypatch, capsys):
     assert "clean — no technical clutter" in capsys.readouterr().out
 
 
+@pytest.fixture()
+def checkable(repos, monkeypatch):
+    """The `repos` work tree, wired so everything else `vibey-gh check` judges already
+    passes — so the exit code and the output are the clean-repo survey's alone."""
+    work, _cfg = repos
+    (work / ".vibey-gh.toml").write_text(
+        '[fingerprint]\nsources = ["src/*.py"]\n[documentation]\nenabled = false\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(work)
+    from vibey_gh.cli import main
+
+    assert main(["install"]) == 0
+    return work
+
+
+def test_check_ci_reports_the_cloud_clutter_and_advises_by_default(checkable, capsys):
+    """Sub-doctrine 9.a has the cloud classes surveyed by `check --ci`. Reporting only:
+    an adopter's first green run must not go red over branches already there."""
+    from vibey_gh.cli import main
+
+    assert main(["check", "--ci"]) == 0
+    err = capsys.readouterr().err
+    assert "clutter: merged remote branches, never deleted: merged-work" in err
+    assert "clutter: draft releases: v9.9.9-draft" in err
+    assert "clutter: orphan tags: orphaned-tag" in err
+    assert "advisory" in err
+    # reporting only, always: nothing the survey named was removed
+    assert "merged-work" in _sh(checkable, "branch", "-r", "--format=%(refname:short)")
+    assert "orphaned-tag" in _sh(checkable, "tag", "--list")
+
+
+def test_check_ci_fails_on_clutter_once_the_adopter_asks_for_it(checkable, capsys):
+    from vibey_gh.cli import main
+
+    config = checkable / ".vibey-gh.toml"
+    config.write_text(config.read_text() + "[tidy]\nfail_check = true\n", encoding="utf-8")
+    assert main(["check", "--ci"]) == 1
+    err = capsys.readouterr().err
+    assert "clutter: merged remote branches" in err
+    assert "advisory" not in err
+    assert main(["check", "--ci", "--quiet"]) == 1
+    assert capsys.readouterr().err == ""
+    # still reporting only
+    assert "merged-work" in _sh(checkable, "branch", "-r", "--format=%(refname:short)")
+
+
+def test_check_ci_says_nothing_when_the_survey_is_disabled(checkable, capsys):
+    from vibey_gh.cli import main
+
+    config = checkable / ".vibey-gh.toml"
+    config.write_text(config.read_text() + "[tidy]\nenabled = false\n", encoding="utf-8")
+    assert main(["check", "--ci"]) == 0
+    assert "clutter" not in capsys.readouterr().err
+
+
+def test_check_without_ci_never_pays_for_the_survey(checkable, monkeypatch, capsys):
+    """A hook runs `check` on every commit; a fetch and two `gh` calls are not its price."""
+    from vibey_gh.cli import main
+
+    def boom(*a, **k):  # pragma: no cover - called means the guard is gone
+        raise AssertionError("the local hook must not survey the forge")
+
+    monkeypatch.setattr(tidy, "survey", boom)
+    assert main(["check"]) == 0
+    assert "clutter" not in capsys.readouterr().err
+
+
+def test_check_ci_reports_a_survey_that_could_not_judge(checkable, capsys):
+    """No kept branch on origin is a notice, never a verdict: the survey found no
+    clutter because it could not look, which is not the same as clean."""
+    from vibey_gh.cli import main
+
+    config = checkable / ".vibey-gh.toml"
+    config.write_text(
+        config.read_text() + '[tidy]\nfail_check = true\n[branches]\nintegration = "nope"\n'
+        'release = "also-nope"\n',
+        encoding="utf-8",
+    )
+    assert main(["install"]) == 0  # the renamed branches re-render the workflows
+    capsys.readouterr()
+    assert main(["check", "--ci"]) == 0
+    err = capsys.readouterr().err
+    assert "clutter: not surveyed — no kept branch resolves on origin" in err
+    assert "merged remote branches" not in err
+
+
 def test_survey_survives_crafted_git_output(repos, monkeypatch):
     """Defensive guards for output shapes real git rarely emits: blank tag lines
     and worktree stanzas with no path line."""
