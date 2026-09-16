@@ -5,11 +5,13 @@ import json
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import asyncpg
 
 from vibey.application.dto import ProjectRecord
+from vibey.domain.correlation import DELIVERY_CORRELATION
+from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.ledger import EventKind, Provenance, digest_event
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.interfaces import (
@@ -57,6 +59,9 @@ class PhaseTransitionedDraftBuilder:
     this event's `produced_at` to that record instead of to its FixedClock).
     """
 
+    def __init__(self, correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION) -> None:
+        self._correlation = correlation
+
     def build(self, settled: ProjectRecord, expected: Phase, guard: str | None) -> LedgerEventDraft:
         """Build the draft for one settled transition.
 
@@ -85,7 +90,7 @@ class PhaseTransitionedDraftBuilder:
             engine_id=None,
             job_id=None,
             causation_id=None,
-            correlation_id=uuid4(),
+            correlation_id=self._correlation.for_project(settled.project_id).value,
             provenance=Provenance.TRUSTED,
             produced_at=settled.updated_at,
             payload=payload,

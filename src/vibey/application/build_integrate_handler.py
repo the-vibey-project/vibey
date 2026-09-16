@@ -33,7 +33,9 @@ from vibey.application.interfaces import (
 )
 from vibey.application.ports import Clock, HumanGateRepository, JobRepository
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
+from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.effort import Effort
+from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
@@ -57,7 +59,9 @@ class BuildIntegrateHandler:
         max_repair_rounds: int = 3,
         repair_backoff: timedelta = timedelta(minutes=10),
         human_gates: HumanGateRepository | None = None,
+        correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
     ) -> None:
+        self._correlation = correlation
         self._integration = integration
         self._gates = gates
         self._ledger = ledger
@@ -142,7 +146,7 @@ class BuildIntegrateHandler:
                 cycle=job.cycle,
                 job_id=job.id,
                 engine_id=None,
-                correlation_id=uuid4(),
+                correlation_id=self._correlation.for_project(job.project_id).value,
                 event=EngineEvent(
                     kind=EventKind.FINDING_RESOLVED.value,
                     at=self._clock.now(),
@@ -271,7 +275,7 @@ class BuildIntegrateHandler:
             cycle=job.cycle,
             job_id=job.id,
             engine_id=None,
-            correlation_id=uuid4(),
+            correlation_id=self._correlation.for_project(job.project_id).value,
             event=EngineEvent(
                 kind=EventKind.FINDING_RAISED.value,
                 at=now,

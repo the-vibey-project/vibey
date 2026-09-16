@@ -24,6 +24,12 @@ containers =
 # the Azure SDK and OpenTelemetry, so importing it here would pull a third-party graph in
 # transitively and break the invariant by the back door. Use it from infrastructure/.
 #
+# `vibey.bootstrap` -- the composition root -- is named for a different reason: it sits
+# outside the layer containers, so `onion-layers` does not reach it, and without this line
+# the innermost layer could import the outermost module. A `forbidden` contract checks the
+# source module's descendants, so this covers `vibey.domain.interfaces` too: an interface
+# declares a seam and never imports the code that wires it (ADR-0016).
+#
 # The rest of the rule is not an import question at all -- no I/O, no async, no clock, no
 # network -- and is enforced by tests/domain/test_domain_purity.py, which walks the AST.
 [importlinter:contract:domain-independence]
@@ -37,6 +43,7 @@ forbidden_modules =
     vibey.infrastructure
     vibey.cli
     vibey.tui
+    vibey.bootstrap
     asyncpg
     psycopg
     httpx
@@ -96,5 +103,6 @@ forbidden_modules =
     vibey_gh.cli
     vibey_gh.marketplace
     vibey_gh.documentation
+    vibey_gh.fitloop
     vibey_gh.doctor
     vibey_gh.install
