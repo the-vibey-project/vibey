@@ -33,7 +33,7 @@ from vibey.bootstrap import (
     build_design_worker,
     build_visual_worker,
 )
-from vibey.cli.errors import guard
+from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.domain.config import parse_toml_string
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
@@ -240,7 +240,7 @@ def resume_design(project_id: UUID) -> None:
 def _qwenloop_feature_enabled(root: Path | None = None) -> bool:
     """Whether the sovereign engine is switched on, by environment or project config.
 
-    Mirrors `bootstrap._qwenloop_enabled` so the health check and the worker agree about
+    Mirrors `bootstrap.qwenloop_enabled` so the health check and the worker agree about
     which engines exist. They disagreed before: the worker ran qwenloop while `doctor`
     could not list it, so the engine an operator was depending on was invisible unless
     they already knew to ask for it by name.
@@ -1252,9 +1252,11 @@ def worker(
     from datetime import timedelta
 
     from vibey.application.worker import WorkerLoop
-    from vibey.bootstrap import build_full_worker, database_url
+    from vibey.bootstrap import build_full_worker, database_url, qwenloop_enabled
     from vibey.domain.engine import EngineId
     from vibey.infrastructure.db.notifier import PostgresJobReadyNotifier
+    from vibey.infrastructure.engines.descriptors import QWENLOOP
+    from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
     from vibey.infrastructure.engines.scripted_decompose import ScriptedWorkPlanProducer
 
     allow_list: frozenset[EngineId] | None = None
@@ -1384,9 +1386,30 @@ def worker(
                 design_provider = ScriptedDesignProvider()
                 decomposer = ScriptedWorkPlanProducer()
 
+            # The pool has to be the one `build_full_worker` will actually run, so ask
+            # bootstrap's own predicate instead of keeping a second copy of it. Without
+            # this the standby engine was the one engine the startup sweep could not
+            # see: it ran, but its conformance warning never appeared, so an operator
+            # depending on it had no way to learn it would never be selected.
             adapters = dict(resources.engine_adapters)
+            if qwenloop_enabled(project.config) and EngineId.QWENLOOP not in adapters:
+                adapters[EngineId.QWENLOOP] = LoopProcessAdapter(descriptor=QWENLOOP)
             if allow_list is not None:
-                adapters = {eid: a for eid, a in adapters.items() if eid in allow_list}
+                allowed = {eid: a for eid, a in adapters.items() if eid in allow_list}
+                # An allow-list matching nothing used to start a worker with zero
+                # engines, which then deferred every engine-driven job every five
+                # minutes, forever, saying nothing. Nothing downstream can recover from
+                # that, so the only honest answer is to refuse at startup and say why.
+                if not allowed:
+                    available = ", ".join(sorted(e.value for e in adapters))
+                    typer.echo(
+                        f"--engines {engines_opt} matches none of this worker's engines "
+                        f"({available}); qwenloop joins them only with "
+                        "VIBEY_FEATURE_QWENLOOP=1, or with [features] qwenloop in the "
+                        "project's config when that environment override is unset."
+                    )
+                    raise typer.Exit(EXIT_USAGE)
+                adapters = allowed
 
             ineligible = await preflight_sweep(
                 resources=resources, project_id=project.project_id, adapters=adapters
