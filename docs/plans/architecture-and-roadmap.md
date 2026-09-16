@@ -563,8 +563,10 @@ releasing the job (§8.5).
   no-op. Handlers additionally guard their own side effects: `build.implement`
   checks whether its worktree branch already contains a completed savepoint
   before spending a turn.
-- **Poison jobs** move to `failed` after `max_attempts` and raise a human gate
-  rather than silently stalling the phase.
+- **Poison jobs** park on an `attempts_exhausted` human gate once `attempts`
+  reaches `max_attempts`, rather than moving to `failed` where nothing asks
+  anyone. Answering `--raw '{"max_attempts": N}'` widens the bound on the row
+  itself, so the granted retries survive the next nack.
 - **Bounded repair ladders park.** A failing verify or integrate enters a bounded
   repair ladder (3 rounds); its end is a parked human gate that can grant more
   rounds, never a terminal failure

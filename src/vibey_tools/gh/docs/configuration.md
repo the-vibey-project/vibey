@@ -275,6 +275,19 @@ payloads finishing sooner) falls back to the flat mean.
 wants; growing paging space is an irreversible act on someone's machine, and
 Article III's bounded delegation leaves that to a human.
 
+**Both sides are read from the machine this actually runs on.** macOS is read from
+`sysctl` and `vm_stat`; Linux from `/proc/meminfo` — except inside a container,
+where `/proc/meminfo` reports the *host's* memory and the process is killed at the
+cgroup limit long before it reaches that, so a cgroup limit wins when one exists
+(`/sys/fs/cgroup/memory.max` for v2, then `memory/memory.limit_in_bytes` for v1).
+A limit of `max`, or one at or above what the host itself has, is not a limit. Every
+one of those paths is a default that can be overridden rather than a constant.
+
+**A machine that will not state its own memory is the floor, not an empty machine.**
+Zero is the absence of a measurement; reporting it as if it were one is the silent
+failure doctrine 10 forbids. When nothing is readable, `vibey-gh fit` says so out
+loud and the verdict is `floor`.
+
 Measured on a 24 GB machine running `qwen2.5-coder:14b`: peak throughput
 **1.72 generations/min at 6 concurrent**, degrading to 1.27/min at 8 — the
 saturation knee, past which added load buys queueing rather than work.
