@@ -344,7 +344,39 @@ def test_a_branch_github_refuses_is_merged_forward_locally(tmp_path, monkeypatch
     assert applied and "merged develop forward" in detail
     pushed = next(c for c in calls if c[:2] == ["git", "push"])
     assert "HEAD:refs/heads/feature/theirs" in pushed
-    assert not any("force" in " ".join(c) for c in calls), "a merge never rewrites history"
+    # Scoped to the push on purpose. The cleanup below force-removes a WORKTREE, which
+    # is not history: the claim being made is that nobody's commits are rewritten, and
+    # a blanket search for "force" would pass or fail on the wrong command.
+    assert not any(flag.startswith("--force") for flag in pushed), "a merge never rewrites history"
+    # The work happens somewhere disposable, so an operator's own checkout keeps its
+    # branch and its uncommitted work while the train runs.
+    assert not any(c[:3] == ["git", "checkout", "--detach"] for c in calls)
+    added = next(c for c in calls if c[:3] == ["git", "worktree", "add"])
+    removed = next(c for c in calls if c[:3] == ["git", "worktree", "remove"])
+    assert added[-1] == "old" and "--detach" in added
+    assert "--force" in removed
+
+
+def test_the_scratch_worktree_is_removed_even_when_the_merge_never_runs(tmp_path, monkeypatch):
+    """The cleanup is in a `finally` because every failure path returns early. A worktree
+    left registered makes the NEXT run fail at `worktree add`, which would turn one
+    conflicted branch into a train that can no longer restack anything."""
+    config = cfg(tmp_path)
+    for failing in ("merge", "push"):
+        calls: list = []
+
+        def run(args, _failing=failing, **kwargs):
+            calls.append(args)
+            if args[:2] == ["git", "rev-parse"]:
+                return completed(out=("old\n" if "origin/" in " ".join(args) else "new\n"))
+            if args[1] == _failing:
+                return completed(1, err="boom")
+            return completed()
+
+        monkeypatch.setattr(subprocess, "run", run)
+        applied, _ = rc.merge_forward(config, "feature/x")
+        assert not applied
+        assert any(c[:3] == ["git", "worktree", "remove"] for c in calls), failing
 
 
 def test_merging_forward_reports_every_way_it_can_decline(tmp_path, monkeypatch):
@@ -354,7 +386,7 @@ def test_merging_forward_reports_every_way_it_can_decline(tmp_path, monkeypatch)
         def run(args, **kwargs):
             if args[:2] == ["git", "rev-parse"]:
                 return completed(out=outcomes.get("rev", "old") + "\n")
-            for key in ("checkout", "merge", "push"):
+            for key in ("worktree", "merge", "push"):
                 if args[1] == key and outcomes.get(key):
                     return completed(1, err="boom")
             return completed()
@@ -364,7 +396,7 @@ def test_merging_forward_reports_every_way_it_can_decline(tmp_path, monkeypatch)
     monkeypatch.setattr(subprocess, "run", responder(rev=""))
     assert rc.merge_forward(config, "feature/x") == (False, "branch no longer exists")
 
-    monkeypatch.setattr(subprocess, "run", responder(checkout=True))
+    monkeypatch.setattr(subprocess, "run", responder(worktree=True))
     assert rc.merge_forward(config, "feature/x")[1] == "could not check the branch out"
 
     monkeypatch.setattr(subprocess, "run", responder(merge=True))
