@@ -4,6 +4,7 @@
 import json
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Final
 from uuid import UUID, uuid4
 
 import asyncpg
@@ -11,9 +12,12 @@ import asyncpg
 from vibey.application.dto import ProjectRecord
 from vibey.domain.ledger import EventKind, Provenance, digest_event
 from vibey.domain.phase import Phase
-from vibey.infrastructure.db.ledger_repository import ConnectionEventAppender
+from vibey.infrastructure.db.interfaces import (
+    EventAppenderInterface,
+    PhaseTransitionedDraftBuilderInterface,
+)
+from vibey.infrastructure.db.ledger_repository import DEFAULT_EVENT_APPENDER
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
-from vibey.infrastructure.interfaces import EventAppender
 
 
 def _row_to_project(row: asyncpg.Record) -> ProjectRecord:
@@ -30,10 +34,68 @@ def _row_to_project(row: asyncpg.Record) -> ProjectRecord:
     )
 
 
+class PhaseTransitionedDraftBuilder:
+    """Turns a settled phase move into the `PhaseTransitioned` draft.
+
+    The event is filed under the phase the project is now IN, with the cycle
+    and `produced_at` the same UPDATE returned, so the row and the event are
+    one consistent snapshot of the transaction that made both. The payload
+    fields are the four handoff-protocol.md names for this kind.
+
+    `produced_at` is database time, deliberately and not by omission. The
+    alternative is the caller's Clock, which every other ledger writer uses,
+    and it was rejected here: this event's whole claim is that it and the
+    project row were written by one statement, and a clock reading taken
+    outside the transaction would put the event's `produced_at` at odds with
+    the `updated_at` the very same UPDATE wrote into the row it describes.
+    The cost is real and is stated rather than hidden: the ledger now carries
+    two time sources -- handler clocks for everything else, the database for
+    this kind -- and nothing checks their skew. A caller that needs the two
+    reconciled must reconcile them, and `transition` returns the settled
+    record precisely so it can (see
+    tests/infrastructure/db/test_design_interview_end_to_end.py, which pins
+    this event's `produced_at` to that record instead of to its FixedClock).
+    """
+
+    def build(self, settled: ProjectRecord, expected: Phase, guard: str | None) -> LedgerEventDraft:
+        payload: dict[str, object] = {
+            "from": expected.value,
+            "to": settled.phase.value,
+            "cycle": settled.cycle,
+            "guard": guard,
+        }
+        return LedgerEventDraft(
+            project_id=settled.project_id,
+            cycle=settled.cycle,
+            phase=settled.phase,
+            kind=EventKind.PHASE_TRANSITIONED,
+            engine_id=None,
+            job_id=None,
+            causation_id=None,
+            correlation_id=uuid4(),
+            provenance=Provenance.TRUSTED,
+            produced_at=settled.updated_at,
+            payload=payload,
+            digest=digest_event(payload),
+        )
+
+
+DEFAULT_TRANSITION_DRAFTS: Final[PhaseTransitionedDraftBuilderInterface] = (
+    PhaseTransitionedDraftBuilder()
+)
+
+
 class PostgresProjectRepository:
-    def __init__(self, pool: asyncpg.Pool) -> None:
+    def __init__(
+        self,
+        pool: asyncpg.Pool,
+        *,
+        appender: EventAppenderInterface = DEFAULT_EVENT_APPENDER,
+        drafts: PhaseTransitionedDraftBuilderInterface = DEFAULT_TRANSITION_DRAFTS,
+    ) -> None:
         self._pool = pool
-        self._events: EventAppender = ConnectionEventAppender()
+        self._events = appender
+        self._drafts = drafts
 
     async def create(
         self,
@@ -125,40 +187,5 @@ class PostgresProjectRepository:
                     f"project {project_id} is not in expected phase {expected.value!r}"
                 )
             settled = _row_to_project(row)
-            await self._events.append(conn, _transition_draft(settled, expected, guard))
+            await self._events.append(conn, self._drafts.build(settled, expected, guard))
             return settled
-
-
-def _transition_draft(
-    settled: ProjectRecord, expected: Phase, guard: str | None
-) -> LedgerEventDraft:
-    """Builds the PhaseTransitioned draft for a move that has just landed.
-
-    A module-level function rather than a method (ADR-0016) because it is a
-    pure mapping from a settled row to a draft: it holds no state, touches no
-    connection, and belongs to neither the repository's nor the appender's
-    identity. The event is filed under the phase the project is now IN, with
-    the cycle and `produced_at` the same UPDATE returned, so the row and the
-    event are one consistent snapshot of the transaction that made both. The
-    payload fields are the four handoff-protocol.md names for this kind.
-    """
-    payload: dict[str, object] = {
-        "from": expected.value,
-        "to": settled.phase.value,
-        "cycle": settled.cycle,
-        "guard": guard,
-    }
-    return LedgerEventDraft(
-        project_id=settled.project_id,
-        cycle=settled.cycle,
-        phase=settled.phase,
-        kind=EventKind.PHASE_TRANSITIONED,
-        engine_id=None,
-        job_id=None,
-        causation_id=None,
-        correlation_id=uuid4(),
-        provenance=Provenance.TRUSTED,
-        produced_at=settled.updated_at,
-        payload=payload,
-        digest=digest_event(payload),
-    )

@@ -6,6 +6,7 @@ no-loss gate depends on."""
 
 import json
 from collections.abc import Sequence
+from typing import Final
 from uuid import UUID
 
 import asyncpg
@@ -13,8 +14,8 @@ import asyncpg
 from vibey.domain.engine import EngineId
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
 from vibey.domain.phase import Phase
+from vibey.infrastructure.db.interfaces import EventAppenderInterface
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
-from vibey.infrastructure.interfaces import EventAppender
 from vibey.infrastructure.ledger.redact import redact_payload
 
 
@@ -90,10 +91,25 @@ class ConnectionEventAppender:
         return _row_to_event(row)
 
 
+DEFAULT_EVENT_APPENDER: Final[EventAppenderInterface] = ConnectionEventAppender()
+"""The one appender everything gets unless a caller substitutes one.
+
+A module-level instance rather than a call in a default argument so the seam
+is a plain keyword default: injecting costs the caller nothing, adds no
+branch to cover, and the class carries no state, so one shared instance is
+the same object every construction would have produced anyway.
+"""
+
+
 class PostgresLedgerRepository:
-    def __init__(self, pool: asyncpg.Pool) -> None:
+    def __init__(
+        self,
+        pool: asyncpg.Pool,
+        *,
+        appender: EventAppenderInterface = DEFAULT_EVENT_APPENDER,
+    ) -> None:
         self._pool = pool
-        self._appender: EventAppender = ConnectionEventAppender()
+        self._appender = appender
 
     async def append(self, draft: LedgerEventDraft) -> LedgerEvent:
         async with self._pool.acquire() as conn, conn.transaction():

@@ -5,7 +5,7 @@ from uuid import UUID
 import asyncpg
 import pytest
 
-from vibey.domain.ledger import EventKind, Provenance
+from vibey.domain.ledger import EventKind, LedgerEvent, Provenance
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
@@ -119,11 +119,13 @@ async def test_a_failed_append_rolls_the_phase_change_back(
     be written, the phase must not have moved either."""
 
     class _ExplodingAppender:
-        async def append(self, conn: object, draft: object) -> None:
+        async def append(self, conn: object, draft: object) -> LedgerEvent:
             raise RuntimeError("ledger is down")
 
-    repo = PostgresProjectRepository(migrated_pool)
-    repo._events = _ExplodingAppender()  # type: ignore[assignment]
+    # Substituted AT THE SEAM the repository declares, not by assigning over a
+    # private attribute: the test depends on the EventAppender contract, so
+    # renaming the field cannot quietly turn this into a test of nothing.
+    repo = PostgresProjectRepository(migrated_pool, appender=_ExplodingAppender())
 
     with pytest.raises(RuntimeError, match="ledger is down"):
         await repo.transition(project_id, expected=Phase.INTAKE, to=Phase.DESIGN)
