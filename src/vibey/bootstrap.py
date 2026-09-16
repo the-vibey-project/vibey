@@ -84,6 +84,7 @@ from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
+from vibey.infrastructure.logging import StructlogAppLogger
 from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
 from vibey.infrastructure.review_artifact_writer import FileReviewArtifactWriter
 from vibey.infrastructure.skills_context import compiler_from_config
@@ -160,6 +161,7 @@ def build_design_worker(
         gates=resources.gates,
         handler=dispatcher,
         owner=owner,
+        logger=StructlogAppLogger(owner=owner),
     )
 
 
@@ -182,6 +184,7 @@ def build_visual_worker(
         gates=resources.gates,
         handler=dispatcher,
         owner=owner,
+        logger=StructlogAppLogger(owner=owner),
     )
 
 
@@ -555,6 +558,7 @@ def build_full_worker(
         handler=dispatcher,
         owner=owner,
         lease_for_kind=lease_for_kind,
+        logger=StructlogAppLogger(owner=owner),
     )
 
 
