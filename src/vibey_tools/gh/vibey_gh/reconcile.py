@@ -26,8 +26,11 @@ path: `deletable` and `rebasable` both refuse them by name.
 
 from __future__ import annotations
 
+import shutil
 import subprocess
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from vibey_gh import github_state
@@ -137,8 +140,16 @@ def decide(facts: BranchFacts, cfg: GhConfig) -> Decision:
     return result(REBASE, f"{facts.unique_commits} unique commit(s) replayed onto the new tip")
 
 
+def _git_at(root: Path, *args: str) -> subprocess.CompletedProcess:
+    """Git in a named directory. `merge_forward` does its work in a throwaway
+    worktree, and `cwd` rather than `-C` keeps the subcommand in argv[1] where
+    every caller -- and every test that drives this by intercepting the command --
+    already looks for it."""
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False)
+
+
 def _git(cfg: GhConfig, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", *args], cwd=cfg.root, capture_output=True, text=True, check=False)
+    return _git_at(cfg.root, *args)
 
 
 def unique_commits(cfg: GhConfig, branch: str) -> int:
@@ -181,28 +192,47 @@ def merge_forward(cfg: GhConfig, branch: str) -> tuple[bool, str]:
     before = _git(cfg, "rev-parse", f"origin/{branch}").stdout.strip()
     if not before:
         return False, "branch no longer exists"
-    if _git(cfg, "checkout", "--quiet", "--detach", before).returncode:
-        return False, "could not check the branch out"
-    _git(cfg, "config", "user.name", "vibey[bot]")
-    _git(cfg, "config", "user.email", "adam@matthewsteinberger.com")
-    merge = _git(
-        cfg,
-        "merge",
-        "--no-edit",
-        "-m",
-        f"chore: merge {cfg.integration_branch} into {branch}",
-        f"origin/{cfg.integration_branch}",
-    )
-    if merge.returncode:
-        _git(cfg, "merge", "--abort")
-        return False, "merge conflicted; left for ordinary conflict resolution"
-    after = _git(cfg, "rev-parse", "HEAD").stdout.strip()
-    if after == before:
-        return False, "already current"
-    push = _git(cfg, "push", "origin", f"HEAD:refs/heads/{branch}")
-    if push.returncode:
-        return False, f"push refused: {push.stderr.strip()}"
-    return True, f"merged {cfg.integration_branch} forward as {after[:7]}"
+    # A THROWAWAY WORKTREE, never the operator's own checkout. This runs unattended from
+    # the merge train, and `checkout --detach` in the working tree somebody is using moves
+    # them off their branch without asking. Worse, it half-succeeds: a checkout that fails
+    # partway -- one unwritable path is enough -- leaves files from the other commit in
+    # the tree with no merge in progress to abort, and the operator cannot tell that
+    # wreckage from their own edits. A worktree cannot do either. It also means the merge
+    # no longer needs a clean tree, which is what made running the train by hand a choice
+    # between finishing the merge and keeping your work in progress.
+    work = Path(tempfile.mkdtemp(prefix="vibey-gh-merge-forward-"))
+    try:
+        if _git(cfg, "worktree", "add", "--quiet", "--detach", str(work), before).returncode:
+            return False, "could not check the branch out"
+        _git_at(work, "config", "user.name", "vibey[bot]")
+        _git_at(work, "config", "user.email", "adam@matthewsteinberger.com")
+        # The whole point of merging here rather than letting GitHub do it: this tree
+        # carries the repository's own `.gitattributes`, so a path declared `merge=union`
+        # -- the changelog every branch appends to -- resolves instead of conflicting.
+        merge = _git_at(
+            work,
+            "merge",
+            "--no-edit",
+            "-m",
+            f"chore: merge {cfg.integration_branch} into {branch}",
+            f"origin/{cfg.integration_branch}",
+        )
+        if merge.returncode:
+            _git_at(work, "merge", "--abort")
+            return False, "merge conflicted; left for ordinary conflict resolution"
+        after = _git_at(work, "rev-parse", "HEAD").stdout.strip()
+        if after == before:
+            return False, "already current"
+        push = _git_at(work, "push", "origin", f"HEAD:refs/heads/{branch}")
+        if push.returncode:
+            return False, f"push refused: {push.stderr.strip()}"
+        return True, f"merged {cfg.integration_branch} forward as {after[:7]}"
+    finally:
+        # Always, including on the early returns above. A worktree left behind keeps its
+        # administrative entry in the repository, and the next run refuses to add one at
+        # a path Git still believes is registered.
+        _git(cfg, "worktree", "remove", "--force", str(work))
+        shutil.rmtree(work, ignore_errors=True)
 
 
 def update_branch(cfg: GhConfig, number: int) -> tuple[bool, str]:

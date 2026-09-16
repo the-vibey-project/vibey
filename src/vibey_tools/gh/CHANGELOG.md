@@ -5,6 +5,32 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Let the merge train clear the conflicts it creates itself. Every merge into the
+  integration branch leaves the NEXT pull request behind the branch that just moved, and
+  the train reported that as `conflicts with develop` and stopped — so it landed one
+  change per run and a person merged the base forward by hand for every one behind it.
+  Measured on nine open pull requests: each became unmergeable the moment its predecessor
+  landed, and every one of them merged cleanly on a local `git merge`. GitHub calls them
+  conflicting because its server-side merge runs without this repository's
+  `.gitattributes`, so a path declared `merge=union` — the changelog every branch appends
+  to — conflicts there and resolves here. `reconcile.merge_forward` already did exactly
+  this for `reconcile-branches`; the train now uses it rather than carrying a second copy,
+  and reports `restacked` instead of skipping. The restacked pull request is deliberately
+  NOT merged on the same pass: its tree has changed, so its green checks describe a tree
+  that no longer exists, and the next train takes it once they have re-run. Turn it off
+  with `[merge_train] restack_conflicts = false`, for a repository that will not have
+  automation push to branches it does not own; forks are excluded either way.
+- Do the merge-forward in a throwaway worktree instead of detaching HEAD in the
+  operator's own checkout. `merge_forward` ran `git checkout --detach` in the working tree
+  somebody was using, which moved them off their branch without asking — and when a
+  checkout failed partway, left files from another commit in the tree with no merge in
+  progress to abort and no way to tell that wreckage from their own edits. Observed with a
+  single unwritable path under `.claude/skills/`. A worktree cannot do either, and it
+  means the merge no longer needs a clean tree: running the train by hand had been a
+  choice between finishing the merge and keeping your work in progress. The worktree is
+  removed in a `finally`, because a leftover registration makes the next `worktree add`
+  refuse at the same path.
+
 - Make the package's own 100% branch floor reachable without a network, and gate it in CI.
   The branch that records a re-locked `uv.lock` after a version bump had exactly one
   reader: a test that resolves against a real package index. Offline the suite landed at

@@ -209,6 +209,100 @@ def test_merge_train_reports_a_refused_merge(repo, capsys, monkeypatch):
     assert "could not be merged — GraphQL: repo not granted" in out
 
 
+def _conflicting(number: int = 5, head: str = "feature/x"):
+    """A pull request the train is told is unmergeable, with a head it may write to."""
+    pr = {"number": number, "headRefName": head, "isCrossRepository": False}
+    verdict = Verdict(number, "t", "owner", "conflicts with develop", restackable=True)
+    return pr, verdict
+
+
+def test_merge_train_clears_a_conflict_it_created_itself(repo, capsys, monkeypatch):
+    """Every merge puts the next pull request behind the one that just landed, so a train
+    that cannot restack lands exactly one change per run. It merges the base forward
+    locally -- where this repository's merge drivers apply and GitHub's do not -- and
+    leaves the merge itself to the next run, because the checks now describe a tree that
+    no longer exists."""
+    pr, verdict = _conflicting()
+    monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [pr])
+    monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: verdict)
+    monkeypatch.setattr(
+        merge_train, "merge", lambda n, m, b=None: pytest.fail("a restacked head is not merged yet")
+    )
+    asked: list[str] = []
+    monkeypatch.setattr(
+        reconcile,
+        "merge_forward",
+        lambda cfg, branch: (asked.append(branch), (True, "merged develop forward as abc1234"))[1],
+    )
+
+    assert main(["merge-train"]) == 0
+    out = capsys.readouterr().out
+    assert asked == ["feature/x"]
+    assert "#5 restacked — merged develop forward as abc1234" in out
+    assert "merges once its checks re-run" in out
+    assert "merged 0, skipped 1" in out
+
+
+def test_merge_train_says_why_a_restack_did_not_happen(repo, capsys, monkeypatch):
+    """A real conflict is still a person's job. The train must say which kind it hit,
+    rather than reporting the same "conflicts with develop" it would have before."""
+    pr, verdict = _conflicting()
+    monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [pr])
+    monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: verdict)
+    monkeypatch.setattr(
+        reconcile, "merge_forward", lambda cfg, branch: (False, "merge conflicted; left for you")
+    )
+    assert main(["merge-train"]) == 0
+    out = capsys.readouterr().out
+    assert "skipped — conflicts with develop (restack declined: merge conflicted" in out
+
+
+def test_merge_train_treats_an_unwritable_ref_as_a_skip_not_a_crash(repo, capsys, monkeypatch):
+    """`merge_forward` raises on a protected or malformed ref. One such pull request must
+    not end the train for every one behind it."""
+    pr, verdict = _conflicting()
+    monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [pr])
+    monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: verdict)
+
+    def refuse(cfg, branch):
+        raise ValueError("refusing to merge into protected or unsafe branch 'develop'")
+
+    monkeypatch.setattr(reconcile, "merge_forward", refuse)
+    assert main(["merge-train"]) == 0
+    assert "restack declined: refusing to merge into protected" in capsys.readouterr().out
+
+
+def test_merge_train_restacks_nothing_when_the_repository_says_not_to(repo, capsys, monkeypatch):
+    """`restack_conflicts = false` is a repository declining to have automation write to
+    branches it does not own. The report goes back to exactly what it was."""
+    config = repo / ".vibey-gh.toml"
+    config.write_text(
+        config.read_text().replace(
+            "[merge_train]\n", "[merge_train]\nrestack_conflicts = false\n"
+        )
+    )
+    pr, verdict = _conflicting()
+    monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [pr])
+    monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: verdict)
+    monkeypatch.setattr(
+        reconcile, "merge_forward", lambda cfg, branch: pytest.fail("restacking was turned off")
+    )
+    assert main(["merge-train"]) == 0
+    assert "#5 skipped — conflicts with develop" in capsys.readouterr().out
+
+
+def test_merge_train_dry_run_restacks_nothing(repo, capsys, monkeypatch):
+    """A dry run reports; it does not push a merge commit to somebody's branch."""
+    pr, verdict = _conflicting()
+    monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [pr])
+    monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: verdict)
+    monkeypatch.setattr(
+        reconcile, "merge_forward", lambda cfg, branch: pytest.fail("a dry run writes nothing")
+    )
+    assert main(["merge-train", "--dry-run"]) == 0
+    assert "#5 skipped — conflicts with develop" in capsys.readouterr().out
+
+
 def test_merge_train_supplies_the_trailer_for_a_body_that_lacks_it(repo, capsys, monkeypatch):
     """A squash commit takes its body from the pull request, and a bot's body never has
     the trailer — so the train supplies one, or it manufactures the exact trailer-less
