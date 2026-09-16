@@ -18,6 +18,7 @@ instead of forking this file.
 from __future__ import annotations
 
 import html as html_lib
+import re
 from collections.abc import Iterable, Sequence
 from html.entities import html5 as _HTML5_ENTITIES
 
@@ -30,8 +31,13 @@ DEFAULT_CHROME_TAGS: frozenset[str] = frozenset(
 
 #: CSS classes marking an element as furniture. `headerlink` is mkdocs' permalink
 #: anchor; the rest are what the other generators this family renders with emit.
+#: `permalink` is deliberately absent. It is an ordinary English word a page may carry on
+#: genuine content, and a default that silently drops a whole subtree is worse than the
+#: pilcrow it would have removed -- the pilcrow now resolves to a character either way,
+#: so validity never depended on it and only the cosmetics are at stake. A theme that
+#: really does mark its permalinks that way hands the class to the constructor.
 DEFAULT_CHROME_CLASSES: frozenset[str] = frozenset(
-    {"headerlink", "headeranchor", "anchorjs-link", "skip-link", "permalink"}
+    {"headerlink", "headeranchor", "anchorjs-link", "skip-link"}
 )
 
 #: The HTML void elements, in full. A bare `<br>` every browser forgives is a hard
@@ -54,6 +60,38 @@ VOID_TAGS: frozenset[str] = frozenset(
         "wbr",
     }
 )
+
+#: Names HTML parses case-insensitively and lowercases, but XML reads literally. These
+#: are the SVG (and MathML) camelCase element and attribute names from the HTML parsing
+#: specification's foreign-content adjustment tables: `viewBox` lowercased to `viewbox`
+#: is an attribute an SVG renderer does not know, so an inline diagram scales wrong or
+#: disappears. Overridable like every other set here (ADR-0018) -- a generator emitting
+#: some other case-sensitive vocabulary declares it rather than forking this file.
+_CASE_SENSITIVE_NAME_SOURCE = """
+altGlyph altGlyphDef altGlyphItem animateColor animateMotion animateTransform clipPath
+feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting
+feDisplacementMap feDistantLight feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur
+feImage feMerge feMergeNode feMorphology feOffset fePointLight feSpecularLighting
+feSpotLight feTile feTurbulence foreignObject glyphRef linearGradient radialGradient
+textPath attributeName attributeType baseFrequency baseProfile calcMode clipPathUnits
+diffuseConstant edgeMode filterUnits gradientTransform gradientUnits kernelMatrix
+kernelUnitLength keyPoints keySplines keyTimes lengthAdjust limitingConeAngle
+markerHeight markerUnits markerWidth maskContentUnits maskUnits numOctaves pathLength
+patternContentUnits patternTransform patternUnits pointsAtX pointsAtY pointsAtZ
+preserveAlpha preserveAspectRatio primitiveUnits refX refY repeatCount repeatDur
+requiredExtensions requiredFeatures specularConstant specularExponent spreadMethod
+startOffset stdDeviation stitchTiles surfaceScale systemLanguage tableValues targetX
+targetY textLength viewBox viewTarget xChannelSelector yChannelSelector zoomAndPan
+"""
+
+DEFAULT_CASE_SENSITIVE_NAMES: frozenset[str] = frozenset(_CASE_SENSITIVE_NAME_SOURCE.split())
+
+# An attribute name XML will read: an XML Name, minus the colon. A colon makes a
+# namespace prefix, and a chapter is a fragment inside an XHTML document that declares no
+# prefix, so `xlink:href` is an unbound-prefix error rather than a stray attribute --
+# dropping the attribute costs a link, keeping it costs the whole package. A duplicated
+# name is the same class of fatal error, so only the first occurrence is written.
+_XML_ATTRIBUTE_NAME = re.compile(r"[A-Za-z_][\w.-]*\Z")
 
 # The only five entity names XML defines without a DTD. Everything else has to be
 # resolved to the character it names.
@@ -80,10 +118,21 @@ class ChapterSanitizer:
         chrome_tags: Iterable[str] = DEFAULT_CHROME_TAGS,
         chrome_classes: Iterable[str] = DEFAULT_CHROME_CLASSES,
         void_tags: Iterable[str] = VOID_TAGS,
+        case_sensitive_names: Iterable[str] = DEFAULT_CASE_SENSITIVE_NAMES,
     ) -> None:
         self._chrome_tags = frozenset(chrome_tags)
         self._chrome_classes = frozenset(chrome_classes)
         self._void_tags = frozenset(void_tags)
+        self._case_sensitive_names = {name.lower(): name for name in case_sensitive_names}
+
+    def canonical_name(self, name: str) -> str:
+        """The spelling XML needs for a name HTML handed over lowercased.
+
+        HTML parsing is case-insensitive and `html.parser` reports every tag and
+        attribute name folded down; XML is not, and SVG's vocabulary is camelCase.
+        Anything outside the table is returned untouched.
+        """
+        return self._case_sensitive_names.get(name.lower(), name)
 
     def is_void(self, tag: str) -> bool:
         return tag in self._void_tags
@@ -101,16 +150,27 @@ class ChapterSanitizer:
         values, a value-less boolean attribute, an unquoted value. Rebuilding escapes
         every value exactly once and writes `open` as `open="open"`, which is what
         XHTML requires and what the source will not reliably give.
+
+        What rebuilding costs is the source's casing, which `html.parser` has already
+        folded away -- so the case-sensitive table puts `viewBox` back, on the tag name
+        and on every attribute name, and `end_tag` applies the same table so the two
+        halves always agree. A name XML cannot read, and a name written twice, are both
+        dropped rather than handed to a parser that would reject the whole package.
         """
+        written: dict[str, str] = {}
+        for key, value in attrs:
+            name = self.canonical_name(key)
+            if name in written or not _XML_ATTRIBUTE_NAME.fullmatch(name):
+                continue
+            written[name] = name if value is None else value
         rendered = "".join(
-            f' {key}="{html_lib.escape(key if value is None else value, quote=True)}"'
-            for key, value in attrs
+            f' {name}="{html_lib.escape(value, quote=True)}"' for name, value in written.items()
         )
         closer = "/>" if self_closing or self.is_void(tag) else ">"
-        return f"<{tag}{rendered}{closer}"
+        return f"<{self.canonical_name(tag)}{rendered}{closer}"
 
     def end_tag(self, tag: str) -> str:
-        return f"</{tag}>"
+        return f"</{self.canonical_name(tag)}>"
 
     def text(self, data: str) -> str:
         return html_lib.escape(data, quote=False)

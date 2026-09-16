@@ -339,3 +339,22 @@ def test_headerlink_anchors_do_not_swallow_the_rest_of_the_heading():
         " and more</h2><p>after</p></main>"
     )
     assert body == '<h2 id="s">Title and more</h2><p>after</p>'
+
+
+def test_inline_svg_keeps_the_case_a_renderer_needs(tmp_path):
+    """Rebuilding a start tag must not cost the casing SVG depends on.
+
+    `html.parser` folds every name to lower case, so rebuilding from the parsed
+    attributes turned `viewBox` into `viewbox` -- an attribute an XHTML/SVG renderer
+    ignores, scaling an inline diagram wrong or dropping it.
+    """
+    body = book.extract_main(
+        '<main><p><svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid">'
+        '<linearGradient id="g"/></svg></p></main>'
+    )
+    assert 'viewBox="0 0 24 24"' in body
+    assert 'preserveAspectRatio="xMidYMid"' in body
+    assert '<linearGradient id="g"/>' in body
+    # and it is still what it has to be first of all: XML
+    ET.fromstring(f"<root>{body}</root>")
+

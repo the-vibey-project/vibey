@@ -12,6 +12,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **gh:** the exported book opens: chapter markup is rewritten as well-formed XHTML with
+  mkdocs' `&para;` permalinks and other named entities resolved, site chrome dropped, and
+  SVG's camelCase names preserved — what counts as chrome and which names are
+  case-sensitive are constructor arguments, not policy ([#162](https://github.com/the-vibey-project/vibey/issues/162))
+
 ## [0.7.0] (2026-09-15)
 
 ### Features

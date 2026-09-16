@@ -30,11 +30,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vibey_gh.chapter_sanitizer import ChapterSanitizer
+from vibey_gh.interfaces.book_interface import MainExtractorInterface
 from vibey_gh.interfaces.chapter_sanitizer_interface import ChapterSanitizerInterface
 
 __all__ = [
     "BookChapter",
     "BookError",
+    "MainExtractor",
     "build_book",
     "chapters_from_nav",
     "extract_main",
@@ -111,13 +113,16 @@ def chapters_from_nav(config_text: str) -> list[BookChapter]:
     return chapters
 
 
-class _MainExtractor(html_parser.HTMLParser):
+class MainExtractor(html_parser.HTMLParser):
     """Capture the subtree of the first <main>, <article>, or role="main" element.
 
     A parser, not a regex: the content element nests arbitrarily many <div>s (the
     ProperDocs theme wraps the body in a Bootstrap column carrying role="main"), and no
     regular expression balances that. Every decision about what survives capture and how
     it is written down belongs to the sanitizer -- this class only walks the tree.
+
+    Its seam is declared beside it in `vibey_gh/interfaces/book_interface.py`, per
+    ADR-0016.
     """
 
     def __init__(self, sanitizer: ChapterSanitizerInterface) -> None:
@@ -197,8 +202,15 @@ def extract_main(page_html: str, sanitizer: ChapterSanitizerInterface | None = N
     a printed page has nothing to click, and the markup that survives is rewritten for
     XML: a chapter is parsed as XHTML, and one `&para;` from a permalink anchor
     invalidates the entire package.
+
+    ADR-0016 method of last resort, and the reason: the only decision a caller would ever
+    vary here is already an injected seam -- `ChapterSanitizerInterface` judges what
+    survives and writes it down -- and the walk itself is `MainExtractor`, a class with
+    its interface beside it. A class wrapping these three lines would carry no state
+    between calls and expose one method taking exactly these arguments: a namespace, not
+    an object.
     """
-    parser = _MainExtractor(sanitizer or ChapterSanitizer())
+    parser: MainExtractorInterface = MainExtractor(sanitizer or ChapterSanitizer())
     parser.feed(page_html)
     body = "".join(parser.out).strip()
     if not body:
@@ -299,6 +311,13 @@ def build_book(
 
     Returns the paths written. Raises BookError with the missing piece named when a nav
     chapter has no built page — a book silently missing a chapter is worse than no book.
+
+    ADR-0016 method of last resort, and the reason: this is a one-shot pipeline with
+    nothing to remember between calls, and its one substitutable decision — how a
+    chapter's markup is judged and rewritten — is the injected `sanitizer`. A class
+    around the rest would take these same five arguments in a constructor and offer one
+    method. It is also the package's published entry point, called from `cli.py`, so the
+    shape is load-bearing past this module.
     """
     if "title" not in meta or not meta["title"]:
         raise BookError("book metadata needs at least a title")

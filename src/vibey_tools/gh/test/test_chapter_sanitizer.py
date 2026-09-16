@@ -87,3 +87,31 @@ def test_the_pieces_compose_into_something_an_xml_parser_reads():
         + s.end_tag("p")
     )
     assert ET.fromstring(chapter) is not None
+
+
+def test_svg_camel_case_names_survive_the_lowercasing_html_did():
+    """SVG is XML: `viewBox` lowercased is an attribute no renderer knows."""
+    s = ChapterSanitizer()
+    assert s.start_tag("svg", [("viewbox", "0 0 24 24")]) == '<svg viewBox="0 0 24 24">'
+    assert s.start_tag("lineargradient", [("id", "g")]) == '<linearGradient id="g">'
+    # the end tag reads the same table, so the two halves can never disagree
+    assert s.end_tag("lineargradient") == "</linearGradient>"
+    # a name outside the table is returned exactly as it arrived
+    assert s.canonical_name("div") == "div"
+
+
+def test_the_case_sensitive_vocabulary_is_configuration_not_policy():
+    s = ChapterSanitizer(case_sensitive_names=frozenset({"fooBar"}))
+    assert s.canonical_name("foobar") == "fooBar"
+    assert s.canonical_name("viewbox") == "viewbox"
+
+
+def test_attribute_names_xml_would_reject_never_reach_a_chapter():
+    s = ChapterSanitizer()
+    # a name written twice is a fatal XML error; the first occurrence wins
+    assert s.start_tag("p", [("id", "one"), ("id", "two")]) == '<p id="one">'
+    # a namespace prefix has no declaration in scope in a chapter fragment
+    assert s.start_tag("use", [("xlink:href", "#g"), ("href", "#g")]) == '<use href="#g">'
+    # and a name that is not an XML Name at all
+    assert s.start_tag("p", [("2bad", "x")]) == "<p>"
+

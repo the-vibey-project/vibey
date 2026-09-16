@@ -17,6 +17,9 @@ class ChapterSanitizerInterface(Protocol):
     entities; an EPUB reader parses the same bytes as XML and forgives neither.
     """
 
+    def canonical_name(self, name: str) -> str:
+        """The XML spelling of a name HTML reported lowercased (SVG's `viewBox`)."""
+
     def is_void(self, tag: str) -> bool:
         """Whether this element has no end tag and must be emitted self-closed."""
 
