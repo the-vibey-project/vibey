@@ -1401,8 +1401,8 @@ def worker(
                     typer.echo(
                         f"--engines {engines_opt} matches none of this worker's engines "
                         f"({available}); qwenloop joins them only with "
-                        "VIBEY_FEATURE_QWENLOOP=1 or [features] qwenloop in the "
-                        "project's config."
+                        "VIBEY_FEATURE_QWENLOOP=1, or with [features] qwenloop in the "
+                        "project's config when that environment override is unset."
                     )
                     raise typer.Exit(EXIT_USAGE)
                 adapters = allowed
