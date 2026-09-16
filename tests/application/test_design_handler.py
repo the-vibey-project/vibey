@@ -19,11 +19,18 @@ class FixedClock:
 class FakeDesignLedger:
     def __init__(self) -> None:
         self.events: list[DesignEvent] = []
+        self.engines: list[EngineId | None] = []
 
     async def append(
-        self, project_id: UUID, cycle: int, job_id: UUID, engine_id: EngineId, event: DesignEvent
+        self,
+        project_id: UUID,
+        cycle: int,
+        job_id: UUID,
+        engine_id: EngineId | None,
+        event: DesignEvent,
     ) -> None:
         self.events.append(event)
+        self.engines.append(engine_id)
 
     async def all_for_project(self, project_id: UUID) -> tuple[DesignEvent, ...]:
         return tuple(self.events)
@@ -315,3 +322,49 @@ async def test_accept_defaults_keeps_explicit_answers_over_defaults() -> None:
     }
     assert answers["q-a"] == "explicit answer"
     assert answers["q-b"] == "def-b"
+
+
+async def test_an_interview_no_engine_ran_names_none_and_excludes_none() -> None:
+    """The scripted path has no engine, so it claims none and bars none.
+
+    `excluded` on design.synthesize exists to keep synthesis off the engine that
+    interviewed. With no interviewer there is nobody to keep off, and inventing
+    one would put a false actor in an append-only record.
+    """
+    project_id = uuid4()
+    job = make_job(project_id)
+    job = job.__class__(
+        **{
+            field: getattr(job, field)
+            for field in job.__dataclass_fields__
+            if field not in {"phase", "kind"}
+        },
+        phase=Phase.DESIGN,
+        kind="design.interview",
+    )
+    jobs = FakeJobRepository()
+    gates = FakeHumanGateRepository()
+    ledger = FakeDesignLedger()
+    handler = DesignInterviewHandler(
+        ledger=ledger,
+        jobs=jobs,
+        gates=gates,
+        questions=ScriptedQuestionProvider(),
+        clock=FixedClock(),
+        interviewer=None,
+    )
+
+    for index, _stage in enumerate(DESIGN_STAGES):
+        outcome = await handler.handle(job)
+        assert isinstance(outcome, Park)
+        raised = await gates.raise_gate(project_id, job.id, outcome.request)
+        await gates.answer(
+            raised.gate_id,
+            answer={"answers": {f"q-{index + 1}": f"answer-{index + 1}"}},
+            answered_by="scripted-user",
+        )
+
+    assert isinstance(await handler.handle(job), Success)
+    assert set(ledger.engines) == {None}
+    synth = next(record for record in jobs._jobs.values() if record.kind == "design.synthesize")
+    assert synth.requirement["excluded"] == []
