@@ -29,9 +29,14 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from vibey_gh.chapter_sanitizer import ChapterSanitizer
+from vibey_gh.interfaces.book_interface import MainExtractorInterface
+from vibey_gh.interfaces.chapter_sanitizer_interface import ChapterSanitizerInterface
+
 __all__ = [
     "BookChapter",
     "BookError",
+    "MainExtractor",
     "build_book",
     "chapters_from_nav",
     "extract_main",
@@ -108,93 +113,194 @@ def chapters_from_nav(config_text: str) -> list[BookChapter]:
     return chapters
 
 
-_STRIP_TAGS = frozenset({"script", "nav", "aside", "form", "button"})
-_VOID_TAGS = frozenset({"br", "hr", "img", "input", "meta", "link"})
+# Start tags that end an open element in HTML, as `tag -> the tags it closes`. HTML lets
+# these end tags be omitted and `HTMLParser` synthesizes nothing, so without this a
+# document's siblings become each other's children: well-formed XML, and a book showing a
+# list nested inside its own first item. Deliberately the small set a documentation site
+# emits rather than HTML's whole optional-end-tag table -- every entry here is one whose
+# absence is visible on a rendered page.
+_IMPLIED_END_TAGS: dict[str, frozenset[str]] = {
+    "li": frozenset({"li"}),
+    "dt": frozenset({"dt", "dd"}),
+    "dd": frozenset({"dt", "dd"}),
+    "td": frozenset({"td", "th"}),
+    "th": frozenset({"td", "th"}),
+    "tr": frozenset({"td", "th", "tr"}),
+    "option": frozenset({"option"}),
+    "p": frozenset({"p"}),
+}
 
 
-class _MainExtractor(html_parser.HTMLParser):
+class MainExtractor(html_parser.HTMLParser):
     """Capture the subtree of the first <main>, <article>, or role="main" element.
 
     A parser, not a regex: the content element nests arbitrarily many <div>s (the
     ProperDocs theme wraps the body in a Bootstrap column carrying role="main"), and no
-    regular expression balances that. Subtrees of chrome tags (script, nav, aside,
-    form, button) are dropped during capture, and void elements are re-emitted
-    self-closed because EPUB readers parse XHTML.
+    regular expression balances that. Every decision about what survives capture and how
+    it is written down belongs to the sanitizer -- this class only walks the tree.
+
+    Its seam is declared beside it in `vibey_gh/interfaces/book_interface.py`, per
+    ADR-0016.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, sanitizer: ChapterSanitizerInterface) -> None:
         super().__init__(convert_charrefs=False)
+        self._sanitizer = sanitizer
         self.out: list[str] = []
-        self.depth = 0  # nesting inside the captured element; 0 = not capturing
-        self.strip_depth = 0
+        # The OPEN ELEMENTS, innermost last -- not a depth count. HTML permits an end tag
+        # to be omitted (`<ul><li>one<li>two</ul>` is valid HTML), and `HTMLParser` does
+        # not synthesize the missing ones, so a counter decremented per end tag closes
+        # the wrong number of elements and emits a fragment XML cannot parse. Holding the
+        # names lets an end tag close whatever it actually closes. Empty = not capturing;
+        # the first entry is the content element itself, which is never emitted.
+        self.open: list[str] = []
+        self.strip_depth = 0  # nesting inside a chrome subtree being discarded
         self.done = False
+
+    @property
+    def depth(self) -> int:
+        """How deep the walk is inside the content element.
+
+        Kept as a read-only view over `open` because it reads better at the call sites
+        that only ask "are we capturing" -- and because a second writable counter beside
+        the stack is exactly the pair that would drift apart.
+        """
+        return len(self.open)
 
     def _is_target(self, tag: str, attrs: list[tuple[str, str | None]]) -> bool:
         return tag in ("main", "article") or ("role", "main") in [(k, v) for k, v in attrs]
+
+    def _close_implied_by(self, tag: str) -> None:
+        """Close the open element this start tag ends, where HTML says it ends one.
+
+        `<li>one<li>two` is two SIBLINGS in HTML -- the second start tag closes the
+        first item -- but `HTMLParser` reports both start tags and leaves the closing to
+        the caller. Stacking them blindly would still be well-formed XML, so the EPUB
+        would open; it would just show a list nested inside its own first item. Valid
+        and wrong is not the bar, so the pairs below are honoured.
+
+        Deliberately the small set a documentation site actually emits, not HTML's whole
+        optional-end-tag table: each entry is a case that has a visible consequence in a
+        rendered book.
+        """
+        closed_by = _IMPLIED_END_TAGS.get(tag)
+        if not closed_by or len(self.open) <= 1 or self.open[-1] not in closed_by:
+            return
+        self.out.append(self._sanitizer.end_tag(self.open.pop()))
+
+    def _emit(self, text: str) -> None:
+        if self.depth and not self.strip_depth and not self.done:
+            self.out.append(text)
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if self.done:
             return
         if self.depth == 0:
             if self._is_target(tag, attrs):
-                self.depth = 1
+                self.open.append(tag)
             return
         if self.strip_depth:
-            if tag in _STRIP_TAGS:
+            # Count every element, not only the chrome tags: a discarded subtree ends
+            # where its own end tag arrives, whatever is nested inside it.
+            if not self._sanitizer.is_void(tag):
                 self.strip_depth += 1
             return
-        if tag in _STRIP_TAGS:
-            self.strip_depth = 1
+        if self._sanitizer.is_chrome(tag, attrs):
+            if not self._sanitizer.is_void(tag):
+                self.strip_depth = 1
             return
-        text = self.get_starttag_text() or f"<{tag}>"
-        if tag in _VOID_TAGS and not text.rstrip().endswith("/>"):
-            text = text.rstrip()[:-1] + "/>"
-        self.out.append(text)
-        if tag not in _VOID_TAGS:
-            self.depth += 1
+        self._close_implied_by(tag)
+        self.out.append(self._sanitizer.start_tag(tag, attrs))
+        if not self._sanitizer.is_void(tag):
+            self.open.append(tag)
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if self.done or self.depth == 0 or self.strip_depth:
             return
-        self.out.append(self.get_starttag_text() or f"<{tag}/>")
+        if self._sanitizer.is_chrome(tag, attrs):
+            return
+        self.out.append(self._sanitizer.start_tag(tag, attrs, self_closing=True))
 
     def handle_endtag(self, tag: str) -> None:
         if self.done or self.depth == 0:
             return
         if self.strip_depth:
-            if tag in _STRIP_TAGS:
+            if not self._sanitizer.is_void(tag):
                 self.strip_depth -= 1
             return
-        if tag in _VOID_TAGS:
+        if self._sanitizer.is_void(tag):
             return
-        self.depth -= 1
-        if self.depth == 0:
-            self.done = True
+        if tag not in self.open:
+            # A stray end tag closing nothing this walk opened. Emitting it would put a
+            # mismatched tag into the fragment; dropping it costs nothing, because there
+            # is no open element it could have been meant for.
             return
-        self.out.append(f"</{tag}>")
+        # Close everything this end tag implicitly closes, innermost first. For
+        # `<ul><li>one<li>two</ul>` the `</ul>` arrives with two <li>s still open, and
+        # both get the end tag HTML let the author omit.
+        #
+        # `while True` rather than `while self.open`, because the check above already
+        # proved `tag` is on the stack: the loop always leaves through one of the two
+        # returns below, and a condition that can never be false would be a branch no
+        # test could ever take.
+        while True:
+            unclosed = self.open.pop()
+            if not self.open:
+                # The content element itself: its end tag ends the capture and is never
+                # emitted, because the chapter is its CONTENTS, not the element.
+                self.done = True
+                return
+            self.out.append(self._sanitizer.end_tag(unclosed))
+            if unclosed == tag:
+                return
+
+    def close(self) -> None:
+        """Finish the walk, closing anything the document left open.
+
+        A truncated page -- or one whose final elements simply omit their end tags --
+        would otherwise leave the fragment unbalanced, which fails the XHTML parse for
+        the whole package rather than for the one chapter. Closing them here is the same
+        repair `handle_endtag` makes, applied at end of input.
+        """
+        super().close()
+        while len(self.open) > 1 and not self.done:
+            self.out.append(self._sanitizer.end_tag(self.open.pop()))
+        self.open.clear()
 
     def handle_data(self, data: str) -> None:
-        if self.depth and not self.strip_depth and not self.done:
-            self.out.append(data)
+        self._emit(self._sanitizer.text(data))
 
     def handle_entityref(self, name: str) -> None:
-        self.handle_data(f"&{name};")
+        self._emit(self._sanitizer.entity_reference(name))
 
     def handle_charref(self, name: str) -> None:
-        self.handle_data(f"&#{name};")
+        self._emit(self._sanitizer.character_reference(name))
 
 
-def extract_main(page_html: str) -> str:
-    """The chapter body from a built page.
+def extract_main(page_html: str, sanitizer: ChapterSanitizerInterface | None = None) -> str:
+    """The chapter body from a built page, as XHTML an EPUB reader will open.
 
     Anchored on <main>, <article>, or any element carrying role="main" -- the last is
     what the ProperDocs theme actually emits, discovered when the first dogfooded
-    deploy refused every page. Chrome subtrees are stripped because a book has no
-    runtime; void elements are self-closed because a bare <br> that every browser
-    forgives is a hard error on a Kindle.
+    deploy refused every page. Site chrome is dropped because a book has no runtime and
+    a printed page has nothing to click, and the markup that survives is rewritten for
+    XML: a chapter is parsed as XHTML, and one `&para;` from a permalink anchor
+    invalidates the entire package.
+
+    ADR-0016 method of last resort, and the reason: the only decision a caller would ever
+    vary here is already an injected seam -- `ChapterSanitizerInterface` judges what
+    survives and writes it down -- and the walk itself is `MainExtractor`, a class with
+    its interface beside it. A class wrapping these three lines would carry no state
+    between calls and expose one method taking exactly these arguments: a namespace, not
+    an object.
     """
-    parser = _MainExtractor()
+    parser: MainExtractorInterface = MainExtractor(
+        sanitizer if sanitizer is not None else ChapterSanitizer()
+    )
     parser.feed(page_html)
+    # Nothing more is coming, so anything still open is an omitted end tag rather than a
+    # continuation. Closing before reading is what keeps the fragment parseable.
+    parser.close()
     body = "".join(parser.out).strip()
     if not body:
         raise BookError(
@@ -288,11 +394,19 @@ def build_book(
     config_text: str,
     output_dir: Path,
     meta: dict[str, str],
+    sanitizer: ChapterSanitizerInterface | None = None,
 ) -> dict[str, Path]:
     """Build book.epub and book-print.html from a built site and its nav.
 
     Returns the paths written. Raises BookError with the missing piece named when a nav
     chapter has no built page — a book silently missing a chapter is worse than no book.
+
+    ADR-0016 method of last resort, and the reason: this is a one-shot pipeline with
+    nothing to remember between calls, and its one substitutable decision — how a
+    chapter's markup is judged and rewritten — is the injected `sanitizer`. A class
+    around the rest would take these same five arguments in a constructor and offer one
+    method. It is also the package's published entry point, called from `cli.py`, so the
+    shape is load-bearing past this module.
     """
     if "title" not in meta or not meta["title"]:
         raise BookError("book metadata needs at least a title")
@@ -304,7 +418,7 @@ def build_book(
         page = site_dir / chapter.site_page
         if not page.is_file():
             raise BookError(f"nav names {chapter.source} but the built site has no {page}")
-        bodies[chapter.slug] = extract_main(page.read_text(encoding="utf-8"))
+        bodies[chapter.slug] = extract_main(page.read_text(encoding="utf-8"), sanitizer)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

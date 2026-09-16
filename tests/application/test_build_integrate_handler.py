@@ -2,7 +2,7 @@
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from tests.application.fakes import FakeJobRepository, make_job
 from vibey.application.build_integrate_handler import BuildIntegrateHandler, MergeOutcome
@@ -45,9 +45,15 @@ class FakeGateRunner:
 class FakeLedger:
     def __init__(self) -> None:
         self.recorded: list[EngineEvent] = []
+        self.correlation_ids: list[UUID] = []
+        self.causation_ids: list[UUID | None] = []
 
-    async def record(self, *, project_id, cycle, job_id, engine_id, correlation_id, event):  # type: ignore[no-untyped-def]
+    async def record(  # type: ignore[no-untyped-def]
+        self, *, project_id, cycle, job_id, engine_id, correlation_id, event, causation_id=None
+    ):
         self.recorded.append(event)
+        self.correlation_ids.append(correlation_id)
+        self.causation_ids.append(causation_id)
 
 
 def _job(**overrides: object):  # type: ignore[no-untyped-def]

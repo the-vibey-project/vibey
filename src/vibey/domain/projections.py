@@ -116,29 +116,60 @@ def build_cost_report(events: Sequence[LedgerEvent]) -> tuple[CostReportEntry, .
 
 @dataclass(frozen=True, slots=True)
 class WorkLedgerEntry:
-    """Per work-thread status, keyed by correlation_id -- the closest thing
-    the event log has to a stable work-item identifier. This is a narrower
-    projection than the full work_item table (which additionally tracks
-    branch/worktree/verification state outside the ledger's vocabulary);
-    it answers "is this thread of work done, and what's left" from replay
-    alone."""
+    """Per work-thread status, keyed by ``causation_id`` -- the engine run
+    that caused the verdict, and now the closest thing the event log has to a
+    stable work-item identifier. It used to key on ``correlation_id``; that
+    field is the *delivery's* id (domain/correlation.py) and is deliberately
+    identical for every event of the delivery, so keying on it would collapse
+    every work thread of a project into one row.
 
-    correlation_id: str
+    This is a narrower projection than the full work_item table (which
+    additionally tracks branch/worktree/verification state outside the
+    ledger's vocabulary); it answers "is this thread of work done, and what's
+    left" from replay alone."""
+
+    causation_id: str
     complete: bool
     remaining_work: tuple[str, ...]
     last_seq: int
 
 
 def build_work_ledger(events: Sequence[LedgerEvent]) -> tuple[WorkLedgerEntry, ...]:
+    """Work threads by causing engine run, latest verdict per thread.
+
+    Scope, stated because the key change narrowed it: this reports only
+    verdicts that name a causing run. DESIGN and REVIEW verdicts never do --
+    `infrastructure/db/design_ledger.py` and `review_ledger.py` both write
+    `causation_id=None` unconditionally -- so every one of them is invisible
+    here. Only BUILD verdicts, which carry the run that produced them, appear.
+
+    That is a real narrowing and it is accepted deliberately, on a condition
+    that can be checked rather than assumed: nothing in production reads this
+    projection. `build_work_ledger` and `WorkLedgerEntry` are referenced by
+    tests/domain/test_projections.py and by nothing else under src/vibey --
+    no handler, no CLI command, no TUI view. So the events it omits are not
+    omitted from anything a user or a worker sees.
+
+    The condition is the thing to re-check, not the behaviour. The moment a
+    caller appears, decide first whether it wants BUILD threads only. If it
+    wants DESIGN and REVIEW too, the fix belongs in those two ledgers -- give
+    their verdicts a real causing id -- and not here, because bucketing them
+    under the string "None" would silently merge unrelated work into one row,
+    which is the bug this replaced.
+    """
     latest: dict[str, LedgerEvent] = {}
     for event in sorted(events, key=lambda e: e.seq):
         if event.kind is not EventKind.VERDICT_RENDERED:
             continue
-        latest[str(event.correlation_id)] = event
+        if event.causation_id is None:
+            # See the docstring: DESIGN and REVIEW verdicts land here, and are
+            # dropped rather than merged under a shared "None" bucket.
+            continue
+        latest[str(event.causation_id)] = event
 
     return tuple(
         WorkLedgerEntry(
-            correlation_id=cid,
+            causation_id=cid,
             complete=bool(event.payload.get("complete", False)),
             remaining_work=_as_str_tuple(event.payload.get("remaining_work", [])),
             last_seq=event.seq,

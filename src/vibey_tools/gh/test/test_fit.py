@@ -11,13 +11,17 @@ from vibey_gh.fit import (
     ADMIT,
     DEFER,
     FLOOR,
+    DarwinMemorySampler,
     Estimate,
+    LinuxMemorySampler,
     Machine,
     Model,
     Observation,
+    TextFileReader,
     decide,
     estimate_from,
     headroom_gb,
+    machine_sampler,
     sample_machine,
     sample_model,
     saturating_wait,
@@ -146,7 +150,7 @@ def test_sample_machine_reads_the_real_shapes(monkeypatch):
         return ""
 
     monkeypatch.setattr(fit, "_run", fake)
-    machine = sample_machine()
+    machine = sample_machine(platform_name="darwin")
     assert machine.total_gb == 25.77
     assert machine.free_gb == pytest.approx(2.95, abs=0.05)
     assert machine.swap_total_gb == 7.0 and machine.swap_used_gb == pytest.approx(6.5, abs=0.01)
@@ -154,8 +158,11 @@ def test_sample_machine_reads_the_real_shapes(monkeypatch):
 
 def test_sample_machine_reports_zero_rather_than_guessing(monkeypatch):
     monkeypatch.setattr(fit, "_run", lambda *cmd: "")
-    machine = sample_machine()
+    machine = sample_machine(platform_name="darwin")
     assert machine.total_gb == 0.0 and machine.free_gb == 0.0
+    # Zero is the absence of a measurement, and says so rather than passing for
+    # a machine with room for nothing.
+    assert not machine.readable
 
 
 def test_sample_model_reads_the_runner(monkeypatch):
@@ -227,7 +234,7 @@ def test_a_page_size_line_without_digits_falls_back_to_the_default(monkeypatch):
             "Mach Virtual Memory Statistics:\nPages free: 100000.\n" if cmd[0] == "vm_stat" else ""
         ),
     )
-    machine = sample_machine()
+    machine = sample_machine(platform_name="darwin")
     assert machine.free_gb == pytest.approx(0.41, abs=0.01)  # 100000 * 4096 bytes
 
 
@@ -264,3 +271,261 @@ def test_the_superlinear_wait_defers_work_a_linear_model_would_have_admitted():
     verdict = decide(MACHINE, MODEL, est, queue_depth=16, payload_bytes=1024, deadline_s=900)
     assert verdict.verdict == DEFER
     assert verdict.projected_wait_s == pytest.approx(2000.0)
+
+
+# -- the machine side on Linux ------------------------------------------------------
+#
+# This machine is macOS, and CI runs the suite on Linux, so neither platform's sampler
+# may depend on the platform running the test. Every reading below is handed to the
+# sampler through its injected `TextFileReaderInterface` (sub-doctrine 9.b): exact file
+# contents, no module attribute patched, the same assertions on either kind of machine.
+
+HOST_MEMINFO = """MemTotal:       32793692 kB
+MemFree:         1000000 kB
+MemAvailable:    8000000 kB
+SwapTotal:       2097152 kB
+SwapFree:        1048576 kB
+Hugepagesize:       2048 kB
+a line with no colon at all
+"""
+
+V2_LIMIT, V1_LIMIT = fit.LINUX_CGROUP_MEMORY_LIMIT_PATHS
+V2_USAGE, V1_USAGE = fit.LINUX_CGROUP_MEMORY_USAGE_PATHS
+(V2_SWAP_LIMIT,) = fit.LINUX_CGROUP_SWAP_LIMIT_PATHS
+(V2_SWAP_USAGE,) = fit.LINUX_CGROUP_SWAP_USAGE_PATHS
+
+
+class FakeFiles:
+    """The read seam, given exact contents. A file not in the mapping does not exist."""
+
+    def __init__(self, files: dict[str, str]):
+        self.files = files
+
+    def read(self, path: str) -> str | None:
+        return self.files.get(path)
+
+
+def linux(**files: str) -> Machine:
+    return LinuxMemorySampler(FakeFiles({fit.LINUX_MEMINFO_PATH: HOST_MEMINFO, **files})).sample()
+
+
+def test_the_sampler_is_the_one_that_can_read_this_kind_of_machine():
+    assert isinstance(machine_sampler("linux"), LinuxMemorySampler)
+    assert isinstance(machine_sampler("linux2"), LinuxMemorySampler)
+    assert isinstance(machine_sampler("darwin"), DarwinMemorySampler)
+    # No argument means this interpreter's own platform, whichever that is.
+    assert isinstance(machine_sampler(), (LinuxMemorySampler, DarwinMemorySampler))
+
+
+def test_linux_reads_its_memory_from_proc_meminfo():
+    """The defect: on Linux `sysctl` and `vm_stat` do not exist, so every field read as
+    zero and the machine silently looked empty."""
+    machine = LinuxMemorySampler(FakeFiles({fit.LINUX_MEMINFO_PATH: HOST_MEMINFO})).sample()
+    assert machine.readable
+    assert machine.total_gb == 33.58  # 32793692 kB
+    assert machine.free_gb == 8.19  # MemAvailable, not MemFree
+    assert machine.swap_total_gb == 2.15
+    assert machine.swap_used_gb == 1.07  # SwapTotal - SwapFree
+
+
+def test_meminfo_without_memavailable_falls_back_to_memfree():
+    """MemAvailable arrived in Linux 3.14; an older kernel still has to be read."""
+    machine = LinuxMemorySampler(
+        FakeFiles({fit.LINUX_MEMINFO_PATH: "MemTotal: 4000000 kB\nMemFree: 2000000 kB\n"})
+    ).sample()
+    assert machine.total_gb == 4.1 and machine.free_gb == 2.05
+
+
+def test_meminfo_lines_that_state_no_usable_number_are_skipped():
+    """`/proc/meminfo` is not contractual: a key with no value, a non-numeric value, and
+    a value with no unit all have to survive being read."""
+    machine = LinuxMemorySampler(
+        FakeFiles(
+            {
+                fit.LINUX_MEMINFO_PATH: (
+                    "MemTotal:\nMemAvailable: not-a-number kB\nMemFree: 2048\nSwapTotal: 0 kB\n"
+                )
+            }
+        )
+    ).sample()
+    assert machine.total_gb == 0.0 and not machine.readable
+    assert machine.free_gb == 0.0  # 2048 bytes, unit-less, rounds to 0.00 GB
+
+
+def test_inside_a_container_the_cgroup_limit_wins_over_the_hosts_memory():
+    """`/proc/meminfo` is the HOST's memory inside a container: this process is killed at
+    the cgroup limit long before it reaches the host's total, so projecting on the host's
+    numbers admits work the container cannot run."""
+    machine = linux(
+        **{
+            V2_LIMIT: "4294967296\n",
+            V2_USAGE: "1073741824\n",
+            V2_SWAP_LIMIT: "536870912\n",
+            V2_SWAP_USAGE: "268435456\n",
+        }
+    )
+    assert machine.readable
+    assert machine.total_gb == 4.29  # the cgroup's 4 GiB, not the host's 32 GB
+    assert machine.free_gb == 3.22  # limit - current
+    assert machine.swap_total_gb == 0.54 and machine.swap_used_gb == 0.27
+
+
+def test_a_cgroup_v1_limit_is_read_when_v2_says_max():
+    """v2 spells "no limit" as the word `max`; the v1 file is then the one to read."""
+    machine = linux(**{V2_LIMIT: "max\n", V1_LIMIT: "4294967296\n", V1_USAGE: "2147483648\n"})
+    assert machine.total_gb == 4.29 and machine.free_gb == 2.15
+
+
+def test_a_container_below_the_hierarchy_root_is_read_where_its_limit_lives():
+    """The ROOT files are not this process's files when it sits in a nested cgroup.
+
+    On a host-mounted hierarchy -- Docker, Kubernetes -- `/sys/fs/cgroup/memory.max`
+    reads `max` while the container's own `memory.max`, under the path
+    `/proc/self/cgroup` reports, holds the real ceiling. Reading only the root falls
+    through to `/proc/meminfo` and projects on the HOST's memory, which is the exact
+    mistake preferring the cgroup exists to avoid.
+    """
+    machine = linux(
+        **{
+            "/proc/self/cgroup": "0::/docker/abc123\n",
+            V2_LIMIT: "max\n",  # the root says "no limit", as it does in a container
+            "/sys/fs/cgroup/docker/abc123/memory.max": "4294967296\n",
+            "/sys/fs/cgroup/docker/abc123/memory.current": "1073741824\n",
+        }
+    )
+    assert machine.total_gb == 4.29  # the container's 4 GiB, not the host's 32 GB
+    assert machine.free_gb == 3.22  # limit - current, both read from the SAME cgroup
+
+
+def test_a_cgroup_v1_memory_controller_names_its_own_path():
+    """v1 writes one line per controller, and the memory line is the one that governs a
+    memory limit -- a sibling controller can sit at a different path entirely."""
+    machine = linux(
+        **{
+            "/proc/self/cgroup": "5:cpu,cpuacct:/elsewhere\n4:memory:/docker/xyz\n",
+            V1_LIMIT: "max\n",
+            "/sys/fs/cgroup/memory/docker/xyz/memory.limit_in_bytes": "2147483648\n",
+            "/sys/fs/cgroup/memory/docker/xyz/memory.usage_in_bytes": "1073741824\n",
+        }
+    )
+    assert machine.total_gb == 2.15 and machine.free_gb == 1.07
+
+
+@pytest.mark.parametrize(
+    "contents",
+    [
+        "0::/\n",  # already at the root: nothing to add
+        "",  # an empty file
+        "garbage without enough colons\n",  # nothing parseable
+    ],
+)
+def test_a_process_at_the_root_reads_exactly_the_configured_paths(contents: str):
+    """Deriving nothing must leave the configured paths untouched, so a plain host and a
+    caller that mounts its hierarchy elsewhere both behave exactly as before."""
+    machine = linux(**{"/proc/self/cgroup": contents, V2_LIMIT: "4294967296\n"})
+    assert machine.total_gb == 4.29
+
+
+def test_an_unreadable_proc_self_cgroup_changes_nothing():
+    """The file is absent on anything that is not Linux-with-cgroups, and its absence is
+    not a reason to stop reading the hierarchy roots."""
+    machine = linux(**{V2_LIMIT: "4294967296\n"})
+    assert machine.total_gb == 4.29
+
+
+def test_a_cgroup_ceiling_at_or_above_the_host_is_not_a_ceiling():
+    """v1 spells "no limit" as a sentinel near 2**63. A limit that large is not a limit,
+    and the host's own numbers stand."""
+    machine = linux(**{V1_LIMIT: "9223372036854771712\n"})
+    assert machine.total_gb == 33.58 and machine.free_gb == 8.19
+    assert machine.swap_total_gb == 2.15  # still the host's paging space
+
+
+def test_a_cgroup_limit_without_a_usage_reading_reports_no_free_memory():
+    """No `memory.current` to subtract, so free memory inside this cgroup was never
+    measured. Unmeasured is zero: the host's MemAvailable describes the host's accounting
+    scope, and capping it at the limit would say a full 4 GiB container has 4 GiB free."""
+    machine = linux(**{V2_LIMIT: "4294967296\n"})
+    assert machine.total_gb == 4.29 and machine.free_gb == 0.0
+    # The host's swap is not this container's to claim.
+    assert machine.swap_total_gb == 0.0 and machine.swap_used_gb == 0.0
+
+
+def test_a_hybrid_host_reads_usage_from_the_same_cgroup_version_as_the_limit():
+    """Both hierarchies mounted, v2 states the limit, v2's `memory.current` is unreadable
+    and v1's `memory.usage_in_bytes` is not. Subtracting the v1 figure from the v2 limit
+    mixes two accounting scopes and overstates free memory, so it is not done."""
+    machine = linux(**{V2_LIMIT: "4294967296\n", V1_USAGE: "1073741824\n"})
+    assert machine.total_gb == 4.29 and machine.free_gb == 0.0
+
+
+def test_a_usage_file_that_states_no_number_is_no_reading_at_all():
+    """`memory.current` reads `max` on a cgroup with no memory accounting; that is not a
+    usage figure, and inventing one from it would be a guess."""
+    machine = linux(**{V2_LIMIT: "4294967296\n", V2_USAGE: "max\n"})
+    assert machine.total_gb == 4.29 and machine.free_gb == 0.0
+
+
+def test_an_override_that_leaves_no_usage_path_for_this_hierarchy_reads_none():
+    """A caller may override one path tuple and not the other (ADR-0018 keeps both keys):
+    a hierarchy with no usage file at the limit's index simply states no usage."""
+    machine = LinuxMemorySampler(
+        FakeFiles({fit.LINUX_MEMINFO_PATH: HOST_MEMINFO, V2_LIMIT: "4294967296\n"}),
+        cgroup_usage_paths=(),
+    ).sample()
+    assert machine.total_gb == 4.29 and machine.free_gb == 0.0
+
+
+def test_a_cgroup_limit_is_read_even_when_proc_meminfo_is_not():
+    machine = LinuxMemorySampler(FakeFiles({V2_LIMIT: "2147483648\n"})).sample()
+    assert machine.readable and machine.total_gb == 2.15
+    assert machine.free_gb == 0.0  # unknown, and unknown is not "all of it"
+
+
+def test_a_linux_machine_that_states_nothing_is_the_floor_not_an_empty_machine():
+    machine = LinuxMemorySampler(FakeFiles({})).sample()
+    assert not machine.readable
+    assert machine.total_gb == 0.0 and machine.free_gb == 0.0
+    assert machine.swap_total_gb == 0.0 and machine.swap_used_gb == 0.0
+
+
+def test_the_default_reader_is_the_real_filesystem(tmp_path):
+    """No reader injected: the sampler reads real files, and a file that is not there is
+    `None` rather than an exception."""
+    meminfo = tmp_path / "meminfo"
+    meminfo.write_text("MemTotal: 1000000 kB\nMemAvailable: 500000 kB\n", encoding="utf-8")
+    machine = LinuxMemorySampler(
+        meminfo_path=str(meminfo),
+        cgroup_limit_paths=(str(tmp_path / "not-mounted"),),
+    ).sample()
+    assert machine.readable and machine.total_gb == 1.02 and machine.free_gb == 0.51
+    assert TextFileReader().read(str(tmp_path / "not-mounted")) is None
+
+
+def test_an_unreadable_machine_is_the_floor_not_a_projection():
+    """The other half of doctrine 10's floor: a model that cannot be read is already a
+    FLOOR, and so is a machine that cannot be read. Before this, an unreadable machine
+    reported zero, skipped the ceiling check, and was quietly admitted."""
+    unknown = Machine(
+        total_gb=0.0, free_gb=0.0, swap_used_gb=0.0, swap_total_gb=0.0, readable=False
+    )
+    verdict = decide(
+        unknown, MODEL, estimate_from([]), queue_depth=0, payload_bytes=1024, deadline_s=900
+    )
+    assert verdict.verdict == FLOOR and not verdict.ok
+    assert "would not state its own memory" in verdict.reason
+
+
+def test_the_fit_cli_says_out_loud_that_the_machine_could_not_be_read(
+    monkeypatch, capsys, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    unknown = Machine(
+        total_gb=0.0, free_gb=0.0, swap_used_gb=0.0, swap_total_gb=0.0, readable=False
+    )
+    monkeypatch.setattr(fit, "sample_machine", lambda: unknown)
+    monkeypatch.setattr(fit, "sample_model", lambda name, base_url=...: MODEL)
+    assert main(["fit"]) == 1
+    out = capsys.readouterr().out
+    assert "machine memory could not be read" in out
+    assert "FLOOR" in out

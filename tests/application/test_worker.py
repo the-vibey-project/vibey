@@ -87,7 +87,10 @@ async def test_failure_outcome_nacks_with_class_and_detail() -> None:
     assert record.last_error == {"class": "work", "detail": "assertion failed"}
 
 
-async def test_failure_marks_failed_once_max_attempts_reached() -> None:
+async def test_exhausted_attempts_park_with_a_grant_instead_of_failing() -> None:
+    """ADR-0024: a bounded ladder ends in a park that can grant more. The
+    attempt bound used to end in `nack`'s state='failed' with no gate row at
+    all -- the work item stopped and nobody was asked."""
     job = make_job(PROJECT_ID, max_attempts=1)
     jobs = FakeJobRepository([job])
     gates = FakeHumanGateRepository()
@@ -98,7 +101,140 @@ async def test_failure_marks_failed_once_max_attempts_reached() -> None:
 
     record = await jobs.get(job.id)
     assert record is not None
-    assert record.state is JobState.FAILED
+    assert record.state is JobState.AWAITING_HUMAN
+    assert jobs.calls[-1] == "park"
+    assert "nack" not in jobs.calls
+
+    assert len(gates.raised) == 1
+    gate = gates.raised[0]
+    assert gate.kind == "attempts_exhausted"
+    assert gate.job_id == job.id
+    # The park advertises the number to type, and says what actually broke.
+    assert '{"max_attempts": 4}' in gate.prompt
+    assert "boom" in gate.prompt
+
+
+async def test_exhaustion_park_advertises_the_configured_grant_step() -> None:
+    """The step is a key, not a literal (ADR-0018)."""
+    job = make_job(PROJECT_ID, max_attempts=2)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+        attempts_grant_step=10,
+    )
+
+    # Burn the first attempt (a plain nack), then trip the bound.
+    await loop.run_once(PROJECT_ID)
+    await loop.run_once(PROJECT_ID)
+
+    assert '{"max_attempts": 12}' in gates.raised[0].prompt
+
+
+async def test_an_answered_grant_widens_the_bound_and_retries() -> None:
+    """Without widening the row, the grant would be spent immediately: the
+    repository decides 'failed' from the row's own max_attempts."""
+    job = make_job(PROJECT_ID, max_attempts=1)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    raised = await gates.raise_gate(
+        PROJECT_ID, job.id, HumanGateRequest(kind="attempts_exhausted", prompt="more?")
+    )
+    await gates.answer(raised.gate_id, answer={"max_attempts": 3}, answered_by="adam")
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    record = await jobs.get(job.id)
+    assert record is not None
+    assert record.max_attempts == 3
+    assert record.state is JobState.READY
+    assert "grant_attempts" in jobs.calls
+    assert jobs.calls[-1] == "nack"
+
+
+async def test_an_answer_without_the_grant_key_parks_again() -> None:
+    """A human who fixed the item by hand answers anything; that buys the one
+    retry the un-park gives, not a wider bound."""
+    job = make_job(PROJECT_ID, max_attempts=1)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    raised = await gates.raise_gate(
+        PROJECT_ID, job.id, HumanGateRequest(kind="attempts_exhausted", prompt="more?")
+    )
+    await gates.answer(raised.gate_id, answer={"resolution": "fixed by hand"}, answered_by="adam")
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    record = await jobs.get(job.id)
+    assert record is not None
+    assert record.state is JobState.AWAITING_HUMAN
+    assert "grant_attempts" not in jobs.calls
+    # The answered gate must not suppress the fresh one, or the human is left
+    # with nothing to answer.
+    assert len(gates.raised) == 2
+
+
+async def test_a_grant_no_wider_than_the_current_bound_parks_again() -> None:
+    job = make_job(PROJECT_ID, max_attempts=1)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    raised = await gates.raise_gate(
+        PROJECT_ID, job.id, HumanGateRequest(kind="attempts_exhausted", prompt="more?")
+    )
+    await gates.answer(raised.gate_id, answer={"max_attempts": 1}, answered_by="adam")
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    record = await jobs.get(job.id)
+    assert record is not None
+    assert record.state is JobState.AWAITING_HUMAN
+    assert record.max_attempts == 1
+    assert "grant_attempts" not in jobs.calls
+
+
+async def test_exhaustion_does_not_duplicate_an_unanswered_gate() -> None:
+    """A gate already open on this job is the one the human will answer;
+    a second would leave the duplicate latest_for_job returns forever."""
+    job = make_job(PROJECT_ID, max_attempts=1)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    await gates.raise_gate(
+        PROJECT_ID, job.id, HumanGateRequest(kind="attempts_exhausted", prompt="more?")
+    )
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert len(gates.raised) == 1
+    record = await jobs.get(job.id)
+    assert record is not None
+    assert record.state is JobState.AWAITING_HUMAN
 
 
 async def test_handler_exception_becomes_a_vibey_class_failure() -> None:
