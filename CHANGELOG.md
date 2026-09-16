@@ -12,6 +12,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **worker:** a deferring worker says why -- one `job.deferred` log line per deferral naming the job kind, the work item, the reason and the retry time, so a job that can never make progress no longer looks like an idle worker
+
 ## [0.7.0] (2026-09-15)
 
 ### Features

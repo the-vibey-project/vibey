@@ -197,8 +197,11 @@ per-engine "turns" figure is the selection count, not turns);
   names (it shows queue depth only): an open circuit (`vibey engines`), a
   capacity backoff, or a verify/integrate repair round in flight (a
   `build.implement` repair job for the same item is queued or running; the
-  verify job re-checks every 10 minutes). The reason is stored on the job
-  row:
+  verify job re-checks every 10 minutes). The worker says so as it defers:
+  one `job.deferred` line per deferral, naming the kind, the work item, the
+  reason and the `retry_at` it will come back at -- a capacity deferral at
+  WARNING, a routine repair wait at INFO. For a job that deferred before you
+  were watching, the same reason is on the job row:
   `psql "$VIBEY_PG_URL" -c "SELECT kind, work_item_id, run_after, last_error->>'detail' FROM job WHERE state='ready' AND run_after > now();"`.
   Watch `vibey ledger show --kind FindingRaised` and `--kind FindingResolved`
   for the repair round to close. Circuits and backoffs clear on their own;

@@ -15,10 +15,12 @@ from vibey.application.interfaces import (
     Defer,
     Failure,
     JobHandler,
+    Logger,
     Outcome,
     Park,
     Success,
 )
+from vibey.application.observability import StandardLibraryLogger
 from vibey.application.ports import HumanGateRepository, JobRepository
 from vibey.domain.job import FailureClass
 
@@ -40,6 +42,7 @@ class WorkerLoop:
         owner: str,
         lease: timedelta = timedelta(seconds=30),
         lease_for_kind: Callable[[str], timedelta] | None = None,
+        logger: Logger | None = None,
     ) -> None:
         self._jobs = jobs
         self._gates = gates
@@ -47,6 +50,9 @@ class WorkerLoop:
         self._owner = owner
         self._lease = lease
         self._lease_for_kind = lease_for_kind
+        self._log: Logger = (
+            logger if logger is not None else StandardLibraryLogger(__name__, owner=owner)
+        )
 
     async def run_once(self, project_id: UUID) -> bool:
         """Claims and executes at most one job. Returns False if there was
@@ -105,6 +111,28 @@ class WorkerLoop:
                 await self._gates.raise_gate(job.project_id, job.id, outcome.request)
             await self._jobs.park(job.id, owner=self._owner)
         elif isinstance(outcome, Defer):
+            # A defer used to leave no trace outside `job.last_error`: the
+            # queue showed 0 failed, 0 parked and a job quietly sliding its
+            # run_after, so a BUILD that could never select an engine was
+            # indistinguishable from an idle worker, and the only way to see
+            # why was a hand-written SQL query. Say it out loud instead.
+            #
+            # Capacity is the one that warrants a warning. Routine
+            # verify-repair waits are Defers too (see `Defer.capacity`), and
+            # crying wolf on every one of those is how a warning stops being
+            # read at all.
+            say = self._log.warning if outcome.capacity else self._log.info
+            say(
+                "job.deferred",
+                job_id=str(job.id),
+                project_id=str(job.project_id),
+                phase=job.phase.value,
+                kind=job.kind,
+                work_item=job.work_item_id,
+                capacity=outcome.capacity,
+                reason=outcome.detail,
+                retry_at=outcome.retry_at.isoformat(),
+            )
             await self._jobs.defer(
                 job.id,
                 owner=self._owner,
