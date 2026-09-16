@@ -672,16 +672,27 @@ jobs:
           mkdir -p "pages/${CHANNEL}" "pages/${OTHER_CHANNEL}"
           cp -R channel-site/. "pages/${CHANNEL}/"
           restored=false
+          # FILTERED TO THE OTHER BRANCH. Without `--branch` this walked the 20 most
+          # recent successful runs of this workflow on ANY branch, looking for an
+          # artifact only the other branch ever produces. Every integration-branch
+          # publish takes one of those 20 slots, so after twenty merges the last release
+          # run falls out of the window, `docs-main` is nowhere in it, and the restore
+          # silently fails. Twenty runs OF THE OTHER BRANCH spans months instead.
           while read -r other_run; do
             if gh run download "$other_run" --name "docs-${OTHER_CHANNEL}" \
               --dir "pages/${OTHER_CHANNEL}" 2>/dev/null; then
               restored=true
               break
             fi
-          done < <(gh run list --workflow release-surfaces.yml \
+          done < <(gh run list --workflow release-surfaces.yml --branch "$OTHER_BRANCH" \
             --status success --limit 20 --json databaseId --jq '.[].databaseId')
           if [ "$restored" != true ]; then
-            echo "::notice::No successful ${OTHER_CHANNEL} documentation artifact exists yet"
+            # Loud, because the deploy below replaces the WHOLE site: an unrestored
+            # channel is not left alone, it is published as an empty directory that the
+            # chooser still links to. Observed as a 404 on every documented `main/` URL --
+            # the book, the paper, the governance corpus -- after a day of merges into the
+            # integration branch, with nothing red anywhere to say so.
+            echo "::warning::No ${OTHER_CHANNEL} docs artifact on ${OTHER_BRANCH}; publishing ${OTHER_CHANNEL}/ empty"
           fi
           cat > pages/index.html <<'HTML'
           <!doctype html>
