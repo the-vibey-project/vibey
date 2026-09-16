@@ -46,6 +46,11 @@ class Verdict:
     # contribution that is green and simply unapproved is waiting on the owner, and
     # nobody finds out unless someone says so.
     held_for_review: bool = False
+    # True when the obstacle is only that the head is conflicting or behind -- a state
+    # the train can clear for itself by merging the integration branch forward, rather
+    # than one that needs a person. Carried as a flag instead of re-read from `reason`,
+    # because a caller matching on that sentence would break the moment it is reworded.
+    restackable: bool = False
 
     @property
     def ready(self) -> bool:
@@ -139,12 +144,21 @@ def judge(pr: dict, cfg: GhConfig) -> Verdict:
 
     reason = None
     held = False
+    restackable = False
     if pr.get("isDraft"):
         reason = "draft"
     elif pr.get("mergeable") == "CONFLICTING":
         reason = f"conflicts with {cfg.integration_branch}"
+        # Conflicting AS GITHUB COMPUTES IT, which is not the same question as whether
+        # the merge conflicts. GitHub merges without this repository's `.gitattributes`,
+        # so a path declared `merge=union` -- the changelog every branch appends to --
+        # is called a conflict there and resolves here. Worth attempting before a person
+        # is asked to: observed as nine open pull requests, each made unmergeable by the
+        # one before it landing, every one of them clearing on a local merge.
+        restackable = not pr.get("isCrossRepository", False)
     elif pr.get("mergeStateStatus") == "BEHIND":
         reason = "head branch is behind its target"
+        restackable = not pr.get("isCrossRepository", False)
     elif labels & {BLOCKED_LABEL, EXHAUSTED_LABEL}:
         reason = "PR automation requires operator action"
     elif review == "CHANGES_REQUESTED":
@@ -188,7 +202,14 @@ def judge(pr: dict, cfg: GhConfig) -> Verdict:
                     f" {why}; merging unbumped publishes nothing (see #254)"
                 )
 
-    return Verdict(pr["number"], pr.get("title", ""), author, reason, held_for_review=held)
+    return Verdict(
+        pr["number"],
+        pr.get("title", ""),
+        author,
+        reason,
+        held_for_review=held,
+        restackable=restackable,
+    )
 
 
 _PR_FIELDS = (

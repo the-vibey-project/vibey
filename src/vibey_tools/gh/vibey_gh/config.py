@@ -1210,6 +1210,13 @@ class GhConfig:
     release_branch: str = "main"
     owner: str = ""
     trusted_authors: tuple[str, ...] = ()
+    # Whether the merge train may bring a conflicting or behind branch forward itself,
+    # by merging the integration branch into it locally, before reporting it as stuck.
+    # A key rather than a constant (ADR-0018): the merge is an ordinary commit pushed to
+    # somebody's topic branch, and a repository is entitled to say that no automation
+    # writes to a branch it does not own. Off, the train reports the conflict exactly as
+    # it did before and a person clears it.
+    restack_conflicts: bool = True
     ai: AiConfig = AiConfig()
     pr_automation: PrAutomationConfig = PrAutomationConfig()
     issue_automation: IssueAutomationConfig = IssueAutomationConfig()
@@ -1446,6 +1453,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         release_branch=br.get("release", "main"),
         owner=tr.get("owner", ""),
         trusted_authors=tuple(tr.get("trusted_authors", ())),
+        restack_conflicts=bool(tr.get("restack_conflicts", True)),
         ai=AiConfig(
             base_url=data.get("ai", {}).get("base_url", ""),
             auth_secret=data.get("ai", {}).get("auth_secret", AiConfig.auth_secret),
