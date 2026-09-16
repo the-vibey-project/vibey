@@ -77,7 +77,7 @@ def test_the_diagram_numbers_every_phase(name: str) -> None:
     missing = [
         f"{circled} {phase.upper()}"
         for circled, _, phase in PHASES
-        if not re.search(rf"{circled}\s*{re.escape(phase.upper())}", diagram)
+        if not re.search(rf"{circled}[ \t]*{re.escape(phase.upper())}(?=$|[^\w])", diagram)
     ]
     assert not missing, f"{name}: the diagram no longer numbers {missing}"
 
