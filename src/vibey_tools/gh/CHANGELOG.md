@@ -5,6 +5,23 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Refuse to replace a live documentation channel with an empty directory. A Pages deploy
+  replaces the whole site, so the run publishing one channel restores the other from its last
+  artifact — and when that restore failed the job emitted a **warning** and deployed anyway,
+  republishing the other channel as an empty directory the chooser still links to. A warning
+  does not prevent a deploy: every documented `main/` URL served Pages' 404 page — the book,
+  the EPUB, the print HTML, the paper, the governance corpus, every runbook — while the job
+  stayed green, which is why it went unnoticed. The two cases are now distinguished instead of
+  warned through. If the other channel is **live**, this deploy would destroy it: the job fails
+  and names the URL, the branch to republish, and the re-run. Liveness is decided on an
+  explicit **404** and nothing else: `curl -f` exits non-zero for a timeout, a DNS or TLS
+  failure, a 403 and a 500 alike, so keying it on the exit status would read a transient
+  blip as "never published" and delete a live channel — failing open in the one guard
+  whose job is to fail closed. Six cases are covered by a focused test that drives the
+  rendered step with a stubbed `curl`. If it was never published there is
+  nothing to lose, so the empty directory is dropped and the publish proceeds with one channel —
+  the ordinary first publish of a new adopter, which failing outright would have broken.
+
 - Stop `doctor` calling valid configuration an error, and make the drift that caused it a test
   failure. `_SECTION_KEYS` is hand-written for the sections whose keys load onto `GhConfig`
   itself, so it drifts from the loader silently — and the drift is not a missing hint, it is an
