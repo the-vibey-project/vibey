@@ -5,7 +5,7 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Agent Skills for vibe engineering — 127 plugins and 644 evidence-grounded practitioner skills spanning security, compliance, cloud infrastructure (including a comparative AWS/GCP/Azure deep dive), IT infrastructure and governance, identity automation, DNS and naming, communication technologies, DevSecOps, Linux server administration, AI/ML, data engineering, web scraping, reporting and dashboards, geospatial software, logistics and optimization, frontend, mobile, desktop, smart TV, game development, UI/UX design, VR and AR, graphics and computer vision, media engineering, social platforms, systems programming (assembly, OS and kernel, languages, browsers, package managers), computer hardware including an ARM deep dive, data centres, peripherals, microarchitecture and memory systems, semiconductors and chip manufacturing, digital logic and firmware, embedded and IoT, maker hardware, electronics, radio and wireless, power engineering, automotive and robotics, rail engineering, civil and industrial engineering, thermodynamics and fluid mechanics, refrigeration and the cold chain, CAD and additive manufacturing, mechanical engineering and manufacturing, construction and civil structures, roads, bridges and public infrastructure, maritime engineering, mining, oil and gas, wood and metal shop craft, blockchain, quantum computing, quantum cryptography and nanotechnology, algorithms and theory of computation, mathematics, scientific computing and signal processing, physics, electromagnetism, chemistry and plastics, earth science, aerospace, rocketry, flight software and space exploration, the life sciences, drug discovery software, medicine and pharmacology, agriculture and livestock, food and sanitation science, the social sciences, political science and governance, public speaking and community organising, negotiation and conflict resolution, wellbeing and motivation, military science and national defence, art and music theory, storytelling and comedy craft, textile and furniture crafts, pedagogy and learning science, exercise science, nutrition science, survival skills, travel planning, business and commercial law, economics, accounting and tax, fundraising, trading mechanics, investment strategy, banking and payment networks, design patterns, developer tooling for editors, IDEs and the GitHub and Jira workflow layer, low-code platforms, penetration testing, cryptography, software architecture, quality engineering, engineering process, technical writing, and the scheduled currency research that keeps the dated claims in all of it honest.",
+    "description": "Agent Skills for vibe engineering \u2014 127 plugins and 644 evidence-grounded practitioner skills spanning security, compliance, cloud infrastructure (including a comparative AWS/GCP/Azure deep dive), IT infrastructure and governance, identity automation, DNS and naming, communication technologies, DevSecOps, Linux server administration, AI/ML, data engineering, web scraping, reporting and dashboards, geospatial software, logistics and optimization, frontend, mobile, desktop, smart TV, game development, UI/UX design, VR and AR, graphics and computer vision, media engineering, social platforms, systems programming (assembly, OS and kernel, languages, browsers, package managers), computer hardware including an ARM deep dive, data centres, peripherals, microarchitecture and memory systems, semiconductors and chip manufacturing, digital logic and firmware, embedded and IoT, maker hardware, electronics, radio and wireless, power engineering, automotive and robotics, rail engineering, civil and industrial engineering, thermodynamics and fluid mechanics, refrigeration and the cold chain, CAD and additive manufacturing, mechanical engineering and manufacturing, construction and civil structures, roads, bridges and public infrastructure, maritime engineering, mining, oil and gas, wood and metal shop craft, blockchain, quantum computing, quantum cryptography and nanotechnology, algorithms and theory of computation, mathematics, scientific computing and signal processing, physics, electromagnetism, chemistry and plastics, earth science, aerospace, rocketry, flight software and space exploration, the life sciences, drug discovery software, medicine and pharmacology, agriculture and livestock, food and sanitation science, the social sciences, political science and governance, public speaking and community organising, negotiation and conflict resolution, wellbeing and motivation, military science and national defence, art and music theory, storytelling and comedy craft, textile and furniture crafts, pedagogy and learning science, exercise science, nutrition science, survival skills, travel planning, business and commercial law, economics, accounting and tax, fundraising, trading mechanics, investment strategy, banking and payment networks, design patterns, developer tooling for editors, IDEs and the GitHub and Jira workflow layer, low-code platforms, penetration testing, cryptography, software architecture, quality engineering, engineering process, technical writing, and the scheduled currency research that keeps the dated claims in all of it honest.",
     "version": "2.19.10"
   },
   "plugins": [
@@ -67,7 +67,7 @@
     {
       "name": "arm-architecture-deep-dive",
       "source": "./plugins/arm-architecture-deep-dive",
-      "description": "ARM — A Deep Dive: what \"ARM\" actually names, the licensing model, product families, ISA generations, AArch64, instruction set characteristics, exception levels, the memory model, MMU and translation, vector extensions including NEON, SVE, SVE2 and SME, atomics and synchronization, floating point and numerics, TrustZone, pointer authentication, BTI and MTE, CCA and realms, big.LITTLE and DynamIQ, interrupts and timers, interconnect, boot and firmware, virtualization, Cortex-M and embedded, toolchain and ABI, porting from x86, and performance analysis.",
+      "description": "ARM \u2014 A Deep Dive: what \"ARM\" actually names, the licensing model, product families, ISA generations, AArch64, instruction set characteristics, exception levels, the memory model, MMU and translation, vector extensions including NEON, SVE, SVE2 and SME, atomics and synchronization, floating point and numerics, TrustZone, pointer authentication, BTI and MTE, CCA and realms, big.LITTLE and DynamIQ, interrupts and timers, interconnect, boot and firmware, virtualization, Cortex-M and embedded, toolchain and ABI, porting from x86, and performance analysis.",
       "version": "0.1.0",
       "category": "hardware",
       "author": {
@@ -89,7 +89,7 @@
     {
       "name": "assembly-programming",
       "source": "./plugins/assembly-programming",
-      "description": "Assembly Programming: instruction-level reference for x86-64, AArch64, and RISC-V — the machine model, calling conventions and ABIs, assemblers and toolchains, reading disassembly, performance engineering, SIMD/vector (SSE/AVX/AVX-512, NEON/SVE2/SME, RVV), systems and constant-time cryptographic assembly, inline assembly and intrinsics, and debugging/verification.",
+      "description": "Assembly Programming: instruction-level reference for x86-64, AArch64, and RISC-V \u2014 the machine model, calling conventions and ABIs, assemblers and toolchains, reading disassembly, performance engineering, SIMD/vector (SSE/AVX/AVX-512, NEON/SVE2/SME, RVV), systems and constant-time cryptographic assembly, inline assembly and intrinsics, and debugging/verification.",
       "version": "0.1.0",
       "category": "systems-programming",
       "author": {
@@ -144,7 +144,7 @@
     {
       "name": "biology-chemistry-foundations",
       "source": "./plugins/biology-chemistry-foundations",
-      "description": "Biology and Chemistry Foundations: atoms and periodicity, bonding and molecular geometry, intermolecular forces, phases and solutions, thermodynamics, kinetics, equilibrium and acid-base chemistry, redox and electrochemistry, organic chemistry and reaction mechanism, analytical methods and spectroscopy, biomolecules, enzymes, bioenergetics and metabolism, membranes and transport, cell architecture, the cell cycle and signalling, and evolution — the chemistry and biology a technical reader actually needs, with the reasoning that transfers.",
+      "description": "Biology and Chemistry Foundations: atoms and periodicity, bonding and molecular geometry, intermolecular forces, phases and solutions, thermodynamics, kinetics, equilibrium and acid-base chemistry, redox and electrochemistry, organic chemistry and reaction mechanism, analytical methods and spectroscopy, biomolecules, enzymes, bioenergetics and metabolism, membranes and transport, cell architecture, the cell cycle and signalling, and evolution \u2014 the chemistry and biology a technical reader actually needs, with the reasoning that transfers.",
       "version": "0.1.0",
       "category": "life-sciences",
       "author": {
@@ -265,7 +265,7 @@
     {
       "name": "computer-peripherals-design-and-standards",
       "source": "./plugins/computer-peripherals-design-and-standards",
-      "description": "Computer Peripherals — Design, Building, Standards and Programming: the peripheral stack, USB architecture, USB-C and Power Delivery, Thunderbolt and alternate modes, wireless peripherals, embedded buses, PCIe peripherals, HID, keyboards, mice and pointing devices, displays, audio interfaces, printers and scanners, storage and capture, controllers and haptics, designing a custom peripheral, firmware, PCB and mechanical design, enumeration and debugging, drivers and OS integration, measuring latency, compliance and certification, accessibility, and peripheral security.",
+      "description": "Computer Peripherals \u2014 Design, Building, Standards and Programming: the peripheral stack, USB architecture, USB-C and Power Delivery, Thunderbolt and alternate modes, wireless peripherals, embedded buses, PCIe peripherals, HID, keyboards, mice and pointing devices, displays, audio interfaces, printers and scanners, storage and capture, controllers and haptics, designing a custom peripheral, firmware, PCB and mechanical design, enumeration and debugging, drivers and OS integration, measuring latency, compliance and certification, accessibility, and peripheral security.",
       "version": "0.1.0",
       "category": "hardware",
       "author": {
@@ -287,7 +287,7 @@
     {
       "name": "cryptocurrency-development",
       "source": "./plugins/cryptocurrency-development",
-      "description": "Cryptocurrency Development: blockchain engineering at both layers — protocol (consensus and finality, execution/consensus clients, the EIP process, EVM internals, L2s and rollups, cross-chain) and application (Solidity/Vyper, contract architecture and upgradeability, ERC standards and account abstraction, DeFi primitives and MEV, Foundry/Hardhat testing, fuzzing and formal verification, the vulnerability canon, deployment and key management).",
+      "description": "Cryptocurrency Development: blockchain engineering at both layers \u2014 protocol (consensus and finality, execution/consensus clients, the EIP process, EVM internals, L2s and rollups, cross-chain) and application (Solidity/Vyper, contract architecture and upgradeability, ERC standards and account abstraction, DeFi primitives and MEV, Foundry/Hardhat testing, fuzzing and formal verification, the vulnerability canon, deployment and key management).",
       "version": "0.1.0",
       "category": "blockchain",
       "author": {
@@ -309,7 +309,7 @@
     {
       "name": "currency-research",
       "source": "./plugins/currency-research",
-      "description": "Currency Research: auditing an evidence-grounded reference for staleness — the durability tiers, deciding whether a finding warrants an edit at all, web search and source-quality practice, dating a claim, the fabrication failure mode, editing a SKILL.md without disturbing its structure or cross-references, and opening the weekly pull request.",
+      "description": "Currency Research: auditing an evidence-grounded reference for staleness \u2014 the durability tiers, deciding whether a finding warrants an edit at all, web search and source-quality practice, dating a claim, the fabrication failure mode, editing a SKILL.md without disturbing its structure or cross-references, and opening the weekly pull request.",
       "version": "0.1.0",
       "category": "research",
       "author": {
@@ -375,7 +375,7 @@
     {
       "name": "diy-kit-dev",
       "source": "./plugins/diy-kit-dev",
-      "description": "DIY Kit Dev: hobbyist and maker hardware development across Raspberry Pi, Arduino, ESP32, Pico and the wider kit ecosystem — choosing the right board, the current platform lineups and what changed, the electronics fundamentals that stop you destroying things, power (the single biggest cause of mystery failures), sensors and actuators, the software layer (Arduino, MicroPython, CircuitPython, ESP-IDF), physical build and soldering, debugging hardware, networking and home automation, enclosures and fabrication, and the honest path from working prototype to shippable product.",
+      "description": "DIY Kit Dev: hobbyist and maker hardware development across Raspberry Pi, Arduino, ESP32, Pico and the wider kit ecosystem \u2014 choosing the right board, the current platform lineups and what changed, the electronics fundamentals that stop you destroying things, power (the single biggest cause of mystery failures), sensors and actuators, the software layer (Arduino, MicroPython, CircuitPython, ESP-IDF), physical build and soldering, debugging hardware, networking and home automation, enclosures and fabrication, and the honest path from working prototype to shippable product.",
       "version": "0.1.0",
       "category": "embedded",
       "author": {
@@ -397,7 +397,7 @@
     {
       "name": "ecommerce-development",
       "source": "./plugins/ecommerce-development",
-      "description": "eCommerce Development: commerce and payments systems — architecture, the payment lifecycle (authorization, capture, settlement, refunds), integration engineering (idempotency, webhooks, reconciliation, state machines), PSPs and gateways (Stripe, PayPal, Adyen, Braintree), payment methods and rails (cards, wallets, ACH/SEPA, SWIFT/ISO 20022, BNPL, instant payments), SCA and 3-D Secure, authorization rates and decline handling, fraud and chargebacks, PCI DSS scope and the SAQ A trap, subscriptions and billing, marketplaces and payouts, tax and cross-border, the platform layer (Shopify, headless, custom), catalog/cart/checkout and conversion, and agentic commerce protocols.",
+      "description": "eCommerce Development: commerce and payments systems \u2014 architecture, the payment lifecycle (authorization, capture, settlement, refunds), integration engineering (idempotency, webhooks, reconciliation, state machines), PSPs and gateways (Stripe, PayPal, Adyen, Braintree), payment methods and rails (cards, wallets, ACH/SEPA, SWIFT/ISO 20022, BNPL, instant payments), SCA and 3-D Secure, authorization rates and decline handling, fraud and chargebacks, PCI DSS scope and the SAQ A trap, subscriptions and billing, marketplaces and payouts, tax and cross-border, the platform layer (Shopify, headless, custom), catalog/cart/checkout and conversion, and agentic commerce protocols.",
       "version": "0.2.0",
       "category": "commerce",
       "author": {
@@ -540,7 +540,7 @@
     {
       "name": "fundamental-physics",
       "source": "./plugins/fundamental-physics",
-      "description": "Fundamental Physics: quantum mechanics, quantum field theory, the Standard Model, general relativity and astrophysics/cosmology as a single connected reference — the postulates and formalism of QM, path integrals and renormalization, the gauge structure and particle content of the Standard Model, special relativity and the Einstein field equations, black hole solutions and thermodynamics, gravitational waves, FLRW cosmology and ΛCDM, stellar structure and evolution, compact objects, the measurement problem and interpretations, the incompatibility of GR and QFT, and the anomalies that are currently live.",
+      "description": "Fundamental Physics: quantum mechanics, quantum field theory, the Standard Model, general relativity and astrophysics/cosmology as a single connected reference \u2014 the postulates and formalism of QM, path integrals and renormalization, the gauge structure and particle content of the Standard Model, special relativity and the Einstein field equations, black hole solutions and thermodynamics, gravitational waves, FLRW cosmology and \u039bCDM, stellar structure and evolution, compact objects, the measurement problem and interpretations, the incompatibility of GR and QFT, and the anomalies that are currently live.",
       "version": "0.1.0",
       "category": "physics",
       "author": {
@@ -551,7 +551,7 @@
     {
       "name": "fundraising-fundamentals",
       "source": "./plugins/fundraising-fundamentals",
-      "description": "Fundraising Fundamentals: what fundraising actually is, the universal structure and the narrative, running the process, the capital ladder, instruments (priced rounds, convertible notes, SAFEs), dilution and cap table mathematics, term sheet economics including liquidation preference, control and governance, non-dilutive and debt financing, diligence, private company valuation, secondaries and exits, why and how companies go public, IPO mechanics and alternatives, post-IPO raising, public debt, securities regulation, and the non-profit side — the revenue model, the donor pyramid and major gifts, grants, capital campaigns, individual and recurring giving, and metrics and the overhead myth.",
+      "description": "Fundraising Fundamentals: what fundraising actually is, the universal structure and the narrative, running the process, the capital ladder, instruments (priced rounds, convertible notes, SAFEs), dilution and cap table mathematics, term sheet economics including liquidation preference, control and governance, non-dilutive and debt financing, diligence, private company valuation, secondaries and exits, why and how companies go public, IPO mechanics and alternatives, post-IPO raising, public debt, securities regulation, and the non-profit side \u2014 the revenue model, the donor pyramid and major gifts, grants, capital campaigns, individual and recurring giving, and metrics and the overhead myth.",
       "version": "0.2.0",
       "category": "finance",
       "author": {
@@ -606,7 +606,7 @@
     {
       "name": "github-jira-deep-dive",
       "source": "./plugins/github-jira-deep-dive",
-      "description": "GitHub and Jira — A Deep Dive: why the tool is not the process, Git's actual data model, branching, merging and rebasing, recovery, GitHub repos, organizations and permissions, pull requests and review, rulesets and branch protection, Actions, the security products, issues and Projects, the API, Apps and webhooks, enterprise identity, Jira's configuration model, team- versus company-managed projects, workflows and statuses, JQL, boards, sprints and estimation, reports, automation, permissions, Jira Service Management, configuration hygiene, integration patterns, metrics, and anti-patterns.",
+      "description": "GitHub and Jira \u2014 A Deep Dive: why the tool is not the process, Git's actual data model, branching, merging and rebasing, recovery, GitHub repos, organizations and permissions, pull requests and review, rulesets and branch protection, Actions, the security products, issues and Projects, the API, Apps and webhooks, enterprise identity, Jira's configuration model, team- versus company-managed projects, workflows and statuses, JQL, boards, sprints and estimation, reports, automation, permissions, Jira Service Management, configuration hygiene, integration patterns, metrics, and anti-patterns.",
       "version": "0.2.0",
       "category": "developer-tools",
       "author": {
@@ -628,7 +628,7 @@
     {
       "name": "how-cars-work-and-how-mechanics-work",
       "source": "./plugins/how-cars-work-and-how-mechanics-work",
-      "description": "How Cars Work — and How Mechanics Do Their Jobs: the four-stroke cycle, engine anatomy, the air path, fuel and injection, ignition and knock, engine management and closed-loop control, cooling and lubrication, emissions aftertreatment, diesel specifics, transmissions, driveline and differentials, suspension, steering and alignment, brakes, tyres, the 12V system, vehicle networks, ADAS, air conditioning, EV architecture, batteries and degradation, high-voltage safety, hybrids, corrosion, diagnostic method, OBD-II and scan data, tools, common misdiagnoses, and maintenance and shop economics.",
+      "description": "How Cars Work \u2014 and How Mechanics Do Their Jobs: the four-stroke cycle, engine anatomy, the air path, fuel and injection, ignition and knock, engine management and closed-loop control, cooling and lubrication, emissions aftertreatment, diesel specifics, transmissions, driveline and differentials, suspension, steering and alignment, brakes, tyres, the 12V system, vehicle networks, ADAS, air conditioning, EV architecture, batteries and degradation, high-voltage safety, hybrids, corrosion, diagnostic method, OBD-II and scan data, tools, common misdiagnoses, and maintenance and shop economics.",
       "version": "0.1.0",
       "category": "automotive",
       "author": {
@@ -705,7 +705,7 @@
     {
       "name": "low-code-no-code",
       "source": "./plugins/low-code-no-code",
-      "description": "Low-Code / No-Code: platforms across the whole spectrum — block-based education tools (Scratch, LEGO, micro:bit), workflow automation (n8n, Zapier, Make, Power Automate), integration and iPaaS (MuleSoft, Boomi, Workato), data pipelines and ETL (Alteryx, Matillion, dbt), app builders (Power Apps, Retool, Airtable, Bubble), RPA, and the AI app-generation wave now reshaping the category — plus how to choose, the governance and escape-hatch problems that bite later, licensing traps, the security evidence, and when to write code instead.",
+      "description": "Low-Code / No-Code: platforms across the whole spectrum \u2014 block-based education tools (Scratch, LEGO, micro:bit), workflow automation (n8n, Zapier, Make, Power Automate), integration and iPaaS (MuleSoft, Boomi, Workato), data pipelines and ETL (Alteryx, Matillion, dbt), app builders (Power Apps, Retool, Airtable, Bubble), RPA, and the AI app-generation wave now reshaping the category \u2014 plus how to choose, the governance and escape-hatch problems that bite later, licensing traps, the security evidence, and when to write code instead.",
       "version": "0.1.0",
       "category": "low-code",
       "author": {
@@ -727,7 +727,7 @@
     {
       "name": "making-fabric-clothing-furniture-laundering",
       "source": "./plugins/making-fabric-clothing-furniture-laundering",
-      "description": "Making Fabric, Clothing and Furniture — and Caring for Them: fibre properties, yarn and spinning, weaving, knitting, nonwovens and felt, dyeing and finishing, fabric properties, grain, pattern drafting and ease, cutting and layout, seams and stitches, construction order, fitting, machines, needles and thread, hand sewing, wood movement, joinery, adhesives and fasteners, wood finishing, upholstery, seating and frames, how laundering actually works, fibre-specific care, stain removal, drying, ironing and storage, and mending and pest control.",
+      "description": "Making Fabric, Clothing and Furniture \u2014 and Caring for Them: fibre properties, yarn and spinning, weaving, knitting, nonwovens and felt, dyeing and finishing, fabric properties, grain, pattern drafting and ease, cutting and layout, seams and stitches, construction order, fitting, machines, needles and thread, hand sewing, wood movement, joinery, adhesives and fasteners, wood finishing, upholstery, seating and frames, how laundering actually works, fibre-specific care, stain removal, drying, ironing and storage, and mending and pest control.",
       "version": "0.1.0",
       "category": "crafts",
       "author": {
@@ -760,7 +760,7 @@
     {
       "name": "math-science-programming",
       "source": "./plugins/math-science-programming",
-      "description": "Math and Science Programming: numerical and scientific computing for software engineers — floating-point arithmetic and the errors it causes, conditioning and stability, the BLAS/LAPACK substrate everything stands on, the tool landscape (MATLAB, Python's scientific stack, Julia, R, Fortran, Mathematica) and how to choose, symbolic versus numeric computation, linear systems, ODEs and PDEs, optimization, statistics and uncertainty, high-performance and GPU computing, and the verification, validation and reproducibility practices that separate trustworthy scientific software from plausible-looking output.",
+      "description": "Math and Science Programming: numerical and scientific computing for software engineers \u2014 floating-point arithmetic and the errors it causes, conditioning and stability, the BLAS/LAPACK substrate everything stands on, the tool landscape (MATLAB, Python's scientific stack, Julia, R, Fortran, Mathematica) and how to choose, symbolic versus numeric computation, linear systems, ODEs and PDEs, optimization, statistics and uncertainty, high-performance and GPU computing, and the verification, validation and reproducibility practices that separate trustworthy scientific software from plausible-looking output.",
       "version": "0.1.0",
       "category": "scientific-computing",
       "author": {
@@ -771,7 +771,7 @@
     {
       "name": "media-engineering",
       "source": "./plugins/media-engineering",
-      "description": "Media Engineering: music, audio, video, TV, film and podcast engineering for software engineers — the fundamentals of digital media, containers and codecs as engineering choices, audio production and plugin formats, video production, colour and timecode, loudness standards and why your mix is quiet on streaming, transcoding pipelines and ABR packaging, streaming delivery (HLS, DASH, CMAF, WebRTC and Media over QUIC), DRM, captions and accessibility, podcast infrastructure and dynamic ad insertion, metadata and rights identifiers, and the AI generation layer with its live licensing fight.",
+      "description": "Media Engineering: music, audio, video, TV, film and podcast engineering for software engineers \u2014 the fundamentals of digital media, containers and codecs as engineering choices, audio production and plugin formats, video production, colour and timecode, loudness standards and why your mix is quiet on streaming, transcoding pipelines and ABR packaging, streaming delivery (HLS, DASH, CMAF, WebRTC and Media over QUIC), DRM, captions and accessibility, podcast infrastructure and dynamic ad insertion, metadata and rights identifiers, and the AI generation layer with its live licensing fight.",
       "version": "0.1.0",
       "category": "media",
       "author": {
@@ -826,7 +826,7 @@
     {
       "name": "mobile-development",
       "source": "./plugins/mobile-development",
-      "description": "Mobile Development: enterprise mobile on Azure — React Native New Architecture, native iOS (Swift/SwiftUI) and Android (Kotlin/Compose), mobile UI/UX and design patterns, Azure hosting/Intune/CI-CD after App Center, and mobile security (OWASP MASVS, secure storage/comms, MFA/passkeys).",
+      "description": "Mobile Development: enterprise mobile on Azure \u2014 React Native New Architecture, native iOS (Swift/SwiftUI) and Android (Kotlin/Compose), mobile UI/UX and design patterns, Azure hosting/Intune/CI-CD after App Center, and mobile security (OWASP MASVS, secure storage/comms, MFA/passkeys).",
       "version": "0.1.0",
       "category": "frontend",
       "author": {
@@ -914,7 +914,7 @@
     {
       "name": "okta-workflows",
       "source": "./plugins/okta-workflows",
-      "description": "Okta Workflows: a field reference for identity source-of-truth → Okta sync pipelines (e.g. Entra ID) — the platform's production quirks, hard record caps, and verified workarounds across branching (If/Else & If/ElseIf), looping constructs, Tables, event hooks/streaming/handler flows, the Okta and Azure AD/Microsoft Entra ID connectors, execution limits & throttling, error handling & retry, and flopack import/export, plus the recent 2025–2026 platform changes.",
+      "description": "Okta Workflows: a field reference for identity source-of-truth \u2192 Okta sync pipelines (e.g. Entra ID) \u2014 the platform's production quirks, hard record caps, and verified workarounds across branching (If/Else & If/ElseIf), looping constructs, Tables, event hooks/streaming/handler flows, the Okta and Azure AD/Microsoft Entra ID connectors, execution limits & throttling, error handling & retry, and flopack import/export, plus the recent 2025\u20132026 platform changes.",
       "version": "0.1.0",
       "category": "cloud-infrastructure",
       "author": {
@@ -936,7 +936,7 @@
     {
       "name": "os-development-kernel-shell",
       "source": "./plugins/os-development-kernel-shell",
-      "description": "OS Development (Linux Kernel & Shell): kernel architecture and programming in C and Rust, modules and drivers, kernel concurrency, syscalls and the userspace ABI, eBPF and sched_ext, boot and init, systemd/cgroups/containers, the kernel development process, debugging and tracing (ftrace, perf, KASAN, crash dumps), security and hardening, plus the shell layer — POSIX sh/bash/zsh/fish/nushell semantics and their traps, choosing a shell, defensive scripting, and the coreutils/systemd userland.",
+      "description": "OS Development (Linux Kernel & Shell): kernel architecture and programming in C and Rust, modules and drivers, kernel concurrency, syscalls and the userspace ABI, eBPF and sched_ext, boot and init, systemd/cgroups/containers, the kernel development process, debugging and tracing (ftrace, perf, KASAN, crash dumps), security and hardening, plus the shell layer \u2014 POSIX sh/bash/zsh/fish/nushell semantics and their traps, choosing a shell, defensive scripting, and the coreutils/systemd userland.",
       "version": "0.1.0",
       "category": "systems-programming",
       "author": {
@@ -969,7 +969,7 @@
     {
       "name": "penetration-testing",
       "source": "./plugins/penetration-testing",
-      "description": "Penetration Testing and Offensive Security: authorized offensive work as a profession — the authorization and legal foundation (CFAA, Computer Misuse Act, bug bounty and VDP scope, rules of engagement) that separates it from a crime, engagement types and scoping, the standard methodologies (PTES, OWASP WSTG, NIST SP 800-115, MITRE ATT&CK), reconnaissance and attack surface, testing per domain (web, network, Active Directory and identity, cloud, API/mobile/wireless/OT/hardware), social engineering and physical, red/purple teaming and post-exploitation, testing AI systems, and reporting, remediation, coordinated disclosure, and career and certification. A methodology, process, and professional-practice reference — not an exploit cookbook.",
+      "description": "Penetration Testing and Offensive Security: authorized offensive work as a profession \u2014 the authorization and legal foundation (CFAA, Computer Misuse Act, bug bounty and VDP scope, rules of engagement) that separates it from a crime, engagement types and scoping, the standard methodologies (PTES, OWASP WSTG, NIST SP 800-115, MITRE ATT&CK), reconnaissance and attack surface, testing per domain (web, network, Active Directory and identity, cloud, API/mobile/wireless/OT/hardware), social engineering and physical, red/purple teaming and post-exploitation, testing AI systems, and reporting, remediation, coordinated disclosure, and career and certification. A methodology, process, and professional-practice reference \u2014 not an exploit cookbook.",
       "version": "0.1.0",
       "category": "security",
       "author": {
@@ -1024,7 +1024,7 @@
     {
       "name": "quality-engineering",
       "source": "./plugins/quality-engineering",
-      "description": "Quality Engineering: Python testing and quality practices, test strategy and frameworks, and systematic debugging with observability — structured logging, OpenTelemetry, distributed tracing, and error handling patterns.",
+      "description": "Quality Engineering: Python testing and quality practices, test strategy and frameworks, and systematic debugging with observability \u2014 structured logging, OpenTelemetry, distributed tracing, and error handling patterns.",
       "version": "0.3.0",
       "category": "engineering-process",
       "author": {
@@ -1090,7 +1090,7 @@
     {
       "name": "resource-extraction-mining-and-oil",
       "source": "./plugins/resource-extraction-mining-and-oil",
-      "description": "Resource Extraction — Mining, Oil and Gas: grade, tonnage and the nature of ore, how deposits form, exploration, resources versus reserves, surface and underground mining, drilling and blasting, comminution, mineral processing, extractive metallurgy, gold, tailings, water and drainage, petroleum geology, seismic exploration, drilling, well control, completion and hydraulic fracturing, production and decline, offshore, refining and processing, coal, economics, safety, closure and legacy, and social licence and artisanal mining.",
+      "description": "Resource Extraction \u2014 Mining, Oil and Gas: grade, tonnage and the nature of ore, how deposits form, exploration, resources versus reserves, surface and underground mining, drilling and blasting, comminution, mineral processing, extractive metallurgy, gold, tailings, water and drainage, petroleum geology, seismic exploration, drilling, well control, completion and hydraulic fracturing, production and decline, offshore, refining and processing, coal, economics, safety, closure and legacy, and social licence and artisanal mining.",
       "version": "0.1.0",
       "category": "resources",
       "author": {
@@ -1112,7 +1112,7 @@
     {
       "name": "robotics-software",
       "source": "./plugins/robotics-software",
-      "description": "Robotics Software: professional robotics software engineering — the architecture of a real robot stack, ROS 2 and the middleware layer, perception and sensor fusion, state estimation and SLAM, motion planning, control theory from PID through MPC and whole-body control, the learning layer (reinforcement learning, imitation learning, and the vision-language-action foundation models now reshaping the field), simulation and sim-to-real, real-time and safety-critical engineering, testing and field deployment, functional safety and the ISO 10218:2025 regime, and aerospace flight-software practice.",
+      "description": "Robotics Software: professional robotics software engineering \u2014 the architecture of a real robot stack, ROS 2 and the middleware layer, perception and sensor fusion, state estimation and SLAM, motion planning, control theory from PID through MPC and whole-body control, the learning layer (reinforcement learning, imitation learning, and the vision-language-action foundation models now reshaping the field), simulation and sim-to-real, real-time and safety-critical engineering, testing and field deployment, functional safety and the ISO 10218:2025 regime, and aerospace flight-software practice.",
       "version": "0.1.0",
       "category": "robotics",
       "author": {
@@ -1123,7 +1123,7 @@
     {
       "name": "rocket-science",
       "source": "./plugins/rocket-science",
-      "description": "Rocket Science: the physics and engineering mathematics of rocketry — derivation of the rocket equation and staging optimization, nozzle thermodynamics and isentropic flow, combustion chamber physics and characteristic velocity, turbomachinery and cycle thermodynamics, regenerative cooling and heat transfer, propellant chemistry, orbital mechanics from the two-body problem through patched conics and perturbations, ascent trajectory optimization, aerodynamic loads, structural mechanics of thin-walled tanks, guidance and control mathematics, reentry heating physics, and combustion instabilities and failure physics.",
+      "description": "Rocket Science: the physics and engineering mathematics of rocketry \u2014 derivation of the rocket equation and staging optimization, nozzle thermodynamics and isentropic flow, combustion chamber physics and characteristic velocity, turbomachinery and cycle thermodynamics, regenerative cooling and heat transfer, propellant chemistry, orbital mechanics from the two-body problem through patched conics and perturbations, ascent trajectory optimization, aerodynamic loads, structural mechanics of thin-walled tanks, guidance and control mathematics, reentry heating physics, and combustion instabilities and failure physics.",
       "version": "0.1.0",
       "category": "aerospace",
       "author": {
@@ -1167,7 +1167,7 @@
     {
       "name": "signal-processing",
       "source": "./plugins/signal-processing",
-      "description": "Signal Processing: digital signal processing for software engineers — sampling, aliasing and quantization, the frequency domain and the FFT (including the windowing and leakage traps), filter design and the FIR/IIR trade-off, convolution and correlation, multirate processing, adaptive filtering and estimation, spectral analysis, audio and speech processing, RF and communications, image and video as 2D signals, the fixed-point and real-time implementation layer, and the classical-versus-learned convergence now reshaping audio DSP.",
+      "description": "Signal Processing: digital signal processing for software engineers \u2014 sampling, aliasing and quantization, the frequency domain and the FFT (including the windowing and leakage traps), filter design and the FIR/IIR trade-off, convolution and correlation, multirate processing, adaptive filtering and estimation, spectral analysis, audio and speech processing, RF and communications, image and video as 2D signals, the fixed-point and real-time implementation layer, and the classical-versus-learned convergence now reshaping audio DSP.",
       "version": "0.1.0",
       "category": "scientific-computing",
       "author": {
@@ -1244,7 +1244,7 @@
     {
       "name": "theory-of-computation",
       "source": "./plugins/theory-of-computation",
-      "description": "Theory of Computation: what is computable and what isn't (halting, Rice's theorem, and why your linter has false positives), automata and the Chomsky hierarchy as a practical design tool, regular languages and the ReDoS failure mode, parsing and grammar classes, Turing machines and reductions, complexity classes and NP-completeness recognition, what to actually do when your problem is NP-hard, SAT/SMT solvers, fine-grained complexity and conditional lower bounds, space complexity and streaming, distributed computing impossibility results (FLP, CAP, consensus), type systems and Curry–Howard, and randomness and approximation.",
+      "description": "Theory of Computation: what is computable and what isn't (halting, Rice's theorem, and why your linter has false positives), automata and the Chomsky hierarchy as a practical design tool, regular languages and the ReDoS failure mode, parsing and grammar classes, Turing machines and reductions, complexity classes and NP-completeness recognition, what to actually do when your problem is NP-hard, SAT/SMT solvers, fine-grained complexity and conditional lower bounds, space complexity and streaming, distributed computing impossibility results (FLP, CAP, consensus), type systems and Curry\u2013Howard, and randomness and approximation.",
       "version": "0.1.0",
       "category": "computer-science",
       "author": {
@@ -1255,9 +1255,20 @@
     {
       "name": "thermodynamics-fluid-mechanics",
       "source": "./plugins/thermodynamics-fluid-mechanics",
-      "description": "Thermodynamics and Fluid Mechanics — A Deep Dive: systems and properties, the zeroth, first and second laws, entropy, property relations, equations of state, phase behaviour, power cycles, refrigeration and heat pumps, exergy, combustion, psychrometrics, fluid properties and statics, the control volume, Bernoulli and the lift myth, Navier-Stokes, boundary layers, dimensional analysis, internal and external flow, drag, turbulence, compressible flow, turbomachinery, conduction, convection, radiation, heat exchangers and phase change, plus CFD practice.",
+      "description": "Thermodynamics and Fluid Mechanics \u2014 A Deep Dive: systems and properties, the zeroth, first and second laws, entropy, property relations, equations of state, phase behaviour, power cycles, refrigeration and heat pumps, exergy, combustion, psychrometrics, fluid properties and statics, the control volume, Bernoulli and the lift myth, Navier-Stokes, boundary layers, dimensional analysis, internal and external flow, drag, turbulence, compressible flow, turbomachinery, conduction, convection, radiation, heat exchangers and phase change, plus CFD practice.",
       "version": "0.1.0",
       "category": "physics",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "tor-and-onion-networks",
+      "source": "./plugins/tor-and-onion-networks",
+      "description": "Tor and Onion Networks: what Tor promises and what it deliberately does not, the history from NRL onion routing to Arti, cells and channels and the telescoping circuit handshake, ntor and ntor-v3, the tor1 to CGO cell-cryptography migration, SENDME flow control, congestion control and Conflux, relays and flags and the nine directory authorities, the hourly consensus and bandwidth weights, guard pinning and path restrictions and happy families, v3 onion services end to end, blinded descriptor keys, introduction and rendezvous points, client authorization, vanguards and proof-of-work and Onionbalance, bridges and pluggable transports, obfs4 and Snowflake and WebTunnel and Conjure, the 2026 DTLS fingerprinting campaign, the attack literature from end-to-end confirmation through website fingerprinting to client-side compromise, the 2026 software ecosystem, Tor against I2P and mixnets and VPNs, governance and funding, and an operations handbook covering SOCKS integration, the control port, ephemeral and long-lived onion services, relays and bridges and exits, transparent-proxy gateways, hardware builds, verification and abuse handling.",
+      "version": "0.1.0",
+      "category": "security",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
@@ -1299,7 +1310,7 @@
     {
       "name": "vibey-bootstrap",
       "source": "./plugins/vibey-bootstrap",
-      "description": "vibey-bootstrap (formerly azure-bootstrap): usage reference for the vibey-bootstrap Python library (v4.0.0) — the 4-phase logging↔config bootstrap, v2 stdlib primitives, ten logging transports, opt-in Tier 2/Tier 3 subpackages, v3 DB/outbox/email/HTTP/AKS/governance/scaffold modules, end-to-end recipes, and TypeScript/Next.js HTTP integration plus pattern ports.",
+      "description": "vibey-bootstrap (formerly azure-bootstrap): usage reference for the vibey-bootstrap Python library (v4.0.0) \u2014 the 4-phase logging\u2194config bootstrap, v2 stdlib primitives, ten logging transports, opt-in Tier 2/Tier 3 subpackages, v3 DB/outbox/email/HTTP/AKS/governance/scaffold modules, end-to-end recipes, and TypeScript/Next.js HTTP integration plus pattern ports.",
       "version": "0.3.0",
       "category": "cloud-infrastructure",
       "author": {
@@ -1354,7 +1365,7 @@
     {
       "name": "web-scraping",
       "source": "./plugins/web-scraping",
-      "description": "Web Scraping: the legal and regulatory landscape (CFAA and the hiQ/Bright Data line, contract and ToS exposure, the DMCA §1201 shift, copyright and TDM, GDPR and the EDPB's 2026 scraping guidelines, the EU AI Act), when not to scrape and what to do instead, robots.txt and the emerging crawl-permission layer, how the modern web actually serves data, the tool ladder (requests, curl_cffi, Scrapy, Playwright, managed services), parsing and extraction, bot detection, scale and reliability engineering, data quality, storage and pipelines, operational ethics, scraping for AI and RAG, and building a site that handles crawlers well.",
+      "description": "Web Scraping: the legal and regulatory landscape (CFAA and the hiQ/Bright Data line, contract and ToS exposure, the DMCA \u00a71201 shift, copyright and TDM, GDPR and the EDPB's 2026 scraping guidelines, the EU AI Act), when not to scrape and what to do instead, robots.txt and the emerging crawl-permission layer, how the modern web actually serves data, the tool ladder (requests, curl_cffi, Scrapy, Playwright, managed services), parsing and extraction, bot detection, scale and reliability engineering, data quality, storage and pipelines, operational ethics, scraping for AI and RAG, and building a site that handles crawlers well.",
       "version": "0.1.0",
       "category": "data-engineering",
       "author": {
@@ -1376,7 +1387,7 @@
     {
       "name": "wireless-technologies-and-rf-engineering",
       "source": "./plugins/wireless-technologies-and-rf-engineering",
-      "description": "Wireless Technologies — RF, Standards, Building and Programming: why wireless is hard, propagation and the link budget, modulation and multiple access, antennas, spectrum and regulation, Wi-Fi and Wi-Fi in practice, Bluetooth and BLE programming, NFC and RFID, Thread, Zigbee and Matter, LoRa and LPWAN, cellular and cellular IoT, UWB, choosing a radio, antenna integration, certification, low-power design, provisioning and onboarding, RF debugging, wireless security, coexistence, and positioning and sensing.",
+      "description": "Wireless Technologies \u2014 RF, Standards, Building and Programming: why wireless is hard, propagation and the link budget, modulation and multiple access, antennas, spectrum and regulation, Wi-Fi and Wi-Fi in practice, Bluetooth and BLE programming, NFC and RFID, Thread, Zigbee and Matter, LoRa and LPWAN, cellular and cellular IoT, UWB, choosing a radio, antenna integration, certification, low-power design, provisioning and onboarding, RF debugging, wireless security, coexistence, and positioning and sensing.",
       "version": "0.1.0",
       "category": "wireless",
       "author": {
