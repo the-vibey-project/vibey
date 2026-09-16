@@ -163,6 +163,8 @@ class ChapterSanitizer:
             if name in written or not _XML_ATTRIBUTE_NAME.fullmatch(name):
                 continue
             written[name] = name if value is None else value
+        if tag == "svg" and "xmlns" not in written:
+            written["xmlns"] = "http://www.w3.org/2000/svg"
         rendered = "".join(
             f' {name}="{html_lib.escape(value, quote=True)}"' for name, value in written.items()
         )
