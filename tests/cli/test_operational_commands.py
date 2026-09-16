@@ -801,7 +801,7 @@ def test_the_feature_flag_reads_the_environment_first(
 def test_the_feature_flag_falls_back_to_project_config(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Same precedence as `bootstrap._qwenloop_enabled`, so the health check and the
+    """Same precedence as `bootstrap.qwenloop_enabled`, so the health check and the
     worker can never disagree about which engines exist."""
     from vibey.cli.main import _qwenloop_feature_enabled
 

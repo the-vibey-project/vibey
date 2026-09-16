@@ -8,8 +8,11 @@ from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, 
 from vibey.application.design import DesignEvent
 from vibey.application.dto import ProjectRecord
 from vibey.bootstrap import build_design_worker, build_visual_worker, qwenloop_enabled
+from vibey.domain.engine import EngineId
 from vibey.domain.job import JobState
 from vibey.domain.phase import Phase
+from vibey.infrastructure.engines.claudeloop_design import ClaudeLoopDesignProvider
+from vibey.infrastructure.engines.qwenloop_design import QwenloopDesignProvider
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 
@@ -17,12 +20,20 @@ from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 class FakeLedger:
     def __init__(self) -> None:
         self.events: list[DesignEvent] = []
+        self.engines: list[EngineId | None] = []
 
     async def append(self, project_id, cycle, job_id, engine_id, event):  # type: ignore[no-untyped-def]
         self.events.append(event)
+        self.engines.append(engine_id)
 
     async def all_for_project(self, project_id):  # type: ignore[no-untyped-def]
         return tuple(self.events)
+
+
+class SovereignDesignProvider(ScriptedDesignProvider):
+    """A stand-in for the sovereign provider: same answers, different actor."""
+
+    engine_id: EngineId | None = EngineId.QWENLOOP
 
 
 def test_qwenloop_feature_resolution(monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -129,3 +140,86 @@ async def test_build_visual_worker_composes_an_executable_inventory_job(tmp_path
     assert stored is not None
     assert stored.state is JobState.SUCCEEDED
     assert inventories.value is not None
+
+
+def _design_job(project_id):  # type: ignore[no-untyped-def]
+    job = make_job(project_id)
+    return job.__class__(
+        **{
+            field: getattr(job, field)
+            for field in job.__dataclass_fields__
+            if field not in {"phase", "kind"}
+        },
+        phase=Phase.DESIGN,
+        kind="design.interview",
+    )
+
+
+def _design_resources(jobs, ledger):  # type: ignore[no-untyped-def]
+    return SimpleNamespace(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        design_ledger=ledger,
+        design_specs=SimpleNamespace(),
+    )
+
+
+def _project(project_id, tmp_path):  # type: ignore[no-untyped-def]
+    return ProjectRecord(
+        project_id=project_id,
+        name="idea",
+        repo_path=tmp_path,
+        phase=Phase.DESIGN,
+        cycle=1,
+        max_cycles=10,
+        config={},
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+
+async def test_design_ledger_names_the_engine_that_actually_interviewed(tmp_path: Path) -> None:
+    """A sovereign run must not be recorded as claudeloop.
+
+    The ledger is append-only, so a wrongly attributed event can never be
+    deleted -- only contradicted. Attribution therefore comes from the provider
+    that was actually composed, not from a literal in the composition root.
+    """
+    project_id = uuid4()
+    jobs = FakeJobRepository([_design_job(project_id)])
+    ledger = FakeLedger()
+    worker = build_design_worker(
+        resources=_design_resources(jobs, ledger),  # type: ignore[arg-type]
+        project=_project(project_id, tmp_path),
+        provider=SovereignDesignProvider(),
+        owner="test-worker",
+    )
+
+    assert await worker.run_once(project_id)
+    assert ledger.engines == [EngineId.QWENLOOP]
+
+
+async def test_a_scripted_design_names_no_engine_rather_than_borrowing_one(
+    tmp_path: Path,
+) -> None:
+    """Nothing ran, so nothing is named: `engine_id` is nullable for this."""
+    project_id = uuid4()
+    jobs = FakeJobRepository([_design_job(project_id)])
+    ledger = FakeLedger()
+    worker = build_design_worker(
+        resources=_design_resources(jobs, ledger),  # type: ignore[arg-type]
+        project=_project(project_id, tmp_path),
+        provider=ScriptedDesignProvider(),
+        owner="test-worker",
+    )
+
+    assert await worker.run_once(project_id)
+    assert ledger.engines == [None]
+
+
+def test_every_design_provider_declares_the_engine_it_speaks_for() -> None:
+    """One declaration each, beside the implementation -- the single source the
+    composition root reads instead of repeating a literal per wiring site."""
+    assert ClaudeLoopDesignProvider.engine_id is EngineId.CLAUDELOOP
+    assert QwenloopDesignProvider.engine_id is EngineId.QWENLOOP
+    assert ScriptedDesignProvider.engine_id is None

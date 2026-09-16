@@ -240,7 +240,7 @@ def resume_design(project_id: UUID) -> None:
 def _qwenloop_feature_enabled(root: Path | None = None) -> bool:
     """Whether the sovereign engine is switched on, by environment or project config.
 
-    Mirrors `bootstrap._qwenloop_enabled` so the health check and the worker agree about
+    Mirrors `bootstrap.qwenloop_enabled` so the health check and the worker agree about
     which engines exist. They disagreed before: the worker ran qwenloop while `doctor`
     could not list it, so the engine an operator was depending on was invisible unless
     they already knew to ask for it by name.

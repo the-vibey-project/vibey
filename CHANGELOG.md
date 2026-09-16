@@ -15,6 +15,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 ### Bug Fixes
 
 * **worker:** `vibey worker --engines <list>` that matches none of the worker's engines — `--engines qwenloop` without `VIBEY_FEATURE_QWENLOOP`, say — is refused at startup with the reason and the switch that fixes it, instead of starting a worker with no engine adapters that deferred every engine-driven job forever, silently. With the feature on, `qwenloop` now joins the startup preflight sweep, so its conformance warning appears like every other engine's.
+* **design:** the ledger names the engine that actually did the DESIGN work. `design.interview` and
+  `design.research` events were attributed to claudeloop whatever `--provider` was in force, so a
+  sovereign run on qwenloop -- and a scripted run with no engine at all -- wrote a false actor into
+  an append-only record. Each `DesignProvider` now declares its own `engine_id` (`None` for the
+  scripted one) and the composition root reads it; the `design.synthesize` exclusion follows the
+  same derived value ([#115](https://github.com/the-vibey-project/vibey/issues/115))
 
 ## [0.7.0] (2026-09-15)
 

@@ -20,7 +20,7 @@ class DesignResearchHandler:
         ledger: DesignLedger,
         researcher: ResearchProvider,
         clock: Clock,
-        engine_id: EngineId,
+        engine_id: EngineId | None,
     ) -> None:
         self._ledger = ledger
         self._researcher = researcher
