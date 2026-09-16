@@ -1,4 +1,4 @@
-# ADR-0034: verify independence is the default, not an absolute
+# ADR-0035: verify independence is the default, not an absolute
 
 - **Status:** Accepted
 - **Date:** 2026-09-15

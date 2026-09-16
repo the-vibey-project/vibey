@@ -561,6 +561,35 @@ async def test_a_failing_gate_on_a_solo_pool_records_no_waiver(tmp_path: Path) -
     assert [e for e in ledger.recorded if e.kind == "DecisionRecorded"] == []
 
 
+async def test_a_rejected_self_review_on_a_solo_pool_records_no_waiver(tmp_path: Path) -> None:
+    """The other way a solo-pool verify can fail: the gates all pass, and the
+    diff review itself says no. The waiver claims the item "was verified by its
+    own implementer"; a rejected review verified nothing, so the append-only
+    ledger must stay empty here too. This is the path the failing-gate test
+    cannot reach -- it returns before the review ever runs."""
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    ledger = FakeLedger()
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=ScriptedEngine(
+            descriptor=CLAUDELOOP,
+            base_dir=tmp_path / "engine",
+            script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
+        ),
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        independence=VerifyIndependencePolicy(
+            pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
+        ),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert outcome == Failure(FailureClass.WORK, "diff review did not approve this work item")
+    assert [e for e in ledger.recorded if e.kind == "DecisionRecorded"] == []
+
+
 def test_granted_max_rounds_parses_both_forms_and_rejects_junk() -> None:
     from vibey.application.build_verify_handler import granted_max_rounds
 
