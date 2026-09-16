@@ -19,7 +19,7 @@ class ProjectStore(Protocol):
     async def get(self, project_id: UUID) -> ProjectRecord | None: ...
 
     async def transition(
-        self, project_id: UUID, *, expected: Phase, to: Phase
+        self, project_id: UUID, *, expected: Phase, to: Phase, guard: str | None = None
     ) -> ProjectRecord: ...
 
 
@@ -32,4 +32,5 @@ class ProjectTransitioner(Protocol):
         expected: Phase,
         to: Phase,
         cycle: int | None = None,
+        guard: str | None = None,
     ) -> Any: ...
