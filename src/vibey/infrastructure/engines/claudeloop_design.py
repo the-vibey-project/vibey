@@ -20,7 +20,7 @@ from vibey.application.design import (
 )
 from vibey.application.dto import RunSpec
 from vibey.domain.effort import Effort
-from vibey.domain.engine import IsolationLevel
+from vibey.domain.engine import EngineId, IsolationLevel
 from vibey.domain.spec import (
     AcceptanceCriterion,
     Constraint,
@@ -33,6 +33,9 @@ from vibey.infrastructure.interfaces import BoundedClaudeLoop
 
 
 class ClaudeLoopDesignProvider:
+    #: This provider drives the claudeloop binary, so claudeloop is the actor.
+    engine_id: EngineId | None = EngineId.CLAUDELOOP
+
     def __init__(self, *, process: BoundedClaudeLoop, worktree_path: Path) -> None:
         self._process = process
         self._worktree_path = worktree_path
