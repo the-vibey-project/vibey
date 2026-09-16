@@ -606,12 +606,61 @@ def test_bumping_a_toml_touches_only_the_project_table(tmp_path):
     assert versioning.read_version(cfg) == "1.3.0"
 
 
-def test_bumping_a_toml_relocks_uv_when_a_lockfile_is_present(tmp_path):
+@pytest.fixture
+def fake_uv(tmp_path: Path, monkeypatch) -> Path:
+    """A `uv` on PATH that records its argv and writes the lockfile itself.
+
+    Real `uv lock` resolves against an index, so the re-lock's success path used to be
+    reachable only with a network -- and a 100% branch floor that needs a network is not
+    a floor. This drives the same `subprocess.run` for real, argv, cwd and exit code
+    included, without leaving the machine. A fake binary rather than a monkeypatched
+    `subprocess.run` on purpose: a mock cannot tell you the command line is wrong.
+    """
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    uv = bin_dir / "uv"
+    uv.write_text(f"""#!/usr/bin/env python3
+import pathlib, sys
+here = pathlib.Path({str(bin_dir)!r})
+with (here / "calls.txt").open("a") as fh:
+    fh.write(" ".join(sys.argv[1:]) + "\\n")
+(here / "cwd.txt").write_text(str(pathlib.Path.cwd()))
+pathlib.Path("uv.lock").write_text('version = "1.3.0"\\n')
+""")
+    uv.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    return bin_dir
+
+
+def test_bumping_a_toml_relocks_uv_when_a_lockfile_is_present(tmp_path, fake_uv):
     """A uv.lock pins its own project's version (editable-installed, so it is
     self-referencing) -- leave it stale and `uv lock --check` fails on this
     commit and only this commit, which is exactly the one promotion just
     produced. Reproduced live: vibey's own 0.5.0 and 0.6.0 releases both
-    shipped a uv.lock still reading the prior version."""
+    shipped a uv.lock still reading the prior version.
+
+    Run against a fake `uv` so it holds offline: this is the only reader of the branch
+    that records the re-locked file, and the package's floor has to be reachable without
+    an index. What the fake cannot prove -- that the real resolver still behaves this way
+    -- is what the `network` test below is for."""
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "demo"\nversion = "1.2.3"\n')
+    (tmp_path / "uv.lock").write_text("stale\n")
+    cfg = cfg_with_versions(tmp_path, "pyproject.toml")
+
+    assert versioning.apply_version(cfg, "1.3.0") == ["pyproject.toml", "uv.lock"]
+    assert (fake_uv / "calls.txt").read_text().splitlines() == ["lock"]
+    assert Path((fake_uv / "cwd.txt").read_text()).resolve() == tmp_path.resolve()
+    assert (tmp_path / "uv.lock").read_text() == 'version = "1.3.0"\n'
+
+
+@pytest.mark.network
+def test_a_real_uv_lock_rewrites_the_pinned_version(tmp_path):
+    """The one test here that drives a genuine `uv lock`, which resolves against an index.
+
+    Marked `network`, so it is skipped unless VIBEY_GH_NETWORK_TESTS=1: everything it
+    covers is covered offline above, and skipping it costs no coverage. It stays because
+    only a real resolver proves the command this tool invokes still does what the rest of
+    the suite assumes."""
     path = tmp_path / "pyproject.toml"
     path.write_text('[project]\nname = "demo"\nversion = "1.2.3"\nrequires-python = ">=3.12"\n')
     subprocess.run(["uv", "lock"], cwd=tmp_path, check=True, capture_output=True)
