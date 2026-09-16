@@ -5,6 +5,20 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Find the other documentation channel by ARTIFACT NAME, not by searching runs. Each publish
+  deploys the whole site, so the run for one channel restores the other from that channel's
+  last artifact — and both previous lookups searched runs, both failing. `gh run list --limit
+  20` with no branch filter walked the twenty most recent runs on any branch, and every
+  integration publish took one of those slots, so after twenty merges in an afternoon the last
+  release run fell out of the window. Adding `--branch` looked like the fix and was strictly
+  worse: it never matches. A `workflow_run` run is attributed to the DEFAULT branch and a
+  `workflow_dispatch` run to the ref it was dispatched on — neither is ever the release branch
+  — so the filter found nothing on every publish and shipped the other channel as an empty
+  directory the chooser still linked to. Observed as a 404 on every documented `main/` URL: the
+  book, the EPUB, the print HTML, the paper, the governance corpus, every runbook page. Five
+  unexpired `docs-main` artifacts existed the whole time. The artifacts endpoint takes the name
+  directly, returns newest first and reports expiry, so branch attribution stops mattering.
+
 - Separate checking a commit subject from rewriting it, and make the rewrite a key.
   `conventional-commits.yml` normalised every nonconforming subject automatically, which
   is a convenience and not the point of the job — and the automatic form is
