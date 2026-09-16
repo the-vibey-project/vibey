@@ -21,6 +21,7 @@ from vibey_gh.config import (
     DEFAULT_INTEGRATION_RULESET_CHECKS,
     DEFAULT_RELEASE_RULESET_CHECKS,
     GhConfig,
+    MergeQueueConfig,
     RulesetConfig,
     RulesetsConfig,
     load_config,
@@ -59,6 +60,98 @@ def test_required_checks_must_be_unique_and_nonempty():
         RulesetConfig(required_checks=("CI", "CI"))
     with pytest.raises(ValueError, match="non-empty"):
         RulesetConfig(required_checks=("CI", " "))
+
+
+# ------------------------------------------------------------------------- merge queue
+
+
+@pytest.mark.parametrize(
+    "changes, match",
+    [
+        (dict(merge_method="FAST_FORWARD"), "merge_method must be one of"),
+        (dict(grouping_strategy="ANYGREEN"), "grouping_strategy must be one of"),
+        (dict(check_response_timeout_minutes=0), "between 1 and 360"),
+        (dict(check_response_timeout_minutes=361), "between 1 and 360"),
+        (dict(max_entries_to_build=0), "between 1 and 100"),
+        (dict(max_entries_to_merge=101), "between 1 and 100"),
+        (dict(min_entries_to_merge=0), "between 1 and 100"),
+        (dict(min_entries_to_merge_wait_minutes=-1), "between 0 and 360"),
+        (dict(min_entries_to_merge=5, max_entries_to_merge=2), "must not exceed"),
+    ],
+)
+def test_a_merge_queue_refuses_a_value_the_forge_would_reject(changes, match):
+    """Refused at load, not at merge. GitHub rejects these too, but it does so once per
+    queued pull request and on the far side of a push; here it costs one error, once."""
+    with pytest.raises(ValueError, match=match):
+        MergeQueueConfig(**changes)
+
+
+def test_a_queue_that_makes_merge_commits_cannot_sit_under_linear_history():
+    """Two declarations that cannot both be honoured. `require_linear_history` forbids the
+    merge commit `merge_method = "MERGE"` exists to create, so the pair is not a strict
+    policy -- it is a queue that can never merge anything. Refusing the combination is
+    cheaper than discovering it one blocked pull request at a time."""
+    with pytest.raises(ValueError, match="conflicts with require_linear_history"):
+        RulesetConfig(
+            require_linear_history=True,
+            merge_queue=MergeQueueConfig(enabled=True, merge_method="MERGE"),
+        )
+    # The same queue is fine where linear history is not demanded, and while it is off.
+    RulesetConfig(
+        require_linear_history=False,
+        merge_queue=MergeQueueConfig(enabled=True, merge_method="MERGE"),
+    )
+    RulesetConfig(require_linear_history=True, merge_queue=MergeQueueConfig(merge_method="MERGE"))
+
+
+def test_no_merge_queue_rule_is_declared_until_a_repository_asks_for_one():
+    """Default-off is the whole safety property: upgrading the tool must not change when
+    anybody's merges happen."""
+    assert all(rule["type"] != rs.MERGE_QUEUE for rule in rs.desired_rules(policy()))
+
+
+def test_a_declared_queue_renders_every_parameter_github_requires():
+    """All seven are required by the API, so all seven are sent. A partial payload is
+    rejected wholesale, which would look like a reconciliation bug rather than a gap."""
+    rules = rs.desired_rules(policy(merge_queue=MergeQueueConfig(enabled=True)))
+    queue = next(rule for rule in rules if rule["type"] == rs.MERGE_QUEUE)
+    assert queue["parameters"] == {
+        "check_response_timeout_minutes": 60,
+        "grouping_strategy": "ALLGREEN",
+        "max_entries_to_build": 5,
+        "max_entries_to_merge": 5,
+        "merge_method": "SQUASH",
+        "min_entries_to_merge": 1,
+        "min_entries_to_merge_wait_minutes": 5,
+    }
+
+
+def test_each_branch_queue_loads_from_toml_and_keeps_its_own_merge_style(tmp_path: Path):
+    """The release branch is promoted by a rebase and the integration branch takes a
+    squash, so one default would be wrong for one of them. Every key is overridable."""
+    (tmp_path / ".vibey-gh.toml").write_text(
+        "[rulesets.integration.merge_queue]\n"
+        "enabled = true\n"
+        "grouping_strategy = 'HEADGREEN'\n"
+        "max_entries_to_merge = 10\n"
+        "min_entries_to_merge_wait_minutes = 0\n"
+        "\n"
+        "[rulesets.release.merge_queue]\n"
+        "enabled = true\n",
+        encoding="utf-8",
+    )
+    cfg = load_config(tmp_path)
+
+    integration = cfg.rulesets.integration.merge_queue
+    assert integration.enabled and integration.merge_method == "SQUASH"
+    assert integration.grouping_strategy == "HEADGREEN"
+    assert integration.max_entries_to_merge == 10
+    assert integration.min_entries_to_merge_wait_minutes == 0
+    # untouched keys keep their defaults rather than becoming zero
+    assert integration.check_response_timeout_minutes == 60
+
+    release = cfg.rulesets.release.merge_queue
+    assert release.enabled and release.merge_method == "REBASE"
 
 
 @pytest.mark.parametrize("actor", ["nocolon", "Team:", ":5", "RepositoryRole:abc"])
