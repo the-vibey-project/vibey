@@ -29,6 +29,16 @@ This file follows Keep a Changelog and semantic versioning conventions.
   that were already there. Set it true once the repository is clean, and clutter can never
   come back. `[tidy] enabled = false` turns the survey off entirely, and no survey runs
   under a local hook, which must not pay for a fetch and two `gh` calls.
+- Add `vibey-gh marketplace` and the `[marketplace]` section: one Claude Code marketplace at
+  the repository root, rendered from the workspace members' own manifests. `/plugin
+  marketplace add owner/repo` reads exactly `<repo>/.claude-plugin/marketplace.json`, and a
+  monorepo that absorbed its marketplaces as members (vibey ADR-0021) had nothing there —
+  `the-vibey-project/vibey: no readable .claude-plugin/marketplace.json`. The root manifest
+  now carries every member's plugins with their sources re-rooted, under a name of its own
+  (Claude Code registers one marketplace per name per user, and each member's package still
+  ships its manifest under its own name). `--check` and `check` report drift; a member
+  defect is a named error. `MarketplaceRenderer` arrives with its seam declared in
+  `vibey_gh/interfaces/` (vibey ADR-0016), the package's first.
 
 - Add `vibey-gh book --site-dir site --title T --author A`, which exports the already-built
   documentation site as a book: a valid EPUB 3.0 package with Dublin Core metadata, and a
