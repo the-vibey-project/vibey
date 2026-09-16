@@ -70,7 +70,16 @@ async def test_one_live_build_implement_runs_on_a_selected_engine(tmp_path: Path
     _git(repo, "commit", "-q", "-m", "init")
 
     async with build_app() as resources:
-        project = await resources.projects.create("paid-build", repo, max_cycles=1, config={})
+        # Strict independence, deliberately: this test proves the must-differ
+        # constraint holds, and under the default (ADR-0035) a sole-engine pool
+        # would instead self-review -- spending a SECOND live paid session to
+        # prove nothing this test is about.
+        project = await resources.projects.create(
+            "paid-build",
+            repo,
+            max_cycles=1,
+            config={"verify": {"require_independent_review": True}},
+        )
         project_id = project.project_id
         await resources.projects.transition(project_id, expected=Phase.INTAKE, to=Phase.DESIGN)
         await resources.projects.transition(project_id, expected=Phase.DESIGN, to=Phase.BUILD)
@@ -120,7 +129,9 @@ async def test_one_live_build_implement_runs_on_a_selected_engine(tmp_path: Path
         # One pass runs the whole live session inside run_once; the second
         # pass claims the verify follow-up, whose must-differ constraint
         # has no eligible engine here and settles as a Defer -- proving
-        # the constraint holds without spending another session.
+        # the constraint holds without spending another session. That
+        # Defer is now the STRICT behaviour the config above opts into;
+        # the default would self-review instead (ADR-0035).
         for _ in range(4):
             if not await worker.run_once(project_id):
                 break
@@ -151,7 +162,8 @@ async def test_one_live_build_implement_runs_on_a_selected_engine(tmp_path: Path
 
         assert verify is not None
         assert '"implementer_engine_id": "claudeloop"' in verify["requirement"]
-        # Sole-engine worker: the verifier must differ, so the job waits.
+        # Sole-engine worker under `require_independent_review = true`: the
+        # verifier must differ, so the job waits rather than self-reviewing.
         assert verify["state"] in (
             JobState.AWAITING_CAPACITY.value,
             JobState.READY.value,
