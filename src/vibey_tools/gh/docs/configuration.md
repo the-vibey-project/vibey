@@ -528,7 +528,7 @@ claim about anyone else's branch flow.
 | Field | Type / default | Meaning |
 |---|---|---|
 | `enabled` | boolean / `false` | Declare the queue at all. **Off by default on purpose:** a merge queue changes when and how every merge happens for everyone using the repository, and switching that on by upgrading a tool would be a behaviour change nobody asked for. |
-| `merge_method` | `MERGE` \| `SQUASH` \| `REBASE` / **integration `SQUASH`, release `REBASE`** | How the queue lands a member. The two defaults differ because the branch flows do: feature pull requests squash into the integration branch, and promotion rebases into the release branch (ADR-0028). |
+| `merge_method` | `MERGE` \| `SQUASH` \| `REBASE` / `SQUASH` for integration, `REBASE` for release | How the queue lands a member. Match the branch's own flow — feature pull requests squash into the integration branch, and promotion rebases into the release branch (ADR-0028). |
 | `grouping_strategy` | `ALLGREEN` \| `HEADGREEN` / `ALLGREEN` | `ALLGREEN` requires every member of a group to be green; `HEADGREEN` merges on the group head alone, which can land a member that was never green on its own. |
 | `check_response_timeout_minutes` | integer 1–360 / `60` | How long the queue waits for a member's checks before treating it as failed. |
 | `max_entries_to_build` | integer 1–100 / `5` | How many members are built speculatively at once. |
@@ -604,8 +604,8 @@ the silence is the whole danger.
 | `github_release` | `GitHub Release` |
 | `repository_profile` | `Repository profile` |
 
-Note the distinction from `required_checks` (see `[rulesets]`): these are **workflow** names,
-while a required status check matches a **check-run** name — which for GitHub Actions is the
+Note the distinction from `required_checks` (see `[rulesets]`): these are **workflow**
+names. A required status check matches a **check-run** name, which for GitHub Actions is the
 job's name, not the workflow's.
 
 ## `[repository_profile]`
