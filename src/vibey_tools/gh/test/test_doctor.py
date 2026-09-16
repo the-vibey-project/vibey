@@ -33,9 +33,10 @@ def test_every_key_the_loader_reads_is_a_key_doctor_knows(tmp_path):
     ignored — an ERROR telling an adopter to delete a setting that works."""
     _repo(tmp_path, '[install]\nself_source = "src/vibey_tools/gh"\n')
     findings = doctor.diagnose(root=tmp_path)
-    assert not [
-        f for f in findings if "self_source" in f.message
-    ], "install.self_source is read by config.load; doctor must not call it unknown"
+    # Bound to a name first: black and `ruff format` disagree about how to wrap a long
+    # assert whose message trails a comprehension, and this file is gated by both.
+    ignored = [f for f in findings if "self_source" in f.message]
+    assert not ignored, "self_source is read by the loader; doctor must not call it unknown"
 
 
 def test_every_section_the_loader_reads_is_a_section_doctor_knows():
