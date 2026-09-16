@@ -5,6 +5,30 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Make the clean-repo survey inside `check --ci` safe where the forge cannot be reached.
+  `_gh_json` now distinguishes "the forge answered" from "the forge could not be asked":
+  a missing `gh` binary no longer raises an uncaught `FileNotFoundError`, and a non-zero
+  `gh` exit (an unauthenticated or rate-limited runner) is reported as a named problem
+  instead of being swallowed into an empty listing. Classes that could not be looked at
+  drop out of the verdict entirely, so an absent forge can never be read as a clean one
+  and can never name a live open-pull-request head as merged clutter. `check` also no
+  longer runs `git fetch --prune`: a read-only verification command does not mutate the
+  clone it verifies, and it acquires no network dependency. Under `--quiet` the survey is
+  skipped unless `[tidy] fail_check` is on, where alone it could still move the exit code.
+
+- Run the clean-repo survey inside `vibey-gh check --ci`. Sub-doctrine 9.a promised the
+  cloud clutter classes were surveyed there, and they were not: `tidy.py` exposed the
+  survey and `check` never called it, so clutter was only ever found by someone who
+  remembered to run `vibey-gh tidy`. `check --ci` now reports merged-and-undeleted remote
+  branches, draft releases, and orphan tags as named problems. It only reports — `check`
+  runs on every commit and in every pull request, so it deletes nothing, ever, and
+  `vibey-gh tidy --apply` remains the only thing that removes anything. The verdict is a
+  key rather than a hard-coded judgment: new `[tidy] fail_check`, default `false`, prints
+  the clutter as an advisory line, because the survey judges a repository's accumulated
+  past and an adopter upgrading into this release must not find its CI red over branches
+  that were already there. Set it true once the repository is clean, and clutter can never
+  come back. `[tidy] enabled = false` turns the survey off entirely, and no survey runs
+  under a local hook, which must not pay for a fetch and two `gh` calls.
 - Add `vibey-gh marketplace` and the `[marketplace]` section: one Claude Code marketplace at
   the repository root, rendered from the workspace members' own manifests. `/plugin
   marketplace add owner/repo` reads exactly `<repo>/.claude-plugin/marketplace.json`, and a
