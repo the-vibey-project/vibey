@@ -25,10 +25,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   an append-only record. Each `DesignProvider` now declares its own `engine_id` (`None` for the
   scripted one) and the composition root reads it; the `design.synthesize` exclusion follows the
   same derived value ([#115](https://github.com/the-vibey-project/vibey/issues/115))
+* **ledger:** every phase move now writes the `PhaseTransitioned` event the ledger always declared,
+  in the same transaction as the compare-and-set that moves the phase — so a project's path through
+  the six phases is reconstructable from its own history, and no move can commit without its event
 
 ### Features
 
 * one correlation id per delivery: every ledger event of a project's DESIGN, BUILD and REVIEW phases now carries the same `correlation_id`, derived from the project alone so a REVIEW loop-back does not mint a second one, instead of a fresh `uuid4()` per write site. Per-run identity moves to the `causation_id` column, which already existed and was always empty, so individual engine runs stay distinguishable. The id is also bindable into the structured log context under a configurable key ([#89](https://github.com/the-vibey-project/vibey/issues/89))
+* **review:** REVIEW no longer runs a hard-coded security scan. `bandit -q -r src` walked the
+  absorbed workspace members and failed every cycle, looping REVIEW back into BUILD forever; no
+  narrower path is right for anyone else either, because `bandit` exits 0 on a path that does not
+  exist, so a baked-in default would report a passing security check that examined zero files.
+  Both the security and code-review command lists are now project configuration
+  (`review.security_commands`, `review.code_review_commands`), and `security_commands` defaults to
+  empty — a project that wants the check configures it
 ### Documentation
 * stop tracking the two built documentation sites (`site/` and `src/vibey_tools/gh/site/`): 5.8 MB of stale rendered HTML — a second, drifting copy of the docs, the ADRs and the runbooks — that `properdocs build` regenerates and that CI never reads ([#155](https://github.com/the-vibey-project/vibey/issues/155))
 

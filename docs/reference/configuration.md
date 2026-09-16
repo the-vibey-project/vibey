@@ -229,6 +229,36 @@ operator's `spec.skillsContext` object (copied verbatim).
 | `command` | array of non-empty strings | unset (`<python> -m vibey_skills.cli`) | Override for the `vibey-skills` command. Read by `compiler_from_config` but not declared in the `VibeyProject` CRD schema, so neither creation path sets it today. |
 | `index_path` | string | `.vibey/skills-context/index` under the repo | Path to the skills index; relative paths resolve under the repo. Read by `compiler_from_config` but not declared in the CRD schema, so neither creation path sets it today. |
 
+## Automated review checks (project config record — not a `vibey.toml` table) { #review }
+
+`VibeyConfig` has no `review` field; a `[review]` table in `vibey.toml` is
+silently ignored by `parse_config`, and `vibey.toml` is never loaded by the
+worker anyway. The values live in the project's stored config record under a
+`review` object, and `SubprocessAutomatedReviewRunner.from_config`
+(`infrastructure/build/automated_review_runner.py`) reads them when
+`bootstrap.build_full_worker` builds the worker. They are the commands
+`review.demo` shells out to: a non-zero exit becomes a `Severity.HIGH`
+`security` finding or a `Severity.MEDIUM` `code_review` finding, which sends
+REVIEW back to BUILD.
+
+Neither `vibey new` nor the operator's `VibeyProject` spec writes this object
+today, the same way `skills_context.command` and `skills_context.index_path`
+are read but never written; the record is written directly. Until one of them
+does, an unconfigured project runs REVIEW's code-review check and no security
+check at all — which is what the empty `security_commands` default states
+plainly, rather than running a scan that inspects nothing and reports success.
+vibey's own `bandit -q -r src/vibey` is enforced for real as gate 6 of
+`ci.yml`, on every pull request, independently of this.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `security_commands` | array of arrays of non-empty strings | `[]` (no security check runs) | Security checks. There is deliberately no default: any baked-in command names both a tool and a layout, and `bandit -q -r <path that does not exist>` exits 0 — a wrong default reports a passing security check that examined zero files. Configure this to get one. |
+| `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop", "--exclude", ".cursorloop", "--exclude", ".agyloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
+
+A malformed `review` object (not an object, a command list that is not a list
+of non-empty string arrays) raises when the worker is built, rather than
+silently running nothing.
+
 ## Full example
 
 This is a valid file exercising most of the schema that `parse_config`
