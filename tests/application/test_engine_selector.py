@@ -10,6 +10,7 @@ import pytest
 from vibey.application.dto import EngineHealthRecord, RotationCursor
 from vibey.application.engine_health_service import EngineHealthService
 from vibey.application.engine_selector import EngineSelector
+from vibey.application.interfaces.engines import EngineSelectorInterface
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId, JobRequirement
 from vibey.domain.errors import NoEligibleEngine
@@ -376,3 +377,160 @@ async def test_an_open_circuit_before_its_deadline_stays_excluded() -> None:
         )
         with _pytest.raises(NoEligibleEngine):
             await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+
+async def test_a_credit_exhausted_circuit_half_opens_once_its_probe_time_passes() -> None:
+    """CreditsExhausted carries no resets_at -- it never will, a credits
+    balance has no clock -- so its backoff lands in probe_next_at alone.
+    Reading only resets_at left the engine excluded for the rest of the
+    project until a human edited engine_health by hand."""
+    from dataclasses import replace as _replace
+    from datetime import UTC, datetime, timedelta
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    out_of_credits = _replace(
+        _healthy_record(project_id, EngineId.CLAUDELOOP),
+        circuit="open",
+        capacity_state="CreditsExhausted",
+        resets_at=None,
+        probe_next_at=datetime.now(UTC) - timedelta(minutes=1),
+        probe_attempt=1,
+        consecutive_fail=1,
+    )
+    await repo.upsert(out_of_credits)
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+async def test_a_credit_exhausted_circuit_before_its_probe_time_stays_excluded() -> None:
+    from dataclasses import replace as _replace
+    from datetime import UTC, datetime, timedelta
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    out_of_credits = _replace(
+        _healthy_record(project_id, EngineId.CLAUDELOOP),
+        circuit="open",
+        capacity_state="CreditsExhausted",
+        resets_at=None,
+        probe_next_at=datetime.now(UTC) + timedelta(minutes=5),
+    )
+    await repo.upsert(out_of_credits)
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    with pytest.raises(NoEligibleEngine):
+        await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+
+async def test_the_earliest_of_the_two_probe_times_decides() -> None:
+    """A window deadline far in the future must not hold back a backoff
+    probe that is already due, and vice versa."""
+    from dataclasses import replace as _replace
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime.now(UTC)
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _replace(
+            _healthy_record(project_id, EngineId.CLAUDELOOP),
+            circuit="open",
+            resets_at=now + timedelta(hours=1),
+            probe_next_at=now - timedelta(minutes=1),
+        )
+    )
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+async def test_an_authentication_opened_circuit_has_no_probe_time_and_stays_excluded() -> None:
+    """Waiting cannot fix a credential, so AuthenticationFailed schedules
+    neither time and the engine stays out -- visibly -- until a human
+    re-authenticates and a preflight proves it."""
+    from dataclasses import replace as _replace
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _replace(
+            _healthy_record(project_id, EngineId.CLAUDELOOP),
+            circuit="open",
+            capacity_state="AuthenticationFailed",
+            resets_at=None,
+            probe_next_at=None,
+        )
+    )
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    with pytest.raises(NoEligibleEngine):
+        await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+
+async def test_a_recorded_credit_exhaustion_is_probed_again_without_a_hand_edit() -> None:
+    """End to end over the real service: record the rejection, let the
+    scheduled probe time arrive, and the engine comes back by itself."""
+    from dataclasses import replace as _replace
+    from datetime import UTC, datetime, timedelta
+
+    from vibey.domain.capacity import CreditsExhausted
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
+    service = EngineHealthService(repo)
+    selector = EngineSelector(
+        health_service=service,
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    rejected = await service.record_capacity_rejection(
+        project_id, EngineId.CLAUDELOOP, CreditsExhausted()
+    )
+    assert rejected.resets_at is None
+    assert rejected.probe_next_at is not None
+    with pytest.raises(NoEligibleEngine):
+        await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    # The clock reaches the scheduled probe. Nothing else changes.
+    await repo.upsert(_replace(rejected, probe_next_at=datetime.now(UTC) - timedelta(seconds=1)))
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+def test_the_selector_satisfies_its_declared_seam() -> None:
+    """ADR-0016: `interfaces/engines.py::EngineSelectorInterface` is the contract.
+
+    An interface nothing checks is a comment. This is the check.
+    """
+    selector = EngineSelector(
+        health_service=EngineHealthService(FakeEngineHealthRepository()),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+    assert isinstance(selector, EngineSelectorInterface)

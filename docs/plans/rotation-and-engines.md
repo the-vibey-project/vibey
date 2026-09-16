@@ -438,7 +438,8 @@ DESIGN jobs on qwenloop directly, outside rotation.
 stateDiagram-v2
     [*] --> closed
     closed --> open: capacity rejection recorded
-    open --> half_open: resets_at passed (evaluated at selection)
+    open --> half_open: resets_at or probe_next_at reached (evaluated at selection)
+    open --> half_open: auth restored (preflight, AuthenticationFailed only)
     half_open --> closed: selected run succeeds
     half_open --> open: rejected again
     closed --> closed: success (reset failure count)
@@ -472,28 +473,31 @@ This is the `*loop` family's hardest-won distinction, and vibey must not soften 
 
 | Capacity state | Designed probe | What the code does today |
 |---|---|---|
-| `WindowExhausted(resets_at)` | at `resets_at` (+ small jitter) | Stores `resets_at` and sets `probe_next_at` to it. The selector half-opens the circuit once `resets_at` has passed. |
+| `WindowExhausted(resets_at)` | at `resets_at` (+ small jitter) | Stores `resets_at` and sets `probe_next_at` to it. The selector half-opens the circuit once that time has passed. |
 | `WindowExhausted(resets_at=None)` | exponential backoff, cap 5 min | Opens the circuit with `resets_at` NULL. The selector never half-opens it automatically. |
-| `CreditsExhausted` | exponential backoff from 5 min, **cap 30 min, no deadline** | Sets `probe_next_at` = now + min(5·2^attempt, 30) min and leaves `resets_at` NULL (a database CHECK enforces this). Nothing reads `probe_next_at`, and the selector half-opens only on `resets_at`, so a credits-opened circuit is never re-probed automatically. |
-| `AuthenticationFailed` | **never automatically** | Opens the circuit with no probe. No human gate is raised. |
+| `CreditsExhausted` | exponential backoff from 5 min, **cap 30 min, no deadline** | Sets `probe_next_at` = now + min(5·2^attempt, 30) min and leaves `resets_at` NULL (a database CHECK enforces this). The selector half-opens on the earlier of `resets_at` and `probe_next_at`, so the engine is re-probed once the backoff elapses. |
+| `AuthenticationFailed` | **never on a clock** | Opens the circuit with neither time set, because waiting cannot fix a credential. The engine stays out, visibly (`circuit=open, capacity_state=AuthenticationFailed` in `vibey status` and the dashboard), until a preflight reports `auth_ok`; `EngineHealthService` half-opens it then, so the human's re-authentication is the probe trigger. No human gate is raised. |
 
 **Credits have no reset time.** Only a human top-up changes that, so vibey
 never computes a "will be fixed at" timestamp for `CreditsExhausted`.
 
-A circuit with no `resets_at` can close only on a success, and an `OPEN`
-circuit is never selected. `vibey doctor --conformance --record` refreshes
-install, auth, and conformance but leaves the circuit column alone, so it
-does not close the circuit either. In practice this gap is latent: the
-production path records only `WindowExhausted` with a deadline, and nothing
-outside tests records `CreditsExhausted` or `AuthenticationFailed`.
+A circuit with no probe time at all can close only on a success, and an
+`OPEN` circuit is never selected -- which is why every capacity state that a
+clock or a human can clear now schedules one. The only state that schedules
+neither is `AuthenticationFailed`, and its way back is a passing preflight
+(worker startup or `vibey doctor --conformance --record`), which half-opens
+the circuit rather than closing it. No state requires a hand-edited
+`engine_health` row any more.
 
 `domain/circuit.py::schedule_probe` encodes the intended schedule in types:
 `ProbeSchedule = DeadlineProbe | BackoffProbe`, and `CreditsExhausted` can
 produce only a `BackoffProbe` (5-minute floor, 30-minute cap).
 `AuthenticationFailed` produces no probe, and `CreditsExhausted` itself has
 no `resets_at` field. Making the rule a type error rather than a convention
-is the point. Wiring `schedule_probe` and `probe_next_at` into selection is
-the remaining work.
+is the point. `probe_next_at` is now read at selection; `schedule_probe`
+itself is not yet the writer -- `EngineHealthService` still computes the same
+5-minute floor / 30-minute cap inline, and folding the two together is the
+remaining work.
 
 ### 6.3 Failure attribution
 

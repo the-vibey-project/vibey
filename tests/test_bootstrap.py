@@ -10,9 +10,9 @@ from vibey.application.dto import ProjectRecord
 from vibey.bootstrap import (
     _independence_policy,
     _independent_review_required,
-    _qwenloop_enabled,
     build_design_worker,
     build_visual_worker,
+    qwenloop_enabled,
 )
 from vibey.domain.engine import EngineId
 from vibey.domain.job import JobState
@@ -44,14 +44,14 @@ class SovereignDesignProvider(ScriptedDesignProvider):
 
 def test_qwenloop_feature_resolution(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
-    assert not _qwenloop_enabled({})
-    assert _qwenloop_enabled({"features": {"qwenloop": True}})
+    assert not qwenloop_enabled({})
+    assert qwenloop_enabled({"features": {"qwenloop": True}})
 
     monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "true")
-    assert _qwenloop_enabled({})
+    assert qwenloop_enabled({})
 
     monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "false")
-    assert not _qwenloop_enabled({"features": {"qwenloop": True}})
+    assert not qwenloop_enabled({"features": {"qwenloop": True}})
 
 
 async def test_build_design_worker_composes_an_executable_interview(tmp_path: Path) -> None:
