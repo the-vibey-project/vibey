@@ -194,7 +194,7 @@ automation has no drift.
 | Implementation plan | `docs/plans/implementation-plan.md` |
 | System design and why each hard call was made | `docs/architecture/decisions/` (36 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
-| Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (21 runbooks, `00-master-plan.md` first) |
+| Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |
 | Security policy and disclosure | `SECURITY.md` |
 

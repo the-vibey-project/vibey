@@ -30,6 +30,7 @@ defaults below. Paths are repository-relative unless stated otherwise.
 | `merge_train.restack_conflicts` | boolean / `true` | Let the train merge the integration branch into a conflicting or behind head itself, locally, before reporting it as stuck. GitHub computes mergeability without this repository's `.gitattributes`, so a path declared `merge=union` (see `install.union_merge_paths`) is called a conflict there and resolves here. The restacked pull request merges on the NEXT train run, once its checks have re-run against the tree that now exists. Forks are never written to, whatever this is set to. `false` reports the conflict and leaves it to a person. |
 | `install.workflows` | string list / all managed workflows | Exact managed subset; `[]` installs hooks and CLI assets only. |
 | `install.union_merge_paths` | string list / `["CHANGELOG.md"]` | Files declared `merge=union` in `.gitattributes`, so two branches appending to the same section merge instead of conflicting. Appended to an existing `.gitattributes`, never rewriting it. `[]` declares none. |
+| `install.self_source` | string / `"."` | Where a repository that **is** the tooling keeps its own copy, for the workflows that install it. Declared rather than discovered on purpose: a workflow that searched the tree for a `pyproject.toml` declaring `name = "vibey-gh"` would be reading a pull request's own files, and a branch that adds one anywhere would get it installed with that job's permissions. The rendered workflows verify the path before using it and fall back to the published release if it does not hold the tooling. |
 | `install.pin_version` | boolean / `false` | Pin every managed workflow's `pip install vibey-gh` to the exact version that rendered it (`vibey-gh==X.Y.Z`), instead of the latest release on every run. `false` keeps the historical floating install. The self-hosting path (this repository, and anything else installing from its own `pyproject.toml`) is never pinned — it installs from source regardless. Running `vibey-gh install` from a newer release moves the pin forward as one visible diff. |
 
 ## `[ai]`
@@ -108,11 +109,13 @@ that failure otherwise turns a billing problem into a hard stop on every pull re
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `enabled` | boolean / `false` | Off unless a repository opts in. It needs a self-hosted runner, so nothing should inherit it. |
+| `enabled` | boolean / `true` | Whether the fallback job is rendered at all. **On by default, per sub-doctrine 8.a:** the sovereign path is the preference, so it is not the one that has to be opted into. That costs an adopter nothing until they stand a runner up, because the **heartbeat** gates scheduling rather than this flag — a repository with no fresh `heartbeat_ref` never offers the lane. Once a runner does exist, keep `trusted_only` true: GitHub says self-hosted runners should "almost never be used for public repositories". |
 | `runner_label` | string / `"vibey-local"` | Label the fallback job targets, alongside `self-hosted`. |
 | `model` | string / `"qwen2.5-coder:14b"` | Model tag served by the Ollama-compatible endpoint. |
 | `base_url` | string / `"http://127.0.0.1:11434"` | Where the local model listens. |
 | `trusted_only` | boolean / `true` | Never run the fallback for a fork pull request. |
+| `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the fallback reads back, so "is the local lane alive?" is answered by something the lane itself had to write. |
+| `heartbeat_max_age_minutes` | integer / `15` | How stale that heartbeat may be before the local lane is treated as down. A ref that stopped moving is indistinguishable from a runner that stopped, which is the point — both mean do not route work there. |
 | `max_diff_chars` | integer / `60000` | Diff is truncated past this, and the model is told it was. |
 | `timeout_seconds` | integer / `600` | Bound on one review. |
 
@@ -509,6 +512,40 @@ names are not configured here — `[rulesets.integration]` always targets
 | `allow_deletions` | boolean / `false` | **Rejected at load time if `true`.** A permanent branch can never be configured to allow deletion. |
 | `bypass_actors` | string list / `["RepositoryRole:5"]` | `"<ActorType>:<id>"` entries granted to bypass the ruleset. The default is the repository admin role. `[]` means nobody — including the owner. |
 
+### `[rulesets.integration.merge_queue]` and `[rulesets.release.merge_queue]`
+
+A green pull request is not a green merge: its checks ran against the base as it stood then,
+and nothing between that base and the branch tip was ever built with it.
+`strict_required_checks` already refuses to merge a stale branch, so without a queue that
+proof is bought by hand, one rebase at a time, with the base moving underneath. The queue
+builds each member against the real tip in sequence instead (ADR-0036).
+
+All seven of GitHub's `merge_queue` parameters are keys rather than constants, because the
+API requires all seven and a value hard-coded here would be a decision taken away from the
+next adopter, silently (ADR-0018). The defaults are the shape this repository runs, not a
+claim about anyone else's branch flow.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `enabled` | boolean / `false` | Declare the queue at all. **Off by default on purpose:** a merge queue changes when and how every merge happens for everyone using the repository, and switching that on by upgrading a tool would be a behaviour change nobody asked for. |
+| `merge_method` | `MERGE` \| `SQUASH` \| `REBASE` / `SQUASH` for integration, `REBASE` for release | How the queue lands a member. Match the branch's own flow — feature pull requests squash into the integration branch, and promotion rebases into the release branch (ADR-0028). |
+| `grouping_strategy` | `ALLGREEN` \| `HEADGREEN` / `ALLGREEN` | `ALLGREEN` requires every member of a group to be green; `HEADGREEN` merges on the group head alone, which can land a member that was never green on its own. |
+| `check_response_timeout_minutes` | integer 1–360 / `60` | How long the queue waits for a member's checks before treating it as failed. |
+| `max_entries_to_build` | integer 1–100 / `5` | How many members are built speculatively at once. |
+| `max_entries_to_merge` | integer 1–100 / `5` | How many members may land in one group. |
+| `min_entries_to_merge` | integer 1–100 / `1` | How few members a group may contain before the wait below applies. |
+| `min_entries_to_merge_wait_minutes` | integer 0–360 / `5` | How long the queue waits for a group to reach `min_entries_to_merge` before merging a smaller one. `0` never waits. |
+
+Out-of-range values and unknown method or strategy names are rejected **at load time**, with
+the field named — not at reconcile time, where a typo would surface as an API rejection
+halfway through a run.
+
+Declaring the table is not the same as applying it: `vibey-gh rulesets` (or the workflow that
+calls it) is what reconciles the queue onto the branch. Declaring it **off** is worth doing
+explicitly — a release branch that promotes with one controlled rebase gains nothing from a
+queue and would add its wait to every release, and writing that down means the next reader
+sees a decision rather than an oversight.
+
 ### `required_checks` names check runs, not workflows
 
 This is the one field here that can lock a branch with no way out, so it is worth stating
@@ -536,6 +573,40 @@ mention is never removed, only reported. A ruleset the API refuses fails the job
 API's own reason rather than being silently skipped — a skipped reconciliation would look
 identical to a satisfied one. Run `vibey-gh rulesets --dry-run` to inspect the diff before
 a workflow run applies it.
+
+## `[workflow_names]`
+
+Every workflow name the rendered templates depend on. Templates chain by `workflow_run`, which
+matches a workflow's display **name**, so these are keys rather than constants: a hardcoded name
+silently assumes every adopter calls its pipeline `CI` and its publish step `Release`. When that
+assumption is wrong the trigger simply never matches and nothing runs, with no error anywhere —
+the silence is the whole danger.
+
+**Two kinds live in this table.**
+
+- `ci` and `release` name workflows the **adopter owns**. vibey-gh renders neither, and never
+  installs or renames those files; it only needs to know what they are called in order to trigger
+  off them. These genuinely differ per repository.
+- The rest name **vibey-gh's own templates**. Renaming one is safe: each template renders its own
+  `name:` from the same field the other templates trigger on, so both sides move together and the
+  chain cannot drift.
+
+| Field | Default |
+|---|---|
+| `ci` | `CI` |
+| `release` | `Release` |
+| `provenance` | `Provenance` |
+| `pr_automation` | `PR automation` |
+| `merge_train` | `Merge train` |
+| `promote` | `Promote` |
+| `release_surfaces` | `Release surfaces` |
+| `release_repair` | `Release repair` |
+| `github_release` | `GitHub Release` |
+| `repository_profile` | `Repository profile` |
+
+Note the distinction from `required_checks` (see `[rulesets]`): these are **workflow**
+names. A required status check matches a **check-run** name, which for GitHub Actions is the
+job's name, not the workflow's.
 
 ## `[repository_profile]`
 
