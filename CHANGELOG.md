@@ -18,6 +18,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **worker:** a job that burns its last attempt parks on an `attempts_exhausted` human gate carrying the grant to type, instead of dying as a `failed` row nobody was told about; answering `--raw '{"max_attempts": N}'` widens the bound on the job row so the granted retries survive the next nack (ADR-0024)
 * **gh:** the exported book opens: chapter markup is rewritten as well-formed XHTML with
   mkdocs' `&para;` permalinks and other named entities resolved, site chrome dropped, and
   SVG's camelCase names preserved — what counts as chrome and which names are
