@@ -2,7 +2,7 @@
 import asyncio
 import json
 import os
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
@@ -1791,6 +1791,45 @@ def test_recover_all_projects(tmp_path: Path) -> None:
     result = runner.invoke(app, ["recover", "--all"])
     assert result.exit_code == 0
     assert "Recovered 0 stuck job(s)." in result.stdout
+
+
+def test_recover_counts_the_jobs_it_put_back(tmp_path: Path) -> None:
+    """The bug this guards: the count came from a pattern written
+    r"UPDATE (\\d+)" -- a doubled backslash, so it looked for a literal
+    backslash and never matched asyncpg's "UPDATE 1" status tag. Every
+    recovery, however many rows it reset, reported `Recovered 0 stuck job(s).`
+    """
+
+    async def seed() -> UUID:
+        async with build_app() as resources:
+            project = await resources.projects.create(
+                "recover-count", tmp_path, max_cycles=1, config={}
+            )
+            await resources.jobs.enqueue(
+                EnqueueRequest(
+                    project_id=project.project_id,
+                    cycle=project.cycle,
+                    phase=Phase.INTAKE,
+                    kind="test.work",
+                    idempotency_key=idempotency_key(
+                        project.project_id, project.cycle, "test.work", "1"
+                    ),
+                    requirement={},
+                )
+            )
+            # A worker that crashed mid-job leaves exactly this behind: a job
+            # in `leased`, with a lease nobody will ever heartbeat again.
+            leased = await resources.jobs.claim(
+                project.project_id, owner="crashed-worker", lease=timedelta(minutes=5)
+            )
+            assert leased is not None
+            return project.project_id
+
+    project_id = asyncio.run(seed())
+
+    result = runner.invoke(app, ["recover", "--project", str(project_id)])
+    assert result.exit_code == 0
+    assert "Recovered 1 stuck job(s)." in result.stdout
 
 
 def test_recover_with_project(tmp_path: Path) -> None:

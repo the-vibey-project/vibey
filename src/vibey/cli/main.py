@@ -575,6 +575,8 @@ def recover(
     ] = False,
 ) -> None:
     """Recover stuck leased jobs, setting them back to ready state."""
+    import re
+
     import asyncpg
 
     from vibey.bootstrap import database_url
@@ -598,9 +600,11 @@ def recover(
                     project_id,
                 )
 
-            import re
-
-            match = re.search(r"UPDATE (\\d+)", result)
+            # asyncpg hands back the command status tag -- "UPDATE 3". The
+            # pattern here was once written r"UPDATE (\\d+)", which looks for a
+            # literal backslash and so never matched: the count printed 0
+            # however many rows had just been reset.
+            match = re.search(r"UPDATE (\d+)", result)
             count = match.group(1) if match else "0"
             typer.echo(f"Recovered {count} stuck job(s).")
         finally:
