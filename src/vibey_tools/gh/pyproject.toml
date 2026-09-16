@@ -69,6 +69,16 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-fail-under=100",
 ]
+markers = [
+    # The ONE way this suite designates a test that leaves the machine. A marked test is
+    # SKIPPED unless VIBEY_GH_NETWORK_TESTS=1 -- test/conftest.py does the skipping, so the
+    # marker and the environment variable are two halves of a single mechanism rather than
+    # two competing ones. A plain offline `pytest` therefore reaches the 100% floor above
+    # with no flag to remember, and `-m network` is how a runner that HAS an index asks for
+    # the real thing. Every branch a `network` test touches must also be reached offline,
+    # or the floor is a claim rather than a contract.
+    "network: leaves the machine (a real package index, a real remote); set VIBEY_GH_NETWORK_TESTS=1 to run",
+]
 
 [tool.coverage.run]
 source = ["vibey_gh"]
