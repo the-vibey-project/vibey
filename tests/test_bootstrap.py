@@ -1,8 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import ast
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
+
+import structlog
 
 from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, make_job
 from vibey import bootstrap
@@ -18,10 +22,12 @@ from vibey.bootstrap import (
 from vibey.domain.engine import EngineId
 from vibey.domain.job import JobState
 from vibey.domain.phase import Phase
+from vibey.domain.verbosity import LogPlan
 from vibey.infrastructure.engines.claudeloop_design import ClaudeLoopDesignProvider
 from vibey.infrastructure.engines.qwenloop_design import QwenloopDesignProvider
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
+from vibey.infrastructure.logging import StructlogAppLogger, configure_logging
 
 
 class FakeLedger:
@@ -55,30 +61,62 @@ def test_qwenloop_feature_resolution(monkeypatch) -> None:  # type: ignore[no-un
     assert not qwenloop_enabled({"features": {"qwenloop": True}})
 
 
-def test_every_composed_worker_logs_through_a_redaction_aware_logger() -> None:
-    """The composition root must hand `WorkerLoop` the structured logger, not leave it on
-    its own last-resort default.
+def test_every_composed_worker_is_given_the_structured_logger() -> None:
+    """Structural, not textual. Counting `return WorkerLoop(` against
+    `logger=StructlogAppLogger(` balances two unrelated totals: drop the keyword from one
+    constructor, add a `StructlogAppLogger(...)` anywhere else in the module, and the counts
+    still match while the worker is back on the flattening default. So walk the AST and tie
+    each construction to its own argument."""
+    tree = ast.parse(Path(bootstrap.__file__).read_text(encoding="utf-8"))
+    calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "WorkerLoop"
+    ]
+    assert calls, "bootstrap must still construct WorkerLoop"
+    for call in calls:
+        logger = next((kw for kw in call.keywords if kw.arg == "logger"), None)
+        assert logger is not None, (
+            f"WorkerLoop at bootstrap.py:{call.lineno} is constructed without a logger, "
+            "so it falls back to the flattening default"
+        )
+        assert isinstance(logger.value, ast.Call), f"line {call.lineno}: logger= is not a call"
+        assert isinstance(logger.value.func, ast.Name), f"line {call.lineno}: unexpected logger"
+        assert logger.value.func.id == "StructlogAppLogger", (
+            f"WorkerLoop at bootstrap.py:{call.lineno} is given "
+            f"{logger.value.func.id}, which is not the redaction-aware logger"
+        )
 
-    `StandardLibraryLogger` renders fields into the message as `key=value` before the sink
-    sees them, and `configure_logging`'s redaction is keyed on FIELD NAMES -- so a value
-    that is sensitive only because of its key survives flattening:
 
-        flattened   {'event': 'job.deferred password=hunter2'}   # untouched
-        structured  {'event': 'job.deferred', 'password': '[REDACTED]'}
+def test_a_key_only_secret_is_redacted_through_the_configured_sink(tmp_path: Path) -> None:
+    """The property the structural test cannot see: a field sensitive only because of its
+    NAME survives as a field all the way to the sink, and is redacted there.
 
-    All three builders constructed `WorkerLoop` without a logger, so that default was the
-    production path, and `WorkerLoop` logs `reason=outcome.detail` -- free text a handler
-    controls. Asserted against the source rather than by building a worker, because two of
-    the three builders need a live database.
-    """
-    source = (Path(bootstrap.__file__)).read_text()
-    constructions = source.count("return WorkerLoop(")
-    injected = source.count("logger=StructlogAppLogger(")
-    assert constructions > 0, "the builders must still construct WorkerLoop"
-    assert injected == constructions, (
-        f"{constructions} WorkerLoop construction(s) but {injected} inject a logger; "
-        "an uninjected one falls back to the flattening default"
+    `hunter2` matches no vendor-shaped pattern, so it is redacted by key or not at all --
+    which is exactly what flattening it into the message would lose."""
+    root = logging.getLogger()
+    root.handlers.clear()
+    structlog.reset_defaults()
+    log_file = tmp_path / "vibey.log"
+    configure_logging(
+        LogPlan(level="INFO", include_third_party=False, include_payloads=False),
+        log_file=log_file,
+        human_console=False,
     )
+    try:
+        # the logger the composition root hands every worker
+        StructlogAppLogger(owner="worker-1").warning("job.deferred", password="hunter2")
+        logging.getLogger().handlers[-1].flush()
+        written = log_file.read_text(encoding="utf-8")
+    finally:
+        root.handlers.clear()
+        structlog.reset_defaults()
+
+    assert "hunter2" not in written, "a key-only secret reached the sink unredacted"
+    assert "[REDACTED]" in written
+    assert "job.deferred" in written
 
 
 async def test_build_design_worker_composes_an_executable_interview(tmp_path: Path) -> None:
