@@ -710,8 +710,15 @@ jobs:
             # is LIVE right now, this deploy would destroy it: fail, and let a human decide.
             # If it was never published, there is nothing to lose -- drop the empty directory
             # and carry on, which is the ordinary first publish of a new adopter.
-            if curl -fsS -o /dev/null --max-time 30 "${OTHER_CHANNEL_URL}"; then
-              echo "::error::${OTHER_CHANNEL_URL} is live but no unexpired docs-${OTHER_CHANNEL} artifact exists; refusing to replace it with an empty directory. Republish ${OTHER_BRANCH}, or re-run once its artifact exists."
+            # ONLY AN EXPLICIT 404 PROVES ABSENCE. `curl -f` exits non-zero for a timeout,
+            # a DNS or TLS failure, a 403 and a 500 alike, so keying the decision on its
+            # exit status would read a transient blip as "never published" and delete a live
+            # channel -- failing OPEN in the one guard whose whole job is to fail closed.
+            # `%{http_code}` is 000 when no response arrived at all, which is not a 404.
+            probe=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 \
+              "${OTHER_CHANNEL_URL}" || echo 000)
+            if [ "$probe" != 404 ]; then
+              echo "::error::${OTHER_CHANNEL_URL} probed ${probe} (only an explicit 404 proves it was never published) and no unexpired docs-${OTHER_CHANNEL} artifact exists; refusing to replace it with an empty directory. Republish ${OTHER_BRANCH}, or re-run once its artifact exists."
               exit 1
             fi
             rmdir "pages/${OTHER_CHANNEL}"
