@@ -210,7 +210,9 @@ def extract_main(page_html: str, sanitizer: ChapterSanitizerInterface | None = N
     between calls and expose one method taking exactly these arguments: a namespace, not
     an object.
     """
-    parser: MainExtractorInterface = MainExtractor(sanitizer or ChapterSanitizer())
+    parser: MainExtractorInterface = MainExtractor(
+        sanitizer if sanitizer is not None else ChapterSanitizer()
+    )
     parser.feed(page_html)
     body = "".join(parser.out).strip()
     if not body:
