@@ -1184,7 +1184,7 @@ jobs:
       - name: Upload the documentation artifacts as release assets
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: v${{ needs.package.outputs.version }}
+          TAG: vibey-v${{ needs.package.outputs.version }}
         run: |
           set -euo pipefail
           present=()

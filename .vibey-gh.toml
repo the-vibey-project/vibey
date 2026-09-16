@@ -143,6 +143,17 @@ trusted_only = true
 # key degrades to one bounded triage comment instead of silence.
 fallback_enabled = true
 
+# The tag every promoted version is published under. Declared rather than defaulted: the
+# default is a bare `v`, and this repository absorbed sibling repositories whose own history
+# already carries `v0.1.0`, `v0.2.0`, `v0.3.0` and `v0.3.1` tags (ADR-0021). A bare prefix
+# would therefore collide with somebody else's release on 0.2.0 and 0.3.0 — and because
+# `require_new_version` is false, the collision is SILENT: `github-release` finds the existing
+# tag, sees it points somewhere else, and returns without creating anything. The three
+# Releases that already exist here are `vibey-v0.1.0` through `vibey-v0.1.2`, so this is the
+# convention being restated, not a new one.
+[github_release]
+tag_prefix = "vibey-v"
+
 [marketplace]
 # The one Claude Code marketplace `/plugin marketplace add the-vibey-project/vibey` reads.
 # Rendered by `vibey-gh marketplace` from the workspace members' own manifests (ADR-0034);
