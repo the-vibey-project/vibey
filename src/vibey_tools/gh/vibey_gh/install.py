@@ -187,6 +187,10 @@ def render_workflow(source: Path, cfg: GhConfig) -> str:
         "true" if cfg.pr_automation.observability.allow_private_full_output else "false",
     )
     wanted = wanted.replace(
+        "__VIBEY_GH_NORMALISE_SUBJECTS__",
+        "true" if cfg.pr_automation.normalise_commit_subjects else "false",
+    )
+    wanted = wanted.replace(
         "__VIBEY_GH_SYNC_ENABLED__", "true" if cfg.branch_sync.enabled else "false"
     )
     talk = cfg.conversation
