@@ -45,7 +45,7 @@ stored `features.qwenloop` is always false for projects created today:
 | Variable | Read by | Effect |
 |---|---|---|
 | `VIBEY_PG_URL` | `bootstrap.database_url()` (every command that opens the queue) | PostgreSQL DSN. Required; there is no default — `vibey` exits with `DatabaseNotConfigured` if it is unset. |
-| `VIBEY_FEATURE_QWENLOOP` | `vibey worker` (`bootstrap._qwenloop_enabled`), `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`), and `load_config_from_path` | Overrides `features.qwenloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other value disables. When set it wins over both the stored project record and `./vibey.toml`. Only `load_config_from_path` rejects a non-boolean value. For the worker, enabling it adds a qwenloop adapter and makes qwenloop the standby engine for BUILD rotation. |
+| `VIBEY_FEATURE_QWENLOOP` | `vibey worker` (`bootstrap.qwenloop_enabled`), `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`), and `load_config_from_path` | Overrides `features.qwenloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other value disables. When set it wins over both the stored project record and `./vibey.toml`. Only `load_config_from_path` rejects a non-boolean value. For the worker, enabling it adds a qwenloop adapter and makes qwenloop the standby engine for BUILD rotation. |
 | `VIBEY_EVIDENCE_DIR` | `vibey work --provider qwenloop`, `vibey worker --provider qwenloop` | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source, and the phase stops there. |
 
 ## Schema semantics
@@ -124,6 +124,15 @@ neither set, spend is uncapped.
 (`max_dollars_per_cycle`, `max_dollars_total`) that nothing writes, so it
 currently shows the fallbacks $40.00 (cycle) and $250.00 (total) rather than
 the real cap.
+
+## `[verify]`
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `require_independent_review` | bool | `false` | When `true`, `build.verify` always fails as `VIBEY` if the reviewing engine is the implementer, even when the configured pool has nobody else. When `false` (the default) a pool that cannot supply a second reviewer gets a self-review, recorded as a `DecisionRecorded` in the ledger so the weakened independence is visible. See [ADR-0035](../architecture/decisions/0035-independence-is-the-default-not-an-absolute.md). |
+
+Unlike `[budget]` above, this key **is** read at runtime, by
+`bootstrap.build_full_worker`.
 
 ## `[engines]`
 
@@ -219,6 +228,36 @@ operator's `spec.skillsContext` object (copied verbatim).
 | `timeout_seconds` | number | `120.0` | Skills compile timeout; must be positive. Settable only through `spec.skillsContext`. |
 | `command` | array of non-empty strings | unset (`<python> -m vibey_skills.cli`) | Override for the `vibey-skills` command. Read by `compiler_from_config` but not declared in the `VibeyProject` CRD schema, so neither creation path sets it today. |
 | `index_path` | string | `.vibey/skills-context/index` under the repo | Path to the skills index; relative paths resolve under the repo. Read by `compiler_from_config` but not declared in the CRD schema, so neither creation path sets it today. |
+
+## Automated review checks (project config record — not a `vibey.toml` table) { #review }
+
+`VibeyConfig` has no `review` field; a `[review]` table in `vibey.toml` is
+silently ignored by `parse_config`, and `vibey.toml` is never loaded by the
+worker anyway. The values live in the project's stored config record under a
+`review` object, and `SubprocessAutomatedReviewRunner.from_config`
+(`infrastructure/build/automated_review_runner.py`) reads them when
+`bootstrap.build_full_worker` builds the worker. They are the commands
+`review.demo` shells out to: a non-zero exit becomes a `Severity.HIGH`
+`security` finding or a `Severity.MEDIUM` `code_review` finding, which sends
+REVIEW back to BUILD.
+
+Neither `vibey new` nor the operator's `VibeyProject` spec writes this object
+today, the same way `skills_context.command` and `skills_context.index_path`
+are read but never written; the record is written directly. Until one of them
+does, an unconfigured project runs REVIEW's code-review check and no security
+check at all — which is what the empty `security_commands` default states
+plainly, rather than running a scan that inspects nothing and reports success.
+vibey's own `bandit -q -r src/vibey` is enforced for real as gate 6 of
+`ci.yml`, on every pull request, independently of this.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `security_commands` | array of arrays of non-empty strings | `[]` (no security check runs) | Security checks. There is deliberately no default: any baked-in command names both a tool and a layout, and `bandit -q -r <path that does not exist>` exits 0 — a wrong default reports a passing security check that examined zero files. Configure this to get one. |
+| `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop", "--exclude", ".cursorloop", "--exclude", ".agyloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
+
+A malformed `review` object (not an object, a command list that is not a list
+of non-empty string arrays) raises when the worker is built, rather than
+silently running nothing.
 
 ## Full example
 

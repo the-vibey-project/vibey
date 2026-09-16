@@ -12,15 +12,33 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Features
+
+* **ci:** `develop` admits changes through a declared merge queue, and CI answers `merge_group` events so the queue can see its own checks. A pull request whose checks passed against an older base proves only that combination was green; nothing between that base and `develop`'s tip was ever built with it, and `strict_required_status_checks_policy` buys that proof by hand, one rebase at a time, with the base moving underneath. The queue is declared in `.vibey-gh.toml` rather than clicked, so it can be reviewed and restored like any other branch rule, and it is off by default for everyone else ([ADR-0036](docs/architecture/decisions/0036-the-merge-queue-is-declared-not-clicked.md))
+
 ### Bug Fixes
 
 * **worker:** `vibey worker --engines <list>` that matches none of the worker's engines — `--engines qwenloop` without `VIBEY_FEATURE_QWENLOOP`, say — is refused at startup with the reason and the switch that fixes it, instead of starting a worker with no engine adapters that deferred every engine-driven job forever, silently. With the feature on, `qwenloop` now joins the startup preflight sweep, so its conformance warning appears like every other engine's.
+* **build:** a one-engine pool (`vibey work --engines qwenloop`) can verify its own work instead of stalling BUILD forever. The `build.verify` independence rule excluded the implementer unconditionally, so a single-engine pool had nothing eligible left, `NoEligibleEngine` became a capacity defer, and the job retried with no park and nothing in the ledger. The exclusion is now waived only when honoring it would leave the configured pool with no reviewer at all, and the waiver is written to the ledger as a decision and to the job result as `independent_review: false` — a non-independent diff review is allowed there, never hidden. With two or more usable engines the rule is unchanged. The waiver decision is written only once the item really passed verification — the ledger is append-only, so a failing gate must not leave behind an entry saying the item was verified — and `verify.require_independent_review = true` in the project config restores the strict rule for projects that would rather stall than accept a self-review ([ADR-0035](docs/architecture/decisions/0035-independence-is-the-default-not-an-absolute.md)).
 * **design:** the ledger names the engine that actually did the DESIGN work. `design.interview` and
   `design.research` events were attributed to claudeloop whatever `--provider` was in force, so a
   sovereign run on qwenloop -- and a scripted run with no engine at all -- wrote a false actor into
   an append-only record. Each `DesignProvider` now declares its own `engine_id` (`None` for the
   scripted one) and the composition root reads it; the `design.synthesize` exclusion follows the
   same derived value ([#115](https://github.com/the-vibey-project/vibey/issues/115))
+* **ledger:** every phase move now writes the `PhaseTransitioned` event the ledger always declared,
+  in the same transaction as the compare-and-set that moves the phase — so a project's path through
+  the six phases is reconstructable from its own history, and no move can commit without its event
+
+* **review:** REVIEW no longer runs a hard-coded security scan. `bandit -q -r src` walked the
+  absorbed workspace members and failed every cycle, looping REVIEW back into BUILD forever; no
+  narrower path is right for anyone else either, because `bandit` exits 0 on a path that does not
+  exist, so a baked-in default would report a passing security check that examined zero files.
+  Both the security and code-review command lists are now project configuration
+  (`review.security_commands`, `review.code_review_commands`), and `security_commands` defaults to
+  empty — a project that wants the check configures it
+### Documentation
+* stop tracking the two built documentation sites (`site/` and `src/vibey_tools/gh/site/`): 5.8 MB of stale rendered HTML — a second, drifting copy of the docs, the ADRs and the runbooks — that `properdocs build` regenerates and that CI never reads ([#155](https://github.com/the-vibey-project/vibey/issues/155))
 
 ## [0.7.0] (2026-09-15)
 

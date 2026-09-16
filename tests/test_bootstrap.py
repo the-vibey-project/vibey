@@ -7,7 +7,13 @@ from uuid import uuid4
 from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, make_job
 from vibey.application.design import DesignEvent
 from vibey.application.dto import ProjectRecord
-from vibey.bootstrap import build_design_worker, build_visual_worker, qwenloop_enabled
+from vibey.bootstrap import (
+    _independence_policy,
+    _independent_review_required,
+    build_design_worker,
+    build_visual_worker,
+    qwenloop_enabled,
+)
 from vibey.domain.engine import EngineId
 from vibey.domain.job import JobState
 from vibey.domain.phase import Phase
@@ -223,3 +229,43 @@ def test_every_design_provider_declares_the_engine_it_speaks_for() -> None:
     assert ClaudeLoopDesignProvider.engine_id is EngineId.CLAUDELOOP
     assert QwenloopDesignProvider.engine_id is EngineId.QWENLOOP
     assert ScriptedDesignProvider.engine_id is None
+
+
+def test_strict_independence_is_opt_in_and_refuses_anything_but_true() -> None:
+    """`verify.require_independent_review` decides whether a one-engine pool may
+    self-review (ADR-0035). The default has to be False, because the measured
+    alternative was BUILD deferring forever; and only the boolean True may turn
+    the strict rule on, so a truthy-looking string in a hand-written config
+    cannot silently change how a project verifies its own work."""
+    assert not _independent_review_required({})
+    assert _independent_review_required({"verify": {"require_independent_review": True}})
+
+    # Anything that is not exactly True leaves the default in place.
+    assert not _independent_review_required({"verify": {"require_independent_review": False}})
+    assert not _independent_review_required({"verify": {"require_independent_review": "true"}})
+    assert not _independent_review_required({"verify": {"require_independent_review": 1}})
+    assert not _independent_review_required({"verify": {}})
+    assert not _independent_review_required({"verify": "require_independent_review"})
+
+
+class FixedClock:
+    def now(self) -> datetime:
+        return datetime(2026, 9, 15, tzinfo=UTC)
+
+
+def test_the_strict_project_gets_no_independence_policy_and_the_default_gets_one() -> None:
+    """Both arms of the composition root's choice (ADR-0035).
+
+    `None` is how the composition root says "keep the strict rule": with no
+    policy wired, `BuildVerifyHandler` fails a verify the implementer reviews
+    itself, which is what a project that would rather stall has asked for.
+    """
+    pool = frozenset({EngineId.CLAUDELOOP})
+    clock = FixedClock()
+
+    strict = _independence_policy({"verify": {"require_independent_review": True}}, pool, clock)
+    assert strict is None
+
+    default = _independence_policy({}, pool, clock)
+    assert default is not None
+    assert default.pool == pool

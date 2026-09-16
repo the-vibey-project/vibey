@@ -82,4 +82,6 @@ nav:
           - "0032 — The documentation ships as a research paper and a book, findable everywhere and built to outlive the site": architecture/decisions/0032-the-docs-ship-as-a-paper-and-a-book.md
           - "0033 — Governance in plain sight — the law is as easy to find and as visible as possible, on every human-readable surface": architecture/decisions/0033-governance-in-plain-sight.md
           - "0034 — One Claude Code marketplace at the repository root, rendered from the workspace members": architecture/decisions/0034-one-marketplace-at-the-root.md
+          - "0035 — Verify independence is the default, not an absolute": architecture/decisions/0035-independence-is-the-default-not-an-absolute.md
+          - "0036 — The merge queue is declared, not clicked": architecture/decisions/0036-the-merge-queue-is-declared-not-clicked.md
   - Research paper: paper.md
