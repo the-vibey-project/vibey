@@ -1212,6 +1212,67 @@ def test_worker_engines_allow_list_without_claudeloop(tmp_path: Path) -> None:
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_refuses_an_allow_list_that_matches_no_engine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`--engines qwenloop` without the feature switch used to start a worker holding
+    zero adapters, which then deferred every engine-driven job every five minutes,
+    silently, forever. Nothing downstream can recover from that, so the allow-list has
+    to be refused at startup -- with the reason and the switch that fixes it."""
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("no-engine-proj", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once", "--engines", "qwenloop"])
+    assert res.exit_code == 2, res.output
+    assert "matches none of this worker's engines" in res.output
+    assert "claudeloop" in res.output
+    assert "VIBEY_FEATURE_QWENLOOP=1" in res.output
+    assert "worker started" not in res.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_sweeps_qwenloop_when_the_feature_is_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With the feature on, qwenloop is an engine this worker really runs, so it has to
+    be preflighted and warned about like every other one. It was the single engine the
+    startup sweep could not see: the worker selected it while its health row stayed
+    empty, so the operator depending on it had no way to learn it was ineligible."""
+    monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "1")
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("standby-proj", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once", "--engines", "qwenloop"])
+    assert res.exit_code == 0, res.output
+    assert "no recorded conformance for qwenloop" in res.output
+    assert "no ready job" in res.output
+
+    async def check() -> tuple[str, ...]:
+        async with build_app() as resources:
+            latest = await resources.projects.get_latest()
+            assert latest is not None
+            records = await resources.engine_health_service.list_for_project(latest.project_id)
+            return tuple(sorted(r.engine_id.value for r in records))
+
+    assert asyncio.run(check()) == ("qwenloop",)
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
 def test_worker_provider_claudeloop_constructs_live_providers(tmp_path: Path) -> None:
     """--provider claudeloop builds the live design provider without any
     subprocess spawn at construction time."""

@@ -12,6 +12,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **worker:** `vibey worker --engines <list>` that matches none of the worker's engines — `--engines qwenloop` without `VIBEY_FEATURE_QWENLOOP`, say — is refused at startup with the reason and the switch that fixes it, instead of starting a worker with no engine adapters that deferred every engine-driven job forever, silently. With the feature on, `qwenloop` now joins the startup preflight sweep, so its conformance warning appears like every other engine's.
+
 ## [0.7.0] (2026-09-15)
 
 ### Features
