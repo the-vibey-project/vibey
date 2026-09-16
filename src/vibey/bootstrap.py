@@ -395,7 +395,12 @@ def build_full_worker(
             artifacts=FileReviewArtifactWriter(resources.projects),
             jobs=resources.jobs,
             clock=clock,
-            automated_reviewer=SubprocessAutomatedReviewRunner(
+            # REVIEW's automated checks are the project's own, not vibey's
+            # guess: `review.security_commands` / `review.code_review_commands`
+            # in the stored config JSON, read the same way the spend caps above
+            # are (ADR-0018). Unset keys keep the defaults.
+            automated_reviewer=SubprocessAutomatedReviewRunner.from_config(
+                project.config,
                 projects=resources.projects,
                 gates=SubprocessGateRunner(),
             ),

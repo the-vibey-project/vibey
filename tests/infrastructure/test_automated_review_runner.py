@@ -9,7 +9,11 @@ from vibey.application.build_verify_handler import GateResult, GateRunner
 from vibey.application.dto import ProjectRecord
 from vibey.domain.phase import Phase
 from vibey.domain.review import Ambiguity, Severity
-from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
+from vibey.infrastructure.build.automated_review_runner import (
+    _DEFAULT_CODE_REVIEW,
+    _DEFAULT_SECURITY,
+    SubprocessAutomatedReviewRunner,
+)
 
 NOW = datetime(2026, 8, 15, tzinfo=UTC)
 
@@ -112,10 +116,110 @@ def test_default_code_review_command_excludes_vibey_machinery() -> None:
     """`ruff check .` at the repo root must never review .vibey worktrees
     or engine state dirs -- a stale worktree's dead code raised a real
     finding live and looped REVIEW back into BUILD."""
-    from vibey.infrastructure.build.automated_review_runner import _DEFAULT_CODE_REVIEW
-
     (command,) = _DEFAULT_CODE_REVIEW
     assert command[:3] == ("ruff", "check", ".")
     for name in (".vibey", ".claudeloop", ".codexloop", ".cursorloop", ".agyloop"):
         index = command.index(name)
         assert command[index - 1] == "--exclude"
+
+
+def test_default_security_command_is_scoped_to_the_product() -> None:
+    """The REVIEW security scan gates the same scope CI gates. `-r src` walked
+    the absorbed workspace members, failed every cycle, and looped REVIEW back
+    into BUILD forever."""
+    assert _DEFAULT_SECURITY == (("bandit", "-q", "-r", "src/vibey"),)
+
+
+def _runner(config: dict[str, object]) -> SubprocessAutomatedReviewRunner:
+    return SubprocessAutomatedReviewRunner.from_config(
+        config, projects=FakeProjectRepo(None), gates=FakeGateRunner()
+    )
+
+
+def test_from_config_without_a_review_object_keeps_the_defaults() -> None:
+    runner = _runner({})
+    assert runner._security_commands == _DEFAULT_SECURITY
+    assert runner._code_review_commands == _DEFAULT_CODE_REVIEW
+
+
+def test_from_config_with_partial_review_object_keeps_the_other_default() -> None:
+    runner = _runner({"review": {"security_commands": [["bandit", "-q", "-r", "app"]]}})
+    assert runner._security_commands == (("bandit", "-q", "-r", "app"),)
+    assert runner._code_review_commands == _DEFAULT_CODE_REVIEW
+
+
+def test_from_config_overrides_both_command_lists() -> None:
+    runner = _runner(
+        {
+            "review": {
+                "security_commands": [["semgrep", "--error"], ["bandit", "-r", "lib"]],
+                "code_review_commands": [["eslint", "."]],
+            }
+        }
+    )
+    assert runner._security_commands == (
+        ("semgrep", "--error"),
+        ("bandit", "-r", "lib"),
+    )
+    assert runner._code_review_commands == (("eslint", "."),)
+
+
+def test_from_config_honours_an_explicitly_empty_command_list() -> None:
+    """`[]` disables a check; it is not the same as saying nothing."""
+    runner = _runner({"review": {"security_commands": []}})
+    assert runner._security_commands == ()
+    assert runner._code_review_commands == _DEFAULT_CODE_REVIEW
+
+
+@pytest.mark.parametrize(
+    ("config", "message"),
+    [
+        ({"review": ["security_commands"]}, "review project config must be an object"),
+        (
+            {"review": {"security_commands": "bandit"}},
+            "review.security_commands must be a list of command arrays",
+        ),
+        (
+            {"review": {"security_commands": ["bandit"]}},
+            "review.security_commands entries must be non-empty command arrays",
+        ),
+        (
+            {"review": {"security_commands": [[]]}},
+            "review.security_commands entries must be non-empty command arrays",
+        ),
+        (
+            {"review": {"code_review_commands": [["ruff", 3]]}},
+            "review.code_review_commands arguments must be non-empty strings",
+        ),
+        (
+            {"review": {"code_review_commands": [["ruff", ""]]}},
+            "review.code_review_commands arguments must be non-empty strings",
+        ),
+    ],
+)
+def test_from_config_rejects_malformed_review_configuration(
+    config: dict[str, object], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        _runner(config)
+
+
+async def test_configured_security_command_is_the_one_that_runs(tmp_path: Path) -> None:
+    proj = ProjectRecord(
+        project_id=uuid4(),
+        name="p1",
+        repo_path=tmp_path,
+        phase=Phase.REVIEW,
+        cycle=1,
+        max_cycles=5,
+        config={"review": {"security_commands": [["bandit", "-q", "-r", "src/vibey"]]}},
+        created_at=NOW,
+        updated_at=NOW,
+    )
+    gates = FakeGateRunner(
+        outcomes={("bandit", "-q", "-r", "src"): GateResult(1, "", "would have blocked")}
+    )
+    runner = SubprocessAutomatedReviewRunner.from_config(
+        proj.config, projects=FakeProjectRepo(proj), gates=gates
+    )
+    assert await runner.run_automated_reviews(proj.project_id, 1) == ()

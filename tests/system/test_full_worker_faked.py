@@ -63,7 +63,7 @@ def _git(repo: Path, *argv: str) -> None:
 
 def _make_repo(root: Path) -> Path:
     """A scratch repo whose contents pass the real automated review commands
-    (bandit -q -r src; ruff check .) that review.demo runs."""
+    (bandit -q -r src/vibey; ruff check .) that review.demo runs."""
     repo = root / "repo"
     (repo / "src").mkdir(parents=True)
     (repo / "src" / "app.py").write_text("def main() -> int:\n    return 0\n")

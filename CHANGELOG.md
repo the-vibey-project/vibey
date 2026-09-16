@@ -12,6 +12,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **review:** REVIEW's automated security scan gates the product (`src/vibey`), not the whole
+  `src/` tree of absorbed workspace members, which failed every cycle and looped REVIEW back into
+  BUILD forever; both the security and code-review command lists are now project configuration
+  (`review.security_commands`, `review.code_review_commands`) instead of constructor-only defaults
+
 ## [0.7.0] (2026-09-15)
 
 ### Features
