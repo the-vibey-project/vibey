@@ -39,7 +39,7 @@ One week after this decision the operator ratified sub-doctrine **8.a — the so
 
 **What is preferred today: DESIGN, by the operator's explicit choice.** `--provider qwenloop` lets phase one run without paid credit, and the research floor is declared (`SovereignResearchUnavailable`) rather than worked around.
 
-**The TOML switch does not reach the worker.** `bootstrap._qwenloop_enabled` reads `project.config` — the project record in Postgres — and `vibey new` writes only `project`, `max_cycle_dollars`, `max_cycle_turns`, `skills_context` into it (`cli/main.py:201-210`). `doctor` reads `./vibey.toml` directly (`cli/main.py:251-253`). `VIBEY_FEATURE_QWENLOOP` is the only switch that works in both places. Either `vibey new` learns to carry `[features]` into the record, or the reference documents say the env var is the switch.
+**The TOML switch does not reach the worker.** `bootstrap.qwenloop_enabled` reads `project.config` — the project record in Postgres — and `vibey new` writes only `project`, `max_cycle_dollars`, `max_cycle_turns`, `skills_context` into it (`cli/main.py:201-210`). `doctor` reads `./vibey.toml` directly (`cli/main.py:251-253`). `VIBEY_FEATURE_QWENLOOP` is the only switch that works in both places. Either `vibey new` learns to carry `[features]` into the record, or the reference documents say the env var is the switch.
 
 **Every BUILD selection spawns `qwenloop doctor` when the feature is on**, bounded by the adapter's `doctor_timeout`. That is the price of a health record that is always current for an engine no cron populates.
 
