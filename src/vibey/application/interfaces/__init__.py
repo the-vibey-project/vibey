@@ -45,6 +45,7 @@ from vibey.application.interfaces.engines import (
     EngineAdapter,
     EngineHealthRepository,
     EngineHealthServiceInterface,
+    EngineProvider,
     EngineSelectorInterface,
     RotationCursorRepository,
 )
@@ -117,6 +118,7 @@ __all__ = [
     "EngineAdapter",
     "EngineHealthRepository",
     "EngineHealthServiceInterface",
+    "EngineProvider",
     "EngineSelectorInterface",
     "RotationCursorRepository",
     "Failure",
