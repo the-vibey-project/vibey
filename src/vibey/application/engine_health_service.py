@@ -51,6 +51,12 @@ class EngineHealthService:
         nothing about either.
         """
         if (
+            record.capacity_state == "AuthenticationFailed"
+            and record.circuit == "half_open"
+            and not preflight.auth_ok
+        ):
+            return "open"
+        if (
             record.circuit == "open"
             and record.capacity_state == "AuthenticationFailed"
             and preflight.auth_ok
