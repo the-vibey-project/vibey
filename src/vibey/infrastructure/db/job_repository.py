@@ -199,6 +199,19 @@ class PostgresJobRepository:
             )
             return _rowcount(result) == 1
 
+    async def grant_attempts(self, job_id: UUID, *, owner: str, max_attempts: int) -> bool:
+        async with self._pool.acquire() as conn:
+            result = await conn.execute(
+                """
+                UPDATE job SET max_attempts = $3, updated_at = now()
+                WHERE id = $1 AND lease_owner = $2 AND max_attempts < $3
+                """,
+                job_id,
+                owner,
+                max_attempts,
+            )
+            return _rowcount(result) == 1
+
     async def defer(
         self,
         job_id: UUID,

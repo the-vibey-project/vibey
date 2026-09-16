@@ -155,6 +155,7 @@ class InMemoryLedger:
         job_id: UUID,
         engine_id: EngineId | None,
         correlation_id: UUID,
+        causation_id: UUID | None = None,
         event: Any,
     ) -> None:
         self._events.append(
@@ -167,7 +168,7 @@ class InMemoryLedger:
                 kind=EventKind(event.kind),
                 engine_id=engine_id or EngineId.CLAUDELOOP,
                 job_id=job_id,
-                causation_id=None,
+                causation_id=causation_id,
                 correlation_id=correlation_id,
                 provenance=Provenance.AGENT,
                 produced_at=event.at,

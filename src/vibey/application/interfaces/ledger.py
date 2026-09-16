@@ -44,8 +44,20 @@ class BuildLedger(Protocol):
         job_id: UUID,
         engine_id: EngineId | None,
         correlation_id: UUID,
+        causation_id: UUID | None = None,
         event: EngineEvent,
-    ) -> None: ...
+    ) -> None:
+        """Append one engine event.
+
+        ``correlation_id`` is the delivery's, derived from the project, and is
+        the same for every event of the delivery. ``causation_id`` is what
+        *caused* this event -- the engine run id for a tailed run -- and is
+        what keeps individual runs distinguishable now that ``correlation_id``
+        no longer varies. Events vibey writes on its own account (a finding it
+        raised, a context packet it compiled) have no causing run and leave it
+        ``None``.
+        """
+        ...
 
 
 @runtime_checkable

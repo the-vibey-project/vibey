@@ -1062,12 +1062,15 @@ def build_cost_report(events: Sequence[LedgerEvent]) -> tuple[CostReportEntry, .
 
 @dataclass(frozen=True, slots=True)
 class WorkLedgerEntry:
-    """Per work-thread status, keyed by correlation_id — the closest thing
-    the event log has to a stable work-item identifier. Narrower than the
-    full work_item table (which additionally tracks branch/worktree/
-    verification state); answers "is this thread of work done, and what's
-    left" from replay alone."""
-    correlation_id: str; complete: bool; remaining_work: tuple[str, ...]; last_seq: int
+    """Per work-thread status, keyed by causation_id — the engine run that
+    produced the verdict, and the closest thing the event log has to a stable
+    work-item identifier. NOT correlation_id: that is the delivery's id and is
+    identical for every event of the delivery (domain/correlation.py), so
+    keying on it would collapse every work thread of a project into one row.
+    Narrower than the full work_item table (which additionally tracks branch/
+    worktree/verification state); answers "is this thread of work done, and
+    what's left" from replay alone."""
+    causation_id: str; complete: bool; remaining_work: tuple[str, ...]; last_seq: int
 
 def build_work_ledger(events: Sequence[LedgerEvent]) -> tuple[WorkLedgerEntry, ...]: ...
 
