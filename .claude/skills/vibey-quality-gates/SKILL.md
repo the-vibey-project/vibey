@@ -197,8 +197,26 @@ pip install -e ".[dev]"
 python -m pytest -q
 ```
 
-vibey-gh's suite shells out to `uv` and drives real git history, so it needs
-`uv` on `PATH` and a full clone.
+vibey-gh's suite drives real git history and shells out to `gh`, so it needs
+both on `PATH` and a full clone -- a shallow one fails. It does **not** need
+`uv`: the single test that drives a real `uv lock` is marked `network`, below.
+
+Tests that leave the machine (a real package index, a real remote) carry
+`@pytest.mark.network` and are **skipped unless `VIBEY_GH_NETWORK_TESTS=1`**.
+Marker and variable are two halves of one mechanism -- the marker declares, and
+`test/conftest.py` does the skipping -- so a plain offline `python -m pytest`
+reaches the package's 100% branch floor with no flag to remember, and a run that
+reports `4 skipped` is correct rather than degraded. Every branch a `network`
+test touches must also be reachable offline, or that floor fails. Where an index
+is reachable, ask for them by name:
+
+```bash
+cd src/vibey_tools/gh
+VIBEY_GH_NETWORK_TESTS=1 python -m pytest -q -m network --no-cov
+```
+
+CI runs that on one matrix row with `continue-on-error`: it reports on somebody
+else's service, so it must never gate a merge.
 
 The runners (`src/vibey_runners/{claude,codex,cursor,agy,qwen}`) carry their own
 `tests/`, ruff, mypy and import-linter configuration in their `pyproject.toml`.
