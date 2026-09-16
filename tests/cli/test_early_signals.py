@@ -10,6 +10,7 @@ after its container started sat through the whole window claiming jobs nobody wa
 
 from __future__ import annotations
 
+import asyncio
 import os
 import signal
 import threading
@@ -48,6 +49,49 @@ def test_release_restores_the_default_disposition() -> None:
     latch.arm()
     latch.release()
     assert signal.getsignal(signal.SIGTERM) is signal.SIG_DFL
+
+
+def test_release_never_takes_the_signal_away_from_a_real_handler() -> None:
+    """The regression this guard exists for.
+
+    `release()` runs AFTER the real handler is installed, not before -- so an
+    unconditional reset to `SIG_DFL` destroyed the handler it was supposed to be making
+    way for. A worker pod then died on SIGTERM instead of draining, which is precisely
+    the scale-in failure the latch was written to survive.
+    """
+    latch = SigtermLatch()
+    assert latch.arm()
+
+    def real_handler(_signum: int, _frame: object) -> None:  # pragma: no cover - identity only
+        raise AssertionError("not called in this test")
+
+    previous = signal.signal(signal.SIGTERM, real_handler)
+    try:
+        latch.release()
+        assert signal.getsignal(signal.SIGTERM) is real_handler
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
+
+def test_the_worker_still_drains_after_the_latch_is_released() -> None:
+    """End to end, in the order `cli.main` actually does it: install the asyncio handler,
+    release the latch, then deliver the signal. Before the guard this process died here
+    rather than failing -- `SIG_DFL` terminates -- which is exactly how the defect
+    presented under xdist, as `worker 'gw0' crashed`.
+    """
+
+    async def drain_once() -> bool:
+        latch = SigtermLatch()
+        latch.arm()
+        drained = asyncio.Event()
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, drained.set)
+        latch.release()
+        _deliver_sigterm()
+        # The loop's self-pipe delivers on the next turn, not inside the C handler.
+        await asyncio.sleep(0.1)
+        return drained.is_set()
+
+    assert asyncio.run(drain_once())
 
 
 def test_releasing_a_latch_that_was_never_armed_does_nothing() -> None:
