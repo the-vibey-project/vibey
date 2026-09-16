@@ -25,6 +25,56 @@ This file follows Keep a Changelog and semantic versioning conventions.
   value — structurally, because the warning comment names `GH_TOKEN` and a text search
   would read the warning as the fault. A credentialed survey belongs in a job whose
   checkout is trusted, which is its own change.
+- Make the exported book a valid EPUB. Chapters were taken from the built site's HTML
+  verbatim, so every mkdocs permalink anchor carried `&para;` into the package -- and
+  `&para;` is not one of the five entities XML defines, so an EPUB reader failed to parse
+  the first heading of every chapter and refused the whole book. The same permalink
+  pilcrows were also printed as visible furniture in a paper interior where nothing is
+  clickable. A new `ChapterSanitizer` (with its interface beside it, per ADR-0016) now
+  owns both halves of that judgement: it drops site chrome -- including any element
+  carrying a permalink class -- and rewrites what survives as XHTML, resolving named
+  entities to the characters they name, escaping bare ampersands, and rebuilding start
+  tags so boolean attributes and attribute values are legal. Which tags and classes count
+  as chrome are constructor arguments, so a theme that marks its permalinks differently
+  configures the sanitizer instead of forking it.
+
+  Three further ways a chapter could reach the package unparseable, all of which fail the
+  whole book rather than the page they came from. The walk tracked NESTING DEPTH as a
+  count, but HTML lets an end tag be omitted -- `<ul><li>one<li>two</ul>` is valid -- and
+  `HTMLParser` synthesizes nothing, so a counter closed the wrong number of elements; it
+  now holds the open elements by name, closes whatever an end tag actually closes, and
+  closes what the document leaves open at end of input (`close()`, declared on the
+  interface, because `out` is only well-formed once the caller says no more markup is
+  coming). Elements HTML implicitly closes -- a second `<li>`, `<dd>`, `<td>`, `<tr>`,
+  `<option>`, `<p>` -- are closed as siblings rather than stacked, because a list nested
+  inside its own first item is well-formed XML and still the wrong book. And `text()`
+  escaped the three markup characters while letting XML's FORBIDDEN code points through:
+  `character_reference` already refused `&#0;`, but a literal NUL or form feed from the
+  built HTML reached the output and made the chapter unparseable, so the same predicate
+  now applies to character data.
+- Read the machine's memory on Linux, and fail loudly on a machine that cannot be read.
+  `vibey-gh fit` sampled memory only through macOS's `sysctl` and `vm_stat`, so on Linux
+  every field came back zero and a machine with 32 GB free was reported as having none —
+  a silent wrong answer where doctrine 10 requires a loud one. A `LinuxMemorySampler` now
+  reads `/proc/meminfo`, and prefers the cgroup limit when one exists
+  (`/sys/fs/cgroup/memory.max`, then `memory/memory.limit_in_bytes`) because inside a
+  container `/proc/meminfo` describes the host rather than the machine the work will run
+  on. When neither can be read, `Machine.readable` is false, `decide()` returns `floor`
+  with the reason, and the CLI says the reading is unknown rather than empty. The samplers
+  sit behind `vibey_gh/interfaces/` (ADR-0016) and read through an injected file-reader
+  seam, so the Linux paths are covered by fixtures on any platform.
+
+  The cgroup files are read where this process's limit actually lives, not only at the
+  hierarchy root. A container on a host-mounted hierarchy -- Docker, Kubernetes -- is not
+  at the root: `/sys/fs/cgroup/memory.max` reads `max` there while the real ceiling sits
+  under the path `/proc/self/cgroup` reports, so reading only the root fell through to
+  `/proc/meminfo` and projected on the HOST's memory, which is the one mistake preferring
+  the cgroup exists to avoid. Each configured path now gains its nested equivalent AHEAD
+  of the root: ahead, not instead, so a derived path that does not exist simply falls
+  through and a host at the root behaves exactly as before. The memory controller's own
+  line is preferred over the unified v2 line, because under v1 a sibling controller can
+  sit at a different path entirely. `proc_self_cgroup_path` is a constructor argument
+  like every other path here (ADR-0018).
 - State in one place which review judgments a diff can carry. The pull-request review asks
   for nineteen answers, but two reviewers answer it from different evidence: the paid
   exact-head reviewer reads the whole proposed repository, while the local fallback sees
