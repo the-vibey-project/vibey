@@ -118,6 +118,14 @@ class SystemClock:
 def build_design_worker(
     *, resources: AppResources, project: ProjectRecord, provider: DesignProvider, owner: str
 ) -> WorkerLoop:
+    """Compose the DESIGN-only worker around one provider.
+
+    The DESIGN handlers are told who to attribute by asking the provider that
+    was actually composed (`DesignProvider.engine_id`) rather than naming an
+    engine here. The ledger is append-only, so an event that names the wrong
+    actor is a correction no one can make: a sovereign run on qwenloop, or a
+    scripted run with no engine at all, must not be recorded as claudeloop.
+    """
     clock = SystemClock()
     dispatcher = JobDispatcher(
         {
@@ -127,13 +135,13 @@ def build_design_worker(
                 gates=resources.gates,
                 questions=provider,
                 clock=clock,
-                interviewer=EngineId.CLAUDELOOP,
+                interviewer=provider.engine_id,
             ),
             "design.research": DesignResearchHandler(
                 ledger=resources.design_ledger,
                 researcher=provider,
                 clock=clock,
-                engine_id=EngineId.CLAUDELOOP,
+                engine_id=provider.engine_id,
             ),
             "design.synthesize": DesignSynthesizeHandler(
                 ledger=resources.design_ledger,
@@ -363,13 +371,13 @@ def build_full_worker(
             gates=resources.gates,
             questions=design_provider,
             clock=clock,
-            interviewer=EngineId.CLAUDELOOP,
+            interviewer=design_provider.engine_id,
         ),
         "design.research": DesignResearchHandler(
             ledger=resources.design_ledger,
             researcher=design_provider,
             clock=clock,
-            engine_id=EngineId.CLAUDELOOP,
+            engine_id=design_provider.engine_id,
         ),
         "design.synthesize": DesignSynthesizeHandler(
             ledger=resources.design_ledger,
