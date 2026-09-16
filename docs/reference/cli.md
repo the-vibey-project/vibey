@@ -44,7 +44,7 @@ with payloads.
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
 | `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, `--provider`, or `--azure` value. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 
@@ -71,19 +71,18 @@ Known gaps in unknown-project handling:
 
 ### Next-step hints
 
-`guard()` appends a hint for these error types. Two hints name a command
-that does not exist, and one gives guidance that does not work today; the
-right-hand column says what to do instead.
+`guard()` appends a hint for these error types. Every command a hint names
+exists, and a test asserts it (`tests/cli/test_errors_and_logging.py`).
 
-| Error | Hint printed | What actually works |
+| Error | Hint printed | Notes |
 |---|---|---|
-| `NoEligibleEngine` | Every engine is excluded, circuit-open, or missing a capability; run `vibey engines` or `vibey doctor`. | As printed. |
-| `BudgetExceeded` | Raise the cap in `vibey.toml` under `[budget]`, or run `vibey cost`. | Nothing in `src/vibey` raises this error, and no runtime code reads `[budget]` from `vibey.toml`. A tripped per-cycle cap parks a `budget_exhausted` gate; raise it with `vibey answer GATE_ID --raw '{"max_dollars": N}'` (or `"max_turns"`). |
-| `EscalationExhausted` | `vibey gates` lists the human gate it raised. | There is no `vibey gates` command, and no command lists gates. See [Finding a gate id](#finding-a-gate-id), then `vibey answer` it. |
-| `HandoffRejected` | `vibey gates` shows what the no-loss gate could not carry over. | Same: see [Finding a gate id](#finding-a-gate-id); the gate's `prompt` says what could not be carried over. |
-| `IllegalTransitionError` | The project is not in a phase this command applies to; `vibey status` shows the phase. | As printed. |
-| `InvalidSpecError` | Run `vibey design` to finish the spec before building. | As printed. |
-| `InvalidPhaseError` | Likely a bug in vibey rather than the project. | As printed. |
+| `NoEligibleEngine` | Every engine is excluded, circuit-open, or missing a capability; run `vibey engines` or `vibey doctor`. | |
+| `BudgetExceeded` | A tripped cap parks a `budget_exhausted` gate; raise it with `vibey answer GATE_ID --raw '{"max_dollars": 25}'` (or `"max_turns"`), and `vibey cost` shows where the spend went. Ends with the [gate query](#finding-a-gate-id). | Nothing in `src/vibey` raises this error today, and no runtime code reads `[budget]` from `vibey.toml` — which is why the hint names neither. |
+| `EscalationExhausted` | The work item failed at every rung of the effort ladder and parked a human gate; `vibey answer GATE_ID` it. Ends with the [gate query](#finding-a-gate-id). | |
+| `HandoffRejected` | The no-loss gate refused the handoff and parked a human gate whose `prompt` says what could not be carried over; `vibey answer GATE_ID` it. Ends with the [gate query](#finding-a-gate-id). | |
+| `IllegalTransitionError` | The project is not in a phase this command applies to; `vibey status` shows the phase. | |
+| `InvalidSpecError` | Run `vibey design` to finish the spec before building. | |
+| `InvalidPhaseError` | Likely a bug in vibey rather than the project. | |
 
 ## `vibey new NAME`
 
@@ -208,9 +207,8 @@ assigned engine are cleared.
 One of `--project` or `--all` is required; with neither, it prints
 `Must specify either --project <id> or --all` and exits 1.
 
-The printed `Recovered N stuck job(s).` count is currently always `0`, even
-when rows were reset (the status-string regex in `main.py` never matches).
-Check the queue depth in `vibey status` to confirm the result.
+Prints `Recovered N stuck job(s).`, where N is the number of rows actually
+reset, read from PostgreSQL's `UPDATE n` status tag.
 
 ## `vibey status [PROJECT_ID]`
 
@@ -333,8 +331,8 @@ every phase for one project.
 
 | Option | Default | What it does |
 |---|---|---|
-| `--engines LIST` | the four paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). |
-| `--parallelism N` / `-j N` | `1` | Concurrent job loops, 1–16. The effective count is clamped to twice the number of allowed paid engines and to the CPU count, and is never below 1. |
+| `--engines LIST` | the four paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). A list that matches none of the worker's engines — `--engines qwenloop` with the feature off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)` and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. |
+| `--parallelism N` / `-j N` | `1` | Concurrent job loops, 1–16. The effective count is clamped to twice the number of allowed engines and to the CPU count, and is never below 1. |
 | `--once` | off | Process one job and exit (`processed one job` or `no ready job`), instead of running forever. |
 | `--provider {scripted,claudeloop,qwenloop}` | `scripted` | DESIGN and decomposition providers. `scripted` is fully offline. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `qwenloop` uses the sovereign local DESIGN provider (reads `$VIBEY_EVIDENCE_DIR`) with scripted decomposition. Any other value exits 2. |
 | `--max-turns N` | `25` | Turn cap per claudeloop DESIGN or decomposition session (min 1). |
@@ -345,8 +343,9 @@ every phase for one project.
 
 The VISUAL_DESIGN stage always uses the scripted visual provider.
 
-On start the worker preflights every allowed engine. Engines with no passing
-recorded conformance produce
+On start the worker preflights every allowed engine — including `qwenloop`
+when the feature is on, so the standby engine is visible in `vibey engines`
+like every other. Engines with no passing recorded conformance produce
 ``warning: no recorded conformance for <names> -- engine-driven jobs will not select them until `vibey doctor --conformance --record` passes``.
 It then prints
 `worker started: project=<name> engines=<list or all> parallelism=<n> provider=<p>`.
