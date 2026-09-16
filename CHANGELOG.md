@@ -22,6 +22,9 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   scripted one) and the composition root reads it; the `design.synthesize` exclusion follows the
   same derived value ([#115](https://github.com/the-vibey-project/vibey/issues/115))
 
+### Documentation
+* stop tracking the two built documentation sites (`site/` and `src/vibey_tools/gh/site/`): 5.8 MB of stale rendered HTML — a second, drifting copy of the docs, the ADRs and the runbooks — that `properdocs build` regenerates and that CI never reads ([#155](https://github.com/the-vibey-project/vibey/issues/155))
+
 ## [0.7.0] (2026-09-15)
 
 ### Features
