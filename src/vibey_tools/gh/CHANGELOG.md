@@ -5,6 +5,19 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Make the exported book a valid EPUB. Chapters were taken from the built site's HTML
+  verbatim, so every mkdocs permalink anchor carried `&para;` into the package -- and
+  `&para;` is not one of the five entities XML defines, so an EPUB reader failed to parse
+  the first heading of every chapter and refused the whole book. The same permalink
+  pilcrows were also printed as visible furniture in a paper interior where nothing is
+  clickable. A new `ChapterSanitizer` (with its interface beside it, per ADR-0016) now
+  owns both halves of that judgement: it drops site chrome -- including any element
+  carrying a permalink class -- and rewrites what survives as XHTML, resolving named
+  entities to the characters they name, escaping bare ampersands, and rebuilding start
+  tags so boolean attributes and attribute values are legal. Which tags and classes count
+  as chrome are constructor arguments, so a theme that marks its permalinks differently
+  configures the sanitizer instead of forking it.
+
 - Add `vibey-gh book --site-dir site --title T --author A`, which exports the already-built
   documentation site as a book: a valid EPUB 3.0 package with Dublin Core metadata, and a
   print-ready HTML sized to the standard 6in x 9in KDP paperback trim. Chapters come from

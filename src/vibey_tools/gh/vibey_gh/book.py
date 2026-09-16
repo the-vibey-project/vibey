@@ -29,6 +29,9 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from vibey_gh.chapter_sanitizer import ChapterSanitizer
+from vibey_gh.interfaces.chapter_sanitizer_interface import ChapterSanitizerInterface
+
 __all__ = [
     "BookChapter",
     "BookError",
@@ -108,29 +111,29 @@ def chapters_from_nav(config_text: str) -> list[BookChapter]:
     return chapters
 
 
-_STRIP_TAGS = frozenset({"script", "nav", "aside", "form", "button"})
-_VOID_TAGS = frozenset({"br", "hr", "img", "input", "meta", "link"})
-
-
 class _MainExtractor(html_parser.HTMLParser):
     """Capture the subtree of the first <main>, <article>, or role="main" element.
 
     A parser, not a regex: the content element nests arbitrarily many <div>s (the
     ProperDocs theme wraps the body in a Bootstrap column carrying role="main"), and no
-    regular expression balances that. Subtrees of chrome tags (script, nav, aside,
-    form, button) are dropped during capture, and void elements are re-emitted
-    self-closed because EPUB readers parse XHTML.
+    regular expression balances that. Every decision about what survives capture and how
+    it is written down belongs to the sanitizer -- this class only walks the tree.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, sanitizer: ChapterSanitizerInterface) -> None:
         super().__init__(convert_charrefs=False)
+        self._sanitizer = sanitizer
         self.out: list[str] = []
         self.depth = 0  # nesting inside the captured element; 0 = not capturing
-        self.strip_depth = 0
+        self.strip_depth = 0  # nesting inside a chrome subtree being discarded
         self.done = False
 
     def _is_target(self, tag: str, attrs: list[tuple[str, str | None]]) -> bool:
         return tag in ("main", "article") or ("role", "main") in [(k, v) for k, v in attrs]
+
+    def _emit(self, text: str) -> None:
+        if self.depth and not self.strip_depth and not self.done:
+            self.out.append(text)
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if self.done:
@@ -140,60 +143,62 @@ class _MainExtractor(html_parser.HTMLParser):
                 self.depth = 1
             return
         if self.strip_depth:
-            if tag in _STRIP_TAGS:
+            # Count every element, not only the chrome tags: a discarded subtree ends
+            # where its own end tag arrives, whatever is nested inside it.
+            if not self._sanitizer.is_void(tag):
                 self.strip_depth += 1
             return
-        if tag in _STRIP_TAGS:
-            self.strip_depth = 1
+        if self._sanitizer.is_chrome(tag, attrs):
+            if not self._sanitizer.is_void(tag):
+                self.strip_depth = 1
             return
-        text = self.get_starttag_text() or f"<{tag}>"
-        if tag in _VOID_TAGS and not text.rstrip().endswith("/>"):
-            text = text.rstrip()[:-1] + "/>"
-        self.out.append(text)
-        if tag not in _VOID_TAGS:
+        self.out.append(self._sanitizer.start_tag(tag, attrs))
+        if not self._sanitizer.is_void(tag):
             self.depth += 1
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if self.done or self.depth == 0 or self.strip_depth:
             return
-        self.out.append(self.get_starttag_text() or f"<{tag}/>")
+        if self._sanitizer.is_chrome(tag, attrs):
+            return
+        self.out.append(self._sanitizer.start_tag(tag, attrs, self_closing=True))
 
     def handle_endtag(self, tag: str) -> None:
         if self.done or self.depth == 0:
             return
         if self.strip_depth:
-            if tag in _STRIP_TAGS:
+            if not self._sanitizer.is_void(tag):
                 self.strip_depth -= 1
             return
-        if tag in _VOID_TAGS:
+        if self._sanitizer.is_void(tag):
             return
         self.depth -= 1
         if self.depth == 0:
             self.done = True
             return
-        self.out.append(f"</{tag}>")
+        self.out.append(self._sanitizer.end_tag(tag))
 
     def handle_data(self, data: str) -> None:
-        if self.depth and not self.strip_depth and not self.done:
-            self.out.append(data)
+        self._emit(self._sanitizer.text(data))
 
     def handle_entityref(self, name: str) -> None:
-        self.handle_data(f"&{name};")
+        self._emit(self._sanitizer.entity_reference(name))
 
     def handle_charref(self, name: str) -> None:
-        self.handle_data(f"&#{name};")
+        self._emit(self._sanitizer.character_reference(name))
 
 
-def extract_main(page_html: str) -> str:
-    """The chapter body from a built page.
+def extract_main(page_html: str, sanitizer: ChapterSanitizerInterface | None = None) -> str:
+    """The chapter body from a built page, as XHTML an EPUB reader will open.
 
     Anchored on <main>, <article>, or any element carrying role="main" -- the last is
     what the ProperDocs theme actually emits, discovered when the first dogfooded
-    deploy refused every page. Chrome subtrees are stripped because a book has no
-    runtime; void elements are self-closed because a bare <br> that every browser
-    forgives is a hard error on a Kindle.
+    deploy refused every page. Site chrome is dropped because a book has no runtime and
+    a printed page has nothing to click, and the markup that survives is rewritten for
+    XML: a chapter is parsed as XHTML, and one `&para;` from a permalink anchor
+    invalidates the entire package.
     """
-    parser = _MainExtractor()
+    parser = _MainExtractor(sanitizer or ChapterSanitizer())
     parser.feed(page_html)
     body = "".join(parser.out).strip()
     if not body:
@@ -288,6 +293,7 @@ def build_book(
     config_text: str,
     output_dir: Path,
     meta: dict[str, str],
+    sanitizer: ChapterSanitizerInterface | None = None,
 ) -> dict[str, Path]:
     """Build book.epub and book-print.html from a built site and its nav.
 
@@ -304,7 +310,7 @@ def build_book(
         page = site_dir / chapter.site_page
         if not page.is_file():
             raise BookError(f"nav names {chapter.source} but the built site has no {page}")
-        bodies[chapter.slug] = extract_main(page.read_text(encoding="utf-8"))
+        bodies[chapter.slug] = extract_main(page.read_text(encoding="utf-8"), sanitizer)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

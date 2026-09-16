@@ -9,12 +9,14 @@ rejection email three days after upload.
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 
 import pytest
 
 from vibey_gh import book
+from vibey_gh.chapter_sanitizer import ChapterSanitizer
 
 NAV = """site_name: demo
 nav:
@@ -232,3 +234,108 @@ def test_parser_handles_end_of_void_and_unclosed_capture():
     assert "a" in body and "b" in body
     # capture that never closes ends at EOF with what it gathered
     assert "tail-content" in book.extract_main("<main><p>tail-content</p>")
+
+
+# --- #162: the book has to be valid before it can be beautiful ---------------------
+
+# What mkdocs actually renders: a permalink anchor after every heading whose text is
+# `&para;`, plus the ordinary named entities prose picks up. `&para;` is undefined in
+# XHTML, so a chapter carrying one is not XML at all and the EPUB will not open.
+MKDOCS_PAGE = """<!doctype html>
+<html lang="en"><head><title>P</title></head><body>
+<nav class="md-header">site nav</nav>
+<main>
+<h1 id="one">Chapter One<a class="headerlink" href="#one" title="Permanent link">&para;</a></h1>
+<p>A caf&eacute; &rarr; a book &amp; back, 100&nbsp;% of the time.</p>
+<h2 id="two">Section<a class="headerlink" href="#two" title="Permanent link">&para;</a></h2>
+<p>Line<br>break, an arrow &#8594;, a <code>&lt;tag&gt;</code>, and R&amp;D.</p>
+</main>
+<footer>f</footer></body></html>
+"""
+
+
+def _mkdocs_site(tmp_path: Path) -> Path:
+    site = tmp_path / "site"
+    for page in ("index.html", "start/index.html", "reference/index.html"):
+        target = site / page
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(MKDOCS_PAGE)
+    return site
+
+
+def test_every_epub_chapter_parses_as_xml(tmp_path):
+    """The whole point of an EPUB: a reader parses each chapter with an XML parser.
+
+    Before the sanitizer this raised `undefined entity` on the first heading of every
+    page, which is an invalid package -- a book that was built, published and could
+    never be opened.
+    """
+    written = book.build_book(
+        _mkdocs_site(tmp_path),
+        NAV,
+        tmp_path / "out",
+        {"title": "Demo Book", "author": "A. Author"},
+    )
+    with zipfile.ZipFile(written["epub"]) as z:
+        documents = [n for n in z.namelist() if n.endswith(".xhtml")]
+        assert len(documents) == 4  # toc + three chapters
+        for name in documents:
+            ET.fromstring(z.read(name).decode())
+
+
+def test_permalink_pilcrows_never_reach_the_interior(tmp_path):
+    """Site chrome is furniture for a page you can click. A book is neither."""
+    written = book.build_book(
+        _mkdocs_site(tmp_path),
+        NAV,
+        tmp_path / "out",
+        {"title": "Demo Book", "author": "A. Author"},
+    )
+    printed = written["print_html"].read_text()
+    with zipfile.ZipFile(written["epub"]) as z:
+        chapter = z.read("OEBPS/index.xhtml").decode()
+    for text in (chapter, printed):
+        assert "headerlink" not in text
+        assert "¶" not in text and "&para;" not in text
+        assert "Permanent link" not in text
+        assert "Chapter One" in text  # the heading itself survives intact
+
+
+def test_named_entities_survive_as_characters_not_as_undefined_entities():
+    body = book.extract_main(MKDOCS_PAGE)
+    assert "café → a book &amp; back, 100 % of the time." in body
+    assert "&eacute;" not in body and "&rarr;" not in body and "&nbsp;" not in body
+    # a numeric reference is already legal XML, so it is left alone
+    assert "&#8594;" in body
+    # and an escaped tag in prose stays escaped exactly once
+    assert "<code>&lt;tag&gt;</code>" in body
+
+
+def test_the_sanitizer_is_injectable_so_a_theme_can_describe_its_own_chrome():
+    """ADR-0018: what counts as chrome is a key, not a decision taken away."""
+    kept = book.extract_main(MKDOCS_PAGE, ChapterSanitizer(chrome_classes=frozenset({"pilcrow"})))
+    assert 'class="headerlink"' in kept and "¶" in kept
+    ET.fromstring(f"<body>{kept}</body>")  # still XML, just not de-chromed
+
+
+def test_void_chrome_and_voids_inside_a_discarded_subtree():
+    """The strip counter counts elements, not chrome tag names: a permalink anchor is
+    an <a>, and </a> would never have decremented a tag-name counter."""
+    page = (
+        "<main>"
+        '<img class="headerlink" src="p.png">'
+        '<img class="headerlink" src="q.png"/>'
+        "<nav><img src='x'>text</br><span>deep</span></nav>"
+        "<p>kept</p>"
+        "</main>"
+    )
+    body = book.extract_main(page)
+    assert body == "<p>kept</p>"
+
+
+def test_headerlink_anchors_do_not_swallow_the_rest_of_the_heading():
+    body = book.extract_main(
+        '<main><h2 id="s">Title<a class="headerlink" href="#s">&para;</a>'
+        " and more</h2><p>after</p></main>"
+    )
+    assert body == '<h2 id="s">Title and more</h2><p>after</p>'
