@@ -14,6 +14,18 @@ This file follows Keep a Changelog and semantic versioning conventions.
   manifest's plugins, not between manifests. `MarketplaceRenderer.build` now names the
   offending member and stops.
 
+- State in one place which review judgments a diff can carry. The pull-request review asks
+  for nineteen answers, but two reviewers answer it from different evidence: the paid
+  exact-head reviewer reads the whole proposed repository, while the local fallback sees
+  one diff. Which half is which lived implicitly in three places, and one of them was
+  already misread -- `audience_order` is reported unevaluated and yet emitted as `true`.
+  The new `vibey_gh.review_contract.ReviewContract` (declared by
+  `vibey_gh.interfaces.ReviewContractPort`) names the diff-groundable fields, names the
+  documentation-contract fields that need wider context, and says plainly that the `true`
+  is a shape-compatibility placeholder rather than an answer. `local_review` now reads its
+  schema's `required` list and its `UNEVALUATED_FIELDS` from the contract instead of
+  restating them, and a test holds the contract against the review schema shipped in
+  `templates/workflows/pr-automation.yml`.
 - Declare a branch's merge queue in `.vibey-gh.toml` and reconcile it like every other
   rule. `rulesets.py` already owned `deletion`, `non_fast_forward`,
   `required_linear_history`, `pull_request` and `required_status_checks`; a merge queue

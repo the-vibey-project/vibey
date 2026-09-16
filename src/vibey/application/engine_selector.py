@@ -8,9 +8,11 @@ to select the next engine using SWRR. Updates the rotation cursor atomically.
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from vibey.application.dto import RotationCursor
-from vibey.application.engine_health_service import EngineHealthService
-from vibey.application.interfaces.engines import RotationCursorRepository
+from vibey.application.dto import EngineHealthRecord, RotationCursor
+from vibey.application.interfaces.engines import (
+    EngineHealthServiceInterface,
+    RotationCursorRepository,
+)
 from vibey.domain.capacity import Available
 from vibey.domain.circuit import Circuit, CircuitState
 from vibey.domain.engine import EngineDescriptor, EngineId, JobRequirement
@@ -30,17 +32,58 @@ AUTH_TTL = timedelta(hours=24)
 
 
 class EngineSelector:
-    """Selects engines using SWRR over eligible, healthy engines."""
+    """Selects engines using SWRR over eligible, healthy engines.
+
+    Declared by `interfaces/engines.py::EngineSelectorInterface`, and it takes
+    `EngineHealthServiceInterface` rather than the concrete service so a test
+    substitutes the health seam instead of patching an import (ADR-0016). Both
+    seams are declared in the port-family module `interfaces/engines.py`; the
+    reason that package keeps the family-grouped form is written there.
+    """
 
     def __init__(
         self,
-        health_service: EngineHealthService,
+        health_service: EngineHealthServiceInterface,
         cursor_repository: RotationCursorRepository,
         descriptors: dict[EngineId, EngineDescriptor],
     ) -> None:
         self._health_service = health_service
         self._cursor_repository = cursor_repository
         self._descriptors = descriptors
+
+    def _circuit_state(self, record: EngineHealthRecord, *, now: datetime) -> CircuitState:
+        """The stored circuit, half-opened once its probe time has arrived.
+
+        An OPEN circuit is never selected, and only a *selected* run can
+        succeed and close it, so whatever half-opens the circuit is the only
+        way back. Half-open is selectable at reduced weight --
+        domain/rotation.py's 0.25 -- which is exactly a probe.
+
+        Both scheduled times count, and the earliest one wins. `resets_at` is
+        a rate-limit window's own deadline; `probe_next_at` is the backoff
+        EngineHealthService writes for a rejection that has no deadline --
+        `CreditsExhausted` above all, which deliberately carries no
+        `resets_at` and never will, because a credits balance has no clock.
+        Reading only `resets_at` left a credit-exhausted engine excluded for
+        the rest of the project unless a human edited `engine_health` by hand.
+
+        `AuthenticationFailed` is the one rejection that gets neither time,
+        and that is the decision, not an oversight: no amount of waiting
+        fixes a credential, so inventing a deadline for it would be the same
+        error as giving `CreditsExhausted` a `resets_at`. It stays OPEN --
+        visible as `circuit=open, capacity_state=AuthenticationFailed` in
+        `vibey status` and the dashboard, never silently dropped -- until a
+        human re-authenticates. EngineHealthService half-opens it on the
+        first preflight whose auth succeeds, so the human's fix is the probe
+        trigger and no hand-edited row is needed there either.
+        """
+        state = CircuitState(record.circuit)
+        if state is not CircuitState.OPEN:
+            return state
+        scheduled = tuple(at for at in (record.resets_at, record.probe_next_at) if at is not None)
+        if scheduled and now >= min(scheduled):
+            return CircuitState.HALF_OPEN
+        return state
 
     async def select_engine(
         self,
@@ -69,22 +112,8 @@ class EngineSelector:
             # Check auth TTL
             auth_valid = record.auth_ok_at is not None and (now - record.auth_ok_at) < AUTH_TTL
 
-            # Build circuit state, honoring the probe deadline: an open
-            # circuit whose resets_at has passed becomes HALF_OPEN
-            # (selectable at reduced weight -- domain/rotation.py's 0.25).
-            # Caught live: without this, an opened circuit could only be
-            # closed by a success that could never happen, because open
-            # circuits are never selected -- one capacity rejection
-            # removed an engine from the project permanently.
-            state = CircuitState(record.circuit)
-            if (
-                state is CircuitState.OPEN
-                and record.resets_at is not None
-                and now >= record.resets_at
-            ):
-                state = CircuitState.HALF_OPEN
             circuit = Circuit(
-                state=state,
+                state=self._circuit_state(record, now=now),
                 capacity=Available(),
                 probe=None,
                 consecutive_failures=record.consecutive_fail,
