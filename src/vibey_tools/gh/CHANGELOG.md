@@ -32,6 +32,29 @@ This file follows Keep a Changelog and semantic versioning conventions.
   `character_reference` already refused `&#0;`, but a literal NUL or form feed from the
   built HTML reached the output and made the chapter unparseable, so the same predicate
   now applies to character data.
+- Read the machine's memory on Linux, and fail loudly on a machine that cannot be read.
+  `vibey-gh fit` sampled memory only through macOS's `sysctl` and `vm_stat`, so on Linux
+  every field came back zero and a machine with 32 GB free was reported as having none —
+  a silent wrong answer where doctrine 10 requires a loud one. A `LinuxMemorySampler` now
+  reads `/proc/meminfo`, and prefers the cgroup limit when one exists
+  (`/sys/fs/cgroup/memory.max`, then `memory/memory.limit_in_bytes`) because inside a
+  container `/proc/meminfo` describes the host rather than the machine the work will run
+  on. When neither can be read, `Machine.readable` is false, `decide()` returns `floor`
+  with the reason, and the CLI says the reading is unknown rather than empty. The samplers
+  sit behind `vibey_gh/interfaces/` (ADR-0016) and read through an injected file-reader
+  seam, so the Linux paths are covered by fixtures on any platform.
+
+  The cgroup files are read where this process's limit actually lives, not only at the
+  hierarchy root. A container on a host-mounted hierarchy -- Docker, Kubernetes -- is not
+  at the root: `/sys/fs/cgroup/memory.max` reads `max` there while the real ceiling sits
+  under the path `/proc/self/cgroup` reports, so reading only the root fell through to
+  `/proc/meminfo` and projected on the HOST's memory, which is the one mistake preferring
+  the cgroup exists to avoid. Each configured path now gains its nested equivalent AHEAD
+  of the root: ahead, not instead, so a derived path that does not exist simply falls
+  through and a host at the root behaves exactly as before. The memory controller's own
+  line is preferred over the unified v2 line, because under v1 a sibling controller can
+  sit at a different path entirely. `proc_self_cgroup_path` is a constructor argument
+  like every other path here (ADR-0018).
 - State in one place which review judgments a diff can carry. The pull-request review asks
   for nineteen answers, but two reviewers answer it from different evidence: the paid
   exact-head reviewer reads the whole proposed repository, while the local fallback sees
