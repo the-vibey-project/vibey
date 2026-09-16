@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from vibey.application.dto import RunSpec
-from vibey.infrastructure.interfaces.logging_interface import DeliveryLogContextInterface
+from vibey.infrastructure.interfaces.logging_interface import CorrelationLogContextInterface
 
 if TYPE_CHECKING:  # concrete result types live beside their adapter
     from vibey.infrastructure.engines.claudeloop_process import (
@@ -33,5 +33,5 @@ class CommandExecutor(Protocol):
 __all__ = [
     "BoundedClaudeLoop",
     "CommandExecutor",
-    "DeliveryLogContextInterface",
+    "CorrelationLogContextInterface",
 ]

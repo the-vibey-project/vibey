@@ -3,25 +3,25 @@
 
 An interface module imports the standard library and other interfaces, and
 nothing else from its own tree (ADR-0016) -- hence the domain interface below
-rather than the concrete ``DeliveryId``.
+rather than the concrete ``CorrelationId``.
 """
 
 from contextlib import AbstractContextManager
 from typing import Protocol, runtime_checkable
 
-from vibey.domain.interfaces.delivery_interface import DeliveryIdInterface
+from vibey.domain.interfaces.correlation_interface import CorrelationIdInterface
 
 
 @runtime_checkable
-class DeliveryLogContextInterface(Protocol):
-    """Puts the delivery id on every log line emitted inside its scope."""
+class CorrelationLogContextInterface(Protocol):
+    """Puts the delivery's correlation id on every log line in its scope."""
 
     @property
     def field(self) -> str:
         """The key the id is rendered under."""
         ...
 
-    def bind(self, delivery_id: DeliveryIdInterface) -> None:
+    def bind(self, correlation_id: CorrelationIdInterface) -> None:
         """Bind the id for this context, until ``clear`` or process exit."""
         ...
 
@@ -29,6 +29,6 @@ class DeliveryLogContextInterface(Protocol):
         """Unbind the id. Safe when nothing is bound."""
         ...
 
-    def bound(self, delivery_id: DeliveryIdInterface) -> AbstractContextManager[str]:
-        """Bind for the duration of a ``with`` block, yielding the bound value."""
+    def bound(self, correlation_id: CorrelationIdInterface) -> AbstractContextManager[str]:
+        """Bind for a ``with`` block, restoring the prior binding on exit."""
         ...

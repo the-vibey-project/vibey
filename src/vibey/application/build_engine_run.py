@@ -5,13 +5,14 @@ in what they ask an engine to do and what a completing verdict means, not
 in how a run is driven or persisted."""
 
 from dataclasses import dataclass
-from uuid import uuid4
 
 from vibey.application.dto import JobRecord, RunHandle
 from vibey.application.interfaces import (
     BuildLedger,
 )
 from vibey.application.ports import EngineAdapter
+from vibey.domain.correlation import DELIVERY_CORRELATION
+from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.ledger import EventKind
 
 
@@ -27,11 +28,21 @@ class RunOutcome:
 
 
 async def run_and_record(
-    engine: EngineAdapter, ledger: BuildLedger, *, job: JobRecord, handle: RunHandle
+    engine: EngineAdapter,
+    ledger: BuildLedger,
+    *,
+    job: JobRecord,
+    handle: RunHandle,
+    correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
 ) -> RunOutcome:
+    # One id for the whole delivery, derived from the project; the run's own
+    # identity moves to causation_id, which is already on LedgerEvent and was
+    # always None. `handle.run_id` rather than a freshly minted uuid4: it is
+    # the id the RunSpec was started with, so a ledger row joins to the run
+    # directory the engine wrote.
+    correlation_id = correlation.for_project(job.project_id).value
     complete = False
     capacity_rejected = False
-    correlation_id = uuid4()
     async for event in engine.tail(handle):
         await ledger.record(
             project_id=job.project_id,
@@ -39,6 +50,7 @@ async def run_and_record(
             job_id=job.id,
             engine_id=engine.descriptor.engine_id,
             correlation_id=correlation_id,
+            causation_id=handle.run_id,
             event=event,
         )
         if event.kind == EventKind.VERDICT_RENDERED.value and bool(event.payload.get("complete")):

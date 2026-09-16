@@ -1,15 +1,16 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """One correlation id per delivery, keyed on the project and nothing else."""
 
+import inspect
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
-from vibey.domain.delivery import (
+from vibey.domain.correlation import (
+    DELIVERY_CORRELATION,
     DELIVERY_NAMESPACE,
     DELIVERY_NAMESPACE_URI,
+    CorrelationId,
     DeliveryCorrelation,
-    DeliveryId,
 )
-from vibey.domain.interfaces import DeliveryCorrelationInterface, DeliveryIdInterface
 
 
 def test_namespace_is_the_fold_of_the_published_uri() -> None:
@@ -30,15 +31,18 @@ def test_different_projects_yield_different_ids() -> None:
     assert deriver.for_project(uuid4()) != deriver.for_project(uuid4())
 
 
-def test_the_cycle_is_not_part_of_the_key() -> None:
+def test_the_cycle_cannot_be_part_of_the_key() -> None:
     """A REVIEW loop-back increments the cycle; the delivery is still one
-    delivery, so the id it is traced by must not move with it."""
-    project_id = uuid4()
-    deriver = DeliveryCorrelation()
+    delivery, so the id it is traced by must not move with it.
 
-    # There is no cycle to pass -- that is the point. Derivation over the
-    # project alone is what makes cycle 1 and cycle 7 the same delivery.
-    assert deriver.for_project(project_id) == deriver.for_project(project_id)
+    Asserted on the signature rather than on two equal derivations: "same
+    project, same id" is already pinned above and would keep passing if a
+    ``cycle`` parameter were added with a default. The only way the guarantee
+    holds for every caller is for there to be no cycle to pass.
+    """
+    parameters = inspect.signature(DeliveryCorrelation.for_project).parameters
+
+    assert list(parameters) == ["self", "project_id"]
 
 
 def test_a_custom_namespace_partitions_the_ids() -> None:
@@ -55,11 +59,18 @@ def test_default_namespace_is_the_published_one() -> None:
     assert DeliveryCorrelation().namespace == DELIVERY_NAMESPACE
 
 
-def test_delivery_id_renders_as_its_uuid() -> None:
+def test_correlation_id_renders_as_its_uuid() -> None:
     value = uuid4()
-    assert str(DeliveryId(value)) == str(value)
+    assert str(CorrelationId(value)) == str(value)
 
 
-def test_the_concrete_types_satisfy_their_interfaces() -> None:
-    assert isinstance(DeliveryCorrelation(), DeliveryCorrelationInterface)
-    assert isinstance(DeliveryId(uuid4()), DeliveryIdInterface)
+def test_the_published_deriver_behaves_like_a_fresh_one() -> None:
+    """Every write site takes this instance as its default, so it has to
+    derive exactly what a freshly constructed deriver derives."""
+    project_id = uuid4()
+
+    assert DELIVERY_CORRELATION.namespace == DELIVERY_NAMESPACE
+    assert (
+        DELIVERY_CORRELATION.for_project(project_id).value
+        == DeliveryCorrelation().for_project(project_id).value
+    )

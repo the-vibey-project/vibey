@@ -6,24 +6,24 @@ from uuid import UUID
 
 
 @runtime_checkable
-class DeliveryIdInterface(Protocol):
+class CorrelationIdInterface(Protocol):
     """An identifier that stays the same for one delivery, end to end."""
 
     @property
     def value(self) -> UUID:
-        """The id itself."""
+        """The id itself, as written to ``event.correlation_id``."""
         ...
 
 
 @runtime_checkable
 class DeliveryCorrelationInterface(Protocol):
-    """Derives delivery ids. Deterministic: same project, same id, always."""
+    """Derives delivery correlation ids. Deterministic: same project, same id."""
 
     @property
     def namespace(self) -> UUID:
         """The namespace every id from this deriver is folded into."""
         ...
 
-    def for_project(self, project_id: UUID) -> DeliveryIdInterface:
-        """The delivery id for the project. Never keyed on the cycle."""
+    def for_project(self, project_id: UUID) -> CorrelationIdInterface:
+        """The delivery's correlation id. Never keyed on the cycle."""
         ...

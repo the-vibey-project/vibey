@@ -14,7 +14,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
-* one correlation id per delivery, derived from the project alone so a REVIEW loop-back does not mint a second one, and bindable into the structured log context under a configurable key ([#89](https://github.com/the-vibey-project/vibey/issues/89))
+* one correlation id per delivery: every ledger event of a project's DESIGN, BUILD and REVIEW phases now carries the same `correlation_id`, derived from the project alone so a REVIEW loop-back does not mint a second one, instead of a fresh `uuid4()` per write site. Per-run identity moves to the `causation_id` column, which already existed and was always empty, so individual engine runs stay distinguishable. The id is also bindable into the structured log context under a configurable key ([#89](https://github.com/the-vibey-project/vibey/issues/89))
 
 ## [0.7.0] (2026-09-15)
 

@@ -285,6 +285,27 @@ CREATE RULE event_no_delete AS ON DELETE TO event DO INSTEAD NOTHING;
 The `RULE`s make `UPDATE` and `DELETE` silent no-ops rather than errors: a stray
 write affects zero rows.
 
+**`correlation_id` is the delivery's; `causation_id` is the run's.** Every event
+of one delivery — DESIGN, BUILD, REVIEW and the deploy stage set, in every cycle
+— carries the same `correlation_id`, so `event_correlation` answers "show me
+this whole delivery" in one index scan. The id is *derived*, never stored and
+never handed across a process boundary: `domain/correlation.py` folds the
+project id into a fixed namespace with `uuid5`, so every worker computes the
+same value for the same project. It is deliberately not keyed on `cycle` — a
+REVIEW loop-back increments the cycle, and one delivery would otherwise acquire
+a fresh id each time it went round.
+
+`causation_id` carries what `correlation_id` used to: which engine run produced
+this event. `run_and_record` writes the `RunSpec`'s `run_id`, so a row joins to
+the run directory on disk, and `build_work_ledger` keys its per-work-thread
+projection on it. Events vibey writes on its own account — a finding it raised,
+a context packet it compiled — have no causing run and leave it `NULL`.
+
+Both columns already existed. Before this, `correlation_id` was minted with
+`uuid4()` at roughly ten separate write sites and `causation_id` was always
+`NULL`, so one delivery left behind ten unrelated ids and could be reassembled
+only by hand (issue #89).
+
 **Gapless `seq`.** One counter row per project, claimed by an upsert inside the
 insert transaction. `PostgresLedgerRepository.append` calls `append_event` inside
 `conn.transaction()`:

@@ -28,18 +28,21 @@ from typing import Any
 import structlog
 from structlog.stdlib import BoundLogger, LoggerFactory, ProcessorFormatter
 
-from vibey.domain.interfaces.delivery_interface import DeliveryIdInterface
+from vibey.domain.interfaces.correlation_interface import CorrelationIdInterface
 from vibey.domain.verbosity import LogPlan
+from vibey.infrastructure.interfaces.logging_interface import CorrelationLogContextInterface
 from vibey.infrastructure.ledger.redact import redact_payload
 
 # Chatty libraries that are noise unless the operator explicitly widened the
 # net with -vv. asyncpg in particular logs every statement at DEBUG.
 _THIRD_PARTY_LOGGERS = ("asyncpg", "asyncio", "httpx", "httpcore", "urllib3", "textual")
 
-# What the delivery correlation id is rendered under by default. A key rather
-# than a literal at the binding site, so a deployment whose collector already
-# reserves this name can bind under another (ADR-0018).
-DELIVERY_LOG_FIELD = "delivery_id"
+# What the delivery correlation id is rendered under by default -- the same
+# name the ledger column carries, so a log line and an `event` row join on a
+# field spelled identically in both places. A key rather than a literal at the
+# binding site, so a deployment whose collector already reserves this name can
+# bind under another (ADR-0018).
+CORRELATION_LOG_FIELD = "correlation_id"
 
 
 def _redact_processor(
@@ -147,7 +150,7 @@ def get_logger(**initial_context: Any) -> BoundLogger:
     return logger
 
 
-class DeliveryLogContext:
+class CorrelationLogContext:
     """Puts one delivery's correlation id on every log line inside its scope.
 
     Ambient rather than threaded through call sites: a delivery crosses six
@@ -165,7 +168,7 @@ class DeliveryLogContext:
     add a dependency graph to gain nothing.
     """
 
-    def __init__(self, field: str = DELIVERY_LOG_FIELD) -> None:
+    def __init__(self, field: str = CORRELATION_LOG_FIELD) -> None:
         self._field = field
 
     @property
@@ -173,20 +176,36 @@ class DeliveryLogContext:
         """The key the id is rendered under."""
         return self._field
 
-    def bind(self, delivery_id: DeliveryIdInterface) -> None:
-        structlog.contextvars.bind_contextvars(**{self._field: str(delivery_id.value)})
+    def bind(self, correlation_id: CorrelationIdInterface) -> None:
+        structlog.contextvars.bind_contextvars(**{self._field: str(correlation_id.value)})
 
     def clear(self) -> None:
         structlog.contextvars.unbind_contextvars(self._field)
 
     @contextmanager
-    def bound(self, delivery_id: DeliveryIdInterface) -> Iterator[str]:
-        """Bind for the duration of the block, unbinding however it ends."""
-        self.bind(delivery_id)
-        try:
-            yield str(delivery_id.value)
-        finally:
-            self.clear()
+    def bound(self, correlation_id: CorrelationIdInterface) -> Iterator[str]:
+        """Bind for the duration of the block, restoring whatever was bound
+        before it however the block ends.
+
+        ``structlog.contextvars.bound_contextvars`` rather than
+        ``bind`` + ``finally: clear``: clearing *unbinds*, so leaving an inner
+        scope would erase an outer delivery's binding instead of putting it
+        back, and every later line in the outer scope would silently lose the
+        id -- exactly the property this class exists to guarantee. structlog
+        already saves and restores the prior token; reimplementing it produced
+        a strictly worse primitive (ADR-0017: if the dependency already does
+        it, use it).
+        """
+        value = str(correlation_id.value)
+        with structlog.contextvars.bound_contextvars(**{self._field: value}):
+            yield value
+
+
+# `mypy --strict` checks this assignment, and that is its whole purpose: a
+# `runtime_checkable` Protocol only hasattr-checks member *names* at runtime,
+# so an `isinstance` test keeps passing after a signature has drifted. The
+# annotation is the conformance check with teeth.
+_CONFORMS: CorrelationLogContextInterface = CorrelationLogContext()
 
 
 class StructlogAppLogger:

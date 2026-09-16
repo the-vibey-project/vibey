@@ -116,14 +116,19 @@ def build_cost_report(events: Sequence[LedgerEvent]) -> tuple[CostReportEntry, .
 
 @dataclass(frozen=True, slots=True)
 class WorkLedgerEntry:
-    """Per work-thread status, keyed by correlation_id -- the closest thing
-    the event log has to a stable work-item identifier. This is a narrower
-    projection than the full work_item table (which additionally tracks
-    branch/worktree/verification state outside the ledger's vocabulary);
-    it answers "is this thread of work done, and what's left" from replay
-    alone."""
+    """Per work-thread status, keyed by ``causation_id`` -- the engine run
+    that caused the verdict, and now the closest thing the event log has to a
+    stable work-item identifier. It used to key on ``correlation_id``; that
+    field is the *delivery's* id (domain/correlation.py) and is deliberately
+    identical for every event of the delivery, so keying on it would collapse
+    every work thread of a project into one row.
 
-    correlation_id: str
+    This is a narrower projection than the full work_item table (which
+    additionally tracks branch/worktree/verification state outside the
+    ledger's vocabulary); it answers "is this thread of work done, and what's
+    left" from replay alone."""
+
+    causation_id: str
     complete: bool
     remaining_work: tuple[str, ...]
     last_seq: int
@@ -134,11 +139,16 @@ def build_work_ledger(events: Sequence[LedgerEvent]) -> tuple[WorkLedgerEntry, .
     for event in sorted(events, key=lambda e: e.seq):
         if event.kind is not EventKind.VERDICT_RENDERED:
             continue
-        latest[str(event.correlation_id)] = event
+        if event.causation_id is None:
+            # A verdict with no causing run is not a work thread -- and
+            # bucketing every such event under the string "None" would
+            # silently merge unrelated ones.
+            continue
+        latest[str(event.causation_id)] = event
 
     return tuple(
         WorkLedgerEntry(
-            correlation_id=cid,
+            causation_id=cid,
             complete=bool(event.payload.get("complete", False)),
             remaining_work=_as_str_tuple(event.payload.get("remaining_work", [])),
             last_seq=event.seq,
