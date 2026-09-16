@@ -498,6 +498,27 @@ against the acceptance criteria is a genuinely independent one. Selection
 excludes the implementer, and the handler fails as a `VIBEY` error if the
 reviewer is the implementer anyway.
 
+Independence is the default, not an absolute. If excluding the implementer would
+leave the configured engine pool (the worker's adapters, narrowed by `--engines`)
+with no reviewer at all — a one-engine pool is the usual case — the exclusion is
+waived and the implementer reviews its own diff. The waiver is decided once, in
+`selection_inputs_for_job`, and the handler asks that same derivation rather than
+re-deriving the rule; the two disagreeing is what made a single-engine pool defer
+every verify job forever with no park and nothing in the ledger. A waived review
+is never a silent one: it is recorded as a `DecisionRecorded` event
+(`d_verify_independence_<item>`, carrying the pool and `independent_review: false`)
+and the job's own result carries `independent_review` either way. That decision is
+written on the **success** path only -- it states that the item was verified, and
+the ledger is append-only, so a failing gate or a rejected diff review must not
+leave one behind. The waiver keys off configuration, never live health, so a
+momentarily circuit-open second engine can never quietly drop independence.
+
+A project that would rather stall than accept a self-review sets
+`verify.require_independent_review = true` in its config: no waiver policy is
+wired, and a solo-pool verify fails as a `VIBEY` error exactly as before. The
+default is the waiver, because the measured alternative was BUILD deferring
+forever with nothing in the ledger ([ADR-0035](../architecture/decisions/0034-independence-is-the-default-not-an-absolute.md)).
+
 Verification is not "the model says it's fine." It is, in order:
 
 1. The item's own `verification.commands` from the decomposition, each run in

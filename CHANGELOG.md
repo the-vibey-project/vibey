@@ -12,6 +12,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **build:** a one-engine pool (`vibey work --engines qwenloop`) can verify its own work instead of stalling BUILD forever. The `build.verify` independence rule excluded the implementer unconditionally, so a single-engine pool had nothing eligible left, `NoEligibleEngine` became a capacity defer, and the job retried with no park and nothing in the ledger. The exclusion is now waived only when honoring it would leave the configured pool with no reviewer at all, and the waiver is written to the ledger as a decision and to the job result as `independent_review: false` — a non-independent diff review is allowed there, never hidden. With two or more usable engines the rule is unchanged. The waiver decision is written only once the item really passed verification — the ledger is append-only, so a failing gate must not leave behind an entry saying the item was verified — and `verify.require_independent_review = true` in the project config restores the strict rule for projects that would rather stall than accept a self-review ([ADR-0035](docs/architecture/decisions/0034-independence-is-the-default-not-an-absolute.md)).
+* **design:** the ledger names the engine that actually did the DESIGN work. `design.interview` and
+  `design.research` events were attributed to claudeloop whatever `--provider` was in force, so a
+  sovereign run on qwenloop -- and a scripted run with no engine at all -- wrote a false actor into
+  an append-only record. Each `DesignProvider` now declares its own `engine_id` (`None` for the
+  scripted one) and the composition root reads it; the `design.synthesize` exclusion follows the
+  same derived value ([#115](https://github.com/the-vibey-project/vibey/issues/115))
+
 ### Features
 
 * one correlation id per delivery: every ledger event of a project's DESIGN, BUILD and REVIEW phases now carries the same `correlation_id`, derived from the project alone so a REVIEW loop-back does not mint a second one, instead of a fresh `uuid4()` per write site. Per-run identity moves to the `causation_id` column, which already existed and was always empty, so individual engine runs stay distinguishable. The id is also bindable into the structured log context under a configurable key ([#89](https://github.com/the-vibey-project/vibey/issues/89))

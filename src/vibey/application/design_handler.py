@@ -35,7 +35,7 @@ class DesignInterviewHandler:
         gates: HumanGateRepository,
         questions: DesignQuestionProvider,
         clock: Clock,
-        interviewer: EngineId,
+        interviewer: EngineId | None,
     ) -> None:
         self._ledger = ledger
         self._jobs = jobs
@@ -120,9 +120,14 @@ class DesignInterviewHandler:
                 idempotency_key=idempotency_key(
                     job.project_id, job.cycle, "design.synthesize", "spec"
                 ),
+                # The "a different engine synthesises than interviewed"
+                # constraint is derived from whoever actually interviewed, never
+                # from a literal: on the sovereign path that is qwenloop, and on
+                # the scripted path no engine interviewed at all, so nothing is
+                # excluded.
                 requirement={
                     "effort": Effort.HIGH.name.lower(),
-                    "excluded": [self._interviewer.value],
+                    "excluded": [] if self._interviewer is None else [self._interviewer.value],
                 },
                 depends_on=tuple(item.id for item in research_jobs),
             )
