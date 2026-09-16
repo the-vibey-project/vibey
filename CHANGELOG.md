@@ -12,10 +12,6 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
-### Documentation
-
-* stop tracking the two built documentation sites (`site/` and `src/vibey_tools/gh/site/`): 5.8 MB of stale rendered HTML — a second, drifting copy of the docs, the ADRs and the runbooks — that `properdocs build` regenerates and that CI never reads ([#155](https://github.com/the-vibey-project/vibey/issues/155))
-
 ### Bug Fixes
 
 * **design:** the ledger names the engine that actually did the DESIGN work. `design.interview` and
@@ -24,6 +20,9 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   an append-only record. Each `DesignProvider` now declares its own `engine_id` (`None` for the
   scripted one) and the composition root reads it; the `design.synthesize` exclusion follows the
   same derived value ([#115](https://github.com/the-vibey-project/vibey/issues/115))
+
+### Documentation
+* stop tracking the two built documentation sites (`site/` and `src/vibey_tools/gh/site/`): 5.8 MB of stale rendered HTML — a second, drifting copy of the docs, the ADRs and the runbooks — that `properdocs build` regenerates and that CI never reads ([#155](https://github.com/the-vibey-project/vibey/issues/155))
 
 ## [0.7.0] (2026-09-15)
 
@@ -35,7 +34,6 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **build:** let the image build vibey-skills from the tree, and stop shipping the subtrees ([8cbdb7b4](https://github.com/the-vibey-project/vibey/commit/8cbdb7b44bbc96e9918dfd8bd8d40f768da8c22e))
 
 * **gh:** governance published on every docs page and in the book; LaTeX rendered on the site from a self-served, checksum-verified MathJax ([#158](https://github.com/the-vibey-project/vibey/issues/158)) ([df68a084](https://github.com/the-vibey-project/vibey/commit/df68a084d1c33a730268f4e947c5d76d7b0dd1d8))
-
 ### Bug Fixes
 
 * **gh:** review, repair and conflict jobs load plugins from a configured marketplace (this repository's own `src/vibey_tools/skills`) instead of a deleted repository ([#149](https://github.com/the-vibey-project/vibey/issues/149)) ([7a5b3b9c](https://github.com/the-vibey-project/vibey/commit/7a5b3b9c4c4631023020668b1e62e7bec61e68f4))
@@ -50,7 +48,6 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * regenerate uv.lock for the v0.6.0 version bump ([711181ae](https://github.com/the-vibey-project/vibey/commit/711181ae30cfcfd6a9ea634b86607a96cb852625))
 
 * **release:** install uv where the version is stamped, so develop and promotions publish ([#160](https://github.com/the-vibey-project/vibey/issues/160)) ([2f2185a4](https://github.com/the-vibey-project/vibey/commit/2f2185a49290e220ece4135442e47842c6db49be))
-
 ### Documentation
 
 * ADR-0016 — code lives in classes, and every class has an interface beside it ([3468bb51](https://github.com/the-vibey-project/vibey/commit/3468bb51944d7840d266a1150846bb587040edc6))
@@ -63,7 +60,6 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * build out every ADR: 0015 rebuilt, 0021–0033 recorded, 0001–0020 brought up to the code ([#159](https://github.com/the-vibey-project/vibey/issues/159)) ([7cf33920](https://github.com/the-vibey-project/vibey/commit/7cf339201597969facd0137fc66f2da30413d2e9))
 * the book and the paper everywhere a reader looks; changelog, contributor docs and paper brought up to date ([#156](https://github.com/the-vibey-project/vibey/issues/156)) ([04766b44](https://github.com/the-vibey-project/vibey/commit/04766b4473dc21100a779497c1be3fc400dfc7b1))
 * **canon:** sub-doctrines 9.b, 10.e, 12.c, 2.b and 7.b ratified; 12.b cites Article II.3 ([#150](https://github.com/the-vibey-project/vibey/issues/150)) ([b8038420](https://github.com/the-vibey-project/vibey/commit/b80384202adb61b8b92ae455080b7fb7a46c0f00)) ([#151](https://github.com/the-vibey-project/vibey/issues/151)) ([fbc4de65](https://github.com/the-vibey-project/vibey/commit/fbc4de655d9a53204d3940ce9dbcbc83fa697382)) ([#152](https://github.com/the-vibey-project/vibey/issues/152)) ([5a35d9ac](https://github.com/the-vibey-project/vibey/commit/5a35d9aca5a7321951a751b80bedf05a3f1cd348)) ([#153](https://github.com/the-vibey-project/vibey/issues/153)) ([3be10eb6](https://github.com/the-vibey-project/vibey/commit/3be10eb63f2ea77e4a7925624015a2b1a3d2204f)) ([#154](https://github.com/the-vibey-project/vibey/issues/154)) ([2bab0f9f](https://github.com/the-vibey-project/vibey/commit/2bab0f9f37c554c04e7f9d10343e573c760ad1a6)) ([#157](https://github.com/the-vibey-project/vibey/issues/157)) ([061adf5d](https://github.com/the-vibey-project/vibey/commit/061adf5dfb97e7951476be0a9d040a88bbe3224f))
-
 ### Miscellaneous Chores
 
 * repoint provenance and every family URL at the-vibey-project ([8ac15815](https://github.com/the-vibey-project/vibey/commit/8ac15815a7a47042cd6872cc6fe3d84a5eb2b043)); repo_name and vibey-skills marketplace instructions updated to match ([1d38ff12](https://github.com/the-vibey-project/vibey/commit/1d38ff1238666e38e56ee75f425aa3469986037e) and siblings)
@@ -179,15 +175,18 @@ Release commit [2d08a834](https://github.com/the-vibey-project/vibey/commit/2d08
 
 ## [0.1.2](https://github.com/the-vibey-project/vibey/compare/vibey-v0.1.1...vibey-v0.1.2) (2026-08-20)
 
+
 ### Documentation
 
 * engagement refresh -- README, community files, license, templates ([#65](https://github.com/the-vibey-project/vibey/issues/65)) ([48ce5ac](https://github.com/the-vibey-project/vibey/commit/48ce5ac706c9b26cc036ab24d63ecd83828fdae6))
+
 
 ### Miscellaneous Chores
 
 * cut 0.1.2 -- ship the engagement refresh to PyPI ([541e820](https://github.com/the-vibey-project/vibey/commit/541e820fe2d68ac3496cec2f4f7eac34f784bcc3))
 
 ## [0.1.1](https://github.com/the-vibey-project/vibey/compare/vibey-v0.1.0...vibey-v0.1.1) (2026-08-20)
+
 
 ### Features
 
@@ -206,6 +205,7 @@ Release commit [2d08a834](https://github.com/the-vibey-project/vibey/commit/2d08
 * worker phase 2 -- close the job chain end to end, DONE(local) reachable ([#39](https://github.com/the-vibey-project/vibey/issues/39)) ([20eb081](https://github.com/the-vibey-project/vibey/commit/20eb08139742deddda43ddbdf2fbc4becce06c41))
 * worker phase 3 -- deployment spec/consent persistence, DONE(deployed) reachable ([#40](https://github.com/the-vibey-project/vibey/issues/40)) ([f89a46d](https://github.com/the-vibey-project/vibey/commit/f89a46d42360c67161431c1e05771367579f26cf))
 * zero-touch answer contracts for interview and exhausted-repair gates ([#53](https://github.com/the-vibey-project/vibey/issues/53)) ([4d40202](https://github.com/the-vibey-project/vibey/commit/4d40202c15d3b43c315f1f440bb0ad974c853785))
+
 
 ### Bug Fixes
 
@@ -227,6 +227,7 @@ Release commit [2d08a834](https://github.com/the-vibey-project/vibey/commit/2d08
 * stop overriding claudeloop's --permission-mode to acceptEdits ([#12](https://github.com/the-vibey-project/vibey/issues/12)) ([b383ae9](https://github.com/the-vibey-project/vibey/commit/b383ae9f0f9de9c4d65070b71ecccd43e31efd9a))
 * two production-blocking bugs found by a real subprocess conformance test ([#36](https://github.com/the-vibey-project/vibey/issues/36)) ([9088919](https://github.com/the-vibey-project/vibey/commit/9088919bd2b2970d40ae5aa7a9f738a4fb7cd1f9))
 
+
 ### Documentation
 
 * fifteen expansion runbooks -- the platform buildout, dogfooded through vibey itself ([#60](https://github.com/the-vibey-project/vibey/issues/60)) ([8bc4484](https://github.com/the-vibey-project/vibey/commit/8bc44843e835f74ba9aefcf3344678bba42558a7))
@@ -241,6 +242,7 @@ Release commit [2d08a834](https://github.com/the-vibey-project/vibey/commit/2d08
 * update loop_events.py verification status now that both sinks are wired ([#35](https://github.com/the-vibey-project/vibey/issues/35)) ([301b3f5](https://github.com/the-vibey-project/vibey/commit/301b3f53d059561240eb3cb5a8fd0b909220fbd0))
 
 ## [0.1.0](https://github.com/the-vibey-project/vibey/releases/tag/vibey-v0.1.0) (2026-08-16)
+
 
 ### Features
 
@@ -297,11 +299,13 @@ Release commit [2d08a834](https://github.com/the-vibey-project/vibey/commit/2d08
 * **visual:** close the loop -- VISUAL_DESIGN -&gt; BUILD accept/waive (task 5.13) ([508bb71](https://github.com/the-vibey-project/vibey/commit/508bb717830e32c894b981379dbd44678bc5a30a))
 * **visual:** wire visual.inventory/visual.plan job handlers and persistence ([6a5231c](https://github.com/the-vibey-project/vibey/commit/6a5231c2d3d33a310aaba6150c160dd94d9d19c8))
 
+
 ### Bug Fixes
 
 * align rotation weights with ADR-0005 ([3f63fcd](https://github.com/the-vibey-project/vibey/commit/3f63fcd9d1c853dcdff16e9796e0c1e2f1e14d46))
 * **cli:** repair unreachable `vibey design accept` and cover build_app() paths ([3987618](https://github.com/the-vibey-project/vibey/commit/39876189a11667e915adde0a4e404b4d0604045f))
 * **cli:** stabilize CliRunner terminal styling across all CLI test files ([#1](https://github.com/the-vibey-project/vibey/issues/1)) ([ac76131](https://github.com/the-vibey-project/vibey/commit/ac7613169d1308a49dc3325a9460a4f42ad4ba7f))
+
 
 ### Documentation
 
@@ -312,6 +316,7 @@ Release commit [2d08a834](https://github.com/the-vibey-project/vibey/commit/2d08
 * plan six-phase Azure deployment lifecycle ([30047f7](https://github.com/the-vibey-project/vibey/commit/30047f754705e9b7d3dddac03a22c629e59ebf43))
 * **security:** document threat model and security policy (task 9.5) ([a254fc1](https://github.com/the-vibey-project/vibey/commit/a254fc1885285ad9cd7b98d5ff9f81ce1963ef3d))
 * update README status for M7 completion and format system test ([0cf7bd3](https://github.com/the-vibey-project/vibey/commit/0cf7bd3596e366929dc34e98d543e75329bcbe3c))
+
 
 ### Miscellaneous Chores
 
