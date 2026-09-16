@@ -6,7 +6,7 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 131 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 134 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
@@ -847,6 +847,17 @@
       }
     },
     {
+      "name": "money-on-the-internet",
+      "source": "./src/vibey_tools/skills/plugins/money-on-the-internet",
+      "description": "Money on the Internet — Bitcoin, Ethereum, Monero, PayPal, Stripe: the five systems positioned against each other on finality, censorship, programmability, privacy and cost, and how to use and build on each. Bitcoin's UTXO model, policy versus consensus, fee estimation and RBF, wallets and multisig and PSBT and miniscript, the Lightning Network, 2026 mining economics, Bitcoin Core and BDK development, and the v30 OP_RETURN governance fight; Ethereum's account and world-state model, the EVM, proof of stake and the two-process node, the upgrade timeline, gas and transaction types, Solidity and Foundry, the access-control losses that dominate 2026 incident data, DeFi primitives, L2s and MEV; Monero's ring signatures and stealth addresses and RingCT, view keys, FCMP++ and its real status, the 2025 Qubic hashrate episode, exchange delistings and access, daemon and wallet RPC development; PayPal's consumer network and Braintree and Venmo acceptance, the US merchant fee schedule effective 1 September 2026, PYUSD and the 2026 crypto strategy, the Orders and Payouts and Subscriptions APIs; Stripe's PaymentIntent lifecycle, idempotency and webhooks, integration patterns from Payment Links to full custom, PCI scope, Connect and Billing and Radar and Terminal, US pricing, Managed Payments as merchant-of-record, and the Bridge and Privy and Tempo stablecoin stack; plus decision heuristics, the four engineering patterns that transfer across every rail, a sequenced study roadmap, and the canonical documentation shelf.",
+      "version": "0.1.0",
+      "category": "finance",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
       "name": "music-theory-fundamentals",
       "source": "./src/vibey_tools/skills/plugins/music-theory-fundamentals",
       "description": "Music Theory Fundamentals: the three layers of claim music theory makes, the harmonic series, psychoacoustics, tuning and temperament, pitch, intervals and notation, scales and modes, rhythm and meter, timbre, chords, functional harmony, cadence and phrase, modulation and chromaticism, counterpoint, form, analytical methods, melody, jazz harmony, popular music, non-Western systems, twentieth-century and later practice, and music and meaning.",
@@ -1006,6 +1017,17 @@
       "description": "Power Engineering: AC power fundamentals including real, reactive and apparent power and frequency as the balance signal, generation, transmission and distribution, power system analysis (power flow, state estimation, fault analysis, stability), protection and relaying, SCADA, EMS and DMS, the protocols, inverters, renewables and the inertia problem including grid-following versus grid-forming, storage, markets and dispatch, writing grid software and why OT is not IT, and datacenter power.",
       "version": "0.1.0",
       "category": "energy",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "private-chat-engines",
+      "source": "./src/vibey_tools/skills/plugins/private-chat-engines",
+      "description": "Private Chat Engines: the three architectural families that every messenger falls into — centralised end-to-end-encrypted, centralised server-encrypted cloud, and federated or decentralised — the threat-model taxonomy that decides every other choice, a comparison matrix, how the field reached its 2026 state, and the forces reshaping it. Signal's protocol stack from X3DH and the double ratchet through sealed sender, private contact discovery, key transparency and post-quantum ratcheting, plus the Foundation's cost structure, its legal fights, and why there is no Signal server to operate. Telegram's MTProto and cloud-chat compromise, why Secret Chats are one-to-one mobile-only and off by default, the Durov prosecution and the compliance turn, scale and economics, and the bot and Mini-App developer ecosystem. Matrix and Element's federation and room model, Olm and Megolm, Matrix 2.0, the ecosystem's organisations and funding, and a homeserver operator handbook including the European sovereignty deployments. The wider field assessed honestly — MLS and RFC 9420 with Wire, WhatsApp's interoperability opening, iMessage PQ3, Threema, Olvid, SimpleX, Session, Nostr, XMPP with OMEMO, Briar, Delta Chat, the dormant and the niche — with a policy annex. And builder and operator playbooks: choosing the protocol shape before touching cryptography, the crypto stack as checklists, the metadata budget every service must fill in, abuse and trust-and-safety under end-to-end encryption, maintained libraries, operations and incident checklists, and budget intuition from public numbers.",
+      "version": "0.1.0",
+      "category": "security",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
@@ -1270,6 +1292,17 @@
       "description": "Thermodynamics and Fluid Mechanics — A Deep Dive: systems and properties, the zeroth, first and second laws, entropy, property relations, equations of state, phase behaviour, power cycles, refrigeration and heat pumps, exergy, combustion, psychrometrics, fluid properties and statics, the control volume, Bernoulli and the lift myth, Navier-Stokes, boundary layers, dimensional analysis, internal and external flow, drag, turbulence, compressible flow, turbomachinery, conduction, convection, radiation, heat exchangers and phase change, plus CFD practice.",
       "version": "0.1.0",
       "category": "physics",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "tor-and-onion-networks",
+      "source": "./src/vibey_tools/skills/plugins/tor-and-onion-networks",
+      "description": "Tor and Onion Networks: what Tor promises and what it deliberately does not, the history from NRL onion routing to Arti, cells and channels and the telescoping circuit handshake, ntor and ntor-v3, the tor1 to CGO cell-cryptography migration, SENDME flow control, congestion control and Conflux, relays and flags and the nine directory authorities, the hourly consensus and bandwidth weights, guard pinning and path restrictions and happy families, v3 onion services end to end, blinded descriptor keys, introduction and rendezvous points, client authorization, vanguards and proof-of-work and Onionbalance, bridges and pluggable transports, obfs4 and Snowflake and WebTunnel and Conjure, the 2026 DTLS fingerprinting campaign, the attack literature from end-to-end confirmation through website fingerprinting to client-side compromise, the 2026 software ecosystem, Tor against I2P and mixnets and VPNs, governance and funding, and an operations handbook covering SOCKS integration, the control port, ephemeral and long-lived onion services, relays and bridges and exits, transparent-proxy gateways, hardware builds, verification and abuse handling.",
+      "version": "0.1.0",
+      "category": "security",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"
