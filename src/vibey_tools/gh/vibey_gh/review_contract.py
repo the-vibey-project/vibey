@@ -97,6 +97,12 @@ class ReviewContract:
     unevaluated_notice: str = DEFAULT_UNEVALUATED_NOTICE
 
     def __post_init__(self) -> None:
+        for label, fields in (
+            (DIFF_GROUNDABLE, self.diff_groundable),
+            (REQUIRES_WIDER_CONTEXT, self.requires_wider_context),
+        ):
+            if len(set(fields)) != len(fields):
+                raise ValueError(f"{label} review fields must be unique")
         overlap = sorted(set(self.diff_groundable) & set(self.requires_wider_context))
         if overlap:
             # A field in both halves is the exact lie this module exists to prevent:
