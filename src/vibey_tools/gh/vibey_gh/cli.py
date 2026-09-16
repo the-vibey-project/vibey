@@ -220,6 +220,32 @@ def _merge_train(args) -> int:
         v = merge_train.judge(pr, cfg)
 
         if not v.ready:
+            # A conflicting or behind head is the one obstacle the train can clear for
+            # itself, and the one it used to hand straight back. Every merge into the
+            # integration branch puts the NEXT pull request behind it, so a train that
+            # refuses to restack merges exactly one change per run and asks a person to
+            # unblock every subsequent one by hand -- the conflict is manufactured by the
+            # train's own previous merge. `merge_forward` merges locally, where this
+            # repository's merge drivers apply, and pushes an ordinary commit.
+            #
+            # The restacked pull request is NOT merged on this pass. Its tree just
+            # changed, so its green checks describe a tree that no longer exists; the
+            # next train takes it once they have re-run against what is actually there.
+            if v.restackable and cfg.restack_conflicts and not args.dry_run:
+                head = str(pr.get("headRefName") or "")
+                try:
+                    moved, detail = reconcile.merge_forward(cfg, head)
+                except ValueError as exc:
+                    # A protected or otherwise unwritable ref. Never a reason to stop the
+                    # train; the pull request is simply reported as it was before.
+                    moved, detail = False, str(exc)
+                if moved:
+                    note = f"restacked — {detail}; merges once its checks re-run"
+                    print(f"  #{v.number} {note}")
+                    rows.append((v.number, v.title, note))
+                    skipped += 1
+                    continue
+                v.reason = f"{v.reason} (restack declined: {detail})"
             # Only a pull request held on the owner's approval gets labelled and
             # announced. A draft or a red build is the contributor's to fix and needs no
             # notification; this one is waiting on somebody who does not know yet.
