@@ -597,7 +597,7 @@ tooling expects to see. Change it only alongside the `name:` in the workflow its
 | `github_release` | `GitHub Release` |
 | `repository_profile` | `Repository profile` |
 
-Note the distinction `required_checks` turns on (see `[rulesets]`): these are **workflow**
+Note the distinction from `required_checks` (see `[rulesets]`): these are **workflow**
 names. A required status check matches a **check-run** name, which for GitHub Actions is the
 job's name, not the workflow's.
 
