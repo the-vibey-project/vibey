@@ -142,6 +142,16 @@ jobs:
           # Interpreters are each runner's own matrix. claudeloop publishes a 3.10 floor and
           # is the only member of this tree that does; per ADR-0022 a floor nothing runs on
           # is a claim, so all four of its interpreters run.
+          #
+          # Known, deliberately unfixed here: claudeloop's [dev] extra pins
+          # `vibey-gh==1.58.0; python_version >= '3.11'`, so these rows resolve vibey-gh from
+          # PyPI while this tree ships 1.73.0 at src/vibey_tools/gh as a workspace member --
+          # ADR-0017's "use ours" read literally. It is not fixable from this file: an `==`
+          # requirement wins over anything installed first, so `pip install -e
+          # ../../vibey_tools/gh` before or after would simply be undone. The fix is claudeloop's
+          # own pyproject, which changes a runner's declared dependencies and needs that
+          # runner's suite to validate. Nothing in claudeloop's tests imports vibey_gh -- it is
+          # release and provenance tooling -- so these rows' verdicts are unaffected either way.
           - package: claudeloop
             dir: src/vibey_runners/claude
             python: "3.10"
@@ -254,6 +264,10 @@ jobs:
           # so a bare `pytest -q` is the entire gate. Its own CI drove that through `uv run`;
           # pip and setup-python are what let 3.14 -- which it publishes and the workspace
           # lock cannot reach -- actually run.
+          # qwenloop's own CI reached 3.14 through astral-sh/setup-uv instead; setup-python@v5
+          # is used here for the same reason every other row uses it, and its manifest has
+          # carried 3.14 on ubuntu since the 3.14.0 release in October 2025. pytest, pytest-cov
+          # and pytest-asyncio all publish py3-none-any wheels, so there is no wheel gap either.
           - package: qwenloop
             dir: src/vibey_runners/qwen
             python: "3.12"
