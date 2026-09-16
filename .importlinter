@@ -68,6 +68,23 @@ forbidden_modules =
     vibey.tui
     vibey.bootstrap
 
+# The same rule, one layer down. `vibey.infrastructure.db.interfaces` (ADR-0016's
+# mirrored form) and the legacy flat `vibey.infrastructure.interfaces` declare seams
+# that infrastructure itself implements, so the application contract's "nothing else
+# from its own tree" clause cannot bind here: a seam over an asyncpg connection or a
+# `LedgerEventDraft` has to name those types or it constrains nothing. What DOES bind
+# is the direction -- a seam never reaches up into the code that consumes it.
+[importlinter:contract:infrastructure-interfaces-declare-only]
+name = Infrastructure interfaces declare seams, never consume them
+type = forbidden
+source_modules =
+    vibey.infrastructure.interfaces
+    vibey.infrastructure.db.interfaces
+forbidden_modules =
+    vibey.cli
+    vibey.tui
+    vibey.bootstrap
+
 # The same rule for the first `interfaces/` package in the absorbed vibey-gh (ADR-0016:
 # tenants converge module by module, and a new module arrives with its seam declared).
 [importlinter:contract:vibey-gh-interfaces-declare-only]
