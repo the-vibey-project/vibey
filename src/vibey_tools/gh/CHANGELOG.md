@@ -5,6 +5,24 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Declare a branch's merge queue in `.vibey-gh.toml` and reconcile it like every other
+  rule. `rulesets.py` already owned `deletion`, `non_fast_forward`,
+  `required_linear_history`, `pull_request` and `required_status_checks`; a merge queue
+  was not modelled at all, so the one part of branch protection that decides *when* a
+  merge happens was settings-page state with no history, no review and no way to restore
+  it — the condition ADR-0018 exists to end. New `[rulesets.<branch>.merge_queue]` carries
+  all seven parameters GitHub requires (`merge_method`, `grouping_strategy`,
+  `check_response_timeout_minutes`, `max_entries_to_build`, `max_entries_to_merge`,
+  `min_entries_to_merge`, `min_entries_to_merge_wait_minutes`), because a value fixed in
+  the tool is a decision taken away from the adopter. `enabled` defaults to **false**: a
+  queue changes when every merge happens for everyone, and upgrading a tool must not do
+  that. The integration branch defaults to `SQUASH` and the release branch to `REBASE`,
+  matching the branch flow each already declares, and a queue that would create merge
+  commits under `require_linear_history` is refused at load rather than once per queued
+  pull request. The `provenance.yml` template now also answers `merge_group` events: a
+  queue only ever sees checks that a merge-group run started, so a required check that
+  does not trigger there ejects every queued pull request on timeout.
+
 - Make the clean-repo survey inside `check --ci` safe where the forge cannot be reached.
   `_gh_json` now distinguishes "the forge answered" from "the forge could not be asked":
   a missing `gh` binary no longer raises an uncaught `FileNotFoundError`, and a non-zero
