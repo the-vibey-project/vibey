@@ -95,6 +95,25 @@ def _gh_json(root: Path, *args: str) -> tuple[list | dict, str]:
     return [], f"`{label}` returned JSON that is neither a list nor an object"
 
 
+def _gh_list(root: Path, *args: str) -> tuple[list, str]:
+    """Ask the forge for a listing, and refuse to read anything else as one.
+
+    `_gh_json` answers for any JSON shape, because an endpoint may legitimately return
+    an object. A *listing* may not. Iterating a dict yields its keys, so a caller handed
+    one would quietly enumerate field names, match none of them, and report an empty
+    result with an empty problem string -- "could not look" wearing the face of "nothing
+    there". That is the exact collapse `_gh_json`'s problem string exists to prevent, so
+    a listing's shape is checked here once rather than trusted at each call site.
+    """
+    value, problem = _gh_json(root, *args)
+    if problem:
+        return [], problem
+    if not isinstance(value, list):
+        label = " ".join(("gh", *args[:2]))
+        return [], f"`{label}` returned a JSON object where a listing was expected"
+    return value, ""
+
+
 def _kept(cfg: GhConfig) -> tuple[str, ...]:
     return tuple(
         dict.fromkeys((cfg.integration_branch, cfg.release_branch, *cfg.tidy.keep_branches))
@@ -102,7 +121,7 @@ def _kept(cfg: GhConfig) -> tuple[str, ...]:
 
 
 def _open_pr_heads(root: Path) -> tuple[set[str], str]:
-    prs, problem = _gh_json(root, "pr", "list", "--json", "headRefName", "--limit", "200")
+    prs, problem = _gh_list(root, "pr", "list", "--json", "headRefName", "--limit", "200")
     return {p.get("headRefName", "") for p in prs if isinstance(p, dict)}, problem
 
 
@@ -163,7 +182,7 @@ def survey(cfg: GhConfig, local: bool = True, refresh: bool = True) -> TidyRepor
             if tip and _contained(root, tip, kept_remote):
                 remote_merged.append(short)
 
-    releases, release_problem = _gh_json(
+    releases, release_problem = _gh_list(
         root, "release", "list", "--json", "tagName,name,isDraft", "--limit", "100"
     )
     if release_problem:
