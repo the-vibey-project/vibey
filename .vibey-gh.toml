@@ -35,7 +35,15 @@ pin_version = true
 # github-release.yml: the immutable tag and GitHub Release for every version promoted to
 # main. Releases stopped at v0.1.2 when release-please was retired (#77) and nothing took
 # over the tagging; the book and the paper are attached to each Release from here on.
-workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "pr-automation.yml", "automation-bootstrap.yml", "github-release.yml"]
+# conventional-commits.yml: the pre-commit hook enforces the Conventional subject and the
+# `Made-With:` trailer, but a commit made in the GitHub web UI never runs a hook, so those
+# land unchecked and only `Provenance` catches them -- at merge time, when a history
+# rewrite and a force-push are the only remedy. Four commits across #171-#174 arrived that
+# way in one day. This job normalises them on push instead, while the branch is still the
+# author's own. It refuses to rewrite a branch that already carries merge commits and
+# fails loudly there rather than guessing, which is the right trade: an automated rewrite
+# of somebody's merge is not a tidy-up.
+workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "pr-automation.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml"]
 
 # Declared here rather than clicked, per ADR-0018. `vibey-gh` has reconciled both of these
 # from configuration since 1.x and vibey-skills has used them for months; this repository,
@@ -105,7 +113,13 @@ plugins = [
 ]
 # This repository's real PR-triggered workflows. The default set names "Docs", which
 # nothing here answers to -- a gate waiting on a scan that can never complete never posts.
-scan_workflows = ["CI", "Provenance"]
+# "Conventional Commits" is here because it is now a gating check, and this list renders
+# into `pr-automation.yml`'s `workflow_run` trigger. A gating workflow absent from it
+# completes and announces nothing, so the last scan fires the final evaluation, this one
+# settles after it, and no run ever looks again -- the pull request then sits blocked with
+# every check green and nothing to rerun. That deadlock has happened here before; the two
+# lines move together.
+scan_workflows = ["CI", "Provenance", "Conventional Commits"]
 
 [pr_automation.fallback]
 # Reviews with a local model when the paid path returns NO VERDICT AT ALL. It never
