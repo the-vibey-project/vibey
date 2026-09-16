@@ -1000,7 +1000,7 @@ next run.
 | `QUESTION_ID=ANSWER …` and/or `--defaults` | the pairs; `--defaults` adds `accept_defaults: true` | `question` (DESIGN interview). `--defaults` answers every question, blocking ones included, with its default; explicit pairs win. |
 | `--verdict VALUE` | `{"verdict": VALUE}` | `approval` (`accept`, `changes`, `cancel`), `deploy_demo_review` (`approve`, `request_changes`) |
 | `--choice VALUE` | `{"choice": VALUE}` | `choice` (`local_only`, `deploy`), `deploy_failure_triage` |
-| `--raw '<json object>'` | the object | grants: `{"max_attempts": N}` (`escalation_exhausted`), `{"max_rounds": N}` (`verify_repair_exhausted`, `integrate_repair_exhausted`), `{"max_dollars": N}` / `{"max_turns": N}` (`budget_exhausted`); review feedback or questions (`approval`); deployment elicitation (`deploy_interview`); consent (`deploy_acceptance`) |
+| `--raw '<json object>'` | the object | grants: `{"max_attempts": N}` (`escalation_exhausted`, `attempts_exhausted`), `{"max_rounds": N}` (`verify_repair_exhausted`, `integrate_repair_exhausted`), `{"max_dollars": N}` / `{"max_turns": N}` (`budget_exhausted`); review feedback or questions (`approval`); deployment elicitation (`deploy_interview`); consent (`deploy_acceptance`) |
 
 **Planned, not implemented.** Gates with a `default_answer` and a
 `timeout_at` would auto-resolve — for low-stakes choices during overnight

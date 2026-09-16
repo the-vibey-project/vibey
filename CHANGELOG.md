@@ -12,6 +12,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **worker:** a job that burns its last attempt parks on an `attempts_exhausted` human gate carrying the grant to type, instead of dying as a `failed` row nobody was told about; answering `--raw '{"max_attempts": N}'` widens the bound on the job row so the granted retries survive the next nack (ADR-0024)
+
 ## [0.7.0] (2026-09-15)
 
 ### Features
