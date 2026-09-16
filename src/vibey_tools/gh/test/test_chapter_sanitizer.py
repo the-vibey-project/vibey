@@ -114,4 +114,3 @@ def test_attribute_names_xml_would_reject_never_reach_a_chapter():
     assert s.start_tag("use", [("xlink:href", "#g"), ("href", "#g")]) == '<use href="#g">'
     # and a name that is not an XML Name at all
     assert s.start_tag("p", [("2bad", "x")]) == "<p>"
-

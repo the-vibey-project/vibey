@@ -357,4 +357,3 @@ def test_inline_svg_keeps_the_case_a_renderer_needs(tmp_path):
     assert '<linearGradient id="g"/>' in body
     # and it is still what it has to be first of all: XML
     ET.fromstring(f"<root>{body}</root>")
-
