@@ -109,7 +109,7 @@ that failure otherwise turns a billing problem into a hard stop on every pull re
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `enabled` | boolean / `true` | Whether the fallback job is rendered at all. **It needs a self-hosted runner carrying `runner_label`**; with no such runner the job simply never has anywhere to run. Set `false` to leave it out of the rendered workflow entirely. |
+| `enabled` | boolean / `true` | Whether the fallback job is rendered at all. **On by default, per sub-doctrine 8.a:** the sovereign path is the preference, so it is not the one that has to be opted into. That costs an adopter nothing until they stand a runner up, because the **heartbeat** gates scheduling rather than this flag — a repository with no fresh `heartbeat_ref` never offers the lane. Once a runner does exist, keep `trusted_only` true: GitHub says self-hosted runners should "almost never be used for public repositories". |
 | `runner_label` | string / `"vibey-local"` | Label the fallback job targets, alongside `self-hosted`. |
 | `model` | string / `"qwen2.5-coder:14b"` | Model tag served by the Ollama-compatible endpoint. |
 | `base_url` | string / `"http://127.0.0.1:11434"` | Where the local model listens. |
@@ -528,7 +528,7 @@ claim about anyone else's branch flow.
 | Field | Type / default | Meaning |
 |---|---|---|
 | `enabled` | boolean / `false` | Declare the queue at all. **Off by default on purpose:** a merge queue changes when and how every merge happens for everyone using the repository, and switching that on by upgrading a tool would be a behaviour change nobody asked for. |
-| `merge_method` | `MERGE` \| `SQUASH` \| `REBASE` / `SQUASH` | How the queue lands a member. Match the branch's own flow — feature pull requests squash into the integration branch, and promotion rebases into the release branch (ADR-0028), so a queue declared on each wants a different value. |
+| `merge_method` | `MERGE` \| `SQUASH` \| `REBASE` / **integration `SQUASH`, release `REBASE`** | How the queue lands a member. The two defaults differ because the branch flows do: feature pull requests squash into the integration branch, and promotion rebases into the release branch (ADR-0028). |
 | `grouping_strategy` | `ALLGREEN` \| `HEADGREEN` / `ALLGREEN` | `ALLGREEN` requires every member of a group to be green; `HEADGREEN` merges on the group head alone, which can land a member that was never green on its own. |
 | `check_response_timeout_minutes` | integer 1–360 / `60` | How long the queue waits for a member's checks before treating it as failed. |
 | `max_entries_to_build` | integer 1–100 / `5` | How many members are built speculatively at once. |
@@ -576,13 +576,20 @@ a workflow run applies it.
 
 ## `[workflow_names]`
 
-The display names of the managed workflows. They are keys rather than constants because
-several features match on them — `release-surfaces.yml` triggers on the `Release` workflow
-completing, and `[pr_automation] scan_workflows` names workflows by their display name — so a
-repository that renames one has to be able to say so.
+Every workflow name the rendered templates depend on. Templates chain by `workflow_run`, which
+matches a workflow's display **name**, so these are keys rather than constants: a hardcoded name
+silently assumes every adopter calls its pipeline `CI` and its publish step `Release`. When that
+assumption is wrong the trigger simply never matches and nothing runs, with no error anywhere —
+the silence is the whole danger.
 
-Renaming here does **not** rename the workflow file or its jobs; it changes the name the
-tooling expects to see. Change it only alongside the `name:` in the workflow itself.
+**Two kinds live in this table.**
+
+- `ci` and `release` name workflows the **adopter owns**. vibey-gh renders neither, and never
+  installs or renames those files; it only needs to know what they are called in order to trigger
+  off them. These genuinely differ per repository.
+- The rest name **vibey-gh's own templates**. Renaming one is safe: each template renders its own
+  `name:` from the same field the other templates trigger on, so both sides move together and the
+  chain cannot drift.
 
 | Field | Default |
 |---|---|
@@ -597,8 +604,8 @@ tooling expects to see. Change it only alongside the `name:` in the workflow its
 | `github_release` | `GitHub Release` |
 | `repository_profile` | `Repository profile` |
 
-Note the distinction `required_checks` turns on (see `[rulesets]`): these are **workflow**
-names. A required status check matches a **check-run** name, which for GitHub Actions is the
+Note the distinction from `required_checks` (see `[rulesets]`): these are **workflow** names,
+while a required status check matches a **check-run** name — which for GitHub Actions is the
 job's name, not the workflow's.
 
 ## `[repository_profile]`
