@@ -6,6 +6,7 @@ Each test encodes one adoption failure that cost real debugging on a live reposi
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from vibey_gh import doctor
@@ -28,15 +29,35 @@ def test_a_key_in_the_wrong_section_is_named(tmp_path):
 
 
 def test_every_key_the_loader_reads_is_a_key_doctor_knows(tmp_path):
-    """The map in doctor is hand-written for the sections whose keys load onto `GhConfig`
-    itself, so it drifts from the loader silently — and drift here is not a missing hint, it
-    is an ERROR telling an adopter to delete a setting that works. `install.self_source` was
-    exactly that: read by the loader, used by this repository, and reported as ignored."""
+    """`install.self_source` was read by the loader, used by this repository, and reported as
+    ignored — an ERROR telling an adopter to delete a setting that works."""
     _repo(tmp_path, '[install]\nself_source = "src/vibey_tools/gh"\n')
     findings = doctor.diagnose(root=tmp_path)
-    assert not [f for f in findings if "self_source" in f.message], (
-        "install.self_source is read by config.load; doctor must not call it unknown"
-    )
+    assert not [
+        f for f in findings if "self_source" in f.message
+    ], "install.self_source is read by config.load; doctor must not call it unknown"
+
+
+def test_every_section_the_loader_reads_is_a_section_doctor_knows():
+    """The guard that makes the previous test unnecessary to write again.
+
+    `_SECTION_KEYS` is hand-written for the sections whose keys load onto `GhConfig` itself,
+    so it drifts from the loader silently — and the drift is not a missing hint, it is an
+    ERROR that exits nonzero and tells an adopter their valid table "does nothing". Three
+    sections had already fallen out this way (`social_signals`, `tidy`, `workflow_names`)
+    while `[tidy]` had a documented section of its own and is named in this repository's own
+    configuration comments.
+
+    Asserted against the loader itself rather than a second hand-written list, because a
+    hand-written list is the thing that broke.
+    """
+    source = (Path(doctor.__file__).parent / "config.py").read_text()
+    # `(?<![A-Za-z_])` so `rulesets_data.get(...)` — a nested table — is not mistaken for a
+    # top-level section.
+    loader_sections = set(re.findall(r'(?<![A-Za-z_])data\.get\("([a-z_]+)"', source))
+    assert loader_sections, "the extraction found nothing; the loader's shape must have changed"
+    unknown = sorted(loader_sections - set(doctor._SECTION_KEYS))
+    assert not unknown, f"doctor would call these valid sections unknown: {unknown}"
 
 
 def test_an_unknown_section_is_named(tmp_path):

@@ -5,6 +5,15 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Stop `doctor` calling valid configuration an error, and make the drift that caused it a test
+  failure. `_SECTION_KEYS` is hand-written for the sections whose keys load onto `GhConfig`
+  itself, so it drifts from the loader silently — and the drift is not a missing hint, it is an
+  **error** that exits nonzero and tells an adopter their working table "does nothing". Four
+  things had fallen out: `install.self_source`, plus the whole of `[social_signals]`, `[tidy]`
+  and `[workflow_names]` — `[tidy]` while carrying a documented section of its own and being
+  named in this repository's own configuration comments. A new test asserts every section the
+  loader reads is a section `doctor` knows, derived from the loader rather than from a second
+  hand-written list, because a hand-written list is the thing that broke.
 - Stop `doctor` calling `[install] self_source` an error. The loader reads it, this repository
   declares it, and the hand-written known-keys map in `doctor` did not list it — so the
   adoption preflight reported *"not a key vibey-gh reads; it is silently ignored"* at **error**
