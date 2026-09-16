@@ -847,6 +847,17 @@
       }
     },
     {
+      "name": "money-on-the-internet",
+      "source": "./src/vibey_tools/skills/plugins/money-on-the-internet",
+      "description": "Money on the Internet — Bitcoin, Ethereum, Monero, PayPal, Stripe: the five systems positioned against each other on finality, censorship, programmability, privacy and cost, and how to use and build on each. Bitcoin's UTXO model, policy versus consensus, fee estimation and RBF, wallets and multisig and PSBT and miniscript, the Lightning Network, 2026 mining economics, Bitcoin Core and BDK development, and the v30 OP_RETURN governance fight; Ethereum's account and world-state model, the EVM, proof of stake and the two-process node, the upgrade timeline, gas and transaction types, Solidity and Foundry, the access-control losses that dominate 2026 incident data, DeFi primitives, L2s and MEV; Monero's ring signatures and stealth addresses and RingCT, view keys, FCMP++ and its real status, the 2025 Qubic hashrate episode, exchange delistings and access, daemon and wallet RPC development; PayPal's consumer network and Braintree and Venmo acceptance, the US merchant fee schedule effective 1 September 2026, PYUSD and the 2026 crypto strategy, the Orders and Payouts and Subscriptions APIs; Stripe's PaymentIntent lifecycle, idempotency and webhooks, integration patterns from Payment Links to full custom, PCI scope, Connect and Billing and Radar and Terminal, US pricing, Managed Payments as merchant-of-record, and the Bridge and Privy and Tempo stablecoin stack; plus decision heuristics, the four engineering patterns that transfer across every rail, a sequenced study roadmap, and the canonical documentation shelf.",
+      "version": "0.1.0",
+      "category": "finance",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
       "name": "music-theory-fundamentals",
       "source": "./src/vibey_tools/skills/plugins/music-theory-fundamentals",
       "description": "Music Theory Fundamentals: the three layers of claim music theory makes, the harmonic series, psychoacoustics, tuning and temperament, pitch, intervals and notation, scales and modes, rhythm and meter, timbre, chords, functional harmony, cadence and phrase, modulation and chromaticism, counterpoint, form, analytical methods, melody, jazz harmony, popular music, non-Western systems, twentieth-century and later practice, and music and meaning.",
