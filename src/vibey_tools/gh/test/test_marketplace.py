@@ -187,6 +187,28 @@ def test_build_refuses_one_plugin_name_from_two_members(tmp_path: Path):
         MarketplaceRenderer().build(cfg)
 
 
+def test_build_refuses_a_member_answering_to_the_roots_own_name(tmp_path: Path):
+    """Two marketplaces cannot share a name, and one of them is rendered from the other.
+
+    Claude Code registers one marketplace per NAME per user, so `/plugin marketplace
+    add` on a member that answers to the root's name is not a second entry -- it is the
+    same registration twice, and whichever is added second replaces the first. The
+    duplicate-plugin check above cannot see this: the names collide one level up, at
+    the manifest rather than among its plugins.
+    """
+    _member(tmp_path, "m", "the-root", [_plugin("p")])
+    cfg = GhConfig(root=tmp_path, marketplace=MarketplaceConfig(name="the-root", members=("m",)))
+    with pytest.raises(MarketplaceError, match="collides with the root marketplace name"):
+        MarketplaceRenderer().build(cfg)
+
+
+def test_a_member_keeping_its_own_distinct_name_is_accepted(tmp_path: Path):
+    """The guard rejects a collision, not merely a member that declares a name."""
+    _member(tmp_path, "m", "its-own", [_plugin("p")])
+    cfg = GhConfig(root=tmp_path, marketplace=MarketplaceConfig(name="the-root", members=("m",)))
+    assert MarketplaceRenderer().build(cfg)["name"] == "the-root"
+
+
 # --- write / check -------------------------------------------------------------------
 
 
