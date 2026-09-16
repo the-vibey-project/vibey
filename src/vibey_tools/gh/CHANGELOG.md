@@ -14,6 +14,14 @@ This file follows Keep a Changelog and semantic versioning conventions.
   `[pr_automation] normalise_commit_subjects` (default **true**, so no adopter loses the
   behaviour they have) splits the job into a check that always runs, a rewrite behind the
   key, and a refusal that names the offending subjects when the key is off.
+- Refuse a workspace member whose marketplace name is the root's. Claude Code registers
+  one marketplace per NAME per user, so `/plugin marketplace add` on a member answering to
+  the root's name is not a second entry — it is the same registration twice, and whichever
+  is added second silently replaces the first. The root manifest is rendered FROM the
+  members, so the collision is between a thing and its own source. The existing
+  duplicate-plugin check could not see it: those names collide one level down, among a
+  manifest's plugins, not between manifests. `MarketplaceRenderer.build` now names the
+  offending member and stops.
 - Let the merge train clear the conflicts it creates itself. Every merge into the
   integration branch leaves the NEXT pull request behind the branch that just moved, and
   the train reported that as `conflicts with develop` and stopped — so it landed one

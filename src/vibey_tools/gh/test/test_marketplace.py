@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any, ClassVar
@@ -185,6 +186,35 @@ def test_build_refuses_one_plugin_name_from_two_members(tmp_path: Path):
     cfg = GhConfig(root=tmp_path, marketplace=MarketplaceConfig(name="x", members=("a", "b")))
     with pytest.raises(MarketplaceError, match="'same' is declared by both a and b"):
         MarketplaceRenderer().build(cfg)
+
+
+def test_build_refuses_a_member_answering_to_the_roots_own_name(tmp_path: Path):
+    """Two marketplaces cannot share a name, and one of them is rendered from the other.
+
+    Claude Code registers one marketplace per NAME per user, so `/plugin marketplace
+    add` on a member that answers to the root's name is not a second entry -- it is the
+    same registration twice, and whichever is added second replaces the first. The
+    duplicate-plugin check above cannot see this: the names collide one level up, at
+    the manifest rather than among its plugins.
+    """
+    _member(tmp_path, "m", "the-root", [_plugin("p")])
+    cfg = GhConfig(root=tmp_path, marketplace=MarketplaceConfig(name="the-root", members=("m",)))
+    # The whole message, not just its suffix. Naming WHICH member collided is the
+    # guard's contract -- an adopter with a dozen members and a bare "names collide"
+    # has been told only that something is wrong -- and a matcher on the generic tail
+    # would keep passing if the member and the name were dropped from the wording.
+    with pytest.raises(
+        MarketplaceError,
+        match=re.escape("m: member marketplace name 'the-root' collides with the root"),
+    ):
+        MarketplaceRenderer().build(cfg)
+
+
+def test_a_member_keeping_its_own_distinct_name_is_accepted(tmp_path: Path):
+    """The guard rejects a collision, not merely a member that declares a name."""
+    _member(tmp_path, "m", "its-own", [_plugin("p")])
+    cfg = GhConfig(root=tmp_path, marketplace=MarketplaceConfig(name="the-root", members=("m",)))
+    assert MarketplaceRenderer().build(cfg)["name"] == "the-root"
 
 
 # --- write / check -------------------------------------------------------------------
