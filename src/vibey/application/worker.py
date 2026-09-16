@@ -132,7 +132,7 @@ class WorkerLoop:
 
         gate = await self._gates.latest_for_job(job.id)
         granted = self._granted_attempts(gate)
-        if granted is not None and granted > job.max_attempts:
+        if granted is not None and granted > job.attempts:
             await self._jobs.grant_attempts(job.id, owner=self._owner, max_attempts=granted)
             await self._jobs.nack(job.id, owner=self._owner, error=error)
             return
