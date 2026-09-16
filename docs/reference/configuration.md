@@ -234,11 +234,16 @@ REVIEW back to BUILD.
 
 Neither `vibey new` nor the operator's `VibeyProject` spec writes this object
 today, the same way `skills_context.command` and `skills_context.index_path`
-are read but never written; the record is written directly.
+are read but never written; the record is written directly. Until one of them
+does, an unconfigured project runs REVIEW's code-review check and no security
+check at all — which is what the empty `security_commands` default states
+plainly, rather than running a scan that inspects nothing and reports success.
+vibey's own `bandit -q -r src/vibey` is enforced for real as gate 6 of
+`ci.yml`, on every pull request, independently of this.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `security_commands` | array of arrays of non-empty strings | `[["bandit", "-q", "-r", "src/vibey"]]` | Security checks. The default is the scope this repository's own CI gates; any other project must set its own, because a path that does not exist is scanned as nothing. An explicit `[]` disables the check; omitting the key inherits the default. |
+| `security_commands` | array of arrays of non-empty strings | `[]` (no security check runs) | Security checks. There is deliberately no default: any baked-in command names both a tool and a layout, and `bandit -q -r <path that does not exist>` exits 0 — a wrong default reports a passing security check that examined zero files. Configure this to get one. |
 | `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop", "--exclude", ".cursorloop", "--exclude", ".agyloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
 
 A malformed `review` object (not an object, a command list that is not a list

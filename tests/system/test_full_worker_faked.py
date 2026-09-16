@@ -61,9 +61,21 @@ def _git(repo: Path, *argv: str) -> None:
     )
 
 
+# REVIEW ships no default security command -- no default can know another
+# project's tool or layout, and a wrong one scans nothing and passes (see
+# `infrastructure/build/automated_review_runner.py`). So the scratch project
+# configures its own, which is also the end-to-end proof that
+# `review.security_commands` travels from the project config record through
+# `bootstrap.build_full_worker` into a real subprocess. `src` here is the
+# scratch repo's own source directory, which `_make_repo` populates.
+_REVIEW_CONFIG: dict[str, object] = {
+    "review": {"security_commands": [["bandit", "-q", "-r", "src"]]}
+}
+
+
 def _make_repo(root: Path) -> Path:
     """A scratch repo whose contents pass the real automated review commands
-    (bandit -q -r src/vibey; ruff check .) that review.demo runs."""
+    (bandit -q -r src, configured below; ruff check .) that review.demo runs."""
     repo = root / "repo"
     (repo / "src").mkdir(parents=True)
     (repo / "src" / "app.py").write_text("def main() -> int:\n    return 0\n")
@@ -117,7 +129,9 @@ async def test_full_worker_drives_a_project_to_done_local(tmp_path: Path) -> Non
     repo = _make_repo(tmp_path)
 
     async with build_app() as resources:
-        project = await resources.projects.create("faked-e2e", repo, max_cycles=3, config={})
+        project = await resources.projects.create(
+            "faked-e2e", repo, max_cycles=3, config=_REVIEW_CONFIG
+        )
         project_id = project.project_id
         await resources.projects.transition(project_id, expected=Phase.INTAKE, to=Phase.DESIGN)
         await resources.jobs.enqueue(
@@ -257,7 +271,9 @@ async def test_full_worker_drives_the_deploy_stage_set_to_done_deployed(tmp_path
     azure = InMemoryAzureClientAdapter()
 
     async with build_app() as resources:
-        project = await resources.projects.create("faked-e2e-deploy", repo, max_cycles=3, config={})
+        project = await resources.projects.create(
+            "faked-e2e-deploy", repo, max_cycles=3, config=_REVIEW_CONFIG
+        )
         project_id = project.project_id
         await resources.projects.transition(project_id, expected=Phase.INTAKE, to=Phase.DESIGN)
         await resources.jobs.enqueue(
@@ -423,7 +439,9 @@ async def test_full_worker_survives_a_forced_wind_down_rotation(tmp_path: Path) 
     repo = _make_repo(tmp_path)
 
     async with build_app() as resources:
-        project = await resources.projects.create("faked-e2e-wind", repo, max_cycles=3, config={})
+        project = await resources.projects.create(
+            "faked-e2e-wind", repo, max_cycles=3, config=_REVIEW_CONFIG
+        )
         project_id = project.project_id
         await resources.projects.transition(project_id, expected=Phase.INTAKE, to=Phase.DESIGN)
         await resources.jobs.enqueue(

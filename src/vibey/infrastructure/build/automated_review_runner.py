@@ -24,18 +24,24 @@ _DEFAULT_CODE_REVIEW: tuple[tuple[str, ...], ...] = (
     + tuple(part for name in _MACHINERY_DIRS for part in ("--exclude", name)),
 )
 
-# The scope this repository's own CI gates (`bandit -q -r src/vibey`, gate 6 in
-# ci.yml). The wider `-r src` this replaced walked the absorbed runner and tool
-# subtrees -- separate workspace members with gates of their own -- and exited
-# non-zero on every cycle, which became a Severity.HIGH finding and looped
-# REVIEW back into BUILD forever.
+# No security check runs unless the project configures one. That is the honest
+# default and it was a deliberate call, not an omission.
 #
-# No default can know another repository's layout, which is the whole reason
-# both command lists are now project configuration (`review.security_commands`,
-# `review.code_review_commands` -- ADR-0018). A project that leaves them unset
-# and has no `src/vibey` gets a scan of nothing rather than a manufactured
-# blocking finding, because bandit exits 0 on a path that does not exist.
-_DEFAULT_SECURITY: tuple[tuple[str, ...], ...] = (("bandit", "-q", "-r", "src/vibey"),)
+# Any baked-in command names both a tool and a layout. The previous default,
+# `bandit -q -r src`, walked this repository's absorbed runner and tool subtrees
+# -- separate workspace members with gates of their own -- and exited non-zero
+# on every cycle, which became a Severity.HIGH finding that looped REVIEW back
+# into BUILD forever. Narrowing it to `src/vibey` fixed vibey and broke everyone
+# else worse: `bandit -q -r <path that does not exist>` exits 0 (measured), so
+# every project without that exact directory would report a passing automated
+# security check having examined zero files, forever. A green gate is trusted; a
+# red one gets investigated. A vacuous green is the worse failure.
+#
+# `()` claims nothing instead. A project that wants the check configures
+# `review.security_commands` (ADR-0018); this repository's REVIEW-phase scan is
+# a convenience, and `bandit -q -r src/vibey` remains enforced for real as gate 6
+# of `ci.yml` on every pull request.
+_DEFAULT_SECURITY: tuple[tuple[str, ...], ...] = ()
 
 
 class SubprocessAutomatedReviewRunner:

@@ -14,6 +14,9 @@ from vibey.infrastructure.build.automated_review_runner import (
     _DEFAULT_SECURITY,
     SubprocessAutomatedReviewRunner,
 )
+from vibey.infrastructure.build.interfaces import (
+    ConfigurableAutomatedReviewRunnerInterface,
+)
 
 NOW = datetime(2026, 8, 15, tzinfo=UTC)
 
@@ -24,6 +27,17 @@ class FakeGateRunner(GateRunner):
 
     async def run(self, argv: tuple[str, ...], *, cwd: Path) -> GateResult:
         return self.outcomes.get(argv, GateResult(0, "ok", ""))
+
+
+class RecordingGateRunner(GateRunner):
+    """Records every argv it is asked to run, so a test can assert on absence."""
+
+    def __init__(self) -> None:
+        self.argvs: list[tuple[str, ...]] = []
+
+    async def run(self, argv: tuple[str, ...], *, cwd: Path) -> GateResult:
+        self.argvs.append(argv)
+        return GateResult(0, "ok", "")
 
 
 class FakeProjectRepo:
@@ -123,11 +137,46 @@ def test_default_code_review_command_excludes_vibey_machinery() -> None:
         assert command[index - 1] == "--exclude"
 
 
-def test_default_security_command_is_scoped_to_the_product() -> None:
-    """The REVIEW security scan gates the same scope CI gates. `-r src` walked
-    the absorbed workspace members, failed every cycle, and looped REVIEW back
-    into BUILD forever."""
-    assert _DEFAULT_SECURITY == (("bandit", "-q", "-r", "src/vibey"),)
+def test_there_is_no_default_security_command() -> None:
+    """No command is baked in, because any baked-in command names a tool AND a
+    layout. `bandit -q -r <missing path>` exits 0, so a wrong default reports a
+    passing security check that examined zero files -- worse than none at all."""
+    assert _DEFAULT_SECURITY == ()
+
+
+async def test_an_unconfigured_project_runs_no_security_command_at_all(
+    tmp_path: Path,
+) -> None:
+    """Not `runs a command that happens to find nothing` -- runs nothing. The
+    fake records every argv it is asked for, and no security tool appears."""
+    proj = ProjectRecord(
+        project_id=uuid4(),
+        name="p1",
+        repo_path=tmp_path,
+        phase=Phase.REVIEW,
+        cycle=1,
+        max_cycles=5,
+        config={},
+        created_at=NOW,
+        updated_at=NOW,
+    )
+    gates = RecordingGateRunner()
+    runner = SubprocessAutomatedReviewRunner.from_config(
+        proj.config, projects=FakeProjectRepo(proj), gates=gates
+    )
+    assert await runner.run_automated_reviews(proj.project_id, 1) == ()
+    assert gates.argvs == list(_DEFAULT_CODE_REVIEW)
+    assert not any(argv[0] == "bandit" for argv in gates.argvs)
+
+
+def test_the_runner_satisfies_its_declared_construction_interface() -> None:
+    """ADR-0016: `from_config` is a construction contract, and it is declared in
+    `infrastructure/build/interfaces/` rather than only implied by the call in
+    bootstrap."""
+    runner = SubprocessAutomatedReviewRunner.from_config(
+        {}, projects=FakeProjectRepo(None), gates=FakeGateRunner()
+    )
+    assert isinstance(runner, ConfigurableAutomatedReviewRunnerInterface)
 
 
 def _runner(config: dict[str, object]) -> SubprocessAutomatedReviewRunner:
@@ -165,10 +214,12 @@ def test_from_config_overrides_both_command_lists() -> None:
 
 
 def test_from_config_honours_an_explicitly_empty_command_list() -> None:
-    """`[]` disables a check; it is not the same as saying nothing."""
-    runner = _runner({"review": {"security_commands": []}})
-    assert runner._security_commands == ()
-    assert runner._code_review_commands == _DEFAULT_CODE_REVIEW
+    """`[]` disables a check; it is not the same as saying nothing. Asserted on
+    `code_review_commands`, whose default is non-empty -- on `security_commands`
+    an honoured `[]` and a dropped `[]` both land on `()` and prove nothing."""
+    runner = _runner({"review": {"code_review_commands": []}})
+    assert runner._code_review_commands == ()
+    assert runner._security_commands == _DEFAULT_SECURITY
 
 
 @pytest.mark.parametrize(
@@ -205,6 +256,9 @@ def test_from_config_rejects_malformed_review_configuration(
 
 
 async def test_configured_security_command_is_the_one_that_runs(tmp_path: Path) -> None:
+    """The configured command must be distinct from the default, or the test
+    passes even when `from_config` drops `review.security_commands` on the
+    floor. `semgrep --error` is nothing this module would ever choose itself."""
     proj = ProjectRecord(
         project_id=uuid4(),
         name="p1",
@@ -212,14 +266,18 @@ async def test_configured_security_command_is_the_one_that_runs(tmp_path: Path) 
         phase=Phase.REVIEW,
         cycle=1,
         max_cycles=5,
-        config={"review": {"security_commands": [["bandit", "-q", "-r", "src/vibey"]]}},
+        config={"review": {"security_commands": [["semgrep", "--error"]]}},
         created_at=NOW,
         updated_at=NOW,
     )
     gates = FakeGateRunner(
-        outcomes={("bandit", "-q", "-r", "src"): GateResult(1, "", "would have blocked")}
+        outcomes={("semgrep", "--error"): GateResult(1, "", "B105 hardcoded password")}
     )
     runner = SubprocessAutomatedReviewRunner.from_config(
         proj.config, projects=FakeProjectRepo(proj), gates=gates
     )
-    assert await runner.run_automated_reviews(proj.project_id, 1) == ()
+    (finding,) = await runner.run_automated_reviews(proj.project_id, 1)
+    assert finding.category == "security"
+    assert finding.severity == Severity.HIGH
+    assert "semgrep --error" in finding.text
+    assert "B105 hardcoded password" in finding.text
