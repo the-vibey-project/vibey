@@ -15,6 +15,13 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  # Where a repository puts this job behind a merge queue, the queue only ever sees
+  # checks a `merge_group` event started; without this the gate never reports and every
+  # queued pull request is ejected on timeout. On a merge group there is no
+  # `pull_request` payload, so the step below falls through to the whole-repository
+  # check -- the right scope, since each group member's commits were already walked on
+  # its own pull request (ADR-0036).
+  merge_group:
 
 permissions:
   contents: read
