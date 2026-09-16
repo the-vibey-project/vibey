@@ -31,6 +31,43 @@ from vibey_gh.config import load_config
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
 
 
+def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Sub-doctrine 9.a's cloud clutter classes, named for `check`: merged-and-undeleted
+    remote branches (a closed pull request's head among them, once its work landed),
+    draft releases, orphan tags. Returns `(clutter, unsurveyable)` — the second is why
+    the survey could not judge, which is a notice and never a verdict.
+
+    Reporting only, and read-only twice over. `check` is what a hook and every pull
+    request and every promotion run, so it deletes nothing, ever — `vibey-gh tidy
+    --apply` is the only thing that removes anything — and it passes `refresh=False`
+    so the survey does not `fetch --prune` either. A verification command does not
+    mutate the clone it is verifying, not even its remote-tracking refs, and not even
+    helpfully: someone's stale `origin/*` landmarks are theirs. The cost is that a
+    long-unfetched clone judges the refs it already has, which can only misreport, and
+    a misreport here is an advisory line by default.
+
+    Surveyed under `--ci` alone: one survey costs two `gh` calls, which a pre-commit
+    hook must not pay, and the local classes need a durable clone to mean anything.
+    Module-level to match every other `check` collaborator here, which argparse
+    dispatch already makes module-level functions.
+    """
+    if not surveyed or not cfg.tidy.enabled:
+        return (), ()
+    from vibey_gh import tidy
+
+    report = tidy.survey(cfg, local=False, refresh=False)
+    clutter = tuple(
+        f"{label}: {', '.join(items)}"
+        for label, items in (
+            ("merged remote branches, never deleted", report.remote_merged),
+            ("draft releases", report.draft_releases),
+            ("orphan tags", report.orphan_tags),
+        )
+        if items
+    )
+    return clutter, report.problems
+
+
 def _check(args) -> int:
     cfg = load_config()
     ok, problems = install.installed(cfg, local=not args.ci)
@@ -44,7 +81,13 @@ def _check(args) -> int:
         from vibey_gh.marketplace import MarketplaceRenderer
 
         marketplace_ok, marketplace_problem = MarketplaceRenderer().check(cfg)
-    clean = ok and report.ok and docs.ok and scan.ok and marketplace_ok
+    # `--quiet` prints nothing, so two forge round trips are worth paying for only when
+    # they can still move the exit code — which is exactly when `[tidy] fail_check` is on.
+    clutter, unsurveyable = _cloud_clutter(
+        cfg, surveyed=args.ci and (not args.quiet or cfg.tidy.fail_check)
+    )
+    clutter_ok = not clutter or not cfg.tidy.fail_check
+    clean = ok and report.ok and docs.ok and scan.ok and marketplace_ok and clutter_ok
 
     if args.quiet:
         return 0 if clean else 1
@@ -76,6 +119,16 @@ def _check(args) -> int:
         print(f"  {problem}", file=sys.stderr)
     if not marketplace_ok:
         print(f"  marketplace: {marketplace_problem}", file=sys.stderr)
+    for problem in unsurveyable:
+        print(f"  clutter: not surveyed — {problem}", file=sys.stderr)
+    for item in clutter:
+        print(f"  clutter: {item}", file=sys.stderr)
+    if clutter:
+        print(
+            "  clutter: `vibey-gh tidy --apply` removes the provably-lossless classes"
+            + ("" if cfg.tidy.fail_check else " (advisory; `[tidy] fail_check = true` fails)"),
+            file=sys.stderr,
+        )
 
     if clean:
         scope = f"{report.checked_files} source file(s)"
