@@ -20,19 +20,26 @@ from __future__ import annotations
 
 import logging
 import sys
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Iterator, Mapping, MutableMapping
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
 import structlog
 from structlog.stdlib import BoundLogger, LoggerFactory, ProcessorFormatter
 
+from vibey.domain.interfaces.delivery_interface import DeliveryIdInterface
 from vibey.domain.verbosity import LogPlan
 from vibey.infrastructure.ledger.redact import redact_payload
 
 # Chatty libraries that are noise unless the operator explicitly widened the
 # net with -vv. asyncpg in particular logs every statement at DEBUG.
 _THIRD_PARTY_LOGGERS = ("asyncpg", "asyncio", "httpx", "httpcore", "urllib3", "textual")
+
+# What the delivery correlation id is rendered under by default. A key rather
+# than a literal at the binding site, so a deployment whose collector already
+# reserves this name can bind under another (ADR-0018).
+DELIVERY_LOG_FIELD = "delivery_id"
 
 
 def _redact_processor(
@@ -138,6 +145,48 @@ def apply_third_party_level(plan: LogPlan) -> None:
 def get_logger(**initial_context: Any) -> BoundLogger:
     logger: BoundLogger = structlog.get_logger(**initial_context)
     return logger
+
+
+class DeliveryLogContext:
+    """Puts one delivery's correlation id on every log line inside its scope.
+
+    Ambient rather than threaded through call sites: a delivery crosses six
+    phases, several handlers and any number of repositories, and a parameter
+    every one of them has to remember to pass is a parameter one of them will
+    not. ``merge_contextvars`` is already the first processor in the shared
+    chain, so a binding here reaches all three sinks -- human console, JSON
+    console and the optional file -- and survives an ``await``.
+
+    structlog's context vars, not ``vibey_bootstrap``'s ``correlation_scope``
+    (ADR-0017): that package is deliberately not a dependency of ``vibey`` --
+    it carries the Azure SDK and OpenTelemetry -- and its ``CorrelationFilter``
+    attaches to stdlib ``LogRecord`` attributes, which this module's
+    ``ProcessorFormatter`` pipeline does not render. Reaching for it here would
+    add a dependency graph to gain nothing.
+    """
+
+    def __init__(self, field: str = DELIVERY_LOG_FIELD) -> None:
+        self._field = field
+
+    @property
+    def field(self) -> str:
+        """The key the id is rendered under."""
+        return self._field
+
+    def bind(self, delivery_id: DeliveryIdInterface) -> None:
+        structlog.contextvars.bind_contextvars(**{self._field: str(delivery_id.value)})
+
+    def clear(self) -> None:
+        structlog.contextvars.unbind_contextvars(self._field)
+
+    @contextmanager
+    def bound(self, delivery_id: DeliveryIdInterface) -> Iterator[str]:
+        """Bind for the duration of the block, unbinding however it ends."""
+        self.bind(delivery_id)
+        try:
+            yield str(delivery_id.value)
+        finally:
+            self.clear()
 
 
 class StructlogAppLogger:

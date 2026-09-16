@@ -66,3 +66,20 @@ forbidden_modules =
     vibey.cli
     vibey.tui
     vibey.bootstrap
+
+# The same rule for the domain layer's own seams. The domain-independence
+# contract above already covers this package's third-party imports, because a
+# forbidden contract checks a source module's descendants too; this one adds
+# the half that rule does not state -- an interface never imports the code
+# that consumes it (ADR-0016).
+[importlinter:contract:domain-interfaces-declare-only]
+name = Domain interfaces declare seams, never consume them
+type = forbidden
+source_modules =
+    vibey.domain.interfaces
+forbidden_modules =
+    vibey.application
+    vibey.infrastructure
+    vibey.cli
+    vibey.tui
+    vibey.bootstrap

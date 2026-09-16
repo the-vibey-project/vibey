@@ -12,6 +12,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Features
+
+* one correlation id per delivery, derived from the project alone so a REVIEW loop-back does not mint a second one, and bindable into the structured log context under a configurable key ([#89](https://github.com/the-vibey-project/vibey/issues/89))
+
 ## [0.7.0] (2026-09-15)
 
 ### Features
