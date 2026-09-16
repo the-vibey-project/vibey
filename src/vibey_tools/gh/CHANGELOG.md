@@ -5,6 +5,33 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Make the exported book a valid EPUB. Chapters were taken from the built site's HTML
+  verbatim, so every mkdocs permalink anchor carried `&para;` into the package -- and
+  `&para;` is not one of the five entities XML defines, so an EPUB reader failed to parse
+  the first heading of every chapter and refused the whole book. The same permalink
+  pilcrows were also printed as visible furniture in a paper interior where nothing is
+  clickable. A new `ChapterSanitizer` (with its interface beside it, per ADR-0016) now
+  owns both halves of that judgement: it drops site chrome -- including any element
+  carrying a permalink class -- and rewrites what survives as XHTML, resolving named
+  entities to the characters they name, escaping bare ampersands, and rebuilding start
+  tags so boolean attributes and attribute values are legal. Which tags and classes count
+  as chrome are constructor arguments, so a theme that marks its permalinks differently
+  configures the sanitizer instead of forking it.
+
+  Three further ways a chapter could reach the package unparseable, all of which fail the
+  whole book rather than the page they came from. The walk tracked NESTING DEPTH as a
+  count, but HTML lets an end tag be omitted -- `<ul><li>one<li>two</ul>` is valid -- and
+  `HTMLParser` synthesizes nothing, so a counter closed the wrong number of elements; it
+  now holds the open elements by name, closes whatever an end tag actually closes, and
+  closes what the document leaves open at end of input (`close()`, declared on the
+  interface, because `out` is only well-formed once the caller says no more markup is
+  coming). Elements HTML implicitly closes -- a second `<li>`, `<dd>`, `<td>`, `<tr>`,
+  `<option>`, `<p>` -- are closed as siblings rather than stacked, because a list nested
+  inside its own first item is well-formed XML and still the wrong book. And `text()`
+  escaped the three markup characters while letting XML's FORBIDDEN code points through:
+  `character_reference` already refused `&#0;`, but a literal NUL or form feed from the
+  built HTML reached the output and made the chapter unparseable, so the same predicate
+  now applies to character data.
 - Read the machine's memory on Linux, and fail loudly on a machine that cannot be read.
   `vibey-gh fit` sampled memory only through macOS's `sysctl` and `vm_stat`, so on Linux
   every field came back zero and a machine with 32 GB free was reported as having none —
