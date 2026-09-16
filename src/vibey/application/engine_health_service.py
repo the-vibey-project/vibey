@@ -19,10 +19,50 @@ from vibey.domain.engine import EngineId
 
 
 class EngineHealthService:
-    """Application service for engine health records."""
+    """Application service for engine health records.
+
+    Declared by `interfaces/engines.py::EngineHealthServiceInterface`, which is
+    what `EngineSelector` takes (ADR-0016). That seam lives in the port-family
+    module rather than a mirrored `*_interface.py`; the reason is written there.
+    """
 
     def __init__(self, repository: EngineHealthRepository) -> None:
         self._repository = repository
+
+    def _circuit_after_preflight(
+        self, record: EngineHealthRecord, preflight: PreflightResult
+    ) -> str:
+        """The circuit an authentication-opened engine carries after a preflight.
+
+        `AuthenticationFailed` is the one capacity rejection that schedules
+        no probe: no amount of waiting fixes a credential, so
+        `domain/circuit.py::schedule_probe` returns None for it and this
+        service writes neither `resets_at` nor `probe_next_at`. The circuit
+        therefore stays OPEN, and the selector keeps the engine out --
+        visibly, as `circuit=open, capacity_state=AuthenticationFailed` in
+        `vibey status` and the dashboard, never silently dropped.
+
+        But "a human must fix it" is not "a human must then edit the
+        database". The evidence that the human did fix it is a preflight
+        whose auth succeeds, so that is the probe trigger: the engine
+        half-opens and rejoins rotation at reduced weight, and one
+        successful run closes the circuit. A circuit opened by credits or by
+        a rate-limit window is left alone here -- working credentials say
+        nothing about either.
+        """
+        if (
+            record.capacity_state == "AuthenticationFailed"
+            and record.circuit == "half_open"
+            and not preflight.auth_ok
+        ):
+            return "open"
+        if (
+            record.circuit == "open"
+            and record.capacity_state == "AuthenticationFailed"
+            and preflight.auth_ok
+        ):
+            return "half_open"
+        return record.circuit
 
     async def get_or_create(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
         """Get existing health record or create a new one with defaults."""
@@ -70,7 +110,7 @@ class EngineHealthService:
             conformance_ok=record.conformance_ok,
             conformance_at=record.conformance_at,
             auth_ok_at=now if preflight.auth_ok else record.auth_ok_at,
-            circuit=record.circuit,
+            circuit=self._circuit_after_preflight(record, preflight),
             capacity_state=record.capacity_state,
             resets_at=record.resets_at,
             probe_next_at=record.probe_next_at,
@@ -103,7 +143,7 @@ class EngineHealthService:
             conformance_ok=conformance_ok,
             conformance_at=now if conformance_ok else record.conformance_at,
             auth_ok_at=auth_ok_at,
-            circuit=record.circuit,
+            circuit=self._circuit_after_preflight(record, preflight),
             capacity_state=record.capacity_state,
             resets_at=record.resets_at,
             probe_next_at=record.probe_next_at,
@@ -149,7 +189,10 @@ class EngineHealthService:
         elif isinstance(capacity_state, AuthenticationFailed):
             circuit_state = "open"
             capacity_state_str = "AuthenticationFailed"
-            # Auth failures don't auto-probe - need manual intervention
+            # Deliberately no resets_at and no probe_next_at: waiting cannot
+            # fix a credential, so inventing a deadline here would be the
+            # same error as giving CreditsExhausted a resets_at. The way
+            # back is _circuit_after_preflight, not a hand-edited row.
 
         updated = EngineHealthRecord(
             project_id=record.project_id,

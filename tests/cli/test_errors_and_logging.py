@@ -5,20 +5,24 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 
 import pytest
 import typer
 from typer.testing import CliRunner
 
-from vibey.cli.errors import EXIT_BLOCKED, guard, render
+from vibey.cli.errors import _NEXT_STEP, EXIT_BLOCKED, guard, render
 from vibey.cli.main import app
 from vibey.domain.errors import (
     BudgetExceeded,
+    EscalationExhausted,
+    HandoffRejected,
     InvalidPhaseError,
     NoEligibleEngine,
     UnknownProject,
 )
+from vibey.domain.handoff import GateMode, GateResult
 from vibey.domain.verbosity import resolve_log_plan
 from vibey.infrastructure.logging import (
     NullAppLogger,
@@ -42,7 +46,28 @@ def test_known_error_renders_as_a_sentence_not_a_traceback() -> None:
 
 def test_errors_with_a_known_remedy_say_what_to_try_next() -> None:
     assert "vibey engines" in render(NoEligibleEngine("nothing eligible"))
-    assert "[budget]" in render(BudgetExceeded("over cap"))
+    assert "vibey answer" in render(BudgetExceeded("over cap"))
+
+
+def test_gate_hints_say_how_to_find_the_gate_and_how_to_answer_it() -> None:
+    """A parked gate is only actionable if the operator can find its id, and no
+    command lists open gates -- so the hint carries the query that does."""
+    refused = GateResult(ok=False, mode=GateMode.STRICT, attempts=2, violations=(), rules_run=())
+    for exc in (BudgetExceeded("over cap"), EscalationExhausted(3), HandoffRejected(refused)):
+        message = render(exc)
+        assert "vibey answer" in message
+        assert "human_gate" in message
+
+
+def test_no_hint_names_a_command_that_does_not_exist() -> None:
+    """The bug this guards: three hints told the operator to run `vibey gates`,
+    and `vibey gates` has never existed -- so the one instruction the operator
+    was given was the one thing that could not work."""
+    registered = {command.name for command in app.registered_commands}
+    registered |= {group.name for group in app.registered_groups}
+    for error, hint in _NEXT_STEP.items():
+        for name in re.findall(r"`vibey ([a-z-]+)", hint):
+            assert name in registered, f"{error.__name__} hint names `vibey {name}`"
 
 
 def test_errors_without_an_honest_remedy_suggest_nothing() -> None:
