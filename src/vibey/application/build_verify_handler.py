@@ -305,7 +305,7 @@ class BuildVerifyHandler:
             cycle=job.cycle,
             job_id=job.id,
             engine_id=self._reviewer.descriptor.engine_id,
-            correlation_id=uuid4(),
+            correlation_id=self._correlation.for_project(job.project_id).value,
             event=EngineEvent(
                 kind=EventKind.DECISION_RECORDED.value,
                 at=policy.clock.now(),
