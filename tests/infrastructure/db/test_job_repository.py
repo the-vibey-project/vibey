@@ -165,6 +165,53 @@ async def test_nack_marks_failed_once_max_attempts_reached(
     assert record.state is JobState.FAILED
 
 
+async def test_grant_attempts_widens_the_bound_so_the_next_nack_retries(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    """ADR-0024: the grant has to reach the row, because nack decides
+    'failed' from the row's own max_attempts."""
+    repo = PostgresJobRepository(migrated_pool)
+    job = await repo.enqueue(_request(project_id, max_attempts=1))
+    await repo.claim(project_id, owner="worker-1", lease=LEASE)
+
+    assert await repo.grant_attempts(job.id, owner="worker-1", max_attempts=4) is True
+    await repo.nack(job.id, owner="worker-1", error={"message": "boom"})
+
+    record = await repo.get(job.id)
+    assert record is not None
+    assert record.max_attempts == 4
+    assert record.state is JobState.READY
+
+
+async def test_grant_attempts_never_narrows_the_bound(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    job = await repo.enqueue(_request(project_id, max_attempts=7))
+    await repo.claim(project_id, owner="worker-1", lease=LEASE)
+
+    assert await repo.grant_attempts(job.id, owner="worker-1", max_attempts=7) is False
+    assert await repo.grant_attempts(job.id, owner="worker-1", max_attempts=2) is False
+
+    record = await repo.get(job.id)
+    assert record is not None
+    assert record.max_attempts == 7
+
+
+async def test_grant_attempts_refuses_a_lease_it_does_not_hold(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    job = await repo.enqueue(_request(project_id, max_attempts=1))
+    await repo.claim(project_id, owner="worker-1", lease=LEASE)
+
+    assert await repo.grant_attempts(job.id, owner="worker-2", max_attempts=9) is False
+
+    record = await repo.get(job.id)
+    assert record is not None
+    assert record.max_attempts == 1
+
+
 async def test_park_sets_awaiting_human_and_releases_lease(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:

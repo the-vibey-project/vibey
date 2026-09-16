@@ -110,6 +110,18 @@ class JobRepository(Protocol):
         without counting as a failure attempt."""
         ...
 
+    async def grant_attempts(self, job_id: UUID, *, owner: str, max_attempts: int) -> bool:
+        """Durably widens this job's attempt bound to a human's grant.
+
+        ADR-0024: a bounded ladder ends in a park that can grant more. The
+        grant has to reach the row, because `nack` decides 'failed' from the
+        row's own `max_attempts` -- a grant that lived only in the answered
+        gate would be spent by the very next nack. Lease-guarded like every
+        other write, and it never narrows: a value at or below the current
+        bound is a no-op returning False.
+        """
+        ...
+
     async def reap(self) -> int:
         """Reclaims jobs whose lease has expired. Returns the count
         reclaimed."""

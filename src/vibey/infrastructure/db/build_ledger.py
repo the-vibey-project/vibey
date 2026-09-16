@@ -25,6 +25,7 @@ class PostgresBuildLedger:
         job_id: UUID,
         engine_id: EngineId | None,
         correlation_id: UUID,
+        causation_id: UUID | None = None,
         event: EngineEvent,
     ) -> None:
         draft = translate_event(
@@ -35,6 +36,7 @@ class PostgresBuildLedger:
             engine_id=engine_id,
             job_id=job_id,
             correlation_id=correlation_id,
+            causation_id=causation_id,
         )
         if draft is not None:
             await self._ledger.append(draft)

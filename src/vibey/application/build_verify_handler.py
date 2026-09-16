@@ -44,8 +44,10 @@ from vibey.application.interfaces import (
 )
 from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
+from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId, IsolationLevel
+from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
@@ -162,8 +164,10 @@ class BuildVerifyHandler:
         ledger: BuildLedger,
         jobs: JobRepository,
         repair: VerifyRepairPolicy | None = None,
+        correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
         independence: VerifyIndependencePolicy | None = None,
     ) -> None:
+        self._correlation = correlation
         self._worktrees = worktrees
         self._gates = gates
         self._reviewer = reviewer
@@ -235,7 +239,9 @@ class BuildVerifyHandler:
                 isolation=IsolationLevel.WORKTREE,
             )
         )
-        run_outcome = await run_and_record(self._reviewer, self._ledger, job=job, handle=handle)
+        run_outcome = await run_and_record(
+            self._reviewer, self._ledger, job=job, handle=handle, correlation=self._correlation
+        )
 
         if not run_outcome.complete:
             return Failure(FailureClass.WORK, "diff review did not approve this work item")
@@ -299,7 +305,7 @@ class BuildVerifyHandler:
             cycle=job.cycle,
             job_id=job.id,
             engine_id=self._reviewer.descriptor.engine_id,
-            correlation_id=uuid4(),
+            correlation_id=self._correlation.for_project(job.project_id).value,
             event=EngineEvent(
                 kind=EventKind.DECISION_RECORDED.value,
                 at=policy.clock.now(),
@@ -384,7 +390,7 @@ class BuildVerifyHandler:
             cycle=job.cycle,
             job_id=job.id,
             engine_id=None,
-            correlation_id=uuid4(),
+            correlation_id=self._correlation.for_project(job.project_id).value,
             event=EngineEvent(
                 kind=EventKind.FINDING_RAISED.value,
                 at=repair.clock.now(),
@@ -427,7 +433,7 @@ class BuildVerifyHandler:
                 cycle=job.cycle,
                 job_id=job.id,
                 engine_id=None,
-                correlation_id=uuid4(),
+                correlation_id=self._correlation.for_project(job.project_id).value,
                 event=EngineEvent(
                     kind=EventKind.FINDING_RESOLVED.value,
                     at=repair.clock.now(),

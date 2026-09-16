@@ -60,8 +60,9 @@ class HumanGateRequest:                 # application/dto.py
 The persisted row (`HumanGateRecord`, table `human_gate`) adds `gate_id`,
 `project_id`, `job_id`, `answer` (JSON), `raised_at`, `answered_at`, and
 `answered_by`. Kinds are strings, not an enum. Those raised today are `question`,
-`approval`, `choice`, `budget_exhausted`, `escalation_exhausted`,
-`verify_repair_exhausted`, `integrate_repair_exhausted`, `too_many_wind_downs`,
+`approval`, `choice`, `attempts_exhausted`, `budget_exhausted`,
+`escalation_exhausted`, `verify_repair_exhausted`, `integrate_repair_exhausted`,
+`too_many_wind_downs`,
 `handoff_gate_failed`, `deploy_interview`, `deploy_acceptance`,
 `deploy_demo_review`, and `deploy_failure_triage`. The `*_exhausted` gates end a
 bounded ladder, and their answer can grant more of what ran out

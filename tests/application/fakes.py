@@ -102,6 +102,14 @@ class FakeJobRepository:
         )
         return True
 
+    async def grant_attempts(self, job_id: UUID, *, owner: str, max_attempts: int) -> bool:
+        self.calls.append("grant_attempts")
+        job = self._jobs.get(job_id)
+        if job is None or job.lease_owner != owner or job.max_attempts >= max_attempts:
+            return False
+        self._jobs[job_id] = _with(job, max_attempts=max_attempts)
+        return True
+
     async def defer(
         self,
         job_id: UUID,

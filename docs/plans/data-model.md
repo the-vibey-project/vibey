@@ -285,6 +285,31 @@ CREATE RULE event_no_delete AS ON DELETE TO event DO INSTEAD NOTHING;
 The `RULE`s make `UPDATE` and `DELETE` silent no-ops rather than errors: a stray
 write affects zero rows.
 
+**`correlation_id` is the delivery's; `causation_id` is the run's.** Every event
+of one delivery — DESIGN, BUILD, REVIEW and the deploy stage set, in every cycle
+— carries the same `correlation_id`, so `event_correlation` answers "show me
+this whole delivery" in one index scan. The id is *derived* at each write site,
+not separately allocated or handed across a process boundary:
+`domain/correlation.py` folds the project id into a fixed namespace with `uuid5`,
+so every worker computes the same value for the same project. The derived value is
+still written on each event -- `event.correlation_id` is `NOT NULL` and
+`event_correlation` indexes it -- which is what makes the one-scan query above
+possible; what does not exist is an allocator to ask or an id to carry. It is
+deliberately not keyed on `cycle` — a
+REVIEW loop-back increments the cycle, and one delivery would otherwise acquire
+a fresh id each time it went round.
+
+`causation_id` carries what `correlation_id` used to: which engine run produced
+this event. `run_and_record` writes the `RunSpec`'s `run_id`, so a row joins to
+the run directory on disk, and `build_work_ledger` keys its per-work-thread
+projection on it. Events vibey writes on its own account — a finding it raised,
+a context packet it compiled — have no causing run and leave it `NULL`.
+
+Both columns already existed. Before this, `correlation_id` was minted with
+`uuid4()` at roughly ten separate write sites and `causation_id` was always
+`NULL`, so one delivery left behind ten unrelated ids and could be reassembled
+only by hand (issue #89).
+
 **Gapless `seq`.** One counter row per project, claimed by an upsert inside the
 insert transaction. `PostgresLedgerRepository.append` calls `append_event` inside
 `conn.transaction()`:
@@ -451,6 +476,11 @@ UPDATE job SET
     updated_at       = now()
 WHERE id = $1 AND lease_owner = $2;
 
+-- GRANT more attempts (ADR-0024; the answered gate's bound reaches the row,
+-- because NACK reads 'failed' from the row's own max_attempts). Never narrows.
+UPDATE job SET max_attempts = $3, updated_at = now()
+WHERE id = $1 AND lease_owner = $2 AND max_attempts < $3;
+
 -- PARK (a human gate was raised; the attempt is refunded)
 UPDATE job SET
     state = 'awaiting_human', lease_owner = NULL,
@@ -486,6 +516,11 @@ All of these live in `PostgresJobRepository`
 re-ready. PARK and DEFER refund the attempt so that waiting on a human or on
 capacity never consumes `max_attempts`; this is how non-negotiable #1 (never
 block a worker on a human) and the capacity-rejection rule reach the queue.
+
+NACK's `'failed'` branch is a safety net, not the ordinary end of a job:
+`WorkerLoop` checks the bound before it nacks and parks an `attempts_exhausted`
+gate instead, GRANTing a wider bound first when the human already answered one
+(ADR-0024). A `failed` row therefore means nobody was asked, which is a bug.
 
 The reaper is what makes worker death safe, and is why every handler must be
 idempotent (non-negotiable #6): a reaped job *will* be executed again. `vibey
@@ -678,8 +713,9 @@ CREATE INDEX human_gate_open ON human_gate (project_id, raised_at)
 ```
 
 `kind` is unconstrained text. Values raised by handlers today include `question`,
-`choice`, `approval`, `budget_exhausted`, `escalation_exhausted`,
-`verify_repair_exhausted`, `integrate_repair_exhausted`, `handoff_gate_failed`,
+`choice`, `approval`, `attempts_exhausted`, `budget_exhausted`,
+`escalation_exhausted`, `verify_repair_exhausted`, `integrate_repair_exhausted`,
+`handoff_gate_failed`,
 `too_many_wind_downs`, `deploy_interview`, `deploy_acceptance`,
 `deploy_demo_review` and `deploy_failure_triage`. Bounded repair and escalation
 ladders park on these gates rather than failing (ADR-0024). Gates are answered
