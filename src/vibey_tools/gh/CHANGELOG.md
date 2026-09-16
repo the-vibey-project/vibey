@@ -5,6 +5,15 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Separate checking a commit subject from rewriting it, and make the rewrite a key.
+  `conventional-commits.yml` normalised every nonconforming subject automatically, which
+  is a convenience and not the point of the job — and the automatic form is
+  `chore: <the original subject>`, conforming without choosing a type, so a bug fix
+  normalised that way is filed as a chore. In a repository whose changelog sections are
+  derived from the type, that is a wrong label rather than a missing one. New
+  `[pr_automation] normalise_commit_subjects` (default **true**, so no adopter loses the
+  behaviour they have) splits the job into a check that always runs, a rewrite behind the
+  key, and a refusal that names the offending subjects when the key is off.
 - Refuse a workspace member whose marketplace name is the root's. Claude Code registers
   one marketplace per NAME per user, so `/plugin marketplace add` on a member answering to
   the root's name is not a second entry — it is the same registration twice, and whichever
