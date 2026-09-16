@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, make_job
+from vibey import bootstrap
 from vibey.application.design import DesignEvent
 from vibey.application.dto import ProjectRecord
 from vibey.bootstrap import (
@@ -52,6 +53,32 @@ def test_qwenloop_feature_resolution(monkeypatch) -> None:  # type: ignore[no-un
 
     monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "false")
     assert not qwenloop_enabled({"features": {"qwenloop": True}})
+
+
+def test_every_composed_worker_logs_through_a_redaction_aware_logger() -> None:
+    """The composition root must hand `WorkerLoop` the structured logger, not leave it on
+    its own last-resort default.
+
+    `StandardLibraryLogger` renders fields into the message as `key=value` before the sink
+    sees them, and `configure_logging`'s redaction is keyed on FIELD NAMES -- so a value
+    that is sensitive only because of its key survives flattening:
+
+        flattened   {'event': 'job.deferred password=hunter2'}   # untouched
+        structured  {'event': 'job.deferred', 'password': '[REDACTED]'}
+
+    All three builders constructed `WorkerLoop` without a logger, so that default was the
+    production path, and `WorkerLoop` logs `reason=outcome.detail` -- free text a handler
+    controls. Asserted against the source rather than by building a worker, because two of
+    the three builders need a live database.
+    """
+    source = (Path(bootstrap.__file__)).read_text()
+    constructions = source.count("return WorkerLoop(")
+    injected = source.count("logger=StructlogAppLogger(")
+    assert constructions > 0, "the builders must still construct WorkerLoop"
+    assert injected == constructions, (
+        f"{constructions} WorkerLoop construction(s) but {injected} inject a logger; "
+        "an uninjected one falls back to the flattening default"
+    )
 
 
 async def test_build_design_worker_composes_an_executable_interview(tmp_path: Path) -> None:
