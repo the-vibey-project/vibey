@@ -12,6 +12,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **ledger:** every phase move now writes the `PhaseTransitioned` event the ledger always declared,
+  in the same transaction as the compare-and-set that moves the phase — so a project's path through
+  the six phases is reconstructable from its own history, and no move can commit without its event
+
 ## [0.7.0] (2026-09-15)
 
 ### Features

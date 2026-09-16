@@ -14,6 +14,7 @@ from vibey.domain.engine import EngineId
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
 from vibey.domain.phase import Phase
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
+from vibey.infrastructure.interfaces import EventAppender
 from vibey.infrastructure.ledger.redact import redact_payload
 
 
@@ -36,11 +37,22 @@ def _row_to_event(row: asyncpg.Record) -> LedgerEvent:
     )
 
 
-class PostgresLedgerRepository:
-    def __init__(self, pool: asyncpg.Pool) -> None:
-        self._pool = pool
+class ConnectionEventAppender:
+    """One append on a connection the caller owns.
 
-    async def append(self, draft: LedgerEventDraft) -> LedgerEvent:
+    Split out of `PostgresLedgerRepository` so a write that must be atomic
+    with something else -- a phase compare-and-set, say -- can put the event
+    and that other write in the SAME transaction. Appending after the other
+    statement's transaction committed would lose the event outright whenever
+    the worker dies in between, and the ledger is append-only: there is no
+    later correction that can put a missing event back where it belonged.
+    """
+
+    async def append(
+        self,
+        conn: asyncpg.pool.PoolConnectionProxy | asyncpg.Connection,
+        draft: LedgerEventDraft,
+    ) -> LedgerEvent:
         # Redaction happens here, immediately before the payload is
         # persisted, and the digest is recomputed over what actually lands
         # in the column -- never over the pre-redaction payload the caller
@@ -49,34 +61,43 @@ class PostgresLedgerRepository:
         redacted_payload = redact_payload(draft.payload)
         digest = digest_event(redacted_payload)
 
+        seq = await conn.fetchval(
+            """
+            SELECT append_event(
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12
+            )
+            """,
+            draft.project_id,
+            draft.cycle,
+            draft.phase.value,
+            draft.kind.value,
+            draft.engine_id.value if draft.engine_id is not None else None,
+            draft.job_id,
+            draft.causation_id,
+            draft.correlation_id,
+            draft.provenance.value,
+            draft.produced_at,
+            json.dumps(redacted_payload),
+            digest,
+        )
+        row = await conn.fetchrow(
+            "SELECT * FROM event WHERE project_id = $1 AND seq = $2",
+            draft.project_id,
+            seq,
+        )
+        if row is None:
+            raise LookupError(f"append_event returned seq {seq} but no row exists")
+        return _row_to_event(row)
+
+
+class PostgresLedgerRepository:
+    def __init__(self, pool: asyncpg.Pool) -> None:
+        self._pool = pool
+        self._appender: EventAppender = ConnectionEventAppender()
+
+    async def append(self, draft: LedgerEventDraft) -> LedgerEvent:
         async with self._pool.acquire() as conn, conn.transaction():
-            seq = await conn.fetchval(
-                """
-                SELECT append_event(
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12
-                )
-                """,
-                draft.project_id,
-                draft.cycle,
-                draft.phase.value,
-                draft.kind.value,
-                draft.engine_id.value if draft.engine_id is not None else None,
-                draft.job_id,
-                draft.causation_id,
-                draft.correlation_id,
-                draft.provenance.value,
-                draft.produced_at,
-                json.dumps(redacted_payload),
-                digest,
-            )
-            row = await conn.fetchrow(
-                "SELECT * FROM event WHERE project_id = $1 AND seq = $2",
-                draft.project_id,
-                seq,
-            )
-            if row is None:
-                raise LookupError(f"append_event returned seq {seq} but no row exists")
-            return _row_to_event(row)
+            return await self._appender.append(conn, draft)
 
     async def range(
         self, project_id: UUID, *, from_seq: int, to_seq: int

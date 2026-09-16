@@ -86,7 +86,15 @@ async def test_real_queue_runs_and_resumes_all_seven_interview_stages(
     events = await durable_ledger.all_for_project(project_id)
     assert [event.kind for event in events].count(EventKind.QUESTION_ASKED) == 7
     assert [event.kind for event in events].count(EventKind.ANSWER_GIVEN) == 7
-    assert all(event.produced_at == datetime(2026, 8, 14, tzinfo=UTC) for event in events)
+    # PhaseTransitioned is stamped by the UPDATE that moved the phase, inside
+    # the same transaction, so it carries database time rather than the
+    # handler's clock.
+    assert all(
+        event.produced_at == datetime(2026, 8, 14, tzinfo=UTC)
+        for event in events
+        if event.kind is not EventKind.PHASE_TRANSITIONED
+    )
+    assert [event.kind for event in events].count(EventKind.PHASE_TRANSITIONED) == 1
 
     async with migrated_pool.acquire() as conn:
         kinds = await conn.fetch("SELECT kind, count(*) AS n FROM job GROUP BY kind")
