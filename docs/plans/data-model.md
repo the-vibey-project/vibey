@@ -288,9 +288,9 @@ write affects zero rows.
 **`correlation_id` is the delivery's; `causation_id` is the run's.** Every event
 of one delivery — DESIGN, BUILD, REVIEW and the deploy stage set, in every cycle
 — carries the same `correlation_id`, so `event_correlation` answers "show me
-this whole delivery" in one index scan. The id is *derived*, never stored and
-never handed across a process boundary: `domain/correlation.py` folds the
-project id into a fixed namespace with `uuid5`, so every worker computes the
+this whole delivery" in one index scan. The id is *derived* at each write site,
+not separately allocated or handed across a process boundary: `domain/correlation.py`
+folds the project id into a fixed namespace with `uuid5`, so every worker computes
 same value for the same project. It is deliberately not keyed on `cycle` — a
 REVIEW loop-back increments the cycle, and one delivery would otherwise acquire
 a fresh id each time it went round.
