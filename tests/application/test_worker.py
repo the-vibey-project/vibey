@@ -381,6 +381,46 @@ async def test_non_capacity_defer_is_logged_at_info_not_warning() -> None:
     assert logger.lines[0][2]["capacity"] is False
 
 
+async def test_a_defer_the_queue_refused_is_never_announced_as_one() -> None:
+    """The announcement follows the transition; it does not precede it.
+
+    `defer` returns False when the lease expired mid-handler and another worker
+    claimed the row: nothing moved, and a `job.deferred` line would assert a
+    `retry_at` the job never took. A reader chasing that line would find a
+    run_after disagreeing with the log -- a false record, which is worse than the
+    silence this whole block exists to end. The true thing is that this worker
+    lost the job, and it is said at warning because the work it just did was
+    discarded.
+    """
+
+    class LostLeaseJobRepository(FakeJobRepository):
+        async def defer(self, job_id, *, owner, retry_at, error) -> bool:
+            self.calls.append("defer")
+            return False
+
+    job = make_job(PROJECT_ID)
+    jobs = LostLeaseJobRepository([job])
+    retry_at = datetime(2026, 8, 14, 20, 10, tzinfo=UTC)
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(CapacityDeferred(retry_at, "no engine had capacity")),
+        owner="w1",
+        logger=logger,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert [(level, event) for level, event, _ in logger.lines] == [
+        ("warning", "job.defer_rejected")
+    ]
+    assert "job.deferred" not in [event for _, event, _ in logger.lines]
+    assert logger.lines[0][2]["reason"] == "lease no longer held by this worker"
+    # The transition was still attempted -- the guard is on the announcement.
+    assert "defer" in jobs.calls
+
+
 async def test_a_worker_with_no_injected_logger_still_speaks(
     caplog: pytest.LogCaptureFixture,
 ) -> None:

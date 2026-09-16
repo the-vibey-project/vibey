@@ -117,6 +117,31 @@ class WorkerLoop:
             # indistinguishable from an idle worker, and the only way to see
             # why was a hand-written SQL query. Say it out loud instead.
             #
+            # The line is emitted AFTER the transition, never before. `defer`
+            # returns False when this worker no longer holds the lease -- it
+            # expired mid-handler and another worker claimed the row -- and it
+            # can fail before committing. Announcing first would assert a
+            # `retry_at` that never moved, and a reader chasing that line finds
+            # a job whose run_after disagrees with the log: a false record is
+            # worse than the silence this block exists to end.
+            deferred = await self._jobs.defer(
+                job.id,
+                owner=self._owner,
+                retry_at=outcome.retry_at,
+                error={"class": FailureClass.CAPACITY.value, "detail": outcome.detail},
+            )
+            if not deferred:
+                # Warning, not info: nothing was deferred, the work this worker
+                # just did was discarded, and something else now owns the job.
+                self._log.warning(
+                    "job.defer_rejected",
+                    job_id=str(job.id),
+                    project_id=str(job.project_id),
+                    phase=job.phase.value,
+                    kind=job.kind,
+                    reason="lease no longer held by this worker",
+                )
+                return
             # Capacity is the one that warrants a warning. Routine
             # verify-repair waits are Defers too (see `Defer.capacity`), and
             # crying wolf on every one of those is how a warning stops being
@@ -132,12 +157,6 @@ class WorkerLoop:
                 capacity=outcome.capacity,
                 reason=outcome.detail,
                 retry_at=outcome.retry_at.isoformat(),
-            )
-            await self._jobs.defer(
-                job.id,
-                owner=self._owner,
-                retry_at=outcome.retry_at,
-                error={"class": FailureClass.CAPACITY.value, "detail": outcome.detail},
             )
 
     async def _heartbeat_forever(self, job_id: UUID, *, lease: timedelta) -> None:
