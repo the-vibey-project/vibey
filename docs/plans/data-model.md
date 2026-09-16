@@ -288,13 +288,14 @@ write affects zero rows.
 **`correlation_id` is the delivery's; `causation_id` is the run's.** Every event
 of one delivery — DESIGN, BUILD, REVIEW and the deploy stage set, in every cycle
 — carries the same `correlation_id`, so `event_correlation` answers "show me
-this whole delivery" in one index scan. The id is *derived*, never separately
-allocated and never handed across a process boundary: `domain/correlation.py`
-folds the project id into a fixed namespace with `uuid5`, so every worker
-computes the same value for the same project without asking anyone. It is of
-course still written on each event -- `event.correlation_id` is `NOT NULL` and
+this whole delivery" in one index scan. The id is *derived* at each write site,
+not separately allocated or handed across a process boundary:
+`domain/correlation.py` folds the project id into a fixed namespace with `uuid5`,
+so every worker computes the same value for the same project. The derived value is
+still written on each event -- `event.correlation_id` is `NOT NULL` and
 `event_correlation` indexes it -- which is what makes the one-scan query above
-possible; what no longer exists is an allocator to ask, or an id to carry. It is deliberately not keyed on `cycle` — a
+possible; what does not exist is an allocator to ask or an id to carry. It is
+deliberately not keyed on `cycle` — a
 REVIEW loop-back increments the cycle, and one delivery would otherwise acquire
 a fresh id each time it went round.
 
