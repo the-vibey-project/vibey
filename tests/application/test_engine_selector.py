@@ -10,6 +10,7 @@ import pytest
 from vibey.application.dto import EngineHealthRecord, RotationCursor
 from vibey.application.engine_health_service import EngineHealthService
 from vibey.application.engine_selector import EngineSelector
+from vibey.application.interfaces.engines import EngineSelectorInterface
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId, JobRequirement
 from vibey.domain.errors import NoEligibleEngine
@@ -520,3 +521,16 @@ async def test_a_recorded_credit_exhaustion_is_probed_again_without_a_hand_edit(
     engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
 
     assert engine_id is EngineId.CLAUDELOOP
+
+
+def test_the_selector_satisfies_its_declared_seam() -> None:
+    """ADR-0016: `interfaces/engines.py::EngineSelectorInterface` is the contract.
+
+    An interface nothing checks is a comment. This is the check.
+    """
+    selector = EngineSelector(
+        health_service=EngineHealthService(FakeEngineHealthRepository()),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+    assert isinstance(selector, EngineSelectorInterface)

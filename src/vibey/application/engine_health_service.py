@@ -19,7 +19,12 @@ from vibey.domain.engine import EngineId
 
 
 class EngineHealthService:
-    """Application service for engine health records."""
+    """Application service for engine health records.
+
+    Declared by `interfaces/engines.py::EngineHealthServiceInterface`, which is
+    what `EngineSelector` takes (ADR-0016). That seam lives in the port-family
+    module rather than a mirrored `*_interface.py`; the reason is written there.
+    """
 
     def __init__(self, repository: EngineHealthRepository) -> None:
         self._repository = repository

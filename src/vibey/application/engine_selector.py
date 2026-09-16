@@ -9,8 +9,10 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from vibey.application.dto import EngineHealthRecord, RotationCursor
-from vibey.application.engine_health_service import EngineHealthService
-from vibey.application.interfaces.engines import RotationCursorRepository
+from vibey.application.interfaces.engines import (
+    EngineHealthServiceInterface,
+    RotationCursorRepository,
+)
 from vibey.domain.capacity import Available
 from vibey.domain.circuit import Circuit, CircuitState
 from vibey.domain.engine import EngineDescriptor, EngineId, JobRequirement
@@ -30,11 +32,18 @@ AUTH_TTL = timedelta(hours=24)
 
 
 class EngineSelector:
-    """Selects engines using SWRR over eligible, healthy engines."""
+    """Selects engines using SWRR over eligible, healthy engines.
+
+    Declared by `interfaces/engines.py::EngineSelectorInterface`, and it takes
+    `EngineHealthServiceInterface` rather than the concrete service so a test
+    substitutes the health seam instead of patching an import (ADR-0016). Both
+    seams are declared in the port-family module `interfaces/engines.py`; the
+    reason that package keeps the family-grouped form is written there.
+    """
 
     def __init__(
         self,
-        health_service: EngineHealthService,
+        health_service: EngineHealthServiceInterface,
         cursor_repository: RotationCursorRepository,
         descriptors: dict[EngineId, EngineDescriptor],
     ) -> None:

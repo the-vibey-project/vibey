@@ -9,6 +9,7 @@ import pytest
 
 from vibey.application.dto import EngineHealthRecord, PreflightResult
 from vibey.application.engine_health_service import EngineHealthService
+from vibey.application.interfaces.engines import EngineHealthServiceInterface
 from vibey.domain.capacity import (
     AuthenticationFailed,
     CreditsExhausted,
@@ -453,3 +454,16 @@ async def test_a_closed_circuit_is_untouched_by_a_passing_preflight() -> None:
     )
 
     assert result.circuit == "closed"
+
+
+def test_the_service_satisfies_the_seam_the_selector_takes() -> None:
+    """ADR-0016: the class has a declared interface, and it is the real one.
+
+    `EngineSelector.__init__` is typed against `EngineHealthServiceInterface`,
+    so if the service ever drops a method off that contract the selector's
+    dependency stops being substitutable. mypy --strict catches the signature
+    drift; this catches the shape at runtime, which is what a test double has
+    to satisfy.
+    """
+    service = EngineHealthService(FakeEngineHealthRepository())
+    assert isinstance(service, EngineHealthServiceInterface)
