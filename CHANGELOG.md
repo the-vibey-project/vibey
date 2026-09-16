@@ -12,6 +12,15 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### Bug Fixes
+
+* **design:** the ledger names the engine that actually did the DESIGN work. `design.interview` and
+  `design.research` events were attributed to claudeloop whatever `--provider` was in force, so a
+  sovereign run on qwenloop -- and a scripted run with no engine at all -- wrote a false actor into
+  an append-only record. Each `DesignProvider` now declares its own `engine_id` (`None` for the
+  scripted one) and the composition root reads it; the `design.synthesize` exclusion follows the
+  same derived value ([#115](https://github.com/the-vibey-project/vibey/issues/115))
+
 ## [0.7.0] (2026-09-15)
 
 ### Features

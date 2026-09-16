@@ -17,10 +17,15 @@ from vibey.application.design import (
     QuestionBatch,
     ResearchResult,
 )
+from vibey.domain.engine import EngineId
 from vibey.domain.spec import AcceptanceCriterion, DesignSpec, NonFunctionalRequirement
 
 
 class ScriptedDesignProvider:
+    #: No engine ran, so the ledger names none. Borrowing a real engine's id
+    #: here would put a false actor in an append-only record.
+    engine_id: EngineId | None = None
+
     async def batch(self, stage: DesignStage, prior_events: Sequence[DesignEvent]) -> QuestionBatch:
         number = DESIGN_STAGES.index(stage) + 1
         return QuestionBatch(
