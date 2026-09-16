@@ -16,7 +16,11 @@ from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.build_decompose_handler import BuildDecomposeHandler
 from vibey.application.build_implement_handler import BuildImplementHandler
 from vibey.application.build_integrate_handler import BuildIntegrateHandler
-from vibey.application.build_verify_handler import BuildVerifyHandler, VerifyRepairPolicy
+from vibey.application.build_verify_handler import (
+    BuildVerifyHandler,
+    VerifyIndependencePolicy,
+    VerifyRepairPolicy,
+)
 from vibey.application.deploy_acceptance_handler import DeployAcceptanceHandler
 from vibey.application.deploy_design_bridge import DeployDesignBridgeHandler
 from vibey.application.deploy_design_handler import (
@@ -118,6 +122,14 @@ class SystemClock:
 def build_design_worker(
     *, resources: AppResources, project: ProjectRecord, provider: DesignProvider, owner: str
 ) -> WorkerLoop:
+    """Compose the DESIGN-only worker around one provider.
+
+    The DESIGN handlers are told who to attribute by asking the provider that
+    was actually composed (`DesignProvider.engine_id`) rather than naming an
+    engine here. The ledger is append-only, so an event that names the wrong
+    actor is a correction no one can make: a sovereign run on qwenloop, or a
+    scripted run with no engine at all, must not be recorded as claudeloop.
+    """
     clock = SystemClock()
     dispatcher = JobDispatcher(
         {
@@ -127,13 +139,13 @@ def build_design_worker(
                 gates=resources.gates,
                 questions=provider,
                 clock=clock,
-                interviewer=EngineId.CLAUDELOOP,
+                interviewer=provider.engine_id,
             ),
             "design.research": DesignResearchHandler(
                 ledger=resources.design_ledger,
                 researcher=provider,
                 clock=clock,
-                engine_id=EngineId.CLAUDELOOP,
+                engine_id=provider.engine_id,
             ),
             "design.synthesize": DesignSynthesizeHandler(
                 ledger=resources.design_ledger,
@@ -229,6 +241,41 @@ async def preflight_sweep(
         for engine_id in adapters
         if engine_id not in by_id or not by_id[engine_id].conformance_ok
     )
+
+
+def _independent_review_required(config: Mapping[str, object]) -> bool:
+    """Whether this project refuses a verify the implementer reviews itself.
+
+    Default False: independence is waived when the pool cannot supply a second
+    reviewer, because the measured alternative on a one-engine pool was BUILD
+    deferring forever with no park and nothing in the ledger. A project that
+    would rather stall than accept a self-review sets
+    ``verify.require_independent_review = true`` and gets the strict rule back
+    (ADR-0018: the choice belongs to the adopter, not to this file; ADR-0035
+    records why the permissive reading is the default).
+    """
+    verify = config.get("verify")
+    return isinstance(verify, Mapping) and verify.get("require_independent_review") is True
+
+
+def _independence_policy(
+    config: Mapping[str, object], pool: frozenset[EngineId], clock: Clock
+) -> VerifyIndependencePolicy | None:
+    """The verify-independence policy this project's config asks for, or None.
+
+    A pool with nobody but the implementer in it verifies its own work and says
+    so in the ledger, rather than deferring forever -- unless the project asked
+    for the strict rule, in which case no policy is wired and the handler keeps
+    failing such a verify (ADR-0035).
+
+    Named rather than inlined at the call site so both arms are reachable from a
+    test: the composition root builds its handlers inside closures that only run
+    once a real job is dispatched, which would otherwise leave the strict arm
+    exercised only by an end-to-end run against a live database.
+    """
+    if _independent_review_required(config):
+        return None
+    return VerifyIndependencePolicy(pool=pool, clock=clock)
 
 
 def _qwenloop_enabled(config: Mapping[str, object]) -> bool:
@@ -340,6 +387,7 @@ def build_full_worker(
             repair=VerifyRepairPolicy(
                 ledger_reader=resources.ledger, clock=clock, gates=resources.gates
             ),
+            independence=_independence_policy(project.config, engine_provider.pool, clock),
         )
         return _recording(handler, adapter)
 
@@ -363,13 +411,13 @@ def build_full_worker(
             gates=resources.gates,
             questions=design_provider,
             clock=clock,
-            interviewer=EngineId.CLAUDELOOP,
+            interviewer=design_provider.engine_id,
         ),
         "design.research": DesignResearchHandler(
             ledger=resources.design_ledger,
             researcher=design_provider,
             clock=clock,
-            engine_id=EngineId.CLAUDELOOP,
+            engine_id=design_provider.engine_id,
         ),
         "design.synthesize": DesignSynthesizeHandler(
             ledger=resources.design_ledger,

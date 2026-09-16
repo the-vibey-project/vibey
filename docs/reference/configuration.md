@@ -125,6 +125,15 @@ neither set, spend is uncapped.
 currently shows the fallbacks $40.00 (cycle) and $250.00 (total) rather than
 the real cap.
 
+## `[verify]`
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `require_independent_review` | bool | `false` | When `true`, `build.verify` always fails as `VIBEY` if the reviewing engine is the implementer, even when the configured pool has nobody else. When `false` (the default) a pool that cannot supply a second reviewer gets a self-review, recorded as a `DecisionRecorded` in the ledger so the weakened independence is visible. See [ADR-0035](../architecture/decisions/0035-independence-is-the-default-not-an-absolute.md). |
+
+Unlike `[budget]` above, this key **is** read at runtime, by
+`bootstrap.build_full_worker`.
+
 ## `[engines]`
 
 | Field | Type | Default | Notes |

@@ -10,6 +10,7 @@ from uuid import UUID
 from vibey.application.dto import (
     EngineEvent,
     EngineHealthRecord,
+    JobRecord,
     PreflightResult,
     RotationCursor,
     RunHandle,
@@ -20,6 +21,23 @@ from vibey.application.dto import (
 from vibey.domain.capacity import CapacityState
 from vibey.domain.engine import EngineDescriptor, EngineId
 from vibey.domain.job import FailureClass
+
+
+@runtime_checkable
+class EngineProvider(Protocol):
+    """Picks the engine a claimed job runs on, and says which engines this
+    worker has at all. ``application/engine_selection.py`` implements it.
+
+    ``pool`` is configuration -- the worker's configured adapters narrowed by
+    the ``--engines`` allow-list -- never live health. Handlers that must
+    apply a pool-shaped rule (the verify-independence waiver) read it here,
+    so "what engines does this worker have" has exactly one answer.
+    """
+
+    @property
+    def pool(self) -> frozenset[EngineId]: ...
+
+    async def select_for(self, job: JobRecord) -> EngineAdapter: ...
 
 
 @runtime_checkable

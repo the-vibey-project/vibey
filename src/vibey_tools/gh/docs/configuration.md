@@ -291,6 +291,7 @@ progress. The clutter this wars on is machine-state clutter only.
 | `enabled` | boolean / `true` | The doctrine's bar; disabling records a deliberate exception in review. |
 | `keep_branches` | string list / empty | Kept beyond the integration and release branches (an LTS line, say). |
 | `trust_forge_deletions` | boolean / `true` | Squash and rebase merges rewrite SHAs, so ancestry cannot prove a merged branch landed — the forge deleting its remote at merge time is the proof instead. Set false where remote branches die for other reasons. |
+| `fail_check` | boolean / `false` | Does the cloud clutter `vibey-gh check --ci` surveys — merged-and-undeleted remote branches, draft releases, orphan tags — fail the build, or print as an advisory line? Advisory by default: the survey judges a repository's accumulated past, so an adopter's CI must not go red for branches that were already there. Turn it on once the repository is clean. `check` only ever reports; `vibey-gh tidy --apply` is the only thing that removes anything. |
 
 Losslessness governs every deletion: ancestry-contained refs and forge-deleted
 upstreams only. Anything not provably redundant — draft releases, orphan tags,
@@ -608,6 +609,36 @@ pattern.
 
 Run `vibey-gh install`, review and commit generated assets, then run
 `vibey-gh check --ci`. Identity and Pages URLs are derived at runtime.
+
+## `[marketplace]`
+
+The one Claude Code marketplace at the repository root, for a monorepo whose plugin
+marketplaces are workspace members. `/plugin marketplace add owner/repo` reads exactly
+`<repo>/.claude-plugin/marketplace.json` and nothing else; `vibey-gh marketplace` renders
+that file from the members' own manifests — every plugin, its `./` source re-rooted from
+the member to the repository, all other fields verbatim, the owner taken from the first
+member — and `vibey-gh check` fails whenever the file on disk is not what the members render
+to. The members' manifests are untouched, so a member's own package keeps shipping its
+marketplace under its own name. Empty `members` renders nothing and checks nothing.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `name` | string / empty | The root marketplace's own name — what users type after `@` in `/plugin install <plugin>@<name>`. Kebab-case, required when `members` is set. Claude Code registers one marketplace per name per user, so this must differ from every member's own name (this repository's root is `vibey`; the packaged vibey-skills stays `vibey-skills`). |
+| `members` | string list / empty | Repository-relative directories each holding a `.claude-plugin/marketplace.json`, in the order their plugins appear in the root. No absolute paths, no `..`, no whitespace or shell metacharacters. |
+| `description` | string / empty | The root manifest's human description. Empty derives one from the plugin count and the members. |
+
+Rendering is strict, and every failure names the member: a manifest that is missing,
+unreadable, has no `name`, no `owner.name` or no `plugins`; a plugin entry with no `name` or
+no `source`; a `./` source that leaves its member (`..`), carries a backslash or resolves to
+a directory without `.claude-plugin/plugin.json`; or one plugin name declared by two members.
+A source that is not a string (a `github`/`url` object) is remote, not member-relative, and
+passes through untouched.
+
+```toml
+[marketplace]
+name = "vibey"
+members = ["src/vibey_tools/skills", "src/vibey_tools/gh"]
+```
 
 ## Advanced debug environment
 
