@@ -26,6 +26,14 @@ class StandardLibraryLogger:
     foreign-record chain drops `extra` attributes, and a field that survives
     in one sink but not another is worse than one rendered plainly in all of
     them. An injected ``StructlogAppLogger`` keeps them as real JSON fields.
+
+    **That flattening is why this is a last resort, not a default to settle
+    for.** ``configure_logging`` redacts by FIELD NAME, so once a field is part
+    of the message string a value that is sensitive only because of its key --
+    ``password``, ``token`` -- is no longer redactable; only the vendor-shaped
+    patterns still match. Anything composing a `WorkerLoop` should inject
+    ``StructlogAppLogger``, which `bootstrap` does for every worker it builds
+    and `tests/test_bootstrap.py` asserts it keeps doing.
     """
 
     def __init__(self, name: str, **context: Any) -> None:
