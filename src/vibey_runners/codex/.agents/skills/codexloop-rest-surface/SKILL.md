@@ -30,10 +30,13 @@ without review.
 After an intentional SDK upgrade, refresh the baseline:
 
 ```bash
-codexloop api --help  # generates the tree
-# The test writes the new baseline to api_baseline.json
-pytest tests/cli/test_api.py --update-baseline
+python tools/refresh_api_baseline.py
 ```
+
+It prints the added and removed methods and rewrites `api_baseline.json`, and
+exits non-zero when the baseline already matches so it cannot leave a no-op
+commit behind. Read the delta: a removed method is a `codexloop api` command
+that disappears from somebody's scripts.
 
 Commit the updated `api_baseline.json` in the same PR as
 `pyproject.toml` changes.

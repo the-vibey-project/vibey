@@ -40,7 +40,14 @@ dependencies = [
     "typer>=0.12",
     "structlog>=24.1",
     "anyio>=4.0",
-    "openai>=1.40",
+    # Bounded, and the floor matches `api_baseline.json`. The drift gate freezes the
+    # SDK's method surface, so an unbounded range makes that gate fire on OpenAI's
+    # release schedule rather than on a change here -- `>=1.40` floated to 3.14.1 and
+    # turned every pull request in the repository red over 54 endpoints nobody in this
+    # package had touched. The floor was also already a fiction: the baseline was
+    # captured at 3.0.0, so an install at 1.40 could never have passed the gate.
+    # Raise both together, deliberately, and never just one.
+    "openai>=3.14.1,<4",
     "textual>=1.0",
     "vibey-runners-common",
 ]
