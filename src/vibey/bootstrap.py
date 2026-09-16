@@ -278,7 +278,14 @@ def _independence_policy(
     return VerifyIndependencePolicy(pool=pool, clock=clock)
 
 
-def _qwenloop_enabled(config: Mapping[str, object]) -> bool:
+def qwenloop_enabled(config: Mapping[str, object]) -> bool:
+    """Whether the sovereign standby engine is switched on for this project.
+
+    Public, and a function rather than a method, because it is the one answer the
+    composition root and its only caller outside it -- the `worker` command, which
+    has to preflight exactly the engine pool this module will run -- must agree on.
+    A second copy of the precedence rule is how they drifted apart before.
+    """
     override = os.environ.get("VIBEY_FEATURE_QWENLOOP")
     if override is not None:
         return override.strip().lower() in {"1", "true", "yes", "on"}
@@ -310,8 +317,8 @@ def build_full_worker(
     wiring is an explicit later decision, never an accidental default.
     """
     adapters = dict(engine_adapters if engine_adapters is not None else resources.engine_adapters)
-    qwenloop_enabled = _qwenloop_enabled(project.config)
-    if qwenloop_enabled and EngineId.QWENLOOP not in adapters:
+    standby_enabled = qwenloop_enabled(project.config)
+    if standby_enabled and EngineId.QWENLOOP not in adapters:
         adapters[EngineId.QWENLOOP] = LoopProcessAdapter(descriptor=QWENLOOP)
     azure = azure_client if azure_client is not None else InMemoryAzureClientAdapter()
     clock = resources.clock
@@ -327,7 +334,7 @@ def build_full_worker(
         clock=clock,
         owner=owner,
         allow_list=allow_list,
-        standby_engine=EngineId.QWENLOOP if qwenloop_enabled else None,
+        standby_engine=EngineId.QWENLOOP if standby_enabled else None,
     )
     # The runaway brake: caps come from the project's own config
     # (max_cycle_dollars / max_cycle_turns, set at `vibey new`). Without
