@@ -14,6 +14,18 @@ This file follows Keep a Changelog and semantic versioning conventions.
   manifest's plugins, not between manifests. `MarketplaceRenderer.build` now names the
   offending member and stops.
 
+- Make the package's own 100% branch floor reachable without a network, and gate it in CI.
+  The branch that records a re-locked `uv.lock` after a version bump had exactly one
+  reader: a test that resolves against a real package index. Offline the suite landed at
+  99.97%, so the floor only held where PyPI did. It is now driven by a fake `uv` on PATH —
+  a real subprocess, asserting argv and cwd, not a mocked one — and a plain `pytest` with
+  no network reaches 100.00% with no flag to remember. Tests that leave the machine are
+  marked `network` and skipped unless `VIBEY_GH_NETWORK_TESTS=1`; that replaces the
+  second, incompatible convention this package had grown for the same job, so there is one
+  marker, one environment variable and one skip rule. CI gates on the offline suite; the
+  `network` tests run as a separate, non-blocking report on one matrix row, because a
+  failure there is news about somebody else's service and not something a pull request
+  author can fix.
 - Make the exported book a valid EPUB. Chapters were taken from the built site's HTML
   verbatim, so every mkdocs permalink anchor carried `&para;` into the package -- and
   `&para;` is not one of the five entities XML defines, so an EPUB reader failed to parse
