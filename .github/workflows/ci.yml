@@ -6,6 +6,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  # A merge queue asks these same checks about the MERGED group, not about any one
+  # branch, and it only ever sees checks that a `merge_group` event starts. Without this
+  # line every queued pull request waits for `gates` to report on a run that was never
+  # triggered, times out after `check_response_timeout_minutes`, and is ejected -- a
+  # queue that rejects everything, for a reason nothing in the pull request explains
+  # (ADR-0036).
+  merge_group:
 
 jobs:
   uv-lock:
@@ -121,6 +128,168 @@ jobs:
           - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.12",
              install: 'pip install -e ".[test,all]"',
              test: 'pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term'}
+          #
+          # The five session runners (ADR-0021 absorbed them; ADR-0022 says they keep every
+          # gate they arrived with). Their floors are NOT in their addopts the way vibey-gh's
+          # and vibey-bootstrap's are: each of them deliberately leaves --cov= and
+          # --cov-fail-under out of pytest's addopts, because pytest-cov UNIONS every --cov=
+          # it sees and one baked in there would silently widen the explicitly-scoped
+          # per-layer runs back out to the whole package. Their four 100% floors live in
+          # their own .github/workflows/ci.yml instead -- inert here, like every other nested
+          # workflow -- so for these packages the command below IS the floor, ported from
+          # that workflow rather than re-derived. qwenloop is the exception: its floor is a
+          # single whole-package --cov-fail-under=100 in its addopts, so `pytest -q` carries
+          # it, exactly as its own CI relied on.
+          #
+          # claudeloop and codexloop depend on vibey-runners-common, which is a workspace
+          # member and is published nowhere: `pip install -e ".[dev]"` alone would go looking
+          # for it on PyPI and fail. It is installed from the tree first, which is the same
+          # resolution the workspace gives them -- not a substitution.
+          #
+          # Interpreters are each runner's own matrix. claudeloop publishes a 3.10 floor and
+          # is the only member of this tree that does; per ADR-0022 a floor nothing runs on
+          # is a claim, so all four of its interpreters run.
+          #
+          # Known, deliberately unfixed here: claudeloop's [dev] extra pins
+          # `vibey-gh==1.58.0; python_version >= '3.11'`, so these rows resolve vibey-gh from
+          # PyPI while this tree ships 1.73.0 at src/vibey_tools/gh as a workspace member --
+          # ADR-0017's "use ours" read literally. It is not fixable from this file: an `==`
+          # requirement wins over anything installed first, so `pip install -e
+          # ../../vibey_tools/gh` before or after would simply be undone. The fix is claudeloop's
+          # own pyproject, which changes a runner's declared dependencies and needs that
+          # runner's suite to validate. Nothing in claudeloop's tests imports vibey_gh -- it is
+          # release and provenance tooling -- so these rows' verdicts are unaffected either way.
+          - package: claudeloop
+            dir: src/vibey_runners/claude
+            python: "3.10"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+          - package: claudeloop
+            dir: src/vibey_runners/claude
+            python: "3.11"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+          - package: claudeloop
+            dir: src/vibey_runners/claude
+            python: "3.12"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+          - package: claudeloop
+            dir: src/vibey_runners/claude
+            python: "3.13"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+          # codexloop, cursorloop and agyloop each replaced four instrumented runs with one,
+          # then filtered the single data file per layer -- `coverage report --include` keeps
+          # each floor's verdict independent, so this is their command, not a cheaper one.
+          # codexloop's own matrix also covered macos-latest; this job is ubuntu-only, so
+          # that half is still ungated here (see the follow-up on the commit).
+          - package: codexloop
+            dir: src/vibey_runners/codex
+            python: "3.12"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest -q --cov=codexloop --cov-branch --cov-report= &&
+              coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/application/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/cli/*' --fail-under=100
+          - package: codexloop
+            dir: src/vibey_runners/codex
+            python: "3.13"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest -q --cov=codexloop --cov-branch --cov-report= &&
+              coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/application/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/cli/*' --fail-under=100
+          - package: cursorloop
+            dir: src/vibey_runners/cursor
+            python: "3.12"
+            install: 'pip install -e ".[dev]"'
+            test: >-
+              pytest tests --cov=cursorloop --cov-branch --cov-report= &&
+              coverage report --include='src/cursorloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/application/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/cli/*' --fail-under=100
+          - package: cursorloop
+            dir: src/vibey_runners/cursor
+            python: "3.13"
+            install: 'pip install -e ".[dev]"'
+            test: >-
+              pytest tests --cov=cursorloop --cov-branch --cov-report= &&
+              coverage report --include='src/cursorloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/application/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/cli/*' --fail-under=100
+          # agyloop's suite ends with its deterministic system harness -- scripted agent over
+          # real FS/git/CLI adapters, no account and no network. Its own CI ran it on every
+          # interpreter in the matrix, and `-m system` on the command line overrides the
+          # `not system` in addopts, which is how that deselection is meant to be undone.
+          - package: agyloop
+            dir: src/vibey_runners/agy
+            python: "3.12"
+            install: 'pip install -e ".[dev]"'
+            test: >-
+              pytest tests --cov=agyloop --cov-branch --cov-report= &&
+              coverage report --include='src/agyloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/application/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/cli/*' --fail-under=100 &&
+              pytest -m system
+          - package: agyloop
+            dir: src/vibey_runners/agy
+            python: "3.13"
+            install: 'pip install -e ".[dev]"'
+            test: >-
+              pytest tests --cov=agyloop --cov-branch --cov-report= &&
+              coverage report --include='src/agyloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/application/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/cli/*' --fail-under=100 &&
+              pytest -m system
+          # qwenloop is the standby runner (ADR-0015) and the only one whose floor is already
+          # in its addopts: --cov=qwenloop --cov-branch --cov-fail-under=100, whole package,
+          # so a bare `pytest -q` is the entire gate. Its own CI drove that through `uv run`;
+          # pip and setup-python are what let 3.14 -- which it publishes and the workspace
+          # lock cannot reach -- actually run.
+          # qwenloop's own CI reached 3.14 through astral-sh/setup-uv instead; setup-python@v5
+          # is used here for the same reason every other row uses it, and its manifest has
+          # carried 3.14 on ubuntu since the 3.14.0 release in October 2025. pytest, pytest-cov
+          # and pytest-asyncio all publish py3-none-any wheels, so there is no wheel gap either.
+          - package: qwenloop
+            dir: src/vibey_runners/qwen
+            python: "3.12"
+            install: 'pip install -e ".[dev]"'
+            test: 'python -m pytest -q'
+          - package: qwenloop
+            dir: src/vibey_runners/qwen
+            python: "3.13"
+            install: 'pip install -e ".[dev]"'
+            test: 'python -m pytest -q'
+          - package: qwenloop
+            dir: src/vibey_runners/qwen
+            python: "3.14"
+            install: 'pip install -e ".[dev]"'
+            test: 'python -m pytest -q'
     steps:
       - uses: actions/checkout@v4
         with:
