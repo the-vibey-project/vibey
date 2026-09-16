@@ -5,6 +5,14 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Refuse a workspace member whose marketplace name is the root's. Claude Code registers
+  one marketplace per NAME per user, so `/plugin marketplace add` on a member answering to
+  the root's name is not a second entry — it is the same registration twice, and whichever
+  is added second silently replaces the first. The root manifest is rendered FROM the
+  members, so the collision is between a thing and its own source. The existing
+  duplicate-plugin check could not see it: those names collide one level down, among a
+  manifest's plugins, not between manifests. `MarketplaceRenderer.build` now names the
+  offending member and stops.
 - Let the merge train clear the conflicts it creates itself. Every merge into the
   integration branch leaves the NEXT pull request behind the branch that just moved, and
   the train reported that as `conflicts with develop` and stopped — so it landed one
