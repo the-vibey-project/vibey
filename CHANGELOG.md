@@ -36,6 +36,9 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   in the same transaction as the compare-and-set that moves the phase — so a project's path through
   the six phases is reconstructable from its own history, and no move can commit without its event
 
+### Features
+
+* one correlation id per delivery: every ledger event of a project's DESIGN, BUILD and REVIEW phases now carries the same `correlation_id`, derived from the project alone so a REVIEW loop-back does not mint a second one, instead of a fresh `uuid4()` per write site. Per-run identity moves to the `causation_id` column, which already existed and was always empty, so individual engine runs stay distinguishable. The id is also bindable into the structured log context under a configurable key ([#89](https://github.com/the-vibey-project/vibey/issues/89))
 * **cli:** `vibey recover` reports how many jobs it actually put back — the status-string pattern carried a doubled backslash, so the count was always `0`
 * **cli:** the next-step hints after `EscalationExhausted`, `HandoffRejected` and `BudgetExceeded` name commands that exist — they pointed at a `vibey gates` command that has never existed, and at a `[budget]` table nothing reads
 * **review:** REVIEW no longer runs a hard-coded security scan. `bandit -q -r src` walked the

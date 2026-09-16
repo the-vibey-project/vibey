@@ -41,6 +41,7 @@ from vibey.application.interfaces import (
 from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
+from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.effort import (
     BUILD_LADDER_EXHAUSTED,
     PHASE_BASE_EFFORT,
@@ -49,6 +50,7 @@ from vibey.domain.effort import (
 )
 from vibey.domain.engine import EXIT_CODE_WIND_DOWN, IsolationLevel
 from vibey.domain.errors import EscalationExhausted
+from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
@@ -73,7 +75,9 @@ class BuildImplementHandler:
         wind_down: WindDownOrchestrator | None = None,
         human_gates: HumanGateRepository | None = None,
         skills_context: SkillsContextCompiler | None = None,
+        correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
     ) -> None:
+        self._correlation = correlation
         self._worktrees = worktrees
         self._provisioner = provisioner
         self._engine = engine
@@ -199,7 +203,7 @@ class BuildImplementHandler:
                 cycle=job.cycle,
                 job_id=job.id,
                 engine_id=None,
-                correlation_id=uuid4(),
+                correlation_id=self._correlation.for_project(job.project_id).value,
                 event=EngineEvent(
                     kind=EventKind.ARTIFACT_PRODUCED.value,
                     at=self._clock.now(),
@@ -222,7 +226,9 @@ class BuildImplementHandler:
                 isolation=IsolationLevel.WORKTREE,
             )
         )
-        run_outcome = await run_and_record(self._engine, self._ledger, job=job, handle=handle)
+        run_outcome = await run_and_record(
+            self._engine, self._ledger, job=job, handle=handle, correlation=self._correlation
+        )
 
         if run_outcome.capacity_rejected:
             engine_id = self._engine.descriptor.engine_id.value
@@ -261,7 +267,7 @@ class BuildImplementHandler:
                 cycle=job.cycle,
                 job_id=job.id,
                 engine_id=self._engine.descriptor.engine_id,
-                correlation_id=uuid4(),
+                correlation_id=self._correlation.for_project(job.project_id).value,
                 event=EngineEvent(
                     kind=EventKind.FINDING_RESOLVED.value,
                     at=self._clock.now(),

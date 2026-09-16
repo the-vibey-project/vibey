@@ -1,10 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Adapter between DESIGN application events and the durable event ledger."""
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from vibey.application.design import DesignEvent
+from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.engine import EngineId
+from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.ledger import digest_event
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
@@ -12,8 +14,14 @@ from vibey.infrastructure.engines.tailer import LedgerEventDraft
 
 
 class PostgresDesignLedger:
-    def __init__(self, ledger: PostgresLedgerRepository) -> None:
+    def __init__(
+        self,
+        ledger: PostgresLedgerRepository,
+        *,
+        correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
+    ) -> None:
         self._ledger = ledger
+        self._correlation = correlation
 
     async def append(
         self,
@@ -33,7 +41,7 @@ class PostgresDesignLedger:
                 engine_id=engine_id,
                 job_id=job_id,
                 causation_id=None,
-                correlation_id=uuid4(),
+                correlation_id=self._correlation.for_project(project_id).value,
                 provenance=event.provenance,
                 produced_at=event.produced_at,
                 payload=payload,
