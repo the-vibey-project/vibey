@@ -6,6 +6,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  # A merge queue asks these same checks about the MERGED group, not about any one
+  # branch, and it only ever sees checks that a `merge_group` event starts. Without this
+  # line every queued pull request waits for `gates` to report on a run that was never
+  # triggered, times out after `check_response_timeout_minutes`, and is ejected -- a
+  # queue that rejects everything, for a reason nothing in the pull request explains
+  # (ADR-0036).
+  merge_group:
 
 jobs:
   uv-lock:
