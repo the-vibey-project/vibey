@@ -32,6 +32,7 @@ LINEAR_HISTORY = "required_linear_history"
 SIGNATURES = "required_signatures"
 PULL_REQUEST = "pull_request"
 STATUS_CHECKS = "required_status_checks"
+MERGE_QUEUE = "merge_queue"
 
 
 def ruleset_name(branch: str) -> str:
@@ -73,6 +74,24 @@ def desired_rules(policy: RulesetConfig) -> list[dict[str, Any]]:
                         {"context": check} for check in policy.required_checks
                     ],
                     "strict_required_status_checks_policy": policy.strict_required_checks,
+                },
+            }
+        )
+    if policy.merge_queue.enabled:
+        # Emitted only when declared. A queue is the one rule here that changes when a
+        # merge happens rather than whether it may, so an adopter opts in (ADR-0036).
+        queue = policy.merge_queue
+        rules.append(
+            {
+                "type": MERGE_QUEUE,
+                "parameters": {
+                    "check_response_timeout_minutes": queue.check_response_timeout_minutes,
+                    "grouping_strategy": queue.grouping_strategy,
+                    "max_entries_to_build": queue.max_entries_to_build,
+                    "max_entries_to_merge": queue.max_entries_to_merge,
+                    "merge_method": queue.merge_method,
+                    "min_entries_to_merge": queue.min_entries_to_merge,
+                    "min_entries_to_merge_wait_minutes": queue.min_entries_to_merge_wait_minutes,
                 },
             }
         )
