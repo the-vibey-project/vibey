@@ -491,10 +491,38 @@ def _unique_nonempty(name: str, values: tuple[str, ...]) -> None:
         raise ValueError(f"{name} entries must be unique")
 
 
+def _merge_queue(section: dict, default_merge_method: str) -> MergeQueueConfig:
+    """The declared queue for one branch, defaulting to that branch's own merge style.
+
+    The default is passed in rather than fixed here because the two permanent branches do
+    not merge the same way: feature pull requests squash into the integration branch and
+    the release branch takes a rebase, so one constant would be wrong for one of them.
+    """
+    defaults = MergeQueueConfig(merge_method=default_merge_method)
+    return MergeQueueConfig(
+        enabled=section.get("enabled", defaults.enabled),
+        merge_method=section.get("merge_method", defaults.merge_method),
+        grouping_strategy=section.get("grouping_strategy", defaults.grouping_strategy),
+        check_response_timeout_minutes=section.get(
+            "check_response_timeout_minutes", defaults.check_response_timeout_minutes
+        ),
+        max_entries_to_build=section.get("max_entries_to_build", defaults.max_entries_to_build),
+        max_entries_to_merge=section.get("max_entries_to_merge", defaults.max_entries_to_merge),
+        min_entries_to_merge=section.get("min_entries_to_merge", defaults.min_entries_to_merge),
+        min_entries_to_merge_wait_minutes=section.get(
+            "min_entries_to_merge_wait_minutes", defaults.min_entries_to_merge_wait_minutes
+        ),
+    )
+
+
 def _ruleset(
-    section: dict, default_checks: tuple[str, ...], default_approvals: int
+    section: dict,
+    default_checks: tuple[str, ...],
+    default_approvals: int,
+    default_merge_method: str = "SQUASH",
 ) -> RulesetConfig:
     return RulesetConfig(
+        merge_queue=_merge_queue(section.get("merge_queue", {}), default_merge_method),
         required_checks=tuple(section.get("required_checks", default_checks)),
         strict_required_checks=section.get("strict_required_checks", True),
         required_approvals=section.get("required_approvals", default_approvals),
@@ -736,6 +764,66 @@ class YankConfig:
             raise ValueError("yank.keep must not be negative")
 
 
+# The two enumerated `merge_queue` parameters, as GitHub defines them. Named here rather
+# than inlined in a check so an error can print the whole set and a reader can see the
+# choices without opening the API reference.
+MERGE_QUEUE_MERGE_METHODS = ("MERGE", "SQUASH", "REBASE")
+MERGE_QUEUE_GROUPING_STRATEGIES = ("ALLGREEN", "HEADGREEN")
+
+
+@dataclass(frozen=True)
+class MergeQueueConfig:
+    """The merge queue declared for one permanent branch (ADR-0036).
+
+    All seven of GitHub's `merge_queue` parameters are fields, because the API requires
+    all seven and a value hard-coded here would be a decision taken away from the next
+    adopter, silently (ADR-0018). The defaults are the shape this repository runs, not a
+    claim about anyone else's branch flow.
+
+    `enabled` defaults to false. A merge queue changes when and how every merge happens
+    for everyone who uses the repository, and switching that on by upgrading a tool would
+    be a behaviour change nobody asked for.
+    """
+
+    enabled: bool = False
+    merge_method: str = "SQUASH"
+    grouping_strategy: str = "ALLGREEN"
+    check_response_timeout_minutes: int = 60
+    max_entries_to_build: int = 5
+    max_entries_to_merge: int = 5
+    min_entries_to_merge: int = 1
+    min_entries_to_merge_wait_minutes: int = 5
+
+    def __post_init__(self) -> None:
+        if self.merge_method not in MERGE_QUEUE_MERGE_METHODS:
+            raise ValueError(
+                "rulesets.merge_queue.merge_method must be one of "
+                f"{', '.join(MERGE_QUEUE_MERGE_METHODS)}, got {self.merge_method!r}"
+            )
+        if self.grouping_strategy not in MERGE_QUEUE_GROUPING_STRATEGIES:
+            raise ValueError(
+                "rulesets.merge_queue.grouping_strategy must be one of "
+                f"{', '.join(MERGE_QUEUE_GROUPING_STRATEGIES)}, got {self.grouping_strategy!r}"
+            )
+        for name, value, low, high in (
+            ("check_response_timeout_minutes", self.check_response_timeout_minutes, 1, 360),
+            ("max_entries_to_build", self.max_entries_to_build, 1, 100),
+            ("max_entries_to_merge", self.max_entries_to_merge, 1, 100),
+            ("min_entries_to_merge", self.min_entries_to_merge, 1, 100),
+            ("min_entries_to_merge_wait_minutes", self.min_entries_to_merge_wait_minutes, 0, 360),
+        ):
+            if not low <= value <= high:
+                raise ValueError(
+                    f"rulesets.merge_queue.{name} must be between {low} and {high}, got {value}"
+                )
+        if self.min_entries_to_merge > self.max_entries_to_merge:
+            # A floor above the ceiling is a queue that can never merge a group: it would
+            # wait for more entries than it is ever allowed to take.
+            raise ValueError(
+                "rulesets.merge_queue.min_entries_to_merge must not exceed max_entries_to_merge"
+            )
+
+
 @dataclass(frozen=True)
 class RulesetConfig:
     """Declared branch-protection policy for one permanent branch.
@@ -756,8 +844,21 @@ class RulesetConfig:
     allow_force_pushes: bool = False
     allow_deletions: bool = False
     bypass_actors: tuple[str, ...] = DEFAULT_RULESET_BYPASS_ACTORS
+    merge_queue: MergeQueueConfig = MergeQueueConfig()
 
     def __post_init__(self) -> None:
+        if (
+            self.merge_queue.enabled
+            and self.require_linear_history
+            and self.merge_queue.merge_method == "MERGE"
+        ):
+            # A ruleset that demands linear history and a queue that creates merge commits
+            # is a configuration that cannot succeed. Refusing at load costs one error
+            # once; allowing it costs a failed merge for every pull request queued.
+            raise ValueError(
+                "rulesets.merge_queue.merge_method MERGE conflicts with "
+                "require_linear_history; use SQUASH or REBASE"
+            )
         if self.allow_force_pushes:
             raise ValueError("rulesets: allow_force_pushes must not be true for a permanent branch")
         if self.allow_deletions:
@@ -793,7 +894,11 @@ class RulesetsConfig:
         required_checks=DEFAULT_INTEGRATION_RULESET_CHECKS, required_approvals=0
     )
     release: RulesetConfig = RulesetConfig(
-        required_checks=DEFAULT_RELEASE_RULESET_CHECKS, required_approvals=1
+        required_checks=DEFAULT_RELEASE_RULESET_CHECKS,
+        required_approvals=1,
+        # The release branch is promoted by a rebase, not a squash, so its queue must be
+        # told so here too -- inert while the queue is off, wrong the moment it is on.
+        merge_queue=MergeQueueConfig(merge_method="REBASE"),
     )
 
 
@@ -1403,7 +1508,9 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             integration=_ruleset(
                 rulesets_data.get("integration", {}), DEFAULT_INTEGRATION_RULESET_CHECKS, 0
             ),
-            release=_ruleset(rulesets_data.get("release", {}), DEFAULT_RELEASE_RULESET_CHECKS, 1),
+            release=_ruleset(
+                rulesets_data.get("release", {}), DEFAULT_RELEASE_RULESET_CHECKS, 1, "REBASE"
+            ),
         ),
         repository_profile=RepositoryProfileConfig(
             enabled=profile.get("enabled", True),
