@@ -75,9 +75,27 @@ def test_the_documentation_contract_is_the_half_a_diff_cannot_carry():
         "release_process_sufficient",
         "links_valid",
     )
+
+
+def test_fields_is_the_two_halves_in_order_and_not_the_yaml_key_order():
+    """`fields` orders the diff-groundable half first, then the documentation contract.
+
+    That is deliberately NOT the primary schema's own key order -- `pr-automation.yml`
+    puts `summary` and `findings` LAST -- so a caller who zips `fields` against a schema's
+    values positionally binds them to the wrong names. The docstring says so; this checks
+    it, and checks it against the local fallback's own ordering rather than against
+    `fields` itself, which would only restate the claim.
+    """
+    schema = _primary_review_schema()
+
     assert REVIEW_CONTRACT.fields == (
-        REVIEW_CONTRACT.diff_groundable + REVIEW_CONTRACT.requires_wider_context
+        tuple(local_review.REVIEW_SCHEMA["required"]) + local_review.UNEVALUATED_FIELDS
     )
+    assert REVIEW_CONTRACT.fields[:3] == ("pass", "summary", "findings")
+    # The concrete fact the "not schema order" claim rests on. Reorder the YAML to match
+    # and this fails, which is the moment to change the docstring rather than ignore it.
+    assert list(schema["properties"])[1] == "complete"
+    assert list(schema["properties"])[-2:] == ["summary", "findings"]
 
 
 @pytest.mark.parametrize(
@@ -145,3 +163,10 @@ def test_a_repository_can_declare_its_own_split():
 def test_the_contract_satisfies_the_declared_seam():
     assert isinstance(REVIEW_CONTRACT, ReviewContractPort)
     assert REVIEW_CONTRACT == ReviewContract.default()
+
+    # Including the placeholder value itself: it decides what `placeholders()` writes into
+    # every verdict, so a caller holding only the seam has to be able to read it, and a
+    # substitute implementation must not be able to satisfy the Protocol without it.
+    port: ReviewContractPort = REVIEW_CONTRACT
+    assert port.unevaluated_placeholder is True
+    assert set(port.placeholders().values()) == {port.unevaluated_placeholder}

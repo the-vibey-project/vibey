@@ -77,9 +77,13 @@ DEFAULT_UNEVALUATED_NOTICE = (
 class ReviewContract:
     """One source of truth for what a diff-only reviewer may and may not certify.
 
-    Every part is a constructor argument rather than a literal in a method, because a
-    repository that shapes its review schema differently — more documentation judgments,
-    fewer, a different placeholder — should configure this rather than fork it.
+    Every part is a constructor argument rather than a literal in a method, so a repository
+    that shapes its review schema differently — more documentation judgments, fewer, a
+    different placeholder — constructs its own instance instead of editing the tuples in
+    this module. That is as far as it goes today: the reviewers import the module-level
+    `REVIEW_CONTRACT` below directly, so nothing yet reads a contract out of `vibey.toml` or
+    takes one as an argument. Carrying a configured instance to the reviewers is a
+    follow-up; until it lands, "configurable" means constructible, not wired.
     """
 
     diff_groundable: tuple[str, ...]
@@ -109,7 +113,14 @@ class ReviewContract:
 
     @property
     def fields(self) -> tuple[str, ...]:
-        """Every field the review schema carries, in schema order."""
+        """Every field the review schema carries: the diff-groundable half, then the other.
+
+        This is the contract's own order, NOT the key order of any schema document. The
+        primary schema in `templates/workflows/pr-automation.yml` puts `summary` and
+        `findings` last; here they sit second and third, beside `pass`, because the halves
+        are what this module is about. So zip this against a schema's values positionally
+        and the values land on the wrong names — look fields up by name.
+        """
         return self.diff_groundable + self.requires_wider_context
 
     def classify(self, field: str) -> str:

@@ -27,7 +27,15 @@ class ReviewContractPort(Protocol):
 
     @property
     def fields(self) -> tuple[str, ...]:
-        """Every field the review schema carries, in schema order."""
+        """Every field the schema carries: the diff-groundable half, then the other half.
+
+        The contract's own order, not a schema document's key order — never zipped
+        positionally against one.
+        """
+
+    @property
+    def unevaluated_placeholder(self) -> bool:
+        """The value written for a field this reviewer did not evaluate. Not an answer."""
 
     @property
     def unevaluated_notice(self) -> str:
