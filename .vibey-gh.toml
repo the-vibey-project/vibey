@@ -65,12 +65,31 @@ required_checks  = ["gates"]
 required_approvals = 1
 bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
 
+# The queue exists because a green pull request is not a green merge: its checks ran
+# against the base as it stood then, and nothing between that base and develop's tip was
+# ever built with it. `strict_required_status_checks_policy` already refuses to merge a
+# stale branch, so without a queue that proof is bought by hand, one rebase at a time,
+# with the base moving underneath -- which is how twelve open pull requests came to have
+# ten unmergeable. SQUASH because feature pull requests squash into develop (ADR-0028);
+# ALLGREEN because a group that merges on its head alone can land a member that was never
+# green. Takes effect when the operator runs `vibey-gh reconcile` (ADR-0036).
+[rulesets.integration.merge_queue]
+enabled = true
+
 # main additionally pins the lock: every other CI job `needs` the uv-lock job, so a release
 # branch that drifts there is a release branch whose gates never ran.
 [rulesets.release]
 required_checks  = ["gates", "uv.lock is in sync with pyproject.toml"]
 required_approvals = 1
 bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
+
+# Declared and off, rather than absent. Promotion is one controlled rebase of develop into
+# main, so a queue here would batch a group of one and add its wait to every release for
+# no proof it does not already have. Written down so the next person sees a decision
+# rather than an oversight, and so turning it on is one word. REBASE is the default here
+# because that is how promotion merges -- wrong the moment `enabled` flips, if left unsaid.
+[rulesets.release.merge_queue]
+enabled = false
 
 [pr_automation]
 # The review, repair and conflict jobs load this tree's own vibey-skills marketplace, read
