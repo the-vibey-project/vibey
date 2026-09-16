@@ -365,8 +365,10 @@ def test_the_scratch_worktree_is_removed_even_when_the_merge_never_runs(tmp_path
     for failing in ("merge", "push"):
         calls: list = []
 
-        def run(args, _failing=failing, **kwargs):
-            calls.append(args)
+        # Both loop variables are bound as defaults, not closed over: `calls` is rebound
+        # each iteration too, and a closure captures the NAME (ruff B023).
+        def run(args, _failing=failing, _calls=calls, **kwargs):
+            _calls.append(args)
             if args[:2] == ["git", "rev-parse"]:
                 return completed(out=("old\n" if "origin/" in " ".join(args) else "new\n"))
             if args[1] == _failing:
