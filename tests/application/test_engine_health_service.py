@@ -9,6 +9,7 @@ import pytest
 
 from vibey.application.dto import EngineHealthRecord, PreflightResult
 from vibey.application.engine_health_service import EngineHealthService
+from vibey.application.interfaces.engines import EngineHealthServiceInterface
 from vibey.domain.capacity import (
     AuthenticationFailed,
     CreditsExhausted,
@@ -343,3 +344,158 @@ async def test_record_preflight_keeps_prior_auth_timestamp_on_auth_failure() -> 
 
     assert second.auth_ok_at == first.auth_ok_at
     assert second.conformance_ok is False
+
+
+# --- authentication recovery: the preflight is the probe ---
+
+
+async def test_a_passing_preflight_half_opens_an_authentication_opened_circuit() -> None:
+    """AuthenticationFailed schedules no probe on purpose -- waiting cannot
+    fix a credential. The human's re-authentication is the trigger instead,
+    and a preflight that sees it puts the engine back in rotation without
+    anyone editing engine_health by hand."""
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="open",
+            capacity_state="AuthenticationFailed",
+        )
+    )
+
+    svc = EngineHealthService(repo)
+    result = await svc.record_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=True),
+    )
+
+    assert result.circuit == "half_open"
+
+
+async def test_a_failing_preflight_reopens_a_half_opened_circuit() -> None:
+    """Half-open is a probation, not a pardon, and the probe reads both ways.
+
+    The re-open condition fires on `half_open` for the same reason the
+    half-open one fires on `open`: a credential that stops working again has
+    to put the engine back out of rotation. Matching only `circuit == "open"`
+    would leave a second failed preflight matching nothing, so
+    `record_preflight` would preserve `half_open` -- and the old `auth_ok_at`
+    with it -- and the selector would keep choosing a credential-invalid
+    engine for the rest of the auth TTL. That is the window this circuit
+    exists to close.
+    """
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="half_open",
+            capacity_state="AuthenticationFailed",
+        )
+    )
+
+    svc = EngineHealthService(repo)
+    result = await svc.record_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=False),
+    )
+
+    assert result.circuit == "open"
+
+
+async def test_doctor_also_half_opens_an_authentication_opened_circuit() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="open",
+            capacity_state="AuthenticationFailed",
+        )
+    )
+
+    svc = EngineHealthService(repo)
+    result = await svc.update_from_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=True),
+        conformance_ok=True,
+    )
+
+    assert result.circuit == "half_open"
+
+
+async def test_a_failing_preflight_leaves_an_authentication_opened_circuit_open() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="open",
+            capacity_state="AuthenticationFailed",
+        )
+    )
+
+    svc = EngineHealthService(repo)
+    result = await svc.record_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=False),
+    )
+
+    assert result.circuit == "open"
+
+
+async def test_a_credits_opened_circuit_is_not_reopened_by_working_credentials() -> None:
+    """Working credentials say nothing about a credits balance or a rate
+    limit window; only those states' own probe times may half-open them."""
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="open",
+            capacity_state="CreditsExhausted",
+            probe_next_at=datetime.now(UTC) + timedelta(minutes=10),
+        )
+    )
+
+    svc = EngineHealthService(repo)
+    result = await svc.record_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=True),
+    )
+
+    assert result.circuit == "open"
+
+
+async def test_a_closed_circuit_is_untouched_by_a_passing_preflight() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_make_record(project_id=project_id, circuit="closed"))
+
+    svc = EngineHealthService(repo)
+    result = await svc.record_preflight(
+        project_id,
+        EngineId.CLAUDELOOP,
+        PreflightResult(installed=True, version="1.0.0", auth_ok=True),
+    )
+
+    assert result.circuit == "closed"
+
+
+def test_the_service_satisfies_the_seam_the_selector_takes() -> None:
+    """ADR-0016: the class has a declared interface, and it is the real one.
+
+    `EngineSelector.__init__` is typed against `EngineHealthServiceInterface`,
+    so if the service ever drops a method off that contract the selector's
+    dependency stops being substitutable. mypy --strict catches the signature
+    drift; this catches the shape at runtime, which is what a test double has
+    to satisfy.
+    """
+    service = EngineHealthService(FakeEngineHealthRepository())
+    assert isinstance(service, EngineHealthServiceInterface)

@@ -43,6 +43,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 ### Documentation
 * stop tracking the two built documentation sites (`site/` and `src/vibey_tools/gh/site/`): 5.8 MB of stale rendered HTML — a second, drifting copy of the docs, the ADRs and the runbooks — that `properdocs build` regenerates and that CI never reads ([#155](https://github.com/the-vibey-project/vibey/issues/155))
 
+* **rotation:** an engine that ran out of credits is probed again once its backoff elapses, instead of being excluded for the rest of the project until someone edited `engine_health` by hand; the selector now half-opens on `probe_next_at` as well as `resets_at`. An engine opened by `AuthenticationFailed` still gets no clock-based probe -- waiting cannot fix a credential -- but a preflight whose auth succeeds half-opens it, so re-authenticating is enough to bring it back.
+
 ## [0.7.0] (2026-09-15)
 
 ### Features
