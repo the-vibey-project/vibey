@@ -1011,6 +1011,17 @@
       }
     },
     {
+      "name": "private-chat-engines",
+      "source": "./plugins/private-chat-engines",
+      "description": "Private Chat Engines: the three architectural families that every messenger falls into \u2014 centralised end-to-end-encrypted, centralised server-encrypted cloud, and federated or decentralised \u2014 the threat-model taxonomy that decides every other choice, a comparison matrix, how the field reached its 2026 state, and the forces reshaping it. Signal's protocol stack from X3DH and the double ratchet through sealed sender, private contact discovery, key transparency and post-quantum ratcheting, plus the Foundation's cost structure, its legal fights, and why there is no Signal server to operate. Telegram's MTProto and cloud-chat compromise, why Secret Chats are one-to-one mobile-only and off by default, the Durov prosecution and the compliance turn, scale and economics, and the bot and Mini-App developer ecosystem. Matrix and Element's federation and room model, Olm and Megolm, Matrix 2.0, the ecosystem's organisations and funding, and a homeserver operator handbook including the European sovereignty deployments. The wider field assessed honestly \u2014 MLS and RFC 9420 with Wire, WhatsApp's interoperability opening, iMessage PQ3, Threema, Olvid, SimpleX, Session, Nostr, XMPP with OMEMO, Briar, Delta Chat, the dormant and the niche \u2014 with a policy annex. And builder and operator playbooks: choosing the protocol shape before touching cryptography, the crypto stack as checklists, the metadata budget every service must fill in, abuse and trust-and-safety under end-to-end encryption, maintained libraries, operations and incident checklists, and budget intuition from public numbers.",
+      "version": "0.1.0",
+      "category": "security",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
       "name": "programming-language-development",
       "source": "./plugins/programming-language-development",
       "description": "Programming Language Development: language design decisions and their consequences, lexing and parsing, names/scopes/modules, type systems (inference, HM, bidirectional, subtyping, generics, traits, effects, ownership, dependent types), intermediate representations (SSA, CPS, ANF, MLIR-style), optimization, code generation and backends (LLVM, Cranelift, custom, WebAssembly), runtime systems and GC, interpreters and JITs, diagnostics, incremental compilation and IDE support, testing and verification, standard library and ecosystem design, and language evolution and governance.",
