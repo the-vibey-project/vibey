@@ -672,27 +672,38 @@ jobs:
           mkdir -p "pages/${CHANNEL}" "pages/${OTHER_CHANNEL}"
           cp -R channel-site/. "pages/${CHANNEL}/"
           restored=false
-          # FILTERED TO THE OTHER BRANCH. Without `--branch` this walked the 20 most
-          # recent successful runs of this workflow on ANY branch, looking for an
-          # artifact only the other branch ever produces. Every integration-branch
-          # publish takes one of those 20 slots, so after twenty merges the last release
-          # run falls out of the window, `docs-main` is nowhere in it, and the restore
-          # silently fails. Twenty runs OF THE OTHER BRANCH spans months instead.
+          # ASK FOR THE ARTIFACT BY NAME, never for runs that might be carrying it.
+          # Two earlier lookups both searched RUNS and both failed, differently:
+          #
+          #   1. `gh run list --limit 20` with no branch filter walked the twenty most
+          #      recent runs on ANY branch. Every integration publish takes one of those
+          #      slots, so after twenty merges in an afternoon the last release run fell
+          #      out of the window and the artifact was simply not among them.
+          #   2. Adding `--branch "$OTHER_BRANCH"` looked like the fix and is strictly
+          #      worse: it never matches. A `workflow_run` run is attributed to the
+          #      DEFAULT branch and a `workflow_dispatch` run to the ref it was dispatched
+          #      on -- neither is ever the release branch -- so the filter found nothing
+          #      every single time and published the other channel EMPTY on every publish.
+          #
+          # The artifacts endpoint takes the name directly, returns newest first, and says
+          # which entries have expired. Branch attribution stops mattering entirely.
           while read -r other_run; do
+            [ -n "$other_run" ] || continue
             if gh run download "$other_run" --name "docs-${OTHER_CHANNEL}" \
               --dir "pages/${OTHER_CHANNEL}" 2>/dev/null; then
               restored=true
               break
             fi
-          done < <(gh run list --workflow release-surfaces.yml --branch "$OTHER_BRANCH" \
-            --status success --limit 20 --json databaseId --jq '.[].databaseId')
+          done < <(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=docs-${OTHER_CHANNEL}&per_page=30" \
+            --jq '.artifacts[] | select(.expired == false) | .workflow_run.id')
           if [ "$restored" != true ]; then
             # Loud, because the deploy below replaces the WHOLE site: an unrestored
             # channel is not left alone, it is published as an empty directory that the
             # chooser still links to. Observed as a 404 on every documented `main/` URL --
             # the book, the paper, the governance corpus -- after a day of merges into the
             # integration branch, with nothing red anywhere to say so.
-            echo "::warning::No ${OTHER_CHANNEL} docs artifact on ${OTHER_BRANCH}; publishing ${OTHER_CHANNEL}/ empty"
+            echo "::warning::No unexpired docs-${OTHER_CHANNEL} artifact exists; publishing ${OTHER_CHANNEL}/ empty"
           fi
           cat > pages/index.html <<'HTML'
           <!doctype html>
