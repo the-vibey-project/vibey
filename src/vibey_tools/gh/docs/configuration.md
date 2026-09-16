@@ -84,6 +84,7 @@ expression is refused at load time.
 | `repair_untrusted_authors` | boolean / `true` | Permit constrained outside-author repairs. |
 | `replace_fork_prs` | boolean / `true` | Repair forks through linked repository-owned PRs. |
 | `retain_schedule_backstop` | boolean / `true` | Retain scheduled recovery beside event triggers. |
+| `normalise_commit_subjects` | boolean / `true` | Whether `Conventional Commits` REWRITES a nonconforming subject or only reports it. The automatic form is `chore: <the original subject>`, which conforms without choosing a type — so a fix normalised this way is filed as a chore. Set it `false` where the author should pick the type; the check still runs and still fails the pull request. |
 | `plugin_marketplaces` | string list / empty | Claude Code plugin marketplaces loaded by the review, repair, and conflict-resolution jobs. Each entry is an `https://` Git URL, or a repository-relative path resolved inside the trusted checkout of the default branch (never the pull request's own tree). Empty by default: a marketplace that cannot be cloned fails the review outright. |
 | `plugins` | string list / empty | Plugins those jobs install, each `<plugin>@<marketplace>`. Requires at least one `plugin_marketplaces` entry. |
 
