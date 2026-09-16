@@ -392,6 +392,37 @@ def test_readiness_gate(tmp_path, pr, ready, fragment):
         assert fragment in verdict.reason
 
 
+@pytest.mark.parametrize(
+    "pr,restackable",
+    [
+        # The two states a local merge forward can clear, and nothing else.
+        (_pr(mergeable="CONFLICTING"), True),
+        (_pr(mergeStateStatus="BEHIND"), True),
+        (_pr(isDraft=True), False),
+        (_pr(reviewDecision="CHANGES_REQUESTED"), False),
+        (_pr(statusCheckRollup=[{"status": "COMPLETED", "conclusion": "FAILURE"}]), False),
+        (_pr(), False),
+        # A fork's head belongs to somebody else's repository. GitHub's own update-branch
+        # may move it forward; this automation may not push to it, and saying so here
+        # keeps the refusal out of the code that acts on the flag.
+        (_pr(mergeable="CONFLICTING", isCrossRepository=True), False),
+        (_pr(mergeStateStatus="BEHIND", isCrossRepository=True), False),
+    ],
+)
+def test_only_a_conflicting_or_behind_head_is_the_trains_to_clear(tmp_path, pr, restackable):
+    """`restackable` is what lets the train fix the obstacle it manufactured itself: each
+    merge leaves the next pull request behind the branch that just moved. A draft or a red
+    build is not in that class -- merging the base forward would not make it mergeable,
+    and pushing a commit to say so is noise on somebody's branch."""
+    cfg = cfg_for(
+        tmp_path,
+        owner="owner",
+        trusted_authors=("owner",),
+        pr_automation=PrAutomationConfig(enabled=False),
+    )
+    assert merge_train.judge(pr, cfg).restackable is restackable
+
+
 def test_merge_train_ignores_internal_draft_gate_after_public_gate_passes(tmp_path):
     cfg = cfg_for(
         tmp_path,
