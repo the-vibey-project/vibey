@@ -54,8 +54,8 @@ worn:
 
 | Symptom set | What is worn |
 |---|---|
-| Oil consumption **without** compression loss (blue smoke) | Worn **oil control** rings |
-| Oil consumption **and** loss of compression (poor starting, blow-by, reduced power) | Worn **compression** rings |
+| Oil consumption **without** compression loss (blue smoke) | Possible oil-control rings, valve-stem seals, PCV faults or turbo seals; test before disassembly |
+| Oil consumption **and** loss of compression (poor starting, blow-by, reduced power) | Possible compression-ring, valve, head-gasket or cylinder wear; confirm with compression/leak-down tests |
 
 Pistons are aluminium and expand with heat, which is why piston-to-cylinder clearance is critical and
 why cold engines are noisy until warm.
