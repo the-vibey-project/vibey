@@ -18,3 +18,12 @@ htmlcov/
 .qwenloop/
 .vibey-tmp/site/
 /site/
+
+# Workspace members do not carry their own lockfiles. uv resolves the whole workspace
+# (`[tool.uv.workspace] members`, ADR-0021) into the single root uv.lock, and that is the
+# only one `uv lock --check` validates. The per-runner locks that survived the sibling-repo
+# absorption were installed from by nothing -- CI installs the runners with plain
+# `pip install -e ".[dev]"` -- and served only to raise Dependabot advisories against
+# versions no environment ever resolved. Keep them out.
+src/vibey_runners/*/uv.lock
+src/vibey_tools/*/uv.lock
