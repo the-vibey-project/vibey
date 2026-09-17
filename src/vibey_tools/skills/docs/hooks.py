@@ -4,7 +4,7 @@
 Removes the literate-nav nav file from the built site.
 
 `docs/gen_reference.py` writes `reference/.nav.md` through mkdocs-gen-files so the nav for
-644 generated skill pages needs no mkdocs.yml edit. mkdocs-literate-nav consumes that file to
+698 generated skill pages needs no mkdocs.yml edit. mkdocs-literate-nav consumes that file to
 build the nav, but because gen-files adds it as a *virtual* page, mkdocs also renders it,
 leaving an orphan page nothing links to.
 

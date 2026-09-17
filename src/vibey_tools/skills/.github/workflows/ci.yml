@@ -95,7 +95,7 @@ jobs:
         run: pip install -e ".[docs]"
 
       # --strict turns warnings into errors. That is what makes the 644 generated skill
-      # pages trustworthy: nobody is going to eyeball 688 pages for a dead link.
+      # pages trustworthy: nobody is going to eyeball 698 pages for a dead link.
       - name: Build the documentation site
         run: mkdocs build --strict
 

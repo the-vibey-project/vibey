@@ -23,7 +23,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-__version__ = "2.19.10"
+__version__ = "2.20.0"
 
 __all__ = [
     "__version__",
