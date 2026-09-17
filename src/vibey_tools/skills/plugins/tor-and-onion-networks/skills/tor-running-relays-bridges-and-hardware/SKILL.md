@@ -1,6 +1,6 @@
 ---
 name: tor-running-relays-bridges-and-hardware
-description: "Use when running Tor infrastructure — middle and guard relays, obfs4 and WebTunnel bridges, Snowflake proxies, exit relays and their prerequisites, transparent-proxy gateways, DNS-leak prevention, Raspberry Pi and travel-router builds, two-box isolation, the SecureDrop architecture, verification checklists, and legal and abuse handling. Covers §13.5 and handbook §2–§6. Companion to the other Tor and onion-network skills."
+description: "Use when running Tor infrastructure — middle and guard relays, obfs4 and WebTunnel bridges, Snowflake proxies, exit relays and their prerequisites, transparent-proxy gateways, DNS-leak prevention, Raspberry Pi and travel-router builds, two-box isolation, the SecureDrop architecture, the operator checklist for running a private Tor network, verification checklists, and legal and abuse handling. Covers §13.5 and handbook §2–§6. Companion to the other Tor and onion-network skills."
 ---
 
 # Running Tor Infrastructure: Relays, Bridges, Gateways, Hardware
@@ -143,6 +143,31 @@ Mandatory homework first:
 4. **Never run an exit on a residential line; never run one at work.**
 5. Consider 0.4.9 features: `ReevaluateExitPolicy` and the new `DoSStream*` token-bucket
    limiters for stream/resolve floods.
+
+### §2.6 Running a private Tor network
+
+If you have decided you need your own network rather than onion services on the public one
+(§13.6 → `tor-building-on-tor-software-patterns`), this is the operator checklist:
+
+2. **Size the relay set for bandwidth, failure tolerance, and the intended anonymity set** — there is no protocol-level relay-count minimum; production targets should be justified for the specific deployment.
+3. **Custom consensus parameters** configured, and **client software pointing at your
+   authorities**, not the public ones.
+4. **Chutney for testing before deployment** (§13.4c →
+   `tor-building-on-tor-software-patterns`).
+5. **Network monitoring and relay health checks** — nyx locally, MetricsPort/Prometheus
+   externally (handbook §5, check 3).
+6. **A plan for Sybil resistance.** Your network is smaller than public Tor and therefore
+   cheaper to attack: consider requiring relay operators to be known, or running a
+   **permissioned** model outright.
+7. **Physical diversity of infrastructure**, and **NTP-disciplined clocks on every node** —
+   anonymity systems are clock-sensitive (handbook §5, check 5).
+
+> **⚠️ GOTCHA:** the authorities *are* the trust root (§6.2 →
+> `tor-network-consensus-guards-and-paths`). Three of them on one provider, in one rack, under
+> one administrator is not a trust root — it is a single point of compromise wearing a
+> consensus protocol. Public Tor's nine are run by nine named people in different
+> organizations and jurisdictions for exactly this reason, and a private network that skips
+> that property has skipped the point.
 
 ---
 

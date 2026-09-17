@@ -1,12 +1,13 @@
 ---
 name: chat-builder-and-operator-playbooks
-description: "Use when designing or running a private-chat product — choosing the protocol shape before touching cryptography, the crypto stack as checklists, the metadata budget table every service should fill in, abuse and trust-and-safety under E2EE, the unglamorous 80%, maintained libraries to start from, ops and incident checklists, and budget intuition from public numbers. Companion to the other private-chat-engine skills."
+description: "Use when designing or running a private-chat product — choosing the protocol shape before touching cryptography, the crypto stack as checklists, the server components and key custody you have to get right, the pre-launch audit checklist, the metadata budget table every service should fill in, abuse and trust-and-safety under E2EE, the unglamorous 80%, the WebRTC layer behind voice and video, maintained libraries to start from, ops and incident checklists, and budget intuition from public numbers. Companion to the other private-chat-engine skills."
 ---
 
 # Builder and Operator Playbooks
 
 > **Part 6 of 6** of the *Private Chat Engines* dossier (plugin
-> `private-chat-engines`), covering §1–§12. Sibling skills:
+> `private-chat-engines`), covering §1–§12 — plus §2.5 (the server you have to write anyway)
+> and §5.5 (the WebRTC layer behind voice and video). Sibling skills:
 > `chat-orientation-threat-models-and-landscape` (§0–§5 — the three architectural families, threat-model taxonomy, the comparison matrix, the timeline, the five forces),
 > `chat-signal` (§1–§6 — the protocol stack, the organisation and its costs, legal posture, operator and developer perspectives, honest weaknesses),
 > `chat-telegram` (§1–§7 — MTProto and the cloud-chat compromise, the Durov prosecution, scale and economics, the bot and Mini-App economy),
@@ -54,6 +55,15 @@ private-chat product, and **what you would tape inside the rack** of a private-c
 | | Keypair-only (Session, Nostr, SimpleX) | maximal deniability; discovery UX becomes your problem |
 | | Random short ID (Threema) / email (Wire/Delta) | middle paths with existing account rails |
 
+> **⚠️ IF YOU HAVE NO STRONG REASON TO FEDERATE, START CENTRALISED.** The engineering effort is
+> roughly **5–10× lower**, the security model is coherent, and one team can ship a protocol upgrade
+> to the whole fleet — Signal shipped the Triple Ratchet in weeks; Matrix's E2EE changes take years
+> (→ `chat-signal` §4, `chat-matrix-and-element` §2). Federation can be added later; it cannot be
+> removed later. It is the right answer for an open communications commons, not for a private system
+> where you control the trust model and carry the consequences — and the real bill is state
+> replication, cross-server key distribution and split-brain, not the protocol itself
+> (→ `chat-matrix-and-element` §4 for what you are signing up to).
+
 ## 2. The cryptography stack, as checklists
 
 **Session establishment**
@@ -79,6 +89,79 @@ private-chat product, and **what you would tape inside the rack** of a private-c
   native multi-member model. Never share long-lived identity private keys between devices —
   backup/recovery via sealed storage (4S-style recovery key; SVR-style enclave KDF for
   PIN-recoverable profile keys only if you can staff HSM/enclave engineering — see §5).
+
+**The boring baseline (get these wrong and the ratchet does not save you)**
+- ☑ **TLS 1.3** on every client↔server and server↔server hop; never disable certificate verification.
+- ☑ **HKDF** for key derivation; **Argon2id** for any password hashing (memory-hard, resists
+  GPU/ASIC); **Ed25519** for identity signatures and **X25519** for key exchange.
+- ☑ **The OS CSPRNG for all randomness — never a language's default `rand()`.**
+
+> **⚠️ DO NOT IMPLEMENT CRYPTOGRAPHY YOURSELF**
+> Use vetted libraries at the highest level of abstraction that solves the problem. **If your code
+> contains a mode of operation, an IV, or a padding decision, you are already lower-level than you
+> probably need to be.** The primitives are rarely broken; the systems built from them fail
+> constantly — implementation bugs, key-management errors, protocol-composition mistakes.
+
+**Key custody — the algorithm choice is easy; where the keys live is where systems fail**
+- ☑ **Identity keys**: generated on-device, private half never leaves it, only the public half is
+  published. Platform secure storage only — Keychain (iOS), Keystore (Android), libsecret (Linux) —
+  **never** the app's sandbox files.
+- ☑ **One-time pre-keys**: generated in batches on-device and uploaded; the server dispenses one at
+  a time and deletes it after use; the client re-uploads when the pool runs low.
+- ☑ **Signed pre-keys**: rotate every few days to weeks; retain the *previous* private key briefly
+  for messages already in flight, then delete it.
+- ☑ **Session/ratchet state** (chain keys, DH key pair, message counters): never leaves the session;
+  persisted encrypted at rest under a key derived from the device passcode, or the next app restart
+  loses the conversation.
+
+**Client message pipeline**
+- ☑ **Fail closed on the client**: when AEAD verification fails, alert the user and display *nothing*.
+  A decryption failure is a possible key-substitution or tampering event, not a rendering bug — and
+  "show it anyway with a warning icon" is how that signal gets trained out of users. On send, a
+  direction change means the DH ratchet step happens *before* the message key is derived; on both
+  paths, persist ratchet state after every message or the next app restart loses the session.
+
+**Before you ship**
+- ☑ External security audit by a firm with cryptography *and* messaging experience — not a generic
+  application pentest shop.
+- ☑ Fuzz the cryptographic code paths.
+- ☑ Test **key substitution**: what does the client do when the server returns a different identity
+  key? (This is the attack safety numbers and key transparency exist for — prove your client
+  notices.)
+- ☑ Test **device migration**: does the old device lose access when it should?
+- ☑ Test **group membership changes**: can a departed member read new messages? Can a new member
+  read old ones? Both are policy decisions — make them deliberately, then test the answer you chose.
+- ☑ Test **dropped, reordered and replayed** messages, then **corrupted ciphertext**: authentication
+  must fail closed, visibly, and without rendering anything.
+- ☑ Penetration-test the server, and re-read the threat model against **what you built** rather than
+  what you designed.
+
+## 2.5 The server you have to write anyway (fundamentals — stable)
+
+Whatever the protocol shape, a centralised engine needs the same five pieces — and the privacy of
+the product is decided by what each one is allowed to remember:
+
+| Component | Job | What it may keep |
+|---|---|---|
+| **Account service** | registration, device authentication, account management | account identifier + public identity keys |
+| **Pre-key directory** | the X3DH bootstrap: serve one bundle per request | signed pre-key + one-time pre-keys, **each one-time key deleted on use** |
+| **Message queue** | hold ciphertext for offline recipients | undelivered messages only — **delete after authenticated client acknowledgement** |
+| **Push service** | wake sleeping clients via APNs/FCM | device token; **never message content** |
+| **WebSocket / long-poll** | real-time delivery to connected clients | deliver; dequeue only after the client acknowledges receipt |
+
+> **⚠️ IF YOU KEEP MESSAGES AFTER DELIVERY YOU ARE NOT RUNNING A MESSAGE QUEUE, YOU ARE RUNNING A
+> MESSAGE ARCHIVE.** Decide which one you are building, then write it into the metadata budget (§3).
+
+**Storage doctrine.** The ideal database holds account registrations, public keys, pre-keys and
+undelivered messages. It does **not** hold delivered messages, who-messaged-whom, social graphs or
+connection logs. Where a feature forces you to keep some metadata — group membership is the usual
+case — keep the minimum and delete it when it stops being needed. Postgres for the relational side,
+Redis for the queue; session state belongs to the client, never the server.
+
+☑ **Rate-limit pre-key fetches per account.** An attacker who drains a user's one-time pre-keys
+degrades or blocks delivery to them: pre-key exhaustion is a denial-of-service surface, not only a
+capacity parameter. §2's "last-resort" pre-key is the graceful half of the answer; the rate limit is
+the other half.
 
 ## 3. The metadata budget — every service must fill this table
 
@@ -111,6 +194,13 @@ private-chat product, and **what you would tape inside the rack** of a private-c
 
 - **Notifications**: content-free payloads; iOS NSE plumbing; Android's FCM hard-dependence vs
   UnifiedPush; battery math (Briar's maintenance-mode obituary paragraph is a cautionary tale).
+- **Never put message content in a push payload.** Send a content-free wake-up and let the client
+  fetch the message over its own encrypted connection. One OS-level channel (APNs, FCM) multiplexes
+  for every app because battery does not permit a persistent connection per app — so Apple and
+  Google see arrival timing for essentially everything, and government requests for push records are
+  documented. The alternatives are a persistent WebSocket (battery) or background fetch (latency),
+  and neither is as reliable as system push; UnifiedPush moves the trust rather than removing it
+  (→ `chat-signal` §4).
 - **Backups**: the classic E2EE failure (plaintext iCloud/Drive backups defeating the protocol);
   2025's proper templates: Signal's zero-knowledge unlinked backups, WhatsApp's password-sealed
   ADP-style designs.
@@ -124,10 +214,60 @@ private-chat product, and **what you would tape inside the rack** of a private-c
 - **Censorship survival**: pluggable transports/proxy hooks, alternate domains, APK sideload
   channels, and a static "get help while we're blocked" site outside your own infra's blast radius.
 
+## 5.5 Voice, video and real-time — the WebRTC layer you inherit (fundamentals — stable)
+
+If the product has calls, it has WebRTC, whether or not anyone says so.
+
+> **⚠️ WEBRTC GIVES YOU ENCRYPTED MEDIA AND NOTHING ELSE. Signalling is deliberately unspecified — your chat server carries the SDP offers/answers and the ICE candidates, or two browsers never meet.**
+
+**The pieces**: `getUserMedia` (camera/mic capture), `RTCPeerConnection` (the encrypted peer
+transport), `RTCDataChannel` (arbitrary data over SCTP, optionally reliable, optionally ordered).
+
+**NAT traversal is the hard part.** ICE tries candidate paths; STUN tells a peer its own public
+address; **TURN relays when direct connection fails — and a meaningful fraction of calls need it**.
+Relay bandwidth is a line item, not a rounding error: Signal's own breakdown puts call relaying at
+~$1.7M/yr of ~$2.8M bandwidth, ~20 PB/yr (→ `chat-signal` §2). Budget TURN before you promise calls.
+
+> **⚠️ WEBRTC LEAKS IP ADDRESSES BY DESIGN**
+> ICE candidate gathering hands local and public addresses to the page — which is why WebRTC has
+> been used for de-anonymisation and VPN-leak detection. Browser mitigations (mDNS for local
+> addresses) are partial. **During a call your users' IPs are visible to the other peer** unless you
+> force traffic through your own relays, which is exactly what Signal's "always relay calls" toggle
+> buys, at latency and bandwidth cost.
+
+**SRTP with DTLS is transport encryption, not E2EE.** Media is always encrypted on the wire with
+keys exchanged via DTLS, but the moment an SFU is in the path the SFU can see the media unless you
+add E2EE through insertable streams.
+
+| Topology | Who does the work | When it is right |
+|---|---|---|
+| **Mesh** | everyone sends to everyone | ≤3–4 participants; upstream bandwidth explodes past that |
+| **SFU** (selective forwarding unit) | server forwards streams without decoding | the standard answer — Jitsi, LiveKit, mediasoup, Signal's group calls, MatrixRTC |
+| **MCU** (multipoint control unit) | server decodes and composites into one stream | only for very weak clients; expensive in CPU, rare in modern systems |
+
+**Simulcast and SVC** — send several qualities so the SFU forwards the appropriate one per
+receiver. This is the only reason a gallery view of thirty people works at all.
+
+> **⚠️ THE E2EE PROBLEM WITH CONFERENCING**
+> An SFU only forwards, so it *can* work with E2EE (insertable streams: it relays media it cannot
+> decode). But every server-side feature that needs the content — recording, transcription, noise
+> suppression, server-computed backgrounds — becomes impossible. That tension is why most
+> conferencing is not E2EE by default, and why Zoom's 2020 "end-to-end encrypted" marketing
+> described transport encryption and ended in an FTC settlement: the canonical case of the four
+> meanings of "encrypted" being conflated (→ `chat-orientation-threat-models-and-landscape` §2).
+
+Reference that transfers: [WebRTC for the Curious](https://webrtcforthecurious.com/) and the W3C
+WebRTC API spec plus the ICE/STUN/TURN/SRTP/DTLS RFCs.
+
 ## 6. Libraries and starting points (all actively maintained as of 2026)
 
 - `signalapp/libsignal-client` (Rust, AGPL) — the canonical stack, SPQR included
   ([repo](https://github.com/signalapp/SparsePostQuantumRatchet)).
+- **libsodium** (C, bindings for every language) — the auxiliary primitives libsignal does not give
+  you: AEAD (XChaCha20-Poly1305), X25519 key exchange, Ed25519 signatures, Argon2id password
+  hashing, HMAC. Reach for it for everything *around* the ratchet; reach for your platform's TLS
+  stack (BoringSSL, OpenSSL, rustls, Secure Transport) for transport, and never disable certificate
+  verification to make a test pass.
 - MLS: **OpenMLS** (Rust, Phoenix R&D), **mls-rs** (AWS, Rust) — both tracked by Wire/MIMI work.
 - Matrix: `matrix-rust-sdk` + vodozemac (crypto incl. cross-signing, 4S backup), `matrix-js-sdk`,
   `mautrix-go` (appservices/bridges), matrix-nio (Python).

@@ -179,6 +179,25 @@ Intro-point flooding was the dominant onion-service DoS vector. The PoW defense 
 - Research-stage: DNS-based discovery, "Sauteed Onions" (CT-log based), onion association
   proposals.
 
+### §9.5 Deployment checklist for a private onion service
+
+Every item here is argued elsewhere in §8–§9 and §13; this is the order to do them in.
+
+1. Run tor from the **Tor Project's own repository**, not the distro's (fresher).
+2. **v3 only** — v2 left the network in October 2021 (§8.4).
+3. **Generate the master identity key offline**; deploy only signing material, and set
+   `OfflineMasterKey`.
+4. **PoW** if DoS is a concern (§9.2). **Vanguards** for guard-discovery resistance (§9.1 —
+   Arti has them built in; the C tor Python addon is unmaintained and incompatible with
+   Conflux).
+5. **Client authorization** for private services (§8.3, §13.3 →
+   `tor-building-on-tor-software-patterns`).
+6. **MetricsPort** for monitoring.
+7. **Test descriptor publication from a second tor instance** before you hand the address to
+   anyone.
+8. Advertise via **Onion-Location** if you have a clearnet twin — and **never serve the
+   Onion-Location header from the onion itself** (§9.4).
+
 ---
 
 ## Where to go next

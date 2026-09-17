@@ -46,6 +46,20 @@ long-term identity key (IK), publishes a signed pre-key (SPK) and one-time pre-k
 server, and an initiator computes up to four DH combinations to bootstrap a shared secret. The
 server's pre-key bundles stand in for online presence — that's what makes messaging asynchronous.
 
+The four combinations, concretely — Alice initiating to an offline Bob:
+
+```
+DH1 = DH(IK_A, SPK_B)             // Alice identity key  + Bob signed pre-key
+DH2 = DH(EK_A, IK_B)              // Alice ephemeral key + Bob identity key
+DH3 = DH(EK_A, SPK_B)             // Alice ephemeral key + Bob signed pre-key
+DH4 = DH(EK_A, OPK_B)             // Alice ephemeral key + Bob one-time pre-key (when one is left)
+SK  = KDF(DH1 ‖ DH2 ‖ DH3 ‖ DH4)  // HKDF
+```
+
+DH1 authenticates Alice to Bob, DH2 authenticates Bob to Alice, DH3/DH4 supply freshness; Alice
+verifies the signature on SPK_B before any of it. **A server compromised later cannot reconstruct
+SK**: it only ever held public keys, and EK_A was generated for this one session and discarded.
+
 **PQXDH** (shipped 2023) keeps X3DH intact and adds a post-quantum KEM: the responder uploads
 an ML-KEM-1024 ("last resort") pre-key, the initiator encapsulates against it, and the KEM secret
 is mixed with the DH secret so an attacker must break *both*. Crucially it upgrades **initial
