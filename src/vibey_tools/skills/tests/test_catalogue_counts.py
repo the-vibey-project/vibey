@@ -48,6 +48,9 @@ SURFACES = (
     "docs/rag-context-engine-plan.md",
     ".claude/skills/README.md",
     ".agents/skills/README.md",
+    ".github/workflows/ci.yml",
+    "docs/gen_reference.py",
+    "docs/hooks.py",
     ".claude-plugin/marketplace.json",
 )
 
@@ -136,10 +139,15 @@ class CatalogueCountTests(unittest.TestCase):
         entries = {p["name"]: p for p in manifest["plugins"]}
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         row = re.compile(r"^\| \[([a-z0-9-]+)\]\([^)]+\) \| ([^|]+?) \| ([^|]+?) \| (\d+) \|", re.M)
+        matches = list(row.finditer(readme))
         rows = {
-            m.group(1): (m.group(2).strip(), m.group(3).strip(), int(m.group(4)))
-            for m in row.finditer(readme)
+            m.group(1): (m.group(2).strip(), m.group(3).strip(), int(m.group(4))) for m in matches
         }
+        self.assertEqual(
+            len(matches),
+            len(rows),
+            "README table contains duplicate plugin rows",
+        )
 
         self.assertEqual(
             sorted(set(entries) - set(rows)),

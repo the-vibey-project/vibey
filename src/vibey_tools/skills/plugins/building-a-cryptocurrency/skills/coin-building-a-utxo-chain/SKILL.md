@@ -125,10 +125,13 @@ Block {
 `merkle_root`, `nonce`) were cut off mid-word by the PDF extraction and are completed here.*
 
 **The coinbase transaction.** The **first transaction in every block** is the coinbase transaction.
-It **has no inputs** and **creates new coins from nothing** — the block subsidy plus fees. This is
-**the only way new coins enter circulation**. Its outputs become new UTXOs that can be spent only
-after a **maturity period of 100 blocks in Bitcoin**, ensuring they are deeply buried before becoming
-spendable.
+It has a special input whose previous-output reference is null; its outputs pay the block
+subsidy plus fees collected from the block's other transactions. The subsidy is the only new
+coin-creation path.
+
+Its outputs become new UTXOs that can be spent only after a **maturity period of 100 blocks in
+Bitcoin**, to ensure they are deeply buried before becoming spendable — so a reorg that orphans the
+block cannot leave already-spent coins behind.
 
 **Why the chain is immutable.** Each block's header contains the hash of the previous block's header.
 Changing any transaction in a historical block changes its Merkle root → changes its header hash →
