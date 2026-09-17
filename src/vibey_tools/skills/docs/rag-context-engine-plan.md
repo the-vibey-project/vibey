@@ -14,7 +14,7 @@ an engine plan.
 
 ## Why now
 
-The marketplace currently contains 131 plugins, 672 long-form skills, approximately 1.29
+The marketplace currently contains 132 plugins, 680 long-form skills, approximately 1.29
 million words, 9.2 MB of Markdown, and 3,661 second-level sections. The corpus is large enough
 that installing or reading skills indiscriminately creates unnecessary context pressure, yet
 small enough that a local SQLite index can serve it without a distributed retrieval service.

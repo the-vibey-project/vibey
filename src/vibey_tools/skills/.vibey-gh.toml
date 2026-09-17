@@ -167,7 +167,7 @@ model        = "qwen2.5-coder:14b"
 trusted_only = true
 
 [repository_profile]
-description = "Agent Skills for vibe engineering — 672 evidence-grounded practitioner references as a Claude Code plugin marketplace"
+description = "Agent Skills for vibe engineering — 680 evidence-grounded practitioner references as a Claude Code plugin marketplace"
 topics = [
   "claude-code",
   "agent-skills",

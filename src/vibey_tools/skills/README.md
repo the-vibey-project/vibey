@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is still published on PyPI as [`vibey-skills`](https://pypi.org/project/vibey-skills/).
 
-> **131 Claude Code plugins. 672 Agent Skills.** Long-form, source-cited practitioner
+> **132 Claude Code plugins. 680 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -41,11 +41,11 @@ fast *and* correct. These skills are the reference layer for that.
 /plugin                                    # browse everything
 ```
 
-That one address serves every plugin in the family: these 131 and vibey-gh's four. The
+That one address serves every plugin in the family: these 132 and vibey-gh's four. The
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 
-**From the PyPI package instead** — the same 131 plugins under the name `vibey-skills`,
+**From the PyPI package instead** — the same 132 plugins under the name `vibey-skills`,
 with no clone of the monorepo:
 
 ```bash
@@ -61,7 +61,7 @@ standalone repository, which has been retired.
 
 ```bash
 uvx vibey-skills list                      # try it without installing
-uvx vibey-skills install --all             # copy all 672 skills into ~/.claude/skills
+uvx vibey-skills install --all             # copy all 680 skills into ~/.claude/skills
 uvx vibey-skills install security-principles azure-cloud-infra
 ```
 
@@ -126,6 +126,7 @@ own `README.md` with the full skill list and trigger descriptions.
 | [banking-swift-and-payment-networks](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/banking-swift-and-payment-networks) | 0.1.0 | finance | 6 | What a payment is, how deposits are created, central bank reserves, RTGS vs deferred net settlement, clearing, netting & Herstatt risk, correspondent banking & nostro/vostro, what SWIFT actually is, MT to ISO 20022, gpi tracking, sanctions & network governance, CIPS & SPFS, Ripple vs XRP vs the XRP Ledger, XRPL consensus & the built-in DEX, Ripple's products, the SEC litigation, FedNow, UPI, Pix & SEPA Instant, stablecoin reserves & run risk, retail & wholesale CBDCs, tokenized deposits, KYC/AML & de-risking, SWIFT-related heists & the CSP, remittance costs |
 | [biology-chemistry-foundations](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/biology-chemistry-foundations) | 0.1.0 | life-sciences | 5 | Atoms & periodicity, bonding & VSEPR, intermolecular forces, thermodynamics, kinetics, equilibrium & acid-base, redox & electrochemistry, organic mechanism, spectroscopy, biomolecules, enzymes, metabolism, membranes, cell architecture & signalling, evolution |
 | [biomedical-engineering-technical](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/biomedical-engineering-technical) | 0.1.0 | life-sciences | 5 | Physiological signal processing, imaging modality physics & DICOM traps, clinical data, clinical ML (prevalence, calibration, shortcut learning), bioinformatics, structural & systems biology, PK/PD, biomechanics, biomaterials, tissue engineering, neural interfaces, biostatistics |
+| [building-a-cryptocurrency](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/building-a-cryptocurrency) | 0.1.0 | blockchain | 8 | A cryptocurrency as a replicated state machine with Sybil-resistant leader election & a fork-choice rule, the three reference architectures (Bitcoin UTXO/SHA-256d, Ethereum account/Gasper, Monero RandomX/mandatory privacy), the five design decisions & their costs, hash properties & the length-extension attack, ECDSA/Schnorr/Ed25519 & the nonce hazard, Merkle trees & Patricia tries & SPV, BIP-39/32/44/49/84/86 & descriptors, key management, proof of work vs proof of stake, fork choice & finality, building a UTXO chain end to end, building an account chain & the EVM & gas, ring signatures & stealth addresses & confidential amounts & zero-knowledge, peer-to-peer propagation, issuance & fee markets & supply caps, what actually loses money, and an ordered practical build guide |
 | [business-marketing-sales-law](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/business-marketing-sales-law) | 0.1.0 | business | 5 | Unit economics (CAC/LTV/payback), strategy & positioning, org design, financing & dilution, what the advertising evidence shows, brand vs activation, attribution limits & incrementality, channels, pipeline & qualification, negotiation, forecasting & comp design, contracts, IP, employment classification, privacy, consumer protection, disputes — legal sections are orientation, not advice |
 | [cad-3d-printing](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/cad-3d-printing) | 0.2.0 | manufacturing | 5 | Geometry representations & kernels, file formats and what each loses, code-CAD (OpenSCAD vs OCCT), mesh repair, slicing & G-code, FDM/SLA/powder physics, design for additive, tolerances & fits, materials, generative design & lattices, automation pipelines, scanning & reverse engineering |
 | [calculus-geometry-algebra](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/calculus-geometry-algebra) | 0.1.0 | mathematics | 6 | Vector spaces & the four fundamental subspaces, determinants, eigenvalues, inner products & orthogonality, spectral theorem & SVD, LU/QR/Cholesky, conditioning, the derivative, integration, Taylor series, multivariable & vector calculus, differential forms, Lagrange & KKT, ODEs, manifolds, tensors, Riemannian geometry, Lie groups |
