@@ -48,7 +48,7 @@ jobs:
           REPO: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
-          CONFIG_DESCRIPTION: "Agent Skills for vibe engineering \u2014 698 evidence-grounded practitioner references as a Claude Code plugin marketplace"
+          CONFIG_DESCRIPTION: "Agent Skills for vibe engineering \u2014 710 evidence-grounded practitioner references as a Claude Code plugin marketplace"
           CONFIG_TOPICS: '{"names":["claude-code","agent-skills","plugin-marketplace","prompt-engineering","developer-tools"]}'
           CONFIG_SETTINGS: '{"has_issues":true,"has_projects":true,"has_wiki":false,"has_discussions":true,"allow_squash_merge":true,"allow_merge_commit":false,"allow_rebase_merge":true,"allow_auto_merge":true,"delete_branch_on_merge":false,"web_commit_signoff_required":true,"vulnerability_alerts":true,"automated_security_fixes":true}'
         run: |
@@ -93,7 +93,7 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
           GHCR_TOKEN: ${{ github.token }}
-          CONFIG_DESCRIPTION: "Agent Skills for vibe engineering \u2014 698 evidence-grounded practitioner references as a Claude Code plugin marketplace"
+          CONFIG_DESCRIPTION: "Agent Skills for vibe engineering \u2014 710 evidence-grounded practitioner references as a Claude Code plugin marketplace"
           CONFIG_TOPICS: '{"names":["claude-code","agent-skills","plugin-marketplace","prompt-engineering","developer-tools"]}'
           CONFIG_SETTINGS: '{"has_issues":true,"has_projects":true,"has_wiki":false,"has_discussions":true,"allow_squash_merge":true,"allow_merge_commit":false,"allow_rebase_merge":true,"allow_auto_merge":true,"delete_branch_on_merge":false,"web_commit_signoff_required":true,"vulnerability_alerts":true,"automated_security_fixes":true}'
           INTEGRATION_BRANCH: develop
