@@ -2,7 +2,7 @@
 
 > **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is still published on PyPI as [`vibey-skills`](https://pypi.org/project/vibey-skills/).
 
-> **133 Claude Code plugins. 688 Agent Skills.** Long-form, source-cited practitioner
+> **134 Claude Code plugins. 698 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
@@ -41,11 +41,11 @@ fast *and* correct. These skills are the reference layer for that.
 /plugin                                    # browse everything
 ```
 
-That one address serves every plugin in the family: these 133 and vibey-gh's four. The
+That one address serves every plugin in the family: these 134 and vibey-gh's four. The
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 
-**From the PyPI package instead** — the same 133 plugins under the name `vibey-skills`,
+**From the PyPI package instead** — the same 134 plugins under the name `vibey-skills`,
 with no clone of the monorepo:
 
 ```bash
@@ -61,7 +61,7 @@ standalone repository, which has been retired.
 
 ```bash
 uvx vibey-skills list                      # try it without installing
-uvx vibey-skills install --all             # copy all 688 skills into ~/.claude/skills
+uvx vibey-skills install --all             # copy all 698 skills into ~/.claude/skills
 uvx vibey-skills install security-principles azure-cloud-infra
 ```
 
@@ -158,6 +158,7 @@ own `README.md` with the full skill list and trigger descriptions.
 | [engineering-process](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/engineering-process) | 0.1.0 | engineering-process | 4 | Requirements, SDLC, process engineering, research methodology |
 | [engines-generators-and-fuels](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/engines-generators-and-fuels) | 0.1.0 | energy | 7 | The four laws & why enthalpy exists, entropy as energy unavailability, the Carnot ceiling & why efficiency is a materials problem, working-fluid saturation/latent heat/critical point, the Rankine cycle & its five improvements, cut-off & compounding & uniflow, impulse vs reaction turbines, the Euler turbomachine equation, Otto & knock as fuel chemistry, volumetric efficiency, Atkinson/Miller, Diesel & DPF/SCR, Brayton & the back-work ratio, Stirling, combined cycles, Faraday to back-EMF, the four generator types, inverter generators, house sizing & transfer switching & never backfeeding, every fuel with its energy density, nuclear/solar/wind/hydro/geothermal/ORC, HHV vs LHV, stoichiometry, engine anatomy & the five-step rebuild, interference engines, fuel trims, forced induction, materials & manufacturing & tolerances & GD&T, and the six things that kill |
 | [entertainment-comedy-drama-storytelling](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/entertainment-comedy-drama-storytelling) | 0.2.0 | arts | 5 | Rules vs heuristics vs marketing, what a story is, character & desire, structure models assessed, the scene, conflict & stakes, dialogue & subtext, point of view, theme, exposition, endings, comedy theory, joke mechanics, rule of three & callbacks, status, improv, standup, timing, offence & the audience contract, acting systems, directing, medium differences, editing & rhythm, development & economics |
+| [evangelism-apologetics-and-church-planting](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/evangelism-apologetics-and-church-planting) | 0.1.0 | religion | 10 | What the persuasion evidence actually supports & what it does not, trust as competence/reliability/care & why most failures are care, the four levels of listening & silence as the most underused, asking before advising, earning the right to be heard, six evangelistic approaches compared, the Roman Road vs the Bridge vs the Four Spiritual Laws vs Creation-Fall-Redemption-Restoration & what each drops, the disclosure test, persuasion vs manipulation vs coercion, power asymmetry & exploited states, altar calls left unruled, the cosmological & teleological & moral & ontological arguments with the objection each actually faces, why the case is cumulative not demonstrative, minimal facts & the criticisms it actually faces, the five alternative explanations tabulated not strengthened, manuscripts & dating & why transmission is not veracity, the logical vs evidential problem of evil, the free will defense read as a defense, soul-making & its limits, four objections answered, presuppositional vs classical vs cumulative-case method, the five-part sermon & four patterns, expository method & the curse of knowledge, delivery & speech anxiety, the six-day rhythm & the one-sentence test, facilitation & deciding how you will decide, wait time & question types, the four-stage discipleship process with fading guidance, learning as a change in long-term memory, six planting models deliberately unranked, the five phases, onboarding as the growth constraint, the tyranny of structurelessness, burnout as a structural problem, the missing stair & safeguarding as law, the founder-to-team transition, and the sixteen-term glossary |
 | [exercise-science-physiology](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/exercise-science-physiology) | 0.1.0 | health | 6 | Reading claims in a noisy field, muscle structure & fibre types, energy systems, VO2max, endocrine claims, motor unit recruitment, thermoregulation & hydration, overload & specificity, strength vs hypertrophy mechanisms, lactate threshold & polarized training, power, flexibility, recovery & sleep, periodization, volume/intensity/frequency/proximity to failure, concurrent training, sarcopenia, fuelling & energy availability, supplement evidence tiers, RED-S & overtraining, injury & load management, testing |
 | [family-and-community-building](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/family-and-community-building) | 0.1.0 | social-sciences | 5 | How to read claims in an advocacy-heavy field, attachment, what predicts couple stability, conflict & repair, family systems, life stages, child development, parenting styles evidence, behaviour genetics, discipline, birth order, family structure as contested territory, ACEs & resilience, caregiving, social capital, networks, loneliness evidence, third places, organizing, collective efficacy, program evaluation |
 | [flight-software](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins/flight-software) | 0.1.0 | aerospace | 5 | What makes it different, layered architecture, cFS & F Prime, languages & MISRA/JPL standards, Rust's real status, flight processors, radiation effects in software terms, real-time & RTOS, FDIR & safe modes, time & clocks, CCSDS command/telemetry, in-flight update, GNC, V&V, autonomy, failure cases |
