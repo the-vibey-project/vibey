@@ -5,6 +5,113 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Add `vibey-gh flatten`: rewrite the current branch as one commit on its base, with the
+  subject normalised and the trailers re-derived. Two gates send a branch here and neither
+  has another remedy. A commit authored through the GitHub web UI or API never meets
+  `.githooks/commit-msg`, so it carries no `Made-With:` trailer and the provenance gate
+  refuses it — `check --apply` cannot repair that, because it writes file headers, not commit
+  trailers. And the Conventional Commits normaliser refuses outright any range containing a
+  merge commit, which is every range that took the integration branch into a topic branch.
+  Both answers were the same hand procedure, and that procedure has a live failure mode: a
+  `reset --mixed` followed by an `add -A`, in a worktree created before a merge that deleted
+  files, stages those files back and silently reverts a merged pull request inside an
+  unrelated commit. It happened on 2026-09-17 — 12,115 lines of five deleted lockfiles — and
+  was caught by reading a `--stat` and noticing the line count was too large, which is not a
+  control. So the new commit is built with `git commit-tree` from the branch's EXISTING tree
+  object: nothing is staged, nothing is reset, the working tree is never read, and there is no
+  step at which content can enter or leave. The invariant is asserted as well as constructed —
+  the built tree must equal the old HEAD's or the ref does not move — because an invariant
+  nobody checks is a comment. Tree equality is necessary and NOT sufficient: against a base
+  carrying commits the branch never merged, HEAD's tree is correctly HEAD's and is exactly what
+  is wrong, because it never had those changes to lose, and the one commit would delete them.
+  So the base must be an ancestor of HEAD, and a base that is not one is refused naming the
+  remedy that keeps both sides: merge it in first, then flatten. Also refused: a detached HEAD,
+  a permanent branch, an uncommitted tracked change, an empty range, and a range of only merge
+  commits with no `--message` to reuse. Every author of the range becomes a `Co-Authored-By`,
+  so absorbing one contributor's commit into another's cannot erase that it contributed at
+  all — and so does every `Co-Authored-By` the range already declares, collected from EVERY
+  commit of it the way the breaking footers are. Authorship is only half of how credit is
+  written, and in this repository it is the quieter half: the convention here names the
+  collaborator in a trailer while the git author stays the operator, so credit re-derived
+  from authorship alone would drop every collaborator the range names. Those trailers are
+  read from the trailing RUN of trailer paragraphs, not from git's final paragraph alone,
+  because `.githooks/commit-msg` appends the provenance trailer as a paragraph of its OWN —
+  so an ordinary commit here ends in two, and a reader that stops at the last one sees the
+  provenance trailer and misses every `Co-Authored-By:` above it. That is not hypothetical:
+  the first real flatten of this branch dropped its own co-author, with the full suite and
+  100% branch coverage green, because a dropped co-author looks exactly like a commit that
+  never named one. A paragraph that is not entirely trailer lines still ends the run, so a
+  body sentence opening `Made-With:` remains prose. Breaking changes are
+  collected from EVERY commit of the range, not from the first one: each `BREAKING-CHANGE:`
+  footer is carried, deduplicated across both spellings the spec allows, and a `!` declared
+  by a commit whose subject is not the one reused re-marks the composed subject rather than
+  being invented into a footer nobody wrote — because nothing re-derives breaking-ness, and
+  losing it silently demotes a major release to a minor one, in the direction nobody notices
+  until it is published. Issue-closing keywords get the same treatment for the same reason.
+  `Closes #12` is re-derivable from nothing — not authorship, not the tree, not the branch
+  name — and the flatten had two ways to drop it: `Closes: #12` is trailer-shaped, so the
+  trailer stripper removed it, and either spelling written in the range's third commit was
+  never in the first commit's message to survive at all. So every closing keyword in the
+  range is collected and put back, deduplicated by issue and keeping the verb its author
+  used, in a paragraph of its own above the trailer block — placement that is load-bearing
+  rather than decorative, since `Closes #12` is not `token: value` and a trailer block
+  containing one stops being a trailer block, which the next flatten would read as a missing
+  provenance trailer and add a second. Nothing is invented: a range that never promised to
+  close an issue does not start promising it here. Both refs are pinned: `update-ref` takes
+  the old LOCAL value and `--push` takes a lease on the value this clone last saw the REMOTE
+  holding — its remote-tracking ref, which is what somebody else's push makes stale — so
+  anything that landed in between refuses rather than being clobbered. Pinning the
+  pre-rewrite local SHA instead reads like the same protection and is not: a branch about to
+  be flattened usually carries a commit that was never pushed, the remote has therefore
+  never held that value, and the lease refuses the ORDINARY case every time. A branch the
+  remote does not have yet is created without a lease, decided by asking the remote and not
+  by reading a failed push: there is no remote value to pin, and a lease naming one cannot
+  be satisfied, so the first push of a branch would fail as a refused lease — the one thing
+  it is not. If the remote cannot be asked at all the lease stays, because an unnecessary
+  lease costs a retry and a dropped one costs somebody else's commits. A refused lease names
+  the retry — a `git fetch` and a push leasing on what the fetch brought back — so pasting
+  it is a decision taken after looking rather than instead of looking. A push that fails for
+  any other reason is reported as itself with the local rewrite left standing. WHICH remote
+  is asked of the branch and not of the base: the base's remote is the one `--onto` fetches
+  from, and answering both questions with it would send a topic branch to somebody else's
+  fork on `--onto upstream/main`. A branch is pushed to the remote it tracks, or to `origin`
+  when it tracks none — the common case, since a branch is flattened before its first push
+  at least as often as after it — and the success note names that remote, because a
+  destination nobody prints is a destination nobody checks. That `--onto` fetch is REQUIRED
+  rather than attempted: a transient network or auth failure used to leave a stale
+  `origin/<base>` on disk, the ancestry guard agreed happily about a base the remote had
+  moved past, and the flatten built one commit whose parent omitted every integration change
+  since — then force-pushed it successfully, because the lease protects the topic branch and
+  has nothing to say about the base. Same work-loss class as the ancestry guard, through a
+  door the guard cannot watch. `--dry-run` does not fetch at all, so a rehearsal changes
+  nothing rather than moving `FETCH_HEAD` and the remote-tracking refs on the way past; it
+  reads the base as this clone already has it and says so among the notes.
+
+- Refuse to flatten a branch whose open pull request has unresolved review threads, unless
+  `--orphan-comments` says to. Inline review comments are anchored to commit SHAs. Replace
+  those commits and GitHub marks every thread outdated: it collapses, it stops appearing
+  against the code it was about, and nobody is prompted to answer it again. That is not
+  hypothetical — 31 review comments were posted inline across five pull requests and 26 of
+  them merged unaddressed, partly because nobody, human or tool, was looking. The refusal
+  LISTS the threads it is refusing over — author, file, line, and the first line of the body
+  — because a refusal nobody can act on is a refusal everybody routes around; and
+  `--orphan-comments` then says yes on purpose, with the notes still naming what it cost.
+  When `gh` is missing, unauthenticated or failing, the answer is that the check **could not
+  be made** and the flatten proceeds: a check that did not happen must never read as one
+  that passed, so "not checked" and "none unresolved" are different sentences rather than
+  one comfortable one. The same rewrite also stales the "referenced this in commit" entries
+  on every issue and discussion the range's commits mention. Nothing can save those — there
+  is no trailer to carry and no keyword to preserve — so they are reported, in the notes and
+  in `--dry-run`, and the operator decides.
+
+- Look for the provenance and co-author trailers where git keeps trailers, which is the
+  final paragraph and nowhere else. Searching the whole message meant a body sentence
+  opening `Made-With:` — exactly how one writes ABOUT this tool — suppressed the provenance
+  trailer the commit needs to pass its own gate, and a body line quoting `Co-Authored-By:`
+  suppressed the real attribution for whoever it displaced. One helper now answers every
+  question about the trailer block, because three copies of "is this a trailer block" drift,
+  and the drift shows up as a trailer written twice or not at all.
+
 - Refuse to replace a live documentation channel with an empty directory. A Pages deploy
   replaces the whole site, so the run publishing one channel restores the other from its last
   artifact — and when that restore failed the job emitted a **warning** and deployed anyway,
