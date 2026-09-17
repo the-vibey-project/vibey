@@ -15,6 +15,7 @@ from vibey_gh import (
     debugging,
     documentation,
     fingerprints,
+    flatten,
     github_release,
     install,
     issue_automation,
@@ -390,6 +391,26 @@ def _write_summary(args, text: str) -> None:
             fh.write(text)
     except OSError as exc:
         print(f"vibey-gh: could not write the summary: {exc}", file=sys.stderr)
+
+
+def _flatten(args) -> int:
+    try:
+        plan, notes = flatten.Flattener().flatten(
+            load_config(),
+            onto=args.onto,
+            message=args.message,
+            push=args.push,
+            dry_run=args.dry_run,
+            orphan_comments=args.orphan_comments,
+        )
+    except flatten.FlattenError as exc:
+        print(f"vibey-gh: {exc}", file=sys.stderr)
+        return 1
+    for note in notes:
+        print(f"  {note}")
+    outcome = "would be flattened onto" if args.dry_run else "flattened onto"
+    print(f"vibey-gh: {plan.branch} {outcome} {plan.base}")
+    return 0
 
 
 def _promote(args) -> int:
@@ -1080,6 +1101,47 @@ def main(argv: list[str] | None = None) -> int:
         "--summary", metavar="FILE", help="write markdown here (default: $GITHUB_STEP_SUMMARY)"
     )
     p.set_defaults(func=_promote)
+
+    f = sub.add_parser(
+        "flatten",
+        help="rewrite the current branch as one commit on its base, trailers re-derived",
+    )
+    f.add_argument(
+        "--onto",
+        metavar="REF",
+        help="the base to flatten onto (default: origin/<integration branch>), fetched first "
+        "from the remote its own name gives — a fetch that fails refuses the flatten, because "
+        "a stale base defeats the check that keeps this from reverting merged work",
+    )
+    f.add_argument(
+        "--message",
+        metavar="TEXT",
+        help="the commit message; by default the first non-merge commit's, minus its trailers",
+    )
+    f.add_argument(
+        "--push",
+        action="store_true",
+        help="push the rewritten branch to its own upstream remote (default `origin`; "
+        "never the base's) with a lease pinned to what this clone last saw that remote "
+        "holding (a branch the remote does not have yet is created without one); without "
+        "it the exact push command is printed instead",
+    )
+    f.add_argument(
+        "--orphan-comments",
+        action="store_true",
+        help="flatten even though the branch's open pull request has unresolved review "
+        "threads. They are anchored to the commits being replaced, so the force-push marks "
+        "every one of them outdated: each thread detaches from the code it was about, "
+        "collapses, and stops prompting anyone to answer it. Without this flag such a "
+        "branch is refused and the threads are listed instead",
+    )
+    f.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="report what it would do and change nothing at all, the base included: no fetch, "
+        "so the plan reads the base as this clone already has it and says so",
+    )
+    f.set_defaults(func=_flatten)
 
     r = sub.add_parser("realign", help="realign the integration branch with the release branch")
     r.set_defaults(func=_realign)
