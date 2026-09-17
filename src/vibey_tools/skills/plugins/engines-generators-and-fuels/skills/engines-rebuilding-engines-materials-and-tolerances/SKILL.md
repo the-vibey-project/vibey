@@ -49,8 +49,8 @@ of the cooling system.
 measured with plastigauge during rebuild. **Rod bearing failure** is one of the most common and
 destructive engine failures — a deep knocking that intensifies with load.
 
-**Pistons and rings — the diagnostic distinction.** This one pair of symptoms tells you which ring is
-worn:
+**Pistons and rings — the diagnostic distinction.** This pair of symptoms narrows where to look; the
+confirming test tells you which:
 
 | Symptom set | What is worn |
 |---|---|

@@ -143,9 +143,46 @@ subsequent block**.
 Bitcoin Script is **stack-based** and **intentionally not Turing-complete (no loops)**.
 
 - Each **output** carries a **locking script** (`scriptPubKey`).
-- Each **input** provides an **unlocking script** (`scriptSig`).
-- To validate, the node **concatenates `scriptSig` + `scriptPubKey` and executes**. If the result is
-  **true**, the spend is valid.
+- Each **input** provides an **unlocking script** (`scriptSig`) and, since SegWit, a separate
+  **witness** — a stack of items carried outside `scriptSig` and outside the transaction's `txid`.
+
+**How an output is validated depends on which kind of output it is**, and the concatenate-and-execute
+rule everyone quotes is the **legacy path only**:
+
+- **Legacy outputs** — P2PKH and P2SH whose redeem script is not a witness program (the `1` and `3`
+  prefixes in the table below), plus bare multisig, which has no address form. The
+  node **executes `scriptSig`, then executes `scriptPubKey` against the stack it left** — the
+  "concatenate `scriptSig` + `scriptPubKey` and execute" description — and the spend is valid if the
+  top stack item is **true**. **P2SH** adds a second pass: the last item `scriptSig` pushed is
+  checked against the hash in `scriptPubKey`, deserialized as the *redeem script*, and then itself
+  executed against the remaining stack.
+- **SegWit v0 outputs** (`bc1q`). The `scriptPubKey` is a **witness program** — a version byte
+  followed by a data push — and `scriptSig` is **empty** (for P2SH-wrapped SegWit it holds only the
+  push of that program). Nothing is concatenated. A **20-byte** program is P2WPKH: the witness is
+  exactly `<signature> <pubkey>`, validated as a P2PKH would be with the program standing in for the
+  public-key hash. A **32-byte** program is P2WSH: the witness's last item is the *witness script*,
+  whose SHA-256 must equal the program, and the items before it are that script's input stack.
+  Signatures commit under the **BIP143** sighash algorithm, not the legacy one.
+- **Taproot (v1) outputs** (`bc1p`). The 32-byte program is a **tweaked output public key**, and
+  there are two ways to satisfy it. A **key-path** spend puts a single **BIP340 Schnorr signature**
+  in the witness, verified against that output key. A **script-path** spend supplies the leaf
+  script, its inputs, and a **control block** holding the internal public key and a Merkle path; the
+  node recomputes the tweak, checks it yields the output key, then executes the leaf under
+  **tapscript** rules (**BIP342**), where `OP_CHECKSIG` verifies Schnorr and `OP_CHECKMULTISIG` is
+  disabled in favour of `OP_CHECKSIGADD`.
+- **Witness versions 2 and above** carry no consensus rules yet — they are the upgrade hook for
+  future soft forks, and a validator must not invent rules for a version it does not recognize.
+
+> **THE LEGACY RULE IS NOT THE GENERAL RULE**
+>
+> An implementation that only concatenates and executes cannot validate native `bc1q`, native
+> `bc1p`, or P2SH-wrapped SegWit spends — **three** of the four address types the table below says
+> a wallet or node must support. The nested form is the one that looks safe and is not: the P2SH
+> hash check passes on the legacy path, so a legacy-only node believes it is done, when it must
+> then recognise the redeem script as a witness program and apply the witness rules for that
+> version (BIP141, BIP143 sighash). This does not surface as a failed unit test: a node that
+> mis-validates witness data disagrees with the network about which blocks are valid, which is a
+> consensus fork with one participant.
 
 ```
 // Pay-to-Public-Key-Hash (P2PKH) — the most common Bitcoin script

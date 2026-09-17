@@ -51,17 +51,21 @@ Energy cannot be created or destroyed, only transformed.
 
 where U is internal energy, Q is heat added *to* the system, W is work done *by* the system.
 
-**Open system** (a control volume with mass flowing through it — the model used for many real engines and engine components):
+**Open system** (a control volume with mass flowing through it — the model used for many real
+engines and engine components):
 
     Q̇ − Ẇ = Σṁ_out(h + V²/2 + gz) − Σṁ_in(h + V²/2 + gz)
 
 where h is enthalpy (internal energy plus flow work, **h = u + Pv**), V is velocity, gz is
 gravitational potential. This is the **steady-flow energy equation**, the bookkeeping identity every
-engine analysis starts from.
+flow analysis starts from.
 
-**Why enthalpy exists.** Not a distinct form of energy. It exists because real engines are open
-systems — mass crosses their boundaries — and the `Pv` term accounts for the work required to push
-that mass across the boundary. Carry `h` instead of `u` and the boundary work is already paid for.
+**Why enthalpy exists.** Not a distinct form of energy. It exists because the engines and components
+analysed this way are open systems — mass crosses their boundaries — and the `Pv` term accounts for
+the work required to push that mass across the boundary. Carry `h` instead of `u` and the boundary
+work is already paid for. A machine whose working fluid never leaves it — a Stirling engine, a
+sealed refrigeration loop — is a closed system, and is analysed with `ΔU = Q − W` or component by
+component with flow between the components.
 
 > **KEY INSIGHT.** The First Law says you cannot win — you cannot get more energy out than you put
 > in. But it says nothing about *how much* of the heat you can convert to work. That is the Second
