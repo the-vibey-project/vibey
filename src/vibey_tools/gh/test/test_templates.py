@@ -55,6 +55,49 @@ def test_every_claude_json_schema_survives_argument_tokenization():
     assert len(schemas) == 7
 
 
+def test_every_claude_tool_list_survives_argument_tokenization():
+    """The sibling of the schema check above, and the one that was missing.
+
+    `claude_args` is tokenized shell-style, so a permission spec containing a SPACE --
+    `Bash(gh pr diff:*)` -- becomes three arguments unless the value is quoted. The
+    runtime then receives `Bash(gh` as a rule, which is unbalanced, and fails while
+    parsing its permissions: 490ms, one turn, no model usage, no cost, no structured
+    output.
+
+    Nothing in that failure names this line. The action reports only
+    "--json-schema was provided but Claude did not return structured_output", which
+    blames the flag on the NEXT line and is already quoted correctly. Meanwhile the gate
+    posts its check-run against the head SHA, so the failure also surfaces on unrelated
+    workflow runs that merely share that commit -- which is where it was eventually
+    noticed, after every exact-head review on this repository had silently failed.
+
+    The check above proved this repository already knew argument tokenization was the
+    hazard here. It was simply never applied to the tool lists.
+    """
+    lists = []
+    for path in WORKFLOW_TEMPLATES:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            for flag in ("--allowedTools", "--disallowedTools"):
+                if f"{flag} " not in line:
+                    continue
+                tokens = shlex.split(line.strip())
+                index = tokens.index(flag)
+                assert len(tokens) == index + 2, (
+                    f"{path.name}: {flag} must tokenize to exactly one argument, but "
+                    f"became {tokens[index + 1 :]} -- quote the value"
+                )
+                for spec in tokens[index + 1].split(","):
+                    assert spec, f"{path.name}: {flag} has an empty entry"
+                    assert spec == spec.strip(), f"{path.name}: padded entry {spec!r}"
+                    # Bound to a local so neither formatter needs to wrap it: black and
+                    # ruff format both run over this file and disagree about where to.
+                    balanced = spec.count("(") == spec.count(")")
+                    assert balanced, f"{path.name}: unbalanced rule {spec!r}"
+                lists.append((path.name, flag))
+    # Every template that drives Claude constrains it; losing one is a finding, not a diff.
+    assert len(lists) == 10
+
+
 @pytest.mark.parametrize("path", REPO_WORKFLOWS, ids=lambda p: p.name)
 def test_this_repository_s_own_workflows_parse(path):
     """Dogfooding: the tool's own CI is subject to the rule it enforces elsewhere."""
