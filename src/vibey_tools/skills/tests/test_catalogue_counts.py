@@ -48,12 +48,13 @@ SURFACES = (
     "docs/rag-context-engine-plan.md",
     ".claude/skills/README.md",
     ".agents/skills/README.md",
+    ".claude-plugin/marketplace.json",
 )
 
 # A number immediately followed by a noun that can only mean "plugins in this marketplace".
 PLUGIN_CLAIMS = (
     re.compile(r"(\d{2,4})\s+(?:Claude Code\s+|Codex\s+)?plugins\b"),
-    re.compile(r"across\s+(\d{2,4})\b"),
+    re.compile(r"Agent Skills across\s+(\d{2,4})\b"),
 )
 
 # A number immediately followed by a noun that can only mean "skills in this marketplace".
