@@ -5,6 +5,25 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Fix the Claude tool lists in the managed workflow templates, which were being torn apart
+  by argument tokenization. `claude_args` is split shell-style, so a permission spec
+  containing a SPACE — `Bash(gh pr diff:*)` — arrived as three separate arguments:
+  `Bash(gh`, `pr`, `diff:*)`. `Bash(gh` is an unbalanced rule, so the runtime failed while
+  parsing its permissions before reaching the model at all — 490ms, one turn, no model
+  usage, no cost — and the action then reported the only symptom it could see,
+  `--json-schema was provided but Claude did not return structured_output`, naming the
+  flag on the NEXT line, which was already quoted correctly. Every exact-head review in
+  `pr-automation.yml` had been failing this way, and because the gate posts its check-run
+  against the head SHA rather than against a workflow, the failure surfaced on unrelated
+  runs that merely shared that commit — `release-surfaces.yml` appeared to be failing on
+  every push to `develop` while being entirely innocent. Both affected values are now
+  quoted, matching the `--json-schema` line directly beneath them, which had carried
+  quotes all along. A new template test tokenizes every `--allowedTools` and
+  `--disallowedTools` in every shipped template with `shlex`, asserts each resolves to
+  exactly one argument, and asserts every comma-separated rule has balanced parentheses —
+  the sibling of the `--json-schema` tokenization test that already existed, and which
+  proves this repository had identified the hazard and simply never applied it here.
+
 - Add `vibey-gh flatten`: rewrite the current branch as one commit on its base, with the
   subject normalised and the trailers re-derived. Two gates send a branch here and neither
   has another remedy. A commit authored through the GitHub web UI or API never meets
