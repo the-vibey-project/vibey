@@ -31,7 +31,7 @@ repository holding ten packages:
 | `qwenloop` | `src/vibey_runners/qwen` | 0.2.0 | local-model session runner (ADR-0015) |
 | `vibey-runners-common` | `src/vibey_runners/common` | 0.1.0 | shared runner application interfaces and use cases |
 | `vibey-gh` | `src/vibey_tools/gh` | 1.73.0 | provenance, versioning, merge train, release automation |
-| `vibey-skills` | `src/vibey_tools/skills` | 2.19.10 | Agent Skills marketplace and context-packet engine |
+| `vibey-skills` | `src/vibey_tools/skills` | 2.20.0 | Agent Skills marketplace and context-packet engine |
 | `vibey-bootstrap` | `src/vibey_tools/bootstrap` | 4.2.3 | Azure cross-cutting layer: App Config, Key Vault, App Insights |
 
 Two findings changed the shape of this work, and both came from looking
