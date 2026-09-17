@@ -3,7 +3,7 @@
 
 `plugins/` is the marketplace's single source of truth: Claude Code reads
 `.claude-plugin/marketplace.json` at the repo root with `source: ./plugins/<name>`, and the
-wheel maps that same tree in via hatchling `force-include`. Copying 698 `SKILL.md` files into
+wheel maps that same tree in via hatchling `force-include`. Copying 710 `SKILL.md` files into
 `docs/` would create a second copy to drift, so this script synthesises the pages instead —
 nothing it writes ever touches the working tree (mkdocs-gen-files writes into the build).
 
