@@ -103,10 +103,22 @@ building's load to competent ground.
   or bored piles (quiet, large capacity, harder to verify) — used when the upper soil layers cannot
   support the load and you need to reach stronger material at depth.
 
-**For a typical house on reasonable ground:** strip footings **600–900 mm wide and 300–450 mm
-deep**, bearing on undisturbed soil **below the frost line**, with a **150–200 mm** reinforced
-concrete ground beam. On expansive clay, use a stiff raft or post-tensioned slab designed by a
-structural engineer. On slopes, stepped footings or a split-level design.
+**The scale of the thing, for a house on ordinary ground:** strip footings in the region of
+**600–900 mm wide and 300–450 mm deep**, bearing on undisturbed soil **below the local frost line**,
+with a **150–200 mm** reinforced concrete ground beam. On expansive clay, a stiff raft or
+post-tensioned slab. On slopes, stepped footings or a split-level design.
+
+> **THOSE NUMBERS ARE AN ILLUSTRATION, NOT A DESIGN**
+> Read them as the order of magnitude a house foundation lands in, and nothing more. Footing width
+> follows the load above divided by the allowable bearing pressure of *your* soil; depth follows
+> frost penetration, the groundwater table and the depth at which competent material actually
+> starts; reinforcement and ground-beam sizing follow the spans, the variability of the ground and
+> the seismic and wind demand the building must carry down. Any one of those can move the answer by
+> a factor, in either direction — and an under-designed foundation is a differential-settlement or
+> collapse problem, not a snagging item. **"Reasonable ground" is not a soil report.** The bearing
+> capacity comes from a geotechnical investigation of the site, the dimensions come from a
+> structural engineer working to your local code, and both are checked by the authority that
+> inspects the work.
 
 > **WATER IS THE RECURRING FOUNDATION PROBLEM**
 > Buoyancy and uplift on basements (a lightweight basement can literally float), dewatering and its

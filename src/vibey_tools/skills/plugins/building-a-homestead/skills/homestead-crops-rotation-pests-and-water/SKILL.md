@@ -31,11 +31,20 @@ managing that engine.
 calendar dates.
 
 ```
-GDD = (daily max temp + daily min temp) / 2 − base temperature
+GDD for one day = max(0, (daily max temp + daily min temp) / 2 − base temperature)
+accumulated GDD = the sum of those daily values over the season
 ```
 
 Base temperature varies by crop: typically **50°F / 10°C for warm-season crops**, **40°F / 4°C for
-cool-season crops**. Use GDD to predict planting dates, maturity, and harvest timing.
+cool-season crops**.
+
+**The `max(0, …)` is not decoration.** A day whose mean sits below the base temperature contributes
+**zero**, not a negative number. Growth stalls on a cold day; it does not un-happen. Let the daily
+term go negative and the accumulated total falls, which moves predicted maturity and harvest dates
+*backwards* as the season goes on — a nonsense answer that looks like arithmetic. Many crop models
+also cap the daily maximum at a crop-specific upper threshold before averaging, because development
+stops gaining above it; the standard method for corn uses a 50°F base with an 86°F cap. Use
+accumulated GDD to predict planting dates, maturity, and harvest timing.
 
 **Planting decisions.**
 

@@ -43,7 +43,12 @@ A motor's back-EMF opposes its supply voltage:
 
     current drawn = (V_supply − back-EMF) / winding_resistance
 
-For a generator, the induced EMF drives current through the load; that current produces counter-torque. Applying a load therefore slows the prime mover unless the governor (or electronic inverter) increases input power to maintain frequency. (Governor and droop: §22 → `engines-safety-and-reference`.)
+A generator runs the other way round: the induced EMF drives current **into the load**, and that
+current in the machine's own field produces an **electromagnetic torque opposing the prime mover**.
+That opposing torque is the load, mechanically speaking — it is how electrical power out becomes
+shaft power in. Draw more current and the opposing torque rises, so the prime mover slows and
+frequency falls with it, unless the governor (or an electronic inverter) puts in more input power to
+hold speed. (Governor and droop: §22 → `engines-safety-and-reference`.)
 
 ### The four real loss mechanisms
 
@@ -93,9 +98,27 @@ Energy source (engine + fuel, or renewable) → generator → power conditioning
 > connect both simultaneously. An automatic transfer switch (ATS) monitors utility power, starts the
 > generator when it fails, switches the load, and reverses when utility returns.
 
-> **SINGLE-POINT NEUTRAL BONDING.** Grounding is critical: the generator frame must be grounded to an
-> earth electrode, and **neutral must be bonded to ground at ONE point** — either at the generator or
-> at the main panel, **never both** — parallel neutral paths and circulating currents.
+> **NEUTRAL BONDING IS CONDITIONAL — IT DEPENDS ON THE TRANSFER SWITCH.** Any one system gets its
+> neutral bonded to ground at exactly **one** point. *Which* point, and whether the generator needs a
+> grounding electrode of its own, depends on whether the generator is a **separately derived system**
+> — and that is decided by whether the transfer switch switches the neutral.
+>
+> - **The transfer switch switches the neutral** (the neutral opens along with the hots): the
+>   generator is separately derived. The bond belongs at the generator, and a permanently installed
+>   separately derived system normally also needs its own grounding-electrode connection.
+> - **The transfer switch does not switch the neutral** (generator neutral stays tied to the service
+>   neutral): the generator is *not* separately derived. The single bond stays at the service
+>   equipment and the generator must be **unbonded** — this is the difference between a
+>   "bonded-neutral" and a "floating-neutral" machine, and many portable generators ship bonded.
+>
+> Get this wrong in either direction and it bites: two bonds put neutral current onto equipment
+> grounding conductors and metal that is not meant to carry it, while no bond anywhere leaves fault
+> current without a low-impedance return path, so protective devices may not trip. Cord-and-plug
+> portable use is a separate case again.
+>
+> **This is not a rule you pick from a reference.** Follow the generator and transfer-switch
+> manufacturer's installation instructions, and have a licensed electrician establish which case your
+> installation is, to your local electrical code, and inspect the result.
 
 Generator output is mains voltage and mains voltage kills; every generator also makes carbon monoxide. Read §21 → `engines-safety-and-reference` before running anything.
 
