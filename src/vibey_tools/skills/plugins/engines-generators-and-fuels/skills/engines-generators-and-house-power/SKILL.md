@@ -39,11 +39,11 @@ N = turns, B = field strength, A = coil area, ω = angular velocity. Output is s
 
 ### Back-EMF and why speed droops under load
 
-A spinning generator (or motor) generates an EMF opposing the supply voltage:
+A motor's back-EMF opposes its supply voltage:
 
     current drawn = (V_supply − back-EMF) / winding_resistance
 
-At no load back-EMF nearly equals supply, so little current flows. Apply a load and the generator slows slightly, back-EMF drops, and more current flows. **This is why generator speed droops under load** — and why the governor (or electronic inverter) must compensate by increasing power input to maintain frequency. (Governor and droop: §22 → `engines-safety-and-reference`.)
+For a generator, the induced EMF drives current through the load; that current produces counter-torque. Applying a load therefore slows the prime mover unless the governor (or electronic inverter) increases input power to maintain frequency. (Governor and droop: §22 → `engines-safety-and-reference`.)
 
 ### The four real loss mechanisms
 
