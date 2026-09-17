@@ -15,7 +15,7 @@ vibey-skills list --json                # machine-readable
 ## Installing
 
 ```bash
-vibey-skills install --all                        # all 644 skills
+vibey-skills install --all                        # all 672 skills
 vibey-skills install security-principles azure-cloud-infra
 vibey-skills install --all --dest ./.claude/skills
 vibey-skills install --all --dry-run              # print the plan, touch nothing
@@ -30,10 +30,10 @@ a skill you edited locally.
 
 ```console
 $ vibey-skills install --all
-vibey-skills: copied 644 skill(s) into /Users/you/.claude/skills
+vibey-skills: copied 672 skill(s) into /Users/you/.claude/skills
 
 $ vibey-skills install --all
-vibey-skills: 644 skill(s) already present, skipped: agile-delivery, ...
+vibey-skills: 672 skill(s) already present, skipped: agile-delivery, ...
 vibey-skills: re-run with --force to overwrite
 ```
 
