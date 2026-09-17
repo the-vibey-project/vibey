@@ -57,7 +57,7 @@ In cryptocurrencies, hash functions serve three critical roles:
 
 | Role | What it does | Reference practice |
 |---|---|---|
-| Block hashing | The proof-of-work puzzle and the chain linkage (§3 → `coin-consensus-and-finality`) | Bitcoin: SHA-256d (double SHA-256). Ethereum: Keccak-256 (a SHA-3 variant) |
+| Block hashing | The proof-of-work puzzle and the chain linkage (§3 → `coin-consensus-and-finality`) | Bitcoin: SHA-256d (double SHA-256). Ethereum: Keccak-256 (the pre-standardization Keccak variant, distinct from SHA3-256) |
 | Merkle trees | Compact commitment to transaction sets (see 2.3) | Bitcoin: transaction sets per block. Ethereum: Merkle-Patricia trie over full state |
 | Address derivation | Turning public keys into addresses | Bitcoin: RIPEMD-160(SHA-256(pubkey)). Ethereum: Keccak-256 |
 
@@ -89,7 +89,7 @@ cannot be replayed for a different transaction.
 | Algorithm | Used By | Key Size | Notes |
 |---|---|---|---|
 | ECDSA (secp256k1) | Bitcoin (pre-Taproot), Ethereum | 256-bit | Widely deployed. Requires a per-signature random nonce `k` — reusing `k` across two signatures reveals the private key. This has broken real systems. |
-| Schnorr (secp256k1) | Bitcoin (Taproot, Nov 2021) | 256-bit | Deterministic (no nonce hazard), linear and aggregatable (enabling MuSig2 multisig), provably secure under standard assumptions. The modern default for new designs. |
+| Schnorr (secp256k1) | Bitcoin (Taproot, Nov 2021) | 256-bit | Linear and aggregatable (enabling MuSig2 multisig); BIP340 specifies deterministic nonce derivation, but nonce handling remains security-critical. The modern default for new designs. |
 | EdDSA (Ed25519) | Many modern systems | 256-bit | Fast, deterministic, misuse-resistant. Curve25519 is designed to be hard to implement incorrectly. An excellent default for new cryptocurrencies. |
 | Ring Signatures | Monero | 256-bit | A group of possible signers, but the actual signer is hidden among them. The key privacy primitive for anonymous transactions. |
 

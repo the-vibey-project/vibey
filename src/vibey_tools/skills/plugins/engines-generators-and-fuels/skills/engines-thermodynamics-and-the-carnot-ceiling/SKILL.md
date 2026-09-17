@@ -51,8 +51,7 @@ Energy cannot be created or destroyed, only transformed.
 
 where U is internal energy, Q is heat added *to* the system, W is work done *by* the system.
 
-**Open system** (a control volume with mass flowing through it — which is what every real engine
-is):
+**Open system** (a control volume with mass flowing through it — the model used for many real engines and engine components):
 
     Q̇ − Ẇ = Σṁ_out(h + V²/2 + gz) − Σṁ_in(h + V²/2 + gz)
 

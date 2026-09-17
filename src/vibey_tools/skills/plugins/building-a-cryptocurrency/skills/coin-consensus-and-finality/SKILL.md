@@ -45,10 +45,11 @@ the chain, an attacker must redo the work for all blocks they want to replace, f
 network produces new ones.
 
 ```
-Block hash = SHA256d(SHA256d(version || prev_block || merkle_root
-|| timestamp || bits || nonce)) Valid if: block_hash < target
-(where target is derived from the 'bits' field) Difficulty
-retargets every N blocks to maintain target block time
+Block hash = SHA256d(version || prev_block || merkle_root
+|| timestamp || bits || nonce)
+Valid if: block_hash < target
+(where target is derived from the 'bits' field)
+Difficulty retargets every N blocks to maintain target block time
 ```
 
 Reproduced exactly as the source writes it. Note that the source elsewhere defines SHA-256d as
