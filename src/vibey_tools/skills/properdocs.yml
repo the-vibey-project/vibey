@@ -1,6 +1,6 @@
 site_name: vibey-skills
 site_description: >-
-  Agent Skills for vibe engineering — 680 evidence-grounded practitioner
+  Agent Skills for vibe engineering — 688 evidence-grounded practitioner
   references packaged as a Claude Code plugin marketplace.
 site_url: https://the-vibey-project.github.io/vibey-skills/
 repo_url: https://github.com/the-vibey-project/vibey-skills
@@ -9,7 +9,7 @@ edit_uri: edit/main/docs/
 
 # Fail the build on a bad internal link rather than shipping one. `mkdocs build --strict`
 # in CI turns every warning into an error, which is what makes the generated skill pages
-# below trustworthy — 680 pages is too many to eyeball.
+# below trustworthy — 688 pages is too many to eyeball.
 strict: true
 
 theme: mkdocs

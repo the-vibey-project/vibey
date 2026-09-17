@@ -6,7 +6,7 @@
     "email": "adam@matthewsteinberger.com"
   },
   "metadata": {
-    "description": "Every Claude Code plugin in this repository: 136 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
+    "description": "Every Claude Code plugin in this repository: 137 plugin(s) from src/vibey_tools/skills, src/vibey_tools/gh.",
     "members": [
       {
         "path": "src/vibey_tools/skills",
@@ -181,6 +181,17 @@
       "description": "Building a Cryptocurrency: designing and shipping your own chain, from the cryptographic primitives up. A cryptocurrency as a replicated state machine with Sybil-resistant leader election and a fork-choice rule, and the three reference architectures every chain is a variation on — Bitcoin's UTXO ledger with SHA-256d proof of work and probabilistic finality, Ethereum's account and world-state model with Gasper proof of stake and explicit finality, Monero's privacy-enhanced UTXOs with RandomX and mandatory privacy — with the five design decisions that follow and what each one costs. Hash functions and their five properties, SHA-256d and Keccak-256 and the length-extension attack that makes H(key + message) not a MAC, ECDSA and Schnorr and Ed25519 and ring signatures with the nonce hazard that has emptied real wallets, Merkle trees and O(log n) proofs and SPV, Merkle-Patricia tries and state proofs for light clients and bridges, BIP-39 seed phrases and BIP-32 derivation and BIP-44/49/84/86 paths and output descriptors, and practical key management. Proof of work and proof of stake, fork choice and finality and what each one actually promises. Then two builds end to end: a Bitcoin-style UTXO chain — transaction and script model, validation rules, what forking Bitcoin Core really involves — and an Ethereum-style account chain with the EVM, gas and smart contracts. Privacy features from ring signatures and stealth addresses to confidential amounts and zero-knowledge constructions; the peer-to-peer networking layer and block propagation; issuance schedules, fee markets, supply caps and incentive design; the security chapter on what actually loses money; and an ordered practical build guide. An engineering reference, not investment, legal or tax advice: distributing a token carries securities, AML/KYC and consumer-protection obligations that are a question for counsel in your jurisdiction.",
       "version": "0.1.0",
       "category": "blockchain",
+      "author": {
+        "name": "Adam Matthew Steinberger",
+        "email": "adam@matthewsteinberger.com"
+      }
+    },
+    {
+      "name": "building-a-homestead",
+      "source": "./src/vibey_tools/skills/plugins/building-a-homestead",
+      "description": "Building a Homestead: building a house from the ground up, raising farm animals, and growing your own crops, detailed enough to actually go out and do it. The building half opens on the thesis that most building failures are not engineering failures but coordination failures at the boundaries between disciplines and between design and construction, then works through site and ground investigation and why sampling a handful of points is what you are really doing, orientation and solar design, foundations from strip footings to frost-line bearing and the expansive-clay case, the gravity system and the lateral system treated separately, shear walls and hold-downs and why a partially built structure has no lateral system at all, a five-way comparison of timber frame against masonry, reinforced concrete, mass timber and steel, then the envelope where buildings actually fail: the four control layers in the order of importance that is itself the content -- water, air, vapour, thermal -- flashing, drying potential and why a wall with a vapour barrier on both sides cannot dry and will fail, roofs and ponding, concrete mix and cover and curing, wood moisture content and movement, steel, masonry movement joints, building services, fire safety, construction sequencing, codes and permitting, and a build checklist. The livestock half covers ruminant digestion and volatile fatty acids and why cattle are different, nutrient requirements, species selection with gestation and characteristics for cattle, sheep, goats, pigs and poultry, housing and fencing, herd health and biosecurity including FAMACHA and refugia, reproduction and breeding and EPDs and dystocia, grazing management from continuous to rotational to mob with the trade-off of each, stocking rate against stocking density, Animal Units, body condition scoring, and the Five Freedoms with low-stress handling. The crop half covers soil science and cation exchange capacity, fertility management, crop production and growing degree days, rotation and the several jobs it does at once, integrated pest management and economic thresholds, irrigation methods compared on efficiency and cost and limitation, an honest assessment of conventional, organic, regenerative and no-till systems, and a growing checklist -- plus a glossary and the books, codes and free extension services that actually teach this.",
+      "version": "0.1.0",
+      "category": "agriculture",
       "author": {
         "name": "Adam Matthew Steinberger",
         "email": "adam@matthewsteinberger.com"

@@ -94,8 +94,8 @@ storage-access optimization, and everything else is noise by comparison.
 
 | Opcode | Semantics |
 |---|---|
-| `CALL` | New context, fresh `msg.sender` |
-| `DELEGATECALL` | Executes target code in the **caller's storage context** — the basis of upgradeable proxies and of some of the worst bugs in history |
+| `CALL` | New context; the callee sees the calling address as `msg.sender` |
+| `DELEGATECALL` | Executes target code in the caller's storage context and preserves the caller's `msg.sender` and `msg.value` — the basis of upgradeable proxies and of some of the worst bugs in history |
 | `STATICCALL` | Read-only, reverts on state change |
 | `CREATE` / `CREATE2` | Deploy new contracts; `CREATE2` gives deterministic addresses from a salt |
 
