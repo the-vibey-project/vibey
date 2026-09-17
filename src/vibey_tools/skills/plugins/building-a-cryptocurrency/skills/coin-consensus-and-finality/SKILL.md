@@ -52,9 +52,12 @@ Valid if: block_hash < target
 Difficulty retargets every N blocks to maintain target block time
 ```
 
-Reproduced exactly as the source writes it. Note that the source elsewhere defines SHA-256d as
-double SHA-256 (§2 → `coin-cryptographic-primitives`), so the nesting above reads as the source's own
-shorthand rather than a third hashing pass.
+**One correction to the source here.** The source writes the first line nested, as
+`SHA256d(SHA256d(...))`. But SHA-256d is *itself* double SHA-256 (§2 →
+`coin-cryptographic-primitives`), so that nesting is four SHA-256 passes, and anyone implementing it
+literally would compute a proof-of-work hash no Bitcoin node agrees with. Bitcoin applies
+**SHA-256d once, to the 80-byte serialized block header** — which is what is written above. The
+remaining lines are reproduced as the source has them.
 
 **Difficulty adjustment.** The network periodically retargets the difficulty to keep the block
 interval near the target, regardless of how much mining power joins or leaves. Bitcoin retargets

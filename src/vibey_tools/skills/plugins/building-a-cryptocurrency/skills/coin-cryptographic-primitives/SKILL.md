@@ -66,7 +66,8 @@ In cryptocurrencies, hash functions serve three critical roles:
 | Function | Status | Verdict for a new chain |
 |---|---|---|
 | SHA-256 | Secure and well-studied | Natural choice |
-| SHA-3 / Keccak-256 | Secure and well-studied | Natural choice |
+| SHA3-256 (FIPS 202) | Secure and well-studied | Natural choice |
+| Keccak-256 (the pre-standardization variant, Ethereum's) | Secure and well-studied, but **not** SHA3-256 — the padding and domain-separation rules differ, so the two return different digests for the same input | Natural choice, but pick it deliberately. Name which of the two your spec means and check which one your library's `sha3`/`keccak` entry point actually computes; getting this wrong silently breaks Ethereum compatibility |
 | BLAKE2 / BLAKE3 | Faster alternatives with strong security properties | Viable |
 | SHA-1 | **Broken for collisions**; deprecated everywhere that matters | Do not use for any security purpose |
 | MD5 | **Completely broken** — collisions are trivial | Do not use for any security purpose |
@@ -83,28 +84,47 @@ the underlying hash.
 
 Digital signatures are the identity system of a cryptocurrency. You sign with your private key;
 anyone can verify with your public key. The signature proves the holder of the private key
-authorized the transaction, and the signature is **bound to the specific transaction data** — so it
-cannot be replayed for a different transaction.
+authorized **the exact bytes that were signed** — and that is the whole of what it proves. It does
+not make a transaction globally unique: the same signature over the same bytes verifies again,
+later, and on any other chain that encodes transactions the same way.
+
+**Replay resistance is a property of the ledger, not of the signature.** A UTXO chain gets it
+because a transaction names the outputs it consumes and each output can only be consumed once
+(§4 → `coin-building-a-utxo-chain`); an account chain gets it because the signed bytes include the
+sender's nonce, which the state machine increments (§5 → `coin-building-an-account-chain`). Across
+chains and contracts it takes explicit domain separation — a chain ID inside the signed bytes
+(**EIP-155**), an **EIP-712** domain separator, or an equivalent tag. The rule for a new design:
+whatever must not be replayable has to be inside the bytes you sign.
 
 | Algorithm | Used By | Key Size | Notes |
 |---|---|---|---|
 | ECDSA (secp256k1) | Bitcoin (pre-Taproot), Ethereum | 256-bit | Widely deployed. Requires a per-signature random nonce `k` — reusing `k` across two signatures reveals the private key. This has broken real systems. |
 | Schnorr (secp256k1) | Bitcoin (Taproot, Nov 2021) | 256-bit | Linear and aggregatable (enabling MuSig2 multisig); BIP340 specifies deterministic nonce derivation, but nonce handling remains security-critical. The modern default for new designs. |
-| EdDSA (Ed25519) | Many modern systems | 256-bit | Fast, deterministic, misuse-resistant. Curve25519 is designed to be hard to implement incorrectly. An excellent default for new cryptocurrencies. |
+| EdDSA (Ed25519) | Many modern systems | 256-bit | Fast, and hard to misuse: **RFC 8032** derives the per-signature nonce by hashing the private key's prefix together with the message, so no per-signature RNG sits in the path to fail. That is the *derivation* doing the work — a repeated nonce still reveals the key. Ed25519 signs over **edwards25519**, a twisted Edwards curve; **Curve25519** is the birationally equivalent Montgomery curve used by **X25519 key exchange**, which is a different primitive and does not sign. Do not substitute one for the other. Verification strictness (cofactor handling, signature malleability) differs between libraries, so a consensus system must pin one rule and test against it. An excellent default for new cryptocurrencies. |
 | Ring Signatures | Monero | 256-bit | A group of possible signers, but the actual signer is hidden among them. The key privacy primitive for anonymous transactions. |
 
 Ring signatures are developed in full — ring size, decoy selection and the FCMP++ upgrade path —
 in §6 → `coin-privacy-features`. Taproot address encoding and the script consequences of Schnorr
 are in §4 → `coin-building-a-utxo-chain`.
 
-> **THE ECDSA NONCE HAZARD**
+> **THE NONCE HAZARD, AND WHY IT IS NOT ONLY ECDSA'S**
 >
-> ECDSA requires a cryptographically random value `k` for each signature. If `k` is reused across
-> two signatures with the same key, **simple algebra reveals the private key**. This has broken
-> real systems, including a well-known game console. Even *biased* `k` (not perfectly random)
-> leaks the key over many signatures. The solution: deterministic nonce generation (**RFC 6979**)
-> or use Ed25519/Schnorr, which are deterministic by design. **If you use ECDSA, always use
-> RFC 6979 deterministic nonces.**
+> ECDSA requires a secret per-signature value `k`. If `k` is reused across two signatures with the
+> same key, **simple algebra reveals the private key**. This has broken real systems, including a
+> well-known game console. Even *biased* `k` (not perfectly random) leaks the key over many
+> signatures.
+>
+> The fix is a **specified deterministic derivation**: **RFC 6979** for ECDSA, **BIP340** for
+> Schnorr, **RFC 8032** for Ed25519. Be precise about what that buys. Determinism is a property of
+> the derivation a specification chose, **not of the signature scheme**: Schnorr and Ed25519 are
+> nonce-based too, and a repeated or biased nonce reveals the key there by the same algebra. They
+> are safer because their standard derivation takes the random-number generator out of the path,
+> not because the hazard is absent.
+>
+> **Whichever scheme you use, use its specified derivation and never a homegrown one.** One
+> exception to keep in view: interactive multi-party signing (**MuSig2**, **FROST**) needs a fresh
+> nonce per signing session that is never reused across sessions or retries — single-signer
+> deterministic derivation does not carry over, and reusing a session nonce leaks the key share.
 
 ### 2.3 Merkle trees
 

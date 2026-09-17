@@ -31,17 +31,39 @@ The security landscape for cryptocurrencies is unlike any other software domain.
 
 The 2025-2026 incident data is unambiguous about what loses money, and it should reorder your priorities.
 
-| Category | 2025 Losses | What It Is | Defense |
+| Category | 2025 losses (full year) | What It Is | Defense |
 |---|---|---|---|
 | Access control | ~$953M | Missing or incorrect permission checks on privileged functions; unprotected initializers or upgrade paths | Audit every privileged path. Use `Ownable2Step` or `AccessControl`. Timelocks on upgrades. |
 | Logic errors | ~$64M | Incorrect business logic — wrong math, wrong conditions, unexpected state transitions | Formal verification. Invariant testing. Multiple audits. |
 | Reentrancy | ~$36M | External call before state update allows re-entry that exploits stale state | Checks-Effects-Interactions ordering. `nonReentrant` guards. Watch cross-function and read-only reentrancy. |
 | Flash loan exploits | ~$34M | Flash loans give attackers unlimited capital for one transaction, amplifying existing vulnerabilities | Assume every attacker has unlimited capital. Don't read DEX spot prices as oracle values. Use Chainlink/Pyth or TWAPs. |
-| Phishing / social engineering | ~$306M (Q1 2026) | Tricking users into signing malicious transactions or revealing keys | Show users what they're signing in human-readable terms. No blind signing. Hardware wallets. Education. |
 
-> **THE PRIORITY REORDERING**
-> Access control vulnerabilities cause roughly **fifteen times** the loss of logic errors and **twenty-seven times** reentrancy. (Computed from the table above: 953/64 ≈ 14.9 and 953/36 ≈ 26.5.) The most devastating attacks don't exploit exotic cryptography — they exploit mundane permission mistakes. And in 2026, phishing and social engineering account for **nearly two-thirds of all losses**, because code audits have pushed smart-contract exploit losses down **~89% year-over-year**. The attackers moved to the humans.
-> Your security budget is probably misallocated if it's all on code audits and none on key management, operational security, and social-engineering resistance.
+**Phishing is measured over a different period, so it gets its own table.** The source's figure for
+it covers **Q1 2026 alone** — one quarter, against four full-year-2025 categories above. The two sets
+are not summable and not rankable against each other as they stand:
+
+| Category | Q1 2026 losses (one quarter) | What It Is | Defense |
+|---|---|---|---|
+| Phishing / social engineering | ~$306M | Tricking users into signing malicious transactions or revealing keys | Show users what they're signing in human-readable terms. No blind signing. Hardware wallets. Education. |
+
+> **THE PRIORITY REORDERING — AND WHICH DATASET EACH CLAIM RESTS ON**
+>
+> **From the 2025 full-year column.** Access control vulnerabilities cause roughly **fifteen times**
+> the loss of logic errors and **twenty-seven times** reentrancy (computed from that table:
+> 953/64 ≈ 14.9 and 953/36 ≈ 26.5). The most devastating attacks don't exploit exotic cryptography —
+> they exploit mundane permission mistakes. These four categories are comparable with each other
+> because they share a period.
+>
+> **From the Q1 2026 data.** The source reports that phishing and social engineering account for
+> **nearly two-thirds of losses** in that period, and that code audits have pushed smart-contract
+> exploit losses down **~89% year-over-year**. That two-thirds is the source's own figure: **the Q1
+> 2026 total across all categories is not given here**, so the share cannot be recomputed from the
+> ~$306M, and ~$306M in a quarter must not be set beside the 2025 rows as though the periods matched.
+>
+> **What the two datasets agree on** is the direction, and that is what should reorder your
+> priorities: the attackers moved to the humans. Your security budget is probably misallocated if
+> it's all on code audits and none on key management, operational security, and social-engineering
+> resistance.
 
 ### The design principles that prevent most bugs
 
@@ -66,30 +88,49 @@ This is the fastest path to a cryptocurrency. You're deploying a smart contract 
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.37;
+
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 /// @title MyCoin — a simple ERC-20 with fixed supply and vesting
 contract MyCoin is ERC20, Ownable2Step, ReentrancyGuard {
-    uint256 public constant TOTAL_SUPPLY = 100_000_000 * 10**18; // 100M to
+    uint256 public constant TOTAL_SUPPLY = 100_000_000 * 10**18; // 100M tokens
+
     struct VestingSchedule {
         uint256 totalAmount;
         uint256 claimed;
         uint256 startTimestamp;
         uint256 durationSeconds;
     }
+
     mapping(address => VestingSchedule) public vesting;
-    event VestingSet(address indexed beneficiary, uint256 amount, uint256 d
+
+    /// @notice Tokens promised to beneficiaries and not yet paid out. Every
+    /// schedule adds to it; every claim subtracts from it. The contract's
+    /// balance minus this is what the owner is still free to promise.
+    uint256 public totalReserved;
+
+    event VestingSet(address indexed beneficiary, uint256 amount, uint256 durationSeconds);
+    event VestingClaimed(address indexed beneficiary, uint256 amount);
+
     constructor() ERC20("MyCoin", "MYC") Ownable(msg.sender) {
         _mint(address(this), TOTAL_SUPPLY);
     }
+
     /// @notice Set vesting for a team member or investor
-    function setVesting(address beneficiary, uint256 amount, uint256 durati
+    function setVesting(address beneficiary, uint256 amount, uint256 duration)
         external
         onlyOwner
     {
+        require(beneficiary != address(0), "Zero beneficiary");
+        require(amount > 0, "Zero amount");
+        require(duration > 0, "Zero duration");
         require(vesting[beneficiary].totalAmount == 0, "Already vested");
-        require(amount <= balanceOf(address(this)), "Insufficient balance")
+        // Check against the UNRESERVED balance. The raw balance still holds every
+        // token already promised to someone else.
+        require(amount <= balanceOf(address(this)) - totalReserved, "Insufficient unreserved balance");
+        totalReserved += amount;
         vesting[beneficiary] = VestingSchedule({
             totalAmount: amount,
             claimed: 0,
@@ -98,21 +139,61 @@ contract MyCoin is ERC20, Ownable2Step, ReentrancyGuard {
         });
         emit VestingSet(beneficiary, amount, duration);
     }
+
     /// @notice Claim vested tokens
     function claimVesting() external nonReentrant {
         VestingSchedule storage v = vesting[msg.sender];
         require(v.totalAmount > 0, "No vesting");
         uint256 elapsed = block.timestamp - v.startTimestamp;
+        // Clamp. Past the end of the schedule the whole allocation is vested and
+        // not one token more.
+        if (elapsed > v.durationSeconds) {
+            elapsed = v.durationSeconds;
+        }
         uint256 vested = (v.totalAmount * elapsed) / v.durationSeconds;
         uint256 claimable = vested - v.claimed;
         require(claimable > 0, "Nothing to claim");
         v.claimed += claimable;
+        totalReserved -= claimable;
+        emit VestingClaimed(msg.sender, claimable);
         _transfer(address(this), msg.sender, claimable);
     }
 }
 ```
 
-Four lines above are clipped at the right margin in the source document — the `TOTAL_SUPPLY` comment, the `VestingSet` event signature, the `setVesting` signature, and the trailing semicolon of the balance `require`. They are reproduced exactly as the source renders them rather than reconstructed.
+> **STATUS OF THIS LISTING: RECONSTRUCTED AND HAND-CHECKED, NOT MACHINE-COMPILED**
+>
+> Four lines are clipped at the right margin in the source document — the `TOTAL_SUPPLY` comment,
+> the `VestingSet` event signature, the `setVesting` signature, and the trailing semicolon of the
+> balance `require` — and the source's vesting logic carries the two bugs described below. What is
+> printed above is therefore **reconstructed**: the clipped lines restored, the two bugs fixed,
+> because the recipe that follows tells you to write and deploy this contract and a damaged listing
+> is not one you can deploy.
+>
+> **It has been read line by line. It has not been through `solc`.** No compiler, no test suite and
+> no audit has seen it, here or anywhere. Treat it as a **starting point to compile, test and
+> audit** — not as something to deploy, and not as evidence that any particular Solidity version or
+> OpenZeppelin release accepts it as written.
+
+> **TWO BUGS IN THE SOURCE'S VESTING, FIXED ABOVE**
+>
+> **It over-allocated.** The source checked each new schedule against the contract's *current
+> balance*. That balance still holds every token already promised to every other beneficiary, so an
+> owner can write schedules that each fit and together do not — and the beneficiary who claims last
+> finds the contract empty and their transaction reverting. Reserving is the fix: `totalReserved`
+> goes up on `setVesting`, down on each claim, and a new schedule is checked against
+> `balanceOf(address(this)) - totalReserved`.
+>
+> **It paid past the end of the schedule.** The source computed `vested = totalAmount * elapsed /
+> durationSeconds` with nothing bounding `elapsed`. One duration after the start `vested` equals
+> `totalAmount`, which is right; two durations after, the arithmetic claims twice the allocation,
+> paid out of other beneficiaries' tokens. Clamping `elapsed` to `durationSeconds` before the
+> division is the whole fix.
+>
+> Both are ordinary logic errors — the ~$64M category in the table above, not exotic cryptography —
+> and both are exactly what invariant testing catches. Assert, as invariants: the sum over all
+> schedules of `totalAmount - claimed` never exceeds `balanceOf(address(this))`, and no beneficiary
+> can ever be paid more than their `totalAmount`.
 
 **What you need to do:** write the contract; test it with Foundry (unit tests, fuzzing, invariant testing); get it audited; deploy to a testnet (Sepolia, Holesky); exercise it; deploy to mainnet; verify the source on Etherscan; transfer ownership to a multisig + timelock; write an incident runbook.
 
@@ -141,7 +222,7 @@ If you need a fully independent blockchain, this is the most ambitious path. You
 | Language | C++, Rust | Go, Rust, C# | C++, Rust |
 | Ledger | UTXO set | Account trie | UTXO + privacy extensions |
 | Consensus | PoW (SHA-256d, RandomX, or custom) | PoS (Gasper-like, Tendermint) | PoW (RandomX or custom ASIC-resistant) |
-| Signatures | Schnorr (secp256k1) | ECDSA (secp256k1) or BLS | Ring signatures (secp256k1) + Bulletproofs |
+| Signatures | Schnorr (secp256k1) | ECDSA (secp256k1) or BLS | Linkable ring signatures over Ed25519 — an Edwards-form Curve25519, **not** secp256k1 — with Bulletproofs+ range proofs on the amounts |
 | Networking | P2P gossip, compact blocks | devp2p / libp2p | P2P with Dandelion++ |
 | Wallet | HD (BIP-32/39), descriptors, PSBT | HD, mnemonic, EIP-712 signing | View key + spend key, subaddresses |
 | Explorer | Electrum server + Esplora | The Graph / Ponder / custom | None (privacy) or view-key-based |
@@ -162,7 +243,7 @@ If you need a fully independent blockchain, this is the most ambitious path. You
 The two sections below are back matter of the source document, following Part X; they are carried here because this is the closing skill of the set.
 
 - **Block** — A container of transactions with a header linking to the previous block, a Merkle root of transactions, and a proof of work (or proof of stake attestation).
-- **Coinbase Transaction** — The first transaction in a block, which creates new coins from nothing (the block subsidy plus fees). The only way new coins enter circulation in a PoW system.
+- **Coinbase Transaction** — The first transaction in a block. It has one special input whose previous-output reference is null, and its outputs pay the block subsidy plus the fees collected from the block's other transactions. Only the subsidy is newly created in this transaction; the fees already existed as inputs elsewhere in the block. On a Bitcoin-style chain after genesis with subsidy-only issuance, the subsidy is the only ongoing issuance path.
 - **Consensus** — The mechanism by which nodes agree on the next block and the current state. PoW, PoS, and BFT are the main families.
 - **Difficulty** — The PoW target — how hard it is to find a valid block hash. Adjusted periodically to maintain the target block interval.
 - **ECDSA** — Elliptic Curve Digital Signature Algorithm. The signature scheme used by Bitcoin (pre-Taproot) and Ethereum. Requires a per-signature random nonce `k` — reuse reveals the private key.
@@ -176,7 +257,7 @@ The two sections below are back matter of the source document, following Part X;
 - **Nonce** — In PoW: the value miners grind to find a valid block hash. In ECDSA: the per-signature random value (reuse reveals the private key). In account-model transactions: a counter preventing replay.
 - **Pedersen Commitment** — A cryptographic commitment to a value that hides the value but allows verification that inputs equal outputs. Used in confidential transactions.
 - **Ring Signature** — A signature where the actual signer is hidden among a group of possible signers. The key privacy primitive for anonymous transaction senders.
-- **Schnorr Signature** — A deterministic signature scheme (no nonce hazard) that is linear and aggregatable. Used by Bitcoin's Taproot. An excellent default for new cryptocurrency designs.
+- **Schnorr Signature** — A linear, aggregatable signature scheme, used by Bitcoin's Taproot and the basis of MuSig2 multisig. Still nonce-based: BIP340 specifies a deterministic nonce derivation, but that is a construction choice, and a repeated or biased nonce reveals the private key exactly as it does in ECDSA. An excellent default for new designs — provided the nonce derivation is the specified one.
 - **Slashing** — In PoS, the destruction of a validator's stake for provable misbehavior (double-signing, equivocation). The enforcement mechanism that makes PoS secure.
 - **Stealth Address** — A one-time derived address that only the recipient can recognize as theirs, preventing on-chain linkage of payments to the same recipient.
 - **Sybil Resistance** — The mechanism that prevents an attacker from creating many fake identities to take over the network. PoW: energy cost. PoS: capital cost. Without it, a single attacker could create millions of nodes and control the network.

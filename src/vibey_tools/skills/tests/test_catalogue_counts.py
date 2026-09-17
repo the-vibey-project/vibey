@@ -70,6 +70,25 @@ SKILL_CLAIMS = (
 )
 
 
+# One row of the root README plugin table: name, version, category, skill count.
+README_ROW = re.compile(r"^\| \[([a-z0-9-]+)\]\([^)]+\) \| ([^|]+?) \| ([^|]+?) \| (\d+) \|", re.M)
+
+
+# Module-level rather than a method on the TestCase because the rule has to be exercised
+# against a *synthetic* table: a method reading the real README could only ever show the
+# guard passing, which is the one outcome that proves nothing about whether it can fail.
+def _duplicate_plugin_rows(markdown: str) -> list[str]:
+    """Plugin names the README table lists on more than one row.
+
+    Keying a dict by plugin name collapses duplicates silently — a table listing a plugin
+    twice still yields one entry per name, so both set comparisons against the manifest
+    pass and the second row is invisible. Counting the names before they become keys is
+    what makes a duplicate detectable at all.
+    """
+    names = [m.group(1) for m in README_ROW.finditer(markdown)]
+    return sorted({name for name in names if names.count(name) > 1})
+
+
 def _true_counts() -> tuple[int, int]:
     manifest = json.loads(
         (ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8")
@@ -138,15 +157,14 @@ class CatalogueCountTests(unittest.TestCase):
         )
         entries = {p["name"]: p for p in manifest["plugins"]}
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        row = re.compile(r"^\| \[([a-z0-9-]+)\]\([^)]+\) \| ([^|]+?) \| ([^|]+?) \| (\d+) \|", re.M)
-        matches = list(row.finditer(readme))
+        matches = list(README_ROW.finditer(readme))
         rows = {
             m.group(1): (m.group(2).strip(), m.group(3).strip(), int(m.group(4))) for m in matches
         }
         self.assertEqual(
-            len(matches),
-            len(rows),
-            "README table contains duplicate plugin rows",
+            _duplicate_plugin_rows(readme),
+            [],
+            "README table lists a plugin on more than one row (CONTRIBUTING.md: one row each)",
         )
 
         self.assertEqual(
@@ -174,6 +192,29 @@ class CatalogueCountTests(unittest.TestCase):
                 wrong.append(f"{name}: table says {skill_count} skills, tree has {actual}")
         self.assertEqual(
             wrong, [], "README table disagrees with the tree:\n  " + "\n  ".join(wrong)
+        )
+
+    def test_a_duplicated_readme_row_is_caught(self) -> None:
+        """A guard nothing has ever seen fail is a guard nobody knows works.
+
+        The duplicate rule cannot be proved against the real README — that table is clean,
+        so reading it only ever shows the assertion passing. This feeds the parser a table
+        that duplicates a row and asserts it is reported, and, on the same table, that the
+        set comparisons the duplicate check backs up stay silent — which is exactly why
+        keying rows by plugin name was not enough on its own.
+        """
+        alpha = "| [alpha](https://example.invalid/alpha) | 0.1.0 | finance | 7 | notes |"
+        beta = "| [beta](https://example.invalid/beta) | 0.2.0 | science | 3 | notes |"
+        clean = "\n".join([alpha, beta])
+        duplicated = "\n".join([alpha, beta, alpha])
+
+        self.assertEqual(_duplicate_plugin_rows(clean), [])
+        self.assertEqual(_duplicate_plugin_rows(duplicated), ["alpha"])
+
+        # The membership checks see the same two names either way: they cannot catch this.
+        self.assertEqual(
+            {m.group(1) for m in README_ROW.finditer(duplicated)},
+            {m.group(1) for m in README_ROW.finditer(clean)},
         )
 
 

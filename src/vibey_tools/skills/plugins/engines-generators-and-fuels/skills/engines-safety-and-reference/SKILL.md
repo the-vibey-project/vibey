@@ -84,9 +84,11 @@ Rules:
 - Use GFCI/RCBO protection.
 - Respect stored energy in capacitors and batteries.
 
-> Related and equally non-negotiable: **never backfeed through a wall outlet**. Neutral bonding and
-> whether a grounding electrode is required depend on the generator's listed transfer equipment,
-> whether it is separately derived, the manufacturer's instructions, and local electrical code.
+Related and equally non-negotiable: **never backfeed through a wall outlet**. Neutral bonding and
+whether a grounding electrode is required depend on the generator's listed transfer equipment,
+whether it is separately derived, the manufacturer's instructions, and local electrical code — the
+transfer-switching and grounding rules, and which way each of those inputs decides the bond, are at
+§14 → `engines-generators-and-house-power`.
 
 ### 21.4 Fuel storage and fire
 

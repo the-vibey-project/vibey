@@ -149,7 +149,21 @@ Mandatory homework first:
 If you have decided you need your own network rather than onion services on the public one
 (§13.6 → `tor-building-on-tor-software-patterns`), this is the operator checklist:
 
-2. **Size the relay set for bandwidth, failure tolerance, and the intended anonymity set** — there is no protocol-level relay-count minimum; production targets should be justified for the specific deployment.
+1. **At least 3 directory authorities**, run on different infrastructure, in different
+   locations, under different administrators — they are the trust root (see the gotcha
+   below).
+2. **Size the relay set to the deployment; there is no protocol-level relay-count minimum.**
+   Three distinct relays is the floor for building a three-hop circuit at all, a test or
+   permissioned deployment sized to its own known traffic can be legitimately small, and a
+   public-facing service needs enough to carry peak load with capacity left over when some
+   are down. Size against **bandwidth** (peak throughput plus headroom, remembering every
+   circuit spends that capacity at three relays); **failure tolerance** (how many relays can
+   drop before circuits fail or capacity does); **path diversity** (enough distinct
+   operators, subnets and providers that the no-shared-operator and no-shared-subnet
+   constraints still leave usable paths); and the **anonymity set** you intend to offer — a
+   network small enough that a relay operator can guess who is talking provides no anonymity
+   at any relay count. Pick the target from those four, write down the reasoning, and
+   re-derive it when traffic or the threat model changes.
 3. **Custom consensus parameters** configured, and **client software pointing at your
    authorities**, not the public ones.
 4. **Chutney for testing before deployment** (§13.4c →
