@@ -58,6 +58,12 @@ protocol everyone now wants to *converge on*:
   ⚠️ "PQ-ready via agility" ≠ "PQ deployed": no shipped PQ ciphersuite is verified in this dossier.
 - **Matrix** named MLS a **Matrix 3.0 candidate** (see `chat-matrix-and-element`).
 - **Nostr** gained MLS group messaging via the Marmot protocol/NIP-EE (see §8).
+- **RCS** — the GSMA's Universal Profile adopted **MLS** as the basis for cross-platform E2EE
+  between Android and iOS, which would make RCS by far the largest MLS deployment in existence if
+  and when it reaches carrier scale. ⚠️ Treat the *standard* as adopted and the *rollout* as
+  unverified in this dossier: check the GSMA, Apple and Google shipping statements before quoting
+  a date, a version, or a coverage figure. It is also the single biggest reason MLS — not the
+  Signal Protocol — is the convergence target for new group-messaging work.
 - **IETF MIMI** (More Instant Messaging Interoperability) is building cross-provider interop *on*
   MLS: hub/follower server model over mutually-authenticated HTTPS, consent flows, message
   franking for abuse reports, minimal-metadata rooms with pseudonymous credentials, hub-proxied /

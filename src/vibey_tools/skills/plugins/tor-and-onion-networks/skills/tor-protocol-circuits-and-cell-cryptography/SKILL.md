@@ -146,6 +146,20 @@ Each hop strips one layer of symmetric crypto from outbound cells and adds one l
 inbound cells — the "onion." The exit decrypts the final layer and forwards plaintext to the
 destination (for client circuits) or the service.
 
+```
+// Outbound (client → destination)
+Client builds:  Layer1(Layer2(Layer3(payload)))
+Guard:  strips Layer1 → forwards Layer2(Layer3(payload)) to middle
+Middle: strips Layer2 → forwards Layer3(payload)         to exit
+Exit:   strips Layer3 → forwards payload                 to destination
+
+// Inbound (destination → client) reverses: exit adds Layer3, middle adds Layer2,
+// guard adds Layer1, and the client — holding keys for all three hops — strips all three.
+```
+
+This is the whole reason the client must hold keys for every hop and each hop holds keys only
+for itself: the client is the only party that can construct or unwrap the full stack.
+
 Two safety rails worth knowing:
 
 - **`RELAY_EARLY` cells** bound circuit construction: only the first N (8) relay cells in a
