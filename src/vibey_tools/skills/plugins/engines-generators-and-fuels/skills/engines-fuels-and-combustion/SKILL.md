@@ -150,7 +150,7 @@ industrial furnaces and geothermal sources.
 | Ethanol (E85) | 30 MJ/kg (25 MJ/L) | Otto (spark-ignition) | Internal | High octane; renewable; lower energy density than petrol |
 | Biodiesel (B100) | 38 MJ/kg (33 MJ/L) | Diesel (compression-ignition) | Internal | Renewable; biodegradable; may gel in cold weather; can affect seals in old engines |
 | Biogas | 20–25 MJ/m³ | Otto-gas, Brayton | Internal | Renewable; requires cleaning (H₂S removal); low energy density |
-| Hydrogen | 120 MJ/kg (but 10 MJ/L at 700 bar) | Brayton, Otto-modified, fuel cell | Internal or electrochemical | Highest energy per kg, lowest per litre; embrittles steel; hard to store; NOx if burned in air |
+| Hydrogen | 120 MJ/kg (about 5 MJ/L at 700 bar) | Brayton, Otto-modified, fuel cell | Internal or electrochemical | Highest energy per kg, lowest per litre; embrittles steel; hard to store; NOx if burned in air |
 | Uranium-235 | ~80 million MJ/kg | Rankine (steam) | Nuclear fission | Extraordinary energy density; zero emissions; waste and safety challenges |
 
 **Reading the table:** MJ/kg and MJ/L tell different stories and the disagreement is the point. Hydrogen has
