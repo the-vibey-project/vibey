@@ -36,7 +36,7 @@ on T_H or T_C, and what stops me pulling it further?*
 | Cycle | Combustion / flow | Lever on T_H | What stops you | Real efficiency |
 |---|---|---|---|---|
 | Otto (§7) | Internal, batch | Compression ratio | Knock — a fuel-chemistry limit | 25–35% |
-| Diesel (§8) | Internal, batch | Much higher compression ratio | — (no limiting mechanism stated) | 35–45% road; **50–55% large marine** |
+| Diesel (§8) | Internal, batch | Much higher compression ratio | Peak cylinder pressure, mechanical stress, cold-start and emissions limits | 35–45% road; **50–55% large marine** |
 | Brayton (§9) | Internal, continuous | Turbine firing temperature | Back-work ratio; blade materials | 30–40% simple cycle |
 | Stirling (§10) | External, batch, sealed fluid | Any external heat source | Heat transfer, sealing, regenerator | Carnot in theory only |
 | Combined (§11) | Brayton topping + Rankine bottoming | Brayton T_H with Rankine T_C | Nothing better is in service | **55–62%** |
