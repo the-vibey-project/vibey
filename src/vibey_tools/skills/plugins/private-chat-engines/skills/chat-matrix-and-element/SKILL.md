@@ -64,6 +64,12 @@ room state, and metadata for its users' rooms forever unless retention is config
 - **Post-compromise security caveat**: because MegOlm sessions are outbound-only, they don't
   self-heal the way pairwise ratchets do; rotation settings and device-change sharing rules are
   the mitigation. This is a known, documented trade (cheap fan-out vs. weaker PCS).
+- **History on join is a policy decision, not a protocol guarantee**: a joining device receives the
+  current outbound session, so unless the room key has rotated it can decrypt messages already sent
+  in that session. Set `m.room.history_visibility` and the rotation parameters
+  (`rotation_period_ms` / `rotation_period_msgs` in `m.room.encryption`) deliberately rather than
+  inheriting defaults — and state the answer in the room's description, because members will assume
+  the opposite of whatever you chose.
 - **Cross-signing & verification**: users hold master/self-signing/user-signing keys (secured by
   the "secure secret storage"/(4S) backup on the homeserver, protected by a recovery key);
   verification by QR/emoji between devices; the Matrix 2.0-era direction is **invisible

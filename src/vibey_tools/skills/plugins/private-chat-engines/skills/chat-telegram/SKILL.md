@@ -54,6 +54,11 @@ voice/video calls are E2EE; group voice/video calls are not** (they're server-me
 client-server encryption). Any security analysis of "Telegram" that doesn't disaggregate these is
 worthless.
 
+Key agreement also **requires both parties to be online**: MTProto's E2E layer has no asynchronous
+pre-key bootstrap of the X3DH kind, so a Secret Chat cannot be opened to a device that is simply
+switched off. That is a second, quieter reason almost nobody uses them — the feature fails exactly
+when mobile messaging normally works.
+
 ### 1.3 MTProto 2.0 and its critics
 MTProto is a bespoke protocol (auth-key DH → per-message keys derived from a middle slice of a
 SHA-256 of the plaintext, encrypted in an unusual IGE-mode construction, 2.0 fixing the worst
