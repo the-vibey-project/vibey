@@ -2,6 +2,8 @@
 
 All commands return zero on success and a nonzero status on validation, policy, or
 transport failure. Run `vibey-gh COMMAND --help` for argparse's generated reference.
+`python -m vibey_gh COMMAND` is the same entry point, for an interpreter that has the
+package but not the `vibey-gh` script on its `PATH`.
 
 | Command | Arguments and options | Behavior |
 |---|---|---|
