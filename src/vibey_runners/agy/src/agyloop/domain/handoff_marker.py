@@ -28,6 +28,11 @@ HANDOFF_SCHEMA_VERSION = 1
 # supervisor needs to tell "handed off, resume me elsewhere" from "failed".
 EXIT_WIND_DOWN = 75
 
+# How a wound-down RunResult's reason begins. The runner writes it and the CLI
+# reads it to choose EXIT_WIND_DOWN over a plain failure, so both sides take it
+# from here rather than each spelling the string out.
+WIND_DOWN_REASON_PREFIX = "wind-down:"
+
 
 @dataclass(frozen=True, slots=True)
 class HandoffMarker:

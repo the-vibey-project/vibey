@@ -9,6 +9,7 @@ import typer
 from agyloop import bootstrap
 from agyloop.application.usecases.resume_session import resolve_last_run, resume_explicit
 from agyloop.cli.asyncio import async_command
+from agyloop.cli.run_outcome import RunOutcomeReporter
 from agyloop.domain.errors import InvalidSessionSelectorError
 
 
@@ -130,7 +131,4 @@ async def _resume(
     )
     typer.echo(f"Run id: {context.run_id}", err=True)
     result = await resume_explicit(context.runner)
-    if not result.success:
-        typer.echo(f"Run failed: {result.reason}", err=True)
-        raise typer.Exit(code=1)
-    typer.echo(f"Done: {result.reason}")
+    RunOutcomeReporter().conclude(result)
