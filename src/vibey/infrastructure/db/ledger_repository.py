@@ -14,28 +14,40 @@ import asyncpg
 from vibey.domain.engine import EngineId
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
 from vibey.domain.phase import Phase
-from vibey.infrastructure.db.interfaces import EventAppenderInterface
+from vibey.infrastructure.db.interfaces import EventAppenderInterface, EventRowMapperInterface
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
 from vibey.infrastructure.ledger.redact import redact_payload
 
 
-def _row_to_event(row: asyncpg.Record) -> LedgerEvent:
-    return LedgerEvent(
-        event_id=row["event_id"],
-        project_id=row["project_id"],
-        cycle=row["cycle"],
-        phase=Phase(row["phase"]),
-        seq=row["seq"],
-        kind=EventKind(row["kind"]),
-        engine_id=EngineId(row["engine_id"]) if row["engine_id"] is not None else None,
-        job_id=row["job_id"],
-        causation_id=row["causation_id"],
-        correlation_id=row["correlation_id"],
-        provenance=Provenance(row["provenance"]),
-        produced_at=row["produced_at"],
-        payload=json.loads(row["payload"]),
-        digest=row["digest"],
-    )
+class EventRowMapper:
+    """Turns one `event` row into a `LedgerEvent`.
+
+    A class of its own so every reader of the table -- this repository, the
+    appender, the search repository -- maps a row one way. Two copies of the
+    mapping would drift the first time a column was added to one of them.
+    """
+
+    def to_event(self, row: asyncpg.Record) -> LedgerEvent:
+        return LedgerEvent(
+            event_id=row["event_id"],
+            project_id=row["project_id"],
+            cycle=row["cycle"],
+            phase=Phase(row["phase"]),
+            seq=row["seq"],
+            kind=EventKind(row["kind"]),
+            engine_id=EngineId(row["engine_id"]) if row["engine_id"] is not None else None,
+            job_id=row["job_id"],
+            causation_id=row["causation_id"],
+            correlation_id=row["correlation_id"],
+            provenance=Provenance(row["provenance"]),
+            produced_at=row["produced_at"],
+            payload=json.loads(row["payload"]),
+            digest=row["digest"],
+        )
+
+
+EVENT_ROWS: Final[EventRowMapperInterface] = EventRowMapper()
+"""The one row mapper every reader shares. Stateless, so one instance serves."""
 
 
 class ConnectionEventAppender:
@@ -88,7 +100,7 @@ class ConnectionEventAppender:
         )
         if row is None:
             raise LookupError(f"append_event returned seq {seq} but no row exists")
-        return _row_to_event(row)
+        return EVENT_ROWS.to_event(row)
 
 
 DEFAULT_EVENT_APPENDER: Final[EventAppenderInterface] = ConnectionEventAppender()
@@ -129,14 +141,14 @@ class PostgresLedgerRepository:
                 from_seq,
                 to_seq,
             )
-            return tuple(_row_to_event(r) for r in rows)
+            return tuple(EVENT_ROWS.to_event(r) for r in rows)
 
     async def all_for_project(self, project_id: UUID) -> tuple[LedgerEvent, ...]:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 "SELECT * FROM event WHERE project_id = $1 ORDER BY seq", project_id
             )
-            return tuple(_row_to_event(r) for r in rows)
+            return tuple(EVENT_ROWS.to_event(r) for r in rows)
 
     async def latest_seq(self, project_id: UUID) -> int:
         async with self._pool.acquire() as conn:

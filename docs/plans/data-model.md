@@ -285,6 +285,32 @@ CREATE RULE event_no_delete AS ON DELETE TO event DO INSTEAD NOTHING;
 The `RULE`s make `UPDATE` and `DELETE` silent no-ops rather than errors: a stray
 write affects zero rows.
 
+**Search indexes.** `vibey ledger search` (sub-doctrine 7.a, #137) adds three
+indexes for the dimensions 0002's could not serve:
+
+```sql
+-- 0012_event_search_indexes.sql
+CREATE INDEX event_digest              ON event (digest);
+CREATE INDEX event_project_produced_at ON event (project_id, produced_at);
+CREATE INDEX event_project_engine      ON event (project_id, engine_id, seq);
+```
+
+`event_digest` is not unique and must not become so: `digest` is the SHA-256 of
+the canonical payload alone, so every event with the same payload (`{}` is common)
+shares one. A digest search returns a set; a record is named by `event_id`. The
+free-text criterion (`payload::text ILIKE`) has no index — `event_payload_gin` is
+`jsonb_path_ops`, which answers containment, not substrings — so it scans one
+project's rows.
+
+**The hash chain is derived, not stored.** There is no `prev_hash` column. The
+`RULE`s above would silently discard a migration's backfill `UPDATE`, and a column
+filled only by new appends would leave all existing history outside the chain.
+Instead `domain/ledger_chain.py` recomputes it from the rows: each event's link is
+the SHA-256 of the previous link and every column of the event (the payload through
+its digest), starting from a per-project genesis. A window of events verifies alone
+from the link before it, which is the hook the storage tiers' chunk hashes fold over
+(#114).
+
 **`correlation_id` is the delivery's; `causation_id` is the run's.** Every event
 of one delivery — DESIGN, BUILD, REVIEW and the deploy stage set, in every cycle
 — carries the same `correlation_id`, so `event_correlation` answers "show me

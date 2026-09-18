@@ -1,5 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""The contract for appending one ledger event on a caller-owned connection.
+"""The contracts for appending one ledger event on a caller-owned connection,
+and for reading one back out of a row.
 
 Mirrors `vibey/infrastructure/db/ledger_repository.py` (ADR-0016): the
 directory gains an `interfaces/` child and the module an `_interface` suffix.
@@ -36,4 +37,13 @@ class EventAppenderInterface(Protocol):
 
     async def append(self, conn: OwnedConnection, draft: LedgerEventDraft) -> LedgerEvent:
         """Persist `draft` on `conn` and return the event as it landed."""
+        ...
+
+
+@runtime_checkable
+class EventRowMapperInterface(Protocol):
+    """Maps one row of the `event` table to the domain's `LedgerEvent`."""
+
+    def to_event(self, row: asyncpg.Record) -> LedgerEvent:
+        """Every column, typed; the payload decoded from its JSON text."""
         ...

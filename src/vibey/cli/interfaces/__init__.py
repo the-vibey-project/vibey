@@ -2,5 +2,15 @@
 """Seams the CLI layer declares. Interfaces declare; they never consume."""
 
 from vibey.cli.interfaces.early_signals_interface import SigtermLatchInterface
+from vibey.cli.interfaces.ledger_search_interface import (
+    LedgerSearchCommandInterface,
+    LedgerSearchPresenterInterface,
+    TimeBoundParserInterface,
+)
 
-__all__ = ["SigtermLatchInterface"]
+__all__ = [
+    "LedgerSearchCommandInterface",
+    "LedgerSearchPresenterInterface",
+    "SigtermLatchInterface",
+    "TimeBoundParserInterface",
+]

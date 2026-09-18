@@ -3,6 +3,11 @@
 
 from vibey.infrastructure.db.interfaces.ledger_repository_interface import (
     EventAppenderInterface,
+    EventRowMapperInterface,
+)
+from vibey.infrastructure.db.interfaces.ledger_search_repository_interface import (
+    LedgerSearchCompilerInterface,
+    SearchStatementInterface,
 )
 from vibey.infrastructure.db.interfaces.project_repository_interface import (
     PhaseTransitionedDraftBuilderInterface,
@@ -10,5 +15,8 @@ from vibey.infrastructure.db.interfaces.project_repository_interface import (
 
 __all__ = [
     "EventAppenderInterface",
+    "EventRowMapperInterface",
+    "LedgerSearchCompilerInterface",
     "PhaseTransitionedDraftBuilderInterface",
+    "SearchStatementInterface",
 ]
