@@ -621,17 +621,27 @@ def _fit(args) -> int:
     from pathlib import Path
 
     from vibey_gh import fit
-    from vibey_gh.fitloop import FitLoop, recorded_observations
+    from vibey_gh.fitloop import FitLoop
 
+    # The runner the model is read from: --base-url, else VIBEY_OLLAMA_URL, else the one
+    # the local review is configured to call -- so the fit describes the runner it gates.
+    base_url = fit.OllamaModelSampler.resolve_base_url(
+        args.base_url, fallback=load_config().pr_automation.fallback.base_url
+    )
     machine = fit.sample_machine()
-    model = fit.sample_model(args.model)
-    # With --journal the decision is recorded with everything needed to re-derive it,
-    # and prior observations in that journal inform this projection — which is what
-    # makes repeated invocations a control loop rather than a series of guesses.
-    journal = Path(args.journal) if args.journal else None
-    loop = FitLoop(args.model, journal=journal)
-    if journal:
-        loop._observations.extend(recorded_observations(journal))
+    model = fit.sample_model(args.model, base_url)
+    # The decision is recorded with everything needed to re-derive it, and prior
+    # observations in the journal inform this projection — which is what makes repeated
+    # invocations a control loop rather than a series of guesses. On unless --no-journal:
+    # --journal, else VIBEY_GH_FIT_JOURNAL, else ~/.local/state/vibey-gh/fit.jsonl.
+    if args.no_journal:
+        journal = None
+    elif args.journal:
+        journal = Path(args.journal)
+    else:
+        journal = FitLoop.default_journal()
+    loop = FitLoop(args.model, journal=journal, base_url=base_url)
+    loop.replay()
     if args.observed_seconds is not None:
         loop.observe(
             payload_bytes=args.payload_bytes,
@@ -653,12 +663,15 @@ def _fit(args) -> int:
     if not machine.readable:
         print("vibey-gh fit: machine memory could not be read — that reading is unknown, not empty")
     if model is None:
-        print(f"vibey-gh fit: model {args.model} could not be read from the runner")
+        print(f"vibey-gh fit: model {args.model} could not be read from the runner at {base_url}")
     else:
         print(
             f"vibey-gh fit: model {model.name} {model.size_gb} GB, context {model.context_length}"
+            + ("" if model.resident else " — not loaded; size is its weights on disk")
         )
     print(f"vibey-gh fit: {verdict.verdict.upper()} — {verdict.reason}")
+    if journal is not None:
+        print(f"vibey-gh fit: journal {journal}")
     if verdict.headroom_gb:
         print(f"vibey-gh fit: headroom wanted: {verdict.headroom_gb} GB")
     for note in verdict.notes:
@@ -1266,9 +1279,22 @@ def main(argv: list[str] | None = None) -> int:
         help="record what this payload ACTUALLY took, feeding the estimate (#263)",
     )
     ft.add_argument(
+        "--base-url",
+        default="",
+        help="the Ollama runner to read the model from (default: $VIBEY_OLLAMA_URL, else"
+        " [pr_automation.fallback] base_url)",
+    )
+    ft_journal = ft.add_mutually_exclusive_group()
+    ft_journal.add_argument(
         "--journal",
         help="record this decision, and read prior ones back, so repeated calls"
-        " form a self-adjusting loop (#263)",
+        " form a self-adjusting loop (#263) (default: $VIBEY_GH_FIT_JOURNAL, else"
+        " ~/.local/state/vibey-gh/fit.jsonl)",
+    )
+    ft_journal.add_argument(
+        "--no-journal",
+        action="store_true",
+        help="decide from this call alone: record nothing and read nothing back",
     )
     ft.set_defaults(func=_fit)
 

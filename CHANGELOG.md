@@ -30,6 +30,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Features
+
+* **gh:** the fit calculus reads a model the runner holds but has not loaded (via
+  `/api/tags` and `/api/show`) instead of calling it the floor, reads the runner that
+  `--base-url` or `VIBEY_OLLAMA_URL` names instead of always 127.0.0.1, and journals to
+  `~/.local/state/vibey-gh/fit.jsonl` by default (`VIBEY_GH_FIT_JOURNAL`, `--journal`,
+  `--no-journal`). Both local-model calls now size their context window through one
+  `ContextSizer`, with unchanged windows. These are prerequisites for wiring the fit loop
+  into live Ollama calls; swap actuation stays refused by design (#135)
+
 ## [0.8.0] (2026-09-16)
 
 ### Features

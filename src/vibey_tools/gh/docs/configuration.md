@@ -294,6 +294,38 @@ Zero is the absence of a measurement; reporting it as if it were one is the sile
 failure doctrine 10 forbids. When nothing is readable, `vibey-gh fit` says so out
 loud and the verdict is `floor`.
 
+**The model is read from the runner the work would go to.** `--base-url`, else the
+`VIBEY_OLLAMA_URL` environment variable (the one the fallback workflows already
+export), else `[pr_automation.fallback] base_url` (default `http://127.0.0.1:11434`).
+In code, `FitLoop(base_url=...)` and `sample_model(name, base_url)` resolve the same
+way, with `http://127.0.0.1:11434` as the last step.
+
+**A model that is not loaded is still a model.** Ollama's `/api/ps` lists only the
+models currently in memory, so a model the runner holds on disk but has idled out
+used to read exactly like one it does not have, and the verdict was `floor`. Now a
+model missing from `/api/ps` is looked up in `/api/tags` (everything the runner
+holds) and its context length is read from `/api/show`. The size it then reports is
+the weights on disk. That is a lower bound, because loading adds the context's KV
+cache, and the verdict says so in a note. `floor` means only that the runner does
+not hold the model, or could not be read at all.
+
+**The journal is on by default.** Each decision, and each `--observed-seconds`
+measurement, is appended to `--journal PATH`, else to `VIBEY_GH_FIT_JOURNAL`, else to
+`~/.local/state/vibey-gh/fit.jsonl`. That path sits next to the failover seat's state
+because the journal describes this machine's runner, not any one repository. Every
+invocation reads back the measurements already there, so separate runs form one
+loop. `--no-journal` decides from the one call alone and writes nothing. In code,
+`FitLoop(journal=None)` still keeps decisions only in memory. `FitLoop.default_journal()`
+and `loop.replay()` are the opt-in.
+
+**One context-sizing rule for every local call.** `local-review` and `local-triage`
+both ask Ollama for a `num_ctx` sized to the prompt through `vibey_gh.fit.ContextSizer`:
+`prompt_chars // 3 + 2048` tokens, never below 4096 (the server's small default,
+into which a large diff context-shifts until it never finishes) and never above
+32768 (an enormous request should fail visibly, not exhaust the host). Each of those
+four numbers is a constructor keyword with that default, and both calls take a
+`sizer=` argument.
+
 Measured on a 24 GB machine running `qwen2.5-coder:14b`: peak throughput
 **1.72 generations/min at 6 concurrent**, degrading to 1.27/min at 8 — the
 saturation knee, past which added load buys queueing rather than work.

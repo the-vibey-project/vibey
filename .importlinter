@@ -104,5 +104,6 @@ forbidden_modules =
     vibey_gh.marketplace
     vibey_gh.documentation
     vibey_gh.fitloop
+    vibey_gh.local_review
     vibey_gh.doctor
     vibey_gh.install

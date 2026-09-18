@@ -32,18 +32,25 @@ hands. `recommendation()` is the output; acting on it is the operator's call.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
+from vibey_gh.interfaces.context_sizer_interface import ContextSizerInterface
 from vibey_gh.interfaces.memory_sampler_interface import MemorySamplerInterface
+from vibey_gh.interfaces.model_sampler_interface import ModelSamplerInterface
 from vibey_gh.interfaces.text_file_reader_interface import TextFileReaderInterface
 
 __all__ = [
     "ADMIT",
+    "DEFAULT_OLLAMA_URL",
     "DEFER",
     "FLOOR",
+    "OLLAMA_URL_ENV",
+    "ContextSizer",
     "DarwinMemorySampler",
     "Estimate",
     "Fit",
@@ -51,6 +58,7 @@ __all__ = [
     "Machine",
     "Model",
     "Observation",
+    "OllamaModelSampler",
     "TextFileReader",
     "decide",
     "estimate_from",
@@ -104,6 +112,24 @@ LINUX_CGROUP_SWAP_LIMIT_PATHS = ("/sys/fs/cgroup/memory.swap.max",)
 LINUX_CGROUP_SWAP_USAGE_PATHS = ("/sys/fs/cgroup/memory.swap.current",)
 _MEMINFO_KEYS = ("MemTotal", "MemAvailable", "MemFree", "SwapTotal", "SwapFree")
 
+# Where the model side is read from. `VIBEY_OLLAMA_URL` is the name the fallback workflows
+# already export on the sovereign runner (`--base-url "${VIBEY_OLLAMA_URL:-...}"`), so the
+# fit is read from the same runner the local review it gates would call -- not from a
+# second guess at where that runner lives. The URL below is the default when nothing says
+# otherwise, and the same one `[pr_automation.fallback] base_url` ships with.
+OLLAMA_URL_ENV = "VIBEY_OLLAMA_URL"
+DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
+# Per request. A runner that cannot answer a metadata query in this long is not one a
+# projection should be built on, and the sampler reports it as unreadable instead.
+DEFAULT_OLLAMA_TIMEOUT_S = 10
+
+# The context window a local call asks for, sized to its prompt (see `ContextSizer`). Each
+# is a default rather than a constant (ADR-0018).
+DEFAULT_CONTEXT_FLOOR_TOKENS = 4096
+DEFAULT_CONTEXT_CEILING_TOKENS = 32768
+DEFAULT_CHARS_PER_TOKEN = 3
+DEFAULT_CONTEXT_RESERVE_TOKENS = 2048
+
 
 def _with_nested(paths: tuple[str, ...], relative: str) -> tuple[str, ...]:
     """Each path preceded by its equivalent inside `relative`, the caller's own cgroup.
@@ -154,6 +180,13 @@ class Model:
     name: str
     size_gb: float
     context_length: int
+    # Whether the runner had this model LOADED when it was read. Resident, `size_gb` is the
+    # runner's own reading of what the model occupies and `context_length` is the window in
+    # use (`/api/ps`). Not resident, `size_gb` is its weights on disk (`/api/tags`) and
+    # `context_length` the maximum its metadata states (`/api/show`) -- a lower bound on
+    # what loading it will occupy, because the context's KV cache and the compute buffers
+    # come on top. The two must not pass for each other, so `decide()` says which it had.
+    resident: bool = True
 
 
 @dataclass(frozen=True)
@@ -462,29 +495,184 @@ def sample_machine(platform_name: str = "") -> Machine:
     return machine_sampler(platform_name).sample()
 
 
-def sample_model(name: str, base_url: str = "http://127.0.0.1:11434") -> Model | None:
-    """Read the model side from the runner itself. None when it cannot be read —
-    the caller must not proceed on an assumed model (doctrine 10)."""
-    curl = shutil.which("curl")
-    if not curl:
-        return None
-    body = _run(curl, "-s", "-m", "10", f"{base_url}/api/ps")
-    if not body:
-        return None
-    try:
-        data = json.loads(body)
-    except json.JSONDecodeError:
-        return None
-    for entry in data.get("models", []) or []:
-        if not isinstance(entry, dict):
-            continue
-        if entry.get("name") == name or entry.get("model") == name:
+class OllamaModelSampler(ModelSamplerInterface):
+    """The model side of the fit, read from an Ollama runner — loaded or not.
+
+    `/api/ps` lists only what is RESIDENT. Asked alone, it makes a model the runner holds
+    on disk but has not loaded yet read exactly like a model the runner does not have, so
+    every cold call — the first review after the runner idled its model out — would be
+    refused at the floor for the wrong reason. A model that is not loaded is therefore
+    looked for in `/api/tags`, which lists everything the runner holds, and its context
+    length is read from `/api/show`'s model metadata. It comes back with `resident=False`,
+    because its size is then the weights on disk: a lower bound, not a measurement.
+
+    `None` is kept for exactly what it names — the runner does not hold this model, or
+    could not be read at all — and never stands in for "not loaded right now".
+
+    Where the runner is: `base_url`, else `VIBEY_OLLAMA_URL`, else `fallback_url` (see
+    `resolve_base_url`). The transport is `curl`, as it always was here, so the sampler
+    adds no dependency (#135: the sampler reads what the machine already publishes); `run`
+    and `curl` are injectable so a test hands it exact responses without a socket.
+    """
+
+    def __init__(
+        self,
+        base_url: str | None = None,
+        *,
+        environ: Mapping[str, str] | None = None,
+        fallback_url: str = DEFAULT_OLLAMA_URL,
+        timeout_s: int = DEFAULT_OLLAMA_TIMEOUT_S,
+        run: Callable[..., str] | None = None,
+        curl: str | None = None,
+    ) -> None:
+        self.base_url = self.resolve_base_url(base_url, environ=environ, fallback=fallback_url)
+        self._timeout_s = timeout_s
+        self._run = run
+        self._curl = curl
+
+    @staticmethod
+    def resolve_base_url(
+        explicit: str | None = None,
+        *,
+        environ: Mapping[str, str] | None = None,
+        fallback: str = DEFAULT_OLLAMA_URL,
+    ) -> str:
+        """The runner to read: `explicit`, else `VIBEY_OLLAMA_URL`, else `fallback`.
+
+        An empty value at any step counts as unset, which is how a shell spells it. The
+        trailing slash is dropped so `http://host:11434/` and `http://host:11434` read the
+        same endpoints.
+        """
+        env = os.environ if environ is None else environ
+        return (explicit or env.get(OLLAMA_URL_ENV) or fallback).rstrip("/")
+
+    def sample(self, name: str) -> Model | None:
+        loaded = self._entry(self._request("/api/ps"), name)
+        if loaded is not None:
             return Model(
                 name=name,
-                size_gb=round(float(entry.get("size", 0)) / 1e9, 2),
-                context_length=int(entry.get("context_length", 0) or 0),
+                size_gb=round(float(loaded.get("size", 0)) / 1e9, 2),
+                context_length=int(loaded.get("context_length", 0) or 0),
             )
-    return None
+        held = self._entry(self._request("/api/tags"), name)
+        if held is None:
+            return None
+        # `model` is the current field and `name` the deprecated one older runners read; a
+        # runner ignores whichever it does not know, so both are sent.
+        show = self._request("/api/show", {"model": name, "name": name})
+        return Model(
+            name=name,
+            size_gb=round(float(held.get("size", 0)) / 1e9, 2),
+            context_length=self._stated_context(show),
+            resident=False,
+        )
+
+    def _request(self, path: str, body: dict[str, str] | None = None) -> object:
+        """The runner's JSON answer at `path` — a POST when there is a `body` — or `None`
+        when there is no `curl`, no answer, or no JSON in it."""
+        curl = self._curl or shutil.which("curl")
+        if not curl:
+            return None
+        command = [curl, "-s", "-m", str(self._timeout_s)]
+        if body is not None:
+            command += ["-H", "Content-Type: application/json", "-d", json.dumps(body)]
+        # `_run` is looked up here rather than bound at construction, so the module's own
+        # runner stays the one default.
+        raw = (self._run or _run)(*command, f"{self.base_url}{path}")
+        if not raw:
+            return None
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return None
+
+    @staticmethod
+    def _entry(data: object, name: str) -> dict | None:
+        """The `models` entry naming this model, or `None`.
+
+        A name without a tag also matches its `:latest`, because that is the model the
+        runner itself resolves the bare name to. The tag is whatever follows the last `:`
+        in the final path segment, so a registry port (`host:5000/model`) is not one.
+        """
+        if not isinstance(data, dict):
+            return None
+        names = {name}
+        if ":" not in name.rsplit("/", 1)[-1]:
+            names.add(f"{name}:latest")
+        for entry in data.get("models", []) or []:
+            if isinstance(entry, dict) and (
+                entry.get("name") in names or entry.get("model") in names
+            ):
+                return entry
+        return None
+
+    @staticmethod
+    def _stated_context(show: object) -> int:
+        """The context length the model's own metadata states, or 0 when it states none.
+
+        `model_info` keys it by architecture — `qwen2.context_length`,
+        `llama.context_length` — so the architecture it names picks the key first, and any
+        other `*.context_length` is the fallback for a runner that omits the name. Zero is
+        the absence of a reading, exactly as a loaded model with no stated window reports.
+        """
+        info = show.get("model_info") if isinstance(show, dict) else None
+        if not isinstance(info, dict):
+            return 0
+        preferred = info.get(f"{info.get('general.architecture')}.context_length")
+        others = (value for key, value in info.items() if str(key).endswith(".context_length"))
+        for value in (preferred, *others):
+            if type(value) is int and value > 0:
+                return value
+        return 0
+
+
+class ContextSizer(ContextSizerInterface):
+    """A context window that actually fits the prompt — the one rule every local call uses.
+
+    Ollama loads models with a small default context (4096 tokens here). Sending a
+    60,000-character diff into that does not error: llama.cpp repeatedly shifts the
+    window instead, and generation degrades from seconds to never-finishes — observed in
+    production as the fallback timing out at 600s and then 1800s on a 717-line diff a
+    10,000-character slice of which reviewed in 17 seconds. Code tokenizes at roughly
+    3 characters per token; 2048 covers the system prompt, schema and response. Capped
+    because an enormous request should fail visibly rather than exhaust the host.
+
+    Each of those numbers is a keyword with that value as its default (ADR-0018); the
+    defaults reproduce the rule `local_review` shipped with exactly.
+    """
+
+    def __init__(
+        self,
+        *,
+        floor_tokens: int = DEFAULT_CONTEXT_FLOOR_TOKENS,
+        ceiling_tokens: int = DEFAULT_CONTEXT_CEILING_TOKENS,
+        chars_per_token: int = DEFAULT_CHARS_PER_TOKEN,
+        reserve_tokens: int = DEFAULT_CONTEXT_RESERVE_TOKENS,
+    ) -> None:
+        if chars_per_token < 1:
+            raise ValueError("chars_per_token must be at least 1")
+        if floor_tokens > ceiling_tokens:
+            raise ValueError("floor_tokens must not exceed ceiling_tokens")
+        self._floor = floor_tokens
+        self._ceiling = ceiling_tokens
+        self._chars_per_token = chars_per_token
+        self._reserve = reserve_tokens
+
+    def num_ctx(self, prompt_chars: int) -> int:
+        wanted = prompt_chars // self._chars_per_token + self._reserve
+        return min(self._ceiling, max(self._floor, wanted))
+
+
+def sample_model(name: str, base_url: str | None = None) -> Model | None:
+    """Read the model side from the runner itself. None when the runner does not hold the
+    model or cannot be read — the caller must not proceed on an assumed model (doctrine 10).
+
+    Module-level for the same reason as `sample_machine`: it is the published entry point
+    `cli.py` and adopters already call by name, so it stays a function and does nothing
+    but ask `OllamaModelSampler`. `base_url` defaults to `VIBEY_OLLAMA_URL`, then to
+    `DEFAULT_OLLAMA_URL`.
+    """
+    return OllamaModelSampler(base_url).sample(name)
 
 
 def estimate_from(observations: list[Observation], floor_slots: float = 1.0) -> Estimate:
@@ -615,6 +803,11 @@ def decide(
     ahead = max(queue_depth, 0)
     wait = round(saturating_wait(service, ahead, est.slots), 1)
     need = headroom_gb(machine, model, est.slots)
+    if not model.resident:
+        notes.append(
+            f"{model.name} is not loaded: {model.size_gb} GB is its weights on disk, a lower"
+            " bound on what loading it will occupy — the context's KV cache comes on top"
+        )
     if need > 0:
         notes.append(
             f"projection wants {need} GB more headroom than the {machine.available_gb}"
