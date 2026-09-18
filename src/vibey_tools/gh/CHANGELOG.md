@@ -5,6 +5,25 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Add `[merge_train] protected_paths`: globs the merge train never merges unattended
+  (vibey #213). A pull request touching one is reported `needs a human merge` instead of
+  merged, because the train falls back to `gh pr merge --admin` when a plain merge is
+  refused, and an admin merge bypasses the code-owner review a ruleset asks for — so the
+  refusal must come first, from configuration. The changed files come from the paginated
+  REST files endpoint, not `pr view --json files` (one GraphQL page of at most 100), a
+  rename counts as a change to its old path, and a listing that fails or falls short of
+  GitHub's own `changedFiles` count refuses rather than passes. A promotion from the
+  integration branch is exempt. The decision lives in `ProtectedPathsGuard`
+  (`vibey_gh/protected_paths.py`) behind `interfaces/protected_paths_interface.py`. Entries
+  must be unique and non-empty, and a leading `/` or a bare string is refused at load,
+  since either would protect nothing. Empty by default: nothing changes until a repository
+  declares paths.
+- Add `require_code_owner_review` to `[rulesets.integration]` and `[rulesets.release]`. It
+  was a literal `false` in every reconciled ruleset, so no repository could ask GitHub to
+  demand its CODEOWNERS' approval. Default `false`: with a CODEOWNERS file it blocks every
+  pull request touching an owned path until that owner approves, which an upgrade must
+  never switch on.
+
 - Fix `automation-bootstrap.yml`, the admin-only path for merging a repair to broken
   privileged workflow code, which could never merge (#214). It required six hard-coded
   check names — `Documentation contract`, `Provenance`, `Build`, `Lint`, `Analyze Python`,

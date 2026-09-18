@@ -108,6 +108,8 @@ conftest falls back to `postgresql://<current user>@localhost:5432/vibey_test`.
   runs `uv run pytest -m noloss --hypothesis-profile=noloss
   --hypothesis-show-statistics -p no:cacheprovider`. Never add a per-test
   `@settings(max_examples=...)` there: it overrides the profile.
+- These files are protected (`.github/CODEOWNERS`, `[merge_train]
+  protected_paths`): the merge train will not merge a change to them.
 
 **Credits-never-have-a-deadline** (`tests/domain/test_circuit.py`):
 - `schedule_probe(CreditsExhausted(...), ...)` can only return a `BackoffProbe`,

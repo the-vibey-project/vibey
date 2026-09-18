@@ -66,7 +66,7 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "fingerprint": {"sources", "text", "superseded_texts", "trailer"},
     "version": {"files", "content_paths", "code_paths"},
     "branches": {"integration", "release"},
-    "merge_train": {"owner", "trusted_authors", "restack_conflicts"},
+    "merge_train": {"owner", "trusted_authors", "restack_conflicts", "protected_paths"},
     "install": {"workflows", "pin_version", "union_merge_paths", "self_source", "fallback_package"},
     "pr_automation": _fields(PrAutomationConfig) | {"observability", "fallback"},
     "issue_automation": _fields(IssueAutomationConfig),

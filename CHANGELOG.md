@@ -72,6 +72,15 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   deadline) and marker drive the new required CI check `No-loss property suite (10,000
   examples)` on both branches, which prints Hypothesis' statistics on every run
   ([#213](https://github.com/the-vibey-project/vibey/issues/213))
+* **governance:** the protected tests are protected by something. The no-loss suite, the
+  chaos test, the full-cycle system test and `tests/live/` were guarded only by a refusal in
+  the dormant `scripts/fleet/land.sh`, which targets repositories that no longer exist. A
+  root `.github/CODEOWNERS` now owns them (and itself), both rulesets set
+  `require_code_owner_review = true`, and `[merge_train] protected_paths` makes the merge
+  train refuse such a pull request as "needs a human merge" before its `--admin` fallback
+  could bypass that review; `tests/meta/test_protected_paths_agree.py` keeps the two lists
+  identical. The ruleset keys take effect on the operator's next `vibey-gh reconcile`
+  ([#213](https://github.com/the-vibey-project/vibey/issues/213))
 
 ## [0.8.0] (2026-09-16)
 

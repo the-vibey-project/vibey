@@ -60,6 +60,20 @@ release     = "main"
 [merge_train]
 owner           = "adammatthewsteinberger"
 trusted_authors = ["adammatthewsteinberger", "claude[bot]", "github-actions[bot]", "vibey[bot]"]
+# The protected paths (#213): the tests that prove vibey works, which a build must never
+# weaken on its own say-so (docs/plans/implementation-plan.md, "Bootstrapping"). A pull
+# request touching one is reported "needs a human merge" and never merged by the train --
+# whose `--admin` fallback would otherwise bypass the code-owner review that
+# `require_code_owner_review` below asks GitHub for. The same list, anchored with `/`, is
+# .github/CODEOWNERS; tests/meta/test_protected_paths_agree.py keeps the two identical.
+protected_paths = [
+  "tests/domain/test_noloss*.py",
+  "tests/domain/test_briefing.py",
+  "tests/infrastructure/db/test_chaos.py",
+  "tests/system/test_delivery_stage_set.py",
+  "tests/live/**",
+  ".github/CODEOWNERS",
+]
 
 [install]
 # This repository vendors the tooling at src/vibey_tools/gh. Declared rather than
@@ -114,6 +128,8 @@ enabled = true
 [rulesets.integration]
 required_checks  = ["gates", "No-loss property suite (10,000 examples)"]
 required_approvals = 1
+# The owner in .github/CODEOWNERS must approve a change to a protected path.
+require_code_owner_review = true
 bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
 
 # The queue exists because a green pull request is not a green merge: its checks ran
@@ -134,6 +150,7 @@ required_checks  = [
   "gates", "No-loss property suite (10,000 examples)", "uv.lock is in sync with pyproject.toml",
 ]
 required_approvals = 1
+require_code_owner_review = true
 bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
 
 # Declared and off, rather than absent. Promotion is one controlled rebase of develop into
