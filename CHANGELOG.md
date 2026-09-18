@@ -30,6 +30,23 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Features
+
+* **gh:** the exact-head review's `--json-schema` is rendered from
+  `ReviewContract.json_schema()` instead of hand-written in `pr-automation.yml`, so the
+  schema the paid reviewer answers and the diff-groundable / wider-context split the local
+  lane uses are one table. The rendered schema is byte-identical to the literal it replaces;
+  this is groundwork for putting the sovereign lane first on the half it can carry (#133,
+  slice 1 of 3)
+
+### Bug Fixes
+
+* **gh:** the PR automation gate can now say "local fallback found a blocking defect". The
+  `review-fallback` job counted its findings but never declared the count as a job output,
+  so the gate always read an empty string and reported every local decline as "could not
+  complete the review", pointing away from a finding that sat in the job log. The paid
+  review job's `findings` output, declared but never written, is now written too (#133)
+
 ## [0.8.0] (2026-09-16)
 
 ### Features

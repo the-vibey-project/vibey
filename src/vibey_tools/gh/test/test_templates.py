@@ -68,9 +68,13 @@ def test_every_shipped_workflow_template_parses(path):
 
 
 def test_every_claude_json_schema_survives_argument_tokenization():
+    """Read from the RENDERED templates, because that is what runs: the exact-head review's
+    schema is a placeholder in the template, filled from `ReviewContract.json_schema()` at
+    install time, so the raw file holds six schemas and a marker rather than seven."""
     schemas = []
     for path in WORKFLOW_TEMPLATES:
-        for line in path.read_text(encoding="utf-8").splitlines():
+        rendered = render_workflow(path, GhConfig(root=Path(".")))
+        for line in rendered.splitlines():
             if "--json-schema " not in line:
                 continue
             tokens = shlex.split(line.strip())
@@ -538,6 +542,9 @@ def test_security_and_api_drift_workflows_are_real_managed_gates():
     assert "--log-failed" in text
     assert "diagnostic bundle truncated at 200000 bytes" in text
     assert "Read that file before" in text
+    # The schema is rendered from the review contract at install time, so the quoted field
+    # names are looked for where they actually appear; the jq that aggregates them is not.
+    rendered = render_workflow(WORKFLOWS / "pr-automation.yml", GhConfig(root=Path(".")))
     for field in (
         "complete",
         "accurate",
@@ -556,7 +563,7 @@ def test_security_and_api_drift_workflows_are_real_managed_gates():
         "release_process_sufficient",
         "links_valid",
     ):
-        assert f'"{field}"' in text
+        assert f'"{field}"' in rendered
         assert f".{field} == true" in text
     assert "((.findings // []) | length == 0)" in text
     assert "Exact-head semantic review result:" in text
@@ -2433,8 +2440,16 @@ def test_a_decline_with_nothing_to_point_at_is_not_called_a_defect():
     step further in.
     """
     text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
-    assert "findings: ${{ steps.result.outputs.findings }}" in text
-    assert "FALLBACK_FINDINGS: ${{ needs.review-fallback.outputs.findings }}" in text
+    jobs = yaml.safe_load(text)["jobs"]
+    # Asserted on the fallback job ITSELF. A substring search for the output line matched
+    # the paid review job's identical declaration instead, so this test passed for as long
+    # as the fallback never declared the output -- and the gate read an empty count, which
+    # turned every local decline into "could not complete the review".
+    assert jobs["review-fallback"]["outputs"]["findings"] == "${{ steps.result.outputs.findings }}"
+    fallback = next(s for s in jobs["review-fallback"]["steps"] if s.get("id") == "result")
+    assert 'echo "findings=' in fallback["run"]
+    gate_env = jobs["gate"]["steps"][0]["env"]
+    assert gate_env["FALLBACK_FINDINGS"] == "${{ needs.review-fallback.outputs.findings }}"
     assert '[ "${FALLBACK_FINDINGS:-0}" -gt 0 ]' in text
     assert "local fallback could not complete the review" in text
 
@@ -2443,6 +2458,33 @@ def test_a_decline_with_nothing_to_point_at_is_not_called_a_defect():
     assert "WITHOUT reporting any finding" in cannot
     assert "not a defect claim about the change" in cannot
     assert "split the pull request" in cannot
+
+
+def test_both_review_lanes_write_every_output_they_declare():
+    """A declared output nothing writes is always empty, and an empty string reads as an
+    answer: `passed == ''` is how the gate recognises "no verdict at all". Both review jobs
+    count their findings the same way, so the next step -- a gate that names which lane
+    carried which half of the verdict -- has the same fact from each."""
+    jobs = yaml.safe_load((WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8"))["jobs"]
+    for name in ("review", "review-fallback"):
+        result = next(s for s in jobs[name]["steps"] if s.get("id") == "result")
+        for output in ("passed", "findings"):
+            assert jobs[name]["outputs"][output] == f"${{{{ steps.result.outputs.{output} }}}}"
+            assert f'echo "{output}=' in result["run"], f"{name} never writes {output}"
+
+
+@pytest.mark.parametrize("path", WORKFLOW_TEMPLATES, ids=lambda p: p.name)
+def test_every_needs_output_a_workflow_reads_is_declared_by_that_job(path):
+    """GitHub evaluates `needs.<job>.outputs.<name>` to an empty string when the job never
+    declared `<name>` -- no error, no warning, just a value that looks like an answer. That
+    is exactly how the gate's fallback-findings branch sat dead: the fallback job wrote the
+    count, never declared it, and the gate read ''. `actionlint` reports this as an
+    undefined property; this is the same check, where it cannot be skipped."""
+    rendered = render_workflow(path, GhConfig(root=Path(".")))
+    jobs = yaml.safe_load(rendered)["jobs"]
+    for job, output in re.findall(r"needs\.([\w-]+)\.outputs\.([\w-]+)", rendered):
+        declared = jobs[job].get("outputs") or {}
+        assert output in declared, f"{path.name}: needs.{job}.outputs.{output} is never declared"
 
 
 def _restore_decision_block() -> str:

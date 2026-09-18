@@ -5,11 +5,13 @@ Two reviewers answer vibey-gh's review schema from different evidence -- the pai
 exact-head reviewer sees the whole proposed repository, the local fallback sees one diff.
 Each needs to know which judgments its evidence supports, and neither should own that
 answer. This declares the shape of the thing that holds it; `vibey_gh.review_contract`
-supplies the one this repository uses.
+supplies the one this repository uses. The same holder renders the JSON Schema a reviewer
+is held to, so the halves and the schema cannot describe two different reviews.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from typing import Protocol, runtime_checkable
 
 
@@ -49,3 +51,14 @@ class ReviewContractPort(Protocol):
 
     def placeholders(self) -> dict[str, bool]:
         """Shape-compatible values for the unevaluated fields. Never assertions."""
+
+    @property
+    def field_schemas(self) -> Mapping[str, Mapping[str, object]]:
+        """The JSON Schema fragment each field is answered in, in schema key order."""
+
+    def json_schema(self, halves: Iterable[str] | None = None) -> dict[str, object]:
+        """The JSON Schema a reviewer answering `halves` is held to; `None` means both.
+
+        Every selected field is required. Raises `ValueError` for an unknown half and
+        `KeyError` for a selected field with no declared type.
+        """

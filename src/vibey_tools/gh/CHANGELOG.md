@@ -5,6 +5,24 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Render the exact-head review's `--json-schema` from `ReviewContract.json_schema()` rather
+  than keeping a hand-written copy in `pr-automation.yml`. The template now carries
+  `__VIBEY_GH_REVIEW_SCHEMA__`, which `install.render_workflow` fills — compact, with any
+  apostrophe written as `\u0027` so the single-quoted `claude_args` argument cannot be broken
+  by a configured field. `ReviewContract` gains a `field_schemas` table (field name to JSON
+  Schema fragment, in schema key order) and `json_schema(halves)`, which renders the full
+  schema or either half on its own; `ReviewContractPort` declares both. The rendered schema
+  is byte-identical to the literal it replaces, and a test pins that. Slice 1 of 3 of #133:
+  no lane ordering changes yet.
+- Fix the gate's "local fallback found a blocking defect" branch, which could never fire.
+  `review-fallback` wrote a `findings` count but did not declare it as a job output, so
+  `needs.review-fallback.outputs.findings` was always empty and every local decline was
+  reported as "could not complete the review" — sending the reader away from a finding that
+  was in the job log. The test meant to guard it matched the paid review job's identical
+  `findings:` line instead; it now reads the fallback job itself, and a new test fails any
+  template that reads a `needs.<job>.outputs.<name>` the job never declares. The paid
+  `review` job's `findings` output, likewise declared and never written, is now written.
+
 - Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
   workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The
   "Restore the other release channel" step had grown to a single 509-line script, and
