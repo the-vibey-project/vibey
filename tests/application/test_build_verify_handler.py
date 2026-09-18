@@ -309,6 +309,7 @@ async def test_a_reviewer_whose_backend_is_misconfigured_parks_rather_than_rejec
         reviewer=reviewer,
         ledger=FakeLedger(),
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
     )
 
     outcome = await handler.handle(_job(requirement={"implementer_engine_id": "qwenloop"}))
