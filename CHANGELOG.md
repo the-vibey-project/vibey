@@ -43,6 +43,23 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   lifetime cap line is gone because nothing enforces one, and the per-engine count is labelled
   `selections`, not `turns`. The shared parser also stops reading a stored `true` as a
   one-turn or one-dollar cap ([#210](https://github.com/the-vibey-project/vibey/issues/210))
+* **engines:** engine health records what each engine spent and when it failed. The cost
+  column that `vibey engines`, `vibey status` and the dashboard show read $0.00 forever,
+  because `record_selection` took a `cost_usd` its one caller never passed. Each
+  `build.implement` and `build.verify` job now writes through a per-job `SpendMeteringLedger`
+  that forwards every event unchanged and sums spend by `LedgerSpendRule`, and
+  `RotationRecordingHandler` charges the total to the selected engine with the new
+  `EngineHealthService.record_spend` however the job ends, even if its handler raises. The
+  column is BUILD-session spend and accumulates across cycles; `vibey cost` keeps the cycle
+  total on the ledger and now labels the per-engine rows `BUILD sessions, all cycles`.
+  Failures were half-missing too: an incomplete run's non-zero exit is now attributed by the
+  adapter (`attribute`), so a runner killed or timed out (137, -9, 124) is an `ENGINE`
+  failure where both handlers hard-coded `WORK`, and the new `record_failure` opens the
+  circuit after 3 consecutive failures (`EngineFailurePolicy`, configurable) while setting
+  `probe_next_at` (5 minutes, doubling to 30), so the engine half-opens for a probe rather
+  than leaving rotation for good. `LedgerBudgetSource` now applies `LedgerSpendRule` instead
+  of its own copy, and the shared rule no longer counts a `bool` as a dollar or a turn
+  ([#209](https://github.com/the-vibey-project/vibey/issues/209))
 ### Features
 
 * **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A

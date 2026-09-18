@@ -322,6 +322,10 @@ def test_non_spend_events_move_neither_boundaries_nor_money() -> None:
         (EventKind.BUDGET_SPENT, {"headroom": 0.9}, PhaseSpend(0.0, 0, 0)),
         (EventKind.BUDGET_SPENT, {"dollars": "bad", "turns": 1.5}, PhaseSpend(0.0, 0, 0)),
         (EventKind.VERDICT_RENDERED, {"cost_usd": 9.0}, None),
+        # bool is an int to isinstance, never a number of dollars or turns (#209).
+        (EventKind.TURN_COMPLETED, {"cost_usd": True}, PhaseSpend(0.0, 1, 0)),
+        (EventKind.BUDGET_SPENT, {"dollars": True, "turns": True}, PhaseSpend(0.0, 0, 0)),
+        (EventKind.BUDGET_SPENT, {"dollars": False, "turns": False}, PhaseSpend(0.0, 0, 0)),
     ],
 )
 def test_the_spend_rule_is_the_budget_brakes_rule(
@@ -330,6 +334,14 @@ def test_the_spend_rule_is_the_budget_brakes_rule(
     event = _event(1, kind, phase=Phase.BUILD, payload=payload)
 
     assert LedgerSpendRule().spend_of(event) == expected
+    # The pre-ledger entry point is the same rule, whether the kind arrives
+    # as the enum or as the value string an EngineEvent carries.
+    assert LedgerSpendRule().spend_of_payload(kind, payload) == expected
+    assert LedgerSpendRule().spend_of_payload(kind.value, payload) == expected
+
+
+def test_an_engine_kind_the_ledger_does_not_know_is_not_spend() -> None:
+    assert LedgerSpendRule().spend_of_payload("turn.completed", {"cost_usd": 1.0}) is None
 
 
 def test_spends_add_without_mutating_either_side() -> None:
@@ -426,6 +438,7 @@ _AMOUNTS = st.one_of(
     st.integers(0, 50),
     st.just("bad"),
     st.none(),
+    st.booleans(),
 )
 
 
@@ -457,7 +470,7 @@ def _ledgers(draw: st.DrawFn, *, monotone_clock: bool) -> list[LedgerEvent]:
             if kind is EventKind.TURN_COMPLETED
             else {
                 "dollars": draw(_AMOUNTS),
-                "turns": draw(st.one_of(st.integers(0, 5), st.just("x"))),
+                "turns": draw(st.one_of(st.integers(0, 5), st.just("x"), st.booleans())),
             }
         )
         events.append(
@@ -559,9 +572,9 @@ class _Reader:
 def test_every_dollar_the_budget_brake_sees_is_charged_somewhere(
     events: list[LedgerEvent],
 ) -> None:
-    """The cross-layer pin the module docstring promises: until
-    LedgerBudgetSource adopts LedgerSpendRule, the two must agree per cycle,
-    and the visits plus the unattributed rows must hold all of it."""
+    """The cross-layer pin the module docstring promises: the projection and
+    the brake -- which now applies LedgerSpendRule itself (#209) -- agree per
+    cycle, and the visits plus the unattributed rows hold all of it."""
     timeline = PhaseTimingProjection().project(events)
     brake = LedgerBudgetSource(_Reader(events))
 

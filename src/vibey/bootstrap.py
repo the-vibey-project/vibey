@@ -38,7 +38,11 @@ from vibey.application.design_research_handler import DesignResearchHandler
 from vibey.application.design_synthesis_handler import DesignSpecHandler, DesignSynthesizeHandler
 from vibey.application.dto import JobRecord, ProjectRecord
 from vibey.application.engine_health_service import EngineHealthService
-from vibey.application.engine_selection import RotationRecordingHandler, SelectingEngineProvider
+from vibey.application.engine_selection import (
+    RotationRecordingHandler,
+    SelectingEngineProvider,
+    SpendMeteringLedger,
+)
 from vibey.application.engine_selector import EngineSelector
 from vibey.application.interfaces import (
     AzureClientPort,
@@ -360,21 +364,29 @@ def build_full_worker(
     )
     skills_context = compiler_from_config(project.config, repo_path=repo_root)
 
-    def _recording(handler: JobHandler, adapter: EngineAdapter) -> JobHandler:
+    def _recording(
+        handler: JobHandler, adapter: EngineAdapter, meter: SpendMeteringLedger
+    ) -> JobHandler:
         return RotationRecordingHandler(
             inner=handler,
             health=resources.engine_health_service,
             project_id=project.project_id,
             engine_id=adapter.descriptor.engine_id,
+            meter=meter,
         )
 
+    # One spend meter per job, around the ledger its handler writes through:
+    # what the selected engine's session cost is charged to that engine's
+    # health record when the job settles (issue #209). The ledger itself sees
+    # every event unchanged.
     async def _implement(job: JobRecord) -> JobHandler:
         adapter = await engine_provider.select_for(job)
+        meter = SpendMeteringLedger(resources.build_ledger)
         handler = BuildImplementHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
             provisioner=AgentSurfaceProvisioner(),
             engine=adapter,
-            ledger=resources.build_ledger,
+            ledger=meter,
             jobs=resources.jobs,
             clock=clock,
             wind_down=wind_down,
@@ -382,15 +394,16 @@ def build_full_worker(
             budget_source=budget_source,
             skills_context=skills_context,
         )
-        return _recording(handler, adapter)
+        return _recording(handler, adapter, meter)
 
     async def _verify(job: JobRecord) -> JobHandler:
         adapter = await engine_provider.select_for(job)
+        meter = SpendMeteringLedger(resources.build_ledger)
         handler = BuildVerifyHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
             gates=SubprocessGateRunner(),
             reviewer=adapter,
-            ledger=resources.build_ledger,
+            ledger=meter,
             jobs=resources.jobs,
             clock=clock,
             repair=VerifyRepairPolicy(
@@ -398,7 +411,7 @@ def build_full_worker(
             ),
             independence=_independence_policy(project.config, engine_provider.pool, clock),
         )
-        return _recording(handler, adapter)
+        return _recording(handler, adapter, meter)
 
     async def _integrate(job: JobRecord) -> JobHandler:
         return BuildIntegrateHandler(

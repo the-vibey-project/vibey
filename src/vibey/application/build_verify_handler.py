@@ -271,7 +271,10 @@ class BuildVerifyHandler:
                 capacity=True,
             )
         if not run_outcome.complete:
-            return Failure(FailureClass.WORK, "diff review did not approve this work item")
+            return Failure(
+                run_outcome.incomplete_failure_class(self._reviewer),
+                f"diff review did not approve this work item{run_outcome.exit_note}",
+            )
 
         if self._repair is not None:
             # A passing verify closes its own earlier repair findings, or

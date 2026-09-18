@@ -252,7 +252,10 @@ class BuildImplementHandler:
                 stop=stop,
             )
         if not run_outcome.complete:
-            return Failure(FailureClass.WORK, "engine run did not report completion")
+            return Failure(
+                run_outcome.incomplete_failure_class(self._engine),
+                f"engine run did not report completion{run_outcome.exit_note}",
+            )
 
         repair_finding_id = str(job.payload.get("repair_finding_id", ""))
         if repair_finding_id:

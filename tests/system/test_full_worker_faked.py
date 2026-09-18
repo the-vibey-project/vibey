@@ -252,6 +252,20 @@ async def test_full_worker_drives_a_project_to_done_local(tmp_path: Path) -> Non
                 implementer = _json.loads(row["requirement"]).get("implementer_engine_id")
                 assert implementer is not None
                 assert row["assigned_engine"] != implementer
+
+        # #209: every BUILD session's spend lands on the engine that ran it.
+        # ScriptedEngine's default run reports $0.01 on its TurnCompleted, and
+        # nothing else in this flow is charged to an engine, so each engine's
+        # cost is $0.01 per time rotation selected it -- where it used to read
+        # $0.00 whatever was spent.
+        health = await resources.engine_health_service.list_for_project(project_id)
+        selected = [record for record in health if record.selected_count > 0]
+        assert selected
+        for record in selected:
+            assert record.cost_usd_cycle >= 0.01
+            assert record.cost_usd_cycle == pytest.approx(0.01 * record.selected_count)
+        # Two implements and two verifies ran, so at least $0.04 in all.
+        assert sum(record.selected_count for record in health) >= 4
         assert kinds[("review.demo", "succeeded")] == 1
         assert kinds[("review.collect", "succeeded")] == 1
         assert kinds[("review.triage", "succeeded")] == 1

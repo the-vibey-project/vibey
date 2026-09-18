@@ -9,7 +9,7 @@ Protocols so a consumer -- the forecast slice of issue #88 -- can depend on
 the shape without depending on ``domain/phase_timing.py``.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta
 from typing import Protocol, runtime_checkable
 
@@ -48,6 +48,13 @@ class LedgerSpendRuleInterface(Protocol):
 
     def spend_of(self, event: LedgerEvent) -> PhaseSpendInterface | None:
         """What one event spent, or None if it is not a spend event at all."""
+        ...
+
+    def spend_of_payload(
+        self, kind: str, payload: Mapping[str, object]
+    ) -> PhaseSpendInterface | None:
+        """The same rule for an event that is not on the ledger yet, given its
+        ``EventKind`` value string and its payload."""
         ...
 
 

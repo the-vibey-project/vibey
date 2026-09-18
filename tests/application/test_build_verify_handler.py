@@ -4,6 +4,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
+import pytest
+
 from tests.application.fakes import FakeJobRepository, make_job
 from vibey.application.build_verify_handler import (
     BuildVerifyHandler,
@@ -286,6 +288,38 @@ async def test_reviewer_rejection_fails_as_work(tmp_path: Path) -> None:
     outcome = await handler.handle(job)
 
     assert outcome == Failure(FailureClass.WORK, "diff review did not approve this work item")
+
+
+@pytest.mark.parametrize(
+    ("exit_code", "failure_class"),
+    [(137, FailureClass.ENGINE), (-9, FailureClass.ENGINE), (1, FailureClass.WORK)],
+)
+async def test_a_reviewer_that_died_is_the_engines_failure_not_the_works(
+    tmp_path: Path, exit_code: int, failure_class: FailureClass
+) -> None:
+    """#209: a reviewer killed mid-review used to fail the item as WORK --
+    blaming the diff -- and never counted against the reviewer's circuit."""
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    reviewer = ScriptedEngine(
+        descriptor=CODEXLOOP,
+        base_dir=tmp_path / "engine",
+        script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
+        exit_code_script=[exit_code],
+    )
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=reviewer,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert outcome == Failure(
+        failure_class, f"diff review did not approve this work item (exit code {exit_code})"
+    )
 
 
 def test_gate_output_tail_prefers_both_streams_and_labels_stdout() -> None:

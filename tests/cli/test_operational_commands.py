@@ -223,6 +223,10 @@ def test_cost_command_shows_the_enforced_caps_and_the_ledger_spend(tmp_path: Pat
     assert "Total Budget" not in res.stdout
     # The per-engine count is rotation selections, never labelled turns.
     assert "claudeloop: $0.00 (4 selections)" in res.stdout
+    # The per-engine figure is metered BUILD spend that nothing resets (#209),
+    # so it must not be labelled as this cycle's.
+    assert "Per-engine (BUILD sessions, all cycles):" in res.stdout
+    assert "current cycle" not in res.stdout
 
 
 def test_cost_command_uncapped_ignores_the_legacy_budget_table(tmp_path: Path) -> None:

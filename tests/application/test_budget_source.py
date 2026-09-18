@@ -3,15 +3,20 @@
 (what engines actually write -- the greeter4 live run proved BUDGET_SPENT
 events carry no dollars in production) plus explicit BUDGET_SPENT."""
 
+import asyncio
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.interfaces import LedgerBudgetSourceInterface
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
 from vibey.domain.phase import Phase
+from vibey.domain.phase_timing import PhaseSpend
 
 NOW = datetime(2026, 8, 19, tzinfo=UTC)
 
@@ -144,3 +149,88 @@ def test_caps_from_config(
 
 def test_ledger_budget_source_satisfies_its_declared_interface() -> None:
     assert isinstance(LedgerBudgetSource(_Reader([])), LedgerBudgetSourceInterface)
+
+
+# ── The brake applies the one spend rule (#209) ─────────────────────────────────
+
+
+def _pre_unification_sum(events: Sequence[LedgerEvent], cycle: int) -> tuple[float, int]:
+    """``LedgerBudgetSource.current`` as it was before it adopted
+    ``LedgerSpendRule``, verbatim: the reference the property below holds the
+    unified brake to. Only the bool guard is new, and the generator below
+    never produces a bool, so this is the old arithmetic unchanged."""
+    dollars = 0.0
+    turns = 0
+    for event in events:
+        if event.cycle != cycle:
+            continue
+        if event.kind is EventKind.TURN_COMPLETED:
+            turns += 1
+            raw_cost = event.payload.get("cost_usd", 0.0)
+            if isinstance(raw_cost, int | float):
+                dollars += float(raw_cost)
+        elif event.kind is EventKind.BUDGET_SPENT:
+            raw_dollars = event.payload.get("dollars", 0.0)
+            raw_turns = event.payload.get("turns", 0)
+            if isinstance(raw_dollars, int | float):
+                dollars += float(raw_dollars)
+            if isinstance(raw_turns, int):
+                turns += raw_turns
+    return dollars, turns
+
+
+# Any finite float, not only dyadic ones: the unified brake must add the same
+# numbers in the same order, so even rounding has to come out identical.
+# NaN and infinity are left out because PostgreSQL's jsonb cannot hold them,
+# so no ledger event can carry one.
+_VALUES = st.one_of(
+    st.floats(allow_nan=False, allow_infinity=False),
+    st.integers(-(10**6), 10**6),
+    st.sampled_from([None, "bad", "", [1]]),
+)
+_PAYLOADS = st.dictionaries(
+    st.sampled_from(["cost_usd", "dollars", "turns", "headroom"]), _VALUES, max_size=4
+)
+_KINDS = st.sampled_from(
+    [EventKind.TURN_COMPLETED, EventKind.BUDGET_SPENT, EventKind.FINDING_RAISED]
+)
+_EVENTS = st.lists(st.builds(_event, st.integers(1, 3), _KINDS, _PAYLOADS), max_size=20)
+
+
+@given(_EVENTS, st.integers(1, 3))
+def test_the_brakes_numbers_are_unchanged_by_adopting_the_spend_rule(
+    events: list[LedgerEvent], cycle: int
+) -> None:
+    budget = asyncio.run(LedgerBudgetSource(_Reader(events)).current(uuid4(), cycle))
+
+    assert (budget.dollars_spent, budget.turns_spent) == _pre_unification_sum(events, cycle)
+
+
+async def test_a_bool_is_no_longer_a_dollar_or_a_turn_to_the_brake() -> None:
+    """The one intended difference, and the bug #245 flagged in both copies of
+    the rule: ``isinstance(True, int)`` holds, so ``cost_usd: true`` was $1."""
+    events = [
+        _event(1, EventKind.TURN_COMPLETED, {"cost_usd": True}),
+        _event(1, EventKind.BUDGET_SPENT, {"dollars": True, "turns": True}),
+    ]
+
+    budget = await LedgerBudgetSource(_Reader(events)).current(uuid4(), 1)
+
+    assert budget.dollars_spent == 0.0
+    assert budget.turns_spent == 1  # the TurnCompleted event itself, as ever
+    assert _pre_unification_sum(events, 1) == (2.0, 2)
+
+
+async def test_the_spend_rule_is_a_constructor_argument() -> None:
+    class FlatRule:
+        def spend_of(self, event: LedgerEvent) -> PhaseSpend | None:
+            return PhaseSpend(dollars=2.0, budget_turns=1)
+
+        def spend_of_payload(self, kind: str, payload: dict[str, object]) -> PhaseSpend | None:
+            return None  # the brake reads ledger events, never this entry point
+
+    events = [_event(1, EventKind.FINDING_RAISED, {}), _event(1, EventKind.FINDING_RAISED, {})]
+
+    budget = await LedgerBudgetSource(_Reader(events), spend_rule=FlatRule()).current(uuid4(), 1)
+
+    assert (budget.dollars_spent, budget.turns_spent) == (4.0, 2)

@@ -783,12 +783,14 @@ def cost(
             if budget.any_exhausted:
                 typer.echo("Cap reached: the next BUILD session parks a budget_exhausted gate.")
 
-            # Per engine, from engine_health. Its cost column is the per-engine
-            # figure the ledger total above does not break down; the count is
-            # how often rotation selected the engine, which is not a turn count.
+            # Per engine, from engine_health. Its cost column is each engine's
+            # metered BUILD-session spend (issue #209), which accumulates across
+            # cycles -- nothing resets it -- so it is labelled as such rather
+            # than as this cycle's, and it leaves DESIGN out. The count is how
+            # often rotation selected the engine, which is not a turn count.
             health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
             records = await health_repo.list_for_project(project.project_id)
-            typer.echo("\nPer-engine (current cycle):")
+            typer.echo("\nPer-engine (BUILD sessions, all cycles):")
             for r in records:
                 typer.echo(
                     f"  • {r.engine_id}: ${r.cost_usd_cycle:.2f} ({r.selected_count} selections)"

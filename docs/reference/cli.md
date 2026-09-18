@@ -214,8 +214,10 @@ reset, read from PostgreSQL's `UPDATE n` status tag.
 
 Show the project's name, phase, cycle, visual and deployment decisions,
 repository path, queue depth per job state, and engine circuits (circuit
-state, consecutive failures, cycle cost). Defaults to the most recently
-created project.
+state, consecutive failures, cost). Defaults to the most recently created
+project. The cost is `engine_health.cost_usd_cycle`: the engine's metered
+BUILD-session spend, which accumulates across cycles (see
+[`vibey cost`](#vibey-cost-project_id)).
 
 | Option | Default | What it does |
 |---|---|---|
@@ -224,11 +226,12 @@ created project.
 ## `vibey engines [PROJECT_ID]`
 
 Show recorded engine health for a project as a table: engine, version,
-circuit-breaker state, consecutive failures, selection count, and cycle
-cost. Rows exist only for engines that `vibey doctor --record` or a worker's
-startup preflight has recorded; with none it prints
-`no engines recorded for project`. Defaults to the most recently created
-project.
+circuit-breaker state, consecutive failures, selection count, and cost. The
+cost is the engine's BUILD-session spend, accumulated across cycles (see
+[`vibey cost`](#vibey-cost-project_id)). Rows exist only for engines that
+`vibey doctor --record` or a worker's startup preflight has recorded; with
+none it prints `no engines recorded for project`. Defaults to the most
+recently created project.
 
 ## `vibey cost [PROJECT_ID]`
 
@@ -241,8 +244,8 @@ Cycle spend:      $3.25 (2 turns)
 Cycle dollar cap: $10.00
 Cycle turn cap:   none
 
-Per-engine (current cycle):
-  • claudeloop: $0.00 (4 selections)
+Per-engine (BUILD sessions, all cycles):
+  • claudeloop: $1.40 (4 selections)
 ```
 
 - **Cycle spend** is the brake's own number: `LedgerBudgetSource` summing the
@@ -261,11 +264,15 @@ Per-engine (current cycle):
   `--raw '{"max_dollars": N}'` or `--raw '{"max_turns": N}'` applies to that
   one job only, so it is not shown here; the command always prints the
   project's stored cap.
-- **Per-engine** rows come from `engine_health`: its per-cycle cost column and
-  the number of times rotation selected the engine (a selection count, not a
-  turn count). Nothing feeds that cost column yet — rotation records each
-  selection with no cost — so it reads `$0.00` and the rows do not sum to
-  the cycle spend (issue #209).
+- **Per-engine** rows come from `engine_health`: its `cost_usd_cycle` column
+  and the number of times rotation selected the engine (a selection count,
+  not a turn count). The cost is each engine's **BUILD-session spend, and it
+  accumulates across cycles**: every `build.implement` and `build.verify` job
+  meters what its engine session recorded, by the same spend rule the brake
+  uses, and charges it to the engine that ran it when the job settles (issue
+  #209). Nothing resets the column despite its name, and DESIGN's spend is
+  not in it, so the rows need not sum to the cycle spend above — that figure
+  is the one the brake enforces.
 
 ## `vibey ledger`
 

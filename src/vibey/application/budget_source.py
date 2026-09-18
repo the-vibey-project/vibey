@@ -18,6 +18,15 @@ Two event shapes carry spend, and both must count:
   engine translation also maps capacity/usage chatter to BUDGET_SPENT
   with neither key; those sum as zero rather than erroring.
 
+Which events are spend, and how much, is ``domain/phase_timing.py``'s
+``LedgerSpendRule`` -- not a copy of it. The phase-timing projection and the
+per-engine spend meter (``application/engine_selection.py``) apply the same
+rule, so the brake, the per-visit spend of the phase timeline and the engine
+health record's per-engine figure cannot disagree about what a dollar is
+(issue #209, ADR-0017). One consequence is deliberate: a ``bool`` in a numeric field
+(``cost_usd: true``, ``turns: true``) counts as nothing, where the brake's
+old inline copy counted it as 1.
+
 The caps themselves come from one place too: ``caps_from_config``. Issue
 #210 was ``vibey cost`` reading a ``budget`` table that nothing writes and
 printing $40 / $250 fallbacks as if they were caps, while the worker
@@ -30,7 +39,11 @@ from uuid import UUID
 
 from vibey.application.interfaces import LedgerReader
 from vibey.domain.budget import BudgetLedger
-from vibey.domain.ledger import EventKind
+from vibey.domain.interfaces.phase_timing_interface import (
+    LedgerSpendRuleInterface,
+    PhaseSpendInterface,
+)
+from vibey.domain.phase_timing import LEDGER_SPEND_RULE, NO_SPEND
 
 
 class LedgerBudgetSource:
@@ -71,32 +84,26 @@ class LedgerBudgetSource:
         *,
         max_turns: int | None = None,
         max_dollars: float | None = None,
+        spend_rule: LedgerSpendRuleInterface = LEDGER_SPEND_RULE,
     ) -> None:
         self._ledger_reader = ledger_reader
         self._max_turns = max_turns
         self._max_dollars = max_dollars
+        self._spend_rule = spend_rule
 
     async def current(self, project_id: UUID, cycle: int) -> BudgetLedger:
-        dollars = 0.0
-        turns = 0
+        spent: PhaseSpendInterface = NO_SPEND
         for event in await self._ledger_reader.all_for_project(project_id):
             if event.cycle != cycle:
                 continue
-            if event.kind is EventKind.TURN_COMPLETED:
-                turns += 1
-                raw_cost = event.payload.get("cost_usd", 0.0)
-                if isinstance(raw_cost, int | float):
-                    dollars += float(raw_cost)
-            elif event.kind is EventKind.BUDGET_SPENT:
-                raw_dollars = event.payload.get("dollars", 0.0)
-                raw_turns = event.payload.get("turns", 0)
-                if isinstance(raw_dollars, int | float):
-                    dollars += float(raw_dollars)
-                if isinstance(raw_turns, int):
-                    turns += raw_turns
+            spend = self._spend_rule.spend_of(event)
+            if spend is not None:
+                spent = spent.plus(spend)
+        # Every TurnCompleted event is one turn to the brake, as it always
+        # was; phase_timing's caveat about that count applies here too.
         return BudgetLedger(
-            turns_spent=turns,
-            dollars_spent=dollars,
+            turns_spent=spent.turn_completed_events + spent.budget_turns,
+            dollars_spent=spent.dollars,
             max_turns=self._max_turns,
             max_dollars=self._max_dollars,
         )

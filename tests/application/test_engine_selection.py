@@ -14,18 +14,21 @@ from tests.application.test_engine_selector import (
     FakeRotationCursorRepository,
     _healthy_record,
 )
-from vibey.application.dto import JobRecord
+from vibey.application.dto import EngineEvent, JobRecord
 from vibey.application.engine_health_service import EngineHealthService
 from vibey.application.engine_selection import (
     RotationRecordingHandler,
     SelectingEngineProvider,
+    SpendMeteringLedger,
     selection_inputs_for_job,
 )
 from vibey.application.engine_selector import EngineSelector
+from vibey.application.interfaces import BuildLedger, SpendMeteringLedgerInterface
 from vibey.application.worker import CapacityDeferred, Defer, Failure, Outcome, Success
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId
 from vibey.domain.job import FailureClass
+from vibey.domain.phase_timing import PhaseSpend
 from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID
 
 NOW = datetime(2026, 8, 19, tzinfo=UTC)
@@ -431,15 +434,41 @@ async def test_capacity_defer_opens_the_circuit_with_the_defer_deadline() -> Non
     assert record.resets_at == retry_at
 
 
-async def test_failure_outcomes_record_nothing() -> None:
-    handler, health, project_id = await _recording(Failure(FailureClass.WORK, "nope"))
+@pytest.mark.parametrize("failure_class", [FailureClass.WORK, FailureClass.VIBEY])
+async def test_work_and_vibey_failures_record_nothing(failure_class: FailureClass) -> None:
+    """The code being wrong, or vibey being wrong, is never the engine's fault."""
+    handler, health, project_id = await _recording(Failure(failure_class, "nope"))
 
     outcome = await handler.handle(make_job(uuid4()))
 
     assert isinstance(outcome, Failure)
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
     assert record.circuit == "closed"
+    assert record.consecutive_fail == 0
     assert record.selected_count == 0
+
+
+async def test_an_engine_failure_is_recorded_against_the_engine() -> None:
+    handler, health, project_id = await _recording(Failure(FailureClass.ENGINE, "exit 137"))
+
+    outcome = await handler.handle(make_job(uuid4()))
+
+    assert outcome == Failure(FailureClass.ENGINE, "exit 137")
+    record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
+    assert record.consecutive_fail == 1
+    assert record.circuit == "closed"
+
+
+async def test_the_third_engine_failure_opens_the_circuit_with_a_probe_time() -> None:
+    handler, health, project_id = await _recording(Failure(FailureClass.ENGINE, "exit 137"))
+
+    for _ in range(3):
+        await handler.handle(make_job(uuid4()))
+
+    record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
+    assert record.circuit == "open"
+    assert record.consecutive_fail == 3
+    assert record.probe_next_at is not None
 
 
 def test_requirement_excluded_engine_ids_are_honored() -> None:
@@ -563,3 +592,252 @@ async def test_the_selecting_provider_satisfies_the_engine_provider_protocol() -
 
     assert isinstance(provider, EngineProvider)
     assert provider.pool == frozenset({EngineId.CLAUDELOOP})
+
+
+# ── SpendMeteringLedger: per-job spend, by the brake's own rule (#209) ──────────
+
+
+class _RecordingLedger:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.calls: list[dict[str, object]] = []
+        self._fail = fail
+
+    async def record(self, **kwargs: object) -> None:
+        if self._fail:
+            raise RuntimeError("ledger append failed")
+        self.calls.append(kwargs)
+
+
+def _engine_event(kind: str, **payload: object) -> EngineEvent:
+    return EngineEvent(kind=kind, at=NOW, payload=payload)
+
+
+async def _record(ledger: BuildLedger, event: EngineEvent, **overrides: object) -> None:
+    kwargs: dict[str, object] = {
+        "project_id": uuid4(),
+        "cycle": 2,
+        "job_id": uuid4(),
+        "engine_id": EngineId.CLAUDELOOP,
+        "correlation_id": uuid4(),
+        "causation_id": uuid4(),
+        "event": event,
+    }
+    kwargs.update(overrides)
+    await ledger.record(**kwargs)  # type: ignore[arg-type]
+
+
+async def test_the_meter_forwards_every_event_unchanged_and_in_order() -> None:
+    inner = _RecordingLedger()
+    meter = SpendMeteringLedger(inner)
+    events = [
+        _engine_event("SessionSeeded", seed_digest="x"),
+        _engine_event("TurnCompleted", cost_usd=0.01),
+        _engine_event("NotAKindVibeyKnows", cost_usd=9.0),
+        _engine_event("VerdictRendered", complete=True),
+    ]
+    project_id, job_id, correlation_id, causation_id = uuid4(), uuid4(), uuid4(), uuid4()
+
+    for event in events:
+        await meter.record(
+            project_id=project_id,
+            cycle=2,
+            job_id=job_id,
+            engine_id=EngineId.CODEXLOOP,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            event=event,
+        )
+    await meter.record(
+        project_id=project_id,
+        cycle=2,
+        job_id=job_id,
+        engine_id=None,
+        correlation_id=correlation_id,
+        event=events[0],
+    )
+
+    assert [call["event"] for call in inner.calls] == [*events, events[0]]
+    assert inner.calls[0] == {
+        "project_id": project_id,
+        "cycle": 2,
+        "job_id": job_id,
+        "engine_id": EngineId.CODEXLOOP,
+        "correlation_id": correlation_id,
+        "causation_id": causation_id,
+        "event": events[0],
+    }
+    assert inner.calls[-1]["causation_id"] is None
+    assert inner.calls[-1]["engine_id"] is None
+
+
+async def test_the_meter_sums_spend_by_the_one_ledger_spend_rule() -> None:
+    meter = SpendMeteringLedger(_RecordingLedger())
+
+    for event in (
+        _engine_event("TurnCompleted", cost_usd=0.25),
+        _engine_event("TurnCompleted"),  # chatter.assistant: a turn, no cost
+        _engine_event("TurnCompleted", cost_usd=True),  # a bool is not a dollar
+        _engine_event("TurnCompleted", cost_usd="n/a"),
+        _engine_event("BudgetSpent", dollars=0.5, turns=2),
+        _engine_event("BudgetSpent", headroom=0.9),  # capacity chatter
+        _engine_event("VerdictRendered", cost_usd=100.0),  # not a spend kind
+    ):
+        await _record(meter, event)
+
+    assert meter.dollars == pytest.approx(0.75)
+    assert isinstance(meter, SpendMeteringLedgerInterface)
+
+
+async def test_the_meter_never_counts_an_event_the_ledger_refused() -> None:
+    meter = SpendMeteringLedger(_RecordingLedger(fail=True))
+
+    with pytest.raises(RuntimeError, match="append failed"):
+        await _record(meter, _engine_event("TurnCompleted", cost_usd=1.0))
+
+    assert meter.dollars == 0.0
+
+
+async def test_the_meters_spend_rule_is_a_constructor_argument() -> None:
+    class FlatRule:
+        def spend_of(self, event: object) -> PhaseSpend | None:
+            return None  # the meter sees engine events, never ledger events
+
+        def spend_of_payload(self, kind: str, payload: object) -> PhaseSpend | None:
+            return PhaseSpend(dollars=1.5)
+
+    meter = SpendMeteringLedger(_RecordingLedger(), spend_rule=FlatRule())
+
+    await _record(meter, _engine_event("SessionSeeded"))
+
+    assert meter.dollars == 1.5
+
+
+# ── RotationRecordingHandler charges the meter to the engine ─────────────────
+
+
+class _Meter:
+    def __init__(self, dollars: float) -> None:
+        self.dollars = dollars
+        self.calls: list[EngineEvent] = []
+
+    async def record(self, **kwargs: object) -> None:
+        self.calls.append(kwargs["event"])  # type: ignore[arg-type]
+
+
+class _RaisingInner:
+    async def handle(self, job: JobRecord) -> Outcome:
+        raise RuntimeError("handler blew up")
+
+
+async def _metered(
+    inner: object, meter: _Meter | None
+) -> tuple[RotationRecordingHandler, EngineHealthService, object]:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
+    health = EngineHealthService(repo)
+    handler = RotationRecordingHandler(
+        inner=inner,  # type: ignore[arg-type]
+        health=health,
+        project_id=project_id,  # type: ignore[arg-type]
+        engine_id=EngineId.CLAUDELOOP,
+        meter=meter,
+    )
+    return handler, health, project_id
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        Success(),
+        Failure(FailureClass.WORK, "tests failed"),
+        Failure(FailureClass.ENGINE, "exit 137"),
+        Defer(NOW + timedelta(minutes=5), "capacity", capacity=True),
+        Defer(NOW + timedelta(minutes=5), "repair in flight"),
+    ],
+    ids=["success", "work-failure", "engine-failure", "capacity-defer", "plain-defer"],
+)
+async def test_the_jobs_spend_is_charged_to_the_engine_however_it_ends(outcome: Outcome) -> None:
+    handler, health, project_id = await _metered(_FixedInner(outcome), _Meter(0.03))
+
+    assert await handler.handle(make_job(uuid4())) == outcome
+
+    record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
+    assert record.cost_usd_cycle == pytest.approx(0.03)
+
+
+async def test_spend_is_charged_even_when_the_handler_raises() -> None:
+    """The money was spent whether or not vibey then crashed, and the
+    handler's own exception still reaches the worker unchanged."""
+    handler, health, project_id = await _metered(_RaisingInner(), _Meter(0.02))
+
+    with pytest.raises(RuntimeError, match="handler blew up"):
+        await handler.handle(make_job(uuid4()))
+
+    record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
+    assert record.cost_usd_cycle == pytest.approx(0.02)
+
+
+@pytest.mark.parametrize("dollars", [0.0, -1.0, float("nan"), float("inf")])
+async def test_a_meter_with_nothing_chargeable_writes_no_spend(dollars: float) -> None:
+    handler, health, project_id = await _metered(_FixedInner(Success()), _Meter(dollars))
+
+    await handler.handle(make_job(uuid4()))
+
+    record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
+    assert record.cost_usd_cycle == 0.0
+    assert record.circuit == "closed"  # the outcome itself is still recorded
+
+
+async def test_without_a_meter_no_spend_is_charged() -> None:
+    handler, health, project_id = await _metered(_FixedInner(Success()), None)
+
+    await handler.handle(make_job(uuid4()))
+
+    record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
+    assert record.cost_usd_cycle == 0.0
+
+
+async def test_a_real_implement_run_charges_its_engine_through_the_meter(
+    tmp_path: Path,
+) -> None:
+    """The whole path in one: ScriptedEngine's default run reports $0.01 on
+    its TurnCompleted, BuildImplementHandler writes through the meter, and the
+    wrapper charges it -- where it used to read $0.00 forever (#209)."""
+    from tests.application.test_build_implement_handler import (
+        FakeLedger,
+        FakeProvisioner,
+        FakeWorktrees,
+    )
+    from tests.application.test_build_implement_handler import _job as _implement_item
+    from vibey.application.build_implement_handler import BuildImplementHandler
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP
+    from vibey.infrastructure.engines.scripted import ScriptedEngine
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
+    health = EngineHealthService(repo)
+    ledger = FakeLedger()
+    meter = SpendMeteringLedger(ledger)
+    handler = RotationRecordingHandler(
+        inner=BuildImplementHandler(
+            worktrees=FakeWorktrees(tmp_path),
+            provisioner=FakeProvisioner(),
+            engine=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
+            ledger=meter,
+            jobs=FakeJobRepository(),
+            clock=FixedClock(),
+        ),
+        health=health,
+        project_id=project_id,
+        engine_id=EngineId.CLAUDELOOP,
+        meter=meter,
+    )
+
+    outcome = await handler.handle(_implement_item(project_id=project_id))
+
+    assert isinstance(outcome, Success)
+    assert any(event.kind == "TurnCompleted" for event in ledger.recorded)
+    record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)
+    assert record.cost_usd_cycle == pytest.approx(0.01)

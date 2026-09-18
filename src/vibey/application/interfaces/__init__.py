@@ -62,6 +62,7 @@ from vibey.application.interfaces.ledger import (
     HandoffStore,
     LedgerReader,
     PhaseLedger,
+    SpendMeteringLedgerInterface,
 )
 from vibey.application.interfaces.observability import (
     Logger,
@@ -146,6 +147,7 @@ __all__ = [
     "ResearchProvider",
     "ReviewArtifactWriter",
     "SpecSynthesizer",
+    "SpendMeteringLedgerInterface",
     "Success",
     "VerifyWorktrees",
     "VisualInventoryProducer",

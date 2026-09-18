@@ -133,8 +133,8 @@ After acceptance, BUILD decomposes the spec into work items and runs
 
 - every job's selected engine is durable (`job.assigned_engine`);
 - each item's **verifier is never its implementer**;
-- `vibey engines` prints a snapshot of selection counts and circuit states;
-  `vibey watch` keeps them live.
+- `vibey engines` prints a snapshot of selection counts, circuit states and
+  each engine's BUILD-session spend so far; `vibey watch` keeps them live.
 
 ## 6. Force a rotation (the E1 milestone)
 
@@ -181,9 +181,10 @@ vibey answer <gate-id> --choice local_only    # review.deployment_choice gate
 The project records DONE(local). `vibey cost` shows the cycle's ledger
 spend (DESIGN and BUILD together) against the `--max-cycle-dollars` /
 `--max-cycle-turns` caps the brake enforces, then a per-engine list of
-selection counts (its per-engine dollar column reads $0.00 for now; see
-issue #209); `vibey status` should show an empty queue with zero failed
-jobs.
+BUILD-session spend and selection counts. The per-engine dollars are each
+engine's metered BUILD sessions, accumulated across cycles, so they leave
+DESIGN out and need not sum to the cycle figure; they were $0.00 before issue
+#209. `vibey status` should show an empty queue with zero failed jobs.
 
 ## If something goes wrong
 
@@ -206,7 +207,10 @@ jobs.
   Watch `vibey ledger show --kind FindingRaised` and `--kind FindingResolved`
   for the repair round to close. Circuits and backoffs clear on their own;
   an open circuit past its reset deadline half-opens automatically at the
-  next selection and closes itself on the first success.
+  next selection and closes itself on the first success. A circuit can also
+  open because its engine crashed, was killed or timed out (exit 137, -9 or
+  124) three times running; it half-opens 5 minutes later, then backs off to
+  a 30-minute cap if the probe fails the same way.
 - **A `verify_repair_exhausted` / `integrate_repair_exhausted` gate** —
   the item burned its bounded repair rounds. Grant more with
   `vibey answer <gate-id> --raw '{"max_rounds": 6}'` (the prompt suggests

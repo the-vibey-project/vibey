@@ -4,18 +4,23 @@ business logic for updating health records based on conformance, capacity
 states, and selection outcomes.
 """
 
+import math
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
 from vibey.application.dto import EngineHealthRecord, PreflightResult
 from vibey.application.interfaces.engines import EngineHealthRepository
+from vibey.application.interfaces.system import Clock
 from vibey.domain.capacity import (
     AuthenticationFailed,
     CapacityState,
     CreditsExhausted,
     WindowExhausted,
 )
+from vibey.domain.circuit import ENGINE_FAILURE_POLICY
 from vibey.domain.engine import EngineId
+from vibey.domain.interfaces.circuit_interface import EngineFailurePolicyInterface
 
 
 class EngineHealthService:
@@ -26,8 +31,23 @@ class EngineHealthService:
     module rather than a mirrored `*_interface.py`; the reason is written there.
     """
 
-    def __init__(self, repository: EngineHealthRepository) -> None:
+    def __init__(
+        self,
+        repository: EngineHealthRepository,
+        *,
+        failure_policy: EngineFailurePolicyInterface = ENGINE_FAILURE_POLICY,
+        clock: Clock | None = None,
+    ) -> None:
+        """``failure_policy`` decides when ENGINE-class failures open a circuit
+        and when it is probed again (default: open at 3, probe after 5 minutes
+        doubling to 30). ``clock`` dates that probe; unset, it is the system
+        clock, which is what the rest of this service has always read."""
         self._repository = repository
+        self._failure_policy = failure_policy
+        self._clock = clock
+
+    def _now(self) -> datetime:
+        return self._clock.now() if self._clock is not None else datetime.now(UTC)
 
     def _circuit_after_preflight(
         self, record: EngineHealthRecord, preflight: PreflightResult
@@ -215,10 +235,14 @@ class EngineHealthService:
 
         return await self._repository.upsert(updated)
 
-    async def record_selection(
-        self, project_id: UUID, engine_id: EngineId, cost_usd: float = 0.0
-    ) -> EngineHealthRecord:
-        """Record that an engine was selected for work."""
+    async def record_selection(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
+        """Record that an engine was selected for work.
+
+        It used to take a ``cost_usd`` too, which its one caller never passed,
+        so every engine's spend read $0.00 in ``vibey engines``, ``vibey
+        status`` and the dashboard (issue #209). What a run costs is only
+        known after it runs; ``record_spend`` is where that lands.
+        """
         record = await self.get_or_create(project_id, engine_id)
 
         updated = EngineHealthRecord(
@@ -236,11 +260,64 @@ class EngineHealthService:
             probe_attempt=record.probe_attempt,
             consecutive_fail=record.consecutive_fail,
             ewma_failure=record.ewma_failure,
-            cost_usd_cycle=record.cost_usd_cycle + cost_usd,
+            cost_usd_cycle=record.cost_usd_cycle,
             selected_count=record.selected_count + 1,
         )
 
         return await self._repository.upsert(updated)
+
+    async def record_spend(
+        self, project_id: UUID, engine_id: EngineId, cost_usd: float
+    ) -> EngineHealthRecord:
+        """Add a BUILD session's metered spend to the engine's running total.
+
+        ``cost_usd_cycle`` is named for a cycle but nothing resets it, so it is
+        the engine's BUILD-session spend across every cycle of the project.
+        The cycle's own total, DESIGN included, is the ledger's -- ``vibey
+        cost`` reads it there. A negative or non-finite amount is refused
+        rather than stored: it can only come from a corrupt engine payload,
+        and the column is money.
+        """
+        if not math.isfinite(cost_usd) or cost_usd < 0:
+            raise ValueError(f"engine spend must be a finite amount >= 0, got {cost_usd!r}")
+        record = await self.get_or_create(project_id, engine_id)
+        return await self._repository.upsert(
+            replace(record, cost_usd_cycle=record.cost_usd_cycle + cost_usd)
+        )
+
+    async def record_failure(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
+        """Record one ENGINE-class failure; open the circuit at the threshold.
+
+        Below the threshold only the counters move. At it, the circuit opens
+        and ``probe_next_at`` is set from the failure policy's backoff --
+        never one without the other, because ``EngineSelector`` half-opens an
+        OPEN circuit only once a scheduled time passes, and an OPEN engine is
+        never selected, so a circuit opened with no probe time could never
+        close again. The capacity state and ``resets_at`` are cleared at the
+        same moment: the circuit is now open for a failure, not a rejection,
+        and a stale ``resets_at`` would half-open it at once.
+        """
+        record = await self.get_or_create(project_id, engine_id)
+        consecutive = record.consecutive_fail + 1
+        ewma = min(1.0, record.ewma_failure * 0.9 + 0.1)
+        if not self._failure_policy.trips(consecutive):
+            return await self._repository.upsert(
+                replace(record, consecutive_fail=consecutive, ewma_failure=ewma)
+            )
+        return await self._repository.upsert(
+            replace(
+                record,
+                circuit="open",
+                capacity_state=None,
+                resets_at=None,
+                probe_next_at=self._failure_policy.probe_at(
+                    now=self._now(), consecutive_failures=consecutive
+                ),
+                probe_attempt=record.probe_attempt + 1,
+                consecutive_fail=consecutive,
+                ewma_failure=ewma,
+            )
+        )
 
     async def record_success(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
         """Record a successful execution (clears consecutive failures)."""

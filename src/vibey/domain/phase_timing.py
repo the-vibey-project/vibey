@@ -46,20 +46,21 @@ to REVIEW is still BUILD's money. Spend whose tag names no visit opened by then
 lands in ``unattributed`` instead of being dropped, so the visits plus the
 unattributed rows always account for every dollar the ledger holds.
 
-The rule for what counts as spend is ``application/budget_source.py``'s
-``LedgerBudgetSource`` -- the budget brake -- reproduced event for event as
-``LedgerSpendRule``: ``TurnCompleted`` contributes its numeric ``cost_usd``,
-``BudgetSpent`` its numeric ``dollars`` and integer ``turns``, anything
-non-numeric contributes zero. Reproduced, not imported, because that rule is
-inlined in an ``application/`` method and ``domain/`` may not import upward:
-the capability gap is that the family had no domain-level spend rule, and
-``LedgerSpendRule`` is that rule added where both layers can reach it. The
-other half -- ``LedgerBudgetSource`` calling it instead of keeping its own
-copy -- is deliberately not done here, to keep this change inside ``domain/``;
-it is the unification left open, and the issue #209 lane, which reworks the
-cost path, is the natural place for it. Until then
-``tests/domain/test_phase_timing.py`` pins the two to the same totals per
-cycle, so they cannot drift apart silently.
+The rule for what counts as spend is ``LedgerSpendRule``, and it is the one
+rule every reader of spend shares: ``TurnCompleted`` contributes its numeric
+``cost_usd``, ``BudgetSpent`` its numeric ``dollars`` and integer ``turns``,
+anything non-numeric contributes zero. It lives in ``domain/`` because both
+layers need it and ``domain/`` may not import upward.
+``application/budget_source.py``'s ``LedgerBudgetSource`` -- the budget brake
+-- sums it per cycle, and ``application/engine_selection.py``'s
+``SpendMeteringLedger`` applies it to the engine events a BUILD job records,
+so the per-engine figure on the engine health record and the brake's cycle
+total come from the same rule (issue #209). ``tests/domain/test_phase_timing.py``
+still pins this projection to the brake's totals per cycle.
+
+``bool`` is not a number here, although ``isinstance(True, int)`` holds in
+Python: a payload's ``cost_usd: true`` is a corrupt field, not one dollar, and
+``turns: true`` is not one turn.
 
 **Turns are not counted, because the ledger cannot count them.** Engine
 translation (``infrastructure/engines/loop_events.py``) maps more than one
@@ -69,7 +70,7 @@ name of what it is -- ``turn_completed_events`` -- with ``turn_caveat`` beside
 it, and never as ``turns``.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from typing import Final
@@ -121,23 +122,42 @@ NO_SPEND: Final = PhaseSpend()
 
 class LedgerSpendRule:
     """Which ledger events are spend, and how much. See the module docstring:
-    this is ``LedgerBudgetSource``'s rule, and it is public so that class can
-    adopt it instead of keeping its own copy."""
+    the one rule the budget brake, this projection, and the per-engine spend
+    meter all apply."""
 
     def spend_of(self, event: LedgerEvent) -> PhaseSpend | None:
         """What one event spent, or None if it is not a spend event at all."""
-        if event.kind is EventKind.TURN_COMPLETED:
-            raw_cost = event.payload.get("cost_usd", 0.0)
-            dollars = float(raw_cost) if isinstance(raw_cost, int | float) else 0.0
-            return PhaseSpend(dollars=dollars, turn_completed_events=1)
-        if event.kind is EventKind.BUDGET_SPENT:
-            raw_dollars = event.payload.get("dollars", 0.0)
-            raw_turns = event.payload.get("turns", 0)
+        return self.spend_of_payload(event.kind, event.payload)
+
+    def spend_of_payload(self, kind: str, payload: Mapping[str, object]) -> PhaseSpend | None:
+        """The same rule, for an event not yet on the ledger: its kind as the
+        ``EventKind`` value string and its payload. A BUILD job's engine
+        events reach the ledger in this shape (``EngineEvent``), and the
+        meter that charges them to an engine must not keep a second copy."""
+        if kind == EventKind.TURN_COMPLETED:
             return PhaseSpend(
-                dollars=float(raw_dollars) if isinstance(raw_dollars, int | float) else 0.0,
-                budget_turns=raw_turns if isinstance(raw_turns, int) else 0,
+                dollars=self._dollars(payload.get("cost_usd")), turn_completed_events=1
+            )
+        if kind == EventKind.BUDGET_SPENT:
+            raw_turns = payload.get("turns")
+            return PhaseSpend(
+                dollars=self._dollars(payload.get("dollars")),
+                budget_turns=(
+                    raw_turns
+                    if isinstance(raw_turns, int) and not isinstance(raw_turns, bool)
+                    else 0
+                ),
             )
         return None
+
+    @staticmethod
+    def _dollars(raw: object) -> float:
+        """A numeric field as dollars; anything else -- absent, a string, a
+        ``bool`` -- is zero. A static method rather than a module function so
+        the rule stays one class (ADR-0016)."""
+        if isinstance(raw, int | float) and not isinstance(raw, bool):
+            return float(raw)
+        return 0.0
 
 
 LEDGER_SPEND_RULE: Final[LedgerSpendRuleInterface] = LedgerSpendRule()

@@ -13,6 +13,7 @@ from vibey.application.interfaces import (
 from vibey.application.ports import EngineAdapter
 from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
+from vibey.domain.job import FailureClass
 from vibey.domain.ledger import EventKind
 
 
@@ -25,6 +26,28 @@ class RunOutcome:
     optional ``run_exit_code`` capability -- EXIT_CODE_WIND_DOWN here is
     the graceful-handoff signal. None for adapters without the capability
     or while the process is still running."""
+
+    def incomplete_failure_class(self, engine: EngineAdapter) -> FailureClass:
+        """Whose fault a run that did not complete is.
+
+        Without an exit code, or with a clean one, the run simply ended
+        without a completing verdict: that is the work's (``WORK``), as it
+        always was. A non-zero exit is the adapter's to attribute, because
+        only the adapter can tell the project's own failure from the runner
+        dying -- ``attribute`` classifies 124 (timed out), 137 and -9 (killed)
+        as ``ENGINE``. Until this asked it, both BUILD handlers hard-coded
+        ``WORK`` and no ``Failure(ENGINE)`` could be produced in production,
+        so a crashing engine never counted toward opening its circuit (issue
+        #209). No output tail is passed: the handlers do not hold one.
+        """
+        if self.exit_code is None or self.exit_code == 0:
+            return FailureClass.WORK
+        return engine.attribute(self.exit_code, "")
+
+    @property
+    def exit_note(self) -> str:
+        """`` (exit code N)`` for a failure detail, or nothing when unknown."""
+        return "" if self.exit_code is None else f" (exit code {self.exit_code})"
 
 
 async def run_and_record(
