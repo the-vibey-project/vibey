@@ -74,7 +74,13 @@ The `evaluate` job holds read-only `contents: read`, `issues: read`, and `pull-r
 read`. It runs trusted default-branch workflow code, installs the published `vibey-gh`
 package, resolves the subject and comment ID from either the dispatch inputs or the
 triggering event, and calls `vibey-gh conversation evaluate` to compute one of `skip`,
-`blocked`, `answer`, or `act` with a stated reason. `evaluate` checks, in order: the
+`blocked`, `answer`, or `act` with a stated reason. The comment is resolved exactly: a
+comment on the thread is found there, and an inline review comment — which `gh issue view`
+does not return — is fetched from the pull request review API and confirmed to belong to
+this pull request. An ID that names neither fails the job; it is never replaced by the
+newest comment, which would answer a request nobody made in the comment that was written.
+Whether the thread is a pull request is read from its URL (`.../pull/N`), the only field
+`gh issue view` returns that says so. `evaluate` checks, in order: the
 automation's own identities (never answered), whether conversation is enabled, whether the
 comment mentions the configured trigger, whether the thread is open, whether this exact
 comment was already answered, whether the author is trusted or `respond_to_untrusted` is
@@ -84,7 +90,8 @@ the privileged `respond` job.
 The `respond` job checks out trusted automation under `automation/` and the thread's branch
 (a pull request head) or the default branch (an issue) under `target/`, both with
 `persist-credentials: false` for the read-only pull-request case. A trusted step renders the
-thread into `briefing/thread.md` with `vibey-gh conversation context`; the pinned Claude Code
+thread into `briefing/thread.md` with `vibey-gh conversation context` (for an inline review
+comment, with the file, line and diff hunk it was written on); the pinned Claude Code
 Action then runs from a disposable credential-free Git context with
 `Read,Glob,Grep,Edit,Write` and no `Bash`, `gh`, or `Agent` tool, and is told the briefing is
 an untrusted report rather than an instruction. When `may_change_files` is false — every case

@@ -724,6 +724,80 @@ def test_conversation_cli_reports_failures(repo, monkeypatch, capsys):
     assert "not found" in capsys.readouterr().err
 
 
+_THREAD_VIEW = "issue view 7 --repo o/r --json number,title,body,state,author,labels,comments,url"
+_REVIEW_COMMENT = "api repos/o/r/pulls/comments/901"
+_PULL_THREAD = {
+    "number": 7,
+    "title": "t",
+    "body": "",
+    "state": "OPEN",
+    "author": {"login": "owner"},
+    "labels": [],
+    "url": "https://github.com/o/r/pull/7",
+    "comments": [
+        {
+            "id": "IC_a",
+            "url": "https://github.com/o/r/pull/7#issuecomment-5001",
+            "author": {"login": "owner"},
+            "body": "@vibey-gh something older and unrelated",
+        }
+    ],
+}
+
+
+def test_conversation_cli_answers_the_review_comment_that_mentioned_it(repo, scripted_gh, capsys):
+    """End to end through a real `gh`, with nothing inside vibey-gh replaced: the pull
+    request is recognised as one, and the inline review comment that carried the mention is
+    the one evaluated and briefed — not the newest comment on the thread."""
+    review = {
+        "id": 901,
+        "user": {"login": "owner"},
+        "body": "@vibey-gh handle the empty case",
+        "path": "src/a.py",
+        "line": 3,
+        "diff_hunk": "@@ -1 +1 @@\n+x = 1",
+        "pull_request_url": "https://api.github.com/repos/o/r/pulls/7",
+    }
+    (scripted_gh / "answers.json").write_text(
+        json.dumps(
+            {
+                _THREAD_VIEW: {"out": json.dumps(_PULL_THREAD)},
+                _REVIEW_COMMENT: {"out": json.dumps(review)},
+            }
+        )
+    )
+
+    assert main(["conversation", "evaluate", "--subject", "7", "--comment-id", "901"]) == 0
+    decision = json.loads(capsys.readouterr().out)
+    assert decision["comment_id"] == "901" and decision["is_pull_request"] is True
+    assert decision["state"] == "act" and decision["may_change_files"] is True
+
+    assert main(["conversation", "context", "--subject", "7", "--comment-id", "901"]) == 0
+    briefing = capsys.readouterr().out
+    assert "Untrusted conversation on pull request #7" in briefing
+    request = briefing.split("## The request to answer")[1]
+    assert "handle the empty case" in request and "something older" not in request
+
+
+def test_conversation_cli_fails_loudly_on_a_comment_it_cannot_find(repo, scripted_gh, capsys):
+    """A comment ID that names nothing used to fall back to the newest comment on the thread
+    and answer that instead. It is now an error, with nothing evaluated or briefed."""
+    (scripted_gh / "answers.json").write_text(
+        json.dumps(
+            {
+                _THREAD_VIEW: {"out": json.dumps(_PULL_THREAD)},
+                _REVIEW_COMMENT: {"err": "gh: Not Found (HTTP 404)\n", "code": 1},
+            }
+        )
+    )
+    for action in ("evaluate", "context"):
+        assert main(["conversation", action, "--subject", "7", "--comment-id", "901"]) == 1
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "901 is neither on #7 nor a review comment on it" in captured.err
+        assert "Not Found (HTTP 404)" in captured.err
+
+
 def test_reconcile_branches_cli_reports_each_decision(repo, monkeypatch, capsys):
     monkeypatch.setattr(
         reconcile,
