@@ -20,7 +20,6 @@ __all__ = [
     "CorrelationIdInterface",
     "DeliveryCorrelationInterface",
     "EngineFailurePolicyInterface",
-
     "LedgerSpendRuleInterface",
     "PhaseSpendInterface",
     "PhaseTimelineInterface",
