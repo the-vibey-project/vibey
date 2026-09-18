@@ -115,11 +115,20 @@ The seven gates are split across git hook stages so commits stay fast
 
 **Commit-msg stage**: Conventional Commits enforcement.
 
-Install all three hook types once:
+Install all three hook types once, then the provenance hooks. The order matters,
+because `pre-commit install` refuses to run while `core.hooksPath` is set:
 
 ```bash
 pre-commit install && pre-commit install --hook-type pre-push && pre-commit install --hook-type commit-msg
+uv run vibey-gh install
 ```
+
+`vibey-gh install` points `core.hooksPath` at `.githooks`. The tracked shims there
+(`pre-commit`, `commit-msg.local`, `pre-push.local`) chain back to the framework
+through `git rev-parse --git-common-dir`, so one install covers the main checkout
+and every linked worktree (`git worktree add`). If a shim prints
+`warning: the pre-commit framework's <stage> hook is not installed`, the commit or
+push went ahead but none of that stage's gates ran. Run them by hand before you push.
 
 ## The other CI jobs
 

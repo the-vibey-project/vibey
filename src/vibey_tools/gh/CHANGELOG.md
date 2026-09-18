@@ -5,6 +5,15 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Test that the rendered `commit-msg` and `pre-push` hooks reach their `<hook>.local`
+  sibling when git runs them from a linked worktree, where `.git` is a file rather than
+  a directory. The test drives a real `git commit` and `git push` against a bare remote,
+  from both a main checkout and a worktree. It checks that pre-push's refs arrive on stdin
+  intact, and that no rendered hook spells a path inside `.git/`. The templates were
+  already correct: they find their sibling through `$(dirname "$0")`. The defect behind
+  vibey #282 was in the monorepo's own `.local` shims, which looked for the pre-commit
+  framework at the literal `.git/hooks/<stage>`. This test stops the templates from
+  picking up the same assumption.
 - Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
   workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The
   "Restore the other release channel" step had grown to a single 509-line script, and
