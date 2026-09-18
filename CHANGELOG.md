@@ -30,6 +30,21 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Features
+
+* **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
+  pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
+  ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
+  that left it, ordered by `seq`, the wall-clock time between them, and what the visit spent
+  by the budget brake's own rule, now published in the domain as `LedgerSpendRule`. Visits
+  roll up per `(cycle, phase)`, because a phase can be visited twice in one cycle. The
+  projection predicts nothing, and it never passes a guess off as a measurement. An open
+  visit has no duration. A visit whose recorded clocks run backwards is clamped to zero and
+  flagged `clock_skewed`. A visit whose entry the range never saw is flagged too. Only a
+  visit that is none of these counts as `measured`. Spend that no visit can own is reported
+  as `unattributed` instead of being dropped. There is no turn count: engine translation
+  writes more than one `TurnCompleted` per real turn, so the projection reports
+  `turn_completed_events` with a caveat beside it
 ### Bug Fixes
 
 * **ci:** root CI now runs each workspace tenant's own static gates (#263). Until now the `tools` matrix ran only the runners' suites and coverage floors; their `mypy --strict`, `lint-imports` and `bandit` lived only in nested workflows, which GitHub never reads. A row's new `static` key runs them from the tenant's directory, against its own configuration, on its floor row: agyloop, claudeloop (on 3.10, plus its skill-frontmatter check), cursorloop, qwenloop, vibey-runners-common (a new static-only row) and vibey-bootstrap (its own pre-commit hook's mypy and `bandit -ll`). codexloop gets its own full matrix back: every gate on ubuntu and macOS, 3.12 and 3.13. A `docs` key restores the strict docs builds that agyloop, codexloop (properdocs) and vibey-skills (mkdocs, with its page-count check) ran in their own CI. `tests/meta/test_tools_matrix_covers_every_package.py` derives from each tenant's pyproject which gates it configures, and fails when no CI command runs one
@@ -37,6 +52,17 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **imports:** the `interfaces-declare-only` contract bound nothing inside `vibey.application`: `application/interfaces` could import `worker`, `job_dispatcher` or any other consumer, and the contract still reported KEPT. It now forbids `vibey.application.*`, with `design` and `dto` allowed as the vocabulary seams name. The new `tests/meta/test_import_contracts_bind.py` fails any import-linter configuration in the tree that has a dotted root, a forbidden module overlapping its source (the parent-package form that skips every pair), or a forbidden module that does not exist (#263)
 * **skills:** `tools/check_links.py` checked none of the 179 repository links in vibey-skills' Markdown. It matched only `/blob/main/` and resolved paths against the skills folder, while every self-link is monorepo-relative and points at `develop`. It now matches any ref: a long-lived branch named in the root `.vibey-gh.toml` `[branches]` resolves against the repository root, and any other ref is reported rather than skipped. It is a class with an interface beside it (ADR-0016), and new unit tests cover it (#263)
 * **docs:** the image contracts are named rather than counted in `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `CONTRIBUTING.md`, the `vibey-quality-gates` skill in all four agent trees, ADR-0019, runbook 05 and `docs/project.mmd`. Every one of them said four; `ci.yml` has had five since #234 (#263)
+* **gh:** a mention on a pull request can now reach the "act" path at all. `vibey-gh
+  conversation` decided pull-request-ness from `isPullRequest`, a field `gh issue view` does
+  not serve (it rejects it), so every thread read as an issue and a trusted request was
+  never allowed to change a file. It is now read from the thread's `url` (`.../pull/N`), in
+  one place, `ConversationThread.is_pull_request` (#145)
+* **gh:** a mention in an inline pull-request review comment is the comment evaluated. Review
+  comments are not in `gh issue view`'s thread, so the command silently fell back to the
+  newest issue-level comment and answered that instead. The ID is now resolved through the
+  pull request review API and checked against the pull request; an ID that names nothing
+  fails the command with a clear message rather than answering a different comment. A review
+  comment's briefing also carries the file, line and diff hunk it was written on (#145)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 
 ## [0.8.0] (2026-09-16)
