@@ -9,12 +9,16 @@ Protocols so a consumer -- the forecast slice of issue #88 -- can depend on
 the shape without depending on ``domain/phase_timing.py``.
 """
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from datetime import datetime, timedelta
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from vibey.domain.ledger import LedgerEvent
 from vibey.domain.phase import Phase
+
+if TYPE_CHECKING:
+    from vibey.domain.ledger import LedgerEvent
 
 
 @runtime_checkable
@@ -37,7 +41,7 @@ class PhaseSpendInterface(Protocol):
         """The ``turns`` explicitly reported on ``BudgetSpent`` events."""
         ...
 
-    def plus(self, other: "PhaseSpendInterface") -> "PhaseSpendInterface":
+    def plus(self, other: PhaseSpendInterface) -> PhaseSpendInterface:
         """The sum of two spends. Never mutates either operand."""
         ...
 
