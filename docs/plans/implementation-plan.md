@@ -84,7 +84,7 @@
 | 1.7 | `domain/rotation.py` — SWRR, factors, `eligible` | **properties: no starvation, weight fidelity, smoothness, determinism, exclusion honored** | all 6 properties green over 1000 examples | **partial** — `domain/rotation.py` and its property tests land; the explicit Hypothesis setting in `tests/domain/test_rotation.py` is `max_examples=50`, not 1000. Production caller: `application/engine_selector.py`, wired in `bootstrap.py` |
 | 1.8 | `domain/ledger.py` — kinds, `digest_range`, `open_items` | property: `digest_range` is order-sensitive and collision-free over shuffles | — | **done** — `domain/ledger.py` |
 | 1.9 | `domain/handoff.py` — envelope + brief ADTs | serialization round-trip | — | **done** — `domain/handoff.py` |
-| 1.10 | **`domain/noloss.py` — all 10 rules** | **adversarial property: dropping any closable item is always caught and named** | property suite green; adversarial corpus fixture in place | **done** — `domain/noloss.py`, `tests/domain/test_noloss.py` (Hypothesis default profile) |
+| 1.10 | **`domain/noloss.py` — all 10 rules** | **adversarial property: dropping any closable item is always caught and named** | property suite green; adversarial corpus fixture in place | **done** — `domain/noloss.py`, `tests/domain/test_noloss.py`; graded by an independent reference model (`tests/domain/test_noloss_reference.py`) over arbitrary-id, interleaved ledgers, and run at 10,000 examples per property by CI's required `No-loss property suite (10,000 examples)` job (#213) |
 | 1.11 | `domain/spec.py`, `review.py`, `budget.py`, `job.py`, `plan.py` | `is_buildable` violation table; `would_exceed` boundary tests | — | **done** — `domain/spec.py`, `review.py`, `budget.py`, `job.py`, `plan.py` |
 
 **Exit:** `pytest tests/domain` passes at 100%, and `domain/` imports nothing but
@@ -331,12 +331,12 @@ Two guardrails, because a tool that edits itself while running is a footgun:
 
 ## Definition of done for v1
 
-Checkboxes reflect status as of 2026-09-15.
+Checkboxes reflect status as of 2026-09-15; an entry that names a later change reflects that change.
 
 - [x] `pytest` green; `domain/`, `application/`, `infrastructure/`, `cli/` each at 100% branch coverage (CI Gates 4a–4d, ADR-0023)
 - [ ] `pytest -m system` covers `①→(visual opt-in/opt-out)→②→③→(deployment opt-in/opt-out)→DONE`, media regeneration, and deployment loop-backs offline — *partial: `tests/system/test_delivery_stage_set.py` covers the stage set and loop-backs; media regeneration is not built (5.11)*
 - [x] Chaos test green at 8 workers with random kills — *in-process abandonment, not OS-level `SIGKILL` (2.8)*
-- [ ] No-loss property suite green over 10,000 adversarial examples — *the suite is green under Hypothesis' default profile; `tests/domain/test_noloss.py` sets no `max_examples`*
+- [x] No-loss property suite green over 10,000 adversarial examples — *`pytest -m noloss --hypothesis-profile=noloss` runs each of the five properties to 10,000 passing examples (`--hypothesis-show-statistics` prints the count on every run); CI's `No-loss property suite (10,000 examples)` job is a required check on both branches (#213)*
 - [ ] `vibey doctor --conformance` passes on all ~~four~~ five installed runners (four paid plus opt-in qwenloop) — *no recorded run*
 - [ ] One real project takes the explicit deployment-opt-in path to a deployed Azure dev slot — *blocked on operator Azure login; the `AzCliClientAdapter` code path exists*
 - [ ] One real project takes the visual-opt-out and deployment-opt-out paths to successful local `DONE`

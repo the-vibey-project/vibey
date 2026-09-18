@@ -56,6 +56,23 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   no-loss suite
   ([#213](https://github.com/the-vibey-project/vibey/issues/213))
 
+### Features
+
+* **noloss:** the no-loss property suite runs the 10,000 adversarial examples the definition
+  of done asks for, and they are adversarial. It ran Hypothesis' default 100 over a space of
+  256 ledgers (four counts from 0..3, sequential ids, every kind contiguous), so a larger
+  `max_examples` alone would have stopped at the space's edge; its adversarial check was four
+  `parametrize` cases; and its expected brief came from the same `open_items` the gate uses,
+  so it graded the gate with the gate's own answer key. The ledgers now have arbitrary ids
+  from one shared pool, every kind interleaved, answers, resolutions and supersedes, several
+  verdicts, and a presentation order unrelated to seq; the expectation comes from an
+  independent reference model (`tests/domain/test_noloss_reference.py`); and the adversarial
+  property drops a random subset of what the brief owes and requires every dropped item named
+  under its own rule, and nothing else. A `noloss` Hypothesis profile (10,000 examples, no
+  deadline) and marker drive the new required CI check `No-loss property suite (10,000
+  examples)` on both branches, which prints Hypothesis' statistics on every run
+  ([#213](https://github.com/the-vibey-project/vibey/issues/213))
+
 ## [0.8.0] (2026-09-16)
 
 ### Features
