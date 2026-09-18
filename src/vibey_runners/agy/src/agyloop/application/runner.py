@@ -64,7 +64,7 @@ from agyloop.domain.forecast import (
     forecast,
     should_wind_down,
 )
-from agyloop.domain.handoff_marker import HandoffMarker
+from agyloop.domain.handoff_marker import WIND_DOWN_REASON_PREFIX, HandoffMarker
 from agyloop.domain.loop import (
     DelayThenSend,
     Finish,
@@ -1326,7 +1326,7 @@ class AutonomousRunner:
         the reactive path it used before.
         """
         result = await self._finish_stopped(
-            state, session_id=session_id, reason=f"wind-down: {decision.reason}"
+            state, session_id=session_id, reason=f"{WIND_DOWN_REASON_PREFIX} {decision.reason}"
         )
         binding = decision.forecast.binding
         points = self._save_points.list_points(self._run_id)
