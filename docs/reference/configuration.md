@@ -17,7 +17,7 @@ active runtime path" status the README gives `infrastructure/notify/` and
 | Input | Read by | What it controls |
 |---|---|---|
 | `./vibey.toml`, key `[features].qwenloop` only | `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`) | Whether `qwenloop` is added to the health sweep. The file is read from the current directory with `parse_toml_string`, never validated by `parse_config`; a missing or malformed file counts as `qwenloop = false`. Every other table on this page is ignored. |
-| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker` and every job handler | Cycle cap, per-cycle spend and turn caps, skills-context policy, and (in principle) `features.qwenloop` — see below. |
+| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker` and every job handler | Cycle cap, per-cycle spend and turn caps, skills-context policy, REVIEW's [automated checks](#review), the [gate-command](#gates) timeout and environment isolation, and (in principle) `features.qwenloop` — see below. |
 | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the qwenloop switch, the sovereign DESIGN provider's evidence directory. |
 
 The project record is written once, at creation, by one of two paths:
@@ -258,6 +258,58 @@ vibey's own `bandit -q -r src/vibey` is enforced for real as gate 6 of
 A malformed `review` object (not an object, a command list that is not a list
 of non-empty string arrays) raises when the worker is built, rather than
 silently running nothing.
+
+These commands run through the same gate runner as BUILD's, so they see the
+environment described under [Gate commands](#gates): the default `ruff` has to
+be installed where the project can reach it, not only inside vibey's venv.
+
+## Gate commands (project config record — not a `vibey.toml` table) { #gates }
+
+`VibeyConfig` has no `gates` field; a `[gates]` table in `vibey.toml` is
+silently ignored by `parse_config`, and the worker never loads `vibey.toml`
+anyway. The values live in the project's stored config record under a `gates`
+object, and `SubprocessGateRunner.from_config`
+(`infrastructure/build/gate_runner.py`) reads them when
+`bootstrap.build_full_worker` builds the worker. That one runner executes every
+gate command the worker runs: `build.verify`'s verification commands and its
+`git diff`, `build.integrate`'s integration gates, and REVIEW's
+[automated checks](#review).
+
+Every gate command:
+
+- runs with every `GIT_*` variable removed, always;
+- runs, by default, with vibey's own Python environment removed —
+  `VIRTUAL_ENV`, `VIRTUAL_ENV_PROMPT`, `PYTHONHOME`, `PYTHONPATH`, and the
+  `PATH` entries under the active venv and under the running interpreter's
+  prefix when that interpreter is a venv. It is the same isolation engine
+  sessions get, so a gate's bare `pip install -e .` cannot land inside vibey's
+  venv and its bare `python` or `pytest` never resolves to vibey's
+  interpreter;
+- reads `/dev/null` as stdin, so a command that prompts gets end-of-file
+  instead of waiting;
+- leads a process group of its own. When it overruns `timeout_seconds`, the
+  whole group is killed with `SIGKILL` and the gate **fails with exit code
+  124** and the message `gate command timed out after <N>s and was killed:
+  <command>` — a failing gate for the repair loop, the way a command that
+  cannot start fails with 127, not an error and not a wait. When the task
+  running it is cancelled (Ctrl-C on the worker, event-loop shutdown), the
+  group is killed the same way before the cancellation propagates;
+- has output that is not valid UTF-8 decoded with replacement characters
+  rather than raising.
+
+Neither `vibey new` nor the operator's `VibeyProject` spec writes this object
+today; like `review`, the record is written directly.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `timeout_seconds` | number | `1800` (30 minutes) | Per command, not per job; a project's whole test suite is usually one command. Must be a finite number greater than zero. |
+| `kill_grace_seconds` | number | `5` | How long to wait for a killed command to be reaped. `SIGKILL` cannot be caught, so this only runs out when a process that left the command's group (a daemon in a session of its own) still holds its output open; the worker logs `gate_process_not_reaped` and moves on rather than wait on it. Must be a finite number greater than zero. |
+| `isolate_python_env` | bool | `true` | `false` passes vibey's Python environment through to gate commands, as before [#212](https://github.com/the-vibey-project/vibey/issues/212) — for a project whose gates rely on tools installed beside vibey, such as the `ruff` and `bandit` of a development checkout's venv. `GIT_*` is stripped either way. |
+
+`true` and `false` are rejected as timeouts rather than read as `1` and `0`.
+A malformed `gates` object — not an object, a non-boolean
+`isolate_python_env`, a timeout that is not a positive finite number — raises
+when the worker is built.
 
 ## Full example
 

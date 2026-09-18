@@ -376,9 +376,13 @@ Variables read by code under `src/vibey`:
 | `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |
 | `CURSOR_API_KEY` | `doctor` auth fallback; `doctor --cluster` | cursorloop credentials. |
 | `GOOGLE_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `GEMINI_API_KEY`, `GOOGLE_APPLICATION_CREDENTIALS`) | agyloop credentials. |
-| `VIRTUAL_ENV` | engine session launch | Removed, together with `VIRTUAL_ENV_PROMPT`, `PYTHONHOME`, `PYTHONPATH`, and the matching `PATH` entries, from the environment passed to engine sessions, so an engine does not install into or run vibey's own interpreter. |
+| `VIRTUAL_ENV` | engine session launch; every gate command (`build.verify`, `build.integrate`, REVIEW's automated checks) unless the project sets [`gates.isolate_python_env`](configuration.md#gates) to `false` | Removed, together with `VIRTUAL_ENV_PROMPT`, `PYTHONHOME`, `PYTHONPATH`, and the matching `PATH` entries, from the environment passed to engine sessions and gate commands, so neither installs into nor runs vibey's own interpreter. For gate commands the running interpreter's prefix counts as a venv only when it is one, so a system-Python install keeps `/usr/bin`. |
 
-Engine sessions otherwise inherit the caller's environment. Build-gate and
-git subprocesses inherit it minus every `GIT_*` variable. The engine CLIs
+Engine sessions otherwise inherit the caller's environment. Gate commands
+inherit it minus every `GIT_*` variable (and, by default, minus vibey's Python
+environment as above); they read `/dev/null` as stdin, and one that overruns
+[`gates.timeout_seconds`](configuration.md#gates) (default 30 minutes) is
+killed with its whole process group and fails as exit 124. vibey's own git
+subprocesses inherit the environment minus every `GIT_*` variable. The engine CLIs
 read further variables of their own; see each runner under
 `src/vibey_runners/`.

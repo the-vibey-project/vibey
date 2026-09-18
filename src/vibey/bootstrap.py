@@ -361,6 +361,11 @@ def build_full_worker(
         write_ledger=write_full_ledger,
     )
     skills_context = compiler_from_config(project.config, repo_path=repo_root)
+    # One runner for every gate command -- build.verify's gates and diff,
+    # build.integrate's gates, REVIEW's automated checks -- built from the
+    # project's `gates` config (per-command timeout, kill grace, Python-env
+    # isolation; ADR-0018). Unset keys keep the defaults.
+    gate_runner = SubprocessGateRunner.from_config(project.config)
 
     def _recording(handler: JobHandler, adapter: EngineAdapter) -> JobHandler:
         return RotationRecordingHandler(
@@ -390,7 +395,7 @@ def build_full_worker(
         adapter = await engine_provider.select_for(job)
         handler = BuildVerifyHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
-            gates=SubprocessGateRunner(),
+            gates=gate_runner,
             reviewer=adapter,
             ledger=resources.build_ledger,
             jobs=resources.jobs,
@@ -405,7 +410,7 @@ def build_full_worker(
     async def _integrate(job: JobRecord) -> JobHandler:
         return BuildIntegrateHandler(
             integration=IntegrationBranch(repo_root, cycle=job.cycle),
-            gates=SubprocessGateRunner(),
+            gates=gate_runner,
             ledger=resources.build_ledger,
             jobs=resources.jobs,
             clock=clock,
@@ -461,7 +466,7 @@ def build_full_worker(
             automated_reviewer=SubprocessAutomatedReviewRunner.from_config(
                 project.config,
                 projects=resources.projects,
-                gates=SubprocessGateRunner(),
+                gates=gate_runner,
             ),
         ),
         "review.collect": ReviewCollectHandler(
