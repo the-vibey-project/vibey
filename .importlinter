@@ -107,3 +107,4 @@ forbidden_modules =
     vibey_gh.local_review
     vibey_gh.doctor
     vibey_gh.install
+    vibey_gh.operation_estimate

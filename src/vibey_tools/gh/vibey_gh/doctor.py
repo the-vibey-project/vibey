@@ -33,6 +33,7 @@ from vibey_gh.config import (
     BranchSyncConfig,
     ConversationConfig,
     DocumentationConfig,
+    EstimateConfig,
     GhConfig,
     GithubReleaseConfig,
     IssueAutomationConfig,
@@ -82,6 +83,9 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "social_signals": _fields(SocialSignalsConfig) | {"entries"},
     "tidy": _fields(TidyConfig),
     "workflow_names": _fields(WorkflowNamesConfig),
+    # `requirements` is one table per stage, and stage names are adopter-defined; the
+    # loader and `vibey_gh.feasibility` validate what is inside it, loudly.
+    "estimate": _fields(EstimateConfig),
     # free-form: per-branch tables validated by their own machinery
     "rulesets": None,
 }

@@ -58,6 +58,29 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   writes more than one `TurnCompleted` per real turn, so the projection reports
   `turn_completed_events` with a caveat beside it
 
+### Features
+
+* **gh:** `vibey-gh estimate --operation STAGE [--from STAGE] [--json]`, the first slice of
+  the feasibility engine (#134). It judges the paper's six-materials state vector at every
+  stage a run must pass. That vector has eighteen coordinates, each a value on 0..1 where
+  1 is peak, or `unknown`, and each carries its source and measurement time. Feasibility
+  is three-valued: a measured shortfall anywhere on the path is `no`, and an unmeasured
+  coordinate can never produce `yes`. Agency shortfalls are listed first. The nine
+  default stages, install through main-validation, and their requirement vectors are
+  data that the new `[estimate]` section can replace. The fit calculus measures hardware
+  and software availability, and the other sixteen coordinates are reported as `unknown`,
+  which lowers the reported confidence. The local model's service time is projected from
+  the fit journal. The stages' duration, the cost and the repair gradient are reported as
+  `unknown`, each with its reason. The command is offline by default and exits 0, 1 or 3
+  for yes, no or unknown. It is a capability on all five surfaces
+* **gh:** one graded estimator, `vibey_gh.estimation` (#88, #134). The fit calculus's
+  least squares now lives there, behind `GradedEstimatorInterface`: observations go in,
+  and a prediction comes out with its basis and `n`, which can then be graded against
+  the actual result. `fit.estimate_from` wraps it, and 400 randomized cases confirm its
+  constants are identical to before. `vibey_gh` now ships `py.typed`, so `src/vibey` can
+  import it under `mypy --strict`. That makes it ready for the vibey-side forecast, which
+  is the follow-up that will combine it with `PhaseTiming`
+
 ## [0.8.0] (2026-09-16)
 
 ### Features

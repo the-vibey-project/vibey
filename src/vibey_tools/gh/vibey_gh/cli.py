@@ -20,6 +20,7 @@ from vibey_gh import (
     install,
     issue_automation,
     merge_train,
+    operation_estimate,
     pr_automation,
     promote,
     realign,
@@ -682,6 +683,57 @@ def _fit(args) -> int:
     return 0 if verdict.ok else 1
 
 
+def _estimate(args) -> int:
+    # Module-level like every other handler in this file: argparse dispatches through
+    # `set_defaults(func=...)`. It only resolves configuration and prints; the estimate
+    # itself is `OperationEstimator`'s (ADR-0016).
+    from vibey_gh import fit
+    from vibey_gh.feasibility import FeasibilityEvaluator, Pipeline
+    from vibey_gh.fitloop import FitLoop
+
+    cfg = load_config()
+    try:
+        pipeline = Pipeline.from_config(cfg.estimate)
+        evaluator = FeasibilityEvaluator(report_first=cfg.estimate.report_first)
+    except ValueError as exc:
+        print(f"vibey-gh estimate: {exc}", file=sys.stderr)
+        return 2
+    # The same runner and model the local lane uses, unless told otherwise: --base-url,
+    # else VIBEY_OLLAMA_URL, else [pr_automation.fallback] base_url; --model, else
+    # [estimate] model, else [pr_automation.fallback] model.
+    base_url = fit.OllamaModelSampler.resolve_base_url(
+        args.base_url, fallback=cfg.pr_automation.fallback.base_url
+    )
+    model = args.model or cfg.estimate.model or cfg.pr_automation.fallback.model
+    # Read, never written: the fit loop's own observations inform the duration.
+    if args.no_journal:
+        journal = None
+    elif args.journal:
+        journal = Path(args.journal)
+    else:
+        journal = FitLoop.default_journal()
+    estimator = operation_estimate.OperationEstimator(
+        model,
+        base_url=base_url,
+        offline=cfg.estimate.offline and not args.online,
+        journal=journal,
+        pipeline=pipeline,
+        evaluator=evaluator,
+    )
+    try:
+        result = estimator.estimate(
+            args.operation, start=args.start, payload_bytes=args.payload_bytes
+        )
+    except ValueError as exc:
+        print(f"vibey-gh estimate: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result.as_dict(), indent=2, sort_keys=True, ensure_ascii=False))
+    else:
+        print("\n".join(result.lines()))
+    return result.exit_code
+
+
 def _doctor(args) -> int:
     from vibey_gh import doctor
 
@@ -1297,6 +1349,62 @@ def main(argv: list[str] | None = None) -> int:
         help="decide from this call alone: record nothing and read nothing back",
     )
     ft.set_defaults(func=_fit)
+
+    es = sub.add_parser(
+        "estimate",
+        help="before a run (#134): feasibility along the whole pipeline, duration, cost,"
+        " and each coordinate's distance from peak -- unknown where unmeasured",
+    )
+    es.add_argument(
+        "--operation",
+        required=True,
+        help="the stage the run must reach, e.g. develop or main (default stages: install,"
+        " interview, feature-branch, develop, develop-deployment, develop-validation, main,"
+        " main-deployment, main-validation; [estimate] stages replaces them)",
+    )
+    es.add_argument(
+        "--from",
+        dest="start",
+        default=None,
+        help="the stage the run starts at (default: the first stage)",
+    )
+    es.add_argument("--json", action="store_true", help="print the estimate as JSON")
+    es.add_argument(
+        "--model",
+        default="",
+        help="the local model the fit coordinates are measured against (default: [estimate]"
+        " model, else [pr_automation.fallback] model)",
+    )
+    es.add_argument(
+        "--base-url",
+        default="",
+        help="the Ollama runner to read the model from (default: $VIBEY_OLLAMA_URL, else"
+        " [pr_automation.fallback] base_url)",
+    )
+    es.add_argument(
+        "--payload-bytes",
+        type=int,
+        default=operation_estimate.DEFAULT_PAYLOAD_BYTES,
+        help="size of the work the local model's service time is projected for",
+    )
+    es.add_argument(
+        "--online",
+        action="store_true",
+        help="also read a runner that is not on this machine (default: offline, unless"
+        " [estimate] offline = false)",
+    )
+    es_journal = es.add_mutually_exclusive_group()
+    es_journal.add_argument(
+        "--journal",
+        help="the fit journal whose observations inform the duration; read, never written"
+        " (default: $VIBEY_GH_FIT_JOURNAL, else ~/.local/state/vibey-gh/fit.jsonl)",
+    )
+    es_journal.add_argument(
+        "--no-journal",
+        action="store_true",
+        help="read no observations: the duration is unknown",
+    )
+    es.set_defaults(func=_estimate)
 
     pp = sub.add_parser(
         "paper",
