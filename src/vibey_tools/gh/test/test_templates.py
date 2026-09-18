@@ -33,6 +33,26 @@ REPO_WORKFLOWS = sorted(
 )
 
 
+def _workspace_workflows() -> list[Path]:
+    """The monorepo root's own deployed copies, when this tenant is checked out inside it.
+
+    vibey-gh ships as a standalone sdist too, where nothing above this tenant exists -- so
+    this walks up looking for a `.github/workflows` that is not the tenant's own and
+    returns nothing when there is none. That path matters: the file GitHub actually
+    rejected was the workspace root's copy, rendered from this tenant's template with the
+    ROOT repository's configuration, which substitutes longer values than the tenant's own.
+    """
+    tenant = Path(__file__).resolve().parent.parent
+    for parent in tenant.parents:
+        candidate = parent / ".github/workflows"
+        if candidate.is_dir():
+            return sorted(candidate.glob("*.yml"))
+    return []
+
+
+WORKSPACE_WORKFLOWS = _workspace_workflows()
+
+
 @pytest.mark.parametrize("path", WORKFLOW_TEMPLATES, ids=lambda p: p.name)
 def test_every_shipped_workflow_template_parses(path):
     parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -96,6 +116,167 @@ def test_every_claude_tool_list_survives_argument_tokenization():
                 lists.append((path.name, flag))
     # Every template that drives Claude constrains it; losing one is a finding, not a diff.
     assert len(lists) == 10
+
+
+# GitHub's cap on ONE expression. Any workflow scalar containing `${{ }}` -- a `run:`
+# script, a `with:` input, an `env:` value -- is compiled as a SINGLE expression, so the
+# whole scalar is what gets measured against this.
+GITHUB_MAX_EXPRESSION_LENGTH = 21_000
+# The budget this repository holds itself to, keeping 5,000 characters -- a quarter of the
+# cap -- in reserve. Justified twice. First, the template is not what GitHub reads: the
+# deployed copy is `render_workflow` output, and a consumer's configuration can render a
+# `__VIBEY_GH_*__` placeholder far longer than the placeholder it replaced, so a scalar
+# that fits here can still fail there. Second, the failure is invisible from the run (see
+# below), so the guard has to fire in CI well before GitHub would. The reserve costs
+# nothing: the largest interpolated scalar in the tree is under 10,000 characters.
+RUN_SCALAR_BUDGET = 16_000
+# A budget above the cap would guard nothing. Pinned so it cannot be raised through it.
+assert RUN_SCALAR_BUDGET < GITHUB_MAX_EXPRESSION_LENGTH
+EXPRESSION_MARKER = "${{"
+_EXPRESSION = re.compile(r"\$\{\{(.*?)\}\}", re.DOTALL)
+
+
+def _compiled_expression_length(scalar: str) -> int | None:
+    """What GitHub measures: the scalar compiled to `format('...', ...)`, or None if plain.
+
+    An interpolated scalar is not measured as written. GitHub splits it into literals and
+    expressions and emits one `format()` call, and the literals are escaped on the way --
+    every `{`, `}` and `'` doubles. On this repository's content that costs 1-4%, and it
+    is not cosmetic: the commit that first bricked release-surfaces.yml carried a 20,786
+    character scalar, comfortably under the cap, which compiled to 21,064 and was refused.
+    Measuring the raw scalar would have passed it.
+    """
+    literals, expressions, last = [], [], 0
+    for match in _EXPRESSION.finditer(scalar):
+        literals.append(scalar[last : match.start()])
+        expressions.append(match.group(1).strip())
+        last = match.end()
+    literals.append(scalar[last:])
+    if not expressions:
+        return None
+    body = ""
+    for index, literal in enumerate(literals):
+        body += literal.replace("{", "{{").replace("}", "}}").replace("'", "''")
+        if index < len(expressions):
+            # A literal placeholder, not a format call: these braces stay single.
+            body += "{" + str(index) + "}"
+    arguments = "".join(", " + expression for expression in expressions)
+    return len("format('" + body + "'" + arguments + ")")
+
+
+def _interpolated_scalars(path: Path) -> list[tuple[str, str]]:
+    """Every string a workflow may interpolate, labelled by file, job, step and key.
+
+    `run:` is the one that bricked a file, but the cap is a property of expressions, not of
+    scripts: a `with:` input is measured the same way, and pr-automation.yml's review
+    prompt is the longest interpolated string this repository ships. A guard that read
+    `run:` alone would not see it.
+    """
+    parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
+    scalars = []
+    for job_name, job in (parsed.get("jobs") or {}).items():
+        if not isinstance(job, dict):
+            continue
+        for key, value in (job.get("env") or {}).items():
+            if isinstance(value, str):
+                scalars.append((f"{path.name} / {job_name} / env.{key}", value))
+        for index, step in enumerate(job.get("steps") or []):
+            label = step.get("name") or f"step {index}"
+            where = f"{path.name} / {job_name} / {label}"
+            if isinstance(step.get("run"), str):
+                scalars.append((f"{where} / run", step["run"]))
+            for section in ("with", "env"):
+                for key, value in (step.get(section) or {}).items():
+                    if isinstance(value, str):
+                        scalars.append((f"{where} / {section}.{key}", value))
+    return scalars
+
+
+def test_no_interpolated_workflow_scalar_exceeds_githubs_expression_limit():
+    """The third GitHub-side limit guarded here, and the one that bricked a whole file.
+
+    A scalar containing `${{ }}` is not a string handed to bash or to an action. It is a
+    template, compiled as a SINGLE expression, and one expression may not exceed 21,000
+    characters. release-surfaces.yml's channel-restore step compiled to 21,599 -- from a
+    21,315-character block scalar, 21,208 in the template -- and GitHub refused the entire
+    file:
+
+        Invalid workflow file
+        .github/workflows/release-surfaces.yml
+        (Line: 670, Col: 14): Exceeded max expression length 21000
+
+    MIND THE UNIT, because two wrong ones are easy to reach for. Counting the raw file
+    bytes with the YAML block indentation still attached reads 26,354, which over-counts by
+    a quarter; counting the parsed scalar reads 21,315, which under-counts, because the
+    literals are escaped into `format()` first. Only the compiled length is the number
+    GitHub compares, which is why `_compiled_expression_length` builds it.
+
+    PARSING PROVES NOTHING ABOUT THIS. The file was perfectly valid YAML the whole time --
+    PyYAML loads it, `test_every_shipped_workflow_template_parses` passes, `installed()`
+    reports no drift -- and it was still an invalid WORKFLOW. Neither does the run report
+    it: an invalid workflow file produces a run named by FILE PATH, with no jobs and no
+    retrievable logs, so it reads as "release-surfaces.yml is failing on every push" when
+    in truth it never ran at all. The documentation site, the book, the paper and the OCI
+    bundle went unpublished behind exactly that misreading.
+
+    Two ways to satisfy this: split the step, or move the expressions into the step's
+    `env:` and read them as ordinary shell variables. The second is the better fix where it
+    applies -- with no inline `${{ }}` the scalar is not a template and the cap stops
+    applying at all, which is why `Build the channel site with ProperDocs` may sit at
+    21,958 characters and break nothing. That exemption is not an assumption. Run
+    35158652570 (develop @ d7fadd1e, 2026-09-16T22:38:28Z) is a real run with real jobs
+    from a file carrying that same 21,958-character expression-free block, 958 over the
+    cap; the very next commit pushed the interpolated restore step to 21,064 compiled, 64
+    over, and every run from there on was named by file path instead. The cap tracks the
+    marker, not the length, so this test does too.
+
+    Splitting has its own hazard, which no length check can see. Each `run:` is a separate
+    shell, so a variable assigned in one step is the empty string in the next. Anything a
+    later step needs must cross through `env:` or `$GITHUB_ENV`; files under the workspace
+    cross by themselves.
+    """
+    # The templates are the source of truth. This tenant's deployed copies and the
+    # workspace root's are what GitHub actually reads, and rendering changes their length,
+    # so a render is never assumed to be the template's size. Sweep all three -- the file
+    # GitHub named in the rejection was the workspace root's.
+    sources = {
+        "templates": WORKFLOW_TEMPLATES,
+        "tenant": REPO_WORKFLOWS,
+        "workspace": WORKSPACE_WORKFLOWS,
+    }
+    swept = {name: 0 for name in sources}
+    checked = {name: 0 for name in sources}
+    for name, paths in sources.items():
+        for path in paths:
+            for where, scalar in _interpolated_scalars(path):
+                swept[name] += 1
+                if EXPRESSION_MARKER not in scalar:
+                    continue
+                size = _compiled_expression_length(scalar)
+                assert size is not None, f"{where}: unbalanced {EXPRESSION_MARKER}"
+                checked[name] += 1
+                detail = (
+                    f"{where}: compiles to {size} characters because the scalar contains "
+                    f"{EXPRESSION_MARKER}, so GitHub evaluates the whole of it as one "
+                    f"expression and rejects the file above "
+                    f"{GITHUB_MAX_EXPRESSION_LENGTH}; the budget here is "
+                    f"{RUN_SCALAR_BUDGET}. Split the step, or move its expressions into "
+                    f"the step's env: block."
+                )
+                assert size <= RUN_SCALAR_BUDGET, detail
+    # Floors, not pins: adding a step should not mean editing this test, but a sweep that
+    # silently measured nothing has to fail rather than pass. Both halves are floored,
+    # because `swept` counts scalars the marker filter then skips -- a mistyped marker
+    # would leave `checked` at zero while `swept` stayed healthy, which is the exact
+    # silent no-op these floors exist to catch. The workspace list is empty in a
+    # standalone sdist checkout, so it is floored only when it resolved to something.
+    assert swept["templates"] > 400, swept
+    assert checked["templates"] > 250, checked
+    assert swept["tenant"] > 400, swept
+    assert checked["tenant"] > 250, checked
+    if WORKSPACE_WORKFLOWS:
+        assert swept["workspace"] > 250, swept
+        assert checked["workspace"] > 150, checked
 
 
 @pytest.mark.parametrize("path", REPO_WORKFLOWS, ids=lambda p: p.name)

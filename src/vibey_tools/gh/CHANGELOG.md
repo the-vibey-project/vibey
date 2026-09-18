@@ -5,6 +5,34 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
+  workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The
+  "Restore the other release channel" step had grown to a single 509-line script, and
+  because it carried inline `${{ }}` expressions GitHub compiled the WHOLE script as one
+  expression and capped it at 21,000 characters. Nothing ran: an unparseable workflow
+  produces a run named by file path, with no jobs and no retrievable logs, so the docs
+  site, the book, the paper and the OCI release bundle silently stopped publishing while
+  the only visible symptom was a red mark on a workflow that was never the patient. The
+  step is now four, split at its own seams — restore the other channel, write the chooser
+  page, substitute its values, write robots/sitemap/llms — and every inline expression has
+  moved into the `env:` block each step already used, which removes the file's last
+  expression-bearing script and takes it out of the cap's reach entirely. **Shell state was
+  the real hazard in that split**, not the YAML: `GA_ID` was assigned in the first segment
+  and read 370 lines later by the chooser's Python pass, so a naive split would have
+  published a blank analytics snippet with nothing red anywhere. It is now carried in the
+  owning step's `env:` behind a `: "${GA_ID?}"` tripwire, which fails on an unset variable
+  while still allowing the empty value that means analytics are switched off.
+- Guard it: a new template test measures every interpolated workflow scalar — `run`, `with.*`
+  and `env.*`, at step and job level, across the templates, the tenant's deployed copies and
+  the workspace root's — against GitHub's limit. It measures the COMPILED length, the scalar
+  escaped into `format('<literal>', ...)`, because that is what GitHub caps and it is
+  materially larger than the parsed string: the commit that first broke this file carries a
+  scalar of 20,786 parsed characters, comfortably under the cap, and 21,064 compiled, over
+  it. A guard measuring the parsed string would have passed the exact commit that caused
+  this outage. Scalars with no expression are exempt and are recorded as such, which the
+  same file proves: a 21,958-character expression-free script sits 463 lines ABOVE the one
+  GitHub named, and GitHub parsed straight past it.
+
 - Fix the Claude tool lists in the managed workflow templates, which were being torn apart
   by argument tokenization. `claude_args` is split shell-style, so a permission spec
   containing a SPACE — `Bash(gh pr diff:*)` — arrived as three separate arguments:

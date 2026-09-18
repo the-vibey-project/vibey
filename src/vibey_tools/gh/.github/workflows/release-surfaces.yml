@@ -202,6 +202,12 @@ jobs:
           CHANNEL: ${{ needs.context.outputs.channel }}
           RELEASE_BRANCH: ${{ needs.context.outputs.branch }}
           RELEASE_SHA: ${{ needs.context.outputs.sha }}
+        # THIS SCRIPT IS ALREADY PAST THE 21,000-CHARACTER EXPRESSION CAP and survives
+        # only because it contains no inline `${{ }}`, so GitHub never compiles it as a
+        # template. Adding one anywhere below makes the whole script one expression and
+        # bricks the entire FILE -- no jobs, no logs, a run named by file path. New values
+        # go in the `env:` block above and are read as shell variables. The note above
+        # "Restore the other release channel" has the whole story.
         run: |
           set -euo pipefail
           export GA_ID="G-DV1RM8BD78"
@@ -660,6 +666,27 @@ jobs:
           name: docs-${{ needs.context.outputs.channel }}
           path: channel-site/
           retention-days: 90
+      # The Pages tree is assembled by the next four steps, in order. They were a single
+      # step until GitHub rejected the whole FILE: a `run:` script containing `${{ }}` is
+      # evaluated as one template expression, and one expression is capped at 21,000
+      # characters. MIND THE UNIT. GitHub measures the COMPILED expression -- the block
+      # scalar after YAML strips this indentation, then escaped into `format('...', ...)`,
+      # which doubles every brace and quote and costs about 1.3% more. That block was
+      # 21,599 compiled, from a 21,315-character scalar (21,208 in the template), so it
+      # was 599 over, not thousands. Counting the raw file bytes with the indentation
+      # still attached reads 26,354, and that unit is simply the wrong one.
+      # An invalid workflow file produces a run named by FILE PATH with no jobs and no
+      # retrievable logs, so the site, the book, the paper and the OCI bundle simply
+      # stopped publishing, and it read as "failing on every push" when in truth nothing
+      # ever ran. Keep each block well under the cap.
+      #
+      # ONLY FILES SURVIVE BETWEEN THESE STEPS. Every `run:` is a separate shell starting
+      # at the workspace root, so `pages/` and everything written under it carries forward
+      # while every shell variable does not. That is why each step declares in its own
+      # `env:` exactly what it reads, and why the `${{ }}` values live in `env:` rather
+      # than inline in a script: an inline expression is what makes GitHub treat the whole
+      # script as a template, and a variable set in one step and read in the next would be
+      # the empty string -- a page published with blank substitutions and nothing red.
       - name: Restore the other release channel
         env:
           CHANNEL: ${{ needs.context.outputs.channel }}
@@ -669,7 +696,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          GA_ID="G-DV1RM8BD78"
           mkdir -p "pages/${CHANNEL}" "pages/${OTHER_CHANNEL}"
           cp -R channel-site/. "pages/${CHANNEL}/"
           restored=false
@@ -729,6 +755,12 @@ jobs:
             # integration branch, with nothing red anywhere to say so.
             echo "::notice::No docs-${OTHER_CHANNEL} artifact and ${OTHER_CHANNEL} is not live; publishing this channel alone."
           fi
+      - name: Write the release channel chooser page
+        # No `env:` and no expressions: the heredoc is quoted, so nothing here expands and
+        # every placeholder below is filled in by the step after this one. `pages/` already
+        # exists because the step above created it -- directories persist between steps.
+        run: |
+          set -euo pipefail
           cat > pages/index.html <<'HTML'
           <!doctype html>
           <html lang="en">
@@ -1033,12 +1065,23 @@ jobs:
           </body>
           </html>
           HTML
+      - name: Substitute the chooser page's values
+        env:
+          RELEASE_BRANCH: ${{ needs.context.outputs.branch }}
+          RELEASE_CHANNEL: ${{ needs.context.outputs.channel }}
+          RELEASE_SHA: ${{ needs.context.outputs.sha }}
+          GA_ID: "G-DV1RM8BD78"
+        run: |
+          set -euo pipefail
+          # GA_ID was a shell variable set in the restore step and read here, hundreds of
+          # lines later in the same block. Across a step boundary that is the EMPTY STRING,
+          # and Python reads it with a default, so the page would publish with a blank
+          # analytics snippet and nothing would report it. It now arrives through `env:`
+          # above, and `${VAR?}` fails the step outright if an entry is ever deleted. An
+          # empty GA_ID stays legal -- that is analytics switched off, not a missing value.
+          : "${GA_ID?}" "${RELEASE_BRANCH?}" "${RELEASE_CHANNEL?}" "${RELEASE_SHA?}"
           REPOSITORY_NAME=${GITHUB_REPOSITORY#*/} \
           REPOSITORY_URL=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY} \
-          RELEASE_BRANCH=${{ needs.context.outputs.branch }} \
-          RELEASE_CHANNEL=${{ needs.context.outputs.channel }} \
-          RELEASE_SHA=${{ needs.context.outputs.sha }} \
-          GA_ID="$GA_ID" \
           SEO_OG_IMAGE='' \
           python - <<'PY'
           import os
@@ -1128,6 +1171,11 @@ jobs:
               text = text.replace(old, new)
           path.write_text(text)
           PY
+      - name: Write robots.txt, the sitemap index and llms.txt
+        env:
+          RELEASE_SHA: ${{ needs.context.outputs.sha }}
+        run: |
+          set -euo pipefail
           OWNER=${GITHUB_REPOSITORY%/*}
           NAME=${GITHUB_REPOSITORY#*/}
           PAGES_ROOT="https://${OWNER}.github.io/${NAME}/"
@@ -1149,6 +1197,9 @@ jobs:
           EOF
           fi
           # The paper and the book on the LLM-facing index as well, only where they exist.
+          # SURFACE_LINES is built and consumed inside THIS step. It must stay that way:
+          # a later step would see it empty and silently drop every offline surface from
+          # llms.txt, which is exactly the kind of loss nothing in a diff shows.
           SURFACE_LINES=""
           [ -f pages/main/paper.pdf ] && SURFACE_LINES="${SURFACE_LINES}- [Research paper (PDF)](${PAGES_ROOT}main/paper.pdf)"$'\n'
           [ -f pages/main/paper/index.html ] && SURFACE_LINES="${SURFACE_LINES}- [Research paper (HTML)](${PAGES_ROOT}main/paper/)"$'\n'
@@ -1167,7 +1218,7 @@ jobs:
           - [Preview documentation](${PAGES_ROOT}develop/)
           - [Source repository](https://github.com/${GITHUB_REPOSITORY})
           - [Releases](https://github.com/${GITHUB_REPOSITORY}/releases)
-          ${SURFACE_LINES}- Provenance: ${GITHUB_REPOSITORY}@${{ needs.context.outputs.sha }}
+          ${SURFACE_LINES}- Provenance: ${GITHUB_REPOSITORY}@${RELEASE_SHA}
           EOF
           fi
           if true; then
