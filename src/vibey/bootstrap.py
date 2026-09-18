@@ -394,6 +394,7 @@ def build_full_worker(
             reviewer=adapter,
             ledger=resources.build_ledger,
             jobs=resources.jobs,
+            clock=clock,
             repair=VerifyRepairPolicy(
                 ledger_reader=resources.ledger, clock=clock, gates=resources.gates
             ),

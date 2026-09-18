@@ -3,6 +3,7 @@
 
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -500,6 +501,56 @@ async def test_non_capacity_defer_never_opens_the_circuit() -> None:
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
     assert record.circuit == "closed"
     assert record.resets_at is None
+
+
+async def test_a_capacity_rejected_diff_review_opens_the_reviewers_circuit(
+    tmp_path: Path,
+) -> None:
+    """#215, end to end through the real verify handler: the reviewer that
+    ran out must have its circuit opened, or the next claim selects the
+    same exhausted engine for the same verify job again."""
+    from tests.application.test_build_verify_handler import (
+        FakeGateRunner,
+        FakeLedger,
+        FakeWorktrees,
+        _capacity_rejected_review,
+    )
+    from tests.application.test_build_verify_handler import _job as _verify_job
+    from vibey.application.build_verify_handler import BuildVerifyHandler
+    from vibey.infrastructure.engines.descriptors import CODEXLOOP
+    from vibey.infrastructure.engines.scripted import ScriptedEngine
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CODEXLOOP))
+    health = EngineHealthService(repo)
+    handler = RotationRecordingHandler(
+        inner=BuildVerifyHandler(
+            worktrees=FakeWorktrees(tmp_path),
+            gates=FakeGateRunner(),
+            reviewer=ScriptedEngine(
+                descriptor=CODEXLOOP,
+                base_dir=tmp_path / "engine",
+                script=_capacity_rejected_review(),
+            ),
+            ledger=FakeLedger(),
+            jobs=FakeJobRepository(),
+            clock=FixedClock(),
+        ),
+        health=health,
+        project_id=project_id,
+        engine_id=EngineId.CODEXLOOP,
+    )
+
+    outcome = await handler.handle(
+        _verify_job(project_id=project_id, requirement={"implementer_engine_id": "claudeloop"})
+    )
+
+    assert isinstance(outcome, Defer)
+    assert outcome.capacity is True
+    record = await health.get_or_create(project_id, EngineId.CODEXLOOP)
+    assert record.circuit == "open"
+    assert record.resets_at == NOW + timedelta(minutes=5)
 
 
 async def test_the_selecting_provider_satisfies_the_engine_provider_protocol() -> None:
