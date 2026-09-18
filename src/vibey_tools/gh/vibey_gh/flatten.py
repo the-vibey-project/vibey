@@ -79,7 +79,14 @@ from typing import Any
 from vibey_gh import fingerprints, github_state, reconcile
 from vibey_gh.config import GhConfig
 
-__all__ = ["COAUTHOR_KEY", "FlattenError", "FlattenPlan", "Flattener", "ReviewThread"]
+__all__ = [
+    "COAUTHOR_KEY",
+    "FlattenError",
+    "FlattenPlan",
+    "Flattener",
+    "RangeCommit",
+    "ReviewThread",
+]
 
 # Git's own spelling is case-insensitive and GitHub's attribution is too; this is the
 # spelling the forge renders, so it is the one written.
@@ -110,16 +117,46 @@ _REFERENCE = re.compile(
     r"https://github\.com/(?P<owner>[\w.-]+/[\w.-]+)/(?:issues|discussions)/(?P<id>\d+)"
     r"|(?<![\w/])(?P<repository>[\w.-]+/[\w.-]+)?#(?P<number>\d+)\b"
 )
+# The subject git and GitHub write for a merge themselves: `Merge pull request #12 from o/b`,
+# `Merge branch 'x'`. Reading merge commits for metadata is right, and this one line of them
+# is the exception — the `#12` in it is plumbing naming the merge's own source, not a
+# reference a human wrote, and the pull request it names is usually the one being flattened,
+# which the plan already reports two lines earlier. Only the SUBJECT is skipped, so a merge
+# body somebody actually typed still contributes everything it says.
+_MERGE_SUBJECT = re.compile(r"Merge (?:pull request|branch|remote-tracking branch|commit|tag)\b")
+# How many threads one page of the query below holds, and how many pages are read before
+# the walk itself is reported as incomplete. A cap rather than `while True` because the
+# cursor comes from the other end of a network: a connection that keeps saying `hasNextPage`
+# forever would hang the flatten, and a hang is the one failure nobody gets a sentence about.
+_THREADS_PER_PAGE = 100
+_THREAD_PAGES = 20
 # The unresolved review threads on the branch's open pull request, with just enough of the
 # first comment to make a refusal actionable: who wrote it, where, and what it said. `line`
 # is null on a thread GitHub already considers outdated, so `originalLine` answers for it.
+#
+# `pageInfo` is the load-bearing part. A connection answers with a WINDOW, and a reader that
+# takes the first window for the whole set is a check that silently passes: the thread that
+# would have refused the rewrite sits at position 101, the refusal never fires, and the
+# notes say "none unresolved" about a branch that has some. `$after` is nullable and omitted
+# on the first call, which is how GraphQL spells "from the beginning".
+#
+# `pullRequests` is asked for TWO for the same reason, and it is the same bug one size
+# smaller. A branch may head more than one open pull request — GitHub allows it whenever the
+# bases differ — and `first:1` took the first and described the answer as the branch's. The
+# second is not walked, because a second connection needs a second cursor; it is DETECTED, so
+# an answer that covers one pull request out of several is reported as the partial check it
+# is rather than passing as a clean one.
+#
+# `PER_PAGE` is substituted rather than written twice: two copies of one number are two
+# numbers the day somebody changes one of them.
 _THREADS_QUERY = """
-query($owner:String!,$name:String!,$branch:String!){
+query($owner:String!,$name:String!,$branch:String!,$after:String){
   repository(owner:$owner,name:$name){
-    pullRequests(headRefName:$branch,states:OPEN,first:1){
+    pullRequests(headRefName:$branch,states:OPEN,first:2){
       nodes{
         number
-        reviewThreads(first:100){
+        reviewThreads(first:PER_PAGE,after:$after){
+          pageInfo{hasNextPage endCursor}
           nodes{
             isResolved
             comments(first:1){nodes{path line originalLine body author{login}}}
@@ -129,7 +166,7 @@ query($owner:String!,$name:String!,$branch:String!){
     }
   }
 }
-"""
+""".replace("PER_PAGE", str(_THREADS_PER_PAGE))
 # How git spells a lease it would not take. Anything else that fails a push — an
 # unreachable remote, a declined hook, no credentials — is a different fact about the
 # world and gets reported as itself. `[remote rejected]` is deliberately not matched:
@@ -139,6 +176,30 @@ _LEASE_REFUSED = re.compile(r"stale info|\[rejected\]")
 
 class FlattenError(RuntimeError):
     """A flatten that will not proceed. Every refusal reaches the caller as one of these."""
+
+
+@dataclass(frozen=True)
+class RangeCommit:
+    """One commit of the range, as every reader that re-derives the message sees it.
+
+    `merge` is a FIELD rather than a filter on the read, and that is the whole of the fix
+    it exists for. The log was taken with `--no-merges`, which made the narrowing invisible
+    downstream: a `Co-Authored-By:`, a `Closes #N`, a `BREAKING-CHANGE:` footer or an issue
+    reference written in a merge commit was simply not in the list, and four methods that
+    promise the WHOLE range quietly spoke for part of it. Carrying the fact instead means
+    the one reader that genuinely needs non-merge commits — the fallback subject, which a
+    merge has none of — asks for them by name, and nobody else silently gets that answer.
+
+    Authorship is the other half. A merge carries none of its own, which is why `plan`
+    reports the two counts separately and why `_coauthors` skips a merge's author; the
+    trailers a merge commit's message DECLARES are credit like any other and are collected.
+    """
+
+    sha: str
+    # `Name <email>`, which is the one shape a `Co-Authored-By:` trailer is written in.
+    author: str
+    body: str
+    merge: bool
 
 
 @dataclass(frozen=True)
@@ -167,9 +228,11 @@ class FlattenPlan:
     base_sha: str
     old_sha: str
     tree: str
-    # Every commit in the range, then the non-merge ones the message and authors come
-    # from. Reported as two numbers because a merge carries no authorship of its own and
-    # a range can be all merges, which is a thing a reader should see rather than infer.
+    # Every commit in the range, then the non-merge ones the reused SUBJECT comes from.
+    # Reported as two numbers because a merge carries no authorship of its own and a range
+    # can be all merges, which is a thing a reader should see rather than infer. Everything
+    # else — the co-authors, the footers, the references — is read from the whole range,
+    # merge commits included, because a merge's message declares them like any other.
     range_size: int
     commits: tuple[str, ...]
     coauthors: tuple[str, ...]
@@ -177,9 +240,11 @@ class FlattenPlan:
     # The issues and discussions the range's commits reference, which keep timeline entries
     # naming commits the rewrite deletes. Reported, never refused on: nothing can save them.
     references: tuple[str, ...] = ()
-    # The branch's open pull request, its unresolved threads, and — when the forge could not
-    # be asked at all — why. `threads_problem` empty is the ONLY thing that means the check
-    # was made; `pull_request is None` with no problem means there is no open pull request.
+    # The open pull request whose threads were read, those threads, and — when the check
+    # could not be completed — why. `threads_problem` empty is the ONLY thing that means the
+    # check was made and covered everything: a forge that could not be asked, a walk that ran
+    # out of cursor, and a branch heading a SECOND open pull request that was not read all
+    # fill it in. `pull_request is None` with no problem means there is no open pull request.
     pull_request: int | None = None
     threads: tuple[ReviewThread, ...] = ()
     threads_problem: str = ""
@@ -214,6 +279,9 @@ class Flattener:
             )
         self._refuse_unmerged_base(cfg, branch, base, base_sha)
         records = self._log(cfg, base_sha)
+        # The one thing a merge cannot supply is a subject to reuse, so that is the one
+        # thing taken from a narrower list. Every other reader below gets `records`.
+        authored = [record for record in records if not record.merge]
         # Asked last of the local refusals and before the message is composed: there is no
         # point asking the forge about a branch that has nothing to flatten, and no point
         # composing a message for a rewrite that is about to be refused.
@@ -228,11 +296,11 @@ class Flattener:
             old_sha=old_sha,
             tree=tree,
             range_size=range_size,
-            commits=tuple(sha for sha, _name, _email, _body in records),
+            commits=tuple(record.sha for record in authored),
             coauthors=coauthors,
             message=self._compose(
                 cfg,
-                self._body(branch, message, records),
+                self._body(branch, message, authored),
                 coauthors,
                 footers=self._breaking_footers(records),
                 closings=self._closing_footers(records),
@@ -399,7 +467,13 @@ class Flattener:
             )
         elif plan.pull_request is None:
             notes.append("review threads: none — the branch has no open pull request")
-        elif plan.threads:
+        elif not plan.threads:
+            notes.append(f"review threads on #{plan.pull_request}: none unresolved")
+        # Listed whether or not the walk finished, because these are the threads somebody IS
+        # about to orphan. A partial listing under an honest "NOT CHECKED" is worth more than
+        # a clean silence: the sentence above says the rest is unknown, and this one says
+        # what is already known to be lost.
+        if plan.threads:
             notes.append(
                 f"orphaning {len(plan.threads)} unresolved review thread(s) on "
                 f"#{plan.pull_request}:"
@@ -408,8 +482,6 @@ class Flattener:
                 f"  {thread.author} {thread.path}:{thread.line} — {thread.excerpt}"
                 for thread in plan.threads
             ]
-        else:
-            notes.append(f"review threads on #{plan.pull_request}: none unresolved")
         if plan.references:
             notes.append(
                 'these timelines say "referenced this in commit" about commits the rewrite '
@@ -492,36 +564,51 @@ class Flattener:
             raise FlattenError(f"cannot read {base_sha}..HEAD: {run.stderr.strip()}")
         return int(run.stdout.strip() or 0)
 
-    def _log(self, cfg: GhConfig, base_sha: str) -> list[tuple[str, str, str, str]]:
-        """`(sha, author name, author email, message)` for each non-merge commit, oldest first.
+    def _log(self, cfg: GhConfig, base_sha: str) -> list[RangeCommit]:
+        """Every commit in the range, oldest first, merges INCLUDED and marked as such.
 
-        One call rather than three: the message of the first commit and the authors of all
+        One call rather than three: the message of the first commit and the trailers of all
         of them are the same read, and a second read is a second chance to disagree.
+
+        Merges are read rather than filtered away, and that is a fix. `--no-merges` used to
+        be on this command, and because `records` is the only input to `_coauthors`,
+        `_closing_footers`, `_breaking_footers` and `_references`, it turned four
+        whole-range promises into partial ones in one stroke: every co-author, closing
+        keyword, breaking footer and issue reference a merge commit's message carries was
+        gone before any of those readers was asked. `%P` marks them instead — a merge is a
+        commit with more than one parent — so the single thing a merge genuinely cannot
+        supply, a subject to reuse, is the only thing read from the narrower list.
         """
         run = self._git(
             cfg,
             "log",
             "--reverse",
-            "--no-merges",
-            "--format=%H%x1f%an%x1f%ae%x1f%B%x1e",
+            "--format=%H%x1f%P%x1f%an%x1f%ae%x1f%B%x1e",
             f"{base_sha}..HEAD",
         )
         if run.returncode != 0:
             raise FlattenError(f"cannot read {base_sha}..HEAD: {run.stderr.strip()}")
-        records: list[tuple[str, str, str, str]] = []
+        records: list[RangeCommit] = []
         for raw in run.stdout.split("\x1e"):
             record = raw.strip("\n")
             if not record:
                 continue
-            sha, name, email, body = (record.split("\x1f", 3) + ["", "", ""])[:4]
-            records.append((sha, name, email, body))
+            sha, parents, name, email, body = (record.split("\x1f", 4) + ["", "", "", ""])[:5]
+            records.append(
+                RangeCommit(
+                    sha=sha,
+                    author=f"{name} <{email}>",
+                    body=body,
+                    merge=" " in parents.strip(),
+                )
+            )
         return records
 
     # -- what the forge has anchored to the range ---------------------------------
 
     @staticmethod
     def _review_threads(branch: str) -> tuple[int | None, tuple[ReviewThread, ...], str]:
-        """The open pull request's unresolved threads, or why they could not be asked about.
+        """The open pull request's unresolved threads, or why the answer is not the whole set.
 
         Three answers, never two: the forge answered and there is no open pull request
         (`None`, no threads, no problem); it answered and here are the threads; or it could
@@ -531,50 +618,138 @@ class Flattener:
         as "nothing there" — and here that difference is a force-push somebody would not
         have made.
 
+        A PAGE of threads is the same trap wearing a success. `reviewThreads` is a
+        connection: it answered `first:100` and said nothing about the rest, and the reader
+        that took that page for the whole set reported a clean check on a pull request whose
+        101st thread was the unresolved one. So the connection is WALKED — every page
+        aggregated before anything is decided — and a walk that stops early is reported as a
+        problem, keeping the same rule the missing `gh` gets: a check that did not complete
+        must never read as a check that passed. What was seen is still carried, because
+        threads already in hand are a known loss and a known loss still refuses; the problem
+        says the rest is unknown.
+
+        The same rule decides the two endings a page can have. `hasNextPage` false is the
+        walk FINISHING. `hasNextPage` true with a null `endCursor` — which the schema
+        permits, the cursor being nullable — is the forge saying there is more and naming
+        nowhere to go, and that is the walk giving up, not the walk finishing. The two share
+        a return shape and nothing else, so they are two `if`s: collapsing them let a null
+        cursor return the empty problem string and print "none unresolved" about a pull
+        request the forge had just said it had not finished describing.
+
+        The CONNECTION of pull requests is the same shape one level up. A branch may head
+        more than one open pull request, so the query asks for two: one comes back and the
+        answer covers the branch, two come back and it covers part of it. The second is not
+        walked — a second connection needs a second cursor — but it is named, because the
+        alternative is the old silence in a narrower window.
+
         `gh` is reached through `github_state`, which is how every other forge call in this
         package is made and therefore how this one is too. It resolves the repository the
         way `gh` always does — `GH_REPO`, else the working directory — so a flatten run from
-        inside the worktree being rewritten asks about that worktree's repository.
+        inside the worktree being rewritten asks about that worktree's repository. It is
+        asked ONCE, on the first page, because it may itself be a `gh` call.
         """
-        try:
-            owner, _, name = github_state.repository().partition("/")
-            payload: Any = github_state.gh_json(
-                "api",
-                "graphql",
-                # `--raw-field`, not `--field`: these are `String!` variables, and `--field`
-                # would coerce a branch or repository named in digits into a number that the
-                # API then rejects for the wrong reason.
-                "--raw-field",
-                f"query={_THREADS_QUERY}",
-                "--raw-field",
-                f"owner={owner}",
-                "--raw-field",
-                f"name={name}",
-                "--raw-field",
-                f"branch={branch}",
+        owner = name = cursor = siblings = ""
+        number: int | None = None
+        threads: tuple[ReviewThread, ...] = ()
+        seen = 0
+        for page in range(_THREAD_PAGES):
+            arguments = ["api", "graphql"]
+            try:
+                if not page:
+                    owner, _, name = github_state.repository().partition("/")
+                # `--raw-field`, not `--field`: these are `String` variables, and `--field`
+                # would coerce a branch, repository or cursor made of digits into a number
+                # that the API then rejects for the wrong reason.
+                arguments += ["--raw-field", f"query={_THREADS_QUERY}"]
+                arguments += ["--raw-field", f"owner={owner}"]
+                arguments += ["--raw-field", f"name={name}"]
+                arguments += ["--raw-field", f"branch={branch}"]
+                if cursor:
+                    # Omitted on the first page: `$after` is nullable, and a null cursor is
+                    # how GraphQL spells "from the beginning" — an empty string is not.
+                    arguments += ["--raw-field", f"after={cursor}"]
+                payload: Any = github_state.gh_json(*arguments)
+            except FileNotFoundError:
+                return number, threads, "the GitHub CLI (`gh`) is not installed"
+            except (OSError, RuntimeError, ValueError, LookupError, TypeError) as exc:
+                # Wide on purpose. `gh` exiting non-zero raises `RuntimeError` and unparseable
+                # output raises `ValueError`, but the repository lookup also INDEXES the JSON it
+                # gets back, so a response shaped differently raises from the subscript instead.
+                # Every one of those is the same fact — the forge could not be asked — and none
+                # of them is a reason to take the flatten down with a traceback.
+                return (
+                    number,
+                    threads,
+                    f"`gh api graphql` failed: {str(exc).strip() or type(exc).__name__}",
+                )
+            # GraphQL answers HTTP 200 and reports field-level failure in `errors`, with
+            # `data` partial or null. Reading straight past it turns a FAILED query into
+            # `repository = {}`, then `pulls = []`, then the clean "there is no open pull
+            # request" answer -- the friendliest possible result, produced by a question
+            # that was never answered. Every other way this walk can fail says so; this
+            # one did not.
+            errors = (payload or {}).get("errors") or []
+            if errors:
+                head = errors[0] if isinstance(errors[0], dict) else {}
+                said = str(head.get("message") or "").strip() or f"{len(errors)} error(s)"
+                return number, threads, f"`gh api graphql` returned errors: {said}"
+            repository = ((payload or {}).get("data") or {}).get("repository") or {}
+            pulls = (repository.get("pullRequests") or {}).get("nodes") or []
+            if not pulls:
+                if page:
+                    # It had one a page ago. Whatever happened — the pull request closed
+                    # mid-walk, the cursor went bad — the rest of the threads went unread,
+                    # and an empty tail must not be reported as the end of a clean list.
+                    return number, threads, f"#{number} stopped listing its review threads"
+                # An answer, not an unknown: the forge was asked and there is no open pull
+                # request, so nothing of its is anchored to the commits about to be replaced.
+                return None, (), ""
+            pull = pulls[0]
+            number = int(pull.get("number") or 0)
+            if len(pulls) > 1:
+                # The query asked for two and got two, so this branch heads more than one
+                # open pull request and only the first one's threads are being read. Not a
+                # reason to stop — the threads already in hand still refuse — but the answer
+                # covers part of the branch and must say so.
+                siblings = (
+                    f"{branch} heads more than one open pull request; "
+                    f"only #{number}'s threads were read"
+                )
+            connection = pull.get("reviewThreads") or {}
+            nodes = connection.get("nodes") or []
+            seen += len(nodes)
+            threads += tuple(
+                Flattener._thread(node) for node in nodes if not node.get("isResolved")
             )
-        except FileNotFoundError:
-            return None, (), "the GitHub CLI (`gh`) is not installed"
-        except (OSError, RuntimeError, ValueError, LookupError, TypeError) as exc:
-            # Wide on purpose. `gh` exiting non-zero raises `RuntimeError` and unparseable
-            # output raises `ValueError`, but the repository lookup also INDEXES the JSON it
-            # gets back, so a response shaped differently raises from the subscript instead.
-            # Every one of those is the same fact — the forge could not be asked — and none
-            # of them is a reason to take the flatten down with a traceback.
-            return None, (), f"`gh api graphql` failed: {str(exc).strip() or type(exc).__name__}"
-        repository = ((payload or {}).get("data") or {}).get("repository") or {}
-        pulls = (repository.get("pullRequests") or {}).get("nodes") or []
-        if not pulls:
-            # An answer, not an unknown: the forge was asked and there is no open pull
-            # request, so nothing of its is anchored to the commits about to be replaced.
-            return None, (), ""
-        pull = pulls[0]
-        threads = tuple(
-            Flattener._thread(node)
-            for node in ((pull.get("reviewThreads") or {}).get("nodes") or [])
-            if not node.get("isResolved")
+            info = connection.get("pageInfo")
+            if not isinstance(info, dict):
+                # A walk is not finished by a field that never arrived. `or {}` made
+                # `hasNextPage` falsy, which fell into the completion branch and returned
+                # the empty problem string -- the sentence reserved for a walk that DID
+                # end. Absent evidence is not evidence of absence, and this function has
+                # now made that mistake in five different places.
+                return number, threads, f"#{number} answered without pageInfo"
+            cursor = str(info.get("endCursor") or "")
+            if not info.get("hasNextPage"):
+                return number, threads, siblings
+            if not cursor:
+                # Two separate facts, and the forge may send the first without the second:
+                # `hasNextPage` says there is more, `endCursor` says where, and the schema
+                # types the cursor as nullable. A walk told there is more and handed nowhere
+                # to go DID NOT FINISH, and the empty problem string belongs to the walk that
+                # did. Folding this into the line above returned "checked, fine" about a pull
+                # request the forge had just said it had not finished describing.
+                return number, threads, f"#{number} stopped listing its review threads"
+        # What was counted, not what the page size implies. `first:100` is an upper bound the
+        # server may under-fill, so `pages x per-page` is a number nobody measured — and the
+        # one sentence this seam emits when the check gives up is the last place to state a
+        # figure on trust. `seen` is every thread that actually came back, resolved ones
+        # included, which is exactly the floor the cursor proves has been passed.
+        unread = (
+            f"#{number} has more than {seen} review threads, which is more of them than "
+            "this check reads"
         )
-        return int(pull.get("number") or 0), threads, ""
+        return number, threads, unread
 
     @staticmethod
     def _thread(node: Any) -> ReviewThread:
@@ -596,7 +771,7 @@ class Flattener:
         )
 
     @staticmethod
-    def _references(records: list[tuple[str, str, str, str]]) -> tuple[str, ...]:
+    def _references(records: list[RangeCommit]) -> tuple[str, ...]:
         """Every issue and discussion the range's commits reference, first-seen order kept.
 
         Not a refusal and not repairable. GitHub writes "referenced this in commit <sha>"
@@ -608,9 +783,19 @@ class Flattener:
         Read from the commit MESSAGES rather than asked of the forge, because the messages
         are what created those entries — and because the answer is then the same offline, on
         a dry run, and on a repository `gh` cannot reach.
+
+        Merge commits are read like any other, minus the one line git wrote for them. Reading
+        merges is what stopped this method speaking for part of a range it describes as
+        whole; scanning their auto-generated SUBJECT would have it report `Merge pull request
+        #12` as an issue the operator should weigh, which is neither an issue nor anything
+        anybody referenced. A report only earns its place if every line in it is worth acting
+        on.
         """
         seen: dict[str, str] = {}
-        for _sha, _name, _email, body in records:
+        for record in records:
+            body = record.body
+            if record.merge and _MERGE_SUBJECT.match(body):
+                body = body.partition("\n")[2]
             for match in _REFERENCE.finditer(body):
                 repository = match.group("repository") or match.group("owner")
                 number = match.group("number") or match.group("id")
@@ -621,7 +806,7 @@ class Flattener:
     # -- the message --------------------------------------------------------------
 
     @staticmethod
-    def _body(branch: str, message: str | None, records: list[tuple[str, str, str, str]]) -> str:
+    def _body(branch: str, message: str | None, records: list[RangeCommit]) -> str:
         """`--message` when given, else the first non-merge commit's, stripped of trailers.
 
         Stripping is what makes the trailers re-derivable: the co-authors and the
@@ -640,7 +825,7 @@ class Flattener:
                 f"{branch} has only merge commits in this range, so there is no message to "
                 "reuse. Pass --message."
             )
-        return Flattener._strip_trailers(records[0][3])
+        return Flattener._strip_trailers(records[0].body)
 
     @staticmethod
     def _strip_trailers(message: str) -> str:
@@ -736,7 +921,7 @@ class Flattener:
                 lines.pop()
 
     @staticmethod
-    def _coauthors(records: list[tuple[str, str, str, str]]) -> tuple[str, ...]:
+    def _coauthors(records: list[RangeCommit]) -> tuple[str, ...]:
         """Everyone the range credits — its authors and the co-authors it declares.
 
         This is the whole reason a flatten is not a loss: absorbing a review bot's commit
@@ -749,15 +934,22 @@ class Flattener:
         headline promise, defeated on the commits it was written for.
 
         So a declared co-author is collected exactly the way `_breaking_footers` collects
-        the other footer nothing re-derives: from EVERY non-merge commit, because the
-        commit that names a collaborator is rarely the commit whose message is reused.
+        the other footer nothing re-derives: from EVERY commit of the range, because the
+        commit that names a collaborator is rarely the commit whose message is reused — and
+        a merge commit's message declares one as readily as any other, which reading the
+        range with `--no-merges` silently denied.
+
+        A merge's own AUTHORSHIP is the one thing not taken from it: merging is not
+        authoring, the plan says so in its two counts, and a range of nothing but merges
+        credits nobody.
         """
         seen: dict[str, str] = {}
-        for _sha, name, email, body in records:
+        for record in records:
             # The commit's own author first, then whoever that commit credits: first-seen
             # order is reading order, and a name is kept in the case it was first written
             # in, however the later mentions of it are spelled.
-            for author in (f"{name} <{email}>", *Flattener._existing(body, COAUTHOR_KEY)):
+            own = () if record.merge else (record.author,)
+            for author in (*own, *Flattener._existing(record.body, COAUTHOR_KEY)):
                 seen.setdefault(author.casefold(), author)
         return tuple(seen.values())
 
@@ -778,10 +970,10 @@ class Flattener:
         return found
 
     @staticmethod
-    def _breaking_footers(records: list[tuple[str, str, str, str]]) -> dict[str, str]:
+    def _breaking_footers(records: list[RangeCommit]) -> dict[str, str]:
         """Every distinct breaking-change footer in the range, first-seen order kept.
 
-        From EVERY non-merge commit, not from the first one alone. A range routinely
+        From EVERY commit, not from the first one alone. A range routinely
         breaks something in a later commit than the one whose subject gets reused, and a
         footer read only from the first is a footer silently dropped — which turns a MAJOR
         release into a minor one, in the direction nobody notices until it is published
@@ -792,8 +984,8 @@ class Flattener:
         instead — which is the same principle, applied to the same whole range.
         """
         seen: dict[str, str] = {}
-        for _sha, _name, _email, body in records:
-            for key, line in Flattener._breaking_lines(body):
+        for record in records:
+            for key, line in Flattener._breaking_lines(record.body):
                 seen.setdefault(key, line)
         return seen
 
@@ -813,7 +1005,7 @@ class Flattener:
         return found
 
     @staticmethod
-    def _closing_footers(records: list[tuple[str, str, str, str]]) -> dict[str, str]:
+    def _closing_footers(records: list[RangeCommit]) -> dict[str, str]:
         """Every distinct issue-closing keyword in the range, first-seen order kept.
 
         This was a live data-loss bug and not a hypothetical one. `Closes #12` is not
@@ -821,16 +1013,17 @@ class Flattener:
         branch name — and the flatten had two ways to drop it. `Closes: #12` is trailer
         shaped, so `_strip_trailers` removed it with the rest; and either spelling written
         in the range's THIRD commit was never in the first commit's message to survive at
-        all. So it is collected from EVERY non-merge commit and put back, which is exactly
-        what `_breaking_footers` does with the other footer nothing re-derives.
+        all. So it is collected from EVERY commit — a merge commit promises to close an
+        issue as readily as any other — and put back, which is exactly what
+        `_breaking_footers` does with the other footer nothing re-derives.
 
         The verb is kept as the author wrote it and nothing is invented: a range that never
         promised to close an issue does not start promising it here, because a keyword this
         command added would close somebody's issue on a merge nobody meant to.
         """
         seen: dict[str, str] = {}
-        for _sha, _name, _email, body in records:
-            for reference, line in Flattener._closing_lines(body):
+        for record in records:
+            for reference, line in Flattener._closing_lines(record.body):
                 seen.setdefault(reference, line)
         return seen
 
@@ -847,7 +1040,7 @@ class Flattener:
         return fingerprints.conventional_subject(subject) and prefix.endswith("!")
 
     @staticmethod
-    def _breaking_subject(records: list[tuple[str, str, str, str]]) -> bool:
+    def _breaking_subject(records: list[RangeCommit]) -> bool:
         """Whether any commit in the range declared itself breaking with `!`.
 
         The other half of the loss, and the half no footer covers. `feat!: drop the old
@@ -856,10 +1049,7 @@ class Flattener:
         commit is not the one whose subject is reused, its `!` leaves with the subject and
         nothing in the flattened commit says the range breaks anything at all.
         """
-        return any(
-            Flattener._marks_breaking(body.partition("\n")[0])
-            for _sha, _name, _email, body in records
-        )
+        return any(Flattener._marks_breaking(record.body.partition("\n")[0]) for record in records)
 
     @staticmethod
     def _marked(text: str) -> str:
