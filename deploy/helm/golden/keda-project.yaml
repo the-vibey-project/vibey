@@ -1,33 +1,25 @@
-{{- if .Values.keda.enabled }}
-{{- $fullName := include "vibey.fullname" . }}
-{{- /*
-The project the scaled worker serves. Workers claim only their own
-project's jobs (JobRepository.claim: `j.project_id = $3`), so a count taken
-across every project scales up workers for work they will never claim --
-and, the other way round, lets another project's backlog keep this pool
-alive. With worker.project set, that is the project; left empty, the
-worker binds at startup to the newest project (PostgresProjectRepository.get_latest),
-and this mirrors the same ORDER BY so a scaled-up pod and the count agree.
-*/}}
-{{- $project := "(SELECT id FROM project ORDER BY created_at DESC LIMIT 1)" }}
-{{- if .Values.worker.project }}
-{{- $project = printf "'%s'::uuid" (include "vibey.workerProjectHex" .) }}
-{{- end }}
+---
+# Source: vibey/templates/keda-scaledobject.yaml
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
-  name: {{ $fullName }}-worker
-  labels: {{- include "vibey.labels" . | nindent 4 }}
+  name: vibey-vibey-worker
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.2.0
 spec:
   scaleTargetRef:
-    name: {{ $fullName }}-worker
-  minReplicaCount: {{ .Values.keda.minReplicas }}
-  maxReplicaCount: {{ .Values.keda.maxReplicas }}
-  pollingInterval: {{ .Values.keda.pollingInterval }}
+    name: vibey-vibey-worker
+  minReplicaCount: 0
+  maxReplicaCount: 4
+  pollingInterval: 15
   # Engine sessions are long. A short cooldown would scale in a worker
   # that is minutes into a paid turn, so this defaults far above KEDA's
   # own 300s only when the operator raises it deliberately.
-  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  cooldownPeriod: 300
   advanced:
     horizontalPodAutoscalerConfig:
       behavior:
@@ -58,7 +50,7 @@ spec:
           SELECT count(*) FROM job j
           WHERE j.state = 'ready'
             AND j.run_after <= now()
-            AND j.project_id = {{ $project }}
+            AND j.project_id = '6f1c2a4e000040008000000000000000'::uuid
             AND NOT EXISTS (
               SELECT 1 FROM job_dependency d
               JOIN job p ON p.id = d.depends_on_job_id
@@ -66,4 +58,4 @@ spec:
             )
         targetQueryValue: "1"
         connectionFromEnv: VIBEY_PG_URL
-  {{- end }}
+

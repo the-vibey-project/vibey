@@ -123,7 +123,7 @@ pre-commit install && pre-commit install --hook-type pre-push && pre-commit inst
 
 ## The other CI jobs
 
-`ci.yml` runs six jobs on every push and PR to `develop`/`main`:
+`ci.yml` runs seven jobs on every push and PR to `develop`/`main`:
 
 | Job | What it checks |
 |---|---|
@@ -131,7 +131,8 @@ pre-commit install && pre-commit install --hook-type pre-push && pre-commit inst
 | `gates` | The seven gates above, against a `postgres:17` service. |
 | `tools` | Each absorbed tool's own suite on its own Python floors (ADR-0022). |
 | `tools-lint` | vibey-gh's own linters and its managed-automation drift check. |
-| `image` | Builds `deploy/docker/Dockerfile` for amd64 and arm64 and asserts four image contracts: the entrypoint runs, it runs as non-root uid 10001, it has no compiler/uv/pip, and migrations ship in the image. |
+| `image` | Builds `deploy/docker/Dockerfile` for amd64 and arm64 and asserts six image contracts against the amd64 build: the entrypoint runs, it runs as non-root uid 10001, it has no compiler/uv/pip/node/npm, migrations ship in the image, `codex --version` prints the version the Dockerfile pins (a digest-verified static musl build, copied without Node or npm), and every console script is on `PATH`. |
+| `chart` | Render-only: `deploy/helm/golden/render.sh` runs `helm lint --strict` and `helm template` for each profile (defaults, `ollama.enabled`, the GPU + qwenloop wiring, and the KEDA query unbound and bound to a project) and diffs each render against its committed golden under `deploy/helm/golden/`, with helm pinned. After an intended chart change, regenerate with `deploy/helm/golden/render.sh --update`. |
 | `cluster-smoke` | Helm install of `deploy/helm/vibey` on minikube and four cluster contracts: a projectless worker parks instead of crash-looping, the worker picks up a project created in-cluster, the KEDA ScaledObject reconciles against real Postgres, and a worker drains promptly on SIGTERM (ADR-0025, ADR-0026). |
 
 Other workflows also gate a merge: `provenance.yml` (runs on every push and PR),

@@ -491,11 +491,14 @@ jobs:
       # runs the pod non-root with allowPrivilegeEscalation false. pip is
       # the one that mattered -- uid 10001 owns a writable $HOME, so
       # `pip install --user` would have worked until it was removed.
-      - name: Image contract - no compiler, no uv, no pip
+      # node and npm are listed because codex ships in the image: its npm
+      # package would have brought both, and the static binary exists so
+      # that neither does.
+      - name: Image contract - no compiler, no uv, no pip, no node/npm
         run: |
           docker run --rm --entrypoint sh vibey:ci -c '
             status=0
-            for tool in uv pip pip3 gcc cc; do
+            for tool in uv pip pip3 gcc cc node npm npx; do
               if command -v "$tool" >/dev/null 2>&1; then
                 echo "$tool present in runtime layer"; status=1
               fi
@@ -508,6 +511,21 @@ jobs:
           count=$(docker run --rm --entrypoint sh vibey:ci -c 'ls /app/migrations/*.sql | wc -l')
           echo "migrations=$count"
           test "$count" -gt 0
+
+      # codexloop drives the codex CLI, so the image carries upstream's static
+      # musl build (see the Dockerfile's build stage). The version is read from
+      # the Dockerfile's own pin rather than repeated here, so a bump changes
+      # one line and this check follows it.
+      - name: Image contract - codex runs and is the pinned build
+        run: |
+          want=$(sed -n 's/^ARG CODEX_VERSION=//p' deploy/docker/Dockerfile)
+          test -n "$want"
+          out=$(docker run --rm --entrypoint codex vibey:ci --version)
+          echo "$out (pinned: $want)"
+          case "$out" in
+            *"$want"*) ;;
+            *) echo "::error::codex --version printed '$out'; the Dockerfile pins $want"; exit 1 ;;
+          esac
 
       # One distribution, eleven console scripts (ADR-0037). That is the new product
       # contract, and it is the one the Dockerfile's COPY list can break silently: a
@@ -541,6 +559,27 @@ jobs:
           tags: vibey:ci-arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Render-only, so it needs neither a cluster nor the image: it lints the chart
+  # and compares its render under every profile in deploy/helm/golden/render.sh
+  # with the committed goldens. cluster-smoke installs only the defaults; this
+  # is what looks at everything else (the in-cluster Ollama, the worker wiring
+  # it adds, the KEDA query's project scoping) before any of it meets a cluster.
+  chart:
+    name: Helm chart lint and golden render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned, unlike cluster-smoke's: a golden is a byte comparison, and a
+      # different helm may format the same manifest differently. Bump the pin
+      # and regenerate the goldens together.
+      - uses: azure/setup-helm@v5
+        with:
+          version: v4.2.4
+
+      - name: Chart - lint and render every profile against its golden
+        run: deploy/helm/golden/render.sh
 
   cluster-smoke:
     name: Helm install on minikube
