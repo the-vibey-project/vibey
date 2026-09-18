@@ -42,6 +42,9 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   the old code and the new through the same fake `gh` on PATH show the same argv, working
   directory and outcome, so GitHub sees no difference. The first slice of the platform
   abstraction (#138), which the forge snapshot (#136) and capture (#145) build on
+### Bug Fixes
+
+* **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 
 ## [0.8.0] (2026-09-16)
 

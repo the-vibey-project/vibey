@@ -102,7 +102,10 @@ orchestrator, not a runner. The wind-down half is architecturally n/a there.
 *Changed since (2026-09-15), without rewriting the table:* codexloop and cursorloop now
 have the `wind-down` command and the exit-75 marker read path (`WindDownCommand` in
 `codexloop/domain/control.py`, `WindDown` in `cursorloop/domain/control.py`); agyloop
-still has neither. qwenloop has a `wind-down` command and exit code 75.
+still has no `wind-down` command. Since #208 its `run` and `resume` do exit 75 on a
+`wind-down:` result (`agyloop/cli/run_outcome.py`), but nothing in agyloop's
+`bootstrap.py` can produce one yet — see §1.4d. qwenloop has a `wind-down` command and
+exit code 75.
 
 ### Defects found in the audit, to fix as part of this work
 
@@ -184,6 +187,14 @@ agyloop has none of it: no `WindDownCommand`, no `wind-down` command (only the
 unrelated `unwind`), no `write_handoff_marker`, no tri-state sleep; it has only
 `WindDownAndFinish` and `_finish_wound_down` in its runner. codexloop still handles
 `WindDownAndFinish` inline — it has no `_finish_wound_down`.
+
+*Changed since (2026-09-18):* agyloop's `run` and `resume` now exit 75 with `Wound down:`
+when the runner returns a `wind-down:` result (#208), instead of `Run failed` and exit 1.
+That half of the marker read path is in place and still inert: `bootstrap.build_runner`
+passes no `wind_down_policy` (so `WindDownPolicy.enabled` stays `False`), wires no
+`handoff_marker_writer` and no `stop_summary_writer`, and there is no `wind-down` command.
+Until those land, agyloop never produces the result the exit code maps, and a vibey
+`stop()` after an agyloop exit 75 would still wait out its 30 s for a `stop-summary.md`.
 
 claudeloop is the reference. Each of the other three needed:
 - `WindDownCommand` in `domain/control.py`, outranked by `StopCommand` in `stop_outranks`.
