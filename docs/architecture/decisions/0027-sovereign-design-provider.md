@@ -1,6 +1,16 @@
 # 0027 — A sovereign DESIGN provider: phase one runs without paid credit
 
-**Status:** accepted · **Date:** 2026-08-30 (PR #120; operator-supplied evidence 51778876, the same day) · **Extends:** ADR-0015 · **Cites:** sub-doctrine 8.a
+**Status:** accepted; "Not yet" amended by ADR-0038 · **Date:** 2026-08-30 (PR #120; operator-supplied evidence 51778876, the same day) · **Extends:** ADR-0015 · **Cites:** sub-doctrine 8.a · **Amended:** 2026-09-18 by ADR-0038
+
+> **2026-09-18 — amended by [ADR-0038](0038-local-engines-are-preferred-first.md).**
+> The rejected alternative "Make qwenloop the default DESIGN provider. Not yet." is
+> now yes, with a condition: when any local engine is switched on
+> (`VIBEY_FEATURE_QWENLOOP` / `VIBEY_FEATURE_CLAUDELOOP_LOCAL`, else `[features]`) and
+> no `--provider` is given, `vibey work` and `vibey worker` choose the sovereign
+> providers — `QwenloopDesignProvider` and `QwenloopWorkPlanProducer` — instead of
+> `scripted`. An explicit `--provider` still wins, and nothing selects the paid
+> provider by default. The research floor is unchanged: it parks a
+> `research_evidence` gate rather than inventing a source.
 
 ## Context
 
@@ -31,3 +41,11 @@ Under that rule the tree had a contradiction. `EngineId.QWENLOOP` was wired as a
 - **Let `research()` answer from the model's memory.** A fabricated citation in a spec is worse than a gap.
 - **Make qwenloop the default DESIGN provider.** Not yet: research depends on operator-supplied evidence and the ledger-driven acceptance path has one live validation. Explicit selection keeps the choice a decision.
 - **Leave DESIGN paid-only and call 8.a satisfied by BUILD.** Phase one is where a project begins; a preferred path that cannot go first is not preferred.
+
+## Addendum — 2026-09-18 (#115): DECOMPOSE, a parked floor, one configurable client
+
+Three things this record left open are now closed; the decision itself is unchanged, and qwenloop is still chosen explicitly (automatic selection remains open, per "Alternatives rejected").
+
+- **DECOMPOSE is sovereign too.** `vibey worker --provider qwenloop` used to hand BUILD's plan to `ScriptedWorkPlanProducer` — the test fake, whose items carry no verification commands, so every verify gate after it ran nothing. `QwenloopWorkPlanProducer` asks the local model under a schema whose `acceptance_ids` and `criteria_checked` are an enum of the spec's own criterion ids and whose items must each carry a command and a checked criterion; ordering, full criterion mapping and the skeleton rule are checked after decoding, and a plan that fails any of them is refused whole. Its decoders are `design_json.WorkPlanDecoder`, shared with the paid producer — the "decoders are shared" rule above, extended to decomposition.
+- **The floor is declared to a human, once.** `SovereignResearchUnavailable` moved to `domain/errors.py` so the research handler can catch it without importing infrastructure. A refusal now parks a `research_evidence` gate on the first attempt, naming the topic, the file wanted and `VIBEY_EVIDENCE_DIR`; before, it was a generic failure retried six times and then parked on an `attempts_exhausted` gate asking for more attempts — none of which could succeed.
+- **One client, configured rather than hard-coded.** Both providers talk through `ollama_chat.OllamaChatClient`: `VIBEY_OLLAMA_URL` (the name vibey-gh already reads), `VIBEY_OLLAMA_MODEL` or `--ollama-model`, and `VIBEY_OLLAMA_TIMEOUT`, defaulting to the values this record shipped with. Only `http`/`https` endpoints with a host are accepted.

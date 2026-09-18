@@ -19,8 +19,9 @@ import subprocess  # nosec B404 - fixed argv, never shell=True
 import sys
 from collections.abc import AsyncIterator, Mapping
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 
 import structlog
 
@@ -127,6 +128,33 @@ class LoopProcessAdapter:
     doctor verifies credentials over the network and takes ~60s warm --
     the old hardcoded 30s meant every real claudeloop preflight timed out
     into the env-var fallback, which cannot see CLI-credential auth."""
+    env_overlay: Mapping[str, str] = field(default_factory=dict)
+    """Variables this engine's processes get on top of the environment they would
+    otherwise inherit -- applied last, after the orchestrator's Python environment
+    is stripped, to the run and to its preflight alike, so the doctor probes the
+    same backend the run will use. How qwenloop learns the one local endpoint
+    (`QWENLOOP_BASE_URL` from `VIBEY_OLLAMA_URL`, ADR-0038); empty for every
+    engine whose configuration lives in its own files."""
+
+    async def _spawn(
+        self,
+        *argv: str,
+        env: Mapping[str, str] | None = None,
+        stdout: int,
+        stderr: int,
+        cwd: Path | None = None,
+    ) -> asyncio.subprocess.Process:
+        """`asyncio.create_subprocess_exec`, with `env_overlay` layered over `env` last.
+
+        `env=None` means "inherit", exactly as for the stdlib call; with no overlay
+        the call is unchanged, so an engine without one behaves as it always has.
+        """
+        merged: dict[str, str] | None = None
+        if env is not None or self.env_overlay:
+            merged = {**(os.environ if env is None else env), **self.env_overlay}
+        return await asyncio.create_subprocess_exec(
+            *argv, stdout=stdout, stderr=stderr, cwd=cwd, env=merged
+        )
 
     @property
     def help_text(self) -> str | None:
@@ -185,7 +213,7 @@ class LoopProcessAdapter:
 
         # Try to get version
         try:
-            proc = await asyncio.create_subprocess_exec(
+            proc = await self._spawn(
                 self.descriptor.binary,
                 "--version",
                 stdout=asyncio.subprocess.PIPE,
@@ -206,9 +234,10 @@ class LoopProcessAdapter:
         auth_ok = False
         detail = ""
         try:
-            proc = await asyncio.create_subprocess_exec(
+            proc = await self._spawn(
                 self.descriptor.binary,
                 "doctor",
+                *self.descriptor.doctor_args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -265,7 +294,7 @@ class LoopProcessAdapter:
                 stdout="DEVNULL",
                 stderr="DEVNULL",
             )
-            process = await asyncio.create_subprocess_exec(
+            process = await self._spawn(
                 *argv,
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,

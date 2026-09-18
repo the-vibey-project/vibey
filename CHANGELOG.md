@@ -32,9 +32,62 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **engines:** vibey read claudeloop's capacity only as a `{"state": …}` mapping, but
+  claudeloop writes the class name (`"capacity": "CreditsExhausted"`), so every real
+  claudeloop capacity payload classified as `Available`. Both shapes are read now, and
+  `BackendMisconfigured` is terminal (`AuthenticationFailed`), never credits (#236)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 * **build:** a capacity rejection during `build.verify`'s diff review now defers the job as capacity instead of being discarded. `run_and_record` reported `capacity_rejected`, but the verify handler never read it and judged the run on its verdict alone — so a reviewer out of capacity either failed as `WORK` (burning an unrefunded attempt, up to the `attempts_exhausted` park, while `RotationRecordingHandler` left the exhausted engine's circuit closed and kept handing it the same job) or, with a completing verdict in the same run, approved the item outright — the non-negotiable "a capacity rejection always outranks a completion claim" broken both ways. It now returns `Defer(capacity=True)` after `capacity_backoff` (a constructor keyword defaulting to 5 minutes, exactly as on `build.implement`), before any repair finding is resolved or any independence waiver is written, and `BuildVerifyHandler` takes a required `clock` ([#215](https://github.com/the-vibey-project/vibey/issues/215))
 * **build:** gate commands now run isolated and bounded. `SubprocessGateRunner` — which runs `build.verify`'s gates and `git diff`, `build.integrate`'s gates and REVIEW's automated checks — handed every command vibey's whole environment minus `GIT_*`, let it inherit the worker's stdin, and waited on `communicate()` with no timeout, so one hung gate held its job's lease for as long as it hung while the heartbeat kept renewing it. Each command now leads a process group of its own and gets `gates.timeout_seconds` (default 1800); one that overruns is killed with its whole group and fails as exit 124, a failing gate for the repair loop rather than an error. A cancelled run (Ctrl-C, event-loop shutdown) kills and reaps its gate before the cancellation propagates, and the reap itself is bounded by `gates.kill_grace_seconds` (default 5), because asyncio's `wait()` never returns while a descendant that escaped the group still holds the pipes. stdin is `/dev/null`, and output that is not UTF-8 is decoded with replacement characters instead of raising. vibey's own Python environment (`VIRTUAL_ENV`, `PYTHONPATH`, `PYTHONHOME`, its venv's `bin` on `PATH`) is stripped with the same `isolate_python_env` engine sessions use, and the running interpreter's prefix counts as a venv only when it is one, so a system-Python install keeps `/usr/bin`. **Behaviour change:** a gate that found a tool only because it was installed beside vibey — the `ruff`, `bandit` or `pytest` of a development checkout's venv, REVIEW's default `ruff check .` included — no longer finds it and fails with exit 127. Install the tool where the project can reach it, or set `gates.isolate_python_env` to `false` in the project's config record. The worker builds one runner from the project's `gates` object, and a malformed one raises when the worker is built ([#212](https://github.com/the-vibey-project/vibey/issues/212))
+### Features
+
+* **engines:** local engines are preferred first (sub-doctrine 8.a). A new engine,
+  `claudeloop-local` — the claudeloop binary on a local backend profile
+  (`--profile NAME --preset …`, never `--effort`; cost 0/0; honest ceiling STANDARD) —
+  joins `qwenloop` in a LOCAL tier behind `VIBEY_FEATURE_CLAUDELOOP_LOCAL` /
+  `[features] claudeloop_local`, configured by `[engines.claudeloop_local]` (`profile`
+  default `local`, overridable by `VIBEY_CLAUDELOOP_LOCAL_PROFILE`; `context_window`;
+  `structured_verdict`, off until conformance proves it). BUILD selection runs SWRR within
+  the LOCAL tier and falls back to paid engines only when no local engine is eligible,
+  replacing qwenloop's standby filter; verify still rotates away from the implementer. With
+  a local engine on and no `--provider`, `vibey work` and `vibey worker` run DESIGN and
+  DECOMPOSE on the sovereign providers. Selection is confined to the worker's own pool,
+  so a local engine's health row left over from before its switch was turned off can
+  never be preferred over the engines the worker can actually run. `VIBEY_OLLAMA_URL` is the one local endpoint
+  setting: qwenloop's process now gets `QWENLOOP_BASE_URL=<url>/v1` and `QWENLOOP_MODEL`
+  from it through a new `LoopProcessAdapter.env_overlay`. One resolver,
+  `LocalEngineSettings`, answers "which local engines are on" for bootstrap, `worker`,
+  `work` and `doctor`. New guide: [Local models on Ollama](docs/guides/local-models-ollama.md)
+  ([ADR-0038](docs/architecture/decisions/0038-local-engines-are-preferred-first.md);
+  #236, #115)
+* **engines:** a run that exits 78 (claudeloop's `BackendMisconfigured`: an unreachable
+  local server, a model not pulled or failing to load, a context too small) parks its
+  `build.implement` or `build.verify` job on an `engine_misconfigured` gate naming the
+  engine's `doctor` command, instead of burning its retry ladder on a configuration
+  fault (#236)
+* **helm:** the `VibeyProject` CRD's `engines` enum accepts `qwenloop` and
+  `claudeloop-local`
+* **design:** sovereign DECOMPOSE — `vibey worker --provider qwenloop` now plans BUILD on
+  the local model (`QwenloopWorkPlanProducer`) instead of the scripted test fake, whose
+  items carried no verification commands. The plan is decoded under a JSON schema whose
+  criterion ids are an enum of the spec's own, every item must carry a verification
+  command and a checked criterion, dependencies must precede their dependents, and a plan
+  that breaks any rule is refused whole rather than partly enqueued. Decoders are shared
+  with the claudeloop producer (`design_json.WorkPlanDecoder`) (#115)
+* **design:** one configurable Ollama client for both sovereign providers —
+  `VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`, `http`/`https` only),
+  `VIBEY_OLLAMA_MODEL` (default `qwen2.5-coder:14b`, overridden by `--ollama-model` on
+  `vibey work` and `vibey worker`) and `VIBEY_OLLAMA_TIMEOUT` (default 900 s) replace
+  values that were hard-coded in the DESIGN provider (#115)
+
+### Bug Fixes
+
+* **design:** a research topic the sovereign provider cannot source now parks a
+  `research_evidence` human gate on its first attempt, naming the topic, the evidence
+  file it wants and `VIBEY_EVIDENCE_DIR`. It used to fail as a generic error, retry six
+  times with backoff, and then park an `attempts_exhausted` gate asking for more attempts
+  that could never succeed. `SovereignResearchUnavailable` moved to `vibey.domain.errors`
+  so the handler can catch it (#115)
 
 ## [0.8.0] (2026-09-16)
 

@@ -58,17 +58,20 @@ uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines c
 - `--provider claudeloop` makes the DESIGN interview and the BUILD
   decomposition use live ClaudeLoop calls (the default `scripted` provider
   is for tests).
-- `--provider qwenloop` is the sovereign alternative to the paid DESIGN
-  provider (ADR-0027). It runs the interview on a local model
-  (`QwenloopDesignProvider`: Ollama at `http://127.0.0.1:11434` with
-  `qwen2.5-coder:14b`). A local model has no web access, so research reads
-  operator-supplied evidence: set `VIBEY_EVIDENCE_DIR` to a directory holding
-  one `<topic>.md` per research topic (`prior-art.md`, `libraries.md`,
-  `api-docs.md`) whose first line is `source: <where it came from>`. A missing file makes the research job
-  refuse rather than invent a source, and synthesis waits on every research
-  job. In this mode the BUILD decomposition uses the scripted producer, not a
-  live model. This demo uses claudeloop because it exercises paid-pool
-  rotation.
+- `--provider qwenloop` is the sovereign alternative to the paid DESIGN and
+  decomposition providers (ADR-0027). It runs the interview and the BUILD
+  decomposition on a local model (`QwenloopDesignProvider` and
+  `QwenloopWorkPlanProducer`, sharing one Ollama client: the server at
+  `VIBEY_OLLAMA_URL`, default `http://127.0.0.1:11434`, and the model
+  `VIBEY_OLLAMA_MODEL` or `--ollama-model`, default `qwen2.5-coder:14b`). A
+  local model has no web access, so research reads operator-supplied
+  evidence: set `VIBEY_EVIDENCE_DIR` to a directory holding one
+  `<topic>.md` per research topic (`prior-art.md`, `libraries.md`,
+  `api-docs.md`) whose first line is `source: <where it came from>`. A
+  missing file parks the research job on a `research_evidence` gate naming
+  the file rather than inventing a source; add the file and answer the gate
+  to retry. Synthesis waits on every research job. This demo uses
+  claudeloop because it exercises paid-pool rotation.
 
   ```bash
   export VIBEY_EVIDENCE_DIR=~/demos/greeter-evidence

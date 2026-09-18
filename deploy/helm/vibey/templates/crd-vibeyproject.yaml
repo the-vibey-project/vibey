@@ -75,7 +75,7 @@ spec:
                   type: array
                   items:
                     type: string
-                    enum: [claudeloop, codexloop, cursorloop, agyloop]
+                    enum: [claudeloop, codexloop, cursorloop, agyloop, qwenloop, claudeloop-local]
                   description: Engine allow-list; empty means all eligible.
                 skillsContext:
                   type: object

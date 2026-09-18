@@ -2,10 +2,10 @@
 
 Every `vibey` command and subcommand, written by hand against
 [`src/vibey/cli/main.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/cli/main.py)
-and checked against it as of 2026-09-15. Nothing generates this page. If it
+and checked against it as of 2026-09-18. Nothing generates this page. If it
 and the code disagree, the code wins. `vibey <command> --help` prints the
 code's own help text, which is shorter than this page and in places less
-complete (for example, `vibey work --help` does not list `qwenloop`).
+complete.
 
 Top-level commands, in `vibey --help` order: `new`, `answer`, `work`,
 `watch`, `recover`, `status`, `engines`, `cost`, `doctor`, `operator`,
@@ -141,11 +141,18 @@ visual-inventory job. Live engine use is explicit and capped. Prints
 
 | Option | Default | What it does |
 |---|---|---|
-| `--provider {scripted,claudeloop,qwenloop}` | `scripted` | `scripted` needs no live engine. `claudeloop` runs a real, paid session capped by `--max-turns` and `--max-dollars`; its spend is recorded as `budget_spent` ledger events so the budget brake counts it. `qwenloop` runs the sovereign local DESIGN provider (ADR-0015, ADR-0027) and reads research material from `$VIBEY_EVIDENCE_DIR`; with that unset, research refuses rather than inventing a source, and DESIGN stops there. Any other value exits 3 with `Error: provider must be 'scripted', 'claudeloop', or 'qwenloop'`. |
+| `--provider {scripted,claudeloop,qwenloop}` | `qwenloop` when a local engine is switched on, else `scripted` | The default follows the local-engine switches (`VIBEY_FEATURE_QWENLOOP` / `VIBEY_FEATURE_CLAUDELOOP_LOCAL`, else `[features]` in the project's stored config; ADR-0038); an explicit value always wins, and `claudeloop` is never a default. `scripted` needs no live engine. `claudeloop` runs a real, paid session capped by `--max-turns` and `--max-dollars`; its spend is recorded as `budget_spent` ledger events so the budget brake counts it. `qwenloop` runs the sovereign local DESIGN provider (ADR-0015, ADR-0027) against the Ollama server at `$VIBEY_OLLAMA_URL` and reads research material from `$VIBEY_EVIDENCE_DIR`. A research job with no matching evidence parks a `research_evidence` gate on its first attempt, naming the file it wants, rather than inventing a source; supply the file and answer the gate to retry. Any other value exits 3 with `Error: provider must be 'scripted', 'claudeloop', or 'qwenloop'`. |
 | `--max-turns N` | `1` | Turn cap for this one job (min 1). |
 | `--max-dollars F` | `0.25` | Dollar cap for this one job (0.01–10). |
+| `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `qwen2.5-coder:14b` | Local model for `--provider qwenloop`; ignored by the other providers. |
 
-In VISUAL_DESIGN only `--provider scripted` works; any other provider exits
+With `--provider qwenloop`, a `VIBEY_OLLAMA_URL` that is not an `http(s)` URL with a
+host, or a `VIBEY_OLLAMA_TIMEOUT` that is not a positive whole number, exits 3 with
+`Error: <VARIABLE>: ...` before any job runs. `work` runs DESIGN only, so it has no
+decomposer; `vibey worker` chooses that.
+
+In VISUAL_DESIGN only `--provider scripted` works, and an unstated provider is
+`scripted` there whatever the switches say; any other provider exits
 3 with `Error: no live VisualInventoryProducer is implemented yet; use --provider scripted`.
 An unknown `PROJECT_ID` exits 3.
 
@@ -285,17 +292,27 @@ the in-cluster preflight instead.
 | Option | Default | What it does |
 |---|---|---|
 | `--conformance` | off | Run the 9-check conformance suite against each checked engine that is installed. |
-| `--engine ENGINE` | unset | Check one engine: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, or `qwenloop`. An unknown name prints `Unknown engine: <name>` and exits 1. |
+| `--engine ENGINE` | unset | Check one engine: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`, or `claudeloop-local`. An unknown name prints `Unknown engine: <name>` and exits 1. |
 | `--record` | off | Persist preflight (and conformance, with `--conformance`) results to `engine_health`. Exits 1 if no project exists. |
 | `--project ID` | latest | Project to record health for, with `--record`. |
 | `--cluster` | off | Run the in-cluster preflight instead of the engine checks — see [Kubernetes guide](../guides/kubernetes.md). |
 
 With `--engine` unset, doctor checks the four paid engines (`claudeloop`,
 `codexloop`, `cursorloop`, `agyloop`) whether or not they are installed —
-missing ones print `NOT INSTALLED` — and adds `qwenloop` when
-`VIBEY_FEATURE_QWENLOOP` is truthy or, if that variable is unset,
-`./vibey.toml` in the current directory has `[features] qwenloop = true`.
-`--engine qwenloop` works regardless of the flag.
+missing ones print `NOT INSTALLED` — and adds each local engine that is
+switched on: `qwenloop` when `VIBEY_FEATURE_QWENLOOP` is truthy or, if that
+variable is unset, `./vibey.toml` in the current directory has
+`[features] qwenloop = true`; `claudeloop-local` the same way through
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL` / `[features] claudeloop_local`. The worker
+asks the same resolver (`LocalEngineSettings`, ADR-0038). `--engine qwenloop`
+and `--engine claudeloop-local` work regardless of the switches.
+
+claudeloop-local is checked with `claudeloop doctor --profile <name>` — the
+profile from `[engines.claudeloop_local] profile` (default `local`) or
+`VIBEY_CLAUDELOOP_LOCAL_PROFILE` — so doctor probes the local backend the runs
+use, not an Anthropic login. When `VIBEY_OLLAMA_URL` is set, qwenloop's doctor
+runs with `QWENLOOP_BASE_URL=<url>/v1` and `QWENLOOP_MODEL`, exactly as its runs
+do.
 
 Each engine line shows install state, version, and auth. Auth is the exit
 status of `<binary> doctor`; if that command cannot run, doctor falls back
@@ -331,30 +348,42 @@ every phase for one project.
 
 | Option | Default | What it does |
 |---|---|---|
-| `--engines LIST` | the four paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). A list that matches none of the worker's engines — `--engines qwenloop` with the feature off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)` and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. |
+| `--engines LIST` | the four paid engines, plus every local engine switched on | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`, `claudeloop-local`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. A local engine joins the pool only when its switch is on (see below). A list that matches none of the worker's engines — `--engines qwenloop` with the feature off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)`, naming both switches, and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. `--engines qwenloop,claudeloop-local` is how to forbid a paid fallback outright. |
 | `--parallelism N` / `-j N` | `1` | Concurrent job loops, 1–16. The effective count is clamped to twice the number of allowed engines and to the CPU count, and is never below 1. |
 | `--once` | off | Process one job and exit (`processed one job` or `no ready job`), instead of running forever. |
-| `--provider {scripted,claudeloop,qwenloop}` | `scripted` | DESIGN and decomposition providers. `scripted` is fully offline. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `qwenloop` uses the sovereign local DESIGN provider (reads `$VIBEY_EVIDENCE_DIR`) with scripted decomposition. Any other value exits 2. |
+| `--provider {scripted,claudeloop,qwenloop}` | `qwenloop` when a local engine is switched on, else `scripted` | DESIGN and decomposition providers. The default follows the same switches as the pool (ADR-0038); an explicit value always wins, and `claudeloop` is never a default. `scripted` is fully offline. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `qwenloop` uses the sovereign local providers for both (ADR-0027): DESIGN reads `$VIBEY_EVIDENCE_DIR` and parks a `research_evidence` gate when a research topic has no evidence, and decomposition asks the local model for a plan under a JSON schema whose criterion ids are the spec's own, refusing the whole plan if any item lacks a verification command or checked criterion, or if dependencies are out of order. Both talk to the one Ollama server at `$VIBEY_OLLAMA_URL`. Any other value exits 2. |
 | `--max-turns N` | `25` | Turn cap per claudeloop DESIGN or decomposition session (min 1). |
 | `--max-dollars F` | `2.0` | Dollar cap per claudeloop DESIGN or decomposition session (0.01–10). |
+| `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `qwen2.5-coder:14b` | Local model for `--provider qwenloop`, used for DESIGN and decomposition alike — and, when `VIBEY_OLLAMA_URL` is set, handed to the qwenloop engine as `QWENLOOP_MODEL` unless that is already set. A bad `VIBEY_OLLAMA_URL` or `VIBEY_OLLAMA_TIMEOUT` exits 3 once the project is resolved, before any job runs. |
 | `--project ID` | latest | Project to work on. |
 | `--wait-for-project SECONDS` | unset (min 1.0) | Poll every N seconds for a project instead of exiting 1 when none exists yet — for long-lived deployments, where exiting means a restart loop. |
 | `--azure {memory,az}` | `memory` | Azure client for the deploy stage set. `memory` is an in-memory adapter that touches no real infrastructure. `az` uses the real Azure CLI and mutates real resources on consented deploys; the worker runs `az account show` first and exits 1 if you are not logged in. Any other value exits 2. |
 
 The VISUAL_DESIGN stage always uses the scripted visual provider.
 
-On start the worker preflights every allowed engine — including `qwenloop`
-when the feature is on, so the standby engine is visible in `vibey engines`
-like every other. Engines with no passing recorded conformance produce
+On start the worker preflights every allowed engine — including each local
+engine that is switched on, so it is visible in `vibey engines` like every
+other. Engines with no passing recorded conformance produce
 ``warning: no recorded conformance for <names> -- engine-driven jobs will not select them until `vibey doctor --conformance --record` passes``.
 It then prints
 `worker started: project=<name> engines=<list or all> parallelism=<n> provider=<p>`.
 
-qwenloop as a standby engine (ADR-0015): the worker enables it only when
-`VIBEY_FEATURE_QWENLOOP` is truthy. Unlike `doctor`, the worker does not
-read `[features] qwenloop` from `vibey.toml`; it falls back to a `features`
-table in the project's stored config, which no creation path writes today.
-In practice the environment variable is the only switch for the worker.
+Local engines are preferred first (ADR-0038, amending ADR-0015's standby):
+BUILD selection runs smooth weighted round-robin within the LOCAL tier
+(`qwenloop`, `claudeloop-local`) and falls back to a paid engine only when no
+local engine is eligible. Before each BUILD selection the worker re-runs every
+enabled local engine's `doctor`; one that fails is simply not eligible. The
+worker enables a local engine when `VIBEY_FEATURE_QWENLOOP` /
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL` is truthy. Unlike `doctor`, it does not read
+`[features]` from `vibey.toml`; it falls back to a `features` table in the
+project's stored config, which no creation path writes today. In practice the
+environment variables are the switches for the worker.
+
+A claudeloop-local run that exits 78 (its backend is misconfigured: the server
+down, a model not pulled or failing to load, a window too small) parks its
+`build.implement` or `build.verify` job on an `engine_misconfigured` gate that
+names the `doctor` command showing the cause; answer it (`--raw '{}'`) after the
+fix to retry.
 
 Shutdown (ADR-0026): SIGTERM drains the worker — it finishes the job in
 hand, claims no more, and exits. A SIGTERM that arrives during startup,
@@ -370,8 +399,13 @@ Variables read by code under `src/vibey`:
 | Variable | Read by | Effect |
 |---|---|---|
 | `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor --record`; `doctor --cluster` | PostgreSQL DSN. There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). |
-| `VIBEY_EVIDENCE_DIR` | `work --provider qwenloop`, `worker --provider qwenloop` | Directory of reading material for the qwenloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
-| `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop; any other set value disables it. When set it overrides config. When unset, `doctor` falls back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config. |
+| `VIBEY_EVIDENCE_DIR` | `work --provider qwenloop`, `worker --provider qwenloop` | Directory of reading material for the qwenloop DESIGN provider's research stage: one `<topic>.md` (or `.txt`) per topic, first line `source: <where it came from>`. Unset or empty means no evidence; each research job then parks a `research_evidence` gate naming the file it wants. |
+| `VIBEY_OLLAMA_URL` | `work` / `worker` on the qwenloop provider; the qwenloop engine in `worker` and `doctor` | The one local endpoint setting, root form. Both sovereign providers use it. Default `http://127.0.0.1:11434`; empty counts as unset. Must be an `http` or `https` URL with a host, or the command exits 3. When set, the qwenloop engine gets `QWENLOOP_BASE_URL=<url>/v1` (and `QWENLOOP_MODEL`) unless already set. The same variable points vibey-gh's local-review fallback at its server. |
+| `VIBEY_OLLAMA_MODEL` | `work --provider qwenloop`, `worker --provider qwenloop` | The local model. Default `qwen2.5-coder:14b`; `--ollama-model` overrides it. |
+| `VIBEY_OLLAMA_TIMEOUT` | `work --provider qwenloop`, `worker --provider qwenloop` | Seconds to wait for one local generation. Default `900`; anything but a positive whole number exits 3. |
+| `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker`, `work` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop; any other set value disables it. When set it overrides config. When unset, `doctor` falls back to `[features] qwenloop` in `./vibey.toml` and `worker` / `work` fall back to the project's stored config. Any local engine on makes `qwenloop` the default `--provider`. |
+| `VIBEY_FEATURE_CLAUDELOOP_LOCAL` | `doctor`, `worker`, `work` | The same switch for `claudeloop-local` (`[features] claudeloop_local`). |
+| `VIBEY_CLAUDELOOP_LOCAL_PROFILE` | `doctor`, `worker` | The claudeloop backend profile claudeloop-local runs with; overrides `[engines.claudeloop_local] profile` (default `local`). |
 | `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |
 | `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |
 | `CURSOR_API_KEY` | `doctor` auth fallback; `doctor --cluster` | cursorloop credentials. |
