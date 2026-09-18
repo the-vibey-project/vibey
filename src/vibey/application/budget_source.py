@@ -17,8 +17,15 @@ Two event shapes carry spend, and both must count:
   shape (grant adjustments, replays, synthetic corrections). Production
   engine translation also maps capacity/usage chatter to BUDGET_SPENT
   with neither key; those sum as zero rather than erroring.
+
+The caps themselves come from one place too: ``caps_from_config``. Issue
+#210 was ``vibey cost`` reading a ``budget`` table that nothing writes and
+printing $40 / $250 fallbacks as if they were caps, while the worker
+enforced ``max_cycle_dollars`` from a second, private parse. Two readers of
+one setting is how the report and the enforcement drift apart.
 """
 
+from collections.abc import Mapping
 from uuid import UUID
 
 from vibey.application.interfaces import LedgerReader
@@ -27,6 +34,37 @@ from vibey.domain.ledger import EventKind
 
 
 class LedgerBudgetSource:
+    """Declared by ``interfaces/budget_source_interface.py::LedgerBudgetSourceInterface``."""
+
+    @staticmethod
+    def caps_from_config(config: Mapping[str, object]) -> tuple[float | None, int | None]:
+        """The brake's caps from a project's stored config: ``(max_dollars, max_turns)``.
+
+        The keys are the top-level ``max_cycle_dollars`` / ``max_cycle_turns``
+        that ``vibey new --max-cycle-dollars/--max-cycle-turns`` and the
+        Kubernetes operator's ``spec.maxCycleDollars/maxCycleTurns`` write. A
+        key that is absent or not a number is no cap (``None``) rather than a
+        default: opting in to the brake is explicit, never a silent limit that
+        would surprise an existing project.
+
+        ``bool`` is rejected before the numeric check because
+        ``isinstance(True, int)`` holds in Python, so a stored
+        ``max_cycle_turns: true`` would otherwise be a cap of one turn. A
+        legacy ``budget`` table (``max_dollars_per_cycle`` and friends) is not
+        read: nothing enforces it, so showing it would be the #210 bug again.
+        """
+        raw_dollars = config.get("max_cycle_dollars")
+        raw_turns = config.get("max_cycle_turns")
+        max_dollars = (
+            float(raw_dollars)
+            if isinstance(raw_dollars, int | float) and not isinstance(raw_dollars, bool)
+            else None
+        )
+        max_turns = (
+            raw_turns if isinstance(raw_turns, int) and not isinstance(raw_turns, bool) else None
+        )
+        return max_dollars, max_turns
+
     def __init__(
         self,
         ledger_reader: LedgerReader,

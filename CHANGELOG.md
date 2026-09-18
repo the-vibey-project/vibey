@@ -34,6 +34,15 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 * **build:** a capacity rejection during `build.verify`'s diff review now defers the job as capacity instead of being discarded. `run_and_record` reported `capacity_rejected`, but the verify handler never read it and judged the run on its verdict alone — so a reviewer out of capacity either failed as `WORK` (burning an unrefunded attempt, up to the `attempts_exhausted` park, while `RotationRecordingHandler` left the exhausted engine's circuit closed and kept handing it the same job) or, with a completing verdict in the same run, approved the item outright — the non-negotiable "a capacity rejection always outranks a completion claim" broken both ways. It now returns `Defer(capacity=True)` after `capacity_backoff` (a constructor keyword defaulting to 5 minutes, exactly as on `build.implement`), before any repair finding is resolved or any independence waiver is written, and `BuildVerifyHandler` takes a required `clock` ([#215](https://github.com/the-vibey-project/vibey/issues/215))
+* **cli:** `vibey cost` prints the budget caps the brake actually enforces. It read a `budget`
+  table that nothing writes and printed $40.00 per cycle and $250.00 total whatever the
+  project's `--max-cycle-dollars` was, and took its spend from `engine_health`, which reads
+  $0. It now shows the stored `max_cycle_dollars` / `max_cycle_turns` (or `none (uncapped)` /
+  `none`) through `LedgerBudgetSource.caps_from_config`, the one parser the worker's brake
+  also uses, and the cycle's ledger spend (DESIGN included) from the brake's own sum. The
+  lifetime cap line is gone because nothing enforces one, and the per-engine count is labelled
+  `selections`, not `turns`. The shared parser also stops reading a stored `true` as a
+  one-turn or one-dollar cap ([#210](https://github.com/the-vibey-project/vibey/issues/210))
 
 ## [0.8.0] (2026-09-16)
 

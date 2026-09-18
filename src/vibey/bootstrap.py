@@ -342,15 +342,13 @@ def build_full_worker(
     # The runaway brake: caps come from the project's own config
     # (max_cycle_dollars / max_cycle_turns, set at `vibey new`). Without
     # either, spend stays uncapped -- opting in is explicit, never a
-    # silent default that would surprise existing projects.
-    raw_dollars = project.config.get("max_cycle_dollars")
-    raw_turns = project.config.get("max_cycle_turns")
+    # silent default that would surprise existing projects. The parse is
+    # LedgerBudgetSource's own, the same one `vibey cost` reports from.
+    max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
     budget_source: LedgerBudgetSource | None = None
-    if isinstance(raw_dollars, int | float) or isinstance(raw_turns, int):
+    if max_dollars is not None or max_turns is not None:
         budget_source = LedgerBudgetSource(
-            resources.ledger,
-            max_dollars=float(raw_dollars) if isinstance(raw_dollars, int | float) else None,
-            max_turns=raw_turns if isinstance(raw_turns, int) else None,
+            resources.ledger, max_dollars=max_dollars, max_turns=max_turns
         )
     wind_down = WindDownOrchestrator(
         ledger=resources.ledger,

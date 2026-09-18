@@ -232,18 +232,40 @@ project.
 
 ## `vibey cost [PROJECT_ID]`
 
-Show per-engine spend for the current cycle, read from `engine_health`, with
-a total and two budget caps. The `(N turns)` figure after each engine is its
-selection count, not a turn count. Defaults to the most recently created
-project.
+Show the current cycle's spend against the caps the worker's budget brake
+enforces. Defaults to the most recently created project.
 
-The caps come from a `budget` table in the project's stored config
-(`max_dollars_per_cycle`, `max_dollars_total`), with fallbacks of $40.00 and
-$250.00. No code path writes that table today — not `vibey new`, not the
-Kubernetes operator, and no runtime code reads `[budget]` from `vibey.toml` — so the command
-prints the $40.00 / $250.00 placeholders. The cap that is enforced is
-`--max-cycle-dollars` / `--max-cycle-turns` from `vibey new`, applied by the
-worker's budget brake; `vibey cost` does not print it.
+```text
+Project: my-app (Cycle 1)
+Cycle spend:      $3.25 (2 turns)
+Cycle dollar cap: $10.00
+Cycle turn cap:   none
+
+Per-engine (current cycle):
+  • claudeloop: $0.00 (4 selections)
+```
+
+- **Cycle spend** is the brake's own number: `LedgerBudgetSource` summing the
+  cycle's `TurnCompleted` (`cost_usd`) and `BudgetSpent` (`dollars`, `turns`)
+  ledger events. It includes DESIGN's spend as well as BUILD's.
+- **Cycle dollar cap** and **Cycle turn cap** are the project's stored
+  `max_cycle_dollars` / `max_cycle_turns` (`vibey new --max-cycle-dollars` /
+  `--max-cycle-turns`, or the operator's `spec.maxCycleDollars` /
+  `spec.maxCycleTurns`), read through the same parser the worker uses. An
+  unset cap prints `none (uncapped)` for dollars and `none` for turns. A
+  `budget` table in the stored config is not read, and there is no lifetime
+  cap to print because nothing enforces one.
+- When spend has reached a cap the command adds
+  `Cap reached: the next BUILD session parks a budget_exhausted gate.`
+- A cap raised by answering a `budget_exhausted` gate with
+  `--raw '{"max_dollars": N}'` or `--raw '{"max_turns": N}'` applies to that
+  one job only, so it is not shown here; the command always prints the
+  project's stored cap.
+- **Per-engine** rows come from `engine_health`: its per-cycle cost column and
+  the number of times rotation selected the engine (a selection count, not a
+  turn count). Nothing feeds that cost column yet — rotation records each
+  selection with no cost — so it reads `$0.00` and the rows do not sum to
+  the cycle spend (issue #209).
 
 ## `vibey ledger`
 

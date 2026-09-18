@@ -178,12 +178,12 @@ vibey answer <gate-id> --verdict accept       # review.collect approval gate
 vibey answer <gate-id> --choice local_only    # review.deployment_choice gate
 ```
 
-The project records DONE(local). `vibey cost` shows per-engine spend for
-the cycle (ignore its `Cycle Budget Cap` and `Total Budget Cap` lines — they read an
-unset `budget` key and print $40.00 and $250.00 regardless of
-`--max-cycle-dollars` — and its
-per-engine "turns" figure is the selection count, not turns);
-`vibey status` should show an empty queue with zero failed jobs.
+The project records DONE(local). `vibey cost` shows the cycle's ledger
+spend (DESIGN and BUILD together) against the `--max-cycle-dollars` /
+`--max-cycle-turns` caps the brake enforces, then a per-engine list of
+selection counts (its per-engine dollar column reads $0.00 for now; see
+issue #209); `vibey status` should show an empty queue with zero failed
+jobs.
 
 ## If something goes wrong
 
