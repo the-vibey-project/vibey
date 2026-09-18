@@ -30,6 +30,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Features
+
+* **qwenloop:** qwenloop can now attach to an OpenAI-compatible server that is already running, with Ollama as the main target, instead of spawning llama-server or vllm, so the BUILD lane can run for free on an operator's existing Ollama. Before this change, `qwenloop doctor` exited 1 whenever llama-server and vllm were both missing, and vibey reads that exit as an auth failure, so qwenloop could never be selected on a machine that had only Ollama. Set `QWENLOOP_BASE_URL=http://127.0.0.1:11434/v1` (or pass `--base-url`, or set `base_url` in qwenloop's new TOML config file) and `auto` selects the new `openai-compat` backend. The model name is set explicitly (`QWENLOOP_MODEL`, `--model`, or `model`; the default is `qwen2.5-coder:14b`), and an optional API key is read only from `QWENLOOP_API_KEY`. `doctor` exits 0 only when the endpoint answers and serves the model, and says which check failed otherwise. `run`, `run --storm`, `server start`, and `server status` all use the same backend. qwenloop never starts or stops an attached server, and prints its API key as `<redacted>`. One more fix: vLLM is now launched with `--served-model-name`, so the model name each request sends is one vLLM actually serves ([qwenloop ADR 0003](src/vibey_runners/qwen/docs/architecture/decisions/0003-attach-openai-compatible-endpoint.md))
+
 ## [0.8.0] (2026-09-16)
 
 ### Features

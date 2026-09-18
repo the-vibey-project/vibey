@@ -1,5 +1,10 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Managed llama.cpp/vLLM OpenAI-compatible server adapters."""
+"""OpenAI-compatible inference adapters.
+
+Two kinds live here. Managed servers (llama.cpp, vLLM) are spawned on loopback with a
+per-launch token, owned, and stopped by qwenloop. An attached server (openai-compat, Ollama
+first) is somebody else's: qwenloop checks it, talks to it, and never starts or stops it.
+"""
 
 import asyncio
 import fcntl
@@ -12,9 +17,10 @@ import urllib.error
 import urllib.request
 from collections.abc import AsyncIterator, Sequence
 from contextlib import suppress
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import IO
+from urllib.parse import urlsplit
 
 from platformdirs import user_cache_path
 
@@ -42,6 +48,7 @@ class OpenAIServer:
                 healthy=False,
                 pid=int(data["pid"]),
                 token=str(data.get("token", "")),
+                model=str(data.get("model", "")),
             )
         except (OSError, ValueError, KeyError, json.JSONDecodeError):
             return None
@@ -75,6 +82,7 @@ class OpenAIServer:
                 healthy=False,
                 pid=process.pid,
                 token=token,
+                model=profile.name,
             )
             state = self.cache_dir / "servers" / f"{profile.name}.json"
             state.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -87,9 +95,7 @@ class OpenAIServer:
             await asyncio.to_thread(_release_profile_lock, lock)
 
     async def health(self, info: ServerInfo) -> bool:
-        request = urllib.request.Request(
-            f"{info.endpoint}/models", headers={"Authorization": f"Bearer {info.token}"}
-        )
+        request = urllib.request.Request(f"{info.endpoint}/models", headers=self._auth(info.token))
         try:
             response = await asyncio.to_thread(urllib.request.urlopen, request, timeout=2)
             return bool(response.status == 200)
@@ -101,7 +107,7 @@ class OpenAIServer:
     ) -> AsyncIterator[ChatChunk]:
         payload = json.dumps(
             {
-                "model": info.profile,
+                "model": info.model or info.profile,
                 "messages": [{"role": item.role, "content": item.content} for item in messages],
                 "tools": _CODING_TOOLS,
                 "tool_choice": "auto",
@@ -111,10 +117,7 @@ class OpenAIServer:
         request = urllib.request.Request(
             f"{info.endpoint}/chat/completions",
             data=payload,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {info.token}",
-            },
+            headers={"Content-Type": "application/json", **self._auth(info.token)},
         )
         try:
             response = await asyncio.to_thread(urllib.request.urlopen, request, timeout=300)
@@ -171,6 +174,15 @@ class OpenAIServer:
     def _argv(self, profile: ModelProfile, port: int, token: str) -> tuple[str, ...]:
         raise NotImplementedError
 
+    @staticmethod
+    def _auth(token: str) -> dict[str, str]:
+        """A bearer header when there is a token; none at all when there is not.
+
+        Ollama needs no key, and `Authorization: Bearer ` with nothing after it is a
+        malformed credential some gateways reject outright rather than ignore.
+        """
+        return {"Authorization": f"Bearer {token}"} if token else {}
+
 
 class LlamaCppServer(OpenAIServer):
     binary = "llama-server"
@@ -218,7 +230,150 @@ class VllmServer(OpenAIServer):
             "hermes",
             "--max-model-len",
             str(profile.context_window),
+            # vLLM serves under the repository id unless told otherwise, and rejects a
+            # request naming anything else; this makes the name every request sends
+            # (the profile's) the name vLLM actually answers to.
+            "--served-model-name",
+            profile.name,
         )
+
+
+class OpenAICompatServer(OpenAIServer):
+    """An OpenAI-compatible server qwenloop attaches to and never starts or stops (ADR 0003).
+
+    Ollama is the primary target, but anything serving `GET /models` and
+    `POST /chat/completions` under its base URL qualifies: LM Studio, a vLLM somebody
+    else runs, a hosted gateway. `owned` is always False, so `stop()` is a no-op, and
+    `start()` spawns nothing: it proves the endpoint is up and serves the configured
+    model, or fails saying which of the two it is not.
+    """
+
+    backend = Backend.OPENAI_COMPAT
+
+    def __init__(
+        self,
+        base_url: str,
+        model: str,
+        *,
+        api_key: str = "",
+        timeout_seconds: float = 5,
+        context_window: int = 32_768,
+        cache_dir: Path | None = None,
+    ) -> None:
+        super().__init__(cache_dir)
+        base = base_url.rstrip("/")
+        parts = urlsplit(base)
+        if parts.scheme not in {"http", "https"} or not parts.hostname:
+            raise ValueError(f"base_url must be an http:// or https:// URL, got {base!r}")
+        self.base_url = base
+        self.model = model
+        self._api_key = api_key
+        self._timeout_seconds = timeout_seconds
+        self._context_window = context_window
+
+    @property
+    def profile(self) -> ModelProfile:
+        """What a run records about the model: the endpoint serves it, so it pins nothing."""
+        return ModelProfile(
+            name=self.model,
+            backend=Backend.OPENAI_COMPAT,
+            repository=self.base_url,
+            revision="endpoint-managed",
+            filename=None,
+            sha256=None,
+            size=None,
+            quantization="endpoint-managed",
+            context_window=self._context_window,
+        )
+
+    def inspect(self, profile: ModelProfile) -> ServerInfo:
+        return ServerInfo(
+            backend=Backend.OPENAI_COMPAT,
+            profile=profile.name,
+            endpoint=self.base_url,
+            owned=False,
+            healthy=False,
+            token=self._api_key,
+            model=self.model,
+        )
+
+    async def install(self, profile: ModelProfile) -> Path:
+        raise RuntimeError(
+            f"an openai-compat endpoint installs its own models; pull {self.model!r} on "
+            f"{self.base_url} (Ollama: `ollama pull {self.model}`)"
+        )
+
+    async def start(self, profile: ModelProfile) -> ServerInfo:
+        await self.check()
+        return replace(self.inspect(profile), healthy=True)
+
+    async def health(self, info: ServerInfo) -> bool:
+        try:
+            await self.check()
+        except RuntimeError:
+            return False
+        return True
+
+    async def stop(self, info: ServerInfo) -> None:
+        """Never stops a server qwenloop did not start."""
+        del info
+
+    async def check(self) -> str:
+        """The served model id matching `model`, or RuntimeError saying what is wrong."""
+        url = f"{self.base_url}/models"
+        request = urllib.request.Request(url, headers=self._auth(self._api_key))
+        try:
+            body = await asyncio.to_thread(self._fetch, request)
+        except urllib.error.HTTPError as exc:
+            raise RuntimeError(
+                f"openai-compat endpoint {url} refused the model list: {_http_error_detail(exc)}"
+            ) from exc
+        except OSError as exc:
+            reason = getattr(exc, "reason", None) or exc
+            raise RuntimeError(
+                f"openai-compat endpoint {url} is unreachable ({reason}); is the server "
+                "running? (Ollama: `ollama serve`)"
+            ) from exc
+        served = self._served_models(body)
+        if served is None:
+            raise RuntimeError(
+                f"openai-compat endpoint {url} did not answer with an OpenAI-compatible "
+                'model list ({"data": [{"id": ...}]})'
+            )
+        match = self._matching(self.model, served)
+        if match is None:
+            listing = ", ".join(served) or "no models at all"
+            raise RuntimeError(
+                f"model {self.model!r} is not served by {self.base_url} (it serves: "
+                f"{listing}); pull it first (Ollama: `ollama pull {self.model}`)"
+            )
+        return match
+
+    def _fetch(self, request: urllib.request.Request) -> bytes:
+        # The scheme was restricted to http/https in __init__, so this cannot open a file:
+        # or ftp: URL, which is the whole of what B310 guards against.
+        with urllib.request.urlopen(request, timeout=self._timeout_seconds) as response:  # nosec B310
+            return bytes(response.read())
+
+    @staticmethod
+    def _served_models(body: bytes) -> tuple[str, ...] | None:
+        try:
+            parsed = json.loads(body)
+        except ValueError:
+            return None
+        data = parsed.get("data") if isinstance(parsed, dict) else None
+        if not isinstance(data, list):
+            return None
+        return tuple(str(item["id"]) for item in data if isinstance(item, dict) and "id" in item)
+
+    @staticmethod
+    def _matching(model: str, served: tuple[str, ...]) -> str | None:
+        """Exact match, or Ollama's implicit `:latest` for an untagged name."""
+        if model in served:
+            return model
+        if ":" not in model and f"{model}:latest" in served:
+            return f"{model}:latest"
+        return None
 
 
 def _free_port() -> int:
