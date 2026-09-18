@@ -277,9 +277,14 @@ SHA, returning it to ordinary review and repair with no exemption.
 `Promote` (workflow file `promote-to-main.yml`) runs on completion of `Merge train`, a
 weekly Monday schedule, and manual dispatch. With `contents: write` and `pull-requests:
 write`, it runs `vibey-gh promote`, which compares `develop` and `main` by tree content
-rather than commit count, derives the next version, and opens or reuses a promotion pull
-request; that PR then goes through the same scans, `PR automation` gate, and a rebase
-merge to `main` as any other change. `AUTOMERGE_TOKEN` is required here because a
+rather than commit count, derives the next version, and opens a promotion pull request —
+or, when one is already open, rewrites its title and body from the current derivation, so
+the version and file count a reviewer approves are the ones the merge will publish, and a
+version that changed since the pull request was opened is said in its body. The body says
+it publishes nothing only when the version equals `main`'s. The rewrite uses `gh pr edit`,
+falling back to the REST endpoint when an older `gh` is refused over Projects (classic);
+if both fail, the run notes it and the promotion proceeds. That PR then goes through the
+same scans, `PR automation` gate, and a rebase merge to `main` as any other change. `AUTOMERGE_TOKEN` is required here because a
 ruleset-required approving review cannot be satisfied by the default `GITHUB_TOKEN`.
 
 ## Release

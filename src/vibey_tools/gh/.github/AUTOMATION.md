@@ -23,7 +23,7 @@ topic branch push
   -> PR automation publishes an exact-head gate
   -> Merge train squash-merges into develop
   -> Release publishes the preview package and documentation channel
-  -> Promote opens or reuses develop -> main
+  -> Promote opens develop -> main, or refreshes the open PR's title and body
   -> The same exact-head scans and review gate the promotion PR
   -> Merge train rebase-merges into main
   -> Release, GitHub Release, Pages, GHCR, and repository profile converge
@@ -49,7 +49,7 @@ events. A skipped stale run is expected. A current-head failure is never bypasse
 | `pr-automation.yml` | PR automation | Aggregates current-head scans, runs semantic review (with an opt-in self-hosted local-model fallback when the primary review returns no verdict), performs bounded repair or conflict resolution, persists lineage state, and publishes the merge gate. |
 | `automation-bootstrap.yml` | Automation bootstrap | Provides an explicitly authorized one-time path for merging a workflow repair when the older base workflow cannot repair itself. |
 | `merge-train.yml` | Merge train | Squash-merges eligible PRs to `develop` and rebase-merges eligible promotion PRs to `main`. |
-| `promote-to-main.yml` | Promote | Opens or reuses the asynchronous `develop -> main` promotion PR after integration succeeds. |
+| `promote-to-main.yml` | Promote | Opens the asynchronous `develop -> main` promotion PR after integration succeeds, or refreshes the open one's title and body. |
 | `release.yml` | Release | Publishes development builds from `develop` to TestPyPI and production builds from `main` to PyPI. |
 | `github-release.yml` | GitHub Release | Creates or reuses the immutable production tag and generated-notes GitHub Release for the exact released SHA. |
 | `release-surfaces.yml` | Release surfaces | Publishes OCI package artifacts and the persistent Production and Preview ProperDocs sites. |

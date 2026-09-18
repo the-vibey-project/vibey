@@ -30,6 +30,17 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Bug Fixes
+
+* **gh:** `vibey-gh promote` rewrites a reused promotion pull request's title and body from
+  the current derivation instead of leaving them as the run that opened it wrote them
+  (#235). #231 kept reading `chore(release): 0.8.0` and "5 file(s) differ" while it
+  proposed a 178-file 1.0.0. The body now opens with a `vibey-gh-promotion` record of the
+  version the pull request was opened at, says when that differs from the version it now
+  carries, and says the merge publishes nothing only when the version equals the release
+  branch's. An edit refused over Projects (classic) falls back to the REST endpoint; a
+  refresh that fails is a note, not a failed promotion.
+
 ## [0.8.0] (2026-09-16)
 
 ### Features

@@ -314,7 +314,7 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 | `vibey-gh issue-automation record-solution --issue N --input JSON` | Persist the machine-readable attempt lineage a retry and its budget depend on. |
 | `vibey-gh issue-automation list-eligible` | List every open issue a recovery sweep should dispatch. |
 | `vibey-gh issue-automation ensure-labels` | Idempotently create the issue automation’s operational labels. |
-| `vibey-gh promote [--no-wait]` | Open or reuse the asynchronous `develop → main` promotion PR. |
+| `vibey-gh promote [--no-wait]` | Open the asynchronous `develop → main` promotion PR, or refresh the open one's title and body. |
 | `vibey-gh github-release --target SHA [--version VERSION]` | Create or reuse an immutable tag and GitHub Release for an exact production SHA. |
 | `vibey-gh realign` | Align identical `develop` and `main` trees after a rebase merge without discarding work. |
 | `vibey-gh flatten [--onto REF] [--push] [--orphan-comments] [--dry-run]` | Rewrite the current branch as one commit on its base, built from the branch's existing tree so content cannot change, with the subject normalized and the trailers re-derived — the remedy for a branch the provenance or Conventional Commits gate refuses and `check --apply` cannot repair. Co-authors, breaking changes and issue-closing keywords are carried from the whole range, because nothing re-derives them. It refuses a branch whose open pull request has unresolved review threads, since the force-push detaches every one of them from the code it was about; `--orphan-comments` proceeds anyway, and a forge that cannot be asked is reported as unchecked rather than as clean. |
@@ -551,7 +551,7 @@ vibey-gh promote --dry-run
 vibey-gh promote
 ```
 
-Moves the integration branch to the release branch, which is what publishes. Three things
+Moves the integration branch to the release branch, which is what publishes. Four things
 it gets right that a hand-written workflow usually does not:
 
 - **It compares by content, not by commit count.** The release branch is rebase-merged, so
@@ -563,6 +563,13 @@ it gets right that a hand-written workflow usually does not:
   holds a runner open with `gh pr checks --watch`; scans, automated review, and the
   exact-head merge train finish the promotion asynchronously. `--wait` retains the legacy
   synchronous mode for recovery.
+- **It keeps a reused PR's words current.** A promotion PR still open from an earlier run
+  has its title and body rewritten from this run's derivation, so a reviewer reads the
+  version the merge will publish rather than the one the PR was opened at. The body opens
+  with a `<!-- vibey-gh-promotion:{...} -->` record of both versions and says when they
+  differ, and it says the merge publishes nothing only when the version equals the release
+  branch's. Nothing is sent when the words are already current; a refresh that fails is a
+  note, not a failed promotion.
 
 ### Realignment
 
@@ -943,7 +950,7 @@ trusted_authors = ["your-login", "dependabot[bot]"]
 | CI\* / Provenance / CodeQL / Docs | Validate code, history, security, human docs, agent docs, plugins, and interfaces. |
 | PR automation | Aggregates exact-head scans; reviews, repairs, resolves conflicts, and gates. |
 | Merge train | Squash-merges into `develop` and rebase-merges promotions into `main`. |
-| Promote | Opens or reuses the `develop` → `main` promotion PR once the merge train advances `develop`. |
+| Promote | Opens the `develop` → `main` promotion PR once the merge train advances `develop`, or refreshes the open one's title and body. |
 | Release\* | Publishes `develop` dev builds to TestPyPI and `main` releases to PyPI. |
 | GitHub Release | Tags the exact production commit and generates release notes. |
 | Release surfaces | Publishes GHCR artifacts and Production/Preview ProperDocs sites. |
