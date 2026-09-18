@@ -147,12 +147,17 @@ jobs:
           # and vibey-bootstrap's are: each of them deliberately leaves --cov= and
           # --cov-fail-under out of pytest's addopts, because pytest-cov UNIONS every --cov=
           # it sees and one baked in there would silently widen the explicitly-scoped
-          # per-layer runs back out to the whole package. Their four 100% floors live in
-          # their own .github/workflows/ci.yml instead -- inert here, like every other nested
-          # workflow -- so for these packages the command below IS the floor, ported from
-          # that workflow rather than re-derived. qwenloop is the exception: its floor is a
-          # single whole-package --cov-fail-under=100 in its addopts, so `pytest -q` carries
-          # it, exactly as its own CI relied on.
+          # per-layer runs back out to the whole package. Their four 100% floors lived in
+          # each runner's own nested .github/workflows/ci.yml, which never fired in this
+          # repository (ADR-0022) and was removed with the rest of the tenants' inert
+          # automation under #189 (`git show 4e9adf18:src/vibey_runners/<r>/.github/workflows/ci.yml`)
+          # -- so for these packages the command below IS the floor, ported from that
+          # workflow rather than re-derived. Those files also ran each runner's own mypy,
+          # lint-imports and bandit, which are NOT ported: the root gates' mypy, bandit and
+          # .importlinter scope is src/vibey, so that half is still an open ADR-0022 gap.
+          # qwenloop is the exception: its floor is a single whole-package
+          # --cov-fail-under=100 in its addopts, so `pytest -q` carries it, exactly as its
+          # own CI relied on.
           #
           # claudeloop and codexloop import vibey_runners.common, so `../common` is
           # installed from the tree before their own install: plain pip knows nothing
@@ -204,8 +209,8 @@ jobs:
           # codexloop, cursorloop and agyloop each replaced four instrumented runs with one,
           # then filtered the single data file per layer -- `coverage report --include` keeps
           # each floor's verdict independent, so this is their command, not a cheaper one.
-          # codexloop's own matrix also covered macos-latest; this job is ubuntu-only, so
-          # that half is still ungated here (see the follow-up on the commit).
+          # codexloop's former nested workflow also covered macos-latest; this job is
+          # ubuntu-only, so that half is still ungated here (see the follow-up on the commit).
           - package: codexloop
             dir: src/vibey_runners/codex
             python: "3.12"

@@ -28,7 +28,8 @@ sources = [
 #
 # `pyproject.toml` is in `code_paths` because the root manifest now decides what ships --
 # which packages, which console scripts, which extras -- so a change confined to it must
-# still reach a release. Precedent: src/vibey_tools/bootstrap/.vibey-gh.toml.
+# still reach a release. Precedent: vibey-bootstrap's own standalone .vibey-gh.toml, inert
+# here and removed under #189 (`git show 4e9adf18:src/vibey_tools/bootstrap/.vibey-gh.toml`).
 [version]
 # CITATION.cff is here because GitHub renders it as "Cite this repository" and citation
 # managers read it directly, so it is the most visible number the project has -- and it

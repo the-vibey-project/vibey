@@ -30,6 +30,18 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Bug Fixes
+
+* **repo:** the absorbed tenants no longer carry the standalone automation they arrived
+  with (#189). 155 inert files are gone — 117 under the seven non-gh tenants' `.github/`,
+  31 tenant `.githooks/` files and 7 tenant `.vibey-gh.toml` — none of which GitHub or git
+  ever acted on here, and nothing in CI depended on (ADR-0022). 43 of those workflows asked
+  an index for `vibey-gh==X.Y.Z`
+  84 times, against ADR-0037 Decision 2; and because vibey-gh stops at the nearest
+  `.vibey-gh.toml`, any `vibey-gh` command run from inside a tenant loaded that tenant's
+  stale standalone config instead of the repository's. `src/vibey_tools/gh` keeps its own,
+  which is drift-gated.
+
 ## [0.8.0] (2026-09-16)
 
 ### Features
