@@ -15,22 +15,31 @@ whether every hyperlink resolves, when the only thing in front of it is a patch.
 judgments need the documents themselves. `pass`, `summary` and `findings` are different:
 each one is grounded in lines the diff actually contains.
 
-Until now that split lived implicitly in three places — `local_review.REVIEW_SCHEMA` (what
+That split used to live implicitly in three places — `local_review.REVIEW_SCHEMA` (what
 the local model is asked), `local_review.UNEVALUATED_FIELDS` (what it is not asked), and
-the review job's `--json-schema` in `templates/workflows/pr-automation.yml` (what the paid
-path is asked). Three copies of one meaning drift, and one of them was already misread:
+a hand-written `--json-schema` literal in `templates/workflows/pr-automation.yml` (what the
+paid path is asked). Three copies of one meaning drift, and one of them was already misread:
 `audience_order` is in `UNEVALUATED_FIELDS` and yet the fallback writes `true` for it. Both
 are true at once, and the reconciliation is the whole point of this module — the `true` is
 a SHAPE placeholder that keeps `jq` and every downstream `.pass` reader working, not a
 claim that the field was checked. This module says that once, in a form code can read, so
 no caller has to infer it from a boolean that looks like an answer.
 
+The paid path's copy is gone: the template now carries `__VIBEY_GH_REVIEW_SCHEMA__`, and
+`install.render_workflow` fills it from `ReviewContract.json_schema()`. So the schema a
+reviewer is held to and the halves this module draws are one table, not two that have to
+be kept in step by hand.
+
 Deliberately data, not behaviour. It decides nothing and calls nothing; it states what
-each half means so the reviewers, the workflow templates and the tests can all agree.
+each half means — and what JSON type each field is answered in — so the reviewers, the
+workflow templates and the tests can all agree.
 """
 
 from __future__ import annotations
 
+import copy
+import dataclasses
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
 # The two halves, named rather than spelled out at each call site.
@@ -64,6 +73,37 @@ DEFAULT_WIDER_CONTEXT_FIELDS = (
     "links_valid",
 )
 
+# The shape of one finding. Every reviewer that reports findings reports them in this form,
+# and `line` is optional because not every finding is about a single line.
+DEFAULT_FINDING_SCHEMA: Mapping[str, object] = {
+    "type": "object",
+    "properties": {
+        "severity": {"type": "string"},
+        "path": {"type": "string"},
+        "line": {"type": "integer"},
+        "explanation": {"type": "string"},
+        "recommended_fix": {"type": "string"},
+    },
+    "required": ["severity", "path", "explanation", "recommended_fix"],
+}
+
+# The JSON type each field is answered in. The verdict and every documentation judgment
+# are booleans, because the gate combines them with `and`; the summary is prose; the
+# findings are a list of the objects above.
+#
+# The ORDER of this table is the order of the schema's keys, and it is deliberately not
+# the contract's own order (`ReviewContract.fields`): the verdict first, then the sixteen
+# judgments, then the prose. That is the order the paid reviewer has always been handed,
+# and a model writes its answer in the order the schema lists the fields — so reordering
+# this table changes what the model has already committed to by the time it writes its
+# summary. Keep it unless that change is the point.
+DEFAULT_FIELD_SCHEMAS: Mapping[str, Mapping[str, object]] = {
+    "pass": {"type": "boolean"},
+    **{name: {"type": "boolean"} for name in DEFAULT_WIDER_CONTEXT_FIELDS},
+    "summary": {"type": "string"},
+    "findings": {"type": "array", "items": DEFAULT_FINDING_SCHEMA},
+}
+
 # Said in the verdict's own summary, because the verdict travels further than this module
 # does: it lands in a job log, a PR comment and an artifact, read by people who will never
 # open this file.
@@ -95,6 +135,13 @@ class ReviewContract:
     # being read as an answer.
     unevaluated_placeholder: bool = True
     unevaluated_notice: str = DEFAULT_UNEVALUATED_NOTICE
+    # Field name -> the JSON Schema fragment it is answered in, in schema key order. A
+    # repository with its own fields supplies its own table; a field with no entry makes
+    # `json_schema` raise rather than guess a type for it. Left out of the hash because a
+    # mapping has none; it still takes part in equality.
+    field_schemas: Mapping[str, Mapping[str, object]] = dataclasses.field(
+        default_factory=lambda: DEFAULT_FIELD_SCHEMAS, hash=False
+    )
 
     def __post_init__(self) -> None:
         for label, fields in (
@@ -122,7 +169,7 @@ class ReviewContract:
         """Every field the review schema carries: the diff-groundable half, then the other.
 
         This is the contract's own order, NOT the key order of any schema document. The
-        primary schema in `templates/workflows/pr-automation.yml` puts `summary` and
+        schema `json_schema()` renders follows `field_schemas`, which puts `summary` and
         `findings` last; here they sit second and third, beside `pass`, because the halves
         are what this module is about. So zip this against a schema's values positionally
         and the values land on the wrong names — look fields up by name.
@@ -154,6 +201,42 @@ class ReviewContract:
         `unevaluated_notice`, which belongs in the same payload.
         """
         return {field: self.unevaluated_placeholder for field in self.requires_wider_context}
+
+    def json_schema(self, halves: Iterable[str] | None = None) -> dict[str, object]:
+        """The JSON Schema a reviewer answering `halves` is held to.
+
+        `halves` names `DIFF_GROUNDABLE`, `REQUIRES_WIDER_CONTEXT`, or both; `None` means
+        both, which is the full schema the paid exact-head reviewer answers today. Every
+        selected field is a property AND required — a reviewer that may skip a field is
+        one whose silence reads as an answer.
+
+        Keys follow `field_schemas`, not `fields`; see `DEFAULT_FIELD_SCHEMAS` for why that
+        order is kept. Each fragment is copied, so a caller editing the result cannot
+        reach back into the contract.
+
+        Raises `ValueError` for a half that does not exist (or none at all) and `KeyError`
+        for a selected field with no declared type: a schema that silently omitted a field,
+        or typed it by guesswork, is a reviewer asked a different question than the one
+        the gate reads.
+        """
+        chosen = (DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT) if halves is None else tuple(halves)
+        known = {DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT}
+        if not chosen or not set(chosen) <= known:
+            raise ValueError(
+                f"halves must name {DIFF_GROUNDABLE!r} and/or {REQUIRES_WIDER_CONTEXT!r}, "
+                f"not {chosen!r}"
+            )
+        wanted = {name for name in self.fields if self.classify(name) in chosen}
+        undeclared = wanted - set(self.field_schemas)
+        missing = [name for name in self.fields if name in undeclared]
+        if missing:
+            raise KeyError(f"no JSON type declared for review field(s): {', '.join(missing)}")
+        order = [name for name in self.field_schemas if name in wanted]
+        return {
+            "type": "object",
+            "properties": {name: copy.deepcopy(dict(self.field_schemas[name])) for name in order},
+            "required": order,
+        }
 
 
 # The contract this repository's reviewers actually read.

@@ -200,7 +200,13 @@ and its exact head SHA and calls `vibey-gh pr-automation evaluate` to compute an
 (when state is `ready` or `review`) checks out the untrusted head read-only beside trusted
 automation and runs the pinned Claude Code Action, restricted to `Read,Glob,Grep` plus a
 scoped inline-comment tool and read-only `gh pr` commands, to produce the structured
-semantic review this repair task itself receives as input. `mirror-fork` opens a
+semantic review this repair task itself receives as input. The JSON Schema that review is
+held to is not written in the template: `vibey-gh install` renders it from
+`ReviewContract.json_schema()` in `vibey_gh/review_contract.py`, the same table that splits
+the review into the half a diff alone can carry (`pass`, `summary`, `findings`) and the
+documentation-contract half that needs the whole repository — so the schema and the split
+cannot drift apart. The job reports its verdict as `passed` and the number of findings as
+`findings`. `mirror-fork` opens a
 repository-owned replacement PR when a fork needs repair or has a conflict. `repair`
 collects exact-head failed-check evidence into `diagnostics/`, runs Claude with
 `Read,Glob,Grep,Edit,Write` and no execution tools, and — only when the branch is still at
@@ -225,8 +231,16 @@ final `PR automation / gate` check run for the exact head and, on success, dispa
 `merge-train.yml`. When the primary review returned no verdict and the fallback ran and
 found nothing blocking, the gate still succeeds but titles the check run
 `PR automation: gate (local fallback)` so the weaker signal is never mistaken for the
-primary review's; when neither produced a usable verdict, it titles the check run
-`PR automation: review incomplete` for an operator to resolve.
+primary review's. When the fallback ran and declined, the gate tells two cases apart by the
+fallback's `findings` count: with at least one finding it titles the check run
+`PR automation: local fallback found a blocking defect` and points at the fallback job's
+log and archived verdict — a lead to verify, not a ruling, since that reviewer saw only a
+possibly truncated diff; with none, it titles it
+`PR automation: local fallback could not complete the review`, which means the diff was too
+large to judge rather than that anything is wrong with it. Before `findings` was declared as
+an output of `review-fallback`, the gate always read an empty count, so every decline was
+reported the second way. When neither lane produced a usable verdict, the gate titles the
+check run `PR automation: review incomplete` for an operator to resolve.
 
 Every `[pr_automation].scan_workflows` entry names a `workflow_run` this aggregation
 waits on, so each one must be a workflow that runs on `pull_request` or

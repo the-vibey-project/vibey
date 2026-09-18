@@ -297,6 +297,10 @@ jobs:
 
           plugins: |
 
+          # The review schema is rendered, not written here: `vibey-gh install` fills the
+          # `--json-schema` placeholder below from `ReviewContract.json_schema()` in
+          # vibey_gh/review_contract.py, the same table that splits the review into the half
+          # a diff can carry and the half it cannot -- so the two cannot drift apart.
           claude_args: |
             --model claude-sonnet-5
             --max-turns 100
@@ -499,6 +503,10 @@ jobs:
           fi
           vibey-gh pr-automation record-review --pr "$PR" --input "$payload"
           echo "passed=$(jq -r .pass <<<"$payload")" >> "$GITHUB_OUTPUT"
+          # Declared as a job output long before anything wrote it, so it was always empty.
+          # Counted the same way the local fallback counts its own, so the two lanes'
+          # verdicts can be told apart on the same terms.
+          echo "findings=$(jq -r '(.findings // []) | length' <<<"$payload")" >> "$GITHUB_OUTPUT"
       - name: Say why the model call failed
         # The action reports only "did not return structured_output", which names the
         # symptom and not the cause, and the gate then tells an operator to read a log
@@ -1208,6 +1216,10 @@ jobs:
       contents: read
     outputs:
       passed: ${{ steps.result.outputs.passed }}
+      # The gate tells "found something" from "could not see enough to say" by this count.
+      # The step below always wrote it; until it was declared here, the gate read an empty
+      # string, so every local decline was reported as "could not complete the review".
+      findings: ${{ steps.result.outputs.findings }}
     steps:
       - name: Check out trusted automation
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

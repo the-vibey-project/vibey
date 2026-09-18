@@ -33,6 +33,22 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 ### Bug Fixes
 
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+### Features
+
+* **gh:** the exact-head review's `--json-schema` is rendered from
+  `ReviewContract.json_schema()` instead of hand-written in `pr-automation.yml`, so the
+  schema the paid reviewer answers and the diff-groundable / wider-context split the local
+  lane uses are one table. The rendered schema is byte-identical to the literal it replaces;
+  this is groundwork for putting the sovereign lane first on the half it can carry (#133,
+  slice 1 of 3)
+
+### Bug Fixes
+
+* **gh:** the PR automation gate can now say "local fallback found a blocking defect". The
+  `review-fallback` job counted its findings but never declared the count as a job output,
+  so the gate always read an empty string and reported every local decline as "could not
+  complete the review", pointing away from a finding that sat in the job log. The paid
+  review job's `findings` output, declared but never written, is now written too (#133)
 
 ## [0.8.0] (2026-09-16)
 
