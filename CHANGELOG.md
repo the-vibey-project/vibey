@@ -30,9 +30,35 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Features
+
+* **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
+  pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
+  ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
+  that left it, ordered by `seq`, the wall-clock time between them, and what the visit spent
+  by the budget brake's own rule, now published in the domain as `LedgerSpendRule`. Visits
+  roll up per `(cycle, phase)`, because a phase can be visited twice in one cycle. The
+  projection predicts nothing, and it never passes a guess off as a measurement. An open
+  visit has no duration. A visit whose recorded clocks run backwards is clamped to zero and
+  flagged `clock_skewed`. A visit whose entry the range never saw is flagged too. Only a
+  visit that is none of these counts as `measured`. Spend that no visit can own is reported
+  as `unattributed` instead of being dropped. There is no turn count: engine translation
+  writes more than one `TurnCompleted` per real turn, so the projection reports
+  `turn_completed_events` with a caveat beside it
 ### Bug Fixes
 
 * **paper:** `docs/paper.md` is now the family's one paper. It absorbs the theses of the runner, `vibey-gh`, `vibey-skills` and `vibey-bootstrap` papers (checked against the code, which had drifted from several of them) and drops the "companion paper" framing. A new section, *Production rate and governance*, states the measured regularity behind #192 — on one machine, successful throughput stayed between 0.99 and 2.00 generations per minute while offered concurrency rose sixteen-fold — as a band, not a constant or a law, with its modulators, the zero-shortfall time-to-completion it predicts, and what would falsify it. The 61-generation, `1.4 ± 0.25`/min figures it replaces matched nothing in the tracked stress record. `scripts/paper_evidence.py` recomputes every number from the record and git history, and `tests/meta/test_paper_renders.py` guards the renderer's line-at-a-time rule, which had printed three of the old paper's formulas as literal TeX ([#192](https://github.com/the-vibey-project/vibey/issues/192), [#155](https://github.com/the-vibey-project/vibey/issues/155))
+* **gh:** a mention on a pull request can now reach the "act" path at all. `vibey-gh
+  conversation` decided pull-request-ness from `isPullRequest`, a field `gh issue view` does
+  not serve (it rejects it), so every thread read as an issue and a trusted request was
+  never allowed to change a file. It is now read from the thread's `url` (`.../pull/N`), in
+  one place, `ConversationThread.is_pull_request` (#145)
+* **gh:** a mention in an inline pull-request review comment is the comment evaluated. Review
+  comments are not in `gh issue view`'s thread, so the command silently fell back to the
+  newest issue-level comment and answered that instead. The ID is now resolved through the
+  pull request review API and checked against the pull request; an ID that names nothing
+  fails the command with a clear message rather than answering a different comment. A review
+  comment's briefing also carries the file, line and diff hunk it was written on (#145)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 
 ## [0.8.0] (2026-09-16)
