@@ -207,6 +207,15 @@ per-engine "turns" figure is the selection count, not turns);
   for the repair round to close. Circuits and backoffs clear on their own;
   an open circuit past its reset deadline half-opens automatically at the
   next selection and closes itself on the first success.
+- **A `job.heartbeat_failed` warning** — a lease heartbeat could not reach
+  Postgres (a pool timeout, a failover). The worker keeps running and
+  retries at the next beat; one line is a blip, a run of them means the
+  database is unreachable and the lease will lapse.
+- **A `job.lease_lost` or `job.<ack|nack|grant|park|defer>_rejected`
+  warning** — this worker's lease on the job expired (the handler outlived
+  it, or heartbeats kept failing) and the row was reaped or claimed by
+  another worker. The worker stays up, but the outcome it just produced was
+  not recorded; the job runs again under whoever holds it now.
 - **A `verify_repair_exhausted` / `integrate_repair_exhausted` gate** —
   the item burned its bounded repair rounds. Grant more with
   `vibey answer <gate-id> --raw '{"max_rounds": 6}'` (the prompt suggests

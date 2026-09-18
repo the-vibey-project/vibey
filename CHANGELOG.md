@@ -30,6 +30,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Bug Fixes
+
+* **worker:** a heartbeat that fails no longer throws away finished work or kills the worker. `_heartbeat_forever` caught only `CancelledError`, so a pool timeout or a Postgres failover ended the task with the exception stored; `run_once` re-raised it from its `finally`, `_settle` never ran — a session that had succeeded was never acked, its lease expired and another worker paid to redo it — and the exception took the worker process down with every parallel drive loop in it. A beat that raises is now said as `job.heartbeat_failed` at warning and retried at the next interval; a beat the queue refuses is said once as `job.lease_lost` and the loop stops beating. The per-kind lease extension right after the claim is guarded the same way and carries on at the default lease. The settle writes stop discarding their answers too: an `ack`, `nack`, `grant_attempts` or `park` refused by the lease guard is said at warning as `job.ack_rejected`, `job.nack_rejected`, `job.grant_rejected` or `job.park_rejected`, the way `job.defer_rejected` already was, and a refused grant skips the nack that would otherwise have failed the job outright. `WorkerLoop` gains its declared seam, `application.interfaces.WorkerLoopInterface` (ADR-0016) ([#211](https://github.com/the-vibey-project/vibey/issues/211))
+
 ## [0.8.0] (2026-09-16)
 
 ### Features
