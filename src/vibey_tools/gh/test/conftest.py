@@ -14,7 +14,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-
 import pytest
 
 # Variables Actions sets that this tool reads. Cleared for every test; a test that wants
@@ -155,4 +154,3 @@ raise SystemExit(entry.get("code", 0))
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
     monkeypatch.setenv("GH_REPO", "o/r")
     return bin_dir
-
