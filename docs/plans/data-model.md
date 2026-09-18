@@ -426,6 +426,14 @@ CREATE INDEX job_dep_reverse ON job_dependency (depends_on_job_id);
 existing row, so a handler that crashes after enqueueing but before settling its own
 job cannot create duplicate work when the job is replayed.
 
+A handler that enqueues several jobs as one unit uses `enqueue_batch`: the same
+per-row statement for every request, all inside one transaction, so a crash part-way
+through commits none of them. A request may name its dependencies by idempotency key
+(`depends_on_keys`) as well as by job id; a key is resolved inside the transaction,
+against the batch's earlier rows first and then `job`, and one that names no job
+raises and rolls the batch back rather than enqueueing a job with a dependency missing.
+`build.decompose` fans its whole plan out this way (phase-protocols §2.1).
+
 `awaiting_capacity` and `cancelled` are defined in the enum, but no repository
 query sets them today: a capacity rejection is a `defer` back to `ready` with an
 explicit `run_after` (§3.4).

@@ -32,6 +32,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **build:** `build.decompose` can no longer enqueue part of a plan. The fan-out used to enqueue items one transaction at a time and only noticed a forward dependency, or a cycle, on reaching it, with every earlier item already committed; a retry then asked the producer again and could orphan or duplicate them. The whole plan is now judged before anything is enqueued (`DecompositionPlanner`, which also refuses dependency cycles and names each one), a sound plan is put into dependency order instead of being refused for its listing order, and the fan-out is one transaction through the new `JobRepository.enqueue_batch`, whose requests name in-batch dependencies by idempotency key (`EnqueueRequest.depends_on_keys`). A replay after a crash mid-batch writes exactly one job per item; a replay after the commit returns the committed fan-out without asking the producer for a second plan (#265)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 
 ## [0.8.0] (2026-09-16)

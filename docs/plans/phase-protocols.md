@@ -402,11 +402,40 @@ Two hard rules the decomposition must satisfy, checked structurally
    queue does not enforce that, so other dependency-free items can run
    beside it.
 
-Each item becomes a `build.implement` job, enqueued in topological order with
-`depends_on` mirroring the item's dependencies, so the queue enforces ordering
-without the handlers knowing about each other. Each item's branch is based on
-the cycle's integration branch, so later items stack on already-integrated
-code.
+The graph itself must be sound too: unique item ids, no dependency on an item
+the plan does not contain, and no dependency cycle (a self-dependency
+included). All of it is judged over the **whole** plan before anything is
+enqueued (`DecompositionPlanner.violations`, which `validate_decomposition`
+fronts for the producers), and a plan that breaks any rule fails the job as
+`WORK` with every violation named and nothing enqueued.
+
+The order the producer lists its items in is not a rule. A sound plan is put
+into dependency order by `DecompositionPlanner.in_dependency_order`: stable, so
+of the items ready together the one listed first goes first, an
+already-ordered plan comes back unchanged, and the walking skeleton stays
+first. Refusing a plan only because a dependent was listed before its
+dependency would throw away a sound answer and spend a job attempt on it.
+
+Each item becomes a `build.implement` job with `depends_on` mirroring the
+item's dependencies, so the queue enforces ordering without the handlers
+knowing about each other. The fan-out is **all-or-nothing**:
+`JobRepository.enqueue_batch` writes every item in one transaction, naming each
+dependency by its idempotency key (`EnqueueRequest.depends_on_keys`, resolved
+inside the transaction) because the dependency's job id does not exist until
+the batch commits. Each key is `idempotency_key(project, cycle,
+"build.implement", item_id)`, so:
+
+- a worker that dies part-way through the fan-out commits nothing, and the
+  replay writes exactly one job per item;
+- a replay after the commit (the worker died before its ack) finds the cycle's
+  fan-out already there and returns it without asking the producer again. The
+  producers are models; a second answer enqueued beside the first would
+  orphan half of each. A wind-down follow-up or a verify repair is a
+  `build.implement` of the same cycle too, but its key is derived from a
+  different subject, so it is never mistaken for the fan-out.
+
+Each item's branch is based on the cycle's integration branch, so later items
+stack on already-integrated code.
 
 ### 2.2 Parallel implementation
 

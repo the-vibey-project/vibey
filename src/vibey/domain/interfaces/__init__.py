@@ -5,5 +5,14 @@ from vibey.domain.interfaces.correlation_interface import (
     CorrelationIdInterface,
     DeliveryCorrelationInterface,
 )
+from vibey.domain.interfaces.plan_interface import (
+    DecompositionPlannerInterface,
+    PlannedItemInterface,
+)
 
-__all__ = ["CorrelationIdInterface", "DeliveryCorrelationInterface"]
+__all__ = [
+    "CorrelationIdInterface",
+    "DecompositionPlannerInterface",
+    "DeliveryCorrelationInterface",
+    "PlannedItemInterface",
+]

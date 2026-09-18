@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Protocol, runtime_checkable
@@ -81,6 +81,25 @@ class JobRepository(Protocol):
         """Idempotent: a second enqueue with the same (project_id,
         idempotency_key) returns the existing row rather than creating a
         duplicate."""
+        ...
+
+    async def enqueue_batch(self, requests: Sequence[EnqueueRequest]) -> tuple[JobRecord, ...]:
+        """All-or-nothing `enqueue`: every request commits in ONE transaction,
+        or none does, so a crash part-way through leaves nothing behind.
+
+        Each request is idempotent exactly as `enqueue` is, so replaying a
+        batch returns the rows it already made rather than duplicating them.
+        Requests are processed in order; a request's `depends_on_keys` may
+        name an earlier request of the batch or a job already enqueued, and a
+        key that names neither raises LookupError and rolls the batch back.
+        Returns one record per request, in request order."""
+        ...
+
+    async def list_for_cycle(
+        self, project_id: UUID, *, cycle: int, kind: str
+    ) -> tuple[JobRecord, ...]:
+        """Every job of `kind` in this project's `cycle`, whatever its state,
+        oldest first."""
         ...
 
     async def claim(self, project_id: UUID, *, owner: str, lease: timedelta) -> JobRecord | None:
