@@ -1,5 +1,13 @@
 # Publishing
 
+> **Superseded — this describes a process that no longer runs.** This package was
+> released from its own repository, under its own name on PyPI. Since vibey ADR-0021
+> the source lives in the vibey monorepo, and since vibey ADR-0037 it is not published
+> separately at all: the whole tree ships as the single `vibey` distribution, released
+> by the monorepo's own `release.yml`. The workflows named below are inert here. This
+> page is kept because it records a real past process and why each gate existed — for
+> the live one, read the monorepo's `CONTRIBUTING.md` and its `vibey-releasing` skill.
+
 `codexloop` ships via [Trusted Publishing](https://docs.pypi.org/trusted-publishers/)
 (OIDC). No long-lived PyPI API tokens are stored in GitHub.
 

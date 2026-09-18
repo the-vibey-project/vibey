@@ -15,7 +15,7 @@ Key invariants:
 - Counter ``pdf.sanitized.actions_stripped`` bumps only when at least
   one entry was actually removed.
 
-Requires ``pip install vibey-bootstrap[pdf-safety]`` (pulls ``pypdf``).
+Requires ``pip install 'vibey[bootstrap-all]'`` (pulls ``pypdf``).
 """
 
 from __future__ import annotations

@@ -18,9 +18,11 @@ Every project-specific decision lives here so the logic beside it can stay gener
     release     = "main"
 
     [install]
-    workflows = []          # omit for all of them; [] for hooks and the CLI only
-    pin_version = false     # pin every rendered `pip install vibey-gh` to the exact
-                            # version that rendered it, instead of the latest release
+    workflows = []            # omit for all of them; [] for hooks and the CLI only
+    fallback_package = "vibey"  # the distribution a rendered workflow or hook installs
+                              # this tooling from when the repository has no copy of it
+    pin_version = false       # pin that rendered `pip install vibey` to the exact
+                              # version that rendered it, instead of the latest release
 
     [issue_automation]
     enabled        = true               # propose a solution branch for a published issue
@@ -1246,8 +1248,18 @@ class GhConfig:
     # Paths marked `merge=union` in `.gitattributes`. Appended to whatever the
     # repository already has there; an existing `.gitattributes` is never rewritten.
     union_merge_paths: tuple[str, ...] = DEFAULT_UNION_MERGE_PATHS
-    # Pin every rendered managed workflow's `pip install vibey-gh` to the exact version
-    # that rendered it. False keeps the historical floating install, so upgrading this
+    # The distribution a rendered workflow or git hook installs this tooling from when
+    # the repository has no copy of its own. `vibey_gh` is a PACKAGE inside the `vibey`
+    # distribution and not a project of its own (ADR-0037), so the default names the
+    # distribution that carries it. A key rather than a constant (sub-doctrine 12.c): a
+    # fork, a mirror, or an internal index publishing this tooling under another name has
+    # nowhere else to say so, and the alternative is an adopter editing rendered output
+    # that `installed()` then reports as drift. One key, because the workflow fallback and
+    # the pre-push hook's recovery advice must never name different packages -- they did,
+    # and the hook kept telling people to install a distribution that no longer existed.
+    fallback_package: str = "vibey"
+    # Pin every rendered `pip install <fallback_package>` to the exact version that
+    # rendered it. False keeps the historical floating install, so upgrading this
     # package changes nothing in an adopting repository until this is turned on.
     pin_version: bool = False
     # Where THIS repository keeps its own copy of vibey-gh, repository-root-relative.
@@ -1288,6 +1300,28 @@ class GhConfig:
     @property
     def trailer_key(self) -> str:
         return self.trailer.split(":", 1)[0].strip() or DEFAULT_TRAILER_KEY
+
+
+# PEP 508 names a distribution: letters, digits, and `-`/`_`/`.` between them.
+_DISTRIBUTION_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$")
+
+
+def _fallback_package(raw: object) -> str:
+    """A distribution name, validated because it is rendered into a shell command.
+
+    This string lands inside `python -m pip install --quiet <value>` in a generated
+    workflow and inside the pre-push hook's recovery advice. A PEP 508 name cannot carry
+    a space, a quote, a semicolon or a slash, so requiring one keeps the rendered line a
+    single argument by construction rather than by escaping it afterwards. An extras
+    suffix is refused for the same reason `pin_version` appends its own `==`: this is the
+    distribution, and the renderers decorate it.
+    """
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError("install.fallback_package must be a non-empty string")
+    value = raw.strip()
+    if not _DISTRIBUTION_RE.match(value):
+        raise ValueError(f"install.fallback_package must be a PEP 508 distribution name: {value!r}")
+    return value
 
 
 def _self_source(raw: object) -> str:
@@ -1452,6 +1486,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         code_paths=tuple(ver.get("code_paths", ("src/",))),
         managed_workflows=(tuple(inst["workflows"]) if "workflows" in inst else None),
         union_merge_paths=tuple(inst.get("union_merge_paths", DEFAULT_UNION_MERGE_PATHS)),
+        fallback_package=_fallback_package(inst.get("fallback_package", "vibey")),
         pin_version=inst.get("pin_version", False),
         self_source=_self_source(inst.get("self_source", ".")),
         integration_branch=br.get("integration", "develop"),

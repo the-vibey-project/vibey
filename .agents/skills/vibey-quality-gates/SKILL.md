@@ -149,8 +149,11 @@ The tenants under `src/vibey_runners/` and `src/vibey_tools/` keep the gates the
 arrived with (ADR-0021, ADR-0022). The root `mypy`, `bandit` and coverage gates
 cover `src/vibey` only. Run a tenant's checks from its own directory, with plain
 pip and a Python at its floor — the workspace lock resolves at 3.12, so a uv
-environment cannot exercise the 3.10 and 3.11 floors. These are the `tools` and
-`tools-lint` commands, verbatim:
+environment cannot exercise the 3.10 and 3.11 floors. Plain pip knows nothing
+about `[tool.uv.sources] workspace = true`, so a tenant that needs a sibling
+installs that sibling **from the tree first** -- no family package may be
+requested from an index, because none of them is published any more (ADR-0037).
+These are the `tools` and `tools-lint` commands, verbatim:
 
 ```bash
 # vibey-gh (CI: Python 3.11, 3.12, 3.13; 100% branch floor in its own addopts)
@@ -167,9 +170,9 @@ pip install -e .
 python3 tools/validate_manifests.py && python3 tools/check_links.py \
   && PYTHONPATH=src python3 -m unittest discover -s tests
 
-# vibey-bootstrap (CI: Python 3.11, 3.12)
+# vibey-bootstrap (CI: Python 3.11, 3.12). It imports vibey_gh, so install that first.
 cd src/vibey_tools/bootstrap
-pip install -e ".[test,all]"
+pip install -e ../gh && pip install -e ".[test,all]"
 pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term
 
 # claudeloop (CI: Python 3.10, 3.11, 3.12, 3.13 -- the only 3.10 floor in the tree)

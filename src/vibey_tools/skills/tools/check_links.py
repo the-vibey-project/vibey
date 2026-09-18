@@ -41,7 +41,13 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SLUG = "adammatthewsteinberger/vibey-skills"
+# The canonical repository this tree actually lives in. It was
+# `adammatthewsteinberger/vibey-skills` while that was a repository of its own; the
+# absorption (vibey ADR-0021) retired it and vibey ADR-0037 retired the distribution
+# too, so both halves of the old slug now name something that does not exist. This
+# value is what a self-referencing absolute link is checked against and what the
+# failure messages recommend, so a stale one recommends a 404.
+SLUG = "the-vibey-project/vibey"
 
 # The pre-rename coordinates. Attribution lives in NOTICE.md; nothing else may link here.
 FORMER_ORG = "TheViziusGroup"

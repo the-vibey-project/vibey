@@ -1,6 +1,6 @@
 ---
 name: vibey-bootstrap-core
-description: "Use when installing or consuming the vibey-bootstrap Python library (v4.0.0) and its v1 core. Covers pip install and the optional-extras matrix (fastapi, servicebus, sumologic, logging-all, db, email, http, documentdb, governance, aks, vibey-bootstrap scaffold, all, etc.), the 4-phase bootstrap that breaks the logging↔configuration circular dependency, initialize_application / get_bootstrap_logger, configuration precedence and the local-override rule, EnhancedConfigRepository, SecretsRepository, Key Vault references, DI interfaces, RepositoryError/ConfigurationError/KeyVaultError, and v1 environment variables (APPLICATIONINSIGHTS_CONNECTION_STRING, AZURE_APP_CONFIGURATION_CONNECTION_STRING, AZURE_KEY_VAULT_URL, LOG_LEVEL). Triggers on vibey-bootstrap, vibey_bootstrap, Azure Functions/container app startup config, App Configuration + Key Vault loading, load_to_environ, or pip install vibey-bootstrap extras."
+description: "Use when installing or consuming the vibey-bootstrap Python library (v4.0.0) and its v1 core. Covers pip install and the optional-extras matrix (fastapi, servicebus, sumologic, logging-all, db, email, http, documentdb, governance, aks, vibey-bootstrap scaffold, all, etc.), the 4-phase bootstrap that breaks the logging↔configuration circular dependency, initialize_application / get_bootstrap_logger, configuration precedence and the local-override rule, EnhancedConfigRepository, SecretsRepository, Key Vault references, DI interfaces, RepositoryError/ConfigurationError/KeyVaultError, and v1 environment variables (APPLICATIONINSIGHTS_CONNECTION_STRING, AZURE_APP_CONFIGURATION_CONNECTION_STRING, AZURE_KEY_VAULT_URL, LOG_LEVEL). Triggers on vibey-bootstrap, vibey_bootstrap, Azure Functions/container app startup config, App Configuration + Key Vault loading, load_to_environ, or installing the bootstrap extras from the vibey distribution."
 ---
 
 > **vibey-bootstrap** is the library formerly published as `azure-bootstrap` (renamed in 4.0.0: package `vibey-bootstrap`, import `vibey_bootstrap`, CLI `vibey-bootstrap`; `azbootstrap` remains as a deprecated alias). Feature-tier labels below (v2 primitives, v3 modules) are historical and unchanged.
@@ -17,23 +17,29 @@ v2.1 logging-transport layer (console / App Insights / Sumo Logic), and v4.0.0 a
 seven more logging transports plus DB/outbox, email, hardened HTTP, AKS runtime,
 governance, and an `vibey-bootstrap` scaffold CLI — all opt-in behind pip extras.
 
-> **`vibey-bootstrap` is a pure Python package.** It is published to PyPI and has
+> **`vibey-bootstrap` is a pure Python package.** It ships inside the `vibey`
+> distribution on PyPI (vibey ADR-0037) and has
 > **no JavaScript/TypeScript distribution** — you cannot `npm install` or `import` it
 > from a Next.js app. (For TS, see the `vibey-bootstrap-typescript` skill: HTTP client
 > integration with a Python backend, and porting the patterns to TypeScript.)
 
-**Compatibility:** Python **≥ 3.11**. Distribution: `pip install vibey-bootstrap`
-(PyPI, MIT). v4.0.0 is **additive** — every v1/v2 import path, symbol, signature, and
+**Compatibility:** the source supports Python **≥ 3.11**; the distribution that ships it
+requires **≥ 3.12**. Distribution: `pip install vibey` (PyPI, MIT) — there is no separate
+`vibey-bootstrap` project (vibey ADR-0037). v4.0.0 is **additive** — every v1/v2 import path, symbol, signature, and
 default is unchanged; opt into new extras and env flags. See `MIGRATING-TO-V3.md`.
 
 ## 1. Installation & extras
 
 ```bash
-pip install vibey-bootstrap                       # core only
-pip install 'vibey-bootstrap[fastapi]'            # one extra
-pip install 'vibey-bootstrap[fastapi,servicebus,sumologic]'   # several
-pip install 'vibey-bootstrap[all]'                # the aggregate extra
+pip install vibey                     # the whole family; vibey_bootstrap importable
+pip install 'vibey[azure]'            # App Configuration + Key Vault + App Insights
+pip install 'vibey[bootstrap-all]'    # every optional dependency any extra below needs
 ```
+
+**Extra names.** The matrix below lists the extras as `vibey-bootstrap`'s own
+`pyproject.toml` declares them, and they still select what each feature needs when the
+package is installed from the tree. On the `vibey` distribution there is no per-feature
+successor spelling: the replacements are the two aggregates above (vibey ADR-0037).
 
 ### Core dependencies (always installed)
 

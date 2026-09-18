@@ -14,9 +14,11 @@ Each of the four session runners — `claudeloop`, `codexloop`,
 its own image, its own Helm chart, its own multi-arch CI publish, its own
 docs. Two consumers are served by the same artifacts:
 
-1. **Standalone.** Each runner is a separately published tool with its own
-   users. `helm install claudeloop` should run an autonomous session in a
-   cluster without vibey anywhere in the picture.
+1. **Standalone.** Each runner is a separately *usable* tool with its own users —
+   though since ADR-0037 it is not a separately *published* one, so a standalone
+   image installs `vibey` and runs the runner's own console script.
+   `helm install claudeloop` should run an autonomous session in a cluster without
+   the vibey conductor anywhere in the picture.
 2. **The `vibey-engines` image.** Runbook 05's design calls for a second
    image layering the runners on top of the vibey base. That image
    consumes what this workstream produces instead of reinventing four
@@ -33,8 +35,8 @@ docs. Two consumers are served by the same artifacts:
 | `qwenloop` | `src/vibey_runners/qwen` | 0.2.0 | >=3.12 | `qwenloop` | none (local llama.cpp / vLLM model) |
 
 - All five are workspace members of this repository, share vibey's onion
-  layout (`domain/application/infrastructure/cli`), and still publish to
-  PyPI as their own projects.
+  layout (`domain/application/infrastructure/cli`), and ship inside the one
+  `vibey` distribution rather than publishing as their own projects (ADR-0037).
 - **Only qwenloop has a `deploy/` directory**
   (`src/vibey_runners/qwen/deploy/docker/Dockerfile`): two stages, but the
   runtime layer keeps `pip`, has no fixed uid, and uses the default

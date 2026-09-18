@@ -2,11 +2,11 @@
 """Compatibility alias for the standalone `vibey-gh` package.
 
 This subpackage shipped the GitHub automation in 4.1.0. In 4.2.0 the code moved to
-[vibey-gh](https://pypi.org/project/vibey-gh/), which has no dependencies, because
-release tooling runs in every CI job of every repository that adopts it — and reaching it
-through this package meant installing the Azure SDK and OpenTelemetry to run a stdlib CLI.
-
-`vibey-gh` is a hard dependency here, so every import that worked before still works:
+`vibey_gh`, which has no dependencies, because release tooling runs in every CI job of
+every repository that adopts it — and reaching it through this package meant installing
+the Azure SDK and OpenTelemetry to run a stdlib CLI. Since ADR-0037 both ship inside the
+one [vibey](https://pypi.org/project/vibey/) distribution rather than as two, so the
+import below never crosses a package boundary at all:
 
     from vibey_bootstrap.gh import merge_train          # the module
     from vibey_bootstrap.gh.config import GhConfig      # and its submodules

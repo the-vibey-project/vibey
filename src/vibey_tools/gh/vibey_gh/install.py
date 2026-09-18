@@ -15,10 +15,11 @@ import shlex
 import shutil
 import stat
 import subprocess
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from vibey_gh import __version__, dependabot
+from vibey_gh import dependabot
 from vibey_gh.config import GhConfig, load_config
 
 TEMPLATES = Path(__file__).parent / "templates" / "githooks"
@@ -31,6 +32,35 @@ HOOKS = ("commit-msg", "pre-push")
 HOOKS_DIR = ".githooks"
 GITATTRIBUTES = ".gitattributes"
 UNION_MARKER = "# vibey-gh: append-only files merge instead of conflicting"
+# What a repository without its own copy of the tooling installs it from. `vibey_gh` is a
+# PACKAGE inside the `vibey` distribution, never a project of its own (ADR-0037), so the
+# fallback names the distribution and gets `vibey-gh` on PATH out of it. The version that
+# may be pinned to it is that distribution's -- never `vibey_gh.__version__`, which
+# numbers the package and names no release any index can serve.
+#
+# The name is `[install] fallback_package` and these are only its default, spelled once so
+# an un-rendered template and an un-configured repository agree. Both the workflow
+# fallback and the pre-push hook's recovery advice render from that one key: they used to
+# be two literals in two files, and the hook went on naming a retired distribution for as
+# long as nobody happened to read it.
+FALLBACK_DISTRIBUTION = "vibey"
+FALLBACK_PLACEHOLDER = "__VIBEY_GH_FALLBACK_PACKAGE__"
+FALLBACK_INSTALL = f"python -m pip install --quiet {FALLBACK_DISTRIBUTION}\n"
+
+
+def _fallback_install(cfg: GhConfig) -> str:
+    """The floating fallback install line for `cfg`'s distribution."""
+    return f"python -m pip install --quiet {cfg.fallback_package}\n"
+
+
+def render_hook(source: Path, cfg: GhConfig) -> str:
+    """A git hook template with this repository's values substituted in.
+
+    Hooks are otherwise copied verbatim, and `installed` compares them byte-for-byte
+    against this function's output rather than against the raw template -- so a rendered
+    hook is still exactly reproducible, which is the property the drift check needs.
+    """
+    return source.read_text(encoding="utf-8").replace(FALLBACK_PLACEHOLDER, cfg.fallback_package)
 
 
 @dataclass
@@ -122,6 +152,69 @@ def _strip_trailing_space(text: str) -> str:
     Done here rather than per placeholder so no future one can reintroduce it.
     """
     return "\n".join(line.rstrip() for line in text.split("\n"))
+
+
+def _fallback_pin(cfg: GhConfig) -> str | None:
+    """The release `[install] pin_version` pins the fallback install to, or None.
+
+    The promise the key makes is "install the exact release that rendered this file",
+    and it is only expressible where that release is knowable. It used to be
+    `vibey_gh.__version__`, because the tooling was its own distribution. It is not one
+    any more (ADR-0037): `vibey_gh` ships inside `vibey`, and nothing here knows which
+    `vibey` release carries which `vibey_gh` -- so a pin built from `__version__` would
+    render `vibey==1.73.0`, a requirement no index can resolve, failing inside somebody
+    else's job rather than here.
+
+    A repository that IS the fallback distribution does know, because it declares the
+    release it publishes. Name and version are read from the same `[project]` table in
+    one parse, deliberately: a version taken from anywhere else could belong to a
+    different distribution than the name just verified. Everywhere else -- every adopter
+    -- the fallback stays floating, which always resolves.
+    """
+    if not cfg.pin_version:
+        return None
+    try:
+        data = tomllib.loads((cfg.root / "pyproject.toml").read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    project = data.get("project")
+    if not isinstance(project, dict) or project.get("name") != cfg.fallback_package:
+        return None
+    version = project.get("version")
+    return str(version) if isinstance(version, str) and version else None
+
+
+def rerender_version_pinned(cfg: GhConfig) -> list[str]:
+    """Rewrite every managed workflow whose rendered text the version just changed.
+
+    `[install] pin_version` renders `<fallback_package>==<this repository's version>` into
+    each managed workflow, so the deployed copies are a FUNCTION of `[project] version`.
+    Bump the version without re-rendering and every one of them pins the release before
+    the one being cut -- and the drift check that CI runs against the deployed copies then
+    fails on the release commit itself, blocking the promotion that produced it.
+
+    That is the same failure the `uv lock` re-run in `versioning.apply_version` exists to
+    prevent, so it is fixed the same way and in the same place: atomically with the bump,
+    not as a step in a runbook somebody has to remember. Returns the repository-relative
+    paths actually rewritten, so a bump that changes nothing reports nothing.
+
+    A repository that has not turned the pin on renders nothing from the version, and this
+    returns an empty list without touching a file.
+    """
+    if _fallback_pin(cfg) is None:
+        return []
+    rewritten: list[str] = []
+    wf_target = cfg.root / WORKFLOWS_DIR
+    for source in _managed_workflows(cfg):
+        dest = wf_target / source.name
+        if not dest.is_file():
+            continue
+        wanted = render_workflow(source, cfg)
+        if dest.read_text(encoding="utf-8") == wanted:
+            continue
+        dest.write_text(wanted, encoding="utf-8")
+        rewritten.append(dest.relative_to(cfg.root).as_posix())
+    return rewritten
 
 
 def render_workflow(source: Path, cfg: GhConfig) -> str:
@@ -326,13 +419,20 @@ def render_workflow(source: Path, cfg: GhConfig) -> str:
         wanted = wanted.replace(marker, "true" if enabled else "false")
     wanted = wanted.replace("__VIBEY_GH_RELEASE_TAG_PREFIX__", cfg.github_release.tag_prefix)
     wanted = wanted.replace("__VIBEY_GH_SELF_SOURCE__", cfg.self_source)
-    if cfg.pin_version:
+    # The workflow templates spell the DEFAULT distribution literally rather than
+    # carrying a placeholder, so the shipped YAML stays readable and greppable and the
+    # tests that assert on it keep asserting on something. Rewriting the default line to
+    # the configured one is a no-op for every repository that agrees with the default,
+    # and it must happen before the pin below, which decorates the rendered name.
+    wanted = wanted.replace(FALLBACK_INSTALL, _fallback_install(cfg))
+    pin = _fallback_pin(cfg)
+    if pin is not None:
         # Only the floating fallback install is pinned. The self-hosting branch just
         # above it (`pip install --quiet -e .`) must keep installing from source: this
         # repository cannot pin itself to a published release that may not exist yet.
         wanted = wanted.replace(
-            "python -m pip install --quiet vibey-gh\n",
-            f'python -m pip install --quiet "vibey-gh=={__version__}"\n',
+            _fallback_install(cfg),
+            f'python -m pip install --quiet "{cfg.fallback_package}=={pin}"\n',
         )
     if source.name != "pr-automation.yml":
         return _strip_trailing_space(wanted)
@@ -427,7 +527,7 @@ def install(cfg: GhConfig | None = None, hooks_path: bool = True) -> list[Action
     for hook in HOOKS:
         source = TEMPLATES / hook
         dest = target / hook
-        wanted = source.read_text(encoding="utf-8")
+        wanted = render_hook(source, cfg)
 
         if dest.exists():
             existing = dest.read_text(encoding="utf-8")
@@ -522,7 +622,7 @@ def installed(cfg: GhConfig | None = None, local: bool = True) -> tuple[bool, li
         dest = target / hook
         if not dest.exists():
             problems.append(f"{HOOKS_DIR}/{hook} is missing")
-        elif dest.read_text(encoding="utf-8") != (TEMPLATES / hook).read_text(encoding="utf-8"):
+        elif dest.read_text(encoding="utf-8") != render_hook(TEMPLATES / hook, cfg):
             problems.append(f"{HOOKS_DIR}/{hook} is out of date")
 
     for source in _managed_workflows(cfg):

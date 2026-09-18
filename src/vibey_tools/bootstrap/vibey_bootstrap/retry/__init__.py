@@ -64,7 +64,7 @@ def build_retry(
         )
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
-            "build_retry requires the `retry` extra: pip install vibey-bootstrap[retry]"
+            "build_retry requires the retry dependencies: pip install 'vibey[bootstrap-all]'"
         ) from exc
 
     logger = logging.getLogger(f"vibey_bootstrap.retry.{operation}")

@@ -4,6 +4,13 @@
 
 **Owes:** a sub-doctrine (not yet proposed) — vibey drives its runners and never calls a provider API for build work (nearest ratified neighbour: 10.e, *the family first*).
 
+> The decision stands.
+> [ADR-0037](0037-one-distribution-one-version.md) supersedes one supporting
+> clause below: the runners no longer keep "its own PyPI project". They keep
+> their own gates and their own versions in the tree, and they ship inside the
+> `vibey` distribution. Nothing about the subprocess boundary changes — which is
+> the point of this record.
+
 ## Context
 
 Four autonomous session runners already existed when this was decided, and they are

@@ -10,7 +10,7 @@ nine real adoptions.
 ## The preflight
 
 ```bash
-pip install vibey-gh
+pip install vibey
 vibey-gh install     # hooks, managed workflows, pinned to this exact version
 vibey-gh check       # is the provenance intact?
 vibey-gh doctor      # will the automation actually work?

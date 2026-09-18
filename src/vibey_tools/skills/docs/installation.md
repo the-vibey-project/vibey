@@ -5,40 +5,45 @@
 The native route. Claude Code reads the marketplace manifest and manages plugins for you.
 
 ```bash
-# From the Git remote
-/plugin marketplace add the-vibey-project/vibey-skills
+# From the Git remote — one marketplace, the whole family
+/plugin marketplace add the-vibey-project/vibey
 
-# ...or from a local clone
-/plugin marketplace add /path/to/vibey-skills
+# ...or from a local clone of the monorepo
+/plugin marketplace add /path/to/vibey
 
 # Browse, then install what you want
 /plugin
-/plugin install security-principles@vibey-skills
+/plugin install security-principles@vibey
 ```
 
-## From PyPI
+## With the CLI
 
-The same skills ship as a Python package with **no runtime dependencies**, so `uvx` can run
-it without a resolution step. Useful when you want the skills in a harness other than
-Claude Code, or you would rather not clone.
+The same skills ship as a Python package with **no runtime dependencies of its own**.
+Useful when you want the skills in a harness other than Claude Code, or you would rather
+not clone. The `vibey-skills` command is one of the console scripts the `vibey`
+distribution installs — there is no separate `vibey-skills` package any more
+(vibey ADR-0037).
 
 ```bash
-# Run without installing
-uvx vibey-skills install --all
+# Install the family, then use the CLI
+uv tool install vibey          # or: pipx install vibey / pip install vibey
+vibey-skills install --all
 
-# ...or install the CLI persistently
-uv tool install vibey-skills
-pip install vibey-skills
+# ...or run it once without installing anything permanently
+uvx --from vibey vibey-skills install --all
 ```
 
-Requires Python 3.10 or newer.
+Requires Python 3.12 or newer, which is `vibey`'s floor. (This package's own source still
+supports 3.10+, and CI still tests it there, but 3.12 is the only floor that ships.)
 
-!!! note "Upgrading from vibe-engineering-skills"
-    The package was renamed to `vibey-skills` in 2.0.0. `pip uninstall vibe-engineering-skills`
-    (or `uv tool uninstall vibe-engineering-skills`), then install `vibey-skills` as above. The
-    `vibe-skills` command still works as a deprecated alias; `vibe-engineering-skills` (the long
-    command) was removed. If you added the marketplace under its old name, re-add it as
-    `adammatthewsteinberger/vibey-skills` and install plugins as `<plugin>@vibey-skills`.
+!!! note "Upgrading from vibe-engineering-skills or from the vibey-skills package"
+    The package was renamed to `vibey-skills` in 2.0.0 and folded into `vibey` in
+    vibey 1.0.0. Uninstall whichever you have — `pip uninstall vibe-engineering-skills`
+    or `pip uninstall vibey-skills` (or the matching `uv tool uninstall`) — then install
+    `vibey` as above. The `vibe-skills` command still works as a deprecated alias;
+    `vibe-engineering-skills` (the long command) was removed. If you added the marketplace
+    under an old name, re-add it as `the-vibey-project/vibey` and install plugins as
+    `<plugin>@vibey`.
 
 ## Where skills get installed
 

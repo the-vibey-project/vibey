@@ -17,7 +17,7 @@ Key invariants:
 - Every counter + alert in the path is best-effort — never breaks the
   scheduler tick.
 
-Requires ``pip install vibey-bootstrap[scheduler]`` only if you wire the
+Requires ``pip install 'vibey[bootstrap-all]'`` only if you wire the
 APScheduler driver; ``refresh_log_flags`` itself is stdlib-only.
 """
 

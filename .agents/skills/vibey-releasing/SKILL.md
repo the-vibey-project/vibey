@@ -9,13 +9,14 @@ allowed-tools: Read Bash
 `vibey-gh` owns the release (ADR-0028). There is no release-please step and no
 hand-run publish. The version is *derived*, not chosen: `vibey-gh version` reads
 what changed against `[version] content_paths` and `code_paths` in
-`.vibey-gh.toml` and answers minor, patch, or nothing. `vibey-gh promote` applies
-that answer. The changelog entry is written by hand.
+`.vibey-gh.toml` and answers major, minor, patch, or nothing. `vibey-gh promote`
+applies that answer. The changelog entry is written by hand.
 
 Every workflow on the release path installs the tree's own `vibey-gh` from the
 declared `[install] self_source = "src/vibey_tools/gh"`, and falls back to
-`vibey-gh==1.73.0` from PyPI only when that path does not hold a `vibey-gh`
-package. A change to `vibey-gh` therefore changes the release path on the next push.
+installing `vibey` from PyPI -- which carries `vibey-gh` (ADR-0037) -- only when
+that path does not hold the package. A change to `vibey-gh` therefore changes the
+release path on the next push.
 
 ## Where a release goes
 
@@ -33,7 +34,8 @@ version silently.
 **As of 2026-09-15 none of those packaging definitions exist yet.** The channels
 this repository publishes today are:
 
-- PyPI `vibey` (from `main`) and TestPyPI `vibey-dev` (from `develop`) — `release.yml`
+- PyPI `vibey` (from `main`) and TestPyPI `vibey-dev` (from `develop`) — `release.yml`.
+  One distribution carries the whole family; there is no second name (ADR-0037)
 - An OCI release bundle of the exact wheel and sdist at
   `ghcr.io/<owner>/<repo>/python` — `release-surfaces.yml`
 - The documentation site, book and paper — `release-surfaces.yml` (below)
@@ -50,9 +52,11 @@ library at all -- only a wrapper that fetches the CLI, which is a different
 promise and has to say so. See ADR-0019 for the grouping and the order.
 
 The workspace tenants (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`,
-`qwenloop`, `vibey-gh`, `vibey-skills`, `vibey-bootstrap`) still exist on PyPI
-under their own names, but their source now lives in this repository (ADR-0021)
-and the workflows below publish only `vibey`.
+`qwenloop`, `vibey-gh`, `vibey-skills`, `vibey-bootstrap`) are no longer separate
+PyPI distributions. Their source lives in this repository (ADR-0021) and they ship
+inside the `vibey` wheel (ADR-0037), so the workflows below publish `vibey` and
+that one distribution is the whole family. A tenant's own version in its
+`pyproject.toml` is an in-tree marker, not a release.
 
 ## Conventional Commits (enforced)
 
@@ -82,14 +86,20 @@ feat!: require Python 3.12+
 BREAKING CHANGE: Python 3.11 is no longer supported.
 ```
 
-**Why this matters:** commit messages are not parsed by the release
-automation. The bump is derived from *which paths changed*, not from commit
-types. Conventional Commits are still enforced for a legible history and
-because the provenance gate reads every commit in a range — which is why the
-automation's own release commit is `chore(release): x.y.z`.
+**Why this matters:** commit messages reach the version in exactly one way —
+a breaking marker — and nothing else about them is read. The minor/patch/nothing
+part of the answer is derived from *which paths changed*, never from commit types.
+Conventional Commits are still enforced for a legible history and because the
+provenance gate reads every commit in a range — which is why the automation's own
+release commit is `chore(release): x.y.z`.
 
-A breaking change is never derived: the derivation answers only minor, patch or
-nothing. A major bump is a deliberate edit (see "A deliberate bump").
+A breaking change **is** derived, and this is the one place commit text reaches
+the version: a `BREAKING CHANGE:` / `BREAKING-CHANGE:` footer, or a `!` before the
+colon in a subject, anywhere in the released range escalates the answer to
+**major**. `vibey-gh` reads that marker with the same parser it uses when it
+flattens a branch, so the commit it writes and the version it derives can never
+disagree. Nothing else about the message is read: the minor/patch/nothing part of
+the answer is still derived from *which paths changed*.
 
 ## How the version is derived
 
@@ -100,11 +110,25 @@ provenance header, and then:
 - any changed file under `[version] content_paths` → **minor**
 - otherwise, any changed file under `[version] code_paths` → **patch**
 - otherwise (docs, workflows, tooling only) → **nothing to release**
+- and then, only if one of the first two matched, a breaking marker anywhere in
+  the range escalates that answer to **major**
 
-This repository sets both to `["src/vibey/"]`, so in practice any change under
-`src/vibey/` is a minor bump and a change elsewhere (including the tenants under
-`src/vibey_runners/` and `src/vibey_tools/`) releases nothing. If the version on
-`HEAD` already differs from `origin/main`, the derivation leaves it alone.
+The order is the implementation's, not a presentation choice. A marker never
+*creates* a release: `docs!: …` still answers "nothing to release", because a
+break is a promise about an interface somebody installed and a range that ships
+nothing has no interface to break.
+
+Since the whole tree ships as one distribution (ADR-0037), `content_paths` must
+cover every prefix whose content reaches an installed user: `src/vibey/`, each
+runner's and tool's package root, and the skills marketplace tree. It deliberately
+does *not* cover a tenant's `docs/` or `tests/`, which change nothing a user
+installs. `code_paths` must include `pyproject.toml`, because the root manifest now
+decides what ships. Left narrower than that, a release that touches only tenants
+classifies as "nothing to release" and republishes the current version into
+`skip-existing` — a green run that publishes nothing. The literal prefixes are in
+`.vibey-gh.toml`; read them there rather than from memory, because `startswith`
+matching cannot express a glob and the list is spelled out. If the version on `HEAD` already differs from `origin/main`, the
+derivation leaves it alone.
 
 `[version] files` lists what a bump writes: `pyproject.toml` and
 `src/vibey/__init__.py`. `vibey-gh`'s `apply_version` also re-runs `uv lock` when
@@ -197,11 +221,16 @@ content:
 
 ## A deliberate bump
 
-Use this only for a major bump or when the train is down:
+Use this only when the train is down. A major bump is not a reason: derive it
+with a breaking marker, so the number the repository carries is one the machine
+can reproduce.
 
 1. `uv run vibey-gh version --since origin/main --explain` to see the derived answer.
-2. Edit the version in `pyproject.toml` and `src/vibey/__init__.py` (or pass
-   `--apply` to write the derived one), then run `uv lock`.
+2. Pass `--apply` so the tool writes it. `apply_version` also re-runs `uv lock`
+   and re-renders every managed workflow whose `pip install` pin this repository's
+   version decides — both are functions of that number, and a bump that leaves
+   either stale fails the very gates the promotion needs. Editing the two files by
+   hand means doing `uv lock` and `vibey-gh install` yourself, in the same commit.
 3. Commit with `chore(release): x.y.z` — the exact subject `vibey-gh promote`
    writes.
 4. Land it on `develop` through a PR. `vibey-gh promote` sees that `develop`
@@ -222,6 +251,11 @@ uv venv --python 3.12
 source .venv/bin/activate
 pip install vibey==x.y.z
 vibey --version
+# the bundle is the contract now (ADR-0037): every console script must be there
+for c in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap azbootstrap \
+         claudeloop codexloop cursorloop agyloop qwenloop; do
+  command -v "$c" >/dev/null || echo "MISSING: $c"
+done
 ```
 
 4. Check the published surfaces for the `main` channel:

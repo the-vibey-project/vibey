@@ -22,6 +22,6 @@ containing private repository data.
 All commits use Conventional Commits. `vibey-gh` installs the provenance hooks:
 
 ```bash
-uvx vibey-gh install
-uvx vibey-gh check
+uvx --from vibey vibey-gh install
+uvx --from vibey vibey-gh check
 ```

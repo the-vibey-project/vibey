@@ -26,7 +26,7 @@ Every code change carries it, and CI enforces it. Source files in `tools/`, `src
 `Made-With:` trailer, which covers the changes that cannot hold a comment.
 
 ```bash
-pip install "vibey-gh==1.56.0"   # or: pip install -e ".[dev]"
+pip install -e ../gh             # vibey-gh from the tree; or: pip install -e ".[dev]"
 vibey-gh install                 # writes the hooks and points core.hooksPath at them
 vibey-gh check --apply           # adds missing headers
 ```
@@ -37,9 +37,11 @@ vibey-gh check --apply           # adds missing headers
 request into `develop`; never commit to `develop` directly.
 
 `feature/* -> develop` is **squash**-merged and `develop -> main` is **rebase**-merged,
-always and only — both enforced by the branch rulesets. Pushes to `develop` publish to
-TestPyPI, pushes to `main` publish to PyPI, and `develop` is realigned to `main`
-automatically after a release. Do not realign or back-merge by hand.
+always and only — both enforced by the branch rulesets. Pushes to `develop` publish the
+monorepo to TestPyPI as `vibey-dev`, pushes to `main` publish `vibey` to PyPI, and
+`develop` is realigned to `main` automatically after a release. There is no separate
+`vibey-skills` release: this tree ships inside `vibey` (vibey ADR-0037). Do not realign or
+back-merge by hand.
 
 Two weekly trains move work along on Mondays: `merge-train.yml` squash-merges
 ready pull requests into `develop`, and `promote-to-main.yml` rebase-merges `develop`

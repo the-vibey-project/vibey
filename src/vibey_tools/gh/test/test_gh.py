@@ -224,6 +224,9 @@ def test_an_imported_history_is_not_this_branch_s_to_answer_for(repo):
         ("1.2.3", "minor", "1.3.0"),
         ("1.2.3", "patch", "1.2.4"),
         ("2.17.0", "minor", "2.18.0"),
+        ("1.2.3", "major", "2.0.0"),
+        ("0.8.0", "major", "1.0.0"),
+        ("2.17.4", "major", "3.0.0"),
     ],
 )
 def test_bump(version, level, expected):
@@ -316,6 +319,76 @@ def test_header_plus_content_in_one_file_is_still_content(repo):
     f.write_text(f"# {DEFAULT_TEXT}\nreal new words\n" + f.read_text())
     git(repo, "add", "-A")
     git(repo, "commit", "-qm", "stamp and change")
+    new, why = versioning.decide(cfg, "base")
+    assert new == "1.3.0", why
+
+
+@pytest.mark.parametrize(
+    "message,expected,note",
+    [
+        ("feat!: drop the old flag", "2.0.0", "`!` on the subject -> major"),
+        ("feat: x\n\nBREAKING-CHANGE: the old flag is gone", "2.0.0", "hyphen footer"),
+        ("feat: x\n\nBREAKING CHANGE: the old flag is gone", "2.0.0", "space footer"),
+        ("feat: x", "1.3.0", "no marker -> the minor it would have been"),
+    ],
+)
+def test_a_declared_break_escalates_the_derived_level(repo, message, expected, note):
+    """Both spellings the spec allows, and the `!` — read from flatten, not respelled."""
+    cfg = cfg_for(repo)
+    git(repo, "branch", "-q", "base")
+    (repo / "content" / "thing.md").write_text("changed\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", message)
+    new, why = versioning.decide(cfg, "base")
+    assert new == expected, f"{note}: got {new} ({why})"
+
+
+def test_a_break_is_found_in_a_later_commit_than_the_first(repo):
+    """The loss `_breaking_footers` records, in the deriver: a range routinely breaks
+    something after its first commit, and reading only the first turns a major into a
+    minor — the direction nobody notices until it is published."""
+    cfg = cfg_for(repo)
+    git(repo, "branch", "-q", "base")
+    (repo / "content" / "thing.md").write_text("changed\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "feat: the ordinary one")
+    (repo / "content" / "other.md").write_text("more\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "fix!: and then the breaking one")
+    new, why = versioning.decide(cfg, "base")
+    assert new == "2.0.0", why
+    assert "fix!: and then the breaking one" in why
+
+
+def test_a_break_over_a_patch_is_still_a_major(repo):
+    cfg = cfg_for(repo)
+    git(repo, "branch", "-q", "base")
+    (repo / "src" / "other.py").write_text("x = 1\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "refactor!: rename the entry point")
+    new, why = versioning.decide(cfg, "base")
+    assert new == "2.0.0", why
+
+
+def test_a_break_that_reaches_no_installed_user_releases_nothing(repo):
+    """MAJOR escalates a decision; it never creates one. Saying BREAKING-CHANGE over a
+    docs-only diff would assert an incompatibility in an interface nobody installed."""
+    cfg = cfg_for(repo)
+    git(repo, "branch", "-q", "base")
+    (repo / "README.md").write_text("docs\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "docs!: reword the readme\n\nBREAKING-CHANGE: nope")
+    new, why = versioning.decide(cfg, "base")
+    assert new is None, why
+
+
+def test_breaking_prose_is_not_a_breaking_footer(repo):
+    """A footer is a whole line. `This is not a BREAKING-CHANGE: really` is prose."""
+    cfg = cfg_for(repo)
+    git(repo, "branch", "-q", "base")
+    (repo / "content" / "thing.md").write_text("changed\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "feat: x\n\nthis is not a BREAKING-CHANGE: really")
     new, why = versioning.decide(cfg, "base")
     assert new == "1.3.0", why
 

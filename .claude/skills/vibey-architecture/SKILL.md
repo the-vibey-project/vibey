@@ -111,12 +111,13 @@ Measured 2026-09-15: `src/vibey` imports **zero** family packages. See ADR-0017
 
 This repository is a uv workspace (`[tool.uv.workspace] members =
 ["src/vibey_runners/*", "src/vibey_tools/*"]`, ADR-0021). `vibey` is the root
-package; the tenants are absorbed packages that still publish to PyPI under their
-own names. Their former GitHub repositories (`the-vibey-project/claudeloop`,
-`vibey-gh`, and the rest) no longer exist — never link them; link the directory in
-this repository instead.
+package; the tenants are absorbed packages that ship inside the one `vibey`
+distribution rather than under their own PyPI names (ADR-0037). Their former
+GitHub repositories (`the-vibey-project/claudeloop`, `vibey-gh`, and the rest)
+and their former PyPI projects no longer exist — never link either; link the
+directory in this repository instead.
 
-| Directory | PyPI name | Python floor | Own checks |
+| Directory | Package | Python floor | Own checks |
 |---|---|---|---|
 | `src/vibey_runners/claude` | `claudeloop` | 3.10 | pytest, ruff, mypy, import-linter |
 | `src/vibey_runners/codex` | `codexloop` | 3.12 | pytest, ruff, mypy, import-linter |

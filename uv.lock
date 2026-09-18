@@ -56,7 +56,6 @@ dev = [
     { name = "pytest-xdist" },
     { name = "ruff" },
     { name = "twine" },
-    { name = "vibey-gh" },
 ]
 docs = [
     { name = "mkdocs" },
@@ -86,7 +85,6 @@ requires-dist = [
     { name = "textual", specifier = ">=1.0" },
     { name = "twine", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "typer", specifier = ">=0.12" },
-    { name = "vibey-gh", marker = "extra == 'dev'", editable = "src/vibey_tools/gh" },
 ]
 provides-extras = ["dev", "docs"]
 
@@ -1025,7 +1023,6 @@ dependencies = [
     { name = "structlog" },
     { name = "textual" },
     { name = "typer" },
-    { name = "vibey-runners-common" },
 ]
 
 [package.optional-dependencies]
@@ -1044,7 +1041,6 @@ dev = [
     { name = "pyyaml" },
     { name = "ruff" },
     { name = "twine" },
-    { name = "vibey-gh" },
 ]
 docs = [
     { name = "mkdocs" },
@@ -1081,8 +1077,6 @@ requires-dist = [
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0" },
     { name = "twine", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "typer", specifier = ">=0.12" },
-    { name = "vibey-gh", marker = "python_full_version >= '3.11' and extra == 'dev'", editable = "src/vibey_tools/gh" },
-    { name = "vibey-runners-common", editable = "src/vibey_runners/common" },
 ]
 provides-extras = ["dev", "docs", "voice"]
 
@@ -1108,7 +1102,6 @@ dependencies = [
     { name = "structlog" },
     { name = "textual" },
     { name = "typer" },
-    { name = "vibey-runners-common" },
 ]
 
 [package.optional-dependencies]
@@ -1127,7 +1120,6 @@ dev = [
     { name = "pytest-xdist" },
     { name = "ruff" },
     { name = "twine" },
-    { name = "vibey-gh" },
 ]
 docs = [
     { name = "mkdocs-material" },
@@ -1155,8 +1147,6 @@ requires-dist = [
     { name = "textual", specifier = ">=1.0" },
     { name = "twine", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "typer", specifier = ">=0.12" },
-    { name = "vibey-gh", marker = "extra == 'dev'", editable = "src/vibey_tools/gh" },
-    { name = "vibey-runners-common", editable = "src/vibey_runners/common" },
 ]
 provides-extras = ["dev", "docs"]
 
@@ -1440,7 +1430,6 @@ dev = [
     { name = "ruff" },
     { name = "twine" },
     { name = "types-pyyaml" },
-    { name = "vibey-gh" },
 ]
 docs = [
     { name = "mkdocs" },
@@ -1475,7 +1464,6 @@ requires-dist = [
     { name = "twine", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "typer", specifier = ">=0.12" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
-    { name = "vibey-gh", marker = "extra == 'dev'", editable = "src/vibey_tools/gh" },
 ]
 provides-extras = ["dev", "docs"]
 
@@ -5367,10 +5355,19 @@ wheels = [
 
 [[package]]
 name = "vibey"
-version = "0.8.0"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "anthropic" },
+    { name = "anyio" },
     { name = "asyncpg" },
+    { name = "claude-agent-sdk" },
+    { name = "cursor-sdk" },
+    { name = "google-antigravity" },
+    { name = "httpx" },
+    { name = "openai" },
+    { name = "platformdirs" },
+    { name = "pyyaml" },
     { name = "structlog" },
     { name = "textual" },
     { name = "tomli-w" },
@@ -5378,6 +5375,48 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+azure = [
+    { name = "azure-appconfiguration" },
+    { name = "azure-appconfiguration-provider" },
+    { name = "azure-core" },
+    { name = "azure-identity" },
+    { name = "azure-keyvault-secrets" },
+    { name = "azure-monitor-opentelemetry" },
+    { name = "cryptography" },
+    { name = "filelock" },
+    { name = "opentelemetry-api" },
+    { name = "pyjwt" },
+    { name = "urllib3" },
+]
+bootstrap-all = [
+    { name = "alembic" },
+    { name = "apscheduler" },
+    { name = "azure-appconfiguration" },
+    { name = "azure-appconfiguration-provider" },
+    { name = "azure-communication-email" },
+    { name = "azure-core" },
+    { name = "azure-cosmos" },
+    { name = "azure-eventhub" },
+    { name = "azure-identity" },
+    { name = "azure-keyvault-secrets" },
+    { name = "azure-kusto-data" },
+    { name = "azure-kusto-ingest" },
+    { name = "azure-monitor-opentelemetry" },
+    { name = "azure-servicebus" },
+    { name = "azure-storage-blob" },
+    { name = "cryptography" },
+    { name = "fastapi" },
+    { name = "filelock" },
+    { name = "opentelemetry-api" },
+    { name = "pyjwt" },
+    { name = "pymongo" },
+    { name = "pypdf" },
+    { name = "requests" },
+    { name = "sqlalchemy" },
+    { name = "starlette" },
+    { name = "tenacity" },
+    { name = "urllib3" },
+]
 dev = [
     { name = "bandit" },
     { name = "hypothesis" },
@@ -5392,20 +5431,43 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-xdist" },
     { name = "ruff" },
-    { name = "vibey-gh" },
 ]
 operator = [
     { name = "kopf" },
     { name = "kubernetes" },
 ]
-skills = [
-    { name = "vibey-skills" },
+voice = [
+    { name = "openai-whisper", marker = "sys_platform != 'win32'" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "alembic", marker = "extra == 'bootstrap-all'", specifier = ">=1.13" },
+    { name = "anthropic", specifier = "==1.2.0" },
+    { name = "anyio", specifier = ">=4.4" },
+    { name = "apscheduler", marker = "extra == 'bootstrap-all'", specifier = ">=3.10" },
     { name = "asyncpg", specifier = ">=0.30" },
+    { name = "azure-appconfiguration", marker = "extra == 'azure'", specifier = ">=1.9.0" },
+    { name = "azure-appconfiguration-provider", marker = "extra == 'azure'", specifier = ">=1.0.0" },
+    { name = "azure-communication-email", marker = "extra == 'bootstrap-all'", specifier = ">=1.0" },
+    { name = "azure-core", marker = "extra == 'azure'", specifier = ">=1.38.0" },
+    { name = "azure-cosmos", marker = "extra == 'bootstrap-all'", specifier = ">=4.5" },
+    { name = "azure-eventhub", marker = "extra == 'bootstrap-all'", specifier = ">=5.11" },
+    { name = "azure-identity", marker = "extra == 'azure'", specifier = ">=1.15.0" },
+    { name = "azure-keyvault-secrets", marker = "extra == 'azure'", specifier = ">=4.7.0" },
+    { name = "azure-kusto-data", marker = "extra == 'bootstrap-all'", specifier = ">=4.0" },
+    { name = "azure-kusto-ingest", marker = "extra == 'bootstrap-all'", specifier = ">=4.0" },
+    { name = "azure-monitor-opentelemetry", marker = "extra == 'azure'", specifier = ">=1.2.0" },
+    { name = "azure-servicebus", marker = "extra == 'bootstrap-all'", specifier = ">=7.11" },
+    { name = "azure-storage-blob", marker = "extra == 'bootstrap-all'", specifier = ">=12.19" },
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8" },
+    { name = "claude-agent-sdk", specifier = ">=0.2.134" },
+    { name = "cryptography", marker = "extra == 'azure'", specifier = ">=50.0.0,<51" },
+    { name = "cursor-sdk", specifier = ">=0.1" },
+    { name = "fastapi", marker = "extra == 'bootstrap-all'", specifier = ">=0.110" },
+    { name = "filelock", marker = "extra == 'azure'", specifier = ">=3.20.3" },
+    { name = "google-antigravity", specifier = ">=0.1.10" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.115" },
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.1" },
     { name = "kopf", marker = "extra == 'dev'", specifier = ">=1.37" },
@@ -5413,21 +5475,33 @@ requires-dist = [
     { name = "kubernetes", marker = "extra == 'dev'", specifier = ">=31.0" },
     { name = "kubernetes", marker = "extra == 'operator'", specifier = ">=31.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.13" },
+    { name = "openai", specifier = "==3.14.1" },
+    { name = "openai-whisper", marker = "sys_platform != 'win32' and extra == 'voice'", specifier = ">=20231117" },
+    { name = "opentelemetry-api", marker = "extra == 'azure'", specifier = ">=1.22.0" },
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7" },
+    { name = "platformdirs", specifier = ">=4.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0" },
+    { name = "pyjwt", marker = "extra == 'azure'", specifier = ">=2.13.0" },
+    { name = "pymongo", marker = "extra == 'bootstrap-all'", specifier = ">=4.6" },
+    { name = "pypdf", marker = "extra == 'bootstrap-all'", specifier = ">=6.13.3" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.5" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "requests", marker = "extra == 'bootstrap-all'", specifier = ">=2.32.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
+    { name = "sqlalchemy", marker = "extra == 'bootstrap-all'", specifier = ">=2.0" },
+    { name = "starlette", marker = "extra == 'bootstrap-all'", specifier = ">=1.3.1" },
     { name = "structlog", specifier = ">=24.4" },
-    { name = "textual", specifier = ">=0.86" },
+    { name = "tenacity", marker = "extra == 'bootstrap-all'", specifier = ">=8.0" },
+    { name = "textual", specifier = ">=1.0" },
     { name = "tomli-w", specifier = ">=1.1" },
     { name = "typer", specifier = ">=0.15" },
-    { name = "vibey-gh", marker = "extra == 'dev'", editable = "src/vibey_tools/gh" },
-    { name = "vibey-skills", marker = "extra == 'skills'", editable = "src/vibey_tools/skills" },
+    { name = "urllib3", marker = "extra == 'azure'", specifier = ">=2.7.0" },
+    { name = "vibey", extras = ["azure"], marker = "extra == 'bootstrap-all'" },
 ]
-provides-extras = ["operator", "skills", "dev"]
+provides-extras = ["operator", "skills", "azure", "bootstrap-all", "voice", "dev"]
 
 [[package]]
 name = "vibey-bootstrap"
@@ -5445,7 +5519,6 @@ dependencies = [
     { name = "opentelemetry-api" },
     { name = "pyjwt" },
     { name = "urllib3" },
-    { name = "vibey-gh" },
 ]
 
 [package.optional-dependencies]
@@ -5669,7 +5742,6 @@ requires-dist = [
     { name = "tenacity", marker = "extra == 'retry'", specifier = ">=8.0" },
     { name = "tenacity", marker = "extra == 'test'", specifier = ">=8.0" },
     { name = "urllib3", specifier = ">=2.7.0" },
-    { name = "vibey-gh", editable = "src/vibey_tools/gh" },
 ]
 provides-extras = ["dev", "test", "docs", "alerts", "health", "fastapi", "heartbeat", "config-refresh", "servicebus", "openai", "tokens", "scheduler", "metrics", "retry", "ingress", "pdf-safety", "ratelimit", "notify", "subscription", "identity", "auth", "sb-lock", "audit", "failclose", "transports", "sumologic", "panther", "bloblog", "sqllog", "nosqllog", "nosqllog-cosmos", "adxlog", "eventhubslog", "logging-all", "db", "documentdb", "email", "http", "http-async", "governance", "aks", "all"]
 
@@ -5732,9 +5804,6 @@ name = "vibey-skills"
 source = { editable = "src/vibey_tools/skills" }
 
 [package.optional-dependencies]
-dev = [
-    { name = "vibey-gh" },
-]
 docs = [
     { name = "mkdocs-gen-files" },
     { name = "mkdocs-literate-nav" },
@@ -5746,7 +5815,6 @@ requires-dist = [
     { name = "mkdocs-gen-files", marker = "extra == 'docs'", specifier = ">=0.5" },
     { name = "mkdocs-literate-nav", marker = "extra == 'docs'", specifier = ">=0.6" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
-    { name = "vibey-gh", marker = "python_full_version >= '3.11' and extra == 'dev'", editable = "src/vibey_tools/gh" },
 ]
 provides-extras = ["dev", "docs"]
 

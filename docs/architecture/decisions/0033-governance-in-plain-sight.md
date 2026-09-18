@@ -22,7 +22,8 @@ A rule binds the people it governs fairly only if they can find it. Measured on
   `CLAUDE.md` links any of it, and only in prose aimed at an agent. The README, which
   is also the PyPI page, does not mention that the project has a constitution.
 - The absorbed runners and tools, each still published under its own name, link none
-  of it.
+  of it. (As of ADR-0037 they are no longer published under their own names; the
+  finding stands as a measurement taken on this record's date.)
 - Its address on `main` returns 404 until a promotion carries the absorbed tools
   there, so even a correct link would currently be dead on the release branch.
 

@@ -1,6 +1,6 @@
 # qwenloop
 
-> **Now part of the vibey monorepo.** `qwenloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) (vibey ADR-0021). It is still published on PyPI as [`qwenloop`](https://pypi.org/project/qwenloop/).
+> **Now part of the vibey monorepo.** `qwenloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
 
 [![CI](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml)
 [![Provenance](https://github.com/the-vibey-project/vibey/actions/workflows/provenance.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/provenance.yml)
@@ -17,11 +17,15 @@ integration never download model weights.
 
 ## Install
 
-Install the runner from [PyPI](https://pypi.org/project/qwenloop/):
+`qwenloop` ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution
+(vibey ADR-0037):
 
 ```bash
-uv tool install qwenloop    # or: pipx install qwenloop
+uv tool install vibey    # or: pipx install vibey / pip install vibey
 ```
+
+That installs the runner. Using it as a vibey engine is a separate, feature-level
+opt-in (`VIBEY_FEATURE_QWENLOOP`, or `[features] qwenloop = true`).
 
 The Python package never bundles model weights.
 

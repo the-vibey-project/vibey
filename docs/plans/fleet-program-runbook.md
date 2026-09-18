@@ -10,6 +10,10 @@
 > runner, `qwenloop`, is an opt-in engine (ADR-0015) and the sovereign DESIGN
 > provider (ADR-0027); this runbook does not cover it.
 >
+> **Also superseded, 2026-09-18:** every "publishable to TestPyPI and then PyPI"
+> and per-repo publish-order step below assumes five distributions. There is one:
+> the whole tree ships as `vibey` (ADR-0037). Read those steps as history.
+>
 > **Landed since:** §Coverage for vibey (all four layers at 100% branch in
 > `ci.yml`, ADR-0023); §1.4d for codexloop and cursorloop; §2.1 (`EngineSelector`
 > wired in `bootstrap.py`, `LoopProcessAdapter`, `LOOP_EVENT_MAP`,

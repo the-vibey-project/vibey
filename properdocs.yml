@@ -84,4 +84,5 @@ nav:
           - "0034 — One Claude Code marketplace at the repository root, rendered from the workspace members": architecture/decisions/0034-one-marketplace-at-the-root.md
           - "0035 — Verify independence is the default, not an absolute": architecture/decisions/0035-independence-is-the-default-not-an-absolute.md
           - "0036 — The merge queue is declared, not clicked": architecture/decisions/0036-the-merge-queue-is-declared-not-clicked.md
+          - "0037 — One distribution, one version — the whole family ships inside vibey": architecture/decisions/0037-one-distribution-one-version.md
   - Research paper: paper.md

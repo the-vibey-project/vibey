@@ -103,8 +103,20 @@ jobs:
         include:
           # Plain pip and setup-python, NOT `uv sync --package`. The workspace lock
           # resolves at requires-python >=3.12 -- the intersection of every member -- so a
-          # uv environment cannot exercise the 3.10 and 3.11 floors these wheels publish.
+          # uv environment cannot exercise the 3.10 and 3.11 floors these tenants declare.
           # A floor nothing runs on is a claim, not a contract.
+          #
+          # ADR-0037 retired the per-tenant distributions; the tenants themselves stay
+          # exactly as ADR-0021 and ADR-0022 left them, each with its own pyproject,
+          # suite and Python floor. So these rows are now the ONLY thing that runs a
+          # tenant on its own floor -- `vibey` publishes at >=3.12 and would never
+          # exercise 3.10 or 3.11 again.
+          #
+          # And the other half of ADR-0037: no family package exists on any index any
+          # more, so a plain-pip row that names one in its dependencies cannot install at
+          # all. Every family package a tenant needs is installed from the tree first,
+          # below -- the same resolution the workspace gives it, not a substitution --
+          # and the step after the install proves nothing came from an index.
           #
           # Each command is the repository's own, ported verbatim. Absorbing a package
           # must not quietly lower what it was already held to: vibey-gh carries a 100%
@@ -124,10 +136,10 @@ jobs:
              install: 'pip install -e .',
              test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'}
           - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.11",
-             install: 'pip install -e ".[test,all]"',
+             install: 'pip install -e ../gh && pip install -e ".[test,all]"',
              test: 'pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term'}
           - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.12",
-             install: 'pip install -e ".[test,all]"',
+             install: 'pip install -e ../gh && pip install -e ".[test,all]"',
              test: 'pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term'}
           #
           # The five session runners (ADR-0021 absorbed them; ADR-0022 says they keep every
@@ -142,24 +154,17 @@ jobs:
           # single whole-package --cov-fail-under=100 in its addopts, so `pytest -q` carries
           # it, exactly as its own CI relied on.
           #
-          # claudeloop and codexloop depend on vibey-runners-common, which is a workspace
-          # member and is published nowhere: `pip install -e ".[dev]"` alone would go looking
-          # for it on PyPI and fail. It is installed from the tree first, which is the same
-          # resolution the workspace gives them -- not a substitution.
+          # claudeloop and codexloop import vibey_runners.common, so `../common` is
+          # installed from the tree before their own install: plain pip knows nothing
+          # about `[tool.uv.sources] workspace = true` and would otherwise go to an index
+          # for a distribution that no longer exists. vibey-bootstrap gets `../gh` the
+          # same way, for the same reason -- vibey_bootstrap.gh re-exports vibey_gh and
+          # its suite asserts the two are the same objects. An already-installed local
+          # package satisfies the requirement, so pip never reaches the index.
           #
           # Interpreters are each runner's own matrix. claudeloop publishes a 3.10 floor and
           # is the only member of this tree that does; per ADR-0022 a floor nothing runs on
           # is a claim, so all four of its interpreters run.
-          #
-          # Known, deliberately unfixed here: claudeloop's [dev] extra pins
-          # `vibey-gh==1.58.0; python_version >= '3.11'`, so these rows resolve vibey-gh from
-          # PyPI while this tree ships 1.73.0 at src/vibey_tools/gh as a workspace member --
-          # ADR-0017's "use ours" read literally. It is not fixable from this file: an `==`
-          # requirement wins over anything installed first, so `pip install -e
-          # ../../vibey_tools/gh` before or after would simply be undone. The fix is claudeloop's
-          # own pyproject, which changes a runner's declared dependencies and needs that
-          # runner's suite to validate. Nothing in claudeloop's tests imports vibey_gh -- it is
-          # release and provenance tooling -- so these rows' verdicts are unaffected either way.
           - package: claudeloop
             dir: src/vibey_runners/claude
             python: "3.10"
@@ -310,6 +315,64 @@ jobs:
       - name: Install
         working-directory: ${{ matrix.dir }}
         run: ${{ matrix.install }}
+      # The contract the rows above are shaped around, asserted instead of assumed.
+      # ADR-0037 leaves one published distribution, so a family package that arrived
+      # from an index is not this tree's code: a stale wheel, a squatted name, or a
+      # resurrection nobody voted for. pip records where every distribution came from
+      # in direct_url.json -- present with a file:// url for an install from a path,
+      # absent for one resolved from an index -- which is the difference, exactly.
+      #
+      # The names are read from the tenants' own pyprojects rather than listed here: a
+      # hard-coded list is the same defect one layer up (ADR-0018), and the tenant added
+      # next month would be the one nobody remembered to add.
+      - name: Every family package came from this tree, not from an index
+        run: |
+          python - <<'PY'
+          import json
+          import re
+          import sys
+          from importlib.metadata import PackageNotFoundError, distribution
+          from pathlib import Path
+
+          root = Path.cwd().resolve()
+
+
+          def declared_name(pyproject):
+              if not pyproject.is_file():
+                  return None
+              for table in re.split(r"^\[", pyproject.read_text(encoding="utf-8"), flags=re.M):
+                  if table.startswith("project]"):
+                      found = re.search(r'^name\s*=\s*"([^"]+)"', table, re.M)
+                      return found.group(1) if found else None
+              return None
+
+
+          manifests = [root / "pyproject.toml", *sorted(root.glob("src/vibey_*/*/pyproject.toml"))]
+          family = {name for name in map(declared_name, manifests) if name}
+          # A check that cannot fail is worse than no check: if the layout moves and the
+          # glob stops matching, this step would pass forever while proving nothing.
+          if len(family) < 2:
+              raise SystemExit(f"::error::read {sorted(family)} from {len(manifests)} manifests")
+          print(f"{len(family)} family distributions declared in this tree")
+
+          strays = []
+          for name in sorted(family):
+              try:
+                  dist = distribution(name)
+              except PackageNotFoundError:
+                  continue
+              recorded = dist.read_text("direct_url.json") or ""
+              url = json.loads(recorded).get("url", "") if recorded else ""
+              where = Path(url[len("file://") :]).resolve() if url.startswith("file://") else None
+              if where is None or not (where == root or root in where.parents):
+                  strays.append(f"{name} {dist.version} <- {url or 'an index'}")
+              else:
+                  print(f"{name} {dist.version} <- {where}")
+          if strays:
+              print("::error::family packages not installed from this tree:")
+              print(*strays, sep="\n")
+              sys.exit(1)
+          PY
       # VIBEY_GH_NETWORK_TESTS is unset here, so every `network` test is skipped and the
       # package's own --cov-fail-under=100 is enforced on what remains. That makes this
       # step the gate on a property the package would otherwise only assert: its 100%
@@ -355,6 +418,12 @@ jobs:
           python -m black --check vibey_gh test
           isort --check-only vibey_gh test
           python -m mypy vibey_gh
+      # Both deployed copies, not one. This repository CONTAINS vibey-gh and also
+      # ADOPTS it, so there are two rendered sets: gh's own, and the repository root's.
+      # Only gh's was checked, which left root drift able to ship silently -- and the
+      # root's rendered pin now moves with every release (`[install] pin_version` pins
+      # the fallback to this repository's own `[project] version`), so the one copy CI
+      # never looked at is the one most likely to lag. Everything-as-code, ADR-0018.
       - name: vibey-gh - it installs its own managed automation without drift
         working-directory: src/vibey_tools/gh
         run: |
@@ -363,6 +432,14 @@ jobs:
           from vibey_gh.install import installed
           ok, problems = installed(load_config(), local=False)
           raise SystemExit("managed automation drift: " + "; ".join(problems) if not ok else 0)
+          PY
+      - name: The repository root - its own rendered automation has no drift
+        run: |
+          python - <<'PY'
+          from vibey_gh.config import load_config
+          from vibey_gh.install import installed
+          ok, problems = installed(load_config(), local=False)
+          raise SystemExit("root automation drift: " + "; ".join(problems) if not ok else 0)
           PY
 
   image:
@@ -391,7 +468,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # The Dockerfile makes three claims in prose. Prose does not survive
+      # The Dockerfile makes four claims in prose. Prose does not survive
       # a refactor, so each one is asserted here: collapse the two stages
       # or drop the USER line and this job fails instead of shipping.
       - name: Image contract - entrypoint runs
@@ -431,6 +508,26 @@ jobs:
           count=$(docker run --rm --entrypoint sh vibey:ci -c 'ls /app/migrations/*.sql | wc -l')
           echo "migrations=$count"
           test "$count" -gt 0
+
+      # One distribution, eleven console scripts (ADR-0037). That is the new product
+      # contract, and it is the one the Dockerfile's COPY list can break silently: a
+      # package root that never reaches the build context does not fail the build, it
+      # just is not there. tests/meta/test_shipped_trees_are_reachable.py catches the
+      # omission in the manifest; this catches it in the artifact.
+      - name: Image contract - every console script is on PATH
+        run: |
+          docker run --rm --entrypoint sh vibey:ci -c '
+            status=0
+            for tool in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap \
+                        azbootstrap claudeloop codexloop cursorloop agyloop qwenloop; do
+              if command -v "$tool" >/dev/null 2>&1; then
+                echo "ok      $tool"
+              else
+                echo "MISSING $tool"; status=1
+              fi
+            done
+            exit $status
+          '
 
       # Built last: under emulation this is the slow half, and there is no
       # point paying for it when the amd64 contracts already failed.

@@ -12,6 +12,24 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### BREAKING CHANGES
+
+* **packaging:** one distribution, one version — `pip install vibey` now delivers the whole
+  family. The `vibey` wheel carries every workspace tenant (`claudeloop`, `codexloop`,
+  `cursorloop`, `agyloop`, `qwenloop`, `vibey_runners`, `vibey_gh`, `vibey_skills`,
+  `vibey_bootstrap`) and puts every one of their console scripts on `PATH`. The nine
+  separate PyPI distributions are gone — `pip install claudeloop`, `pip install vibey-gh`
+  and the rest no longer resolve, and nothing in this repository asks an index for a family
+  package any more. The tenants remain separate workspace members with their own
+  `pyproject.toml`, version, Python floor, tests and gates (ADR-0021, ADR-0022); what ended
+  is separate *publication*, not separate projects. Extras move with them:
+  `claudeloop[voice]` becomes `vibey[voice]`, `vibey-bootstrap`'s Azure core becomes
+  `vibey[azure]`, and its ~40 per-feature extras are reached through one
+  `vibey[bootstrap-all]` aggregate; `vibey[skills]` stays as an empty alias. The published
+  Python floor is now 3.12 for everything, so the 3.10 and 3.11 floors the tools used to
+  publish cease to exist as shipped artifacts even though CI keeps testing them
+  ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
+
 ## [0.8.0] (2026-09-16)
 
 ### Features

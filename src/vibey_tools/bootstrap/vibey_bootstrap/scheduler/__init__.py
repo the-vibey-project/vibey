@@ -33,8 +33,8 @@ def parse_cron_trigger(expr: str) -> Any:
         from apscheduler.triggers.cron import CronTrigger  # type: ignore[import-not-found]
     except ImportError as exc:
         raise ImportError(
-            "parse_cron_trigger requires the `scheduler` extra: "
-            "pip install vibey-bootstrap[scheduler]"
+            "parse_cron_trigger requires the scheduler dependencies: "
+            "pip install 'vibey[bootstrap-all]'"
         ) from exc
 
     try:

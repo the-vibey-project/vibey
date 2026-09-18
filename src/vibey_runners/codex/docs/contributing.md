@@ -25,5 +25,6 @@ Conventional Commits (`feat:`, `fix:`, `test:`, `chore:`, `docs:`).
 
 ## Publishing
 
-See [Publishing](publishing.md) for TestPyPI → PyPI Trusted Publishing and the
+See [Publishing](publishing.md) — superseded, kept as a record — for TestPyPI → PyPI
+Trusted Publishing and the
 release-please flow.

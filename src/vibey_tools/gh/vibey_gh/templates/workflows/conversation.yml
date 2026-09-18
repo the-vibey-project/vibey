@@ -75,12 +75,13 @@ jobs:
           # contributor's choosing. The path is verified below before anything runs.
           self="__VIBEY_GH_SELF_SOURCE__"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       - name: Resolve the thread and comment
@@ -169,12 +170,13 @@ jobs:
           self="automation/__VIBEY_GH_SELF_SOURCE__"
           self="${self%/.}"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       - name: Write the bounded untrusted briefing

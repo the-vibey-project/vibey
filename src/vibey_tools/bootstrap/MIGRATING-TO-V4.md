@@ -9,7 +9,7 @@ to install and import it.
 
 | | 3.x | 4.0.0 |
 |---|---|---|
-| PyPI distribution | `azure-bootstrap` | `vibey-bootstrap` |
+| PyPI distribution | `azure-bootstrap` | `vibey-bootstrap`, and from vibey 1.0.0 the `vibey` distribution that carries it (vibey ADR-0037) |
 | Import package | `azure_bootstrap` | `vibey_bootstrap` |
 | Console script | `azbootstrap` | `vibey-bootstrap` (`azbootstrap` kept as a deprecated alias) |
 | GitHub | `TheViziusGroup/azure-bootstrap` | `adammatthewsteinberger/vibey-bootstrap` |
@@ -21,10 +21,12 @@ to install and import it.
 
    ```bash
    pip uninstall azure-bootstrap
-   pip install "vibey-bootstrap>=4,<5"
+   pip install vibey        # carries vibey_bootstrap 4.x (vibey ADR-0037)
    ```
 
-   Extras keep their names: `pip install 'vibey-bootstrap[alerts,fastapi,health]'`.
+   Extras keep their names in this package's own `pyproject.toml`; on the vibey
+   distribution they are reached through two aggregates,
+   `pip install 'vibey[azure]'` and `pip install 'vibey[bootstrap-all]'`.
 
 2. Rename the imports (a mechanical find-and-replace):
 

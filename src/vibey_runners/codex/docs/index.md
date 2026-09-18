@@ -5,7 +5,7 @@ human, distinguishes rate limits from exhausted credits, and resumes safely
 across usage windows.
 
 ```bash
-pipx install codexloop
+pipx install vibey      # codexloop is one of its console scripts
 codexloop doctor
 codexloop run plan.md
 ```

@@ -25,7 +25,14 @@ from vibey_gh.config import (
     GhConfig,
     load_config,
 )
-from vibey_gh.install import TEMPLATES, WORKFLOWS, installed, render_workflow
+from vibey_gh.install import (
+    FALLBACK_DISTRIBUTION,
+    FALLBACK_INSTALL,
+    TEMPLATES,
+    WORKFLOWS,
+    installed,
+    render_workflow,
+)
 
 WORKFLOW_TEMPLATES = sorted(WORKFLOWS.glob("*.yml"))
 REPO_WORKFLOWS = sorted(
@@ -1826,7 +1833,7 @@ def test_conventional_commits_installs_the_published_package_not_the_adopting_re
     assert "pip install --quiet ./automation" not in text
     assert 'self="__VIBEY_GH_SELF_SOURCE__"' in text
     assert 'python -m pip install --quiet -e "$self"' in text
-    assert "python -m pip install --quiet vibey-gh" in text
+    assert FALLBACK_INSTALL in text
     assert "name: Check out trusted automation" in text
     assert "name: Check out trusted normalizer" not in text
 
@@ -1878,7 +1885,8 @@ def test_pr_automation_never_assumes_the_adopting_repos_own_package_is_vibey_gh(
     assert "pip install --quiet ./automation" not in text
     checks = re.findall(r'self="automation/__VIBEY_GH_SELF_SOURCE__"', text)
     assert len(checks) == 5  # review, repair, resolve-conflict, escalate, review-fallback
-    installs = re.findall(r"python -m pip install --quiet vibey-gh\b", text)
+    lines = text.splitlines(keepends=True)
+    installs = [line for line in lines if line.endswith(FALLBACK_INSTALL)]
     assert len(installs) == 6  # the five guarded installs above plus the evaluate job's own
 
 
@@ -1929,28 +1937,76 @@ def test_the_provenance_job_carries_no_forge_credential():
     assert 'python -m pip install --quiet -e "$self"' in text
 
 
+def _is_the_fallback_distribution(root: Path, version: str) -> None:
+    """Make `root` the distribution the fallback installs, at `version`."""
+    root.joinpath("pyproject.toml").write_text(
+        f'[project]\nname = "{FALLBACK_DISTRIBUTION}"\nversion = "{version}"\n',
+        encoding="utf-8",
+    )
+
+
 def test_pin_version_pins_every_managed_templates_tooling_install(tmp_path: Path):
     """`install.pin_version` must reach every managed workflow, not just the ones the
     issue happened to confirm — a config key that only fixes some templates leaves the
     same outage waiting in whichever one it missed.
     """
-    from vibey_gh import __version__
-
+    _is_the_fallback_distribution(tmp_path, "4.5.6")
     cfg = GhConfig(root=tmp_path, pin_version=True)
-    unpinned = re.compile(r"pip install --quiet vibey-gh(?!==)")
     for path in WORKFLOW_TEMPLATES:
         text = render_workflow(path, cfg)
-        if "pip install --quiet vibey-gh" not in path.read_text(encoding="utf-8"):
+        if FALLBACK_INSTALL not in path.read_text(encoding="utf-8"):
             continue  # this template never installed the floating tooling to begin with
-        assert not unpinned.search(text), f"{path.name}: an unpinned install survived pinning"
-        assert f'"vibey-gh=={__version__}"' in text
+        assert FALLBACK_INSTALL not in text, f"{path.name}: an unpinned install survived"
+        assert f'"{FALLBACK_DISTRIBUTION}==4.5.6"' in text
 
 
 def test_pin_version_unset_leaves_every_managed_template_floating(tmp_path: Path):
+    _is_the_fallback_distribution(tmp_path, "4.5.6")
     cfg = GhConfig(root=tmp_path)
     for path in WORKFLOW_TEMPLATES:
         text = render_workflow(path, cfg)
-        assert "vibey-gh==" not in text
+        assert f"{FALLBACK_DISTRIBUTION}==" not in text
+
+
+@pytest.mark.parametrize(
+    "pyproject",
+    [
+        pytest.param(None, id="no pyproject at all"),
+        pytest.param("[project\nname = ", id="a pyproject that does not parse"),
+        pytest.param('[tool.poetry]\nname = "vibey"\n', id="no [project] table"),
+        pytest.param('[project]\nname = "vibey"\n', id="no version declared"),
+    ],
+)
+def test_pin_version_floats_when_the_repository_declares_no_release(tmp_path: Path, pyproject):
+    """Anything short of a declared release leaves the fallback floating.
+
+    A renderer that guessed here would write the guess into every managed workflow of a
+    repository that never said it, and the job would fail on `pip install` rather than
+    on the render anybody could have read.
+    """
+    if pyproject is not None:
+        tmp_path.joinpath("pyproject.toml").write_text(pyproject, encoding="utf-8")
+    text = render_workflow(WORKFLOWS / "merge-train.yml", GhConfig(root=tmp_path, pin_version=True))
+    assert FALLBACK_INSTALL in text
+    assert f"{FALLBACK_DISTRIBUTION}==" not in text
+
+
+def test_pin_version_cannot_invent_a_release_for_a_repository_that_is_not_it(tmp_path: Path):
+    """An adopter turning the key on must not get a version this tooling guessed.
+
+    `vibey_gh.__version__` numbers a package inside `vibey` (ADR-0037), and an adopter's
+    own version numbers their project; neither names a `vibey` release. A pin built from
+    either resolves to nothing inside the adopter's job. Floating always resolves.
+    """
+    tmp_path.joinpath("pyproject.toml").write_text(
+        '[project]\nname = "somebody-else"\nversion = "9.9.9"\n', encoding="utf-8"
+    )
+    for path in WORKFLOW_TEMPLATES:
+        text = render_workflow(path, GhConfig(root=tmp_path, pin_version=True))
+        assert "9.9.9" not in text
+        assert f"{FALLBACK_DISTRIBUTION}==" not in text
+        if FALLBACK_INSTALL in path.read_text(encoding="utf-8"):
+            assert FALLBACK_INSTALL in text
 
 
 def test_every_managed_third_party_action_is_immutably_pinned():
