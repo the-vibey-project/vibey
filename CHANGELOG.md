@@ -36,6 +36,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **gh:** `vibey-gh install` no longer fails with a traceback, after writing every file, on a machine without the GitHub CLI; the secret check degrades to the notice `gh not found; skipping secret/permission checks` (#264)
 * **gh:** `python -m vibey_gh` now runs the CLI; the package had no `__main__` module (#264)
 * **gh:** the docs and the config comment for `[issue_automation] fallback_enabled` now give its real default, `true`: #277 turned both local fallbacks on by default under sub-doctrine 8.a and left them saying "off" (#264)
+* **gh:** `vibey-gh doctor` no longer fails every repository on the starter config (`[install] workflows = ["provenance.yml"]`). The missing-gate check is an error only where `pr-automation.yml` or `merge-train.yml` is installed; a repository that declines both gets an `info` note (#264)
 
 ## [0.8.0] (2026-09-16)
 
