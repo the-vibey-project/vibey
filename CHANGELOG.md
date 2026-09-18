@@ -32,6 +32,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **engines:** the per-cycle turn cap (`max_cycle_turns`) now counts real turns. `chatter.assistant` mapped to `TurnCompleted` next to `turn.completed`, so claudeloop and agyloop, under their default `log_chatter=summary`, parked a cycle as `budget_exhausted` at about half its configured turns. Every qwenloop `text_delta` counted as a turn as well. Chatter and stream deltas now map to a new `TranscriptRecorded` event kind, which stays in the ledger for replay but is never counted. qwenloop now writes one `turn.completed` per model call, its only event that counts as a turn, and `chatter.prompt` no longer duplicates `TurnRequested`. codexloop's `turn.failed` still counts, once, as a turn attempt. Dollars were never double counted (#266)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 
 ## [0.8.0] (2026-09-16)

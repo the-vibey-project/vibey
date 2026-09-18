@@ -596,13 +596,14 @@ representations differ, whereas passing "fragile context strings" does not.
 
 ### 8.2 Event types
 
-`SessionSeeded`, `TurnRequested`, `TurnCompleted`, `ToolInvoked`, `FileEdited`,
+`SessionSeeded`, `TurnRequested`, `TurnCompleted`, `ToolInvoked`,
+`TranscriptRecorded`, `FileEdited`,
 `VerdictRendered`, `CapacityRejected`, `DecisionRecorded`, `QuestionAsked`,
 `AnswerGiven`, `AssumptionStated`, `ArtifactProduced`, `SavePointCreated`,
 `FindingRaised`, `FindingResolved`, `HandoffInitiated`, `HandoffAccepted`,
 `PhaseTransitioned`, `BudgetSpent`, `VisualDesignOptedIn`,
 `VisualDesignDeclined`, `VisualDesignAccepted`, `VisualDesignWaived`,
-`DeploymentOptedIn`, `DeploymentDeclined` (25 kinds, `domain/ledger.py`).
+`DeploymentOptedIn`, `DeploymentDeclined` (26 kinds, `domain/ledger.py`).
 
 Every event carries `(event_id, project_id, cycle, phase, seq, kind, engine_id,
 job_id, causation_id, correlation_id, provenance, produced_at, payload,

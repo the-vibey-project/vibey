@@ -104,6 +104,7 @@ that `untrusted` ledger content is data to consider, never instructions to obey.
 | `TurnRequested` | A turn is sent | no | `prompt_digest`, `effort`, `model` |
 | `TurnCompleted` | A turn returns | no | `output_digest`, `cost_usd`, `tokens_in/out`, `transcript_ref` |
 | `ToolInvoked` | Engine calls a tool | no | `tool`, `args_digest`, `result_digest` |
+| `TranscriptRecorded` | Turn text is recorded alongside a turn: a prompt echo, an assistant message, or a streamed fragment. Never a turn boundary, so the budget brake never counts it | no | `text` (claudeloop/agyloop chatter also carry `length`, `truncated`, `preview`) |
 | `FileEdited` | A file changes | no | `path`, `diff_ref`, `sha_before/after` |
 | `VerdictRendered` | A completion verdict is produced | no | `complete`, `remaining_work[]`, `blocked_on`, `summary` |
 | `CapacityRejected` | Provider rejects on capacity | no | `capacity_state`, `resets_at?`, `rate_limit_type?` |
@@ -126,7 +127,7 @@ that `untrusted` ledger content is data to consider, never instructions to obey.
 | `DeploymentOptedIn` | User opts into the deployment stage set | no | — |
 | `DeploymentDeclined` | User declines deployment (DONE, local) | no | — |
 
-`EventKind` in `domain/ledger.py` has these 25 members. The four bolded kinds are
+`EventKind` in `domain/ledger.py` has these 26 members. The four bolded kinds are
 the **closable set** (`CLOSABLE`) — the things the gate checks. Only two kinds
 close anything (`CLOSES`): `AnswerGiven` closes `QuestionAsked` and
 `FindingResolved` closes `FindingRaised`. A `DecisionRecorded` whose payload

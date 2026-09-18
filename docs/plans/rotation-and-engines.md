@@ -666,15 +666,30 @@ skipped, so a new runner event cannot crash vibey.
 
 | Engine | Runner event → ledger `EventKind` |
 |---|---|
-| `claudeloop` | `run.started`, `preflight` → `SESSION_SEEDED`; `chatter.prompt`, `turn.starting` → `TURN_REQUESTED`; `chatter.assistant`, `turn.completed` → `TURN_COMPLETED`; `chatter.tool` → `TOOL_INVOKED`; `savepoint` → `SAVEPOINT_CREATED`; `capacity.forecast` → `BUDGET_SPENT`; `finished` → `VERDICT_RENDERED` |
+| `claudeloop` | `run.started`, `preflight` → `SESSION_SEEDED`; `turn.starting` → `TURN_REQUESTED`; `turn.completed` → `TURN_COMPLETED`; `chatter.prompt`, `chatter.assistant` → `TRANSCRIPT_RECORDED`; `chatter.tool` → `TOOL_INVOKED`; `savepoint` → `SAVEPOINT_CREATED`; `capacity.forecast` → `BUDGET_SPENT`; `finished` → `VERDICT_RENDERED` (`chatter.delta` unmapped) |
 | `codexloop` | `thread.started` → `SESSION_SEEDED`; `turn.started` → `TURN_REQUESTED`; `turn.completed`, `turn.failed` → `TURN_COMPLETED`; `item.started`, `item.completed` → `TOOL_INVOKED`; `rate_limits.updated` → `BUDGET_SPENT`; `run.verdict` → `VERDICT_RENDERED` |
 | `cursorloop` | `tool_call` → `TOOL_INVOKED`; `usage` → `BUDGET_SPENT` (no session, turn, or verdict boundary events) |
 | `agyloop` | as claudeloop, except `sdk.event` (not `chatter.tool`) → `TOOL_INVOKED`, and `savepoint`, `savepoint.created`, `savepoint.skipped` → `SAVEPOINT_CREATED` |
-| `qwenloop` | `run.started` → `SESSION_SEEDED`; `text_delta` → `TURN_COMPLETED`; `tool_result` → `TOOL_INVOKED`; `completed`, `failed` → `VERDICT_RENDERED` |
+| `qwenloop` | `run.started` → `SESSION_SEEDED`; `turn.completed` → `TURN_COMPLETED`; `text_delta` → `TRANSCRIPT_RECORDED`; `tool_result` → `TOOL_INVOKED`; `completed`, `failed` → `VERDICT_RENDERED` |
 
 `capacity.forecast` and `rate_limits.updated` are headroom telemetry, emitted
 while capacity is still available. They map to `BUDGET_SPENT`, never to a
 capacity rejection.
+
+**One turn, one `TURN_COMPLETED`.** The budget brake (`LedgerBudgetSource`)
+counts every `TURN_COMPLETED` in a cycle against `max_cycle_turns`, so each
+engine maps only its runner's own turn boundary to it. Text that rides
+alongside a turn maps to `TRANSCRIPT_RECORDED`: it stays in the ledger for
+replay and is never counted. That covers the `chatter.prompt` and
+`chatter.assistant` echoes that claudeloop and agyloop write every turn under
+their default `log_chatter=summary`, and qwenloop's `text_delta`, one per
+streamed fragment. qwenloop writes its own `turn.completed` once per model
+call for exactly this reason. codexloop's `turn.failed` counts as a turn
+attempt: codex ends every turn with exactly one of `turn.completed` or
+`turn.failed`, and a run that fails turn after turn is the runaway the cap
+exists to stop. `claudeloop`'s `chatter.delta` stays unmapped, because
+`chatter.assistant` already carries the assembled text. cursorloop writes no
+turn boundary, so it contributes no `TURN_COMPLETED` at all.
 
 ---
 

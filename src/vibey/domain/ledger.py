@@ -20,6 +20,11 @@ class EventKind(StrEnum):
     TURN_REQUESTED = "TurnRequested"
     TURN_COMPLETED = "TurnCompleted"
     TOOL_INVOKED = "ToolInvoked"
+    # Turn text kept for replay -- a prompt echo, an assistant message, or a
+    # streamed fragment. Never a turn boundary: TURN_REQUESTED and
+    # TURN_COMPLETED are exactly one each per real turn, and the budget brake
+    # counts TURN_COMPLETED, so text that rides alongside a turn lands here.
+    TRANSCRIPT_RECORDED = "TranscriptRecorded"
     FILE_EDITED = "FileEdited"
     VERDICT_RENDERED = "VerdictRendered"
     CAPACITY_REJECTED = "CapacityRejected"
