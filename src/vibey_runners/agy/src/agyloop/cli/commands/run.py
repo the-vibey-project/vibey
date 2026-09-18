@@ -9,6 +9,7 @@ import typer
 from agyloop import bootstrap
 from agyloop.application.usecases.run_plan import parse_plan_file, run_from_plan_file
 from agyloop.cli.asyncio import async_command
+from agyloop.cli.run_outcome import RunOutcomeReporter
 from agyloop.domain.errors import InvalidPlanError, UnsafeSkipPermissionsError
 
 
@@ -194,7 +195,4 @@ async def _run(
     )
     typer.echo(f"Run id: {context.run_id}", err=True)
     result = await run_from_plan_file(context.runner, plan_file)
-    if not result.success:
-        typer.echo(f"Run failed: {result.reason}", err=True)
-        raise typer.Exit(code=1)
-    typer.echo(f"Done: {result.reason}")
+    RunOutcomeReporter().conclude(result)
