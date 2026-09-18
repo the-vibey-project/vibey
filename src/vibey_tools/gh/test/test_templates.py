@@ -23,6 +23,7 @@ from vibey_gh.config import (
     AiConfig,
     DocumentationConfig,
     GhConfig,
+    SocialSignalsConfig,
     load_config,
 )
 from vibey_gh.install import (
@@ -446,6 +447,37 @@ def test_release_surfaces_adds_nothing_to_the_install_by_default(tmp_path: Path)
     # without one runs an install of exactly the two packages and nothing else.
     assert 'if [ -n "docs/requirements.txt" ]' in rendered
     assert '[ -f "docs/requirements.txt" ]' in rendered
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_social_signals_are_injected_into_the_built_site_not_before_it(
+    tmp_path: Path, enabled: bool
+):
+    """The 4.a step ran BEFORE `properdocs build`, so `inject()` found no
+    channel-site/index.html and returned False on every deploy: a surface an adopter had
+    switched on published nothing, and nothing was red (#264). It must follow the build,
+    which also writes the funding footer it anchors to, and precede everything that
+    publishes channel-site/ -- the artifact upload and the copy into the Pages tree."""
+    cfg = GhConfig(root=tmp_path, social_signals=SocialSignalsConfig(enabled=enabled))
+    rendered = render_workflow(WORKFLOWS / "release-surfaces.yml", cfg)
+    steps = yaml.safe_load(rendered)["jobs"]["docs"]["steps"]
+
+    def index(predicate) -> int:
+        found = [i for i, step in enumerate(steps) if predicate(step)]
+        assert len(found) == 1, found
+        return found[0]
+
+    def uploads_the_site(step) -> bool:
+        artifact = str(step.get("uses", "")).startswith("actions/upload-artifact@")
+        return artifact and step.get("with", {}).get("path") == "channel-site/"
+
+    inject = index(lambda s: "social_signals import inject" in s.get("run", ""))
+    build = index(lambda s: "--site-dir channel-site" in s.get("run", ""))
+    upload = index(uploads_the_site)
+    restore = index(lambda s: s.get("name") == "Restore the other release channel")
+    assert build < inject < upload < restore
+    # Gated on the surface: `if:` renders the literal [social_signals] enabled.
+    assert steps[inject]["if"] is enabled
 
 
 def test_documentation_workflow_authors_guarded_refresh_prs():
