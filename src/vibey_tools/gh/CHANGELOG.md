@@ -5,6 +5,22 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Add `vibey_gh.gh_transport.GhTransport`, the one seam for running `gh`, declared in
+  `vibey_gh/interfaces/gh_transport_interface.py`. The package had grown seven private
+  runners that disagree about what a failure is, so rather than a fourth answer it offers
+  the three they give, each byte-identical to its original: `json` raises like
+  `github_state.gh_json`, `probe` reports `(ok, out)` like `promote._gh` (or, with
+  `strip=False, with_stderr=True`, like the merge train's `_gh`), and `survey` returns
+  `(value, problem)` like `tidy._gh_json`, so "could not ask" never reads as "nothing
+  there". `github_state.gh_json`, `repository` and `upsert_comment` now delegate to it,
+  keeping their names so every caller and every test that replaces them is untouched. That
+  re-routes conversation, PR and issue automation, reconcile, rulesets and flatten through
+  the transport with the same argv and working directory: `test/test_gh_transport.py`
+  drives the code as it stood before and the code now through one fake `gh` on PATH and
+  requires identical argv lists, directories, `calls.txt` bytes and outcomes. The fake
+  itself moves into `test/conftest.py` as `FakeGh`, which also records each call's exact
+  argv, directory and (on request) standard input, for any test to reuse. The other
+  modules keep their own runners for now and move over one at a time.
 - Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
   workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The
   "Restore the other release channel" step had grown to a single 509-line script, and

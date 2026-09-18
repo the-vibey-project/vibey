@@ -20,6 +20,15 @@ thread into a bounded briefing, and leaving both the reply and any bounded file 
 trusted step. `vibey_gh.github_state` is the single implementation of durable
 marker-comment state, shared by all three.
 
+Its `gh` calls, and every call other modules make through its `gh_json`, `repository` and
+`upsert_comment`, run on `vibey_gh.gh_transport`: the one declared seam for invoking the
+forge's command-line client (`vibey_gh/interfaces/gh_transport_interface.py`). The package
+grew seven private `gh` runners that disagree about what a failure is, so the transport
+offers the three answers they give rather than a fourth — raise on failure, report success
+as a boolean, or return a problem string that keeps "could not ask" distinct from "nothing
+there" — each byte-identical to the runner it replaces, with the argv and working directory
+unchanged. The remaining runners move onto it one module at a time.
+
 When a primary Claude path returns no verdict at all, `vibey_gh.local_review` offers two
 opt-in fallbacks through the same Ollama-compatible endpoint on the same distinct,
 non-privileged self-hosted runner. For pull requests, `local-review` reviews the diff and

@@ -30,6 +30,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Code Refactoring
+
+* **gh:** one transport for every `gh` call vibey-gh makes, beginning with the shared
+  marker-comment state. `vibey_gh.gh_transport.GhTransport`, declared by
+  `vibey_gh/interfaces/gh_transport_interface.py`, gives the three answers the package's
+  seven private `gh` runners already give — raise, report success as a boolean, or return
+  a problem string — each byte-identical to the runner it replaces. `github_state` now
+  rides on it, and with it every forge call that conversation, PR and issue automation,
+  reconcile, rulesets and flatten make through `github_state`; before/after tests driving
+  the old code and the new through the same fake `gh` on PATH show the same argv, working
+  directory and outcome, so GitHub sees no difference. The first slice of the platform
+  abstraction (#138), which the forge snapshot (#136) and capture (#145) build on
+
 ## [0.8.0] (2026-09-16)
 
 ### Features
