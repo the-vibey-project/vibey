@@ -43,6 +43,7 @@ from vibey.domain.ledger_query import (
     InvalidLedgerQuery,
     LedgerQuery,
 )
+from vibey.domain.phase import Phase
 from vibey.infrastructure.db.ledger_search_repository import PostgresLedgerSearchRepository
 
 DEFAULT_DIGEST_WIDTH: Final = 12
@@ -109,8 +110,11 @@ class LedgerSearchPresenter:
     def _line(self, event: LedgerEvent) -> str:
         stamp = event.produced_at.strftime("%Y-%m-%d %H:%M:%S")
         engine = f" [{event.engine_id.value}]" if event.engine_id is not None else ""
+        # A phase a newer vibey wrote (vibey#287) has no member name; its stored
+        # text is what the operator can search for, so that is what is shown.
+        phase = event.phase.name if isinstance(event.phase, Phase) else event.phase.value
         return (
-            f"#{event.seq:<4} {stamp} [{event.phase.name}] {event.kind.value}{engine} "
+            f"#{event.seq:<4} {stamp} [{phase}] {event.kind.value}{engine} "
             f"id={event.event_id} digest={event.digest[: self._digest_width]}"
         )
 

@@ -14,6 +14,7 @@ from vibey.application.dto import EngineHealthRecord, EnqueueRequest
 from vibey.bootstrap import build_app, database_url
 from vibey.cli.main import app
 from vibey.domain.circuit import CircuitState
+from vibey.domain.engine import EngineId
 from vibey.domain.job import idempotency_key
 from vibey.domain.ledger import EventKind, Provenance
 from vibey.domain.phase import Phase
@@ -55,7 +56,7 @@ async def _seed_status_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -121,7 +122,7 @@ async def _seed_engines_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -165,7 +166,7 @@ async def _seed_cost_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,

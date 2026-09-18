@@ -7,7 +7,7 @@ from vibey.application.design import DesignEvent
 from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.engine import EngineId
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
-from vibey.domain.ledger import EventKind, digest_event
+from vibey.domain.ledger import EventKind, Provenance, digest_event
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
@@ -54,8 +54,12 @@ class PostgresDesignLedger:
 
         A kind this vibey does not know is left out (vibey#275): no design handler
         could act on it, and a `DesignEvent` is also what the design handlers
-        append, so it carries only kinds vibey can write. The row itself stays in
-        the ledger and in every full ledger handed on.
+        append, so it carries only kinds vibey can write. The same goes for a
+        provenance this vibey does not know (vibey#287): a trust class it cannot
+        rate is not one it can hand a design handler as though it were one of its
+        own. A phase it does not know is not DESIGN, so the phase test already
+        leaves that out. The row itself stays in the ledger and in every full
+        ledger handed on.
         """
         events = await self._ledger.all_for_project(project_id)
         return tuple(
@@ -66,5 +70,7 @@ class PostgresDesignLedger:
                 payload=event.payload,
             )
             for event in events
-            if event.phase is Phase.DESIGN and isinstance(event.kind, EventKind)
+            if event.phase is Phase.DESIGN
+            and isinstance(event.kind, EventKind)
+            and isinstance(event.provenance, Provenance)
         )

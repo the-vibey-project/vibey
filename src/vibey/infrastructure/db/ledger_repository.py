@@ -11,16 +11,19 @@ from uuid import UUID
 
 import asyncpg
 
-from vibey.domain.engine import EngineId
+from vibey.domain.engine import ENGINE_ID_PARSER, EngineId, UnrecognizedEngineId
 from vibey.domain.interfaces.ledger_interface import EventKindParserInterface
+from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
 from vibey.domain.ledger import (
     EVENT_KIND_PARSER,
+    PROVENANCE_PARSER,
     EventKind,
     LedgerEvent,
     Provenance,
+    UnrecognizedProvenance,
     digest_event,
 )
-from vibey.domain.phase import Phase
+from vibey.domain.phase import PHASE_PARSER, Phase, UnrecognizedPhase
 from vibey.infrastructure.db.interfaces import EventAppenderInterface, EventRowMapperInterface
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
 from vibey.infrastructure.ledger.redact import redact_payload
@@ -33,28 +36,44 @@ class EventRowMapper:
     appender, the search repository -- maps a row one way. Two copies of the
     mapping would drift the first time a column was added to one of them.
 
-    The `kind` column is read forward-compatibly (vibey#275): a kind a newer vibey
-    wrote comes back as an `UnrecognizedEventKind`, never a `ValueError`. One row
-    this version predates must not make a project's whole ledger unreadable to
-    every older worker in a rolling upgrade.
+    Every closed vocabulary on the row is read forward-compatibly: `kind` since
+    vibey#275, and `phase`, `engine_id` and `provenance` since vibey#287. A value a
+    newer vibey wrote comes back as its stored text in an `Unrecognized*` type,
+    never a `ValueError`. One row this version predates must not make a project's
+    whole ledger unreadable to every older worker in a rolling upgrade -- and
+    `engine_id` needs no migration to grow, so #281's `claudeloop-local` reaches
+    this mapper the moment a newer worker runs it.
     """
 
-    def __init__(self, kinds: EventKindParserInterface = EVENT_KIND_PARSER) -> None:
+    def __init__(
+        self,
+        kinds: EventKindParserInterface = EVENT_KIND_PARSER,
+        *,
+        phases: StoredValueParserInterface[Phase, UnrecognizedPhase] = PHASE_PARSER,
+        engines: StoredValueParserInterface[EngineId, UnrecognizedEngineId] = ENGINE_ID_PARSER,
+        provenances: StoredValueParserInterface[
+            Provenance, UnrecognizedProvenance
+        ] = PROVENANCE_PARSER,
+    ) -> None:
         self._kinds = kinds
+        self._phases = phases
+        self._engines = engines
+        self._provenances = provenances
 
     def to_event(self, row: asyncpg.Record) -> LedgerEvent:
+        engine_id = row["engine_id"]
         return LedgerEvent(
             event_id=row["event_id"],
             project_id=row["project_id"],
             cycle=row["cycle"],
-            phase=Phase(row["phase"]),
+            phase=self._phases.parse(row["phase"]),
             seq=row["seq"],
             kind=self._kinds.parse(row["kind"]),
-            engine_id=EngineId(row["engine_id"]) if row["engine_id"] is not None else None,
+            engine_id=self._engines.parse(engine_id) if engine_id is not None else None,
             job_id=row["job_id"],
             causation_id=row["causation_id"],
             correlation_id=row["correlation_id"],
-            provenance=Provenance(row["provenance"]),
+            provenance=self._provenances.parse(row["provenance"]),
             produced_at=row["produced_at"],
             payload=json.loads(row["payload"]),
             digest=row["digest"],
@@ -177,9 +196,9 @@ def to_drafts(events: Sequence[LedgerEvent]) -> tuple[LedgerEventDraft, ...]:
     """Round-trips persisted events back into drafts, for tests that need
     to re-append a fixture range.
 
-    Raises `ValueError` for an event whose kind this vibey does not know:
-    re-appending it would be vibey writing a kind it cannot vouch for, and
-    writers stay strict (vibey#275).
+    Raises `ValueError` for an event carrying a kind (vibey#275), a phase, an
+    engine id or a provenance (vibey#287) this vibey does not know: re-appending it
+    would be vibey writing a value it cannot vouch for, and writers stay strict.
     """
     drafts: list[LedgerEventDraft] = []
     for e in events:
@@ -188,13 +207,25 @@ def to_drafts(events: Sequence[LedgerEvent]) -> tuple[LedgerEventDraft, ...]:
                 f"event seq {e.seq} has kind {e.kind.value!r}, which this vibey does not "
                 "know; it reads such an event but never writes one"
             )
+        engine_id = e.engine_id
+        if (
+            not isinstance(e.phase, Phase)
+            or not isinstance(e.provenance, Provenance)
+            or isinstance(engine_id, UnrecognizedEngineId)
+        ):
+            raise ValueError(
+                f"event seq {e.seq} carries a phase, engine id or provenance this vibey "
+                f"does not know (phase {e.phase.value!r}, engine "
+                f"{engine_id.value if engine_id is not None else None!r}, provenance "
+                f"{e.provenance.value!r}); it reads such an event but never writes one"
+            )
         drafts.append(
             LedgerEventDraft(
                 project_id=e.project_id,
                 cycle=e.cycle,
                 phase=e.phase,
                 kind=e.kind,
-                engine_id=e.engine_id,
+                engine_id=engine_id,
                 job_id=e.job_id,
                 causation_id=e.causation_id,
                 correlation_id=e.correlation_id,

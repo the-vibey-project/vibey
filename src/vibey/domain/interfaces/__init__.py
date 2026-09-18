@@ -22,6 +22,10 @@ from vibey.domain.interfaces.ledger_query_interface import (
     LedgerQueryInterface,
     LedgerSearchResultInterface,
 )
+from vibey.domain.interfaces.stored_value_interface import (
+    StoredValueParserInterface,
+    UnrecognizedValueInterface,
+)
 
 __all__ = [
     "ActorInterface",
@@ -36,5 +40,7 @@ __all__ = [
     "LedgerChainInterface",
     "LedgerQueryInterface",
     "LedgerSearchResultInterface",
+    "StoredValueParserInterface",
     "UnrecognizedEventKindInterface",
+    "UnrecognizedValueInterface",
 ]
