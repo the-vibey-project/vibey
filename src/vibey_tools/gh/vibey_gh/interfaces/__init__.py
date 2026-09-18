@@ -2,8 +2,8 @@
 """The declared seams of `vibey_gh` (vibey ADR-0016).
 
 Interfaces declare; they never consume. A module here may import the standard library,
-`vibey_gh.config` (data, not behaviour) and other interfaces — nothing else from this
-tree. `.importlinter` enforces it.
+`vibey_gh.config` and `vibey_gh.forge` (data, not behaviour) and other interfaces —
+nothing else from this tree. `.importlinter` enforces it.
 """
 
 from __future__ import annotations

@@ -29,6 +29,10 @@ Every project-specific decision lives here so the logic beside it can stay gener
     branch_prefix  = "vibey-gh/issue"   # namespace every proposal branch lives under
     required_label = "vibey-gh:solve"   # what opts an outside author's issue in
 
+    [platform]
+    kind = "github"         # which forge the repository lives on; github is the one adapter
+    host = "github.com"     # that forge's host, for GitHub Enterprise Server and its like
+
 Absent keys fall back to the defaults below, so a repository that agrees with them needs
 no file at all. `tomllib` is stdlib from 3.11, which this package already requires.
 """
@@ -40,6 +44,8 @@ import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+
+from vibey_gh.forge import ForgeKind
 
 CONFIG_NAME = ".vibey-gh.toml"
 
@@ -219,6 +225,56 @@ class WorkflowNamesConfig:
     release_repair: str = "Release repair"
     github_release: str = "GitHub Release"
     repository_profile: str = "Repository profile"
+
+
+# The forges `[platform] kind` accepts today: the ones with an adapter. `ForgeKind` names
+# more, because the standard is written for every forge (#138), but a kind with no adapter
+# is refused here, at load, rather than accepted and then quietly driven as GitHub by every
+# module that has not moved onto the adapter yet. `ForgeSelector.kinds` must equal this,
+# and a test holds them together.
+ADAPTED_PLATFORM_KINDS = (ForgeKind.GITHUB.value,)
+
+# A bare host name, optionally with a port: what `gh` takes as `GH_HOST`. No scheme, path,
+# user or whitespace, so the value cannot smuggle anything else into the client's reading.
+_HOST_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?")
+
+
+@dataclass(frozen=True)
+class PlatformConfig:
+    """Which forge this repository lives on, and where (#138).
+
+    `kind` selects the forge adapter, which is the only code allowed to know what platform
+    it is speaking to. `host` is that forge's host: `github.com`, the default, is the host
+    `gh` assumes on its own and changes nothing; any other host (a GitHub Enterprise Server)
+    is handed to `gh` as `GH_HOST`, so every call the adapter makes goes there.
+
+    Only the calls that have moved onto the adapter read this — today the clean-repo
+    survey's two forge reads. Every other command still runs `gh` the way it always has,
+    which is exactly why a kind without an adapter is refused rather than half-honoured.
+    """
+
+    kind: str = ForgeKind.GITHUB.value
+    host: str = "github.com"
+
+    def __post_init__(self) -> None:
+        kinds = tuple(kind.value for kind in ForgeKind)
+        if self.kind not in kinds:
+            raise ValueError(f"platform.kind must be one of {', '.join(kinds)}: {self.kind!r}")
+        if self.kind not in ADAPTED_PLATFORM_KINDS:
+            raise ValueError(self.not_adapted(self.kind))
+        if not isinstance(self.host, str) or not _HOST_RE.fullmatch(self.host):
+            raise ValueError(
+                "platform.host must be a bare host name, optionally with a port "
+                f"(no scheme or path): {self.host!r}"
+            )
+
+    @staticmethod
+    def not_adapted(kind: str) -> str:
+        """The one sentence for a forge the standard names but no adapter drives yet."""
+        return (
+            f"platform.kind = {kind!r}: the {kind} adapter is not implemented yet; "
+            f"vibey-gh drives {', '.join(ADAPTED_PLATFORM_KINDS)} only (#138)"
+        )
 
 
 @dataclass(frozen=True)
@@ -1234,6 +1290,7 @@ class GhConfig:
     yank: YankConfig = YankConfig()
     social_signals: SocialSignalsConfig = SocialSignalsConfig()
     tidy: TidyConfig = TidyConfig()
+    platform: PlatformConfig = PlatformConfig()
     workflow_names: WorkflowNamesConfig = WorkflowNamesConfig()
     rulesets: RulesetsConfig = RulesetsConfig()
     repository_profile: RepositoryProfileConfig = RepositoryProfileConfig()
@@ -1445,6 +1502,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     profile = data.get("repository_profile", {})
     documentation = data.get("documentation", {})
     marketplace = data.get("marketplace", {})
+    platform = data.get("platform", {})
     automation = PrAutomationConfig(
         enabled=auto.get("enabled", True),
         scan_workflows=tuple(auto.get("scan_workflows", DEFAULT_SCAN_WORKFLOWS)),
@@ -1545,6 +1603,10 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             keep_branches=tuple(data.get("tidy", {}).get("keep_branches", ())),
             trust_forge_deletions=data.get("tidy", {}).get("trust_forge_deletions", True),
             fail_check=data.get("tidy", {}).get("fail_check", False),
+        ),
+        platform=PlatformConfig(
+            kind=platform.get("kind", PlatformConfig.kind),
+            host=platform.get("host", PlatformConfig.host),
         ),
         yank=YankConfig(
             pypi=yanking.get("pypi", False),

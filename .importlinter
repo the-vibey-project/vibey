@@ -94,6 +94,8 @@ forbidden_modules =
 
 # The same rule for the first `interfaces/` package in the absorbed vibey-gh (ADR-0016:
 # tenants converge module by module, and a new module arrives with its seam declared).
+# The forge seams (#138) may name `vibey_gh.forge`, the forge-neutral nouns, which are data
+# the way `vibey_gh.config` is; never an adapter, the selector, or the survey that uses them.
 [importlinter:contract:vibey-gh-interfaces-declare-only]
 name = vibey_gh interfaces declare seams, never consume them
 type = forbidden
@@ -108,6 +110,9 @@ forbidden_modules =
     vibey_gh.install
     vibey_gh.gh_transport
     vibey_gh.github_state
+    vibey_gh.forge_github
+    vibey_gh.forge_selector
+    vibey_gh.tidy
 # The flatten seam names its `FlattenPlan` record under `TYPE_CHECKING`, so at runtime it
 # imports nothing from `vibey_gh.flatten`. Counted as an edge, though, it reaches every
 # module `flatten` does, and `flatten` asks the forge through `github_state` and so through

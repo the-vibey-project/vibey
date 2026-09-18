@@ -5,6 +5,31 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Add the forge adapter layer (#138, slices F2 and F3). `vibey_gh/forge.py` holds the
+  forge-neutral nouns as frozen records — `ForgeKind`, `ForgeRepository`, `ChangeRequest`,
+  `ForgeComment`, `CheckResult`, `ForgeRelease`, `ForgeLabel`, `ProtectedRef` — recorded in
+  `docs/adr/0001-forge-neutral-nouns.md`, which is proposed and needs the operator's
+  ratification. `vibey_gh/interfaces/forge_adapter_interface.py` declares two verbs,
+  `open_change_request_heads` and `releases`, and makes the clean-repo survey's
+  `(value, problem)` shape the contract of every verb. `vibey_gh.forge_github.GitHubForge`
+  implements them on `GhTransport`, and `vibey_gh.forge_selector.ForgeSelector` is the one
+  place `[platform] kind` is read. `tidy.survey` is the first consumer: its `gh pr list` and
+  `gh release list` moved onto the adapter, taking tidy's private `_gh_json`, `_gh_list` and
+  `_open_pr_heads` with them, and `test/test_forge_github.py` drives the survey as it stood
+  and as it stands through one `FakeGh`, requiring the same argv lists, working directory,
+  `calls.txt` bytes and report for every forge answer, including refusals, error envelopes
+  and a missing `gh`. `test/test_tidy.py` now answers `gh` through `FakeGh` too, keyed by
+  the exact command lines. `survey` also takes a `forge=` argument, so a caller or a test can
+  hand it any adapter.
+- Add `[platform]`: `kind` (default `"github"`) and `host` (default `"github.com"`). `gitlab`
+  and `forgejo` are named by the standard but refused at load until their adapters exist,
+  because every command not yet on the adapter would otherwise drive GitHub quietly; any
+  other kind is refused as unknown. `host` must be a bare host name with an optional port.
+  A host other than `github.com` is exported to `gh` as `GH_HOST` through the new
+  `GhTransport.host`; the default leaves `gh`'s environment untouched. `doctor` knows both
+  keys. `GhTransportInterface` now declares `executable`, so an adapter names the client in
+  its own problems the way the transport does.
+
 - Add `vibey_gh.gh_transport.GhTransport`, the one seam for running `gh`, declared in
   `vibey_gh/interfaces/gh_transport_interface.py`. The package had grown seven private
   runners that disagree about what a failure is, so rather than a fourth answer it offers

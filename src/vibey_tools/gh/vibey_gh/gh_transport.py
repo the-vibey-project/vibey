@@ -9,15 +9,17 @@ nothing it returns to its own callers changes when it does:
 - `json` is `github_state.gh_json`, and the merge train's `_gh_json`, which is its twin.
 - `probe` is `promote._gh` by default and the merge train's `_gh` with
   `strip=False, with_stderr=True`.
-- `survey` is `tidy._gh_json`.
+- `survey` is what `tidy._gh_json` was, before the clean-repo survey moved onto the GitHub
+  forge adapter (`vibey_gh.forge_github`), which now reads through it.
 
-`github_state` is the first consumer. The rest of the package still runs its own and moves
-over one module at a time.
+`github_state` was the first consumer and the forge adapter the second. The rest of the
+package still runs its own and moves over one module at a time.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -28,14 +30,21 @@ from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface, Wor
 
 @dataclass(frozen=True)
 class GhTransport(GhTransportInterface):
-    """Runs `executable` on PATH with an argv this process built. Holds no other state.
+    """Runs `executable` on PATH with an argv this process built.
 
     `executable` is the one literal every runner in the package used to repeat. Nothing
-    reads it from configuration yet: that belongs to the slice that selects between
-    forges, which is the first thing with a reason to set it.
+    reads it from configuration yet.
+
+    `host` pins the client to one forge host by exporting it as `GH_HOST`, which is how
+    `gh` is pointed at a GitHub Enterprise Server instead of github.com. `None`, the
+    default, leaves the child's environment exactly as this process has it: every runner
+    this transport replaced did that, and a `GH_HOST` the caller exported keeps working.
+    The forge adapter sets it from `[platform] host`, and only for a host other than the
+    one `gh` assumes on its own.
     """
 
     executable: str = "gh"
+    host: str | None = None
 
     def run(
         self,
@@ -44,12 +53,13 @@ class GhTransport(GhTransportInterface):
         cwd: WorkingDirectory | None = None,
         stdin: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        # `cwd=None` and `input=None` are `subprocess.run`'s own defaults, so a call that
-        # passes neither is the very call the runners it replaces made.
+        # `cwd=None`, `input=None` and `env=None` are `subprocess.run`'s own defaults, so a
+        # call that sets none of them is the very call the runners it replaces made.
         return subprocess.run(
             [self.executable, *args],
             cwd=cwd,
             input=stdin,
+            env=None if self.host is None else {**os.environ, "GH_HOST": self.host},
             capture_output=True,
             text=True,
             check=False,

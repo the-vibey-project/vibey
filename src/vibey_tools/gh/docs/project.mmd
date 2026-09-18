@@ -30,6 +30,10 @@ flowchart TB
     Conversation["Conversation (comment-driven answer and bounded change, vibey_gh.conversation)"]
     GithubState["Durable marker-comment state (vibey_gh.github_state)"]
     GhTransport["Forge CLI transport (vibey_gh.gh_transport): one seam, three result shapes"]
+    ForgeNouns["Forge-neutral nouns (vibey_gh.forge): ChangeRequest, ForgeRelease, CheckResult, ProtectedRef, ..."]
+    ForgeSelector["Forge selection (vibey_gh.forge_selector): [platform] kind picks the adapter"]
+    ForgeAdapter["Forge adapter (vibey_gh.forge_github.GitHubForge): verbs answer value and problem"]
+    Tidy["Clean-repo survey (vibey_gh.tidy): technical clutter, never human mess"]
     MergeTrain[Merge train]
     Promotion[Promotion]
     Versioning[Versioning]
@@ -264,6 +268,12 @@ flowchart TB
   ConversationReply --> Guard
   Conversation --> GithubState
   GithubState -->|every gh call, argv and cwd unchanged| GhTransport
+  CLI --> Tidy
+  Tidy -->|open change-request heads, releases| ForgeSelector
+  Config -->|"[platform] kind and host"| ForgeSelector
+  ForgeSelector -->|github; gitlab and forgejo refused until adapted| ForgeAdapter
+  ForgeAdapter -->|answers in| ForgeNouns
+  ForgeAdapter -->|same argv and cwd as before| GhTransport
   Conversation --> Trusted
   Maintainer -->|installs the marketplace for a project session| ClaudeSettings
   ClaudeSettings --> DevPlugin

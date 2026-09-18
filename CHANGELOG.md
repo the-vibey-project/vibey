@@ -30,6 +30,23 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Features
+
+* **gh:** the clean-repo survey asks its forge through a forge-neutral adapter, the second
+  slice of the platform abstraction (#138). `vibey_gh.forge` names what vibey-gh talks
+  about in any forge's terms (`ForgeKind`, `ForgeRepository`, `ChangeRequest`,
+  `ForgeComment`, `CheckResult`, `ForgeRelease`, `ForgeLabel`, `ProtectedRef`), and
+  `vibey_gh/interfaces/forge_adapter_interface.py` declares the verbs, each answering
+  `(value, problem)` so a forge that could not be asked never reads as one that said
+  "nothing". `vibey_gh.forge_github.GitHubForge` implements them on the `gh` transport, and
+  `vibey-gh tidy` and `check --ci` now read the open pull request heads and the releases
+  through it, with the same `gh` argv and working directory, which before/after tests prove
+  through one fake `gh`. A new `[platform]` table chooses the adapter (`kind = "github"`,
+  `host = "github.com"`): `gitlab` and `forgejo` are refused at load with "the … adapter is
+  not implemented yet" rather than half-honoured, and a host other than github.com reaches
+  `gh` as `GH_HOST` for GitHub Enterprise Server. The noun vocabulary is proposed in
+  vibey-gh's ADR 0001 and awaits the operator's ratification
+
 ### Code Refactoring
 
 * **gh:** one transport for every `gh` call vibey-gh makes, beginning with the shared
