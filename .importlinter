@@ -108,6 +108,7 @@ forbidden_modules =
     vibey_gh.install
     vibey_gh.gh_transport
     vibey_gh.github_state
+    vibey_gh.conversation
 # The flatten seam names its `FlattenPlan` record under `TYPE_CHECKING`, so at runtime it
 # imports nothing from `vibey_gh.flatten`. Counted as an edge, though, it reaches every
 # module `flatten` does, and `flatten` asks the forge through `github_state` and so through
