@@ -33,6 +33,24 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 ### Bug Fixes
 
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+### Features
+
+* **ledger:** `vibey ledger search` finds ledger records by record id (`--id`), payload digest
+  (`--digest`, which names a payload, so it can match several records), actor (`--actor`: an
+  engine id, a provenance, or `vibey` for events vibey wrote itself), time window
+  (`--since`/`--until`, half-open, ISO-8601), any of several kinds (repeatable `--kind`), and
+  literal case-insensitive text in the payload (`--text`), scoped to one project. Every
+  criterion and the `--limit` run in SQL as one parameterised statement — nothing typed reaches
+  the SQL text — and the result says when older matches were cut; `--json` prints every field
+  of every event. Migration 0012 adds the digest, production-time and per-engine indexes the
+  search reads. The first slice of sub-doctrine 7.a, the searchable ledger (#137)
+* **ledger:** the ledger has a hash chain, derived from the rows rather than stored beside them
+  (`domain/ledger_chain.py`). Each event's link is the SHA-256 of the previous link and every
+  stored field of the event, from a per-project genesis; `verify` walks a whole ledger or a
+  window from a trusted link, recomputes each payload's digest, and reports every gap,
+  duplicate, foreign event, digest mismatch and disagreeing anchor rather than the first one.
+  A window verifies alone from the link before it, which is what the storage tiers' chunk
+  hashes will fold over (#114, #137)
 
 ## [0.8.0] (2026-09-16)
 
