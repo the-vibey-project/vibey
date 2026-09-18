@@ -116,7 +116,15 @@ conftest falls back to `postgresql://<current user>@localhost:5432/vibey_test`.
 against real Postgres, each randomly abandoning a claimed job mid-flight (the
 observable effect of a kill: no ack, no nack, lease just expires), with a
 concurrent reaper reclaiming expired leases. It proves the property that
-matters: **zero double-execution, zero lost jobs** across 500 jobs.
+matters: **zero double-commit, zero lost jobs** across 500 jobs.
+
+Delivery is at-least-once. On a loaded machine claim-to-ack outlives the 150 ms
+lease, the job is reaped and claimed again, and the work runs twice. The ack is
+fenced on `lease_owner`, so the stale ack is refused and exactly one ack per job
+returns `True`. The test therefore counts *committed* executions (acks that
+returned `True`), fails if any job is committed twice or never, and only prints
+the raw execution count (`pytest -rP` shows the tally). Don't lengthen the lease
+to quiet a failure: that hides the fence the test exists to exercise.
 
 This is a scoped-down substitute for the implementation plan's literal spec
 (8 OS processes, `SIGKILL` every 2s via testcontainers) — no Docker daemon

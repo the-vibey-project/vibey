@@ -12,7 +12,17 @@ ack, nack, or heartbeat again and the lease is left to expire. A
 concurrent reaper reclaims those expired leases, same as production.
 
 What's verified is the property the real chaos test exists to protect:
-zero double-execution, zero lost jobs, every job reaches a terminal state.
+zero double-commit, zero lost jobs, every job reaches a terminal state.
+
+Delivery is at-least-once, and the test counts it honestly instead of hiding
+it. A worker slower than its lease (a loaded machine is enough) has its job
+reaped and claimed again by another worker, so the work can run twice. What
+must never happen twice is the commit: ack is fenced on lease_owner, so a
+stale ack is refused and exactly one ack per job returns True. The test
+therefore tallies COMMITTED executions -- acks that returned True -- and
+asserts that none was committed twice and none was lost, keeping the raw
+execution count for information only. Lengthening the lease would make the
+duplicates vanish on an idle machine and mask the very fence under test.
 """
 
 import asyncio
@@ -33,16 +43,18 @@ WORKER_COUNT = 8
 LEASE = timedelta(milliseconds=150)
 CRASH_PROBABILITY = 0.2
 TEST_TIMEOUT_SECONDS = 45.0
+DRAIN_TIMEOUT_SECONDS = 10.0
 
 
 @pytest.mark.slow
-async def test_chaos_zero_double_execution_zero_lost_jobs(
+async def test_chaos_zero_double_commit_zero_lost_jobs(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:
     repo = PostgresJobRepository(migrated_pool)
 
+    job_ids: set[UUID] = set()
     for i in range(JOB_COUNT):
-        await repo.enqueue(
+        job = await repo.enqueue(
             EnqueueRequest(
                 project_id=project_id,
                 cycle=1,
@@ -53,9 +65,12 @@ async def test_chaos_zero_double_execution_zero_lost_jobs(
                 max_attempts=1000,
             )
         )
+        job_ids.add(job.id)
 
-    execution_log: list[UUID] = []
-    log_lock = asyncio.Lock()
+    # One event loop, so these appends never interleave and need no lock.
+    executions: list[UUID] = []  # every time a worker did the work
+    commits: list[UUID] = []  # acks the lease-owner fence accepted
+    refused: list[UUID] = []  # stale acks the fence turned away
     stop = asyncio.Event()
     rng = random.Random(1234)
 
@@ -72,9 +87,11 @@ async def test_chaos_zero_double_execution_zero_lost_jobs(
                 # must expire on its own.
                 continue
 
-            async with log_lock:
-                execution_log.append(job.id)
-            await repo.ack(job.id, owner=name)
+            executions.append(job.id)
+            if await repo.ack(job.id, owner=name):
+                commits.append(job.id)
+            else:
+                refused.append(job.id)
 
     async def reaper() -> None:
         while not stop.is_set():
@@ -100,14 +117,38 @@ async def test_chaos_zero_double_execution_zero_lost_jobs(
         await asyncio.wait_for(wait_until_all_terminal(), timeout=TEST_TIMEOUT_SECONDS)
     finally:
         stop.set()
-        for t in worker_tasks:
+        # Let each task finish the iteration it is in rather than cancelling
+        # it: a worker cancelled after the database committed its ack, but
+        # before the ack returned, would drop that commit from the tally and
+        # read as a lost job.
+        _, pending = await asyncio.wait([*worker_tasks, reaper_task], timeout=DRAIN_TIMEOUT_SECONDS)
+        for t in pending:
             t.cancel()
-        reaper_task.cancel()
-        await asyncio.gather(*worker_tasks, reaper_task, return_exceptions=True)
+        outcomes = await asyncio.gather(*worker_tasks, reaper_task, return_exceptions=True)
 
-    # Zero double-execution: every job id that reached the "about to ack"
-    # log appears at most once.
-    assert len(execution_log) == len(set(execution_log)), "a job was executed more than once"
+    crashed = [o for o in outcomes if isinstance(o, BaseException)]
+    assert not crashed, f"a worker or the reaper raised: {crashed!r}"
+
+    # The raw execution count is informational and has no bound: under load,
+    # claim-to-ack outlives the lease and the work runs again. That is
+    # at-least-once delivery, not a defect. The tally itself must balance.
+    # Printed so `pytest -rP` shows it on a pass; every failure message has it.
+    tally = (
+        f"{len(executions)} raw executions = {len(commits)} committed"
+        f" + {len(refused)} stale acks refused"
+    )
+    print(f"chaos tally: {tally}")
+    assert len(executions) == len(commits) + len(refused), f"an ack went untallied: {tally}"
+
+    # Zero double-commit: no job's ack was accepted twice.
+    double_committed = len(commits) - len(set(commits))
+    assert double_committed == 0, f"{double_committed} job(s) committed more than once: {tally}"
+
+    # Zero lost jobs: every job committed, so every refused ack was a stale
+    # one whose job another ack carried home.
+    lost = job_ids - set(commits)
+    assert not lost, f"{len(lost)} job(s) never committed: {tally}"
+    assert len(commits) == JOB_COUNT, f"expected {JOB_COUNT} commits: {tally}"
 
     async with migrated_pool.acquire() as conn:
         states = await conn.fetch(

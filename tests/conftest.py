@@ -42,8 +42,17 @@ def _worker_id() -> str:
     return os.environ.get("PYTEST_XDIST_WORKER", "main")
 
 
+# Drawn once per process, so _setup and _teardown name the same database; the
+# pid says whose it was if a crashed run leaves it behind.
+_LOCAL_RUN_ID = f"{os.getpid()}_{os.urandom(4).hex()}"
+
+
 def _worker_db_name() -> str:
-    run_id = os.environ.get("PYTEST_XDIST_TESTRUNUID", "main")
+    # xdist hands each worker a per-run id. A serial (-n 0) run and the xdist
+    # controller get none, and the old fixed fallback named every such process,
+    # in every checkout on the server, vibey_test_main_main -- which each run's
+    # startup terminated and dropped from under whichever run was using it.
+    run_id = os.environ.get("PYTEST_XDIST_TESTRUNUID") or _LOCAL_RUN_ID
     return f"vibey_test_{_worker_id()}_{run_id}"
 
 
