@@ -30,6 +30,21 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Bug Fixes
+
+* **gh:** the automation-bootstrap recovery path could never merge. It waited on six
+  literal check names — `Documentation contract`, `Provenance`, `Build`, `Lint`,
+  `Analyze Python`, and the parity check — five of which never report here, and `Build`,
+  `Lint` and the parity check came only from vibey-gh's own hand-written workflows, so the
+  emergency path failed closed for every adopter exactly when it was needed. Its scope check
+  assumed the standalone layout too, and `gh pr diff` reports repository-root paths, so
+  every `src/vibey_tools/gh/…` file was refused. Both are now rendered from configuration:
+  the gates are `[rulesets.integration] required_checks` less
+  `[pr_automation] ignored_checks` and the gate the path routes around (`["gates"]` here),
+  and the scope is anchored at `[install] self_source`. Still fail-closed — an empty list,
+  an absent gate or any red check refuses the merge, and the error names what is absent
+  ([#214](https://github.com/the-vibey-project/vibey/issues/214))
+
 ## [0.8.0] (2026-09-16)
 
 ### Features

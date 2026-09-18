@@ -5,6 +5,33 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Fix `automation-bootstrap.yml`, the admin-only path for merging a repair to broken
+  privileged workflow code, which could never merge (#214). It required six hard-coded
+  check names — `Documentation contract`, `Provenance`, `Build`, `Lint`, `Analyze Python`,
+  and `MCP, API, CLI, SDK, and webhook parity` — under `jq -e`, and `Build`, `Lint` and the
+  parity check came from this project's own non-template workflows, so no adopting
+  repository could ever produce them; the vibey monorepo produced none but one. The gates
+  are now rendered by `vibey-gh install` from `[rulesets.integration] required_checks`,
+  less `[pr_automation] ignored_checks` and the gates the path routes around (`gate`,
+  `PR automation / gate`, `Automation bootstrap / gate`), into the step's `env:` as a JSON
+  list that `jq --argjson` reads — so a name with a quote, comma or parentheses survives —
+  and the run summary lists them instead of claiming a fixed set. It still fails closed:
+  an empty list, a head with no check runs, an absent gate or any red run refuses the
+  merge, and the error now names the absent gates. A configured name that opens a `${{ }}`
+  expression is refused at render time. **Behaviour change for a repository whose
+  `required_checks` differ from those six:** the bootstrap now waits on its own list —
+  this tenant's configuration renders `Lint`, `Build`, `Test (3.11)`–`Test (3.13)`,
+  `Provenance`, `CodeQL`, `Documentation contract` and the parity check, so `Analyze Python`
+  is no longer required here and the three test jobs and `CodeQL` are.
+- Fix the same workflow's change-scope check for a vendored copy. `gh pr diff` reports
+  repository-root paths, and the pattern assumed the standalone layout, so a repair under
+  `src/vibey_tools/gh/` was refused file by file. The pattern is now rendered from
+  `[install] self_source` with every ERE metacharacter escaped and control characters
+  refused, and it admits that subtree's own deployed workflows and
+  `vibey_gh/automation_bootstrap.py` — the new home of this derivation — alongside the
+  existing automation-core paths. A standalone repository renders the pattern it always
+  had, plus that one module.
+
 - Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
   workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The
   "Restore the other release channel" step had grown to a single 509-line script, and

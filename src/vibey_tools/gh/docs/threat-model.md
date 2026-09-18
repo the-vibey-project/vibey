@@ -123,14 +123,33 @@ used only to recover from a broken privileged workflow that a normal PR cannot r
 because privileged workflow code is loaded from the trusted base branch, not the PR head.
 Only a repository administrator can trigger it, and only with explicit `workflow_dispatch`
 authorization naming an exact PR and head SHA. Before merging, the workflow independently
-re-verifies that the PR is open, non-draft, targets `develop`, and matches the supplied head
-exactly; that its changed files are confined to workflow, template, or automation-core
-paths; and that every non-gate check run on that exact SHA — including CodeQL, API drift,
-documentation, provenance, build, and lint — completed successfully. It then performs a
-`--match-head-commit` admin squash merge, which bypasses ordinary `PRAutomation` and `Guard`
-review but never deletes a permanent branch. This trades the semantic review step for an
-administrator's explicit authorization plus the same independent deterministic gates,
-scoped to the one case those gates cannot otherwise unblock.
+re-verifies that the PR is open, non-draft, targets the integration branch, and matches the
+supplied head exactly; that its changed files are confined to workflow, template, or
+automation-core paths; and that every check run on that exact SHA other than the
+routed-around PR-automation gate completed green, with every independent gate present among
+them. It then performs a `--match-head-commit` admin squash merge, which bypasses ordinary
+`PRAutomation` and `Guard` review but never deletes a permanent branch. This trades the
+semantic review step for an administrator's explicit authorization plus the same
+independent deterministic gates, scoped to the one case those gates cannot otherwise
+unblock.
+
+Which gates count as independent is therefore part of this boundary, and so is the scope
+pattern, and both are rendered from reviewed configuration rather than written into the
+template. The gates are `[rulesets.integration] required_checks` — the names GitHub already
+enforces on the target branch — less `[pr_automation] ignored_checks` and the routed-around
+gates. A fixed list once named checks most repositories never produce, so the path failed
+closed for everyone. Deriving it from the ruleset makes the bootstrap demand what the branch
+it merges into already demands, less only the gate it exists to route around and what PR
+automation itself ignores — and every other check run on the head must still be green.
+Three properties keep that derivation from becoming a way around the gate:
+an empty list refuses the merge (nothing independent would have been verified); a
+configured name that opens a `${{ }}` expression is refused at render time, since the list
+lands in the step's environment and Actions would evaluate it; and the scope's
+`[install] self_source` prefix is rendered with every ERE metacharacter escaped and any
+control character refused, so a vendored subtree narrows the scope to that subtree instead
+of widening it. Both values are fixed in the deployed workflow the administrator dispatches
+— the default branch's copy unless they deliberately choose another ref — so a pull request
+that edits `.vibey-gh.toml` changes nothing here until it has been merged and re-rendered.
 
 The opt-in local-model review fallback introduces a distinct asset and a distinct
 boundary: a repository-provided `[self-hosted, vibey-local-gh]` runner, rather than a

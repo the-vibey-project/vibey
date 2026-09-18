@@ -30,7 +30,7 @@ defaults below. Paths are repository-relative unless stated otherwise.
 | `merge_train.restack_conflicts` | boolean / `true` | Let the train merge the integration branch into a conflicting or behind head itself, locally, before reporting it as stuck. GitHub computes mergeability without this repository's `.gitattributes`, so a path declared `merge=union` (see `install.union_merge_paths`) is called a conflict there and resolves here. The restacked pull request merges on the NEXT train run, once its checks have re-run against the tree that now exists. Forks are never written to, whatever this is set to. `false` reports the conflict and leaves it to a person. |
 | `install.workflows` | string list / all managed workflows | Exact managed subset; `[]` installs hooks and CLI assets only. |
 | `install.union_merge_paths` | string list / `["CHANGELOG.md"]` | Files declared `merge=union` in `.gitattributes`, so two branches appending to the same section merge instead of conflicting. Appended to an existing `.gitattributes`, never rewriting it. `[]` declares none. |
-| `install.self_source` | string / `"."` | Where a repository that **is** the tooling keeps its own copy, for the workflows that install it. Declared rather than discovered on purpose: a workflow that searched the tree for a `pyproject.toml` declaring `name = "vibey-gh"` would be reading a pull request's own files, and a branch that adds one anywhere would get it installed with that job's permissions. The rendered workflows verify the path before using it and fall back to the published release if it does not hold the tooling. |
+| `install.self_source` | string / `"."` | Where a repository that **is** the tooling keeps its own copy, for the workflows that install it. Declared rather than discovered on purpose: a workflow that searched the tree for a `pyproject.toml` declaring `name = "vibey-gh"` would be reading a pull request's own files, and a branch that adds one anywhere would get it installed with that job's permissions. The rendered workflows verify the path before using it and fall back to the published release if it does not hold the tooling. It also anchors `automation-bootstrap.yml`'s change scope: `gh pr diff` reports repository-root paths, so a vendored copy's automation-core files are admitted under this prefix and nowhere else. |
 | `install.fallback_package` | string / `"vibey"` | The distribution the managed workflows install when `self_source` does not hold the tooling — the branch every adopter takes, since their `self_source` default `"."` never matches. A key rather than a constant so a fork, or an internal index publishing under another name, can point it at their own distribution instead of one they cannot publish to. It is the package `pin_version` pins. |
 | `install.pin_version` | boolean / `false` | Pin every managed workflow's `pip install vibey` — the distribution that carries `vibey-gh` — to the exact version that rendered it (`vibey==X.Y.Z`), instead of the latest release on every run. `false` keeps the historical floating install. The self-hosting path (this repository, and anything else installing from its own `pyproject.toml`) is never pinned — it installs from source regardless. Running `vibey-gh install` from a newer release moves the pin forward as one visible diff. |
 
@@ -79,7 +79,7 @@ expression is refused at load time.
 |---|---|---|
 | `enabled` | boolean / `true` | Enable event-driven evaluation, review, repair, and gating. |
 | `scan_workflows` | string list / CI, Provenance, CodeQL, Docs, Conventional Commits | Workflow names that trigger evaluation. Every name must be a workflow with a `pull_request` or `pull_request_target` trigger — one that only runs on `push` can never complete for a pull request, so `state` never leaves `pending`, the gate never publishes, and — made a required check — no pull request can ever merge. `vibey-gh check` fails on any named workflow that exists but cannot fire for a pull request; a name absent from `.github/workflows/` is not an error. |
-| `ignored_checks` | string list / orchestration checks | Checks excluded from the ordinary rollup. Own checks are always ignored. |
+| `ignored_checks` | string list / orchestration checks | Checks excluded from the ordinary rollup. Own checks are always ignored. Also subtracted from `[rulesets.integration] required_checks` to give the gates `automation-bootstrap.yml` waits on. |
 | `max_repair_attempts` | integer / `3` (1–10) | Repair budget per contributor lineage. |
 | `model` | string / `claude-sonnet-5` | Review and repair model. |
 | `review_untrusted_authors` | boolean / `true` | Require exact-head outside-author review. |
@@ -502,7 +502,7 @@ names are not configured here — `[rulesets.integration]` always targets
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `required_checks` | string list / integration: `["Provenance", "Analyze Python", "Documentation contract", "PR automation / gate"]`; release: the same without the gate | Required status-check contexts — **check-run names, not workflow names** (see below). Empty omits the check requirement entirely. |
+| `required_checks` | string list / integration: `["Provenance", "Analyze Python", "Documentation contract", "PR automation / gate"]`; release: the same without the gate | Required status-check contexts — **check-run names, not workflow names** (see below). Empty omits the check requirement entirely. The integration list, less `[pr_automation] ignored_checks` and the gates it routes around, is also what `automation-bootstrap.yml` waits on (see below); empty there means the bootstrap refuses every merge. |
 | `strict_required_checks` | boolean / `true` | Require the branch to be up to date with its base before merging. |
 | `required_approvals` | integer / integration: `0`, release: `1` (0–6) | Required approving reviews. Integration defaults to `0` because PR automation gates it instead. |
 | `dismiss_stale_reviews` | boolean / `true` | Dismiss stale reviews when new commits are pushed. |
@@ -567,6 +567,24 @@ real names, open a recent pull request's checks tab, or:
 gh api "repos/OWNER/REPO/commits/$(git rev-parse HEAD)/check-runs" \
   --jq '.check_runs[].name' | sort -u
 ```
+
+### The integration list also gates the automation bootstrap
+
+`automation-bootstrap.yml` — the admin-only path that merges a repair to privileged workflow
+code past PR automation — waits on these names too, so it never names a check this
+repository does not produce. `vibey-gh install` renders `[rulesets.integration]
+required_checks` into the deployed workflow, less `[pr_automation] ignored_checks` and the
+gates the bootstrap exists to route around (`gate`, `PR automation / gate`,
+`Automation bootstrap / gate`). With the defaults that is `Provenance`, `Analyze Python`,
+and `Documentation contract`; a repository whose CI reports one job named `gates` and
+requires only that waits on `gates` alone. Change the list, then re-run `vibey-gh install`
+and commit the re-rendered workflow — `vibey-gh check --ci` reports the drift until you do.
+
+The step fails closed: an empty list, a head with no check runs, a named gate that is
+absent, or any other check run that is not green each refuse the merge, and the error names
+the absent gates. A name that opens a `${{ }}` expression is refused at render time,
+because the list is rendered into the step's environment. See
+[Workflows](workflows.md#automation-bootstrap) for the whole gate.
 
 Reconciliation is idempotent read-compare-write, the same shape `repository-profile.yml`
 already uses for settings and topics: an existing rule type the configuration does not

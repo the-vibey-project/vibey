@@ -102,6 +102,7 @@ source_modules =
 forbidden_modules =
     vibey_gh.cli
     vibey_gh.marketplace
+    vibey_gh.automation_bootstrap
     vibey_gh.documentation
     vibey_gh.fitloop
     vibey_gh.doctor
