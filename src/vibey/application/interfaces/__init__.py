@@ -19,6 +19,9 @@ from vibey.application.interfaces.azure import (
     DeploymentConsentStore,
     DeploymentSpecStore,
 )
+from vibey.application.interfaces.budget_source_interface import (
+    LedgerBudgetSourceInterface,
+)
 from vibey.application.interfaces.build import (
     BudgetSource,
     BuildProvisioner,
@@ -132,6 +135,7 @@ __all__ = [
     "JobHandlerFactory",
     "JobReadyNotifier",
     "JobRepository",
+    "LedgerBudgetSourceInterface",
     "LedgerReader",
     "MergeOutcome",
     "Outcome",

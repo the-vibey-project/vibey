@@ -291,9 +291,12 @@ cap before every attempt. It parks a `budget_exhausted` gate when the cap is
 reached. On attempts after the first, it also parks when the payload's
 `projected_cost_per_attempt` would exceed the cap. Answering
 `--raw '{"max_dollars": N}'` or `--raw '{"max_turns": N}'` raises the cap for
-that job. With neither setting, spend is uncapped. The `vibey.toml` keys
-`max_dollars_per_cycle` and `max_turns_per_item` are parsed, but the brake
-ignores them, and only `vibey cost` displays the former.
+that job only; the stored cap is unchanged. With neither setting, spend is
+uncapped. The worker and `vibey cost` read both caps through one parser,
+`LedgerBudgetSource.caps_from_config`, so the cap `vibey cost` prints is the
+cap the brake enforces. The `vibey.toml` keys `max_dollars_per_cycle` and
+`max_turns_per_item` are parsed into the config model, but nothing reads
+them at runtime: not the brake, and not `vibey cost`.
 
 ---
 

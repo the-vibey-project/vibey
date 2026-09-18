@@ -6,7 +6,10 @@ events carry no dollars in production) plus explicit BUDGET_SPENT."""
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+import pytest
+
 from vibey.application.budget_source import LedgerBudgetSource
+from vibey.application.interfaces import LedgerBudgetSourceInterface
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
 from vibey.domain.phase import Phase
 
@@ -90,3 +93,54 @@ async def test_uncapped_source_never_reports_exhaustion() -> None:
 
     assert budget.any_exhausted is False
     assert budget.max_dollars is None and budget.max_turns is None
+
+
+# ── caps_from_config: the one parser the brake and `vibey cost` share (#210) ──
+
+
+@pytest.mark.parametrize(
+    ("config", "expected"),
+    [
+        # Both keys, as `vibey new --max-cycle-dollars/--max-cycle-turns` writes them.
+        ({"max_cycle_dollars": 12.5, "max_cycle_turns": 40}, (12.5, 40)),
+        # Neither key: uncapped, never a made-up default.
+        ({}, (None, None)),
+        # An integer dollar cap (the operator's spec can carry one) is a float cap.
+        ({"max_cycle_dollars": 25}, (25.0, None)),
+        ({"max_cycle_turns": 7}, (None, 7)),
+        # isinstance(True, int) holds, so without the bool guard `true` was a
+        # one-turn cap and a one-dollar cap.
+        ({"max_cycle_dollars": True, "max_cycle_turns": True}, (None, None)),
+        ({"max_cycle_dollars": False, "max_cycle_turns": False}, (None, None)),
+        # Not numbers, or a fractional turn count: no cap rather than a guess.
+        ({"max_cycle_dollars": "10", "max_cycle_turns": 2.5}, (None, None)),
+        # The legacy `budget` table that `vibey cost` used to print from is
+        # enforced by nothing, so it is not a cap.
+        (
+            {"budget": {"max_dollars_per_cycle": 40.0, "max_dollars_total": 250.0}},
+            (None, None),
+        ),
+    ],
+    ids=[
+        "both",
+        "neither",
+        "int-dollars",
+        "turns-only",
+        "bool-true-rejected",
+        "bool-false-rejected",
+        "non-numeric-rejected",
+        "legacy-budget-key-ignored",
+    ],
+)
+def test_caps_from_config(
+    config: dict[str, object], expected: tuple[float | None, int | None]
+) -> None:
+    caps = LedgerBudgetSource.caps_from_config(config)
+
+    assert caps == expected
+    max_dollars, _ = caps
+    assert max_dollars is None or type(max_dollars) is float
+
+
+def test_ledger_budget_source_satisfies_its_declared_interface() -> None:
+    assert isinstance(LedgerBudgetSource(_Reader([])), LedgerBudgetSourceInterface)
