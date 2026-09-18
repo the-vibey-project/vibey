@@ -18,7 +18,7 @@ active runtime path" status the README gives `infrastructure/notify/` and
 |---|---|---|
 | `./vibey.toml`, key `[features].qwenloop` only | `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`) | Whether `qwenloop` is added to the health sweep. The file is read from the current directory with `parse_toml_string`, never validated by `parse_config`; a missing or malformed file counts as `qwenloop = false`. Every other table on this page is ignored. |
 | The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker` and every job handler | Cycle cap, per-cycle spend and turn caps, skills-context policy, and (in principle) `features.qwenloop` — see below. |
-| Environment variables | See [Environment variables](#environment-variables) | Database DSN, the qwenloop switch, the sovereign DESIGN provider's evidence directory. |
+| Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the qwenloop switch, the sovereign DESIGN provider's evidence directory. |
 
 The project record is written once, at creation, by one of two paths:
 
@@ -45,6 +45,7 @@ stored `features.qwenloop` is always false for projects created today:
 | Variable | Read by | Effect |
 |---|---|---|
 | `VIBEY_PG_URL` | `bootstrap.database_url()` (every command that opens the queue) | PostgreSQL DSN. Required; there is no default — `vibey` exits with `DatabaseNotConfigured` if it is unset. |
+| `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` | `bootstrap.build_app()` via `PostgresMigrator.from_environ` (every command that opens the queue) | How long a start waits for another process's migration before failing with `MigrationLockTimeout`, which names the backend pid holding the lock. Seconds, fractions allowed and rounded up to the next millisecond; default `300`; `0` waits indefinitely. Unset or blank means the default; anything that is not a number from `0` to `2147483.647` fails the start with `InvalidMigrationLockTimeout` before the pool opens, rather than falling back. See [the migration lock](../plans/data-model.md#71-the-migration-lock). |
 | `VIBEY_FEATURE_QWENLOOP` | `vibey worker` (`bootstrap.qwenloop_enabled`), `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`), and `load_config_from_path` | Overrides `features.qwenloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other value disables. When set it wins over both the stored project record and `./vibey.toml`. Only `load_config_from_path` rejects a non-boolean value. For the worker, enabling it adds a qwenloop adapter and makes qwenloop the standby engine for BUILD rotation. |
 | `VIBEY_EVIDENCE_DIR` | `vibey work --provider qwenloop`, `vibey worker --provider qwenloop` | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source, and the phase stops there. |
 

@@ -4,11 +4,13 @@
 from vibey.infrastructure.db.interfaces.ledger_repository_interface import (
     EventAppenderInterface,
 )
+from vibey.infrastructure.db.interfaces.migrator_interface import MigratorInterface
 from vibey.infrastructure.db.interfaces.project_repository_interface import (
     PhaseTransitionedDraftBuilderInterface,
 )
 
 __all__ = [
     "EventAppenderInterface",
+    "MigratorInterface",
     "PhaseTransitionedDraftBuilderInterface",
 ]

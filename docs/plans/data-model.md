@@ -804,6 +804,9 @@ SELECT pg_advisory_unlock($1);
 lock pins its pooled connection until release, because returning the connection to
 the pool would drop the lock silently.
 
+**Migrations** are serialized by a second session-level advisory lock, under the key
+of `sha256('vibey.migrate')`, which a start *waits* for rather than deferring — see §7.
+
 ---
 
 ## 6. Retention (planned)
@@ -841,18 +844,80 @@ CREATE TABLE IF NOT EXISTS schema_migration (
 `checksum` is the sha256 hex of the file's text. Each pending migration runs in its
 own transaction together with its `schema_migration` insert.
 
-There is no `vibey migrate` command. `build_app()` in `src/vibey/bootstrap.py` calls
-`apply_migrations(conn, discover_migrations(migrations_dir()))` every time it opens
-the pool, so every CLI command that opens the database, and every worker start,
-brings the schema up to date.
+There is no `vibey migrate` command. `build_app()` in `src/vibey/bootstrap.py` runs
+`PostgresMigrator.from_environ(os.environ).apply(conn, discover_migrations(migrations_dir()))`
+every time it opens the pool, so every CLI command that opens the database, and every
+worker start, brings the schema up to date.
 `migrations_dir()` resolves to `<checkout>/migrations` from a source tree and to
 `/app/migrations` in the container image. Every start also re-verifies checksums:
-`apply_migrations` raises `MigrationChecksumError` if an already-applied migration's
-file has changed — an edited migration is a bug, not a convenience. A
-`check_only=True` keyword (verify, apply nothing) exists on `apply_migrations` but
-has no CLI flag and no caller yet.
+`apply` raises `MigrationChecksumError` if an already-applied migration's file has
+changed — an edited migration is a bug, not a convenience. A `check_only=True`
+keyword (verify, apply nothing) exists on `apply` but has no CLI flag and no caller
+yet. The module-level `apply_migrations(conn, migrations)` is a façade over
+`PostgresMigrator().apply` with the default wait; the test harness migrates its
+template database through it.
+
+### 7.1 The migration lock
+
+Replicas that start together — a KEDA scale-out, a Helm rollout — would each read the
+same applied set and race to apply the same pending migration; on a fresh database
+even the `CREATE TABLE IF NOT EXISTS schema_migration` above collides on the
+catalog's unique index. So every run takes a session-level advisory lock first, and
+holds it until the last pending migration has committed:
+
+```sql
+BEGIN;
+SELECT set_config('lock_timeout', '300000ms', true);  -- the bound: this statement only
+SELECT pg_advisory_lock($1);   -- $1 = signed int64 of sha256('vibey.migrate')[:8]
+COMMIT;                        -- the lock is session-level, so it outlives the COMMIT
+-- CREATE TABLE IF NOT EXISTS schema_migration; read it; apply each pending
+-- migration in its own transaction (as above)
+SELECT pg_advisory_unlock($1); -- in a finally: a failed migration wedges nobody
+```
+
+One process migrates; the rest queue on the lock, then read a settled applied set and
+find nothing to do. The key (`PostgresMigrator.LOCK_KEY`, `-1686359016981790252`) is
+derived the way ADR-0029 derives the integrate key, so the two can never collide.
+It is a class constant rather than a setting: it is the contract between every
+process that migrates one database — the old and new releases of a rolling upgrade
+included — and two processes configured with different keys would not exclude each
+other at all. Advisory locks are scoped to one database, so separate deployments never
+contend and need no key of their own. A test pins the value so it cannot drift
+between releases.
+
+**This lock blocks, deliberately.** ADR-0029's never-block clause governs a worker
+holding a job, which defers on contention because it has other work it could do. The
+migration lock is taken inside `build_app()`, before anything has been claimed, by a
+process that cannot do anything until the schema is current; the only alternative to
+waiting is exiting and being restarted to wait again.
+
+**The wait is bounded.** `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` (default `300`; `0`
+waits indefinitely, Postgres's own meaning for `lock_timeout = 0`; fractions round up
+to the next millisecond, never down to `0`) sets how long a start queues behind
+another process's migration. When it runs out the start fails with
+`MigrationLockTimeout`, naming the key and the backend pid still holding it (read
+from `pg_locks`, filtered to this database) — so a wedged holder surfaces as a
+failed start with a pid to inspect in `pg_stat_activity`, not as a pod that looks
+healthy and never arrives. A value that is not a number of seconds between `0` and
+Postgres's ceiling (`2147483.647`) fails the start with
+`InvalidMigrationLockTimeout` before the pool opens; it is never replaced by the
+default. The bound is `SET LOCAL` for the acquiring statement only, so the migrations
+themselves never run under it.
+
+`apply` refuses (`MigrationInsideTransaction`) a connection that already has a
+transaction open: inside an outer transaction nothing would commit until after the
+lock was released, and a second process could read the old applied set anyway.
+
+### 7.2 Tests
 
 `tests/infrastructure/db/test_migrator.py` applies the full set to a fresh Postgres
 and asserts the expected tables exist, re-applies the set as a no-op, and re-applies
-it over a database that already holds a `project` row. There is no per-version
+it over a database that already holds a `project` row. Against real Postgres, with
+two sessions on one database, it also proves the lock: two starts racing a slow
+migration apply it exactly once (with the lock disabled the same test fails on the
+`schema_migration` catalog race); a second start queues on the lock before touching
+anything and then finds the schema settled; a bounded wait behind a wedged holder
+raises `MigrationLockTimeout` naming the holder's pid, and leaves no `lock_timeout`
+or open transaction behind; the lock is released after a run and after a failed
+migration; and a migration does not inherit the wait bound. There is no per-version
 upgrade fixture yet: no test seeds data at migration N−1 and then applies N.
