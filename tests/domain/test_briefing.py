@@ -93,6 +93,40 @@ def test_superseded_decision_is_not_carried_but_current_one_is() -> None:
     assert ids == {"d2"}
 
 
+def test_a_decision_recorded_after_the_supersede_naming_it_is_carried() -> None:
+    """Found by the widened no-loss strategy (#213): the floor used to consult the
+    decision log's `superseded_by`, which ignores order, and dropped a decision the gate
+    still counted open -- so the lossless floor failed its own gate."""
+    events = [
+        _event(
+            1,
+            EventKind.DECISION_RECORDED,
+            {"decision_id": "early", "title": "t", "choice": "a", "supersedes": "late"},
+        ),
+        _event(
+            2, EventKind.DECISION_RECORDED, {"decision_id": "late", "title": "t", "choice": "b"}
+        ),
+    ]
+    brief = build_deterministic_brief(events)
+    assert {d.decision_id for d in brief.decisions} == {"early", "late"}
+    assert verify(ledger=events, brief=brief, ref=_ref_for(events), budget=ZERO_BUDGET).ok
+
+
+def test_a_reinstated_decision_is_carried_with_its_latest_wording() -> None:
+    events = [
+        _event(1, EventKind.DECISION_RECORDED, {"decision_id": "d1", "title": "v1", "choice": "a"}),
+        _event(
+            2,
+            EventKind.DECISION_RECORDED,
+            {"decision_id": "d2", "title": "", "choice": "b", "supersedes": "d1"},
+        ),
+        _event(3, EventKind.DECISION_RECORDED, {"decision_id": "d1", "title": "v2", "choice": "a"}),
+    ]
+    brief = build_deterministic_brief(events)
+    assert {(d.decision_id, d.restatement) for d in brief.decisions} == {("d1", "v2"), ("d2", "b")}
+    assert verify(ledger=events, brief=brief, ref=_ref_for(events), budget=ZERO_BUDGET).ok
+
+
 def test_remaining_work_from_latest_verdict_is_carried() -> None:
     events = [
         _event(1, EventKind.VERDICT_RENDERED, {"complete": False, "remaining_work": ["stale"]}),

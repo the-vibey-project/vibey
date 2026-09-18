@@ -45,6 +45,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   and the scope is anchored at `[install] self_source`. Still fail-closed — an empty list,
   an absent gate or any red check refuses the merge, and the error names what is absent
   ([#214](https://github.com/the-vibey-project/vibey/issues/214))
+* **briefing:** the deterministic floor brief carries every decision the no-loss gate still
+  counts open. It chose decisions by the decision log's `superseded_by`, which records whether
+  an id was EVER named by a supersede, whatever the order, so a decision recorded after the
+  supersede naming it -- or reinstated after being superseded -- was dropped while R3, which
+  reads `open_items`, still required it: the floor that is lossless by construction failed its
+  own gate, so a handoff through `DeterministicBriefProducer` (the production default) spent
+  its three STRICT attempts on the same brief and escalated to full-transcript mode. It now
+  takes the ids from `open_items` and only the wording from the log. Found by the widened
+  no-loss suite
+  ([#213](https://github.com/the-vibey-project/vibey/issues/213))
 
 ## [0.8.0] (2026-09-16)
 
