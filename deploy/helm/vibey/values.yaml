@@ -1,6 +1,7 @@
 # Default values target a local minikube install with an in-cluster
-# PostgreSQL. Cloud presets (values-aks/eks/gke.yaml) override the pieces
-# that differ; nothing here assumes a managed service.
+# PostgreSQL. There are no per-cloud presets yet: for a managed database
+# set postgres.enabled=false and dsn.existingSecret. Nothing here assumes
+# a managed service.
 
 image:
   repository: vibey
