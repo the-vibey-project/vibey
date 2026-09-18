@@ -41,6 +41,18 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   lane uses are one table. The rendered schema is byte-identical to the literal it replaces;
   this is groundwork for putting the sovereign lane first on the half it can carry (#133,
   slice 1 of 3)
+* **gh:** the sovereign review lane now goes FIRST on the half of the review it can carry
+  (sub-doctrine 8.a, #133). With a fresh heartbeat, `review-sovereign` (formerly
+  `review-fallback`) reviews the exact-head diff on the operator's own runner before the
+  paid review; for a trusted same-repository author its verdict carries `pass`, `summary`
+  and `findings`, and the paid reviewer is handed only the sixteen documentation-contract
+  judgments plus its own `wider_summary` / `wider_findings`. `vibey-gh pr-automation
+  combine` composes the one verdict the gate reads, recording which lane carried each field,
+  and replaces the `jq` that listed the sixteen judgments by name; the gate names the lane
+  behind each half. A local finding never triggers automated repair. With no heartbeat the
+  workflow behaves exactly as before, and with no API credit exactly as the local fallback
+  did — both pinned by a golden capture of the previous gate. `local-review` gains
+  `--role sovereign|fallback` (#133, slice 2 of 3)
 
 ### Bug Fixes
 

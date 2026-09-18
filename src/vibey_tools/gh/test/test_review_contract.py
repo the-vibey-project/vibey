@@ -9,6 +9,7 @@ change to any one of the three has to move the other two.
 from __future__ import annotations
 
 import json
+import re
 import shlex
 from pathlib import Path
 
@@ -55,18 +56,41 @@ LEGACY_REVIEW_SCHEMA = (
 )
 
 
-def _schema_argument(text: str, marker: str = "links_valid") -> str:
-    """The raw `--json-schema` argument of the review job, as the action will tokenize it.
+# The exact-head review picks its schema at run time (#133): the wider half alone when the
+# sovereign lane carried the diff half, the whole review otherwise. Both are literals inside
+# one GitHub expression, so neither is visible to a plain shell tokenizer until that
+# expression is resolved -- which is what this does, once per branch.
+_SCHEMA_CHOICE = re.compile(
+    r"--json-schema '\$\{\{ (?P<condition>.+?) && '(?P<wider>[^']*)' "
+    r"\|\| '(?P<full>[^']*)' \}\}'"
+)
 
+
+def _schema_arguments(text: str, marker: str = "links_valid") -> dict[str, str]:
+    """Both `--json-schema` arguments of the review job, as the action will tokenize them.
+
+    Each branch of the expression is substituted back into the line and tokenized
+    shell-style, exactly as the action would see it once GitHub has resolved the choice.
     Found by a field only the review schema carries; the workflow holds other schemas."""
     for line in text.splitlines():
-        if "--json-schema " not in line:
+        choice = _SCHEMA_CHOICE.search(line)
+        if not choice:
             continue
-        tokens = shlex.split(line.strip())
-        argument = tokens[tokens.index("--json-schema") + 1]
-        if marker in argument:
-            return argument
+        arguments = {}
+        for branch in ("wider", "full"):
+            resolved = line[: choice.start()] + f"--json-schema '{choice[branch]}'"
+            tokens = shlex.split(resolved.strip())
+            arguments[branch] = tokens[tokens.index("--json-schema") + 1]
+        if marker in arguments["full"]:
+            assert choice["condition"] == "steps.half.outputs.half == 'requires-wider-context'"
+            return arguments
     raise AssertionError("pr-automation.yml no longer declares the review schema")
+
+
+def _schema_argument(text: str, marker: str = "links_valid") -> str:
+    """The FULL-review `--json-schema` argument: what the paid reviewer answers whenever no
+    sovereign lane carried the diff half -- and what it answered before the lanes split."""
+    return _schema_arguments(text, marker)["full"]
 
 
 def _rendered_pr_automation() -> str:
@@ -240,7 +264,10 @@ def test_the_contract_satisfies_the_declared_seam():
     assert port.unevaluated_placeholder is True
     assert set(port.placeholders().values()) == {port.unevaluated_placeholder}
     # The schema is read through the same seam, so a substitute contract has to render one.
-    assert list(port.field_schemas) == port.json_schema()["required"]
+    # The table also types the wider half's report fields, which the full schema never asks.
+    judged = [name for name in port.field_schemas if name not in port.wider_report_fields]
+    assert judged == port.json_schema()["required"]
+    assert port.wider_report_fields == (port.wider_summary_field, port.wider_findings_field)
 
 
 def test_the_rendered_schema_is_the_hand_written_one_it_replaced():
@@ -254,14 +281,20 @@ def test_the_rendered_schema_is_the_hand_written_one_it_replaced():
     assert json.dumps(REVIEW_CONTRACT.json_schema(), separators=(",", ":")) == rendered
 
 
-def test_the_template_carries_a_placeholder_and_never_a_hand_written_schema():
-    """A literal beside the placeholder is how a second copy creeps back in."""
+def test_the_template_carries_placeholders_and_never_a_hand_written_schema():
+    """A literal beside the placeholders is how a second copy creeps back in."""
     raw = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
 
-    assert "--json-schema '__VIBEY_GH_REVIEW_SCHEMA__'" in raw
+    assert (
+        "--json-schema '${{ steps.half.outputs.half == 'requires-wider-context' && "
+        "'__VIBEY_GH_REVIEW_WIDER_SCHEMA__' || '__VIBEY_GH_REVIEW_SCHEMA__' }}'"
+    ) in raw
     assert raw.count("__VIBEY_GH_REVIEW_SCHEMA__") == 1
+    assert raw.count("__VIBEY_GH_REVIEW_WIDER_SCHEMA__") == 1
     assert '"links_valid"' not in raw
-    assert "__VIBEY_GH_REVIEW_SCHEMA__" not in _rendered_pr_automation()
+    rendered = _rendered_pr_automation()
+    assert "__VIBEY_GH_REVIEW_SCHEMA__" not in rendered
+    assert "__VIBEY_GH_REVIEW_WIDER_SCHEMA__" not in rendered
 
 
 def _deployed_copies() -> list:
@@ -281,31 +314,42 @@ def _deployed_copies() -> list:
 
 @pytest.mark.parametrize("path", _deployed_copies())
 def test_every_deployed_copy_asks_what_the_contract_says(path: Path):
-    deployed = json.loads(_schema_argument(path.read_text(encoding="utf-8")))
+    deployed = _schema_arguments(path.read_text(encoding="utf-8"))
 
-    assert deployed == REVIEW_CONTRACT.json_schema()
+    assert json.loads(deployed["full"]) == REVIEW_CONTRACT.json_schema()
+    assert json.loads(deployed["wider"]) == REVIEW_CONTRACT.json_schema([REQUIRES_WIDER_CONTEXT])
 
 
 def test_the_full_schema_requires_every_field_in_schema_order():
     schema = REVIEW_CONTRACT.json_schema()
+    judged = [
+        name for name in DEFAULT_FIELD_SCHEMAS if name not in ("wider_summary", "wider_findings")
+    ]
 
     assert schema["type"] == "object"
-    assert list(schema["properties"]) == list(DEFAULT_FIELD_SCHEMAS)
-    assert schema["required"] == list(DEFAULT_FIELD_SCHEMAS)
+    assert list(schema["properties"]) == judged
+    assert schema["required"] == judged
     assert set(schema["required"]) == set(REVIEW_CONTRACT.fields)
     assert schema == REVIEW_CONTRACT.json_schema((DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT))
 
 
 def test_one_half_is_exactly_that_half():
-    """The seam the sovereign-first ordering will stand on: each half's schema asks for its
-    own fields, all of them, and nothing from the other half."""
+    """The seam the sovereign-first ordering stands on: each half's schema asks for its own
+    fields, all of them, and nothing from the other half. The wider half asked ALONE also
+    asks where to write its own prose and findings -- `summary` and `findings` are the
+    other lane's -- and asks them after its judgments, verdict before words."""
     diff = REVIEW_CONTRACT.json_schema([DIFF_GROUNDABLE])
     wider = REVIEW_CONTRACT.json_schema([REQUIRES_WIDER_CONTEXT])
+    judgments = list(REVIEW_CONTRACT.requires_wider_context)
 
     assert diff["required"] == ["pass", "summary", "findings"]
     assert list(diff["properties"]) == diff["required"]
-    assert wider["required"] == list(REVIEW_CONTRACT.requires_wider_context)
-    assert all(wider["properties"][name] == {"type": "boolean"} for name in wider["required"])
+    assert wider["required"] == [*judgments, "wider_summary", "wider_findings"]
+    assert list(wider["properties"]) == wider["required"]
+    assert all(wider["properties"][name] == {"type": "boolean"} for name in judgments)
+    assert wider["properties"]["wider_summary"] == {"type": "string"}
+    assert wider["properties"]["wider_findings"] == diff["properties"]["findings"]
+    assert not {"pass", "summary", "findings"} & set(wider["properties"])
     assert diff["properties"]["findings"]["items"]["required"] == [
         "severity",
         "path",
@@ -369,12 +413,95 @@ def test_an_apostrophe_in_a_schema_cannot_break_the_single_quoted_argument(monke
         requires_wider_context=("house_style",),
         field_schemas={
             "pass": {"type": "boolean", "description": "the reviewer's verdict"},
-            "house_style": {"type": "boolean"},
+            "house_style": {"type": "boolean", "description": "the house's own style"},
+            "wider_summary": {"type": "string"},
+            "wider_findings": {"type": "array"},
         },
     )
     monkeypatch.setattr(install, "REVIEW_CONTRACT", contract)
 
-    argument = _schema_argument(_rendered_pr_automation(), marker="house_style")
+    arguments = _schema_arguments(_rendered_pr_automation(), marker="house_style")
 
-    assert "'" not in argument
-    assert json.loads(argument)["properties"]["pass"]["description"] == "the reviewer's verdict"
+    # Both branches, because both are expression literals as well as shell arguments, and
+    # an apostrophe would end either one early.
+    assert "'" not in arguments["full"] and "'" not in arguments["wider"]
+    full = json.loads(arguments["full"])
+    assert full["properties"]["pass"]["description"] == "the reviewer's verdict"
+    wider = json.loads(arguments["wider"])
+    assert wider["properties"]["house_style"]["description"] == "the house's own style"
+
+
+def test_the_full_schema_never_asks_for_the_wider_report_fields():
+    """The report fields exist for a reviewer answering the wider half ALONE. One reviewer
+    answering both halves writes `summary` and `findings`; handing it two more names to
+    write the same things into would change the review it has always been asked for."""
+    full = REVIEW_CONTRACT.json_schema()
+    both = REVIEW_CONTRACT.json_schema([DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT])
+    diff = REVIEW_CONTRACT.json_schema([DIFF_GROUNDABLE])
+
+    for schema in (full, both, diff):
+        assert not set(REVIEW_CONTRACT.wider_report_fields) & set(schema["properties"])
+    assert REVIEW_CONTRACT.wider_report_fields == ("wider_summary", "wider_findings")
+
+
+def test_the_report_fields_are_neither_half():
+    """They are where one lane says what it found, not judgments: nothing classifies them,
+    and nothing placeholders them."""
+    for name in REVIEW_CONTRACT.wider_report_fields:
+        assert name not in REVIEW_CONTRACT.fields
+        assert name not in REVIEW_CONTRACT.placeholders()
+        with pytest.raises(KeyError, match="not a review field"):
+            REVIEW_CONTRACT.classify(name)
+
+
+def test_a_report_field_cannot_also_be_a_judgment():
+    """A report field that is also a review field would be written by two lanes at once --
+    the collision the report fields exist to prevent."""
+    with pytest.raises(ValueError, match="wider report field cannot be a review field: summary"):
+        ReviewContract(
+            diff_groundable=("pass", "summary"),
+            requires_wider_context=("house_style",),
+            wider_summary_field="summary",
+        )
+
+
+def test_the_two_report_fields_cannot_be_one_field():
+    with pytest.raises(ValueError, match="wider report review fields must be unique"):
+        ReviewContract(
+            diff_groundable=("pass",),
+            requires_wider_context=("house_style",),
+            wider_summary_field="notes",
+            wider_findings_field="notes",
+        )
+
+
+def test_a_repository_can_name_its_own_report_fields():
+    contract = ReviewContract(
+        diff_groundable=("pass",),
+        requires_wider_context=("house_style",),
+        field_schemas={
+            "pass": {"type": "boolean"},
+            "house_style": {"type": "boolean"},
+            "house_notes": {"type": "string"},
+            "house_issues": {"type": "array"},
+        },
+        wider_summary_field="house_notes",
+        wider_findings_field="house_issues",
+    )
+
+    wider = contract.json_schema([REQUIRES_WIDER_CONTEXT])
+
+    assert wider["required"] == ["house_style", "house_notes", "house_issues"]
+
+
+def test_an_untyped_report_field_raises_like_any_other():
+    """The same rule as every field: a guessed type is a different question."""
+    contract = ReviewContract(
+        diff_groundable=("pass",),
+        requires_wider_context=("house_style",),
+        field_schemas={"pass": {"type": "boolean"}, "house_style": {"type": "boolean"}},
+    )
+
+    assert contract.json_schema()["required"] == ["pass", "house_style"]
+    with pytest.raises(KeyError, match="wider_summary, wider_findings"):
+        contract.json_schema([REQUIRES_WIDER_CONTEXT])

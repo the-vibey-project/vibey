@@ -5,6 +5,29 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Put the sovereign review lane FIRST on the half of the review it can carry (sub-doctrine
+  8.a, #133 slice 2 of 3, Option A: serial). `evaluate` decides the lane once:
+  `sovereign_lane` (enabled, a fresh heartbeat, and under `trusted_only` a same-repository
+  head) and `sovereign_carries` (that, and a trusted author). `review-fallback` becomes
+  `review-sovereign` ("Sovereign diff review"), runs before the paid `review`, and reports
+  `passed`, `findings`, `verdict` and `model`. The paid review waits for it: when the local
+  lane carries the diff half and returned a verdict, the reviewer is held to
+  `ReviewContract.json_schema([REQUIRES_WIDER_CONTEXT])` — rendered as
+  `__VIBEY_GH_REVIEW_WIDER_SCHEMA__` and chosen by a GitHub expression at run time — and
+  told the diff half is carried; otherwise it answers the full schema exactly as before. The
+  wider half asked alone reports its own `wider_summary` and `wider_findings`
+  (`ReviewContract.wider_summary_field` / `wider_findings_field`), so the two lanes never
+  write the same names. `vibey-gh pr-automation combine` (`vibey_gh.review_composition`,
+  `ReviewComposer` behind `ReviewComposerPort`) composes the verdict, replaces the `jq` that
+  listed the sixteen judgments, and emits `carried` (field to lane), `halves`, `findings`
+  and `repairable`. The gate names the lane behind each half. A failure carried by the
+  sovereign lane alone is never repaired: `repair` and `mirror-fork` also require
+  `repairable`, and a later evaluation of that head reviews it again
+  (`AutomationState.review_repairable`). An outside author's local verdict is held in
+  reserve and read only when the paid review returns no verdict. `local-review --role
+  sovereign|fallback` labels the verdict by the role it ran in. A frozen golden capture of
+  the previous gate and `jq` (`test/golden/`) pins that no heartbeat behaves exactly as
+  before and no credit exactly as the local fallback did.
 - Render the exact-head review's `--json-schema` from `ReviewContract.json_schema()` rather
   than keeping a hand-written copy in `pr-automation.yml`. The template now carries
   `__VIBEY_GH_REVIEW_SCHEMA__`, which `install.render_workflow` fills — compact, with any

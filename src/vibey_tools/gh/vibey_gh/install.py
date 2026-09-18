@@ -21,7 +21,7 @@ from pathlib import Path
 
 from vibey_gh import dependabot
 from vibey_gh.config import GhConfig, load_config
-from vibey_gh.review_contract import REVIEW_CONTRACT
+from vibey_gh.review_contract import REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
 
 TEMPLATES = Path(__file__).parent / "templates" / "githooks"
 WORKFLOWS = Path(__file__).parent / "templates" / "workflows"
@@ -463,8 +463,18 @@ def render_workflow(source: Path, cfg: GhConfig) -> str:
     # JSON's own syntax has no apostrophe, but a string inside a field's fragment could, so
     # any is written as the JSON escape `\u0027` -- identical to a JSON parser, and never a
     # quote to the tokenizer.
+    #
+    # Two schemas, because the paid reviewer answers one of two things (#133): the whole
+    # review, or -- when the sovereign lane carried the diff half -- only the wider half.
+    # Both sit inside a GitHub expression as single-quoted string literals, chosen at run
+    # time, and the same escape keeps them valid there: an expression literal ends at an
+    # apostrophe too.
     review_schema = json.dumps(REVIEW_CONTRACT.json_schema(), separators=(",", ":"))
     review_schema = review_schema.replace("'", "\\u0027")
+    wider_schema = json.dumps(
+        REVIEW_CONTRACT.json_schema([REQUIRES_WIDER_CONTEXT]), separators=(",", ":")
+    )
+    wider_schema = wider_schema.replace("'", "\\u0027")
     schedule = (
         '  schedule:\n    - cron: "37 */2 * * *"'
         if cfg.pr_automation.retain_schedule_backstop
@@ -473,6 +483,7 @@ def render_workflow(source: Path, cfg: GhConfig) -> str:
     return _strip_trailing_space(
         wanted.replace("__VIBEY_GH_SCAN_WORKFLOWS__", workflows)
         .replace("__VIBEY_GH_REVIEW_SCHEMA__", review_schema)
+        .replace("__VIBEY_GH_REVIEW_WIDER_SCHEMA__", wider_schema)
         .replace("  # __VIBEY_GH_SCHEDULE__", schedule)
     )
 

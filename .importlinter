@@ -106,3 +106,4 @@ forbidden_modules =
     vibey_gh.fitloop
     vibey_gh.doctor
     vibey_gh.install
+    vibey_gh.review_composition

@@ -30,6 +30,12 @@ The paid path's copy is gone: the template now carries `__VIBEY_GH_REVIEW_SCHEMA
 reviewer is held to and the halves this module draws are one table, not two that have to
 be kept in step by hand.
 
+The halves are also what the lanes are ordered by (doctrine 8.a, #133). When the sovereign
+lane is up it carries the diff-groundable half, and the paid reviewer is handed only
+`json_schema([REQUIRES_WIDER_CONTEXT])` -- the sixteen judgments plus the two report fields
+it writes its own prose and findings into. `vibey_gh.review_composition` puts the two
+answers back together into one verdict that says which lane carried which field.
+
 Deliberately data, not behaviour. It decides nothing and calls nothing; it states what
 each half means — and what JSON type each field is answered in — so the reviewers, the
 workflow templates and the tests can all agree.
@@ -73,6 +79,16 @@ DEFAULT_WIDER_CONTEXT_FIELDS = (
     "links_valid",
 )
 
+# Where a reviewer answering the wider-context half ON ITS OWN writes its prose and its
+# findings. `summary` and `findings` belong to the diff-groundable half, so once the
+# sovereign lane carries that half they hold the sovereign lane's words; a second reviewer
+# writing into the same two names would overwrite them, and the published verdict could no
+# longer say which lane said what. So the wider half, answered alone, reports under names
+# of its own. They are never asked for when one reviewer answers both halves: the full
+# schema stays exactly the one the paid reviewer has always been handed.
+DEFAULT_WIDER_SUMMARY_FIELD = "wider_summary"
+DEFAULT_WIDER_FINDINGS_FIELD = "wider_findings"
+
 # The shape of one finding. Every reviewer that reports findings reports them in this form,
 # and `line` is optional because not every finding is about a single line.
 DEFAULT_FINDING_SCHEMA: Mapping[str, object] = {
@@ -97,11 +113,17 @@ DEFAULT_FINDING_SCHEMA: Mapping[str, object] = {
 # and a model writes its answer in the order the schema lists the fields — so reordering
 # this table changes what the model has already committed to by the time it writes its
 # summary. Keep it unless that change is the point.
+#
+# The wider half's own report fields come last. The full schema never selects them, so
+# they cannot move a key of it; the wider half answered alone lists its sixteen judgments
+# first and its prose after, the same "verdict before words" order as the full schema.
 DEFAULT_FIELD_SCHEMAS: Mapping[str, Mapping[str, object]] = {
     "pass": {"type": "boolean"},
     **{name: {"type": "boolean"} for name in DEFAULT_WIDER_CONTEXT_FIELDS},
     "summary": {"type": "string"},
     "findings": {"type": "array", "items": DEFAULT_FINDING_SCHEMA},
+    DEFAULT_WIDER_SUMMARY_FIELD: {"type": "string"},
+    DEFAULT_WIDER_FINDINGS_FIELD: {"type": "array", "items": DEFAULT_FINDING_SCHEMA},
 }
 
 # Said in the verdict's own summary, because the verdict travels further than this module
@@ -142,11 +164,20 @@ class ReviewContract:
     field_schemas: Mapping[str, Mapping[str, object]] = dataclasses.field(
         default_factory=lambda: DEFAULT_FIELD_SCHEMAS, hash=False
     )
+    # Where the wider half, answered by a reviewer that is NOT also answering the diff
+    # half, writes its prose and its findings (see `DEFAULT_WIDER_SUMMARY_FIELD`). Report
+    # fields, not judgments: they belong to neither half, so `fields`, `classify` and
+    # `placeholders` never see them, and only a wider-half-alone schema asks for them.
+    # Named by role rather than listed, so nothing downstream has to guess which of the
+    # two holds the findings.
+    wider_summary_field: str = DEFAULT_WIDER_SUMMARY_FIELD
+    wider_findings_field: str = DEFAULT_WIDER_FINDINGS_FIELD
 
     def __post_init__(self) -> None:
         for label, fields in (
             (DIFF_GROUNDABLE, self.diff_groundable),
             (REQUIRES_WIDER_CONTEXT, self.requires_wider_context),
+            ("wider report", self.wider_report_fields),
         ):
             if len(set(fields)) != len(fields):
                 raise ValueError(f"{label} review fields must be unique")
@@ -155,6 +186,11 @@ class ReviewContract:
             # A field in both halves is the exact lie this module exists to prevent:
             # something a caller would treat as evaluated and unevaluated at once.
             raise ValueError(f"a review field cannot be in both halves: {', '.join(overlap)}")
+        clash = sorted(set(self.wider_report_fields) & set(self.fields))
+        if clash:
+            # A report field that is also a judgment would be written by two lanes at once
+            # -- the collision the report fields exist to avoid.
+            raise ValueError(f"a wider report field cannot be a review field: {', '.join(clash)}")
 
     @classmethod
     def default(cls) -> ReviewContract:
@@ -163,6 +199,11 @@ class ReviewContract:
             diff_groundable=DEFAULT_DIFF_GROUNDABLE_FIELDS,
             requires_wider_context=DEFAULT_WIDER_CONTEXT_FIELDS,
         )
+
+    @property
+    def wider_report_fields(self) -> tuple[str, ...]:
+        """The wider half's own summary and findings fields, in that order."""
+        return (self.wider_summary_field, self.wider_findings_field)
 
     @property
     def fields(self) -> tuple[str, ...]:
@@ -206,9 +247,14 @@ class ReviewContract:
         """The JSON Schema a reviewer answering `halves` is held to.
 
         `halves` names `DIFF_GROUNDABLE`, `REQUIRES_WIDER_CONTEXT`, or both; `None` means
-        both, which is the full schema the paid exact-head reviewer answers today. Every
-        selected field is a property AND required — a reviewer that may skip a field is
-        one whose silence reads as an answer.
+        both, which is the full schema the paid exact-head reviewer answers whenever no
+        other lane carries the diff half. Every selected field is a property AND required
+        — a reviewer that may skip a field is one whose silence reads as an answer.
+
+        The wider half selected WITHOUT the diff half also asks for `wider_report_fields`:
+        that reviewer is not the one writing `summary` and `findings`, and still has to be
+        able to say what it found. With both halves selected they are left out, so the full
+        schema is byte-for-byte the one it has always been.
 
         Keys follow `field_schemas`, not `fields`; see `DEFAULT_FIELD_SCHEMAS` for why that
         order is kept. Each fragment is copied, so a caller editing the result cannot
@@ -227,8 +273,10 @@ class ReviewContract:
                 f"not {chosen!r}"
             )
         wanted = {name for name in self.fields if self.classify(name) in chosen}
+        if DIFF_GROUNDABLE not in chosen:
+            wanted |= set(self.wider_report_fields)
         undeclared = wanted - set(self.field_schemas)
-        missing = [name for name in self.fields if name in undeclared]
+        missing = [name for name in self.fields + self.wider_report_fields if name in undeclared]
         if missing:
             raise KeyError(f"no JSON type declared for review field(s): {', '.join(missing)}")
         order = [name for name in self.field_schemas if name in wanted]

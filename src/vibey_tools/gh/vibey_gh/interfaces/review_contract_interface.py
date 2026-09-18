@@ -56,9 +56,25 @@ class ReviewContractPort(Protocol):
     def field_schemas(self) -> Mapping[str, Mapping[str, object]]:
         """The JSON Schema fragment each field is answered in, in schema key order."""
 
+    @property
+    def wider_summary_field(self) -> str:
+        """Where the wider half, answered without the diff half, writes its prose."""
+
+    @property
+    def wider_findings_field(self) -> str:
+        """Where the wider half, answered without the diff half, writes its findings."""
+
+    @property
+    def wider_report_fields(self) -> tuple[str, ...]:
+        """The two fields above, summary first.
+
+        Report fields rather than judgments: in neither half, never placeholdered.
+        """
+
     def json_schema(self, halves: Iterable[str] | None = None) -> dict[str, object]:
         """The JSON Schema a reviewer answering `halves` is held to; `None` means both.
 
-        Every selected field is required. Raises `ValueError` for an unknown half and
+        Every selected field is required; the wider half without the diff half also
+        requires `wider_report_fields`. Raises `ValueError` for an unknown half and
         `KeyError` for a selected field with no declared type.
         """
