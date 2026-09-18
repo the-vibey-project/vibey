@@ -1516,3 +1516,111 @@ async def test_tail_reads_codexloop_flat_events_keyed_by_type(tmp_path: Path) ->
     assert events[0].payload["thread_id"] == "t-1"
     assert events[1].payload["done_marker"] == "CODEXLOOP_TASK_FULLY_COMPLETE"
     assert events[1].payload["complete"] is True
+
+
+# ── the per-engine environment overlay and doctor arguments (ADR-0038) ────────
+
+
+async def test_start_layers_the_env_overlay_over_the_isolated_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The overlay is how qwenloop learns the one local endpoint. It lands after the
+    orchestrator's venv is stripped, so it cannot bring that venv back, and it wins over
+    an inherited value of the same name."""
+    from unittest.mock import AsyncMock
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+    from vibey.infrastructure.engines import loop_process_adapter as module
+    from vibey.infrastructure.engines.descriptors import QWENLOOP
+
+    captured: dict[str, object] = {}
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        process = AsyncMock()
+        process.pid = 4243
+        process.returncode = None
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setenv("VIRTUAL_ENV", "/orchestrator/.venv")
+    monkeypatch.setenv("QWENLOOP_MODEL", "inherited")
+
+    adapter = LoopProcessAdapter(
+        descriptor=QWENLOOP,
+        env_overlay={"QWENLOOP_BASE_URL": "http://127.0.0.1:11434/v1", "QWENLOOP_MODEL": "q"},
+    )
+    handle = await adapter.start(
+        RunSpec(
+            run_id=uuid4(),
+            worktree_path=tmp_path,
+            prompt="do the thing",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+    )
+    _active_processes.pop(handle.run_id, None)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["QWENLOOP_BASE_URL"] == "http://127.0.0.1:11434/v1"
+    assert env["QWENLOOP_MODEL"] == "q"
+    assert "VIRTUAL_ENV" not in env
+
+
+def _recording_binary(tmp_path: Path, name: str) -> tuple[Path, Path]:
+    """A fake engine whose `doctor` writes its arguments and one env var to a file."""
+    record = tmp_path / f"{name}.record"
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        name,
+        f'if [ "$1" = "--version" ]; then echo "{name} 0.8.0"; '
+        f'else echo "$@|${{QWENLOOP_BASE_URL:-unset}}" > "{record}"; fi',
+    )
+    return bin_dir, record
+
+
+async def test_preflight_passes_the_descriptors_doctor_args_and_the_overlay(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """claudeloop-local's doctor must probe the local backend its profile names, not
+    the Anthropic login a profile never uses -- so `--profile <name>` reaches doctor --
+    and qwenloop's doctor must see the endpoint the run will use."""
+    from dataclasses import replace
+
+    bin_dir, record = _recording_binary(tmp_path, "fakeloop")
+    monkeypatch.setenv("PATH", f"{bin_dir}:{__import__('os').environ['PATH']}")
+    descriptor = replace(CLAUDELOOP, binary="fakeloop", doctor_args=("--profile", "local"))
+
+    result = await LoopProcessAdapter(
+        descriptor=descriptor, env_overlay={"QWENLOOP_BASE_URL": "http://h:1/v1"}
+    ).preflight()
+
+    assert result.installed and result.auth_ok and result.version == "0.8.0"
+    assert record.read_text().strip() == "doctor --profile local|http://h:1/v1"
+
+
+async def test_preflight_without_an_overlay_inherits_the_environment_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dataclasses import replace
+
+    bin_dir, record = _recording_binary(tmp_path, "plainloop")
+    monkeypatch.setenv("PATH", f"{bin_dir}:{__import__('os').environ['PATH']}")
+    monkeypatch.delenv("QWENLOOP_BASE_URL", raising=False)
+
+    await LoopProcessAdapter(descriptor=replace(CLAUDELOOP, binary="plainloop")).preflight()
+
+    assert record.read_text().strip() == "doctor|unset"
+
+
+def test_claudeloop_local_classifies_through_claudeloops_own_vocabulary() -> None:
+    from vibey.domain.capacity import AuthenticationFailed
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP_LOCAL)
+
+    assert isinstance(adapter.classify({"capacity": "BackendMisconfigured"}), AuthenticationFailed)
+    assert adapter.attribute(78, "") is FailureClass.ENGINE

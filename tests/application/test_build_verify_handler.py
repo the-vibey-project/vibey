@@ -279,6 +279,36 @@ async def test_reviewer_rejection_fails_as_work(tmp_path: Path) -> None:
     assert outcome == Failure(FailureClass.WORK, "diff review did not approve this work item")
 
 
+async def test_a_reviewer_whose_backend_is_misconfigured_parks_rather_than_rejects(
+    tmp_path: Path,
+) -> None:
+    """Exit 78: the reviewer never judged the diff, so recording a rejection would be
+    false and retrying would repeat the same fault. The job parks for the fix."""
+    from vibey.application.worker import Park
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    reviewer = ScriptedEngine(
+        descriptor=CLAUDELOOP_LOCAL,
+        base_dir=tmp_path / "engine",
+        script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
+        exit_code_script=[78],
+    )
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=reviewer,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "qwenloop"}))
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "engine_misconfigured"
+    assert "`claudeloop doctor --profile local`" in outcome.request.prompt
+
+
 def test_gate_output_tail_prefers_both_streams_and_labels_stdout() -> None:
     """pytest prints the actual failure to stdout; stderr often carries
     only warnings. Both must appear (tail-capped), or the operator sees a

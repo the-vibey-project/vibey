@@ -165,8 +165,9 @@ Because of the ledger invariant and the no-loss gate, the scheduler may treat $E
 substitutable executors and choose among them by policy rather than by state: the
 delivery semantics live entirely above the vendor line. The same orchestration is
 written once over five engines — the Claude, Codex, Cursor and Antigravity/Gemini
-session runners, which form the paid pool, and a local model runner that is an
-opt-in standby for the build phase and can serve the design interview with no vendor
+session runners, which form the paid pool, and a local model runner that, once opted
+into, is preferred ahead of that pool for the build phase (alongside the Claude runner
+pointed at a local backend) and can serve the design interview with no vendor
 account at all — differing only in their capacity lexicons and in whether a credit
 balance exists.
 

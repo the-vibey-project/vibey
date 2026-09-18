@@ -244,6 +244,13 @@ class BuildVerifyHandler:
         )
 
         if not run_outcome.complete:
+            # A reviewer whose backend could not serve the review never judged the
+            # diff: park for the fix rather than record a rejection (exit 78).
+            misconfigured = run_outcome.misconfiguration_gate(
+                self._reviewer.descriptor, job.work_item_id
+            )
+            if misconfigured is not None:
+                return Park(misconfigured)
             return Failure(FailureClass.WORK, "diff review did not approve this work item")
 
         if self._repair is not None:
