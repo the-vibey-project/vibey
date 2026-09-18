@@ -212,8 +212,9 @@ repair-attempt budget is exhausted.
 `review-fallback` runs only when `[pr_automation.fallback].enabled` is set, the primary
 `review` job produced no verdict at all (not a review that ran and found something), the
 event is not a fork pull request (`trusted_only`), and the run is not a dry run. Unlike
-every other job in this workflow it targets a distinct `[self-hosted, vibey-local-gh]`
-runner rather than `ubuntu-latest`, and holds only `contents: read` — no secret, and no
+every other job in this workflow it targets a distinct `[self-hosted, <runner_label>]`
+runner (the label is `[pr_automation.fallback] runner_label`, default `vibey-local`)
+rather than `ubuntu-latest`, and holds only `contents: read` — no secret, and no
 token capable of mutating the repository. It fetches the exact-head diff with `gh pr diff`,
 falling back to a local merge-base reconstruction when GitHub's diff API refuses a pull
 request beyond roughly 300 changed files, then runs `vibey-gh local-review` against an

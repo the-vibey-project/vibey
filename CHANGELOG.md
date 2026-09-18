@@ -38,6 +38,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **gh:** the docs and the config comment for `[issue_automation] fallback_enabled` now give its real default, `true`: #277 turned both local fallbacks on by default under sub-doctrine 8.a and left them saying "off" (#264)
 * **gh:** `vibey-gh doctor` no longer fails every repository on the starter config (`[install] workflows = ["provenance.yml"]`). The missing-gate check is an error only where `pr-automation.yml` or `merge-train.yml` is installed; a repository that declines both gets an `info` note (#264)
 * **gh:** the sub-doctrine 4.a social-signals section now actually reaches the published site: `release-surfaces.yml` ran the inject step before `properdocs build` created `channel-site/`, so it injected nothing on every deploy (#264)
+* **gh:** the vibey-gh docs now name the local lane's runner by its key, `[pr_automation.fallback] runner_label`, and its default `vibey-local`, instead of `vibey-local-gh`, which is only vibey-gh's own setting (#264)
 
 ## [0.8.0] (2026-09-16)
 

@@ -485,7 +485,8 @@ With `[pr_automation.fallback].enabled` (on by default) and a live local lane, a
 repository gets one more line of defense before that gate fails outright: when the
 primary review returns no verdict at
 all, a `review-fallback` job sends the diff to a local Ollama model on a self-hosted
-`vibey-local-gh`-labelled runner (never for a fork PR unless `trusted_only = false`) and
+runner carrying the `[pr_automation.fallback] runner_label` label (default
+`vibey-local`; never for a fork PR unless `trusted_only = false`) and
 runs `vibey-gh local-review`. A clean local verdict passes the gate under the honestly
 weaker title `PR automation: gate (local fallback)`; the local model never overrides an
 actual finding, and it holds no repository credentials at all. See

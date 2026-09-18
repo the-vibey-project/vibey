@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -178,6 +179,17 @@ def test_the_documented_fallback_defaults_are_the_code_defaults(tmp_path):
     )
     for row in (issue_row, pr_row):
         assert row.split("|")[2].strip() == "boolean / `true`", row
+
+
+def test_the_docs_name_the_runner_label_key_not_one_repositorys_value():
+    """Five pages said the lane runs on `[self-hosted, vibey-local-gh]` -- the label
+    vibey-gh's OWN .vibey-gh.toml sets -- while `runner_label` defaults to `vibey-local`
+    (#264). A literal runs-on in prose may only be the placeholder or the default."""
+    tenant = Path(__file__).resolve().parent.parent
+    allowed = {"<runner_label>", PrAutomationFallbackConfig().runner_label}
+    for page in [tenant / "README.md", *sorted((tenant / "docs").glob("*.md"))]:
+        for label in re.findall(r"\[self-hosted, ([^\]]+)\]", page.read_text(encoding="utf-8")):
+            assert label in allowed, f"{page.name} names runner label {label!r}"
 
 
 @pytest.mark.parametrize(
