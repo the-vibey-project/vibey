@@ -165,30 +165,21 @@ def _compiled_expression_length(scalar: str) -> int | None:
 
 
 def _interpolated_scalars(path: Path) -> list[tuple[str, str]]:
-    """Every string a workflow may interpolate, labelled by file, job, step and key.
-
-    `run:` is the one that bricked a file, but the cap is a property of expressions, not of
-    scripts: a `with:` input is measured the same way, and pr-automation.yml's review
-    prompt is the longest interpolated string this repository ships. A guard that read
-    `run:` alone would not see it.
-    """
+    """Every string a workflow may interpolate, labelled by its YAML path."""
     parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
-    scalars = []
-    for job_name, job in (parsed.get("jobs") or {}).items():
-        if not isinstance(job, dict):
-            continue
-        for key, value in (job.get("env") or {}).items():
-            if isinstance(value, str):
-                scalars.append((f"{path.name} / {job_name} / env.{key}", value))
-        for index, step in enumerate(job.get("steps") or []):
-            label = step.get("name") or f"step {index}"
-            where = f"{path.name} / {job_name} / {label}"
-            if isinstance(step.get("run"), str):
-                scalars.append((f"{where} / run", step["run"]))
-            for section in ("with", "env"):
-                for key, value in (step.get(section) or {}).items():
-                    if isinstance(value, str):
-                        scalars.append((f"{where} / {section}.{key}", value))
+    scalars: list[tuple[str, str]] = []
+
+    def visit(value: object, where: str) -> None:
+        if isinstance(value, str):
+            scalars.append((where, value))
+        elif isinstance(value, dict):
+            for key, child in value.items():
+                visit(child, f"{where}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{where}[{index}]")
+
+    visit(parsed, path.name)
     return scalars
 
 
