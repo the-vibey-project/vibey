@@ -878,6 +878,10 @@ book and the research paper are published at the root of each channel site and l
 from every page's navigation and footer, from the channel picker, and from `llms.txt` —
 always from what the deploy actually produced — and, on the release channel, attached to
 that version's GitHub Release as permanent assets.
+The book is a paperback interior, not a printed web page: mirrored margins with the
+gutter on the binding side, page numbers, running heads, a part page per nav section and
+a contents grouped the way the nav is, justified and hyphenated text — with every physical
+dimension (trim, margins, gutter, type) a `vibey-gh book` flag defaulting to KDP's 6x9in.
 
 GitHub Packages does not provide a PyPI registry. The workflow therefore publishes the
 exact wheel and source distribution from the successful `Release` run as an OCI artifact

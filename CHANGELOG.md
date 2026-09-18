@@ -30,6 +30,23 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Features
+
+* **gh:** the book is a paperback interior, not a printed web page (#162). `book-print.html`
+  now mirrors its margins with the gutter on the binding side, prints a page number at the
+  foot of every body page and none on the front matter, carries each chapter's title as the
+  running head of its recto pages (its nav section's on the verso), opens every nav section
+  with a part page, and sets justified, hyphenated text in the book's declared language with
+  widows and orphans held to three lines. The contents — printed and EPUB — is grouped under
+  the nav's own section headings at any depth, where it used to be one flat column that
+  dropped Guides, Reference, Architecture > Decision records and Governance; chapter titles
+  lose YAML quotes and markdown backticks. The EPUB gains `dc:date`, a landmarks navigation,
+  `xml:lang` on every document, and a `dc:identifier` that is the same for the same book on
+  every build instead of a fresh random UUID. Every physical dimension — trim, margins,
+  gutter, type size, leading, font stacks — is a `vibey-gh book` flag defaulting to the
+  standard KDP 6x9in interior, and the 0.5in default gutter is documented against KDP's
+  page-count tiers.
+
 ## [0.8.0] (2026-09-16)
 
 ### Features

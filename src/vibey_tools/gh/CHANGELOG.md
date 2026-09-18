@@ -5,6 +5,43 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- `vibey-gh book` prints a paperback interior, not a web page (#162). The print CSS mirrors
+  its margins recto to verso with the gutter on the binding side, puts a folio in a
+  bottom-centre margin box on every body page and none on the numberless front matter
+  (title, copyright, contents) or the new part pages, gives every chapter a named page whose
+  top margin box carries its title (recto) and its nav section's (verso) — Chrome implements
+  neither `string-set` nor `running()`, so the title is a literal per page name — and sets
+  justified, `hyphens:auto` text under an `<html lang>` taken from `--language`, with
+  `orphans`/`widows` of 3, `break-inside:avoid` on `pre`, `table` and `figure`, and the
+  modern `break-*` properties in place of the legacy `page-break-*`. Inline code gains `<wbr>`
+  break opportunities after `/`, `.`, `_` and `:`, so a path no longer stretches a justified
+  line into a row of gaps, and table cells wrap with `break-word` rather than letting an
+  auto-width table squeeze a column to one letter per line.
+- The nav reader keeps the nav's structure: `BookChapter.sections` records every enclosing
+  heading (depth is no longer capped at one, so the three-deep ADR entries sit under
+  Architecture > Decision records), both the indented and the `yaml.safe_dump` indentless
+  styles are read, a comment line no longer ends the block, quoted titles are unquoted and
+  unescaped (a quoted title may now carry a colon), and markdown backticks are stripped from
+  titles. The dead `_NAV_SECTION` pattern is now what reads the headings. One
+  `TableOfContents` renders the grouped contents for both the EPUB navigation document and
+  the print interior.
+- EPUB: `dc:date` (from `--date`, else the build date, and the copyright year follows it), a
+  hidden `landmarks` navigation (contents and start of body matter), `xml:lang`/`lang` on
+  every XHTML document and the package, no empty `dc:description`, and a `dc:identifier`
+  derived as a UUIDv5 over title, author, language and `--edition` — stable across builds —
+  unless `--identifier` gives one outright.
+- Every physical parameter is a `PrintInterior` constructor parameter and a CLI flag, with
+  today's values as the defaults (ADR-0018): `--trim 6x9`, `--margin-top`/`--margin-bottom
+  0.75in`, `--margin-outside 0.5in`, `--gutter 0.5in`, `--font-size 11pt`, `--line-height
+  1.5`, `--font-family "Georgia, serif"`, `--code-font-family monospace`,
+  `--running-head-length 60`. Each is validated, because each is written into a stylesheet.
+  The gutter's help and the CLI reference carry KDP's minimums by page count (24–150 pages
+  0.375in, 151–300 0.5in, 301–500 0.625in, 501–700 0.75in, 701–828 0.875in).
+- The new classes — `NavReader`, `TableOfContents`, `PrintInterior`, `EpubPackage` — have their
+  seams declared in `vibey_gh/interfaces/book_interface.py` (ADR-0016), and `build_book`
+  takes `interior=` and `package=`. The module docstring no longer says the workflow installs
+  Playwright; it prints with the runner's own Chrome.
+
 - Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
   workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The
   "Restore the other release channel" step had grown to a single 509-line script, and
