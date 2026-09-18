@@ -5,6 +5,28 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- The fit calculus reads a cold model instead of refusing it (vibey#135). `sample_model`
+  used to read only Ollama's `/api/ps`, which lists loaded models, so any model the runner
+  held but had idled out came back `None`, and the verdict was `floor`. Every first call
+  after an idle period would have been refused once the loop is wired into live calls. It
+  now falls back to `/api/tags` to confirm the model is held and to `/api/show` for the
+  context length its metadata states. That returns a `Model(resident=False)` whose size is
+  the weights on disk, which is a lower bound, and `decide()` says so in a note. `None`
+  now means only "not held" or "unreadable". A bare name also matches its `:latest` tag,
+  as Ollama resolves it. The reading is done by a new `OllamaModelSampler` behind
+  `ModelSamplerInterface`; `sample_model` stays the published entry point.
+- `FitLoop` reads the runner the work would go to: `base_url=`, else `VIBEY_OLLAMA_URL`,
+  else `http://127.0.0.1:11434`. Before, `admit()` always read 127.0.0.1 and ignored both.
+  It also takes an injected `model_sampler`, gains `FitLoop.default_journal()`
+  (`VIBEY_GH_FIT_JOURNAL`, else `~/.local/state/vibey-gh/fit.jsonl`) and
+  `loop.replay()`, which the CLI now uses instead of reaching into a private attribute.
+- `vibey-gh fit` gains `--base-url` (default `VIBEY_OLLAMA_URL`, else
+  `[pr_automation.fallback] base_url`) and journals by default to that path. `--journal`
+  still overrides it, and the new `--no-journal` keeps the old journal-free run available.
+- One context sizer: `local-review` and `local-triage` size `num_ctx` through
+  `vibey_gh.fit.ContextSizer` (behind `ContextSizerInterface`) instead of a private
+  `_num_ctx`. The windows are unchanged, and every number in the rule is now a
+  constructor keyword. Both calls take `sizer=`.
 - Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
   workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The
   "Restore the other release channel" step had grown to a single 509-line script, and

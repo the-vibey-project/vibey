@@ -33,6 +33,15 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 ### Bug Fixes
 
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+### Features
+
+* **gh:** the fit calculus reads a model the runner holds but has not loaded (via
+  `/api/tags` and `/api/show`) instead of calling it the floor, reads the runner that
+  `--base-url` or `VIBEY_OLLAMA_URL` names instead of always 127.0.0.1, and journals to
+  `~/.local/state/vibey-gh/fit.jsonl` by default (`VIBEY_GH_FIT_JOURNAL`, `--journal`,
+  `--no-journal`). Both local-model calls now size their context window through one
+  `ContextSizer`, with unchanged windows. These are prerequisites for wiring the fit loop
+  into live Ollama calls; swap actuation stays refused by design (#135)
 
 ## [0.8.0] (2026-09-16)
 
