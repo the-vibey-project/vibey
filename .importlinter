@@ -107,3 +107,4 @@ forbidden_modules =
     vibey_gh.doctor
     vibey_gh.install
     vibey_gh.review_composition
+    vibey_gh.conversation
