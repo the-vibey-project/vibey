@@ -410,13 +410,17 @@ Variables read by code under `src/vibey`:
 | `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |
 | `CURSOR_API_KEY` | `doctor` auth fallback; `doctor --cluster` | cursorloop credentials. |
 | `GOOGLE_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `GEMINI_API_KEY`, `GOOGLE_APPLICATION_CREDENTIALS`) | agyloop credentials. |
-| `VIRTUAL_ENV` | engine session launch; every gate command (`build.verify`, `build.integrate`, REVIEW's automated checks) unless the project sets [`gates.isolate_python_env`](configuration.md#gates) to `false` | Removed, together with `VIRTUAL_ENV_PROMPT`, `PYTHONHOME`, `PYTHONPATH`, and the matching `PATH` entries, from the environment passed to engine sessions and gate commands, so neither installs into nor runs vibey's own interpreter. For gate commands the running interpreter's prefix counts as a venv only when it is one, so a system-Python install keeps `/usr/bin`. |
+| `VIRTUAL_ENV` | engine session launch; every gate command (`build.verify`, `build.integrate`, REVIEW's automated checks) unless the project sets [`gates.isolate_python_env`](configuration.md#gates) to `false` | Removed, together with `VIRTUAL_ENV_PROMPT`, `PYTHONHOME`, `PYTHONPATH`, and the matching `PATH` entries, from the environment passed to engine sessions and gate commands, so neither installs into nor runs vibey's own interpreter. For both, the running interpreter's prefix counts as a venv only when it is one, so a system-Python install keeps `/usr/bin` ([#283](https://github.com/the-vibey-project/vibey/issues/283)). |
 
 Engine sessions otherwise inherit the caller's environment. Gate commands
 inherit it minus every `GIT_*` variable (and, by default, minus vibey's Python
 environment as above); they read `/dev/null` as stdin, and one that overruns
 [`gates.timeout_seconds`](configuration.md#gates) (default 30 minutes) is
-killed with its whole process group and fails as exit 124. vibey's own git
-subprocesses inherit the environment minus every `GIT_*` variable. The engine CLIs
+killed with its whole process group and fails as exit 124. An engine's
+`--version` and `doctor` probes, and the `vibey-skills` CLI, likewise run in a
+process group of their own and are killed with it when they overrun or are
+cancelled; the reap after every such kill is bounded, so a descendant that
+escaped the group and holds the output open is logged and left, not waited on.
+vibey's own git subprocesses inherit the environment minus every `GIT_*` variable. The engine CLIs
 read further variables of their own; see each runner under
 `src/vibey_runners/`.

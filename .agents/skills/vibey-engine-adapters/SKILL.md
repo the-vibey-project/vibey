@@ -54,6 +54,16 @@ setting `VIBEY_OLLAMA_URL` (`local_engines.py::LocalEndpointEnvironment`).
 Preflight runs `<binary> doctor` plus `descriptor.doctor_args`
 (claudeloop-local: `--profile NAME`).
 
+Preflight's `--version` and `doctor` probes each lead a process group of their own.
+On a timeout or a cancellation, `infrastructure/process/reaper.py::ProcessReaper`
+kills the whole group and reaps it within `LoopProcessAdapter.kill_grace_seconds`,
+logging `engine_process_not_reaped` if a descendant that left the group still holds
+the pipes. The gate runner and the skills-context compiler use the same reaper.
+Never hand-roll a kill followed by an unbounded `process.wait()` (#283, ADR-0017).
+The run's environment strips the interpreter's prefix only when it is a venv
+(`infrastructure/process/python_env.py::OrchestratorPythonEnv`, shared with the gate
+runner), so a system-Python install keeps `/usr/bin`.
+
 `start()` internally calls `infrastructure/engines/argv.py::build_argv()` —
 that's a plain function, not an adapter method; it takes both the descriptor
 and the `RunSpec` (`build_argv(descriptor, spec)`), not just the spec.

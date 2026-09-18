@@ -28,37 +28,31 @@ long as the command hung, with the heartbeat renewing it the whole time.
 **It dies with everything it started.** The command leads a session of its
 own and the kill goes to the whole process group, so a test server or a
 `sleep` behind `sh -c` dies with it; a survivor would hold the output pipes
-open and hang the next read exactly where the timed-out one hung. stdin is
-/dev/null, so a command that prompts reads end-of-file instead of waiting on
-the worker's stdin."""
+open and hang the next read exactly where the timed-out one hung. The kill and
+the bounded reap after it are `infrastructure/process/reaper.py`'s, the one
+implementation every subprocess call site shares (#283). stdin is /dev/null, so
+a command that prompts reads end-of-file instead of waiting on the worker's
+stdin."""
 
 import asyncio
-import contextlib
 import math
 import os
 import shlex
-import signal
-import sys
 from collections.abc import Mapping
 from pathlib import Path
 
-import structlog
-
 from vibey.application.build_verify_handler import GateResult
 from vibey.infrastructure.engines.loop_process_adapter import isolate_python_env
-
-logger = structlog.get_logger(__name__)
+from vibey.infrastructure.process import (
+    DEFAULT_KILL_GRACE_SECONDS,
+    OrchestratorPythonEnv,
+    ProcessReaper,
+)
 
 _DEFAULT_TIMEOUT_SECONDS = 1800.0
 """Per command. Generous on purpose: a project's whole test suite is one gate
 command, and a cap it can hit on a slow day turns a passing suite into a
 failing gate. What matters is that there is a bound at all."""
-
-_DEFAULT_KILL_GRACE_SECONDS = 5.0
-"""How long to wait for a killed command to be reaped before giving up on it.
-SIGKILL cannot be caught, so the command itself is gone in milliseconds; the
-grace only ever runs out when something outside its process group still holds
-its output pipes (see `_kill`)."""
 
 _EXIT_TIMED_OUT = 124
 _EXIT_COULD_NOT_START = 127
@@ -69,12 +63,16 @@ class SubprocessGateRunner:
         self,
         *,
         timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
-        kill_grace_seconds: float = _DEFAULT_KILL_GRACE_SECONDS,
+        kill_grace_seconds: float = DEFAULT_KILL_GRACE_SECONDS,
         isolate_python_env: bool = True,
     ) -> None:
         self._timeout_seconds = self._positive("timeout_seconds", timeout_seconds)
         self._kill_grace_seconds = self._positive("kill_grace_seconds", kill_grace_seconds)
         self._isolate_python_env = isolate_python_env
+        self._reaper = ProcessReaper(
+            grace_seconds=self._kill_grace_seconds, event="gate_process_not_reaped"
+        )
+        self._python_env = OrchestratorPythonEnv()
 
     @classmethod
     def from_config(cls, config: Mapping[str, object]) -> "SubprocessGateRunner":
@@ -96,7 +94,7 @@ class SubprocessGateRunner:
             raise ValueError("gates.isolate_python_env must be a boolean")
         return cls(
             timeout_seconds=cls._seconds(raw, "timeout_seconds", _DEFAULT_TIMEOUT_SECONDS),
-            kill_grace_seconds=cls._seconds(raw, "kill_grace_seconds", _DEFAULT_KILL_GRACE_SECONDS),
+            kill_grace_seconds=cls._seconds(raw, "kill_grace_seconds", DEFAULT_KILL_GRACE_SECONDS),
             isolate_python_env=isolate,
         )
 
@@ -140,7 +138,7 @@ class SubprocessGateRunner:
                 process.communicate(), timeout=self._timeout_seconds
             )
         except TimeoutError:
-            await self._kill(process)
+            await self._reaper.kill_and_reap(process)
             return GateResult(
                 _EXIT_TIMED_OUT,
                 "",
@@ -151,7 +149,7 @@ class SubprocessGateRunner:
             # Cancelled (Ctrl-C on the worker, event-loop shutdown, any caller
             # that cancels the handler) or anything else: a gate never outlives
             # the task that ran it.
-            await self._kill(process)
+            await self._reaper.kill_and_reap(process)
             raise
         return GateResult(
             process.returncode or 0,
@@ -163,39 +161,4 @@ class SubprocessGateRunner:
         env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
         if not self._isolate_python_env:
             return env
-        return isolate_python_env(
-            env, venv_prefixes=(os.environ.get("VIRTUAL_ENV"), self._interpreter_venv())
-        )
-
-    @staticmethod
-    def _interpreter_venv() -> str | None:
-        # sys.prefix names a venv only when it differs from sys.base_prefix. On
-        # an interpreter installed into the system it is `/usr`, and stripping
-        # every PATH entry under it would take /usr/bin -- git, sh, and most
-        # of what a gate runs -- with it.
-        return sys.prefix if sys.prefix != sys.base_prefix else None
-
-    async def _kill(self, process: asyncio.subprocess.Process) -> None:
-        # ProcessLookupError: nothing is left in the group -- the command
-        # exited on its own, and whatever still holds its pipes left the group
-        # first. PermissionError: macOS refuses killpg on a group whose only
-        # member is a zombie, which the command is between exiting and being
-        # reaped. Either way there is nothing left to kill.
-        with contextlib.suppress(ProcessLookupError, PermissionError):
-            os.killpg(process.pid, signal.SIGKILL)
-        try:
-            await asyncio.wait_for(process.wait(), timeout=self._kill_grace_seconds)
-        except TimeoutError:
-            # A wait() that starts before the process exits resolves only once
-            # every pipe has closed too (CPython 3.12). A descendant that
-            # escaped into a session of its own and kept the command's stdout
-            # would block it forever, though the command itself is long dead
-            # -- and a worker blocked here is the hang this runner exists to
-            # prevent. The child watcher still reaps the command; the escaped
-            # descendant is outside any group vibey started.
-            logger.warning(
-                "gate_process_not_reaped",
-                pid=process.pid,
-                returncode=process.returncode,
-                kill_grace_seconds=self._kill_grace_seconds,
-            )
+        return isolate_python_env(env, venv_prefixes=self._python_env.venv_prefixes())

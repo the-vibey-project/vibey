@@ -21,7 +21,6 @@ from vibey.infrastructure.engines.loop_process_adapter import (
     EXIT_CODE_WIND_DOWN,
     LoopProcessAdapter,
     _active_processes,
-    _communicate,
     _render_plan,
 )
 
@@ -595,17 +594,33 @@ async def test_stop_handles_invalid_snapshot_json(tmp_path: Path) -> None:
 
 
 async def test_communicate_reaps_an_already_exited_process_on_error() -> None:
-    from unittest.mock import AsyncMock
+    """The probe already exited, so its group is gone: the kill finds no one (ESRCH),
+    the reap returns at once, and the original error still propagates."""
+    import asyncio
 
-    process = AsyncMock()
-    process.communicate.side_effect = RuntimeError("communication failed")
-    process.returncode = 1
+    from structlog.testing import capture_logs
 
-    with pytest.raises(RuntimeError, match="communication failed"):
-        await _communicate(process, timeout=1.0)
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    process = await adapter._spawn(
+        "/bin/sh",
+        "-c",
+        "exit 1",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        start_new_session=True,
+    )
+    await process.wait()
 
-    process.kill.assert_not_called()
-    process.wait.assert_awaited_once()
+    async def failing_communicate() -> tuple[bytes, bytes]:
+        raise RuntimeError("communication failed")
+
+    process.communicate = failing_communicate  # type: ignore[method-assign]
+
+    with capture_logs() as logs, pytest.raises(RuntimeError, match="communication failed"):
+        await adapter._communicate(process, timeout=1.0)
+
+    assert process.returncode == 1
+    assert logs == []
 
 
 async def test_stop_reaps_an_exited_registered_process(tmp_path: Path) -> None:
@@ -1624,3 +1639,169 @@ def test_claudeloop_local_classifies_through_claudeloops_own_vocabulary() -> Non
 
     assert isinstance(adapter.classify({"capacity": "BackendMisconfigured"}), AuthenticationFailed)
     assert adapter.attribute(78, "") is FailureClass.ENGINE
+
+
+# ── bounded reaping of preflight probes, and the spawn's venv guard (#283) ────
+
+
+def _loop_descriptor(binary: str):  # type: ignore[no-untyped-def]
+    from dataclasses import replace
+
+    return replace(CLAUDELOOP, binary=binary, auth_env=("VIBEY_TEST_REAP_MISSING_KEY",))
+
+
+async def test_a_timed_out_doctor_dies_with_its_whole_group(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The kill used to reach only the probe. Its background `sleep` then held the
+    output pipes, and the unbounded wait after the kill waited on the sleep. The probe
+    now leads a group of its own, and the whole group dies."""
+    import asyncio
+    import os
+
+    from structlog.testing import capture_logs
+
+    from tests.infrastructure.process.escapes import background_script, dead_within, read_pids
+
+    pidfile = tmp_path / "background.pid"
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        "reaploop",
+        f'if [ "$1" = "--version" ]; then echo "reaploop 1.0.0"; exit 0; fi\n'
+        f"{background_script(pidfile)}",
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.delenv("VIBEY_TEST_REAP_MISSING_KEY", raising=False)
+    adapter = LoopProcessAdapter(descriptor=_loop_descriptor("reaploop"), doctor_timeout=1.0)
+    loop = asyncio.get_running_loop()
+
+    started = loop.time()
+    with capture_logs() as logs:
+        result = await adapter.preflight()
+
+    assert loop.time() - started < 10
+    assert result.version == "1.0.0"
+    assert result.auth_ok is False
+    (background,) = await read_pids(pidfile)
+    assert await dead_within(background, seconds=5)
+    assert not [entry for entry in logs if entry["event"] == "engine_process_not_reaped"]
+
+
+async def test_a_doctor_whose_escaped_child_holds_the_pipes_is_abandoned_after_the_grace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No group kill reaches a child that left the group, and on CPython 3.12 the wait
+    after the kill does not return while it holds the pipes. Preflight gives up after
+    `kill_grace_seconds`, logs which engine's probe it left, and carries on."""
+    import asyncio
+    import os
+    import shlex
+    import sys
+
+    from structlog.testing import capture_logs
+
+    from tests.infrastructure.process.escapes import ESCAPE, dead_within, read_pids, release
+
+    script, pidfile = tmp_path / "escape.py", tmp_path / "escape.pids"
+    script.write_text(ESCAPE)
+    command = shlex.join([sys.executable, str(script), str(pidfile), "linger"])
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        "escapeloop",
+        f'if [ "$1" = "--version" ]; then echo "escapeloop 1.0.0"; exit 0; fi\nexec {command}',
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.delenv("VIBEY_TEST_REAP_MISSING_KEY", raising=False)
+    adapter = LoopProcessAdapter(
+        descriptor=_loop_descriptor("escapeloop"), doctor_timeout=1.0, kill_grace_seconds=0.2
+    )
+    loop = asyncio.get_running_loop()
+
+    started = loop.time()
+    with capture_logs() as logs:
+        result = await adapter.preflight()
+    escaped, doctor = await read_pids(pidfile)
+    try:
+        assert loop.time() - started < 10
+        assert result.auth_ok is False
+        (warning,) = [entry for entry in logs if entry["event"] == "engine_process_not_reaped"]
+        assert warning["pid"] == doctor
+        assert warning["engine"] == "claudeloop"
+        assert warning["kill_grace_seconds"] == 0.2
+        assert await dead_within(doctor, seconds=5)
+    finally:
+        await release(escaped)
+
+
+_SYSTEM_PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+
+async def _captured_start_kwargs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, object]:
+    from unittest.mock import AsyncMock
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+    from vibey.infrastructure.engines import loop_process_adapter as module
+
+    captured: dict[str, object] = {}
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        process = AsyncMock()
+        process.pid = 4244
+        process.returncode = None
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    handle = await LoopProcessAdapter(descriptor=CLAUDELOOP).start(
+        RunSpec(
+            run_id=uuid4(),
+            worktree_path=tmp_path,
+            prompt="do the thing",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+    )
+    _active_processes.pop(handle.run_id, None)
+    return captured
+
+
+async def test_start_on_a_system_python_keeps_usr_bin_on_the_engines_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Outside a venv, sys.prefix is `/usr`. Passing it as a venv prefix stripped
+    /usr/bin and /usr/local/bin -- git, sh, the engine CLIs -- from every session."""
+    import sys
+
+    monkeypatch.setattr(sys, "prefix", "/usr")
+    monkeypatch.setattr(sys, "base_prefix", "/usr")
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    monkeypatch.setenv("PATH", _SYSTEM_PATH)
+
+    captured = await _captured_start_kwargs(tmp_path, monkeypatch)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["PATH"] == _SYSTEM_PATH
+    # The engine run stays in the worker's session; only the probes get their own.
+    assert captured["start_new_session"] is False
+
+
+async def test_start_from_a_venv_interpreter_strips_that_venv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sys
+
+    monkeypatch.setattr(sys, "prefix", "/orchestrator/.venv")
+    monkeypatch.setattr(sys, "base_prefix", "/usr")
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    monkeypatch.setenv("PATH", f"/orchestrator/.venv/bin:{_SYSTEM_PATH}")
+
+    captured = await _captured_start_kwargs(tmp_path, monkeypatch)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["PATH"] == _SYSTEM_PATH

@@ -93,6 +93,9 @@ spec:
                     timeout_seconds:
                       type: number
                       exclusiveMinimum: 0
+                    kill_grace_seconds:
+                      type: number
+                      exclusiveMinimum: 0
                 answers:
                   type: object
                   description: >-

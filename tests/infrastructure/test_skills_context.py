@@ -183,37 +183,60 @@ async def test_invalid_index_is_rebuilt_and_build_failure_falls_back(tmp_path: P
     assert "build failed" in str(result.provenance["detail"])
 
 
-class _Process:
-    def __init__(self, *, returncode: int | None) -> None:
-        self.returncode = returncode
-        self.killed = False
-        self.waited = False
+async def test_run_kills_the_clis_whole_group_on_timeout_and_reraises(tmp_path: Path) -> None:
+    """The CLI leads a group of its own, so the kill reaches what it started. A plain
+    kill left the background `sleep` holding the pipes, and the wait after it waited
+    on the sleep (#283)."""
+    import asyncio
 
-    async def communicate(self) -> tuple[bytes, bytes]:
-        raise TimeoutError("slow")
+    from structlog.testing import capture_logs
 
-    def kill(self) -> None:
-        self.killed = True
+    from tests.infrastructure.process.escapes import background_script, dead_within, read_pids
 
-    async def wait(self) -> None:
-        self.waited = True
+    pidfile = tmp_path / "background.pid"
+    compiler = VibeySkillsContextCompiler(mode="shadow", index_path=tmp_path, timeout_seconds=1.0)
+    loop = asyncio.get_running_loop()
+
+    started = loop.time()
+    with capture_logs() as logs, pytest.raises(TimeoutError):
+        await compiler._run("/bin/sh", "-c", background_script(pidfile))
+
+    # The old kill-then-wait returned only when the 30-second sleep did.
+    assert loop.time() - started < 10
+    (background,) = await read_pids(pidfile)
+    assert await dead_within(background, seconds=5)
+    assert not [e for e in logs if e["event"] == "skills_context_process_not_reaped"]
 
 
-@pytest.mark.parametrize("returncode", (None, 1))
-async def test_run_waits_for_failed_process(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, returncode: int | None
+async def test_run_abandons_the_reap_after_the_grace_when_an_escaped_child_holds_the_pipes(
+    tmp_path: Path,
 ) -> None:
-    process = _Process(returncode=returncode)
-    monkeypatch.setattr(
-        "vibey.infrastructure.skills_context.asyncio.create_subprocess_exec",
-        AsyncMock(return_value=process),
-    )
-    compiler = VibeySkillsContextCompiler(mode="shadow", index_path=tmp_path)
+    """No group kill reaches a child that left the group. The compiler gives up on the
+    reap after `kill_grace_seconds`, logs it, and the timeout still propagates."""
+    import asyncio
 
-    with pytest.raises(TimeoutError, match="slow"):
-        await compiler._run("command")
-    assert process.killed is (returncode is None)
-    assert process.waited
+    from structlog.testing import capture_logs
+
+    from tests.infrastructure.process.escapes import ESCAPE, dead_within, read_pids, release
+
+    pidfile = tmp_path / "escape.pids"
+    compiler = VibeySkillsContextCompiler(
+        mode="shadow", index_path=tmp_path, timeout_seconds=1.0, kill_grace_seconds=0.2
+    )
+    loop = asyncio.get_running_loop()
+
+    started = loop.time()
+    with capture_logs() as logs, pytest.raises(TimeoutError):
+        await compiler._run(sys.executable, "-c", ESCAPE, str(pidfile), "linger")
+    escaped, cli = await read_pids(pidfile)
+    try:
+        assert loop.time() - started < 10
+        (warning,) = [e for e in logs if e["event"] == "skills_context_process_not_reaped"]
+        assert warning["pid"] == cli
+        assert warning["kill_grace_seconds"] == 0.2
+        assert await dead_within(cli, seconds=5)
+    finally:
+        await release(escaped)
 
 
 def test_config_and_request_projection_variants(tmp_path: Path) -> None:

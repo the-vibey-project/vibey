@@ -258,6 +258,7 @@ operator's `spec.skillsContext` object (copied verbatim).
 | `mode` | string | `"off"` | `off`, `shadow` (measure only, never changes prompts), or `inject` (append successful packets to BUILD prompts). Any other value raises when the worker is built. |
 | `budget` | integer | `6000` | Token budget for retrieval, 1,000–32,000 (enforced by the `vibey new` flag, the operator CRD, and `VibeySkillsContextCompiler`). |
 | `timeout_seconds` | number | `120.0` | Skills compile timeout; must be positive. Settable only through `spec.skillsContext`. |
+| `kill_grace_seconds` | number | `5` | How long to wait for a `vibey-skills` process that overran `timeout_seconds` (or whose compile was cancelled) to be reaped after its process group is killed with `SIGKILL`. It only runs out when a process that left the group still holds its output open; the worker then logs `skills_context_process_not_reaped` and moves on rather than wait on it, and a timed-out compile still falls back to the existing prompt ([#283](https://github.com/the-vibey-project/vibey/issues/283)). Must be a finite number greater than zero. Settable only through `spec.skillsContext`. |
 | `command` | array of non-empty strings | unset (`<python> -m vibey_skills.cli`) | Override for the `vibey-skills` command. Read by `compiler_from_config` but not declared in the `VibeyProject` CRD schema, so neither creation path sets it today. |
 | `index_path` | string | `.vibey/skills-context/index` under the repo | Path to the skills index; relative paths resolve under the repo. Read by `compiler_from_config` but not declared in the CRD schema, so neither creation path sets it today. |
 
@@ -335,7 +336,7 @@ today; like `review`, the record is written directly.
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `timeout_seconds` | number | `1800` (30 minutes) | Per command, not per job; a project's whole test suite is usually one command. Must be a finite number greater than zero. |
-| `kill_grace_seconds` | number | `5` | How long to wait for a killed command to be reaped. `SIGKILL` cannot be caught, so this only runs out when a process that left the command's group (a daemon in a session of its own) still holds its output open; the worker logs `gate_process_not_reaped` and moves on rather than wait on it. Must be a finite number greater than zero. |
+| `kill_grace_seconds` | number | `5` | How long to wait for a killed command to be reaped. `SIGKILL` cannot be caught, so this only runs out when a process that left the command's group (a daemon in a session of its own) still holds its output open; the worker logs `gate_process_not_reaped` and moves on rather than wait on it. Must be a finite number greater than zero. The same kill-and-reap (`infrastructure/process/reaper.py`) bounds [`skills_context.kill_grace_seconds`](#skills_context) and the engines' preflight probes ([#283](https://github.com/the-vibey-project/vibey/issues/283)). |
 | `isolate_python_env` | bool | `true` | `false` passes vibey's Python environment through to gate commands, as before [#212](https://github.com/the-vibey-project/vibey/issues/212) — for a project whose gates rely on tools installed beside vibey, such as the `ruff` and `bandit` of a development checkout's venv. `GIT_*` is stripped either way. |
 
 `true` and `false` are rejected as timeouts rather than read as `1` and `0`.
