@@ -75,8 +75,9 @@ forbidden_modules =
     vibey.tui
     vibey.bootstrap
 
-# The same rule, one layer down. `vibey.infrastructure.db.interfaces` (ADR-0016's
-# mirrored form) and the legacy flat `vibey.infrastructure.interfaces` declare seams
+# The same rule, one layer down. `vibey.infrastructure.db.interfaces` and
+# `vibey.infrastructure.ledger.interfaces` (ADR-0016's mirrored form) and the legacy
+# flat `vibey.infrastructure.interfaces` declare seams
 # that infrastructure itself implements, so the application contract's "nothing else
 # from its own tree" clause cannot bind here: a seam over an asyncpg connection or a
 # `LedgerEventDraft` has to name those types or it constrains nothing. What DOES bind
@@ -87,6 +88,7 @@ type = forbidden
 source_modules =
     vibey.infrastructure.interfaces
     vibey.infrastructure.db.interfaces
+    vibey.infrastructure.ledger.interfaces
 forbidden_modules =
     vibey.cli
     vibey.tui

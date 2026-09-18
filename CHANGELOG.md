@@ -35,6 +35,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 ### Features
 
+* **ledger:** `vibey ledger export PROJECT --out FILE` publishes a project's ledger as a
+  shard the repository commits, and `vibey ledger site --from FILE --out DIR --json-only`
+  builds its static JSON surface with no database: `records/<event_id>.json`, an
+  `index.json` for client-side search (id, seq, kind, phase, actor, time, digest, tokens)
+  and a `manifest.json` (seq range, `digest_range`, the ledger's chain head, `holds`,
+  `tier`, and every withheld count). What is published is a read-time projection through
+  a default-deny policy (`domain/publication_policy.py`): allowlisted kinds and fields
+  only, engine chatter and `untrusted` events withheld whole, absolute paths and email
+  addresses stripped, `repo_path` never published, credential redaction last — and every
+  event, field, path, address and credential withheld is counted, never silently dropped.
+  Site output is deterministic and HTML-inert. See
+  [What gets published](docs/guides/ledger-publication.md). Slices S3 and S4 of
+  sub-doctrine 7.a, the searchable ledger (#137)
 * **ledger:** `vibey ledger search` finds ledger records by record id (`--id`), payload digest
   (`--digest`, which names a payload, so it can match several records), actor (`--actor`: an
   engine id, a provenance, or `vibey` for events vibey wrote itself), time window

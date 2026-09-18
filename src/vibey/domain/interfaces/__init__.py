@@ -18,6 +18,15 @@ from vibey.domain.interfaces.ledger_query_interface import (
     LedgerQueryInterface,
     LedgerSearchResultInterface,
 )
+from vibey.domain.interfaces.ledger_record_interface import LedgerRecordCodecInterface
+from vibey.domain.interfaces.publication_policy_interface import (
+    CredentialRedactorInterface,
+    PublicationDecisionInterface,
+    PublicationOutcomeInterface,
+    PublicationPolicyInterface,
+    PublicationRulesInterface,
+    TrimCountsInterface,
+)
 
 __all__ = [
     "ActorInterface",
@@ -26,9 +35,16 @@ __all__ = [
     "ChainLinkInterface",
     "ChainVerificationInterface",
     "CorrelationIdInterface",
+    "CredentialRedactorInterface",
     "DeliveryCorrelationInterface",
     "EventKindResolverInterface",
     "LedgerChainInterface",
     "LedgerQueryInterface",
+    "LedgerRecordCodecInterface",
     "LedgerSearchResultInterface",
+    "PublicationDecisionInterface",
+    "PublicationOutcomeInterface",
+    "PublicationPolicyInterface",
+    "PublicationRulesInterface",
+    "TrimCountsInterface",
 ]

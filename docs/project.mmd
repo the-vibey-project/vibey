@@ -63,7 +63,7 @@ flowchart TB
         IAzure["azure/az_cli.py · iac.py · arm.py · adapter.py"]
         INotify["notify/service.py · notify/webhook.py<br/>HMAC-SHA256 signed webhooks (+ desktop.py · events.py)<br/>IMPLEMENTED + TESTED, NOT constructed by bootstrap.py"]
         IProvision["provision/agent_surface.py<br/>writes the generated block into CLAUDE.md · AGENTS.md ·<br/>CURSOR.md · GEMINI.md · QWEN.md in each worktree (ADR-0011)"]
-        IRedact["ledger/redact.py — credential/token/secret redaction<br/>ledger/full_ledger_writer.py"]
+        IRedact["ledger/redact.py — credential/token/secret redaction<br/>ledger/full_ledger_writer.py<br/>ledger/static_export.py — published shard + static JSON site (7.a)"]
         ILogging["logging.py — structlog Logger adapter (observability port)"]
         ISkillsContext["skills_context.py<br/>VibeySkillsContextCompiler (ADR-0031)<br/>runs python -m vibey_skills.cli"]
         IOtel["otel.py<br/>TelemetryTracer + TelemetryMetrics<br/>+ calculate_rotation_fairness()<br/>IMPLEMENTED + TESTED, NOT constructed by bootstrap.py"]
