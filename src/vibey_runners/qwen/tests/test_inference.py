@@ -418,6 +418,12 @@ def test_attached_server_refuses_a_non_http_url(url: str) -> None:
         OpenAICompatServer(url, "m")
 
 
+@pytest.mark.parametrize("url", ["http://u@host/v1"])
+def test_attached_server_refuses_embedded_credentials(url: str) -> None:
+    with pytest.raises(ValueError, match="must not include credentials"):
+        OpenAICompatServer(url, "m")
+
+
 def test_attached_server_profile_and_inspect_pin_nothing_and_own_nothing() -> None:
     server = ollama(api_key="sk-x", context_window=8192)
     assert isinstance(server, AttachedServerInterface)

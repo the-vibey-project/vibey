@@ -74,6 +74,12 @@ def test_base_url_must_be_http_with_a_host(url: str) -> None:
         parser.parse({"base_url": url})
 
 
+@pytest.mark.parametrize("url", ["http://u@host/v1"])
+def test_base_url_must_not_embed_credentials(url: str) -> None:
+    with pytest.raises(ValueError, match="must not include credentials"):
+        parser.parse({"base_url": url})
+
+
 def test_model_must_not_be_blank() -> None:
     with pytest.raises(ValueError, match="model must name"):
         parser.parse({"model": "   "})

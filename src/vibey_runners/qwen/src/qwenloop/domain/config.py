@@ -100,4 +100,6 @@ class QwenConfigParser:
         parts = urlsplit(text)
         if parts.scheme not in {"http", "https"} or not parts.hostname:
             raise ValueError(f"base_url must be an http:// or https:// URL, got {text!r}")
+        if parts.username is not None or parts.password is not None:
+            raise ValueError("base_url must not include credentials; use QWENLOOP_API_KEY")
         return text
