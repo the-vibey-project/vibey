@@ -109,3 +109,4 @@ forbidden_modules =
     vibey_gh.install
     vibey_gh.protected_paths
     vibey_gh.merge_train
+    vibey_gh.conversation
