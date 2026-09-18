@@ -65,7 +65,7 @@ already covered by group 1.
 
 `podman` is a container runtime, not a package manager. What it actually wants is
 an OCI image, and this repository **already builds one** (`deploy/docker/`,
-multi-arch amd64+arm64, gated by four image contracts in CI). `release-surfaces.yml`
+multi-arch amd64+arm64, gated by the `Image contract - …` steps of CI's `image` job). `release-surfaces.yml`
 already pushes to `ghcr.io` on every release, but what it pushes is the wheel and
 sdist as an OCI *artifact* (`ghcr.io/<repository>/python`), not the runnable container
 image. Publishing the image is a small, real task, and it serves Docker, podman, Kubernetes and
