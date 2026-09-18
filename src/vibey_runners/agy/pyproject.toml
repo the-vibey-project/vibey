@@ -156,6 +156,24 @@ forbidden_modules = [
     "agyloop.bootstrap",
 ]
 
+# The same rule for the CLI layer's seams (ADR-0016: a tenant converges module by module,
+# and a new module arrives with its interface beside it). The siblings are named one by
+# one on purpose: forbidding the parent `agyloop.cli` instead is reported KEPT even with
+# `interfaces -> run_outcome` planted in the tree, so that form would enforce nothing.
+[[tool.importlinter.contracts]]
+name = "CLI interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = ["agyloop.cli.interfaces"]
+forbidden_modules = [
+    "agyloop.cli.app",
+    "agyloop.cli.asyncio",
+    "agyloop.cli.commands",
+    "agyloop.cli.render",
+    "agyloop.cli.run_outcome",
+    "agyloop.infrastructure",
+    "agyloop.bootstrap",
+]
+
 # Coverage is measured per layer, not in aggregate: a blanket number lets a
 # well-tested domain hide an untested adapter. The floors live in CI so a
 # single `--cov` here cannot union the scopes and silently defeat them.
