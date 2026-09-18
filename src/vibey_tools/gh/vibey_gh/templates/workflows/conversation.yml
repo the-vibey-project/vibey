@@ -212,11 +212,9 @@ jobs:
           allowed_bots: "github-actions,github-actions[bot]"
           track_progress: ${{ __VIBEY_GH_SANITIZED_PROGRESS__ && (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') }}
           plugin_marketplaces: |
-            https://github.com/the-vibey-project/vibey-skills.git
+            __VIBEY_GH_PLUGIN_MARKETPLACES__
           plugins: |
-            software-architecture@vibey-skills
-            engineering-process@vibey-skills
-            security-principles@vibey-skills
+            __VIBEY_GH_PLUGINS__
           claude_args: |
             --model __VIBEY_GH_CONVERSATION_MODEL__
             --max-turns 120

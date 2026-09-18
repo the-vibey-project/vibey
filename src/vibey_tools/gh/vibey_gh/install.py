@@ -434,12 +434,17 @@ def render_workflow(source: Path, cfg: GhConfig) -> str:
             _fallback_install(cfg),
             f'python -m pip install --quiet "{cfg.fallback_package}=={pin}"\n',
         )
-    if source.name != "pr-automation.yml":
-        return _strip_trailing_space(wanted)
     # One marketplace or plugin per line of the action's newline-separated input. A
     # repository-relative marketplace resolves inside the trusted default-branch checkout
     # every plugin-loading job makes at `automation/`, as an absolute path, which is the
     # form the action passes to Claude Code as a local marketplace.
+    #
+    # Applied to EVERY template, not just pr-automation.yml. It was scoped to that one file
+    # while the other four hard-coded `github.com/the-vibey-project/vibey-skills.git`, a
+    # repository that no longer exists -- so their rendered jobs failed loading plugins
+    # before they could answer. Scoping the substitution to one file is also how a
+    # placeholder survives into a deployed workflow verbatim, which the drift check cannot
+    # see: the deployed copy faithfully matches a render that is itself wrong.
     indent = "\n            "
     marketplaces = [
         entry if entry.startswith("https://") else "${{ github.workspace }}/automation/" + entry
@@ -447,6 +452,8 @@ def render_workflow(source: Path, cfg: GhConfig) -> str:
     ]
     wanted = wanted.replace("__VIBEY_GH_PLUGIN_MARKETPLACES__", indent.join(marketplaces))
     wanted = wanted.replace("__VIBEY_GH_PLUGINS__", indent.join(cfg.pr_automation.plugins))
+    if source.name != "pr-automation.yml":
+        return _strip_trailing_space(wanted)
     workflows = json.dumps(list(cfg.pr_automation.scan_workflows))
     schedule = (
         '  schedule:\n    - cron: "37 */2 * * *"'

@@ -94,11 +94,9 @@ jobs:
             actions: read
             checks: read
           plugin_marketplaces: |
-            https://github.com/the-vibey-project/vibey-skills.git
+
           plugins: |
-            quality-engineering@vibey-skills
-            security-principles@vibey-skills
-            engineering-process@vibey-skills
+
           claude_args: |
             --model claude-sonnet-5
             --max-turns 120
