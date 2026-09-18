@@ -30,6 +30,42 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Features
+
+* **claudeloop:** backend profiles — run claudeloop for free against Ollama, or any server
+  that speaks the Anthropic Messages API, with `--profile NAME` / `CLAUDELOOP_PROFILE` and a
+  `[profiles.NAME]` table carrying `base_url` and three model tiers. Claude Code still runs
+  the agent loop; only the model behind it moves. A local profile blanks
+  `ANTHROPIC_API_KEY` so a paid key never leaves the machine, refuses `claude-*` model ids
+  and web search / deep research (neither exists there), records every turn at $0 — Claude
+  Code prices a model it does not recognise at its default model's rate, a live run showed
+  $0.0008365 for one free `qwen2.5-coder:1.5b` turn, and that guess used to reach
+  `--max-budget-usd`, the 80% budget downgrade and the supervisor's brake — while keeping
+  token counts, and applies the same environment to the capacity probe, which otherwise
+  still asked Anthropic. Run meta records the backend, and `resume` refuses a session last
+  run on another one. A backend that cannot serve the run — unreachable, model not pulled,
+  model failed to load, context window too small for Claude Code's prompt — is a new
+  terminal `BackendMisconfigured` capacity state that exits
+  78 instead of being read as `Available` and re-sent turn after turn; a full local queue
+  (HTTP 503) waits as `WindowExhausted(rate_limit_type="local")`. `claudeloop doctor
+  --profile NAME` checks the token, that the endpoint answers, that every model the
+  profile names is present, and that each tier makes real tool calls — the live smoke run
+  found `qwen2.5-coder:14b` on Ollama writing its tool calls as text, typing the done
+  marker, and "completing" a task it never did, so a local profile also turns off the
+  done-marker fallback (`done_marker_fallback = false`): only a structured verdict ends a
+  local run ([local backend guide](src/vibey_runners/claude/docs/guides/local-backend.md), #236)
+
+### Bug Fixes
+
+* **claudeloop:** `claudeloop resume` exits 75 on a deliberate wind-down, as `run` always
+  has, instead of printing "Run failed" and exiting 1 — a supervisor could not tell a
+  handoff from a failure without parsing text. Both commands now share one exit-status map
+* **claudeloop:** `doctor` no longer fails a machine with no `claude` on `PATH`: it falls
+  back to the CLI bundled inside claude-agent-sdk, which is the one the SDK launches anyway,
+  and uses it for the login and MCP checks too (#121, slice S1b)
+* **claudeloop:** a model the backend does not have (`model_not_found`, on any backend) now
+  ends the run with exit 78 instead of re-sending the turn until the turn budget ran out
+
 ## [0.8.0] (2026-09-16)
 
 ### Features

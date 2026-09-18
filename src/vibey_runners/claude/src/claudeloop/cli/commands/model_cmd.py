@@ -15,7 +15,8 @@ def model_cmd(
     """Queue a mid-run model change at the next turn boundary."""
     try:
         result = bootstrap_ops.enqueue_model(Path.cwd(), model, run_id=run_id)
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, ValueError) as exc:
+        # ValueError: a claude-* id asked of a run on a local backend.
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
     typer.echo(f"Queued set_model for run {result.run_id}: {model}")

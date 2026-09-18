@@ -50,6 +50,8 @@ class ScriptedTurn:
     session_id: str | None = "fake-session-id"
     cost_usd: float = 0.0
     raw_events: tuple[dict[str, object], ...] = ()
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 class FakeAgentGateway:
@@ -93,6 +95,8 @@ class FakeAgentGateway:
             session_id=turn.session_id,
             cost_usd=turn.cost_usd,
             raw_events=turn.raw_events,
+            input_tokens=turn.input_tokens,
+            output_tokens=turn.output_tokens,
         )
 
     async def close(self) -> None:

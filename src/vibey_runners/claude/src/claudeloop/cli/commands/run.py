@@ -11,12 +11,10 @@ import typer
 from claudeloop import bootstrap
 from claudeloop.application.usecases.run_plan import parse_plan_file, run_from_plan_file
 from claudeloop.cli.asyncio import async_command
+from claudeloop.cli.outcome import RunOutcomeReporter
 from claudeloop.cli.time_parse import parse_wind_down_at
 from claudeloop.domain.errors import InvalidPlanError
-from claudeloop.domain.handoff_marker import (
-    EXIT_WIND_DOWN,
-    HANDOFF_MARKER_FILENAME,
-)
+from claudeloop.domain.handoff_marker import HANDOFF_MARKER_FILENAME
 from claudeloop.infrastructure.config import load_config
 from claudeloop.infrastructure.logging import configure_logging
 from claudeloop.infrastructure.stream_ui import BufferingStreamUi, run_textual_app
@@ -82,6 +80,11 @@ def run(
     max_turns: int | None = typer.Option(None, "--max-turns"),
     max_dollars: float | None = typer.Option(None, "--max-dollars"),
     max_wait_seconds: float | None = typer.Option(None, "--max-wait"),
+    profile: str | None = typer.Option(
+        None,
+        "--profile",
+        help="Backend profile: a [profiles.NAME] config table, e.g. a local Ollama (default: Anthropic)",
+    ),
     model: str | None = typer.Option(
         None, "--model", help="Alias (low|medium|high) or raw Anthropic model id"
     ),
@@ -155,6 +158,7 @@ def run(
         max_turns=max_turns,
         max_dollars=max_dollars,
         max_wait_seconds=max_wait_seconds,
+        profile=profile,
         model=model,
         effort=effort,
         preset=preset,
@@ -191,6 +195,7 @@ async def _run(
     max_turns: int | None,
     max_dollars: float | None,
     max_wait_seconds: float | None,
+    profile: str | None,
     model: str | None,
     effort: str | None,
     preset: str | None,
@@ -224,27 +229,32 @@ async def _run(
     if slash is not None and not slash.startswith("/"):
         typer.echo("--slash must start with '/'", err=True)
         raise typer.Exit(code=2)
-    config = load_config(
-        cwd=cwd,
-        cli_overrides={
-            "max_turns": max_turns,
-            "max_dollars": max_dollars,
-            "max_wait_seconds": max_wait_seconds,
-            "model": model,
-            "effort": effort,
-            "preset": preset,
-            "log_level": log_level,
-            "log_chatter": log_chatter,
-            "done_marker": done_marker,
-            "log_file": str(log_file) if log_file else None,
-            "max_buffer_size": max_buffer_size,
-            "auto_model": auto_model,
-            "stream_ui": stream_ui,
-            "permission_mode": permission_mode,
-            "web_search": web_search,
-            "deep_research": deep_research,
-        },
-    )
+    try:
+        config = load_config(
+            cwd=cwd,
+            cli_overrides={
+                "max_turns": max_turns,
+                "max_dollars": max_dollars,
+                "max_wait_seconds": max_wait_seconds,
+                "profile": profile,
+                "model": model,
+                "effort": effort,
+                "preset": preset,
+                "log_level": log_level,
+                "log_chatter": log_chatter,
+                "done_marker": done_marker,
+                "log_file": str(log_file) if log_file else None,
+                "max_buffer_size": max_buffer_size,
+                "auto_model": auto_model,
+                "stream_ui": stream_ui,
+                "permission_mode": permission_mode,
+                "web_search": web_search,
+                "deep_research": deep_research,
+            },
+        )
+    except ValueError as exc:
+        typer.echo(f"Invalid configuration: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
     structlog_path = log_file or (Path(config.log_file) if config.log_file else None)
     configure_logging(
         log_file=structlog_path,
@@ -324,21 +334,9 @@ async def _run(
         typer.echo(f"Invalid plan file: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
-    if not result.success:
-        if result.reason.startswith("wind-down:"):
-            # Not a failure: the run handed its work over on purpose. A distinct
-            # exit code is how a supervisor tells "resume me elsewhere" from
-            # "this failed" without parsing the reason string.
-            typer.echo(f"Wound down: {result.reason}", err=True)
-            marker = context.run_dir.root / HANDOFF_MARKER_FILENAME
-            if marker.is_file():
-                typer.echo(f"Handoff: {marker}", err=True)
-            raise typer.Exit(code=EXIT_WIND_DOWN)
-        typer.echo(f"Run failed: {result.reason}", err=True)
-        if "stopped" in result.reason:
-            summary = context.run_dir.stop_summary_path
-            if summary.is_file():
-                typer.echo(f"Stop summary: {summary}", err=True)
-            raise typer.Exit(code=130)
-        raise typer.Exit(code=1)
-    typer.echo(f"Done: {result.reason}")
+    RunOutcomeReporter().report(
+        result,
+        handoff_marker=context.run_dir.root / HANDOFF_MARKER_FILENAME,
+        stop_summary=context.run_dir.stop_summary_path,
+        profile=config.backend.name,
+    )
