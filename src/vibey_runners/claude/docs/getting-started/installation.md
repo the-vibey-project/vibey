@@ -14,29 +14,34 @@
 
 ## From PyPI
 
+`claudeloop` is not a PyPI project of its own. It ships inside the `vibey`
+distribution, which installs every `*loop` runner and every family tool in one
+step (vibey ADR-0037):
+
 ```bash
-pipx install claudeloop
+pipx install vibey
 ```
 
 [`pipx`](https://pipx.pypa.io) is recommended over a bare `pip install` for
-CLI tools — it isolates the install into its own virtual environment so
-`claudeloop`'s dependencies never collide with anything else on your system.
-A plain
+CLI tools — it isolates the install into its own virtual environment so the
+dependencies never collide with anything else on your system. A plain
 
 ```bash
-pip install claudeloop
+pip install vibey
 ```
 
-works too, inside whatever virtual environment you're already using.
+works too, inside whatever virtual environment you're already using. Note that
+the distribution requires **Python 3.12 or newer**, even though this package's
+own source supports 3.10+ and CI still tests it there.
 
 ## From source (for development)
 
 ```bash
-git clone https://github.com/the-vibey-project/claudeloop.git
-cd claudeloop
+git clone https://github.com/the-vibey-project/vibey.git
+cd vibey/src/vibey_runners/claude
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev,docs]"
+pip install -e ../common && pip install -e ".[dev,docs]"
 pre-commit install
 ```
 
@@ -50,7 +55,7 @@ claudeloop --version
 claudeloop --help
 ```
 
-If `claudeloop` isn't on your `PATH` after a `pipx install`, run
+If `claudeloop` isn't on your `PATH` after a `pipx install vibey`, run
 `pipx ensurepath` and open a new shell.
 
 ## Project status

@@ -143,12 +143,13 @@ jobs:
           # contributor's choosing. The path is verified below before anything runs.
           self="__VIBEY_GH_SELF_SOURCE__"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
 
       # Doctrine 8.a prefers the sovereign path, but a sovereign job scheduled against a
@@ -487,12 +488,13 @@ jobs:
           self="automation/__VIBEY_GH_SELF_SOURCE__"
           self="${self%/.}"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
           vibey-gh pr-automation record-review --pr "$PR" --input "$payload"
           echo "passed=$(jq -r .pass <<<"$payload")" >> "$GITHUB_OUTPUT"
@@ -630,12 +632,13 @@ jobs:
           self="automation/__VIBEY_GH_SELF_SOURCE__"
           self="${self%/.}"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
           vibey-gh pr-automation ensure-labels
           gh pr edit "$PR" --add-label vibey-gh:repairing
@@ -843,12 +846,13 @@ jobs:
           self="automation/__VIBEY_GH_SELF_SOURCE__"
           self="${self%/.}"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
           head_sha=$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq .headRefOid)
           payload=$(jq -c --arg head_sha "$head_sha" '. + {head_sha:$head_sha}' <<<"$STRUCTURED")
@@ -1074,12 +1078,13 @@ jobs:
           self="automation/__VIBEY_GH_SELF_SOURCE__"
           self="${self%/.}"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
           new_sha=$(git -C target rev-parse HEAD)
           payload=$(jq -c --arg head_sha "$new_sha" \
@@ -1223,12 +1228,13 @@ jobs:
           self="automation/__VIBEY_GH_SELF_SOURCE__"
           self="${self%/.}"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
       # The diff arrives through the API and reaches the model as text. Repository code is
       # never checked out here and never executed: the model has no shell, no tools, and no

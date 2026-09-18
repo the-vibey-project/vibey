@@ -2,14 +2,18 @@
 
 ## Install
 
+`codexloop` is not a PyPI project of its own. It ships inside the `vibey`
+distribution, which installs every `*loop` runner and every family tool in one
+step (vibey ADR-0037):
+
 ```bash
-pipx install codexloop
+pipx install vibey
 ```
 
-From a clone (contributors):
+From a clone (contributors), in `src/vibey_runners/codex`:
 
 ```bash
-pip install -e ".[dev,docs]"
+pip install -e ../common && pip install -e ".[dev,docs]"
 ```
 
 ## Preflight

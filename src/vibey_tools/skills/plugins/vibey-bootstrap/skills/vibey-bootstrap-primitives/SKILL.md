@@ -326,5 +326,5 @@ background flush thread, batch by count and bytes, flush at `atexit`. Factories 
 | `adx` | `ADX_CLUSTER_URI`, `ADX_DATABASE` |
 | `event_hubs` | `EVENTHUB_FQNS`, `EVENTHUB_NAME` |
 
-Install all transport deps with `pip install 'vibey-bootstrap[logging-all]'`. See
+Install all transport deps with `pip install 'vibey[bootstrap-all]'`. See
 `examples/39_v3_transports.py`.

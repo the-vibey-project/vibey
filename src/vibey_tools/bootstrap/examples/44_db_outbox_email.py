@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-# Requires: pip install vibey-bootstrap[db,email]
+# Requires: pip install 'vibey[bootstrap-all]'
 # Env: DATABASE_URL, ACS_CONNECTION_STRING, ACS_SENDER_ADDRESS
 from vibey_bootstrap.db import get_sessionmaker
 from vibey_bootstrap.db.outbox import Outbox, drain_outbox

@@ -130,8 +130,8 @@ def install_graph_webhook_route(
         from fastapi.responses import PlainTextResponse  # type: ignore[import-not-found]
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
-            "install_graph_webhook_route requires the `fastapi` extra: "
-            "pip install vibey-bootstrap[fastapi]"
+            "install_graph_webhook_route requires the fastapi dependencies: "
+            "pip install 'vibey[bootstrap-all]'"
         ) from exc
 
     @app.post(path, include_in_schema=False)

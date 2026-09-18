@@ -20,14 +20,15 @@ assemble budgeted context packets for an agent.
 === "Claude Code marketplace"
 
     ```bash
-    /plugin marketplace add the-vibey-project/vibey-skills
-    /plugin install security-principles@vibey-skills
+    /plugin marketplace add the-vibey-project/vibey
+    /plugin install security-principles@vibey
     ```
 
-=== "PyPI (any agent)"
+=== "CLI (any agent)"
 
     ```bash
-    uvx vibey-skills install --all
+    uv tool install vibey      # vibey-skills ships inside it
+    vibey-skills install --all
     ```
 
     Copies every skill into `~/.claude/skills`, which also works for any other harness

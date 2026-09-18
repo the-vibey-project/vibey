@@ -5,10 +5,15 @@ This has to be automatic, not remembered. A PyPI upload with `skip-existing` tur
 unbumped release into a green run that publishes nothing, silently, with no warning — so
 a human-maintained version is a silent-failure generator.
 
+    breaking marker        -> MAJOR   the range said so; outranks the two lines below it
     content_paths changed  -> MINOR   the product changed; users receive something new
     only code_paths        -> PATCH   an internal fix
     neither                -> NONE    docs, CI, tooling: nothing an installed user gets
     version already ahead  -> NONE    a deliberate bump is in place; never double it
+
+MAJOR escalates a decision the two lines under it already reached; it never creates one.
+A range that reaches no installed user still releases nothing, and writing
+`BREAKING-CHANGE:` over a documentation edit does not change that.
 
 `none` is a legitimate and common answer. The promotion still happens; it simply does not
 publish, which is correct rather than a failure.
@@ -22,12 +27,21 @@ import subprocess
 import tomllib
 
 from vibey_gh.config import GhConfig
+from vibey_gh.flatten import Flattener
 
 VERSION_RE = re.compile(r'^(__version__\s*=\s*")([^"]+)(")', re.MULTILINE)
 JSON_VERSION_KEYS = ("version",)
 # A TOML `version = "..."`, matched only inside the [project] table — pyproject has
 # other tables with a `version` key and bumping the wrong one is worse than not bumping.
 TOML_VERSION_RE = re.compile(r'^(version\s*=\s*")([^"]+)(")', re.MULTILINE)
+# A Citation File Format `version: X.Y.Z`. Anchored at column zero on purpose: that is
+# what distinguishes the software's own version from `cff-version:`, the FORMAT version,
+# which sits four lines above it in every CITATION.cff and must never be bumped. Nested
+# keys (a `preferred-citation:` block, a `references:` entry) are indented and so cannot
+# match either. Left unmanaged, this file is the most visible stale number a project has:
+# GitHub renders it as "Cite this repository" and citation managers read it directly --
+# vibey's said 0.6.0 through two releases before anything noticed.
+CFF_VERSION_RE = re.compile(r"^(version:[ \t]*)(\S+)([ \t]*)$", re.MULTILINE)
 
 
 def _toml_version(text: str) -> str | None:
@@ -73,6 +87,10 @@ def read_version(cfg: GhConfig) -> str:
             version = _toml_version(path.read_text(encoding="utf-8"))
             if version is not None:
                 return version
+        elif path.suffix == ".cff":
+            match = CFF_VERSION_RE.search(path.read_text(encoding="utf-8"))
+            if match:
+                return match.group(2)
         else:
             match = VERSION_RE.search(path.read_text(encoding="utf-8"))
             if match:
@@ -104,6 +122,10 @@ def read_version_at(cfg: GhConfig, ref: str) -> str | None:
             version = _toml_version(r.stdout)
             if version is not None:
                 return version
+        elif rel.endswith(".cff"):
+            match = CFF_VERSION_RE.search(r.stdout)
+            if match:
+                return match.group(2)
         else:
             match = VERSION_RE.search(r.stdout)
             if match:
@@ -112,8 +134,51 @@ def read_version_at(cfg: GhConfig, ref: str) -> str | None:
 
 
 def bump(version: str, level: str) -> str:
+    """The next version at `level` — `major`, `minor`, or anything else meaning patch.
+
+    `major` is derived like the other two, not chosen. A version this function cannot
+    produce is a version the next release derives from a number the machine does not
+    believe in: `decide` reads the working version back, sees it ahead of the released
+    one, and answers "a deliberate bump is in place" — once, for that release. The
+    release after it derives from the hand-written number as though the tool had written
+    it. So the only safe way to reach 1.0.0 is for the deriver to be able to reach it.
+    """
     major, minor, patch = (int(p) for p in version.split(".")[:3])
+    if level == "major":
+        return f"{major + 1}.0.0"
     return f"{major}.{minor + 1}.0" if level == "minor" else f"{major}.{minor}.{patch + 1}"
+
+
+def breaking_marker(cfg: GhConfig, since: str, head: str) -> str | None:
+    """The first breaking-change declaration in `since..head`, verbatim, or None.
+
+    Conventional Commits accepts two ways to say it and this reads both: a
+    `BREAKING-CHANGE:` / `BREAKING CHANGE:` footer anywhere in the range, and a `!` before
+    the colon of any subject in it. Neither is spelled here. Both are asked of
+    `flatten.Flattener`, which already owns them for this package, because THE TWO MUST
+    AGREE: `vibey-gh flatten` re-marks the flattened subject with `!` and carries every
+    breaking footer forward onto the commit it writes. If this module read the range more
+    narrowly than that one writes it, `vibey-gh` would publish a minor over a commit
+    `vibey-gh` itself had just marked breaking — one half of this package contradicting
+    the other, in the direction nobody notices until somebody's build breaks against a
+    version that promised not to.
+
+    Every commit is read, not the first. That is the same lesson `_breaking_footers`
+    records: a range routinely breaks something in a later commit than the one whose
+    subject survives a flatten.
+    """
+    log = _git(cfg, "log", "--reverse", "--no-merges", "--format=%B%x1e", f"{since}..{head}")
+    for raw in log.split("\x1e"):
+        body = raw.strip("\n")
+        if not body:
+            continue
+        subject = body.partition("\n")[0]
+        if Flattener._marks_breaking(subject):
+            return subject.strip()
+        footers = Flattener._breaking_lines(body)
+        if footers:
+            return footers[0][1]
+    return None
 
 
 def _provenance_only(cfg: GhConfig, since: str, path: str) -> bool:
@@ -194,13 +259,22 @@ def _classify(cfg: GhConfig, since: str, head: str, working: str) -> tuple[str |
             "header — comments reach no installed user, so there is nothing to release"
         )
     if any(f.startswith(p) for f in changed for p in cfg.content_paths):
-        return bump(working, "minor"), "packaged content changed"
-    if any(f.startswith(p) for f in changed for p in cfg.code_paths):
-        return bump(working, "patch"), "only internal code changed"
-    return None, (
-        f"{len(changed)} file(s) changed but none reach an installed user "
-        "(docs, workflows, tooling) — nothing to release"
-    )
+        level, why = "minor", "packaged content changed"
+    elif any(f.startswith(p) for f in changed for p in cfg.code_paths):
+        level, why = "patch", "only internal code changed"
+    else:
+        return None, (
+            f"{len(changed)} file(s) changed but none reach an installed user "
+            "(docs, workflows, tooling) — nothing to release"
+        )
+    # Asked only once the range has been shown to reach an installed user. A break is a
+    # promise about an interface somebody installed, so a range that ships nothing has no
+    # interface to break — and a MAJOR derived from a docs-only diff would be a version
+    # number asserting an incompatibility that does not exist.
+    marker = breaking_marker(cfg, since, head)
+    if marker is not None:
+        return bump(working, "major"), f"{why}, and the range declares a break: {marker}"
+    return bump(working, level), why
 
 
 def apply_version(cfg: GhConfig, new: str) -> list[str]:
@@ -223,6 +297,12 @@ def apply_version(cfg: GhConfig, new: str) -> list[str]:
             if n != 1:
                 raise RuntimeError(f"{rel}: expected one [project] version, found {n}")
             path.write_text(text[:start] + patched + text[end:], encoding="utf-8")
+        elif path.suffix == ".cff":
+            text = path.read_text(encoding="utf-8")
+            patched, n = CFF_VERSION_RE.subn(rf"\g<1>{new}\g<3>", text, count=1)
+            if n != 1:
+                raise RuntimeError(f"{rel}: expected one top-level version:, found {n}")
+            path.write_text(patched, encoding="utf-8")
         else:
             text = path.read_text(encoding="utf-8")
             patched, n = VERSION_RE.subn(rf"\g<1>{new}\g<3>", text, count=1)
@@ -244,6 +324,17 @@ def apply_version(cfg: GhConfig, new: str) -> list[str]:
         if r.returncode:
             raise RuntimeError(f"uv lock: {r.stderr.strip()}")
         written.append("uv.lock")
+
+    # The managed workflows are the other artefact derived from this number. With
+    # `[install] pin_version` on, each one pins the fallback install to the repository's
+    # own `[project] version`, so a bump that does not re-render leaves every deployed
+    # workflow pinning the PREVIOUS release -- and the drift check fails on the release
+    # commit itself. Exactly the lockfile's failure mode, fixed in the same breath rather
+    # than left to a runbook step. Imported here, not at module scope: `install` reads
+    # `pyproject.toml` for the pin and must read it AFTER this function has rewritten it.
+    from vibey_gh.install import rerender_version_pinned
+
+    written.extend(rerender_version_pinned(cfg))
 
     return written
 

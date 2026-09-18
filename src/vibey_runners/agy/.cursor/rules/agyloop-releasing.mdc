@@ -7,6 +7,15 @@ alwaysApply: false
 
 # agyloop releasing
 
+> **Superseded — this describes a process that no longer runs.** agyloop was released
+> from its own repository under its own name on PyPI. Since vibey ADR-0021 the source
+> lives in the vibey monorepo, and since vibey ADR-0037 it is not published separately at
+> all: the whole tree ships as the single `vibey` distribution, released by the monorepo's
+> own `release.yml`. `publish-to-pypi.yml` and release-please are inert here, and the
+> TestPyPI command below cannot resolve. For the live process read the monorepo's
+> `CONTRIBUTING.md` and its `vibey-releasing` skill.
+
+
 ```
 main         ← always releasable; release-please target-branch: main
   ▲ merge commit
@@ -20,14 +29,14 @@ Never implement on `main`.
 Commit: `<type>[scope]: <description>`. Hook `--strict`. Types: feat, fix,
 docs, style, refactor, perf, test, build, ci, chore, revert.
 
-First public tag is **v0.1.0** (already in pyproject / manifest). Later:
-release-please PR on `main`, then `publish-to-pypi.yml` (filename
-load-bearing) with OIDC environments `testpypi` / `pypi` (manual approve).
+Historically: first public tag **v0.1.0**, then a release-please PR on `main`,
+then `publish-to-pypi.yml` (filename load-bearing) with OIDC environments
+`testpypi` / `pypi` (manual approve), verified with a TestPyPI install of
+`agyloop`. None of that runs now — there is no `agyloop` distribution to install.
 
-TestPyPI:
+Today a change here is released by the monorepo: it reaches an installed user
+through the `vibey` wheel, `vibey-gh` derives the version from the range, and
+`pip install vibey` puts `agyloop` on PATH.
 
-```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ agyloop
-```
-
-See `docs/contributing/release-process.md`.
+See `docs/contributing/release-process.md` (also superseded, kept as the record of
+why each gate existed) and the monorepo's `vibey-releasing` skill for the live one.

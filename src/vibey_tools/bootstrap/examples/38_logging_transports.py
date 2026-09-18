@@ -17,7 +17,7 @@ factory you can turn on or off from your own code (or via an env flag).
 - ``register_transport`` lets you add your own named sink.
 
 The registry, console, and App Insights transports need no extra; the Sumo Logic
-transport needs ``pip install 'vibey-bootstrap[sumologic]'``.
+transport needs ``pip install 'vibey[bootstrap-all]'``.
 """
 
 from __future__ import annotations

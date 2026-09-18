@@ -21,7 +21,8 @@ runs before every Pages deploy.
 - **In `docs/`** use repo-relative Markdown links between pages
   (`getting-started/installation.md`). MkDocs rewrites them for the site;
   they also work when browsing the tree on GitHub.
-- **In `README.md`** (ships to PyPI) use **absolute** `https://` URLs for
-  docs, license, and badges — relative paths break on pypi.org.
+- **In `README.md`** (rendered outside this directory) use **absolute** `https://`
+  URLs for docs, license, and badges — relative paths break wherever it is rendered
+  from another root.
 - **`[project.urls]`** in `pyproject.toml` already points Documentation at
   the GitHub.io root; keep that URL in sync with `site_url` in `mkdocs.yml`.

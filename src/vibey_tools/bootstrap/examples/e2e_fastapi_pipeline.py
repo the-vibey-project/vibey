@@ -125,7 +125,7 @@ def main_dry_run() -> None:
     try:
         from fastapi.testclient import TestClient
     except ImportError:
-        print("fastapi not installed — run `pip install vibey-bootstrap[fastapi]`")
+        print("fastapi not installed — run `pip install 'vibey[bootstrap-all]'`")
         return
 
     app, delivered, sent_alerts = build_app()

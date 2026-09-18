@@ -97,9 +97,9 @@ until you stop seeing relevant patterns.
 
 | Example | Install |
 | --- | --- |
-| 39 | `pip install vibey-bootstrap[logging-all]` (or individual `[panther]`, `[bloblog]`, `[sqllog]`, `[nosqllog]`, `[adxlog]`, `[eventhubslog]`) |
-| 44 | `pip install vibey-bootstrap[db,email]` + `DATABASE_URL`, `ACS_*` env |
-| 45 | `pip install vibey-bootstrap[http]` |
+| 39 | `pip install 'vibey[bootstrap-all]'` (the aggregate covers every log transport) |
+| 44 | `pip install 'vibey[bootstrap-all]'` + `DATABASE_URL`, `ACS_*` env |
+| 45 | `pip install 'vibey[bootstrap-all]'` |
 | 46 | base install (`vibey-bootstrap` console script included) |
 
 ## By tier

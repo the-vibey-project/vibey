@@ -132,7 +132,10 @@ def test_without_apscheduler_parsing_a_cron_expression_is_an_import_error(monkey
         return real_import(name, *a, **kw)
 
     monkeypatch.setattr(py_builtins, "__import__", refuse)
-    with pytest.raises(ImportError, match="scheduler.* extra"):
+    # Pins the two things the message must keep: which feature is missing, and an install
+    # that can actually succeed. It read "scheduler.* extra" when the guard named the
+    # retired `vibey-bootstrap[scheduler]`; the extra is gone, the distribution is not.
+    with pytest.raises(ImportError, match=r"scheduler dependencies.*vibey\[bootstrap-all\]"):
         scheduler_mod.parse_cron_trigger("0 * * * *")
 
 

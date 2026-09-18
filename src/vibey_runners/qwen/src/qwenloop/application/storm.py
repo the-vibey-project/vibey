@@ -60,7 +60,7 @@ def build_plan(
         "does: abstract, introduction, related work, architecture/method, evaluation,\n"
         "conclusion, and a References section — no invented benchmarks or citations.\n"
         "Then run:\n"
-        "    pip install --quiet vibey-gh\n"
+        "    pip install --quiet vibey\n"
         f'    vibey-gh paper --author "{author}" --journal\n\n'
         "## 3. Comprehensive book\n"
         "If docs/ lacks a full chapter set (overview, architecture, usage, configuration,\n"

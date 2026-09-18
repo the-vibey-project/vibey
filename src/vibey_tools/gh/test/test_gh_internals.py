@@ -803,16 +803,21 @@ def test_pin_version_defaults_to_false_and_is_read_from_config(tmp_path):
 
 def test_pinning_the_tooling_version_is_a_visible_one_line_diff(repo):
     """Turning the key on, and a later release, both show up as one changed line."""
-    from vibey_gh import __version__
-    from vibey_gh.install import WORKFLOWS, render_workflow
+    from vibey_gh.install import FALLBACK_DISTRIBUTION, FALLBACK_INSTALL, WORKFLOWS, render_workflow
+
+    # The repository that IS the fallback distribution: the only one whose released
+    # version this tooling can know (ADR-0037 -- `vibey_gh` is a package inside it).
+    (repo / "pyproject.toml").write_text(
+        f'[project]\nname = "{FALLBACK_DISTRIBUTION}"\nversion = "2.3.4"\n', encoding="utf-8"
+    )
 
     floating = render_workflow(WORKFLOWS / "merge-train.yml", GhConfig(root=repo))
-    assert "python -m pip install --quiet vibey-gh\n" in floating
-    assert "vibey-gh==" not in floating
+    assert FALLBACK_INSTALL in floating
+    assert f"{FALLBACK_DISTRIBUTION}==" not in floating
 
     pinned = render_workflow(WORKFLOWS / "merge-train.yml", GhConfig(root=repo, pin_version=True))
-    assert f'python -m pip install --quiet "vibey-gh=={__version__}"\n' in pinned
-    assert "python -m pip install --quiet vibey-gh\n" not in pinned
+    assert f'python -m pip install --quiet "{FALLBACK_DISTRIBUTION}==2.3.4"\n' in pinned
+    assert FALLBACK_INSTALL not in pinned
     # The self-hosting branch is untouched either way — it cannot pin to a published
     # release that may not exist yet.
     assert 'python -m pip install --quiet -e "$self"\n' in floating
@@ -1061,3 +1066,220 @@ def test_the_train_holds_an_unbumped_promotion(repo, monkeypatch):
     )
     verdict = merge_train.judge(promotion, cfg)
     assert verdict.ready
+
+
+# ------------------------------------------------------- the fallback distribution as a key
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["", "   ", "vibey extras", "vibey[azure]", "vibey;rm -rf /", "../vibey", "vibey/gh", "-vibey"],
+)
+def test_fallback_package_refuses_anything_that_is_not_a_distribution_name(value, tmp_path):
+    """This string is rendered into a shell command in a generated workflow and a hook.
+
+    A PEP 508 name cannot carry a space, a quote, a semicolon or a slash, so requiring
+    one keeps the rendered line a single argument by construction rather than by
+    escaping it afterwards.
+    """
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".vibey-gh.toml").write_text(
+        f'[install]\nfallback_package = "{value}"\n', encoding="utf-8"
+    )
+    from vibey_gh.config import load_config
+
+    with pytest.raises(ValueError, match="install.fallback_package"):
+        load_config(tmp_path)
+
+
+def test_fallback_package_defaults_to_vibey_and_is_read_from_config(tmp_path):
+    from vibey_gh.config import load_config
+    from vibey_gh.install import FALLBACK_DISTRIBUTION
+
+    assert GhConfig(root=tmp_path).fallback_package == FALLBACK_DISTRIBUTION
+
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[install]\nfallback_package = "acme-conductor"\n', encoding="utf-8"
+    )
+    assert load_config(tmp_path).fallback_package == "acme-conductor"
+
+
+def test_the_workflow_fallback_and_the_hook_advice_name_the_same_package(repo):
+    """One key, because two literals in two files is how they came to disagree.
+
+    The pre-push hook went on telling people to `pip install vibey-gh` for as long as
+    nobody happened to read it, while every rendered workflow had moved to `vibey`.
+    """
+    from vibey_gh.install import TEMPLATES, WORKFLOWS, render_hook, render_workflow
+
+    cfg = GhConfig(root=repo, fallback_package="acme-conductor")
+    workflow = render_workflow(WORKFLOWS / "merge-train.yml", cfg)
+    hook = render_hook(TEMPLATES / "pre-push", cfg)
+
+    assert "python -m pip install --quiet acme-conductor\n" in workflow
+    assert "pip install acme-conductor" in hook
+    assert "vibey-gh\n" not in hook
+    # No placeholder survives into either rendered artefact.
+    assert "__VIBEY_GH_FALLBACK_PACKAGE__" not in workflow
+    assert "__VIBEY_GH_FALLBACK_PACKAGE__" not in hook
+
+
+def test_a_renamed_fallback_is_still_pinnable(repo):
+    """`pin_version` decorates whatever name the key gives, not a hard-coded one."""
+    from vibey_gh.install import WORKFLOWS, render_workflow
+
+    (repo / "pyproject.toml").write_text(
+        '[project]\nname = "acme-conductor"\nversion = "7.1.0"\n', encoding="utf-8"
+    )
+    text = render_workflow(
+        WORKFLOWS / "merge-train.yml",
+        GhConfig(root=repo, fallback_package="acme-conductor", pin_version=True),
+    )
+    assert 'python -m pip install --quiet "acme-conductor==7.1.0"\n' in text
+
+
+def test_installed_compares_hooks_against_the_rendered_template_not_the_raw_one(repo):
+    """A rendered hook must still be exactly reproducible — that is what drift needs."""
+    from vibey_gh.install import install, installed
+
+    cfg = GhConfig(root=repo, fallback_package="acme-conductor")
+    install(cfg, hooks_path=False)
+    assert "pip install acme-conductor" in (repo / ".githooks" / "pre-push").read_text()
+    assert installed(cfg, local=False)[0] is True
+    # The RAW template would not match, so a comparison against it would report drift
+    # on a correctly installed hook.
+    assert installed(GhConfig(root=repo), local=False)[0] is False
+
+
+# --------------------------------------------- the version and the pin move together
+
+
+def test_a_bump_rerenders_every_workflow_whose_pin_the_version_decides(repo):
+    """Otherwise the bump leaves every deployed workflow pinning the PREVIOUS release.
+
+    The drift check CI runs against the deployed copies then fails on the release commit
+    itself, blocking the promotion that produced it — exactly the lockfile's failure mode.
+    """
+    from vibey_gh.install import install, installed
+    from vibey_gh.versioning import apply_version
+
+    (repo / "pyproject.toml").write_text(
+        '[project]\nname = "vibey"\nversion = "1.0.0"\n', encoding="utf-8"
+    )
+    cfg = GhConfig(root=repo, pin_version=True, version_files=("pyproject.toml",))
+    install(cfg, hooks_path=False)
+    assert 'python -m pip install --quiet "vibey==1.0.0"' in (
+        repo / ".github" / "workflows" / "merge-train.yml"
+    ).read_text(encoding="utf-8")
+
+    written = apply_version(cfg, "1.1.0")
+
+    assert ".github/workflows/merge-train.yml" in written
+    assert 'python -m pip install --quiet "vibey==1.1.0"' in (
+        repo / ".github" / "workflows" / "merge-train.yml"
+    ).read_text(encoding="utf-8")
+    assert installed(cfg, local=False)[0] is True
+
+
+def test_a_bump_rerenders_nothing_where_the_version_pins_nothing(repo):
+    """An adopter that never turned the pin on renders nothing from the version."""
+    from vibey_gh.install import install
+    from vibey_gh.versioning import apply_version
+
+    (repo / "pyproject.toml").write_text(
+        '[project]\nname = "vibey"\nversion = "1.0.0"\n', encoding="utf-8"
+    )
+    cfg = GhConfig(root=repo, version_files=("pyproject.toml",))
+    install(cfg, hooks_path=False)
+    written = apply_version(cfg, "1.1.0")
+    assert written == ["pyproject.toml"]
+
+
+def test_a_bump_rerenders_nothing_when_the_workflows_were_never_deployed(repo):
+    """`rerender_version_pinned` skips a managed workflow this repository does not have."""
+    from vibey_gh.install import rerender_version_pinned
+
+    (repo / "pyproject.toml").write_text(
+        '[project]\nname = "vibey"\nversion = "1.0.0"\n', encoding="utf-8"
+    )
+    assert rerender_version_pinned(GhConfig(root=repo, pin_version=True)) == []
+
+
+# ------------------------------------------------------------------ CITATION.cff
+
+
+CITATION = """\
+cff-version: 1.2.0
+title: thing
+version: 0.6.0
+date-released: "2026-09-14"
+preferred-citation:
+  type: article
+  version: 9.9.9
+"""
+
+
+def test_a_citation_file_is_bumped_without_touching_the_format_version(repo):
+    """`cff-version:` is the FORMAT version and must never move with the release.
+
+    It sits two lines above the software's own `version:` in every CITATION.cff, and a
+    naive `version:` match would take it. The nested `version:` under
+    `preferred-citation:` is indented, so the column-zero anchor excludes it too.
+    """
+    from vibey_gh.versioning import apply_version, read_version
+
+    (repo / "CITATION.cff").write_text(CITATION, encoding="utf-8")
+    cfg = GhConfig(root=repo, version_files=("CITATION.cff",))
+
+    assert read_version(cfg) == "0.6.0"
+    assert apply_version(cfg, "1.0.0") == ["CITATION.cff"]
+
+    text = (repo / "CITATION.cff").read_text(encoding="utf-8")
+    assert "cff-version: 1.2.0\n" in text
+    assert "\nversion: 1.0.0\n" in text
+    assert "  version: 9.9.9\n" in text
+
+
+def test_a_citation_file_is_read_at_a_ref(repo):
+    import subprocess
+
+    from vibey_gh.versioning import read_version_at
+
+    (repo / "CITATION.cff").write_text(CITATION, encoding="utf-8")
+    subprocess.run(["git", "add", "CITATION.cff"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "chore: citation", "--no-verify"], cwd=repo, check=True)
+    cfg = GhConfig(root=repo, version_files=("CITATION.cff",))
+    assert read_version_at(cfg, "HEAD") == "0.6.0"
+
+
+def test_a_citation_file_without_a_version_is_an_error_not_a_silent_skip(repo):
+    from vibey_gh.versioning import apply_version
+
+    (repo / "CITATION.cff").write_text("cff-version: 1.2.0\ntitle: thing\n", encoding="utf-8")
+    cfg = GhConfig(root=repo, version_files=("CITATION.cff",))
+    with pytest.raises(RuntimeError, match="expected one top-level version:"):
+        apply_version(cfg, "1.0.0")
+
+
+def test_a_citation_file_with_no_version_falls_through_to_the_next_file(repo):
+    """A reader that stopped at the first LISTED file would answer None here.
+
+    The contract is "the first file that actually yields a version", so a citation file
+    a project has not filled in yet must not mask the one that has.
+    """
+    import subprocess
+
+    from vibey_gh.versioning import read_version, read_version_at
+
+    (repo / "CITATION.cff").write_text("cff-version: 1.2.0\ntitle: thing\n", encoding="utf-8")
+    (repo / "pyproject.toml").write_text(
+        '[project]\nname = "thing"\nversion = "2.5.0"\n', encoding="utf-8"
+    )
+    cfg = GhConfig(root=repo, version_files=("CITATION.cff", "pyproject.toml"))
+
+    assert read_version(cfg) == "2.5.0"
+
+    subprocess.run(["git", "add", "CITATION.cff", "pyproject.toml"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "chore: both", "--no-verify"], cwd=repo, check=True)
+    assert read_version_at(cfg, "HEAD") == "2.5.0"

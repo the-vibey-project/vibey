@@ -59,7 +59,11 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey-gh==1.73.0"
+            # `vibey`, not `vibey-gh`: ADR-0037 leaves one published distribution and
+            # `vibey_gh` ships inside it. Unpinned because this branch is hand-written
+            # rather than rendered -- a version here would be a number nobody re-renders,
+            # and this repository takes the branch above in any case.
+            python -m pip install --quiet vibey
           fi
           # An index version is immutable, so a develop build cannot reuse the release
           # version; the dev suffix makes each push distinct and sorts it BEFORE the
@@ -133,9 +137,30 @@ jobs:
             echo "not indexed yet (attempt $i); waiting"
             sleep 30
           done
-          # The distribution is vibey-dev; the package it installs is still vibey.
+          # The distribution is vibey-dev; the packages it installs are the whole
+          # family (ADR-0037). This is the ONLY place the artifact is proven against a
+          # real index before PyPI, so it exercises the contract the distribution now
+          # makes -- eleven console scripts -- rather than the one it used to make. A
+          # wheel that silently lost a tenant's `packages` entry passed the old
+          # `vibey --version` unchanged.
+          missing=""
+          for tool in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap \
+                      azbootstrap claudeloop codexloop cursorloop agyloop qwenloop; do
+            if command -v "$tool" >/dev/null 2>&1; then
+              echo "ok      $tool"
+            else
+              echo "MISSING $tool"; missing="$missing $tool"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::console scripts missing from the published wheel:$missing"
+            exit 1
+          fi
           vibey --version
-          echo "installed ${VERSION} from TestPyPI and it runs"
+          claudeloop --version
+          vibey-skills --version
+          vibey-gh --help >/dev/null
+          echo "installed ${VERSION} from TestPyPI; all eleven scripts resolve and run"
 
   pypi:
     name: Publish to PyPI
@@ -200,7 +225,11 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey-gh==1.73.0"
+            # `vibey`, not `vibey-gh`: ADR-0037 leaves one published distribution and
+            # `vibey_gh` ships inside it. Unpinned because this branch is hand-written
+            # rather than rendered -- a version here would be a number nobody re-renders,
+            # and this repository takes the branch above in any case.
+            python -m pip install --quiet vibey
           fi
 
       # main is rebase-merged, so its commits are rewritten copies with new SHAs and

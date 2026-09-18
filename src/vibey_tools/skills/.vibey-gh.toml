@@ -39,8 +39,9 @@ content_paths = ["plugins/", ".claude-plugin/marketplace.json"]
 code_paths    = ["src/", "pyproject.toml"]
 
 [install]
-# Every rendered template pins its own `pip install` to the exact vibey-gh version
-# currently installing, instead of a floating `pip install vibey-gh`. This is the fix for
+# Every rendered template pins its own `pip install` to the exact version currently
+# installing, instead of a floating install of `[install] fallback_package` -- `vibey`
+# since vibey ADR-0037, which is the distribution that now carries vibey-gh. This is the fix for
 # the whole failure class that broke CI in the first place (see the top of this file):
 # `vibey-gh install` — never a hand-edit — is what advances the pin, so an upgrade is
 # always a visible, reviewed diff rather than something a runner's resolver decides on

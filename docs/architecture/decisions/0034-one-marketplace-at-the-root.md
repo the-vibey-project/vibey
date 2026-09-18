@@ -1,6 +1,14 @@
 # 0034 — One Claude Code marketplace at the repository root, rendered from the workspace members
 
-**Status:** accepted · **Date:** 2026-09-15
+**Status:** accepted; rationale superseded in part by ADR-0037 · **Date:** 2026-09-15
+
+> The decision stands: one rendered manifest at the repository root, named
+> `vibey`. [ADR-0037](0037-one-distribution-one-version.md) supersedes its
+> *reasoning* only. The one-marketplace-per-name collision this record avoids —
+> a root manifest named `vibey-skills` clashing with the one the PyPI package
+> ships — cannot occur now that there is no packaged `vibey-skills`. Read the
+> passages about registering both "side by side" and the "packaged route" as
+> history: there is exactly one marketplace.
 
 ## Context
 

@@ -245,10 +245,11 @@ concurrency, secret exposure, and branch deletion—not merely YAML syntax.
 
 ## Tooling install version
 
-Every rendered workflow installs `vibey-gh` itself with `pip install vibey-gh`, floating on
-the latest published release by default. Set `[install].pin_version = true` in
-`.vibey-gh.toml` to pin that install to the exact version that rendered the file
-(`vibey-gh==X.Y.Z`) instead, so a later release of this tool cannot change these workflows'
+Every rendered workflow installs `vibey-gh` itself with `pip install vibey` — the one
+distribution that carries it (vibey ADR-0037) — floating on the latest published release by
+default. Set `[install].pin_version = true` in `.vibey-gh.toml` to pin that install to the
+exact version that rendered the file (`vibey==X.Y.Z`) instead, so a later release of this
+tool cannot change these workflows'
 behavior underneath you with no warning. `vibey-gh install` owns the pin: run it from a
 newer release to move the pin forward as one visible, reviewable diff. The self-hosting
 branch each workflow falls back to (`pip install -e .`, used by this repository and

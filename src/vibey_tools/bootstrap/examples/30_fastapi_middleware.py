@@ -12,7 +12,7 @@
 - Fires an ERROR alert + re-raises on uncaught handler exceptions
   (deduped per ``http_crash:{path}:{type}``).
 
-Requires ``pip install vibey-bootstrap[fastapi]``.
+Requires ``pip install 'vibey[bootstrap-all]'``.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ def main() -> None:
         from fastapi import FastAPI, HTTPException
         from fastapi.testclient import TestClient
     except ImportError:
-        print("fastapi not installed — run `pip install vibey-bootstrap[fastapi]`")
+        print("fastapi not installed — run `pip install 'vibey[bootstrap-all]'`")
         return
 
     register_dispatcher(lambda *a: None, recipients=["ops@example.com"])

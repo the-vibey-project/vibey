@@ -159,11 +159,14 @@ never as imported code. Their source now lives in this repository, a uv
 workspace ([ADR-0021](../architecture/decisions/0021-one-tree-history-preserved.md)):
 `src/vibey/` (the conductor), `src/vibey_runners/` (`claude`, `codex`, `cursor`,
 `agy`, `qwen`, and the shared `common` package), and `src/vibey_tools/` (`gh`,
-`skills`, `bootstrap` — published as `vibey-gh`, `vibey-skills`,
-`vibey-bootstrap`). Each package still publishes to PyPI under its own name and
-keeps its own test, lint and coverage gates in this repository's CI
-([ADR-0022](../architecture/decisions/0022-absorbed-packages-keep-their-own-gates.md)). The
-former sibling GitHub repositories no longer exist.
+`skills`, `bootstrap` — the packages `vibey_gh`, `vibey_skills`,
+`vibey_bootstrap`). Each keeps its own test, lint and coverage gates in this
+repository's CI
+([ADR-0022](../architecture/decisions/0022-absorbed-packages-keep-their-own-gates.md)),
+and each ships inside the one `vibey` distribution rather than publishing under its own
+name
+([ADR-0037](../architecture/decisions/0037-one-distribution-one-version.md)). The
+former sibling GitHub repositories, and the former PyPI projects, no longer exist.
 
 ---
 

@@ -64,12 +64,9 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           plugin_marketplaces: |
-            https://github.com/the-vibey-project/vibey-skills.git
+
           plugins: |
-            engineering-process@vibey-skills
-            software-architecture@vibey-skills
-            security-principles@vibey-skills
-            quality-engineering@vibey-skills
+
           claude_args: |
             --model claude-sonnet-5
             --max-turns 180

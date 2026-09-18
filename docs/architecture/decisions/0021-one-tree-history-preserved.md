@@ -1,6 +1,16 @@
 # 0021 — One tree, history preserved: the family is absorbed as subtrees in a uv workspace
 
-**Status:** accepted · **Date:** 2026-09-15 · **Supersedes:** the submodule design in runbook 19
+**Status:** superseded in part by ADR-0037 · **Date:** 2026-09-15 · **Supersedes:** the submodule design in runbook 19
+
+> The subtree import, the uv workspace and the per-package projects stand
+> unchanged. [ADR-0037](0037-one-distribution-one-version.md) supersedes only
+> what this record says about *publishing*: the clause "publish as before" and
+> "The PyPI distributions continue to exist under their own names" in the
+> Decision, the Context sentence "The sibling GitHub repositories were then
+> retired; the PyPI names were not", and the *Alternatives rejected* bullet
+> "One package, one version" — which ADR-0037 quotes and answers. The tenants
+> are still separate projects with their own versions, floors and gates; they
+> are no longer separate distributions.
 
 ## Context
 

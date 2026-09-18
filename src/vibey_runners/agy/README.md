@@ -1,10 +1,9 @@
 # agyloop
 
-> **Now part of the vibey monorepo.** `agyloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/agy`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) (vibey ADR-0021). It is still published on PyPI as [`agyloop`](https://pypi.org/project/agyloop/).
+> **Now part of the vibey monorepo.** `agyloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/agy`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
 
-[![PyPI](https://img.shields.io/pypi/v/agyloop)](https://pypi.org/project/agyloop/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/agyloop)](https://pypi.org/project/agyloop/)
-[![Python versions](https://img.shields.io/pypi/pyversions/agyloop)](https://pypi.org/project/agyloop/)
+[![Ships in vibey](https://img.shields.io/pypi/v/vibey?label=ships%20in%20vibey)](https://pypi.org/project/vibey/)
+[![Python versions](https://img.shields.io/pypi/pyversions/vibey)](https://pypi.org/project/vibey/)
 [![CI](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/agy/LICENSE)
 
@@ -41,7 +40,8 @@ lane is active; it never guesses
 Windows is not a supported target.
 
 ```bash
-pipx install agyloop
+pipx install vibey      # or: uv tool install vibey / pip install vibey
+                        # the whole family; agyloop is one of its console scripts
 agyloop doctor
 ```
 
@@ -171,12 +171,15 @@ Same contract, different vendor. The four `*loop` runners share one domain
 state machine, one set of application ports, and one `.<name>loop/runs/<id>/`
 layout — pick the one that matches the agent you pay for:
 
-| Runner | Drives | Install |
+| Runner | Drives | Command |
 |---|---|---|
-| [claudeloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude) | Claude Code (Anthropic) | `pipx install claudeloop` |
-| [codexloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) | OpenAI Codex / GPT | `pipx install codexloop` |
-| [cursorloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) | Cursor Agent (Composer-first; Grok as a model profile) | `pipx install cursorloop` |
-| **agyloop** (this package) | Google Antigravity / Gemini | `pipx install agyloop` |
+| [claudeloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude) | Claude Code (Anthropic) | `claudeloop` |
+| [codexloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) | OpenAI Codex / GPT | `codexloop` |
+| [cursorloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) | Cursor Agent (Composer-first; Grok as a model profile) | `cursorloop` |
+| **agyloop** (this package) | Google Antigravity / Gemini | `agyloop` |
+
+All four ship inside the [`vibey`](https://pypi.org/project/vibey/) distribution: one
+`pip install vibey` puts every command above on `PATH` (vibey ADR-0037).
 
 Around them:
 

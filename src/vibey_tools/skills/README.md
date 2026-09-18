@@ -1,17 +1,17 @@
 # vibey-skills
 
-> **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is still published on PyPI as [`vibey-skills`](https://pypi.org/project/vibey-skills/).
+> **Now part of the vibey monorepo.** `vibey-skills` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
 
 > **135 Claude Code plugins. 710 Agent Skills.** Long-form, source-cited practitioner
 > references for the parts of software engineering an agent is most likely to get
 > confidently wrong — security, compliance, Azure, identity automation (Okta),
 > DevSecOps, AI/ML, data engineering, frontend, mobile, desktop, smart TV, game development, UI/UX design, systems programming, embedded and IoT, blockchain, quantum computing, penetration testing, architecture, quality
-> engineering, process, and technical writing. Install as a marketplace or from PyPI.
+> engineering, process, and technical writing. Install as a marketplace, or from the
+> `vibey` distribution that carries the CLI.
 
 Formerly **vibe-engineering-skills** — see [NOTICE.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/NOTICE.md).
 
-[![PyPI](https://img.shields.io/pypi/v/vibey-skills.svg)](https://pypi.org/project/vibey-skills/)
-[![Downloads](https://img.shields.io/pypi/dm/vibey-skills.svg)](https://pypi.org/project/vibey-skills/)
+[![Ships in vibey](https://img.shields.io/pypi/v/vibey?label=ships%20in%20vibey)](https://pypi.org/project/vibey/)
 [![CI](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/LICENSE)
 
@@ -25,8 +25,8 @@ fast *and* correct. These skills are the reference layer for that.
   Okta Workflows record caps, React Native New Architecture) written so a model can
   act on it. Claude loads it automatically when a task matches the trigger description.
 - **One source of truth.** `plugins/` is the marketplace tree Claude Code reads; the
-  PyPI wheel maps that same tree in at build time. There is exactly one copy of every skill.
-- **Zero runtime dependencies.** `uvx` runs the CLI with no resolution step. Skills
+  wheel maps that same tree in at build time. There is exactly one copy of every skill.
+- **Zero runtime dependencies of its own.** The CLI resolves nothing at run time. Skills
   install into `~/.claude/skills`, which any harness that reads `SKILL.md` can use.
 - **Nothing overwritten.** `install` skips skill directories that already exist and
   tells you which; `--force` is explicit.
@@ -45,29 +45,25 @@ That one address serves every plugin in the family: these 135 and vibey-gh's fou
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 
-**From the PyPI package instead** — the same 135 plugins under the name `vibey-skills`,
-with no clone of the monorepo:
+That root manifest is the only marketplace there is. `vibey-skills` is no longer a
+separate PyPI project, so the old `/plugin marketplace add the-vibey-project/vibey-skills`
+shortcut and the packaged `<plugin>@vibey-skills` route are both retired (vibey ADR-0037);
+the packaged manifest it printed now ships inside `vibey` and is what the root manifest is
+rendered from.
+
+**With the CLI instead** — same skills, any agent that reads `SKILL.md`. The
+`vibey-skills` command ships in the `vibey` distribution:
 
 ```bash
-uvx vibey-skills marketplace               # prints the packaged marketplace.json path
-/plugin marketplace add <that path>
-/plugin install security-principles@vibey-skills
+uv tool install vibey                      # or: pipx install vibey / pip install vibey
+vibey-skills list
+vibey-skills install --all                 # copy all 710 skills into ~/.claude/skills
+vibey-skills install security-principles azure-cloud-infra
 ```
 
-The former `/plugin marketplace add the-vibey-project/vibey-skills` shortcut pointed at the
-standalone repository, which has been retired.
-
-**From PyPI** — same skills, any agent that reads `SKILL.md`:
-
-```bash
-uvx vibey-skills list                      # try it without installing
-uvx vibey-skills install --all             # copy all 710 skills into ~/.claude/skills
-uvx vibey-skills install security-principles azure-cloud-infra
-```
-
-Or install the CLI permanently with `uv tool install vibey-skills` /
-`pip install vibey-skills` (Python 3.10+); `vibey-skills` is then on your PATH
-(`vibe-skills` still works as a deprecated alias).
+`vibey-skills` is then on your PATH (`vibe-skills` still works as a deprecated alias).
+Without installing anything permanently, `uvx --from vibey vibey-skills list` does the
+same in one shot.
 
 ```console
 $ vibey-skills list
@@ -94,11 +90,11 @@ ai-and-data  (0.2.0, ai, 4 skills)
 
 | | 1.x (`vibe-engineering-skills`) | 2.0.0 (`vibey-skills`) |
 |---|---|---|
-| PyPI package | `pip install vibe-engineering-skills` | `pip install vibey-skills` |
+| PyPI package | `pip install vibe-engineering-skills` | `pip install vibey` (it carries `vibey_skills`; there is no separate `vibey-skills` project — vibey ADR-0037) |
 | Python import | `import vibe_engineering_skills` | `import vibey_skills` |
 | CLI | `vibe-engineering-skills`, `vibe-skills` | `vibey-skills` (`vibe-skills` kept as a deprecated alias; the long form is gone) |
-| Marketplace | `/plugin marketplace add TheViziusGroup/vibe-engineering-skills` | `/plugin marketplace add the-vibey-project/vibey` (or the packaged manifest via `uvx vibey-skills marketplace`) |
-| Plugin install | `<plugin>@vibe-engineering-skills` | `<plugin>@vibey` (`<plugin>@vibey-skills` from the packaged manifest) |
+| Marketplace | `/plugin marketplace add TheViziusGroup/vibe-engineering-skills` | `/plugin marketplace add the-vibey-project/vibey` |
+| Plugin install | `<plugin>@vibe-engineering-skills` | `<plugin>@vibey` |
 | Docs | theviziusgroup.github.io/vibe-engineering-skills | [`src/vibey_tools/skills/docs/`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/docs) in the vibey monorepo |
 
 Uninstall the old package (`pip uninstall vibe-engineering-skills` / `uv tool uninstall
@@ -279,13 +275,14 @@ documentation.
 ## Docs & links
 
 - **[Documentation](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/index.md)** — [Installation](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/installation.md) · [Usage](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/docs/usage.md) · [Plugin sources](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills/plugins) (the skills reference is generated from them, one page per plugin and per skill)
-- **[PyPI](https://pypi.org/project/vibey-skills/)** · **[Releases](https://github.com/the-vibey-project/vibey/releases)** · **[Issues](https://github.com/the-vibey-project/vibey/issues)**
+- **[PyPI (`vibey`)](https://pypi.org/project/vibey/)** · **[Releases](https://github.com/the-vibey-project/vibey/releases)** · **[Issues](https://github.com/the-vibey-project/vibey/issues)**
 - **[CONTRIBUTING.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/CONTRIBUTING.md)** · **[SECURITY.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/SECURITY.md)** · **[CODE_OF_CONDUCT.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/CODE_OF_CONDUCT.md)** · **[CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/CLAUDE.md)** (conventions and the `SKILL.md` format)
 - Claude Code docs: [Plugins](https://code.claude.com/docs/en/plugins) · [Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces) · [Agent Skills](https://code.claude.com/docs/en/skills)
 
 ## Related projects
 
-Part of the same open-source family — MIT, on PyPI:
+Part of the same open-source family — MIT, and all shipping inside the one
+[`vibey`](https://pypi.org/project/vibey/) distribution (vibey ADR-0037):
 
 - **[claudeloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude)** · **[codexloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex)** · **[cursorloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor)** · **[agyloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy)** — autonomous coding-session runners with the same contract, different vendor
 - **[vibey](https://github.com/the-vibey-project/vibey)** — six-phase queue conductor over the loop runners — background reading: the [vibey research paper](https://the-vibey-project.github.io/vibey/main/paper/) ([PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf)) and the vibey book ([PDF](https://the-vibey-project.github.io/vibey/main/book.pdf), [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub), [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html)).
@@ -314,8 +311,8 @@ and [CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibe
 
 This repository's own release pipeline — the fingerprint check, version bumps, the merge
 train, promotion, and branch realignment — runs on
-[`vibey-gh`](https://pypi.org/project/vibey-gh/) rather than a bespoke copy of that
-tooling. The sections below exist to satisfy `vibey-gh`'s own documentation contract
+[`vibey-gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh)
+rather than a bespoke copy of that tooling. The sections below exist to satisfy `vibey-gh`'s own documentation contract
 (`vibey-gh check` verifies they're present), and document that automation for whoever
 next touches a workflow file — not the marketplace itself, covered above.
 
@@ -335,7 +332,7 @@ admin role are already configured, along with GitHub Pages deploying from Action
 ### Commands
 
 ```bash
-pip install "vibey-gh==1.47.0"   # or: pip install -e ".[dev]"
+pip install -e ../gh             # vibey-gh from the tree; or: pip install vibey
 vibey-gh install                 # writes the hooks and the managed workflow files
 vibey-gh check --ci              # exactly what CI runs
 vibey-gh version --since origin/main --explain

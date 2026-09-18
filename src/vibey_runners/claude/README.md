@@ -1,10 +1,9 @@
 # claudeloop
 
-> **Now part of the vibey monorepo.** `claudeloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/claude`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude) (vibey ADR-0021). It is still published on PyPI as [`claudeloop`](https://pypi.org/project/claudeloop/).
+> **Now part of the vibey monorepo.** `claudeloop` lives in [the-vibey-project/vibey](https://github.com/the-vibey-project/vibey) at [`src/vibey_runners/claude`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude) (vibey ADR-0021). It is not published on its own any more: it ships inside the [`vibey`](https://pypi.org/project/vibey/) distribution, so `pip install vibey` installs it (vibey ADR-0037).
 
-[![PyPI](https://img.shields.io/pypi/v/claudeloop)](https://pypi.org/project/claudeloop/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/claudeloop)](https://pypi.org/project/claudeloop/)
-[![Python versions](https://img.shields.io/pypi/pyversions/claudeloop)](https://pypi.org/project/claudeloop/)
+[![Ships in vibey](https://img.shields.io/pypi/v/vibey?label=ships%20in%20vibey)](https://pypi.org/project/vibey/)
+[![Python versions](https://img.shields.io/pypi/pyversions/vibey)](https://pypi.org/project/vibey/)
 [![CI](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml/badge.svg)](https://github.com/the-vibey-project/vibey/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/claude/LICENSE)
 
@@ -39,7 +38,8 @@ Requires **Python 3.10+**, **macOS or Linux**, and the
 Windows is not a supported target.
 
 ```bash
-pipx install claudeloop
+pipx install vibey      # or: uv tool install vibey / pip install vibey
+                        # the whole family; claudeloop is one of its console scripts
 ```
 
 See the [installation guide](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/claude/docs/getting-started/installation.md)
@@ -158,12 +158,15 @@ Same contract, different vendor. The four `*loop` runners share one domain
 state machine, one set of application ports, and one `.<name>loop/runs/<id>/`
 layout — pick the one that matches the agent you pay for:
 
-| Runner | Drives | Install |
+| Runner | Drives | Command |
 |---|---|---|
-| **claudeloop** (this package) | Claude Code (Anthropic) | `pipx install claudeloop` |
-| [codexloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) | OpenAI Codex / GPT | `pipx install codexloop` |
-| [cursorloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) | Cursor Agent (Composer-first; Grok as a model profile) | `pipx install cursorloop` |
-| [agyloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) | Google Antigravity / Gemini | `pipx install agyloop` |
+| **claudeloop** (this package) | Claude Code (Anthropic) | `claudeloop` |
+| [codexloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) | OpenAI Codex / GPT | `codexloop` |
+| [cursorloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) | Cursor Agent (Composer-first; Grok as a model profile) | `cursorloop` |
+| [agyloop](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) | Google Antigravity / Gemini | `agyloop` |
+
+All four ship inside the [`vibey`](https://pypi.org/project/vibey/) distribution: one
+`pip install vibey` puts every command above on `PATH` (vibey ADR-0037).
 
 Around them:
 

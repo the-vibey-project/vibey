@@ -42,7 +42,8 @@ def install_middleware(
         )
     except ImportError as exc:  # pragma: no cover
         raise ImportError(
-            "install_middleware requires the `fastapi` extra: pip install vibey-bootstrap[fastapi]"
+            "install_middleware requires the fastapi dependencies: "
+            "pip install 'vibey[bootstrap-all]'"
         ) from exc
 
     probe_set = set(probe_paths)

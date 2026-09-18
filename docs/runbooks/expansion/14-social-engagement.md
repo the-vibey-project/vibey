@@ -14,8 +14,9 @@
 The vibey repository — which now carries claudeloop, codexloop,
 cursorloop, agyloop and qwenloop as workspace members — is optimized for
 online discovery, first-impression conversion, and community growth: the
-repository itself as a landing page. Each runner's PyPI page is a
-secondary landing page.
+repository itself as a landing page. Since ADR-0037 there is one PyPI page —
+`vibey` — and each runner's README is a secondary landing page inside the
+repository rather than on an index of its own.
 
 ## The checklist
 
@@ -84,8 +85,9 @@ secondary landing page.
    done.
 2. VHS/asciinema demo pipeline in CI (greeter with scripted engines for
    speed; one real-engine capture for the hero GIF).
-3. Runner PyPI pages: each runner's README carries the value prop,
-   quickstart and a link back to the vibey docs site.
+3. Runner READMEs as landing pages (they no longer have PyPI pages of their own —
+   ADR-0037): each carries the value prop, quickstart and a link back to the vibey
+   docs site.
 4. Launch collateral for the next public release (rides 09's release).
 5. Traffic dashboard + weekly snapshot job.
 

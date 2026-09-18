@@ -430,7 +430,7 @@ def test_the_workflow_installs_the_published_package_for_adopters():
     # 4: recovery, solve, exhausted, and the local triage fallback added alongside them.
     assert text.count('grep -qE \'^name = "vibey-gh"\' "') == 4
     assert text.count('self=""') == 4
-    assert text.count("python -m pip install --quiet vibey-gh") == 4
+    assert text.count("python -m pip install --quiet vibey\n") == 4
     assert text.count("command -v vibey-gh >/dev/null") == 3
     assert "python -m pip install --quiet ./target" not in text
 

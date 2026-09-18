@@ -1,8 +1,15 @@
 # 0019 — Vibey is installable wherever its users already are
 
-**Status:** accepted · **Date:** 2026-09-15 · **Extends:** ADR-0017, ADR-0018
+**Status:** superseded in part by ADR-0037 · **Date:** 2026-09-15 · **Extends:** ADR-0017, ADR-0018
 
 **Canon:** sub-doctrine 2.b — *installable wherever its users already are*, filed under doctrine 2 — Audience channels (ADR-0020). It is law from the operator's ratifying merge of the change that carries it.
+
+> The decision and the channel plan stand, and get simpler.
+> [ADR-0037](0037-one-distribution-one-version.md) supersedes only this
+> record's opening premise: "Ten distributions come out of this tree" is now
+> one. Every target below — Homebrew, winget, apt, the single-file artifact —
+> now has one artifact to carry rather than ten, which is the same decision
+> with less work in it.
 
 ## Context
 

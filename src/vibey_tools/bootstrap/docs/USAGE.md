@@ -32,7 +32,8 @@ hardening, Service Bus plumbing, webhook auth, AI usage tracking, health probes,
 a v2.1 logging-transport layer (console / App Insights / Sumo Logic).
 
 > [!IMPORTANT]
-> **`vibey-bootstrap` is a pure Python package.** It is published to PyPI and has
+> **`vibey-bootstrap` is a pure Python package.** It ships inside the `vibey`
+> distribution on PyPI (vibey ADR-0037) and has
 > **no JavaScript/TypeScript distribution** — you cannot `npm install` or `import` it
 > from a Next.js app. Accordingly, the TypeScript/Next.js half of this guide covers
 > two distinct, legitimate things:
@@ -45,8 +46,9 @@ a v2.1 logging-transport layer (console / App Insights / Sumo Logic).
 >    (structured JSON logging, correlation via `AsyncLocalStorage`, masking, counters,
 >    token bucket, **HMAC action tokens that interoperate byte-for-byte** with Python).
 
-**Compatibility:** Python **≥ 3.11**. Distribution: `pip install vibey-bootstrap`
-(PyPI, MIT). Every v1 public symbol is preserved byte-identical across v2.
+**Compatibility:** the source supports Python **≥ 3.11**; the distribution that ships it
+requires **≥ 3.12**. Distribution: `pip install vibey` (PyPI, MIT) — there is no separate
+`vibey-bootstrap` project (vibey ADR-0037). Every v1 public symbol is preserved byte-identical across v2.
 
 ### Table of contents
 
@@ -65,11 +67,18 @@ a v2.1 logging-transport layer (console / App Insights / Sumo Logic).
 ## 1. Installation & extras
 
 ```bash
-pip install vibey-bootstrap                       # core only
-pip install 'vibey-bootstrap[fastapi]'            # one extra
-pip install 'vibey-bootstrap[fastapi,servicebus,sumologic]'   # several
-pip install 'vibey-bootstrap[all]'                # the aggregate extra
+pip install vibey                     # the whole family; vibey_bootstrap importable
+pip install 'vibey[azure]'            # App Configuration + Key Vault + App Insights
+pip install 'vibey[bootstrap-all]'    # every optional dependency any extra below needs
 ```
+
+**Extra names.** The matrix below lists the extras as this package's own
+`pyproject.toml` declares them, and they still select what each feature needs when you
+install this package from the tree. On the `vibey` distribution there is no per-feature
+successor spelling — one distribution cannot carry forty names that only ever described
+one package — so the replacements are two aggregates: `vibey[azure]` for the App
+Configuration / Key Vault / App Insights core, and `vibey[bootstrap-all]` for every
+third-party package any extra below named (vibey ADR-0037).
 
 ### Core dependencies (always installed)
 
@@ -136,9 +145,8 @@ dependencies where a third-party package is genuinely required.
 
 ```bash
 # Common combinations
-pip install 'vibey-bootstrap[alerts,fastapi,health]'
-pip install 'vibey-bootstrap[servicebus,sb-lock,retry,heartbeat]'
-pip install 'vibey-bootstrap[all]'
+pip install 'vibey[azure]'
+pip install 'vibey[bootstrap-all]'
 ```
 
 ---
@@ -649,7 +657,7 @@ configure_transports(
 ```
 
 See [examples/39_v3_transports.py](../examples/39_v3_transports.py). Install all deps
-with `pip install 'vibey-bootstrap[logging-all]'`.
+with `pip install 'vibey[bootstrap-all]'`.
 
 ### v3.0.0 runtime modules (non-transport)
 

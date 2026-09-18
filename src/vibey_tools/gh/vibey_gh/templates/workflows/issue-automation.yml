@@ -67,12 +67,13 @@ jobs:
           # contributor's choosing. The path is verified below before anything runs.
           self="__VIBEY_GH_SELF_SOURCE__"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       - name: Dispatch every eligible open issue once
@@ -137,12 +138,13 @@ jobs:
           # contributor's choosing. The path is verified below before anything runs.
           self="__VIBEY_GH_SELF_SOURCE__"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       # 8.a's probe, same reasoning as pr-automation: a sovereign job scheduled against
@@ -235,12 +237,13 @@ jobs:
           self="automation/__VIBEY_GH_SELF_SOURCE__"
           self="${self%/.}"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       - name: Mark the solution attempt in progress
@@ -284,12 +287,9 @@ jobs:
           track_progress: ${{ __VIBEY_GH_SANITIZED_PROGRESS__ && (github.event_name == 'issues' || github.event_name == 'issue_comment') }}
           show_full_output: ${{ inputs.full_claude_output && github.event_name == 'workflow_dispatch' && github.event.repository.visibility == 'private' && __VIBEY_GH_ALLOW_PRIVATE_FULL_OUTPUT__ }}
           plugin_marketplaces: |
-            https://github.com/the-vibey-project/vibey-skills.git
+            __VIBEY_GH_PLUGIN_MARKETPLACES__
           plugins: |
-            software-architecture@vibey-skills
-            quality-engineering@vibey-skills
-            security-principles@vibey-skills
-            engineering-process@vibey-skills
+            __VIBEY_GH_PLUGINS__
           claude_args: |
             --model __VIBEY_GH_ISSUE_MODEL__
             --max-turns __VIBEY_GH_ISSUE_MAX_TURNS__
@@ -580,12 +580,13 @@ jobs:
           self="automation/__VIBEY_GH_SELF_SOURCE__"
           self="${self%/.}"
           # Verified, not assumed: a misconfigured path must fall back to the published
-          # release rather than install whatever happens to sit there.
+          # release rather than install whatever happens to sit there. That release is
+          # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
           grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey-gh
+            python -m pip install --quiet vibey
           fi
       # The issue text arrives through the API and reaches the model as text. Repository
       # code is never checked out here and never executed.
