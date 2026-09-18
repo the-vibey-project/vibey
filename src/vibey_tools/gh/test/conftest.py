@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+
 import pytest
 
 # Variables Actions sets that this tool reads. Cleared for every test; a test that wants
@@ -116,3 +117,42 @@ def fake_gh(tmp_path: Path, monkeypatch) -> FakeGh:
     bin_dir.mkdir()
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
     return FakeGh(bin_dir)
+
+
+# Module-level rather than a class (vibey ADR-0016) because pytest resolves a fixture by
+# name at conftest module scope.
+@pytest.fixture
+def scripted_gh(tmp_path: Path, monkeypatch) -> Path:
+    """A real `gh` executable on PATH that replays scripted answers and records its argv.
+
+    Answers live in `answers.json` in the returned directory, keyed by the joined argv
+    (`{"out": ..., "err": ..., "code": ...}`); `calls.txt` records every invocation. An
+    unscripted call exits 3, so a test cannot pass by reaching a command it never named.
+
+    This is the seam a test needs when the defect lives in *which fields a command line
+    returns*: replacing the Python function that runs `gh` would replay whatever the test
+    author believed `gh` returns, which is exactly how a field `gh` never serves went
+    unnoticed. `GH_REPO` is pinned so `github_state.repository()` never asks `gh` for it.
+    """
+    bin_dir = tmp_path / "scripted-gh"
+    bin_dir.mkdir()
+    gh = bin_dir / "gh"
+    gh.write_text(f"""#!/usr/bin/env python3
+import json, pathlib, sys
+here = pathlib.Path({str(bin_dir)!r})
+with (here / "calls.txt").open("a") as fh:
+    fh.write(" ".join(sys.argv[1:]) + "\\n")
+entry = json.loads((here / "answers.json").read_text()).get(" ".join(sys.argv[1:]))
+if entry is None:
+    sys.stderr.write("no scripted answer\\n")
+    raise SystemExit(3)
+sys.stdout.write(entry.get("out", ""))
+sys.stderr.write(entry.get("err", ""))
+raise SystemExit(entry.get("code", 0))
+""")
+    gh.chmod(0o755)
+    (bin_dir / "answers.json").write_text("{}")
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("GH_REPO", "o/r")
+    return bin_dir
+
