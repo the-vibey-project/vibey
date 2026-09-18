@@ -30,6 +30,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Bug Fixes
+
+* **build:** a capacity rejection during `build.verify`'s diff review now defers the job as capacity instead of being discarded. `run_and_record` reported `capacity_rejected`, but the verify handler never read it and judged the run on its verdict alone — so a reviewer out of capacity either failed as `WORK` (burning an unrefunded attempt, up to the `attempts_exhausted` park, while `RotationRecordingHandler` left the exhausted engine's circuit closed and kept handing it the same job) or, with a completing verdict in the same run, approved the item outright — the non-negotiable "a capacity rejection always outranks a completion claim" broken both ways. It now returns `Defer(capacity=True)` after `capacity_backoff` (a constructor keyword defaulting to 5 minutes, exactly as on `build.implement`), before any repair finding is resolved or any independence waiver is written, and `BuildVerifyHandler` takes a required `clock` ([#215](https://github.com/the-vibey-project/vibey/issues/215))
+
 ## [0.8.0] (2026-09-16)
 
 ### Features

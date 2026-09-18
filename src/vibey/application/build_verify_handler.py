@@ -13,7 +13,11 @@ Verification is not "the model says it's fine." In order:
    name which criteria it checks. An item with no criteria_checked never
    silently passes.
 3. Only then, a diff review by a rotated engine at LOW effort, judged by
-   the same VerdictRendered.complete convention build.implement uses.
+   the same VerdictRendered.complete convention build.implement uses --
+   and, like build.implement, a CapacityRejected from the reviewer outranks
+   any completion claim in the same run: it is a capacity Defer, never a
+   WORK failure, so the attempt is refunded and the reviewer's circuit
+   opens rather than the same exhausted engine being handed the job again.
 
 The rotation in step 3 is the default, not an absolute: a configured pool
 with nobody else to review lets the implementer review its own diff, and
@@ -163,6 +167,8 @@ class BuildVerifyHandler:
         reviewer: EngineAdapter,
         ledger: BuildLedger,
         jobs: JobRepository,
+        clock: Clock,
+        capacity_backoff: timedelta = timedelta(minutes=5),
         repair: VerifyRepairPolicy | None = None,
         correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
         independence: VerifyIndependencePolicy | None = None,
@@ -173,6 +179,11 @@ class BuildVerifyHandler:
         self._reviewer = reviewer
         self._ledger = ledger
         self._jobs = jobs
+        # Required, not borrowed from `repair`/`independence`: both policies
+        # are optional, and a capacity rejection must defer whether or not
+        # either is wired (build.implement takes its clock the same way).
+        self._clock = clock
+        self._capacity_backoff = capacity_backoff
         self._repair = repair
         self._independence = independence
 
@@ -243,6 +254,22 @@ class BuildVerifyHandler:
             self._reviewer, self._ledger, job=job, handle=handle, correlation=self._correlation
         )
 
+        if run_outcome.capacity_rejected:
+            # A capacity rejection always outranks a completion claim
+            # (CLAUDE.md non-negotiable), and it is checked before anything
+            # the success path writes: the reviewer never finished, so no
+            # repair finding is resolved and no independence waiver lands
+            # in the append-only ledger. A Defer refunds the attempt (a WORK
+            # failure nacks and burns it), and `capacity=True` is what makes
+            # RotationRecordingHandler open the reviewer's circuit so the
+            # retry rotates -- as a WORK failure the whole retry ladder was
+            # spent on the very engine that had just said it was out.
+            engine_id = self._reviewer.descriptor.engine_id.value
+            return Defer(
+                retry_at=self._clock.now() + self._capacity_backoff,
+                detail=f"engine {engine_id} reported capacity rejection during the diff review",
+                capacity=True,
+            )
         if not run_outcome.complete:
             return Failure(FailureClass.WORK, "diff review did not approve this work item")
 
