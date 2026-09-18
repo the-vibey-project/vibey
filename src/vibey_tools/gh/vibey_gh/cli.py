@@ -29,6 +29,8 @@ from vibey_gh import (
     versioning,
 )
 from vibey_gh.config import load_config
+from vibey_gh.fallback_pin import FallbackPinResolver
+from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
 
 
@@ -69,9 +71,11 @@ def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...
     return clutter, report.problems
 
 
-def _check(args) -> int:
+def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
-    ok, problems = install.installed(cfg, local=not args.ci)
+    # Resolved once, so the drift verdict and the notice below describe the same pin.
+    pin = (resolver or FallbackPinResolver()).resolve(cfg)
+    ok, problems = install.installed(cfg, local=not args.ci, fallback_pin=pin)
     report = fingerprints.check(cfg, rev_range=args.commits, apply=args.apply)
     docs = documentation.check(cfg)
     scan = pr_automation.check_scan_workflows(cfg)
@@ -130,6 +134,12 @@ def _check(args) -> int:
             + ("" if cfg.tidy.fail_check else " (advisory; `[tidy] fail_check = true` fails)"),
             file=sys.stderr,
         )
+    # Advisory, never a verdict: a floating install still resolves. Printed because a pin
+    # that cannot resolve renders floating, so a deployed workflow that still carries the
+    # pin reads "out of date" above with no cause named, and a drift report with no cause
+    # named is how one diagnosis went through three wrong hypotheses (#273).
+    if pin.notice:
+        print(f"  notice: {pin.notice}", file=sys.stderr)
 
     if clean:
         scope = f"{report.checked_files} source file(s)"
@@ -148,12 +158,15 @@ def _check(args) -> int:
     return 1
 
 
-def _install(args) -> int:
+def _install(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
-    for action in install.install(cfg):
+    pin = (resolver or FallbackPinResolver()).resolve(cfg)
+    for action in install.install(cfg, fallback_pin=pin):
         print(f"  {action.hook}: {action.outcome}")
     for notice in install.installation_notices():
         print(f"  notice: {notice}")
+    if pin.notice:
+        print(f"  notice: {pin.notice}")
     print(f"vibey-gh: installed into {cfg.root}")
     return 0
 

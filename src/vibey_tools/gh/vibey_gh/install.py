@@ -15,12 +15,13 @@ import shlex
 import shutil
 import stat
 import subprocess
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
 from vibey_gh import dependabot
 from vibey_gh.config import GhConfig, load_config
+from vibey_gh.fallback_pin import FallbackPinResolver
+from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPin
 
 TEMPLATES = Path(__file__).parent / "templates" / "githooks"
 WORKFLOWS = Path(__file__).parent / "templates" / "workflows"
@@ -154,41 +155,12 @@ def _strip_trailing_space(text: str) -> str:
     return "\n".join(line.rstrip() for line in text.split("\n"))
 
 
-def _fallback_pin(cfg: GhConfig) -> str | None:
-    """The release `[install] pin_version` pins the fallback install to, or None.
-
-    The promise the key makes is "install the exact release that rendered this file",
-    and it is only expressible where that release is knowable. It used to be
-    `vibey_gh.__version__`, because the tooling was its own distribution. It is not one
-    any more (ADR-0037): `vibey_gh` ships inside `vibey`, and nothing here knows which
-    `vibey` release carries which `vibey_gh` -- so a pin built from `__version__` would
-    render `vibey==1.73.0`, a requirement no index can resolve, failing inside somebody
-    else's job rather than here.
-
-    A repository that IS the fallback distribution does know, because it declares the
-    release it publishes. Name and version are read from the same `[project]` table in
-    one parse, deliberately: a version taken from anywhere else could belong to a
-    different distribution than the name just verified. Everywhere else -- every adopter
-    -- the fallback stays floating, which always resolves.
-    """
-    if not cfg.pin_version:
-        return None
-    try:
-        data = tomllib.loads((cfg.root / "pyproject.toml").read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError):
-        return None
-    project = data.get("project")
-    if not isinstance(project, dict) or project.get("name") != cfg.fallback_package:
-        return None
-    version = project.get("version")
-    return str(version) if isinstance(version, str) and version else None
-
-
-def rerender_version_pinned(cfg: GhConfig) -> list[str]:
+def rerender_version_pinned(cfg: GhConfig, *, fallback_pin: FallbackPin | None = None) -> list[str]:
     """Rewrite every managed workflow whose rendered text the version just changed.
 
-    `[install] pin_version` renders `<fallback_package>==<this repository's version>` into
-    each managed workflow, so the deployed copies are a FUNCTION of `[project] version`.
+    In the repository that IS the fallback distribution, `[install] pin_version` renders
+    `<fallback_package>==<this repository's version>` into each managed workflow, so the
+    deployed copies are a FUNCTION of `[project] version`.
     Bump the version without re-rendering and every one of them pins the release before
     the one being cut -- and the drift check that CI runs against the deployed copies then
     fails on the release commit itself, blocking the promotion that produced it.
@@ -199,9 +171,13 @@ def rerender_version_pinned(cfg: GhConfig) -> list[str]:
     paths actually rewritten, so a bump that changes nothing reports nothing.
 
     A repository that has not turned the pin on renders nothing from the version, and this
-    returns an empty list without touching a file.
+    returns an empty list without touching a file. Neither does an adopter whose pin is the
+    installed release `vibey-gh` runs from: its own version decides nothing in these files,
+    and re-rendering on its bump would fold a tooling upgrade into a release commit that
+    never asked for one. `vibey-gh install` is where that pin moves, as its own diff.
     """
-    if _fallback_pin(cfg) is None:
+    pin = fallback_pin or FallbackPinResolver().resolve(cfg)
+    if not pin.from_repository:
         return []
     rewritten: list[str] = []
     wf_target = cfg.root / WORKFLOWS_DIR
@@ -209,7 +185,7 @@ def rerender_version_pinned(cfg: GhConfig) -> list[str]:
         dest = wf_target / source.name
         if not dest.is_file():
             continue
-        wanted = render_workflow(source, cfg)
+        wanted = render_workflow(source, cfg, fallback_pin=pin)
         if dest.read_text(encoding="utf-8") == wanted:
             continue
         dest.write_text(wanted, encoding="utf-8")
@@ -217,7 +193,13 @@ def rerender_version_pinned(cfg: GhConfig) -> list[str]:
     return rewritten
 
 
-def render_workflow(source: Path, cfg: GhConfig) -> str:
+def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | None = None) -> str:
+    """`source` with this repository's values substituted in.
+
+    `fallback_pin` is the resolved `[install] pin_version` pin. A caller rendering many
+    templates resolves it once and passes it to each, so they all agree; omitted, it is
+    resolved here against the running interpreter.
+    """
     wanted = source.read_text(encoding="utf-8")
     wanted = wanted.replace("__VIBEY_GH_INTEGRATION_BRANCH__", cfg.integration_branch)
     wanted = wanted.replace("__VIBEY_GH_RELEASE_BRANCH__", cfg.release_branch)
@@ -425,14 +407,14 @@ def render_workflow(source: Path, cfg: GhConfig) -> str:
     # the configured one is a no-op for every repository that agrees with the default,
     # and it must happen before the pin below, which decorates the rendered name.
     wanted = wanted.replace(FALLBACK_INSTALL, _fallback_install(cfg))
-    pin = _fallback_pin(cfg)
-    if pin is not None:
+    pin = fallback_pin or FallbackPinResolver().resolve(cfg)
+    if pin.version is not None:
         # Only the floating fallback install is pinned. The self-hosting branch just
         # above it (`pip install --quiet -e .`) must keep installing from source: this
         # repository cannot pin itself to a published release that may not exist yet.
         wanted = wanted.replace(
             _fallback_install(cfg),
-            f'python -m pip install --quiet "{cfg.fallback_package}=={pin}"\n',
+            f'python -m pip install --quiet "{cfg.fallback_package}=={pin.version}"\n',
         )
     # One marketplace or plugin per line of the action's newline-separated input. A
     # repository-relative marketplace resolves inside the trusted default-branch checkout
@@ -525,8 +507,11 @@ def apply_union_merge(cfg: GhConfig) -> str | None:
     return outcome
 
 
-def install(cfg: GhConfig | None = None, hooks_path: bool = True) -> list[Action]:
+def install(
+    cfg: GhConfig | None = None, hooks_path: bool = True, *, fallback_pin: FallbackPin | None = None
+) -> list[Action]:
     cfg = cfg or load_config()
+    pin = fallback_pin or FallbackPinResolver().resolve(cfg)
     target = cfg.root / HOOKS_DIR
     target.mkdir(parents=True, exist_ok=True)
     actions: list[Action] = []
@@ -566,7 +551,7 @@ def install(cfg: GhConfig | None = None, hooks_path: bool = True) -> list[Action
     wf_target.mkdir(parents=True, exist_ok=True)
     for source in _managed_workflows(cfg):
         dest = wf_target / source.name
-        wanted = render_workflow(source, cfg)
+        wanted = render_workflow(source, cfg, fallback_pin=pin)
         if dest.exists() and dest.read_text(encoding="utf-8") == wanted:
             actions.append(Action(f"{WORKFLOWS_DIR}/{source.name}", "unchanged"))
             continue
@@ -613,7 +598,9 @@ def install(cfg: GhConfig | None = None, hooks_path: bool = True) -> list[Action
     return actions
 
 
-def installed(cfg: GhConfig | None = None, local: bool = True) -> tuple[bool, list[str]]:
+def installed(
+    cfg: GhConfig | None = None, local: bool = True, *, fallback_pin: FallbackPin | None = None
+) -> tuple[bool, list[str]]:
     """Whether the hooks are present, current, and — when `local` — actually wired up.
 
     The two halves are deliberately separable. Whether the hook FILES are committed and
@@ -622,6 +609,7 @@ def installed(cfg: GhConfig | None = None, local: bool = True) -> tuple[bool, li
     asserting it on a runner would fail every build for a condition that cannot hold there.
     """
     cfg = cfg or load_config()
+    pin = fallback_pin or FallbackPinResolver().resolve(cfg)
     problems: list[str] = []
     target = cfg.root / HOOKS_DIR
 
@@ -637,7 +625,8 @@ def installed(cfg: GhConfig | None = None, local: bool = True) -> tuple[bool, li
         if not dest.exists():
             problems.append(f"{WORKFLOWS_DIR}/{source.name} is missing")
         else:
-            existing, wanted = dest.read_text(encoding="utf-8"), render_workflow(source, cfg)
+            existing = dest.read_text(encoding="utf-8")
+            wanted = render_workflow(source, cfg, fallback_pin=pin)
             if existing != wanted:
                 problem = f"{WORKFLOWS_DIR}/{source.name} is out of date"
                 # Name the likeliest cause when the drift has its signature (#273). "Out

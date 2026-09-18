@@ -32,6 +32,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **gh:** `[install] pin_version` pins adopters again. From 1.0.0 `vibey-gh install` rendered a floating `pip install --quiet vibey` for every repository that was not `vibey` itself, so the ten adopters that set the key lost their exact pins without a word. The pin is now the release `vibey-gh` runs from: the repository's own `[project] version` where it IS `[install] fallback_package` (unchanged, so vibey's own workflows render byte-identically); otherwise the installed `fallback_package` release that provides the running `vibey_gh`, read from its metadata, so `uvx --from vibey==X.Y.Z vibey-gh install` renders `"vibey==X.Y.Z"`. An editable or other source-tree install names no release, so it still floats, and `install` and `check` now print a `notice:` saying why. The resolution sits behind `FallbackPinResolver` and `InstalledDistributions`, each with its interface beside it (#259)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 
 ## [0.8.0] (2026-09-16)

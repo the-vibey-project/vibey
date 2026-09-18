@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+import vibey_gh
 from vibey_gh.config import (
     DEFAULT_SCAN_WORKFLOWS,
     AiConfig,
@@ -25,6 +26,7 @@ from vibey_gh.config import (
     GhConfig,
     load_config,
 )
+from vibey_gh.fallback_pin import FallbackPinResolver, InstalledDistributions
 from vibey_gh.install import (
     FALLBACK_DISTRIBUTION,
     FALLBACK_INSTALL,
@@ -1986,27 +1988,49 @@ def test_pin_version_floats_when_the_repository_declares_no_release(tmp_path: Pa
     """
     if pyproject is not None:
         tmp_path.joinpath("pyproject.toml").write_text(pyproject, encoding="utf-8")
-    text = render_workflow(WORKFLOWS / "merge-train.yml", GhConfig(root=tmp_path, pin_version=True))
+    cfg = GhConfig(root=tmp_path, pin_version=True)
+    # Nothing installed to witness a release either, stated rather than left to whatever
+    # the virtualenv running this suite happens to hold.
+    pin = FallbackPinResolver(InstalledDistributions(search_path=[])).resolve(cfg)
+    text = render_workflow(WORKFLOWS / "merge-train.yml", cfg, fallback_pin=pin)
     assert FALLBACK_INSTALL in text
     assert f"{FALLBACK_DISTRIBUTION}==" not in text
 
 
+class _PublishedRelease:
+    """`vibey` 1.0.0, installed from an index, and the source of the running vibey-gh."""
+
+    def version(self, distribution: str) -> str | None:
+        return "1.0.0" if distribution == FALLBACK_DISTRIBUTION else None
+
+    def installed_from_source(self, distribution: str) -> bool:
+        return False
+
+    def installs(self, distribution: str, path: Path) -> bool:
+        return True
+
+
 def test_pin_version_cannot_invent_a_release_for_a_repository_that_is_not_it(tmp_path: Path):
-    """An adopter turning the key on must not get a version this tooling guessed.
+    """An adopter turning the key on gets the release it runs from, never a guess.
 
     `vibey_gh.__version__` numbers a package inside `vibey` (ADR-0037), and an adopter's
-    own version numbers their project; neither names a `vibey` release. A pin built from
-    either resolves to nothing inside the adopter's job. Floating always resolves.
+    own version numbers their project; neither names a `vibey` release, and a pin built
+    from either resolves to nothing inside the adopter's job. The installed `vibey`
+    release that `vibey-gh` is running from does name one, and every managed template
+    carries it.
     """
     tmp_path.joinpath("pyproject.toml").write_text(
         '[project]\nname = "somebody-else"\nversion = "9.9.9"\n', encoding="utf-8"
     )
+    cfg = GhConfig(root=tmp_path, pin_version=True)
+    pin = FallbackPinResolver(_PublishedRelease()).resolve(cfg)
     for path in WORKFLOW_TEMPLATES:
-        text = render_workflow(path, GhConfig(root=tmp_path, pin_version=True))
+        text = render_workflow(path, cfg, fallback_pin=pin)
         assert "9.9.9" not in text
-        assert f"{FALLBACK_DISTRIBUTION}==" not in text
+        assert f"=={vibey_gh.__version__}" not in text
+        assert FALLBACK_INSTALL not in text
         if FALLBACK_INSTALL in path.read_text(encoding="utf-8"):
-            assert FALLBACK_INSTALL in text
+            assert f'"{FALLBACK_DISTRIBUTION}==1.0.0"' in text
 
 
 def test_every_managed_third_party_action_is_immutably_pinned():
