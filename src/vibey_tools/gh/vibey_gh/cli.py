@@ -815,29 +815,25 @@ def _local_review(args) -> int:
 def _conversation(args) -> int:
     cfg = load_config()
     try:
-        subject = conversation.fetch_subject(args.subject)
-        comments = list(subject.get("comments") or [])
-        comment: dict = {}
-        if args.comment_id:
-            comment = next(
-                (item for item in comments if conversation.matches_comment(item, args.comment_id)),
-                comments[-1] if comments else {},
-            )
-        else:
-            comment = comments[-1] if comments else {}
-        if args.action == "evaluate":
-            decision = conversation.evaluate(
-                comment, subject, cfg, stored=conversation.parse_state(comments)
-            )
-            print(decision.to_json())
-        elif args.action == "context":
-            document = conversation.context(subject, comment, cfg, max_bytes=args.max_bytes)
-            if args.output:
-                args.output.parent.mkdir(parents=True, exist_ok=True)
-                args.output.write_text(document, encoding="utf-8")
-                print(f"vibey-gh: wrote {len(document.encode())} bytes to {args.output}")
+        if args.action in ("evaluate", "context"):
+            subject = conversation.fetch_subject(args.subject)
+            # Resolved, never guessed: an ID naming no comment on this thread or its review
+            # is an error here, not a licence to answer the newest comment in its place.
+            comment = conversation.ConversationThread(subject).comment(args.comment_id or "")
+            if args.action == "evaluate":
+                comments = list(subject.get("comments") or [])
+                decision = conversation.evaluate(
+                    comment, subject, cfg, stored=conversation.parse_state(comments)
+                )
+                print(decision.to_json())
             else:
-                print(document, end="")
+                document = conversation.context(subject, comment, cfg, max_bytes=args.max_bytes)
+                if args.output:
+                    args.output.parent.mkdir(parents=True, exist_ok=True)
+                    args.output.write_text(document, encoding="utf-8")
+                    print(f"vibey-gh: wrote {len(document.encode())} bytes to {args.output}")
+                else:
+                    print(document, end="")
         elif args.action == "reply":
             body = _read_text(args.body)
             if not conversation.reply(args.subject, body, cfg):
