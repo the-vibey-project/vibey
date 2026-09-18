@@ -34,6 +34,7 @@ from vibey.bootstrap import (
     build_visual_worker,
 )
 from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.ledger_search import ledger_search
 from vibey.domain.config import parse_toml_string
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
@@ -73,6 +74,7 @@ deploy_app = typer.Typer(name="deploy", invoke_without_command=True)
 app.add_typer(deploy_app, name="deploy")
 ledger_app = typer.Typer(name="ledger", invoke_without_command=True)
 app.add_typer(ledger_app, name="ledger")
+ledger_app.command("search")(ledger_search)
 
 
 def _version_callback(value: bool) -> None:

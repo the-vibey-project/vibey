@@ -5,5 +5,30 @@ from vibey.domain.interfaces.correlation_interface import (
     CorrelationIdInterface,
     DeliveryCorrelationInterface,
 )
+from vibey.domain.interfaces.ledger_chain_interface import (
+    ChainFindingInterface,
+    ChainLinkInterface,
+    ChainVerificationInterface,
+    LedgerChainInterface,
+)
+from vibey.domain.interfaces.ledger_query_interface import (
+    ActorInterface,
+    ActorResolverInterface,
+    EventKindResolverInterface,
+    LedgerQueryInterface,
+    LedgerSearchResultInterface,
+)
 
-__all__ = ["CorrelationIdInterface", "DeliveryCorrelationInterface"]
+__all__ = [
+    "ActorInterface",
+    "ActorResolverInterface",
+    "ChainFindingInterface",
+    "ChainLinkInterface",
+    "ChainVerificationInterface",
+    "CorrelationIdInterface",
+    "DeliveryCorrelationInterface",
+    "EventKindResolverInterface",
+    "LedgerChainInterface",
+    "LedgerQueryInterface",
+    "LedgerSearchResultInterface",
+]
