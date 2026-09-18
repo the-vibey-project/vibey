@@ -165,7 +165,19 @@ def _compiled_expression_length(scalar: str) -> int | None:
 
 
 def _interpolated_scalars(path: Path) -> list[tuple[str, str]]:
-    """Every string a workflow may interpolate, labelled by its YAML path."""
+    """Every string a workflow may interpolate, labelled by its YAML path.
+
+    ENUMERATING KEYS IS HOW THIS GUARD GOES BLIND, and it already did once. The first
+    version visited four -- job `env`, and step `run`, `with` and `env` -- chosen because
+    that is where the known problems lived, while describing itself as covering every
+    interpolated string. release-surfaces.yml alone carries six expression-bearing fields
+    it never reached: `jobs.*.outputs`, `jobs.*.name`, `jobs.*.concurrency` and
+    `jobs.*.environment`. An oversized expression in any of them bricks the whole file the
+    way the channel-restore script did, and the guard would have passed.
+
+    So the document is walked. A field nobody thought of, or one GitHub adds next year, is
+    covered the day it appears rather than the day someone remembers to extend a list.
+    """
     parsed = yaml.safe_load(path.read_text(encoding="utf-8"))
     scalars: list[tuple[str, str]] = []
 
@@ -181,6 +193,25 @@ def _interpolated_scalars(path: Path) -> list[tuple[str, str]]:
 
     visit(parsed, path.name)
     return scalars
+
+
+def test_the_scalar_sweep_reaches_fields_no_enumeration_listed():
+    """The sweep must WALK the document, not visit a list of keys someone maintains.
+
+    The walk is already here; what was missing is anything that keeps it. These four labels
+    are real expression-bearing scalars in the shipped templates that the enumeration this
+    replaced could not reach. Pinning them by path makes a regression to any hand-kept list
+    fail here, rather than in GitHub's parser months later -- where it presents as a
+    workflow named by file path, with no jobs and no logs.
+    """
+    labels = {label for path in WORKFLOW_TEMPLATES for label, _ in _interpolated_scalars(path)}
+    for unreachable in (
+        "conversation.yml.jobs.evaluate.outputs.state",
+        "release-surfaces.yml.jobs.package.name",
+        "release-surfaces.yml.jobs.docs.concurrency.group",
+        "release-surfaces.yml.jobs.docs.environment.url",
+    ):
+        assert unreachable in labels, f"the sweep no longer reaches {unreachable}"
 
 
 def test_no_interpolated_workflow_scalar_exceeds_githubs_expression_limit():
@@ -261,10 +292,10 @@ def test_no_interpolated_workflow_scalar_exceeds_githubs_expression_limit():
     # would leave `checked` at zero while `swept` stayed healthy, which is the exact
     # silent no-op these floors exist to catch. The workspace list is empty in a
     # standalone sdist checkout, so it is floored only when it resolved to something.
-    assert swept["templates"] > 400, swept
-    assert checked["templates"] > 250, checked
-    assert swept["tenant"] > 400, swept
-    assert checked["tenant"] > 250, checked
+    assert swept["templates"] > 900, swept
+    assert checked["templates"] > 300, checked
+    assert swept["tenant"] > 900, swept
+    assert checked["tenant"] > 300, checked
     if WORKSPACE_WORKFLOWS:
         assert swept["workspace"] > 250, swept
         assert checked["workspace"] > 150, checked
