@@ -217,7 +217,7 @@ closed, because anyone with a GitHub account can open an issue.
 | `open_pull_request` | boolean / `true` | Open a linked pull request after publishing the branch. |
 | `draft_pull_request` | boolean / `true` | Open that pull request as a draft, letting PR automation promote it when its exact head is green. |
 | `retain_schedule_backstop` | boolean / `true` | Retain the scheduled recovery sweep beside the event triggers. |
-| `fallback_enabled` | boolean / `false` | Post a bounded local-model triage comment when the paid solve produced nothing — the issue path's counterpart to `[pr_automation.fallback]`, sharing its runner, model, and limits. The triage writes no code, deduplicates itself to one comment per issue, and forces `needs_human` true whatever the model claims. Off by default because it needs that self-hosted runner to exist. |
+| `fallback_enabled` | boolean / `true` | Post a bounded local-model triage comment when the paid solve produced nothing — the issue path's counterpart to `[pr_automation.fallback]`, sharing its runner, model, and limits. The triage writes no code, deduplicates itself to one comment per issue, and forces `needs_human` true whatever the model claims. **On by default, per sub-doctrine 8.a**, like `[pr_automation.fallback] enabled`, and for the same reason it costs a repository without a runner nothing: the sovereign heartbeat, not this flag, decides whether the job is scheduled, and a repository with no fresh `heartbeat_ref` never schedules it. Set `false` to never render the job at all. |
 
 An issue's attempt budget is keyed to a SHA-256 fingerprint of its title and body, so
 re-running automation on unchanged text cannot spend the budget twice and editing the issue

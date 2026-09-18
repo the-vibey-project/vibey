@@ -119,7 +119,8 @@ Accepted IDs use atomic mode-0600 marker creation, preventing replay across rest
 concurrent CLI processes. Operators own TLS, rate limits, request-size limits, backups,
 retention, and safe pruning of expired claims.
 
-The opt-in `[pr_automation.fallback]` local-model review/triage path runs on a self-hosted
+The `[pr_automation.fallback]` local-model review/triage path — on by default, but
+scheduled only while the sovereign heartbeat is fresh — runs on a self-hosted
 runner rather than a GitHub-hosted one, so it sits outside the credential-free ephemeral
 Git context described above by design: it holds no repository secret at all
 (`permissions: contents: read`), never checks out PR source, and reaches only a local

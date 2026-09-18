@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from vibey_gh import sovereign
 from vibey_gh.cli import main
-from vibey_gh.config import PrAutomationFallbackConfig
+from vibey_gh.config import IssueAutomationConfig, PrAutomationFallbackConfig, load_config
 from vibey_gh.sovereign import beat, probe
 
 REF = "refs/vibey-gh/sovereign-heartbeat"
@@ -159,6 +161,23 @@ def test_the_sovereign_lane_is_available_by_default_now(monkeypatch):
     scheduling — a repository with no heartbeat simply never offers the lane."""
     assert PrAutomationFallbackConfig().enabled is True
     assert PrAutomationFallbackConfig().heartbeat_max_age_minutes == 15
+
+
+def test_the_documented_fallback_defaults_are_the_code_defaults(tmp_path):
+    """#277 turned BOTH local fallbacks on; the issue path's config comment and its
+    configuration.md row went on saying "off by default" (#264). The dataclass and the
+    loader spell the default separately, so both are asserted, and so is the docs row."""
+    issue_default = IssueAutomationConfig().fallback_enabled
+    assert issue_default is True
+    assert load_config(tmp_path).issue_automation.fallback_enabled is issue_default
+    docs = Path(__file__).resolve().parent.parent / "docs" / "configuration.md"
+    lines = docs.read_text(encoding="utf-8").splitlines()
+    issue_row = next(line for line in lines if line.startswith("| `fallback_enabled` |"))
+    pr_row = next(
+        line for line in lines if line.startswith("| `enabled` |") and "fallback job" in line
+    )
+    for row in (issue_row, pr_row):
+        assert row.split("|")[2].strip() == "boolean / `true`", row
 
 
 @pytest.mark.parametrize(

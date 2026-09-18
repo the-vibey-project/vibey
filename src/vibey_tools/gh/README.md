@@ -286,8 +286,10 @@ replay rejection survives CLI process restarts and concurrent receivers. Deploym
 place `VIBEY_GH_WEBHOOK_STATE_DIR` on durable, access-controlled storage and retain the raw
 request bytes for HMAC verification; see [the CLI and adapter reference](docs/cli.md).
 
-The opt-in local-model review/triage fallback runs on a self-hosted runner, which GitHub
-itself warns against exposing to public-repository pull requests. `trusted_only` (default
+The local-model review/triage fallback runs on a self-hosted runner, which GitHub itself
+warns against exposing to public-repository pull requests. It is on by default
+(sub-doctrine 8.a) but scheduled only while the sovereign heartbeat is fresh, so a
+repository that never stands a runner up never offers it work. `trusted_only` (default
 `true`) keeps fork PRs off that runner entirely, and the job holds only `contents: read` —
 no secret, and no token capable of pushing, merging, or mutating the repository. Trusted
 steps use `gh`/`git` to assemble the diff or issue text; only the local model's own
@@ -479,8 +481,9 @@ Repositories must configure `ANTHROPIC_API_KEY`; `AUTOMERGE_TOKEN` is required w
 default Actions token cannot push or merge through the repository ruleset. Installation
 does not create either secret.
 
-A repository that sets `[pr_automation.fallback].enabled = true` gets one more line of
-defense before that gate fails outright: when the primary review returns no verdict at
+With `[pr_automation.fallback].enabled` (on by default) and a live local lane, a
+repository gets one more line of defense before that gate fails outright: when the
+primary review returns no verdict at
 all, a `review-fallback` job sends the diff to a local Ollama model on a self-hosted
 `vibey-local-gh`-labelled runner (never for a fork PR unless `trusted_only = false`) and
 runs `vibey-gh local-review`. A clean local verdict passes the gate under the honestly

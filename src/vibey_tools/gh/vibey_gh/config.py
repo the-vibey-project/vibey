@@ -581,7 +581,9 @@ class IssueAutomationConfig:
     retain_schedule_backstop: bool = True
     # Post a bounded local-model triage comment when the paid solve produced nothing —
     # the issue path's counterpart to [pr_automation.fallback], sharing its runner, model
-    # and limits. Off by default: it needs that self-hosted runner to exist.
+    # and limits. On by default per sub-doctrine 8.a (#277): the sovereign path is the
+    # preference, not the opt-in. A repository with no runner loses nothing, because the
+    # job is scheduled only while the sovereign heartbeat is fresh, not on this flag alone.
     fallback_enabled: bool = True
 
     def __post_init__(self) -> None:

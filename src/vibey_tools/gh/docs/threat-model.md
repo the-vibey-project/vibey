@@ -132,7 +132,7 @@ review but never deletes a permanent branch. This trades the semantic review ste
 administrator's explicit authorization plus the same independent deterministic gates,
 scoped to the one case those gates cannot otherwise unblock.
 
-The opt-in local-model review fallback introduces a distinct asset and a distinct
+The local-model review fallback (on by default) introduces a distinct asset and a distinct
 boundary: a repository-provided `[self-hosted, vibey-local-gh]` runner, rather than a
 GitHub-hosted one, that GitHub itself warns should almost never serve a public repository
 because any accountholder can open a pull request against it. The `trusted_only` setting

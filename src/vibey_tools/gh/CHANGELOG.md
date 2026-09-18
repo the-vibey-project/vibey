@@ -7,6 +7,7 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 - Fix `vibey-gh install` crashing with `FileNotFoundError`, after it had written every file, when `gh` is not on PATH; `installation_notices()` now reports `gh not found; skipping secret/permission checks` (#264).
 - Add `vibey_gh/__main__.py`, so `python -m vibey_gh` runs the same CLI as the `vibey-gh` script instead of failing with `No module named vibey_gh.__main__` (#264).
+- Correct `[issue_automation] fallback_enabled` in `docs/configuration.md` and its `config.py` comment: the default has been `true` since #277 (sub-doctrine 8.a), not `false`; the README, security and threat-model pages also stop calling the heartbeat-gated fallback "opt-in", and a test pins the documented defaults to the code (#264).
 - Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
   workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The
   "Restore the other release channel" step had grown to a single 509-line script, and
