@@ -30,12 +30,38 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Features
+
+* **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
+  pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
+  ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
+  that left it, ordered by `seq`, the wall-clock time between them, and what the visit spent
+  by the budget brake's own rule, now published in the domain as `LedgerSpendRule`. Visits
+  roll up per `(cycle, phase)`, because a phase can be visited twice in one cycle. The
+  projection predicts nothing, and it never passes a guess off as a measurement. An open
+  visit has no duration. A visit whose recorded clocks run backwards is clamped to zero and
+  flagged `clock_skewed`. A visit whose entry the range never saw is flagged too. Only a
+  visit that is none of these counts as `measured`. Spend that no visit can own is reported
+  as `unattributed` instead of being dropped. There is no turn count: engine translation
+  writes more than one `TurnCompleted` per real turn, so the projection reports
+  `turn_completed_events` with a caveat beside it
 ### Bug Fixes
 
 * **engines:** vibey read claudeloop's capacity only as a `{"state": …}` mapping, but
   claudeloop writes the class name (`"capacity": "CreditsExhausted"`), so every real
   claudeloop capacity payload classified as `Available`. Both shapes are read now, and
   `BackendMisconfigured` is terminal (`AuthenticationFailed`), never credits (#236)
+* **gh:** a mention on a pull request can now reach the "act" path at all. `vibey-gh
+  conversation` decided pull-request-ness from `isPullRequest`, a field `gh issue view` does
+  not serve (it rejects it), so every thread read as an issue and a trusted request was
+  never allowed to change a file. It is now read from the thread's `url` (`.../pull/N`), in
+  one place, `ConversationThread.is_pull_request` (#145)
+* **gh:** a mention in an inline pull-request review comment is the comment evaluated. Review
+  comments are not in `gh issue view`'s thread, so the command silently fell back to the
+  newest issue-level comment and answered that instead. The ID is now resolved through the
+  pull request review API and checked against the pull request; an ID that names nothing
+  fails the command with a clear message rather than answering a different comment. A review
+  comment's briefing also carries the file, line and diff hunk it was written on (#145)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 * **build:** a capacity rejection during `build.verify`'s diff review now defers the job as capacity instead of being discarded. `run_and_record` reported `capacity_rejected`, but the verify handler never read it and judged the run on its verdict alone — so a reviewer out of capacity either failed as `WORK` (burning an unrefunded attempt, up to the `attempts_exhausted` park, while `RotationRecordingHandler` left the exhausted engine's circuit closed and kept handing it the same job) or, with a completing verdict in the same run, approved the item outright — the non-negotiable "a capacity rejection always outranks a completion claim" broken both ways. It now returns `Defer(capacity=True)` after `capacity_backoff` (a constructor keyword defaulting to 5 minutes, exactly as on `build.implement`), before any repair finding is resolved or any independence waiver is written, and `BuildVerifyHandler` takes a required `clock` ([#215](https://github.com/the-vibey-project/vibey/issues/215))
 * **build:** gate commands now run isolated and bounded. `SubprocessGateRunner` — which runs `build.verify`'s gates and `git diff`, `build.integrate`'s gates and REVIEW's automated checks — handed every command vibey's whole environment minus `GIT_*`, let it inherit the worker's stdin, and waited on `communicate()` with no timeout, so one hung gate held its job's lease for as long as it hung while the heartbeat kept renewing it. Each command now leads a process group of its own and gets `gates.timeout_seconds` (default 1800); one that overruns is killed with its whole group and fails as exit 124, a failing gate for the repair loop rather than an error. A cancelled run (Ctrl-C, event-loop shutdown) kills and reaps its gate before the cancellation propagates, and the reap itself is bounded by `gates.kill_grace_seconds` (default 5), because asyncio's `wait()` never returns while a descendant that escaped the group still holds the pipes. stdin is `/dev/null`, and output that is not UTF-8 is decoded with replacement characters instead of raising. vibey's own Python environment (`VIRTUAL_ENV`, `PYTHONPATH`, `PYTHONHOME`, its venv's `bin` on `PATH`) is stripped with the same `isolate_python_env` engine sessions use, and the running interpreter's prefix counts as a venv only when it is one, so a system-Python install keeps `/usr/bin`. **Behaviour change:** a gate that found a tool only because it was installed beside vibey — the `ruff`, `bandit` or `pytest` of a development checkout's venv, REVIEW's default `ruff check .` included — no longer finds it and fails with exit 127. Install the tool where the project can reach it, or set `gates.isolate_python_env` to `false` in the project's config record. The worker builds one runner from the project's `gates` object, and a malformed one raises when the worker is built ([#212](https://github.com/the-vibey-project/vibey/issues/212))
