@@ -1,6 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """`LedgerSearch` over real Postgres: every criterion in SQL, every value bound."""
 
+import json
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -10,7 +11,13 @@ import pytest
 
 from vibey.application.interfaces import LedgerSearch
 from vibey.domain.engine import EngineId
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
+from vibey.domain.ledger import (
+    EventKind,
+    LedgerEvent,
+    Provenance,
+    UnrecognizedEventKind,
+    digest_event,
+)
 from vibey.domain.ledger_query import (
     SELF_ACTOR,
     Actor,
@@ -252,6 +259,45 @@ async def test_any_of_several_kinds(migrated_pool: asyncpg.Pool, project_id: UUI
     await _seed(migrated_pool, project_id)
     findings = LedgerQuery(kinds=frozenset({EventKind.FINDING_RAISED, EventKind.FINDING_RESOLVED}))
     assert await _seqs(migrated_pool, project_id, findings) == [5, 6]
+
+
+def test_an_unrecognized_kind_is_bound_as_its_exact_text() -> None:
+    """vibey#275: a kind this vibey does not know is searched for as stored."""
+    query = LedgerQuery(
+        kinds=frozenset({EventKind.FINDING_RAISED, UnrecognizedEventKind("FutureKindX")})
+    )
+    statement = LedgerSearchCompiler().compile(uuid4(), query, fetch=2)
+    assert "kind = ANY($2::text[])" in statement.sql
+    assert statement.args[1] == ["FindingRaised", "FutureKindX"]
+
+
+async def test_a_kind_a_newer_vibey_wrote_is_found_and_read_back(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    await _seed(migrated_pool, project_id)
+    payload = {"transcript_ref": "runs/1/t.jsonl"}
+    async with migrated_pool.acquire() as conn:
+        # A newer vibey's appender, through the same SQL function.
+        await conn.execute(
+            "SELECT append_event($1, 1, 'build', 'FutureKindX', NULL, NULL, NULL, $1, "
+            "'agent', $2, $3::jsonb, $4)",
+            project_id,
+            T0 + timedelta(minutes=6),
+            json.dumps(payload),
+            digest_event(payload),
+        )
+
+    everything = await PostgresLedgerSearchRepository(migrated_pool).search(
+        project_id, LedgerQuery()
+    )
+    assert [event.seq for event in everything.events] == [1, 2, 3, 4, 5, 6, 7]
+    assert everything.events[-1].kind == UnrecognizedEventKind("FutureKindX")
+
+    by_kind = LedgerQuery(kinds=frozenset({UnrecognizedEventKind("FutureKindX")}))
+    assert await _seqs(migrated_pool, project_id, by_kind) == [7]
+    # Exact: a case variant is another kind, and finds nothing.
+    other_case = LedgerQuery(kinds=frozenset({UnrecognizedEventKind("futurekindx")}))
+    assert await _seqs(migrated_pool, project_id, other_case) == []
 
 
 async def test_text_is_case_insensitive(migrated_pool: asyncpg.Pool, project_id: UUID) -> None:

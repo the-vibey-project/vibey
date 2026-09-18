@@ -11,6 +11,10 @@ from vibey.domain.interfaces.ledger_chain_interface import (
     ChainVerificationInterface,
     LedgerChainInterface,
 )
+from vibey.domain.interfaces.ledger_interface import (
+    EventKindParserInterface,
+    UnrecognizedEventKindInterface,
+)
 from vibey.domain.interfaces.ledger_query_interface import (
     ActorInterface,
     ActorResolverInterface,
@@ -27,8 +31,10 @@ __all__ = [
     "ChainVerificationInterface",
     "CorrelationIdInterface",
     "DeliveryCorrelationInterface",
+    "EventKindParserInterface",
     "EventKindResolverInterface",
     "LedgerChainInterface",
     "LedgerQueryInterface",
     "LedgerSearchResultInterface",
+    "UnrecognizedEventKindInterface",
 ]

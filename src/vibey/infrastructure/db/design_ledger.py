@@ -7,7 +7,7 @@ from vibey.application.design import DesignEvent
 from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.engine import EngineId
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
-from vibey.domain.ledger import digest_event
+from vibey.domain.ledger import EventKind, digest_event
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
@@ -50,6 +50,13 @@ class PostgresDesignLedger:
         )
 
     async def all_for_project(self, project_id: UUID) -> tuple[DesignEvent, ...]:
+        """The DESIGN-phase events, as the design handlers read them.
+
+        A kind this vibey does not know is left out (vibey#275): no design handler
+        could act on it, and a `DesignEvent` is also what the design handlers
+        append, so it carries only kinds vibey can write. The row itself stays in
+        the ledger and in every full ledger handed on.
+        """
         events = await self._ledger.all_for_project(project_id)
         return tuple(
             DesignEvent(
@@ -59,5 +66,5 @@ class PostgresDesignLedger:
                 payload=event.payload,
             )
             for event in events
-            if event.phase is Phase.DESIGN
+            if event.phase is Phase.DESIGN and isinstance(event.kind, EventKind)
         )

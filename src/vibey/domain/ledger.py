@@ -1,7 +1,18 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The append-only, vendor-neutral event ledger (ADR-0003). This module is
 pure projection logic over an in-memory event sequence -- persistence lives
-in infrastructure/."""
+in infrastructure/.
+
+**Readers are forward compatible; writers are strict (vibey#275).** The ledger is
+shared by every vibey in the fleet, and during a rolling upgrade or after a
+rollback some of them are older than the rows they read. A kind this version has
+no `EventKind` member for is read as an `UnrecognizedEventKind` carrying the
+stored text: kept, never dropped and never raised, so it still reaches every full
+ledger handed on and every digest folded over the range. Every projection here
+matches kinds by identity against `EventKind` members, so an unrecognized kind
+matches none of them and is skipped. Writing stays strict: a draft carries an
+`EventKind`, so vibey can only ever append a kind it knows.
+"""
 
 import hashlib
 import json
@@ -9,9 +20,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
+from typing import Final
 from uuid import UUID
 
 from vibey.domain.engine import EngineId
+from vibey.domain.interfaces.ledger_interface import EventKindParserInterface
 from vibey.domain.phase import Phase
 
 
@@ -41,6 +54,60 @@ class EventKind(StrEnum):
     VISUAL_DESIGN_WAIVED = "VisualDesignWaived"
     DEPLOYMENT_OPTED_IN = "DeploymentOptedIn"
     DEPLOYMENT_DECLINED = "DeploymentDeclined"
+
+
+_KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)
+
+
+@dataclass(frozen=True, slots=True)
+class UnrecognizedEventKind:
+    """A stored event kind this version of vibey has no `EventKind` member for.
+
+    A newer vibey wrote it -- the newer pods of a rolling upgrade, or the release
+    a rollback stepped back from -- or an older one did and a later release
+    retired the kind. Either way the row is real, append-only history. A reader
+    keeps it, so it reaches every full ledger handed on and every range digest;
+    what no reader can do is interpret it, so every projection skips it.
+
+    Never names a known kind: construction refuses one, so a known event can
+    never hide behind this type and slip past an `is EventKind.X` check.
+    """
+
+    value: str
+    """The kind exactly as stored -- the same text a newer vibey would read as its
+    own member's value, so a hash chain or a JSON record built from `.value`
+    comes out identical on both versions."""
+
+    def __post_init__(self) -> None:
+        if self.value in _KNOWN_KIND_VALUES:
+            raise ValueError(
+                f"{self.value!r} is a known event kind; read it as EventKind({self.value!r})"
+            )
+
+    def __str__(self) -> str:
+        return self.value
+
+
+type LedgerEventKind = EventKind | UnrecognizedEventKind
+"""What a stored event's kind reads as: a member this vibey knows, or the text of
+one it does not. Narrow with `isinstance(kind, EventKind)` before using anything
+only a member has (its `name`, `CLOSABLE`, a `Mapping[EventKind, ...]` key)."""
+
+
+class EventKindParser:
+    """Reads a stored kind. Never raises: a value this vibey knows is its
+    `EventKind` member, and anything else is an `UnrecognizedEventKind` carrying
+    the exact text. Matching is exact -- `event.kind` holds a member's value
+    verbatim, so a case variant is not that member, it is another kind."""
+
+    def parse(self, raw: str) -> LedgerEventKind:
+        if raw in _KNOWN_KIND_VALUES:
+            return EventKind(raw)
+        return UnrecognizedEventKind(raw)
+
+
+EVENT_KIND_PARSER: Final[EventKindParserInterface] = EventKindParser()
+"""The parser every ledger reader shares. Stateless, so one instance serves."""
 
 
 CLOSABLE: frozenset[EventKind] = frozenset(
@@ -81,7 +148,7 @@ class LedgerEvent:
     cycle: int
     phase: Phase
     seq: int
-    kind: EventKind
+    kind: LedgerEventKind
     engine_id: EngineId | None
     job_id: UUID | None
     causation_id: UUID | None

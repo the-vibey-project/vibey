@@ -45,5 +45,7 @@ class EventRowMapperInterface(Protocol):
     """Maps one row of the `event` table to the domain's `LedgerEvent`."""
 
     def to_event(self, row: asyncpg.Record) -> LedgerEvent:
-        """Every column, typed; the payload decoded from its JSON text."""
+        """Every column, typed; the payload decoded from its JSON text. A kind
+        this vibey does not know is kept as an `UnrecognizedEventKind`, never
+        raised (vibey#275)."""
         ...

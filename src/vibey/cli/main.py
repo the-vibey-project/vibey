@@ -34,7 +34,7 @@ from vibey.bootstrap import (
     build_visual_worker,
 )
 from vibey.cli.errors import EXIT_USAGE, guard
-from vibey.cli.ledger_search import ledger_search
+from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.domain.config import parse_toml_string
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
@@ -43,7 +43,8 @@ from vibey.domain.errors import (
     UnknownProvider,
     WrongPhase,
 )
-from vibey.domain.ledger import EventKind
+from vibey.domain.ledger import EventKind, LedgerEventKind
+from vibey.domain.ledger_query import EVENT_KINDS, InvalidLedgerQuery
 from vibey.domain.phase import Phase, VisualDecision
 from vibey.domain.spec import (
     AcceptanceCriterion,
@@ -799,6 +800,18 @@ def ledger_show(
     kind: Annotated[str | None, typer.Option("--kind")] = None,
 ) -> None:
     """Show the append-only event ledger history."""
+    # `--kind` reads a label the way `ledger search --kind` does, from the same
+    # resolver: a known kind by value or name, any case; anything else matched
+    # exactly as written, so a kind a newer vibey recorded is still findable
+    # from this one (vibey#275).
+    wanted: LedgerEventKind | None = None
+    if kind is not None:
+        try:
+            wanted = EVENT_KINDS.resolve(kind)
+        except InvalidLedgerQuery as exc:
+            raise typer.BadParameter(str(exc)) from exc
+        for note in PRESENTER.kind_notes((wanted,)):
+            typer.echo(note, err=True)
 
     async def show_events() -> None:
         async with build_app() as resources:
@@ -818,12 +831,8 @@ def ledger_show(
                     if e.phase.value.lower() == phase.lower()
                     or e.phase.name.lower() == phase.lower()
                 )
-            if kind is not None:
-                events = tuple(
-                    e
-                    for e in events
-                    if e.kind.value.lower() == kind.lower() or e.kind.name.lower() == kind.lower()
-                )
+            if wanted is not None:
+                events = tuple(e for e in events if e.kind == wanted)
 
             displayed = events[-limit:] if len(events) > limit else events
             for e in displayed:

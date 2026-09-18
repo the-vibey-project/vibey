@@ -44,7 +44,7 @@ with payloads.
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
 | `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `ledger search`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `ledger search` with an unknown `--actor` or `--kind`, a `--digest` that is not a full hex SHA-256, an unreadable `--since`/`--until`, an empty time window, or an empty `--text`. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `ledger show` or `ledger search` with an empty `--kind`; `ledger search` with an unknown `--actor`, a `--digest` that is not a full hex SHA-256, an unreadable `--since`/`--until`, an empty time window, or an empty `--text`. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 
@@ -253,13 +253,13 @@ Bare `vibey ledger` prints help. Subcommands:
 |---|---|---|---|
 | `ledger show [PROJECT_ID]` | `--limit N` / `-n` | `50` | Show the most recent N events (min 1). |
 | | `--phase PHASE` | unset | Filter to one phase, by name or value, case-insensitive (`BUILD`, `deploy_design`). |
-| | `--kind KIND` | unset | Filter to one event kind, by name or value, case-insensitive. |
+| | `--kind KIND` | unset | Filter to one event kind, by name or value, case-insensitive. A kind this vibey does not know is matched exactly as written (see **Kinds from a newer vibey** below). |
 | `ledger search [PROJECT_ID]` | `--id EVENT_ID` | unset | Exactly this record. |
 | | `--digest SHA256` | unset | Every record whose payload has this digest: the full 64-character hex SHA-256, any case. |
 | | `--actor ACTOR` | unset | Who produced it: an engine id (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`), a provenance (`trusted`, `agent`, `untrusted`), or `vibey` for events vibey wrote on its own account. Case-insensitive. |
 | | `--since TIME` | unset | Produced at or after this ISO-8601 date or time (inclusive). |
 | | `--until TIME` | unset | Produced before this ISO-8601 date or time (exclusive). |
-| | `--kind KIND` (repeatable) | unset | Any of these kinds, each by name or value, case-insensitive. |
+| | `--kind KIND` (repeatable) | unset | Any of these kinds, each by name or value, case-insensitive. A kind this vibey does not know is matched exactly as written (see **Kinds from a newer vibey** below). |
 | | `--text TEXT` | unset | Appears in the payload, literally and case-insensitively. |
 | | `--limit N` / `-n` | `50` | At most N events, the most recent matches (min 1). |
 | | `--json` | off | Print the result as JSON instead. |
@@ -295,6 +295,15 @@ search or raise --limit`. `--json` prints `{"project_id", "truncated",
   project. An unknown `PROJECT_ID` prints `unknown project <id>` and exits 1.
 - **Checked first.** Every option is validated before a connection is
   opened, so bad input exits 2 even when the database is unreachable.
+- **Kinds from a newer vibey.** During a rolling upgrade, or after a
+  rollback, the ledger can hold event kinds this version has never heard of.
+  `show` and `search` list them under their stored name, like any other
+  event (vibey#275). A `--kind` that names no kind this vibey knows is
+  searched for exactly as written -- surrounding spaces dropped, case kept --
+  and each command prints `note: '<kind>' is not an event kind this vibey
+  knows; matching it exactly as written ...` to stderr, so a typo that finds
+  nothing is visible, and `--json` stdout stays one document. An empty
+  `--kind` exits 2.
 
 ## `vibey deploy`
 

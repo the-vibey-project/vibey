@@ -12,7 +12,14 @@ from uuid import UUID
 import asyncpg
 
 from vibey.domain.engine import EngineId
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
+from vibey.domain.interfaces.ledger_interface import EventKindParserInterface
+from vibey.domain.ledger import (
+    EVENT_KIND_PARSER,
+    EventKind,
+    LedgerEvent,
+    Provenance,
+    digest_event,
+)
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.interfaces import EventAppenderInterface, EventRowMapperInterface
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
@@ -25,7 +32,15 @@ class EventRowMapper:
     A class of its own so every reader of the table -- this repository, the
     appender, the search repository -- maps a row one way. Two copies of the
     mapping would drift the first time a column was added to one of them.
+
+    The `kind` column is read forward-compatibly (vibey#275): a kind a newer vibey
+    wrote comes back as an `UnrecognizedEventKind`, never a `ValueError`. One row
+    this version predates must not make a project's whole ledger unreadable to
+    every older worker in a rolling upgrade.
     """
+
+    def __init__(self, kinds: EventKindParserInterface = EVENT_KIND_PARSER) -> None:
+        self._kinds = kinds
 
     def to_event(self, row: asyncpg.Record) -> LedgerEvent:
         return LedgerEvent(
@@ -34,7 +49,7 @@ class EventRowMapper:
             cycle=row["cycle"],
             phase=Phase(row["phase"]),
             seq=row["seq"],
-            kind=EventKind(row["kind"]),
+            kind=self._kinds.parse(row["kind"]),
             engine_id=EngineId(row["engine_id"]) if row["engine_id"] is not None else None,
             job_id=row["job_id"],
             causation_id=row["causation_id"],
@@ -160,21 +175,33 @@ class PostgresLedgerRepository:
 
 def to_drafts(events: Sequence[LedgerEvent]) -> tuple[LedgerEventDraft, ...]:
     """Round-trips persisted events back into drafts, for tests that need
-    to re-append a fixture range."""
-    return tuple(
-        LedgerEventDraft(
-            project_id=e.project_id,
-            cycle=e.cycle,
-            phase=e.phase,
-            kind=e.kind,
-            engine_id=e.engine_id,
-            job_id=e.job_id,
-            causation_id=e.causation_id,
-            correlation_id=e.correlation_id,
-            provenance=e.provenance,
-            produced_at=e.produced_at,
-            payload=dict(e.payload),
-            digest=e.digest,
+    to re-append a fixture range.
+
+    Raises `ValueError` for an event whose kind this vibey does not know:
+    re-appending it would be vibey writing a kind it cannot vouch for, and
+    writers stay strict (vibey#275).
+    """
+    drafts: list[LedgerEventDraft] = []
+    for e in events:
+        if not isinstance(e.kind, EventKind):
+            raise ValueError(
+                f"event seq {e.seq} has kind {e.kind.value!r}, which this vibey does not "
+                "know; it reads such an event but never writes one"
+            )
+        drafts.append(
+            LedgerEventDraft(
+                project_id=e.project_id,
+                cycle=e.cycle,
+                phase=e.phase,
+                kind=e.kind,
+                engine_id=e.engine_id,
+                job_id=e.job_id,
+                causation_id=e.causation_id,
+                correlation_id=e.correlation_id,
+                provenance=e.provenance,
+                produced_at=e.produced_at,
+                payload=dict(e.payload),
+                digest=e.digest,
+            )
         )
-        for e in events
-    )
+    return tuple(drafts)

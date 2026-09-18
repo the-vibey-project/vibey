@@ -35,7 +35,13 @@ from vibey.domain.interfaces.ledger_query_interface import (
     ActorResolverInterface,
     EventKindResolverInterface,
 )
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance
+from vibey.domain.ledger import (
+    EventKind,
+    LedgerEvent,
+    LedgerEventKind,
+    Provenance,
+    UnrecognizedEventKind,
+)
 
 DEFAULT_SEARCH_LIMIT: Final = 50
 """How many events a search returns when the searcher does not say. The same
@@ -118,13 +124,34 @@ class ActorResolver:
 
 class EventKindResolver:
     """Resolves a typed kind label -- the value or the enum name, any case --
-    the way `vibey ledger show --kind` has always read one."""
+    the way `vibey ledger show --kind` has always read one.
 
-    def resolve(self, label: str) -> EventKind:
-        needle = label.strip().lower()
+    A label that names no kind this vibey knows is, by default, searched for as
+    written (surrounding whitespace dropped, case kept): an `UnrecognizedEventKind`
+    that matches the stored text exactly. During a rolling upgrade the ledger holds
+    kinds a newer vibey wrote, and an operator on the older CLI must still be able
+    to find them (vibey#275). The cost is that a typo finds nothing instead of
+    failing, so the CLI says out loud which labels it matched literally. A
+    deployment that prefers typos to fail passes `accept_unrecognized=False`
+    (ADR-0018). An empty label is refused either way: it names nothing.
+    """
+
+    def __init__(self, *, accept_unrecognized: bool = True) -> None:
+        self._accept_unrecognized = accept_unrecognized
+
+    @property
+    def accepts_unrecognized(self) -> bool:
+        """Whether a label naming no known kind is searched for as written."""
+        return self._accept_unrecognized
+
+    def resolve(self, label: str) -> LedgerEventKind:
+        written = label.strip()
+        needle = written.lower()
         for kind in EventKind:
             if needle in (kind.value.lower(), kind.name.lower()):
                 return kind
+        if written and self._accept_unrecognized:
+            return UnrecognizedEventKind(written)
         raise InvalidLedgerQuery(
             f"unknown event kind {label!r}: expected one of "
             + ", ".join(k.value for k in EventKind)
@@ -155,7 +182,7 @@ class LedgerQuery:
     actor: ActorInterface | None = None
     since: datetime | None = None
     until: datetime | None = None
-    kinds: frozenset[EventKind] = frozenset()
+    kinds: frozenset[LedgerEventKind] = frozenset()
     text: str | None = None
     limit: int = DEFAULT_SEARCH_LIMIT
 
