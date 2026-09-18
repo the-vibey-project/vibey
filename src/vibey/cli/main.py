@@ -59,6 +59,12 @@ from vibey.infrastructure.engines.claudeloop_process import (
     ClaudeLoopProcess,
     SpendRecorder,
 )
+from vibey.infrastructure.engines.ollama_chat import (
+    DEFAULT_OLLAMA_MODEL,
+    OLLAMA_MODEL_ENV,
+    OLLAMA_URL_ENV,
+    OllamaChatClient,
+)
 from vibey.infrastructure.engines.qwenloop_design import QwenloopDesignProvider
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
@@ -335,7 +341,20 @@ def answer(
     typer.echo(f"answered {gate_id}")
 
 
-async def _work_once(project_id: UUID, provider: str, max_turns: int, max_dollars: float) -> bool:
+# One sentence for both commands' --ollama-model, so `work` and `worker` cannot drift.
+_OLLAMA_MODEL_HELP = (
+    "Local model for --provider qwenloop; ignored by the other providers. Default: "
+    f"${OLLAMA_MODEL_ENV}, else {DEFAULT_OLLAMA_MODEL}. The server is ${OLLAMA_URL_ENV}."
+)
+
+
+async def _work_once(
+    project_id: UUID,
+    provider: str,
+    max_turns: int,
+    max_dollars: float,
+    ollama_model: str | None = None,
+) -> bool:
     async with build_app() as resources:
         project = await resources.projects.get(project_id)
         if project is None:
@@ -371,12 +390,13 @@ async def _work_once(project_id: UUID, provider: str, max_turns: int, max_dollar
         elif provider == "qwenloop":
             # Doctrine 8.a: the sovereign path is the preferred way to run, so it has to
             # be selectable here rather than reachable only through a paid engine.
-            # VIBEY_EVIDENCE_DIR is where the operator leaves reading for the research
-            # stage; without it research refuses rather than inventing a source, and
-            # since synthesis depends on research the phase stops there.
-            evidence = os.environ.get("VIBEY_EVIDENCE_DIR")
-            design_provider = QwenloopDesignProvider(
-                evidence_dir=Path(evidence) if evidence else None
+            # VIBEY_OLLAMA_URL / VIBEY_OLLAMA_MODEL (or --ollama-model) choose the local
+            # server and model. VIBEY_EVIDENCE_DIR is where the operator leaves reading
+            # for the research stage; without it research parks a `research_evidence`
+            # gate rather than inventing a source. `work` runs DESIGN only, so it has no
+            # decomposer to choose -- `worker` does.
+            design_provider = QwenloopDesignProvider.from_environment(
+                os.environ, chat=OllamaChatClient.from_environment(os.environ, model=ollama_model)
             )
         else:
             raise UnknownProvider("provider must be 'scripted', 'claudeloop', or 'qwenloop'")
@@ -395,10 +415,16 @@ def work_once(
     provider: Annotated[str, typer.Option("--provider")] = "scripted",
     max_turns: Annotated[int, typer.Option("--max-turns", min=1)] = 1,
     max_dollars: Annotated[float, typer.Option("--max-dollars", min=0.01, max=10)] = 0.25,
+    ollama_model: Annotated[
+        str | None,
+        typer.Option("--ollama-model", help=_OLLAMA_MODEL_HELP),
+    ] = None,
 ) -> None:
     """Process one ready DESIGN job; live ClaudeLoop use is explicit and capped."""
     with guard():
-        processed = asyncio.run(_work_once(project_id, provider, max_turns, max_dollars))
+        processed = asyncio.run(
+            _work_once(project_id, provider, max_turns, max_dollars, ollama_model)
+        )
     typer.echo("processed one job" if processed else "no ready job")
 
 
@@ -1222,6 +1248,10 @@ def worker(
     ] = "scripted",
     max_turns: Annotated[int, typer.Option("--max-turns", min=1)] = 25,
     max_dollars: Annotated[float, typer.Option("--max-dollars", min=0.01, max=10)] = 2.0,
+    ollama_model: Annotated[
+        str | None,
+        typer.Option("--ollama-model", help=_OLLAMA_MODEL_HELP),
+    ] = None,
     project_opt: Annotated[
         UUID | None,
         typer.Option("--project", help="Project id (default: the latest project)"),
@@ -1376,12 +1406,17 @@ def worker(
             elif provider == "qwenloop":
                 # Doctrine 8.a: the sovereign path is the preferred way to run, so the
                 # long-running worker has to be able to select it too, not just the
-                # one-shot `vibey work`.
-                evidence = os.environ.get("VIBEY_EVIDENCE_DIR")
-                design_provider = QwenloopDesignProvider(
-                    evidence_dir=Path(evidence) if evidence else None
+                # one-shot `vibey work` -- and for DECOMPOSE as well as DESIGN. This used
+                # to hand BUILD's plan to ScriptedWorkPlanProducer, the test fake, whose
+                # items carry no verification commands. One client, so both providers
+                # talk to the same server and model.
+                from vibey.infrastructure.engines.qwenloop_decompose import (
+                    QwenloopWorkPlanProducer,
                 )
-                decomposer = ScriptedWorkPlanProducer()
+
+                chat = OllamaChatClient.from_environment(os.environ, model=ollama_model)
+                design_provider = QwenloopDesignProvider.from_environment(os.environ, chat=chat)
+                decomposer = QwenloopWorkPlanProducer(chat=chat)
             else:
                 design_provider = ScriptedDesignProvider()
                 decomposer = ScriptedWorkPlanProducer()
