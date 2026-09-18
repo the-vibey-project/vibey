@@ -29,6 +29,19 @@ as a boolean, or return a problem string that keeps "could not ask" distinct fro
 there" — each byte-identical to the runner it replaces, with the argv and working directory
 unchanged. The remaining runners move onto it one module at a time.
 
+`vibey_gh.forge_snapshot` is the first module built on the transport from the start, and the
+one that leans on its third answer hardest. `vibey-gh forge-snapshot` reads a repository's
+issues, comments, change requests, reviews, review comments, labels, milestones, releases and
+tags out of the forge into plain JSON Lines the project owns: the forge's JSON verbatim
+inside a forge-neutral envelope, each record sealed over the vibey ledger's canonical form
+and chained to the one before it. It is three classes behind three seams
+(`vibey_gh/interfaces/forge_snapshot_interface.py`), because they change for different
+reasons: a reader per forge (`GithubForgeReader`), a store per destination
+(`JsonlSnapshotStore`; the vibey ledger writer will be another), and the capture that drives
+them and accounts in its manifest for every artifact class, the ones it never captures
+included. It never writes to the forge, and a class the forge could not be asked about is
+recorded as such, never as empty. The schema is in [Forge snapshot](forge-snapshot.md).
+
 When a primary Claude path returns no verdict at all, `vibey_gh.local_review` offers two
 opt-in fallbacks through the same Ollama-compatible endpoint on the same distinct,
 non-privileged self-hosted runner. For pull requests, `local-review` reviews the diff and

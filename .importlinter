@@ -106,6 +106,7 @@ forbidden_modules =
     vibey_gh.fitloop
     vibey_gh.doctor
     vibey_gh.install
+    vibey_gh.forge_snapshot
     vibey_gh.gh_transport
     vibey_gh.github_state
 # The flatten seam names its `FlattenPlan` record under `TYPE_CHECKING`, so at runtime it

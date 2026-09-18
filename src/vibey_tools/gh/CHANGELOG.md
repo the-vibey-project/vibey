@@ -5,6 +5,27 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Add `vibey-gh forge-snapshot`, slice S1 of vibey#136: a read-only capture of a GitHub
+  repository's issues, issue comments, pull requests (class `change-request`), reviews,
+  review comments, labels, milestones, releases with their asset manifests, and tags, into
+  `--out DIR` as one append-only JSON Lines file per class. Every record is the forge's JSON
+  verbatim inside a `vibey.forge-record/1` envelope (forge, repository, neutral class, native
+  class, native id, `captured_at`), with a `payload_sha256` content digest and a `sha256`
+  seal over the rest of the record, both over the vibey ledger's canonical form, and `prev`
+  linking it to the record before it in its file. `DIR/manifest.json`
+  (`vibey.forge-manifest/1`) records each class's status (`captured`, `could-not-look`,
+  `not-selected`), counts, chain head and cursor, a `resume_since`, and an `excluded` list
+  naming every artifact class not captured, with its reason — 33 of them, from timeline
+  events and review-thread resolution to secrets, which the forge never returns. Built on
+  `GhTransport.survey`, so a class the forge could not be asked about keeps its file and its
+  cursor and is never written as empty; the command then exits 1. Listings use
+  `gh api --paginate --slurp` (GitHub CLI 2.48+); pull requests, which GitHub cannot filter
+  by `since`, are paged newest-update-first and the walk stops at the cursor. `--since
+  resume` continues every chain from the manifest's resume point, and content already
+  recorded is counted as unchanged rather than written again, so a rerun appends nothing.
+  Three classes behind three seams in `vibey_gh/interfaces/forge_snapshot_interface.py`:
+  `GithubForgeReader`, `JsonlSnapshotStore` and `ForgeSnapshot`. Registered as a capability
+  on every surface. Documented in `docs/forge-snapshot.md`.
 - Add `vibey_gh.gh_transport.GhTransport`, the one seam for running `gh`, declared in
   `vibey_gh/interfaces/gh_transport_interface.py`. The package had grown seven private
   runners that disagree about what a failure is, so rather than a fourth answer it offers
