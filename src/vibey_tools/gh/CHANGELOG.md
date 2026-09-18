@@ -5,6 +5,29 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Fix the managed `commit-msg` hook, which ignored a refusal from the project's own chained
+  `commit-msg.local`. It chained with `[ -x … ] && "…"` and runs without `set -e`, so the
+  failing status was dropped and the commit went ahead. It now exits with that status.
+  `pre-push` already propagated its chain's status through `set -e`; it now also says so
+  with `|| exit $?`. Tests commit through a real `git` against an adopter whose own hook
+  exits 1, and check the exact status under both `sh` and `bash`.
+- Fix the `Provenance` workflow's promotion shortcut, which skips the per-commit trailer
+  audit. It matched branch names alone, so a fork pull request from a branch named like the
+  integration branch into the release branch skipped the audit of its commits. It now also
+  requires the pull request's head repository to be this repository. The two names reach
+  the script through `env:` (`HEAD_REPO`, `THIS_REPO`), never as inline expressions. A test
+  runs the rendered step against same-repository, fork, deleted-fork, topic-branch and push
+  events.
+- Harden the managed hooks so no `python3` they start imports from the working tree. `-c`
+  and `-m` put the current directory first on `sys.path`, so a checked-out branch carrying
+  its own `vibey_gh/` package would have been imported and executed by the hook. Every
+  invocation now carries `PYTHONSAFEPATH=1`. A declared `[install] self_source` still runs
+  because it arrives on `PYTHONPATH`, and tests prove it for a planted package, a monorepo
+  tenant, a standalone repository and this repository's own layout. The
+  `.venv/bin/vibey-gh` and `venv/bin/vibey-gh` lookups stay, for the non-activated
+  virtualenv case.
+- These change the rendered hooks and `provenance.yml`. Adopters see them "out of date"
+  until they re-render with `vibey-gh install`.
 - Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
   workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The
   "Restore the other release channel" step had grown to a single 509-line script, and

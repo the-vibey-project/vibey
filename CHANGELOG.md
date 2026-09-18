@@ -32,6 +32,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **gh:** the managed `commit-msg` hook now carries a refusal from the project's own chained `commit-msg.local` out as its exit status. It chained with `[ -x … ] && "…"` and runs without `set -e`, so a project hook that rejected the message was ignored and the commit went ahead. `pre-push` already propagated the status and now says so explicitly with `|| exit $?`
+* **gh:** the `Provenance` workflow takes its promotion shortcut, which skips the per-commit trailer audit, only when the pull request's head repository is this repository. It had matched branch names alone, so a fork pull request from a branch named like the integration branch into the release branch skipped the audit of its commits. The head repository reaches the script through `env:` as `HEAD_REPO`/`THIS_REPO`, never inline
+* **gh:** every `python3` the managed hooks start runs with `PYTHONSAFEPATH=1`, so the top of the working tree is never on the import path and a checked-out branch's own `vibey_gh/` package is not imported and executed in place of the tool. A declared `[install] self_source` still runs, through `PYTHONPATH`. These three change the rendered hooks and `provenance.yml`: adopters see them "out of date" until they re-render with `vibey-gh install`
+
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
 
 ## [0.8.0] (2026-09-16)

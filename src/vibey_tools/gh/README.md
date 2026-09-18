@@ -344,7 +344,8 @@ existing `.gitattributes` is appended to, never rewritten.
 `install` writes the git hooks and workflow files into your repository and points
 `core.hooksPath` at them. A hook you already have is moved aside to `<name>.local` and
 chained, never discarded — adopting this should not silently drop checks somebody thought
-were important.
+were important. When that hook refuses, the managed hook exits with its status, so the
+commit or push is refused too.
 
 ## What it does
 

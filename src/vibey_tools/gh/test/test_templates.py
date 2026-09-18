@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import os
 import re
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -28,9 +30,12 @@ from vibey_gh.config import (
 from vibey_gh.install import (
     FALLBACK_DISTRIBUTION,
     FALLBACK_INSTALL,
+    HOOKS_DIR,
     TEMPLATES,
     WORKFLOWS,
+    install,
     installed,
+    render_hook,
     render_workflow,
 )
 
@@ -1429,6 +1434,293 @@ def test_a_repository_that_is_vibey_gh_runs_its_own_working_tree(hook):
     assert '[ -d "$dir/vibey_gh" ]' in text
 
 
+# What the hooks DO when they run, not only what they say. Each test below drives the
+# rendered hook as a real shell script, in an environment with nothing ambient in it.
+
+
+def _stub(bin_dir: Path, name: str, body: str) -> None:
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    path = bin_dir / name
+    path.write_text("#!/bin/sh\n" + body, encoding="utf-8")
+    path.chmod(0o755)
+
+
+def _isolated_env(tmp_path: Path, bin_dir: Path, *, git: bool = False) -> dict[str, str]:
+    """No virtualenv, no PYTHONPATH, no git config, and only `bin_dir` ahead of the system.
+
+    A developer's own PATH usually carries a `vibey-gh` (this repository's virtualenv, a
+    pipx install), which a hook finds first -- and which would make a test about how the
+    hook resolves the tool pass for the wrong reason. Git's directory is added only for the
+    tests that commit, and always behind the stubs.
+    """
+    import shutil
+
+    path = [str(bin_dir)]
+    if git:
+        found = shutil.which("git")
+        assert found, "git is required to exercise the hooks"
+        path.append(os.path.dirname(found))
+    home = tmp_path / "home"
+    home.mkdir(exist_ok=True)
+    return {
+        "PATH": os.pathsep.join([*path, "/usr/bin", "/bin"]),
+        "HOME": str(home),
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@example.com",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@example.com",
+    }
+
+
+def _python3(bin_dir: Path, *flags: str) -> None:
+    """`python3` on the isolated PATH: this interpreter, which has vibey_gh installed."""
+    _stub(bin_dir, "python3", f'exec "{sys.executable}" {" ".join(flags)} "$@"\n')
+
+
+def _hook_functions(hook: str, root: Path) -> str:
+    """`vibey_gh_self` and `vibey_gh`, exactly as the rendered hook carries them."""
+    text = render_hook(TEMPLATES / hook, GhConfig(root=root))
+    start = text.index("vibey_gh_self() {")
+    resolver = text.index("\nvibey_gh() {", start)
+    return text[start : text.index("\n}\n", resolver) + 3]
+
+
+def _resolve(hook: str, root: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    """Ask the hook's own resolver for the trailer key, from the top of `root`."""
+    script = "set -eu\n" + _hook_functions(hook, root) + "\nvibey_gh trailer-key\n"
+    return subprocess.run(
+        ["sh", "-c", script], cwd=root, env=env, capture_output=True, text=True, check=False
+    )
+
+
+def _plant(root: Path, marker: Path) -> None:
+    """A `vibey_gh` package in a working tree that records it was imported."""
+    package = root / "vibey_gh"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text(
+        f"import pathlib\npathlib.Path({str(marker)!r}).write_text('imported')\n",
+        encoding="utf-8",
+    )
+    (package / "cli.py").write_text("print('planted')\n", encoding="utf-8")
+
+
+def _stand_in_tool(root: Path, answer: str) -> None:
+    """A vibey-gh source tree whose CLI prints `answer` and its arguments."""
+    (root / "vibey_gh").mkdir(parents=True)
+    (root / "pyproject.toml").write_text('name = "vibey-gh"\n', encoding="utf-8")
+    (root / "vibey_gh" / "__init__.py").write_text("", encoding="utf-8")
+    (root / "vibey_gh" / "cli.py").write_text(
+        f"import sys\nprint({answer!r}, *sys.argv[1:])\n", encoding="utf-8"
+    )
+
+
+# An optional keyword, any assignment prefix, then the interpreter itself.
+_PYTHON3_COMMAND = re.compile(
+    r"^(?:(?:if|elif|then|else|!)\s+)?((?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*)python3\b"
+)
+
+
+def _python3_commands(hook_text: str) -> list[str]:
+    """Every simple command in a hook that runs `python3`, with continuations joined."""
+    commands = []
+    for line in hook_text.replace("\\\n", " ").splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        code = line.split(" # ", 1)[0]
+        for command in re.split(r"&&|\|\||;|\|", code):
+            if re.search(r"\bpython3\b", command):
+                commands.append(" ".join(command.split()))
+    return commands
+
+
+@pytest.mark.parametrize("hook", ["pre-push", "commit-msg"])
+def test_every_python3_the_hook_runs_ignores_the_working_directory(hook, tmp_path):
+    """PYTHONSAFEPATH=1 on each `python3`, as an assignment on that very command.
+
+    `python3 -c` and `python3 -m` put the current directory first on sys.path, and a hook
+    runs from the top of the working tree -- whatever branch is checked out. Each
+    invocation carries the variable itself: an `export` would also reach the project's
+    `.local` hook and every tool that runs, which is not this hook's to change.
+    """
+    commands = _python3_commands(render_hook(TEMPLATES / hook, GhConfig(root=tmp_path)))
+    # Three import probes and the three runs they guard: self-hosted, installed, and the
+    # pre-split layout. A count that drops means the parse stopped seeing them.
+    assert len(commands) == 6, commands
+    for command in commands:
+        match = _PYTHON3_COMMAND.match(command)
+        assert match, f"python3 is not the command here: {command}"
+        assert "PYTHONSAFEPATH=1" in match.group(1).split(), command
+
+
+@pytest.mark.parametrize("hook", ["pre-push", "commit-msg"])
+def test_the_hook_never_imports_a_vibey_gh_from_the_working_tree(hook, tmp_path):
+    """The installed case: a branch's own `vibey_gh/` must not be what the hook executes."""
+    repo = tmp_path / "repo"
+    marker = tmp_path / "planted-was-imported"
+    _plant(repo, marker)
+    bin_dir = tmp_path / "bin"
+    _python3(bin_dir)
+    env = _isolated_env(tmp_path, bin_dir)
+
+    # The plant is live: the same interpreter without the guard imports it. Without this
+    # the assertion below could pass only because the plant never worked.
+    subprocess.run(
+        [str(bin_dir / "python3"), "-c", "import vibey_gh.cli"],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        check=False,
+    )
+    assert marker.exists()
+    marker.unlink()
+
+    done = _resolve(hook, repo, env)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == GhConfig(root=repo).trailer_key
+    assert not marker.exists(), "the hook imported a vibey_gh package from the working tree"
+
+
+@pytest.mark.parametrize("hook", ["pre-push", "commit-msg"])
+def test_a_self_hosted_hook_still_runs_the_source_it_declares(hook, tmp_path):
+    """PYTHONSAFEPATH drops the working directory, never PYTHONPATH.
+
+    So the declared source still runs -- including `.`, a standalone repository's own
+    root -- and a package planted beside a declared subdirectory no longer shadows it.
+    """
+    bin_dir = tmp_path / "bin"
+    _python3(bin_dir)
+    env = _isolated_env(tmp_path, bin_dir)
+
+    mono = tmp_path / "mono"
+    _stand_in_tool(mono / "tools" / "gh", "declared")
+    (mono / ".vibey-gh.toml").write_text('[install]\nself_source = "tools/gh"\n')
+    marker = tmp_path / "planted-was-imported"
+    _plant(mono, marker)
+    done = _resolve(hook, mono, env)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "declared trailer-key"
+    assert not marker.exists(), "a top-level vibey_gh shadowed the declared source"
+
+    standalone = tmp_path / "standalone"
+    _stand_in_tool(standalone, "standalone")
+    (standalone / ".vibey-gh.toml").write_text("[install]\n")
+    done = _resolve(hook, standalone, env)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "standalone trailer-key"
+
+
+def _repositories_that_host_vibey_gh() -> list[Path]:
+    """This tenant, and the workspace root that declares it when checked out inside one."""
+    tenant = Path(__file__).resolve().parent.parent
+    roots = [tenant]
+    for parent in tenant.parents:
+        if (parent / ".vibey-gh.toml").is_file():
+            roots.append(parent)
+            break
+    return roots
+
+
+@pytest.mark.parametrize("root", _repositories_that_host_vibey_gh(), ids=lambda p: p.name)
+@pytest.mark.parametrize("hook", ["pre-push", "commit-msg"])
+def test_this_repository_s_hooks_still_run_its_own_source(hook, root, tmp_path):
+    """The real package, in this repository's real layout, under PYTHONSAFEPATH.
+
+    `python3 -S` has no site-packages and so no installed vibey_gh: the only way this
+    answers is the self-hosted branch importing the source the configuration declares.
+    """
+    bin_dir = tmp_path / "bin"
+    _python3(bin_dir, "-S")
+    done = _resolve(hook, root, _isolated_env(tmp_path, bin_dir))
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == load_config(root).trailer_key
+
+
+def _adopter_whose_hook_exits(tmp_path: Path, hook: str, status: int) -> tuple[Path, dict]:
+    """An adopting repository whose own `hook` exits `status`, after `vibey-gh install`.
+
+    Installed the way an adopter gets it: the pre-existing hook is moved to `<hook>.local`
+    and the managed hook chains to it. The CLI is a stand-in that answers the trailer
+    queries and passes `check`, which is all either hook asks of it.
+    """
+    repo = tmp_path / "repo"
+    (repo / HOOKS_DIR).mkdir(parents=True)
+    bin_dir = tmp_path / "bin"
+    answers = [
+        'case "$1" in',
+        "  trailer-key) echo Made-With ;;",
+        '  trailer) echo "Made-With: t" ;;',
+        "esac",
+    ]
+    _stub(bin_dir, "vibey-gh", "\n".join(answers) + "\n")
+    env = _isolated_env(tmp_path, bin_dir, git=True)
+    subprocess.run(["git", "init", "-q", "."], cwd=repo, env=env, check=True)
+    (repo / HOOKS_DIR / hook).write_text(f"#!/bin/sh\nexit {status}\n", encoding="utf-8")
+    actions = {a.hook: a.outcome for a in install(GhConfig(root=repo, managed_workflows=()))}
+    assert actions[hook] == "chained"
+    return repo, env
+
+
+@pytest.mark.parametrize("status", [0, 1])
+def test_a_project_commit_msg_hook_that_refuses_the_message_refuses_the_commit(status, tmp_path):
+    """The chain has to carry the status out, because commit-msg runs without `set -e`.
+
+    It once read `[ -x .local ] && .local "$@"`, which discards a failure: a project hook
+    that rejected the message was ignored and the commit went ahead anyway.
+    """
+    repo, env = _adopter_whose_hook_exits(tmp_path, "commit-msg", status)
+    done = subprocess.run(
+        ["git", "commit", "--allow-empty", "-q", "-m", "feat: guarded"],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    head = subprocess.run(
+        ["git", "log", "-1", "--format=%B"],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if status:
+        assert done.returncode != 0, "git accepted a commit the project hook refused"
+        assert head.returncode != 0, "a commit exists although the project hook refused it"
+    else:
+        assert done.returncode == 0, done.stderr
+        assert head.stdout.rstrip().endswith("Made-With: t")
+
+
+@pytest.mark.parametrize("shell", ["sh", "bash"])
+@pytest.mark.parametrize("status", [0, 1, 3])
+@pytest.mark.parametrize("hook", ["commit-msg", "pre-push"])
+def test_the_hook_exits_with_the_project_hook_s_status(hook, status, shell, tmp_path):
+    """Exactly that status, under either shell a hook may meet, on both hooks.
+
+    pre-push already propagated it through `set -e` and being the last line; it now also
+    says so with `|| exit $?`, and this holds it there.
+    """
+    repo, env = _adopter_whose_hook_exits(tmp_path, hook, status)
+    message = repo / "MESSAGE"
+    message.write_text("feat: guarded\n", encoding="utf-8")
+    argv = [str(message)] if hook == "commit-msg" else ["origin", "https://example.invalid/r"]
+    done = subprocess.run(
+        [shell, str(repo / HOOKS_DIR / hook), *argv],
+        cwd=repo,
+        env=env,
+        input="",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == status, done.stderr
+    if hook == "commit-msg" and status:
+        # Refused before anything touched the message.
+        assert message.read_text(encoding="utf-8") == "feat: guarded\n"
+
+
 def test_no_code_token_can_keep_a_colour_meant_for_a_white_page():
     """The gap the contrast test alone could not close.
 
@@ -1897,6 +2189,88 @@ def test_promotion_checks_provenance_without_rewriting_or_reauditing_history():
     assert "Promotion PR: checking repository provenance" in text
     assert "vibey-gh check --ci" in text
     assert 'vibey-gh check --ci --commits "${BASE_SHA}..${HEAD_SHA}"' in text
+
+
+def _provenance_steps(root: Path) -> list[dict]:
+    rendered = render_workflow(WORKFLOWS / "provenance.yml", GhConfig(root=root))
+    return yaml.safe_load(rendered)["jobs"]["provenance"]["steps"]
+
+
+def _check_provenance_step(root: Path) -> dict:
+    (step,) = [s for s in _provenance_steps(root) if s.get("name") == "Check provenance"]
+    return step
+
+
+def test_the_promotion_shortcut_reads_where_the_head_lives_through_env(tmp_path):
+    """Branch names are the contributor's to choose; the head repository is not.
+
+    And the value reaches the script through `env:` only. A `${{ }}` inside `run:` is
+    pasted into the shell source before bash ever sees it, so no expression belongs there.
+    """
+    step = _check_provenance_step(tmp_path)
+    assert step["env"]["HEAD_REPO"] == "${{ github.event.pull_request.head.repo.full_name }}"
+    assert step["env"]["THIS_REPO"] == "${{ github.repository }}"
+    assert '[ "$HEAD_REPO" = "$THIS_REPO" ]' in step["run"]
+    for each in _provenance_steps(tmp_path):
+        assert "${{" not in (each.get("run") or ""), each.get("name")
+
+
+_BASE, _HEAD = "b" * 40, "h" * 40
+_PROMOTION = dict(BASE_REF="main", HEAD_REF="develop", BASE_SHA=_BASE, HEAD_SHA=_HEAD)
+_AUDIT = f"check --ci --commits {_BASE}..{_HEAD}"
+
+
+@pytest.mark.parametrize(
+    ("event", "expected", "promotion"),
+    [
+        pytest.param(
+            {**_PROMOTION, "HEAD_REPO": "owner/project"}, "check --ci", True, id="promotion"
+        ),
+        pytest.param(
+            {**_PROMOTION, "HEAD_REPO": "someone/fork"}, _AUDIT, False, id="fork-named-develop"
+        ),
+        pytest.param({**_PROMOTION, "HEAD_REPO": ""}, _AUDIT, False, id="fork-since-deleted"),
+        pytest.param(
+            {**_PROMOTION, "HEAD_REF": "feat/x", "HEAD_REPO": "owner/project"},
+            _AUDIT,
+            False,
+            id="topic-branch",
+        ),
+        pytest.param({}, "check --ci", False, id="push"),
+    ],
+)
+def test_the_promotion_shortcut_is_taken_only_for_this_repository_s_own_branch(
+    event, expected, promotion, tmp_path
+):
+    """The step's own script, run the way Actions runs it, against each event shape.
+
+    A fork can name its branch after the integration branch and open a pull request into
+    the release branch. By branch names alone that is a promotion, and a promotion skips
+    the per-commit audit -- so the fork's commits would be waved through unexamined.
+    """
+    step = _check_provenance_step(tmp_path)
+    bin_dir = tmp_path / "bin"
+    calls = tmp_path / "calls"
+    _stub(bin_dir, "vibey-gh", f'printf "%s\\n" "$*" >> "{calls}"\n')
+    _stub(bin_dir, "git", "exit 0\n")  # the fetches are best-effort; nothing to reach here
+    env = {"PATH": os.pathsep.join([str(bin_dir), "/usr/bin", "/bin"]), "HOME": str(tmp_path)}
+    # Actions sets every declared variable, to "" where the expression was empty.
+    env |= {name: str(value) for name, value in step["env"].items() if "${{" not in str(value)}
+    for name in ("BASE_SHA", "BASE_REF", "HEAD_REF", "HEAD_SHA", "HEAD_REPO"):
+        env[name] = event.get(name, "")
+    env["THIS_REPO"] = "owner/project"
+
+    done = subprocess.run(
+        ["bash", "-c", step["run"]],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    assert calls.read_text(encoding="utf-8").splitlines() == [expected]
+    assert ("Promotion PR" in done.stdout) is promotion
 
 
 def test_the_provenance_job_carries_no_forge_credential():
