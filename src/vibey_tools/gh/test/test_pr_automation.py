@@ -155,6 +155,46 @@ def test_installation_notices_report_missing_secrets(monkeypatch):
     assert any("ANTHROPIC_API_KEY" in item for item in installation_notices())
 
 
+def test_installation_notices_degrade_when_gh_is_not_installed(monkeypatch):
+    """`install` writes every file BEFORE it asks for notices, so a missing `gh` raising
+    FileNotFoundError here turned a finished install into a traceback and exit 1."""
+
+    def missing(*args, **kwargs):
+        raise FileNotFoundError(2, "No such file or directory", "gh")
+
+    monkeypatch.setattr(subprocess, "run", missing)
+    notices = installation_notices()
+    assert "gh not found; skipping secret/permission checks" in notices
+    assert not any("configure repository secret" in item for item in notices)
+
+
+def test_install_finishes_when_gh_is_not_on_path(tmp_path, monkeypatch, capsys):
+    """The reproduction: `vibey-gh install` on a PATH that reaches git but not `gh`.
+
+    A PATH holding only a link to the real git, rather than a literal `/usr/bin:/bin`:
+    GitHub's Ubuntu runners install `gh` into /usr/bin, where that literal would find it.
+    """
+    import shutil
+
+    from vibey_gh.cli import main
+
+    git = shutil.which("git")
+    assert git, "the suite already needs git on PATH"
+    repo, bin_dir = tmp_path / "repo", tmp_path / "bin"
+    repo.mkdir()
+    bin_dir.mkdir()
+    (bin_dir / "git").symlink_to(git)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / ".vibey-gh.toml").write_text("[install]\nworkflows = []\n")
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("PATH", str(bin_dir))
+    assert shutil.which("gh") is None
+    assert main(["install"]) == 0
+    out = capsys.readouterr().out
+    assert "notice: gh not found; skipping secret/permission checks" in out
+    assert (repo / ".githooks").is_dir()
+
+
 @pytest.mark.parametrize(
     "changes,state,reason",
     [

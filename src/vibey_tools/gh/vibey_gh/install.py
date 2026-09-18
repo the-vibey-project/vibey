@@ -472,9 +472,16 @@ def installation_notices() -> tuple[str, ...]:
     notices = [
         "enable Actions read/write permissions and allow Actions to create pull requests",
     ]
-    run = subprocess.run(
-        ["gh", "secret", "list", "--json", "name"], capture_output=True, text=True, check=False
-    )
+    try:
+        run = subprocess.run(
+            ["gh", "secret", "list", "--json", "name"], capture_output=True, text=True, check=False
+        )
+    except FileNotFoundError:
+        # Best-effort means best-effort: by the time this runs `install` has already
+        # written every hook and workflow, so a missing `gh` escaping here turned a
+        # completed install into a traceback and a nonzero exit.
+        notices.append("gh not found; skipping secret/permission checks")
+        return tuple(notices)
     if run.returncode == 0:
         try:
             present = {str(item["name"]) for item in json.loads(run.stdout)}
