@@ -11,14 +11,14 @@ the shape without depending on ``domain/phase_timing.py``.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from vibey.domain.phase import Phase
-
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from datetime import datetime, timedelta
+
     from vibey.domain.ledger import LedgerEvent
+    from vibey.domain.phase import StoredPhase
 
 
 @runtime_checkable
@@ -64,7 +64,7 @@ class PhaseVisitInterface(Protocol):
     def cycle(self) -> int: ...
 
     @property
-    def phase(self) -> Phase: ...
+    def phase(self) -> StoredPhase: ...
 
     @property
     def entered_seq(self) -> int: ...
@@ -120,7 +120,7 @@ class PhaseTotalInterface(Protocol):
     def cycle(self) -> int: ...
 
     @property
-    def phase(self) -> Phase: ...
+    def phase(self) -> StoredPhase: ...
 
     @property
     def visits(self) -> int: ...
@@ -148,7 +148,7 @@ class UnattributedSpendInterface(Protocol):
     def cycle(self) -> int: ...
 
     @property
-    def phase(self) -> Phase: ...
+    def phase(self) -> StoredPhase: ...
 
     @property
     def spend(self) -> PhaseSpendInterface: ...
