@@ -41,7 +41,7 @@ fast *and* correct. These skills are the reference layer for that.
 /plugin                                    # browse everything
 ```
 
-That one address serves every plugin in the family: these 134 and vibey-gh's four. The
+That one address serves every plugin in the family: these 135 and vibey-gh's four. The
 root manifest is rendered from this tree's own `.claude-plugin/marketplace.json` by
 `vibey-gh marketplace` (vibey ADR-0034), so nothing here is duplicated by hand.
 

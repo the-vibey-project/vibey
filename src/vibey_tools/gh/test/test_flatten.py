@@ -75,6 +75,12 @@ def cfg(work: Path, **kw) -> GhConfig:
     return GhConfig(root=work, **kw)
 
 
+# What the forge says about a branch with no open pull request. A named constant because
+# `pages` hands it back as one page of a walk too: a pull request can close between two
+# calls, and that tail must not read as the whole answer.
+CLOSED: dict[str, Any] = {"data": {"repository": {"pullRequests": {"nodes": []}}}}
+
+
 class Forge:
     """What `gh` would have said -- or how it would have failed, which is also an answer."""
 
@@ -82,28 +88,75 @@ class Forge:
         # The default is a machine with no GitHub CLI on it, which is the honest starting
         # point for a repository the forge has never heard of.
         self.reply: object = FileNotFoundError(2, "No such file or directory", "gh")
+        # One reply per call, for the tests that walk a paginated connection. Empty means
+        # every call gets `reply`, which is what a single-page answer needs.
+        self.replies: list[object] = []
         self.calls: list[tuple[str, ...]] = []
 
     def __call__(self, *args: str) -> Any:
         self.calls.append(args)
-        if isinstance(self.reply, BaseException):
-            raise self.reply
-        return self.reply
+        reply = self.replies.pop(0) if self.replies else self.reply
+        if isinstance(reply, BaseException):
+            raise reply
+        return reply
+
+    @staticmethod
+    def page(
+        threads: Any,
+        *,
+        number: int = 12,
+        after: str = "",
+        more: bool | None = None,
+        pulls: int = 1,
+    ) -> dict[str, Any]:
+        """One page of the thread connection, naming the next cursor when there is one.
+
+        `more` is separate from `after` on purpose. `endCursor` is nullable in the schema,
+        so a forge is allowed to answer "there is another page" and name nowhere to go --
+        and a helper that derived `hasNextPage` from the cursor could not express that page
+        at all, which is precisely why nothing caught the walk reporting it as clean. The
+        default keeps every ordinary page one argument: a cursor means another page.
+
+        `pulls` is the same story one level up. A branch may head more than one open pull
+        request, the query asks for two, and two nodes is the only way to say so.
+        """
+        walked = {
+            "number": number,
+            "reviewThreads": {
+                "pageInfo": {
+                    "hasNextPage": bool(after) if more is None else more,
+                    "endCursor": after or None,
+                },
+                "nodes": list(threads),
+            },
+        }
+        siblings = [
+            {"number": number + extra, "reviewThreads": {"pageInfo": {}, "nodes": []}}
+            for extra in range(1, pulls)
+        ]
+        return {"data": {"repository": {"pullRequests": {"nodes": [walked, *siblings]}}}}
 
     def pull_request(self, *threads: dict[str, Any], number: int = 12) -> None:
-        """One open pull request carrying these review threads."""
-        self.reply = {
-            "data": {
-                "repository": {
-                    "pullRequests": {
-                        "nodes": [{"number": number, "reviewThreads": {"nodes": list(threads)}}]
-                    }
-                }
-            }
-        }
+        """One open pull request carrying these review threads, all on one page."""
+        self.reply = self.page(threads, number=number)
+
+    def pages(self, *pages: Any, number: int = 12) -> None:
+        """One reply per page, each naming the next.
+
+        A page given as a list is a list of threads; given as an exception or a ready-made
+        reply it stands for a page that fails or answers with something else, which is how
+        a walk that stops partway gets tested at all.
+        """
+        self.replies = []
+        for n, page in enumerate(pages, 1):
+            if isinstance(page, (BaseException, dict)):
+                self.replies.append(page)
+                continue
+            after = f"cursor-{n}" if n < len(pages) else ""
+            self.replies.append(self.page(page, number=number, after=after))
 
     def no_pull_request(self) -> None:
-        self.reply = {"data": {"repository": {"pullRequests": {"nodes": []}}}}
+        self.reply = CLOSED
 
 
 def thread(
@@ -322,6 +375,50 @@ def test_the_message_is_the_first_non_merge_commits_without_its_trailers(work):
     assert f"Co-Authored-By: {OLD_ONE}" in plan.message
     assert plan.coauthors == (ALICE, OLD_ONE, BOT)
     assert sha(work, f"refs/heads/{name}") == sha(work)
+
+
+def test_a_merge_commits_own_footers_and_trailers_are_not_dropped(work):
+    """A merge commit has a MESSAGE, and everything in it was being thrown away.
+
+    The range was read with `--no-merges`, and `records` is the only input to `_coauthors`,
+    `_closing_footers`, `_breaking_footers` and `_references` -- so a co-author credited on
+    the merge, an issue it promised to close, a break it declared and an issue it referenced
+    all left the history at once, silently, with the whole-range docstrings still promising
+    otherwise. Resolving a conflict in a merge is exactly when a collaborator gets named.
+
+    Authorship is the one thing a merge still does not carry: MAINTAINER merged and authored
+    nothing, and the plan says so in its two counts.
+    """
+    name = topic(work)
+    commit(work, "feat: the topic's work", author=ALICE, file="a.txt")
+    git(work, "checkout", "-q", "develop")
+    commit(work, "chore: integration moved on", file="c.txt")
+    git(work, "push", "-q", "origin", "develop")
+    git(work, "checkout", "-q", name)
+    git(
+        work,
+        "merge",
+        "--no-ff",
+        "-q",
+        "develop",
+        "-m",
+        "Merge branch 'develop' into feat/thing\n\nWe untangled the conflict together.\n\n"
+        f"Closes #41\n\nBREAKING-CHANGE: the old flag is gone\nCo-Authored-By: {OLD_ONE}",
+    )
+
+    plan, _ = flatten.Flattener().flatten(cfg(work))
+
+    assert plan.range_size == 2 and len(plan.commits) == 1
+    # The subject still comes from the non-merge commit: a merge has none worth reusing,
+    # which is the one thing the narrower list is still read for.
+    assert plan.subject == "feat: the topic's work"
+    assert OLD_ONE in plan.coauthors and f"Co-Authored-By: {OLD_ONE}" in plan.message
+    assert "Closes #41" in plan.message
+    assert "BREAKING-CHANGE: the old flag is gone" in plan.message
+    assert plan.references == ("#41",)
+    # Merging is not authoring, so the merger is credited by neither half.
+    assert MAINTAINER not in plan.coauthors
+    assert ALICE in plan.coauthors
 
 
 def test_a_breaking_change_footer_survives_the_rewrite(work):
@@ -887,6 +984,227 @@ def test_a_thread_whose_every_nullable_field_is_null_is_still_named(work, forge)
     )
 
 
+def test_a_thread_past_the_first_page_is_found_rather_than_reported_as_none(work, forge):
+    """A connection answers with a WINDOW, and a window is not the set.
+
+    `reviewThreads(first:100)` with no walk behind it reported a CLEAN check on a pull
+    request whose 101st thread was the unresolved one: the refusal never fired, the notes
+    said "none unresolved" about a branch that had some, and the rewrite orphaned exactly
+    the thread the check exists to protect. The failure mode is the dangerous one -- it
+    succeeds.
+    """
+    name = topic(work)
+    commit(work, "feat: work", file="x.txt")
+    before = sha(work)
+    forge.pages(
+        [thread(resolved=True) for _ in range(100)],
+        [thread(author="alice", path="late.py", line=101, body="the 101st thread")],
+    )
+
+    with pytest.raises(flatten.FlattenError) as raised:
+        flatten.Flattener().flatten(cfg(work))
+
+    assert f"{name} has 1 unresolved review thread(s) on #12" in str(raised.value)
+    assert "  alice late.py:101 — the 101st thread" in str(raised.value)
+    # Two calls, and the second asks from where the first left off. The first must name no
+    # cursor at all: `$after` is nullable, and an empty string is not null.
+    assert len(forge.calls) == 2
+    assert "after=cursor-1" in forge.calls[1]
+    assert not [argument for argument in forge.calls[0] if argument.startswith("after=")]
+    assert sha(work, f"refs/heads/{name}") == before
+
+
+def test_a_walk_that_stops_partway_is_a_problem_and_still_names_what_it_saw(work, forge):
+    """Half a list is not a clean list, and it is not nothing either.
+
+    The same rule the missing `gh` gets, applied to a walk that dies on page two: the
+    unread remainder is a PROBLEM, so the notes say NOT CHECKED rather than counting the
+    threads in hand as all of them. What was seen is still carried and still refuses --
+    those threads are a known loss, and a known loss outranks an unknown one.
+    """
+    topic(work)
+    commit(work, "feat: work", file="x.txt")
+    seen = flatten.ReviewThread(author="alice", path="a.py", line="3", excerpt="page one")
+
+    def arm() -> None:
+        forge.pages(
+            [thread(author="alice", path="a.py", line=3, body="page one")],
+            RuntimeError("gh api graphql: HTTP 502"),
+        )
+
+    arm()
+    plan, notes = flatten.Flattener().flatten(cfg(work), orphan_comments=True, dry_run=True)
+
+    assert plan.pull_request == 12 and plan.threads == (seen,)
+    assert plan.threads_problem == "`gh api graphql` failed: gh api graphql: HTTP 502"
+    assert [note for note in notes if note.startswith("review threads: NOT CHECKED")]
+    assert "orphaning 1 unresolved review thread(s) on #12:" in notes
+    assert "  alice a.py:3 — page one" in notes
+
+    arm()
+    with pytest.raises(flatten.FlattenError, match="1 unresolved review thread"):
+        flatten.Flattener().flatten(cfg(work))
+
+
+def test_a_graphql_errors_payload_is_not_read_as_having_no_pull_request(work, forge):
+    """HTTP 200 carrying an `errors` array is a FAILED query, not an empty repository.
+
+    GraphQL reports field-level failure in `errors` and leaves `data` partial or null. Read
+    past it and `repository` is `{}`, `pulls` is `[]`, and the walk returns the clean "there
+    is no open pull request" answer -- the friendliest possible result, produced by a
+    question that was never answered. The flatten then proceeds with no thread check having
+    happened and says nothing about it.
+    """
+    topic(work)
+    commit(work, "feat: work", file="x.txt")
+    forge.reply = {
+        "data": None,
+        "errors": [{"message": "Something went wrong while executing your query."}],
+    }
+
+    plan, notes = flatten.Flattener().flatten(cfg(work), dry_run=True)
+
+    assert plan.threads_problem == (
+        "`gh api graphql` returned errors: Something went wrong while executing your query."
+    )
+    assert [note for note in notes if note.startswith("review threads: NOT CHECKED")]
+    assert not [note for note in notes if "none unresolved" in note]
+
+
+def test_a_page_without_pageinfo_is_not_read_as_a_finished_walk(work, forge):
+    """A walk is not finished by a field that never arrived.
+
+    `pageInfo` absent made `hasNextPage` falsy under `or {}`, which fell into the completion
+    branch and returned the empty problem string -- the sentence reserved for a walk that
+    DID end. The notes then say "none unresolved" about a connection that never claimed to
+    have ended, which is the fifth place in this one function where absent evidence was read
+    as evidence of absence.
+    """
+    topic(work)
+    commit(work, "feat: work", file="x.txt")
+    forge.reply = {
+        "data": {
+            "repository": {
+                "pullRequests": {
+                    "nodes": [{"number": 12, "reviewThreads": {"nodes": []}}],
+                }
+            }
+        }
+    }
+
+    plan, notes = flatten.Flattener().flatten(cfg(work), dry_run=True)
+
+    assert plan.threads_problem == "#12 answered without pageInfo"
+    assert [note for note in notes if note.startswith("review threads: NOT CHECKED")]
+    assert not [note for note in notes if "none unresolved" in note]
+
+
+def test_a_pull_request_that_stops_answering_midwalk_is_not_read_as_having_none(work, forge):
+    """An empty tail is not the end of a clean list.
+
+    The forge handed back page one of #12's threads and then said the branch has no open
+    pull request -- merged mid-walk, or a cursor that went bad. Reading that as the
+    no-pull-request ANSWER would turn a half-read list into "nothing is anchored here",
+    which is the same silence this whole seam exists to refuse.
+    """
+    topic(work)
+    commit(work, "feat: work", file="x.txt")
+    forge.pages([thread(author="alice", path="a.py", line=3, body="still open")], CLOSED)
+
+    plan, notes = flatten.Flattener().flatten(cfg(work), orphan_comments=True, dry_run=True)
+
+    assert plan.pull_request == 12
+    assert plan.threads_problem == "#12 stopped listing its review threads"
+    assert plan.threads == (
+        flatten.ReviewThread(author="alice", path="a.py", line="3", excerpt="still open"),
+    )
+    assert "review threads: none — the branch has no open pull request" not in notes
+
+
+def test_a_next_page_with_no_cursor_is_a_check_that_did_not_finish(work, forge):
+    """Being told there is more and being told where are two facts, not one.
+
+    `endCursor` is nullable in the Cursor Connections spec, so `hasNextPage: true` with a
+    null cursor is a shape the API is allowed to hand back: the forge says the list goes on
+    and names nowhere to go. Folded into one condition with `hasNextPage` being false, it
+    returned the EMPTY problem string -- the codebase's spelling of "checked, fine" -- so a
+    pull request whose unresolved thread sat on the page nobody could reach printed "review
+    threads on #12: none unresolved" and the rewrite went ahead.
+
+    The page here is deliberately all-resolved, because that is the trap: nothing refuses,
+    nothing is listed, and the only thing standing between the operator and a silent orphan
+    is whether the sentence says NOT CHECKED.
+    """
+    topic(work)
+    commit(work, "feat: work", file="x.txt")
+    forge.reply = Forge.page([thread(resolved=True)], more=True)
+
+    plan, notes = flatten.Flattener().flatten(cfg(work), dry_run=True)
+
+    assert len(forge.calls) == 1
+    assert plan.threads_problem == "#12 stopped listing its review threads"
+    assert any(note.startswith("review threads: NOT CHECKED") for note in notes)
+    assert "review threads on #12: none unresolved" not in notes
+
+
+def test_a_branch_with_a_second_open_pull_request_is_a_partial_check(work, forge):
+    """One branch, two open pull requests -- which GitHub allows whenever the bases differ.
+
+    `pullRequests(first:1)` took the first node and the whole seam then spoke as though it
+    were the branch's: the field is named in the singular, `_collateral` says "the branch has
+    no open pull request", and an empty `threads_problem` declares the check complete. The
+    second pull request's unresolved threads were never fetched, never refused on and never
+    mentioned. Asking for two does not walk the second -- a second connection needs a second
+    cursor -- but it makes the partial answer say that it is partial, which is the rule the
+    rest of this seam holds to.
+    """
+    topic(work)
+    commit(work, "feat: work", file="x.txt")
+    forge.reply = Forge.page([thread(author="alice", path="a.py", line=3, body="open")], pulls=2)
+
+    plan, notes = flatten.Flattener().flatten(cfg(work), orphan_comments=True, dry_run=True)
+
+    assert plan.pull_request == 12
+    problem = "feat/thing heads more than one open pull request; only #12's threads were read"
+    assert plan.threads_problem == problem
+    assert any(note.startswith("review threads: NOT CHECKED") for note in notes)
+    # What WAS read is still carried and still listed: a known loss refuses on its own, and
+    # the sentence above is what says the rest is unknown.
+    assert plan.threads == (
+        flatten.ReviewThread(author="alice", path="a.py", line="3", excerpt="open"),
+    )
+
+
+def test_a_connection_that_never_ends_is_reported_rather_than_walked_forever(work, forge):
+    """The cursor comes from the other end of a network, so the walk is bounded.
+
+    A connection that keeps saying `hasNextPage` would hang the flatten, and a hang is the
+    one failure nobody ever gets a sentence about. The cap stops the walk and says what it
+    could not read, which is the same honest degradation every other unread answer gets.
+    """
+    topic(work)
+    commit(work, "feat: work", file="x.txt")
+    forge.pages(
+        *[
+            [thread(author="alice", path="a.py", line=number)]
+            for number in range(1, flatten._THREAD_PAGES + 2)
+        ]
+    )
+
+    plan, _ = flatten.Flattener().flatten(cfg(work), orphan_comments=True, dry_run=True)
+
+    assert len(forge.calls) == flatten._THREAD_PAGES
+    assert len(plan.threads) == flatten._THREAD_PAGES
+    # The number is what came back, not `pages x per-page`. These pages carry ONE thread
+    # each -- `first:100` is an upper bound a server may under-fill -- so a message inferred
+    # from the page size would say 2000 about a walk that counted twenty, in the one sentence
+    # this seam emits when it admits it could not finish.
+    assert plan.threads_problem == (
+        f"#12 has more than {flatten._THREAD_PAGES} review threads, which is more of them "
+        "than this check reads"
+    )
+
+
 def test_the_issues_and_discussions_the_rewrite_stales_are_reported(work, forge):
     """Reporting, not refusing: nothing can save a timeline entry naming a deleted commit."""
     topic(work)
@@ -907,6 +1225,40 @@ def test_the_issues_and_discussions_the_rewrite_stales_are_reported(work, forge)
     )
     staled = [note for note in notes if note.startswith("these timelines")]
     assert staled and "#12, the-vibey-project/vibey#7" in staled[0]
+
+
+def test_the_merge_subject_github_writes_is_not_read_as_a_reference(work):
+    """Reading merges for metadata is right; reading git's own boilerplate as a claim is not.
+
+    GitHub's merge commits are literally `Merge pull request #12 from owner/branch`, so the
+    moment merge messages were scanned, every squash-free merge started contributing a `#12`
+    that no human referenced -- usually the very pull request being flattened, which the plan
+    already names. The note's whole value is that a reader acts on every line of it, so the
+    one line git wrote is skipped and the body somebody typed is not.
+    """
+    name = topic(work)
+    commit(work, "feat: the topic's work\n\nCloses #41.", author=ALICE, file="a.txt")
+    git(work, "checkout", "-q", "develop")
+    commit(work, "chore: integration moved on", file="c.txt")
+    git(work, "push", "-q", "origin", "develop")
+    git(work, "checkout", "-q", name)
+    git(
+        work,
+        "merge",
+        "--no-ff",
+        "-q",
+        "develop",
+        "-m",
+        "Merge pull request #12 from owner/branch\n\nThis also relates to #77.",
+    )
+
+    plan, notes = flatten.Flattener().flatten(cfg(work), dry_run=True)
+
+    # #77 is in the merge body a human wrote, so it survives; #12 is in the subject git
+    # wrote, so it was never a reference to begin with.
+    assert plan.references == ("#41", "#77")
+    staled = [note for note in notes if note.startswith("these timelines")]
+    assert staled and "#12" not in staled[0]
 
 
 def test_a_range_that_references_nothing_reports_nothing(work):

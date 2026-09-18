@@ -15,6 +15,43 @@ The fix is not to remember harder. It is to make the build fail.
 corpus size of a specific retrieval evaluation, which is a dated research measurement
 rather than a claim about the marketplace as it stands today. Changing it would falsify
 the paper, not correct it.
+
+What makes a number a COUNT CLAIM, and why the rule is not "a number near the word
+plugin": a claim is a number standing where the catalogue's noun goes. Two shapes do
+that. The number sits immediately BEFORE the noun — `135 plugins`, `710 skills` — which is
+what these patterns started as and all they could see. Or the noun is ELIDED and the number
+is introduced by a determiner pointing back at it: "every plugin in the family: these 134
+and vibey-gh's four". The second is a claim about the catalogue exactly as much as the
+first, and it is how README.md came to state 134 against a tree of 135 while this suite
+passed nineteen times out of nineteen.
+
+The determiner is what keeps the widened rule from swallowing the file. A version number
+and a section reference FOLLOW their noun — `version 2.0.0`, `ADR-0034`, `Python 3.12`,
+`step 3`, `Requirement 11.6.1` — they never replace it, so no `these`/`those`/`all` ever
+introduces one, and a bare `134` on its own is still ignored. The noun deciding WHICH
+population is counted must appear in the same clause, within a short phrase and no sentence
+end between, which is why the elided form is anchored to "plugin" or "skill" rather than
+left to float: `all 710` on a line about skills must not be read as a plugin count and fail
+a test it has no business being in.
+
+Anchoring is not enough on its own, because these two nouns travel together — a sentence
+about the marketplace names both far more often than it names one. So the anchor is
+EXCLUSIVE in both directions, and each half answers a way one sentence was read as two
+claims:
+
+- The RIVAL noun may not sit between the anchor and the determiner. "Each plugin ships its
+  own skills: all 710 of them" is a true sentence that both patterns matched, charging 710
+  to the plugins as well and failing the plugin test with "says 710 plugins, not 135".
+  Forbidding the crossing makes the NEAREST noun the anchor, which is the one the determiner
+  is actually pointing back at.
+- The number may not be immediately followed by the rival noun, because then nothing was
+  elided: "Each plugin ships all 12 skills" states its noun outright, and the population it
+  states is the other one. The direct `<number> <noun>` rule above is what reads that shape;
+  the elided rule exists only for the sentence where the noun is missing.
+
+Neither guard weakens the claim the file makes about itself. A stale count is still caught
+in every shape a doc surface writes one; what stops being caught is a count that was never
+this population's to begin with.
 """
 
 from __future__ import annotations
@@ -54,19 +91,40 @@ SURFACES = (
     ".claude-plugin/marketplace.json",
 )
 
-# A number immediately followed by a noun that can only mean "plugins in this marketplace".
+
+def _elided(noun: str, rival: str) -> str:
+    """A count whose noun is ELIDED, introduced by a determiner pointing back at `noun`.
+
+    `{0,60}` keeps the noun and the number in one clause and `[^.]` keeps them in one
+    sentence, so the noun is what the number counts rather than a word that happened to be
+    nearby. `rival` is the OTHER catalogue noun, and it is excluded twice: it may not be
+    crossed on the way to the determiner, and it may not follow the number. Both are what
+    make one sentence naming plugins and skills a claim about one of them instead of the
+    same figure charged to both. See the module docstring for the sentences that taught it.
+    """
+    return (
+        rf"{noun}(?:(?!{rival})[^.]){{0,60}}?"
+        rf"\b(?:these|those|all)\s+(\d{{2,4}})\b(?!\s+{rival}s?)"
+    )
+
+
+# A number immediately followed by a noun that can only mean "plugins in this marketplace",
+# or elided after one.
 PLUGIN_CLAIMS = (
     re.compile(r"(\d{2,4})\s+(?:Claude Code\s+|Codex\s+)?plugins\b"),
     re.compile(r"Agent Skills across\s+(\d{2,4})\b"),
+    re.compile(_elided("plugin", "skill"), re.IGNORECASE),
 )
 
-# A number immediately followed by a noun that can only mean "skills in this marketplace".
+# A number immediately followed by a noun that can only mean "skills in this marketplace",
+# or elided after one.
 SKILL_CLAIMS = (
     re.compile(r"(\d{2,4})\s+(?:Agent |long-form |evidence-grounded practitioner )?[Ss]kills?\b"),
     re.compile(r"(\d{2,4})\s+evidence-grounded practitioner\b"),
     re.compile(r"(\d{2,4})\s+SKILL\.md\b"),
     re.compile(r"(\d{2,4})\s+pages\b"),
     re.compile(r"(\d{2,4})-document skill corpus\b"),
+    re.compile(_elided("skill", "plugin"), re.IGNORECASE),
 )
 
 
@@ -87,6 +145,16 @@ def _duplicate_plugin_rows(markdown: str) -> list[str]:
     """
     names = [m.group(1) for m in README_ROW.finditer(markdown)]
     return sorted({name for name in names if names.count(name) > 1})
+
+
+def _claims(patterns: tuple[re.Pattern[str], ...], line: str) -> list[int]:
+    """Every count `patterns` read out of one line.
+
+    Shared by the surface sweeps and by the synthetic test below, so the rule the tests
+    prove is the rule the build runs. A second copy written for testing would be a second
+    rule, and the one that drifts is always the one nobody reads.
+    """
+    return [int(claim) for pattern in patterns for claim in pattern.findall(line)]
 
 
 def _true_counts() -> tuple[int, int]:
@@ -121,10 +189,9 @@ class CatalogueCountTests(unittest.TestCase):
             for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
                 if HISTORICAL in line:
                     continue
-                for pattern in PLUGIN_CLAIMS:
-                    for claim in pattern.findall(line):
-                        if int(claim) != plugins:
-                            wrong.append(f"{name}:{line_no} says {claim} plugins, not {plugins}")
+                for claim in _claims(PLUGIN_CLAIMS, line):
+                    if claim != plugins:
+                        wrong.append(f"{name}:{line_no} says {claim} plugins, not {plugins}")
         self.assertEqual(wrong, [], "stale plugin counts:\n  " + "\n  ".join(wrong))
 
     def test_every_stated_skill_count_is_true(self) -> None:
@@ -137,11 +204,67 @@ class CatalogueCountTests(unittest.TestCase):
             for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
                 if HISTORICAL in line:
                     continue
-                for pattern in SKILL_CLAIMS:
-                    for claim in pattern.findall(line):
-                        if int(claim) != skills:
-                            wrong.append(f"{name}:{line_no} says {claim} skills, not {skills}")
+                for claim in _claims(SKILL_CLAIMS, line):
+                    if claim != skills:
+                        wrong.append(f"{name}:{line_no} says {claim} skills, not {skills}")
         self.assertEqual(wrong, [], "stale skill counts:\n  " + "\n  ".join(wrong))
+
+    def test_a_count_claim_with_its_noun_elided_is_caught(self) -> None:
+        """The shape that walked past this guard while the catalogue grew underneath it.
+
+        README.md said "every plugin in the family: these 134 and vibey-gh\'s four" against a
+        tree of 135, and nothing failed: the number is followed by "and", so a rule that only
+        reads `<number> plugins` could not see it at all -- the guard written to stop counts
+        drifting carried a stale one inside its own README, through nineteen passing tests.
+
+        The second half is the cost of widening it. These two nouns share almost every
+        sentence in these docs, and an anchor that only had to appear SOMEWHERE earlier let
+        both patterns fire on one line: "Each plugin ships its own skills: all 710 of them"
+        charged 710 to the plugins too and failed the plugin test on a true sentence. A rival
+        noun between the anchor and the determiner now disqualifies that anchor, so the
+        nearest noun wins and one sentence is one claim about one population.
+
+        Synthetic lines rather than the real files, for the reason `_duplicate_plugin_rows`
+        is tested that way: reading a corrected README can only ever show the rule passing,
+        which proves nothing about whether it can fail.
+        """
+        elided = "That one address serves every plugin in the family: these 134 and four more."
+        self.assertEqual(_claims(PLUGIN_CLAIMS, elided), [134])
+        # The same shape about the other population must not be read as a plugin count, or
+        # a true skill claim would fail a test it has no business being in.
+        about_skills = "Every skill is installable on its own: all 710 of them, one each."
+        self.assertEqual(_claims(SKILL_CLAIMS, about_skills), [710])
+        self.assertEqual(_claims(PLUGIN_CLAIMS, about_skills), [])
+        self.assertEqual(_claims(SKILL_CLAIMS, elided), [])
+
+        # Both nouns on one line, which is how these docs actually write. The anchor has to
+        # be the NEARER noun and fire once, or a true sentence is read as two claims and the
+        # build breaks on correct prose with a message asserting a right number is wrong.
+        for line, plugins, skills in (
+            ("Each plugin ships its own skills: all 710 of them.", [], [710]),
+            ("Each plugin ships skills; all 710 of them are installable.", [], [710]),
+            ("Every skill lives in a plugin: these 135 and no more.", [135], []),
+            ("The skill tree spans every plugin: all 135 of them.", [135], []),
+        ):
+            self.assertEqual(_claims(PLUGIN_CLAIMS, line), plugins, line)
+            self.assertEqual(_claims(SKILL_CLAIMS, line), skills, line)
+
+        # Nothing is elided here -- the noun is stated, and it is the other population's. So
+        # the elided rule must not charge 12 to the plugins; the direct `<number> <noun>`
+        # rule reads it as the skill figure it literally says, which is that rule's job.
+        stated = "Each plugin ships all 12 skills."
+        self.assertEqual(_claims(PLUGIN_CLAIMS, stated), [])
+        self.assertEqual(_claims(SKILL_CLAIMS, stated), [12])
+
+        # A number that FOLLOWS its noun is not standing in for a population, so none of
+        # these is a claim about how many of anything the marketplace holds.
+        for quiet in (
+            "The plugin marketplace moved to version 2.0.0 in ADR-0034.",
+            "See plugin authoring step 3 and Requirement 11.6.1 for the skill layout.",
+            "Every plugin here targets Python 3.12, and each skill is one directory.",
+        ):
+            self.assertEqual(_claims(PLUGIN_CLAIMS, quiet), [], quiet)
+            self.assertEqual(_claims(SKILL_CLAIMS, quiet), [], quiet)
 
     def test_the_readme_table_lists_every_plugin_accurately(self) -> None:
         """CONTRIBUTING.md step 3 for a new plugin: add a row to the root README table.
