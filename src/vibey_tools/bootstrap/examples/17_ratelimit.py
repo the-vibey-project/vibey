@@ -12,7 +12,7 @@ Key invariants:
 - Two presets: ``webhook_bucket()`` (240 burst, 4/s) for Graph-shaped
   webhooks; ``admin_bucket()`` (30 burst, 0.5/s) for manual triggers.
 
-Requires ``pip install vibey-bootstrap[fastapi]`` for the FastAPI demo.
+Requires ``pip install 'vibey[bootstrap-all]'`` for the FastAPI demo.
 """
 
 from __future__ import annotations

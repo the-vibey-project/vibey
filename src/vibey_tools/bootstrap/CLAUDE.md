@@ -9,7 +9,8 @@ This repository contains the **vibey-bootstrap** library (formerly **azure-boots
 **Package Name**: `vibey-bootstrap`
 **Version**: 4.0.0
 **Language**: Python 3.11+
-**Distribution**: PyPI (public)
+**Distribution**: inside the `vibey` PyPI distribution — no separate `vibey-bootstrap`
+project (vibey ADR-0037)
 
 ## What This Library Does
 
@@ -320,6 +321,10 @@ python -m build
 
 ### Publish to PyPI
 
+> **Superseded — this no longer runs.** `vibey-bootstrap` is not published on its own
+> (vibey ADR-0037); it ships inside `vibey`, released by the monorepo's `release.yml`.
+> The commands below are kept as a record of how this package was published.
+
 ```bash
 # Manual publish
 pip install twine
@@ -519,6 +524,11 @@ See `azure-pipelines.yml` for complete configuration.
 - **Patch (0.0.X)** - Bug fixes
 
 ### Release Process
+
+> **Superseded — this no longer runs.** `vibey-bootstrap` is not published on its own
+> (vibey ADR-0037); it ships inside `vibey`, released by the monorepo's `release.yml`.
+> Kept as the record of how this package was released and configured.
+
 
 1. Update version in `pyproject.toml`
 2. Update version in `vibey_bootstrap/__init__.py`
@@ -730,9 +740,10 @@ def hello(req):
 
 ## Support
 
-- **Repository**: https://github.com/the-vibey-project/vibey-bootstrap
-- **Issues**: https://github.com/the-vibey-project/vibey-bootstrap/issues
-- **PyPI**: https://pypi.org/project/vibey-bootstrap/
+- **Repository**: https://github.com/the-vibey-project/vibey (this tree lives at
+  `src/vibey_tools/bootstrap`)
+- **Issues**: https://github.com/the-vibey-project/vibey/issues
+- **PyPI**: https://pypi.org/project/vibey/ (the distribution that carries it)
 
 ---
 
@@ -761,7 +772,12 @@ This library was extracted from a production Azure Functions application that pr
 
 ## CI/CD Setup & Troubleshooting
 
-The library uses **GitHub Actions** for CI/CD, publishing stable releases to
+> **Superseded — this section records the standalone repository's pipeline.** Those
+> workflows are inert here: the monorepo's `ci.yml` runs this package's gates and its
+> `release.yml` publishes the one `vibey` distribution that carries it (vibey ADR-0021,
+> ADR-0037). Kept because it documents why each gate existed.
+
+The library used **GitHub Actions** for CI/CD, publishing stable releases to
 **PyPI** (public) and `develop`-branch dev builds to **TestPyPI**.
 
 ### Workflow Overview
@@ -796,6 +812,11 @@ graph LR
 | `v*` tags | Stable | `4.0.0` | PyPI |
 
 ### GitHub Actions Setup for PyPI Publishing
+
+> **Superseded — this no longer runs.** `vibey-bootstrap` is not published on its own
+> (vibey ADR-0037); it ships inside `vibey`, released by the monorepo's `release.yml`.
+> Kept as the record of how this package was released and configured.
+
 
 **Option A: Trusted Publishers (recommended)**
 1. Go to [PyPI](https://pypi.org) → Your Account → **Publishing**
@@ -839,24 +860,28 @@ if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWit
 
 ### Using Published Packages
 
+This part is still live, and it is the one thing in this section that changed shape:
+`vibey_bootstrap` is installed by installing `vibey` (vibey ADR-0037).
+
 ```bash
 # Install from PyPI (no extra config needed)
-pip install vibey-bootstrap
+pip install vibey
 
 # Install specific version
-pip install vibey-bootstrap==4.0.0
+pip install vibey==1.0.0
 
-# Install a dev build. These live on TestPyPI, NOT PyPI — `--pre` against PyPI
-# finds nothing, because PyPI now only ever holds real releases. TestPyPI does
-# not mirror PyPI, so --extra-index-url is needed for the runtime deps.
+# Install a dev build. These live on TestPyPI as `vibey-dev`, NOT PyPI — `--pre`
+# against PyPI finds nothing, because PyPI now only ever holds real releases.
+# TestPyPI does not mirror PyPI, so --extra-index-url is needed for the runtime deps.
 pip install \
   --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  'vibey-bootstrap==4.0.0.dev20260818123456'
+  'vibey-dev==1.0.0.dev20260818123456'
 
-# Install with optional extras
-pip install 'vibey-bootstrap[alerts,fastapi,servicebus]'
-pip install 'vibey-bootstrap[all]'
+# Install with optional extras. On the vibey distribution the per-feature extras are
+# reached through two aggregates rather than by name.
+pip install 'vibey[azure]'
+pip install 'vibey[bootstrap-all]'
 ```
 
 ### CI/CD Troubleshooting
@@ -876,8 +901,10 @@ Reads like a permissions bug; it is almost always a claim mismatch:
 
 #### Package Not Found After Publishing
 - PyPI indexing is usually instant, but wait a few seconds and retry
-- Verify package at https://pypi.org/project/vibey-bootstrap/ (stable) or
-  https://test.pypi.org/project/vibey-bootstrap/ (dev builds)
+- Verify package at https://pypi.org/project/vibey/ (stable) or
+  https://test.pypi.org/project/vibey-dev/ (dev builds) — since vibey ADR-0037
+  `vibey_bootstrap` ships inside the one `vibey` distribution and has no project
+  page of its own
 
 #### Workflow Not Running
 - Verify `.github/workflows/ci-cd.yml` exists
@@ -901,7 +928,7 @@ GitHub Pages must be enabled once, by hand, before the first deploy:
 
 #### Version Conflicts
 - Clear pip cache: `pip cache purge`
-- Install specific version: `pip install vibey-bootstrap==4.0.0`
+- Install specific version: `pip install vibey==1.0.0` (the distribution that carries it)
 
 ---
 

@@ -13,7 +13,7 @@ The bootstrap handles:
 - Loading all configs to os.environ
 
 Installation:
-    pip install vibey-bootstrap
+    pip install vibey
 
 Configuration:
     See local.settings.json.example for required environment variables

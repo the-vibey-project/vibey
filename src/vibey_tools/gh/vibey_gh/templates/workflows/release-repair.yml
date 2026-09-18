@@ -94,11 +94,9 @@ jobs:
             actions: read
             checks: read
           plugin_marketplaces: |
-            https://github.com/the-vibey-project/vibey-skills.git
+            __VIBEY_GH_PLUGIN_MARKETPLACES__
           plugins: |
-            quality-engineering@vibey-skills
-            security-principles@vibey-skills
-            engineering-process@vibey-skills
+            __VIBEY_GH_PLUGINS__
           claude_args: |
             --model __VIBEY_GH_MODEL__
             --max-turns 120

@@ -49,21 +49,27 @@ in one vendor's chat session.
 | Runs on | macOS / Linux, local. No cloud control plane required. |
 | Language | Python 3.12+ |
 | Queue | PostgreSQL (`FOR UPDATE SKIP LOCKED`) |
-| Engines | [`claudeloop`](https://pypi.org/project/claudeloop/), [`codexloop`](https://pypi.org/project/codexloop/), [`cursorloop`](https://pypi.org/project/cursorloop/), [`agyloop`](https://pypi.org/project/agyloop/), plus the opt-in [`qwenloop`](https://pypi.org/project/qwenloop/) — a local standby engine and sovereign DESIGN provider (ADR-0015, ADR-0027). Sources: [`src/vibey_runners/`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/). |
+| Engines | [`claudeloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude), [`codexloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex), [`cursorloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor), [`agyloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy), plus the opt-in [`qwenloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) — a local standby engine and sovereign DESIGN provider (ADR-0015, ADR-0027). All five ship inside the `vibey` distribution ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)). |
 | State dir | `.vibey/` |
 | Env prefix | `VIBEY_` |
 | Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |
 
 ## Install
 
-Requires **Python 3.12+**, **PostgreSQL**, and at least one `*loop` engine on
-PATH. Windows is not a supported target. Every database-backed command reads
-the connection string from `VIBEY_PG_URL`; vibey never guesses a database and
-exits with `VIBEY_PG_URL is not set` when it is missing.
+Requires **Python 3.12+** and **PostgreSQL**. Windows is not a supported
+target. Every database-backed command reads the connection string from
+`VIBEY_PG_URL`; vibey never guesses a database and exits with
+`VIBEY_PG_URL is not set` when it is missing.
+
+One install is the whole family: `vibey`, all five `*loop` engines, and the
+tools (`vibey-gh`, `vibey-skills`, `vibey-bootstrap`) ship in the one `vibey`
+distribution and land on `PATH` together
+([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)). What
+each engine still needs separately is its own vendor CLI and credentials —
+which is what `vibey doctor` checks.
 
 ```bash
 uv tool install vibey          # or: pipx install vibey / pip install vibey
-uv tool install claudeloop     # at least one engine; add codexloop, cursorloop, agyloop for rotation
 export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey
 vibey doctor                   # pre-flight: engines installed, versions, auth
 ```
@@ -72,18 +78,18 @@ vibey doctor                   # pre-flight: engines installed, versions, auth
 to the database for a project, and `--cluster` runs the in-cluster preflight
 (DSN, workspace, secrets, database, migrations) instead.
 
-`qwenloop` is opt-in (`uv tool install qwenloop`). With
-`VIBEY_FEATURE_QWENLOOP=1` set, the worker adds it as the standby engine and
-`vibey doctor` lists it; `vibey doctor` also honours `[features] qwenloop = true`
+`qwenloop` installs with everything else; what is opt-in is the *feature*, not
+the install. With `VIBEY_FEATURE_QWENLOOP=1` set, the worker adds it as the
+standby engine and `vibey doctor` lists it; `vibey doctor` also honours `[features] qwenloop = true`
 in a `./vibey.toml`. Separately, `vibey worker --provider qwenloop` (or
 `vibey work --provider qwenloop`) uses it for the DESIGN interview; BUILD
 decomposition under that provider stays scripted.
 
-To add deterministic, budgeted context packets from the independently versioned
-`vibey-skills` marketplace, install the optional extra and enable it per project:
+To add deterministic, budgeted context packets from the `vibey-skills`
+marketplace, enable it per project — `vibey-skills` ships in the same
+distribution, so there is nothing extra to install:
 
 ```bash
-uv tool install 'vibey[skills]'
 vibey new my-app --repo ~/src/my-app \
   --skills-context-mode shadow --skills-context-budget 6000
 ```
@@ -104,9 +110,8 @@ skills plugins and vibey-gh's four, from one address and nothing else:
 ```
 
 The root manifest is rendered from the workspace members by `vibey-gh marketplace` and
-held to them by `vibey-gh check` ([ADR-0034](architecture/decisions/0034-one-marketplace-at-the-root.md)); it is never edited by hand. The PyPI package
-`vibey-skills` still ships its own marketplace under the name `vibey-skills`, so both can
-be registered side by side.
+held to them by `vibey-gh check` ([ADR-0034](architecture/decisions/0034-one-marketplace-at-the-root.md)); it is never edited by hand. Since the family
+ships as one distribution ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)) this root manifest is the only marketplace there is.
 
 ## Quickstart
 
@@ -282,7 +287,7 @@ things those runners deliberately do not do:
 | [Phase protocols](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/main/CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (36 ADRs) |
+| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (37 ADRs) |
 
 ## Status
 
@@ -304,7 +309,7 @@ test — the no-loss handoff gate is deterministic code, not a model's opinion.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `vibey doctor` reports an engine `NOT INSTALLED` | The `*loop` binary isn't on `PATH`. | `uv tool install claudeloop` (or codexloop/cursorloop/agyloop/qwenloop), then re-run `vibey doctor`. |
+| `vibey doctor` reports an engine `NOT INSTALLED` | The `*loop` binaries ship with `vibey`, so this is a `PATH` problem, not a missing package: `vibey` is being run from one environment while `PATH` points at another (a venv whose `bin/` is not exported, a shadowing `uv tool` shim, a system `python` install). | `python -c 'import shutil; print(shutil.which("claudeloop"))'` in the same environment that runs `vibey`; if it prints nothing, put that environment's `bin/` on `PATH` (or reinstall with `uv tool install vibey`), then re-run `vibey doctor`. |
 | `VIBEY_PG_URL is not set` | No database connection string in the environment. | `export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey`, pointing at a database you own. |
 | `vibey doctor` reports `auth FAIL` | The engine's own vendor credentials aren't configured. | Run that engine's own login/auth flow, then re-run `vibey doctor --conformance`. |
 | `vibey worker` logs `no recorded conformance for ...` | `vibey doctor --conformance --record` has never passed for that engine on this project. | Run it before starting the worker; engine-driven jobs won't select an unrecorded engine. |
@@ -315,8 +320,9 @@ test — the no-loss handoff gate is deterministic code, not a model's opinion.
 
 ## Upgrading
 
-Vibey is pre-1.0: minor versions may change `vibey.toml` fields, ledger
-event shapes, or CLI flags. Before upgrading:
+From 1.0.0 vibey follows semantic versioning: a change that breaks
+`vibey.toml` fields, ledger event shapes, or CLI flags takes a major version.
+Before upgrading:
 
 1. Read the [changelog](https://github.com/the-vibey-project/vibey/blob/main/CHANGELOG.md)
    for the versions between your current version and the target.
@@ -330,7 +336,9 @@ to TestPyPI as `vibey-dev`; every push to `main` publishes `vibey` to PyPI.
 After a successful `main` release, `github-release.yml` tags that exact commit
 and creates the matching GitHub Release. Versioning and release are owned by
 the in-tree `vibey-gh`; release-please is retired (ADR-0028). `uv tool install
-vibey` (or `pipx install vibey` / `pip install vibey`) tracks stable releases.
+vibey` (or `pipx install vibey` / `pip install vibey`) tracks stable releases —
+and it is the family's only install instruction
+([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)).
 
 ## Formal notes
 
@@ -367,20 +375,23 @@ proof sketch — is the research paper, *Ledger-Mediated Orchestration: Vendor-I
 ## Related projects
 
 These packages live in this repository as uv workspace members
-(`src/vibey_runners/*`, `src/vibey_tools/*`; ADR-0021) and are published to
-PyPI under their own names. Their former standalone GitHub repositories no
-longer exist.
+(`src/vibey_runners/*`, `src/vibey_tools/*`; ADR-0021). Each keeps its own
+`pyproject.toml`, version, Python floor, tests and gates — but none is
+published separately any more: all eight ship inside the one `vibey`
+distribution ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)),
+and their former standalone GitHub repositories and PyPI projects no longer
+exist.
 
 | Project | Source | What it is |
 |---|---|---|
-| [claudeloop](https://pypi.org/project/claudeloop/) | [`src/vibey_runners/claude`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude) | Autonomous Claude Code session runner — the design the family transplants |
-| [codexloop](https://pypi.org/project/codexloop/) | [`src/vibey_runners/codex`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) | The same design retargeted onto OpenAI Codex |
-| [cursorloop](https://pypi.org/project/cursorloop/) | [`src/vibey_runners/cursor`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) | The same design retargeted onto Cursor |
-| [agyloop](https://pypi.org/project/agyloop/) | [`src/vibey_runners/agy`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) | The same design retargeted onto Google Antigravity / Gemini |
-| [qwenloop](https://pypi.org/project/qwenloop/) | [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) | The same design on a local Qwen 2.5 Coder model (llama.cpp or vLLM) — the opt-in standby engine and sovereign DESIGN provider |
-| [vibey-skills](https://pypi.org/project/vibey-skills/) | [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) | The Agent Skills marketplace (a Claude Code plugin marketplace) behind `vibey[skills]` and its context packets |
-| [vibey-gh](https://pypi.org/project/vibey-gh/) | [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) | Provenance fingerprints, derived version bumps, a merge train, and branch realignment; it owns vibey's own release (ADR-0028) |
-| [vibey-bootstrap](https://pypi.org/project/vibey-bootstrap/) | [`src/vibey_tools/bootstrap`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) | Azure bootstrap library for App Configuration, Key Vault, and App Insights integration |
+| claudeloop | [`src/vibey_runners/claude`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude) | Autonomous Claude Code session runner — the design the family transplants |
+| codexloop | [`src/vibey_runners/codex`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) | The same design retargeted onto OpenAI Codex |
+| cursorloop | [`src/vibey_runners/cursor`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) | The same design retargeted onto Cursor |
+| agyloop | [`src/vibey_runners/agy`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) | The same design retargeted onto Google Antigravity / Gemini |
+| qwenloop | [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) | The same design on a local Qwen 2.5 Coder model (llama.cpp or vLLM) — the opt-in standby engine and sovereign DESIGN provider |
+| vibey-skills | [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) | The Agent Skills marketplace (a Claude Code plugin marketplace) and its context packets |
+| vibey-gh | [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) | Provenance fingerprints, derived version bumps, a merge train, and branch realignment; it owns vibey's own release (ADR-0028) |
+| vibey-bootstrap | [`src/vibey_tools/bootstrap`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) | Azure bootstrap library for App Configuration, Key Vault, and App Insights integration |
 
 ## License
 
@@ -395,7 +406,7 @@ spec to deployed software, without losing a single open question.
 **Your next step**: install it and let it interview you —
 
 ```bash
-uv tool install vibey && uv tool install claudeloop && vibey doctor
+uv tool install vibey && vibey doctor
 ```
 
 **Prefer to read first?** The design is a [research paper](https://the-vibey-project.github.io/vibey/main/paper/)

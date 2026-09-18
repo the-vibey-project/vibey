@@ -115,7 +115,7 @@ claudeloop response retry               # re-queues last prompt as PromptNow
 ## Voice (optional)
 
 ```bash
-pip install 'claudeloop[voice]'
+pip install 'vibey[voice]'
 claudeloop speak "hello"
 claudeloop voice status
 ```

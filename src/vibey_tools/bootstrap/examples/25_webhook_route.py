@@ -13,7 +13,7 @@ Key invariants:
 - 401 + 429 responses have empty bodies (no info leak).
 - Dedup TTL of 600 s covers Graph's documented retry window.
 
-Requires ``pip install vibey-bootstrap[fastapi]``.
+Requires ``pip install 'vibey[bootstrap-all]'``.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def main() -> None:
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
     except ImportError:
-        print("fastapi not installed — run `pip install vibey-bootstrap[fastapi]`")
+        print("fastapi not installed — run `pip install 'vibey[bootstrap-all]'`")
         return
 
     delivered: list[str] = []

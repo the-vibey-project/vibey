@@ -5,7 +5,8 @@ Built on PostgreSQL and five `*loop` autonomous session runners (claudeloop,
 codexloop, cursorloop, agyloop, and the opt-in local qwenloop), which live in this
 repository under `src/vibey_runners/`. It orchestrates design → build → review with
 an optional visual-design interstitial, plus an opt-in Azure deployment stage
-set. Pre-1.0. Python 3.12+.
+set. One distribution — `pip install vibey` delivers the whole family,
+engines and tools included (ADR-0037). Python 3.12+.
 
 **This file is deliberately short — it holds facts, not procedures.** Every
 "how do I..." lives in a skill below; every "why was it built this way"
@@ -97,8 +98,8 @@ uv workspace (`[tool.uv.workspace] members = ["src/vibey_runners/*",
 Each tenant keeps its own `pyproject.toml`, version, Python floor (3.10+ for
 claudeloop, vibey-runners-common and vibey-skills; 3.11+ for vibey-gh and
 vibey-bootstrap; 3.12+ for the other runners and vibey), test suite and gates
-(ADR-0022). The old sibling GitHub repositories are gone; the PyPI names are
-unchanged.
+(ADR-0022). The old sibling GitHub repositories are gone, and so are the old
+PyPI names: the whole tree ships as the single `vibey` distribution (ADR-0037).
 
 ## The six-phase model
 
@@ -163,7 +164,7 @@ uv run pip-audit
 # CI job `tools`: each tool's own suite, plain pip, on its Python floor and newer
 (cd src/vibey_tools/gh && pip install -e ".[dev]" && python -m pytest -q)
 (cd src/vibey_tools/skills && pip install -e . && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests)
-(cd src/vibey_tools/bootstrap && pip install -e ".[test,all]" && pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term)
+(cd src/vibey_tools/bootstrap && pip install -e ../gh && pip install -e ".[test,all]" && pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term)
 
 # CI job `tools-lint`: vibey-gh's own linters
 (cd src/vibey_tools/gh && python -m black --check vibey_gh test && isort --check-only vibey_gh test && python -m mypy vibey_gh)
@@ -192,7 +193,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (36 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (37 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

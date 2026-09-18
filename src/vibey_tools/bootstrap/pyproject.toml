@@ -38,16 +38,12 @@ classifiers = [
 requires-python = ">=3.11"
 
 dependencies = [
-    # The GitHub automation that used to live in vibey_bootstrap.gh. Split out because
-    # it has no dependencies of its own and release tooling should not drag the Azure
-    # SDK into every repository that adopts it.
-    # Was `==1.70.0`. One workspace resolves one version of a distribution, and
-    # vibey-skills pinned a different exact version -- two exact pins on the same
-    # distribution cannot co-resolve, and `uv lock --check` is the CI job every other job
-    # depends on. Widening is strictly compatible for downstream: every environment that
-    # satisfied ==1.70.0 still satisfies this. The floor stays the version this package was
-    # validated against; the ceiling is the major boundary.
-    "vibey-gh>=1.70,<2",
+    # `vibey-gh` used to be declared here -- the GitHub automation that once lived in
+    # vibey_bootstrap.gh, split out because release tooling should not drag the Azure SDK
+    # into every repository that adopts it. That split still holds; what changed is that
+    # vibey-gh is no longer a separately published distribution (ADR-0037). It ships in
+    # the same `vibey` wheel this package ships in, so `vibey_bootstrap.gh` finds it
+    # already importable and a requirement on it would only ask PyPI for a 404.
     "azure-appconfiguration-provider>=1.0.0",
     # Imported directly by vibey_bootstrap.health for a cheap readiness probe.
     # It also arrives transitively via the provider, but we import it, so we

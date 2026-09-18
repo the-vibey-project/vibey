@@ -137,19 +137,20 @@ Helm install on minikube with four cluster contracts
 This repository is a uv workspace (ADR-0021). `src/vibey` is the conductor;
 `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}` are the `*loop`
 runners; `src/vibey_tools/{gh,skills,bootstrap}` are vibey-gh, vibey-skills
-and vibey-bootstrap. Each was imported with its history and is still published
-to PyPI under its own name.
+and vibey-bootstrap. Each was imported with its history, and each ships inside
+the `vibey` distribution rather than under its own PyPI name (ADR-0037).
 
 The root gates above cover `src/vibey` only. A tenant keeps every gate it was
 already held to (ADR-0022), run from its own directory with its own command,
-on the Python floors its wheel publishes — exactly as ci.yml's `tools` and
-`tools-lint` jobs do:
+on its own Python floor and newer — exactly as ci.yml's `tools` and
+`tools-lint` jobs do. Nothing in that matrix may reach an index for a family
+package: a tenant that needs a sibling installs it from the tree first.
 
 | Tenant | Checks |
 |---|---|
 | `src/vibey_tools/gh` | `pip install -e ".[dev]"`, `python -m pytest -q` (100% branch floor), `black --check vibey_gh test`, `isort --check-only vibey_gh test`, `mypy vibey_gh`, and the managed-automation drift check; Python 3.11–3.13 |
 | `src/vibey_tools/skills` | `python3 tools/validate_manifests.py`, `python3 tools/check_links.py`, `PYTHONPATH=src python3 -m unittest discover -s tests`; Python 3.10 and 3.12 |
-| `src/vibey_tools/bootstrap` | `pip install -e ".[test,all]"`, `pytest test/ -m "not integration" --cov=vibey_bootstrap` (100% line floor); Python 3.11–3.12 |
+| `src/vibey_tools/bootstrap` | `pip install -e ../gh` (it imports `vibey_gh`), `pip install -e ".[test,all]"`, `pytest test/ -m "not integration" --cov=vibey_bootstrap` (100% line floor); Python 3.11–3.12 |
 | `src/vibey_runners/*` | each runner's own `ruff`, `mypy --strict`, `lint-imports` and `pytest`, per its `CONTRIBUTING.md` |
 
 A change to a vibey-gh template (`src/vibey_tools/gh/vibey_gh/templates/`)

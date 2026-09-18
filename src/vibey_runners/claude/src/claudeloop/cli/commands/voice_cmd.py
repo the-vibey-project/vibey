@@ -7,13 +7,12 @@ import sys
 
 import typer
 
-app = typer.Typer(help="Voice input/output (optional claudeloop[voice] extras)")
+app = typer.Typer(help="Voice input/output (optional vibey[voice] extras)")
 
 
 def _voice_hint() -> None:
     typer.echo(
-        "Voice features require optional dependencies. Install with:\n"
-        "  pip install 'claudeloop[voice]'",
+        "Voice features require optional dependencies. Install with:\n  pip install 'vibey[voice]'",
         err=True,
     )
 
@@ -23,7 +22,7 @@ def start() -> None:
     """Start voice input (not yet implemented)."""
     typer.echo(
         "Voice input is not wired yet. "
-        "Install claudeloop[voice] for future support; use prompt/stop for now.",
+        "Install vibey[voice] for future support; use prompt/stop for now.",
         err=True,
     )
     _voice_hint()

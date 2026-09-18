@@ -1,6 +1,13 @@
 # 0015 — qwenloop is an opt-in local engine: a standby tier for BUILD, the sovereign provider for DESIGN
 
-**Status:** accepted · **Date:** 2026-08-23 (PR #83) · **Rewritten:** 2026-09-15 · **Extended by:** PR #117 (doctor visibility, 2026-08-30) and ADR-0027 (the sovereign DESIGN provider, PR #120, 2026-08-30) · **In tension with:** sub-doctrine 8.a (ratified 2026-08-30) — see Consequences
+**Status:** accepted; one clause superseded in part by ADR-0037 · **Date:** 2026-08-23 (PR #83) · **Rewritten:** 2026-09-15 · **Extended by:** PR #117 (doctor visibility, 2026-08-30) and ADR-0027 (the sovereign DESIGN provider, PR #120, 2026-08-30) · **In tension with:** sub-doctrine 8.a (ratified 2026-08-30) — see Consequences
+
+> The decision stands in full: qwenloop is still a default-off local engine, a
+> BUILD standby and the sovereign DESIGN provider.
+> [ADR-0037](0037-one-distribution-one-version.md) supersedes one clause of the
+> Context only — "published on PyPI as `qwenloop`". There is no `qwenloop`
+> distribution; it ships inside `vibey`, and the opt-in is now purely a FEATURE
+> switch (`VIBEY_FEATURE_QWENLOOP`) rather than also an install choice.
 
 ## Context
 

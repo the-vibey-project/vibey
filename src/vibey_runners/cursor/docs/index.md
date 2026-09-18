@@ -12,6 +12,6 @@ human. Distinguishes rate-limit windows from exhausted credits.
 | CLI | [Reference](reference/cli.md) |
 
 Source and issues live on
-[GitHub](https://github.com/the-vibey-project/cursorloop).
-Package metadata and downloads:
-[PyPI](https://pypi.org/project/cursorloop/).
+[GitHub](https://github.com/the-vibey-project/vibey), at
+`src/vibey_runners/cursor`. It ships inside the `vibey` distribution:
+[PyPI](https://pypi.org/project/vibey/).

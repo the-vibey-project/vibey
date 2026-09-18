@@ -13,7 +13,7 @@ Sections (when their module is installed):
 - ``last_sb_settle_age_seconds``: heartbeat age (seconds since last
   Service Bus message settle)
 
-Requires ``pip install vibey-bootstrap[fastapi]`` for the FastAPI demo;
+Requires ``pip install 'vibey[bootstrap-all]'`` for the FastAPI demo;
 ``build_metrics_snapshot`` itself is stdlib-only.
 """
 

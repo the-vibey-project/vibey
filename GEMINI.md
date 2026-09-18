@@ -61,7 +61,8 @@ tenants keep their own pyproject, version, Python floor, tests and gates
 (ADR-0022): `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}`
 (claudeloop, codexloop, cursorloop, agyloop, qwenloop, vibey-runners-common) and
 `src/vibey_tools/{gh,skills,bootstrap}` (vibey-gh, vibey-skills,
-vibey-bootstrap). Sibling GitHub repos are gone; PyPI names unchanged.
+vibey-bootstrap). Sibling GitHub repos are gone and so are the separate PyPI
+names — the tree ships as one `vibey` distribution (ADR-0037).
 
 ## Queue and engines
 
@@ -112,7 +113,7 @@ uv run pip-audit
 # CI job `tools`: each tool's own suite, plain pip, on its Python floor and newer
 (cd src/vibey_tools/gh && pip install -e ".[dev]" && python -m pytest -q)
 (cd src/vibey_tools/skills && pip install -e . && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests)
-(cd src/vibey_tools/bootstrap && pip install -e ".[test,all]" && pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term)
+(cd src/vibey_tools/bootstrap && pip install -e ../gh && pip install -e ".[test,all]" && pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term)
 
 # CI job `tools-lint`: vibey-gh's own linters
 (cd src/vibey_tools/gh && python -m black --check vibey_gh test && isort --check-only vibey_gh test && python -m mypy vibey_gh)
@@ -141,7 +142,7 @@ automation has no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (36 ADRs: 0001–0036) |
+| ADRs | `docs/architecture/decisions/` (37 ADRs: 0001–0037) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

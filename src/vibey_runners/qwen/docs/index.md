@@ -9,12 +9,11 @@ integration never download model weights.
 
 ## Install
 
-Until the first PyPI release, install the runner from the immutable Git tag or
-an explicit commit:
+`qwenloop` ships inside the `vibey` distribution (vibey ADR-0037); there is no
+separate `qwenloop` project to install:
 
 ```bash
-uv tool install \
-  'qwenloop @ git+https://github.com/the-vibey-project/qwenloop.git@feature/qwenloop-local-engine'
+uv tool install vibey    # or: pipx install vibey / pip install vibey
 ```
 
 The Python package never bundles model weights.

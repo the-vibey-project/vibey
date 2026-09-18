@@ -48,8 +48,8 @@ means it would have failed for you too.
   skills link directly to file paths under `docs/`, not to built site URLs.
 - **Link by relative path**, not by absolute site URL, so links work both on
   GitHub and in the built site. **Exception: `README.md` at the repo root**
-  is also the PyPI project description — PyPI rewrites relative links under
-  `https://pypi.org/project/claudeloop/`, which 404s. Use absolute
+  is rendered outside this directory (on GitHub, and historically as a PyPI
+  project description, where relative links were rewritten and 404d). Use absolute
   `https://the-vibey-project.github.io/claudeloop/...` and GitHub
   `blob`/`tree` URLs in `README.md` only.
 - **State the "why," not just the "what."** A page that only restates what a

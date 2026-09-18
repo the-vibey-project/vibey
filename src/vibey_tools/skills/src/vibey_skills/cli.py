@@ -389,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
 
 DEPRECATED_ALIAS_WARNING = (
     "vibe-skills: this command name is deprecated and will be removed in a future release; "
-    "use `vibey-skills` (the package is now `vibey-skills` on PyPI)."
+    "use `vibey-skills` (it ships in the `vibey` distribution)."
 )
 
 

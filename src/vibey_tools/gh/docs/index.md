@@ -56,7 +56,7 @@ tagging, and GitHub Release channels.
 ## Start in two commands
 
 ```console
-pip install vibey-gh
+pip install vibey
 vibey-gh install
 ```
 

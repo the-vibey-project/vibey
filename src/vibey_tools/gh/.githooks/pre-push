@@ -84,7 +84,7 @@ if ! vibey_gh trailer-key >/dev/null 2>&1; then
   echo
   echo "  This repository requires it for provenance and release automation."
   echo
-  echo "      pip install vibey-gh"
+  echo "      pip install vibey"
   echo "      vibey-gh install"
   echo
   echo "  Then push again. To bypass once: git push --no-verify"

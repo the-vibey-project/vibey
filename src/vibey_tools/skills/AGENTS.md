@@ -5,7 +5,8 @@ Guidance for Codex when working in this repository.
 ## What this repo is
 
 This is a **Codex plugin marketplace**: 135 plugins composed of 710 Agent Skills,
-published to PyPI as `vibey-skills` under the MIT license. The application code is the
+shipped inside the `vibey` distribution under the MIT license — `vibey-skills` is a
+workspace tenant, not a separate PyPI project (vibey ADR-0037). The application code is the
 packaging CLI plus the retrieval context engine (`src/vibey_skills/context_engine.py`,
 behind `vibey-skills index / search / packet / evaluate`) — but the deliverable is still
 the Markdown and JSON that define the plugins. "Correctness" means valid manifests and
@@ -111,7 +112,7 @@ three different base URLs:
 | Surface | Base | Relative links |
 |---|---|---|
 | GitHub repo view | the repo root | work |
-| PyPI project page | `https://pypi.org/project/vibey-skills/` | **break** |
+| PyPI project page | `https://pypi.org/project/vibey/` (the root README is the long description; this one is not rendered there) | **break** |
 | Pages site | `https://the-vibey-project.github.io/vibey-skills/` | work only inside `docs/` |
 
 - **Root Markdown** (`README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `SECURITY.md`,
@@ -177,14 +178,14 @@ Two things must be configured for it to run, and neither is in the repository:
 
 ## Release tooling lives in a package, not in this repository
 
-`vibey-gh` (on PyPI, no dependencies) provides the fingerprint check, the derived version
-bump, the merge train, and branch realignment. This repository used to carry its own copy
+`vibey-gh` (a workspace tenant at `../gh`, no third-party dependencies) provides the
+fingerprint check, the derived version bump, the merge train, and branch realignment. This repository used to carry its own copy
 of all of that — `tools/check_fingerprints.py`, `tools/next_version.py`,
 `tools/dev_version.py` and a 170-line merge-train workflow, about 530 lines. They are
 gone; the behaviour is unchanged.
 
 ```bash
-pip install "vibey-gh==1.56.0"
+pip install -e ../gh      # from the tree; or `pip install vibey`, which carries it
 vibey-gh install          # hooks + the merge-train workflow, and points core.hooksPath
 vibey-gh check            # are the fingerprints intact?
 vibey-gh version --since origin/main --explain
@@ -285,8 +286,8 @@ Confirmed unchanged in 1.27.0 and correctly scoped to a self-hosting repository,
 bug.
 
 `[install] pin_version = true` makes every rendered template pin its own `pip install` to
-the exact `vibey-gh` version currently installing, rather than the unpinned
-`pip install vibey-gh` every template used through 1.16.0 — which is what let CI silently
+the exact version currently installing (`vibey==X.Y.Z` since vibey ADR-0037; `vibey-gh==X.Y.Z`
+before it), rather than the unpinned install every template used through 1.16.0 — which is what let CI silently
 jump from 1.2.0 to 1.16.0 and break on the new defaults in the first place (see below).
 `vibey-gh install` is what advances the pin now; a hand-edit to any managed file is still
 flagged "out of date" by `vibey-gh check` and reverted by the next `install`, so the pin
@@ -317,7 +318,7 @@ Install the tooling and its hooks once per clone, so the trailer is added for yo
 push without the fingerprints is refused:
 
 ```bash
-pip install "vibey-gh==1.56.0"
+pip install -e ../gh      # from the tree; or `pip install vibey`, which carries it
 vibey-gh install
 ```
 
@@ -333,6 +334,15 @@ checks the trailer on each commit the branch adds.
 - Prose Markdown at the root — documentation, rendered on PyPI and GitHub Pages.
 
 ## Branching and publishing
+
+> **Superseded — this describes a process that no longer runs.** `vibey-skills` was
+> published from its own repository with its own workflows. Since vibey ADR-0021 the
+> source lives in the vibey monorepo, and since vibey ADR-0037 it is not published
+> separately at all: the whole tree ships as `vibey`, released by the monorepo's own
+> `release.yml`. The nested workflows under this directory are inert. The sections below
+> are kept because they record how this package was released and why each gate existed —
+> read the monorepo's `CONTRIBUTING.md` and the `vibey-releasing` skill for the process
+> that is live.
 
 ```
 feature/*  --PR-->  develop  --PR-->  main

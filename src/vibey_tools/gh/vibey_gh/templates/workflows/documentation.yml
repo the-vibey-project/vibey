@@ -64,12 +64,9 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.__VIBEY_GH_AI_AUTH_SECRET__ }}
           plugin_marketplaces: |
-            https://github.com/the-vibey-project/vibey-skills.git
+            __VIBEY_GH_PLUGIN_MARKETPLACES__
           plugins: |
-            engineering-process@vibey-skills
-            software-architecture@vibey-skills
-            security-principles@vibey-skills
-            quality-engineering@vibey-skills
+            __VIBEY_GH_PLUGINS__
           claude_args: |
             --model __VIBEY_GH_DOCUMENTATION_MODEL__
             --max-turns 180

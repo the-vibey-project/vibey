@@ -10,7 +10,7 @@ The v2 retry decorators bake in:
 - ``reraise=True`` by default — apps that want tenacity's ``RetryError``
   wrapping opt in explicitly.
 
-Requires ``pip install vibey-bootstrap[retry]``.
+Requires ``pip install 'vibey[bootstrap-all]'``.
 """
 
 from __future__ import annotations

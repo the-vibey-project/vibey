@@ -55,7 +55,10 @@ dependencies = [
     # the only thing that reaches that job.
     "openai==3.14.1",
     "textual>=1.0",
-    "vibey-runners-common",
+    # No `vibey-runners-common` here any more. The shared tree is not published to an
+    # index and will not be again (ADR-0037) -- it ships inside the same `vibey` wheel
+    # this package ships in -- so naming it here would ask PyPI for a 404. Installed
+    # from the tree instead, ahead of this package; see ci.yml's tools matrix.
 ]
 
 [project.urls]
@@ -67,10 +70,10 @@ Changelog = "https://github.com/the-vibey-project/codexloop/blob/main/CHANGELOG.
 
 [project.optional-dependencies]
 dev = [
-    # Release automation and provenance guardrails, shared by every repo in
-    # the family. Stdlib-only, so adopting it in five places multiplies
-    # nobody's dependency tree.
-    "vibey-gh>=1.2",
+    # `vibey-gh` is not named here. The release tooling is a sibling in this tree and no
+    # longer a distribution on any index (ADR-0037), so a requirement on it resolves
+    # nowhere. The guardrail does not weaken -- the pre-push hook and CI both still refuse
+    # a push without it -- it is installed from `src/vibey_tools/gh` instead of from PyPI.
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "pytest-xdist>=3.5",
@@ -218,5 +221,3 @@ forbidden_modules = [
     "codexloop.bootstrap",
 ]
 
-[tool.uv.sources]
-vibey-runners-common = { workspace = true }

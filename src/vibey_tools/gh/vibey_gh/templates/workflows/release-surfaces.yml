@@ -185,8 +185,9 @@ jobs:
         run: |
           set -euo pipefail
           # Self-hosting-aware: this repository IS vibey-gh when the import already
-          # resolves from source; every adopter installs the pinned release.
-          python - <<'PY' || python -m pip install --quiet vibey-gh
+          # resolves from source; every adopter installs it from `vibey`, the
+          # distribution `vibey_gh` ships inside (ADR-0037).
+          python - <<'PY' || python -m pip install --quiet vibey
           import vibey_gh  # noqa: F401
           PY
           python - <<'PY'
@@ -410,12 +411,13 @@ jobs:
             # contributor's choosing. The path is verified below before anything runs.
             self="__VIBEY_GH_SELF_SOURCE__"
             # Verified, not assumed: a misconfigured path must fall back to the published
-            # release rather than install whatever happens to sit there.
+            # release rather than install whatever happens to sit there. That release is
+            # `vibey`: `vibey_gh` ships inside it, not as a project of its own (ADR-0037).
             grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
             if [ -n "$self" ]; then
               python -m pip install --quiet -e "$self"
             else
-              python -m pip install --quiet vibey-gh
+              python -m pip install --quiet vibey
             fi
           fi
           if [ "__VIBEY_GH_DOC_BOOK__" = "true" ]; then

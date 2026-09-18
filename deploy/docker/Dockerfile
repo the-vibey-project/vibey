@@ -35,24 +35,57 @@ ENV UV_COMPILE_BYTECODE=1 \
 # Dependency layer first: the lockfile changes far less often than source,
 # so this caches across almost every rebuild.
 COPY pyproject.toml uv.lock README.md ./
-# vibey-skills is a workspace member now, not a PyPI download, so uv has to be able to
-# BUILD it in this layer -- without it the sync fails outright with "Distribution not
-# found at: .../src/vibey_tools/skills". Only this one member is needed: the runners and
-# the other tools are not dependencies of `vibey[operator,skills]`, so uv never looks for
-# them. Copying the subtree whole rather than cherry-picking its manifest is deliberate;
-# its wheel force-includes plugins/ and .claude-plugin/, and a narrower copy silently rots
-# the moment that list grows.
-COPY src/vibey_tools/skills/ ./src/vibey_tools/skills/
+# No workspace member is needed here any more. It used to be: `vibey[skills]` required
+# `vibey-skills`, uv had to BUILD that member to satisfy it, and the sync failed with
+# "Distribution not found at: .../src/vibey_tools/skills" without the subtree. Since
+# ADR-0037 no family package is a REQUIREMENT of anything -- they are packages of this
+# wheel -- so `--no-install-project` resolves third-party dependencies alone and this
+# layer caches on the lockfile by itself.
 # --extra operator: the same image serves the worker and the operator
-# Deployment, so kopf has to be present. --extra skills makes the optional
-# context compiler available when a VibeyProject enables it; its process is
-# never started for projects that leave the feature off.
+# Deployment, so kopf has to be present. --extra skills is now an empty compatibility
+# alias (the context compiler ships in the wheel); the flag stays because removing it
+# would be a silent behaviour change to every chart and script that passes it.
 RUN uv sync --frozen --no-install-project --no-dev --extra operator --extra skills
 
-# src/vibey only. This was `COPY src/ ./src/`, which already shipped five runner subtrees
-# into a runtime image that cannot execute them; with three tools absorbed as well it
-# became roughly 160 MB of tests, docs and marketplace Markdown in the layer.
+# What the root wheel is built from. ADR-0021 cut this back to `src/vibey` because
+# `COPY src/ ./src/` shipped roughly 160 MB of tests, docs and marketplace Markdown into
+# a runtime image that could not execute any of it. ADR-0037 reverses the premise, not
+# the discipline: the runners and tools are now PACKAGES of this wheel, so the final
+# `uv sync` below builds the project and hatchling demands every path
+# `[tool.hatch.build.targets.wheel]` names -- a missing one fails the build outright
+# ("Forced include not found: .../gh/docs/javascripts/channel.js"), which is how this
+# was found. So the list grew to exactly those paths and no further: ten package roots,
+# five force-include sources, and the nine tenant manifests uv's workspace globs
+# (`src/vibey_runners/*`, `src/vibey_tools/*`) require of any member directory that
+# exists in the context at all. Each tenant's tests/, docs/ and README still stay out.
+#
+# tests/meta/test_shipped_trees_are_reachable.py binds this list to the
+# pyproject, so adding a package root without a COPY line fails in CI rather than in the
+# `image` job's build log.
 COPY src/vibey/ ./src/vibey/
+COPY src/vibey_runners/claude/pyproject.toml ./src/vibey_runners/claude/
+COPY src/vibey_runners/codex/pyproject.toml ./src/vibey_runners/codex/
+COPY src/vibey_runners/cursor/pyproject.toml ./src/vibey_runners/cursor/
+COPY src/vibey_runners/agy/pyproject.toml ./src/vibey_runners/agy/
+COPY src/vibey_runners/qwen/pyproject.toml ./src/vibey_runners/qwen/
+COPY src/vibey_runners/common/pyproject.toml ./src/vibey_runners/common/
+COPY src/vibey_tools/gh/pyproject.toml ./src/vibey_tools/gh/
+COPY src/vibey_tools/bootstrap/pyproject.toml ./src/vibey_tools/bootstrap/
+COPY src/vibey_tools/skills/pyproject.toml ./src/vibey_tools/skills/
+COPY src/vibey_runners/claude/src/claudeloop/ ./src/vibey_runners/claude/src/claudeloop/
+COPY src/vibey_runners/codex/src/codexloop/ ./src/vibey_runners/codex/src/codexloop/
+COPY src/vibey_runners/cursor/src/cursorloop/ ./src/vibey_runners/cursor/src/cursorloop/
+COPY src/vibey_runners/agy/src/agyloop/ ./src/vibey_runners/agy/src/agyloop/
+COPY src/vibey_runners/qwen/src/qwenloop/ ./src/vibey_runners/qwen/src/qwenloop/
+COPY src/vibey_runners/common/src/vibey_runners/ ./src/vibey_runners/common/src/vibey_runners/
+COPY src/vibey_tools/gh/vibey_gh/ ./src/vibey_tools/gh/vibey_gh/
+COPY src/vibey_tools/bootstrap/vibey_bootstrap/ ./src/vibey_tools/bootstrap/vibey_bootstrap/
+COPY src/vibey_tools/skills/src/vibey_skills/ ./src/vibey_tools/skills/src/vibey_skills/
+COPY src/vibey_tools/skills/plugins/ ./src/vibey_tools/skills/plugins/
+COPY src/vibey_tools/skills/.claude-plugin/marketplace.json ./src/vibey_tools/skills/.claude-plugin/
+COPY src/vibey_tools/gh/docs/stylesheets/vibey.css ./src/vibey_tools/gh/docs/stylesheets/
+COPY src/vibey_tools/gh/docs/javascripts/channel.js ./src/vibey_tools/gh/docs/javascripts/
+COPY src/vibey_tools/gh/docs/javascripts/math.js ./src/vibey_tools/gh/docs/javascripts/
 COPY migrations/ ./migrations/
 RUN uv sync --frozen --no-dev --extra operator --extra skills
 

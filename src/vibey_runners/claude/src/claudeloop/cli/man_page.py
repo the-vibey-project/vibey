@@ -10,10 +10,14 @@ from __future__ import annotations
 
 from claudeloop import __version__
 
-_DOCS = "https://the-vibey-project.github.io/claudeloop/"
-_REPO = "https://github.com/the-vibey-project/claudeloop"
-_PYPI = "https://pypi.org/project/claudeloop/"
-_TESTPYPI = "https://test.pypi.org/project/claudeloop/"
+# claudeloop's own repository and its own PyPI project are both retired: the source was
+# absorbed into the vibey monorepo (ADR-0021) and the distribution folded into `vibey`
+# (ADR-0037). These four render into `claudeloop --man`, which `pip install vibey` puts on
+# everyone's PATH, so they name where the code and the artifact actually are.
+_DOCS = "https://the-vibey-project.github.io/vibey/main/"
+_REPO = "https://github.com/the-vibey-project/vibey"
+_PYPI = "https://pypi.org/project/vibey/"
+_TESTPYPI = "https://test.pypi.org/project/vibey-dev/"
 
 
 def render_man_page() -> str:
@@ -131,7 +135,7 @@ COMMANDS
               Last-turn clipboard/stdout, feedback events, or re-queue prompt.
 
        voice|speak …
-              Optional TTS/STT extras (claudeloop[voice] or system say/espeak).
+              Optional TTS/STT extras (vibey[voice] or system say/espeak).
 
        logs [--run-id ID] [--follow | -f]
               Print or follow the per-run events.jsonl stream (recursively
@@ -367,7 +371,7 @@ EXAMPLES
 SEE ALSO
        Documentation (github.io): {_DOCS}
        Repository: {_REPO}
-       PyPI: {_PYPI}
+       PyPI: {_PYPI} (claudeloop ships inside the `vibey` distribution)
        TestPyPI: {_TESTPYPI}
        Guides: autonomous runs, run resources and chat ops, rate limits vs
        credits, never-blocking, live testing, configuration — under {_DOCS}
