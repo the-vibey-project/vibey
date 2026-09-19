@@ -29,6 +29,19 @@ as a boolean, or return a problem string that keeps "could not ask" distinct fro
 there" — each byte-identical to the runner it replaces, with the argv and working directory
 unchanged. The remaining runners move onto it one module at a time.
 
+Above the transport sits the forge adapter layer (#138), which is what will let vibey-gh
+reach forges other than GitHub. `vibey_gh.forge` defines the forge-neutral nouns —
+`ChangeRequest`, `ForgeRelease`, `CheckResult`, `ProtectedRef` and the rest, recorded in
+[ADR 0001](adr/0001-forge-neutral-nouns.md), which is proposed and awaits the operator's
+ratification. `vibey_gh/interfaces/forge_adapter_interface.py` declares the verbs, and every
+verb answers `(value, problem)`, so "could not look" never reads as "nothing there".
+`vibey_gh.forge_github.GitHubForge` implements them on the `gh` transport, and
+`vibey_gh.forge_selector` is the one place that reads `[platform] kind` to choose it. GitHub
+is the only adapter; `gitlab` and `forgejo` are refused at load until theirs exist. The
+clean-repo survey (`vibey_gh.tidy`) is the first consumer: its open-pull-request heads and
+its releases now come through the adapter, with the same `gh` argv and working directory as
+before, so it never names a platform.
+
 When a primary Claude path returns no verdict at all, `vibey_gh.local_review` offers two
 opt-in fallbacks through the same Ollama-compatible endpoint on the same distinct,
 non-privileged self-hosted runner. For pull requests, `local-review` reviews the diff and

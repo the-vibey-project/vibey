@@ -33,9 +33,10 @@ clarification requires of it.
 from __future__ import annotations
 
 import json
+import os
 import time
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -46,13 +47,22 @@ from vibey_gh.fit import (
     Machine,
     Model,
     Observation,
+    OllamaModelSampler,
     decide,
     estimate_from,
     sample_machine,
-    sample_model,
 )
+from vibey_gh.interfaces.model_sampler_interface import ModelSamplerInterface
 
-__all__ = ["Decision", "FitLoop", "recorded_observations"]
+__all__ = ["DEFAULT_JOURNAL", "JOURNAL_ENV", "Decision", "FitLoop", "recorded_observations"]
+
+# Where the journal lives when nobody says otherwise: beside the failover seat's state
+# (`~/.local/state/vibey-gh/failover.json`), because it describes this MACHINE's runner
+# rather than any one repository, and every invocation on the machine -- the CLI now, the
+# live local calls next -- has to read the same one for the estimate to be a loop at all.
+# `VIBEY_GH_FIT_JOURNAL` moves it, following the tool's `VIBEY_GH_*` naming.
+JOURNAL_ENV = "VIBEY_GH_FIT_JOURNAL"
+DEFAULT_JOURNAL = Path("~/.local/state/vibey-gh/fit.jsonl")
 
 # `None` is a real answer for a model — "the runner does not hold it", which is the
 # FLOOR case — so it cannot double as "the caller did not say". A caller that has
@@ -61,12 +71,16 @@ __all__ = ["Decision", "FitLoop", "recorded_observations"]
 _UNSET: object = object()
 
 
-def recorded_observations(journal: Path) -> list[Observation]:
+def recorded_observations(journal: Path, model: str | None = None) -> list[Observation]:
     """Measurements a previous run wrote, so constants carry across invocations.
 
     Only entries a caller recorded through `observe()` are returned — never a decision's
     *projection*. Feeding a projection back as a measurement would let the estimate
     confirm its own guesses and drift from the machine while growing more confident.
+
+    With `model`, only that model's measurements. One machine-wide journal holds every
+    model the runner serves, and τ for a 14B model says nothing about a 70B one — mixing
+    them would fit a service time that belongs to neither.
 
     A missing, unreadable, or partly corrupt journal yields what it can rather than
     raising: an admission controller that will not run because its own logbook is
@@ -81,6 +95,8 @@ def recorded_observations(journal: Path) -> list[Observation]:
         try:
             entry = json.loads(line)
             if entry.get("kind") != "observation":
+                continue
+            if model is not None and entry.get("model") != model:
                 continue
             samples.append(
                 Observation(
@@ -122,7 +138,16 @@ class Decision:
 
 
 class FitLoop:
-    """A continuously re-fitted admission controller for one model on one machine."""
+    """A continuously re-fitted admission controller for one model on one machine.
+
+    The model is read from the runner at `base_url` -- else `VIBEY_OLLAMA_URL`, else the
+    local default -- which is the runner the work would actually go to. `model_sampler`
+    replaces that reader outright (a test, or a runner that is not Ollama); `base_url`
+    then only names the runner for whoever reads `loop.base_url`.
+
+    `journal=None` keeps the decisions in memory only. `default_journal()` is where the
+    CLI and any other caller that wants the machine-wide loop point it.
+    """
 
     def __init__(
         self,
@@ -131,12 +156,42 @@ class FitLoop:
         journal: Path | None = None,
         window: int = DEFAULT_WINDOW,
         clock: Callable[[], float] | None = None,
+        base_url: str | None = None,
+        model_sampler: ModelSamplerInterface | None = None,
+        environ: Mapping[str, str] | None = None,
     ) -> None:
         self.model_name = model_name
         self.journal = journal
+        self.base_url = OllamaModelSampler.resolve_base_url(base_url, environ=environ)
+        self._model_sampler: ModelSamplerInterface = (
+            OllamaModelSampler(self.base_url) if model_sampler is None else model_sampler
+        )
         self._observations: deque[Observation] = deque(maxlen=max(window, 1))
         self._clock = clock or time.time
         self._decisions: list[Decision] = []
+
+    @staticmethod
+    def default_journal(environ: Mapping[str, str] | None = None) -> Path:
+        """`VIBEY_GH_FIT_JOURNAL` when it is set and not empty, else `DEFAULT_JOURNAL`,
+        with `~` expanded."""
+        env = os.environ if environ is None else environ
+        return Path(env.get(JOURNAL_ENV) or DEFAULT_JOURNAL).expanduser()
+
+    def replay(self) -> int:
+        """Load the measurements this loop's journal already holds into its window, and
+        say how many there were.
+
+        This is what makes separate processes one loop: each invocation starts from what
+        the previous ones measured instead of from nothing. Only this loop's model's
+        observations come back, never projections and never another model's timings (see
+        `recorded_observations`), and the window still bounds how many of them govern the
+        estimate.
+        """
+        if self.journal is None:
+            return 0
+        samples = recorded_observations(self.journal, self.model_name)
+        self._observations.extend(samples)
+        return len(samples)
 
     # -- measurement ------------------------------------------------------------
 
@@ -192,7 +247,7 @@ class FitLoop:
         """
         machine = sample_machine() if machine is None else machine
         if model is _UNSET:
-            model = sample_model(self.model_name)
+            model = self._model_sampler.sample(self.model_name)
         resolved = model if isinstance(model, Model) else None
         est = self.estimate
         verdict = decide(

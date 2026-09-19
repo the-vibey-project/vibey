@@ -16,6 +16,7 @@ from typing import Self
 import pytest
 
 from vibey_gh import local_review
+from vibey_gh.fit import ContextSizer
 
 
 class _Response:
@@ -511,7 +512,7 @@ def test_the_context_window_scales_with_the_prompt(monkeypatch, tmp_path):
     assert local_review.review(["--diff", str(big)]) == 0
     ctx = sent[0]["options"]["num_ctx"]
     assert ctx > 4096
-    assert ctx == local_review._num_ctx(len(sent[0]["messages"][1]["content"]))
+    assert ctx == ContextSizer().num_ctx(len(sent[0]["messages"][1]["content"]))
 
     small = tmp_path / "small.diff"
     small.write_text("+ one line\n")
@@ -534,7 +535,31 @@ def test_the_context_window_scales_with_the_prompt(monkeypatch, tmp_path):
 
 def test_the_context_window_is_capped(tmp_path):
     """An enormous request should fail visibly rather than exhaust the host."""
-    assert local_review._num_ctx(10_000_000) == 32768
+    assert local_review.CONTEXT_SIZER.num_ctx(10_000_000) == 32768
+
+
+def test_review_and_triage_size_their_window_through_one_seam(monkeypatch):
+    """Both calls take the same sizer, so the fit projection can choose the window per
+    request later without either call changing, and a test can pin it exactly."""
+
+    class _Fixed:
+        def __init__(self) -> None:
+            self.asked: list[int] = []
+
+        def num_ctx(self, prompt_chars: int) -> int:
+            self.asked.append(prompt_chars)
+            return 12345
+
+    sizer = _Fixed()
+    sent = _model_returns(monkeypatch, _verdict())
+    local_review.call_ollama("http://h:1", "m", "diff", 100, 5, sizer=sizer)
+    assert sent[0]["options"]["num_ctx"] == 12345
+    assert sizer.asked == [len(sent[0]["messages"][1]["content"])]
+
+    sent = _model_returns(monkeypatch, _triage_verdict())
+    local_review.call_ollama_triage("http://h:1", "m", "issue", 100, 5, sizer=sizer)
+    assert sent[0]["options"]["num_ctx"] == 12345
+    assert len(sizer.asked) == 2
 
 
 def test_the_prompt_names_the_idioms_that_look_like_defects_and_are_not():
@@ -563,3 +588,36 @@ def test_the_prompt_names_the_idioms_that_look_like_defects_and_are_not():
     assert "Only report a finding you can point at a specific added or modified line for" in (
         SYSTEM_PROMPT
     )
+
+
+def test_a_verdict_names_the_role_it_ran_in(monkeypatch, capsys, tmp_path):
+    """Since the sovereign lane goes first (#133) its verdict is not always a fallback. The
+    summary travels into the state comment, so a verdict that carried the diff half says
+    so, and only one that stood in for a failed paid review calls itself a fallback."""
+    diff = tmp_path / "d.diff"
+    diff.write_text("+ added a line\n", encoding="utf-8")
+    _model_returns(monkeypatch, _verdict())
+
+    assert local_review.review(["--diff", str(diff), "--role", "sovereign"]) == 0
+    carried = json.loads(capsys.readouterr().out)
+    assert local_review.review(["--diff", str(diff)]) == 0
+    fallback = json.loads(capsys.readouterr().out)
+
+    assert carried["summary"].startswith("[SOVEREIGN LANE — ")
+    assert "FALLBACK" not in carried["summary"]
+    assert "NOT evaluated" in carried["summary"]
+    assert fallback["summary"].startswith("[LOCAL FALLBACK — ")
+    with pytest.raises(SystemExit):
+        local_review.review(["--diff", str(diff), "--role", "primary"])
+
+
+def test_the_cli_forwards_the_role(monkeypatch, tmp_path):
+    from vibey_gh import cli
+
+    diff = tmp_path / "d.diff"
+    diff.write_text("+ a line\n", encoding="utf-8")
+    seen: list[list[str]] = []
+    monkeypatch.setattr(local_review, "review", lambda argv: seen.append(argv) or 0)
+
+    assert cli.main(["local-review", "--diff", str(diff), "--role", "sovereign"]) == 0
+    assert seen == [["--diff", str(diff), "--role", "sovereign"]]

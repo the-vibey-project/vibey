@@ -16,6 +16,8 @@ from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient
 from structlog.stdlib import BoundLogger
 
 from claudeloop.application.dto import TurnOutcome
+from claudeloop.domain.backend import BackendRuntime
+from claudeloop.domain.interfaces import BackendRuntimeInterface
 from claudeloop.domain.model_profile import ModelEffortProfile
 from claudeloop.domain.permission import (
     DEFAULT_USER_PERMISSION_MODE,
@@ -61,8 +63,11 @@ class ClaudeAgentGateway:
         system_prompt_append: str = "",
         allowed_tools: list[str] | None = None,
         tool_approval_timeout: float = 30.0,
+        backend: BackendRuntimeInterface | None = None,
     ) -> None:
         self._cwd = cwd
+        # The resolved backend profile; the default is plain Anthropic.
+        self._backend: BackendRuntimeInterface = backend or BackendRuntime()
         self._session_id = session_id
         self._resume = resume
         self._continue_conversation = continue_conversation
@@ -92,16 +97,20 @@ class ClaudeAgentGateway:
         return self._approval.resolve(request_id, allow=allow, reason=reason)
 
     def _options(self) -> ClaudeAgentOptions:
+        zero_cost = self._backend.cost_mode == "zero"
         return build_turn_options(
             cwd=self._cwd,
             session_id=self._session_id,
             resume=self._resume,
             continue_conversation=self._continue_conversation,
             max_turns=self._max_turns,
-            max_budget_usd=self._max_budget_usd,
+            # Claude Code enforces --max-budget-usd against its own cost figure,
+            # which on a zero-cost backend is a guess about a free model. The
+            # runner's own dollar budget still applies (at $0 per turn).
+            max_budget_usd=None if zero_cost else self._max_budget_usd,
             retry_watchdog=self._retry_watchdog,
             model=self._model,
-            effort=self._effort,
+            effort=self._effort if self._backend.pass_effort else None,
             max_buffer_size=self._max_buffer_size,
             include_partial_messages=self._include_partial_messages,
             permission_mode=self._permission_mode,
@@ -112,6 +121,8 @@ class ClaudeAgentGateway:
             can_use_tool=self._approval.can_use_tool,
             system_prompt_append=self._system_prompt_append,
             allowed_tools=self._allowed_tools or None,
+            env=self._backend.environment(),
+            cli_path=self._backend.cli_path,
         )
 
     async def _reconnect(self) -> None:
@@ -242,7 +253,11 @@ class ClaudeAgentGateway:
                 self._on_event(event)
 
         await client.query(prompt_text)
-        accumulator = TurnAccumulator(on_event=_on_event)
+        accumulator = TurnAccumulator(
+            on_event=_on_event,
+            cost_mode=self._backend.cost_mode,
+            local_backend=self._backend.local,
+        )
         async for message in client.receive_response():
             for event in self._approval.drain_events():
                 if self._on_event is not None:
@@ -279,11 +294,15 @@ class ClaudeCapacityProbe:
         on_event: EventListener | None = None,
         max_buffer_size: int | None = None,
         model: str | None = None,
+        backend: BackendRuntimeInterface | None = None,
     ) -> None:
         self._cwd = cwd
         self._on_event = on_event
         self._max_buffer_size = max_buffer_size
         self._model = model
+        # Same backend as the turns — a probe without it would re-check capacity
+        # on Anthropic while the run itself talks to a local server.
+        self._backend: BackendRuntimeInterface = backend or BackendRuntime()
 
     def set_model(self, model: str | None) -> None:
         """Keep the probe on the same model as the live run."""
@@ -294,13 +313,19 @@ class ClaudeCapacityProbe:
             cwd=self._cwd,
             max_buffer_size=self._max_buffer_size,
             model=self._model,
+            env=self._backend.environment(),
+            cli_path=self._backend.cli_path,
         )
         _logger().info("gateway.probe.start", model=self._model)
         client = ClaudeSDKClient(options=options)
         await client.connect()
         try:
             await client.query("Reply with the single word OK and nothing else.")
-            accumulator = TurnAccumulator(on_event=self._on_event)
+            accumulator = TurnAccumulator(
+                on_event=self._on_event,
+                cost_mode=self._backend.cost_mode,
+                local_backend=self._backend.local,
+            )
             async for message in client.receive_response():
                 accumulator.feed(message)
             outcome = accumulator.build()

@@ -2,7 +2,9 @@
 
 `qwenloop` is an autonomous, local Qwen 2.5 Coder 14B runner. It uses a
 portable llama.cpp/Q5_K_M profile by default and can use BF16 through vLLM on
-Linux NVIDIA systems with at least 40 GiB of usable VRAM.
+Linux NVIDIA systems with at least 40 GiB of usable VRAM. It can also attach to
+a server that is already running, such as Ollama, instead of starting one (see
+[Attach to Ollama](#attach-to-ollama-or-any-openai-compatible-endpoint)).
 
 Model installation is always explicit. The package, tests, `doctor`, and Vibey
 integration never download model weights.
@@ -40,6 +42,56 @@ graceful wind-down, the `QWENLOOP_TASK_FULLY_COMPLETE` marker, and a
 
 Servers bind to loopback and require a per-launch bearer token. Qwenloop never
 silently changes backend during a run.
+
+## Attach to Ollama, or any OpenAI-compatible endpoint
+
+The `openai-compat` backend attaches to an inference server that someone else runs
+instead of spawning llama-server or vllm. Ollama is the main target, but any server that
+answers `GET /models` and `POST /chat/completions` under its base URL works:
+LM Studio, a vLLM someone else runs, or a hosted gateway.
+
+```bash
+ollama pull qwen2.5-coder:14b
+export QWENLOOP_BASE_URL=http://127.0.0.1:11434/v1   # the OpenAI base URL, /v1 included
+qwenloop doctor                                      # 0 only if it answers AND serves the model
+qwenloop run plan.md --run-id <uuid> --cwd <worktree>
+```
+
+qwenloop never owns an attached server. `start` checks that the endpoint answers and
+serves the configured model, and fails with a message naming which check failed. `stop`
+does nothing. `auto` selects `openai-compat` whenever a base URL is configured, and an
+explicit `--backend` still wins. `--backend openai-compat` with no base URL attaches to
+Ollama's default address, `http://127.0.0.1:11434/v1`. `run`, `run --storm`,
+`server start`, and `server status` all use the same backend. A run records the
+endpoint URL in place of a pinned revision and digest, because the endpoint manages the
+model, not qwenloop.
+
+| Setting | Flag | Environment | Config key | Default |
+|---|---|---|---|---|
+| Endpoint base URL | `--base-url` | `QWENLOOP_BASE_URL` | `base_url` | unset |
+| Model name sent to the endpoint | `--model` | `QWENLOOP_MODEL` | `model` | `qwen2.5-coder:14b` |
+| Endpoint API key | — | `QWENLOOP_API_KEY` | — | none, so no `Authorization` header is sent |
+| Endpoint probe timeout (seconds) | — | — | `endpoint_timeout_seconds` | `5` |
+| Backend | `--backend` | — | `backend` | `auto` |
+| Turn limit | `--max-turns` | — | `max_turns` | `40` |
+| Server startup wait (seconds) | — | — | `startup_timeout_seconds` | `180` |
+| Context window (tokens) | — | — | `context_window` | `32768` |
+
+A flag beats an environment variable, which beats the config file, which beats the
+default. The config file is TOML, read from `$QWENLOOP_CONFIG`. When that is unset,
+it is read from `<user config dir>/qwenloop/config.toml`, which is
+`~/Library/Application Support/qwenloop/config.toml` on macOS and
+`~/.config/qwenloop/config.toml` on Linux. A missing default file is fine. A missing
+file named by `QWENLOOP_CONFIG`, invalid TOML, an unknown key, or a base URL that is
+not `http(s)://` stops the command with exit code 2 and a message naming the problem.
+The API key is read only from the environment: it never goes in a file or on a command
+line. `portable_profile`, `nvidia_profile`, and `idle_timeout_seconds` are checked for
+validity, but nothing uses them yet.
+
+Ollama must be able to hold `context_window` tokens. Set its own context length
+(`OLLAMA_CONTEXT_LENGTH`, or the model's `num_ctx`) to at least `context_window`, or
+lower `context_window` to match. Otherwise Ollama quietly drops the start of a long
+prompt, which qwenloop has already trimmed to `context_window`.
 
 ## Development
 

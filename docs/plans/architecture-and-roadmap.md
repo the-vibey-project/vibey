@@ -596,13 +596,14 @@ representations differ, whereas passing "fragile context strings" does not.
 
 ### 8.2 Event types
 
-`SessionSeeded`, `TurnRequested`, `TurnCompleted`, `ToolInvoked`, `FileEdited`,
+`SessionSeeded`, `TurnRequested`, `TurnCompleted`, `ToolInvoked`,
+`TranscriptRecorded`, `FileEdited`,
 `VerdictRendered`, `CapacityRejected`, `DecisionRecorded`, `QuestionAsked`,
 `AnswerGiven`, `AssumptionStated`, `ArtifactProduced`, `SavePointCreated`,
 `FindingRaised`, `FindingResolved`, `HandoffInitiated`, `HandoffAccepted`,
 `PhaseTransitioned`, `BudgetSpent`, `VisualDesignOptedIn`,
 `VisualDesignDeclined`, `VisualDesignAccepted`, `VisualDesignWaived`,
-`DeploymentOptedIn`, `DeploymentDeclined` (25 kinds, `domain/ledger.py`).
+`DeploymentOptedIn`, `DeploymentDeclined` (26 kinds, `domain/ledger.py`).
 
 Every event carries `(event_id, project_id, cycle, phase, seq, kind, engine_id,
 job_id, causation_id, correlation_id, provenance, produced_at, payload,
@@ -791,12 +792,12 @@ An engine is eligible when: installed, authenticated (`doctor` passed within TTL
 circuit not `open`, capability requirements met, and per-phase allow-list permits
 it.
 
-**Standby rule** ([ADR-0015](../architecture/decisions/0015-qwenloop-standby.md)). `qwenloop` is
-a local, zero-dollar engine, off unless `[features] qwenloop = true` or
-`VIBEY_FEATURE_QWENLOOP` enables it. Even when enabled it never competes in SWRR
-with paid engines: `EngineSelector` drops it from the candidate set whenever any
-paid engine is eligible, so it is selected only when the paid pool is empty or a
-phase allow-list names only `qwenloop`. Separately, DESIGN can be run on a local
+**Local tier, preferred first** ([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md),
+amending [ADR-0015](../architecture/decisions/0015-qwenloop-standby.md)'s standby rule). `qwenloop`
+and `claudeloop-local` are local, zero-dollar engines, each off unless its
+`[features]` key or `VIBEY_FEATURE_*` switch enables it. When enabled they are
+preferred: `EngineSelector` runs SWRR within the LOCAL tier and a paid engine is
+selected only when no local engine is eligible. Separately, DESIGN can be run on a local
 model by choice — `--provider qwenloop` on `vibey work` and `vibey worker` — which
 talks to the local model directly rather than through rotation
 ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)).

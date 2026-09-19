@@ -114,3 +114,67 @@ def test_completion_schema_describes_blocked_on_as_terminal_external_only() -> N
     assert isinstance(remaining, dict)
     rem_desc = str(remaining["description"]).lower()
     assert "background" in rem_desc or "waitable" in rem_desc
+
+
+# --- cost modes and token counts ---
+
+
+def _result_message(**fields: object) -> object:
+    from claude_agent_sdk import ResultMessage
+
+    base: dict[str, object] = {
+        "subtype": "success",
+        "duration_ms": 1,
+        "duration_api_ms": 1,
+        "is_error": False,
+        "num_turns": 1,
+        "session_id": "s",
+        "total_cost_usd": 0.0008365,
+        "usage": {"input_tokens": 157, "output_tokens": 2},
+        "result": "OK",
+    }
+    base.update(fields)
+    return ResultMessage(**base)  # type: ignore[arg-type]
+
+
+def test_reported_cost_mode_keeps_claude_codes_figure_and_the_tokens() -> None:
+    acc = TurnAccumulator()
+    acc.feed(_result_message())
+    outcome = acc.build()
+    assert outcome.cost_usd == 0.0008365
+    assert (outcome.input_tokens, outcome.output_tokens) == (157, 2)
+    assert outcome.signals.local_backend is False
+    event = outcome.raw_events[0]
+    assert event["total_cost_usd"] == 0.0008365
+    assert event["usage"] == {"input_tokens": 157, "output_tokens": 2}
+    assert "reported_cost_usd" not in event
+
+
+def test_zero_cost_mode_records_nothing_spent_but_keeps_the_guess_on_record() -> None:
+    """Captured live: Claude Code reported $0.0008365 for one turn of a free
+    local qwen2.5-coder:1.5b, priced as if it were its default model."""
+    acc = TurnAccumulator(cost_mode="zero", local_backend=True)
+    acc.feed(_result_message())
+    outcome = acc.build()
+    assert outcome.cost_usd == 0.0
+    assert outcome.output_tokens == 2
+    assert outcome.signals.local_backend is True
+    event = outcome.raw_events[0]
+    assert event["total_cost_usd"] == 0.0
+    assert event["reported_cost_usd"] == 0.0008365
+
+
+def test_zero_cost_mode_with_no_reported_cost() -> None:
+    acc = TurnAccumulator(cost_mode="zero")
+    acc.feed(_result_message(total_cost_usd=None))
+    outcome = acc.build()
+    assert outcome.cost_usd == 0.0
+    assert outcome.raw_events[0]["reported_cost_usd"] is None
+
+
+def test_malformed_usage_leaves_the_counts_alone() -> None:
+    acc = TurnAccumulator()
+    acc.feed(_result_message(usage={"input_tokens": True, "output_tokens": "7"}))
+    acc.feed(_result_message(usage=None))
+    outcome = acc.build()
+    assert (outcome.input_tokens, outcome.output_tokens) == (0, 0)

@@ -60,7 +60,7 @@ pip install -e ".[dev,test,all,docs]"
 # Verify setup
 pytest
 
-# Verify the documentation site builds (optional, but CI gates on it)
+# Verify the documentation site builds (optional; no CI job builds this site in the monorepo)
 mkdocs build --strict
 ```
 
@@ -483,44 +483,30 @@ def initialize_application(secrets_repository: Optional[SecretsRepositoryInterfa
 
 ## Git Hooks
 
-The repository includes pre-commit and pre-push hooks that enforce code quality standards.
+This package has no git hooks of its own. It lives in the vibey monorepo, where git runs
+only the repository root's `.githooks/` (`core.hooksPath`): vibey-gh's Conventional
+Commits and provenance hooks, which `vibey-gh install` writes at the repository root. The
+pre-commit and pre-push hooks this repository carried when it stood alone never fired here
+and were removed under vibey #189; they stay in git history
+(`git show 4e9adf18:src/vibey_tools/bootstrap/.githooks/pre-commit`).
 
-### Installation
+### Running the Old Hook's Checks by Hand
 
-**Windows (PowerShell)**:
-```powershell
-powershell -ExecutionPolicy Bypass -File .githooks\install-hooks.ps1
-```
+From this directory, the same checks the old pre-commit hook ran:
 
-**Linux/Mac/Git Bash**:
 ```bash
-bash .githooks/install-hooks.sh
+python -m black --check vibey_bootstrap/ test/
+python -m isort --check-only vibey_bootstrap/ test/
+python -m ruff check vibey_bootstrap/ test/
+python -m mypy vibey_bootstrap/
+python -m bandit -r vibey_bootstrap/ -ll -q
+python -m pip_audit
+python -m pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term-missing
 ```
 
-**Manual**:
-```bash
-git config core.hooksPath .githooks
-```
-
-### What Gets Checked
-
-#### pre-commit (~30-60 seconds)
-
-Runs on every `git commit`:
-1. **Black** - Code formatting (line length 100)
-2. **isort** - Import sorting (Black-compatible)
-3. **Ruff** - Linting (pycodestyle, pyflakes, bugbear, etc.)
-4. **MyPy** - Type checking (with ignore_missing_imports)
-5. **Bandit** - Security vulnerability scanning
-6. **pip-audit** - Dependency security audit (warning only)
-7. **pytest** - Full test suite with **85%+ coverage requirement**
-
-#### pre-push (~60-90 seconds)
-
-Runs on every `git push`:
-1. All pre-commit checks
-2. Full verbose test suite
-3. Package build verification
+CI runs only the last of these, in the root `ci.yml` `tools` job on Python 3.11 and 3.12,
+held to the package's own 100% line floor (`[tool.coverage.report] fail_under` in its
+`pyproject.toml`). The others are not in CI.
 
 ### Quick Fix Commands
 
@@ -529,31 +515,7 @@ Runs on every `git push`:
 black vibey_bootstrap/ test/
 isort vibey_bootstrap/ test/
 ruff check --fix vibey_bootstrap/ test/
-
-# Run all checks manually
-bash .githooks/pre-commit
 ```
-
-### Bypassing Hooks
-
-**Not recommended**, but available:
-```bash
-git commit --no-verify   # Skip pre-commit
-git push --no-verify     # Skip pre-push
-```
-
-### Disabling / Re-enabling Hooks
-
-```bash
-git config core.hooksPath ""          # Disable
-git config core.hooksPath .githooks   # Re-enable
-```
-
-### Hook Troubleshooting
-
-- **"Virtual environment not found"**: Run `pip install -e ".[dev]"`
-- **"Permission denied" (Linux/Mac)**: Run `chmod +x .githooks/pre-commit .githooks/pre-push`
-- **Hooks not running**: Check `git config core.hooksPath` outputs `.githooks`
 
 All tool configurations are in `pyproject.toml` (`[tool.black]`, `[tool.isort]`, `[tool.ruff]`, `[tool.mypy]`, `[tool.bandit]`, `[tool.coverage.report]`).
 

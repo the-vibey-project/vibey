@@ -44,7 +44,7 @@ with payloads.
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
 | `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 
@@ -289,6 +289,8 @@ the in-cluster preflight instead.
 | `--record` | off | Persist preflight (and conformance, with `--conformance`) results to `engine_health`. Exits 1 if no project exists. |
 | `--project ID` | latest | Project to record health for, with `--record`. |
 | `--cluster` | off | Run the in-cluster preflight instead of the engine checks — see [Kubernetes guide](../guides/kubernetes.md). |
+| `--engines LIST` | unset | With `--cluster`: the worker's own `--engines` allow-list (chart value `worker.engines`). `engine-auth` requires exactly these. Parsed as the worker parses it; empty means unset. |
+| `--provider NAME` | `scripted` | With `--cluster`: the worker's own `--provider` (`scripted`, `claudeloop`, or `qwenloop`; chart value `worker.provider`). `claudeloop` adds claudeloop to what `engine-auth` requires. |
 
 With `--engine` unset, doctor checks the four paid engines (`claudeloop`,
 `codexloop`, `cursorloop`, `agyloop`) whether or not they are installed —
@@ -306,12 +308,21 @@ With `--conformance`, the command exits 1 if any engine fails a check. The
 worker does not select an engine for engine-driven jobs until a
 `doctor --conformance --record` run has passed for it.
 
-`--cluster` ignores the other options, runs up to six checks, and exits 1 if
-any fails: the DSN host resolves beyond its own namespace, the process is not
-root, the workspace (current directory) is writable, every installed paid
-engine binary has an API key in the environment, the database accepts a
+`--cluster` ignores `--conformance`, `--engine`, `--record` and `--project`,
+runs up to six checks, and exits 1 if any fails: the DSN host resolves beyond
+its own namespace, the process is not root, the workspace (current directory)
+is writable, the engines the worker uses have API keys, the database accepts a
 connection, and no migrations are pending. The migrations check is skipped
 when the database connection fails.
+
+The engine check (`engine-auth`) judges what the worker was told to run, not
+what is on `PATH` — every runner ships in the image since ADR-0037, so a
+binary's presence says nothing. It requires each engine in `--engines`, plus
+claudeloop under `--provider claudeloop`, to be on `PATH` with one of its
+API-key variables set (qwenloop takes none). With neither, nothing is
+required: the check passes and reports which engines in the worker's default
+pool have a key, so a default install says plainly when no engine-driven job
+can run. `--engines` and `--provider` without `--cluster` exit 2.
 
 ## `vibey operator`
 

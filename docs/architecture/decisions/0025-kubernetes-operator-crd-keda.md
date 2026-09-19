@@ -1,6 +1,14 @@
 # 0025 — Kubernetes: a chart, KEDA on claimable work, and an operator that never grows its own logic
 
-**Status:** accepted · **Date:** 2026-08-21 (PRs #73 and #76; recorded 2026-09-15) · **Extends:** ADR-0002, ADR-0009
+**Status:** accepted; one Consequences clause outdated by ADR-0037 · **Date:** 2026-08-21 (PRs #73 and #76; recorded 2026-09-15) · **Extends:** ADR-0002, ADR-0009
+
+> Status note (2026-09-18): the decision stands in full. One sentence of
+> *Consequences* no longer holds — "Engines do not ship in the image".
+> Since [ADR-0037](0037-one-distribution-one-version.md) the one `vibey`
+> wheel carries every runner and the image puts all five on `PATH`. The
+> chart's default is still `--provider scripted`; what keeps a real engine
+> out of a default install now is credentials and each runner's headless
+> verification (runbook 16, Phase 0), not the image.
 
 ## Context
 
