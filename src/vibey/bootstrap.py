@@ -75,9 +75,10 @@ from vibey.infrastructure.db.design_spec_repository import FileDesignSpecReposit
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.handoff_repository import PostgresHandoffRepository
 from vibey.infrastructure.db.human_gate_repository import PostgresHumanGateRepository
+from vibey.infrastructure.db.interfaces import MigratorInterface
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
-from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
+from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
 from vibey.infrastructure.db.review_ledger import PostgresReviewLedger
 from vibey.infrastructure.db.rotation_cursor_repository import PostgresRotationCursorRepository
@@ -618,12 +619,15 @@ def migrations_dir() -> Path:
 
 @asynccontextmanager
 async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
+    # Read before the pool opens, so a bad VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS
+    # fails the start before anything touches the database.
+    migrator: MigratorInterface = PostgresMigrator.from_environ(os.environ)
     pool = await asyncpg.create_pool(url or database_url(), min_size=1, max_size=10)
     if pool is None:
         raise RuntimeError("asyncpg did not create a pool")
     try:
         async with pool.acquire() as conn:
-            await apply_migrations(conn, discover_migrations(migrations_dir()))
+            await migrator.apply(conn, discover_migrations(migrations_dir()))
 
         projects = PostgresProjectRepository(pool)
         ledger = PostgresLedgerRepository(pool)
