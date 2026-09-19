@@ -1243,6 +1243,8 @@ def test_latex_renders_on_the_site_from_a_verified_self_served_mathjax(tmp_path)
     script = (SOURCE_RELEASE_ASSETS / "javascripts" / "math.js").read_text(encoding="utf-8")
     assert 'processHtmlClass: "arithmatex"' in script
     assert "convertLatexFences();" in script
+    assert "DOMContentLoaded" in script
+    assert "pre.language-latex > code" in script
     assert "\\begin\\{verbatim\\}" in script
 
 

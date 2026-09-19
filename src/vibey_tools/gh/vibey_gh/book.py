@@ -618,8 +618,16 @@ class PrintInterior:
                     "pre{white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;"
                     "font-size:8.5pt;background:#f4f4f4;padding:.6em}"
                 ),
-                "pre,table,figure,img,svg{break-inside:avoid}",
-                "table{border-collapse:collapse;width:100%;font-size:9.5pt}",
+                "pre,figure,img,svg{break-inside:avoid}",
+                # A table may be taller than a page. Keeping the table itself whole is
+                # what produced a blank lower half of the preceding page in the command
+                # reference: Chrome moved the complete table to the next page. Let the
+                # table fragment, keep each ordinary row together, and repeat the header
+                # so a continued table remains readable on every page.
+                "table{border-collapse:collapse;width:100%;font-size:9.5pt;break-inside:auto}",
+                "thead{display:table-header-group}",
+                "tfoot{display:table-footer-group}",
+                "tr{break-inside:avoid}",
                 # `break-word`, not `anywhere`: only `anywhere` lowers a cell's minimum
                 # width, and an auto-width table then squeezes a narrow column down to a
                 # letter a line ("Documen / t").
@@ -636,8 +644,51 @@ class PrintInterior:
                 ".part{page:part;break-after:page;text-align:center;padding-top:2.5in}",
                 ".part h1{font-size:24pt;text-align:center}",
                 ".part p{font-size:14pt;font-style:italic;text-align:center}",
-                ".title-page{text-align:center;padding-top:2.5in}",
-                ".title-page h1{font-size:24pt;text-align:center}",
+                (
+                    ".title-page{position:relative;box-sizing:border-box;display:flex;"
+                    "flex-direction:column;align-items:center;justify-content:center;"
+                    "overflow:hidden;text-align:center;padding:.45in .3in .55in;"
+                    "color:#142338;background:linear-gradient(145deg,#f7f9fc,#edf2f8);"
+                    "-webkit-print-color-adjust:exact;print-color-adjust:exact}"
+                ),
+                (
+                    ".title-page:before{content:'';position:absolute;inset:.2in;"
+                    "border:1px solid #c9d4e2;border-radius:12px;pointer-events:none}"
+                ),
+                (
+                    ".title-page:after{content:'';position:absolute;width:3.4in;height:3.4in;"
+                    "right:-1.55in;top:-1.25in;border-radius:50%;"
+                    "background:rgba(45,123,154,.12);pointer-events:none}"
+                ),
+                ".title-mark{position:relative;z-index:1;width:1.3in;height:1.3in;margin:0 0 .22in}",
+                ".title-mark svg{display:block;width:100%;height:100%}",
+                (
+                    ".title-kicker{position:relative;z-index:1;margin:0;color:#2d7b9a;"
+                    "font-size:8.5pt;font-weight:bold;letter-spacing:.22em;"
+                    "text-transform:uppercase}"
+                ),
+                ".title-rule{position:relative;z-index:1;width:1.25in;margin:.18in 0;border-top:1.5pt solid #2d7b9a}",
+                ".title-rule--short{width:.55in;margin:.24in 0 .2in;border-top-color:#b07a3a}",
+                (
+                    ".title-page h1{position:relative;z-index:1;max-width:4.7in;margin:0;"
+                    "font-size:31pt;line-height:1.08;text-align:center;letter-spacing:-.02em;"
+                    "color:#142338}"
+                ),
+                (
+                    ".title-page .title-subtitle{position:relative;z-index:1;max-width:4.2in;"
+                    "margin:0;color:#52647a;font-size:13pt;line-height:1.35;"
+                    "font-style:italic;text-align:center}"
+                ),
+                (
+                    ".title-page .title-author{position:relative;z-index:1;margin:0;"
+                    "font-size:12pt;font-weight:bold;letter-spacing:.04em;"
+                    "text-align:center;color:#142338}"
+                ),
+                (
+                    ".title-page .title-edition{position:relative;z-index:1;margin:.16in 0 0;"
+                    "color:#68788b;font-size:8.5pt;letter-spacing:.12em;"
+                    "text-transform:uppercase;text-align:center}"
+                ),
                 ".copyright-page{font-size:9pt;padding-top:5in;text-align:left}",
                 ".toc ol{list-style:none;padding-left:0;text-align:left}",
                 ".toc ol ol{padding-left:1.25em}",
@@ -677,14 +728,36 @@ class PrintInterior:
                 f"{self._breakable(bodies[chapter.slug])}</section>"
             )
         contents = TableOfContents(chapters).ordered_list(lambda chapter: f"#{chapter.slug}")
-        subtitle = f"<p>{e(meta['subtitle'])}</p>" if meta.get("subtitle") else ""
+        subtitle = (
+            f'<p class="title-subtitle">{e(meta["subtitle"])}</p>' if meta.get("subtitle") else ""
+        )
+        edition = f"Edition {e(meta['edition'])} · " if meta.get("edition") else ""
+        title_page = (
+            '<section class="title-page">'
+            '<div class="title-mark" aria-hidden="true">'
+            '<svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">'
+            '<defs><linearGradient id="title-gradient" x1="0" y1="0" x2="1" y2="1">'
+            '<stop offset="0" stop-color="#2d7b9a"/><stop offset="1" stop-color="#b07a3a"/>'
+            "</linearGradient></defs>"
+            '<circle cx="80" cy="80" r="60" fill="none" stroke="#c9d4e2" stroke-width="2"/>'
+            '<path d="M28 92c25-48 56-48 104 0" fill="none" stroke="url(#title-gradient)" stroke-width="8" stroke-linecap="round"/>'
+            '<path d="M42 112c19-28 38-28 76 0" fill="none" stroke="#142338" stroke-width="5" stroke-linecap="round"/>'
+            '<circle cx="80" cy="48" r="11" fill="#b07a3a"/>'
+            "</svg></div>"
+            '<p class="title-kicker">Documentation edition</p>'
+            '<div class="title-rule" aria-hidden="true"></div>'
+            f"<h1>{e(meta['title'])}</h1>{subtitle}"
+            '<div class="title-rule title-rule--short" aria-hidden="true"></div>'
+            f'<p class="title-author">{e(meta["author"])}</p>'
+            f'<p class="title-edition">{edition}Complete reference · {year}</p>'
+            "</section>"
+        )
         stylesheet = "\n".join(rules)
         return (
             "<!DOCTYPE html>\n"
             f'<html lang="{e(meta.get("language", "en"))}"><head><meta charset="utf-8">'
             f"<title>{e(meta['title'])}</title><style>\n{stylesheet}\n</style></head><body>\n"
-            f'<section class="title-page"><h1>{e(meta["title"])}</h1>{subtitle}'
-            f"<p>{e(meta['author'])}</p></section>\n"
+            f"{title_page}\n"
             f'<section class="copyright-page"><p>Copyright &#169; {year} {e(meta["author"])}.'
             f" All rights reserved.</p><p>{e(meta.get('publisher', meta['author']))}</p>"
             "</section>\n"
