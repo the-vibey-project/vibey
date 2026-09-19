@@ -162,3 +162,53 @@ def test_probe_options_without_model_omits_model_kwarg() -> None:
 
     options = build_probe_options(cwd="/tmp")
     assert options.model is None
+
+
+# --- backend overlay: applied to the turn AND the probe ---
+
+_LOCAL_ENV = {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:11434",
+    "ANTHROPIC_AUTH_TOKEN": "ollama",
+    "ANTHROPIC_API_KEY": "",
+}
+
+
+def test_turn_options_merge_the_backend_overlay_over_the_defaults() -> None:
+    options = build_turn_options(
+        cwd="/tmp",
+        retry_watchdog=True,
+        env={**_LOCAL_ENV, "CLAUDE_CODE_MAX_RETRIES": "2"},
+    )
+    assert options.env["ANTHROPIC_BASE_URL"] == "http://127.0.0.1:11434"
+    assert options.env["ANTHROPIC_API_KEY"] == ""
+    assert options.env["CLAUDE_CODE_RETRY_WATCHDOG"] == "1"
+    # The overlay is applied last, so a profile can retune a default.
+    assert options.env["CLAUDE_CODE_MAX_RETRIES"] == "2"
+
+
+def test_turn_options_without_an_overlay_keep_the_anthropic_defaults() -> None:
+    options = build_turn_options(cwd="/tmp")
+    assert options.env == {"CLAUDE_CODE_MAX_RETRIES": "10"}
+    assert options.cli_path is None
+
+
+def test_turn_options_carry_a_profile_cli_path() -> None:
+    assert build_turn_options(cwd="/tmp", cli_path="/opt/claude").cli_path == "/opt/claude"
+
+
+def test_probe_options_carry_the_same_backend() -> None:
+    """Without the overlay a probe would re-check capacity on Anthropic while the
+    run itself talks to a local server."""
+    from claudeloop.infrastructure.agent.options import build_probe_options
+
+    options = build_probe_options(cwd="/tmp", env=_LOCAL_ENV, cli_path="/opt/claude")
+    assert options.env == _LOCAL_ENV
+    assert options.cli_path == "/opt/claude"
+
+
+def test_probe_options_without_an_overlay_set_no_env() -> None:
+    from claudeloop.infrastructure.agent.options import build_probe_options
+
+    options = build_probe_options(cwd="/tmp")
+    assert options.env == {}
+    assert options.cli_path is None

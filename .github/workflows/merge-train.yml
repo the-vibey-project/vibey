@@ -67,7 +67,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey==1.2.0"
+            python -m pip install --quiet "vibey==1.3.0"
           fi
       - name: Resolve the gated PR
         id: resolve

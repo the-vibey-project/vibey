@@ -286,8 +286,10 @@ replay rejection survives CLI process restarts and concurrent receivers. Deploym
 place `VIBEY_GH_WEBHOOK_STATE_DIR` on durable, access-controlled storage and retain the raw
 request bytes for HMAC verification; see [the CLI and adapter reference](docs/cli.md).
 
-The opt-in local-model review/triage fallback runs on a self-hosted runner, which GitHub
-itself warns against exposing to public-repository pull requests. `trusted_only` (default
+The local-model review/triage fallback runs on a self-hosted runner, which GitHub itself
+warns against exposing to public-repository pull requests. It is on by default
+(sub-doctrine 8.a) but scheduled only while the sovereign heartbeat is fresh, so a
+repository that never stands a runner up never offers it work. `trusted_only` (default
 `true`) keeps fork PRs off that runner entirely, and the job holds only `contents: read` —
 no secret, and no token capable of pushing, merging, or mutating the repository. Trusted
 steps use `gh`/`git` to assemble the diff or issue text; only the local model's own
@@ -314,7 +316,7 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 | `vibey-gh issue-automation record-solution --issue N --input JSON` | Persist the machine-readable attempt lineage a retry and its budget depend on. |
 | `vibey-gh issue-automation list-eligible` | List every open issue a recovery sweep should dispatch. |
 | `vibey-gh issue-automation ensure-labels` | Idempotently create the issue automation’s operational labels. |
-| `vibey-gh promote [--no-wait]` | Open or reuse the asynchronous `develop → main` promotion PR. |
+| `vibey-gh promote [--no-wait]` | Open the asynchronous `develop → main` promotion PR, or refresh the open one's title and body. |
 | `vibey-gh github-release --target SHA [--version VERSION]` | Create or reuse an immutable tag and GitHub Release for an exact production SHA. |
 | `vibey-gh realign` | Align identical `develop` and `main` trees after a rebase merge without discarding work. |
 | `vibey-gh flatten [--onto REF] [--push] [--orphan-comments] [--dry-run]` | Rewrite the current branch as one commit on its base, built from the branch's existing tree so content cannot change, with the subject normalized and the trailers re-derived — the remedy for a branch the provenance or Conventional Commits gate refuses and `check --apply` cannot repair. Co-authors, breaking changes and issue-closing keywords are carried from the whole range, because nothing re-derives them. It refuses a branch whose open pull request has unresolved review threads, since the force-push detaches every one of them from the code it was about; `--orphan-comments` proceeds anyway, and a forge that cannot be asked is reported as unchecked rather than as clean. |
@@ -344,7 +346,8 @@ existing `.gitattributes` is appended to, never rewritten.
 `install` writes the git hooks and workflow files into your repository and points
 `core.hooksPath` at them. A hook you already have is moved aside to `<name>.local` and
 chained, never discarded — adopting this should not silently drop checks somebody thought
-were important.
+were important. When that hook refuses, the managed hook exits with its status, so the
+commit or push is refused too.
 
 ## What it does
 
@@ -479,10 +482,12 @@ Repositories must configure `ANTHROPIC_API_KEY`; `AUTOMERGE_TOKEN` is required w
 default Actions token cannot push or merge through the repository ruleset. Installation
 does not create either secret.
 
-A repository that sets `[pr_automation.fallback].enabled = true` gets one more line of
-defense before that gate fails outright: when the primary review returns no verdict at
+With `[pr_automation.fallback].enabled` (on by default) and a live local lane, a
+repository gets one more line of defense before that gate fails outright: when the
+primary review returns no verdict at
 all, a `review-fallback` job sends the diff to a local Ollama model on a self-hosted
-`vibey-local-gh`-labelled runner (never for a fork PR unless `trusted_only = false`) and
+runner carrying the `[pr_automation.fallback] runner_label` label (default
+`vibey-local`; never for a fork PR unless `trusted_only = false`) and
 runs `vibey-gh local-review`. A clean local verdict passes the gate under the honestly
 weaker title `PR automation: gate (local fallback)`; the local model never overrides an
 actual finding, and it holds no repository credentials at all. See
@@ -551,7 +556,7 @@ vibey-gh promote --dry-run
 vibey-gh promote
 ```
 
-Moves the integration branch to the release branch, which is what publishes. Three things
+Moves the integration branch to the release branch, which is what publishes. Four things
 it gets right that a hand-written workflow usually does not:
 
 - **It compares by content, not by commit count.** The release branch is rebase-merged, so
@@ -563,6 +568,13 @@ it gets right that a hand-written workflow usually does not:
   holds a runner open with `gh pr checks --watch`; scans, automated review, and the
   exact-head merge train finish the promotion asynchronously. `--wait` retains the legacy
   synchronous mode for recovery.
+- **It keeps a reused PR's words current.** A promotion PR still open from an earlier run
+  has its title and body rewritten from this run's derivation, so a reviewer reads the
+  version the merge will publish rather than the one the PR was opened at. The body opens
+  with a `<!-- vibey-gh-promotion:{...} -->` record of both versions and says when they
+  differ, and it says the merge publishes nothing only when the version equals the release
+  branch's. Nothing is sent when the words are already current; a refresh that fails is a
+  note, not a failed promotion.
 
 ### Realignment
 
@@ -878,6 +890,10 @@ book and the research paper are published at the root of each channel site and l
 from every page's navigation and footer, from the channel picker, and from `llms.txt` —
 always from what the deploy actually produced — and, on the release channel, attached to
 that version's GitHub Release as permanent assets.
+The book is a paperback interior, not a printed web page: mirrored margins with the
+gutter on the binding side, page numbers, running heads, a part page per nav section and
+a contents grouped the way the nav is, justified and hyphenated text — with every physical
+dimension (trim, margins, gutter, type) a `vibey-gh book` flag defaulting to KDP's 6x9in.
 
 GitHub Packages does not provide a PyPI registry. The workflow therefore publishes the
 exact wheel and source distribution from the successful `Release` run as an OCI artifact
@@ -943,7 +959,7 @@ trusted_authors = ["your-login", "dependabot[bot]"]
 | CI\* / Provenance / CodeQL / Docs | Validate code, history, security, human docs, agent docs, plugins, and interfaces. |
 | PR automation | Aggregates exact-head scans; reviews, repairs, resolves conflicts, and gates. |
 | Merge train | Squash-merges into `develop` and rebase-merges promotions into `main`. |
-| Promote | Opens or reuses the `develop` → `main` promotion PR once the merge train advances `develop`. |
+| Promote | Opens the `develop` → `main` promotion PR once the merge train advances `develop`, or refreshes the open one's title and body. |
 | Release\* | Publishes `develop` dev builds to TestPyPI and `main` releases to PyPI. |
 | GitHub Release | Tags the exact production commit and generates release notes. |
 | Release surfaces | Publishes GHCR artifacts and Production/Preview ProperDocs sites. |
@@ -1111,6 +1127,12 @@ install` from the newer release, and the pin moves forward as one visible diff y
 and commit like any other change. The self-hosting path this repository uses to install
 itself from source is never pinned, since it cannot depend on a published release that may
 not exist yet.
+
+The pin is the release `vibey-gh` is running from, so run it from one: `uvx --from
+vibey==X.Y.Z vibey-gh install` renders `vibey==X.Y.Z`. An editable or other source-tree
+install carries the last release's number while its templates may be ahead of it, so it
+pins nothing: the install stays floating, and `install` and `check` print a `notice:`
+saying so rather than leaving the key silently inert.
 
 
 `trusted_authors` is matched after normalising `app/name` and `name[bot]` to the same

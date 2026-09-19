@@ -7,6 +7,7 @@ check wiring and exit codes rather than re-testing the logic.
 
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 from pathlib import Path
@@ -22,8 +23,9 @@ from vibey_gh import (
     reconcile,
     rulesets,
 )
-from vibey_gh.cli import main
+from vibey_gh.cli import _check, _install, main
 from vibey_gh.config import load_config
+from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPin
 from vibey_gh.merge_train import Verdict
 
 
@@ -69,6 +71,54 @@ def test_check_quiet_succeeds_after_install(repo, capsys):
     main(["install"])
     main(["check", "--ci", "--apply"])
     assert main(["check", "--ci", "--quiet"]) == 0
+
+
+class _Resolved:
+    """A fallback pin, resolved to exactly what the test states."""
+
+    def __init__(self, pin: FallbackPin) -> None:
+        self.pin = pin
+
+    def resolve(self, cfg) -> FallbackPin:
+        return self.pin
+
+
+FLOATING = FallbackPin(None, notice="[install] pin_version is set, but it floats (a reason)")
+
+
+def test_install_says_when_pin_version_cannot_pin(repo, capsys):
+    """The key used to go silently inert; `install` now says so, beside its other notices."""
+    assert _install(argparse.Namespace(), resolver=_Resolved(FLOATING)) == 0
+    assert f"  notice: {FLOATING.notice}\n" in capsys.readouterr().out
+
+
+def test_install_renders_the_pin_it_resolved(repo, capsys):
+    assert _install(argparse.Namespace(), resolver=_Resolved(FallbackPin("1.0.0"))) == 0
+    out = capsys.readouterr().out
+    assert "pin_version" not in out
+    merge_train_yml = (repo / ".github" / "workflows" / "merge-train.yml").read_text()
+    assert 'python -m pip install --quiet "vibey==1.0.0"\n' in merge_train_yml
+
+
+def test_check_says_when_pin_version_cannot_pin_without_failing_for_it(repo, capsys):
+    main(["install"])
+    main(["check", "--ci", "--apply"])
+    capsys.readouterr()
+    args = argparse.Namespace(ci=True, quiet=False, commits=None, apply=False)
+    assert _check(args, resolver=_Resolved(FLOATING)) == 0
+    assert f"  notice: {FLOATING.notice}\n" in capsys.readouterr().err
+
+
+def test_check_reports_drift_against_the_pin_it_resolved(repo, capsys):
+    """A deployed floating install is out of date once a release can be named."""
+    main(["install"])
+    main(["check", "--ci", "--apply"])
+    capsys.readouterr()
+    args = argparse.Namespace(ci=True, quiet=False, commits=None, apply=False)
+    assert _check(args, resolver=_Resolved(FallbackPin("1.0.0"))) == 1
+    err = capsys.readouterr().err
+    assert ".github/workflows/merge-train.yml is out of date" in err
+    assert "notice: [install] pin_version" not in err
 
 
 def test_check_reports_missing_documentation(repo, capsys):
@@ -1080,3 +1130,27 @@ def test_failover_cli_runs_once_with_explicit_paths(repo, capsys, tmp_path, monk
     monkeypatch.setenv("HOME", str(tmp_path))
     assert main(["failover", "--once"]) == 0
     assert "disabled" in capsys.readouterr().out
+
+
+def test_python_dash_m_runs_the_cli():
+    """`python -m vibey_gh` failed with "No module named vibey_gh.__main__"."""
+    import sys
+
+    run = subprocess.run(
+        [sys.executable, "-m", "vibey_gh", "--help"], capture_output=True, text=True, check=False
+    )
+    assert run.returncode == 0, run.stderr
+    assert "usage:" in run.stdout
+
+
+def test_dunder_main_delegates_to_cli_main(monkeypatch):
+    """In-process, so the delegation itself is asserted rather than inferred from --help:
+    whatever `cli.main` returns is the process exit status."""
+    import runpy
+
+    import vibey_gh.cli
+
+    monkeypatch.setattr(vibey_gh.cli, "main", lambda argv=None: 7)
+    with pytest.raises(SystemExit) as exited:
+        runpy.run_module("vibey_gh", run_name="__main__")
+    assert exited.value.code == 7

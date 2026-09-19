@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vibey"
-version = "1.2.0"
+version = "1.3.0"
 description = "A queue-based, six-phase conductor with optional visual design and Azure deployment."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -257,6 +257,7 @@ markers = [
     "system: delivery-stage-set end-to-end system test",
     "live: tests against real loop binaries (faked mode — scripted agents)",
     "paid: tests against real models (requires API keys, costs money)",
+    "noloss: the no-loss property suite; CI also runs it alone at 10,000 examples (-m noloss --hypothesis-profile=noloss)",
 ]
 
 [tool.ruff]

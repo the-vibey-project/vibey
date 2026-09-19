@@ -177,7 +177,10 @@ the server-side half of the provenance rule — backstopping the pre-push hook, 
 in a clone and can be skipped with `--no-verify` or simply never installed. A promotion PR
 from `develop` into `main` checks provenance without rewriting or re-auditing
 already-admitted history; an ordinary PR checks only the commits it adds, via `--commits
-BASE_SHA..HEAD`.
+BASE_SHA..HEAD`. A PR counts as a promotion only when its head branch belongs to this
+repository (`github.event.pull_request.head.repo.full_name` equals `github.repository`,
+both passed through `env:`). A fork PR from a branch that happens to be named `develop` is
+audited commit by commit like any other.
 
 ## Docs (documentation contract and maintenance)
 
@@ -219,8 +222,9 @@ repair-attempt budget is exhausted.
 `review-fallback` runs only when `[pr_automation.fallback].enabled` is set, the primary
 `review` job produced no verdict at all (not a review that ran and found something), the
 event is not a fork pull request (`trusted_only`), and the run is not a dry run. Unlike
-every other job in this workflow it targets a distinct `[self-hosted, vibey-local-gh]`
-runner rather than `ubuntu-latest`, and holds only `contents: read` — no secret, and no
+every other job in this workflow it targets a distinct `[self-hosted, <runner_label>]`
+runner (the label is `[pr_automation.fallback] runner_label`, default `vibey-local`)
+rather than `ubuntu-latest`, and holds only `contents: read` — no secret, and no
 token capable of mutating the repository. It fetches the exact-head diff with `gh pr diff`,
 falling back to a local merge-base reconstruction when GitHub's diff API refuses a pull
 request beyond roughly 300 changed files, then runs `vibey-gh local-review` against an
@@ -284,9 +288,14 @@ SHA, returning it to ordinary review and repair with no exemption.
 `Promote` (workflow file `promote-to-main.yml`) runs on completion of `Merge train`, a
 weekly Monday schedule, and manual dispatch. With `contents: write` and `pull-requests:
 write`, it runs `vibey-gh promote`, which compares `develop` and `main` by tree content
-rather than commit count, derives the next version, and opens or reuses a promotion pull
-request; that PR then goes through the same scans, `PR automation` gate, and a rebase
-merge to `main` as any other change. `AUTOMERGE_TOKEN` is required here because a
+rather than commit count, derives the next version, and opens a promotion pull request —
+or, when one is already open, rewrites its title and body from the current derivation, so
+the version and file count a reviewer approves are the ones the merge will publish, and a
+version that changed since the pull request was opened is said in its body. The body says
+it publishes nothing only when the version equals `main`'s. The rewrite uses `gh pr edit`,
+falling back to the REST endpoint when an older `gh` is refused over Projects (classic);
+if both fail, the run notes it and the promotion proceeds. That PR then goes through the
+same scans, `PR automation` gate, and a rebase merge to `main` as any other change. `AUTOMERGE_TOKEN` is required here because a
 ruleset-required approving review cannot be satisfied by the default `GITHUB_TOKEN`.
 
 ## Release

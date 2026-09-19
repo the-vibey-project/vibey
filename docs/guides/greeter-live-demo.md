@@ -85,10 +85,12 @@ uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines c
   `[features] qwenloop = true` in `vibey.toml` is honored by `vibey doctor`
   but not by the worker, which reads the project's stored config.
 - Launch the worker with `uv run` from the vibey checkout (`--project`), not a
-  bare `.venv/bin/vibey`. Verify
-  and integrate gate commands run with the worker's own environment, so
-  `uv run` is what puts the venv's `bin` on `PATH` for gate binaries such
-  as `python`.
+  bare `.venv/bin/vibey`. Gate commands (verify, integrate, REVIEW's checks)
+  do **not** see vibey's venv: its `bin`, `VIRTUAL_ENV`, `PYTHONPATH` and
+  `PYTHONHOME` are stripped from them, so a gate's `python` is whichever one
+  the rest of `PATH` provides, never vibey's. A project whose gates need tools
+  installed beside vibey sets `gates.isolate_python_env` to `false` in its
+  config record ([Gate commands](../reference/configuration.md#gates)).
 
 The worker LISTENs on `vibey_job_ready`, so answers you give in another
 terminal wake it immediately.
@@ -210,6 +212,15 @@ per-engine "turns" figure is the selection count, not turns);
   for the repair round to close. Circuits and backoffs clear on their own;
   an open circuit past its reset deadline half-opens automatically at the
   next selection and closes itself on the first success.
+- **A `job.heartbeat_failed` warning** — a lease heartbeat could not reach
+  Postgres (a pool timeout, a failover). The worker keeps running and
+  retries at the next beat; one line is a blip, a run of them means the
+  database is unreachable and the lease will lapse.
+- **A `job.lease_lost` or `job.<ack|nack|grant|park|defer>_rejected`
+  warning** — this worker's lease on the job expired (the handler outlived
+  it, or heartbeats kept failing) and the row was reaped or claimed by
+  another worker. The worker stays up, but the outcome it just produced was
+  not recorded; the job runs again under whoever holds it now.
 - **A `verify_repair_exhausted` / `integrate_repair_exhausted` gate** —
   the item burned its bounded repair rounds. Grant more with
   `vibey answer <gate-id> --raw '{"max_rounds": 6}'` (the prompt suggests
@@ -228,11 +239,18 @@ per-engine "turns" figure is the selection count, not turns);
   the next verify pass.
 - **A verify gate fails with `gate command could not start` (exit 127)** —
   the engine wrote a gate command (often `python`) whose binary is not on
-  the worker's `PATH`. That is a failing gate the repair loop fixes, not a
-  vibey failure, but launch the worker with `uv run` (step 3) so the
-  venv's `bin` is on `PATH` for gate commands. Known open issue: engine
-  sessions have been observed installing packages into vibey's own venv;
-  if `vibey doctor` starts failing after a run, `uv sync` restores it.
+  the worker's `PATH` once vibey's venv is stripped from it. That is a
+  failing gate the repair loop fixes, not a vibey failure; put the binary
+  on the worker's `PATH` outside vibey's venv, or opt the project out with
+  `gates.isolate_python_env` (step 3). Engine sessions and gate commands
+  both run without vibey's Python environment, which closes the route by
+  which packages were observed landing in vibey's own venv; if
+  `vibey doctor` starts failing after a run anyway, `uv sync` restores it.
+- **A verify gate fails with exit 124, `gate command timed out`** — the
+  command ran past `gates.timeout_seconds` (30 minutes by default) and was
+  killed with everything it started. It is a failing gate like any other;
+  raise the timeout in the project's config record if the suite is simply
+  slow.
 - **A gate you don't recognize** — `vibey answer --raw '{"...": ...}'`
   covers any shape the typed flags don't.
 - Workers are disposable: kill the worker any time; leases expire and the

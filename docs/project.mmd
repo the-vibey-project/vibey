@@ -56,14 +56,14 @@ flowchart TB
     subgraph Infrastructure["infrastructure/ — adapters, all I/O"]
         IDb[("PostgreSQL<br/>queue (FOR UPDATE SKIP LOCKED) + ledger + repositories")]
         IDbMods["db/ — 15 modules: job · ledger · project · handoff · human_gate ·<br/>engine_health · rotation_cursor repositories · build/design/review ledgers ·<br/>design_spec · visual_inventory repositories · notifier.py (LISTEN/NOTIFY) ·<br/>migrator.py · advisory_lock.py (integration lock, ADR-0029)"]
-        IEngines["engines/ — LoopProcessAdapter × 4 (paid pool)<br/>claudeloop · codexloop · cursorloop · agyloop<br/>+ qwenloop: opt-in local standby, ADR-0015<br/>(project config features.qwenloop / VIBEY_FEATURE_QWENLOOP) — 5th adapter when on"]
+        IEngines["engines/ — LoopProcessAdapter × 4 (paid tier)<br/>claudeloop · codexloop · cursorloop · agyloop<br/>+ local tier, preferred first (ADR-0038): qwenloop · claudeloop-local<br/>(features.* / VIBEY_FEATURE_* via LocalEngineSettings) — added when on"]
         IDesignProviders["engines/ DESIGN + decompose providers<br/>QwenloopDesignProvider · QwenloopWorkPlanProducer (sovereign, the preference — ADR-0027;<br/>one OllamaChatClient calling the local Ollama chat API directly, not the qwenloop binary) ·<br/>ClaudeLoopDesignProvider · ClaudeLoop decompose ·<br/>Scripted Design / Decompose / Visual providers<br/>selected by vibey work / worker --provider scripted, claudeloop, qwenloop"]
         IEngineInternals["engines/ internals — argv.py · classify.py · tailer.py ·<br/>loop_events.py · plan_writer.py · design_json.py (shared decoders) · ollama_chat.py · descriptors.py"]
         IGit["git/worktree_manager.py · integration_branch.py · clean_env.py"]
         IAzure["azure/az_cli.py · iac.py · arm.py · adapter.py"]
         INotify["notify/service.py · notify/webhook.py<br/>HMAC-SHA256 signed webhooks (+ desktop.py · events.py)<br/>IMPLEMENTED + TESTED, NOT constructed by bootstrap.py"]
         IProvision["provision/agent_surface.py<br/>writes the generated block into CLAUDE.md · AGENTS.md ·<br/>CURSOR.md · GEMINI.md · QWEN.md in each worktree (ADR-0011)"]
-        IRedact["ledger/redact.py — credential/token/secret redaction<br/>ledger/full_ledger_writer.py"]
+        IRedact["ledger/redact.py — credential/token/secret redaction<br/>ledger/full_ledger_writer.py<br/>ledger/static_export.py — published shard + static JSON site (7.a)"]
         ILogging["logging.py — structlog Logger adapter (observability port)"]
         ISkillsContext["skills_context.py<br/>VibeySkillsContextCompiler (ADR-0031)<br/>runs python -m vibey_skills.cli"]
         IOtel["otel.py<br/>TelemetryTracer + TelemetryMetrics<br/>+ calculate_rotation_fairness()<br/>IMPLEMENTED + TESTED, NOT constructed by bootstrap.py"]
@@ -174,7 +174,7 @@ flowchart TB
 
     subgraph Monorepo["uv workspace monorepo — pyproject.toml [tool.uv.workspace] (ADR-0021, ADR-0022)"]
         Runners["src/vibey_runners/<br/>claude: claudeloop 0.8.0 · codex: codexloop 0.4.0 ·<br/>cursor: cursorloop 0.7.0 · agy: agyloop 0.5.0 ·<br/>qwen: qwenloop 0.2.0 · common: vibey-runners-common 0.1.0<br/>(the *loop session runners; versioned in-tree, published only<br/>inside the vibey distribution — ADR-0037)"]
-        ToolGh["src/vibey_tools/gh — vibey-gh 1.73.0<br/>provenance · PR automation · merge train · promote ·<br/>release · realign · github-release · release surfaces ·<br/>book · paper · corpus-index (ADR-0028)"]
+        ToolGh["src/vibey_tools/gh — vibey-gh 1.73.0<br/>provenance · PR automation · merge train · promote ·<br/>release · realign · github-release · release surfaces ·<br/>book · paper · corpus-index · forge-snapshot (ADR-0028)"]
         ToolSkills["src/vibey_tools/skills — vibey-skills<br/>Agent Skills marketplace + context compiler CLI"]
         ToolBootstrap["src/vibey_tools/bootstrap — vibey-bootstrap 4.2.3<br/>Azure App Configuration · Key Vault · App Insights bootstrap library"]
         LiveHarness["tests/live — two-mode live harness (ADR-0030)<br/>faked: ScriptedEngine, no subprocess ·<br/>paid: real engine binaries against real models"]
@@ -193,7 +193,7 @@ flowchart TB
     Canon -.->|"8.a: sovereign path preferred"| IDesignProviders
 
     subgraph Release["CI, release and docs channels — .github/workflows/ (ADR-0023, ADR-0028)"]
-        PR(["pull request or push → develop / main"]) --> CIWF["CI (ci.yml)<br/>uv-lock · gates: ruff · format · mypy --strict · pytest+cov ·<br/>4× per-layer 100% branch gates · lint-imports · bandit · pip-audit ·<br/>tools matrix, 20 rows over 8 packages:<br/>vibey-gh 3.11/3.12/3.13 · vibey-skills 3.10/3.12 · vibey-bootstrap 3.11/3.12 ·<br/>claudeloop 3.10/3.11/3.12/3.13 · codexloop · cursorloop ·<br/>agyloop (+ pytest -m system) 3.12/3.13 · qwenloop 3.12/3.13/3.14 ·<br/>reports, not required in .vibey-gh.toml · tools-lint ·<br/>image: amd64 + arm64, 4 image contracts, not pushed ·<br/>cluster-smoke: helm on minikube, KEDA + SIGTERM drain"]
+        PR(["pull request or push → develop / main"]) --> CIWF["CI (ci.yml)<br/>uv-lock · gates: ruff · format · mypy --strict · pytest+cov ·<br/>4× per-layer 100% branch gates · lint-imports · bandit · pip-audit ·<br/>tools matrix, each tenant's suite on its own floors, plus its own<br/>mypy · lint-imports · bandit on its floor row (the row's static key),<br/>and the strict docs builds agyloop, codexloop and vibey-skills had:<br/>vibey-gh 3.11/3.12/3.13 · vibey-skills 3.10/3.12 · vibey-bootstrap 3.11/3.12 ·<br/>vibey-runners-common 3.10 (static only) · claudeloop 3.10/3.11/3.12/3.13 ·<br/>codexloop 3.12/3.13 on ubuntu and macOS · cursorloop 3.12/3.13 ·<br/>agyloop (+ pytest -m system) 3.12/3.13 · qwenloop 3.12/3.13/3.14 ·<br/>reports, not required in .vibey-gh.toml · tools-lint ·<br/>image: amd64 + arm64, one Image contract step per Dockerfile claim, not pushed ·<br/>cluster-smoke: helm on minikube, KEDA + SIGTERM drain"]
         AnyPush(["git push: any branch · every PR"]) --> Provenance["Provenance workflow (provenance.yml)<br/>vibey-gh check --ci on every push and PR"]
         PR --> Provenance
         CIWF --> PRAuto["PR automation (pr-automation.yml)<br/>vibey-gh pr-automation evaluate · review · repair · mirror-fork"]
@@ -215,14 +215,14 @@ flowchart TB
         Pages --> Book["…/main/book.pdf · book.epub · book-print.html<br/>(vibey-gh book, KDP interior)"]
         Pages --> Paper["…/main/paper/ (docs/paper.md) · paper.pdf<br/>(vibey-gh paper → LaTeX, Tectonic)"]
         Pages -.->|"only if corpus-index.json exists at the repo root — it does not"| CorpusShip["…/channel/corpus-index.json"]
-        DockerImg["deploy/docker/Dockerfile<br/>two-stage, no compiler/uv/pip in the runtime layer,<br/>uid 10001, tini -g as PID 1 (ADR-0026)"] --> HelmChart["deploy/helm/vibey chart (ADR-0025)<br/>worker Deployment · in-cluster Postgres 17 ·<br/>VibeyProject CRD (installCRD: true) · kopf operator (off by default) ·<br/>KEDA ScaledObject (off by default, 0–4 replicas)"]
+        DockerImg["deploy/docker/Dockerfile<br/>two-stage, no compiler/uv/pip/node/npm in the runtime layer,<br/>uid 10001, tini -g as PID 1 (ADR-0026),<br/>codex as a pinned, digest-verified static binary"] --> HelmChart["deploy/helm/vibey chart (ADR-0025)<br/>worker Deployment · in-cluster Postgres 17 ·<br/>VibeyProject CRD (installCRD: true) · kopf operator (off by default) ·<br/>KEDA ScaledObject (off by default, 0–4 replicas, scoped to the worker's project) ·<br/>Ollama for qwenloop / sovereign DESIGN (off by default)"]
         HelmChart --> K8sCluster[("Kubernetes cluster<br/>minikube verified in ci.yml cluster-smoke<br/>no cloud values presets ship yet")]
     end
 
     CIWF -->|tools matrix| ToolGh
     CIWF -->|tools matrix| ToolSkills
     CIWF -->|tools matrix| ToolBootstrap
-    CIWF -->|"tools matrix: the five runner suites, 13 rows"| Runners
+    CIWF -->|"tools matrix: the five runner suites and every runner's static gates"| Runners
     CIWF -->|image + cluster-smoke| DockerImg
     Provenance -->|vibey-gh check --ci| ToolGh
     ReleaseSurfaces -->|"vibey-gh book · paper"| ToolGh

@@ -129,8 +129,9 @@ branch coverage does not merge. A `pragma: no cover`, `noqa`, `nosec` or
 `type: ignore` needs its reason written beside it. Every `None`-default
 keyword argument needs both-sides tests.
 
-CI also runs a multi-arch container build with four image contracts and a
-Helm install on minikube with four cluster contracts
+CI also runs a multi-arch container build, with one `Image contract - …` step
+for each claim the Dockerfile makes, and a Helm install on minikube with four
+cluster contracts
 ([Kubernetes guide](docs/guides/kubernetes.md), ADR-0025).
 
 ## The workspace tenants
@@ -150,9 +151,10 @@ package: a tenant that needs a sibling installs it from the tree first.
 | Tenant | Checks |
 |---|---|
 | `src/vibey_tools/gh` | `pip install -e ".[dev]"`, `python -m pytest -q` (100% branch floor), `black --check vibey_gh test`, `isort --check-only vibey_gh test`, `mypy vibey_gh`, and the managed-automation drift check; Python 3.11–3.13 |
-| `src/vibey_tools/skills` | `python3 tools/validate_manifests.py`, `python3 tools/check_links.py`, `PYTHONPATH=src python3 -m unittest discover -s tests`; Python 3.10 and 3.12 |
-| `src/vibey_tools/bootstrap` | `pip install -e ../gh` (it imports `vibey_gh`), `pip install -e ".[test,all]"`, `pytest test/ -m "not integration" --cov=vibey_bootstrap` (100% line floor); Python 3.11–3.12 |
-| `src/vibey_runners/*` | its `tools` row: the suite with the four per-layer 100% branch floors (qwenloop: one whole-package floor, in its addopts), on each runner's own interpreters. Each runner's own `mypy`, `lint-imports` and `bandit` are not in CI yet (they lived only in its nested workflow, which never fired) — run them per its `CONTRIBUTING.md` |
+| `src/vibey_tools/skills` | `python3 tools/validate_manifests.py`, `python3 tools/check_links.py`, `PYTHONPATH=src python3 -m unittest discover -s tests`; Python 3.10 and 3.12. On the 3.12 row, also its own strict docs build: `pip install -e ".[docs]"`, `mkdocs build --strict`, and a check that every plugin and skill produced a page |
+| `src/vibey_tools/bootstrap` | `pip install -e ../gh` (it imports `vibey_gh`), `pip install -e ".[test,all]"`, `pytest test/ -m "not integration" --cov=vibey_bootstrap` (100% line floor); Python 3.11–3.12. On the 3.11 floor row, also `.[dev]` and its own pre-commit hook's `python -m mypy vibey_bootstrap/` and `python -m bandit -r vibey_bootstrap/ -ll -q` |
+| `src/vibey_runners/common` | `pip install -e ".[dev]"`, `mypy --strict src/vibey_runners/common`, `lint-imports`; Python 3.10. It ships no suite |
+| `src/vibey_runners/*` | the suite with the four per-layer 100% branch floors (qwenloop: one whole-package floor, in its addopts) on each runner's own interpreters. On the floor row, also its own `mypy --strict src/<pkg>`, `lint-imports` and `bandit -q -r src/<pkg>`, plus agyloop's vendor-import grep and claudeloop's skill-frontmatter check. codexloop runs every gate on ubuntu and macOS, 3.12 and 3.13, as its own CI did. agyloop and codexloop also run `properdocs build --strict` (properdocs 1.6.7) on ubuntu 3.12 |
 
 A tenant carries no `.github/`, `.githooks/` or `.vibey-gh.toml` of its own.
 GitHub reads only the root's workflows and templates, git runs only the root's
@@ -200,7 +202,10 @@ A small set of test files encode contracts that must not drift
 `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`,
 and everything under `tests/live/`). Do not modify them without explicit
 maintainer sign-off in the PR description; changes to them are reviewed as
-contract changes, not test edits.
+contract changes, not test edits. The list is `[merge_train] protected_paths`
+in `.vibey-gh.toml`, mirrored by `.github/CODEOWNERS`: the owner's review is
+required, and the merge train refuses such a pull request as "needs a human
+merge", so the maintainer merges it by hand.
 
 ## Agent surfaces
 

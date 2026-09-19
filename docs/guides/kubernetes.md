@@ -18,20 +18,29 @@ and
 Be clear about this before you install anything:
 
 - **The worker runs, applies migrations, claims jobs, and autoscales.**
-- **Engines do not ship in the image.** `deploy/docker/Dockerfile` builds
-  vibey only — no `claudeloop`, `codexloop`, `cursorloop`, or `agyloop`
-  binaries, and no `qwenloop`, the opt-in local engine. The runner
-  packages live in this repository (`src/vibey_runners/`), but the image
-  copies `src/vibey` alone. In-cluster runs therefore use
-  `--provider scripted`, and the worker will log `no recorded conformance
-  for agyloop, claudeloop, codexloop, cursorloop`. That warning is
-  correct, not a misconfiguration. Real engines in-cluster are workstreams
-  [05](../runbooks/expansion/05-server-mode-kubernetes.md) item 1 and
-  [16](../runbooks/expansion/16-loop-runner-containers.md).
+- **Every engine ships in the image; none is configured by default.**
+  Since [ADR-0037](../architecture/decisions/0037-one-distribution-one-version.md)
+  the one `vibey` wheel carries all five runners, so the image puts
+  `claudeloop`, `codexloop`, `cursorloop`, `agyloop` and `qwenloop` on
+  `PATH` beside `vibey` (CI's `image` job asserts every console script
+  resolves). The chart still defaults to `worker.provider: scripted` with
+  no `worker.engines` and no keys, and that is the install CI deploys. Its
+  worker logs `no recorded conformance for agyloop, claudeloop, codexloop,
+  cursorloop`: correct, not a misconfiguration, because an engine without
+  a key can never pass conformance and is never selected. Engine-driven
+  (BUILD) jobs therefore do not run on a default install.
+- **A binary on `PATH` is not yet a working engine.** Shipping the
+  runners is not the same as running them headless. codexloop drives an
+  external `codex` binary, which the image does not carry. claudeloop runs
+  through the Claude CLI bundled inside `claude-agent-sdk`, but
+  `claudeloop doctor` looks for `claude` on `PATH` only, so it reports the
+  CLI missing in the image. That per-runner verification is runbook
+  [16](../runbooks/expansion/16-loop-runner-containers.md)'s Phase 0 and
+  runbook [05](../runbooks/expansion/05-server-mode-kubernetes.md) item 1.
 - **Engine authentication in a pod is by API key only.** Subscription
-  login is an interactive TTY flow and does not exist in a cluster. When
-  an image does carry engine binaries, the chart reads their keys from a
-  Secret you create: set `engineAuth.existingSecret` to its name and list
+  login is an interactive TTY flow and does not exist in a cluster. The
+  chart reads the keys from a Secret you create: set
+  `engineAuth.existingSecret` to its name and list
   `engineAuth.keys` as `{name, key}` pairs (environment variable name,
   key inside the Secret), for example
   `{name: ANTHROPIC_API_KEY, key: anthropic}`. They are injected into the
@@ -40,8 +49,10 @@ Be clear about this before you install anything:
   `OPENAI_API_KEY`, `AZURE_OPENAI_API_KEY`, or `CODEX_API_KEY`
   (codexloop); `CURSOR_API_KEY` (cursorloop); and `GOOGLE_API_KEY`,
   `GEMINI_API_KEY`, or `GOOGLE_APPLICATION_CREDENTIALS` (agyloop).
-  `vibey doctor --cluster` reports `engine-auth` as `FAIL` for any
-  installed engine without one.
+  Declare the engines you mean to use in `worker.engines`:
+  `vibey doctor --cluster --engines <the same list>` then reports
+  `engine-auth` as `FAIL` for any of them without a key (see
+  [Preflight from inside a pod](#preflight-from-inside-a-pod)).
 - **The operator is implemented, but off by default.** `vibey operator`
   (`pip install 'vibey[operator]'`) runs kopf handlers that create
   projects and apply `spec.answers` through the same application services
@@ -188,6 +199,19 @@ checks that wiring from inside the pod:
 kubectl exec -n vibey deploy/vibey-vibey-worker -- vibey doctor --cluster
 ```
 
+`doctor` runs as a separate process, so it cannot see the worker's own
+command line. Pass it the worker's `--engines` and `--provider` (the chart's
+`worker.engines` and `worker.provider`) so the `engine-auth` check judges the
+engines the worker will actually use:
+
+```bash
+kubectl exec -n vibey deploy/vibey-vibey-worker -- \
+  vibey doctor --cluster --engines claudeloop,codexloop --provider claudeloop
+```
+
+Every runner is on `PATH` in the image, so a binary being present says
+nothing about intent, and the check does not treat it as intent.
+
 It prints one `PASS` or `FAIL` line per check and exits non-zero if any
 check fails:
 
@@ -196,7 +220,7 @@ check fails:
 | `dsn-host` | the DSN host is fully qualified, an IP address, or `localhost`, so KEDA's operator in another namespace can resolve it |
 | `non-root` | the process uid is not 0 |
 | `workspace-writable` | the working directory (`/work` in the chart) accepts a write |
-| `engine-auth` | every engine binary on `PATH` has one of its API-key variables set; an image with no engine binaries passes as the scripted-provider image |
+| `engine-auth` | every engine named by `--engines`, plus claudeloop under `--provider claudeloop`, is on `PATH` and has one of its API-key variables set (qwenloop takes none). With neither flag nothing is required: it passes and reports which engines in the worker's default pool have a key, so a default install says plainly that no engine-driven job can run |
 | `database` | the DSN connects |
 | `migrations` | every file in `/app/migrations` is recorded in `schema_migration`; runs only when `database` connected |
 
@@ -331,8 +355,9 @@ The CR also accepts `maxCycleTurns` and
 `spec.engines` is restricted by the CRD schema to the four paid engines,
 so `qwenloop` cannot be named in a CR today. The worker accepts
 `--provider qwenloop` (chart value `worker.provider`) for the sovereign
-DESIGN provider, but the stock image carries no `qwenloop` binary, so
-that path needs an image that ships it.
+DESIGN provider. That provider talks to a local Ollama over HTTP rather
+than running the `qwenloop` binary (which the image does ship), so it
+needs a model server the pod can reach; the chart does not provide one.
 
 The operator creates the project on first reconcile, then re-reconciles
 every 15s. It applies any new `spec.answers` through the same gate-answer
@@ -401,7 +426,8 @@ across *all* projects, while the worker Deployment binds to one. Work in
 another project will scale workers that cannot claim it.
 
 **A worker is Ready but does no work.** Run `vibey doctor --cluster`
-inside the pod (see [Preflight from inside a pod](#preflight-from-inside-a-pod)).
+inside the pod, with the worker's `--engines` and `--provider` (see
+[Preflight from inside a pod](#preflight-from-inside-a-pod)).
 
 ## Values worth knowing
 
@@ -413,8 +439,8 @@ inside the pod (see [Preflight from inside a pod](#preflight-from-inside-a-pod))
 | `worker.waitForProjectSeconds` | `15` | park instead of restart-looping |
 | `worker.parallelism` | `2` | concurrent job loops per pod |
 | `worker.project` | `""` | **set this**; empty binds to the newest project |
-| `worker.provider` | `scripted` | DESIGN/decompose provider; `claudeloop` or `qwenloop` need an image that ships the binary |
-| `worker.engines` | `""` | comma-separated engine allow-list (`--engines`); empty means all |
+| `worker.provider` | `scripted` | DESIGN/decompose provider; `claudeloop` needs its API key, `qwenloop` a reachable Ollama |
+| `worker.engines` | `""` | comma-separated engine allow-list (`--engines`); empty means all; pass the same list to `doctor --cluster --engines` |
 | `worker.replicas` | `1` | ignored once KEDA owns the Deployment |
 | `worker.worktrees.size` / `storageClass` | `5Gi` / `""` | the `/work` PVC where BUILD worktrees live |
 | `engineAuth.existingSecret` | `""` | Secret holding engine API keys |
