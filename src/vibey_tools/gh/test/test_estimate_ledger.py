@@ -91,7 +91,9 @@ def test_billing_reader_uses_the_budget_brake_vocabulary(tmp_path: Path) -> None
     assert result.usage.artifacts_produced == 1
     untimed = tmp_path / "untimed.jsonl"
     untimed.write_text('{"kind": "PhaseTransitioned", "payload": {}}\n', encoding="utf-8")
-    assert reader.read(untimed).usage.elapsed_seconds is None
+    untimed_usage = reader.read(untimed).usage
+    assert untimed_usage.elapsed_seconds is None
+    assert untimed_usage.dollars is None
 
 
 def test_billing_reader_does_not_turn_missing_or_corrupt_data_into_zero(tmp_path: Path) -> None:

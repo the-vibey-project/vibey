@@ -58,7 +58,13 @@ jobs:
 
   publish:
     name: Publish changed estimate ledger and report
-    if: github.event_name != 'pull_request'
+    # Only repository-controlled automation may receive contents: write. In particular,
+    # an issue can be opened by anyone, so an `issues` event may refresh a read-only
+    # estimate but must never reach the commit-and-push job.
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
     needs: refresh
     runs-on: ubuntu-latest
     permissions:

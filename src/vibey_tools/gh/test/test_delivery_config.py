@@ -1,6 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
@@ -44,10 +45,18 @@ normal = 2.0
         ("forecast_billing_ledger", "", "billing ledger"),
         ("forecast_phi_floor", -0.1, "phi_floor"),
         ("forecast_phi_floor", 1.0, "phi_floor"),
+        ("forecast_phi_floor", True, "finite number"),
+        ("forecast_phi_floor", math.inf, "finite number"),
+        ("forecast_phi_epsilon", True, "finite number"),
+        ("forecast_phi_epsilon", math.nan, "finite number"),
         ("forecast_phi_epsilon", 0.0, "epsilon"),
+        ("forecast_phi_exponent", math.inf, "finite number"),
         ("forecast_phi_exponent", 0.0, "exponent"),
+        ("forecast_phi_unknown_factor", math.nan, "finite number"),
         ("forecast_phi_unknown_factor", 0.5, "unknown_factor"),
         ("forecast_size_weights", (("s", 1.0), ("s", 2.0)), "size_weights"),
+        ("forecast_size_weights", (("s", True),), "finite number"),
+        ("forecast_size_weights", (("s", math.inf),), "finite number"),
         ("forecast_size_weights", (("s", 0.0),), "size_weights values"),
     ],
 )
@@ -61,3 +70,9 @@ def test_forecast_config_rejects_non_tables() -> None:
         EstimateConfig.from_table({"forecast": "bad"})
     with pytest.raises(TypeError, match="size_weights must be a table"):
         EstimateConfig.from_table({"forecast": {"size_weights": "bad"}})
+
+
+@pytest.mark.parametrize("key, value", [("phi_floor", True), ("phi_epsilon", math.inf)])
+def test_forecast_table_rejects_bool_and_non_finite_numbers(key: str, value: object) -> None:
+    with pytest.raises(ValueError, match="finite number"):
+        EstimateConfig.from_table({"forecast": {key: value}})

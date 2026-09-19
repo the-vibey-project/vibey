@@ -28,15 +28,15 @@ from vibey_gh.interfaces.delivery_estimate_interface import (
 )
 
 __all__ = [
-    "BILLING_LEDGER_FORMAT",
     "DEFAULT_ESTIMATE_LEDGER",
     "DEFAULT_ESTIMATE_REPORT",
+    "DELIVERY_ESTIMATE_LEDGER_FORMAT",
     "BillingLedgerReader",
     "BillingLedgerSnapshot",
     "DeliveryEstimateLedger",
 ]
 
-BILLING_LEDGER_FORMAT: Final = "vibey-delivery-estimate-ledger/v1"
+DELIVERY_ESTIMATE_LEDGER_FORMAT: Final = "vibey-delivery-estimate-ledger/v1"
 DEFAULT_ESTIMATE_LEDGER: Final = Path(".vibey/delivery-estimates.jsonl")
 DEFAULT_ESTIMATE_REPORT: Final = Path("docs/estimate.md")
 _GENESIS: Final = "0" * 64
@@ -85,6 +85,7 @@ class BillingLedgerReader(BillingLedgerReaderInterface):
     @classmethod
     def _usage(cls, events: list[Mapping[str, object]]) -> BillingUsage:
         dollars = 0.0
+        spend_events = 0
         turn_completed_events = 0
         budget_turns = 0
         phase_transitions = 0
@@ -99,9 +100,11 @@ class BillingLedgerReader(BillingLedgerReaderInterface):
             payload = event.get("payload")
             body = payload if isinstance(payload, Mapping) else {}
             if kind == "TurnCompleted":
+                spend_events += 1
                 turn_completed_events += 1
                 dollars += cls._number(body.get("cost_usd"))
             elif kind == "BudgetSpent":
+                spend_events += 1
                 dollars += cls._number(body.get("dollars"))
                 turns = body.get("turns")
                 if isinstance(turns, int) and not isinstance(turns, bool):
@@ -124,7 +127,7 @@ class BillingLedgerReader(BillingLedgerReaderInterface):
         elapsed = (max(moments) - min(moments)).total_seconds() if moments else None
         return BillingUsage(
             elapsed_seconds=elapsed,
-            dollars=dollars,
+            dollars=dollars if spend_events else None,
             turn_completed_events=turn_completed_events,
             budget_turns=budget_turns,
             ledger_events=len(events),
@@ -173,7 +176,7 @@ class DeliveryEstimateLedger(DeliveryEstimateLedgerInterface):
         seq = 1 if previous is None else self._integer(previous.get("seq"), "seq") + 1
         previous_digest = _text(previous.get("digest"), "digest") if previous else _GENESIS
         envelope: dict[str, object] = {
-            "format": BILLING_LEDGER_FORMAT,
+            "format": DELIVERY_ESTIMATE_LEDGER_FORMAT,
             "seq": seq,
             "kind": "DeliveryEstimateRecorded",
             "produced_at": forecast.recorded_at,
