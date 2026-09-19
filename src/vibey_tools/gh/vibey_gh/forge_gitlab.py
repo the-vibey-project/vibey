@@ -97,15 +97,18 @@ class GitLabForge(ForgeAdapterInterface):
             return None, problem
         if not isinstance(val, dict):
             return None, f"Expected object for MR {number}"
-        return ChangeRequest(
-            number=int(val.get("iid", 0)),
-            head_ref=str(val.get("source_branch", "")),
-            head_sha=str(val.get("sha", "")),
-            base_ref=str(val.get("target_branch", "")),
-            title=str(val.get("title", "")),
-            body=str(val.get("description", "")),
-            state=str(val.get("state", "")),
-        ), ""
+        return (
+            ChangeRequest(
+                number=int(val.get("iid", 0)),
+                head_ref=str(val.get("source_branch", "")),
+                head_sha=str(val.get("sha", "")),
+                base_ref=str(val.get("target_branch", "")),
+                title=str(val.get("title", "")),
+                body=str(val.get("description", "")),
+                state=str(val.get("state", "")),
+            ),
+            "",
+        )
 
     def get_issue(self, number: int) -> tuple[ForgeIssue | None, str]:
         val, problem = self.transport.survey(
@@ -115,12 +118,15 @@ class GitLabForge(ForgeAdapterInterface):
             return None, problem
         if not isinstance(val, dict):
             return None, f"Expected object for issue {number}"
-        return ForgeIssue(
-            number=int(val.get("iid", 0)),
-            title=str(val.get("title", "")),
-            body=str(val.get("description", "")),
-            state=str(val.get("state", "")),
-        ), ""
+        return (
+            ForgeIssue(
+                number=int(val.get("iid", 0)),
+                title=str(val.get("title", "")),
+                body=str(val.get("description", "")),
+                state=str(val.get("state", "")),
+            ),
+            "",
+        )
 
     def get_issue_thread(self, number: int) -> tuple[tuple[ForgeComment, ...], str]:
         # Issues and MRs have separate comment endpoints in GitLab
@@ -137,15 +143,18 @@ class GitLabForge(ForgeAdapterInterface):
             return (), problem
         if not isinstance(val, list):
             return (), "Comments field is not a list"
-        return tuple(
-            ForgeComment(
-                id=str(c.get("id", "")),
-                author=str(c.get("author", {}).get("username", "")),
-                body=str(c.get("body", "")),
-            )
-            for c in val
-            if isinstance(c, dict)
-        ), ""
+        return (
+            tuple(
+                ForgeComment(
+                    id=str(c.get("id", "")),
+                    author=str(c.get("author", {}).get("username", "")),
+                    body=str(c.get("body", "")),
+                )
+                for c in val
+                if isinstance(c, dict)
+            ),
+            "",
+        )
 
     def get_reviews(self, number: int) -> tuple[tuple[ForgeReview, ...], str]:
         # GitLab reviews are "Approvals" or "Discussions"
@@ -158,13 +167,17 @@ class GitLabForge(ForgeAdapterInterface):
         if not isinstance(val, dict):
             return (), "Approvals response is not an object"
         return (
-            ForgeReview(
-                id="approval",
-                author="system",
-                verdict="APPROVED",
-                body="Approved via GitLab approvals",
-            ),
-        ) if val.get("approved", False) else (), ""
+            (
+                ForgeReview(
+                    id="approval",
+                    author="system",
+                    verdict="APPROVED",
+                    body="Approved via GitLab approvals",
+                ),
+            )
+            if val.get("approved", False)
+            else ()
+        ), ""
 
     def get_check_results(self, head_sha: str) -> tuple[tuple[Any, ...], str]:
         # GitLab: /projects/:id/commits/:sha/statuses
@@ -175,11 +188,14 @@ class GitLabForge(ForgeAdapterInterface):
             return (), problem
         if not isinstance(val, list):
             return (), "Check results are not a list"
-        return tuple(
-            {"name": r.get("name", ""), "head_sha": head_sha, "conclusion": r.get("status", "")}
-            for r in val
-            if isinstance(r, dict)
-        ), ""
+        return (
+            tuple(
+                {"name": r.get("name", ""), "head_sha": head_sha, "conclusion": r.get("status", "")}
+                for r in val
+                if isinstance(r, dict)
+            ),
+            "",
+        )
 
     def create_comment(self, number: int, body: str) -> tuple[ForgeComment | None, str]:
         # We'll try creating on issue, then MR

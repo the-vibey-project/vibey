@@ -97,15 +97,18 @@ class ForgejoForge(ForgeAdapterInterface):
             return None, problem
         if not isinstance(val, dict):
             return None, f"Expected object for PR {number}"
-        return ChangeRequest(
-            number=int(val.get("id", 0)),
-            head_ref=str(val.get("head", {}).get("branch", "")),
-            head_sha=str(val.get("head", {}).get("sha", "")),
-            base_ref=str(val.get("base", {}).get("ref", "")),
-            title=str(val.get("title", "")),
-            body=str(val.get("body", "")),
-            state=str(val.get("state", "")),
-        ), ""
+        return (
+            ChangeRequest(
+                number=int(val.get("id", 0)),
+                head_ref=str(val.get("head", {}).get("branch", "")),
+                head_sha=str(val.get("head", {}).get("sha", "")),
+                base_ref=str(val.get("base", {}).get("ref", "")),
+                title=str(val.get("title", "")),
+                body=str(val.get("body", "")),
+                state=str(val.get("state", "")),
+            ),
+            "",
+        )
 
     def get_issue(self, number: int) -> tuple[ForgeIssue | None, str]:
         val, problem = self.transport.survey(
@@ -115,12 +118,15 @@ class ForgejoForge(ForgeAdapterInterface):
             return None, problem
         if not isinstance(val, dict):
             return None, f"Expected object for issue {number}"
-        return ForgeIssue(
-            number=int(val.get("id", 0)),
-            title=str(val.get("title", "")),
-            body=str(val.get("body", "")),
-            state=str(val.get("state", "")),
-        ), ""
+        return (
+            ForgeIssue(
+                number=int(val.get("id", 0)),
+                title=str(val.get("title", "")),
+                body=str(val.get("body", "")),
+                state=str(val.get("state", "")),
+            ),
+            "",
+        )
 
     def get_issue_thread(self, number: int) -> tuple[tuple[ForgeComment, ...], str]:
         # Forgejo: /repos/{owner}/{repo}/issues/{id}/comments
@@ -136,15 +142,18 @@ class ForgejoForge(ForgeAdapterInterface):
             return (), problem
         if not isinstance(val, list):
             return (), "Comments field is not a list"
-        return tuple(
-            ForgeComment(
-                id=str(c.get("id", "")),
-                author=str(c.get("user", {}).get("username", "")),
-                body=str(c.get("body", "")),
-            )
-            for c in val
-            if isinstance(c, dict)
-        ), ""
+        return (
+            tuple(
+                ForgeComment(
+                    id=str(c.get("id", "")),
+                    author=str(c.get("user", {}).get("username", "")),
+                    body=str(c.get("body", "")),
+                )
+                for c in val
+                if isinstance(c, dict)
+            ),
+            "",
+        )
 
     def get_reviews(self, number: int) -> tuple[tuple[ForgeReview, ...], str]:
         # Forgejo reviews are simpler; we can check for approval status
@@ -164,11 +173,18 @@ class ForgejoForge(ForgeAdapterInterface):
             return (), problem
         if not isinstance(val, list):
             return (), "Check results are not a list"
-        return tuple(
-            {"name": r.get("context", ""), "head_sha": head_sha, "conclusion": r.get("state", "")}
-            for r in val
-            if isinstance(r, dict)
-        ), ""
+        return (
+            tuple(
+                {
+                    "name": r.get("context", ""),
+                    "head_sha": head_sha,
+                    "conclusion": r.get("state", ""),
+                }
+                for r in val
+                if isinstance(r, dict)
+            ),
+            "",
+        )
 
     def create_comment(self, number: int, body: str) -> tuple[ForgeComment | None, str]:
         # Try issues then PRs

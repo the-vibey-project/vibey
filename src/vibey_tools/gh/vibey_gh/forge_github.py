@@ -119,15 +119,18 @@ class GitHubForge(ForgeAdapterInterface):
             return None, problem
         if not isinstance(val, dict):
             return None, f"Expected object for PR {number}"
-        return ChangeRequest(
-            number=int(val.get("number", 0)),
-            head_ref=str(val.get("headRefName", "")),
-            head_sha=str(val.get("headRefOid", "")),
-            base_ref=str(val.get("baseRefName", "")),
-            title=str(val.get("title", "")),
-            body=str(val.get("body", "")),
-            state=str(val.get("state", "")),
-        ), ""
+        return (
+            ChangeRequest(
+                number=int(val.get("number", 0)),
+                head_ref=str(val.get("headRefName", "")),
+                head_sha=str(val.get("headRefOid", "")),
+                base_ref=str(val.get("baseRefName", "")),
+                title=str(val.get("title", "")),
+                body=str(val.get("body", "")),
+                state=str(val.get("state", "")),
+            ),
+            "",
+        )
 
     def get_issue(self, number: int) -> tuple[ForgeIssue | None, str]:
         val, problem = self.transport.survey(
@@ -137,12 +140,15 @@ class GitHubForge(ForgeAdapterInterface):
             return None, problem
         if not isinstance(val, dict):
             return None, f"Expected object for issue {number}"
-        return ForgeIssue(
-            number=int(val.get("number", 0)),
-            title=str(val.get("title", "")),
-            body=str(val.get("body", "")),
-            state=str(val.get("state", "")),
-        ), ""
+        return (
+            ForgeIssue(
+                number=int(val.get("number", 0)),
+                title=str(val.get("title", "")),
+                body=str(val.get("body", "")),
+                state=str(val.get("state", "")),
+            ),
+            "",
+        )
 
     def get_issue_thread(self, number: int) -> tuple[tuple[ForgeComment, ...], str]:
         val, problem = self.transport.survey(
@@ -155,15 +161,18 @@ class GitHubForge(ForgeAdapterInterface):
         comments = val.get("comments", [])
         if not isinstance(comments, list):
             return (), "Comments field is not a list"
-        return tuple(
-            ForgeComment(
-                id=str(c.get("id", "")),
-                author=str(c.get("author", "")),
-                body=str(c.get("body", "")),
-            )
-            for c in comments
-            if isinstance(c, dict)
-        ), ""
+        return (
+            tuple(
+                ForgeComment(
+                    id=str(c.get("id", "")),
+                    author=str(c.get("author", "")),
+                    body=str(c.get("body", "")),
+                )
+                for c in comments
+                if isinstance(c, dict)
+            ),
+            "",
+        )
 
     def get_reviews(self, number: int) -> tuple[tuple[ForgeReview, ...], str]:
         val, problem = self.transport.survey(
@@ -173,16 +182,19 @@ class GitHubForge(ForgeAdapterInterface):
             return (), problem
         if not isinstance(val, list):
             return (), "Expected list of reviews"
-        return tuple(
-            ForgeReview(
-                id=str(r.get("id", "")),
-                author=str(r.get("user", {}).get("login", "")),
-                verdict=str(r.get("state", "")),
-                body=str(r.get("body", "")),
-            )
-            for r in val
-            if isinstance(r, dict)
-        ), ""
+        return (
+            tuple(
+                ForgeReview(
+                    id=str(r.get("id", "")),
+                    author=str(r.get("user", {}).get("login", "")),
+                    verdict=str(r.get("state", "")),
+                    body=str(r.get("body", "")),
+                )
+                for r in val
+                if isinstance(r, dict)
+            ),
+            "",
+        )
 
     def get_check_results(self, head_sha: str) -> tuple[tuple[Any, ...], str]:
         val, problem = self.transport.survey(
@@ -195,11 +207,18 @@ class GitHubForge(ForgeAdapterInterface):
         runs = val.get("check_runs", [])
         if not isinstance(runs, list):
             return (), "check_runs field is not a list"
-        return tuple(
-            {"name": r.get("name", ""), "head_sha": head_sha, "conclusion": r.get("conclusion", "")}
-            for r in runs
-            if isinstance(r, dict)
-        ), ""
+        return (
+            tuple(
+                {
+                    "name": r.get("name", ""),
+                    "head_sha": head_sha,
+                    "conclusion": r.get("conclusion", ""),
+                }
+                for r in runs
+                if isinstance(r, dict)
+            ),
+            "",
+        )
 
     def create_comment(self, number: int, body: str) -> tuple[ForgeComment | None, str]:
         _, problem = self.transport.survey(
