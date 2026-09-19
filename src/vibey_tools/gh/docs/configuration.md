@@ -337,9 +337,110 @@ Zero is the absence of a measurement; reporting it as if it were one is the sile
 failure doctrine 10 forbids. When nothing is readable, `vibey-gh fit` says so out
 loud and the verdict is `floor`.
 
+**The model is read from the runner the work would go to.** `--base-url`, else the
+`VIBEY_OLLAMA_URL` environment variable (the one the fallback workflows already
+export), else `[pr_automation.fallback] base_url` (default `http://127.0.0.1:11434`).
+In code, `FitLoop(base_url=...)` and `sample_model(name, base_url)` resolve the same
+way, with `http://127.0.0.1:11434` as the last step.
+
+**A model that is not loaded is still a model.** Ollama's `/api/ps` lists only the
+models currently in memory, so a model the runner holds on disk but has idled out
+used to read exactly like one it does not have, and the verdict was `floor`. Now a
+model missing from `/api/ps` is looked up in `/api/tags` (everything the runner
+holds) and its context length is read from `/api/show`. The size it then reports is
+the weights on disk. That is a lower bound, because loading adds the context's KV
+cache, and the verdict says so in a note. `floor` means only that the runner does
+not hold the model, or could not be read at all.
+
+**The journal is on by default.** Each decision, and each `--observed-seconds`
+measurement, is appended to `--journal PATH`, else to `VIBEY_GH_FIT_JOURNAL`, else to
+`~/.local/state/vibey-gh/fit.jsonl`. That path sits next to the failover seat's state
+because the journal describes this machine's runner, not any one repository. Every
+invocation reads back the measurements already there, so separate runs form one
+loop. `--no-journal` decides from the one call alone and writes nothing. In code,
+`FitLoop(journal=None)` still keeps decisions only in memory. `FitLoop.default_journal()`
+and `loop.replay()` are the opt-in.
+
+**One context-sizing rule for every local call.** `local-review` and `local-triage`
+both ask Ollama for a `num_ctx` sized to the prompt through `vibey_gh.fit.ContextSizer`:
+`prompt_chars // 3 + 2048` tokens, never below 4096 (the server's small default,
+into which a large diff context-shifts until it never finishes) and never above
+32768 (an enormous request should fail visibly, not exhaust the host). Each of those
+four numbers is a constructor keyword with that default, and both calls take a
+`sizer=` argument.
+
 Measured on a 24 GB machine running `qwen2.5-coder:14b`: peak throughput
 **1.72 generations/min at 6 concurrent**, degrading to 1.27/min at 8 — the
 saturation knee, past which added load buys queueing rather than work.
+
+## `[estimate]` and `vibey-gh estimate`
+
+The fit calculus answers one question for one machine: should it take this work now?
+`vibey-gh estimate` (#134) asks the wider question from the paper's six-materials
+calculus ([The mechanics of the governance dilemma](paper.md)). Before a run, it asks
+whether the run can get through **every stage it must pass**, how long it will take,
+what it will cost, and how far each of the eighteen coordinates sits from peak.
+
+```bash
+vibey-gh estimate --operation develop
+vibey-gh estimate --operation main --from develop-validation --json
+```
+
+**Two coordinates are measured, and sixteen are `unknown`.** Hardware availability is
+the machine's ceiling (memory plus paging, the same ceiling `fit` floors against)
+divided by the size of the local model, capped at 1. It is 1 exactly when `fit` would
+not declare the hardware floor. Software availability is 1 when the local runner holds
+the model, whether loaded or on disk. Every other coordinate is `unknown`, and each one
+names what would measure it. None is defaulted to healthy. The reported confidence
+drops with each one. It is the fraction of the coordinates on the path that were
+actually measured.
+
+**Feasibility is three-valued.**
+
+- `no`: a measured coordinate falls short of a stage's minimum, anywhere on the path.
+- `yes`: every coordinate the path requires is measured and meets its minimum.
+- `unknown`: anything in between. An unmeasured coordinate cannot produce a `yes`.
+
+The exit status follows the verdict: `0` for yes, `1` for no, `3` for unknown, and `2`
+for a stage that does not exist. Shortfalls are listed **agency first**, because a run
+that cannot merge is infeasible however healthy the hardware.
+
+**Duration and cost.** The local model's service time is projected from the fit
+journal's own observations. The projection uses the same graded estimator that `fit`
+uses (`vibey_gh.estimation`), and it states its basis and `n`. No stage timings are
+recorded in vibey-gh, so the duration of the stages is `unknown`. Cost is `unknown`,
+because no spend measurement reaches this command yet, and a made-up number is worse
+than none. The repair ranking is not computed: the gradient `-∇T` needs φ, the dilation
+each shortfall imposes, and φ is not measured yet.
+
+**Offline by default.** The command reads this machine's memory. It reads the model
+runner only when the runner is on this machine: `localhost`, a `.localhost` name, or a
+loopback address. It decides this from the URL's text, because resolving the name would
+itself leave the machine. A runner on another host is read only with `--online` or
+`offline = false`. The fit journal is read, never written.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `offline` | boolean / `true` | Never leave this machine. A runner elsewhere is not read, and its coordinates stay `unknown` and say why. `--online` overrides it for one call. |
+| `model` | string / empty | The local model the fit coordinates are measured against. Empty means `[pr_automation.fallback] model`. `--model` overrides it. |
+| `stages` | string list / empty | The pipeline, in order. Empty means the nine default stages: `install`, `interview`, `feature-branch`, `develop`, `develop-deployment`, `develop-validation`, `main`, `main-deployment`, `main-validation`. A stage that is not one of these needs its own `[estimate.requirements.<stage>]` table. |
+| `requirements` | table of stage tables / empty | `"material.property" = minimum` per stage, on the 0..1 scale where 1 is peak. A table **replaces** that stage's default vector outright. A table for a stage the pipeline never reaches is an error, and so is an unknown material or property. |
+| `report_first` | string list / `["agency"]` | Materials whose shortfalls lead the report, in order. |
+
+```toml
+[estimate]
+offline = true
+
+# Promotion needs merge rights and a reachable forge, nothing more.
+[estimate.requirements.main]
+"agency.availability" = 1
+"network.availability" = 1
+```
+
+By default, each stage gates only the **availability** of the materials it draws on. A
+stability or reliability shortfall should dilate duration through φ rather than make
+the work impossible, and φ is not measured yet. **Paid credit counts as agency**:
+spending is a form of permission to act.
 
 ## `[tidy]`
 

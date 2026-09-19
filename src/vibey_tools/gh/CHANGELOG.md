@@ -5,6 +5,60 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- `vibey-gh estimate --operation STAGE [--from STAGE] [--json]` (vibey#134, slice 1). It
+  judges the six-materials state vector from `docs/paper.md` at every stage a run must
+  pass, from `--from` through `--operation`. The vector has eighteen coordinates, each on
+  0..1 where 1 is peak, or `unknown`, and each carries its source and time.
+  - Feasibility is three-valued. A measured shortfall anywhere on the path is `no`, and an
+    unmeasured coordinate can never produce `yes`. Agency shortfalls are listed first.
+  - The nine default stages, `install` through `main-validation`, are requirement data.
+    Only availability is gated. The new `[estimate]` section (`offline`, `model`,
+    `stages`, `requirements`, `report_first`) replaces any of it, and `doctor` knows the
+    section.
+  - Hardware and software availability come from the fit calculus. The other sixteen
+    coordinates are `unknown`, each naming what would measure it, and the reported
+    confidence drops accordingly.
+  - The local model's service time is projected from the fit journal, which is read but
+    never written. The stages' duration, the cost and the repair gradient are `unknown`,
+    each with its reason.
+  - The command is offline by default: a runner that is not on this machine is read only
+    with `--online`. It exits 0, 1 or 3 for yes, no or unknown, and 2 for a stage that
+    does not exist.
+  - It is registered in `surfaces.CAPABILITIES`, so it reaches all five surfaces.
+
+  The work lives in `vibey_gh.feasibility` (`StateVector`, `Pipeline`,
+  `FeasibilityEvaluator`), `vibey_gh.operation_estimate` and `vibey_gh.estimate_report`,
+  each class with an interface beside it.
+- One graded estimator, `vibey_gh.estimation` (vibey#88, vibey#134). The fit calculus's
+  least squares was moved there unchanged, behind `GradedEstimatorInterface`. Samples go
+  in, and a `Prediction` comes out with its basis and `n`. A prediction can then be graded
+  against the actual result, and a set of grades summarised as a `TrackRecord`.
+  `fit.estimate_from` is now a thin wrapper, and 400 randomized cases confirm it returns
+  the same constants as the function it replaced. `Observation.sample` is the one
+  conversion both commands use.
+- `vibey_gh` ships `py.typed`, so `src/vibey` can import it under `mypy --strict`.
+- The fit calculus reads a cold model instead of refusing it (vibey#135). `sample_model`
+  used to read only Ollama's `/api/ps`, which lists loaded models, so any model the runner
+  held but had idled out came back `None`, and the verdict was `floor`. Every first call
+  after an idle period would have been refused once the loop is wired into live calls. It
+  now falls back to `/api/tags` to confirm the model is held and to `/api/show` for the
+  context length its metadata states. That returns a `Model(resident=False)` whose size is
+  the weights on disk, which is a lower bound, and `decide()` says so in a note. `None`
+  now means only "not held" or "unreadable". A bare name also matches its `:latest` tag,
+  as Ollama resolves it. The reading is done by a new `OllamaModelSampler` behind
+  `ModelSamplerInterface`; `sample_model` stays the published entry point.
+- `FitLoop` reads the runner the work would go to: `base_url=`, else `VIBEY_OLLAMA_URL`,
+  else `http://127.0.0.1:11434`. Before, `admit()` always read 127.0.0.1 and ignored both.
+  It also takes an injected `model_sampler`, gains `FitLoop.default_journal()`
+  (`VIBEY_GH_FIT_JOURNAL`, else `~/.local/state/vibey-gh/fit.jsonl`) and
+  `loop.replay()`, which the CLI now uses instead of reaching into a private attribute.
+- `vibey-gh fit` gains `--base-url` (default `VIBEY_OLLAMA_URL`, else
+  `[pr_automation.fallback] base_url`) and journals by default to that path. `--journal`
+  still overrides it, and the new `--no-journal` keeps the old journal-free run available.
+- One context sizer: `local-review` and `local-triage` size `num_ctx` through
+  `vibey_gh.fit.ContextSizer` (behind `ContextSizerInterface`) instead of a private
+  `_num_ctx`. The windows are unchanged, and every number in the rule is now a
+  constructor keyword. Both calls take `sizer=`.
 - Add the forge adapter layer (#138, slices F2 and F3). `vibey_gh/forge.py` holds the
   forge-neutral nouns as frozen records — `ForgeKind`, `ForgeRepository`, `ChangeRequest`,
   `ForgeComment`, `CheckResult`, `ForgeRelease`, `ForgeLabel`, `ProtectedRef` — recorded in

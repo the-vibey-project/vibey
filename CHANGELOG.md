@@ -118,6 +118,15 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   fails the command with a clear message rather than answering a different comment. A review
   comment's briefing also carries the file, line and diff hunk it was written on (#145)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+### Features
+
+* **gh:** the fit calculus reads a model the runner holds but has not loaded (via
+  `/api/tags` and `/api/show`) instead of calling it the floor, reads the runner that
+  `--base-url` or `VIBEY_OLLAMA_URL` names instead of always 127.0.0.1, and journals to
+  `~/.local/state/vibey-gh/fit.jsonl` by default (`VIBEY_GH_FIT_JOURNAL`, `--journal`,
+  `--no-journal`). Both local-model calls now size their context window through one
+  `ContextSizer`, with unchanged windows. These are prerequisites for wiring the fit loop
+  into live Ollama calls; swap actuation stays refused by design (#135)
 * **build:** a capacity rejection during `build.verify`'s diff review now defers the job as capacity instead of being discarded. `run_and_record` reported `capacity_rejected`, but the verify handler never read it and judged the run on its verdict alone — so a reviewer out of capacity either failed as `WORK` (burning an unrefunded attempt, up to the `attempts_exhausted` park, while `RotationRecordingHandler` left the exhausted engine's circuit closed and kept handing it the same job) or, with a completing verdict in the same run, approved the item outright — the non-negotiable "a capacity rejection always outranks a completion claim" broken both ways. It now returns `Defer(capacity=True)` after `capacity_backoff` (a constructor keyword defaulting to 5 minutes, exactly as on `build.implement`), before any repair finding is resolved or any independence waiver is written, and `BuildVerifyHandler` takes a required `clock` ([#215](https://github.com/the-vibey-project/vibey/issues/215))
 * **build:** gate commands now run isolated and bounded. `SubprocessGateRunner` — which runs `build.verify`'s gates and `git diff`, `build.integrate`'s gates and REVIEW's automated checks — handed every command vibey's whole environment minus `GIT_*`, let it inherit the worker's stdin, and waited on `communicate()` with no timeout, so one hung gate held its job's lease for as long as it hung while the heartbeat kept renewing it. Each command now leads a process group of its own and gets `gates.timeout_seconds` (default 1800); one that overruns is killed with its whole group and fails as exit 124, a failing gate for the repair loop rather than an error. A cancelled run (Ctrl-C, event-loop shutdown) kills and reaps its gate before the cancellation propagates, and the reap itself is bounded by `gates.kill_grace_seconds` (default 5), because asyncio's `wait()` never returns while a descendant that escaped the group still holds the pipes. stdin is `/dev/null`, and output that is not UTF-8 is decoded with replacement characters instead of raising. vibey's own Python environment (`VIRTUAL_ENV`, `PYTHONPATH`, `PYTHONHOME`, its venv's `bin` on `PATH`) is stripped with the same `isolate_python_env` engine sessions use, and the running interpreter's prefix counts as a venv only when it is one, so a system-Python install keeps `/usr/bin`. **Behaviour change:** a gate that found a tool only because it was installed beside vibey — the `ruff`, `bandit` or `pytest` of a development checkout's venv, REVIEW's default `ruff check .` included — no longer finds it and fails with exit 127. Install the tool where the project can reach it, or set `gates.isolate_python_env` to `false` in the project's config record. The worker builds one runner from the project's `gates` object, and a malformed one raises when the worker is built ([#212](https://github.com/the-vibey-project/vibey/issues/212))
 * **infra:** every subprocess vibey kills is now killed with its whole process group and reaped within a bound, by one implementation, `infrastructure/process/reaper.py`'s `ProcessReaper`, which #212's gate runner, the loop-process adapter and the skills-context compiler all use (ADR-0017). The adapter's preflight probes (`<engine> --version`, `<engine> doctor`) and the `vibey-skills` CLI used to kill only the direct child and then wait on it with no bound. On CPython 3.12 that wait does not return while a descendant that escaped into a session of its own still holds the pipes, so a probe or a skills compile with such a descendant hung preflight or the BUILD job for as long as the descendant lived. Measured on 3.12.13: a 0.2 s timeout returned after 5.5 s and 6.0 s, when the escaped `sleep 6` exited. Both now start their child in a session of its own. On a timeout or a cancellation, `SIGKILL` goes to the whole group (ESRCH and macOS's EPERM for a zombie-only group are tolerated), and the reap gives up after a grace, logging `engine_process_not_reaped` (with the engine) or `skills_context_process_not_reaped`. The grace is `skills_context.kill_grace_seconds` (default 5, also declared in the `VibeyProject` CRD's `skillsContext`) and `LoopProcessAdapter.kill_grace_seconds` (default 5; the adapter is built without project config). The engine spawn also stripped `/usr/bin` and `/usr/local/bin` from every engine session on a system Python, because it always treated `sys.prefix` as a venv. It now asks the same `OrchestratorPythonEnv` the gate runner does, which counts the interpreter's prefix only when `sys.prefix != sys.base_prefix`. Gate behaviour, `gates.kill_grace_seconds` and `gate_process_not_reaped` are unchanged ([#283](https://github.com/the-vibey-project/vibey/issues/283))
@@ -402,6 +411,29 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   as `unattributed` instead of being dropped. There is no turn count: engine translation
   writes more than one `TurnCompleted` per real turn, so the projection reports
   `turn_completed_events` with a caveat beside it
+
+### Features
+
+* **gh:** `vibey-gh estimate --operation STAGE [--from STAGE] [--json]`, the first slice of
+  the feasibility engine (#134). It judges the paper's six-materials state vector at every
+  stage a run must pass. That vector has eighteen coordinates, each a value on 0..1 where
+  1 is peak, or `unknown`, and each carries its source and measurement time. Feasibility
+  is three-valued: a measured shortfall anywhere on the path is `no`, and an unmeasured
+  coordinate can never produce `yes`. Agency shortfalls are listed first. The nine
+  default stages, install through main-validation, and their requirement vectors are
+  data that the new `[estimate]` section can replace. The fit calculus measures hardware
+  and software availability, and the other sixteen coordinates are reported as `unknown`,
+  which lowers the reported confidence. The local model's service time is projected from
+  the fit journal. The stages' duration, the cost and the repair gradient are reported as
+  `unknown`, each with its reason. The command is offline by default and exits 0, 1 or 3
+  for yes, no or unknown. It is a capability on all five surfaces
+* **gh:** one graded estimator, `vibey_gh.estimation` (#88, #134). The fit calculus's
+  least squares now lives there, behind `GradedEstimatorInterface`: observations go in,
+  and a prediction comes out with its basis and `n`, which can then be graded against
+  the actual result. `fit.estimate_from` wraps it, and 400 randomized cases confirm its
+  constants are identical to before. `vibey_gh` now ships `py.typed`, so `src/vibey` can
+  import it under `mypy --strict`. That makes it ready for the vibey-side forecast, which
+  is the follow-up that will combine it with `PhaseTiming`
 ### Features
 
 * **ledger:** `vibey ledger export PROJECT --out FILE` publishes a project's ledger as a

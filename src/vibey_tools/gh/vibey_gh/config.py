@@ -1266,6 +1266,78 @@ class MarketplaceConfig:
 
 
 @dataclass(frozen=True)
+class EstimateConfig:
+    """`[estimate]`: what `vibey-gh estimate` reads, and what each stage requires (#134).
+
+    Every key has a default that reproduces the shipped behaviour, so an adopter writes
+    only what differs (ADR-0018):
+
+    - `offline` (true): the command never leaves this machine. It reads the machine's own
+      memory, and the model runner only when the runner is on this machine; everything
+      else stays `unknown` rather than being probed over the network.
+    - `model` (empty): the local model the fit coordinates are measured against. Empty
+      means `[pr_automation.fallback] model`, the model the local lane actually runs.
+    - `stages` (empty): the pipeline, in order. Empty means the nine stages
+      `vibey_gh.feasibility` declares, install through main-validation.
+    - `requirements`: per stage, `"material.property" = minimum` on the 0..1 scale where
+      1 is peak. A stage named here REPLACES that stage's default vector outright, so the
+      file says exactly what the stage needs rather than a delta to be merged in one's
+      head. Held as `(stage, ((coordinate, minimum), ...))` so the config stays frozen.
+    - `report_first` (["agency"]): materials whose shortfalls lead the report. Agency is
+      the common killer -- a run that cannot merge is infeasible however healthy the
+      hardware -- so it is first by default.
+
+    Only the SHAPE is checked here. Whether `agency` is a material and `develop` a stage
+    is `vibey_gh.feasibility`'s vocabulary, and it is checked there, where the words are
+    defined, rather than copied into a second list that could drift from them.
+    """
+
+    offline: bool = True
+    model: str = ""
+    stages: tuple[str, ...] = ()
+    requirements: tuple[tuple[str, tuple[tuple[str, float], ...]], ...] = ()
+    report_first: tuple[str, ...] = ("agency",)
+
+    def __post_init__(self) -> None:
+        _unique_nonempty("estimate.stages", self.stages)
+        _unique_nonempty("estimate.report_first", self.report_first)
+        _unique_nonempty("estimate.requirements", tuple(stage for stage, _ in self.requirements))
+        for stage, needs in self.requirements:
+            for coordinate, minimum in needs:
+                material, dot, prop = coordinate.partition(".")
+                if not material or not dot or not prop or "." in prop:
+                    raise ValueError(
+                        f"estimate.requirements.{stage}: {coordinate!r} is not 'material.property'"
+                    )
+                if (
+                    isinstance(minimum, bool)
+                    or not isinstance(minimum, int | float)
+                    or not 0.0 <= minimum <= 1.0
+                ):
+                    raise ValueError(
+                        f"estimate.requirements.{stage}.{coordinate} must be a number from"
+                        f" 0 to 1, where 1 is peak: {minimum!r}"
+                    )
+
+    @classmethod
+    def from_table(cls, section: dict) -> EstimateConfig:
+        """`[estimate]` as TOML hands it over, with each stage's table frozen."""
+        raw = section.get("requirements", {})
+        if not isinstance(raw, dict) or not all(isinstance(v, dict) for v in raw.values()):
+            raise ValueError(
+                "estimate.requirements must be a table of stage tables, e.g."
+                ' [estimate.requirements.main] "agency.availability" = 1.0'
+            )
+        return cls(
+            offline=bool(section.get("offline", True)),
+            model=str(section.get("model", "")),
+            stages=tuple(section.get("stages", ())),
+            requirements=tuple((stage, tuple(needs.items())) for stage, needs in raw.items()),
+            report_first=tuple(section.get("report_first", cls.report_first)),
+        )
+
+
+@dataclass(frozen=True)
 class GhConfig:
     root: Path
     text: str = DEFAULT_TEXT
@@ -1307,6 +1379,7 @@ class GhConfig:
     repository_profile: RepositoryProfileConfig = RepositoryProfileConfig()
     documentation: DocumentationConfig = DocumentationConfig()
     marketplace: MarketplaceConfig = MarketplaceConfig()
+    estimate: EstimateConfig = EstimateConfig()
     # Which bundled workflow templates this repository wants installed and kept current.
     # None means all of them, which is the right default for a repository adopting the
     # whole thing. A repository with its own richer workflows sets `workflows = []` and
@@ -1626,6 +1699,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             notify_contributor_branches=realigning.get("notify_contributor_branches", True),
         ),
         social_signals=_social_signals(data.get("social_signals", {})),
+        estimate=EstimateConfig.from_table(data.get("estimate", {})),
         workflow_names=_workflow_names(data.get("workflow_names", {})),
         tidy=TidyConfig(
             enabled=data.get("tidy", {}).get("enabled", True),

@@ -83,6 +83,20 @@ def test_enabled_gate_without_the_workflow_is_the_stuck_train(tmp_path):
     assert not any("merge train" in f.message for f in doctor.diagnose(root=tmp_path))
 
 
+def test_the_estimate_section_is_known_and_its_strays_are_named(tmp_path):
+    """`[estimate]` (#134) is read by the loader, so doctor must know every key of it --
+    including `requirements`, whose per-stage tables the loader itself validates."""
+    _repo(
+        tmp_path,
+        "[pr_automation]\nenabled = false\n"
+        '[estimate]\noffline = true\nmodel = ""\nstages = []\nreport_first = ["agency"]\n'
+        "ofline = false\n"
+        '[estimate.requirements.main]\n"agency.availability" = 1\n',
+    )
+    messages = [f.message for f in doctor.diagnose(root=tmp_path)]
+    assert messages == ["[estimate] ofline is not a key vibey-gh reads; it is silently ignored"]
+
+
 def test_ruff_selecting_e_collides_with_the_header(tmp_path):
     _repo(tmp_path, "[pr_automation]\nenabled = false\n")
     (tmp_path / "pyproject.toml").write_text(
