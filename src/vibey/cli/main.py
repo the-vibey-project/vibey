@@ -13,6 +13,7 @@ import json
 import os
 import signal
 import subprocess  # nosec B404 - fixed argv, never shell=True
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
@@ -35,7 +36,6 @@ from vibey.bootstrap import (
 )
 from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.ledger_search import PRESENTER, ledger_search
-from vibey.domain.config import parse_toml_string
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
     InvalidAnswer,
@@ -62,6 +62,7 @@ from vibey.infrastructure.engines.claudeloop_process import (
     ClaudeLoopProcess,
     SpendRecorder,
 )
+from vibey.infrastructure.engines.local_engines import LocalEngineSettings
 from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_MODEL,
     OLLAMA_MODEL_ENV,
@@ -247,24 +248,16 @@ def resume_design(project_id: UUID) -> None:
         typer.echo(f"design job {asyncio.run(_enqueue_design(project_id))}")
 
 
-def _qwenloop_feature_enabled(root: Path | None = None) -> bool:
-    """Whether the sovereign engine is switched on, by environment or project config.
+def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
+    """The local-engine settings `vibey doctor` reads: `./vibey.toml` under the environment.
 
-    Mirrors `bootstrap.qwenloop_enabled` so the health check and the worker agree about
-    which engines exist. They disagreed before: the worker ran qwenloop while `doctor`
-    could not list it, so the engine an operator was depending on was invisible unless
-    they already knew to ask for it by name.
+    The same resolver the worker asks (ADR-0038), fed the file instead of the stored
+    project record, so the health check and the dispatcher agree about which engines
+    exist. They disagreed before: the worker ran qwenloop while `doctor` could not list
+    it. Module-level, like the typer commands that call it, because it is the CLI's
+    own reading of the working directory -- nothing else reads config from there.
     """
-    override = os.environ.get("VIBEY_FEATURE_QWENLOOP")
-    if override is not None:
-        return override.strip().lower() in {"1", "true", "yes", "on"}
-    config = (root or Path.cwd()) / "vibey.toml"
-    try:
-        data = parse_toml_string(config.read_text())
-    except (OSError, ValueError):
-        return False
-    features = data.get("features")
-    return isinstance(features, dict) and features.get("qwenloop") is True
+    return LocalEngineSettings.from_toml((root or Path.cwd()) / "vibey.toml", environ=os.environ)
 
 
 def _parse_question_answers(items: tuple[str, ...]) -> dict[str, object]:
@@ -350,11 +343,34 @@ _OLLAMA_MODEL_HELP = (
     "Local model for --provider qwenloop; ignored by the other providers. Default: "
     f"${OLLAMA_MODEL_ENV}, else {DEFAULT_OLLAMA_MODEL}. The server is ${OLLAMA_URL_ENV}."
 )
+_PROVIDERS = ("scripted", "claudeloop", "qwenloop")
+# The same for --provider: its default is the one decision both commands must share.
+_PROVIDER_HELP = (
+    "DESIGN/DECOMPOSE provider: scripted, claudeloop, or qwenloop (the sovereign one, on "
+    "Ollama). Default: qwenloop when any local engine is switched on "
+    "(VIBEY_FEATURE_QWENLOOP / VIBEY_FEATURE_CLAUDELOOP_LOCAL, else [features] in the "
+    "project's config), otherwise scripted. An explicit value always wins."
+)
+
+
+def _resolve_provider(explicit: str | None, config: Mapping[str, object]) -> str:
+    """The provider to run: the operator's explicit choice, else the sovereign default.
+
+    Sub-doctrine 8.a, slice B5 of #115 (ADR-0038): an operator who has switched a local
+    engine on has said the sovereign path is how this project runs, so DESIGN and
+    DECOMPOSE default to the local providers too instead of the scripted fake. Paid
+    (`claudeloop`) is never a default; it is always a stated choice. Module-level, like
+    the typer commands that share it, so `work` and `worker` cannot disagree.
+    """
+    if explicit is not None:
+        return explicit
+    local = LocalEngineSettings(environ=os.environ, config=config)
+    return "qwenloop" if local.any_enabled else "scripted"
 
 
 async def _work_once(
     project_id: UUID,
-    provider: str,
+    provider_opt: str | None,
     max_turns: int,
     max_dollars: float,
     ollama_model: str | None = None,
@@ -368,7 +384,9 @@ async def _work_once(
         owner = f"cli-{os.getpid()}"
         if project.phase is Phase.VISUAL_DESIGN:
             visual_provider: VisualInventoryProducer
-            if provider == "scripted":
+            # No sovereign visual producer exists, so the sovereign default stops at
+            # DESIGN and DECOMPOSE: an unstated provider here is still the scripted one.
+            if provider_opt in (None, "scripted"):
                 visual_provider = ScriptedVisualProvider()
             else:
                 raise WrongPhase(
@@ -377,6 +395,7 @@ async def _work_once(
             worker = build_visual_worker(resources=resources, provider=visual_provider, owner=owner)
             return await worker.run_once(project_id)
 
+        provider = _resolve_provider(provider_opt, project.config)
         design_provider: DesignProvider
         if provider == "scripted":
             design_provider = ScriptedDesignProvider()
@@ -418,7 +437,7 @@ async def _work_once(
 @app.command("work")
 def work_once(
     project_id: UUID,
-    provider: Annotated[str, typer.Option("--provider")] = "scripted",
+    provider: Annotated[str | None, typer.Option("--provider", help=_PROVIDER_HELP)] = None,
     max_turns: Annotated[int, typer.Option("--max-turns", min=1)] = 1,
     max_dollars: Annotated[float, typer.Option("--max-dollars", min=0.01, max=10)] = 0.25,
     ollama_model: Annotated[
@@ -1104,34 +1123,31 @@ def doctor(
     """Check engine health, auth status, and optionally run conformance."""
     from vibey.application.conformance import run_conformance
     from vibey.infrastructure.engines.classify import CREDITS_FIXTURES
-    from vibey.infrastructure.engines.descriptors import (
-        BY_ENGINE_ID,
-        DEFAULT_DESCRIPTORS,
-        QWENLOOP,
-    )
-    from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
+    from vibey.infrastructure.engines.descriptors import DEFAULT_DESCRIPTORS
+    from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment
 
     async def run_doctor() -> None:
         import tempfile
         from uuid import uuid4
 
+        # The worker runs every local engine that is switched on; without this the
+        # health check was the one place that could not see them, so the engine the
+        # operator is actually depending on stayed invisible unless they knew to ask
+        # for it by name. A preferred path you cannot inspect is not a preferred path.
+        # The same resolver builds claudeloop-local from its configured profile and
+        # gives qwenloop the endpoint the worker would, so doctor probes what runs.
+        local = _local_engines_from_toml()
+        endpoint = LocalEndpointEnvironment(os.environ)
         if engine is not None:
             from vibey.domain.engine import EngineId
 
             try:
-                eid = EngineId(engine)
+                eids = [EngineId(engine)]
             except ValueError as exc:
                 typer.echo(f"Unknown engine: {engine}")
                 raise typer.Exit(1) from exc
-            descriptors = [BY_ENGINE_ID[eid]]
         else:
-            descriptors = list(DEFAULT_DESCRIPTORS)
-            # The worker already runs qwenloop when the feature is on; without this the
-            # health check was the one place that could not see it, so the engine the
-            # operator is actually depending on stayed invisible unless they knew to ask
-            # for it by name. A preferred path you cannot inspect is not a preferred path.
-            if _qwenloop_feature_enabled():
-                descriptors.append(QWENLOOP)
+            eids = [d.engine_id for d in DEFAULT_DESCRIPTORS] + list(local.enabled_engines)
 
         all_ok = True
 
@@ -1147,14 +1163,15 @@ def doctor(
                 raise typer.Exit(1)
             record_project_id = target.project_id
 
-        for desc in descriptors:
-            adapter = LoopProcessAdapter(descriptor=desc)
+        for eid in eids:
+            adapter = local.adapter(eid, endpoint)
+            desc = adapter.descriptor
             preflight = await adapter.preflight()
 
             status = "installed" if preflight.installed else "NOT INSTALLED"
             version = preflight.version or "?"
             auth = "auth OK" if preflight.auth_ok else "auth FAIL"
-            typer.echo(f"{desc.engine_id.value:<12} {status:<14} v{version:<10} {auth}")
+            typer.echo(f"{desc.engine_id.value:<16} {status:<14} v{version:<10} {auth}")
 
             if preflight.detail:
                 typer.echo(f"  detail: {preflight.detail}")
@@ -1260,12 +1277,7 @@ def worker(
         bool,
         typer.Option("--once", help="Process one job and exit"),
     ] = False,
-    provider: Annotated[
-        str,
-        typer.Option(
-            "--provider", help="Design/decompose providers: scripted, claudeloop, or qwenloop"
-        ),
-    ] = "scripted",
+    provider_opt: Annotated[str | None, typer.Option("--provider", help=_PROVIDER_HELP)] = None,
     max_turns: Annotated[int, typer.Option("--max-turns", min=1)] = 25,
     max_dollars: Annotated[float, typer.Option("--max-dollars", min=0.01, max=10)] = 2.0,
     ollama_model: Annotated[
@@ -1302,11 +1314,10 @@ def worker(
     from datetime import timedelta
 
     from vibey.application.worker import WorkerLoop
-    from vibey.bootstrap import build_full_worker, database_url, qwenloop_enabled
+    from vibey.bootstrap import build_full_worker, database_url
     from vibey.domain.engine import EngineId
     from vibey.infrastructure.db.notifier import PostgresJobReadyNotifier
-    from vibey.infrastructure.engines.descriptors import QWENLOOP
-    from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
+    from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment
     from vibey.infrastructure.engines.scripted_decompose import ScriptedWorkPlanProducer
 
     allow_list: frozenset[EngineId] | None = None
@@ -1316,7 +1327,7 @@ def worker(
         except ValueError as exc:
             typer.echo(f"Invalid engine: {exc}")
             raise typer.Exit(2) from exc
-    if provider not in ("scripted", "claudeloop", "qwenloop"):
+    if provider_opt is not None and provider_opt not in _PROVIDERS:
         typer.echo("provider must be 'scripted', 'claudeloop', or 'qwenloop'")
         raise typer.Exit(2)
     if azure not in ("memory", "az"):
@@ -1411,6 +1422,10 @@ def worker(
                 )
                 raise typer.Exit(1)
 
+            # Sovereign by default once a local engine is on (8.a, #115 B5); an explicit
+            # --provider still wins. Resolved here, after the project, because the
+            # project's own config is one of the two places the switch can live.
+            provider = _resolve_provider(provider_opt, project.config)
             design_provider: DesignProvider
             decomposer: WorkPlanProducer
             if provider == "claudeloop":
@@ -1449,13 +1464,17 @@ def worker(
                 decomposer = ScriptedWorkPlanProducer()
 
             # The pool has to be the one `build_full_worker` will actually run, so ask
-            # bootstrap's own predicate instead of keeping a second copy of it. Without
-            # this the standby engine was the one engine the startup sweep could not
-            # see: it ran, but its conformance warning never appeared, so an operator
-            # depending on it had no way to learn it would never be selected.
+            # the same resolver it does instead of keeping a second copy of the rule.
+            # Without this a local engine was the one engine the startup sweep could
+            # not see: it ran, but its conformance warning never appeared, so an
+            # operator depending on it had no way to learn it would never be selected.
+            # `--ollama-model` reaches qwenloop's process as QWENLOOP_MODEL too, so the
+            # BUILD engine and the DESIGN/DECOMPOSE providers run the same model.
+            local = LocalEngineSettings(environ=os.environ, config=project.config)
             adapters = dict(resources.engine_adapters)
-            if qwenloop_enabled(project.config) and EngineId.QWENLOOP not in adapters:
-                adapters[EngineId.QWENLOOP] = LoopProcessAdapter(descriptor=QWENLOOP)
+            endpoint = LocalEndpointEnvironment(os.environ, model=ollama_model)
+            for engine_id, local_adapter in local.adapters(endpoint).items():
+                adapters.setdefault(engine_id, local_adapter)
             if allow_list is not None:
                 allowed = {eid: a for eid, a in adapters.items() if eid in allow_list}
                 # An allow-list matching nothing used to start a worker with zero
@@ -1466,9 +1485,10 @@ def worker(
                     available = ", ".join(sorted(e.value for e in adapters))
                     typer.echo(
                         f"--engines {engines_opt} matches none of this worker's engines "
-                        f"({available}); qwenloop joins them only with "
-                        "VIBEY_FEATURE_QWENLOOP=1, or with [features] qwenloop in the "
-                        "project's config when that environment override is unset."
+                        f"({available}); a local engine joins them only with its switch "
+                        "on -- VIBEY_FEATURE_QWENLOOP=1 or VIBEY_FEATURE_CLAUDELOOP_LOCAL=1, "
+                        "or [features] qwenloop / claudeloop_local in the project's config "
+                        "when that environment override is unset."
                     )
                     raise typer.Exit(EXIT_USAGE)
                 adapters = allowed

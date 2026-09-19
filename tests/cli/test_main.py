@@ -64,7 +64,9 @@ def test_work_command_runs_one_queue_item(monkeypatch) -> None:  # type: ignore[
 
     async def fake_work(received, provider, max_turns, max_dollars, ollama_model):  # type: ignore[no-untyped-def]
         assert received == project_id
-        assert provider == "scripted"
+        # Unstated: the default is resolved once the project's own config is known
+        # (sovereign when a local engine is on, else scripted -- ADR-0038).
+        assert provider is None
         assert max_turns == 1
         assert max_dollars == 0.25
         assert ollama_model is None

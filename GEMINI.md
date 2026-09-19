@@ -70,12 +70,14 @@ names — the tree ships as one `vibey` distribution (ADR-0037).
 - **Engines:** claudeloop, codexloop, cursorloop, agyloop — the paid pool,
   rotated per BUILD job via smooth weighted round robin
   (`SelectingEngineProvider` → `EngineSelector` → `domain/rotation.select()`,
-  ADR-0005). `qwenloop` is a fifth, default-off local engine
-  (`VIBEY_FEATURE_QWENLOOP` or `[features] qwenloop`). In BUILD rotation it is a
-  standby, considered only when enabled and no eligible paid engine is
-  available (ADR-0015). For DESIGN it is the sovereign provider
-  (`vibey worker --provider qwenloop`, ADR-0027), the preferred path under
-  sub-doctrine 8.a.
+  ADR-0005). Two default-off local engines — `qwenloop`
+  (`VIBEY_FEATURE_QWENLOOP` or `[features] qwenloop`) and `claudeloop-local`, the
+  claudeloop binary on a local backend profile (`VIBEY_FEATURE_CLAUDELOOP_LOCAL`
+  or `[features] claudeloop_local`) — are **preferred first** under sub-doctrine
+  8.a: SWRR runs within the LOCAL tier, and the paid pool is the fallback when no
+  local engine is eligible (ADR-0038, amending ADR-0015). With a local engine on
+  and no `--provider`, DESIGN and DECOMPOSE run on the sovereign providers
+  (ADR-0027, ADR-0038). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
 - **Handoff:** when `CreditsExhausted`, vibey verifies brief against no-loss
   gate (10 rules: R1–R10), writes full ledger to receiving worktree, seeds
   next engine.
@@ -145,7 +147,7 @@ automation has no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (37 ADRs: 0001–0037) |
+| ADRs | `docs/architecture/decisions/` (38 ADRs: 0001–0038) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

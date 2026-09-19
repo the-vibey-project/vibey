@@ -3,6 +3,7 @@
 
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -317,8 +318,26 @@ async def test_a_two_engine_pool_still_rotates_the_verify_away() -> None:
     assert adapter.descriptor.engine_id is EngineId.CLAUDELOOP
 
 
+class _SelectsAnEngineWithNoAdapter:
+    """A selector that ignores the allow-list it is handed -- the defence below is for
+    exactly the selector that misbehaves, so only a misbehaving one can reach it."""
+
+    async def select_engine(self, project_id, requirement, **_: object):  # type: ignore[no-untyped-def]
+        return EngineId.AGYLOOP, None
+
+
 async def test_selected_engine_without_a_configured_adapter_defers() -> None:
-    provider, _, jobs, project_id = await _provider([EngineId.CLAUDELOOP], adapters={})
+    repo = FakeEngineHealthRepository()
+    health = EngineHealthService(repo)
+    provider = SelectingEngineProvider(
+        selector=_SelectsAnEngineWithNoAdapter(),  # type: ignore[arg-type]
+        health=health,
+        adapters={EngineId.CLAUDELOOP: _Adapter(EngineId.CLAUDELOOP)},
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        owner="w1",
+    )
+    project_id = uuid4()
     job = replace(make_job(project_id, attempts=1), project_id=project_id)
 
     with pytest.raises(CapacityDeferred) as excinfo:
@@ -327,50 +346,96 @@ async def test_selected_engine_without_a_configured_adapter_defers() -> None:
     assert "no configured adapter" in excinfo.value.detail
 
 
-async def test_enabled_qwenloop_preflights_then_falls_back() -> None:
-    repo = FakeEngineHealthRepository()
-    project_id = uuid4()
-    health = EngineHealthService(repo)
-    jobs = FakeJobRepository()
-    standby = _StandbyAdapter(EngineId.QWENLOOP)
-    provider = SelectingEngineProvider(
+async def test_selection_is_confined_to_the_pool_not_every_health_row() -> None:
+    """A health row outlives the switch that wrote it. A local engine switched off
+    since -- and now *preferred* by tier -- must not be offered to a worker with no
+    adapter for it: that deferred the job forever instead of running a paid engine."""
+    provider, _, _, project_id = await _provider(
+        [EngineId.CLAUDELOOP, EngineId.QWENLOOP],
+        adapters={EngineId.CLAUDELOOP: _Adapter(EngineId.CLAUDELOOP)},
+    )
+    job = replace(make_job(project_id, attempts=1), project_id=project_id)
+
+    adapter = await provider.select_for(job)
+
+    assert adapter.descriptor.engine_id is EngineId.CLAUDELOOP
+
+
+class _LocalAdapter(_Adapter):
+    """A local engine whose `doctor` passes (or not), counting how often it is asked."""
+
+    def __init__(self, engine_id: EngineId, *, ready: bool = True) -> None:
+        super().__init__(engine_id)
+        self.ready = ready
+        self.preflights = 0
+
+    async def preflight(self):  # type: ignore[no-untyped-def]
+        from vibey.application.dto import PreflightResult
+
+        self.preflights += 1
+        return PreflightResult(installed=True, version="0.1.0", auth_ok=self.ready)
+
+
+def _local_provider(
+    health: EngineHealthService,
+    adapters: dict[EngineId, _Adapter],
+    *,
+    local_engines: tuple[EngineId, ...],
+    allow_list: frozenset[EngineId] | None = None,
+) -> SelectingEngineProvider:
+    return SelectingEngineProvider(
         selector=EngineSelector(
             health_service=health,
             cursor_repository=FakeRotationCursorRepository(),
             descriptors=BY_ENGINE_ID,
         ),
         health=health,
-        adapters={EngineId.QWENLOOP: standby},
-        jobs=jobs,
+        adapters=adapters,
+        jobs=FakeJobRepository(),
         clock=FixedClock(),
         owner="w1",
-        standby_engine=EngineId.QWENLOOP,
+        allow_list=allow_list,
+        local_engines=local_engines,
     )
-    job = replace(make_job(project_id, attempts=1), project_id=project_id)
-    selected = await provider.select_for(job)
-    assert selected is standby
+
+
+async def test_an_enabled_local_engine_is_preflighted_then_preferred() -> None:
+    """No cron records a local engine's health, so each selection refreshes it -- and
+    once its `doctor` passes it is preferred over a healthy paid engine (8.a)."""
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
+    health = EngineHealthService(repo)
+    local = _LocalAdapter(EngineId.QWENLOOP)
+    provider = _local_provider(
+        health,
+        {EngineId.CLAUDELOOP: _Adapter(EngineId.CLAUDELOOP), EngineId.QWENLOOP: local},
+        local_engines=(EngineId.QWENLOOP,),
+    )
+
+    selected = await provider.select_for(
+        replace(make_job(project_id, attempts=1), project_id=project_id)
+    )
+
+    assert selected is local
+    assert local.preflights == 1
     record = await health.get_or_create(project_id, EngineId.QWENLOOP)
     assert record.installed and record.conformance_ok
 
 
-async def test_missing_standby_adapter_does_not_block_paid_selection() -> None:
+async def test_a_local_engine_whose_doctor_fails_falls_back_to_paid() -> None:
     repo = FakeEngineHealthRepository()
     project_id = uuid4()
     await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
     health = EngineHealthService(repo)
     paid = _Adapter(EngineId.CLAUDELOOP)
-    provider = SelectingEngineProvider(
-        selector=EngineSelector(
-            health_service=health,
-            cursor_repository=FakeRotationCursorRepository(),
-            descriptors=BY_ENGINE_ID,
-        ),
-        health=health,
-        adapters={EngineId.CLAUDELOOP: paid},
-        jobs=FakeJobRepository(),
-        clock=FixedClock(),
-        owner="w1",
-        standby_engine=EngineId.QWENLOOP,
+    provider = _local_provider(
+        health,
+        {
+            EngineId.CLAUDELOOP: paid,
+            EngineId.QWENLOOP: _LocalAdapter(EngineId.QWENLOOP, ready=False),
+        },
+        local_engines=(EngineId.QWENLOOP,),
     )
 
     selected = await provider.select_for(
@@ -378,6 +443,121 @@ async def test_missing_standby_adapter_does_not_block_paid_selection() -> None:
     )
 
     assert selected is paid
+    record = await health.get_or_create(project_id, EngineId.QWENLOOP)
+    assert record.conformance_ok is False
+
+
+async def test_every_enabled_local_engine_is_refreshed_not_just_qwenloop() -> None:
+    health = EngineHealthService(FakeEngineHealthRepository())
+    project_id = uuid4()
+    qwen = _LocalAdapter(EngineId.QWENLOOP)
+    claude_local = _LocalAdapter(EngineId.CLAUDELOOP_LOCAL)
+    provider = _local_provider(
+        health,
+        {EngineId.QWENLOOP: qwen, EngineId.CLAUDELOOP_LOCAL: claude_local},
+        local_engines=(EngineId.QWENLOOP, EngineId.CLAUDELOOP_LOCAL),
+    )
+
+    selected = await provider.select_for(
+        replace(make_job(project_id, attempts=1), project_id=project_id)
+    )
+
+    assert selected in (qwen, claude_local)
+    assert (qwen.preflights, claude_local.preflights) == (1, 1)
+
+
+async def test_a_local_engine_outside_the_pool_is_neither_preflighted_nor_selected() -> None:
+    """A switch that is on, narrowed away by `--engines`, and an enabled engine this
+    worker has no adapter for: neither costs a `doctor` run, neither blocks selection."""
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
+    health = EngineHealthService(repo)
+    paid = _Adapter(EngineId.CLAUDELOOP)
+    narrowed = _LocalAdapter(EngineId.QWENLOOP)
+    provider = _local_provider(
+        health,
+        {EngineId.CLAUDELOOP: paid, EngineId.QWENLOOP: narrowed},
+        local_engines=(EngineId.QWENLOOP, EngineId.CLAUDELOOP_LOCAL),
+        allow_list=frozenset({EngineId.CLAUDELOOP}),
+    )
+
+    selected = await provider.select_for(
+        replace(make_job(project_id, attempts=1), project_id=project_id)
+    )
+
+    assert selected is paid
+    assert narrowed.preflights == 0
+
+
+async def test_verify_rotates_from_one_local_engine_to_the_other() -> None:
+    """Independence holds inside the local tier: qwenloop implemented, so the review
+    goes to claudeloop-local, not back to qwenloop and not out to a paid engine."""
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
+    health = EngineHealthService(repo)
+    claude_local = _LocalAdapter(EngineId.CLAUDELOOP_LOCAL)
+    provider = _local_provider(
+        health,
+        {
+            EngineId.CLAUDELOOP: _Adapter(EngineId.CLAUDELOOP),
+            EngineId.QWENLOOP: _LocalAdapter(EngineId.QWENLOOP),
+            EngineId.CLAUDELOOP_LOCAL: claude_local,
+        },
+        local_engines=(EngineId.QWENLOOP, EngineId.CLAUDELOOP_LOCAL),
+    )
+    job = replace(
+        make_job(project_id, attempts=1),
+        project_id=project_id,
+        kind="build.verify",
+        requirement={"implementer_engine_id": "qwenloop"},
+    )
+
+    assert await provider.select_for(job) is claude_local
+
+
+async def test_verify_falls_back_to_paid_when_the_implementer_is_the_only_local_engine() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
+    health = EngineHealthService(repo)
+    paid = _Adapter(EngineId.CLAUDELOOP)
+    provider = _local_provider(
+        health,
+        {EngineId.CLAUDELOOP: paid, EngineId.QWENLOOP: _LocalAdapter(EngineId.QWENLOOP)},
+        local_engines=(EngineId.QWENLOOP,),
+    )
+    job = replace(
+        make_job(project_id, attempts=1),
+        project_id=project_id,
+        kind="build.verify",
+        requirement={"implementer_engine_id": "qwenloop"},
+    )
+
+    assert await provider.select_for(job) is paid
+
+
+async def test_a_qwenloop_only_pool_still_verifies_its_own_work() -> None:
+    """#179's waiver survives the tiering: a sovereign single-engine pool reviews its own
+    diff rather than deferring forever."""
+    health = EngineHealthService(FakeEngineHealthRepository())
+    project_id = uuid4()
+    qwen = _LocalAdapter(EngineId.QWENLOOP)
+    provider = _local_provider(
+        health,
+        {EngineId.QWENLOOP: qwen},
+        local_engines=(EngineId.QWENLOOP,),
+        allow_list=frozenset({EngineId.QWENLOOP}),
+    )
+    job = replace(
+        make_job(project_id, attempts=1),
+        project_id=project_id,
+        kind="build.verify",
+        requirement={"implementer_engine_id": "qwenloop"},
+    )
+
+    assert await provider.select_for(job) is qwen
 
 
 # ── RotationRecordingHandler ─────────────────────────────────────────────────
@@ -500,6 +680,56 @@ async def test_non_capacity_defer_never_opens_the_circuit() -> None:
     record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
     assert record.circuit == "closed"
     assert record.resets_at is None
+
+
+async def test_a_capacity_rejected_diff_review_opens_the_reviewers_circuit(
+    tmp_path: Path,
+) -> None:
+    """#215, end to end through the real verify handler: the reviewer that
+    ran out must have its circuit opened, or the next claim selects the
+    same exhausted engine for the same verify job again."""
+    from tests.application.test_build_verify_handler import (
+        FakeGateRunner,
+        FakeLedger,
+        FakeWorktrees,
+        _capacity_rejected_review,
+    )
+    from tests.application.test_build_verify_handler import _job as _verify_job
+    from vibey.application.build_verify_handler import BuildVerifyHandler
+    from vibey.infrastructure.engines.descriptors import CODEXLOOP
+    from vibey.infrastructure.engines.scripted import ScriptedEngine
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CODEXLOOP))
+    health = EngineHealthService(repo)
+    handler = RotationRecordingHandler(
+        inner=BuildVerifyHandler(
+            worktrees=FakeWorktrees(tmp_path),
+            gates=FakeGateRunner(),
+            reviewer=ScriptedEngine(
+                descriptor=CODEXLOOP,
+                base_dir=tmp_path / "engine",
+                script=_capacity_rejected_review(),
+            ),
+            ledger=FakeLedger(),
+            jobs=FakeJobRepository(),
+            clock=FixedClock(),
+        ),
+        health=health,
+        project_id=project_id,
+        engine_id=EngineId.CODEXLOOP,
+    )
+
+    outcome = await handler.handle(
+        _verify_job(project_id=project_id, requirement={"implementer_engine_id": "claudeloop"})
+    )
+
+    assert isinstance(outcome, Defer)
+    assert outcome.capacity is True
+    record = await health.get_or_create(project_id, EngineId.CODEXLOOP)
+    assert record.circuit == "open"
+    assert record.resets_at == NOW + timedelta(minutes=5)
 
 
 async def test_the_selecting_provider_satisfies_the_engine_provider_protocol() -> None:

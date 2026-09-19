@@ -35,6 +35,69 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **worker:** a heartbeat that fails no longer throws away finished work or kills the worker. `_heartbeat_forever` caught only `CancelledError`, so a pool timeout or a Postgres failover ended the task with the exception stored; `run_once` re-raised it from its `finally`, `_settle` never ran — a session that had succeeded was never acked, its lease expired and another worker paid to redo it — and the exception took the worker process down with every parallel drive loop in it. A beat that raises is now said as `job.heartbeat_failed` at warning and retried at the next interval; a beat the queue refuses is said once as `job.lease_lost` and the loop stops beating. The per-kind lease extension right after the claim is guarded the same way and carries on at the default lease. The settle writes stop discarding their answers too: an `ack`, `nack`, `grant_attempts` or `park` refused by the lease guard is said at warning as `job.ack_rejected`, `job.nack_rejected`, `job.grant_rejected` or `job.park_rejected`, the way `job.defer_rejected` already was, and a refused grant skips the nack that would otherwise have failed the job outright. `WorkerLoop` gains its declared seam, `application.interfaces.WorkerLoopInterface` (ADR-0016) ([#211](https://github.com/the-vibey-project/vibey/issues/211))
 ### Features
 
+* **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
+  pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
+  ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
+  that left it, ordered by `seq`, the wall-clock time between them, and what the visit spent
+  by the budget brake's own rule, now published in the domain as `LedgerSpendRule`. Visits
+  roll up per `(cycle, phase)`, because a phase can be visited twice in one cycle. The
+  projection predicts nothing, and it never passes a guess off as a measurement. An open
+  visit has no duration. A visit whose recorded clocks run backwards is clamped to zero and
+  flagged `clock_skewed`. A visit whose entry the range never saw is flagged too. Only a
+  visit that is none of these counts as `measured`. Spend that no visit can own is reported
+  as `unattributed` instead of being dropped. There is no turn count: engine translation
+  writes more than one `TurnCompleted` per real turn, so the projection reports
+  `turn_completed_events` with a caveat beside it
+### Bug Fixes
+
+* **engines:** vibey read claudeloop's capacity only as a `{"state": …}` mapping, but
+  claudeloop writes the class name (`"capacity": "CreditsExhausted"`), so every real
+  claudeloop capacity payload classified as `Available`. Both shapes are read now, and
+  `BackendMisconfigured` is terminal (`AuthenticationFailed`), never credits (#236)
+* **gh:** a mention on a pull request can now reach the "act" path at all. `vibey-gh
+  conversation` decided pull-request-ness from `isPullRequest`, a field `gh issue view` does
+  not serve (it rejects it), so every thread read as an issue and a trusted request was
+  never allowed to change a file. It is now read from the thread's `url` (`.../pull/N`), in
+  one place, `ConversationThread.is_pull_request` (#145)
+* **gh:** a mention in an inline pull-request review comment is the comment evaluated. Review
+  comments are not in `gh issue view`'s thread, so the command silently fell back to the
+  newest issue-level comment and answered that instead. The ID is now resolved through the
+  pull request review API and checked against the pull request; an ID that names nothing
+  fails the command with a clear message rather than answering a different comment. A review
+  comment's briefing also carries the file, line and diff hunk it was written on (#145)
+* **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+* **build:** a capacity rejection during `build.verify`'s diff review now defers the job as capacity instead of being discarded. `run_and_record` reported `capacity_rejected`, but the verify handler never read it and judged the run on its verdict alone — so a reviewer out of capacity either failed as `WORK` (burning an unrefunded attempt, up to the `attempts_exhausted` park, while `RotationRecordingHandler` left the exhausted engine's circuit closed and kept handing it the same job) or, with a completing verdict in the same run, approved the item outright — the non-negotiable "a capacity rejection always outranks a completion claim" broken both ways. It now returns `Defer(capacity=True)` after `capacity_backoff` (a constructor keyword defaulting to 5 minutes, exactly as on `build.implement`), before any repair finding is resolved or any independence waiver is written, and `BuildVerifyHandler` takes a required `clock` ([#215](https://github.com/the-vibey-project/vibey/issues/215))
+* **build:** gate commands now run isolated and bounded. `SubprocessGateRunner` — which runs `build.verify`'s gates and `git diff`, `build.integrate`'s gates and REVIEW's automated checks — handed every command vibey's whole environment minus `GIT_*`, let it inherit the worker's stdin, and waited on `communicate()` with no timeout, so one hung gate held its job's lease for as long as it hung while the heartbeat kept renewing it. Each command now leads a process group of its own and gets `gates.timeout_seconds` (default 1800); one that overruns is killed with its whole group and fails as exit 124, a failing gate for the repair loop rather than an error. A cancelled run (Ctrl-C, event-loop shutdown) kills and reaps its gate before the cancellation propagates, and the reap itself is bounded by `gates.kill_grace_seconds` (default 5), because asyncio's `wait()` never returns while a descendant that escaped the group still holds the pipes. stdin is `/dev/null`, and output that is not UTF-8 is decoded with replacement characters instead of raising. vibey's own Python environment (`VIRTUAL_ENV`, `PYTHONPATH`, `PYTHONHOME`, its venv's `bin` on `PATH`) is stripped with the same `isolate_python_env` engine sessions use, and the running interpreter's prefix counts as a venv only when it is one, so a system-Python install keeps `/usr/bin`. **Behaviour change:** a gate that found a tool only because it was installed beside vibey — the `ruff`, `bandit` or `pytest` of a development checkout's venv, REVIEW's default `ruff check .` included — no longer finds it and fails with exit 127. Install the tool where the project can reach it, or set `gates.isolate_python_env` to `false` in the project's config record. The worker builds one runner from the project's `gates` object, and a malformed one raises when the worker is built ([#212](https://github.com/the-vibey-project/vibey/issues/212))
+* **infra:** every subprocess vibey kills is now killed with its whole process group and reaped within a bound, by one implementation, `infrastructure/process/reaper.py`'s `ProcessReaper`, which #212's gate runner, the loop-process adapter and the skills-context compiler all use (ADR-0017). The adapter's preflight probes (`<engine> --version`, `<engine> doctor`) and the `vibey-skills` CLI used to kill only the direct child and then wait on it with no bound. On CPython 3.12 that wait does not return while a descendant that escaped into a session of its own still holds the pipes, so a probe or a skills compile with such a descendant hung preflight or the BUILD job for as long as the descendant lived. Measured on 3.12.13: a 0.2 s timeout returned after 5.5 s and 6.0 s, when the escaped `sleep 6` exited. Both now start their child in a session of its own. On a timeout or a cancellation, `SIGKILL` goes to the whole group (ESRCH and macOS's EPERM for a zombie-only group are tolerated), and the reap gives up after a grace, logging `engine_process_not_reaped` (with the engine) or `skills_context_process_not_reaped`. The grace is `skills_context.kill_grace_seconds` (default 5, also declared in the `VibeyProject` CRD's `skillsContext`) and `LoopProcessAdapter.kill_grace_seconds` (default 5; the adapter is built without project config). The engine spawn also stripped `/usr/bin` and `/usr/local/bin` from every engine session on a system Python, because it always treated `sys.prefix` as a venv. It now asks the same `OrchestratorPythonEnv` the gate runner does, which counts the interpreter's prefix only when `sys.prefix != sys.base_prefix`. Gate behaviour, `gates.kill_grace_seconds` and `gate_process_not_reaped` are unchanged ([#283](https://github.com/the-vibey-project/vibey/issues/283))
+
+### Features
+
+* **engines:** local engines are preferred first (sub-doctrine 8.a). A new engine,
+  `claudeloop-local` — the claudeloop binary on a local backend profile
+  (`--profile NAME --preset …`, never `--effort`; cost 0/0; honest ceiling STANDARD) —
+  joins `qwenloop` in a LOCAL tier behind `VIBEY_FEATURE_CLAUDELOOP_LOCAL` /
+  `[features] claudeloop_local`, configured by `[engines.claudeloop_local]` (`profile`
+  default `local`, overridable by `VIBEY_CLAUDELOOP_LOCAL_PROFILE`; `context_window`;
+  `structured_verdict`, off until conformance proves it). BUILD selection runs SWRR within
+  the LOCAL tier and falls back to paid engines only when no local engine is eligible,
+  replacing qwenloop's standby filter; verify still rotates away from the implementer. With
+  a local engine on and no `--provider`, `vibey work` and `vibey worker` run DESIGN and
+  DECOMPOSE on the sovereign providers. Selection is confined to the worker's own pool,
+  so a local engine's health row left over from before its switch was turned off can
+  never be preferred over the engines the worker can actually run. `VIBEY_OLLAMA_URL` is the one local endpoint
+  setting: qwenloop's process now gets `QWENLOOP_BASE_URL=<url>/v1` and `QWENLOOP_MODEL`
+  from it through a new `LoopProcessAdapter.env_overlay`. One resolver,
+  `LocalEngineSettings`, answers "which local engines are on" for bootstrap, `worker`,
+  `work` and `doctor`. New guide: [Local models on Ollama](docs/guides/local-models-ollama.md)
+  ([ADR-0038](docs/architecture/decisions/0038-local-engines-are-preferred-first.md);
+  #236, #115)
+* **engines:** a run that exits 78 (claudeloop's `BackendMisconfigured`: an unreachable
+  local server, a model not pulled or failing to load, a context too small) parks its
+  `build.implement` or `build.verify` job on an `engine_misconfigured` gate naming the
+  engine's `doctor` command, instead of burning its retry ladder on a configuration
+  fault (#236)
+* **helm:** the `VibeyProject` CRD's `engines` enum accepts `qwenloop` and
+  `claudeloop-local`
 * **qwenloop:** qwenloop can now attach to an OpenAI-compatible server that is already running, with Ollama as the main target, instead of spawning llama-server or vllm, so the BUILD lane can run for free on an operator's existing Ollama. Before this change, `qwenloop doctor` exited 1 whenever llama-server and vllm were both missing, and vibey reads that exit as an auth failure, so qwenloop could never be selected on a machine that had only Ollama. Set `QWENLOOP_BASE_URL=http://127.0.0.1:11434/v1` (or pass `--base-url`, or set `base_url` in qwenloop's new TOML config file) and `auto` selects the new `openai-compat` backend. The model name is set explicitly (`QWENLOOP_MODEL`, `--model`, or `model`; the default is `qwen2.5-coder:14b`), and an optional API key is read only from `QWENLOOP_API_KEY`. `doctor` exits 0 only when the endpoint answers and serves the model, and says which check failed otherwise. `run`, `run --storm`, `server start`, and `server status` all use the same backend. qwenloop never starts or stops an attached server, and prints its API key as `<redacted>`. One more fix: vLLM is now launched with `--served-model-name`, so the model name each request sends is one vLLM actually serves ([qwenloop ADR 0003](src/vibey_runners/qwen/docs/architecture/decisions/0003-attach-openai-compatible-endpoint.md))
 ### Bug Fixes
 

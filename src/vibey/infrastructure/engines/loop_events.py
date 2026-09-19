@@ -170,6 +170,10 @@ LOOP_EVENT_MAP: dict[EngineId, dict[str, EventKind]] = {
         "failed": EventKind.VERDICT_RENDERED,
     },
 }
+# claudeloop-local is the claudeloop binary on a local backend profile: the same
+# runner writes the same events.jsonl, so it reads through the same map -- one
+# entry, not a copy that could drift from it (ADR-0038).
+LOOP_EVENT_MAP[EngineId.CLAUDELOOP_LOCAL] = LOOP_EVENT_MAP[EngineId.CLAUDELOOP]
 
 
 def translate_event_type(engine_id: EngineId, event_type: str) -> EventKind | None:

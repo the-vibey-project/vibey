@@ -133,6 +133,7 @@ def _sovereign_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "VIBEY_OLLAMA_TIMEOUT",
         "VIBEY_EVIDENCE_DIR",
         "VIBEY_FEATURE_QWENLOOP",
+        "VIBEY_FEATURE_CLAUDELOOP_LOCAL",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -330,6 +331,60 @@ def test_research_without_evidence_parks_a_research_evidence_gate(tmp_path: Path
     assert recorded["engine_id"] == "qwenloop"
     assert recorded["provenance"] == "untrusted"
     assert json.loads(recorded["payload"])["source"] == "https://example.test/greeters"
+
+
+@pytest.mark.usefixtures("_sovereign_env")
+def test_work_is_sovereign_by_default_once_a_local_engine_is_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#115 B5 (ADR-0038): with a local engine switched on and no --provider, `vibey
+    work` runs DESIGN on the sovereign provider -- visible here as the research floor's
+    park, which only the sovereign provider raises -- instead of the scripted fake."""
+    monkeypatch.setenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", "1")
+    project_id = asyncio.run(_seed_research(tmp_path))
+
+    res = runner.invoke(app, ["work", str(project_id)])
+
+    assert res.exit_code == 0, res.output
+    (job,) = asyncio.run(_rows("SELECT state FROM job WHERE project_id = $1", project_id))
+    assert job["state"] == "awaiting_human"
+    (gate,) = asyncio.run(_rows("SELECT kind FROM human_gate WHERE project_id = $1", project_id))
+    assert gate["kind"] == "research_evidence"
+
+
+@pytest.mark.usefixtures("_sovereign_env")
+def test_an_explicit_provider_beats_the_sovereign_default_on_work(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "1")
+    project_id = asyncio.run(_seed_research(tmp_path))
+
+    res = runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
+
+    assert res.exit_code == 0, res.output
+    (job,) = asyncio.run(_rows("SELECT state FROM job WHERE project_id = $1", project_id))
+    assert job["state"] == "succeeded"
+
+
+@pytest.mark.usefixtures("_sovereign_env")
+def test_the_visual_phase_keeps_the_scripted_default_when_local_engines_are_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No sovereign visual producer exists, so the default stops at DESIGN/DECOMPOSE."""
+    monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "1")
+
+    async def seed() -> UUID:
+        async with build_app() as resources:
+            project = await resources.projects.create("visual", tmp_path, max_cycles=1, config={})
+            await resources.projects.transition(
+                project.project_id, expected=Phase.INTAKE, to=Phase.VISUAL_DESIGN
+            )
+            return project.project_id
+
+    res = runner.invoke(app, ["work", str(asyncio.run(seed()))])
+
+    assert res.exit_code == 0, res.output
+    assert "no ready job" in res.output
 
 
 @pytest.mark.usefixtures("_sovereign_env")

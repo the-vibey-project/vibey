@@ -157,7 +157,7 @@ class SelectingEngineProvider:
         owner: str,
         allow_list: frozenset[EngineId] | None = None,
         backoff: timedelta = timedelta(minutes=5),
-        standby_engine: EngineId | None = None,
+        local_engines: tuple[EngineId, ...] = (),
     ) -> None:
         self._selector = selector
         self._health = health
@@ -165,10 +165,11 @@ class SelectingEngineProvider:
         self._jobs = jobs
         self._clock = clock
         self._owner = owner
-        self._allow_list = allow_list
         self._backoff = backoff
-        self._standby_engine = standby_engine
         self._pool = frozenset(adapters) if allow_list is None else frozenset(adapters) & allow_list
+        # Local engines have no cron that records their health, so each selection
+        # refreshes theirs first -- only for those this worker can dispatch to.
+        self._local_engines = tuple(engine for engine in local_engines if engine in self._pool)
 
     @property
     def pool(self) -> frozenset[EngineId]:
@@ -181,21 +182,28 @@ class SelectingEngineProvider:
 
     async def select_for(self, job: JobRecord) -> EngineAdapter:
         inputs = selection_inputs_for_job(job, pool=self._pool)
-        if self._standby_engine is not None:
-            standby = self._adapters.get(self._standby_engine)
-            if standby is not None:
-                preflight = await standby.preflight()
-                await self._health.update_from_preflight(
-                    job.project_id,
-                    self._standby_engine,
-                    preflight,
-                    conformance_ok=preflight.installed and preflight.auth_ok,
-                )
+        for engine_id in self._local_engines:
+            # A local engine's `doctor` is its readiness check: the server is up, the
+            # model is pulled, and (for claudeloop-local) the model answers a tool
+            # call. That is what makes it eligible, and it is refreshed here because
+            # nothing else would -- the price ADR-0015 accepted for qwenloop, now paid
+            # for every local engine the operator switched on (ADR-0038).
+            preflight = await self._adapters[engine_id].preflight()
+            await self._health.update_from_preflight(
+                job.project_id,
+                engine_id,
+                preflight,
+                conformance_ok=preflight.installed and preflight.auth_ok,
+            )
         try:
+            # The pool, never None: the selector reads every health row the project
+            # has, and a row outlives the switch that created it. Offered an engine
+            # this worker has no adapter for -- a local engine switched off since,
+            # now *preferred* by tier -- it would defer the job forever.
             engine_id, _selection = await self._selector.select_engine(
                 job.project_id,
                 inputs.requirement,
-                allow_list=self._allow_list,
+                allow_list=self._pool,
                 affinity_engine=inputs.affinity,
             )
         except NoEligibleEngine as exc:

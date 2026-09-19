@@ -122,13 +122,16 @@ explicit opt-in; declining deployment records a successful local completion.
 - **Queue backend:** PostgreSQL 17, never SQLite. `FOR UPDATE SKIP LOCKED` is
   the reason; see ADR-0002.
 - **Engines:** `claudeloop`, `codexloop`, `cursorloop`, and `agyloop` are the
-  default paid-engine pool. `qwenloop` is a fifth, default-off local engine
-  (`VIBEY_FEATURE_QWENLOOP` or `[features] qwenloop = true`; ADR-0015 records
-  which switch reaches which command). In BUILD rotation it is a standby,
-  considered only when enabled and no eligible paid engine is available. For
-  DESIGN it is the sovereign provider (`vibey worker --provider qwenloop` →
-  `QwenloopDesignProvider`, ADR-0027), which sub-doctrine 8.a makes the preferred
-  path, not the fallback.
+  default paid-engine pool (tier PAID). Two default-off local engines (tier LOCAL)
+  join them behind their own switches: `qwenloop` (`VIBEY_FEATURE_QWENLOOP` or
+  `[features] qwenloop`) and `claudeloop-local` — the claudeloop binary on a local
+  backend profile (`VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features]
+  claudeloop_local`). Under sub-doctrine 8.a local engines are **preferred first**:
+  BUILD selection runs SWRR within the LOCAL tier and falls back to PAID only when
+  no local engine is eligible (ADR-0038, amending ADR-0015's standby). With a local
+  engine on and no `--provider`, DESIGN and DECOMPOSE run on the sovereign
+  providers (`QwenloopDesignProvider`, `QwenloopWorkPlanProducer`; ADR-0027,
+  ADR-0038). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
 - **Rotation:** `domain/rotation.py::select()` implements smooth-weighted
   round-robin selection (ADR-0005) and is wired in production: `bootstrap.py`
   builds `EngineSelector`, and BUILD jobs pick their engine per job through
@@ -196,7 +199,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (37 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (38 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |
