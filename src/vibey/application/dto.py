@@ -30,6 +30,11 @@ class EnqueueRequest:
     max_attempts: int = 7
     run_after: datetime | None = None
     depends_on: tuple[UUID, ...] = ()
+    depends_on_keys: tuple[str, ...] = ()
+    """Dependencies named by idempotency key (same project) rather than job id:
+    the only way to name a job whose id does not exist yet, i.e. an earlier
+    request of the same `JobRepository.enqueue_batch`. Resolved inside the
+    enqueue's own transaction; a key that names no job raises LookupError."""
 
 
 @dataclass(frozen=True, slots=True)
