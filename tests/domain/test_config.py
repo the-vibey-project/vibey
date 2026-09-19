@@ -210,3 +210,72 @@ def test_require_reports_missing_field_by_path() -> None:
 def test_malformed_toml_raises() -> None:
     with pytest.raises(Exception):  # noqa: B017 - tomllib.TOMLDecodeError, not our concern
         load_config_from_string("[project\nname = 'x'")
+
+
+def test_claudeloop_local_defaults_to_the_local_profile_and_claims_no_verdict() -> None:
+    config = load_config_from_string('[project]\nname = "tiny"\n')
+
+    assert config.features.claudeloop_local is False
+    assert config.engines.claudeloop_local.profile == "local"
+    assert config.engines.claudeloop_local.context_window == 32_768
+    assert config.engines.claudeloop_local.structured_verdict is False
+    assert "claudeloop-local" not in config.engines.enabled
+
+
+def test_claudeloop_local_feature_joins_the_default_pool_with_its_profile() -> None:
+    config = load_config_from_string(
+        '[project]\nname = "x"\n\n[features]\nclaudeloop_local = true\n\n'
+        '[engines.claudeloop_local]\nprofile = " ollama "\ncontext_window = 65536\n'
+        "structured_verdict = true\n"
+    )
+
+    assert config.engines.enabled[-1] == "claudeloop-local"
+    assert config.engines.claudeloop_local.profile == "ollama"
+    assert config.engines.claudeloop_local.context_window == 65_536
+    assert config.engines.claudeloop_local.structured_verdict is True
+    assert config.features.enables("claudeloop-local")
+    assert config.features.enables("claudeloop")  # a paid engine needs no switch
+    assert not config.features.enables("qwenloop")
+
+
+def test_both_local_features_join_the_pool_in_order() -> None:
+    config = load_config_from_string(
+        '[project]\nname = "x"\n\n[features]\nqwenloop = true\nclaudeloop_local = true\n'
+    )
+
+    assert config.engines.enabled[-2:] == ("qwenloop", "claudeloop-local")
+
+
+def test_claudeloop_local_request_requires_its_feature() -> None:
+    with pytest.raises(ConfigError, match="features.claudeloop_local"):
+        load_config_from_string(
+            '[project]\nname = "x"\n\n[engines]\nenabled = ["claudeloop-local"]\n'
+        )
+    with pytest.raises(ConfigError, match="features.claudeloop_local"):
+        load_config_from_string(
+            '[project]\nname = "x"\n\n[phases.build]\nengines = ["claudeloop-local"]\n'
+        )
+
+
+def test_an_explicit_pool_is_kept_as_written() -> None:
+    config = load_config_from_string(
+        '[project]\nname = "x"\n\n[features]\nclaudeloop_local = true\n\n'
+        '[engines]\nenabled = ["claudeloop-local"]\n'
+    )
+
+    assert config.engines.enabled == ("claudeloop-local",)
+
+
+@pytest.mark.parametrize(
+    "table, match",
+    [
+        ('profile = "  "', "must name a claudeloop backend profile"),
+        ("profile = 7", "must be a str"),
+        ("context_window = 0", "must be a positive integer"),
+        ("context_window = true", "must be a positive integer"),
+        ('structured_verdict = "yes"', "must be a bool"),
+    ],
+)
+def test_an_invalid_claudeloop_local_table_is_refused(table: str, match: str) -> None:
+    with pytest.raises(ConfigError, match=match):
+        load_config_from_string(f'[project]\nname = "x"\n\n[engines.claudeloop_local]\n{table}\n')

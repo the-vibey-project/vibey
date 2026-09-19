@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import json
 from collections.abc import AsyncIterator, Sequence
 from pathlib import Path
 
@@ -149,6 +150,50 @@ async def test_runner_inserts_continue_prompt_after_assistant_only_turn(tmp_path
     assert [message.role for message in server.seen[1][-2:]] == ["assistant", "user"]
     # a tool-only turn already ends on "tool", so no continuation prompt is needed or added
     assert server.seen[2][-1].role == "tool"
+
+
+@pytest.mark.asyncio
+async def test_runner_emits_one_turn_completed_per_model_call(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [ChatChunk(text="think"), ChatChunk(text="ing", input_tokens=7, output_tokens=2)],
+            [
+                ChatChunk(
+                    tool_call={"name": "write_file", "arguments": {"path": "x", "content": "y"}}
+                ),
+                ChatChunk(text="```qwenloop-verdict\npass\n```\n"),
+                ChatChunk(text="QWENLOOP_TASK_FULLY_COMPLETE", input_tokens=3, output_tokens=4),
+            ],
+        ]
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+        run_id="turns", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=3
+    )
+    assert result.status is RunStatus.COMPLETED
+    events_path = tmp_path / ".qwenloop" / "runs" / "turns" / "events.jsonl"
+    events = [json.loads(line) for line in events_path.read_text().splitlines()]
+    types = [event["type"] for event in events]
+    # four streamed fragments across two model calls: many deltas, but two turns
+    assert types.count("text_delta") == 4
+    assert [event for event in events if event["type"] == "turn.completed"] == [
+        {
+            "type": "turn.completed",
+            "turn": 1,
+            "input_tokens": 7,
+            "output_tokens": 2,
+            "tool_called": False,
+        },
+        {
+            "type": "turn.completed",
+            "turn": 2,
+            "input_tokens": 3,
+            "output_tokens": 4,
+            "tool_called": True,
+        },
+    ]
+    # each boundary closes its own turn, so the run's verdict follows the last one
+    assert types[-2:] == ["turn.completed", "completed"]
 
 
 @pytest.mark.asyncio

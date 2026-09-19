@@ -2,6 +2,7 @@
 """Tests for application/engine_health_service.py — the business logic
 wrapper around EngineHealthRepository."""
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -15,6 +16,7 @@ from vibey.domain.capacity import (
     CreditsExhausted,
     WindowExhausted,
 )
+from vibey.domain.circuit import EngineFailurePolicy
 from vibey.domain.engine import EngineId
 
 
@@ -233,18 +235,208 @@ async def test_ewma_failure_increases_on_rejection() -> None:
 # --- record_selection ---
 
 
-async def test_record_selection_increments_count_and_cost() -> None:
+async def test_record_selection_counts_selections_and_leaves_spend_alone() -> None:
+    """A selection has cost nothing yet. Its old `cost_usd` parameter was
+    never passed by its one caller, which is why every engine read $0.00
+    (#209); spend now arrives through `record_spend` once the run is over."""
     repo = FakeEngineHealthRepository()
     svc = EngineHealthService(repo)
     project_id = uuid4()
+    await repo.upsert(_make_record(project_id=project_id, cost_usd_cycle=1.25))
 
-    r1 = await svc.record_selection(project_id, EngineId.CLAUDELOOP, cost_usd=0.50)
-    assert r1.selected_count == 1
-    assert r1.cost_usd_cycle == pytest.approx(0.50)
+    r1 = await svc.record_selection(project_id, EngineId.CLAUDELOOP)
+    r2 = await svc.record_selection(project_id, EngineId.CLAUDELOOP)
 
-    r2 = await svc.record_selection(project_id, EngineId.CLAUDELOOP, cost_usd=0.25)
-    assert r2.selected_count == 2
-    assert r2.cost_usd_cycle == pytest.approx(0.75)
+    assert (r1.selected_count, r2.selected_count) == (1, 2)
+    assert r2.cost_usd_cycle == pytest.approx(1.25)
+
+
+# --- record_spend ---
+
+
+async def test_record_spend_accumulates_and_touches_nothing_else() -> None:
+    repo = FakeEngineHealthRepository()
+    svc = EngineHealthService(repo)
+    project_id = uuid4()
+    before = await repo.upsert(
+        _make_record(project_id=project_id, consecutive_fail=2, selected_count=3)
+    )
+
+    await svc.record_spend(project_id, EngineId.CLAUDELOOP, 0.50)
+    after = await svc.record_spend(project_id, EngineId.CLAUDELOOP, 0.25)
+
+    assert after.cost_usd_cycle == pytest.approx(0.75)
+    assert replace(after, cost_usd_cycle=0.0) == before
+
+
+async def test_record_spend_creates_the_record_it_charges() -> None:
+    svc = EngineHealthService(FakeEngineHealthRepository())
+
+    result = await svc.record_spend(uuid4(), EngineId.CODEXLOOP, 0.01)
+
+    assert result.cost_usd_cycle == pytest.approx(0.01)
+
+
+@pytest.mark.parametrize("amount", [-0.01, float("nan"), float("inf")])
+async def test_record_spend_refuses_an_amount_that_is_not_money(amount: float) -> None:
+    repo = FakeEngineHealthRepository()
+    svc = EngineHealthService(repo)
+
+    with pytest.raises(ValueError, match="finite amount"):
+        await svc.record_spend(uuid4(), EngineId.CLAUDELOOP, amount)
+    assert await repo.list_for_project(uuid4()) == ()
+
+
+# --- record_failure ---
+
+T0 = datetime(2026, 9, 18, 12, 0, tzinfo=UTC)
+
+
+class _Clock:
+    def __init__(self, now: datetime) -> None:
+        self._now = now
+
+    def now(self) -> datetime:
+        return self._now
+
+
+async def test_an_engine_failure_below_the_threshold_only_moves_the_counters() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    before = await repo.upsert(_make_record(project_id=project_id))
+    svc = EngineHealthService(repo, clock=_Clock(T0))
+
+    first = await svc.record_failure(project_id, EngineId.CLAUDELOOP)
+    second = await svc.record_failure(project_id, EngineId.CLAUDELOOP)
+
+    assert (first.consecutive_fail, second.consecutive_fail) == (1, 2)
+    assert first.ewma_failure == pytest.approx(0.1)
+    assert second.ewma_failure == pytest.approx(0.19)
+    assert replace(second, consecutive_fail=0, ewma_failure=0.0) == before
+    assert second.circuit == "closed"
+    assert second.probe_next_at is None
+
+
+async def test_the_third_engine_failure_opens_the_circuit_and_schedules_its_probe() -> None:
+    """Opening alone would be a one-way door: the selector never picks an
+    OPEN engine and half-opens one only once a scheduled time passes."""
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_make_record(project_id=project_id, consecutive_fail=2, probe_attempt=1))
+    svc = EngineHealthService(repo, clock=_Clock(T0))
+
+    result = await svc.record_failure(project_id, EngineId.CLAUDELOOP)
+
+    assert result.circuit == "open"
+    assert result.consecutive_fail == 3
+    assert result.probe_next_at == T0 + timedelta(minutes=5)
+    assert result.probe_attempt == 2
+    assert result.capacity_state is None
+    assert result.resets_at is None
+
+
+async def test_a_trip_clears_a_stale_capacity_window_that_would_half_open_it_at_once() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _make_record(
+            project_id=project_id,
+            circuit="open",
+            capacity_state="WindowExhausted",
+            resets_at=T0 - timedelta(hours=1),
+            probe_next_at=T0 - timedelta(hours=1),
+            consecutive_fail=2,
+        )
+    )
+    svc = EngineHealthService(repo, clock=_Clock(T0))
+
+    result = await svc.record_failure(project_id, EngineId.CLAUDELOOP)
+
+    assert result.circuit == "open"
+    assert (result.capacity_state, result.resets_at) == (None, None)
+    assert result.probe_next_at == T0 + timedelta(minutes=5)
+
+
+async def test_each_failure_past_the_threshold_backs_the_probe_off_further() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_make_record(project_id=project_id, consecutive_fail=3, circuit="open"))
+    svc = EngineHealthService(repo, clock=_Clock(T0))
+
+    result = await svc.record_failure(project_id, EngineId.CLAUDELOOP)
+
+    assert result.consecutive_fail == 4
+    assert result.probe_next_at == T0 + timedelta(minutes=10)
+
+
+async def test_the_failure_policy_is_a_constructor_argument() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    svc = EngineHealthService(
+        repo,
+        failure_policy=EngineFailurePolicy(threshold=1, probe_base=timedelta(seconds=30)),
+        clock=_Clock(T0),
+    )
+
+    result = await svc.record_failure(project_id, EngineId.CLAUDELOOP)
+
+    assert result.circuit == "open"
+    assert result.probe_next_at == T0 + timedelta(seconds=30)
+
+
+async def test_without_a_clock_the_probe_is_dated_by_the_system_clock() -> None:
+    svc = EngineHealthService(
+        FakeEngineHealthRepository(), failure_policy=EngineFailurePolicy(threshold=1)
+    )
+    before = datetime.now(UTC)
+
+    result = await svc.record_failure(uuid4(), EngineId.CLAUDELOOP)
+
+    assert result.probe_next_at is not None
+    assert before + timedelta(minutes=5) <= result.probe_next_at
+    assert result.probe_next_at <= datetime.now(UTC) + timedelta(minutes=5)
+
+
+async def test_an_engine_opened_by_failures_half_opens_once_its_probe_time_passes() -> None:
+    """End to end through the real selector: three ENGINE failures take the
+    engine out of rotation, and once `probe_next_at` is behind the selector's
+    clock it is selectable again as a half-open probe -- never out for good."""
+    from tests.application.test_engine_selector import FakeRotationCursorRepository
+    from vibey.application.engine_selector import EngineSelector
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import JobRequirement
+    from vibey.domain.errors import NoEligibleEngine
+    from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_make_record(project_id=project_id))
+    requirement = JobRequirement(effort=Effort.STANDARD)
+
+    # Failures recorded "now": the probe is five minutes ahead of the
+    # selector, which reads the real clock, so the engine is out.
+    fresh = EngineHealthService(repo, clock=_Clock(datetime.now(UTC)))
+    for _ in range(3):
+        opened = await fresh.record_failure(project_id, EngineId.CLAUDELOOP)
+    assert opened.circuit == "open"
+    selector = EngineSelector(fresh, FakeRotationCursorRepository(), BY_ENGINE_ID)
+    with pytest.raises(NoEligibleEngine):
+        await selector.select_engine(project_id, requirement)
+
+    # The same trip recorded an hour ago: its probe time has passed.
+    await repo.upsert(_make_record(project_id=project_id, consecutive_fail=2))
+    stale = EngineHealthService(repo, clock=_Clock(datetime.now(UTC) - timedelta(hours=1)))
+    reopened = await stale.record_failure(project_id, EngineId.CLAUDELOOP)
+    assert reopened.circuit == "open"
+
+    engine_id, selection = await EngineSelector(
+        stale, FakeRotationCursorRepository(), BY_ENGINE_ID
+    ).select_engine(project_id, requirement)
+
+    assert engine_id is EngineId.CLAUDELOOP
+    # Half-open is selectable at reduced weight: that is the probe.
+    (candidate,) = selection.candidates
+    assert candidate.health_factor == pytest.approx(0.25)
 
 
 # --- record_success ---

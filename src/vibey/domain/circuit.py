@@ -3,6 +3,7 @@ import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import StrEnum
+from typing import ClassVar, Final
 
 from vibey.domain.capacity import (
     Available,
@@ -10,12 +11,33 @@ from vibey.domain.capacity import (
     CreditsExhausted,
     WindowExhausted,
 )
+from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
+from vibey.domain.stored_value import StoredValueParser, UnrecognizedValue
 
 
 class CircuitState(StrEnum):
     CLOSED = "closed"
     HALF_OPEN = "half_open"
     OPEN = "open"
+
+
+@dataclass(frozen=True, slots=True)
+class UnrecognizedCircuitState(UnrecognizedValue):
+    """A stored circuit state this vibey has no `CircuitState` member for
+    (vibey#287). `circuit_state` is a Postgres enum a newer vibey widens with a
+    migration. An older selector cannot tell whether such a circuit admits a run,
+    so it does not select the engine; it never crashes on the row."""
+
+    members: ClassVar[frozenset[str]] = frozenset(state.value for state in CircuitState)
+
+
+type StoredCircuitState = CircuitState | UnrecognizedCircuitState
+
+
+CIRCUIT_STATE_PARSER: Final[StoredValueParserInterface[CircuitState, UnrecognizedCircuitState]] = (
+    StoredValueParser(CircuitState, UnrecognizedCircuitState)
+)
+"""The parser every reader of `engine_health.circuit` shares. Stateless."""
 
 
 @dataclass(frozen=True, slots=True)

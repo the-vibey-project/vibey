@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from claudeloop.application.dto import RunResult
+from claudeloop.application.dto import BackendStatus, RunResult, ToolCallStatus
 from claudeloop.application.usecases.doctor import DoctorCheck, all_passed, run_doctor
 from claudeloop.application.usecases.list_sessions import list_sessions
 from claudeloop.application.usecases.resume_session import resolve_most_recent, resume_explicit
@@ -12,6 +12,7 @@ from claudeloop.application.usecases.run_plan import (
     run_from_plan_file,
     with_done_marker_instruction,
 )
+from claudeloop.domain.backend import BackendProfile
 from claudeloop.domain.control import WindDownCommand
 from claudeloop.domain.errors import InvalidSessionSelectorError
 from claudeloop.domain.session import SessionRef
@@ -112,6 +113,9 @@ class _FakeDoctorEnv:
         mcp_servers: list[str],
         anthropic_version: str | None = "0.0.0",
         api_count: int | None = 137,
+        bundled_cli: str | None = None,
+        backend_status: BackendStatus | None = None,
+        tool_calls: dict[str, ToolCallStatus] | None = None,
     ) -> None:
         self._cli_path = cli_path
         self._version = version
@@ -119,12 +123,30 @@ class _FakeDoctorEnv:
         self._mcp_servers = mcp_servers
         self._anthropic_version = anthropic_version
         self._api_count = api_count
+        self._bundled_cli = bundled_cli
+        self._backend_status = backend_status or BackendStatus(reachable=False, detail="down")
+        self._tool_calls = tool_calls or {}
+        self.version_asked: list[str] = []
+        self.probed: list[tuple[str, str]] = []
+        self.tool_probed: list[str] = []
 
     def find_claude_cli(self) -> str | None:
         return self._cli_path
 
+    def find_bundled_claude_cli(self) -> str | None:
+        return self._bundled_cli
+
     def claude_cli_version(self, path: str) -> str | None:
+        self.version_asked.append(path)
         return self._version
+
+    def probe_backend(self, base_url: str, auth_token: str) -> BackendStatus:
+        self.probed.append((base_url, auth_token))
+        return self._backend_status
+
+    def probe_tool_calling(self, base_url: str, auth_token: str, model: str) -> ToolCallStatus:
+        self.tool_probed.append(model)
+        return self._tool_calls.get(model, ToolCallStatus(supported=True, detail="tool_use"))
 
     def is_authenticated(self) -> bool:
         return self._authed
@@ -160,6 +182,212 @@ def test_run_doctor_missing_cli() -> None:
     cli_check = next(c for c in checks if c.name == "claude-cli")
     assert cli_check.passed is False
     assert "not found" in cli_check.detail
+
+
+def test_the_fake_doctor_env_satisfies_the_port() -> None:
+    from claudeloop.application.interfaces import DoctorEnvironment
+
+    env = _FakeDoctorEnv(cli_path=None, version=None, authed=False, mcp_servers=[])
+    assert isinstance(env, DoctorEnvironment)
+
+
+def test_run_doctor_falls_back_to_the_sdk_bundled_cli_when_claude_is_not_on_path() -> None:
+    """Issue #121 S1b: a container with no global `claude` still runs, because the
+    SDK launches its own bundled CLI — doctor must not fail it for that."""
+    env = _FakeDoctorEnv(
+        cli_path=None,
+        version="2.1.0",
+        authed=True,
+        mcp_servers=[],
+        bundled_cli="/sdk/_bundled/claude",
+    )
+    checks = run_doctor(env, cwd=Path("/tmp"))  # type: ignore[arg-type]
+    cli_check = next(c for c in checks if c.name == "claude-cli")
+    assert cli_check.passed is True
+    assert "bundled" in cli_check.detail
+    assert "/sdk/_bundled/claude" in cli_check.detail
+    assert env.version_asked == ["/sdk/_bundled/claude"]
+
+
+def test_run_doctor_checks_the_bundled_cli_before_path_like_the_sdk() -> None:
+    """The SDK launches its bundled CLI even when another `claude` is on PATH,
+    so that is the one whose version matters."""
+    env = _FakeDoctorEnv(
+        cli_path="/usr/local/bin/claude",
+        version="2.1.259",
+        authed=True,
+        mcp_servers=[],
+        bundled_cli="/sdk/_bundled/claude",
+    )
+    checks = run_doctor(env, cwd=Path("/tmp"))  # type: ignore[arg-type]
+    cli_check = next(c for c in checks if c.name == "claude-cli")
+    assert "what a run launches" in cli_check.detail
+    assert env.version_asked == ["/sdk/_bundled/claude"]
+
+
+def test_run_doctor_prefers_a_profile_cli_path() -> None:
+    env = _FakeDoctorEnv(cli_path="/usr/bin/claude", version="2.1.0", authed=True, mcp_servers=[])
+    profile = BackendProfile(cli_path="/opt/claude/bin/claude")
+    checks = run_doctor(env, cwd=Path("/tmp"), backend=profile)  # type: ignore[arg-type]
+    cli_check = next(c for c in checks if c.name == "claude-cli")
+    assert cli_check.passed is True
+    assert cli_check.detail == "profile cli_path /opt/claude/bin/claude (2.1.0)"
+    assert env.version_asked == ["/opt/claude/bin/claude"]
+
+
+def test_run_doctor_fails_a_profile_cli_path_that_does_not_answer() -> None:
+    env = _FakeDoctorEnv(cli_path="/usr/bin/claude", version=None, authed=True, mcp_servers=[])
+    profile = BackendProfile(cli_path="/opt/claude/bin/claude")
+    checks = run_doctor(env, cwd=Path("/tmp"), backend=profile)  # type: ignore[arg-type]
+    cli_check = next(c for c in checks if c.name == "claude-cli")
+    assert cli_check.passed is False
+    assert "did not answer" in cli_check.detail
+
+
+def test_run_doctor_keeps_anthropic_authentication_for_the_default_profile() -> None:
+    env = _FakeDoctorEnv(cli_path="/usr/bin/claude", version="1.0", authed=True, mcp_servers=[])
+    checks = run_doctor(env, cwd=Path("/tmp"), backend=BackendProfile())  # type: ignore[arg-type]
+    names = [c.name for c in checks]
+    assert "authentication" in names
+    assert "backend" not in names
+    assert env.probed == []
+
+
+_LOCAL = BackendProfile(
+    name="local",
+    base_url="http://127.0.0.1:11434",
+    model_low="qwen2.5-coder:14b",
+    model_medium="qwen2.5-coder:14b",
+    model_high="qwen2.5-coder:32b",
+)
+
+
+def _local_checks(
+    status: BackendStatus,
+    *,
+    token: str | None = "ollama",
+    tool_calls: dict[str, ToolCallStatus] | None = None,
+) -> dict[str, DoctorCheck]:
+    env = _FakeDoctorEnv(
+        cli_path="/usr/bin/claude",
+        version="1.0",
+        authed=False,
+        mcp_servers=[],
+        backend_status=status,
+        tool_calls=tool_calls,
+    )
+    checks = run_doctor(env, cwd=Path("/tmp"), backend=_LOCAL, auth_token=token)  # type: ignore[arg-type]
+    return {c.name: c for c in checks}
+
+
+def test_run_doctor_local_profile_replaces_anthropic_auth_with_backend_checks() -> None:
+    """ANTHROPIC_AUTH_TOKEN being set used to be enough to pass; for a local
+    backend what matters is that it answers and has the models."""
+    by_name = _local_checks(
+        BackendStatus(
+            reachable=True,
+            detail="answered",
+            models=("qwen2.5-coder:14b", "qwen2.5-coder:32b"),
+        )
+    )
+    assert "authentication" not in by_name
+    assert by_name["backend-auth"].passed is True
+    assert "auth_token" in by_name["backend-auth"].detail
+    assert by_name["backend"].passed is True
+    assert by_name["backend-models"].passed is True
+    assert "all present" in by_name["backend-models"].detail
+    assert by_name["backend-tools"].passed is True
+    assert "qwen2.5-coder:14b, qwen2.5-coder:32b" in by_name["backend-tools"].detail
+
+
+def test_run_doctor_local_profile_names_missing_models_and_how_to_pull_them() -> None:
+    by_name = _local_checks(
+        BackendStatus(reachable=True, detail="answered", models=("qwen2.5-coder:14b",))
+    )
+    models = by_name["backend-models"]
+    assert models.passed is False
+    assert "qwen2.5-coder:32b" in models.detail
+    assert "ollama pull qwen2.5-coder:32b" in models.detail
+
+
+def test_run_doctor_local_profile_accepts_an_implicit_latest_tag() -> None:
+    profile = BackendProfile(
+        name="local",
+        base_url="http://127.0.0.1:11434",
+        model_low="llama3",
+        model_medium="llama3",
+        model_high="llama3",
+    )
+    env = _FakeDoctorEnv(
+        cli_path="/usr/bin/claude",
+        version="1.0",
+        authed=False,
+        mcp_servers=[],
+        backend_status=BackendStatus(reachable=True, detail="ok", models=("llama3:latest",)),
+    )
+    checks = run_doctor(env, cwd=Path("/tmp"), backend=profile, auth_token="ollama")  # type: ignore[arg-type]
+    assert next(c for c in checks if c.name == "backend-models").passed is True
+
+
+def test_run_doctor_local_profile_unreachable_backend() -> None:
+    by_name = _local_checks(BackendStatus(reachable=False, detail="cannot reach it"))
+    assert by_name["backend"].passed is False
+    assert "cannot reach it" in by_name["backend"].detail
+    assert by_name["backend-models"].passed is False
+    assert "not answering" in by_name["backend-models"].detail
+
+
+def test_run_doctor_local_profile_unverifiable_model_listing_is_not_a_failure() -> None:
+    by_name = _local_checks(BackendStatus(reachable=True, detail="answered", models=None))
+    models = by_name["backend-models"]
+    assert models.passed is True
+    assert "verify by hand" in models.detail
+
+
+def test_run_doctor_local_profile_unresolvable_token() -> None:
+    profile = BackendProfile(
+        name="remote",
+        base_url="https://gpu.example",
+        auth_token_env="GPU_TOKEN",
+        model_low="m",
+        model_medium="m",
+        model_high="m",
+    )
+    env = _FakeDoctorEnv(
+        cli_path="/usr/bin/claude",
+        version="1.0",
+        authed=False,
+        mcp_servers=[],
+        backend_status=BackendStatus(reachable=True, detail="ok", models=("m",)),
+    )
+    checks = run_doctor(env, cwd=Path("/tmp"), backend=profile, auth_token=None)  # type: ignore[arg-type]
+    auth = next(c for c in checks if c.name == "backend-auth")
+    assert auth.passed is False
+    assert "$GPU_TOKEN" in auth.detail
+    assert env.probed == [("https://gpu.example", "")]
+
+
+def test_run_doctor_local_profile_token_from_env_var() -> None:
+    profile = BackendProfile(
+        name="remote",
+        base_url="https://gpu.example",
+        auth_token_env="GPU_TOKEN",
+        model_low="m",
+        model_medium="m",
+        model_high="m",
+    )
+    env = _FakeDoctorEnv(
+        cli_path="/usr/bin/claude",
+        version="1.0",
+        authed=False,
+        mcp_servers=[],
+        backend_status=BackendStatus(reachable=True, detail="ok", models=("m",)),
+    )
+    checks = run_doctor(env, cwd=Path("/tmp"), backend=profile, auth_token="s3cret")  # type: ignore[arg-type]
+    auth = next(c for c in checks if c.name == "backend-auth")
+    assert auth.passed is True
+    assert "$GPU_TOKEN" in auth.detail
+    assert env.probed == [("https://gpu.example", "s3cret")]
 
 
 def test_run_doctor_flags_mcp_servers_as_needing_manual_verification(tmp_path: Path) -> None:
@@ -223,3 +451,45 @@ def test_request_wind_down_enqueues_the_command_with_its_reason() -> None:
     assert result.run_id == "run-1"
     assert result.command_type == "wind_down"
     assert inbox.commands == [WindDownCommand(reason="rotate")]
+
+
+_BOTH = BackendStatus(
+    reachable=True, detail="answered", models=("qwen2.5-coder:14b", "qwen2.5-coder:32b")
+)
+
+
+def test_run_doctor_fails_a_model_that_writes_tool_calls_as_text() -> None:
+    """Captured live: qwen2.5-coder:14b on Ollama 0.34.2 answers a tools request
+    with the call written out as JSON text — Claude Code can do nothing with it."""
+    by_name = _local_checks(
+        _BOTH,
+        tool_calls={
+            "qwen2.5-coder:14b": ToolCallStatus(
+                supported=False, detail="wrote its tool call as text instead of calling it"
+            ),
+            "qwen2.5-coder:32b": ToolCallStatus(supported=None, detail="answered HTTP 400"),
+        },
+    )
+    tools = by_name["backend-tools"]
+    assert tools.passed is False
+    assert "qwen2.5-coder:14b: wrote its tool call as text" in tools.detail
+    assert "qwen2.5-coder:32b: answered HTTP 400" in tools.detail
+
+
+def test_run_doctor_asks_each_distinct_tier_once() -> None:
+    env = _FakeDoctorEnv(
+        cli_path="/usr/bin/claude",
+        version="1.0",
+        authed=False,
+        mcp_servers=[],
+        backend_status=_BOTH,
+    )
+    run_doctor(env, cwd=Path("/tmp"), backend=_LOCAL, auth_token="ollama")  # type: ignore[arg-type]
+    assert env.tool_probed == ["qwen2.5-coder:14b", "qwen2.5-coder:32b"]
+
+
+def test_run_doctor_skips_the_tool_check_until_the_models_are_there() -> None:
+    by_name = _local_checks(BackendStatus(reachable=True, detail="answered", models=()))
+    tools = by_name["backend-tools"]
+    assert tools.passed is False
+    assert tools.detail.startswith("not checked")

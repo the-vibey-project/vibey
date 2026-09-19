@@ -568,7 +568,7 @@ def test_exact_head_gate_lookup_skips_existing_missing_sha_and_nonpassing(monkey
 
 def test_open_pull_requests_reuses_exact_head_lookup(monkeypatch, tmp_path):
     monkeypatch.setattr(merge_train, "_gh_json", lambda *args: [{"number": 2}])
-    monkeypatch.setattr(merge_train, "pull_request", lambda number: {"number": number})
+    monkeypatch.setattr(merge_train, "pull_request", lambda number, cfg=None: {"number": number})
     assert merge_train.open_pull_requests(cfg_for(tmp_path)) == [{"number": 2}]
 
 
