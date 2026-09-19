@@ -35,6 +35,23 @@ defaults below. Paths are repository-relative unless stated otherwise.
 | `install.fallback_package` | string / `"vibey"` | The distribution the managed workflows install when `self_source` does not hold the tooling — the branch every adopter takes, since their `self_source` default `"."` never matches. A key rather than a constant so a fork, or an internal index publishing under another name, can point it at their own distribution instead of one they cannot publish to. It is the package `pin_version` pins. |
 | `install.pin_version` | boolean / `false` | Pin every managed workflow's `pip install vibey` — the distribution that carries `vibey-gh` — to the exact version that rendered it (`vibey==X.Y.Z`), instead of the latest release on every run. `false` keeps the historical floating install. The self-hosting path (this repository, and anything else installing from its own `pyproject.toml`) is never pinned — it installs from source regardless. Running `vibey-gh install` from a newer release moves the pin forward as one visible diff. |
 
+## `[platform]`
+
+Which forge the repository lives on, and where. `kind` chooses the forge adapter: the only
+code that knows which platform it is speaking to, so everything above it asks forge-neutral
+questions ([ADR 0001](adr/0001-forge-neutral-nouns.md), #138).
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `kind` | string / `"github"` | The forge. The standard names `github`, `gitlab` and `forgejo`, but only `github` has an adapter today; `gitlab` and `forgejo` are refused when the configuration loads, with "the … adapter is not implemented yet", because the commands that have not moved onto the adapter still speak to GitHub directly and would drive the wrong forge without saying so. Any other value is refused as unknown. |
+| `host` | string / `"github.com"` | The forge's host, as a bare host name with an optional port (`ghe.example.com`, `git.internal:8443`); a scheme, path or whitespace is refused. `github.com` is the host `gh` assumes on its own, so it changes nothing, and a `GH_HOST` already in the environment still applies. Any other host is handed to `gh` as `GH_HOST`, for a GitHub Enterprise Server. |
+
+Apart from that refusal, which every command makes, only the reads that have moved onto the
+adapter use this table today: the open pull request heads and the releases that the
+clean-repo survey (`vibey-gh tidy`, `check --ci`) reads.
+With the defaults, those run exactly the `gh` command lines, in the same directory and
+environment, that they ran before `[platform]` existed.
+
 ## `[ai]`
 
 Where every AI step sends its requests. Unset, nothing changes: requests go to Anthropic

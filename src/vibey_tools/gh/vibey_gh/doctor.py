@@ -37,6 +37,7 @@ from vibey_gh.config import (
     GithubReleaseConfig,
     IssueAutomationConfig,
     MarketplaceConfig,
+    PlatformConfig,
     PrAutomationConfig,
     PrAutomationFallbackConfig,
     PrAutomationObservabilityConfig,
@@ -81,6 +82,7 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "repository_profile": _fields(RepositoryProfileConfig),
     "social_signals": _fields(SocialSignalsConfig) | {"entries"},
     "tidy": _fields(TidyConfig),
+    "platform": _fields(PlatformConfig),
     "workflow_names": _fields(WorkflowNamesConfig),
     # free-form: per-branch tables validated by their own machinery
     "rulesets": None,
