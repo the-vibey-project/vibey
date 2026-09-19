@@ -7,6 +7,7 @@ from vibey.domain.errors import (
     InvalidPhaseError,
     InvalidSpecError,
     NoEligibleEngine,
+    SovereignResearchUnavailable,
     VibeyError,
 )
 
@@ -44,3 +45,19 @@ def test_handoff_rejected_carries_the_gate_result() -> None:
 
     assert error.result is result
     assert "2 violation" in str(error)
+
+
+def test_sovereign_research_unavailable_carries_what_a_gate_needs() -> None:
+    """The research handler turns this into a human gate from application/, so it has to
+    carry the topic and the file the provider looked for rather than leave the handler to
+    parse them back out of a message."""
+    error = SovereignResearchUnavailable(
+        "OAuth device flow", "no evidence", evidence_name="oauthdeviceflow.md"
+    )
+
+    assert isinstance(error, VibeyError)
+    assert error.topic == "OAuth device flow"
+    assert error.detail == "no evidence"
+    assert error.evidence_name == "oauthdeviceflow.md"
+    assert str(error) == "no evidence"
+    assert SovereignResearchUnavailable("?", "unnamed").evidence_name is None

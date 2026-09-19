@@ -32,6 +32,27 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **design:** sovereign DECOMPOSE — `vibey worker --provider qwenloop` now plans BUILD on
+  the local model (`QwenloopWorkPlanProducer`) instead of the scripted test fake, whose
+  items carried no verification commands. The plan is decoded under a JSON schema whose
+  criterion ids are an enum of the spec's own, every item must carry a verification
+  command and a checked criterion, dependencies must precede their dependents, and a plan
+  that breaks any rule is refused whole rather than partly enqueued. Decoders are shared
+  with the claudeloop producer (`design_json.WorkPlanDecoder`) (#115)
+* **design:** one configurable Ollama client for both sovereign providers —
+  `VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`, `http`/`https` only),
+  `VIBEY_OLLAMA_MODEL` (default `qwen2.5-coder:14b`, overridden by `--ollama-model` on
+  `vibey work` and `vibey worker`) and `VIBEY_OLLAMA_TIMEOUT` (default 900 s) replace
+  values that were hard-coded in the DESIGN provider (#115)
+
+### Bug Fixes
+
+* **design:** a research topic the sovereign provider cannot source now parks a
+  `research_evidence` human gate on its first attempt, naming the topic, the evidence
+  file it wants and `VIBEY_EVIDENCE_DIR`. It used to fail as a generic error, retry six
+  times with backoff, and then park an `attempts_exhausted` gate asking for more attempts
+  that could never succeed. `SovereignResearchUnavailable` moved to `vibey.domain.errors`
+  so the handler can catch it (#115)
 * **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
   pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
   ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
