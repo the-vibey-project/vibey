@@ -16,9 +16,9 @@ from textual.widgets import Footer, Header, Static
 
 from vibey.application.dto import EngineHealthRecord
 from vibey.application.ports import EngineHealthRepository, JobRepository
-from vibey.domain.job import JobState
+from vibey.domain.job import JobState, StoredJobState
 from vibey.domain.ledger import EventKind, LedgerEvent
-from vibey.domain.phase import Phase
+from vibey.domain.phase import Phase, StoredPhase
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
 
@@ -28,15 +28,21 @@ class DashboardState:
     project_id: UUID
     project_name: str
     repo_path: Path
-    phase: Phase
+    phase: StoredPhase
     cycle: int
     max_cycles: int
     visual_decision: str | None
     deployment_decision: str | None
-    queue_depth: Mapping[JobState, int]
+    queue_depth: Mapping[StoredJobState, int]
     circuits: tuple[EngineHealthRecord, ...]
     active_worktrees: tuple[str, ...]
     ledger_tail: tuple[LedgerEvent, ...]
+
+    @property
+    def phase_label(self) -> str:
+        """The phase as the operator reads it: a member's name, or the stored text
+        of a phase a newer vibey wrote (vibey#287)."""
+        return self.phase.name if isinstance(self.phase, Phase) else self.phase.value
 
 
 def format_circuit_summary(circuits: Mapping[str, str] | Sequence[EngineHealthRecord]) -> str:
@@ -54,7 +60,7 @@ def format_circuit_summary(circuits: Mapping[str, str] | Sequence[EngineHealthRe
     return "\n".join(lines) if lines else "  (no engines recorded)"
 
 
-def format_queue_summary(queue: Mapping[JobState, int]) -> str:
+def format_queue_summary(queue: Mapping[StoredJobState, int]) -> str:
     lines: list[str] = []
     for state in (
         JobState.READY,
@@ -66,13 +72,19 @@ def format_queue_summary(queue: Mapping[JobState, int]) -> str:
     ):
         count = queue.get(state, 0)
         lines.append(f"  • {state.name}: {count}")
+    lines.extend(
+        f"  {state.value}: {count}"
+        for state, count in queue.items()
+        if not isinstance(state, JobState)
+    )
     return "\n".join(lines)
 
 
 def format_event_row(event: LedgerEvent) -> str:
     ts = event.produced_at.strftime("%H:%M:%S")
     engine = f"[{event.engine_id.value}]" if event.engine_id else ""
-    return f"#{event.seq:<4} {ts} [{event.phase.name}] {event.kind.value} {engine}"
+    phase = event.phase.name if isinstance(event.phase, Phase) else event.phase.value
+    return f"#{event.seq:<4} {ts} [{phase}] {event.kind.value} {engine}"
 
 
 async def fetch_dashboard_state(
@@ -95,6 +107,8 @@ async def fetch_dashboard_state(
     visual_dec: str | None = None
     deploy_dec: str | None = None
     for ev in events:
+        if not ev.interpretable:
+            continue
         if ev.kind == EventKind.VISUAL_DESIGN_OPTED_IN:
             visual_dec = "OPTED_IN"
         elif ev.kind == EventKind.VISUAL_DESIGN_DECLINED:
@@ -144,7 +158,7 @@ class StatusPanel(Static):
         dep = f" | Deploy: {state.deployment_decision}" if state.deployment_decision else ""
         text = (
             f"[bold cyan]Project:[/] {state.project_name} ({state.project_id})\n"
-            f"[bold cyan]Phase:[/] [green]{state.phase.name}[/] | "
+            f"[bold cyan]Phase:[/] [green]{state.phase_label}[/] | "
             f"[bold cyan]Cycle:[/] {state.cycle}/{state.max_cycles}{vis}{dep}\n"
             f"[bold cyan]Repo:[/] {state.repo_path}"
         )
@@ -309,11 +323,11 @@ def build_replay_states(
     """Reconstructs state history step-by-step from ledger events."""
     states: list[DashboardState] = []
 
-    current_phase = Phase.INTAKE
+    current_phase: StoredPhase = Phase.INTAKE
     current_cycle = 1
     visual_decision: str | None = None
     deployment_decision: str | None = None
-    queue_counts: dict[JobState, int] = {s: 0 for s in JobState}
+    queue_counts: dict[StoredJobState, int] = {s: 0 for s in JobState}
     circuits: list[EngineHealthRecord] = []
     active_worktrees: list[str] = []
     tail: list[LedgerEvent] = []
@@ -399,7 +413,7 @@ class VibeyReplayApp(App[None]):
                 max_cycles=1,
                 visual_decision=None,
                 deployment_decision=None,
-                queue_depth={s: 0 for s in JobState},
+                queue_depth=dict.fromkeys(JobState, 0),
                 circuits=(),
                 active_worktrees=(),
                 ledger_tail=(),
@@ -444,7 +458,7 @@ class VibeyReplayApp(App[None]):
             status_panel.update(
                 f"[bold cyan]vibey (REPLAY)[/bold cyan]  Step {self.current_step}/{max_step}\n"
                 f"Project: {state.project_name}  ({state.project_id})\n"
-                f"Phase:   [bold green]{state.phase.name}[/bold green]  | "
+                f"Phase:   [bold green]{state.phase_label}[/bold green]  | "
                 f"Cycle: {state.cycle}/{state.max_cycles}{vis}{dep}\n"
                 f"Repo:    {state.repo_path}"
             )

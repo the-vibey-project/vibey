@@ -5,6 +5,35 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Correct the paper's commodity-thesis evidence (`docs/paper.md`) against the tracked
+  stress record, with dated correction notes: the "61 generations at 1.00 success,
+  1.4 ± 0.25 per minute" figures and the linear-then-superlinear latency law matched
+  nothing in `docs/sovereignty-stress-2026-08-30.md`, which itself falsifies both
+  latency models. The paragraph now reports 52/52 through N = 16, 102/107 from N = 2 to
+  32, and a 0.99–2.00 per minute band, and the "same structure in silicon" claim is
+  withdrawn (the-vibey-project/vibey#192).
+- Fix `conversation`'s pull-request check, which could never be true in production.
+  `evaluate` and `context` read `isPullRequest`, but `fetch_subject` never requested it and
+  could not have: it is not a `gh issue view --json` field, and `gh` rejects it rather than
+  ignoring it. Every thread therefore read as an issue, `may_change_files` was never true,
+  and the "act" path was unreachable. The tests missed it because they built the thread by
+  hand with `isPullRequest=True` and replaced `fetch_subject`. PR-ness is now read from the
+  one field `gh issue view` does serve that says so — `url`, `.../pull/N` against
+  `.../issues/N` — in a single place, `ConversationThread.is_pull_request`, declared by
+  `interfaces/conversation_interface.py`. New tests run the real `fetch_subject` against a
+  scripted `gh` on PATH (a shared `scripted_gh` fixture in `test/conftest.py`).
+- Fix mentions in inline pull-request review comments, which evaluated the wrong comment. The
+  workflow passes a review comment's ID for `pull_request_review_comment`, but review
+  comments are not part of `gh issue view`'s thread, so the lookup missed and silently fell
+  back to the newest issue-level comment — answering, and on a pull request acting on, a
+  request nobody made there. `ConversationThread.comment` now resolves an ID the thread
+  does not hold through `gh api repos/{repo}/pulls/comments/{id}` (the repository from
+  `github_state.repository()`, so `GH_REPO` is honoured), confirms it belongs to this pull
+  request, and otherwise raises: `conversation evaluate` and `context` exit nonzero with a
+  message naming the ID and the thread. No ID still means the newest comment. A review
+  comment's briefing now also carries the file, line and diff hunk it was written on,
+  placed after the request so truncation takes it first.
+
 - Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
   workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The
   "Restore the other release channel" step had grown to a single 509-line script, and
