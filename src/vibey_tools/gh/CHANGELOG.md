@@ -5,6 +5,46 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Put the sovereign review lane FIRST on the half of the review it can carry (sub-doctrine
+  8.a, #133 slice 2 of 3, Option A: serial). `evaluate` decides the lane once:
+  `sovereign_lane` (enabled, a fresh heartbeat, and under `trusted_only` a same-repository
+  head) and `sovereign_carries` (that, and a trusted author). `review-fallback` becomes
+  `review-sovereign` ("Sovereign diff review"), runs before the paid `review`, and reports
+  `passed`, `findings`, `verdict` and `model`. The paid review waits for it: when the local
+  lane carries the diff half and returned a verdict, the reviewer is held to
+  `ReviewContract.json_schema([REQUIRES_WIDER_CONTEXT])` — rendered as
+  `__VIBEY_GH_REVIEW_WIDER_SCHEMA__` and chosen by a GitHub expression at run time — and
+  told the diff half is carried; otherwise it answers the full schema exactly as before. The
+  wider half asked alone reports its own `wider_summary` and `wider_findings`
+  (`ReviewContract.wider_summary_field` / `wider_findings_field`), so the two lanes never
+  write the same names. `vibey-gh pr-automation combine` (`vibey_gh.review_composition`,
+  `ReviewComposer` behind `ReviewComposerPort`) composes the verdict, replaces the `jq` that
+  listed the sixteen judgments, and emits `carried` (field to lane), `halves`, `findings`
+  and `repairable`. The gate names the lane behind each half. A failure carried by the
+  sovereign lane alone is never repaired: `repair` and `mirror-fork` also require
+  `repairable`, and a later evaluation of that head reviews it again
+  (`AutomationState.review_repairable`). An outside author's local verdict is held in
+  reserve and read only when the paid review returns no verdict. `local-review --role
+  sovereign|fallback` labels the verdict by the role it ran in. A frozen golden capture of
+  the previous gate and `jq` (`test/golden/`) pins that no heartbeat behaves exactly as
+  before and no credit exactly as the local fallback did.
+- Render the exact-head review's `--json-schema` from `ReviewContract.json_schema()` rather
+  than keeping a hand-written copy in `pr-automation.yml`. The template now carries
+  `__VIBEY_GH_REVIEW_SCHEMA__`, which `install.render_workflow` fills — compact, with any
+  apostrophe written as `\u0027` so the single-quoted `claude_args` argument cannot be broken
+  by a configured field. `ReviewContract` gains a `field_schemas` table (field name to JSON
+  Schema fragment, in schema key order) and `json_schema(halves)`, which renders the full
+  schema or either half on its own; `ReviewContractPort` declares both. The rendered schema
+  is byte-identical to the literal it replaces, and a test pins that. Slice 1 of 3 of #133:
+  no lane ordering changes yet.
+- Fix the gate's "local fallback found a blocking defect" branch, which could never fire.
+  `review-fallback` wrote a `findings` count but did not declare it as a job output, so
+  `needs.review-fallback.outputs.findings` was always empty and every local decline was
+  reported as "could not complete the review" — sending the reader away from a finding that
+  was in the job log. The test meant to guard it matched the paid review job's identical
+  `findings:` line instead; it now reads the fallback job itself, and a new test fails any
+  template that reads a `needs.<job>.outputs.<name>` the job never declares. The paid
+  `review` job's `findings` output, likewise declared and never written, is now written.
 - Correct the paper's commodity-thesis evidence (`docs/paper.md`) against the tracked
   stress record, with dated correction notes: the "61 generations at 1.00 success,
   1.4 ± 0.25 per minute" figures and the linear-then-superlinear latency law matched

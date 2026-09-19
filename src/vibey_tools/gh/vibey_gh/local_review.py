@@ -1,9 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Local-model fallback for vibey-gh's exact-head review.
+"""Local-model review for vibey-gh's exact head: the sovereign lane's diff half.
 
-Runs when the paid review path returns no verdict at all — an exhausted API key, expired
-credentials, an unavailable model — so a required check does not become a hard stop on
-every pull request.
+Runs on the operator's own runner whenever its heartbeat is fresh (doctrine 8.a, #133). For
+a trusted same-repository author its verdict CARRIES the diff-groundable half of the review,
+and the paid reviewer answers only the rest; for anyone else it is held in reserve, and the
+gate reads it only when the paid review returns no verdict at all — an exhausted API key,
+expired credentials, an unavailable model — so a required check does not become a hard stop
+on every pull request. `--role` says which of the two a verdict is.
 
 Deliberately narrower than the primary review. Ollama's `format` parameter compiles the
 schema below into a grammar and constrains decoding token by token, so the OUTPUT SHAPE is
@@ -62,6 +65,12 @@ REVIEW_SCHEMA = {
 # Both facts -- which fields, and that the `true` is a placeholder rather than an answer --
 # live in `vibey_gh.review_contract`; this is the name the local path knows them by.
 UNEVALUATED_FIELDS = REVIEW_CONTRACT.requires_wider_context
+
+# How a verdict names itself at the head of its summary, by the role it was run in. The
+# summary travels into the PR's state comment, so a verdict that carried the diff half must
+# not call itself a fallback, and one that stood in for a failed paid review must not claim
+# to have been the plan.
+ROLE_LABELS = {"fallback": "LOCAL FALLBACK", "sovereign": "SOVEREIGN LANE"}
 
 SYSTEM_PROMPT = """\
 You are a code reviewer examining a pull request diff. You are a FALLBACK reviewer running \
@@ -176,6 +185,7 @@ def review(argv: list[str] | None = None) -> int:
     parser.add_argument("--base-url", default=defaults.base_url)
     parser.add_argument("--max-chars", type=int, default=defaults.max_diff_chars)
     parser.add_argument("--timeout", type=int, default=defaults.timeout_seconds)
+    parser.add_argument("--role", choices=tuple(ROLE_LABELS), default="fallback")
     args = parser.parse_args(argv)
 
     if args.diff:
@@ -198,7 +208,7 @@ def review(argv: list[str] | None = None) -> int:
         return 1
 
     verdict["summary"] = (
-        f"[LOCAL FALLBACK — {args.model}] {verdict.get('summary', '').strip()} "
+        f"[{ROLE_LABELS[args.role]} — {args.model}] {verdict.get('summary', '').strip()} "
         f"{REVIEW_CONTRACT.unevaluated_notice}"
     ).strip()
     verdict.update(REVIEW_CONTRACT.placeholders())
