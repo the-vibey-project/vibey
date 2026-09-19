@@ -49,13 +49,13 @@ jobs:
           # the check-run names GitHub already enforces on the branch this merges into,
           # less `[pr_automation] ignored_checks` and EXCLUDED_CHECKS below. Rendered, not
           # written here, so the path waits on checks this repository actually produces.
-          REQUIRED_CHECKS: "[\"gates\", \"No-loss property suite (10,000 examples)\"]"
+          REQUIRED_CHECKS: __VIBEY_GH_BOOTSTRAP_REQUIRED_CHECKS__
           # PR automation's own merge gate (broken, or this path would not be needed) and
           # this workflow's own: never waited on, never required.
-          EXCLUDED_CHECKS: "[\"gate\", \"PR automation / gate\", \"Automation bootstrap / gate\"]"
+          EXCLUDED_CHECKS: __VIBEY_GH_BOOTSTRAP_EXCLUDED_CHECKS__
           # Workflow, template, and automation-core paths as a POSIX ERE, anchored at
           # `[install] self_source`: `gh pr diff` reports repository-root paths.
-          CHANGED_FILE_SCOPE: "^(\\.github/workflows/|src/vibey_tools/gh/(\\.github/workflows/|vibey_gh/templates/workflows/|vibey_gh/(automation_bootstrap|cli|install|merge_train|pr_automation)\\.py$|test/))"
+          CHANGED_FILE_SCOPE: __VIBEY_GH_BOOTSTRAP_SCOPE__
         run: |
           set -euo pipefail
           permission=$(gh api "repos/${REPO}/collaborators/${GITHUB_ACTOR}/permission" --jq .permission)
