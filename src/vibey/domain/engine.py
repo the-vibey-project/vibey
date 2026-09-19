@@ -15,6 +15,13 @@ from vibey.domain.stored_value import StoredValueParser, UnrecognizedValue
 # to the protocol, not to any one subprocess adapter.
 EXIT_CODE_WIND_DOWN = 75
 
+# EX_CONFIG from sysexits.h: the runner stopped because its own backend is
+# misconfigured -- an unreachable local server, a model that is not pulled or
+# fails to load, a context window too small for one request. claudeloop exits
+# with it for `BackendMisconfigured`. No retry fixes a configuration, so the
+# job parks for a human instead of burning its attempts on the same fault.
+EXIT_CODE_BACKEND_MISCONFIGURED = 78
+
 
 class EngineId(StrEnum):
     CLAUDELOOP = "claudeloop"
@@ -22,6 +29,25 @@ class EngineId(StrEnum):
     CURSORLOOP = "cursorloop"
     AGYLOOP = "agyloop"
     QWENLOOP = "qwenloop"
+    # The same claudeloop binary, driven through a named backend profile that
+    # points Claude Code at a local model (Ollama) instead of Anthropic. A
+    # separate engine, not a flag on claudeloop: it has its own health row,
+    # its own circuit, its own cost (zero) and its own tier (ADR-0038).
+    CLAUDELOOP_LOCAL = "claudeloop-local"
+
+
+class EngineTier(StrEnum):
+    """Who the engine answers to. LOCAL runs on hardware the operator owns and
+    costs nothing per token; PAID runs on a vendor's account."""
+
+    LOCAL = "local"
+    PAID = "paid"
+
+
+# Selection order across tiers. Sub-doctrine 8.a: the sovereign path is the
+# preference, not the fallback -- a paid engine is chosen only when no local
+# engine is eligible (ADR-0038, amending ADR-0015's standby rule).
+TIER_PREFERENCE: tuple[EngineTier, ...] = (EngineTier.LOCAL, EngineTier.PAID)
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,6 +131,13 @@ class EngineDescriptor:
     # positional to a binary that wants a flag fails at argument parsing,
     # before the session ever starts.
     plan_flag: str | None = None
+    # Which side of TIER_PREFERENCE the engine sits on. PAID unless the
+    # engine runs on the operator's own hardware.
+    tier: EngineTier = EngineTier.PAID
+    # Extra arguments for `<binary> doctor` in preflight. claudeloop-local
+    # passes its profile, so the health check probes the local backend the
+    # run will use rather than the Anthropic login a profile never touches.
+    doctor_args: tuple[str, ...] = ()
 
     def invoke(self, effort: Effort) -> EngineInvocation:
         try:

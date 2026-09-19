@@ -30,6 +30,7 @@ from vibey_gh import (
 )
 from vibey_gh.config import load_config
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
+from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
 
 
 def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -316,6 +317,15 @@ def _pr_automation(args) -> int:
             kind = args.action.removeprefix("record-")
             state = pr_automation.record(args.pr, _read_json(args.input), kind)
             print(json.dumps(asdict(state), sort_keys=True))
+        elif args.action == "combine":
+            # An empty --sovereign is how the workflow says the sovereign lane produced no
+            # verdict; the composer then refuses a wider-half-only answer rather than
+            # passing a review whose diff half nobody carried.
+            sovereign = _read_json(args.sovereign) if args.sovereign else None
+            envelope = REVIEW_COMPOSER.compose(
+                _read_json(args.paid), half=args.half, sovereign=sovereign, head_sha=args.head_sha
+            )
+            print(json.dumps(envelope, ensure_ascii=False))
         elif args.action == "mirror-fork":
             print(json.dumps(pr_automation.mirror_fork(args.pr, cfg), sort_keys=True))
         elif args.action == "self-heal":
@@ -783,6 +793,7 @@ def _local_review(args) -> int:
         ("--base-url", args.base_url),
         ("--max-chars", args.max_chars),
         ("--timeout", args.timeout),
+        ("--role", args.role),
     ):
         if value is not None:
             forwarded += [flag, str(value)]
@@ -1025,6 +1036,29 @@ def main(argv: list[str] | None = None) -> int:
         record.add_argument("--pr", type=int, required=True)
         record.add_argument("--input", required=True, help="JSON object, file, or - for stdin")
         record.set_defaults(func=_pr_automation)
+    combine = automation_sub.add_parser(
+        "combine",
+        help="compose one review verdict from the lane or lanes that answered it",
+    )
+    combine.add_argument(
+        "--paid", required=True, help="the paid reviewer's answer: JSON object, file, or -"
+    )
+    combine.add_argument(
+        "--half",
+        required=True,
+        choices=PAID_HALVES,
+        help="what the paid reviewer answered: the full schema, or the wider half alone",
+    )
+    combine.add_argument(
+        "--sovereign",
+        default="",
+        help=(
+            "the sovereign lane's diff-half verdict (JSON object or file); required with"
+            " --half requires-wider-context, empty when that lane produced none"
+        ),
+    )
+    combine.add_argument("--head-sha", required=True)
+    combine.set_defaults(func=_pr_automation)
     mirror = automation_sub.add_parser(
         "mirror-fork", help="open a repository-owned replacement for a fork PR"
     )
@@ -1162,13 +1196,21 @@ def main(argv: list[str] | None = None) -> int:
 
     local = sub.add_parser(
         "local-review",
-        help="review a diff with a local model when the paid review path returns no verdict",
+        help="review a diff with a local model: the sovereign lane's diff half, or the fallback",
     )
     local.add_argument("--diff", help="path to a diff file (default: stdin)")
     local.add_argument("--model", help="override [pr_automation.fallback] model")
     local.add_argument("--base-url", help="override [pr_automation.fallback] base_url")
     local.add_argument("--max-chars", type=int, help="override max_diff_chars")
     local.add_argument("--timeout", type=int, help="override timeout_seconds")
+    local.add_argument(
+        "--role",
+        choices=("fallback", "sovereign"),
+        help=(
+            "how the verdict labels itself: 'sovereign' when it carries the diff half,"
+            " 'fallback' (the default) when it stands in for a paid review that failed"
+        ),
+    )
     local.set_defaults(func=_local_review)
 
     doc = sub.add_parser(

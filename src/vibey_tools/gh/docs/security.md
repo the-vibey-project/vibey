@@ -98,23 +98,28 @@ path routes around, rendered into the workflow rather than written into it; an e
 refuses the merge rather than waving it through. It never deletes a permanent branch. See
 [Threat model](threat-model.md) for the full rationale.
 
-The local-model review fallback (`[pr_automation.fallback]`, `vibey_gh.local_review`, the
+The local-model review lane (`[pr_automation.fallback]`, `vibey_gh.local_review`, the
 `local-review`/`local-triage` CLI commands) is a distinct security boundary from every
 other AI path in this project: it runs on a repository-provided
-`[self-hosted, vibey-local-gh]` runner rather than a GitHub-hosted one, only when the
-primary Claude review returned no verdict at all. GitHub's own guidance is that
+`[self-hosted, vibey-local-gh]` runner rather than a GitHub-hosted one. Since #133 it runs
+FIRST, before the paid review, whenever its heartbeat is fresh — so it sees every eligible
+pull request, not only the ones whose paid review failed. GitHub's own guidance is that
 self-hosted runners should almost never serve a public repository, because any contributor
 can open a pull request against one; `trusted_only` (default on) removes that risk by
-excluding fork pull requests from the fallback entirely, leaving them to fail closed to
-`PR automation: review incomplete` like any other unresolved review. The `review-fallback`
-job holds only `contents: read` — no secret and no token capable of mutating the
-repository — and the diff reaches a locally served Ollama-compatible model as text; the
-model has no shell, no tools, and no network beyond the local inference port. Ollama's
-`format` parameter constrains decoding to the response schema, so the output shape is
-guaranteed, but a small local model's judgments are not: the fallback verdict omits the
-documentation-contract fields the primary review certifies, and the gate names the result
-`PR automation: gate (local fallback)` so it is never mistaken for a full review. See
-[Configuration](configuration.md#pr_automationfallback) for the field reference.
+excluding fork pull requests from the lane entirely, leaving them to the paid review alone.
+The `review-sovereign` job holds only `contents: read` — no secret and no token capable of
+mutating the repository — and the diff reaches a locally served Ollama-compatible model as
+text; the model has no shell, no tools, and no network beyond the local inference port.
+Ollama's `format` parameter constrains decoding to the response schema, so the output shape
+is guaranteed, but a small local model's judgments are not. Three rules follow from that.
+The local verdict carries the diff half only for a trusted author; an outside author's
+change keeps the paid correctness and security review. It never certifies the
+documentation-contract fields, which stay with the paid lane or are reported unevaluated.
+And a local finding never triggers automated repair — the paid agent that edits branches
+acts only on the paid lane's findings. The gate names the lane behind each half, and titles
+a fallback verdict `PR automation: gate (local fallback)`, so a narrower review is never
+mistaken for a full one. See [Configuration](configuration.md#pr_automationfallback) for
+the field reference.
 
 Webhook receivers must use a strong `VIBEY_GH_WEBHOOK_SECRET`, verify HMAC over the exact
 raw body, and place `VIBEY_GH_WEBHOOK_STATE_DIR` on access-controlled durable storage.

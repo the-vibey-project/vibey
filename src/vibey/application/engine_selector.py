@@ -3,6 +3,10 @@
 
 Combines engine health records, rotation cursor state, and job requirements
 to select the next engine using SWRR. Updates the rotation cursor atomically.
+
+Tiers come first: the eligible engines of the most-preferred tier (LOCAL before
+PAID, sub-doctrine 8.a) are the only ones offered to SWRR, so a paid engine is
+the fallback when no local engine can take the job (ADR-0038).
 """
 
 from datetime import UTC, datetime, timedelta
@@ -24,6 +28,7 @@ from vibey.domain.rotation import (
     eligible,
     fidelity_factor,
     health_factor,
+    preferred_tier,
     select,
 )
 
@@ -151,11 +156,6 @@ class EngineSelector:
 
         # Filter to eligible engines
         eligible_runtimes = eligible(runtimes, requirement=requirement, allow_list=allow_list)
-        # Local qwenloop is a standby tier: a zero-dollar local model must
-        # never crowd healthy paid engines out of ordinary SWRR rotation.
-        paid = tuple(item for item in eligible_runtimes if item.engine_id is not EngineId.QWENLOOP)
-        if paid:
-            eligible_runtimes = paid
         if not eligible_runtimes:
             raise NoEligibleEngine(f"No engines meet requirements for project {project_id}")
 
@@ -201,11 +201,15 @@ class EngineSelector:
                     fidelity_factor=f_factor,
                     cost_factor=c_factor,
                     affinity_factor=a_factor,
+                    tier=runtime.descriptor.tier,
                 )
             )
 
-        # Select using SWRR
-        selection = select(candidates)
+        # Sovereign before paid (sub-doctrine 8.a, ADR-0038): SWRR runs within the
+        # most-preferred tier that can win a round. This replaced a hard-coded
+        # "qwenloop only when nothing paid is eligible" filter -- the standby rule
+        # ADR-0015 recorded as an open tension with 8.a.
+        selection = select(preferred_tier(candidates))
 
         # Update rotation cursors
         updated_cursors = tuple(

@@ -1,6 +1,16 @@
 # 0027 — A sovereign DESIGN provider: phase one runs without paid credit
 
-**Status:** accepted · **Date:** 2026-08-30 (PR #120; operator-supplied evidence 51778876, the same day) · **Extends:** ADR-0015 · **Cites:** sub-doctrine 8.a
+**Status:** accepted; "Not yet" amended by ADR-0038 · **Date:** 2026-08-30 (PR #120; operator-supplied evidence 51778876, the same day) · **Extends:** ADR-0015 · **Cites:** sub-doctrine 8.a · **Amended:** 2026-09-18 by ADR-0038
+
+> **2026-09-18 — amended by [ADR-0038](0038-local-engines-are-preferred-first.md).**
+> The rejected alternative "Make qwenloop the default DESIGN provider. Not yet." is
+> now yes, with a condition: when any local engine is switched on
+> (`VIBEY_FEATURE_QWENLOOP` / `VIBEY_FEATURE_CLAUDELOOP_LOCAL`, else `[features]`) and
+> no `--provider` is given, `vibey work` and `vibey worker` choose the sovereign
+> providers — `QwenloopDesignProvider` and `QwenloopWorkPlanProducer` — instead of
+> `scripted`. An explicit `--provider` still wins, and nothing selects the paid
+> provider by default. The research floor is unchanged: it parks a
+> `research_evidence` gate rather than inventing a source.
 
 ## Context
 

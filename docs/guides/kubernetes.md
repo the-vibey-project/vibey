@@ -259,7 +259,12 @@ Two details make this hold in the window before the worker is fully up
   started was observed sitting out the entire 7200s grace period, still
   claiming jobs. `tini` is ready in microseconds and forwards the signal;
   `-g` sends it to the whole process group, so an engine subprocess the
-  worker started is signalled too.
+  worker started is signalled too. Gate commands, an engine's `--version`
+  and `doctor` probes, and the `vibey-skills` CLI are the exception: each
+  leads a process group of its own so vibey can kill everything it started,
+  and the worker kills that group itself on a timeout or when the task
+  running it is cancelled. Anything still running when the container stops
+  ends with the pod's PID namespace.
 - **A SIGTERM latch catches the startup window.** `vibey` arms a small
   handler before its other imports whose only job is to remember that
   SIGTERM arrived. Once the event loop is running and the real drain
@@ -326,8 +331,8 @@ Keys under `spec.answers` are gate UUIDs — read them from
 interview gates.
 
 The CR also accepts `maxCycleTurns` and
-`skillsContext: {mode, budget, timeout_seconds}` (`mode` is `off`,
-`shadow`, or `inject`; `budget` is 1,000–32,000, default 6,000).
+`skillsContext: {mode, budget, timeout_seconds, kill_grace_seconds}` (`mode`
+is `off`, `shadow`, or `inject`; `budget` is 1,000–32,000, default 6,000).
 `spec.engines` is restricted by the CRD schema to the four paid engines,
 so `qwenloop` cannot be named in a CR today. The worker accepts
 `--provider qwenloop` (chart value `worker.provider`) for the sovereign
