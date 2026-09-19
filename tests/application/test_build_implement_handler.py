@@ -376,6 +376,38 @@ async def test_run_without_a_completion_verdict_fails_as_work(tmp_path: Path) ->
     assert outcome == Failure(FailureClass.WORK, "engine run did not report completion")
 
 
+@pytest.mark.parametrize(
+    ("exit_code", "failure_class"),
+    [
+        (137, FailureClass.ENGINE),  # SIGKILL, as a shell reports it
+        (-9, FailureClass.ENGINE),  # SIGKILL, as asyncio reports it
+        (124, FailureClass.ENGINE),  # timeout(1)
+        (1, FailureClass.WORK),  # an ordinary non-zero exit is not the engine's fault
+        (0, FailureClass.WORK),  # a clean exit without a verdict is the work's
+    ],
+)
+async def test_an_incomplete_run_is_attributed_by_the_engine_from_its_exit_code(
+    tmp_path: Path, exit_code: int, failure_class: FailureClass
+) -> None:
+    """#209: both BUILD handlers hard-coded WORK, so no ENGINE failure could
+    ever be produced in production and a dying runner never counted toward
+    opening its circuit. The adapter's `attribute` now decides."""
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP,
+        base_dir=tmp_path / "engine",
+        script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
+        exit_code_script=[exit_code],
+    )
+    handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
+
+    outcome = await handler.handle(_job())
+
+    assert outcome == Failure(
+        failure_class, f"engine run did not report completion (exit code {exit_code})"
+    )
+
+
 # ── wind-down (exit code 75) ─────────────────────────────────────────────────
 
 
@@ -447,7 +479,10 @@ async def test_exit_75_without_an_orchestrator_keeps_the_old_failure_path(
 
     outcome = await handler.handle(_job())
 
-    assert outcome == Failure(FailureClass.WORK, "engine run did not report completion")
+    # Still WORK: without an orchestrator, 75 is an ordinary non-zero exit.
+    assert outcome == Failure(
+        FailureClass.WORK, "engine run did not report completion (exit code 75)"
+    )
 
 
 async def test_normal_exit_with_an_orchestrator_never_winds_down(tmp_path: Path) -> None:

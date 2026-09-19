@@ -794,7 +794,9 @@ def engines(
 def cost(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
 ) -> None:
-    """Show cost breakdown and budget consumption."""
+    """Show the cycle's spend against the caps the budget brake enforces."""
+    from vibey.application.budget_source import LedgerBudgetSource
+    from vibey.application.interfaces import LedgerBudgetSourceInterface
     from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 
     async def show_cost() -> None:
@@ -813,24 +815,40 @@ def cost(
                     raise typer.Exit(1)
                 project = proj
 
-            health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
-            records = await health_repo.list_for_project(project.project_id)
-            total_cost = sum(r.cost_usd_cycle for r in records)
-
-            budget_cfg = (
-                project.config.get("budget", {}) if isinstance(project.config, dict) else {}
+            # The brake's own numbers, not a second opinion (issue #210): the
+            # caps through the one parser the worker uses, and the spend from
+            # the ledger sum the worker checks before every BUILD session --
+            # which also carries DESIGN's spend, unlike engine_health. Typed as
+            # its interface so mypy holds the class to the declared seam.
+            max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
+            source: LedgerBudgetSourceInterface = LedgerBudgetSource(
+                resources.ledger, max_dollars=max_dollars, max_turns=max_turns
             )
-            cycle_cap = budget_cfg.get("max_dollars_per_cycle", 40.0)
-            total_cap = budget_cfg.get("max_dollars_total", 250.0)
+            budget = await source.current(project.project_id, project.cycle)
+            dollar_cap = f"${max_dollars:.2f}" if max_dollars is not None else "none (uncapped)"
+            turn_cap = str(max_turns) if max_turns is not None else "none"
 
             typer.echo(f"Project: {project.name} (Cycle {project.cycle})")
-            typer.echo(f"Total Spend (Cycle): ${total_cost:.2f}")
-            typer.echo(f"Cycle Budget Cap:    ${float(cycle_cap):.2f}")
+            typer.echo(
+                f"Cycle spend:      ${budget.dollars_spent:.2f} ({budget.turns_spent} turns)"
+            )
+            typer.echo(f"Cycle dollar cap: {dollar_cap}")
+            typer.echo(f"Cycle turn cap:   {turn_cap}")
+            if budget.any_exhausted:
+                typer.echo("Cap reached: the next BUILD session parks a budget_exhausted gate.")
 
-            typer.echo(f"Total Budget Cap:    ${float(total_cap):.2f}")
-            typer.echo("\nPer-Engine Spend (Current Cycle):")
+            # Per engine, from engine_health. Its cost column is each engine's
+            # metered BUILD-session spend (issue #209), which accumulates across
+            # cycles -- nothing resets it -- so it is labelled as such rather
+            # than as this cycle's, and it leaves DESIGN out. The count is how
+            # often rotation selected the engine, which is not a turn count.
+            health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
+            records = await health_repo.list_for_project(project.project_id)
+            typer.echo("\nPer-engine (BUILD sessions, all cycles):")
             for r in records:
-                typer.echo(f"  • {r.engine_id}: ${r.cost_usd_cycle:.2f} ({r.selected_count} turns)")
+                typer.echo(
+                    f"  • {r.engine_id}: ${r.cost_usd_cycle:.2f} ({r.selected_count} selections)"
+                )
 
     asyncio.run(show_cost())
 

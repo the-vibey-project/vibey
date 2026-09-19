@@ -129,10 +129,14 @@ cycle's `TurnCompleted` and `BudgetSpent` ledger events — never estimated
 ahead of time — and tripping either parks a `budget_exhausted` gate. With
 neither set, spend is uncapped.
 
-`vibey cost` prints caps from a `budget` key in the stored project config
-(`max_dollars_per_cycle`, `max_dollars_total`) that nothing writes, so it
-currently shows the fallbacks $40.00 (cycle) and $250.00 (total) rather than
-the real cap.
+The worker and `vibey cost` read the two caps through one parser,
+`LedgerBudgetSource.caps_from_config`, so `vibey cost` prints the cap the
+brake enforces, beside the same ledger sum. For both, a stored value that is
+not a number — including `true` or `false` — is no cap rather than an error,
+and an unset cap prints as `none`. Neither reads `[budget]` or a `budget`
+table in the stored config, and `vibey cost` prints no lifetime cap, because
+nothing enforces one. A cap raised by answering a `budget_exhausted` gate
+applies to that one job and is not shown.
 
 ## `[verify]`
 

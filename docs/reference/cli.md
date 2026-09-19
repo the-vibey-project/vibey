@@ -221,8 +221,10 @@ reset, read from PostgreSQL's `UPDATE n` status tag.
 
 Show the project's name, phase, cycle, visual and deployment decisions,
 repository path, queue depth per job state, and engine circuits (circuit
-state, consecutive failures, cycle cost). Defaults to the most recently
-created project.
+state, consecutive failures, cost). Defaults to the most recently created
+project. The cost is `engine_health.cost_usd_cycle`: the engine's metered
+BUILD-session spend, which accumulates across cycles (see
+[`vibey cost`](#vibey-cost-project_id)).
 
 | Option | Default | What it does |
 |---|---|---|
@@ -231,26 +233,53 @@ created project.
 ## `vibey engines [PROJECT_ID]`
 
 Show recorded engine health for a project as a table: engine, version,
-circuit-breaker state, consecutive failures, selection count, and cycle
-cost. Rows exist only for engines that `vibey doctor --record` or a worker's
-startup preflight has recorded; with none it prints
-`no engines recorded for project`. Defaults to the most recently created
-project.
+circuit-breaker state, consecutive failures, selection count, and cost. The
+cost is the engine's BUILD-session spend, accumulated across cycles (see
+[`vibey cost`](#vibey-cost-project_id)). Rows exist only for engines that
+`vibey doctor --record` or a worker's startup preflight has recorded; with
+none it prints `no engines recorded for project`. Defaults to the most
+recently created project.
 
 ## `vibey cost [PROJECT_ID]`
 
-Show per-engine spend for the current cycle, read from `engine_health`, with
-a total and two budget caps. The `(N turns)` figure after each engine is its
-selection count, not a turn count. Defaults to the most recently created
-project.
+Show the current cycle's spend against the caps the worker's budget brake
+enforces. Defaults to the most recently created project.
 
-The caps come from a `budget` table in the project's stored config
-(`max_dollars_per_cycle`, `max_dollars_total`), with fallbacks of $40.00 and
-$250.00. No code path writes that table today — not `vibey new`, not the
-Kubernetes operator, and no runtime code reads `[budget]` from `vibey.toml` — so the command
-prints the $40.00 / $250.00 placeholders. The cap that is enforced is
-`--max-cycle-dollars` / `--max-cycle-turns` from `vibey new`, applied by the
-worker's budget brake; `vibey cost` does not print it.
+```text
+Project: my-app (Cycle 1)
+Cycle spend:      $3.25 (2 turns)
+Cycle dollar cap: $10.00
+Cycle turn cap:   none
+
+Per-engine (BUILD sessions, all cycles):
+  • claudeloop: $1.40 (4 selections)
+```
+
+- **Cycle spend** is the brake's own number: `LedgerBudgetSource` summing the
+  cycle's `TurnCompleted` (`cost_usd`) and `BudgetSpent` (`dollars`, `turns`)
+  ledger events. It includes DESIGN's spend as well as BUILD's.
+- **Cycle dollar cap** and **Cycle turn cap** are the project's stored
+  `max_cycle_dollars` / `max_cycle_turns` (`vibey new --max-cycle-dollars` /
+  `--max-cycle-turns`, or the operator's `spec.maxCycleDollars` /
+  `spec.maxCycleTurns`), read through the same parser the worker uses. An
+  unset cap prints `none (uncapped)` for dollars and `none` for turns. A
+  `budget` table in the stored config is not read, and there is no lifetime
+  cap to print because nothing enforces one.
+- When spend has reached a cap the command adds
+  `Cap reached: the next BUILD session parks a budget_exhausted gate.`
+- A cap raised by answering a `budget_exhausted` gate with
+  `--raw '{"max_dollars": N}'` or `--raw '{"max_turns": N}'` applies to that
+  one job only, so it is not shown here; the command always prints the
+  project's stored cap.
+- **Per-engine** rows come from `engine_health`: its `cost_usd_cycle` column
+  and the number of times rotation selected the engine (a selection count,
+  not a turn count). The cost is each engine's **BUILD-session spend, and it
+  accumulates across cycles**: every `build.implement` and `build.verify` job
+  meters what its engine session recorded, by the same spend rule the brake
+  uses, and charges it to the engine that ran it when the job settles (issue
+  #209). Nothing resets the column despite its name, and DESIGN's spend is
+  not in it, so the rows need not sum to the cycle spend above — that figure
+  is the one the brake enforces.
 
 ## `vibey ledger`
 
