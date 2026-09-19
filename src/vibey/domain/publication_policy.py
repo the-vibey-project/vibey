@@ -110,14 +110,29 @@ DEFAULT_ALLOWLIST: Final[Mapping[EventKind, frozenset[str]]] = MappingProxyType(
         EventKind.VISUAL_DESIGN_WAIVED: frozenset({"choice"}),
         EventKind.DEPLOYMENT_OPTED_IN: frozenset({"choice"}),
         EventKind.DEPLOYMENT_DECLINED: frozenset({"choice"}),
+        EventKind.DELIVERY_ESTIMATE_RECORDED: frozenset(
+            {
+                "schema",
+                "recorded_at",
+                "source_fingerprint",
+                "history",
+                "time",
+                "billing",
+                "materials",
+                "track_record",
+                "assumptions",
+                "problems",
+            }
+        ),
     }
 )
 """The default allowlist: the record of what was decided, asked, answered, assumed,
 found and resolved, and how the phases moved -- and nothing an engine said on the
 way. Kinds absent here (`SessionSeeded`, `FileEdited`, `CapacityRejected`,
 `SavePointCreated`, `HandoffInitiated`, `HandoffAccepted`, `BudgetSpent`) are
-withheld whole. Paths an artifact was written to, research content and spend are
-left out on purpose."""
+withheld whole. Paths an artifact was written to, research content and raw spend are
+left out on purpose; the forecast is allowlisted because it is an explicitly derived,
+human-facing summary with its assumptions beside it."""
 
 # A path starts where a word could: at the start of the text, or after whitespace, a
 # quote, an opening `(`, `[` or `{`, or one of `=,;:|>`. Not after a letter, a digit, a
@@ -367,3 +382,29 @@ the class against its declared seam."""
 DEFAULT_POLICY: Final[PublicationPolicyInterface] = PublicationPolicy()
 """The default rules with no credential redactor. A caller that publishes passes one
 (`vibey ledger export` passes `infrastructure/ledger/redact.py`'s)."""
+
+# An operator-scoped billing shard is deliberately a different projection from the
+# public shard above. Public export withholds raw spend; this explicit opt-in keeps only
+# the numeric fields and event kinds the budget brake and phase-timing projection consume,
+# so ``vibey-gh forecast`` can use real billing history without publishing prompts,
+# outputs, tool bodies or credentials. Empty payload allowlists are intentional: the
+# event kind itself is the operational count.
+BILLING_ALLOWLIST: Final[Mapping[EventKind, frozenset[str]]] = MappingProxyType(
+    {
+        EventKind.TURN_COMPLETED: frozenset({"cost_usd"}),
+        EventKind.BUDGET_SPENT: frozenset({"dollars", "turns"}),
+        EventKind.PHASE_TRANSITIONED: frozenset(),
+        EventKind.CAPACITY_REJECTED: frozenset(),
+        EventKind.HANDOFF_INITIATED: frozenset(),
+        EventKind.TOOL_INVOKED: frozenset(),
+        EventKind.FILE_EDITED: frozenset(),
+        EventKind.ARTIFACT_PRODUCED: frozenset(),
+    }
+)
+BILLING_RULES: Final[PublicationRulesInterface] = PublicationRules(
+    allowed=BILLING_ALLOWLIST,
+    chatter=frozenset(),
+    scheme="vibey-billing-publication/v1",
+)
+BILLING_POLICY: Final[PublicationPolicyInterface] = PublicationPolicy(BILLING_RULES)
+"""The explicit operator-only billing projection consumed by the forecast."""

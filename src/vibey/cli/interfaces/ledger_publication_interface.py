@@ -36,7 +36,7 @@ class PublicationPresenterInterface(Protocol):
 class LedgerExportCommandInterface(Protocol):
     """Resolves the project, exports its shard, prints what happened."""
 
-    async def run(self, project_id: UUID, out: Path) -> None:
+    async def run(self, project_id: UUID, out: Path, *, billing: bool = False) -> None:
         """Exit 1 for an unknown project."""
         ...
 

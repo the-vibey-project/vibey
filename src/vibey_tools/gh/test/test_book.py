@@ -602,13 +602,34 @@ def test_the_interior_is_a_book_and_not_a_web_page(tmp_path):
     # Justified and hyphenated, with widows and orphans held to three lines.
     for rule in ("text-align:justify", "hyphens:auto", "orphans:3", "widows:3"):
         assert rule in text
-    assert "pre,table,figure,img,svg{break-inside:avoid}" in text
+    assert "pre,figure,img,svg{break-inside:avoid}" in text
+    assert "table{border-collapse:collapse;width:100%;font-size:9.5pt;break-inside:auto}" in text
+    assert "thead{display:table-header-group}" in text
+    assert "tr{break-inside:avoid}" in text
     # The modern fragmentation properties only; the legacy page-break-* are gone.
     assert "page-break" not in text
     # Hyphenation needs a language to hyphenate in.
     assert text.startswith('<!DOCTYPE html>\n<html lang="en">')
     # A narrow table column keeps whole words: `anywhere` would squeeze it to a letter.
     assert "overflow-wrap:break-word}" in text.split("td,th{", 1)[1].split("\n", 1)[0]
+
+
+def test_the_title_page_is_a_designed_frontispiece(tmp_path):
+    text = _interior(
+        tmp_path,
+        {
+            "title": "The Documentation",
+            "subtitle": "A practical field guide",
+            "author": "A. Author",
+            "edition": "2",
+        },
+    )
+    assert 'class="title-mark"' in text
+    assert 'class="title-kicker">Documentation edition</p>' in text
+    assert 'class="title-subtitle">A practical field guide</p>' in text
+    assert 'class="title-author">A. Author</p>' in text
+    assert "Edition 2 · Complete reference" in text
+    assert "linearGradient" in text
 
 
 def test_every_chapter_has_a_named_page_carrying_its_running_heads(tmp_path):

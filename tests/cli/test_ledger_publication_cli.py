@@ -219,6 +219,63 @@ def _shard_file(tmp_path: Path) -> Path:
     return path
 
 
+def test_operator_billing_export_keeps_metered_usage_for_forecast(tmp_path: Path) -> None:
+    events = (
+        LedgerEvent(
+            event_id=UUID(int=11),
+            project_id=PROJECT,
+            cycle=1,
+            phase=Phase.BUILD,
+            seq=1,
+            kind=EventKind.TURN_COMPLETED,
+            engine_id=EngineId.CLAUDELOOP,
+            job_id=None,
+            causation_id=None,
+            correlation_id=PROJECT,
+            provenance=Provenance.AGENT,
+            produced_at=T0,
+            payload={"cost_usd": 2.5, "text": "private output"},
+            digest=digest_event({"cost_usd": 2.5, "text": "private output"}),
+        ),
+        LedgerEvent(
+            event_id=UUID(int=12),
+            project_id=PROJECT,
+            cycle=1,
+            phase=Phase.BUILD,
+            seq=2,
+            kind=EventKind.BUDGET_SPENT,
+            engine_id=EngineId.CLAUDELOOP,
+            job_id=None,
+            causation_id=None,
+            correlation_id=PROJECT,
+            provenance=Provenance.TRUSTED,
+            produced_at=T0 + timedelta(seconds=5),
+            payload={"dollars": 1.5, "turns": 3},
+            digest=digest_event({"dollars": 1.5, "turns": 3}),
+        ),
+    )
+
+    class _Projects:
+        async def get(self, project_id: UUID) -> object:
+            return type("Project", (), {"project_id": project_id, "name": "billing"})()
+
+    class _Ledger:
+        async def all_for_project(self, project_id: UUID) -> tuple[LedgerEvent, ...]:
+            return events
+
+    @asynccontextmanager
+    async def _app() -> AsyncIterator[AppResources]:
+        yield type("Resources", (), {"projects": _Projects(), "ledger": _Ledger()})()  # type: ignore[misc]
+
+    path = tmp_path / "billing.jsonl"
+    asyncio.run(LedgerExportCommand(open_app=_app).run(PROJECT, path, billing=True))
+    records = [json.loads(line) for line in path.read_text().splitlines()[1:]]
+    assert [record["payload"] for record in records] == [
+        {"cost_usd": 2.5},
+        {"dollars": 1.5, "turns": 3},
+    ]
+
+
 def test_site_builds_from_a_shard_file_alone(tmp_path: Path) -> None:
     shard = _shard_file(tmp_path)
     site = tmp_path / "site"

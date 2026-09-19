@@ -50,7 +50,12 @@ from vibey.cli.interfaces.ledger_publication_interface import (
 from vibey.domain.interfaces.ledger_chain_interface import LedgerChainInterface
 from vibey.domain.interfaces.publication_policy_interface import PublicationPolicyInterface
 from vibey.domain.ledger_chain import LEDGER_CHAIN
-from vibey.domain.publication_policy import DEFAULT_RULES, PublicationPolicy, WithheldReason
+from vibey.domain.publication_policy import (
+    BILLING_POLICY,
+    DEFAULT_RULES,
+    PublicationPolicy,
+    WithheldReason,
+)
 from vibey.infrastructure.ledger.redact import CREDENTIAL_REDACTOR
 from vibey.infrastructure.ledger.static_export import JsonlShardStore, StaticSiteWriter
 
@@ -127,21 +132,24 @@ class LedgerExportCommand:
         chain: LedgerChainInterface = LEDGER_CHAIN,
         presenter: PublicationPresenterInterface = PRESENTER,
         open_app: Callable[[], AbstractAsyncContextManager[AppResources]] = build_app,
+        billing_policy: PublicationPolicyInterface = BILLING_POLICY,
     ) -> None:
         self._policy = policy
         self._store = store
         self._chain = chain
         self._presenter = presenter
         self._open_app = open_app
+        self._billing_policy = billing_policy
 
-    async def run(self, project_id: UUID, out: Path) -> None:
+    async def run(self, project_id: UUID, out: Path, *, billing: bool = False) -> None:
         async with self._open_app() as resources:
             project = await resources.projects.get(project_id)
             if project is None:
                 typer.echo(f"unknown project {project_id}")
                 raise typer.Exit(1)
+            policy = self._billing_policy if billing else self._policy
             exporter: LedgerExporterInterface = LedgerExporter(
-                ledger=resources.ledger, store=self._store, policy=self._policy, chain=self._chain
+                ledger=resources.ledger, store=self._store, policy=policy, chain=self._chain
             )
             # The name and the id, never the row: `repo_path` is never published.
             shard = await exporter.export(project.project_id, project.name, out)
@@ -200,12 +208,18 @@ def ledger_export(
             help="The shard file to write (JSON Lines). Replaced if it exists.",
         ),
     ],
+    billing: Annotated[
+        bool,
+        typer.Option(
+            "--billing",
+            help="Write the operator-scoped billing projection for vibey-gh forecast.",
+        ),
+    ] = False,
 ) -> None:
-    """Write a project's public shard: what the publication policy allows, and a count
-    of everything it withheld."""
+    """Write a project's public shard, or the explicit operator billing projection."""
     # A module-level function because typer builds a command's options from a
     # plain function's signature. It holds no logic; the command class does.
-    asyncio.run(LEDGER_EXPORT.run(project_id, out))
+    asyncio.run(LEDGER_EXPORT.run(project_id, out, billing=billing))
 
 
 def ledger_site(

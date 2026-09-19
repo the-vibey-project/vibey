@@ -254,6 +254,8 @@ Bare `vibey ledger` prints help. Subcommand:
 | `ledger show [PROJECT_ID]` | `--limit N` / `-n` | `50` | Show the most recent N events (min 1). |
 | | `--phase PHASE` | unset | Filter to one phase, by name or value, case-insensitive (`BUILD`, `deploy_design`). |
 | | `--kind KIND` | unset | Filter to one event kind, by name or value, case-insensitive. |
+| `ledger export PROJECT_ID` | `--out FILE` | required | Write the public, redacted ledger projection. |
+| | `--billing` | off | Write the operator-scoped billing projection consumed by `vibey-gh forecast`; it keeps metered spend fields and operational event kinds only. |
 
 Prints one line per event, oldest first:
 `#<seq> <YYYY-MM-DD HH:MM:SS> [<PHASE>] <kind> [<engine>]`. Filters apply
