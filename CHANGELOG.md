@@ -79,6 +79,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `turn_completed_events` with a caveat beside it
 ### Bug Fixes
 
+* **paper:** `docs/paper.md` is now the family's one paper. It absorbs the theses of the runner, `vibey-gh`, `vibey-skills` and `vibey-bootstrap` papers (checked against the code, which had drifted from several of them) and drops the "companion paper" framing. A new section, *Production rate and governance*, states the measured regularity behind #192 — on one machine, successful throughput stayed between 0.99 and 2.00 generations per minute while offered concurrency rose sixteen-fold — as a band, not a constant or a law, with its modulators, the zero-shortfall time-to-completion it predicts, and what would falsify it. The 61-generation, `1.4 ± 0.25`/min figures it replaces matched nothing in the tracked stress record. `scripts/paper_evidence.py` recomputes every number from the record and git history, and `tests/meta/test_paper_renders.py` guards the renderer's line-at-a-time rule, which had printed three of the old paper's formulas as literal TeX ([#192](https://github.com/the-vibey-project/vibey/issues/192), [#155](https://github.com/the-vibey-project/vibey/issues/155))
 * **gh:** a mention on a pull request can now reach the "act" path at all. `vibey-gh
   conversation` decided pull-request-ness from `isPullRequest`, a field `gh issue view` does
   not serve (it rejects it), so every thread read as an issue and a trusted request was

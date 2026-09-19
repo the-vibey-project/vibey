@@ -262,7 +262,9 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-include = ["src/**/*.py", "tests/**/*.py"]
+# scripts/ is here for the same reason it is a `[fingerprint]` source in .vibey-gh.toml:
+# a tracked Python file the gates cannot see is one nobody is checking.
+include = ["src/**/*.py", "tests/**/*.py", "scripts/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
