@@ -59,6 +59,27 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   fails the command with a clear message rather than answering a different comment. A review
   comment's briefing also carries the file, line and diff hunk it was written on (#145)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+* **ledger:** ledger readers are forward compatible with event kinds a newer vibey wrote. Every reader parsed `event.kind` with `EventKind(...)`, a closed enum, so during a rolling upgrade or after a rollback one row of a new kind (#270's `TranscriptRecorded` is the first) raised `ValueError` in every older worker that read the project, and the fleet died one lease at a time. Now the shared `EventRowMapper` reads an unknown kind as `UnrecognizedEventKind` carrying the stored text: kept in every range, in the full ledger handed to the next engine (byte for byte what a newer vibey writes) and in `digest_range` (R6 unchanged), skipped by every projection, the gate, the budget brake and the dashboard, and never written. `vibey ledger show --kind` and `vibey ledger search --kind` match a kind they do not know exactly as written and say so on stderr; `EventKindResolver(accept_unrecognized=False)` keeps the old refusal. Must land before #270 and any other new `EventKind` member (#275)
+* **domain:** forward-compatible readers for closed vocabularies across database columns. Readers of `engine_id`, `phase`, `provenance`, `job.state`, and `circuit` parse rows into enum members or `UnrecognizedValue` instances rather than crashing with `ValueError` on rows written by newer versions. Older workers keep unrecognized values in storage without mutation and skip domain projections that require known semantics, while writers remain strictly validated. Must land before #281 adds `claudeloop-local` (#287)
+
+### Features
+
+* **ledger:** `vibey ledger search` finds ledger records by record id (`--id`), payload digest
+  (`--digest`, which names a payload, so it can match several records), actor (`--actor`: an
+  engine id, a provenance, or `vibey` for events vibey wrote itself), time window
+  (`--since`/`--until`, half-open, ISO-8601), any of several kinds (repeatable `--kind`), and
+  literal case-insensitive text in the payload (`--text`), scoped to one project. Every
+  criterion and the `--limit` run in SQL as one parameterised statement — nothing typed reaches
+  the SQL text — and the result says when older matches were cut; `--json` prints every field
+  of every event. Migration 0012 adds the digest, production-time and per-engine indexes the
+  search reads. The first slice of sub-doctrine 7.a, the searchable ledger (#137)
+* **ledger:** the ledger has a hash chain, derived from the rows rather than stored beside them
+  (`domain/ledger_chain.py`). Each event's link is the SHA-256 of the previous link and every
+  stored field of the event, from a per-project genesis; `verify` walks a whole ledger or a
+  window from a trusted link, recomputes each payload's digest, and reports every gap,
+  duplicate, foreign event, digest mismatch and disagreeing anchor rather than the first one.
+  A window verifies alone from the link before it, which is what the storage tiers' chunk
+  hashes will fold over (#114, #137)
 
 ## [0.8.0] (2026-09-16)
 

@@ -157,6 +157,8 @@ class ReviewDemoHandler:
         raised: list[str] = []
         resolved: set[str] = set()
         for event in await self._ledger.all_for_project(job.project_id):
+            if not event.interpretable:
+                continue
             finding_id = str(event.payload.get("finding_id", ""))
             if not finding_id:
                 continue

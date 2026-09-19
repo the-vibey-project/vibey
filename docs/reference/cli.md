@@ -43,8 +43,8 @@ with payloads.
 | Code | Meaning |
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
-| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value. |
+| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `ledger search`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `ledger show` or `ledger search` with an empty `--kind`; `ledger search` with an unknown `--actor`, a `--digest` that is not a full hex SHA-256, an unreadable `--since`/`--until`, an empty time window, or an empty `--text`. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 
@@ -59,7 +59,7 @@ Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
 `VibeyError` keep their Python traceback.
 
 The other commands (`answer`, `watch`, `recover`, `status`, `engines`,
-`cost`, `ledger show`, every `deploy` subcommand, `doctor`, `operator`) are
+`cost`, `ledger show`, `ledger search`, every `deploy` subcommand, `doctor`, `operator`) are
 not guarded. Their own checks exit 1 or 2 as listed above; any other error,
 including an unset `VIBEY_PG_URL`, surfaces as a Python traceback.
 
@@ -247,17 +247,63 @@ worker's budget brake; `vibey cost` does not print it.
 
 ## `vibey ledger`
 
-Bare `vibey ledger` prints help. Subcommand:
+Bare `vibey ledger` prints help. Subcommands:
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
 | `ledger show [PROJECT_ID]` | `--limit N` / `-n` | `50` | Show the most recent N events (min 1). |
 | | `--phase PHASE` | unset | Filter to one phase, by name or value, case-insensitive (`BUILD`, `deploy_design`). |
-| | `--kind KIND` | unset | Filter to one event kind, by name or value, case-insensitive. |
+| | `--kind KIND` | unset | Filter to one event kind, by name or value, case-insensitive. A kind this vibey does not know is matched exactly as written (see **Kinds from a newer vibey** below). |
+| `ledger search [PROJECT_ID]` | `--id EVENT_ID` | unset | Exactly this record. |
+| | `--digest SHA256` | unset | Every record whose payload has this digest: the full 64-character hex SHA-256, any case. |
+| | `--actor ACTOR` | unset | Who produced it: an engine id (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`), a provenance (`trusted`, `agent`, `untrusted`), or `vibey` for events vibey wrote on its own account. Case-insensitive. |
+| | `--since TIME` | unset | Produced at or after this ISO-8601 date or time (inclusive). |
+| | `--until TIME` | unset | Produced before this ISO-8601 date or time (exclusive). |
+| | `--kind KIND` (repeatable) | unset | Any of these kinds, each by name or value, case-insensitive. A kind this vibey does not know is matched exactly as written (see **Kinds from a newer vibey** below). |
+| | `--text TEXT` | unset | Appears in the payload, literally and case-insensitively. |
+| | `--limit N` / `-n` | `50` | At most N events, the most recent matches (min 1). |
+| | `--json` | off | Print the result as JSON instead. |
 
-Prints one line per event, oldest first:
+`ledger show` prints one line per event, oldest first:
 `#<seq> <YYYY-MM-DD HH:MM:SS> [<PHASE>] <kind> [<engine>]`. Filters apply
-before `--limit`. Defaults to the most recently created project.
+before `--limit`. Defaults to the most recently created project. It loads the
+whole project ledger and filters it in Python.
+
+`ledger search` is the search: every criterion, and the limit, runs in
+Postgres as one parameterised statement, so it reads only the rows it
+returns. Criteria combine with AND; none at all means the latest `--limit`
+events. It prints the same line as `show` plus ` id=<event_id>
+digest=<first 12 hex>`, oldest first, then one closing line: `N matching
+events`, `no events match`, or — when more matched than `--limit` let
+through — `showing the latest N; older matches were left out -- narrow the
+search or raise --limit`. `--json` prints `{"project_id", "truncated",
+"events"}`, each event with every column, payload included.
+
+- **A digest names a payload, not a record.** The ledger's digest is the
+  SHA-256 of the canonical payload alone, so events with the same payload
+  (`{}` is common) share one, and `--digest` can return several records.
+  `--id` is the only criterion that names one record.
+- **Time.** `--since`/`--until` take anything Python's
+  `datetime.fromisoformat` reads (`2026-09-18`, `2026-09-18T14:30:00Z`,
+  `2026-09-18T14:30:00+02:00`). A value with no zone is read as UTC. The
+  window is half-open, so adjacent windows never both claim an event.
+- **Text.** `--text` matches the payload's JSON text as Postgres renders it,
+  keys included, with `%`, `_` and `\` taken literally. JSON escaping
+  applies: a quote inside a payload string is stored as `\"`. No index
+  serves it, so it scans the project's rows.
+- **Scope.** One project: `PROJECT_ID`, or the most recently created
+  project. An unknown `PROJECT_ID` prints `unknown project <id>` and exits 1.
+- **Checked first.** Every option is validated before a connection is
+  opened, so bad input exits 2 even when the database is unreachable.
+- **Kinds from a newer vibey.** During a rolling upgrade, or after a
+  rollback, the ledger can hold event kinds this version has never heard of.
+  `show` and `search` list them under their stored name, like any other
+  event (vibey#275). A `--kind` that names no kind this vibey knows is
+  searched for exactly as written -- surrounding spaces dropped, case kept --
+  and each command prints `note: '<kind>' is not an event kind this vibey
+  knows; matching it exactly as written ...` to stderr, so a typo that finds
+  nothing is visible, and `--json` stdout stays one document. An empty
+  `--kind` exits 2.
 
 ## `vibey deploy`
 
