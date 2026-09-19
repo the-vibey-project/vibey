@@ -18,7 +18,7 @@ from vibey.application.review_demo_handler import (
 from vibey.application.worker import Success
 from vibey.domain.effort import Effort
 from vibey.domain.job import JobState
-from vibey.domain.ledger import EventKind, LedgerEvent
+from vibey.domain.ledger import EventKind, LedgerEvent, Provenance
 from vibey.domain.phase import Phase
 from vibey.domain.review import Ambiguity, Severity
 from vibey.domain.spec import AcceptanceCriterion, DesignSpec
@@ -69,7 +69,7 @@ class FakeReviewLedger(PhaseLedger):
                 job_id=job_id,
                 causation_id=None,
                 correlation_id=uuid4(),
-                provenance="trusted",  # type: ignore[arg-type]
+                provenance=Provenance.TRUSTED,
                 produced_at=NOW,
                 payload=dict(payload),
                 digest="abc",

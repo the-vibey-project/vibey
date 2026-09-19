@@ -18,14 +18,21 @@ and
 Be clear about this before you install anything:
 
 - **The worker runs, applies migrations, claims jobs, and autoscales.**
-- **Engines do not ship in the image.** `deploy/docker/Dockerfile` builds
-  vibey only — no `claudeloop`, `codexloop`, `cursorloop`, or `agyloop`
-  binaries, and no `qwenloop`, the opt-in local engine. The runner
-  packages live in this repository (`src/vibey_runners/`), but the image
-  copies `src/vibey` alone. In-cluster runs therefore use
-  `--provider scripted`, and the worker will log `no recorded conformance
-  for agyloop, claudeloop, codexloop, cursorloop`. That warning is
-  correct, not a misconfiguration. Real engines in-cluster are workstreams
+- **One vendor engine binary ships in the image: `codex`.** Since
+  [ADR-0037](../architecture/decisions/0037-one-distribution-one-version.md)
+  the image carries every runner's console script (`claudeloop`,
+  `codexloop`, `cursorloop`, `agyloop`, `qwenloop`), but three of those
+  drive a vendor CLI that is still absent: `claude`, `cursor-sdk-bridge`,
+  and `agy`. The fourth, `codex`, is now in the image as upstream's static
+  musl build — pinned by version and sha256, copied into the runtime layer
+  alone, with no Node and no npm (step 1). So codexloop is the one paid
+  engine that can run in a pod today, given `OPENAI_API_KEY` or
+  `CODEX_API_KEY`; nothing in CI has run a live codex session in-cluster
+  yet. `qwenloop` needs no vendor binary, only a model server, which the
+  chart can now run for it (step 8). Without either, in-cluster runs use
+  `--provider scripted`, and the worker logs `no recorded conformance for
+  agyloop, claudeloop, codexloop, cursorloop`. That warning is correct,
+  not a misconfiguration. The remaining engines in-cluster are workstreams
   [05](../runbooks/expansion/05-server-mode-kubernetes.md) item 1 and
   [16](../runbooks/expansion/16-loop-runner-containers.md).
 - **Engine authentication in a pod is by API key only.** Subscription
@@ -94,10 +101,23 @@ engine session inside a worker finds nothing it can install with.
 `tini`, but it needs root and the pod runs as uid 10001 with
 `allowPrivilegeEscalation: false`. The entrypoint is
 `tini -g -- vibey` (see step 6). Migrations ship inside the image, so an
-install never depends on someone running SQL by hand first. CI asserts
-each of these against the amd64 build: the entrypoint runs, `id -u` is 10001, none
-of `uv pip pip3 gcc cc` is on `PATH`, and `/app/migrations/*.sql` is
-non-empty.
+install never depends on someone running SQL by hand first.
+
+`codex` reaches the image the same way: the build stage downloads
+upstream's static musl release for the architecture it is building
+(`dpkg --print-architecture`, because cluster-smoke's classic builder
+never sets `TARGETARCH`), checks it against the sha256 pinned in the
+Dockerfile, and the runtime stage copies the one executable to
+`/usr/local/bin/codex`, with its `LICENSE` and `NOTICE` under
+`/usr/share/doc/codex/`. The npm package would have brought Node and npm
+with it; the static build brings neither. To move to another codex
+release, change `CODEX_VERSION` and every `CODEX_*_SHA256` build argument
+together — a stale digest fails the build at `sha256sum -c`.
+
+CI asserts each of these against the amd64 build: the entrypoint runs,
+`id -u` is 10001, none of `uv pip pip3 gcc cc node npm npx` is on `PATH`,
+`/app/migrations/*.sql` is non-empty, `codex --version` prints the
+version the Dockerfile pins, and every console script is on `PATH`.
 
 ## 2. Install the chart
 
@@ -151,7 +171,9 @@ kubectl exec -n vibey deploy/vibey-vibey-worker -- \
 > there is no list-projects command yet, so otherwise read it from the
 > database (`SELECT id, name FROM project;`). The chart does not enforce
 > this — with the value empty it omits `--project` and installs anyway —
-> so it is on you:
+> so it is on you. A value that is set but is not a UUID fails at
+> `helm install`/`helm template` time rather than in the pod, because
+> the autoscaler's query uses it too (step 5):
 >
 > ```bash
 > helm upgrade vibey deploy/helm/vibey -n vibey \
@@ -213,10 +235,22 @@ helm install keda kedacore/keda -n keda --create-namespace --wait
 helm upgrade vibey deploy/helm/vibey -n vibey --set keda.enabled=true
 ```
 
-The trigger is the **claimable-work** query — ready, due now, and not
-blocked behind an unsatisfied dependency — deliberately mirroring
-`JobRepository.claim`'s SELECT arm. Scaling on raw queue depth would
-start workers for jobs nothing can claim yet.
+The trigger is the **claimable-work** query — ready, due now, in the
+project this worker serves, and not blocked behind an unsatisfied
+dependency — deliberately mirroring `JobRepository.claim`'s SELECT arm.
+Scaling on raw queue depth would start workers for jobs nothing can claim
+yet.
+
+The project scoping matters as soon as a database holds two projects. A
+worker claims only its own project's jobs, so a count across every
+project would scale up workers for work they will never claim, and let
+another project's backlog hold this pool above zero. With
+`worker.project` set, the query counts that project only. Left empty, it
+counts the project a worker starting now would bind to — the newest, by
+the same `ORDER BY created_at DESC` the worker uses — which is right for
+a single-project install and approximate once a second project is
+created while workers are running: a running worker stays bound to the
+project it started with. Set `worker.project` whenever KEDA is on.
 
 Measured behavior on minikube with `maxReplicas: 4`:
 
@@ -259,7 +293,12 @@ Two details make this hold in the window before the worker is fully up
   started was observed sitting out the entire 7200s grace period, still
   claiming jobs. `tini` is ready in microseconds and forwards the signal;
   `-g` sends it to the whole process group, so an engine subprocess the
-  worker started is signalled too.
+  worker started is signalled too. Gate commands, an engine's `--version`
+  and `doctor` probes, and the `vibey-skills` CLI are the exception: each
+  leads a process group of its own so vibey can kill everything it started,
+  and the worker kills that group itself on a timeout or when the task
+  running it is cancelled. Anything still running when the container stops
+  ends with the pod's PID namespace.
 - **A SIGTERM latch catches the startup window.** `vibey` arms a small
   handler before its other imports whose only job is to remember that
   SIGTERM arrived. Once the event loop is running and the real drain
@@ -326,8 +365,8 @@ Keys under `spec.answers` are gate UUIDs — read them from
 interview gates.
 
 The CR also accepts `maxCycleTurns` and
-`skillsContext: {mode, budget, timeout_seconds}` (`mode` is `off`,
-`shadow`, or `inject`; `budget` is 1,000–32,000, default 6,000).
+`skillsContext: {mode, budget, timeout_seconds, kill_grace_seconds}` (`mode`
+is `off`, `shadow`, or `inject`; `budget` is 1,000–32,000, default 6,000).
 `spec.engines` is restricted by the CRD schema to the four paid engines,
 so `qwenloop` cannot be named in a CR today. The worker accepts
 `--provider qwenloop` (chart value `worker.provider`) for the sovereign
@@ -356,6 +395,107 @@ Each reconcile writes:
 reason), and Age as columns; `kubectl describe` shows the full status.
 The operator never deletes a project, so removing the CR does not remove
 the underlying project or its data.
+
+## 8. Sovereign inference: an in-cluster Ollama (optional)
+
+Sub-doctrine 8.a makes the sovereign path the preference rather than the
+fallback, and until now a cluster could not take it: qwenloop and
+vibey's sovereign DESIGN provider both need a model server, and the
+chart had none. It can run one:
+
+```bash
+helm upgrade vibey deploy/helm/vibey -n vibey --set ollama.enabled=true
+```
+
+This adds, all named `<release>-vibey-ollama`:
+
+- a PersistentVolumeClaim for the weights (`ollama.storage.size`,
+  default `30Gi`), mounted at `/ollama` as both `HOME` and
+  `OLLAMA_MODELS`, so a restarted pod serves at once instead of
+  downloading again;
+- a ClusterIP Service on port `11434` (`ollama.service.port`);
+- a single-replica Deployment on `ollama/ollama:0.34.2`, pinned by the
+  digest of its multi-arch index (`ollama.image.digest`), with
+  `strategy: Recreate` because the weights volume is ReadWriteOnce, and
+  readiness and liveness probes on `/api/version`, which answers without
+  loading a model;
+- a Job, `<release>-vibey-ollama-pull-<hash>`, that waits for the server
+  and then runs `ollama pull <ollama.model>`: the image has no curl, and
+  its own CLI POSTs `/api/pull` to the server named by `OLLAMA_HOST`. The
+  suffix is a hash of the Job's pod template, so an upgrade that changes
+  the model, image, or endpoint starts a new pull, and one that changes
+  none of them pulls nothing. Set `ollama.pull.enabled=false` to manage
+  models yourself.
+
+It also points the worker at the server. The URL is fully qualified for
+the same reason the DSN is:
+
+| Variable | Value (release `vibey`, namespace `vibey`) | Read by |
+|---|---|---|
+| `VIBEY_OLLAMA_URL` | `http://vibey-vibey-ollama.vibey.svc.cluster.local:11434` | vibey's sovereign DESIGN and decompose providers (`worker.provider: qwenloop`) |
+| `VIBEY_OLLAMA_MODEL` | `ollama.model` | the same |
+| `QWENLOOP_BASE_URL` | the same URL plus `/v1` | qwenloop's `openai-compat` backend, which `auto` selects whenever a base URL is set |
+| `QWENLOOP_MODEL` | `ollama.model` | the same |
+| `VIBEY_FEATURE_QWENLOOP` | `1`, unless `ollama.qwenloopFeature=false` | the worker's qwenloop switch — the only one that reaches a worker ([ADR-0015](../architecture/decisions/0015-qwenloop-standby.md)) |
+
+The first two are read by vibey's configurable Ollama client (#255) and
+the next two by qwenloop's `openai-compat` backend (#243); an image built
+before those landed ignores them.
+
+With only `ollama.enabled`, qwenloop joins the worker as the BUILD
+standby: it is selected only when no paid engine is eligible. To route
+work to it on purpose:
+
+```bash
+helm upgrade vibey deploy/helm/vibey -n vibey --set ollama.enabled=true \
+  --set worker.provider=qwenloop --set worker.engines=qwenloop
+```
+
+`worker.provider=qwenloop` runs DESIGN and decomposition on the local
+model; `worker.engines=qwenloop` narrows BUILD to qwenloop alone. Either
+works without the other.
+
+**Sizing.** The default model is `qwen2.5-coder:14b` (about 9 GB), the
+one vibey and qwenloop already default to. The server requests 2 CPUs and
+`16Gi` with a `24Gi` limit, sized for CPU inference of that model at a
+32K context: `ollama.contextLength` (default `32768`) becomes
+`OLLAMA_CONTEXT_LENGTH`, because qwenloop runs a 32K context and Ollama's
+own default window is far smaller and truncates longer prompts silently.
+Lower the resources only together with a smaller model or context.
+
+**GPU.** `--set ollama.gpu.enabled=true` adds `nvidia.com/gpu: 1`
+(`ollama.gpu.resourceName`, `ollama.gpu.count`) to the container's
+limits. Pair it with `ollama.nodeSelector` and `ollama.tolerations` for
+the GPU pool, and `ollama.runtimeClassName` where the cluster needs one
+(for example `nvidia`). These are separate from the worker's own
+`nodeSelector`/`tolerations`, so the worker never lands on a GPU node by
+accident.
+
+**Security context.** The ollama image runs as root by default. The
+chart runs it as uid 10001 instead, with its own
+`ollama.podSecurityContext` and `ollama.securityContext` rather than the
+chart-wide ones, and points `HOME` and `OLLAMA_MODELS` at the volume so
+that uid can write its key pair and weights. If a storage class does not
+honour `fsGroup`, restore the image default for this pod alone with
+`ollama.podSecurityContext.runAsUser=0` and `runAsNonRoot=false`; the
+worker is unaffected.
+
+**The first install downloads gigabytes.** Depending on your Helm
+version's wait strategy, `helm install --wait` may wait for the pull Job
+as well as the Deployments, so give a first install a generous
+`--timeout`, or install without `--wait` and follow the pull:
+
+```bash
+kubectl logs -n vibey -f job/$(kubectl get jobs -n vibey \
+  -l app.kubernetes.io/component=ollama-pull -o name | head -n 1 | cut -d/ -f2)
+kubectl exec -n vibey deploy/vibey-vibey-worker -- qwenloop doctor
+```
+
+Everything this section describes is rendered, linted and compared
+against a committed golden in CI (the `chart` job,
+`deploy/helm/golden/render.sh`); none of it is installed on a cluster by
+CI, because cluster-smoke has neither the memory nor a GPU for a 14B
+model.
 
 ## Troubleshooting
 
@@ -396,9 +536,13 @@ Connections from addresses with no corresponding pod are orphans; kill
 them at the container runtime (`docker kill` inside `minikube docker-env`).
 Prefer a normal delete — the drain makes it fast.
 
-**Workers scale up but claim nothing.** The scaler counts claimable jobs
-across *all* projects, while the worker Deployment binds to one. Work in
-another project will scale workers that cannot claim it.
+**Workers scale up but claim nothing.** On a chart older than 0.2.0 the
+scaler counted claimable jobs across *all* projects while the worker
+binds to one, so work in another project scaled up workers that could
+not claim it. From 0.2.0 the query is scoped to the worker's project
+(step 5). If it still happens, `worker.project` is probably empty and a
+newer project was created after the running workers bound to an older
+one — set `worker.project`.
 
 **A worker is Ready but does no work.** Run `vibey doctor --cluster`
 inside the pod (see [Preflight from inside a pod](#preflight-from-inside-a-pod)).
@@ -415,6 +559,7 @@ inside the pod (see [Preflight from inside a pod](#preflight-from-inside-a-pod))
 | `worker.project` | `""` | **set this**; empty binds to the newest project |
 | `worker.provider` | `scripted` | DESIGN/decompose provider; `claudeloop` or `qwenloop` need an image that ships the binary |
 | `worker.engines` | `""` | comma-separated engine allow-list (`--engines`); empty means all |
+| `worker.extraEnv` | `[]` | extra EnvVar objects for the worker, appended after the chart's own |
 | `worker.replicas` | `1` | ignored once KEDA owns the Deployment |
 | `worker.worktrees.size` / `storageClass` | `5Gi` / `""` | the `/work` PVC where BUILD worktrees live |
 | `engineAuth.existingSecret` | `""` | Secret holding engine API keys |
@@ -430,3 +575,13 @@ inside the pod (see [Preflight from inside a pod](#preflight-from-inside-a-pod))
 | `operator.enabled` | `false` | install the kopf `VibeyProject` operator |
 | `operator.watchNamespace` | `""` | empty watches cluster-wide |
 | `operator.installCRD` | `true` | disable if another release already owns the CRD |
+| `ollama.enabled` | `false` | run an in-cluster Ollama and point the worker at it (step 8) |
+| `ollama.image.tag` / `digest` | `0.34.2` / its index digest | pinned; bump both together, an empty digest falls back to the tag |
+| `ollama.model` | `qwen2.5-coder:14b` | pulled by the Job; exported to the worker as `VIBEY_OLLAMA_MODEL` and `QWENLOOP_MODEL` |
+| `ollama.contextLength` | `32768` | `OLLAMA_CONTEXT_LENGTH`; qwenloop runs a 32K context |
+| `ollama.storage.size` / `storageClass` | `30Gi` / `""` | the weights PVC |
+| `ollama.resources` | 2 CPU, `16Gi` request / `24Gi` limit | CPU inference of the default model |
+| `ollama.gpu.enabled` | `false` | add `ollama.gpu.resourceName` (`nvidia.com/gpu`) × `ollama.gpu.count` (`1`) to limits |
+| `ollama.podSecurityContext` / `securityContext` | uid 10001, non-root, no capabilities | the Ollama pod's own; the image's default is root |
+| `ollama.pull.enabled` | `true` | the pull Job; `activeDeadlineSeconds` `3600`, `backoffLimit` `6` |
+| `ollama.qwenloopFeature` | `true` | also set `VIBEY_FEATURE_QWENLOOP=1` on the worker |

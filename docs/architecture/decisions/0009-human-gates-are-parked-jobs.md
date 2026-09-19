@@ -62,7 +62,7 @@ The persisted row (`HumanGateRecord`, table `human_gate`) adds `gate_id`,
 `answered_by`. Kinds are strings, not an enum. Those raised today are `question`,
 `approval`, `choice`, `attempts_exhausted`, `budget_exhausted`,
 `escalation_exhausted`, `verify_repair_exhausted`, `integrate_repair_exhausted`,
-`too_many_wind_downs`,
+`too_many_wind_downs`, `research_evidence`,
 `handoff_gate_failed`, `deploy_interview`, `deploy_acceptance`,
 `deploy_demo_review`, and `deploy_failure_triage`. The `*_exhausted` gates end a
 bounded ladder, and their answer can grant more of what ran out

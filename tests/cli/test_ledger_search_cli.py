@@ -27,7 +27,13 @@ from vibey.cli.ledger_search import (
 )
 from vibey.cli.main import app
 from vibey.domain.engine import EngineId
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
+from vibey.domain.ledger import (
+    EventKind,
+    LedgerEvent,
+    Provenance,
+    UnrecognizedEventKind,
+    digest_event,
+)
 from vibey.domain.ledger_query import InvalidLedgerQuery, LedgerSearchResult
 from vibey.domain.phase import Phase
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
@@ -201,6 +207,67 @@ def test_json_carries_every_field_of_every_event(tmp_path: Path) -> None:
     assert document["events"][0]["engine_id"] is None
 
 
+# -- a kind a newer vibey wrote (vibey#275) ----------------------------------
+
+
+async def _seed_with_a_newer_kind(tmp_path: Path) -> UUID:
+    pid, _ = await _seed(tmp_path)
+    payload = {"transcript_ref": "runs/1/t.jsonl"}
+    async with build_app() as resources, resources.ledger._pool.acquire() as conn:
+        # A newer vibey's appender, through the same SQL function.
+        await conn.execute(
+            "SELECT append_event($1, 1, 'build', 'FutureKindX', 'claudeloop', NULL, NULL, "
+            "$1, 'agent', $2, $3::jsonb, $4)",
+            pid,
+            T0 + timedelta(minutes=3),
+            json.dumps(payload),
+            digest_event(payload),
+        )
+    return pid
+
+
+def test_the_ledger_stays_searchable_with_a_kind_this_vibey_does_not_know(
+    tmp_path: Path,
+) -> None:
+    pid = asyncio.run(_seed_with_a_newer_kind(tmp_path))
+
+    code, out = _search(str(pid))
+    assert code == 0, out
+    assert "[BUILD] FutureKindX [claudeloop]" in out
+    assert out.strip().endswith("4 matching events")
+
+
+def test_a_kind_this_vibey_does_not_know_is_found_by_its_exact_text(tmp_path: Path) -> None:
+    pid = asyncio.run(_seed_with_a_newer_kind(tmp_path))
+
+    result = runner.invoke(app, ["ledger", "search", str(pid), "--kind", "FutureKindX"])
+    assert result.exit_code == 0, result.output
+    assert "#4 " in result.stdout
+    assert result.stdout.strip().endswith("1 matching event")
+    # A typo would find nothing too, so the CLI says it matched literally --
+    # on stderr, out of the way of the result.
+    assert "'FutureKindX' is not an event kind this vibey knows" in result.stderr
+    assert "not an event kind" not in result.stdout
+
+
+def test_json_stays_one_document_when_a_kind_is_matched_literally(tmp_path: Path) -> None:
+    pid = asyncio.run(_seed_with_a_newer_kind(tmp_path))
+
+    result = runner.invoke(app, ["ledger", "search", str(pid), "--kind", "FutureKindX", "--json"])
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.stdout)
+    assert [record["kind"] for record in document["events"]] == ["FutureKindX"]
+    assert document["events"][0]["payload"] == {"transcript_ref": "runs/1/t.jsonl"}
+
+
+def test_the_presenter_notes_only_the_kinds_it_matched_literally() -> None:
+    notes = LedgerSearchPresenter().kind_notes(
+        [UnrecognizedEventKind("Zed"), EventKind.FINDING_RAISED, UnrecognizedEventKind("Alpha")]
+    )
+    assert [note.split("'")[1] for note in notes] == ["Alpha", "Zed"]
+    assert LedgerSearchPresenter().kind_notes([EventKind.FINDING_RAISED]) == []
+
+
 # -- nothing to search ------------------------------------------------------
 
 
@@ -225,7 +292,7 @@ def test_an_unknown_project_exits_1(tmp_path: Path) -> None:
     ("args", "fragment"),
     [
         (["--actor", "mallory"], "unknown actor 'mallory'"),
-        (["--kind", "Nonsense"], "unknown event kind 'Nonsense'"),
+        (["--kind", " "], "unknown event kind ' '"),
         (["--digest", "abc123"], "full 64-character hex SHA-256"),
         (["--since", "yesterday"], "'yesterday' is not an ISO-8601"),
         (["--until", "2026-13-01"], "'2026-13-01' is not an ISO-8601"),

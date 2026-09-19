@@ -92,6 +92,15 @@ class TestModelCommand:
         result = runner.invoke(app, ["model", "high", "--run-id", "x"], env=_ENV)
         assert result.exit_code == 1
 
+    def test_model_claude_id_refused_on_a_local_run(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.chdir(tmp_path)
+        directory = _run_dir(tmp_path)
+        directory.update_meta(backend="local:http://127.0.0.1:11434")
+        run_id = directory.read_meta().run_id
+        result = runner.invoke(app, ["model", "claude-opus-4-6", "--run-id", run_id], env=_ENV)
+        assert result.exit_code == 1
+        assert "does not serve the Anthropic model" in result.output
+
 
 class TestEffortCommand:
     def test_effort_success(self, tmp_path: Path, monkeypatch) -> None:
@@ -770,7 +779,7 @@ class TestDoctorCommand:
         monkeypatch.setattr(
             doctor_mod,
             "run_doctor",
-            lambda env, cwd: [DoctorCheck(name="claude-cli", passed=True, detail="ok")],
+            lambda env, cwd, **_: [DoctorCheck(name="claude-cli", passed=True, detail="ok")],
         )
         result = runner.invoke(app, ["doctor"], env=_ENV)
         assert result.exit_code == 0
@@ -784,7 +793,7 @@ class TestDoctorCommand:
         monkeypatch.setattr(
             doctor_mod,
             "run_doctor",
-            lambda env, cwd: [DoctorCheck(name="claude-cli", passed=False, detail="missing")],
+            lambda env, cwd, **_: [DoctorCheck(name="claude-cli", passed=False, detail="missing")],
         )
         result = runner.invoke(app, ["doctor"], env=_ENV)
         assert result.exit_code == 1

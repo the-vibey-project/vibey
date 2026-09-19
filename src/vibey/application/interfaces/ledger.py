@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
@@ -12,6 +13,10 @@ from vibey.application.design import (
 )
 from vibey.application.dto import (
     EngineEvent,
+)
+from vibey.application.interfaces.ledger_publication_interface import (
+    LedgerShardInterface,
+    LedgerSitePlanInterface,
 )
 from vibey.domain.engine import EngineId
 from vibey.domain.handoff import (
@@ -61,6 +66,24 @@ class BuildLedger(Protocol):
         raised, a context packet it compiled) have no causing run and leave it
         ``None``.
         """
+        ...
+
+
+@runtime_checkable
+class SpendMeteringLedgerInterface(BuildLedger, Protocol):
+    """A ``BuildLedger`` that also meters the spend recorded through it.
+
+    ``application/engine_selection.py::SpendMeteringLedger`` implements it: it
+    forwards every event to the ledger it wraps, unchanged, and sums what
+    ``domain/phase_timing.py::LedgerSpendRule`` says each one spent. One is
+    built per BUILD job, so ``dollars`` is that job's engine session spend --
+    what ``RotationRecordingHandler`` charges to the selected engine's health
+    record once the job settles.
+    """
+
+    @property
+    def dollars(self) -> float:
+        """The dollars recorded through this ledger so far."""
         ...
 
 
@@ -119,6 +142,31 @@ class LedgerSearch(Protocol):
     ) -> LedgerSearchResultInterface:
         """The most recent `query.limit` matches, oldest first, and whether
         older matches were left out."""
+        ...
+
+
+@runtime_checkable
+class LedgerShardStore(Protocol):
+    """Keeps a published shard: the file a repository commits (sub-doctrine 7.a's
+    "the shard the repository holds"). Read back by a site build that has no
+    database, so reading checks everything it can about the file's shape."""
+
+    def write(self, shard: LedgerShardInterface, path: Path) -> None:
+        """Write the shard to `path`, replacing whatever was there."""
+        ...
+
+    def read(self, path: Path) -> LedgerShardInterface:
+        """The shard at `path`. Raises `InvalidLedgerShard` for a file that is not one."""
+        ...
+
+
+@runtime_checkable
+class LedgerSiteWriter(Protocol):
+    """Writes a planned static site to a directory."""
+
+    def write(self, plan: LedgerSitePlanInterface, directory: Path) -> None:
+        """Write every planned document under `directory`, and remove stale ones
+        from the subdirectories the plan owns."""
         ...
 
 

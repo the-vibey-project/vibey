@@ -285,6 +285,39 @@ CREATE RULE event_no_delete AS ON DELETE TO event DO INSTEAD NOTHING;
 The `RULE`s make `UPDATE` and `DELETE` silent no-ops rather than errors: a stray
 write affects zero rows.
 
+**`kind` is open text, read forward-compatibly (vibey#275).** The column has no
+constraint and no enum type, so a newer vibey writes a kind an older one has never
+heard of. During a rolling upgrade (KEDA-scaled workers on mixed versions) and
+after a rollback, older readers meet such rows. Readers must never raise on one:
+one row would make the project's whole ledger unreadable to every older worker,
+and a lease that dies on it is re-leased to another worker that dies the same way.
+So the rule is readers forward compatible, writers strict:
+
+- **Read, kept.** `EventRowMapper` — the one row mapper every reader of this
+  table shares — parses `kind` through `domain/ledger.py::EventKindParser`. A
+  value this vibey knows is its `EventKind` member. Anything else is an
+  `UnrecognizedEventKind` carrying the stored text verbatim; it is never
+  dropped and never raised. `LedgerEvent.kind` is `EventKind |
+  UnrecognizedEventKind`.
+- **Handed on, whole.** The event is in every range, in the full ledger written
+  into a receiving worktree (under its own kind, byte for byte what a newer
+  vibey writes), and in `digest_range` — which folds `seq` and the payload
+  digest, not the kind, so R6 is unchanged. The hash chain folds `kind.value`,
+  and an unrecognized kind's value is the stored text, so older and newer
+  readers compute the same links.
+- **Interpreted by nobody.** Every projection, the no-loss gate's R1–R5 and R7–R8,
+  the budget brake and the dashboard match kinds by identity against `EventKind`
+  members, so an unrecognized kind matches none of them and is skipped. The
+  design ledger's `DesignEvent` view leaves it out explicitly. An older vibey
+  therefore cannot act on what a newer kind means. The next engine still gets the
+  row in the full ledger.
+- **Never written.** `LedgerEventDraft.kind` is `EventKind`, so vibey can only
+  append a kind it knows. `to_drafts` refuses to re-append an unrecognized one.
+
+The same exposure exists for `phase` and `provenance` (Postgres enums read into
+closed Python enums) and `engine_id` (text read into `EngineId`). vibey#275
+covers `kind` only, the column new releases actually extend.
+
 **Search indexes.** `vibey ledger search` (sub-doctrine 7.a, #137) adds three
 indexes for the dimensions 0002's could not serve:
 
@@ -310,6 +343,37 @@ the SHA-256 of the previous link and every column of the event (the payload thro
 its digest), starting from a per-project genesis. A window of events verifies alone
 from the link before it, which is the hook the storage tiers' chunk hashes fold over
 (#114).
+
+**The published shard is a projection, not a copy.** `vibey ledger export` (#137)
+writes nothing to the database and adds no column: it reads a project's rows, derives
+the chain above over **every** event, and writes a JSON Lines file for the repository
+to commit — sub-doctrine 7.a's "the shard the repository holds":
+
+```text
+{"shard": {"format": "vibey-ledger-shard/v1", "project_id": …, "project_name": …,
+           "holds": "full" | "window", "tier": "standard (untiered)",
+           "ledger":    {"first_seq", "last_seq", "event_count"},
+           "chain":     {"scheme", "head", "findings"},
+           "policy":    {"scheme", "fingerprint"},
+           "published": {"count", "digest_range"},
+           "withheld":  {"events": {<reason>: n, …}, "fields", "paths", "emails", "credentials"},
+           "trims":     {<event_id>: {"fields", "paths", "emails", "credentials"}, …}}}
+{<one published record: the same object as .vibey/handoff/ledger.jsonl>}
+…
+```
+
+Each record line is `domain/ledger_record.py`'s object — the one the handoff ledger
+writes — after the publication policy (`domain/publication_policy.py`) has run:
+default-deny by kind and payload field, engine chatter and `untrusted` events withheld
+whole, absolute paths and email addresses replaced, `repo_path` never kept, and
+credential redaction (`infrastructure/ledger/redact.py`) last. A record's `digest` is
+recomputed over what was published, so every record checks against its own digest,
+and `published.digest_range` is `digest_range` over the published records. The
+`chain.head` is the ledger's, not the shard's: it commits to the unpublished events
+too, so only a holder of the full ledger can recompute it — which is the point, since
+it is what an archival node (#114) checks a shard against. The header's counts must
+add up (`event_count` = published + withheld) and `vibey ledger site` refuses a shard
+whose counts, digests or ranges do not.
 
 **`correlation_id` is the delivery's; `causation_id` is the run's.** Every event
 of one delivery — DESIGN, BUILD, REVIEW and the deploy stage set, in every cycle
@@ -451,6 +515,14 @@ CREATE INDEX job_dep_reverse ON job_dependency (depends_on_job_id);
 `ON CONFLICT (project_id, idempotency_key) DO NOTHING` and, on conflict, returns the
 existing row, so a handler that crashes after enqueueing but before settling its own
 job cannot create duplicate work when the job is replayed.
+
+A handler that enqueues several jobs as one unit uses `enqueue_batch`: the same
+per-row statement for every request, all inside one transaction, so a crash part-way
+through commits none of them. A request may name its dependencies by idempotency key
+(`depends_on_keys`) as well as by job id; a key is resolved inside the transaction,
+against the batch's earlier rows first and then `job`, and one that names no job
+raises and rolls the batch back rather than enqueueing a job with a dependency missing.
+`build.decompose` fans its whole plan out this way (phase-protocols §2.1).
 
 `awaiting_capacity` and `cancelled` are defined in the enum, but no repository
 query sets them today: a capacity rejection is a `defer` back to `ready` with an
@@ -742,7 +814,7 @@ CREATE INDEX human_gate_open ON human_gate (project_id, raised_at)
 `choice`, `approval`, `attempts_exhausted`, `budget_exhausted`,
 `escalation_exhausted`, `verify_repair_exhausted`, `integrate_repair_exhausted`,
 `handoff_gate_failed`,
-`too_many_wind_downs`, `deploy_interview`, `deploy_acceptance`,
+`too_many_wind_downs`, `research_evidence`, `deploy_interview`, `deploy_acceptance`,
 `deploy_demo_review` and `deploy_failure_triage`. Bounded repair and escalation
 ladders park on these gates rather than failing (ADR-0024). Gates are answered
 with `vibey answer GATE_ID`.
@@ -836,7 +908,8 @@ the pool would drop the lock silently.
 
 Nothing is pruned, partitioned or garbage-collected today. Every table grows
 without bound, `event` is a single heap table (0002), and there is no `vibey gc`
-command. `vibey ledger` exposes only `show`. The intended policy, none of it
+command. `vibey ledger` reads (`show`, `search`) and publishes (`export`, `site`); it never
+prunes. The intended policy, none of it
 implemented:
 
 | Table | Intended policy |

@@ -6,14 +6,35 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from vibey_gh import fitloop
-from vibey_gh.fit import ADMIT, DEFER, FLOOR, Machine, Model
-from vibey_gh.fitloop import FitLoop
+import pytest
+
+from vibey_gh import fit, fitloop
+from vibey_gh.fit import ADMIT, DEFER, FLOOR, Machine, Model, OllamaModelSampler
+from vibey_gh.fitloop import DEFAULT_JOURNAL, JOURNAL_ENV, FitLoop
+from vibey_gh.interfaces.model_sampler_interface import ModelSamplerInterface
 
 # The live machine the stress run measured: 24 GB, qwen2.5-coder:14b resident.
 MACHINE = Machine(total_gb=25.77, free_gb=10.6, swap_used_gb=7.79, swap_total_gb=9.22)
 TIGHT = Machine(total_gb=25.77, free_gb=2.97, swap_used_gb=6.5, swap_total_gb=7.0)
 MODEL = Model(name="qwen2.5-coder:14b", size_gb=10.52, context_length=9390)
+
+
+@pytest.fixture(autouse=True)
+def _journal_stays_in_the_test(monkeypatch, tmp_path):
+    """The CLI journals by default, to a file in the user's home. No test may reach it."""
+    monkeypatch.setenv(JOURNAL_ENV, str(tmp_path / "default-journal.jsonl"))
+
+
+class _Sampler:
+    """A runner that answers with exactly one model, or with none, and remembers who asked."""
+
+    def __init__(self, model: Model | None, calls: list[str] | None = None) -> None:
+        self._model = model
+        self.calls: list[str] = [] if calls is None else calls
+
+    def sample(self, name: str) -> Model | None:
+        self.calls.append(name)
+        return self._model
 
 
 def _loop(tmp_path: Path, **kw) -> FitLoop:
@@ -100,8 +121,7 @@ def test_an_unreadable_model_is_the_floor_and_the_loop_samples_it_itself(
     is the failure this module exists to avoid."""
     calls: list[str] = []
     monkeypatch.setattr(fitloop, "sample_machine", lambda: (calls.append("machine"), MACHINE)[1])
-    monkeypatch.setattr(fitloop, "sample_model", lambda name: (calls.append(name), None)[1])
-    loop = _loop(tmp_path)
+    loop = _loop(tmp_path, model_sampler=_Sampler(None, calls))
     verdict = loop.admit(payload_bytes=1024, deadline_s=900)
     assert verdict.verdict == FLOOR
     assert "forbids proceeding on an assumed model" in verdict.reason
@@ -250,12 +270,8 @@ def test_the_fit_cli_records_a_measurement_and_reads_it_back(monkeypatch, capsys
 
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".vibey-gh.toml").write_text("", encoding="utf-8")
-    monkeypatch.setattr(fitloop, "sample_machine", lambda: MACHINE)
-    monkeypatch.setattr(fitloop, "sample_model", lambda name: MODEL)
-    import vibey_gh.fit as fitmod
-
-    monkeypatch.setattr(fitmod, "sample_machine", lambda: MACHINE)
-    monkeypatch.setattr(fitmod, "sample_model", lambda name: MODEL)
+    monkeypatch.setattr(fit, "sample_machine", lambda: MACHINE)
+    monkeypatch.setattr(fit, "sample_model", lambda name, base_url=None: MODEL)
 
     journal = str(tmp_path / "j.jsonl")
     assert (
@@ -275,15 +291,175 @@ def test_the_fit_cli_records_a_measurement_and_reads_it_back(monkeypatch, capsys
 
 
 def test_the_fit_cli_runs_without_a_journal(monkeypatch, capsys, tmp_path):
+    """`--no-journal` is the old journal-free behaviour, kept reachable now that the
+    journal is on by default: nothing is written, and nothing is read back."""
     from vibey_gh.cli import main
 
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".vibey-gh.toml").write_text("", encoding="utf-8")
-    monkeypatch.setattr(fitloop, "sample_machine", lambda: MACHINE)
-    monkeypatch.setattr(fitloop, "sample_model", lambda name: MODEL)
-    import vibey_gh.fit as fitmod
+    default = tmp_path / "state" / "fit.jsonl"
+    monkeypatch.setenv(JOURNAL_ENV, str(default))
+    monkeypatch.setattr(fit, "sample_machine", lambda: MACHINE)
+    monkeypatch.setattr(fit, "sample_model", lambda name, base_url=None: MODEL)
+    assert main(["fit", "--no-journal"]) == 0
+    out = capsys.readouterr().out
+    assert "ADMIT" in out and "journal" not in out
+    assert not default.exists()
 
-    monkeypatch.setattr(fitmod, "sample_machine", lambda: MACHINE)
-    monkeypatch.setattr(fitmod, "sample_model", lambda name: MODEL)
+
+def test_the_fit_cli_journals_by_default_where_the_environment_says(monkeypatch, capsys, tmp_path):
+    """Every invocation on the machine lands in one journal unless told otherwise, so
+    separate calls form one loop: a measurement from the first informs the second."""
+    from vibey_gh.cli import main
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".vibey-gh.toml").write_text("", encoding="utf-8")
+    default = tmp_path / "state" / "fit.jsonl"
+    monkeypatch.setenv(JOURNAL_ENV, str(default))
+    monkeypatch.setattr(fit, "sample_machine", lambda: MACHINE)
+    monkeypatch.setattr(fit, "sample_model", lambda name, base_url=None: MODEL)
+
+    assert main(["fit", "--payload-bytes", "2048", "--observed-seconds", "70"]) == 0
+    assert f"journal {default}" in capsys.readouterr().out
     assert main(["fit"]) == 0
-    assert "ADMIT" in capsys.readouterr().out
+    assert "τ is unmeasured" not in capsys.readouterr().out
+    kinds = [json.loads(line)["kind"] for line in default.read_text().splitlines()]
+    assert kinds == ["observation", "decision", "decision"]
+
+
+def test_the_fit_cli_refuses_a_journal_and_no_journal_together(monkeypatch, tmp_path):
+    from vibey_gh.cli import main
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit):
+        main(["fit", "--journal", str(tmp_path / "j.jsonl"), "--no-journal"])
+
+
+@pytest.mark.parametrize(
+    "argv, env, config, expected",
+    [
+        (["--base-url", "http://flag:1/"], "http://env:2", "", "http://flag:1"),
+        ([], "http://env:2", "", "http://env:2"),
+        ([], None, 'base_url = "http://configured:3"', "http://configured:3"),
+        ([], None, "", "http://127.0.0.1:11434"),
+    ],
+)
+def test_the_fit_cli_reads_the_runner_the_review_would_call(
+    monkeypatch, capsys, tmp_path, argv, env, config, expected
+):
+    """--base-url, else VIBEY_OLLAMA_URL — the variable the fallback workflows already
+    export — else the configured fallback runner. Before, `fit` read 127.0.0.1 whatever
+    any of them said, so it could measure a runner the review never used."""
+    from vibey_gh.cli import main
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".vibey-gh.toml").write_text(
+        f"[pr_automation.fallback]\n{config}\n", encoding="utf-8"
+    )
+    if env is None:
+        monkeypatch.delenv(fit.OLLAMA_URL_ENV, raising=False)
+    else:
+        monkeypatch.setenv(fit.OLLAMA_URL_ENV, env)
+    asked: list[str | None] = []
+    monkeypatch.setattr(fit, "sample_machine", lambda: MACHINE)
+    monkeypatch.setattr(fit, "sample_model", lambda name, base_url=None: asked.append(base_url))
+    assert main(["fit", "--no-journal", *argv]) == 1
+    assert asked == [expected]
+    assert f"could not be read from the runner at {expected}" in capsys.readouterr().out
+
+
+def test_the_fit_cli_says_when_a_model_is_not_loaded(monkeypatch, capsys, tmp_path):
+    from vibey_gh.cli import main
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".vibey-gh.toml").write_text("", encoding="utf-8")
+    cold = Model(name=MODEL.name, size_gb=9.0, context_length=32768, resident=False)
+    monkeypatch.setattr(fit, "sample_machine", lambda: MACHINE)
+    monkeypatch.setattr(fit, "sample_model", lambda name, base_url=None: cold)
+    assert main(["fit", "--no-journal"]) == 0
+    out = capsys.readouterr().out
+    assert "not loaded; size is its weights on disk" in out
+    assert "a lower bound on what loading it will occupy" in out
+
+
+def test_the_loop_reads_the_model_from_the_runner_it_is_given(tmp_path: Path, monkeypatch):
+    """An explicit base URL wins, and the default sampler is pointed at it: the loop asks
+    the runner the work would go to, not whatever listens on 127.0.0.1."""
+    urls: list[str] = []
+    monkeypatch.setattr(fit.shutil, "which", lambda _: "/usr/bin/curl")
+    monkeypatch.setattr(fit, "_run", lambda *cmd: urls.append(cmd[-1]) or "")
+    loop = _loop(tmp_path, base_url="http://gpu-box:11434/")
+    assert loop.base_url == "http://gpu-box:11434"
+    loop.admit(payload_bytes=1024, deadline_s=900, machine=MACHINE)
+    assert urls == ["http://gpu-box:11434/api/ps", "http://gpu-box:11434/api/tags"]
+
+
+@pytest.mark.parametrize(
+    "environ, expected",
+    [
+        ({"VIBEY_OLLAMA_URL": "http://env:2"}, "http://env:2"),
+        ({"VIBEY_OLLAMA_URL": ""}, "http://127.0.0.1:11434"),
+        ({}, "http://127.0.0.1:11434"),
+    ],
+)
+def test_the_loops_runner_defaults_to_the_environment_then_the_local_default(
+    tmp_path: Path, environ, expected
+):
+    assert _loop(tmp_path, environ=environ).base_url == expected
+
+
+def test_an_injected_sampler_replaces_the_runner_outright(tmp_path: Path):
+    sampler = _Sampler(MODEL)
+    loop = _loop(tmp_path, model_sampler=sampler, environ={})
+    assert loop.admit(payload_bytes=1024, deadline_s=900, machine=MACHINE).verdict == ADMIT
+    assert sampler.calls == ["qwen2.5-coder:14b"]
+    assert isinstance(OllamaModelSampler(), ModelSamplerInterface)
+
+
+@pytest.mark.parametrize(
+    "environ, expected",
+    [
+        ({JOURNAL_ENV: "/elsewhere/fit.jsonl"}, Path("/elsewhere/fit.jsonl")),
+        ({JOURNAL_ENV: ""}, DEFAULT_JOURNAL.expanduser()),
+        ({}, DEFAULT_JOURNAL.expanduser()),
+    ],
+)
+def test_the_default_journal_is_machine_wide_and_movable(environ, expected):
+    """Beside failover's seat state, because it describes this machine's runner rather
+    than a repository; `VIBEY_GH_FIT_JOURNAL` moves it, and an empty value is unset."""
+    assert FitLoop.default_journal(environ) == expected
+    assert DEFAULT_JOURNAL == Path("~/.local/state/vibey-gh/fit.jsonl")
+
+
+def test_the_default_journal_reads_the_process_environment(monkeypatch, tmp_path):
+    monkeypatch.setenv(JOURNAL_ENV, str(tmp_path / "j.jsonl"))
+    assert FitLoop.default_journal() == tmp_path / "j.jsonl"
+
+
+def test_replay_loads_what_earlier_invocations_measured(tmp_path: Path):
+    first = _loop(tmp_path)
+    first.observe(payload_bytes=1024, elapsed_s=60.0, concurrent=1)
+    first.observe(payload_bytes=8192, elapsed_s=120.0, concurrent=1)
+    first.admit(payload_bytes=1024, deadline_s=900, machine=MACHINE, model=MODEL)
+
+    second = _loop(tmp_path)
+    assert second.estimate.samples == 0
+    assert second.replay() == 2
+    assert second.estimate.samples == 2
+
+    assert FitLoop("m", environ={}).replay() == 0
+
+
+def test_replay_never_mixes_one_models_timings_into_anothers(tmp_path: Path):
+    """The default journal is machine-wide, so it holds every model the runner serves; a
+    70B model's service time must not be fitted from a 14B model's measurements."""
+    journal = tmp_path / "fit" / "journal.jsonl"
+    FitLoop("llama3:70b", journal=journal).observe(
+        payload_bytes=1024, elapsed_s=600.0, concurrent=1
+    )
+    _loop(tmp_path).observe(payload_bytes=1024, elapsed_s=60.0, concurrent=1)
+
+    again = _loop(tmp_path)
+    assert again.replay() == 1
+    assert again.estimate.base_s == 60.0
+    assert len(fitloop.recorded_observations(journal)) == 2

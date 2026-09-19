@@ -28,8 +28,10 @@ from vibey_gh.pr_automation import (
     OWN_CHECKS,
     newest_per_name,
 )
+from vibey_gh.protected_paths import CHANGED_PATHS_KEY, LISTED_FILES_KEY, ProtectedPathsGuard
 
 NEEDS_REVIEW_LABEL = "needs-human-review"
+_PROTECTED_PATHS = ProtectedPathsGuard()
 # The phrase the owner-notification comment is recognised by. Matching on our own text is
 # what keeps the mention to once per pull request; see hold_for_review().
 _NOTIFIED_MARKER = "awaiting your review"
@@ -202,6 +204,18 @@ def judge(pr: dict, cfg: GhConfig) -> Verdict:
                     f" {why}; merging unbumped publishes nothing (see #254)"
                 )
 
+    # Last, so it is the reason given only when nothing else stands in the way: a pull
+    # request touching a protected path is otherwise ready, and must still not merge
+    # unattended -- `merge()` would fall back to `--admin` and bypass the code-owner review
+    # the ruleset asks for. A promotion is exempt: everything it carries already merged
+    # into the integration branch, where this same check held it for a human.
+    promotion = (
+        pr.get("baseRefName") == cfg.release_branch
+        and pr.get("headRefName") == cfg.integration_branch
+    )
+    if reason is None and not promotion:
+        reason = _PROTECTED_PATHS.refusal(pr, cfg.protected_paths)
+
     return Verdict(
         pr["number"],
         pr.get("title", ""),
@@ -217,14 +231,52 @@ _PR_FIELDS = (
     "statusCheckRollup,author,labels,headRefOid,headRefName,baseRefName,isCrossRepository,"
     # body: so the caller can see whether the squash commit will carry the Made-With
     # trailer, and supply one when it will not. A bot's pull request body never has it.
-    "body"
+    "body,"
+    # changedFiles: GitHub's own count, against which the protected-paths listing is
+    # checked for truncation.
+    "changedFiles"
 )
 
 
-def pull_request(number: int) -> dict:
+def pull_request(number: int, cfg: GhConfig | None = None) -> dict:
     pr = cast(dict, _gh_json("pr", "view", str(number), "--json", _PR_FIELDS))
     _include_exact_head_gate(pr)
+    if cfg is not None and cfg.protected_paths:
+        _include_changed_paths(pr)
     return pr
+
+
+def _include_changed_paths(pr: dict) -> None:
+    """Every path the pull request changes, for `[merge_train] protected_paths`.
+
+    Paginated REST, because `pr view --json files` is one GraphQL page of at most 100. Left
+    absent when the listing fails or cannot be read, and `judge` then refuses the merge
+    rather than assuming the files it never saw were clean.
+
+    A module-level function, beside the `_include_exact_head_gate` it mirrors: this module
+    is the merge train's functions and has not yet converged on classes (vibey ADR-0016,
+    tenants converge module by module), and the decision itself lives in
+    `ProtectedPathsGuard`, behind its interface.
+    """
+    run = subprocess.run(
+        [
+            "gh",
+            "api",
+            "--paginate",
+            f"repos/{{owner}}/{{repo}}/pulls/{pr['number']}/files?per_page=100",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if run.returncode:
+        return
+    try:
+        paths, listed = _PROTECTED_PATHS.parse_listing(run.stdout)
+    except (TypeError, ValueError):
+        return
+    pr[CHANGED_PATHS_KEY] = list(paths)
+    pr[LISTED_FILES_KEY] = listed
 
 
 def _include_exact_head_gate(pr: dict) -> None:
@@ -254,7 +306,7 @@ def _include_exact_head_gate(pr: dict) -> None:
 
 def open_pull_requests(cfg: GhConfig, number: int | None = None) -> list[dict]:
     if number is not None:
-        return [pull_request(number)]
+        return [pull_request(number, cfg)]
     numbers = _gh_json(
         "pr",
         "list",
@@ -269,7 +321,7 @@ def open_pull_requests(cfg: GhConfig, number: int | None = None) -> list[dict]:
     )
     out: list[dict] = []
     for entry in numbers or []:
-        out.append(pull_request(int(entry["number"])))
+        out.append(pull_request(int(entry["number"]), cfg))
     return out
 
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from datetime import datetime
     from uuid import UUID
 
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
         LedgerQueryInterface,
         LedgerSearchResultInterface,
     )
+    from vibey.domain.ledger import LedgerEventKind
 
 
 @runtime_checkable
@@ -39,6 +41,11 @@ class LedgerSearchPresenterInterface(Protocol):
 
     def machine(self, project_id: UUID, result: LedgerSearchResultInterface) -> str:
         """The same result as a JSON document, every field of every event."""
+        ...
+
+    def kind_notes(self, kinds: Iterable[LedgerEventKind]) -> list[str]:
+        """One line per kind this vibey does not know, saying it is matched
+        exactly as written -- the only sign a mistyped `--kind` gives."""
         ...
 
 

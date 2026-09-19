@@ -37,14 +37,15 @@ or real waiting.
 | `WAITING` | Capacity is exhausted | `ScheduleProbe(at=...)` — never a blind sleep; see [`domain-model.md`](domain-model.md#waitingpy-waitpolicyconfig-next_probe_instant). |
 | (implicit, inside `WAITING`) | A scheduled probe fires | `RunProbe` — a cheap, throwaway turn purely to re-check capacity. |
 | `COMPLETE` | A real turn returned `Done` while capacity was `Available` | `Finish(success=True, reason=summary)` |
-| `FAILED` | Authentication failure, a `Blocked` verdict, budget exhaustion, or `max_wait` exceeded | `Finish(success=False, reason=...)` |
+| `FAILED` | Authentication failure, a misconfigured backend, a `Blocked` verdict, budget exhaustion, or `max_wait` exceeded | `Finish(success=False, reason=...)` |
 
 ## The three decision functions
 
 ### `decide_preflight(state, capacity, *, now)`
 
-The very first branch of every run. `AuthenticationFailed` aborts
-immediately — there's no scenario where retrying helps. `Available` sends the
+The very first branch of every run. `AuthenticationFailed` and
+`BackendMisconfigured` abort immediately — there's no scenario where retrying
+helps. (All three decision functions share one `_terminal()` check for them.) `Available` sends the
 first turn. Anything else (`WindowExhausted` or `CreditsExhausted`) enters
 `WAITING` before a single real turn is spent.
 

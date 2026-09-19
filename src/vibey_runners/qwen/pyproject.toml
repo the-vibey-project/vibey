@@ -79,3 +79,21 @@ include_external_packages = true
 name = "Onion layering"
 type = "layers"
 layers = ["qwenloop.cli", "qwenloop.infrastructure", "qwenloop.application", "qwenloop.domain"]
+
+# ADR-0016's mirrored `interfaces/` packages declare seams; they never reach up into the
+# code that consumes them. The onion contract above already keeps domain and application
+# interfaces out of infrastructure; this adds the rule for every interfaces package,
+# including infrastructure's own, against the adapters and the CLI that wire them.
+[[tool.importlinter.contracts]]
+name = "Interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = [
+  "qwenloop.domain.interfaces",
+  "qwenloop.application.interfaces",
+  "qwenloop.infrastructure.interfaces",
+]
+forbidden_modules = [
+  "qwenloop.cli",
+  "qwenloop.infrastructure.inference",
+  "qwenloop.infrastructure.settings",
+]
