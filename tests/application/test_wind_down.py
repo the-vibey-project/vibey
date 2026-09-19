@@ -26,6 +26,7 @@ from vibey.domain.ledger import (
     EventKind,
     LedgerEvent,
     Provenance,
+    UnrecognizedEventKind,
     digest_event,
     digest_range,
 )
@@ -110,9 +111,11 @@ class _FakeHandoffStore:
 class _RecordingLedgerWriter:
     def __init__(self) -> None:
         self.calls: list[tuple[int, Path]] = []
+        self.written: list[LedgerEvent] = []
 
     def __call__(self, events, path):  # type: ignore[no-untyped-def]
         self.calls.append((len(events), path))
+        self.written = list(events)
         ordered = sorted(events, key=lambda e: e.seq)
         return LedgerRef(
             uri="handoff/ledger.jsonl",
@@ -291,3 +294,37 @@ def test_budget_from_events_ignores_non_numeric_payloads() -> None:
     assert budget.turns_spent == 3
     assert budget.max_turns is None
     assert budget.max_dollars is None
+
+
+async def test_a_kind_this_vibey_does_not_know_is_handed_on_whole(tmp_path: Path) -> None:
+    """vibey#275, the no-loss non-negotiable in a mixed-version fleet: a newer
+    vibey's event in this cycle's BUILD range reaches the full ledger the next
+    engine receives, is folded into the range digest the gate checks, and moves
+    nothing the brief says -- the handoff proceeds instead of the worker dying."""
+    project_id = uuid4()
+    known = _ledger_events(project_id, question_text="cap retries at 5?")
+    transcript = {"transcript_ref": "runs/1/transcript.jsonl", "cost_usd": 12.0}
+    newer = replace(
+        _event(project_id, 7, EventKind.TURN_COMPLETED, transcript),
+        kind=UnrecognizedEventKind("TranscriptRecorded"),
+    )
+    events = (*known[:3], replace(newer, seq=4), *(replace(e, seq=e.seq + 1) for e in known[3:]))
+    orchestrator, handoffs, _, writer = await _orchestrator(project_id, events)
+
+    outcome = await orchestrator.execute(
+        job=_wind_down_job(project_id),
+        worktree_path=tmp_path,
+        engine_id=EngineId.CLAUDELOOP,
+        effort=Effort.LOW,
+        stop=_STOP,
+    )
+
+    assert isinstance(outcome, Success), outcome
+    assert [e.kind for e in writer.written].count(UnrecognizedEventKind("TranscriptRecorded")) == 1
+    assert len(writer.written) == len(events)
+    (envelope,) = handoffs.envelopes
+    assert envelope.gate.ok
+    assert envelope.ledger_ref.digest == digest_range(events)
+    # The spend-shaped payload is not spend this vibey can account for.
+    assert envelope.budget.dollars_spent == 0.25
+    assert envelope.budget.turns_spent == 3

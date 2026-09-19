@@ -1,6 +1,6 @@
 ---
 name: claudeloop-domain-model
-description: Explains every value object and ADT in src/claudeloop/domain/ — CapacityState (Available/WindowExhausted/CreditsExhausted/AuthenticationFailed), TurnSignals classification, CompletionVerdict (Done/Continue/Blocked), the wait-probe policy in waiting.py, Budget/BudgetLedger, and the run-loop state machine in loop.py. Use this whenever reading, modifying, or extending anything in src/claudeloop/domain/ or tests/domain/, whenever the user asks about rate-limit classification, credits vs. rate limits, capacity states, completion detection, the waiting/backoff policy, or the run-loop state machine, and whenever adding a new domain type or branch. Make sure to consult this before touching domain/classify.py, domain/waiting.py, domain/completion.py, or domain/loop.py — the ordering of branches in each is deliberate and tested, and an out-of-order edit silently reintroduces bugs this project was specifically built to fix.
+description: Explains every value object and ADT in src/claudeloop/domain/ — CapacityState (Available/WindowExhausted/CreditsExhausted/AuthenticationFailed/BackendMisconfigured), TurnSignals classification, CompletionVerdict (Done/Continue/Blocked), the wait-probe policy in waiting.py, Budget/BudgetLedger, and the run-loop state machine in loop.py. Use this whenever reading, modifying, or extending anything in src/claudeloop/domain/ or tests/domain/, whenever the user asks about rate-limit classification, credits vs. rate limits, capacity states, completion detection, the waiting/backoff policy, or the run-loop state machine, and whenever adding a new domain type or branch. Make sure to consult this before touching domain/classify.py, domain/waiting.py, domain/completion.py, or domain/loop.py — the ordering of branches in each is deliberate and tested, and an out-of-order edit silently reintroduces bugs this project was specifically built to fix.
 allowed-tools: Read Grep Glob
 ---
 
@@ -14,14 +14,19 @@ see `docs/architecture/domain-model.md`.
 ## `capacity.py` — CapacityState
 
 ```python
-CapacityState = Available | WindowExhausted | CreditsExhausted | AuthenticationFailed
+CapacityState = (
+    Available | WindowExhausted | CreditsExhausted | AuthenticationFailed | BackendMisconfigured
+)
 ```
 
 **The single most important fact in this codebase**: `CreditsExhausted` has
 **no `resets_at` field at all** — not `None`, the type literally doesn't
 carry one — because waiting for a clock can never fix an empty credits
 balance. `WindowExhausted` carries `resets_at: datetime | None`.
-`is_waitable(state)` is `False` only for `AuthenticationFailed`.
+`is_waitable(state)` is `False` only for the two terminal states,
+`AuthenticationFailed` and `BackendMisconfigured` (the backend, as configured,
+cannot serve the run — unreachable, model missing, model failed to load; it
+needs a human, and `run`/`resume` exit 78 for it).
 
 **Never conflate these two states** and never add a `resets_at` field to
 `CreditsExhausted` "for consistency" — that would silently reintroduce the
@@ -38,9 +43,12 @@ independent SDK signals** (a `RateLimitEvent`, `ResultMessage
 **Ordering is load-bearing, in this exact sequence:**
 
 1. `assistant_error == "authentication_failed"` → `AuthenticationFailed`, checked FIRST, outranks everything.
-2. `rate_limit_status == "allowed_warning"` → `Available` (NOT a rejection — this is the exact false positive that caused multi-day cooldowns in the legacy script).
-3. A rejection signal present → split further: credit signals (`error_code == "credits_required"`, `disabled_reason == "out_of_credits"`, a set `overage_disabled_reason`) win over a stray `resets_at` — check credits BEFORE falling through to `WindowExhausted`.
-4. Anything else rejected → `WindowExhausted`, falling back to `rate_limit_type="unknown", resets_at=None` if thin.
+2. `assistant_error == "billing_error"` → `CreditsExhausted`, before any window path.
+3. `backend_misconfiguration(signals)` → `BackendMisconfigured`: `assistant_error == "model_not_found"` on any backend; and only when `local_backend` (a profile with `base_url`) a 404, a 500 (model failed to load), `invalid_request` "Prompt is too long" (`context_window` too small), or an `assistant_error` with no HTTP status whose text names a refused/unreachable connection. Always needs a real error signal — never text alone.
+4. `local_backend` and `api_error_status == 503` (a full local queue) → `WindowExhausted(rate_limit_type="local", resets_at=None)` — the one local error a clock fixes.
+5. `rate_limit_status == "allowed_warning"` → `Available` (NOT a rejection — this is the exact false positive that caused multi-day cooldowns in the legacy script).
+6. A rejection signal present → split further: credit signals (`error_code == "credits_required"`, `disabled_reason == "out_of_credits"`, a set `overage_disabled_reason`) win over a stray `resets_at` — check credits BEFORE falling through to `WindowExhausted`.
+7. Anything else rejected → `WindowExhausted`, falling back to `rate_limit_type="unknown", resets_at=None` if thin.
 
 If you're editing `classify.py`, preserve this order and re-run
 `tests/domain/test_classify.py` — every branch above has a dedicated test
@@ -60,7 +68,9 @@ only for true external/human blockers; waitable self-started work belongs in
 `remaining_work` with `blocked_on: null` (schema descriptions + autonomy
 prompt reinforce this). Fallback (only when `structured is None`):
 substring-match `CLAUDELOOP_TASK_FULLY_COMPLETE` (or the configured marker)
-in raw output text — this is a fallback, not the primary path, and must stay
+in raw output text — unless `marker_fallback=False` (a local backend's default,
+`done_marker_fallback`: a model that cannot call tools once typed the marker
+and "completed" work it never did) — this is a fallback, not the primary path, and must stay
 that way; the substring approach has two documented failure modes (collision
 with user prompt text, truncation inside a limit message).
 

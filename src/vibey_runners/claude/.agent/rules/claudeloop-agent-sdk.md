@@ -20,5 +20,20 @@ imported.
   .api_error_status`, `AssistantMessage.error`), trust none alone.
 - `CLAUDE_CODE_RETRY_WATCHDOG` off by default. Opt-in via
   `--retry-watchdog`. See ADR 0005.
+- Backend profiles (`--profile`, `domain/backend.py`): the SDK merges
+  `options.env` over `os.environ`, so the profile overlay wins — a local
+  profile sets `ANTHROPIC_API_KEY=""` to scrub a paid key. Both
+  `build_turn_options` and `build_probe_options` take `env=` / `cli_path=`;
+  a probe without the overlay would still ask Anthropic. Local means: tiers
+  required, no `claude-*` ids, no effort, no `--max-budget-usd`, cost recorded
+  as $0 (Claude Code guesses a price for unknown models) with token counts
+  kept, and `TurnSignals.local_backend=True` so `classify` reads Ollama's
+  404 / 500 / refused-connection / "Prompt is too long" as
+  `BackendMisconfigured` and 503 as a local
+  window. The CLI sends `error: "model_not_found"` although the SDK Literal
+  does not list it. `resume` refuses to cross backends (run meta `backend`).
+  A model that writes tool calls as text (qwen2.5-coder:14b on Ollama, live)
+  can fake Done via the marker, so local profiles set
+  `done_marker_fallback = false` and `doctor` checks for real `tool_use`.
 
-See ADR 0002, 0005, 0007.
+See ADR 0002, 0005, 0007 and `docs/guides/local-backend.md`.

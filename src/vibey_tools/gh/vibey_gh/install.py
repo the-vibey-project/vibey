@@ -20,7 +20,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vibey_gh import dependabot
+from vibey_gh.automation_bootstrap import AutomationBootstrapGate
 from vibey_gh.config import GhConfig, load_config
+from vibey_gh.interfaces.automation_bootstrap_gate_interface import (
+    AutomationBootstrapGateInterface,
+)
+from vibey_gh.review_contract import REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
 
 TEMPLATES = Path(__file__).parent / "templates" / "githooks"
 WORKFLOWS = Path(__file__).parent / "templates" / "workflows"
@@ -419,6 +424,10 @@ def render_workflow(source: Path, cfg: GhConfig) -> str:
         wanted = wanted.replace(marker, "true" if enabled else "false")
     wanted = wanted.replace("__VIBEY_GH_RELEASE_TAG_PREFIX__", cfg.github_release.tag_prefix)
     wanted = wanted.replace("__VIBEY_GH_SELF_SOURCE__", cfg.self_source)
+    # automation-bootstrap.yml's independent gates and change scope, derived from the
+    # integration ruleset and `self_source` rather than written into the template (#214).
+    bootstrap: AutomationBootstrapGateInterface = AutomationBootstrapGate()
+    wanted = bootstrap.render(wanted, cfg)
     # The workflow templates spell the DEFAULT distribution literally rather than
     # carrying a placeholder, so the shipped YAML stays readable and greppable and the
     # tests that assert on it keep asserting on something. Rewriting the default line to
@@ -455,15 +464,35 @@ def render_workflow(source: Path, cfg: GhConfig) -> str:
     if source.name != "pr-automation.yml":
         return _strip_trailing_space(wanted)
     workflows = json.dumps(list(cfg.pr_automation.scan_workflows))
+    # The paid reviewer's `--json-schema`, from the same table that splits the review into
+    # the half a diff can carry and the half it cannot -- one source rather than a literal
+    # here and a contract there that have to be kept in step by hand. Compact, so it stays
+    # one line of `claude_args`. That argument is single-quoted and tokenized shell-style:
+    # JSON's own syntax has no apostrophe, but a string inside a field's fragment could, so
+    # any is written as the JSON escape `\u0027` -- identical to a JSON parser, and never a
+    # quote to the tokenizer.
+    #
+    # Two schemas, because the paid reviewer answers one of two things (#133): the whole
+    # review, or -- when the sovereign lane carried the diff half -- only the wider half.
+    # Both sit inside a GitHub expression as single-quoted string literals, chosen at run
+    # time, and the same escape keeps them valid there: an expression literal ends at an
+    # apostrophe too.
+    review_schema = json.dumps(REVIEW_CONTRACT.json_schema(), separators=(",", ":"))
+    review_schema = review_schema.replace("'", "\\u0027")
+    wider_schema = json.dumps(
+        REVIEW_CONTRACT.json_schema([REQUIRES_WIDER_CONTEXT]), separators=(",", ":")
+    )
+    wider_schema = wider_schema.replace("'", "\\u0027")
     schedule = (
         '  schedule:\n    - cron: "37 */2 * * *"'
         if cfg.pr_automation.retain_schedule_backstop
         else "  # schedule backstop disabled by .vibey-gh.toml"
     )
     return _strip_trailing_space(
-        wanted.replace("__VIBEY_GH_SCAN_WORKFLOWS__", workflows).replace(
-            "  # __VIBEY_GH_SCHEDULE__", schedule
-        )
+        wanted.replace("__VIBEY_GH_SCAN_WORKFLOWS__", workflows)
+        .replace("__VIBEY_GH_REVIEW_SCHEMA__", review_schema)
+        .replace("__VIBEY_GH_REVIEW_WIDER_SCHEMA__", wider_schema)
+        .replace("  # __VIBEY_GH_SCHEDULE__", schedule)
     )
 
 
@@ -472,9 +501,16 @@ def installation_notices() -> tuple[str, ...]:
     notices = [
         "enable Actions read/write permissions and allow Actions to create pull requests",
     ]
-    run = subprocess.run(
-        ["gh", "secret", "list", "--json", "name"], capture_output=True, text=True, check=False
-    )
+    try:
+        run = subprocess.run(
+            ["gh", "secret", "list", "--json", "name"], capture_output=True, text=True, check=False
+        )
+    except FileNotFoundError:
+        # Best-effort means best-effort: by the time this runs `install` has already
+        # written every hook and workflow, so a missing `gh` escaping here turned a
+        # completed install into a traceback and a nonzero exit.
+        notices.append("gh not found; skipping secret/permission checks")
+        return tuple(notices)
     if run.returncode == 0:
         try:
             present = {str(item["name"]) for item in json.loads(run.stdout)}

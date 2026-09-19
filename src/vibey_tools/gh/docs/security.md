@@ -121,7 +121,8 @@ branch. See [Threat model](threat-model.md) for the full rationale.
 The local-model review fallback (`[pr_automation.fallback]`, `vibey_gh.local_review`, the
 `local-review`/`local-triage` CLI commands) is a distinct security boundary from every
 other AI path in this project: it runs on a repository-provided
-`[self-hosted, vibey-local-gh]` runner rather than a GitHub-hosted one, only when the
+`[self-hosted, <runner_label>]` runner (the label is `[pr_automation.fallback] runner_label`,
+default `vibey-local`) rather than a GitHub-hosted one, only when the
 primary Claude review returned no verdict at all. GitHub's own guidance is that
 self-hosted runners should almost never serve a public repository, because any contributor
 can open a pull request against one; `trusted_only` (default on) removes that risk by
@@ -142,7 +143,8 @@ Accepted IDs use atomic mode-0600 marker creation, preventing replay across rest
 concurrent CLI processes. Operators own TLS, rate limits, request-size limits, backups,
 retention, and safe pruning of expired claims.
 
-The opt-in `[pr_automation.fallback]` local-model review/triage path runs on a self-hosted
+The `[pr_automation.fallback]` local-model review/triage path — on by default, but
+scheduled only while the sovereign heartbeat is fresh — runs on a self-hosted
 runner rather than a GitHub-hosted one, so it sits outside the credential-free ephemeral
 Git context described above by design: it holds no repository secret at all
 (`permissions: contents: read`), never checks out PR source, and reaches only a local

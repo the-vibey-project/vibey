@@ -17,7 +17,6 @@ from vibey.bootstrap import (
     _independent_review_required,
     build_design_worker,
     build_visual_worker,
-    qwenloop_enabled,
 )
 from vibey.domain.engine import EngineId
 from vibey.domain.job import JobState
@@ -47,18 +46,6 @@ class SovereignDesignProvider(ScriptedDesignProvider):
     """A stand-in for the sovereign provider: same answers, different actor."""
 
     engine_id: EngineId | None = EngineId.QWENLOOP
-
-
-def test_qwenloop_feature_resolution(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
-    assert not qwenloop_enabled({})
-    assert qwenloop_enabled({"features": {"qwenloop": True}})
-
-    monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "true")
-    assert qwenloop_enabled({})
-
-    monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "false")
-    assert not qwenloop_enabled({"features": {"qwenloop": True}})
 
 
 def test_every_composed_worker_is_given_the_structured_logger() -> None:

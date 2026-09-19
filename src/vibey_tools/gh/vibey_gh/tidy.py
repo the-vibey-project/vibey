@@ -28,12 +28,13 @@ it is the mess, wearing a uniform.
 
 from __future__ import annotations
 
-import json
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from vibey_gh.config import GhConfig
+from vibey_gh.forge_selector import ForgeSelector
+from vibey_gh.interfaces.forge_adapter_interface import ForgeAdapterInterface
 
 __all__ = ["TidyReport", "apply", "survey"]
 
@@ -72,57 +73,10 @@ def _git(root: Path, *args: str) -> str:
     return run.stdout if run.returncode == 0 else ""
 
 
-def _gh_json(root: Path, *args: str) -> tuple[list | dict, str]:
-    """Ask the forge, and say which of the two things happened: it answered, or it
-    could not be asked. Collapsing those is the defect this shape exists to prevent —
-    a seam that reads a missing `gh`, an unauthenticated runner or a rate-limited
-    token as an empty answer reports "could not look" as "nothing there". Returns the
-    decoded JSON and a problem string that is empty exactly when the forge answered."""
-    label = " ".join(("gh", *args[:2]))
-    try:
-        run = subprocess.run(["gh", *args], cwd=root, capture_output=True, text=True, check=False)
-    except FileNotFoundError:
-        return [], "the GitHub CLI (`gh`) is not installed"
-    if run.returncode != 0:
-        detail = (run.stderr or run.stdout).strip().splitlines()
-        return [], f"`{label}` failed: {detail[-1] if detail else 'no output'}"
-    try:
-        value = json.loads(run.stdout)
-    except json.JSONDecodeError:
-        return [], f"`{label}` returned output that is not JSON"
-    if isinstance(value, (list, dict)):
-        return value, ""
-    return [], f"`{label}` returned JSON that is neither a list nor an object"
-
-
-def _gh_list(root: Path, *args: str) -> tuple[list, str]:
-    """Ask the forge for a listing, and refuse to read anything else as one.
-
-    `_gh_json` answers for any JSON shape, because an endpoint may legitimately return
-    an object. A *listing* may not. Iterating a dict yields its keys, so a caller handed
-    one would quietly enumerate field names, match none of them, and report an empty
-    result with an empty problem string -- "could not look" wearing the face of "nothing
-    there". That is the exact collapse `_gh_json`'s problem string exists to prevent, so
-    a listing's shape is checked here once rather than trusted at each call site.
-    """
-    value, problem = _gh_json(root, *args)
-    if problem:
-        return [], problem
-    if not isinstance(value, list):
-        label = " ".join(("gh", *args[:2]))
-        return [], f"`{label}` returned a JSON object where a listing was expected"
-    return value, ""
-
-
 def _kept(cfg: GhConfig) -> tuple[str, ...]:
     return tuple(
         dict.fromkeys((cfg.integration_branch, cfg.release_branch, *cfg.tidy.keep_branches))
     )
-
-
-def _open_pr_heads(root: Path) -> tuple[set[str], str]:
-    prs, problem = _gh_list(root, "pr", "list", "--json", "headRefName", "--limit", "200")
-    return {p.get("headRefName", "") for p in prs if isinstance(p, dict)}, problem
 
 
 def _contained(root: Path, tip: str, kept_remote: list[str]) -> bool:
@@ -138,7 +92,13 @@ def _contained(root: Path, tip: str, kept_remote: list[str]) -> bool:
     return False
 
 
-def survey(cfg: GhConfig, local: bool = True, refresh: bool = True) -> TidyReport:
+def survey(
+    cfg: GhConfig,
+    local: bool = True,
+    refresh: bool = True,
+    *,
+    forge: ForgeAdapterInterface | None = None,
+) -> TidyReport:
     """Enumerate the mess. `local=False` (CI) surveys only the cloud classes —
     an ephemeral runner's clone has no stashes or worktrees worth judging.
 
@@ -152,7 +112,11 @@ def survey(cfg: GhConfig, local: bool = True, refresh: bool = True) -> TidyRepor
 
     Every class the survey could not look at becomes a `problems` entry and is left
     out of the verdict, because finding nothing because you could not ask is not the
-    same as finding nothing."""
+    same as finding nothing. That is the forge adapter's own contract: each of its
+    answers comes with a problem that is empty exactly when the forge answered.
+
+    `forge` is the repository's forge, chosen from `[platform]` when not given. The
+    survey asks it two forge-neutral questions and never names a platform itself."""
     root = cfg.root
     kept = _kept(cfg)
     problems: list[str] = []
@@ -161,7 +125,9 @@ def survey(cfg: GhConfig, local: bool = True, refresh: bool = True) -> TidyRepor
     kept_remote = [f"origin/{b}" for b in kept if _git(root, "rev-parse", f"origin/{b}")]
     if not kept_remote:
         return TidyReport(problems=("no kept branch resolves on origin; refusing to judge",))
-    pr_heads, forge_problem = _open_pr_heads(root)
+    if forge is None:
+        forge = ForgeSelector().select(cfg)
+    pr_heads, forge_problem = forge.open_change_request_heads(limit=200)
     judged = not forge_problem
     if forge_problem:
         problems.append(f"{forge_problem}; merged branches were not judged")
@@ -182,16 +148,10 @@ def survey(cfg: GhConfig, local: bool = True, refresh: bool = True) -> TidyRepor
             if tip and _contained(root, tip, kept_remote):
                 remote_merged.append(short)
 
-    releases, release_problem = _gh_list(
-        root, "release", "list", "--json", "tagName,name,isDraft", "--limit", "100"
-    )
+    releases, release_problem = forge.releases(limit=100)
     if release_problem:
         problems.append(f"{release_problem}; draft releases were not judged")
-    drafts = [
-        str(r.get("tagName") or r.get("name") or "")
-        for r in releases
-        if isinstance(r, dict) and r.get("isDraft")
-    ]
+    drafts = [release.label for release in releases if release.draft]
 
     orphan_tags: list[str] = []
     for tag in _git(root, "tag", "--list").splitlines():
