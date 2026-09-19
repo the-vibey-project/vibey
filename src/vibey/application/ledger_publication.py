@@ -84,8 +84,9 @@ class ShardHolding(StrEnum):
 class InvalidLedgerShard(VibeyError):
     """A file or value that is not a shard this build can publish. Says why.
 
-    An exception type, so it has no interface beside it: a `Protocol` cannot be
-    raised or caught, and the seam an error crosses is its type.
+    The exception remains the concrete type callers catch; its diagnostic
+    surface is declared by ``InvalidLedgerShardInterface`` for code that only
+    needs to inspect an error crossing the application boundary.
     """
 
 

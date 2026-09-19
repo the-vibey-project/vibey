@@ -92,13 +92,20 @@ async def test_engine_health_service_preserves_unrecognized_circuits() -> None:
     res3 = await service.record_capacity_rejection(project_id, EngineId.CLAUDELOOP, Available())
     assert res3 == unknown_circuit_record
 
-    # 4. record_selection returns record unmodified (line 234)
-    res4 = await service.record_selection(project_id, EngineId.CLAUDELOOP, cost_usd=0.1)
+    # 4. record_selection returns record unmodified
+    res4 = await service.record_selection(project_id, EngineId.CLAUDELOOP)
     assert res4 == unknown_circuit_record
 
-    # 5. record_success returns record unmodified (line 261)
-    res5 = await service.record_success(project_id, EngineId.CLAUDELOOP)
+    # 5. spend and failures never rewrite a row owned by a newer circuit model.
+    res5 = await service.record_spend(project_id, EngineId.CLAUDELOOP, 0.1)
     assert res5 == unknown_circuit_record
+
+    res6 = await service.record_failure(project_id, EngineId.CLAUDELOOP)
+    assert res6 == unknown_circuit_record
+
+    # 6. record_success returns record unmodified
+    res7 = await service.record_success(project_id, EngineId.CLAUDELOOP)
+    assert res7 == unknown_circuit_record
 
 
 @pytest.mark.asyncio

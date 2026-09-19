@@ -24,10 +24,12 @@ would falsify it and what it does not cover, and we argue from the same records 
 the scarce inputs were governance and correct judgment, not production.
 
 *Artifacts.* This paper is typeset from `docs/paper.md` and published as
-[PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf) and
+[PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf),
+[DOCX](https://the-vibey-project.github.io/vibey/main/paper.docx) and
 [HTML](https://the-vibey-project.github.io/vibey/main/paper/). The complete
 documentation is published as a book:
 [PDF](https://the-vibey-project.github.io/vibey/main/book.pdf),
+[DOCX](https://the-vibey-project.github.io/vibey/main/book.docx),
 [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) and
 [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html). Every
 empirical figure in the section on production rate is recomputed from tracked sources

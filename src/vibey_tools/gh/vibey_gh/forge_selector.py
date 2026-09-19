@@ -5,11 +5,8 @@ The one place a platform is named by kind. It maps each `ForgeKind` that has an 
 the code that builds one, and hands the result back as a `ForgeAdapterInterface`, so the
 modules that ask about the forge stay forge-neutral.
 
-GitHub is the only adapter today. `[platform] kind = "gitlab"` or `"forgejo"` is already
-refused when the configuration loads, because every other command in this package still
-speaks to GitHub directly and would do the wrong thing quietly. The selector refuses too,
-for any kind it has no adapter for, so a configuration that reached it by some other road
-fails with the same sentence instead of getting an adapter for the wrong forge.
+The selector refuses any kind it has no adapter for, so a configuration that reached it by
+some other road fails with the same sentence instead of getting an adapter for the wrong forge.
 """
 
 from __future__ import annotations
@@ -17,10 +14,14 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from types import MappingProxyType
 
-from vibey_gh.config import GhConfig, PlatformConfig
+from vibey_gh.config import ADAPTED_PLATFORM_KINDS, GhConfig, PlatformConfig
 from vibey_gh.forge import ForgeKind
+from vibey_gh.forge_forgejo import ForgejoForge
 from vibey_gh.forge_github import GH_DEFAULT_HOST, GitHubForge
+from vibey_gh.forge_gitlab import GitLabForge
+from vibey_gh.forgejo_transport import ForgejoTransport
 from vibey_gh.gh_transport import GhTransport
+from vibey_gh.gitlab_transport import GitLabTransport
 from vibey_gh.interfaces.forge_adapter_interface import ForgeAdapterInterface
 from vibey_gh.interfaces.forge_selector_interface import ForgeSelectorInterface
 
@@ -34,7 +35,19 @@ class ForgeSelector(ForgeSelectorInterface):
 
     def __init__(self, adapters: Mapping[ForgeKind, AdapterFactory] | None = None) -> None:
         self._adapters: Mapping[ForgeKind, AdapterFactory] = MappingProxyType(
-            dict(adapters) if adapters is not None else {ForgeKind.GITHUB: self._github}
+            dict(adapters)
+            if adapters is not None
+            else {
+                ForgeKind.GITHUB: self._github,
+                **{
+                    ForgeKind(kind): factory
+                    for kind, factory in (
+                        (ForgeKind.GITLAB.value, self._gitlab),
+                        (ForgeKind.FORGEJO.value, self._forgejo),
+                    )
+                    if kind in ADAPTED_PLATFORM_KINDS
+                },
+            }
         )
 
     @property
@@ -50,8 +63,24 @@ class ForgeSelector(ForgeSelectorInterface):
 
     @staticmethod
     def _github(cfg: GhConfig) -> ForgeAdapterInterface:
-        # `gh`'s own default host is left unexported, so a repository on github.com runs
-        # `gh` with the environment it always had; any other host pins `gh` to it.
         host = cfg.platform.host
         transport = GhTransport(host=None if host == GH_DEFAULT_HOST else host)
         return GitHubForge(root=cfg.root, transport=transport)
+
+    @staticmethod
+    def _gitlab(cfg: GhConfig) -> ForgeAdapterInterface:
+        # GitLab uses a private token from the platform config.
+        transport = GitLabTransport(
+            host=cfg.platform.host,
+            token=str(getattr(cfg.platform, "token", "")),
+        )
+        return GitLabForge(root=cfg.root, transport=transport)
+
+    @staticmethod
+    def _forgejo(cfg: GhConfig) -> ForgeAdapterInterface:
+        # Forgejo uses a private token from the platform config.
+        transport = ForgejoTransport(
+            host=cfg.platform.host,
+            token=str(getattr(cfg.platform, "token", "")),
+        )
+        return ForgejoForge(root=cfg.root, transport=transport)

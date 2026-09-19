@@ -259,7 +259,12 @@ class BuildImplementHandler:
             )
             if misconfigured is not None:
                 return Park(misconfigured)
-            return Failure(FailureClass.WORK, "engine run did not report completion")
+            if run_outcome.exit_code is None:
+                return Failure(FailureClass.WORK, "engine run did not report completion")
+            return Failure(
+                self._engine.attribute(run_outcome.exit_code, ""),
+                f"engine run did not report completion (exit code {run_outcome.exit_code})",
+            )
 
         repair_finding_id = str(job.payload.get("repair_finding_id", ""))
         if repair_finding_id:

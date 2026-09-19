@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """One way to run `gh`, with each of the three answers the tree already relies on.
 
-The contract is `vibey_gh.interfaces.gh_transport_interface`. Each result shape below is
+The contract is `vibey_gh.interfaces.forge_transport_interface`. Each result shape below is
 the extraction of a runner that exists today, kept to the byte — the error text, the empty
 answer, which exceptions escape — because a module only moves onto this transport safely if
 nothing it returns to its own callers changes when it does:
@@ -25,11 +25,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from vibey_gh.interfaces.forge_transport_interface import ForgeTransportInterface
 from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface, WorkingDirectory
 
 
 @dataclass(frozen=True)
-class GhTransport(GhTransportInterface):
+class GhTransport(GhTransportInterface, ForgeTransportInterface):
     """Runs `executable` on PATH with an argv this process built.
 
     `executable` is the one literal every runner in the package used to repeat. Nothing
@@ -53,8 +54,6 @@ class GhTransport(GhTransportInterface):
         cwd: WorkingDirectory | None = None,
         stdin: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        # `cwd=None`, `input=None` and `env=None` are `subprocess.run`'s own defaults, so a
-        # call that sets none of them is the very call the runners it replaces made.
         return subprocess.run(
             [self.executable, *args],
             cwd=cwd,

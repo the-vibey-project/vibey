@@ -26,10 +26,13 @@ __all__ = [
     "ChangeRequest",
     "CheckResult",
     "ForgeComment",
+    "ForgeIssue",
     "ForgeKind",
     "ForgeLabel",
     "ForgeRelease",
     "ForgeRepository",
+    "ForgeReview",
+    "ForgeUser",
     "ProtectedRef",
 ]
 
@@ -71,6 +74,21 @@ class ChangeRequest:
     head_ref: str
     head_sha: str
     base_ref: str
+    title: str = ""
+    body: str = ""
+    state: str = ""
+
+
+@dataclass(frozen=True)
+class ForgeIssue:
+    """A forge issue. On GitHub, pull requests are also issues; on others, they are distinct.
+    This noun captures the commonality: a number, a title, and a body.
+    """
+
+    number: int
+    title: str = ""
+    body: str = ""
+    state: str = ""
 
 
 @dataclass(frozen=True)
@@ -81,6 +99,26 @@ class ForgeComment:
     id: str
     author: str
     body: str
+
+
+@dataclass(frozen=True)
+class ForgeReview:
+    """A review of a change request. `verdict` is the forge-neutral status (e.g., APPROVED,
+    CHANGES_REQUESTED).
+    """
+
+    id: str
+    author: str
+    verdict: str
+    body: str = ""
+
+
+@dataclass(frozen=True)
+class ForgeUser:
+    """A user on the forge. `login` is the identifier used in API calls."""
+
+    login: str
+    name: str = ""
 
 
 @dataclass(frozen=True)

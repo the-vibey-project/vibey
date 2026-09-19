@@ -352,7 +352,7 @@ def test_any_split_verifies_as_two_chunks_that_agree_with_the_whole(
 class _NewerEventKind(StrEnum):
     """Stands in for a newer vibey's `EventKind`, which has a member this one lacks."""
 
-    TRANSCRIPT_RECORDED = "TranscriptRecorded"
+    TRANSCRIPT_RECORDED = "TranscriptRecordedV2"
 
 
 def test_an_older_vibey_computes_the_same_links_over_a_newer_kind() -> None:
@@ -364,7 +364,7 @@ def test_an_older_vibey_computes_the_same_links_over_a_newer_kind() -> None:
         for e in ledger
     ]
     as_older_reads = [
-        dataclasses.replace(e, kind=UnrecognizedEventKind("TranscriptRecorded"))
+        dataclasses.replace(e, kind=UnrecognizedEventKind("TranscriptRecordedV2"))
         if e.seq == 2
         else e
         for e in ledger

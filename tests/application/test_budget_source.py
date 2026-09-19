@@ -251,7 +251,7 @@ async def test_a_kind_this_vibey_does_not_know_spends_nothing() -> None:
         dataclasses.replace(
             _event(1, EventKind.TURN_COMPLETED, spend), kind=UnrecognizedEventKind(raw)
         )
-        for raw in ("TranscriptRecorded", "CostEstimated", "turncompleted")
+        for raw in ("TranscriptRecordedV2", "CostEstimated", "turncompleted")
     ]
     events = [_event(1, EventKind.BUDGET_SPENT, {"dollars": 0.5, "turns": 1}), *newer]
 

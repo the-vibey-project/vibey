@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
     from datetime import datetime, timedelta
 
     from vibey.domain.ledger import LedgerEvent
@@ -52,6 +52,12 @@ class LedgerSpendRuleInterface(Protocol):
 
     def spend_of(self, event: LedgerEvent) -> PhaseSpendInterface | None:
         """What one event spent, or None if it is not a spend event at all."""
+        ...
+
+    def spend_of_payload(
+        self, kind: str, payload: Mapping[str, object]
+    ) -> PhaseSpendInterface | None:
+        """The same rule for an event not yet persisted to the ledger."""
         ...
 
 

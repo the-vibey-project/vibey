@@ -19,8 +19,6 @@ from vibey.infrastructure.db.migrator import (
     discover_migrations,
 )
 
-from .conftest import TEST_DATABASE_URL
-
 MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "migrations"
 LOCK_KEY = PostgresMigrator.LOCK_KEY
 
@@ -149,9 +147,11 @@ async def test_check_only_mode_still_catches_a_checksum_mismatch(
 
 
 @pytest_asyncio.fixture
-async def other_conn(pg_conn: asyncpg.Connection) -> AsyncIterator[asyncpg.Connection]:
+async def other_conn(
+    pg_conn: asyncpg.Connection, database_url: str
+) -> AsyncIterator[asyncpg.Connection]:
     """A second session on the same (freshly emptied) database: another pod."""
-    conn = await asyncpg.connect(TEST_DATABASE_URL)
+    conn = await asyncpg.connect(database_url)
     try:
         yield conn
     finally:

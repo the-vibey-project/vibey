@@ -31,6 +31,12 @@ from claudeloop.application.interfaces.agent import (
     RunResources,
     SessionCatalog,
 )
+from claudeloop.application.interfaces.class_contracts import (
+    AutonomousRunnerInterface,
+    BackendStatusInterface,
+    ToolCallStatusInterface,
+    TurnOutcomeInterface,
+)
 from claudeloop.application.interfaces.doctor import DoctorEnvironment
 from claudeloop.application.interfaces.observability import (
     AuditLog,
@@ -45,8 +51,10 @@ from claudeloop.application.interfaces.storage import (
 
 __all__ = [
     "AgentGateway",
+    "AutonomousRunnerInterface",
     "ApiGateway",
     "AuditLog",
+    "BackendStatusInterface",
     "CapacityProbe",
     "Clock",
     "ControlInbox",
@@ -65,4 +73,6 @@ __all__ = [
     "Sleeper",
     "StateBus",
     "StreamUi",
+    "ToolCallStatusInterface",
+    "TurnOutcomeInterface",
 ]

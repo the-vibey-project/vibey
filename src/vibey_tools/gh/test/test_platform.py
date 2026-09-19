@@ -169,6 +169,21 @@ def test_the_selector_builds_whatever_adapter_is_registered_for_the_kind(tmp_pat
     assert forge == GitHubForge(root="elsewhere") and built == [cfg]
 
 
+def test_unenabled_platform_factories_still_build_their_injected_seams(tmp_path):
+    from vibey_gh.forge_forgejo import ForgejoForge
+    from vibey_gh.forge_gitlab import GitLabForge
+    from vibey_gh.forgejo_transport import ForgejoTransport
+    from vibey_gh.gitlab_transport import GitLabTransport
+
+    cfg = GhConfig(root=tmp_path)
+    gitlab = ForgeSelector._gitlab(cfg)
+    forgejo = ForgeSelector._forgejo(cfg)
+    assert isinstance(gitlab, GitLabForge)
+    assert isinstance(gitlab.transport, GitLabTransport)
+    assert isinstance(forgejo, ForgejoForge)
+    assert isinstance(forgejo.transport, ForgejoTransport)
+
+
 # --------------------------------------------------------- the host reaches the client
 
 
