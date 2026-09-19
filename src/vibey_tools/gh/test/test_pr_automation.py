@@ -155,6 +155,46 @@ def test_installation_notices_report_missing_secrets(monkeypatch):
     assert any("ANTHROPIC_API_KEY" in item for item in installation_notices())
 
 
+def test_installation_notices_degrade_when_gh_is_not_installed(monkeypatch):
+    """`install` writes every file BEFORE it asks for notices, so a missing `gh` raising
+    FileNotFoundError here turned a finished install into a traceback and exit 1."""
+
+    def missing(*args, **kwargs):
+        raise FileNotFoundError(2, "No such file or directory", "gh")
+
+    monkeypatch.setattr(subprocess, "run", missing)
+    notices = installation_notices()
+    assert "gh not found; skipping secret/permission checks" in notices
+    assert not any("configure repository secret" in item for item in notices)
+
+
+def test_install_finishes_when_gh_is_not_on_path(tmp_path, monkeypatch, capsys):
+    """The reproduction: `vibey-gh install` on a PATH that reaches git but not `gh`.
+
+    A PATH holding only a link to the real git, rather than a literal `/usr/bin:/bin`:
+    GitHub's Ubuntu runners install `gh` into /usr/bin, where that literal would find it.
+    """
+    import shutil
+
+    from vibey_gh.cli import main
+
+    git = shutil.which("git")
+    assert git, "the suite already needs git on PATH"
+    repo, bin_dir = tmp_path / "repo", tmp_path / "bin"
+    repo.mkdir()
+    bin_dir.mkdir()
+    (bin_dir / "git").symlink_to(git)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / ".vibey-gh.toml").write_text("[install]\nworkflows = []\n")
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("PATH", str(bin_dir))
+    assert shutil.which("gh") is None
+    assert main(["install"]) == 0
+    out = capsys.readouterr().out
+    assert "notice: gh not found; skipping secret/permission checks" in out
+    assert (repo / ".githooks").is_dir()
+
+
 @pytest.mark.parametrize(
     "changes,state,reason",
     [
@@ -836,3 +876,96 @@ def test_dedupe_keeps_distinct_checks_and_tolerates_missing_timestamps():
     kept = {c["name"]: c for c in pa.newest_per_name(rollup)}
     assert set(kept) == {"CI", "Provenance"}
     assert kept["CI"]["conclusion"] == "FAILURE"
+
+
+def test_a_finding_only_the_sovereign_lane_made_is_reviewed_again_never_repaired(tmp_path):
+    """Local findings never trigger repair (#133). A split verdict persists whether the
+    paid lane's half failed; when only the sovereign lane's did, the next evaluation of the
+    same head reviews it again -- the behaviour it had while the local model was a fallback
+    whose verdict was never recorded -- and spends no repair attempt."""
+    config = cfg(tmp_path)
+    green = pr(statusCheckRollup=[check()])
+    local_only = pa.AutomationState(
+        "abc", "abc", review_sha="abc", review_passed=False, review_repairable=False
+    )
+
+    decision = pa.evaluate(green, config, expected_sha="abc", stored=local_only)
+
+    assert decision.state == "review"
+    assert "automated repair does not act on" in decision.reason
+    assert decision.repair_attempt == 0
+
+    # A paid finding in a split verdict repairs exactly like any other finding.
+    paid = pa.AutomationState(
+        "abc", "abc", review_sha="abc", review_passed=False, review_repairable=True
+    )
+    assert pa.evaluate(green, config, expected_sha="abc", stored=paid).state == "repair"
+
+
+def test_a_review_records_whether_its_failure_is_repairable():
+    local = pa.updated_state(
+        pr(), {"head_sha": "abc", "pass": False, "repairable": False}, kind="review"
+    )
+    assert local.review_passed is False and local.review_repairable is False
+
+    paid = pa.updated_state(
+        pr(), {"head_sha": "abc", "pass": False, "repairable": True}, kind="review"
+    )
+    assert paid.review_repairable is True
+
+    # A review the paid lane answered whole carries no such field: the old reading stands.
+    whole = pa.updated_state(pr(), {"head_sha": "abc", "pass": False}, kind="review")
+    assert whole.review_repairable is None
+    odd = pa.updated_state(pr(), {"head_sha": "abc", "repairable": "no"}, kind="review")
+    assert odd.review_repairable is None
+
+    # It survives the round trip through the state comment, and a repair clears it.
+    assert pa.parse_state([{"body": pa.state_body(local, "x")}]) == local
+    repaired = pa.updated_state(
+        pr(comments=[pa.state_body(local, "x")]), {"head_sha": "def"}, kind="repair"
+    )
+    assert repaired.review_repairable is None
+
+
+def test_a_self_heal_clears_the_recorded_repairability(monkeypatch, tmp_path):
+    state = pa.AutomationState(
+        "abc", "abc", attempts=3, review_sha="abc", review_passed=False, review_repairable=False
+    )
+    current = pr(labels=[{"name": pa.EXHAUSTED_LABEL}], comments=[pa.state_body(state, "x")])
+    monkeypatch.setattr(pa, "fetch_pr", lambda number: current)
+    monkeypatch.setenv("GH_REPO", "o/r")
+    saved: list = []
+    monkeypatch.setattr(pa, "upsert_state", lambda *a: saved.append(a))
+    monkeypatch.setattr(subprocess, "run", lambda args, **k: completed())
+
+    assert pa.self_heal(12, GhConfig(root=tmp_path, owner="owner"))["healed"]
+    assert saved[0][1].review_repairable is None
+
+
+def test_a_split_review_headlines_both_lanes_summaries(monkeypatch, tmp_path):
+    """The diff half's `summary` is the sovereign lane's words and `wider_summary` the paid
+    lane's; the state comment's headline carries both. A review answered whole reads as it
+    always did."""
+    monkeypatch.setattr(pa, "fetch_pr", lambda number: pr())
+    captured: list = []
+    monkeypatch.setattr(pa, "upsert_state", lambda *a: captured.append(a))
+
+    pa.record(
+        12, {"head_sha": "abc", "summary": "Diff fine.", "wider_summary": "Docs fine."}, "review"
+    )
+    pa.record(12, {"head_sha": "abc", "summary": "Whole review."}, "review")
+    pa.record(12, {"head_sha": "abc"}, "review")
+
+    assert [call[2] for call in captured] == [
+        "Diff fine. Docs fine.",
+        "Whole review.",
+        "Recorded review for `abc`.",
+    ]
+
+
+def test_the_sovereign_job_and_its_old_name_are_both_our_own_checks():
+    """Renamed when it started going first; a pre-upgrade run's check on the same head
+    must still be recognised as this workflow's own bookkeeping, not as a scan."""
+    assert "Sovereign diff review" in pa.OWN_JOBS
+    assert "Local review fallback" in pa.OWN_JOBS
+    assert "PR automation / Sovereign diff review" in pa.OWN_CHECKS

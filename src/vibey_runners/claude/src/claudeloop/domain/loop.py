@@ -16,6 +16,7 @@ from claudeloop.domain.budget import BudgetLedger
 from claudeloop.domain.capacity import (
     AuthenticationFailed,
     Available,
+    BackendMisconfigured,
     CapacityState,
     CreditsExhausted,
     WindowExhausted,
@@ -125,10 +126,9 @@ def decide_preflight(
 ) -> tuple[RunState, Decision]:
     """The very first thing a run does: check whether we're already mid-cooldown
     before spending a real attempt (mirrors preflight_wait() in the legacy script)."""
-    if isinstance(capacity, AuthenticationFailed):
-        return _fail(state, "authentication failed"), Finish(
-            success=False, reason="authentication failed"
-        )
+    terminal = _terminal(state, capacity)
+    if terminal is not None:
+        return terminal
     if isinstance(capacity, Available):
         return RunState(phase=Phase.RUNNING, ledger=state.ledger), SendTurn()
     return _enter_waiting(state, capacity, now=now, config=config)
@@ -152,6 +152,7 @@ def decide_after_turn(
     is guaranteed by placement rather than by a comment:
 
       1. authentication failure    terminal, waiting cannot fix credentials
+         or backend misconfigured  terminal, waiting cannot pull a model either
       2. any real capacity block   a *real* rejection always beats a predicted one
       3. Done                      never turn a completed run into a handoff
       4. Blocked                   a blocked run has nothing to hand over
@@ -164,10 +165,9 @@ def decide_after_turn(
     """
     new_ledger = state.ledger.spend_turn(dollars=dollars)
 
-    if isinstance(capacity, AuthenticationFailed):
-        return _fail(state, "authentication failed"), Finish(
-            success=False, reason="authentication failed"
-        )
+    terminal = _terminal(state, capacity)
+    if terminal is not None:
+        return terminal
 
     if not isinstance(capacity, Available):
         return _enter_waiting(
@@ -209,10 +209,9 @@ def decide_after_probe(
     config: WaitPolicyConfig = DEFAULT_WAIT_POLICY_CONFIG,
 ) -> tuple[RunState, Decision]:
     """Called once a throwaway probe turn has completed while waiting."""
-    if isinstance(capacity, AuthenticationFailed):
-        return _fail(state, "authentication failed"), Finish(
-            success=False, reason="authentication failed"
-        )
+    terminal = _terminal(state, capacity)
+    if terminal is not None:
+        return terminal
     if isinstance(capacity, Available):
         return RunState(phase=Phase.RUNNING, ledger=state.ledger), SendTurn()
     return _enter_waiting(state, capacity, now=now, config=config, is_reprobe=True)
@@ -228,8 +227,9 @@ def _enter_waiting(
 ) -> tuple[RunState, Decision]:
     # Precondition, not a security gate: every caller (decide_preflight,
     # decide_after_turn, decide_after_probe) only reaches _enter_waiting after
-    # excluding Available and AuthenticationFailed, so this is exhaustive by
-    # construction — asserted here to fail loudly if a future caller breaks that.
+    # excluding Available and the terminal states (_terminal), so this is
+    # exhaustive by construction — asserted here to fail loudly if a future
+    # caller breaks that.
     assert isinstance(capacity, (WindowExhausted, CreditsExhausted))  # nosec B101
     started = state.started_waiting_at if is_reprobe and state.started_waiting_at else now
     probe_count = state.probe_count + 1 if is_reprobe else 0
@@ -254,6 +254,22 @@ def _enter_waiting(
         probe_count=probe_count,
     )
     return waiting, ScheduleProbe(at=at)
+
+
+def _terminal(state: RunState, capacity: CapacityState) -> tuple[RunState, Decision] | None:
+    """The Finish for a capacity state no wait can fix, or None to carry on.
+
+    Shared by all three decide_* functions so the terminal set is written once:
+    authentication failure and backend misconfiguration both end the run, and
+    both need a human before it can succeed.
+    """
+    if isinstance(capacity, AuthenticationFailed):
+        reason = "authentication failed"
+    elif isinstance(capacity, BackendMisconfigured):
+        reason = capacity.describe()
+    else:
+        return None
+    return _fail(state, reason), Finish(success=False, reason=reason)
 
 
 def _fail(state: RunState, reason: str) -> RunState:

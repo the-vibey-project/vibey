@@ -1,5 +1,18 @@
 {{- if .Values.keda.enabled }}
 {{- $fullName := include "vibey.fullname" . }}
+{{- /*
+The project the scaled worker serves. Workers claim only their own
+project's jobs (JobRepository.claim: `j.project_id = $3`), so a count taken
+across every project scales up workers for work they will never claim --
+and, the other way round, lets another project's backlog keep this pool
+alive. With worker.project set, that is the project; left empty, the
+worker binds at startup to the newest project (PostgresProjectRepository.get_latest),
+and this mirrors the same ORDER BY so a scaled-up pod and the count agree.
+*/}}
+{{- $project := "(SELECT id FROM project ORDER BY created_at DESC LIMIT 1)" }}
+{{- if .Values.worker.project }}
+{{- $project = printf "'%s'::uuid" (include "vibey.workerProjectHex" .) }}
+{{- end }}
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -37,14 +50,15 @@ spec:
     - type: postgresql
       metadata:
         # The claimable-work query, deliberately identical in spirit to
-        # JobRepository.claim's SELECT arm: ready, due now, and not
-        # blocked behind an unsatisfied dependency. Scaling on total
-        # queue depth instead would spin up workers for jobs nothing can
-        # claim yet.
+        # JobRepository.claim's SELECT arm: ready, due now, in the project
+        # this worker serves, and not blocked behind an unsatisfied
+        # dependency. Scaling on total queue depth instead would spin up
+        # workers for jobs nothing can claim yet.
         query: >-
           SELECT count(*) FROM job j
           WHERE j.state = 'ready'
             AND j.run_after <= now()
+            AND j.project_id = {{ $project }}
             AND NOT EXISTS (
               SELECT 1 FROM job_dependency d
               JOIN job p ON p.id = d.depends_on_job_id

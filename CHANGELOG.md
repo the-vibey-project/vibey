@@ -52,6 +52,74 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   ([#121](https://github.com/the-vibey-project/vibey/issues/121))
 ### Features
 
+* **gh:** the book is a paperback interior, not a printed web page (#162). `book-print.html`
+  now mirrors its margins with the gutter on the binding side, prints a page number at the
+  foot of every body page and none on the front matter, carries each chapter's title as the
+  running head of its recto pages (its nav section's on the verso), opens every nav section
+  with a part page, and sets justified, hyphenated text in the book's declared language with
+  widows and orphans held to three lines. The contents — printed and EPUB — is grouped under
+  the nav's own section headings at any depth, where it used to be one flat column that
+  dropped Guides, Reference, Architecture > Decision records and Governance; chapter titles
+  lose YAML quotes and markdown backticks. The EPUB gains `dc:date`, a landmarks navigation,
+  `xml:lang` on every document, and a `dc:identifier` that is the same for the same book on
+  every build instead of a fresh random UUID. Every physical dimension — trim, margins,
+  gutter, type size, leading, font stacks — is a `vibey-gh book` flag defaulting to the
+  standard KDP 6x9in interior, and the 0.5in default gutter is documented against KDP's
+  page-count tiers.
+* **gh:** the clean-repo survey asks its forge through a forge-neutral adapter, the second
+  slice of the platform abstraction (#138). `vibey_gh.forge` names what vibey-gh talks
+  about in any forge's terms (`ForgeKind`, `ForgeRepository`, `ChangeRequest`,
+  `ForgeComment`, `CheckResult`, `ForgeRelease`, `ForgeLabel`, `ProtectedRef`), and
+  `vibey_gh/interfaces/forge_adapter_interface.py` declares the verbs, each answering
+  `(value, problem)` so a forge that could not be asked never reads as one that said
+  "nothing". `vibey_gh.forge_github.GitHubForge` implements them on the `gh` transport, and
+  `vibey-gh tidy` and `check --ci` now read the open pull request heads and the releases
+  through it, with the same `gh` argv and working directory, which before/after tests prove
+  through one fake `gh`. A new `[platform]` table chooses the adapter (`kind = "github"`,
+  `host = "github.com"`): `gitlab` and `forgejo` are refused at load with "the … adapter is
+  not implemented yet" rather than half-honoured, and a host other than github.com reaches
+  `gh` as `GH_HOST` for GitHub Enterprise Server. The noun vocabulary is proposed in
+  vibey-gh's ADR 0001 and awaits the operator's ratification
+
+### Code Refactoring
+
+* **gh:** one transport for every `gh` call vibey-gh makes, beginning with the shared
+  marker-comment state. `vibey_gh.gh_transport.GhTransport`, declared by
+  `vibey_gh/interfaces/gh_transport_interface.py`, gives the three answers the package's
+  seven private `gh` runners already give — raise, report success as a boolean, or return
+  a problem string — each byte-identical to the runner it replaces. `github_state` now
+  rides on it, and with it every forge call that conversation, PR and issue automation,
+  reconcile, rulesets and flatten make through `github_state`; before/after tests driving
+  the old code and the new through the same fake `gh` on PATH show the same argv, working
+  directory and outcome, so GitHub sees no difference. The first slice of the platform
+  abstraction (#138), which the forge snapshot (#136) and capture (#145) build on
+
+### Features
+
+* **deploy:** the Helm chart (0.2.0) can run an in-cluster Ollama for the sovereign path. `ollama.enabled` (default `false`) adds a weights PVC, a ClusterIP Service on 11434, a single-replica `ollama/ollama:0.34.2` Deployment pinned by index digest and run as uid 10001 with its own security context, an optional `nvidia.com/gpu` limit (`ollama.gpu`), and a Job that `ollama pull`s `ollama.model` (default `qwen2.5-coder:14b`) and is named after a hash of its own pod template, so it re-pulls only when the model, image or endpoint changes. The worker gets `VIBEY_OLLAMA_URL`/`VIBEY_OLLAMA_MODEL`, `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` (with `/v1`) and, unless `ollama.qwenloopFeature=false`, `VIBEY_FEATURE_QWENLOOP=1`, all fully qualified like the DSN; `OLLAMA_CONTEXT_LENGTH` defaults to 32768 because qwenloop runs a 32K context. `worker.extraEnv` is new too. Defaults render byte-for-byte as before apart from the chart label, and a new `chart` CI job lints and diffs five profiles against goldens in `deploy/helm/golden/` (#121)
+* **deploy:** the container image carries `codex`, the CLI codexloop drives, as upstream's static musl build 0.154.0: fetched in the build stage for `dpkg --print-architecture`, checked against a pinned per-architecture sha256 (plus its `LICENSE` and `NOTICE`), and copied into the runtime stage alone — no Node, no npm. The `image` job now asserts `codex --version` prints the pinned version and that `node`, `npm` and `npx` are absent (#121)
+
+### Bug Fixes
+
+* **deploy:** the KEDA ScaledObject counted claimable jobs across every project, while a worker claims only its own (`JobRepository.claim`, `j.project_id = $3`), so another project's backlog scaled up workers that could never claim it. The query is now scoped to `worker.project` when set, and otherwise to the newest project, by the same `ORDER BY created_at DESC` the worker binds with. The ScaledObject's name and labels are unchanged. `worker.project` is validated as a UUID at render time, since it now reaches SQL. `tests/infrastructure/db/test_keda_scaler_query.py` runs the rendered SQL from the goldens against the real schema and asserts it counts exactly what `JobRepository.claim` can take (#121)
+* **gh:** `vibey-gh forge-snapshot --out DIR [--classes …] [--since MOMENT|resume]`, a
+  read-only capture of a GitHub repository's own state into plain files the project owns
+  (#136, slice S1). Issues, comments, change requests, reviews, review comments, labels,
+  milestones, releases with their asset manifests, and tags each go to `DIR/<class>.jsonl`
+  as append-only `vibey.forge-record/1` records: the forge's JSON verbatim in a forge-neutral
+  envelope, sealed with a SHA-256 over the vibey ledger's own canonical form and hash-chained
+  to the record before it. `DIR/manifest.json` gives every class's status, counts, chain head
+  and resume cursor, and names every artifact class it does not capture with the reason. A
+  class the forge could not be asked about is recorded as `could-not-look` and never written
+  as empty. `--since` resumes and continues every chain; content already recorded is never
+  written twice, so a rerun appends nothing. Nothing is written to the vibey ledger yet: that
+  writer (S4) needs #114. Schema: `src/vibey_tools/gh/docs/forge-snapshot.md`
+
+### Bug Fixes
+
+* **worker:** a heartbeat that fails no longer throws away finished work or kills the worker. `_heartbeat_forever` caught only `CancelledError`, so a pool timeout or a Postgres failover ended the task with the exception stored; `run_once` re-raised it from its `finally`, `_settle` never ran — a session that had succeeded was never acked, its lease expired and another worker paid to redo it — and the exception took the worker process down with every parallel drive loop in it. A beat that raises is now said as `job.heartbeat_failed` at warning and retried at the next interval; a beat the queue refuses is said once as `job.lease_lost` and the loop stops beating. The per-kind lease extension right after the claim is guarded the same way and carries on at the default lease. The settle writes stop discarding their answers too: an `ack`, `nack`, `grant_attempts` or `park` refused by the lease guard is said at warning as `job.ack_rejected`, `job.nack_rejected`, `job.grant_rejected` or `job.park_rejected`, the way `job.defer_rejected` already was, and a refused grant skips the nack that would otherwise have failed the job outright. `WorkerLoop` gains its declared seam, `application.interfaces.WorkerLoopInterface` (ADR-0016) ([#211](https://github.com/the-vibey-project/vibey/issues/211))
+### Features
+
 * **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
   pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
   ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
@@ -67,6 +135,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `turn_completed_events` with a caveat beside it
 ### Bug Fixes
 
+* **gh:** `[install] pin_version` pins adopters again. From 1.0.0 `vibey-gh install` rendered a floating `pip install --quiet vibey` for every repository that was not `vibey` itself, so the ten adopters that set the key lost their exact pins without a word. The pin is now the release `vibey-gh` runs from: the repository's own `[project] version` where it IS `[install] fallback_package` (unchanged, so vibey's own workflows render byte-identically); otherwise the installed `fallback_package` release that provides the running `vibey_gh`, read from its metadata, so `uvx --from vibey==X.Y.Z vibey-gh install` renders `"vibey==X.Y.Z"`. An editable or other source-tree install names no release, so it still floats, and `install` and `check` now print a `notice:` saying why. The resolution sits behind `FallbackPinResolver` and `InstalledDistributions`, each with its interface beside it (#259)
+* **gh:** the managed `commit-msg` hook now carries a refusal from the project's own chained `commit-msg.local` out as its exit status. It chained with `[ -x … ] && "…"` and runs without `set -e`, so a project hook that rejected the message was ignored and the commit went ahead. `pre-push` already propagated the status and now says so explicitly with `|| exit $?`
+* **gh:** the `Provenance` workflow takes its promotion shortcut, which skips the per-commit trailer audit, only when the pull request's head repository is this repository. It had matched branch names alone, so a fork pull request from a branch named like the integration branch into the release branch skipped the audit of its commits. The head repository reaches the script through `env:` as `HEAD_REPO`/`THIS_REPO`, never inline
+* **gh:** every `python3` the managed hooks start runs with `PYTHONSAFEPATH=1`, so the top of the working tree is never on the import path and a checked-out branch's own `vibey_gh/` package is not imported and executed in place of the tool. A declared `[install] self_source` still runs, through `PYTHONPATH`. These three change the rendered hooks and `provenance.yml`: adopters see them "out of date" until they re-render with `vibey-gh install`
+
+* **engines:** the per-cycle turn cap (`max_cycle_turns`) now counts real turns. `chatter.assistant` mapped to `TurnCompleted` next to `turn.completed`, so claudeloop and agyloop, under their default `log_chatter=summary`, parked a cycle as `budget_exhausted` at about half its configured turns. Every qwenloop `text_delta` counted as a turn as well. Chatter and stream deltas now map to a new `TranscriptRecorded` event kind, which stays in the ledger for replay but is never counted. qwenloop now writes one `turn.completed` per model call, its only event that counts as a turn, and `chatter.prompt` no longer duplicates `TurnRequested`. codexloop's `turn.failed` still counts, once, as a turn attempt. Dollars were never double counted (#266)
+* **engines:** vibey read claudeloop's capacity only as a `{"state": …}` mapping, but
+  claudeloop writes the class name (`"capacity": "CreditsExhausted"`), so every real
+  claudeloop capacity payload classified as `Available`. Both shapes are read now, and
+  `BackendMisconfigured` is terminal (`AuthenticationFailed`), never credits (#236)
 * **gh:** a mention on a pull request can now reach the "act" path at all. `vibey-gh
   conversation` decided pull-request-ness from `isPullRequest`, a field `gh issue view` does
   not serve (it rejects it), so every thread read as an issue and a trusted request was
@@ -79,6 +157,359 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   fails the command with a clear message rather than answering a different comment. A review
   comment's briefing also carries the file, line and diff hunk it was written on (#145)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+* **gh:** `vibey-gh install` no longer fails with a traceback, after writing every file, on a machine without the GitHub CLI; the secret check degrades to the notice `gh not found; skipping secret/permission checks` (#264)
+* **gh:** `python -m vibey_gh` now runs the CLI; the package had no `__main__` module (#264)
+* **gh:** the docs and the config comment for `[issue_automation] fallback_enabled` now give its real default, `true`: #277 turned both local fallbacks on by default under sub-doctrine 8.a and left them saying "off" (#264)
+* **gh:** `vibey-gh doctor` no longer fails every repository on the starter config (`[install] workflows = ["provenance.yml"]`). The missing-gate check is an error only where `pr-automation.yml` or `merge-train.yml` is installed; a repository that declines both gets an `info` note (#264)
+* **gh:** the sub-doctrine 4.a social-signals section now actually reaches the published site: `release-surfaces.yml` ran the inject step before `properdocs build` created `channel-site/`, so it injected nothing on every deploy (#264)
+* **gh:** the vibey-gh docs now name the local lane's runner by its key, `[pr_automation.fallback] runner_label`, and its default `vibey-local`, instead of `vibey-local-gh`, which is only vibey-gh's own setting (#264)
+### Features
+
+* **gh:** the fit calculus reads a model the runner holds but has not loaded (via
+  `/api/tags` and `/api/show`) instead of calling it the floor, reads the runner that
+  `--base-url` or `VIBEY_OLLAMA_URL` names instead of always 127.0.0.1, and journals to
+  `~/.local/state/vibey-gh/fit.jsonl` by default (`VIBEY_GH_FIT_JOURNAL`, `--journal`,
+  `--no-journal`). Both local-model calls now size their context window through one
+  `ContextSizer`, with unchanged windows. These are prerequisites for wiring the fit loop
+  into live Ollama calls; swap actuation stays refused by design (#135)
+* **build:** a capacity rejection during `build.verify`'s diff review now defers the job as capacity instead of being discarded. `run_and_record` reported `capacity_rejected`, but the verify handler never read it and judged the run on its verdict alone — so a reviewer out of capacity either failed as `WORK` (burning an unrefunded attempt, up to the `attempts_exhausted` park, while `RotationRecordingHandler` left the exhausted engine's circuit closed and kept handing it the same job) or, with a completing verdict in the same run, approved the item outright — the non-negotiable "a capacity rejection always outranks a completion claim" broken both ways. It now returns `Defer(capacity=True)` after `capacity_backoff` (a constructor keyword defaulting to 5 minutes, exactly as on `build.implement`), before any repair finding is resolved or any independence waiver is written, and `BuildVerifyHandler` takes a required `clock` ([#215](https://github.com/the-vibey-project/vibey/issues/215))
+* **build:** gate commands now run isolated and bounded. `SubprocessGateRunner` — which runs `build.verify`'s gates and `git diff`, `build.integrate`'s gates and REVIEW's automated checks — handed every command vibey's whole environment minus `GIT_*`, let it inherit the worker's stdin, and waited on `communicate()` with no timeout, so one hung gate held its job's lease for as long as it hung while the heartbeat kept renewing it. Each command now leads a process group of its own and gets `gates.timeout_seconds` (default 1800); one that overruns is killed with its whole group and fails as exit 124, a failing gate for the repair loop rather than an error. A cancelled run (Ctrl-C, event-loop shutdown) kills and reaps its gate before the cancellation propagates, and the reap itself is bounded by `gates.kill_grace_seconds` (default 5), because asyncio's `wait()` never returns while a descendant that escaped the group still holds the pipes. stdin is `/dev/null`, and output that is not UTF-8 is decoded with replacement characters instead of raising. vibey's own Python environment (`VIRTUAL_ENV`, `PYTHONPATH`, `PYTHONHOME`, its venv's `bin` on `PATH`) is stripped with the same `isolate_python_env` engine sessions use, and the running interpreter's prefix counts as a venv only when it is one, so a system-Python install keeps `/usr/bin`. **Behaviour change:** a gate that found a tool only because it was installed beside vibey — the `ruff`, `bandit` or `pytest` of a development checkout's venv, REVIEW's default `ruff check .` included — no longer finds it and fails with exit 127. Install the tool where the project can reach it, or set `gates.isolate_python_env` to `false` in the project's config record. The worker builds one runner from the project's `gates` object, and a malformed one raises when the worker is built ([#212](https://github.com/the-vibey-project/vibey/issues/212))
+* **infra:** every subprocess vibey kills is now killed with its whole process group and reaped within a bound, by one implementation, `infrastructure/process/reaper.py`'s `ProcessReaper`, which #212's gate runner, the loop-process adapter and the skills-context compiler all use (ADR-0017). The adapter's preflight probes (`<engine> --version`, `<engine> doctor`) and the `vibey-skills` CLI used to kill only the direct child and then wait on it with no bound. On CPython 3.12 that wait does not return while a descendant that escaped into a session of its own still holds the pipes, so a probe or a skills compile with such a descendant hung preflight or the BUILD job for as long as the descendant lived. Measured on 3.12.13: a 0.2 s timeout returned after 5.5 s and 6.0 s, when the escaped `sleep 6` exited. Both now start their child in a session of its own. On a timeout or a cancellation, `SIGKILL` goes to the whole group (ESRCH and macOS's EPERM for a zombie-only group are tolerated), and the reap gives up after a grace, logging `engine_process_not_reaped` (with the engine) or `skills_context_process_not_reaped`. The grace is `skills_context.kill_grace_seconds` (default 5, also declared in the `VibeyProject` CRD's `skillsContext`) and `LoopProcessAdapter.kill_grace_seconds` (default 5; the adapter is built without project config). The engine spawn also stripped `/usr/bin` and `/usr/local/bin` from every engine session on a system Python, because it always treated `sys.prefix` as a venv. It now asks the same `OrchestratorPythonEnv` the gate runner does, which counts the interpreter's prefix only when `sys.prefix != sys.base_prefix`. Gate behaviour, `gates.kill_grace_seconds` and `gate_process_not_reaped` are unchanged ([#283](https://github.com/the-vibey-project/vibey/issues/283))
+
+### Features
+
+* **engines:** local engines are preferred first (sub-doctrine 8.a). A new engine,
+  `claudeloop-local` — the claudeloop binary on a local backend profile
+  (`--profile NAME --preset …`, never `--effort`; cost 0/0; honest ceiling STANDARD) —
+  joins `qwenloop` in a LOCAL tier behind `VIBEY_FEATURE_CLAUDELOOP_LOCAL` /
+  `[features] claudeloop_local`, configured by `[engines.claudeloop_local]` (`profile`
+  default `local`, overridable by `VIBEY_CLAUDELOOP_LOCAL_PROFILE`; `context_window`;
+  `structured_verdict`, off until conformance proves it). BUILD selection runs SWRR within
+  the LOCAL tier and falls back to paid engines only when no local engine is eligible,
+  replacing qwenloop's standby filter; verify still rotates away from the implementer. With
+  a local engine on and no `--provider`, `vibey work` and `vibey worker` run DESIGN and
+  DECOMPOSE on the sovereign providers. Selection is confined to the worker's own pool,
+  so a local engine's health row left over from before its switch was turned off can
+  never be preferred over the engines the worker can actually run. `VIBEY_OLLAMA_URL` is the one local endpoint
+  setting: qwenloop's process now gets `QWENLOOP_BASE_URL=<url>/v1` and `QWENLOOP_MODEL`
+  from it through a new `LoopProcessAdapter.env_overlay`. One resolver,
+  `LocalEngineSettings`, answers "which local engines are on" for bootstrap, `worker`,
+  `work` and `doctor`. New guide: [Local models on Ollama](docs/guides/local-models-ollama.md)
+  ([ADR-0038](docs/architecture/decisions/0038-local-engines-are-preferred-first.md);
+  #236, #115)
+* **engines:** a run that exits 78 (claudeloop's `BackendMisconfigured`: an unreachable
+  local server, a model not pulled or failing to load, a context too small) parks its
+  `build.implement` or `build.verify` job on an `engine_misconfigured` gate naming the
+  engine's `doctor` command, instead of burning its retry ladder on a configuration
+  fault (#236)
+* **helm:** the `VibeyProject` CRD's `engines` enum accepts `qwenloop` and
+  `claudeloop-local`
+* **qwenloop:** qwenloop can now attach to an OpenAI-compatible server that is already running, with Ollama as the main target, instead of spawning llama-server or vllm, so the BUILD lane can run for free on an operator's existing Ollama. Before this change, `qwenloop doctor` exited 1 whenever llama-server and vllm were both missing, and vibey reads that exit as an auth failure, so qwenloop could never be selected on a machine that had only Ollama. Set `QWENLOOP_BASE_URL=http://127.0.0.1:11434/v1` (or pass `--base-url`, or set `base_url` in qwenloop's new TOML config file) and `auto` selects the new `openai-compat` backend. The model name is set explicitly (`QWENLOOP_MODEL`, `--model`, or `model`; the default is `qwen2.5-coder:14b`), and an optional API key is read only from `QWENLOOP_API_KEY`. `doctor` exits 0 only when the endpoint answers and serves the model, and says which check failed otherwise. `run`, `run --storm`, `server start`, and `server status` all use the same backend. qwenloop never starts or stops an attached server, and prints its API key as `<redacted>`. One more fix: vLLM is now launched with `--served-model-name`, so the model name each request sends is one vLLM actually serves ([qwenloop ADR 0003](src/vibey_runners/qwen/docs/architecture/decisions/0003-attach-openai-compatible-endpoint.md))
+### Bug Fixes
+
+* **repo:** the absorbed tenants no longer carry the standalone automation they arrived
+  with (#189). 155 inert files are gone — 117 under the seven non-gh tenants' `.github/`,
+  31 tenant `.githooks/` files and 7 tenant `.vibey-gh.toml` — none of which GitHub or git
+  ever acted on here, and nothing in CI depended on (ADR-0022). 43 of those workflows asked
+  an index for `vibey-gh==X.Y.Z`
+  84 times, against ADR-0037 Decision 2; and because vibey-gh stops at the nearest
+  `.vibey-gh.toml`, any `vibey-gh` command run from inside a tenant loaded that tenant's
+  stale standalone config instead of the repository's. `src/vibey_tools/gh` keeps its own,
+  which is drift-gated.
+### Features
+
+* **design:** sovereign DECOMPOSE — `vibey worker --provider qwenloop` now plans BUILD on
+  the local model (`QwenloopWorkPlanProducer`) instead of the scripted test fake, whose
+  items carried no verification commands. The plan is decoded under a JSON schema whose
+  criterion ids are an enum of the spec's own, every item must carry a verification
+  command and a checked criterion, dependencies must precede their dependents, and a plan
+  that breaks any rule is refused whole rather than partly enqueued. Decoders are shared
+  with the claudeloop producer (`design_json.WorkPlanDecoder`) (#115)
+* **design:** one configurable Ollama client for both sovereign providers —
+  `VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`, `http`/`https` only),
+  `VIBEY_OLLAMA_MODEL` (default `qwen2.5-coder:14b`, overridden by `--ollama-model` on
+  `vibey work` and `vibey worker`) and `VIBEY_OLLAMA_TIMEOUT` (default 900 s) replace
+  values that were hard-coded in the DESIGN provider (#115)
+
+### Bug Fixes
+
+* **design:** a research topic the sovereign provider cannot source now parks a
+  `research_evidence` human gate on its first attempt, naming the topic, the evidence
+  file it wants and `VIBEY_EVIDENCE_DIR`. It used to fail as a generic error, retry six
+  times with backoff, and then park an `attempts_exhausted` gate asking for more attempts
+  that could never succeed. `SovereignResearchUnavailable` moved to `vibey.domain.errors`
+  so the handler can catch it (#115)
+* **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
+  pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
+  ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
+  that left it, ordered by `seq`, the wall-clock time between them, and what the visit spent
+  by the budget brake's own rule, now published in the domain as `LedgerSpendRule`. Visits
+  roll up per `(cycle, phase)`, because a phase can be visited twice in one cycle. The
+  projection predicts nothing, and it never passes a guess off as a measurement. An open
+  visit has no duration. A visit whose recorded clocks run backwards is clamped to zero and
+  flagged `clock_skewed`. A visit whose entry the range never saw is flagged too. Only a
+  visit that is none of these counts as `measured`. Spend that no visit can own is reported
+  as `unattributed` instead of being dropped. There is no turn count: engine translation
+  writes more than one `TurnCompleted` per real turn, so the projection reports
+  `turn_completed_events` with a caveat beside it
+### Bug Fixes
+
+* **ci:** root CI now runs each workspace tenant's own static gates (#263). Until now the `tools` matrix ran only the runners' suites and coverage floors; their `mypy --strict`, `lint-imports` and `bandit` lived only in nested workflows, which GitHub never reads. A row's new `static` key runs them from the tenant's directory, against its own configuration, on its floor row: agyloop, claudeloop (on 3.10, plus its skill-frontmatter check), cursorloop, qwenloop, vibey-runners-common (a new static-only row) and vibey-bootstrap (its own pre-commit hook's mypy and `bandit -ll`). codexloop gets its own full matrix back: every gate on ubuntu and macOS, 3.12 and 3.13. A `docs` key restores the strict docs builds that agyloop, codexloop (properdocs) and vibey-skills (mkdocs, with its page-count check) ran in their own CI. `tests/meta/test_tools_matrix_covers_every_package.py` derives from each tenant's pyproject which gates it configures, and fails when no CI command runs one
+* **runners-common:** `lint-imports` had never evaluated either of vibey-runners-common's contracts. `root_package = "vibey_runners.common"` is not top-level, so grimp raised NotATopLevelModule and lint-imports exited 1 before evaluating anything. It is now rooted at `vibey_runners`, and both contracts catch a planted violation (#263)
+* **imports:** the `interfaces-declare-only` contract bound nothing inside `vibey.application`: `application/interfaces` could import `worker`, `job_dispatcher` or any other consumer, and the contract still reported KEPT. It now forbids `vibey.application.*`, with `design` and `dto` allowed as the vocabulary seams name. The new `tests/meta/test_import_contracts_bind.py` fails any import-linter configuration in the tree that has a dotted root, a forbidden module overlapping its source (the parent-package form that skips every pair), or a forbidden module that does not exist (#263)
+* **skills:** `tools/check_links.py` checked none of the 179 repository links in vibey-skills' Markdown. It matched only `/blob/main/` and resolved paths against the skills folder, while every self-link is monorepo-relative and points at `develop`. It now matches any ref: a long-lived branch named in the root `.vibey-gh.toml` `[branches]` resolves against the repository root, and any other ref is reported rather than skipped. It is a class with an interface beside it (ADR-0016), and new unit tests cover it (#263)
+* **docs:** the image contracts are named rather than counted in `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `CONTRIBUTING.md`, the `vibey-quality-gates` skill in all four agent trees, ADR-0019, runbook 05 and `docs/project.mmd`. Every one of them said four; `ci.yml` has had five since #234 (#263)
+* **paper:** `docs/paper.md` is now the family's one paper. It absorbs the theses of the runner, `vibey-gh`, `vibey-skills` and `vibey-bootstrap` papers (checked against the code, which had drifted from several of them) and drops the "companion paper" framing. A new section, *Production rate and governance*, states the measured regularity behind #192 — on one machine, successful throughput stayed between 0.99 and 2.00 generations per minute while offered concurrency rose sixteen-fold — as a band, not a constant or a law, with its modulators, the zero-shortfall time-to-completion it predicts, and what would falsify it. The 61-generation, `1.4 ± 0.25`/min figures it replaces matched nothing in the tracked stress record. `scripts/paper_evidence.py` recomputes every number from the record and git history, and `tests/meta/test_paper_renders.py` guards the renderer's line-at-a-time rule, which had printed three of the old paper's formulas as literal TeX ([#192](https://github.com/the-vibey-project/vibey/issues/192), [#155](https://github.com/the-vibey-project/vibey/issues/155))
+* **gh:** a mention on a pull request can now reach the "act" path at all. `vibey-gh
+  conversation` decided pull-request-ness from `isPullRequest`, a field `gh issue view` does
+  not serve (it rejects it), so every thread read as an issue and a trusted request was
+  never allowed to change a file. It is now read from the thread's `url` (`.../pull/N`), in
+  one place, `ConversationThread.is_pull_request` (#145)
+* **gh:** a mention in an inline pull-request review comment is the comment evaluated. Review
+  comments are not in `gh issue view`'s thread, so the command silently fell back to the
+  newest issue-level comment and answered that instead. The ID is now resolved through the
+  pull request review API and checked against the pull request; an ID that names nothing
+  fails the command with a clear message rather than answering a different comment. A review
+  comment's briefing also carries the file, line and diff hunk it was written on (#145)
+* **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+* **gh:** the automation-bootstrap recovery path could never merge. It waited on six
+  literal check names — `Documentation contract`, `Provenance`, `Build`, `Lint`,
+  `Analyze Python`, and the parity check — five of which never report here, and `Build`,
+  `Lint` and the parity check came only from vibey-gh's own hand-written workflows, so the
+  emergency path failed closed for every adopter exactly when it was needed. Its scope check
+  assumed the standalone layout too, and `gh pr diff` reports repository-root paths, so
+  every `src/vibey_tools/gh/…` file was refused. Both are now rendered from configuration:
+  the gates are `[rulesets.integration] required_checks` less
+  `[pr_automation] ignored_checks` and the gate the path routes around (`["gates"]` here),
+  and the scope is anchored at `[install] self_source`. Still fail-closed — an empty list,
+  an absent gate or any red check refuses the merge, and the error names what is absent
+  ([#214](https://github.com/the-vibey-project/vibey/issues/214))
+* **briefing:** the deterministic floor brief carries every decision the no-loss gate still
+  counts open. It chose decisions by the decision log's `superseded_by`, which records whether
+  an id was EVER named by a supersede, whatever the order, so a decision recorded after the
+  supersede naming it -- or reinstated after being superseded -- was dropped while R3, which
+  reads `open_items`, still required it: the floor that is lossless by construction failed its
+  own gate, so a handoff through `DeterministicBriefProducer` (the production default) spent
+  its three STRICT attempts on the same brief and escalated to full-transcript mode. It now
+  takes the ids from `open_items` and only the wording from the log. Found by the widened
+  no-loss suite
+  ([#213](https://github.com/the-vibey-project/vibey/issues/213))
+
+### Features
+
+* **noloss:** the no-loss property suite runs the 10,000 adversarial examples the definition
+  of done asks for, and they are adversarial. It ran Hypothesis' default 100 over a space of
+  256 ledgers (four counts from 0..3, sequential ids, every kind contiguous), so a larger
+  `max_examples` alone would have stopped at the space's edge; its adversarial check was four
+  `parametrize` cases; and its expected brief came from the same `open_items` the gate uses,
+  so it graded the gate with the gate's own answer key. The ledgers now have arbitrary ids
+  from one shared pool, every kind interleaved, answers, resolutions and supersedes, several
+  verdicts, and a presentation order unrelated to seq; the expectation comes from an
+  independent reference model (`tests/domain/test_noloss_reference.py`); and the adversarial
+  property drops a random subset of what the brief owes and requires every dropped item named
+  under its own rule, and nothing else. A `noloss` Hypothesis profile (10,000 examples, no
+  deadline) and marker drive the new required CI check `No-loss property suite (10,000
+  examples)` on both branches, which prints Hypothesis' statistics on every run
+  ([#213](https://github.com/the-vibey-project/vibey/issues/213))
+* **governance:** the protected tests are protected by something. The no-loss suite, the
+  chaos test, the full-cycle system test and `tests/live/` were guarded only by a refusal in
+  the dormant `scripts/fleet/land.sh`, which targets repositories that no longer exist. A
+  root `.github/CODEOWNERS` now owns them (and itself), both rulesets set
+  `require_code_owner_review = true`, and `[merge_train] protected_paths` makes the merge
+  train refuse such a pull request as "needs a human merge" before its `--admin` fallback
+  could bypass that review; `tests/meta/test_protected_paths_agree.py` keeps the two lists
+  identical. The ruleset keys take effect on the operator's next `vibey-gh reconcile`
+  ([#213](https://github.com/the-vibey-project/vibey/issues/213))
+### Features
+
+* **gh:** the exact-head review's `--json-schema` is rendered from
+  `ReviewContract.json_schema()` instead of hand-written in `pr-automation.yml`, so the
+  schema the paid reviewer answers and the diff-groundable / wider-context split the local
+  lane uses are one table. The rendered schema is byte-identical to the literal it replaces;
+  this is groundwork for putting the sovereign lane first on the half it can carry (#133,
+  slice 1 of 3)
+* **gh:** the sovereign review lane now goes FIRST on the half of the review it can carry
+  (sub-doctrine 8.a, #133). With a fresh heartbeat, `review-sovereign` (formerly
+  `review-fallback`) reviews the exact-head diff on the operator's own runner before the
+  paid review; for a trusted same-repository author its verdict carries `pass`, `summary`
+  and `findings`, and the paid reviewer is handed only the sixteen documentation-contract
+  judgments plus its own `wider_summary` / `wider_findings`. `vibey-gh pr-automation
+  combine` composes the one verdict the gate reads, recording which lane carried each field,
+  and replaces the `jq` that listed the sixteen judgments by name; the gate names the lane
+  behind each half. A local finding never triggers automated repair. With no heartbeat the
+  workflow behaves exactly as before, and with no API credit exactly as the local fallback
+  did — both pinned by a golden capture of the previous gate. `local-review` gains
+  `--role sovereign|fallback` (#133, slice 2 of 3)
+
+### Bug Fixes
+
+* **gh:** the PR automation gate can now say "local fallback found a blocking defect". The
+  `review-fallback` job counted its findings but never declared the count as a job output,
+  so the gate always read an empty string and reported every local decline as "could not
+  complete the review", pointing away from a finding that sat in the job log. The paid
+  review job's `findings` output, declared but never written, is now written too (#133)
+* **ledger:** ledger readers are forward compatible with event kinds a newer vibey wrote. Every reader parsed `event.kind` with `EventKind(...)`, a closed enum, so during a rolling upgrade or after a rollback one row of a new kind (#270's `TranscriptRecorded` is the first) raised `ValueError` in every older worker that read the project, and the fleet died one lease at a time. Now the shared `EventRowMapper` reads an unknown kind as `UnrecognizedEventKind` carrying the stored text: kept in every range, in the full ledger handed to the next engine (byte for byte what a newer vibey writes) and in `digest_range` (R6 unchanged), skipped by every projection, the gate, the budget brake and the dashboard, and never written. `vibey ledger show --kind` and `vibey ledger search --kind` match a kind they do not know exactly as written and say so on stderr; `EventKindResolver(accept_unrecognized=False)` keeps the old refusal. Must land before #270 and any other new `EventKind` member (#275)
+* **domain:** forward-compatible readers for closed vocabularies across database columns. Readers of `engine_id`, `phase`, `provenance`, `job.state`, and `circuit` parse rows into enum members or `UnrecognizedValue` instances rather than crashing with `ValueError` on rows written by newer versions. Older workers keep unrecognized values in storage without mutation and skip domain projections that require known semantics, while writers remain strictly validated. Must land before #281 adds `claudeloop-local` (#287)
+
+### Features
+
+* **claudeloop:** backend profiles — run claudeloop for free against Ollama, or any server
+  that speaks the Anthropic Messages API, with `--profile NAME` / `CLAUDELOOP_PROFILE` and a
+  `[profiles.NAME]` table carrying `base_url` and three model tiers. Claude Code still runs
+  the agent loop; only the model behind it moves. A local profile blanks
+  `ANTHROPIC_API_KEY` so a paid key never leaves the machine, refuses `claude-*` model ids
+  and web search / deep research (neither exists there), records every turn at $0 — Claude
+  Code prices a model it does not recognise at its default model's rate, a live run showed
+  $0.0008365 for one free `qwen2.5-coder:1.5b` turn, and that guess used to reach
+  `--max-budget-usd`, the 80% budget downgrade and the supervisor's brake — while keeping
+  token counts, and applies the same environment to the capacity probe, which otherwise
+  still asked Anthropic. Run meta records the backend, and `resume` refuses a session last
+  run on another one. A backend that cannot serve the run — unreachable, model not pulled,
+  model failed to load, context window too small for Claude Code's prompt — is a new
+  terminal `BackendMisconfigured` capacity state that exits
+  78 instead of being read as `Available` and re-sent turn after turn; a full local queue
+  (HTTP 503) waits as `WindowExhausted(rate_limit_type="local")`. `claudeloop doctor
+  --profile NAME` checks the token, that the endpoint answers, that every model the
+  profile names is present, and that each tier makes real tool calls — the live smoke run
+  found `qwen2.5-coder:14b` on Ollama writing its tool calls as text, typing the done
+  marker, and "completing" a task it never did, so a local profile also turns off the
+  done-marker fallback (`done_marker_fallback = false`): only a structured verdict ends a
+  local run ([local backend guide](src/vibey_runners/claude/docs/guides/local-backend.md), #236)
+
+### Bug Fixes
+
+* **claudeloop:** `claudeloop resume` exits 75 on a deliberate wind-down, as `run` always
+  has, instead of printing "Run failed" and exiting 1 — a supervisor could not tell a
+  handoff from a failure without parsing text. Both commands now share one exit-status map
+* **claudeloop:** `doctor` no longer fails a machine with no `claude` on `PATH`: it falls
+  back to the CLI bundled inside claude-agent-sdk, which is the one the SDK launches anyway,
+  and uses it for the login and MCP checks too (#121, slice S1b)
+* **claudeloop:** a model the backend does not have (`model_not_found`, on any backend) now
+  ends the run with exit 78 instead of re-sending the turn until the turn budget ran out
+* **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
+  pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
+  ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
+  that left it, ordered by `seq`, the wall-clock time between them, and what the visit spent
+  by the budget brake's own rule, now published in the domain as `LedgerSpendRule`. Visits
+  roll up per `(cycle, phase)`, because a phase can be visited twice in one cycle. The
+  projection predicts nothing, and it never passes a guess off as a measurement. An open
+  visit has no duration. A visit whose recorded clocks run backwards is clamped to zero and
+  flagged `clock_skewed`. A visit whose entry the range never saw is flagged too. Only a
+  visit that is none of these counts as `measured`. Spend that no visit can own is reported
+  as `unattributed` instead of being dropped. There is no turn count: engine translation
+  writes more than one `TurnCompleted` per real turn, so the projection reports
+  `turn_completed_events` with a caveat beside it
+### Bug Fixes
+
+* **build:** `build.decompose` can no longer enqueue part of a plan. The fan-out used to enqueue items one transaction at a time and only noticed a forward dependency, or a cycle, on reaching it, with every earlier item already committed; a retry then asked the producer again and could orphan or duplicate them. The whole plan is now judged before anything is enqueued (`DecompositionPlanner`, which also refuses dependency cycles and names each one), a sound plan is put into dependency order instead of being refused for its listing order, and the fan-out is one transaction through the new `JobRepository.enqueue_batch`, whose requests name in-batch dependencies by idempotency key (`EnqueueRequest.depends_on_keys`). A replay after a crash mid-batch writes exactly one job per item; a replay after the commit returns the committed fan-out without asking the producer for a second plan (#265)
+* **gh:** a mention on a pull request can now reach the "act" path at all. `vibey-gh
+  conversation` decided pull-request-ness from `isPullRequest`, a field `gh issue view` does
+  not serve (it rejects it), so every thread read as an issue and a trusted request was
+  never allowed to change a file. It is now read from the thread's `url` (`.../pull/N`), in
+  one place, `ConversationThread.is_pull_request` (#145)
+* **gh:** a mention in an inline pull-request review comment is the comment evaluated. Review
+  comments are not in `gh issue view`'s thread, so the command silently fell back to the
+  newest issue-level comment and answered that instead. The ID is now resolved through the
+  pull request review API and checked against the pull request; an ID that names nothing
+  fails the command with a clear message rather than answering a different comment. A review
+  comment's briefing also carries the file, line and diff hunk it was written on (#145)
+* **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+* **build:** a capacity rejection during `build.verify`'s diff review now defers the job as capacity instead of being discarded. `run_and_record` reported `capacity_rejected`, but the verify handler never read it and judged the run on its verdict alone — so a reviewer out of capacity either failed as `WORK` (burning an unrefunded attempt, up to the `attempts_exhausted` park, while `RotationRecordingHandler` left the exhausted engine's circuit closed and kept handing it the same job) or, with a completing verdict in the same run, approved the item outright — the non-negotiable "a capacity rejection always outranks a completion claim" broken both ways. It now returns `Defer(capacity=True)` after `capacity_backoff` (a constructor keyword defaulting to 5 minutes, exactly as on `build.implement`), before any repair finding is resolved or any independence waiver is written, and `BuildVerifyHandler` takes a required `clock` ([#215](https://github.com/the-vibey-project/vibey/issues/215))
+* **cli:** `vibey cost` prints the budget caps the brake actually enforces. It read a `budget`
+  table that nothing writes and printed $40.00 per cycle and $250.00 total whatever the
+  project's `--max-cycle-dollars` was, and took its spend from `engine_health`, which reads
+  $0. It now shows the stored `max_cycle_dollars` / `max_cycle_turns` (or `none (uncapped)` /
+  `none`) through `LedgerBudgetSource.caps_from_config`, the one parser the worker's brake
+  also uses, and the cycle's ledger spend (DESIGN included) from the brake's own sum. The
+  lifetime cap line is gone because nothing enforces one, and the per-engine count is labelled
+  `selections`, not `turns`. The shared parser also stops reading a stored `true` as a
+  one-turn or one-dollar cap ([#210](https://github.com/the-vibey-project/vibey/issues/210))
+* **engines:** engine health records what each engine spent and when it failed. The cost
+  column that `vibey engines`, `vibey status` and the dashboard show read $0.00 forever,
+  because `record_selection` took a `cost_usd` its one caller never passed. Each
+  `build.implement` and `build.verify` job now writes through a per-job `SpendMeteringLedger`
+  that forwards every event unchanged and sums spend by `LedgerSpendRule`, and
+  `RotationRecordingHandler` charges the total to the selected engine with the new
+  `EngineHealthService.record_spend` however the job ends, even if its handler raises. The
+  column is BUILD-session spend and accumulates across cycles; `vibey cost` keeps the cycle
+  total on the ledger and now labels the per-engine rows `BUILD sessions, all cycles`.
+  Failures were half-missing too: an incomplete run's non-zero exit is now attributed by the
+  adapter (`attribute`), so a runner killed or timed out (137, -9, 124) is an `ENGINE`
+  failure where both handlers hard-coded `WORK`, and the new `record_failure` opens the
+  circuit after 3 consecutive failures (`EngineFailurePolicy`, configurable) while setting
+  `probe_next_at` (5 minutes, doubling to 30), so the engine half-opens for a probe rather
+  than leaving rotation for good. `LedgerBudgetSource` now applies `LedgerSpendRule` instead
+  of its own copy, and the shared rule no longer counts a `bool` as a dollar or a turn
+  ([#209](https://github.com/the-vibey-project/vibey/issues/209))
+### Features
+
+* **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
+  pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
+  ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
+  that left it, ordered by `seq`, the wall-clock time between them, and what the visit spent
+  by the budget brake's own rule, now published in the domain as `LedgerSpendRule`. Visits
+  roll up per `(cycle, phase)`, because a phase can be visited twice in one cycle. The
+  projection predicts nothing, and it never passes a guess off as a measurement. An open
+  visit has no duration. A visit whose recorded clocks run backwards is clamped to zero and
+  flagged `clock_skewed`. A visit whose entry the range never saw is flagged too. Only a
+  visit that is none of these counts as `measured`. Spend that no visit can own is reported
+  as `unattributed` instead of being dropped. There is no turn count: engine translation
+  writes more than one `TurnCompleted` per real turn, so the projection reports
+  `turn_completed_events` with a caveat beside it
+
+### Features
+
+* **gh:** `vibey-gh estimate --operation STAGE [--from STAGE] [--json]`, the first slice of
+  the feasibility engine (#134). It judges the paper's six-materials state vector at every
+  stage a run must pass. That vector has eighteen coordinates, each a value on 0..1 where
+  1 is peak, or `unknown`, and each carries its source and measurement time. Feasibility
+  is three-valued: a measured shortfall anywhere on the path is `no`, and an unmeasured
+  coordinate can never produce `yes`. Agency shortfalls are listed first. The nine
+  default stages, install through main-validation, and their requirement vectors are
+  data that the new `[estimate]` section can replace. The fit calculus measures hardware
+  and software availability, and the other sixteen coordinates are reported as `unknown`,
+  which lowers the reported confidence. The local model's service time is projected from
+  the fit journal. The stages' duration, the cost and the repair gradient are reported as
+  `unknown`, each with its reason. The command is offline by default and exits 0, 1 or 3
+  for yes, no or unknown. It is a capability on all five surfaces
+* **gh:** one graded estimator, `vibey_gh.estimation` (#88, #134). The fit calculus's
+  least squares now lives there, behind `GradedEstimatorInterface`: observations go in,
+  and a prediction comes out with its basis and `n`, which can then be graded against
+  the actual result. `fit.estimate_from` wraps it, and 400 randomized cases confirm its
+  constants are identical to before. `vibey_gh` now ships `py.typed`, so `src/vibey` can
+  import it under `mypy --strict`. That makes it ready for the vibey-side forecast, which
+  is the follow-up that will combine it with `PhaseTiming`
+### Features
+
+* **ledger:** `vibey ledger export PROJECT --out FILE` publishes a project's ledger as a
+  shard the repository commits, and `vibey ledger site --from FILE --out DIR --json-only`
+  builds its static JSON surface with no database: `records/<event_id>.json`, an
+  `index.json` for client-side search (id, seq, kind, phase, actor, time, digest, tokens)
+  and a `manifest.json` (seq range, `digest_range`, the ledger's chain head, `holds`,
+  `tier`, and every withheld count). What is published is a read-time projection through
+  a default-deny policy (`domain/publication_policy.py`): allowlisted kinds and fields
+  only, engine chatter and `untrusted` events withheld whole, absolute paths and email
+  addresses stripped, `repo_path` never published, credential redaction last — and every
+  event, field, path, address and credential withheld is counted, never silently dropped.
+  Site output is deterministic and HTML-inert. See
+  [What gets published](docs/guides/ledger-publication.md). Slices S3 and S4 of
+  sub-doctrine 7.a, the searchable ledger (#137)
+* **ledger:** `vibey ledger search` finds ledger records by record id (`--id`), payload digest
+  (`--digest`, which names a payload, so it can match several records), actor (`--actor`: an
+  engine id, a provenance, or `vibey` for events vibey wrote itself), time window
+  (`--since`/`--until`, half-open, ISO-8601), any of several kinds (repeatable `--kind`), and
+  literal case-insensitive text in the payload (`--text`), scoped to one project. Every
+  criterion and the `--limit` run in SQL as one parameterised statement — nothing typed reaches
+  the SQL text — and the result says when older matches were cut; `--json` prints every field
+  of every event. Migration 0012 adds the digest, production-time and per-engine indexes the
+  search reads. The first slice of sub-doctrine 7.a, the searchable ledger (#137)
+* **ledger:** the ledger has a hash chain, derived from the rows rather than stored beside them
+  (`domain/ledger_chain.py`). Each event's link is the SHA-256 of the previous link and every
+  stored field of the event, from a per-project genesis; `verify` walks a whole ledger or a
+  window from a trusted link, recomputes each payload's digest, and reports every gap,
+  duplicate, foreign event, digest mismatch and disagreeing anchor rather than the first one.
+  A window verifies alone from the link before it, which is what the storage tiers' chunk
+  hashes will fold over (#114, #137)
 
 ## [0.8.0] (2026-09-16)
 

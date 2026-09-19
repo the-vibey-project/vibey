@@ -19,8 +19,14 @@ def _sh(cwd: Path, *args: str) -> str:
     ).stdout
 
 
+# The two forge reads the survey makes, exactly as `gh` receives them. The fake answers
+# nothing else, so a command line that drifted gets no answer and the survey says so.
+PR_HEADS = "pr list --json headRefName --limit 200"
+RELEASES = "release list --json tagName,name,isDraft --limit 100"
+
+
 @pytest.fixture()
-def repos(tmp_path: Path, monkeypatch):
+def repos(tmp_path: Path, fake_gh):
     """A local clone with an `origin`, one merged branch, one gone-upstream branch,
     one live open-PR head, a stash, an untracked file, and an orphan tag."""
     origin = tmp_path / "origin.git"
@@ -83,27 +89,16 @@ def repos(tmp_path: Path, monkeypatch):
     (work / "a.txt").write_text("stashable\n")
     _sh(work, "stash", "push", "-q", "-m", "keep me")
 
-    # gh is stubbed: one open PR (pr-head), one draft release
-    def fake_gh(cmd, cwd=None, capture_output=True, text=True, check=False):
-        class R:
-            returncode = 0
-            stdout = ""
-
-        r = R()
-        if cmd[:3] == ["gh", "pr", "list"]:
-            r.stdout = '[{"headRefName": "pr-head"}]'
-        elif cmd[:3] == ["gh", "release", "list"]:
-            r.stdout = '[{"tagName": "v9.9.9-draft", "isDraft": true}, {"tagName": "v1.0.0", "isDraft": false}]'
-        return r
-
-    real_run = subprocess.run
-
-    def router(cmd, **kw):
-        if cmd and cmd[0] == "gh":
-            return fake_gh(cmd, **kw)
-        return real_run(cmd, **kw)
-
-    monkeypatch.setattr(tidy.subprocess, "run", router)
+    # gh is a real process on PATH (`FakeGh`): one open PR (pr-head), one draft release
+    fake_gh.script(
+        {
+            PR_HEADS: {"out": '[{"headRefName": "pr-head"}]'},
+            RELEASES: {
+                "out": '[{"tagName": "v9.9.9-draft", "isDraft": true},'
+                ' {"tagName": "v1.0.0", "isDraft": false}]'
+            },
+        }
+    )
     cfg = GhConfig(root=work)
     return work, cfg
 

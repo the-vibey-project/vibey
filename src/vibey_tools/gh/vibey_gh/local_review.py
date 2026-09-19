@@ -27,6 +27,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from vibey_gh.fit import ContextSizer
+from vibey_gh.interfaces.context_sizer_interface import ContextSizerInterface
 from vibey_gh.review_contract import REVIEW_CONTRACT
 
 # What the model is actually asked to decide. Kept small on purpose: every field here is
@@ -63,6 +65,11 @@ REVIEW_SCHEMA = {
 # live in `vibey_gh.review_contract`; this is the name the local path knows them by.
 UNEVALUATED_FIELDS = REVIEW_CONTRACT.requires_wider_context
 
+# The context window both local calls ask for when their caller does not choose one. One
+# instance for both, so the review and the triage cannot size the same prompt differently;
+# the rule itself, and why it exists, is `vibey_gh.fit.ContextSizer`.
+CONTEXT_SIZER: ContextSizerInterface = ContextSizer()
+
 SYSTEM_PROMPT = """\
 You are a code reviewer examining a pull request diff. You are a FALLBACK reviewer running \
 because the primary reviewer was unavailable, so your job is to catch clear, demonstrable \
@@ -88,20 +95,6 @@ reason is not a bug. Report a leaked credential only when a literal secret VALUE
 the diff.
 - Keep the summary to one or two sentences describing what the change does and your verdict.
 """
-
-
-def _num_ctx(prompt_chars: int) -> int:
-    """A context window that actually fits the prompt.
-
-    Ollama loads models with a small default context (4096 tokens here). Sending a
-    60,000-character diff into that does not error: llama.cpp repeatedly shifts the
-    window instead, and generation degrades from seconds to never-finishes — observed in
-    production as the fallback timing out at 600s and then 1800s on a 717-line diff a
-    10,000-character slice of which reviewed in 17 seconds. Code tokenizes at roughly
-    3 characters per token; 2048 covers the system prompt, schema and response. Capped
-    because an enormous request should fail visibly rather than exhaust the host.
-    """
-    return min(32768, max(4096, prompt_chars // 3 + 2048))
 
 
 def build_prompt(diff: str, max_chars: int) -> str:
@@ -132,7 +125,17 @@ def _post(request: urllib.request.Request, timeout: int):
     return urllib.request.urlopen(request, timeout=timeout)  # nosec B310
 
 
-def call_ollama(base_url: str, model: str, diff: str, max_chars: int, timeout: int) -> dict:
+def call_ollama(
+    base_url: str,
+    model: str,
+    diff: str,
+    max_chars: int,
+    timeout: int,
+    *,
+    sizer: ContextSizerInterface | None = None,
+) -> dict:
+    """One review request. `sizer` chooses `num_ctx`; the default is `vibey_gh.fit`'s
+    `ContextSizer`, the same rule the triage call uses."""
     payload_prompt = build_prompt(diff, max_chars)
     payload = {
         "model": model,
@@ -146,8 +149,11 @@ def call_ollama(base_url: str, model: str, diff: str, max_chars: int, timeout: i
         "stream": False,
         # Deterministic-ish. A review that flips verdict between runs on an unchanged head
         # is worse than useless when it gates a merge. num_ctx because the server's default
-        # window is far smaller than the diffs this reviews; see _num_ctx.
-        "options": {"temperature": 0, "num_ctx": _num_ctx(len(payload_prompt))},
+        # window is far smaller than the diffs this reviews; see `fit.ContextSizer`.
+        "options": {
+            "temperature": 0,
+            "num_ctx": (sizer or CONTEXT_SIZER).num_ctx(len(payload_prompt)),
+        },
     }
     request = urllib.request.Request(
         f"{base_url.rstrip('/')}/api/chat",
@@ -262,8 +268,15 @@ def build_triage_prompt(issue_text: str, max_chars: int) -> str:
 
 
 def call_ollama_triage(
-    base_url: str, model: str, issue_text: str, max_chars: int, timeout: int
+    base_url: str,
+    model: str,
+    issue_text: str,
+    max_chars: int,
+    timeout: int,
+    *,
+    sizer: ContextSizerInterface | None = None,
 ) -> dict:
+    """One triage request, its context window sized exactly as `call_ollama` sizes one."""
     payload_prompt = build_triage_prompt(issue_text, max_chars)
     payload = {
         "model": model,
@@ -273,7 +286,10 @@ def call_ollama_triage(
         ],
         "format": TRIAGE_SCHEMA,
         "stream": False,
-        "options": {"temperature": 0, "num_ctx": _num_ctx(len(payload_prompt))},
+        "options": {
+            "temperature": 0,
+            "num_ctx": (sizer or CONTEXT_SIZER).num_ctx(len(payload_prompt)),
+        },
     }
     request = urllib.request.Request(
         f"{base_url.rstrip('/')}/api/chat",
