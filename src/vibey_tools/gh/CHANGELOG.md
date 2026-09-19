@@ -5,6 +5,12 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Fix `vibey-gh install` crashing with `FileNotFoundError`, after it had written every file, when `gh` is not on PATH; `installation_notices()` now reports `gh not found; skipping secret/permission checks` (#264).
+- Add `vibey_gh/__main__.py`, so `python -m vibey_gh` runs the same CLI as the `vibey-gh` script instead of failing with `No module named vibey_gh.__main__` (#264).
+- Correct `[issue_automation] fallback_enabled` in `docs/configuration.md` and its `config.py` comment: the default has been `true` since #277 (sub-doctrine 8.a), not `false`; the README, security and threat-model pages also stop calling the heartbeat-gated fallback "opt-in", and a test pins the documented defaults to the code (#264).
+- Fix `vibey-gh doctor` exiting 1 on every repository that uses the starter config: `pr_automation.enabled` with no `pr-automation.yml` is still an ERROR wherever `[install] workflows` takes `pr-automation.yml` or `merge-train.yml`, but a repository that declines both now gets a new `info` severity, which is printed, never counted as a warning, and never fails the run (#264).
+- Fix the dead 4.a social-signals injection in `release-surfaces.yml`: the `Inject social signals` step ran before `properdocs build … --site-dir channel-site`, so `inject()` found no `index.html` and returned False on every deploy. It is now its own step after the site build and before the artifact and Pages upload, and a template test asserts that order (#264).
+- Fix runner-label drift in `docs/workflows.md`, `docs/security.md`, `docs/threat-model.md`, `docs/operations.md` and the README: they named `[self-hosted, vibey-local-gh]`, the value this repository's own `.vibey-gh.toml` sets. They now name the key `[pr_automation.fallback] runner_label` and its default `vibey-local`, and a test allows no other literal label in the docs (#264).
 - `vibey-gh estimate --operation STAGE [--from STAGE] [--json]` (vibey#134, slice 1). It
   judges the six-materials state vector from `docs/paper.md` at every stage a run must
   pass, from `--from` through `--operation`. The vector has eighteen coordinates, each on

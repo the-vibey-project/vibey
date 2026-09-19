@@ -10,7 +10,8 @@ repository before it was understood:
   configures silently stays at defaults while every render looks green;
 - `pr_automation.enabled` defaults true, so a repository without pr-automation.yml has a
   merge train that refuses every pull request with "gate has not passed" — green,
-  mergeable, and stuck forever;
+  mergeable, and stuck forever (an error only where the gate or the merge train is
+  installed: a repository whose `[install] workflows` declines both gets a note instead);
 - ruff configured to select E cannot coexist with the 230-character provenance header,
   so CI fails on every stamped file;
 - two workflows both deploying GitHub Pages silently contend for the same site;
@@ -53,7 +54,9 @@ from vibey_gh.config import (
 
 @dataclass
 class Finding:
-    severity: str  # "error" | "warning"
+    # "error" breaks the automation and exits nonzero; "warning" is a real problem that
+    # blocks nothing; "info" is a fact about a deliberate choice, printed and never counted.
+    severity: str
     message: str
 
 
@@ -140,10 +143,35 @@ def _check_unknown_keys(root: Path) -> list[Finding]:
 
 
 def _check_gate_installed(cfg: GhConfig) -> list[Finding]:
+    """The stuck train, reported as an error only where a train can actually get stuck.
+
+    Every adopter of the README's starter config (`[install] workflows =
+    ["provenance.yml"]`) got this as an ERROR and a nonzero exit: `pr_automation.enabled`
+    defaults true, and that repository deliberately took neither the gate nor the merge
+    train, so nothing in it was broken. The failure is real exactly when the gate is
+    managed but absent, or when the managed merge train will demand a gate that is not
+    managed. A repository that declined both gets the fact as a note, because running
+    `vibey-gh merge-train` by hand would still wait on a gate that never reports.
+    """
     if not cfg.pr_automation.enabled:
         return []
     if (cfg.root / ".github" / "workflows" / "pr-automation.yml").is_file():
         return []
+    # `managed_workflows` is `[install] workflows`; None (the key absent) means all of them.
+    declined = cfg.managed_workflows is not None and not (
+        {"pr-automation.yml", "merge-train.yml"} & set(cfg.managed_workflows)
+    )
+    if declined:
+        return [
+            Finding(
+                "info",
+                "pr_automation.enabled is true (the default) but [install] workflows takes "
+                "neither pr-automation.yml nor merge-train.yml, so nothing here runs the "
+                "gate. Harmless unless you run `vibey-gh merge-train` by hand — it would "
+                "wait on a gate that never reports. Set [pr_automation] enabled = false to "
+                "say so explicitly.",
+            )
+        ]
     return [
         Finding(
             "error",

@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 from vibey_gh import doctor
 from vibey_gh.cli import main
 from vibey_gh.config import DEFAULT_SUPERSEDED_TEXTS, GhConfig
@@ -83,18 +85,36 @@ def test_enabled_gate_without_the_workflow_is_the_stuck_train(tmp_path):
     assert not any("merge train" in f.message for f in doctor.diagnose(root=tmp_path))
 
 
-def test_the_estimate_section_is_known_and_its_strays_are_named(tmp_path):
-    """`[estimate]` (#134) is read by the loader, so doctor must know every key of it --
-    including `requirements`, whose per-stage tables the loader itself validates."""
-    _repo(
-        tmp_path,
-        "[pr_automation]\nenabled = false\n"
-        '[estimate]\noffline = true\nmodel = ""\nstages = []\nreport_first = ["agency"]\n'
-        "ofline = false\n"
-        '[estimate.requirements.main]\n"agency.availability" = 1\n',
-    )
-    messages = [f.message for f in doctor.diagnose(root=tmp_path)]
-    assert messages == ["[estimate] ofline is not a key vibey-gh reads; it is silently ignored"]
+def test_the_starter_config_declines_the_gate_and_gets_a_note_not_an_error(
+    tmp_path, capsys, monkeypatch
+):
+    """The README's starter config took neither the gate nor the merge train, and every
+    adopter using it got an ERROR and exit 1 for a train that did not exist (#264)."""
+    _repo(tmp_path, '[install]\nworkflows = ["provenance.yml"]\n')
+    findings = doctor.diagnose(root=tmp_path)
+    assert [f.severity for f in findings] == ["info"]
+    assert "takes neither pr-automation.yml nor merge-train.yml" in findings[0].message
+    monkeypatch.chdir(tmp_path)
+    assert main(["doctor"]) == 0
+    out = capsys.readouterr().out
+    assert "  info: pr_automation.enabled is true (the default)" in out
+    # A note is not a warning, so the summary must not count it as one.
+    assert "the automation should function" in out
+    assert "warning(s)" not in out
+
+
+@pytest.mark.parametrize(
+    "workflows",
+    [
+        '["provenance.yml", "merge-train.yml"]',  # the train is installed, the gate is not
+        '["provenance.yml", "pr-automation.yml"]',  # the gate is managed, but not on disk
+    ],
+)
+def test_the_stuck_train_stays_an_error_wherever_it_can_happen(tmp_path, workflows):
+    _repo(tmp_path, f"[install]\nworkflows = {workflows}\n")
+    findings = [f for f in doctor.diagnose(root=tmp_path) if "merge train" in f.message]
+    assert [f.severity for f in findings] == ["error"]
+    assert "will refuse every pull request" in findings[0].message
 
 
 def test_ruff_selecting_e_collides_with_the_header(tmp_path):

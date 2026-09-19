@@ -123,59 +123,32 @@ used only to recover from a broken privileged workflow that a normal PR cannot r
 because privileged workflow code is loaded from the trusted base branch, not the PR head.
 Only a repository administrator can trigger it, and only with explicit `workflow_dispatch`
 authorization naming an exact PR and head SHA. Before merging, the workflow independently
-re-verifies that the PR is open, non-draft, targets the integration branch, and matches the
-supplied head exactly; that its changed files are confined to workflow, template, or
-automation-core paths; and that every check run on that exact SHA other than the
-routed-around PR-automation gate completed green, with every independent gate present among
-them. It then performs a `--match-head-commit` admin squash merge, which bypasses ordinary
-`PRAutomation` and `Guard` review but never deletes a permanent branch. This trades the
-semantic review step for an administrator's explicit authorization plus the same
-independent deterministic gates, scoped to the one case those gates cannot otherwise
-unblock.
+re-verifies that the PR is open, non-draft, targets `develop`, and matches the supplied head
+exactly; that its changed files are confined to workflow, template, or automation-core
+paths; and that every non-gate check run on that exact SHA — including CodeQL, API drift,
+documentation, provenance, build, and lint — completed successfully. It then performs a
+`--match-head-commit` admin squash merge, which bypasses ordinary `PRAutomation` and `Guard`
+review but never deletes a permanent branch. This trades the semantic review step for an
+administrator's explicit authorization plus the same independent deterministic gates,
+scoped to the one case those gates cannot otherwise unblock.
 
-Which gates count as independent is therefore part of this boundary, and so is the scope
-pattern, and both are rendered from reviewed configuration rather than written into the
-template. The gates are `[rulesets.integration] required_checks` — the names GitHub already
-enforces on the target branch — less `[pr_automation] ignored_checks` and the routed-around
-gates. A fixed list once named checks most repositories never produce, so the path failed
-closed for everyone. Deriving it from the ruleset makes the bootstrap demand what the branch
-it merges into already demands, less only the gate it exists to route around and what PR
-automation itself ignores — and every other check run on the head must still be green.
-Three properties keep that derivation from becoming a way around the gate:
-an empty list refuses the merge (nothing independent would have been verified); a
-configured name that opens a `${{ }}` expression is refused at render time, since the list
-lands in the step's environment and Actions would evaluate it; and the scope's
-`[install] self_source` prefix is rendered with every ERE metacharacter escaped and any
-control character refused, so a vendored subtree narrows the scope to that subtree instead
-of widening it. Both values are fixed in the deployed workflow the administrator dispatches
-— the default branch's copy unless they deliberately choose another ref — so a pull request
-that edits `.vibey-gh.toml` changes nothing here until it has been merged and re-rendered.
-
-The local-model review lane introduces a distinct asset and a distinct boundary: a
-repository-provided `[self-hosted, vibey-local-gh]` runner, rather than a GitHub-hosted
-one, that GitHub itself warns should almost never serve a public repository because any
-accountholder can open a pull request against it. The `trusted_only` setting (on by
-default) is what removes that exposure — it excludes fork pull requests from
-`review-sovereign` entirely, so only a same-repository head, whose author GitHub has
-already authorized, ever reaches that runner. Since #133 the job runs FIRST whenever the
-operator's heartbeat is fresh, so its exposure is every eligible pull request rather than
-only those whose paid review failed; the boundary is unchanged. It holds `contents: read`
-and nothing else: no secret, and no token capable of pushing, merging, or mutating the
-repository, so compromising that runner cannot itself authorize a merge. The diff still
-reaches a model as text; the local model has no shell, no tools, and no network beyond the
-loopback inference port, matching the no-execution rule the primary review follows.
-
-Its verdict now decides something for some authors, and the limits on what it may decide
-are the controls. A small local model's judgments are unreliable even though Ollama's
-schema-constrained decoding guarantees the response shape, so: its verdict carries the
-diff-groundable half only for a trusted author, and an outside author's change keeps the
-paid lane's correctness and security review; it never certifies the documentation-contract
-fields, which the paid lane answers against the whole repository; a finding it reports is
-never handed to automated repair, so a false positive cannot make a paid agent rewrite a
-branch; and the gate names the lane behind each half — or titles a fallback verdict
-`PR automation: gate (local fallback)` — so a narrower signal can never silently stand in
-for the paid review's. A compromised runner can still fail a trusted author's pull request
-or pass its diff half; it cannot pass the documentation half, reach a fork, or merge.
+The local-model review fallback (on by default) introduces a distinct asset and a distinct
+boundary: a repository-provided `[self-hosted, <runner_label>]` runner — the label is
+`[pr_automation.fallback] runner_label`, default `vibey-local` — rather than a
+GitHub-hosted one, that GitHub itself warns should almost never serve a public repository
+because any accountholder can open a pull request against it. The `trusted_only` setting
+(on by default) is what removes that exposure — it excludes fork pull requests from
+`review-fallback` entirely, so only a same-repository head, whose author GitHub has
+already authorized, ever reaches that runner. The job runs only when the primary Claude
+review produced no verdict at all, never when a review ran and returned findings, and it
+holds `contents: read` and nothing else: no secret, and no token capable of pushing,
+merging, or mutating the repository, so compromising that runner cannot itself authorize a
+merge. The diff still reaches a model as text; the local model has no shell, no tools, and
+no network beyond the loopback inference port, matching the no-execution rule the primary
+review follows. Because a small local model's judgments are unreliable even though Ollama's
+schema-constrained decoding guarantees the response shape, the fallback's verdict omits the
+documentation-contract fields and the gate names the result `PR automation: gate (local
+fallback)`, so a degraded signal can never silently stand in for the primary review's.
 
 The AI action's Git-discovery requirement is isolated from source and persisted credentials.
 During model execution, workspace-root `.git` points only to an ephemeral empty repository.

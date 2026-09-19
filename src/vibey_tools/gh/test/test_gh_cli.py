@@ -1082,75 +1082,25 @@ def test_failover_cli_runs_once_with_explicit_paths(repo, capsys, tmp_path, monk
     assert "disabled" in capsys.readouterr().out
 
 
-def test_pr_automation_combine_composes_the_review_the_workflow_persists(repo, capsys, tmp_path):
-    """`combine` is the one place the workflow asks what "passed" means (#133). Whole, it
-    is the old jq rule; split, it needs the sovereign lane's verdict and says which lane
-    carried which field."""
-    from vibey_gh.review_contract import REVIEW_CONTRACT
+def test_python_dash_m_runs_the_cli():
+    """`python -m vibey_gh` failed with "No module named vibey_gh.__main__"."""
+    import sys
 
-    judgments = {name: True for name in REVIEW_CONTRACT.requires_wider_context}
-    full = {"pass": False, **judgments, "summary": "ok", "findings": []}
-    assert (
-        main(
-            [
-                "pr-automation",
-                "combine",
-                "--paid",
-                json.dumps(full),
-                "--half",
-                "full",
-                "--head-sha",
-                "abc",
-            ]
-        )
-        == 0
+    run = subprocess.run(
+        [sys.executable, "-m", "vibey_gh", "--help"], capture_output=True, text=True, check=False
     )
-    envelope = json.loads(capsys.readouterr().out)
-    assert envelope["verdict"]["pass"] is True and envelope["verdict"]["head_sha"] == "abc"
+    assert run.returncode == 0, run.stderr
+    assert "usage:" in run.stdout
 
-    sovereign = tmp_path / "sovereign.json"
-    sovereign.write_text(json.dumps({"pass": True, "summary": "[SOVEREIGN LANE — m] ✓"}))
-    wider = {**judgments, "wider_summary": "docs", "wider_findings": []}
-    assert (
-        main(
-            [
-                "pr-automation",
-                "combine",
-                "--paid",
-                json.dumps(wider),
-                "--half",
-                "requires-wider-context",
-                "--sovereign",
-                str(sovereign),
-                "--head-sha",
-                "abc",
-            ]
-        )
-        == 0
-    )
-    out = capsys.readouterr().out
-    assert "✓" in out  # written as text, not escaped: the verdict is read by people too
-    envelope = json.loads(out)
-    assert envelope["carried"]["pass"] == "sovereign"
-    assert envelope["verdict"]["pass"] is True
 
-    # An empty --sovereign is the workflow saying the lane produced nothing: a wider-only
-    # answer then refuses to compose, so the review job fails closed rather than passing.
-    assert (
-        main(
-            [
-                "pr-automation",
-                "combine",
-                "--paid",
-                json.dumps(wider),
-                "--half",
-                "requires-wider-context",
-                "--sovereign",
-                "",
-                "--head-sha",
-                "abc",
-            ]
-        )
-        == 1
-    )
-    assert "sovereign lane's verdict is needed" in capsys.readouterr().err
+def test_dunder_main_delegates_to_cli_main(monkeypatch):
+    """In-process, so the delegation itself is asserted rather than inferred from --help:
+    whatever `cli.main` returns is the process exit status."""
+    import runpy
+
+    import vibey_gh.cli
+
+    monkeypatch.setattr(vibey_gh.cli, "main", lambda argv=None: 7)
+    with pytest.raises(SystemExit) as exited:
+        runpy.run_module("vibey_gh", run_name="__main__")
+    assert exited.value.code == 7

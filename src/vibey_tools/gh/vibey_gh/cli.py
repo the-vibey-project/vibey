@@ -822,8 +822,10 @@ def _doctor(args) -> int:
             f"vibey-gh doctor: {errors} problem(s) that will break the automation", file=sys.stderr
         )
         return 1
-    if findings:
-        print(f"vibey-gh doctor: no blockers; {len(findings)} warning(s)")
+    # An "info" finding is printed above but is not a warning, so it is not counted as one.
+    warnings = sum(1 for f in findings if f.severity == "warning")
+    if warnings:
+        print(f"vibey-gh doctor: no blockers; {warnings} warning(s)")
     else:
         print("vibey-gh doctor: the automation should function")
     return 0
