@@ -36,3 +36,31 @@ def test_fallback_marker_absent_is_continue():
 def test_fallback_uses_custom_marker():
     result = evaluate(structured=None, output_text="XYZ_DONE", done_marker="XYZ_DONE")
     assert result == Done(summary="")
+
+
+def test_a_zero_cost_turn_that_generated_tokens_is_not_empty():
+    """On a local backend every turn is recorded at $0 (cost_mode "zero"), so
+    output tokens are what tell a tool-only turn from an empty response."""
+    verdict = evaluate(
+        structured=None, output_text="", cost_usd=0.0, output_tokens=412, empty_turn_streak=2
+    )
+    assert verdict == Continue(remaining_work=())
+
+
+def test_a_zero_cost_zero_token_turn_is_still_empty():
+    verdict = evaluate(
+        structured=None, output_text="", cost_usd=0.0, output_tokens=0, empty_turn_streak=2
+    )
+    assert verdict == Blocked(reason="repeated empty model responses")
+
+
+def test_without_the_marker_fallback_only_a_structured_verdict_completes():
+    text = '{"name": "StructuredOutput"}\nCLAUDELOOP_TASK_FULLY_COMPLETE'
+    assert evaluate(structured=None, output_text=text, marker_fallback=False) == Continue(
+        remaining_work=()
+    )
+    assert evaluate(
+        structured=StructuredVerdict(complete=True, summary="ok"),
+        output_text=text,
+        marker_fallback=False,
+    ) == Done(summary="ok")

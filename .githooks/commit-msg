@@ -47,9 +47,17 @@ vibey_gh() {
   if [ -z "${_VIBEY_GH_SELF+x}" ]; then
     _VIBEY_GH_SELF=$(vibey_gh_self)
   fi
-  if [ -n "$_VIBEY_GH_SELF" ] && PYTHONPATH="$_VIBEY_GH_SELF${PYTHONPATH:+:$PYTHONPATH}" \
+  # Every `python3` below runs with PYTHONSAFEPATH=1. Without it, `-c` and `-m` put the
+  # current directory -- the top of the working tree -- first on sys.path, so a checked-out
+  # branch carrying a `vibey_gh/` package of its own would be imported and executed by
+  # this hook in place of the real one. The self-hosted branch still runs its source: it
+  # names that source on PYTHONPATH, which PYTHONSAFEPATH leaves alone. Python 3.11+
+  # honours the variable and older interpreters ignore it; vibey-gh requires 3.11.
+  if [ -n "$_VIBEY_GH_SELF" ] && PYTHONSAFEPATH=1 \
+      PYTHONPATH="$_VIBEY_GH_SELF${PYTHONPATH:+:$PYTHONPATH}" \
       python3 -c "import vibey_gh.cli" >/dev/null 2>&1; then
-    PYTHONPATH="$_VIBEY_GH_SELF${PYTHONPATH:+:$PYTHONPATH}" python3 -m vibey_gh.cli "$@"
+    PYTHONSAFEPATH=1 PYTHONPATH="$_VIBEY_GH_SELF${PYTHONPATH:+:$PYTHONPATH}" \
+      python3 -m vibey_gh.cli "$@"
   elif command -v vibey-gh >/dev/null 2>&1; then
     vibey-gh "$@"
   elif [ -n "${VIRTUAL_ENV:-}" ] && [ -x "${VIRTUAL_ENV}/bin/vibey-gh" ]; then
@@ -58,10 +66,10 @@ vibey_gh() {
     ./.venv/bin/vibey-gh "$@"
   elif [ -x "venv/bin/vibey-gh" ]; then
     ./venv/bin/vibey-gh "$@"
-  elif python3 -c "import vibey_gh.cli" >/dev/null 2>&1; then
-    python3 -m vibey_gh.cli "$@"
-  elif python3 -c "import vibey_bootstrap.gh.cli" >/dev/null 2>&1; then
-    python3 -m vibey_bootstrap.gh.cli "$@"   # pre-split layout
+  elif PYTHONSAFEPATH=1 python3 -c "import vibey_gh.cli" >/dev/null 2>&1; then
+    PYTHONSAFEPATH=1 python3 -m vibey_gh.cli "$@"
+  elif PYTHONSAFEPATH=1 python3 -c "import vibey_bootstrap.gh.cli" >/dev/null 2>&1; then
+    PYTHONSAFEPATH=1 python3 -m vibey_bootstrap.gh.cli "$@"   # pre-split layout
   else
     return 127
   fi
@@ -72,8 +80,13 @@ msg_file="$1"
 key=$(vibey_gh trailer-key 2>/dev/null || echo "Made-With")
 trailer=$(vibey_gh trailer 2>/dev/null || echo "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).")
 
-# A pre-existing project hook runs first and may do its own thing.
-[ -x "$(dirname "$0")/commit-msg.local" ] && "$(dirname "$0")/commit-msg.local" "$@"
+# A pre-existing project hook runs first and may do its own thing -- including refuse the
+# commit, and that refusal must stand. This hook runs without `set -e`, so the chain has to
+# carry the status out itself: a bare `[ -x … ] && "…"` discarded it, and a project hook
+# that rejected the message was ignored while the commit went ahead.
+if [ -x "$(dirname "$0")/commit-msg.local" ]; then
+  "$(dirname "$0")/commit-msg.local" "$@" || exit $?
+fi
 
 # Normalize the subject without assuming the Python package is importable in the hook's
 # process. The body and existing trailers remain unchanged.

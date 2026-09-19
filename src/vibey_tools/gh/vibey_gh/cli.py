@@ -20,6 +20,7 @@ from vibey_gh import (
     install,
     issue_automation,
     merge_train,
+    operation_estimate,
     pr_automation,
     promote,
     realign,
@@ -32,6 +33,7 @@ from vibey_gh.config import load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
+from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
 
 
 def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -329,6 +331,15 @@ def _pr_automation(args) -> int:
             kind = args.action.removeprefix("record-")
             state = pr_automation.record(args.pr, _read_json(args.input), kind)
             print(json.dumps(asdict(state), sort_keys=True))
+        elif args.action == "combine":
+            # An empty --sovereign is how the workflow says the sovereign lane produced no
+            # verdict; the composer then refuses a wider-half-only answer rather than
+            # passing a review whose diff half nobody carried.
+            sovereign = _read_json(args.sovereign) if args.sovereign else None
+            envelope = REVIEW_COMPOSER.compose(
+                _read_json(args.paid), half=args.half, sovereign=sovereign, head_sha=args.head_sha
+            )
+            print(json.dumps(envelope, ensure_ascii=False))
         elif args.action == "mirror-fork":
             print(json.dumps(pr_automation.mirror_fork(args.pr, cfg), sort_keys=True))
         elif args.action == "self-heal":
@@ -558,6 +569,70 @@ def _tidy(args) -> int:
     return 1
 
 
+def _forge_snapshot(args) -> int:
+    """Capture the forge's state into `--out` (vibey#136, slice S1); read-only against the forge.
+
+    Exit 0 when every selected class was captured, 1 when any could not be looked at (the
+    rest are still written, and the manifest says which), 2 for arguments that name no
+    capture at all. A class the forge would not answer for is reported by name with the
+    forge's reason, never as a class with nothing in it.
+    """
+    from datetime import timedelta
+
+    from vibey_gh import github_state
+    from vibey_gh.forge_snapshot import (
+        RESUME,
+        ForgeSnapshot,
+        GithubForgeReader,
+        JsonlSnapshotStore,
+        SnapshotStoreError,
+    )
+    from vibey_gh.gh_transport import GhTransport
+
+    prefix = "vibey-gh forge-snapshot:"
+    classes = None
+    if args.classes is not None:
+        classes = [name.strip() for name in args.classes.split(",") if name.strip()]
+    try:
+        repository = args.repo or github_state.repository()
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
+        print(f"{prefix} could not tell which repository to read: {exc}", file=sys.stderr)
+        return 1
+    out = Path(args.out)
+    try:
+        reader = GithubForgeReader(GhTransport(), repository, per_page=args.per_page)
+        store = JsonlSnapshotStore(out, forge=reader.forge, repository=reader.repository)
+        capture = ForgeSnapshot(reader, store, clock_skew=timedelta(seconds=args.clock_skew))
+        manifest = capture.capture(classes=classes, since=args.since)
+    except (SnapshotStoreError, OSError) as exc:
+        print(f"{prefix} {exc}", file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(f"{prefix} {exc}", file=sys.stderr)
+        return 2
+    print(f"{prefix} {manifest['forge']} {manifest['repository']} into {out}")
+    if args.since == RESUME and manifest["since"] is None:
+        print(f"{prefix} no resume point was recorded, so this capture is a full one")
+    for name, entry in manifest["classes"].items():
+        if entry["status"] == "captured":
+            head = (entry["head"] or "none")[:12]
+            print(
+                f"  {name}: {entry['observed']} observed, {entry['appended']} appended,"
+                f" {entry['unchanged']} unchanged; {entry['records']} record(s), head {head}"
+            )
+        elif entry["status"] == "could-not-look":
+            print(f"  {name}: COULD NOT LOOK, nothing written: {entry['problem']}", file=sys.stderr)
+        else:
+            print(f"  {name}: not selected")
+    print(
+        f"{prefix} {len(manifest['excluded'])} artifact class(es) not captured, each named"
+        f" with its reason in {out / 'manifest.json'}"
+    )
+    if manifest["resume_since"] is not None:
+        print(f"{prefix} resume with --since {manifest['resume_since']} (or --since {RESUME})")
+    return 0 if manifest["complete"] else 1
+
+
 def _corpus_index(args) -> int:
     from vibey_gh import corpus
 
@@ -634,17 +709,27 @@ def _fit(args) -> int:
     from pathlib import Path
 
     from vibey_gh import fit
-    from vibey_gh.fitloop import FitLoop, recorded_observations
+    from vibey_gh.fitloop import FitLoop
 
+    # The runner the model is read from: --base-url, else VIBEY_OLLAMA_URL, else the one
+    # the local review is configured to call -- so the fit describes the runner it gates.
+    base_url = fit.OllamaModelSampler.resolve_base_url(
+        args.base_url, fallback=load_config().pr_automation.fallback.base_url
+    )
     machine = fit.sample_machine()
-    model = fit.sample_model(args.model)
-    # With --journal the decision is recorded with everything needed to re-derive it,
-    # and prior observations in that journal inform this projection — which is what
-    # makes repeated invocations a control loop rather than a series of guesses.
-    journal = Path(args.journal) if args.journal else None
-    loop = FitLoop(args.model, journal=journal)
-    if journal:
-        loop._observations.extend(recorded_observations(journal))
+    model = fit.sample_model(args.model, base_url)
+    # The decision is recorded with everything needed to re-derive it, and prior
+    # observations in the journal inform this projection — which is what makes repeated
+    # invocations a control loop rather than a series of guesses. On unless --no-journal:
+    # --journal, else VIBEY_GH_FIT_JOURNAL, else ~/.local/state/vibey-gh/fit.jsonl.
+    if args.no_journal:
+        journal = None
+    elif args.journal:
+        journal = Path(args.journal)
+    else:
+        journal = FitLoop.default_journal()
+    loop = FitLoop(args.model, journal=journal, base_url=base_url)
+    loop.replay()
     if args.observed_seconds is not None:
         loop.observe(
             payload_bytes=args.payload_bytes,
@@ -666,12 +751,15 @@ def _fit(args) -> int:
     if not machine.readable:
         print("vibey-gh fit: machine memory could not be read — that reading is unknown, not empty")
     if model is None:
-        print(f"vibey-gh fit: model {args.model} could not be read from the runner")
+        print(f"vibey-gh fit: model {args.model} could not be read from the runner at {base_url}")
     else:
         print(
             f"vibey-gh fit: model {model.name} {model.size_gb} GB, context {model.context_length}"
+            + ("" if model.resident else " — not loaded; size is its weights on disk")
         )
     print(f"vibey-gh fit: {verdict.verdict.upper()} — {verdict.reason}")
+    if journal is not None:
+        print(f"vibey-gh fit: journal {journal}")
     if verdict.headroom_gb:
         print(f"vibey-gh fit: headroom wanted: {verdict.headroom_gb} GB")
     for note in verdict.notes:
@@ -680,6 +768,57 @@ def _fit(args) -> int:
     if advice:
         print(f"vibey-gh fit: ACTION NEEDED — {advice}")
     return 0 if verdict.ok else 1
+
+
+def _estimate(args) -> int:
+    # Module-level like every other handler in this file: argparse dispatches through
+    # `set_defaults(func=...)`. It only resolves configuration and prints; the estimate
+    # itself is `OperationEstimator`'s (ADR-0016).
+    from vibey_gh import fit
+    from vibey_gh.feasibility import FeasibilityEvaluator, Pipeline
+    from vibey_gh.fitloop import FitLoop
+
+    cfg = load_config()
+    try:
+        pipeline = Pipeline.from_config(cfg.estimate)
+        evaluator = FeasibilityEvaluator(report_first=cfg.estimate.report_first)
+    except ValueError as exc:
+        print(f"vibey-gh estimate: {exc}", file=sys.stderr)
+        return 2
+    # The same runner and model the local lane uses, unless told otherwise: --base-url,
+    # else VIBEY_OLLAMA_URL, else [pr_automation.fallback] base_url; --model, else
+    # [estimate] model, else [pr_automation.fallback] model.
+    base_url = fit.OllamaModelSampler.resolve_base_url(
+        args.base_url, fallback=cfg.pr_automation.fallback.base_url
+    )
+    model = args.model or cfg.estimate.model or cfg.pr_automation.fallback.model
+    # Read, never written: the fit loop's own observations inform the duration.
+    if args.no_journal:
+        journal = None
+    elif args.journal:
+        journal = Path(args.journal)
+    else:
+        journal = FitLoop.default_journal()
+    estimator = operation_estimate.OperationEstimator(
+        model,
+        base_url=base_url,
+        offline=cfg.estimate.offline and not args.online,
+        journal=journal,
+        pipeline=pipeline,
+        evaluator=evaluator,
+    )
+    try:
+        result = estimator.estimate(
+            args.operation, start=args.start, payload_bytes=args.payload_bytes
+        )
+    except ValueError as exc:
+        print(f"vibey-gh estimate: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result.as_dict(), indent=2, sort_keys=True, ensure_ascii=False))
+    else:
+        print("\n".join(result.lines()))
+    return result.exit_code
 
 
 def _doctor(args) -> int:
@@ -696,8 +835,10 @@ def _doctor(args) -> int:
             f"vibey-gh doctor: {errors} problem(s) that will break the automation", file=sys.stderr
         )
         return 1
-    if findings:
-        print(f"vibey-gh doctor: no blockers; {len(findings)} warning(s)")
+    # An "info" finding is printed above but is not a warning, so it is not counted as one.
+    warnings = sum(1 for f in findings if f.severity == "warning")
+    if warnings:
+        print(f"vibey-gh doctor: no blockers; {warnings} warning(s)")
     else:
         print("vibey-gh doctor: the automation should function")
     return 0
@@ -796,6 +937,7 @@ def _local_review(args) -> int:
         ("--base-url", args.base_url),
         ("--max-chars", args.max_chars),
         ("--timeout", args.timeout),
+        ("--role", args.role),
     ):
         if value is not None:
             forwarded += [flag, str(value)]
@@ -1038,6 +1180,29 @@ def main(argv: list[str] | None = None) -> int:
         record.add_argument("--pr", type=int, required=True)
         record.add_argument("--input", required=True, help="JSON object, file, or - for stdin")
         record.set_defaults(func=_pr_automation)
+    combine = automation_sub.add_parser(
+        "combine",
+        help="compose one review verdict from the lane or lanes that answered it",
+    )
+    combine.add_argument(
+        "--paid", required=True, help="the paid reviewer's answer: JSON object, file, or -"
+    )
+    combine.add_argument(
+        "--half",
+        required=True,
+        choices=PAID_HALVES,
+        help="what the paid reviewer answered: the full schema, or the wider half alone",
+    )
+    combine.add_argument(
+        "--sovereign",
+        default="",
+        help=(
+            "the sovereign lane's diff-half verdict (JSON object or file); required with"
+            " --half requires-wider-context, empty when that lane produced none"
+        ),
+    )
+    combine.add_argument("--head-sha", required=True)
+    combine.set_defaults(func=_pr_automation)
     mirror = automation_sub.add_parser(
         "mirror-fork", help="open a repository-owned replacement for a fork PR"
     )
@@ -1175,13 +1340,21 @@ def main(argv: list[str] | None = None) -> int:
 
     local = sub.add_parser(
         "local-review",
-        help="review a diff with a local model when the paid review path returns no verdict",
+        help="review a diff with a local model: the sovereign lane's diff half, or the fallback",
     )
     local.add_argument("--diff", help="path to a diff file (default: stdin)")
     local.add_argument("--model", help="override [pr_automation.fallback] model")
     local.add_argument("--base-url", help="override [pr_automation.fallback] base_url")
     local.add_argument("--max-chars", type=int, help="override max_diff_chars")
     local.add_argument("--timeout", type=int, help="override timeout_seconds")
+    local.add_argument(
+        "--role",
+        choices=("fallback", "sovereign"),
+        help=(
+            "how the verdict labels itself: 'sovereign' when it carries the diff half,"
+            " 'fallback' (the default) when it stands in for a paid review that failed"
+        ),
+    )
     local.set_defaults(func=_local_review)
 
     doc = sub.add_parser(
@@ -1237,6 +1410,34 @@ def main(argv: list[str] | None = None) -> int:
     fo.add_argument("--once", action="store_true", help="one probe and transition, then exit")
     fo.set_defaults(func=_failover)
 
+    fs = sub.add_parser(
+        "forge-snapshot",
+        help="read-only capture of issues, change requests, reviews, releases and more into"
+        " hash-chained JSONL (#136)",
+    )
+    fs.add_argument("--out", required=True, help="the snapshot directory; created if missing")
+    fs.add_argument(
+        "--classes",
+        help="comma-separated artifact classes (default: every supported class), e.g."
+        " issue,comment,change-request",
+    )
+    fs.add_argument(
+        "--since",
+        help="ISO 8601 moment to capture from, or 'resume' for the manifest's resume point;"
+        " omitted, the capture is a full one",
+    )
+    fs.add_argument("--repo", default="", help="owner/name (default: $GH_REPO, then gh's own)")
+    fs.add_argument("--per-page", type=int, default=100, help="listing page size, 1 to 100")
+    fs.add_argument(
+        "--clock-skew",
+        type=int,
+        default=300,
+        metavar="SECONDS",
+        help="how far this machine's clock may run ahead of the forge's; a cursor taken from"
+        " it is set back this far (default 300)",
+    )
+    fs.set_defaults(func=_forge_snapshot)
+
     ci_ = sub.add_parser(
         "corpus-index",
         help="build the governance corpus index — chunked, hashed, deterministic (#249)",
@@ -1275,11 +1476,80 @@ def main(argv: list[str] | None = None) -> int:
         help="record what this payload ACTUALLY took, feeding the estimate (#263)",
     )
     ft.add_argument(
+        "--base-url",
+        default="",
+        help="the Ollama runner to read the model from (default: $VIBEY_OLLAMA_URL, else"
+        " [pr_automation.fallback] base_url)",
+    )
+    ft_journal = ft.add_mutually_exclusive_group()
+    ft_journal.add_argument(
         "--journal",
         help="record this decision, and read prior ones back, so repeated calls"
-        " form a self-adjusting loop (#263)",
+        " form a self-adjusting loop (#263) (default: $VIBEY_GH_FIT_JOURNAL, else"
+        " ~/.local/state/vibey-gh/fit.jsonl)",
+    )
+    ft_journal.add_argument(
+        "--no-journal",
+        action="store_true",
+        help="decide from this call alone: record nothing and read nothing back",
     )
     ft.set_defaults(func=_fit)
+
+    es = sub.add_parser(
+        "estimate",
+        help="before a run (#134): feasibility along the whole pipeline, duration, cost,"
+        " and each coordinate's distance from peak -- unknown where unmeasured",
+    )
+    es.add_argument(
+        "--operation",
+        required=True,
+        help="the stage the run must reach, e.g. develop or main (default stages: install,"
+        " interview, feature-branch, develop, develop-deployment, develop-validation, main,"
+        " main-deployment, main-validation; [estimate] stages replaces them)",
+    )
+    es.add_argument(
+        "--from",
+        dest="start",
+        default=None,
+        help="the stage the run starts at (default: the first stage)",
+    )
+    es.add_argument("--json", action="store_true", help="print the estimate as JSON")
+    es.add_argument(
+        "--model",
+        default="",
+        help="the local model the fit coordinates are measured against (default: [estimate]"
+        " model, else [pr_automation.fallback] model)",
+    )
+    es.add_argument(
+        "--base-url",
+        default="",
+        help="the Ollama runner to read the model from (default: $VIBEY_OLLAMA_URL, else"
+        " [pr_automation.fallback] base_url)",
+    )
+    es.add_argument(
+        "--payload-bytes",
+        type=int,
+        default=operation_estimate.DEFAULT_PAYLOAD_BYTES,
+        help="size of the work the local model's service time is projected for",
+    )
+    es.add_argument(
+        "--online",
+        action="store_true",
+        help="also read a runner that is not on this machine (default: offline, unless"
+        " [estimate] offline = false)",
+    )
+    es_journal = es.add_mutually_exclusive_group()
+    es_journal.add_argument(
+        "--journal",
+        help="the fit journal whose observations inform the duration; read, never written"
+        " (default: $VIBEY_GH_FIT_JOURNAL, else ~/.local/state/vibey-gh/fit.jsonl)",
+    )
+    es_journal.add_argument(
+        "--no-journal",
+        action="store_true",
+        help="read no observations: the duration is unknown",
+    )
+    es.set_defaults(func=_estimate)
 
     pp = sub.add_parser(
         "paper",

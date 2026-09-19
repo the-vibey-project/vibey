@@ -20,6 +20,25 @@ to. The default grants no authority it does not already imply, since anyone able
 a ruleset can equally rewrite it; a repository wanting the stricter posture sets
 `bypass_actors = []` and accepts that recovery then means editing the ruleset by hand.
 
+Branch names are metadata the pull request's author chooses, so no gate may take a
+shortcut on a branch name alone. The provenance gate skips its per-commit trailer audit
+for a promotion, a pull request from the integration branch into the release branch. It
+now takes that shortcut only when the pull request's head repository is this repository.
+Before, a fork with a branch named like the integration branch qualified too, and the gate
+skipped the audit of that fork's commits. A fork's pull request is now audited commit by
+commit. So is one whose fork was deleted, whose head repository GitHub reports as empty.
+
+The local git hooks run with the developer's own authority on whatever branch is checked
+out, and a branch fetched from someone else holds that author's content. The working tree
+is therefore untrusted input to the hooks. They never search it for the tooling; they
+honour only a declared `[install] self_source`. Every interpreter they start runs with
+`PYTHONSAFEPATH=1`, which keeps the working directory off `sys.path`, so a `vibey_gh/`
+package placed at the top of the tree is not imported. Self-hosting is the deliberate
+exception. A repository that declares `self_source` runs that declared copy, and on a
+checked-out branch that is the branch's copy. The hooks also never reduce a project's
+existing checks. A pre-existing hook, chained as `<hook>.local`, can still refuse a commit
+or a push, and the managed hook exits with its status.
+
 The integration and release branch rulesets are themselves reconciled, not merely assumed:
 `vibey_gh.rulesets` builds each desired ruleset from configuration and compares it against
 what GitHub actually has before `repository-profile.yml` applies the difference.
@@ -132,8 +151,9 @@ review but never deletes a permanent branch. This trades the semantic review ste
 administrator's explicit authorization plus the same independent deterministic gates,
 scoped to the one case those gates cannot otherwise unblock.
 
-The opt-in local-model review fallback introduces a distinct asset and a distinct
-boundary: a repository-provided `[self-hosted, vibey-local-gh]` runner, rather than a
+The local-model review fallback (on by default) introduces a distinct asset and a distinct
+boundary: a repository-provided `[self-hosted, <runner_label>]` runner — the label is
+`[pr_automation.fallback] runner_label`, default `vibey-local` — rather than a
 GitHub-hosted one, that GitHub itself warns should almost never serve a public repository
 because any accountholder can open a pull request against it. The `trusted_only` setting
 (on by default) is what removes that exposure — it excludes fork pull requests from

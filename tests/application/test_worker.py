@@ -1,14 +1,16 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import asyncio
 import logging
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
 from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, make_job
 from vibey.application.dto import HumanGateRequest, JobRecord
+from vibey.application.interfaces.worker_interface import WorkerLoopInterface
 from vibey.application.worker import (
     CapacityDeferred,
     Defer,
@@ -43,6 +45,18 @@ class _SlowHandler:
     async def handle(self, job: JobRecord) -> Outcome:
         await asyncio.sleep(self._delay)
         return self._outcome
+
+
+def test_the_worker_loop_satisfies_its_declared_seam() -> None:
+    """ADR-0016: the class and its interface stay in step."""
+    loop = WorkerLoop(
+        jobs=FakeJobRepository([]),
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(Success()),
+        owner="w1",
+    )
+
+    assert isinstance(loop, WorkerLoopInterface)
 
 
 async def test_run_once_returns_false_when_nothing_claimable() -> None:
@@ -581,3 +595,336 @@ async def test_a_worker_with_no_injected_logger_still_speaks(
     assert "reason=five-hour window exhausted" in message
     assert f"retry_at={retry_at.isoformat()}" in message
     assert "owner=w1" in message
+
+
+class _FlakyQueue(FakeJobRepository):
+    """The shared fake, with the two ways a real queue lets a worker down (#211).
+
+    ``beats`` scripts the first heartbeats, consumed in order: an exception is
+    raised, as a pool timeout or a Postgres failover would; a bool is returned
+    as-is. Once the script runs out the fake beats normally. ``refuse`` names
+    the lease-guarded writes that report False, as Postgres does once this
+    worker's lease has expired and the row is someone else's.
+    """
+
+    def __init__(
+        self,
+        jobs: list[JobRecord],
+        *,
+        beats: Sequence[bool | Exception] = (),
+        refuse: Collection[str] = (),
+    ) -> None:
+        super().__init__(jobs)
+        self._beats = list(beats)
+        self._refuse = frozenset(refuse)
+
+    def _refused(self, name: str) -> bool:
+        if name not in self._refuse:
+            return False
+        self.calls.append(name)
+        return True
+
+    async def heartbeat(self, job_id: UUID, *, owner: str, lease: timedelta) -> bool:
+        if not self._beats:
+            return await super().heartbeat(job_id, owner=owner, lease=lease)
+        self.calls.append("heartbeat")
+        beat = self._beats.pop(0)
+        if isinstance(beat, Exception):
+            raise beat
+        return beat
+
+    async def ack(self, job_id: UUID, *, owner: str) -> bool:
+        return False if self._refused("ack") else await super().ack(job_id, owner=owner)
+
+    async def nack(self, job_id: UUID, *, owner: str, error: Mapping[str, object]) -> bool:
+        if self._refused("nack"):
+            return False
+        return await super().nack(job_id, owner=owner, error=error)
+
+    async def grant_attempts(self, job_id: UUID, *, owner: str, max_attempts: int) -> bool:
+        if self._refused("grant_attempts"):
+            return False
+        return await super().grant_attempts(job_id, owner=owner, max_attempts=max_attempts)
+
+    async def park(self, job_id: UUID, *, owner: str) -> bool:
+        return False if self._refused("park") else await super().park(job_id, owner=owner)
+
+
+class _UntilBeaten:
+    """Returns its outcome only once the loop has heartbeat ``beats`` times, so
+    a test waits on the behaviour it asserts rather than on the wall clock."""
+
+    def __init__(self, jobs: FakeJobRepository, *, beats: int, outcome: Outcome) -> None:
+        self._jobs = jobs
+        self._beats = beats
+        self._outcome = outcome
+
+    async def handle(self, job: JobRecord) -> Outcome:
+        while self._jobs.calls.count("heartbeat") < self._beats:
+            await asyncio.sleep(0.001)
+        return self._outcome
+
+
+def _fields(job: JobRecord) -> dict[str, object]:
+    return {
+        "job_id": str(job.id),
+        "project_id": str(job.project_id),
+        "phase": job.phase.value,
+        "kind": job.kind,
+    }
+
+
+_LOST = "lease no longer held by this worker"
+_SHORT_LEASE = timedelta(seconds=0.03)
+
+
+async def test_a_heartbeat_that_raises_mid_handler_still_acks_the_finished_job() -> None:
+    """#211: the heartbeat task used to die on the exception, and `run_once`
+    re-raised it from its `finally` -- `_settle` never ran, a finished (paid)
+    session was never acked, and the worker process went down with it."""
+    job = make_job(PROJECT_ID)
+    jobs = _FlakyQueue([job], beats=[ConnectionError("pool timeout")])
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_UntilBeaten(jobs, beats=1, outcome=Success()),
+        owner="w1",
+        lease=_SHORT_LEASE,
+        logger=logger,
+    )
+
+    claimed = await asyncio.wait_for(loop.run_once(PROJECT_ID), timeout=5.0)
+
+    assert claimed is True
+    record = await jobs.get(job.id)
+    assert record is not None
+    assert record.state is JobState.SUCCEEDED
+    assert logger.lines == [
+        (
+            "warning",
+            "job.heartbeat_failed",
+            {**_fields(job), "error": repr(ConnectionError("pool timeout"))},
+        )
+    ]
+
+
+async def test_a_heartbeat_that_fails_once_keeps_beating_after() -> None:
+    """A failed beat is a transient: the loop logs it and carries on, so the
+    lease is still kept alive once the database comes back."""
+    job = make_job(PROJECT_ID)
+    jobs = _FlakyQueue([job], beats=[TimeoutError()])
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_UntilBeaten(jobs, beats=3, outcome=Success()),
+        owner="w1",
+        lease=_SHORT_LEASE,
+        logger=logger,
+    )
+
+    await asyncio.wait_for(loop.run_once(PROJECT_ID), timeout=5.0)
+
+    assert jobs.calls.count("heartbeat") >= 3
+    assert [(level, event) for level, event, _ in logger.lines] == [
+        ("warning", "job.heartbeat_failed")
+    ]
+    record = await jobs.get(job.id)
+    assert record is not None
+    assert record.state is JobState.SUCCEEDED
+
+
+async def test_a_refused_heartbeat_stops_beating_and_the_refused_ack_is_said() -> None:
+    """A refused beat means the lease is gone: say so once and stop beating a
+    row that may already be another worker's. The ack that follows is refused
+    by the same guard, and that is said too -- not raised, which would kill
+    the worker and every parallel drive loop in it."""
+    job = make_job(PROJECT_ID)
+    jobs = _FlakyQueue([job], beats=[False], refuse={"ack"})
+    logger = _RecordingLogger()
+
+    class _OutlivesTheLease:
+        async def handle(self, handled: JobRecord) -> Outcome:
+            while "heartbeat" not in jobs.calls:
+                await asyncio.sleep(0.001)
+            # Ten more beat intervals: a loop that kept beating would show it.
+            await asyncio.sleep(_SHORT_LEASE.total_seconds() / 3 * 10)
+            return Success()
+
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_OutlivesTheLease(),
+        owner="w1",
+        lease=_SHORT_LEASE,
+        logger=logger,
+    )
+
+    claimed = await asyncio.wait_for(loop.run_once(PROJECT_ID), timeout=5.0)
+
+    assert claimed is True
+    assert jobs.calls.count("heartbeat") == 1
+    assert logger.lines == [
+        ("warning", "job.lease_lost", {**_fields(job), "reason": _LOST}),
+        ("warning", "job.ack_rejected", {**_fields(job), "reason": _LOST}),
+    ]
+
+
+async def test_the_heartbeat_loop_ends_on_its_own_once_the_lease_is_refused() -> None:
+    """Stopping is the loop's own doing, not the cancellation's: it returns
+    without ever being cancelled."""
+    job = make_job(PROJECT_ID)
+    jobs = _FlakyQueue([job], beats=[True, False])
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(Success()),
+        owner="w1",
+        logger=_RecordingLogger(),
+    )
+
+    await asyncio.wait_for(loop._heartbeat_forever(job, lease=_SHORT_LEASE), timeout=5.0)
+
+    assert jobs.calls == ["heartbeat", "heartbeat"]
+
+
+async def test_a_nack_the_queue_refused_is_said_not_raised() -> None:
+    job = make_job(PROJECT_ID)
+    jobs = _FlakyQueue([job], refuse={"nack"})
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+        logger=logger,
+    )
+
+    claimed = await loop.run_once(PROJECT_ID)
+
+    assert claimed is True
+    assert jobs.calls[-1] == "nack"
+    assert logger.lines == [("warning", "job.nack_rejected", {**_fields(job), "reason": _LOST})]
+
+
+async def test_a_refused_grant_skips_the_nack() -> None:
+    """The grant always widens the bound (granted > attempts >= max_attempts),
+    so its refusal can only mean the lease is gone. A nack without the grant
+    would be the 'failed' dead end ADR-0024 rejects -- so it is not sent."""
+    job = make_job(PROJECT_ID, max_attempts=1)
+    jobs = _FlakyQueue([job], refuse={"grant_attempts"})
+    gates = FakeHumanGateRepository()
+    raised = await gates.raise_gate(
+        PROJECT_ID, job.id, HumanGateRequest(kind="attempts_exhausted", prompt="more?")
+    )
+    await gates.answer(raised.gate_id, answer={"max_attempts": 3}, answered_by="adam")
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+        logger=logger,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert jobs.calls[-1] == "grant_attempts"
+    assert "nack" not in jobs.calls
+    assert logger.lines == [("warning", "job.grant_rejected", {**_fields(job), "reason": _LOST})]
+
+
+async def test_a_nack_refused_after_a_granted_widening_is_said() -> None:
+    job = make_job(PROJECT_ID, max_attempts=1)
+    jobs = _FlakyQueue([job], refuse={"nack"})
+    gates = FakeHumanGateRepository()
+    raised = await gates.raise_gate(
+        PROJECT_ID, job.id, HumanGateRequest(kind="attempts_exhausted", prompt="more?")
+    )
+    await gates.answer(raised.gate_id, answer={"max_attempts": 3}, answered_by="adam")
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Failure(FailureClass.WORK, "boom")),
+        owner="w1",
+        logger=logger,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert jobs.calls[-2:] == ["grant_attempts", "nack"]
+    assert logger.lines == [("warning", "job.nack_rejected", {**_fields(job), "reason": _LOST})]
+
+
+async def test_a_park_the_queue_refused_is_said_not_raised() -> None:
+    job = make_job(PROJECT_ID)
+    jobs = _FlakyQueue([job], refuse={"park"})
+    gates = FakeHumanGateRepository()
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Park(HumanGateRequest(kind="approval", prompt="proceed?"))),
+        owner="w1",
+        logger=logger,
+    )
+
+    claimed = await loop.run_once(PROJECT_ID)
+
+    assert claimed is True
+    assert jobs.calls[-1] == "park"
+    assert logger.lines == [("warning", "job.park_rejected", {**_fields(job), "reason": _LOST})]
+
+
+async def test_an_initial_lease_extension_that_raises_carries_on_at_the_default() -> None:
+    """The per-kind extension is a heartbeat like any other: a failure is
+    said, and the job runs on at the default lease the claim took."""
+    job = make_job(PROJECT_ID)
+    jobs = _FlakyQueue([job], beats=[ConnectionError("failover")])
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(Success()),
+        owner="w1",
+        lease=timedelta(seconds=30),
+        lease_for_kind=lambda kind: timedelta(hours=2),
+        logger=logger,
+    )
+
+    claimed = await loop.run_once(PROJECT_ID)
+
+    assert claimed is True
+    assert jobs.calls[:2] == ["claim", "heartbeat"]
+    record = await jobs.get(job.id)
+    assert record is not None
+    assert record.state is JobState.SUCCEEDED
+    assert logger.lines == [
+        (
+            "warning",
+            "job.heartbeat_failed",
+            {**_fields(job), "error": repr(ConnectionError("failover"))},
+        )
+    ]
+
+
+async def test_an_initial_lease_extension_that_is_refused_is_said() -> None:
+    job = make_job(PROJECT_ID)
+    jobs = _FlakyQueue([job], beats=[False])
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(Success()),
+        owner="w1",
+        lease=timedelta(seconds=30),
+        lease_for_kind=lambda kind: timedelta(hours=2),
+        logger=logger,
+    )
+
+    claimed = await loop.run_once(PROJECT_ID)
+
+    assert claimed is True
+    assert logger.lines == [("warning", "job.lease_lost", {**_fields(job), "reason": _LOST})]

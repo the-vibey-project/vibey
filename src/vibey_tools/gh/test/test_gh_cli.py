@@ -1130,3 +1130,27 @@ def test_failover_cli_runs_once_with_explicit_paths(repo, capsys, tmp_path, monk
     monkeypatch.setenv("HOME", str(tmp_path))
     assert main(["failover", "--once"]) == 0
     assert "disabled" in capsys.readouterr().out
+
+
+def test_python_dash_m_runs_the_cli():
+    """`python -m vibey_gh` failed with "No module named vibey_gh.__main__"."""
+    import sys
+
+    run = subprocess.run(
+        [sys.executable, "-m", "vibey_gh", "--help"], capture_output=True, text=True, check=False
+    )
+    assert run.returncode == 0, run.stderr
+    assert "usage:" in run.stdout
+
+
+def test_dunder_main_delegates_to_cli_main(monkeypatch):
+    """In-process, so the delegation itself is asserted rather than inferred from --help:
+    whatever `cli.main` returns is the process exit status."""
+    import runpy
+
+    import vibey_gh.cli
+
+    monkeypatch.setattr(vibey_gh.cli, "main", lambda argv=None: 7)
+    with pytest.raises(SystemExit) as exited:
+        runpy.run_module("vibey_gh", run_name="__main__")
+    assert exited.value.code == 7

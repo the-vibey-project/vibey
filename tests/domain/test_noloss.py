@@ -7,6 +7,12 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from tests.domain.test_noloss_reference import (
+    REFERENCE,
+    Scenario,
+    dropped_from,
+    scenarios,
+)
 from vibey.domain.handoff import (
     AssumptionRef,
     BudgetSnapshot,
@@ -21,7 +27,10 @@ from vibey.domain.handoff import (
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event, digest_range
 from vibey.domain.noloss import verify
 from vibey.domain.phase import Phase
-from vibey.domain.review import Ambiguity, FindingRef, Severity
+
+# The no-loss property suite: protected (`[merge_train] protected_paths`,
+# .github/CODEOWNERS), and run alone at 10,000 examples by CI's no-loss lane.
+pytestmark = pytest.mark.noloss
 
 PROJECT_ID = uuid4()
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
@@ -457,123 +466,73 @@ def test_attempts_is_carried_through_to_the_result() -> None:
     assert result.attempts == 3
 
 
-# --- Adversarial property: omitting any closable item is always caught ------
+# --- Adversarial properties: graded by the reference model, never by the gate -----------
+#
+# Every expectation below comes from tests/domain/test_noloss_reference.py, which restates
+# what is still open without calling `open_items`. The ledgers come from its strategy:
+# arbitrary ids, every kind interleaved, closing events and supersedes, several verdicts,
+# and a presentation order unrelated to seq.
 
 
-def _perfect_brief_for(ledger: Sequence[LedgerEvent]) -> HandoffBrief:
-    from vibey.domain.ledger import open_items as _open_items
-
-    return _empty_brief(
-        open_questions=tuple(
-            QuestionRef(qid, "restated", blocking=False)
-            for qid in _open_items(ledger, EventKind.QUESTION_ASKED)
-        ),
-        decisions=tuple(
-            DecisionRef(did, "restated") for did in _open_items(ledger, EventKind.DECISION_RECORDED)
-        ),
-        assumptions=tuple(
-            AssumptionRef(aid, "restated")
-            for aid in _open_items(ledger, EventKind.ASSUMPTION_STATED)
-        ),
-        open_findings=tuple(
-            FindingRef(fid, Severity.LOW, Ambiguity.CLEAR)
-            for fid in _open_items(ledger, EventKind.FINDING_RAISED)
-        ),
-    )
-
-
-@given(
-    n_questions=st.integers(0, 3),
-    n_decisions=st.integers(0, 3),
-    n_assumptions=st.integers(0, 3),
-    n_findings=st.integers(0, 3),
-)
-def test_perfect_brief_always_passes_closure_rules(
-    n_questions: int, n_decisions: int, n_assumptions: int, n_findings: int
-) -> None:
-    ledger: list[LedgerEvent] = []
-    seq = 1
-    for i in range(n_questions):
-        ledger.append(
-            _event(
-                seq,
-                EventKind.QUESTION_ASKED,
-                {"question_id": f"q{i}", "text": "?", "blocking": False},
-            )
-        )
-        seq += 1
-    for i in range(n_decisions):
-        ledger.append(
-            _event(
-                seq,
-                EventKind.DECISION_RECORDED,
-                {"decision_id": f"d{i}", "title": "t", "choice": "c"},
-            )
-        )
-        seq += 1
-    for i in range(n_assumptions):
-        ledger.append(
-            _event(
-                seq,
-                EventKind.ASSUMPTION_STATED,
-                {"assumption_id": f"a{i}", "text": "x", "confidence": "high"},
-            )
-        )
-        seq += 1
-    for i in range(n_findings):
-        ledger.append(
-            _event(
-                seq,
-                EventKind.FINDING_RAISED,
-                {"finding_id": f"f{i}", "severity": "low", "text": "x"},
-            )
-        )
-        seq += 1
-
-    brief = _perfect_brief_for(ledger)
+@given(scenario=scenarios())
+def test_perfect_brief_always_passes(scenario: Scenario) -> None:
+    brief = REFERENCE.brief(REFERENCE.expected(scenario))
     result = verify(
-        ledger=ledger,
+        ledger=scenario.presented,
         brief=brief,
-        ref=_ref_for(ledger) if ledger else _ref_for_empty(),
+        ref=scenario.ref,
         budget=ZERO_BUDGET,
+        spec_constraints=scenario.spec_constraints,
     )
 
-    assert result.ok
+    assert result.ok, result.violations
 
 
-@pytest.mark.parametrize(
-    ("kind", "id_field", "rule"),
-    [
-        (EventKind.QUESTION_ASKED, "question_id", GateRule.R2_QUESTIONS),
-        (EventKind.DECISION_RECORDED, "decision_id", GateRule.R3_DECISIONS),
-        (EventKind.ASSUMPTION_STATED, "assumption_id", GateRule.R4_ASSUMPTIONS),
-        (EventKind.FINDING_RAISED, "finding_id", GateRule.R5_FINDINGS),
-    ],
-)
-def test_omitting_any_closable_item_is_always_caught(
-    kind: EventKind, id_field: str, rule: GateRule
+_ITEM_RULES = {
+    GateRule.R2_QUESTIONS: "questions",
+    GateRule.R3_DECISIONS: "decisions",
+    GateRule.R4_ASSUMPTIONS: "assumptions",
+    GateRule.R5_FINDINGS: "findings",
+    GateRule.R7_ARTIFACTS: "artifacts",
+}
+_TEXT_RULES = {GateRule.R1_REMAINING: "remaining", GateRule.R9_CONSTRAINTS: "constraints"}
+
+
+@given(st.data())
+def test_dropping_any_subset_of_owed_items_names_every_one_and_nothing_else(
+    data: st.DataObject,
 ) -> None:
-    payloads = {
-        "question_id": {"text": "?", "blocking": False},
-        "decision_id": {"title": "t", "choice": "c"},
-        "assumption_id": {"text": "x", "confidence": "high"},
-        "finding_id": {"severity": "low", "text": "x"},
-    }
-    payload = {id_field: "victim", **payloads[id_field]}
-    ledger = [_event(1, kind, payload)]
+    """Drop a random part of what the brief owes -- any mix of questions, decisions,
+    assumptions, findings, artifacts, remaining work and hard constraints -- and the gate
+    must name each dropped item under its own rule, and name nothing that was kept."""
+    scenario = data.draw(scenarios())
+    expected = REFERENCE.expected(scenario)
+    dropped = dropped_from(data, expected)
+    brief = REFERENCE.brief(expected.without(dropped))
 
-    perfect = _perfect_brief_for(ledger)
-    damaged = _empty_brief(
-        open_questions=tuple(q for q in perfect.open_questions if q.question_id != "victim"),
-        decisions=tuple(d for d in perfect.decisions if d.decision_id != "victim"),
-        assumptions=tuple(a for a in perfect.assumptions if a.assumption_id != "victim"),
-        open_findings=tuple(f for f in perfect.open_findings if f.finding_id != "victim"),
+    result = verify(
+        ledger=scenario.presented,
+        brief=brief,
+        ref=scenario.ref,
+        budget=ZERO_BUDGET,
+        spec_constraints=scenario.spec_constraints,
     )
 
-    result = verify(ledger=ledger, brief=damaged, ref=_ref_for(ledger), budget=ZERO_BUDGET)
-
-    assert not result.ok
-    assert any(v.rule is rule and v.item_id == "victim" for v in result.violations)
+    assert result.ok is dropped.is_empty()
+    assert {v.rule for v in result.violations} <= set(_ITEM_RULES) | set(_TEXT_RULES)
+    named = {(v.rule, v.item_id) for v in result.violations if v.rule in _ITEM_RULES}
+    owed = {
+        (rule, item_id) for rule, attr in _ITEM_RULES.items() for item_id in getattr(dropped, attr)
+    }
+    assert named == owed
+    for rule, attr in _TEXT_RULES.items():
+        # R1 and R9 carry no item id, so the text is named in the detail. R1 names a text
+        # once per occurrence in `remaining_work`, so distinct details are what is counted.
+        details = {v.detail for v in result.violations if v.rule is rule}
+        texts = getattr(dropped, attr)
+        assert len(details) == len(texts), (rule, details, texts)
+        for text in texts:
+            assert any(repr(text) in detail for detail in details), (rule, text, details)
 
 
 def test_rewording_without_carrying_the_id_still_fails() -> None:

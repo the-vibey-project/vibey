@@ -55,7 +55,12 @@ branch = true
 source = ["src/vibey_runners/common"]
 
 [tool.importlinter]
-root_package = "vibey_runners.common"
+# The top-level package, not `vibey_runners.common`. grimp builds its graph from a
+# top-level package only; given the dotted name, it raised NotATopLevelModule and
+# lint-imports exited 1 before evaluating either contract below. Neither had ever been
+# checked, and nothing noticed, because nothing ran it (#263). The contracts still name
+# `vibey_runners.common`, and the root just has to contain it.
+root_package = "vibey_runners"
 include_external_packages = true
 
 # This package is the bottom of the onion for every runner that depends on
