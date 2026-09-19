@@ -62,11 +62,12 @@ def test_design_command_enqueues_interview(monkeypatch) -> None:  # type: ignore
 def test_work_command_runs_one_queue_item(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     project_id = uuid4()
 
-    async def fake_work(received, provider, max_turns, max_dollars):  # type: ignore[no-untyped-def]
+    async def fake_work(received, provider, max_turns, max_dollars, ollama_model):  # type: ignore[no-untyped-def]
         assert received == project_id
         assert provider == "scripted"
         assert max_turns == 1
         assert max_dollars == 0.25
+        assert ollama_model is None
         return True
 
     monkeypatch.setattr(cli_main, "_work_once", fake_work)

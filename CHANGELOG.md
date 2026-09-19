@@ -32,6 +32,27 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **design:** sovereign DECOMPOSE — `vibey worker --provider qwenloop` now plans BUILD on
+  the local model (`QwenloopWorkPlanProducer`) instead of the scripted test fake, whose
+  items carried no verification commands. The plan is decoded under a JSON schema whose
+  criterion ids are an enum of the spec's own, every item must carry a verification
+  command and a checked criterion, dependencies must precede their dependents, and a plan
+  that breaks any rule is refused whole rather than partly enqueued. Decoders are shared
+  with the claudeloop producer (`design_json.WorkPlanDecoder`) (#115)
+* **design:** one configurable Ollama client for both sovereign providers —
+  `VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`, `http`/`https` only),
+  `VIBEY_OLLAMA_MODEL` (default `qwen2.5-coder:14b`, overridden by `--ollama-model` on
+  `vibey work` and `vibey worker`) and `VIBEY_OLLAMA_TIMEOUT` (default 900 s) replace
+  values that were hard-coded in the DESIGN provider (#115)
+
+### Bug Fixes
+
+* **design:** a research topic the sovereign provider cannot source now parks a
+  `research_evidence` human gate on its first attempt, naming the topic, the evidence
+  file it wants and `VIBEY_EVIDENCE_DIR`. It used to fail as a generic error, retry six
+  times with backoff, and then park an `attempts_exhausted` gate asking for more attempts
+  that could never succeed. `SovereignResearchUnavailable` moved to `vibey.domain.errors`
+  so the handler can catch it (#115)
 * **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
   pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
   ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
@@ -107,6 +128,27 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   could bypass that review; `tests/meta/test_protected_paths_agree.py` keeps the two lists
   identical. The ruleset keys take effect on the operator's next `vibey-gh reconcile`
   ([#213](https://github.com/the-vibey-project/vibey/issues/213))
+* **ledger:** ledger readers are forward compatible with event kinds a newer vibey wrote. Every reader parsed `event.kind` with `EventKind(...)`, a closed enum, so during a rolling upgrade or after a rollback one row of a new kind (#270's `TranscriptRecorded` is the first) raised `ValueError` in every older worker that read the project, and the fleet died one lease at a time. Now the shared `EventRowMapper` reads an unknown kind as `UnrecognizedEventKind` carrying the stored text: kept in every range, in the full ledger handed to the next engine (byte for byte what a newer vibey writes) and in `digest_range` (R6 unchanged), skipped by every projection, the gate, the budget brake and the dashboard, and never written. `vibey ledger show --kind` and `vibey ledger search --kind` match a kind they do not know exactly as written and say so on stderr; `EventKindResolver(accept_unrecognized=False)` keeps the old refusal. Must land before #270 and any other new `EventKind` member (#275)
+* **domain:** forward-compatible readers for closed vocabularies across database columns. Readers of `engine_id`, `phase`, `provenance`, `job.state`, and `circuit` parse rows into enum members or `UnrecognizedValue` instances rather than crashing with `ValueError` on rows written by newer versions. Older workers keep unrecognized values in storage without mutation and skip domain projections that require known semantics, while writers remain strictly validated. Must land before #281 adds `claudeloop-local` (#287)
+
+### Features
+
+* **ledger:** `vibey ledger search` finds ledger records by record id (`--id`), payload digest
+  (`--digest`, which names a payload, so it can match several records), actor (`--actor`: an
+  engine id, a provenance, or `vibey` for events vibey wrote itself), time window
+  (`--since`/`--until`, half-open, ISO-8601), any of several kinds (repeatable `--kind`), and
+  literal case-insensitive text in the payload (`--text`), scoped to one project. Every
+  criterion and the `--limit` run in SQL as one parameterised statement — nothing typed reaches
+  the SQL text — and the result says when older matches were cut; `--json` prints every field
+  of every event. Migration 0012 adds the digest, production-time and per-engine indexes the
+  search reads. The first slice of sub-doctrine 7.a, the searchable ledger (#137)
+* **ledger:** the ledger has a hash chain, derived from the rows rather than stored beside them
+  (`domain/ledger_chain.py`). Each event's link is the SHA-256 of the previous link and every
+  stored field of the event, from a per-project genesis; `verify` walks a whole ledger or a
+  window from a trusted link, recomputes each payload's digest, and reports every gap,
+  duplicate, foreign event, digest mismatch and disagreeing anchor rather than the first one.
+  A window verifies alone from the link before it, which is what the storage tiers' chunk
+  hashes will fold over (#114, #137)
 
 ## [0.8.0] (2026-09-16)
 

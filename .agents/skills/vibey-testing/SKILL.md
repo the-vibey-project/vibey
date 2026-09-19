@@ -33,6 +33,11 @@ excluded and everything runs under pytest-xdist.
 and repoints `VIBEY_TEST_DATABASE_URL` at the clone. The role in the DSN must be
 able to connect to the `postgres` database and run `CREATE DATABASE`.
 
+The template is migrated from the running checkout and then reused, so two
+checkouts whose `migrations/` differ -- parallel worktrees, one adding a migration
+-- must not share it: set `VIBEY_TEST_TEMPLATE_DB` to a name of the checkout's own
+(default `vibey_test_template`).
+
 ```bash
 export VIBEY_TEST_DATABASE_URL="postgresql://$(whoami)@localhost:5432/vibey_test"
 uv run pytest tests/domain -p no:cacheprovider            # one area, xdist on

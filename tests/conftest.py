@@ -2,7 +2,8 @@
 """Root test configuration — per-worker database via PostgreSQL template pattern.
 
 Session startup creates ``vibey_test_template`` (migrated once, reused across
-sessions) and clones it into ``vibey_test_<worker_id>`` for this process.
+sessions; ``VIBEY_TEST_TEMPLATE_DB`` renames it) and clones it into
+``vibey_test_<worker_id>`` for this process.
 ``VIBEY_TEST_DATABASE_URL`` is repointed so every downstream fixture and test
 helper picks up the isolated per-worker database transparently.
 """
@@ -35,7 +36,12 @@ settings.register_profile(
 )
 
 _MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
-_TEMPLATE_DB = "vibey_test_template"
+# The template is migrated from THIS checkout's migrations and then reused by
+# every later session on the same server. Two checkouts whose migrations
+# differ -- parallel worktrees, one carrying a migration the other lacks --
+# would otherwise leak schema into each other's clones. Name it per checkout
+# with VIBEY_TEST_TEMPLATE_DB; the default is the name it has always had.
+_TEMPLATE_DB = os.environ.get("VIBEY_TEST_TEMPLATE_DB", "vibey_test_template")
 _BASE_DSN: str | None = None
 
 

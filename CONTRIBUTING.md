@@ -41,9 +41,10 @@ Requires **Python 3.12+**, **PostgreSQL**, and **macOS or Linux**. Windows is
 not a supported target. The suite reads `VIBEY_TEST_DATABASE_URL` (default
 `postgresql://$USER@localhost:5432/vibey_test`); that role needs `CREATEDB`,
 because the session builds a migrated `vibey_test_template` and clones one
-`vibey_test_<worker>` per xdist worker. The default suite needs no engine
-binaries and no paid accounts: tests marked `paid` are deselected unless you
-ask for them (ADR-0030).
+`vibey_test_<worker>` per xdist worker. Parallel checkouts whose migrations
+differ each set `VIBEY_TEST_TEMPLATE_DB` to a template name of their own. The
+default suite needs no engine binaries and no paid accounts: tests marked
+`paid` are deselected unless you ask for them (ADR-0030).
 
 ## The branch model
 

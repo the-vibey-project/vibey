@@ -37,6 +37,7 @@ def build_deterministic_brief(
     invariants: Sequence[str] = (),
     style_rules: Sequence[str] = (),
 ) -> HandoffBrief:
+    events = tuple(event for event in events if event.interpretable)
     open_view = build_open_items(events)
     decision_log = build_decision_log(events)
 

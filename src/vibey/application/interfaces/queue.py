@@ -15,7 +15,7 @@ from vibey.application.dto import (
     JobRecord,
 )
 from vibey.domain.engine import EngineId
-from vibey.domain.job import FailureClass, JobState
+from vibey.domain.job import FailureClass, StoredJobState
 from vibey.domain.phase import Phase
 
 
@@ -85,7 +85,11 @@ class JobRepository(Protocol):
 
     async def claim(self, project_id: UUID, *, owner: str, lease: timedelta) -> JobRecord | None:
         """Claims the highest-priority ready job whose dependencies have all
-        succeeded, or None if there is nothing claimable right now."""
+        succeeded, or None if there is nothing claimable right now.
+
+        Only a job in a phase this vibey knows, of a project in a phase this vibey
+        knows, is claimable (vibey#287): a phase a newer vibey added is left for a
+        worker that knows what it means, never guessed at."""
         ...
 
     async def heartbeat(self, job_id: UUID, *, owner: str, lease: timedelta) -> bool: ...
@@ -143,8 +147,10 @@ class JobRepository(Protocol):
         last one?" from inside its own still-leased job."""
         ...
 
-    async def queue_depth(self, project_id: UUID) -> Mapping[JobState, int]:
-        """Returns the number of jobs by JobState for the given project."""
+    async def queue_depth(self, project_id: UUID) -> Mapping[StoredJobState, int]:
+        """Returns the number of jobs by state for the given project. Every
+        `JobState` member is present; a state a newer vibey added is counted under
+        its stored name (vibey#287)."""
         ...
 
     async def get(self, job_id: UUID) -> JobRecord | None: ...
