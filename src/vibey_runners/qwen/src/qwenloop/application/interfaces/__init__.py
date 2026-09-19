@@ -12,9 +12,16 @@ from typing import Protocol
 from qwenloop.application.interfaces.backend_selection_interface import (
     BackendSelectorInterface,
 )
+from qwenloop.application.interfaces.class_contracts import AutonomousRunnerInterface
 from qwenloop.domain.model import ChatChunk, ChatMessage, ModelProfile, ServerInfo
 
-__all__ = ["BackendSelectorInterface", "InferenceServer", "RunStore", "ToolExecutor"]
+__all__ = [
+    "AutonomousRunnerInterface",
+    "BackendSelectorInterface",
+    "InferenceServer",
+    "RunStore",
+    "ToolExecutor",
+]
 
 
 class InferenceServer(Protocol):

@@ -846,19 +846,33 @@ def _doctor(args) -> int:
 
 def _paper(args) -> int:
     from vibey_gh import paper
+    from vibey_gh.docx import DocxError
 
+    out = Path(args.output)
+    source = Path(args.source)
+    output_format = args.format or ("docx" if out.suffix.casefold() == ".docx" else "tex")
     try:
+        markdown = source.read_text(encoding="utf-8")
+        out.parent.mkdir(parents=True, exist_ok=True)
+        if output_format == "docx":
+            paper.write_docx(
+                markdown,
+                out,
+                author=args.author,
+                journal=args.journal,
+                keywords=args.keywords,
+            )
+            print(f"docx: {out}")
+            return 0
         tex = paper.render_paper(
-            Path(args.source).read_text(encoding="utf-8"),
+            markdown,
             author=args.author,
             journal=args.journal,
             keywords=args.keywords,
         )
-    except (paper.PaperError, OSError) as error:
+    except (paper.PaperError, DocxError, OSError) as error:
         print(f"vibey-gh paper: {error}", file=sys.stderr)
         return 1
-    out = Path(args.output)
-    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(tex, encoding="utf-8")
     print(f"tex: {out}")
     return 0
@@ -866,6 +880,7 @@ def _paper(args) -> int:
 
 def _book(args) -> int:
     from vibey_gh import book
+    from vibey_gh.docx import DocxError
 
     meta = {
         "title": args.title,
@@ -905,7 +920,7 @@ def _book(args) -> int:
             meta={k: v for k, v in meta.items() if v},
             interior=book.PrintInterior(**layout),
         )
-    except (book.BookError, OSError) as error:
+    except (book.BookError, DocxError, OSError) as error:
         print(f"vibey-gh book: {error}", file=sys.stderr)
         return 1
     for kind, path in written.items():
@@ -1580,6 +1595,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     pp.add_argument("--source", default="docs/paper.md")
     pp.add_argument("--output", default="paper/paper.tex")
+    pp.add_argument(
+        "--format",
+        choices=("tex", "docx"),
+        help="output format; inferred from .docx output names, otherwise tex",
+    )
     pp.add_argument("--author", required=True)
     pp.add_argument("--journal", action="store_true", help="journal layout instead of conference")
     pp.add_argument("--keywords", default="")

@@ -7,9 +7,17 @@ from claudeloop.domain.interfaces.backend_interface import (
     BackendProfileInterface,
     BackendRuntimeInterface,
 )
+from claudeloop.domain.interfaces.class_contracts import (
+    BackendMisconfiguredInterface,
+    BackendProfileErrorInterface,
+    TurnSignalsInterface,
+)
 
 __all__ = [
     "BackendIdentityInterface",
+    "BackendMisconfiguredInterface",
     "BackendProfileInterface",
+    "BackendProfileErrorInterface",
     "BackendRuntimeInterface",
+    "TurnSignalsInterface",
 ]

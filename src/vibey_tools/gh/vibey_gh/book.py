@@ -38,13 +38,16 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vibey_gh.chapter_sanitizer import ChapterSanitizer
+from vibey_gh.docx import DocxWriter, HtmlToDocx
 from vibey_gh.interfaces.book_interface import (
     BookChapterInterface,
+    BookErrorInterface,
     EpubPackageInterface,
     MainExtractorInterface,
     PrintInteriorInterface,
 )
 from vibey_gh.interfaces.chapter_sanitizer_interface import ChapterSanitizerInterface
+from vibey_gh.interfaces.docx_interface import DocxBlock, DocxWriterInterface
 
 __all__ = [
     "BookChapter",
@@ -55,12 +58,13 @@ __all__ = [
     "PrintInterior",
     "TableOfContents",
     "build_book",
+    "build_docx_blocks",
     "chapters_from_nav",
     "extract_main",
 ]
 
 
-class BookError(RuntimeError):
+class BookError(RuntimeError, BookErrorInterface):
     """A book cannot be built and the reason is actionable by the operator."""
 
 
@@ -892,13 +896,15 @@ def build_book(
     *,
     interior: PrintInteriorInterface | None = None,
     package: EpubPackageInterface | None = None,
+    docx_writer: DocxWriterInterface | None = None,
 ) -> dict[str, Path]:
-    """Build book.epub and book-print.html from a built site and its nav.
+    """Build book.epub, book-print.html and book.docx from a built site and its nav.
 
     Returns the paths written. Raises BookError with the missing piece named when a nav
     chapter has no built page — a book silently missing a chapter is worse than no book.
     `interior` is the print layout (its trim, margins and type are its constructor's
-    parameters) and `package` the EPUB writer; both default to the standard ones.
+    parameters), `package` the EPUB writer, and `docx_writer` the editable Word writer;
+    all default to the standard ones.
 
     ADR-0016 method of last resort, and the reason: this is a one-shot pipeline with
     nothing to remember between calls, and every substitutable decision in it -- how a
@@ -939,4 +945,70 @@ def build_book(
     layout = interior if interior is not None else PrintInterior()
     print_path = output_dir / "book-print.html"
     print_path.write_text(layout.render(meta, chapters, bodies, published.year), encoding="utf-8")
-    return {"epub": epub_path, "print_html": print_path}
+    docx_path = output_dir / "book.docx"
+    selected_docx = docx_writer if docx_writer is not None else DocxWriter()
+    selected_docx.write(
+        docx_path,
+        title=meta["title"],
+        author=meta["author"],
+        blocks=build_docx_blocks(meta, chapters, bodies, published.year),
+        page_width_twips=8640,
+        page_height_twips=12960,
+    )
+    return {"epub": epub_path, "print_html": print_path, "docx": docx_path}
+
+
+def build_docx_blocks(
+    meta: Mapping[str, str],
+    chapters: Sequence[BookChapterInterface],
+    bodies: Mapping[str, str],
+    year: int,
+) -> tuple[DocxBlock, ...]:
+    """Build the editable book's front matter, contents and chapter blocks.
+
+    This is a stateless assembly façade, not a second renderer: the chapter markup is
+    still the sanitized HTML already used by EPUB and print HTML, then ``HtmlToDocx``
+    maps that shared source to Word's semantic blocks.
+    """
+    blocks: list[DocxBlock] = []
+    if meta.get("subtitle"):
+        blocks.append(
+            {
+                "kind": "paragraph",
+                "style": "Subtitle",
+                "center": True,
+                "runs": ({"text": meta["subtitle"]},),
+            }
+        )
+    blocks.extend(
+        (
+            {"kind": "page_break"},
+            {
+                "kind": "paragraph",
+                "runs": ({"text": f"Copyright © {year} {meta['author']}. All rights reserved."},),
+            },
+            {"kind": "paragraph", "runs": ({"text": meta.get("publisher", meta["author"])},)},
+            {"kind": "page_break"},
+            {"kind": "heading", "level": 1, "runs": ({"text": "Table of Contents"},)},
+        )
+    )
+    for chapter in chapters:
+        blocks.append(
+            {
+                "kind": "number",
+                "level": max(0, min(8, chapter.depth)),
+                "runs": ({"text": chapter.title},),
+            }
+        )
+    converter = HtmlToDocx()
+    previous_sections: tuple[str, ...] = ()
+    for chapter in chapters:
+        blocks.append({"kind": "page_break"})
+        if chapter.sections and chapter.sections != previous_sections:
+            blocks.append(
+                {"kind": "heading", "level": 2, "runs": ({"text": chapter.sections[-1]},)}
+            )
+        blocks.append({"kind": "heading", "level": 1, "runs": ({"text": chapter.title},)})
+        blocks.extend(converter.convert(bodies[chapter.slug], leading_title=chapter.title))
+        previous_sections = chapter.sections
+    return tuple(blocks)

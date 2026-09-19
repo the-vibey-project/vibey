@@ -936,13 +936,16 @@ def test_the_site_publishes_its_own_book_and_paper_when_enabled(tmp_path):
     # holds only ProperDocs, and the first dogfooded deploy failed with exit 127.
     assert on.index('pip install --quiet -e "$self"') < on.index("vibey-gh book --site-dir")
     assert "cp book-out/book.epub channel-site/book.epub" in on
+    assert "cp book-out/book.docx channel-site/book.docx" in on
     # The finished KDP interior: one headless-Chromium print of the 6x9 print HTML.
     # Soft-fails to the print HTML rather than killing a docs deploy over one artifact.
     assert '--print-to-pdf="$PWD/book-out/book.pdf"' in on
     assert "--no-pdf-header-footer" in on
     assert "book.pdf was not produced" in on
     assert "vibey-gh paper --author" in on
+    assert "--output paper-out/paper.docx --format docx" in on
     assert "cp paper-out/paper.pdf channel-site/paper.pdf" in on
+    assert "cp paper-out/paper.docx channel-site/paper.docx" in on
     # The engine is pinned by version AND checksum, and verification precedes use.
     assert "tectonic%400.15.0" in on
     assert "875fbbc9ab48560d7776088c608e0beee49197b57ab4a2f6c5385b2c661c842f" in on
@@ -969,7 +972,9 @@ def test_the_book_and_the_paper_are_findable_on_every_published_surface(tmp_path
     )
     # Every page: the theme script learns which forms exist from the built site.
     assert '"paper_pdf": (site / "paper.pdf").is_file()' in on
+    assert '"paper_docx": (site / "paper.docx").is_file()' in on
     assert '"book_epub": (site / "book.epub").is_file()' in on
+    assert '"book_docx": (site / "book.docx").is_file()' in on
     assert 'replace("__DOC_SURFACES__", encoded)' in on
     script = (SOURCE_RELEASE_ASSETS / "javascripts" / "channel.js").read_text(encoding="utf-8")
     assert "'__DOC_SURFACES__'" in script
@@ -985,7 +990,15 @@ def test_the_book_and_the_paper_are_findable_on_every_published_surface(tmp_path
     assert "[ -f pages/main/paper.pdf ] && SURFACE_LINES=" in on
     assert "${SURFACE_LINES}- Provenance:" in on
     # Every book format that can be produced is listed, not a subset.
-    for produced in ("book.pdf", "book.epub", "book-print.html", "paper/index.html"):
+    for produced in (
+        "book.pdf",
+        "book.docx",
+        "book.epub",
+        "book-print.html",
+        "paper.pdf",
+        "paper.docx",
+        "paper/index.html",
+    ):
         assert f"[ -f pages/main/{produced} ] && SURFACE_LINES=" in on, produced
     # Immutable copies: an attach job, and the only job allowed to write contents.
     parsed = yaml.safe_load(on)

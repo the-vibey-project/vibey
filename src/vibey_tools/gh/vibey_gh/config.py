@@ -32,6 +32,8 @@ Every project-specific decision lives here so the logic beside it can stay gener
     [platform]
     kind = "github"         # which forge the repository lives on; github is the one adapter
     host = "github.com"     # that forge's host, for GitHub Enterprise Server and its like
+    repository = "owner/name"  # optional namespace; otherwise read origin's URL
+    token_env = "GITLAB_TOKEN"  # name of the environment variable, never the secret itself
 
 Absent keys fall back to the defaults below, so a repository that agrees with them needs
 no file at all. `tomllib` is stdlib from 3.11, which this package already requires.
@@ -232,7 +234,7 @@ class WorkflowNamesConfig:
 # is refused here, at load, rather than accepted and then quietly driven as GitHub by every
 # module that has not moved onto the adapter yet. `ForgeSelector.kinds` must equal this,
 # and a test holds them together.
-ADAPTED_PLATFORM_KINDS = (ForgeKind.GITHUB.value,)
+ADAPTED_PLATFORM_KINDS = tuple(kind.value for kind in ForgeKind)
 
 # A bare host name, optionally with a port: what `gh` takes as `GH_HOST`. No scheme, path,
 # user or whitespace, so the value cannot smuggle anything else into the client's reading.
@@ -255,17 +257,32 @@ class PlatformConfig:
 
     kind: str = ForgeKind.GITHUB.value
     host: str = "github.com"
+    repository: str = ""
+    token_env: str = ""
 
     def __post_init__(self) -> None:
         kinds = tuple(kind.value for kind in ForgeKind)
         if self.kind not in kinds:
             raise ValueError(f"platform.kind must be one of {', '.join(kinds)}: {self.kind!r}")
-        if self.kind not in ADAPTED_PLATFORM_KINDS:
+        if (
+            self.kind not in ADAPTED_PLATFORM_KINDS
+        ):  # pragma: no cover - enum and adapters move together
             raise ValueError(self.not_adapted(self.kind))
         if not isinstance(self.host, str) or not _HOST_RE.fullmatch(self.host):
             raise ValueError(
                 "platform.host must be a bare host name, optionally with a port "
                 f"(no scheme or path): {self.host!r}"
+            )
+        if self.repository and (
+            self.repository.startswith("/")
+            or self.repository.endswith("/")
+            or any(part == "" for part in self.repository.split("/"))
+            or any(char.isspace() for char in self.repository)
+        ):
+            raise ValueError("platform.repository must be a forge namespace such as 'owner/name'")
+        if self.token_env and not SECRET_NAME_PATTERN.fullmatch(self.token_env):
+            raise ValueError(
+                "platform.token_env must be an environment variable name, not a secret"
             )
 
     @staticmethod
@@ -1712,6 +1729,8 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         platform=PlatformConfig(
             kind=platform.get("kind", PlatformConfig.kind),
             host=platform.get("host", PlatformConfig.host),
+            repository=platform.get("repository", PlatformConfig.repository),
+            token_env=platform.get("token_env", PlatformConfig.token_env),
         ),
         yank=YankConfig(
             pypi=yanking.get("pypi", False),

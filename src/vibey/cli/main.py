@@ -1402,7 +1402,6 @@ def worker(
 
     async def run_worker() -> None:
         from vibey.application.interfaces import WorkPlanProducer
-        from vibey.bootstrap import preflight_sweep
         from vibey.infrastructure.engines.claudeloop_decompose import ClaudeLoopWorkPlanProducer
 
         # Kubernetes scale-in is SIGTERM, a wait, then SIGKILL. A
@@ -1548,15 +1547,36 @@ def worker(
                     raise typer.Exit(EXIT_USAGE)
                 adapters = allowed
 
-            ineligible = await preflight_sweep(
-                resources=resources, project_id=project.project_id, adapters=adapters
+            preflight_report = await resources.conductor_preflight.run(
+                project_id=project.project_id,
+                adapters=adapters,
             )
+            ineligible = preflight_report.ineligible_engines
             if ineligible:
                 names = ", ".join(sorted(e.value for e in ineligible))
                 typer.echo(
                     f"warning: no recorded conformance for {names} -- engine-driven jobs "
                     "will not select them until `vibey doctor --conformance --record` passes"
                 )
+
+            feasibility = preflight_report.feasibility
+            location = (
+                ""
+                if feasibility.blocked_at is None
+                else f" — blocked at stage {feasibility.blocked_at!r}"
+            )
+            basis = (
+                f"; first repair: {feasibility.first_repair}"
+                if feasibility.first_repair is not None
+                else (
+                    f"; {feasibility.required_measured} of {feasibility.required} "
+                    "required coordinates measured; no measured shortfall"
+                )
+            )
+            typer.echo(
+                f"preflight feasibility: {feasibility.status.upper()}{location}{basis}",
+                err=feasibility.status == "infeasible",
+            )
 
             count = max(1, min(parallelism, len(adapters) * 2, os.cpu_count() or 1))
             loops = [

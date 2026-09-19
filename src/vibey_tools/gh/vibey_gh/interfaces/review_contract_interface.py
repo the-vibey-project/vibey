@@ -78,3 +78,10 @@ class ReviewContractPort(Protocol):
         requires `wider_report_fields`. Raises `ValueError` for an unknown half and
         `KeyError` for a selected field with no declared type.
         """
+
+
+@runtime_checkable
+class ReviewContractInterface(ReviewContractPort, Protocol):
+    """The concrete review contract's complete field-split surface."""
+
+    def json_schema(self, halves: Iterable[str] | None = None) -> dict[str, object]: ...

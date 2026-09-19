@@ -33,9 +33,25 @@ uv sync --extra dev
 # and pre-push hooks are never installed and the suite never runs locally.
 uv run pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 # Then the provenance hooks. This points core.hooksPath at .githooks; the
-# tracked .githooks/*.local shims chain back to the framework hooks above.
+# tracked .githooks/*.local shims chain back to the framework hooks above,
+# resolving the common git directory to ensure they run in linked worktrees.
 uv run vibey-gh install
 ```
+
+The order matters: `pre-commit install` refuses to run while `core.hooksPath`
+is set. The tracked shims (`.githooks/pre-commit`, `commit-msg.local` and
+`pre-push.local`) all hand over to `.githooks/framework-hook.sh`. It finds the
+framework's hooks through `git rev-parse --git-common-dir`, the same directory
+`pre-commit install` writes to. That works from a plain clone and from a linked
+worktree (`git worktree add`), where `.git` is a file rather than a directory,
+and one install covers every worktree. It also drops the `GIT_DIR` that git
+exports to a worktree's hooks, so the gate suite runs as it would from a plain
+clone and a test's scratch `git init` cannot rewrite this repository's config.
+If the framework's hook for a stage is
+not installed, the shim prints
+`warning: the pre-commit framework's <stage> hook is not installed` and lets
+the commit or push go ahead. None of that stage's gates ran, so run them by
+hand. CI runs them regardless.
 
 Requires **Python 3.12+**, **PostgreSQL**, and **macOS or Linux**. Windows is
 not a supported target. The suite reads `VIBEY_TEST_DATABASE_URL` (default
@@ -274,8 +290,8 @@ copies of everything are published under `/develop/`.
 ## Getting help
 
 See [SUPPORT.md](SUPPORT.md) for the right channel. Usage questions belong
-in [Discussions](https://github.com/the-vibey-project/vibey/discussions),
-not bug reports.
+in [Discussions](https://github.com/the-vibey-project/vibey/discussions), not
+bug reports.
 
 ## Code of Conduct
 
