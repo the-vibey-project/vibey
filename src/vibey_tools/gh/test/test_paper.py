@@ -12,6 +12,7 @@ from __future__ import annotations
 import pytest
 
 from vibey_gh import paper
+from vibey_gh.interfaces.paper_interface import PaperDocumentInterface, PaperErrorInterface
 
 MD = """# A Sound System
 
@@ -105,6 +106,11 @@ def test_a_paper_missing_journal_essentials_is_refused(source, missing):
         paper.render_paper(source, author="A")
 
 
+def test_paper_document_and_error_have_declared_interfaces():
+    assert isinstance(paper.convert(MD), PaperDocumentInterface)
+    assert isinstance(paper.PaperError("x"), PaperErrorInterface)
+
+
 def test_the_cli_writes_the_tex_and_reports_it(tmp_path, capsys):
     from vibey_gh import cli
 
@@ -163,3 +169,88 @@ def test_an_unterminated_display_block_ends_at_the_file_not_in_a_loop():
     md = "# T\n\n**Abstract.** A.\n\n$$\n\\alpha + \\beta\n"
     tex = paper.render_paper(md, author="A")
     assert "\\alpha + \\beta" in tex
+
+
+def test_the_paper_can_be_exported_as_an_editable_docx():
+    import io
+    import zipfile
+
+    document = paper.render_docx(MD, author="A. Person")
+    with zipfile.ZipFile(io.BytesIO(document)) as archive:
+        xml = archive.read("word/document.xml").decode()
+        relationships = archive.read("word/_rels/document.xml.rels").decode()
+    assert "A Sound System" in xml
+    assert "Abstract" in xml and "code_span" in xml
+    assert "E = mc" in xml and "col_a" in xml
+    assert "https://x.example" in relationships
+    assert 'w:type="page"' not in xml
+
+
+def test_docx_paper_handles_multiline_math_and_injected_writers(tmp_path):
+    import io
+    import zipfile
+
+    markdown = "# T\n\n**Abstract.** First line\ncontinues here.\n\n$$\n\\alpha + \\beta\n$$\n"
+    document = paper.render_docx(markdown, author="A")
+    with zipfile.ZipFile(io.BytesIO(document)) as archive:
+        xml = archive.read("word/document.xml")
+    assert b"alpha" in xml and b"beta" in xml
+
+    class Writer:
+        def build(self, **kwargs):
+            assert kwargs["title"] == "T"
+            return b"injected"
+
+        def write(self, path, **kwargs):
+            assert kwargs["title"] == "T"
+            path.write_bytes(b"injected")
+
+    assert paper.render_docx(markdown, author="A", writer=Writer()) == b"injected"
+    output = tmp_path / "paper.docx"
+    paper.write_docx(markdown, output, author="A", writer=Writer())
+    assert output.read_bytes() == b"injected"
+    assert any(run.get("href") for run in paper._docx_runs("[link](https://example.test)"))
+    unterminated = paper.render_docx("# T\n\n**Abstract.** A.\n\n$$\n\\alpha\n", author="A")
+    assert b"alpha" in zipfile.ZipFile(io.BytesIO(unterminated)).read("word/document.xml")
+
+
+def test_docx_paper_requires_a_title_for_both_facades(tmp_path, monkeypatch):
+    monkeypatch.setattr(paper, "convert", lambda markdown: None)
+    source = "**Abstract.** A.\n"
+    with pytest.raises(paper.PaperError, match="Title"):
+        paper.render_docx(source, author="A")
+    with pytest.raises(paper.PaperError, match="Title"):
+        paper.write_docx(source, tmp_path / "paper.docx", author="A")
+
+
+def test_the_paper_cli_infers_and_accepts_the_docx_format(tmp_path, capsys):
+    from vibey_gh import cli
+
+    source = tmp_path / "paper.md"
+    source.write_text(MD)
+    inferred = tmp_path / "inferred.docx"
+    assert (
+        cli.main(["paper", "--source", str(source), "--output", str(inferred), "--author", "A"])
+        == 0
+    )
+    assert inferred.is_file()
+    assert "docx:" in capsys.readouterr().out
+
+    explicit = tmp_path / "explicit.out"
+    assert (
+        cli.main(
+            [
+                "paper",
+                "--source",
+                str(source),
+                "--output",
+                str(explicit),
+                "--format",
+                "docx",
+                "--author",
+                "A",
+            ]
+        )
+        == 0
+    )
+    assert explicit.is_file()

@@ -19,6 +19,7 @@ from typing import Any, cast
 from vibey_gh import github_state
 from vibey_gh.config import GhConfig, normalise_actor
 from vibey_gh.issue_automation import sanitize
+from vibey_gh.review_contract import REVIEW_CONTRACT
 
 STATE_MARKER = "vibey-gh-pr-automation"
 EXTERNAL_REPAIR_LABEL = "vibey-gh:external-repair"
@@ -47,6 +48,9 @@ OWN_JOBS = (
     "Repair failed scans or review findings",
     "Resolve merge conflicts",
     "Escalate exhausted repair lineage",
+    "Sovereign diff review",
+    # The sovereign job's name before it went first (#133). Kept so a check run a
+    # pre-upgrade run of this workflow left on a head is still recognised as our own.
     "Local review fallback",
     "gate",
 )
@@ -75,6 +79,11 @@ class AutomationState:
     attempts: int = 0
     review_sha: str | None = None
     review_passed: bool | None = None
+    # False when the recorded review failed ONLY in the half the sovereign lane carried.
+    # A local model's finding never triggers automated repair, so such a head is reviewed
+    # again rather than repaired. None -- every review recorded before the lanes split,
+    # and every review the paid lane answered alone -- keeps the old reading.
+    review_repairable: bool | None = None
     replacement_pr: int | None = None
     heals: int = 0
     history: list[dict[str, Any]] = field(default_factory=list)
@@ -239,6 +248,7 @@ def parse_state(comments: Sequence[dict[str, Any] | str]) -> AutomationState | N
             attempts=int(data.get("attempts", 0)),
             review_sha=data.get("review_sha"),
             review_passed=data.get("review_passed"),
+            review_repairable=data.get("review_repairable"),
             replacement_pr=data.get("replacement_pr"),
             heals=int(data.get("heals", 0)),
             history=list(data.get("history", [])),
@@ -424,6 +434,17 @@ def evaluate(
         if state.review_sha != head:
             return result("review", "current head requires automated review")
         if state.review_passed is not True:
+            if state.review_repairable is False:
+                # The only findings came from the sovereign lane's diff review. Repair is a
+                # paid agent editing the branch, and a local model's finding is a lead for a
+                # human rather than a ruling, so it never spends a repair attempt -- the head
+                # is simply reviewed again, exactly as it was while that model was only a
+                # fallback whose verdict was never recorded.
+                return result(
+                    "review",
+                    "the sovereign lane's diff review has findings that automated repair "
+                    "does not act on; the head is reviewed again",
+                )
             if state.attempts >= cfg.pr_automation.max_repair_attempts:
                 return result(
                     "blocked", "review repair budget is exhausted", repair_attempt=state.attempts
@@ -506,6 +527,8 @@ def updated_state(
         state = lineage_for(current, head)
         state.review_sha = head
         state.review_passed = bool(payload.get("pass"))
+        repairable = payload.get("repairable")
+        state.review_repairable = repairable if isinstance(repairable, bool) else None
     elif kind == "repair":
         state = current or AutomationState(lineage_sha=head, current_sha=head)
         if payload.get("fixable") is not False:
@@ -513,6 +536,7 @@ def updated_state(
         state.current_sha = head
         state.review_sha = None
         state.review_passed = None
+        state.review_repairable = None
     else:
         raise ValueError(f"unknown record kind: {kind}")
     state.history.append({"kind": kind, **payload})
@@ -535,7 +559,15 @@ def upsert_state(
 def record(number: int, payload: dict[str, Any], kind: str) -> AutomationState:
     pr = fetch_pr(number)
     state = updated_state(pr, payload, kind=kind)
-    summary = str(payload.get("summary") or f"Recorded {kind} for `{state.current_sha}`.")
+    # A review split across lanes speaks twice: the diff half's `summary` from the
+    # sovereign lane and the wider half's own summary from the paid lane. Both belong in
+    # the headline; a review answered whole has only the first, and reads as it always did.
+    said = [
+        str(payload[key])
+        for key in ("summary", REVIEW_CONTRACT.wider_summary_field)
+        if payload.get(key)
+    ]
+    summary = " ".join(said) or f"Recorded {kind} for `{state.current_sha}`."
     upsert_state(number, state, summary, list(pr.get("comments") or []))
     return state
 
@@ -584,6 +616,7 @@ def self_heal(number: int, cfg: GhConfig) -> dict[str, Any]:
     state.attempts = 0
     state.review_sha = None
     state.review_passed = None
+    state.review_repairable = None
     state.history.append({"kind": "self-heal", "head_sha": head, "heal": state.heals})
     summary = (
         f"Repair budget refilled automatically (self-heal {state.heals} of "

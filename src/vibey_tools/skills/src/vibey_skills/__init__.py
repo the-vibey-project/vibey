@@ -140,7 +140,7 @@ def iter_skills(plugin: str | None = None):
         plugin: restrict the results to a single plugin name.
     """
     root = plugins_root()
-    plugin_dirs = sorted(p for p in root.iterdir() if p.is_dir())
+    plugin_dirs = sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith("."))
     if plugin is not None:
         plugin_dirs = [p for p in plugin_dirs if p.name == plugin]
 

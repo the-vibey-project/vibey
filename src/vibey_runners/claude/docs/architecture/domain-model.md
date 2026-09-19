@@ -65,7 +65,9 @@ of "no."** A five-hour rate-limit window and an empty credits balance both
 surface as an HTTP 429, but only one of them will ever resolve by waiting.
 
 ```python
-CapacityState = Available | WindowExhausted | CreditsExhausted | AuthenticationFailed
+CapacityState = (
+    Available | WindowExhausted | CreditsExhausted | AuthenticationFailed | BackendMisconfigured
+)
 ```
 
 - **`Available(utilization: float | None)`** — capacity exists; spend a real
@@ -80,9 +82,19 @@ CapacityState = Available | WindowExhausted | CreditsExhausted | AuthenticationF
   deliberate, not an oversight, because a clock advancing can never resolve
   an empty credits balance. Only a human buying more can, which is why the
   waiting policy (below) treats this state completely differently.
-- **`AuthenticationFailed(detail)`** — terminal. `is_waitable()` returns
-  `False` only for this state; every other state is, by construction,
-  something a wait-and-retry loop can eventually clear.
+- **`AuthenticationFailed(detail)`** — terminal.
+- **`BackendMisconfigured(reason, detail)`** — terminal. The backend, as
+  configured, cannot serve the run: the model does not exist on it
+  (`model_not_found`, any backend), or — on a local backend profile — it is
+  not answering (`unreachable`), a path is wrong (`endpoint_not_found`), the
+  model failed to load (`model_load_failed`, usually out of memory), or the
+  conversation does not fit its window (`context_too_small`). A human fixes
+  it; `run` / `resume` exit 78. See
+  [the local-backend guide](../guides/local-backend.md).
+
+`is_waitable()` returns `False` only for those two terminal states; every other
+state is, by construction, something a wait-and-retry loop can eventually
+clear.
 
 ## `classify.py` — `TurnSignals` → `CapacityState`
 

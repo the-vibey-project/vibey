@@ -73,13 +73,20 @@ jobs:
             echo "this repository provides the tooling — installing from source"
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey==1.1.0"
+            python -m pip install --quiet "vibey==1.4.0"
           fi
 
       # --ci skips the core.hooksPath assertion, which is per-clone local git config that
       # no runner can satisfy. The hook FILES are repository state and are still checked.
-      # The base SHA goes through env: rather than into the shell, so there is no
+      # Every event value goes through env: rather than into the shell, so there is no
       # injection surface even though it comes from github.event.
+      #
+      # The promotion shortcut skips the per-commit audit, so it is taken only for a pull
+      # request whose head is a branch of THIS repository. Branch names alone are not
+      # enough: a fork can name its branch after the integration branch, and a pull
+      # request from it into the release branch would otherwise be treated as a promotion
+      # and have its commits waved through unaudited. A fork's head repository is the
+      # fork, so it takes the per-commit path like any other contribution.
       - name: Check provenance
         env:
           # No GH_TOKEN here, on purpose -- see `permissions:` above. This step runs the
@@ -95,12 +102,18 @@ jobs:
           # merge ref, 16 from the branch head. Walking `HEAD` there reports a green gate
           # having examined nothing at all.
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Where the head branch lives, and this repository. Empty on a push or merge
+          # group, and on a pull request whose fork has since been deleted -- none of
+          # which is a promotion.
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          THIS_REPO: ${{ github.repository }}
           INTEGRATION_BRANCH: develop
           RELEASE_BRANCH: main
         run: |
           set -euo pipefail
           if [ "$HEAD_REF" = "$INTEGRATION_BRANCH" ] && \
-             [ "$BASE_REF" = "$RELEASE_BRANCH" ]; then
+             [ "$BASE_REF" = "$RELEASE_BRANCH" ] && \
+             [ -n "$HEAD_REPO" ] && [ "$HEAD_REPO" = "$THIS_REPO" ]; then
             echo "Promotion PR: checking repository provenance without rewriting or re-auditing admitted history."
             vibey-gh check --ci
           elif [ -n "${BASE_SHA:-}" ]; then

@@ -1,6 +1,6 @@
 # 0037 — One distribution, one version: the whole family ships inside `vibey`
 
-**Status:** accepted · **Date:** 2026-09-18 · **Supersedes in part:** ADR-0021, ADR-0019, ADR-0034, ADR-0015
+**Status:** accepted · **Date:** 2026-09-18 · **Supersedes in part:** ADR-0021, ADR-0019, ADR-0034, ADR-0015 · **Implementation corrected:** #259 (2026-09-18: decision 5's `pin_version` had stopped pinning adopters; it now pins the installed `vibey` release that `vibey-gh` runs from)
 
 **Owes:** nothing — mechanism (ADR-0020). The conduct rule this applies already
 exists: sub-doctrine 2.b, *installable wherever its users already are*, ratified

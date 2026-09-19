@@ -1,14 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Composition root: the only module that wires concrete adapters to ports."""
 
-import asyncio
 import os
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from uuid import UUID
 
 import asyncpg
 
@@ -38,11 +36,16 @@ from vibey.application.design_research_handler import DesignResearchHandler
 from vibey.application.design_synthesis_handler import DesignSpecHandler, DesignSynthesizeHandler
 from vibey.application.dto import JobRecord, ProjectRecord
 from vibey.application.engine_health_service import EngineHealthService
-from vibey.application.engine_selection import RotationRecordingHandler, SelectingEngineProvider
+from vibey.application.engine_selection import (
+    RotationRecordingHandler,
+    SelectingEngineProvider,
+    SpendMeteringLedger,
+)
 from vibey.application.engine_selector import EngineSelector
 from vibey.application.interfaces import (
     AzureClientPort,
     Clock,
+    ConductorPreflightInterface,
     DesignProvider,
     EngineAdapter,
     JobHandler,
@@ -50,6 +53,7 @@ from vibey.application.interfaces import (
     WorkPlanProducer,
 )
 from vibey.application.job_dispatcher import JobDispatcher
+from vibey.application.preflight import ConductorPreflight
 from vibey.application.review_collect_handler import ReviewCollectHandler
 from vibey.application.review_demo_handler import ReviewDemoHandler
 from vibey.application.review_deployment_choice_handler import ReviewDeploymentChoiceHandler
@@ -71,20 +75,26 @@ from vibey.infrastructure.db.design_spec_repository import FileDesignSpecReposit
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.handoff_repository import PostgresHandoffRepository
 from vibey.infrastructure.db.human_gate_repository import PostgresHumanGateRepository
+from vibey.infrastructure.db.interfaces import MigratorInterface
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
-from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
+from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
 from vibey.infrastructure.db.review_ledger import PostgresReviewLedger
 from vibey.infrastructure.db.rotation_cursor_repository import PostgresRotationCursorRepository
 from vibey.infrastructure.db.visual_inventory_repository import FileVisualInventoryRepository
 from vibey.infrastructure.deploy.state_repository import FileDeploymentStateRepository
-from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCRIPTORS, QWENLOOP
+from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCRIPTORS
+from vibey.infrastructure.engines.local_engines import (
+    LocalEndpointEnvironment,
+    LocalEngineSettings,
+)
 from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
+from vibey.infrastructure.preflight_feasibility import VibeyGhFeasibilityAdapter
 from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
 from vibey.infrastructure.review_artifact_writer import FileReviewArtifactWriter
 from vibey.infrastructure.skills_context import compiler_from_config
@@ -107,6 +117,7 @@ class AppResources:
     engine_health_repo: PostgresEngineHealthRepository
     rotation_cursors: PostgresRotationCursorRepository
     engine_health_service: EngineHealthService
+    conductor_preflight: ConductorPreflightInterface
     engine_selector: EngineSelector
     rotation_handoff: RotationHandoffService
     engine_adapters: Mapping[EngineId, EngineAdapter]
@@ -217,35 +228,6 @@ def lease_for_kind(kind: str) -> timedelta:
     return _KIND_LEASES.get(kind, timedelta(minutes=2))
 
 
-async def preflight_sweep(
-    *,
-    resources: AppResources,
-    project_id: UUID,
-    adapters: Mapping[EngineId, EngineAdapter],
-) -> tuple[EngineId, ...]:
-    """Refresh installed/version/auth for every configured engine, then
-    return the engines still ineligible for engine-driven jobs (no recorded
-    conformance) so the caller can warn -- conformance itself is granted
-    only by `vibey doctor --conformance --record`.
-
-    Preflights run concurrently: each engine's doctor does real network
-    auth verification (~60s for claudeloop), and running them in sequence
-    made worker startup scale linearly with engine count."""
-    engine_ids = tuple(adapters)
-    preflights = await asyncio.gather(
-        *(adapters[engine_id].preflight() for engine_id in engine_ids)
-    )
-    for engine_id, preflight in zip(engine_ids, preflights, strict=True):
-        await resources.engine_health_service.record_preflight(project_id, engine_id, preflight)
-    records = await resources.engine_health_service.list_for_project(project_id)
-    by_id = {record.engine_id: record for record in records}
-    return tuple(
-        engine_id
-        for engine_id in adapters
-        if engine_id not in by_id or not by_id[engine_id].conformance_ok
-    )
-
-
 def _independent_review_required(config: Mapping[str, object]) -> bool:
     """Whether this project refuses a verify the implementer reviews itself.
 
@@ -282,18 +264,13 @@ def _independence_policy(
 
 
 def qwenloop_enabled(config: Mapping[str, object]) -> bool:
-    """Whether the sovereign standby engine is switched on for this project.
+    """Return the resolved qwenloop feature switch for a project.
 
-    Public, and a function rather than a method, because it is the one answer the
-    composition root and its only caller outside it -- the `worker` command, which
-    has to preflight exactly the engine pool this module will run -- must agree on.
-    A second copy of the precedence rule is how they drifted apart before.
+    The worker and CLI share ``LocalEngineSettings`` for all local engines; this
+    compatibility helper keeps the long-standing bootstrap import while delegating
+    precedence to that single resolver.
     """
-    override = os.environ.get("VIBEY_FEATURE_QWENLOOP")
-    if override is not None:
-        return override.strip().lower() in {"1", "true", "yes", "on"}
-    features = config.get("features")
-    return isinstance(features, Mapping) and features.get("qwenloop") is True
+    return LocalEngineSettings(environ=os.environ, config=config).enabled(EngineId.QWENLOOP)
 
 
 def build_full_worker(
@@ -320,9 +297,12 @@ def build_full_worker(
     wiring is an explicit later decision, never an accidental default.
     """
     adapters = dict(engine_adapters if engine_adapters is not None else resources.engine_adapters)
-    standby_enabled = qwenloop_enabled(project.config)
-    if standby_enabled and EngineId.QWENLOOP not in adapters:
-        adapters[EngineId.QWENLOOP] = LoopProcessAdapter(descriptor=QWENLOOP)
+    # The one resolver for "which local engines are on" (ADR-0038): the `worker`
+    # command asks the same one, so the pool it preflights is the pool this runs.
+    # An injected adapter wins (the faked harness passes ScriptedEngines here).
+    local = LocalEngineSettings(environ=os.environ, config=project.config)
+    for engine_id, local_adapter in local.adapters(LocalEndpointEnvironment(os.environ)).items():
+        adapters.setdefault(engine_id, local_adapter)
     azure = azure_client if azure_client is not None else InMemoryAzureClientAdapter()
     clock = resources.clock
     repo_root = Path(project.repo_path)
@@ -337,46 +317,61 @@ def build_full_worker(
         clock=clock,
         owner=owner,
         allow_list=allow_list,
-        standby_engine=EngineId.QWENLOOP if standby_enabled else None,
+        local_engines=local.enabled_engines,
     )
     # The runaway brake: caps come from the project's own config
     # (max_cycle_dollars / max_cycle_turns, set at `vibey new`). Without
     # either, spend stays uncapped -- opting in is explicit, never a
-    # silent default that would surprise existing projects.
-    raw_dollars = project.config.get("max_cycle_dollars")
-    raw_turns = project.config.get("max_cycle_turns")
+    # silent default that would surprise existing projects. The parse is
+    # LedgerBudgetSource's own, the same one `vibey cost` reports from.
+    max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
     budget_source: LedgerBudgetSource | None = None
-    if isinstance(raw_dollars, int | float) or isinstance(raw_turns, int):
+    if max_dollars is not None or max_turns is not None:
         budget_source = LedgerBudgetSource(
-            resources.ledger,
-            max_dollars=float(raw_dollars) if isinstance(raw_dollars, int | float) else None,
-            max_turns=raw_turns if isinstance(raw_turns, int) else None,
+            resources.ledger, max_dollars=max_dollars, max_turns=max_turns
         )
     wind_down = WindDownOrchestrator(
         ledger=resources.ledger,
-        handoff_service=RotationHandoffService(resources.engine_selector, allow_list=allow_list),
+        # The pool, like the provider's own selection: a wind-down must hand off to an
+        # engine this worker can actually run, never to a stale health row's engine.
+        handoff_service=RotationHandoffService(
+            resources.engine_selector, allow_list=engine_provider.pool
+        ),
         handoffs=resources.handoffs,
         jobs=resources.jobs,
         clock=clock,
         write_ledger=write_full_ledger,
     )
     skills_context = compiler_from_config(project.config, repo_path=repo_root)
+    # One runner for every gate command -- build.verify's gates and diff,
+    # build.integrate's gates, REVIEW's automated checks -- built from the
+    # project's `gates` config (per-command timeout, kill grace, Python-env
+    # isolation; ADR-0018). Unset keys keep the defaults.
+    gate_runner = SubprocessGateRunner.from_config(project.config)
 
-    def _recording(handler: JobHandler, adapter: EngineAdapter) -> JobHandler:
+    def _recording(
+        handler: JobHandler, adapter: EngineAdapter, meter: SpendMeteringLedger
+    ) -> JobHandler:
         return RotationRecordingHandler(
             inner=handler,
             health=resources.engine_health_service,
             project_id=project.project_id,
             engine_id=adapter.descriptor.engine_id,
+            meter=meter,
         )
 
+    # One spend meter per job, around the ledger its handler writes through:
+    # what the selected engine's session cost is charged to that engine's
+    # health record when the job settles (issue #209). The ledger itself sees
+    # every event unchanged.
     async def _implement(job: JobRecord) -> JobHandler:
         adapter = await engine_provider.select_for(job)
+        meter = SpendMeteringLedger(resources.build_ledger)
         handler = BuildImplementHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
             provisioner=AgentSurfaceProvisioner(),
             engine=adapter,
-            ledger=resources.build_ledger,
+            ledger=meter,
             jobs=resources.jobs,
             clock=clock,
             wind_down=wind_down,
@@ -384,27 +379,29 @@ def build_full_worker(
             budget_source=budget_source,
             skills_context=skills_context,
         )
-        return _recording(handler, adapter)
+        return _recording(handler, adapter, meter)
 
     async def _verify(job: JobRecord) -> JobHandler:
         adapter = await engine_provider.select_for(job)
+        meter = SpendMeteringLedger(resources.build_ledger)
         handler = BuildVerifyHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
-            gates=SubprocessGateRunner(),
+            gates=gate_runner,
             reviewer=adapter,
-            ledger=resources.build_ledger,
+            ledger=meter,
             jobs=resources.jobs,
+            clock=clock,
             repair=VerifyRepairPolicy(
                 ledger_reader=resources.ledger, clock=clock, gates=resources.gates
             ),
             independence=_independence_policy(project.config, engine_provider.pool, clock),
         )
-        return _recording(handler, adapter)
+        return _recording(handler, adapter, meter)
 
     async def _integrate(job: JobRecord) -> JobHandler:
         return BuildIntegrateHandler(
             integration=IntegrationBranch(repo_root, cycle=job.cycle),
-            gates=SubprocessGateRunner(),
+            gates=gate_runner,
             ledger=resources.build_ledger,
             jobs=resources.jobs,
             clock=clock,
@@ -460,7 +457,7 @@ def build_full_worker(
             automated_reviewer=SubprocessAutomatedReviewRunner.from_config(
                 project.config,
                 projects=resources.projects,
-                gates=SubprocessGateRunner(),
+                gates=gate_runner,
             ),
         ),
         "review.collect": ReviewCollectHandler(
@@ -605,12 +602,15 @@ def migrations_dir() -> Path:
 
 @asynccontextmanager
 async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
+    # Read before the pool opens, so a bad VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS
+    # fails the start before anything touches the database.
+    migrator: MigratorInterface = PostgresMigrator.from_environ(os.environ)
     pool = await asyncpg.create_pool(url or database_url(), min_size=1, max_size=10)
     if pool is None:
         raise RuntimeError("asyncpg did not create a pool")
     try:
         async with pool.acquire() as conn:
-            await apply_migrations(conn, discover_migrations(migrations_dir()))
+            await migrator.apply(conn, discover_migrations(migrations_dir()))
 
         projects = PostgresProjectRepository(pool)
         ledger = PostgresLedgerRepository(pool)
@@ -619,6 +619,10 @@ async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
         engine_health_repo = PostgresEngineHealthRepository(pool)
         rotation_cursors = PostgresRotationCursorRepository(pool)
         engine_health_service = EngineHealthService(engine_health_repo)
+        conductor_preflight = ConductorPreflight(
+            health=engine_health_service,
+            feasibility=VibeyGhFeasibilityAdapter(),
+        )
         engine_selector = EngineSelector(
             health_service=engine_health_service,
             cursor_repository=rotation_cursors,
@@ -645,6 +649,7 @@ async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
             engine_health_repo=engine_health_repo,
             rotation_cursors=rotation_cursors,
             engine_health_service=engine_health_service,
+            conductor_preflight=conductor_preflight,
             engine_selector=engine_selector,
             rotation_handoff=rotation_handoff,
             engine_adapters=engine_adapters,

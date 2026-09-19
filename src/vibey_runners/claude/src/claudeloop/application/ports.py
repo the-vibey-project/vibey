@@ -13,6 +13,8 @@ from claudeloop.application.interfaces import (
     AgentGateway,
     ApiGateway,
     AuditLog,
+    AutonomousRunnerInterface,
+    BackendStatusInterface,
     CapacityProbe,
     Clock,
     ControlInbox,
@@ -31,12 +33,16 @@ from claudeloop.application.interfaces import (
     Sleeper,
     StateBus,
     StreamUi,
+    ToolCallStatusInterface,
+    TurnOutcomeInterface,
 )
 
 __all__ = [
     "AgentGateway",
+    "AutonomousRunnerInterface",
     "ApiGateway",
     "AuditLog",
+    "BackendStatusInterface",
     "CapacityProbe",
     "Clock",
     "ControlInbox",
@@ -55,4 +61,6 @@ __all__ = [
     "Sleeper",
     "StateBus",
     "StreamUi",
+    "ToolCallStatusInterface",
+    "TurnOutcomeInterface",
 ]

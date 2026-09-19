@@ -21,7 +21,7 @@ from vibey.infrastructure.engines.loop_process_adapter import (
     EXIT_CODE_WIND_DOWN,
     LoopProcessAdapter,
     _active_processes,
-    _communicate,
+    _diagnostic_files,
     _render_plan,
 )
 
@@ -60,6 +60,34 @@ def test_attribute_wind_down() -> None:
     adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
     result = adapter.attribute(75, "")
     assert isinstance(result, FailureClass)
+
+
+def test_diagnostic_tail_reads_and_releases_child_output(tmp_path: Path) -> None:
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    handle = _make_handle(tmp_path)
+
+    assert adapter.diagnostic_tail(handle) == ""
+    missing_stdout = (tmp_path / "missing-stdout").open("w", encoding="utf-8")
+    empty_stderr = (tmp_path / "empty-stderr").open("w", encoding="utf-8")
+    Path(missing_stdout.name).unlink()
+    _diagnostic_files[handle.run_id] = (missing_stdout, empty_stderr)
+    assert adapter.diagnostic_tail(handle) == ""
+    adapter.release_diagnostics(handle)
+
+    stdout_path = tmp_path / "stdout"
+    stderr_path = tmp_path / "stderr"
+    stdout_file = stdout_path.open("w", encoding="utf-8")
+    stderr_file = stderr_path.open("w", encoding="utf-8")
+    stdout_file.write("work output\n")
+    stderr_file.write("engine traceback\n")
+    stdout_file.flush()
+    stderr_file.flush()
+    _diagnostic_files[handle.run_id] = (stdout_file, stderr_file)
+
+    assert adapter.diagnostic_tail(handle) == "[stderr] engine traceback\n[stdout] work output"
+    adapter.release_diagnostics(handle)
+    assert handle.run_id not in _diagnostic_files
+    adapter.release_diagnostics(handle)
 
 
 async def test_send_prompt_writes_inbox_file(tmp_path: Path) -> None:
@@ -375,7 +403,8 @@ async def test_tail_yields_translated_events(tmp_path: Path) -> None:
 
     assert len(events) == 2
     assert events[0].kind == "SessionSeeded"
-    assert events[1].kind == "TurnCompleted"
+    # chatter.assistant echoes a turn's text; only turn.completed is a turn.
+    assert events[1].kind == "TranscriptRecorded"
 
 
 async def test_tail_skips_unknown_event_types(tmp_path: Path) -> None:
@@ -595,17 +624,33 @@ async def test_stop_handles_invalid_snapshot_json(tmp_path: Path) -> None:
 
 
 async def test_communicate_reaps_an_already_exited_process_on_error() -> None:
-    from unittest.mock import AsyncMock
+    """The probe already exited, so its group is gone: the kill finds no one (ESRCH),
+    the reap returns at once, and the original error still propagates."""
+    import asyncio
 
-    process = AsyncMock()
-    process.communicate.side_effect = RuntimeError("communication failed")
-    process.returncode = 1
+    from structlog.testing import capture_logs
 
-    with pytest.raises(RuntimeError, match="communication failed"):
-        await _communicate(process, timeout=1.0)
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    process = await adapter._spawn(
+        "/bin/sh",
+        "-c",
+        "exit 1",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        start_new_session=True,
+    )
+    await process.wait()
 
-    process.kill.assert_not_called()
-    process.wait.assert_awaited_once()
+    async def failing_communicate() -> tuple[bytes, bytes]:
+        raise RuntimeError("communication failed")
+
+    process.communicate = failing_communicate  # type: ignore[method-assign]
+
+    with capture_logs() as logs, pytest.raises(RuntimeError, match="communication failed"):
+        await adapter._communicate(process, timeout=1.0)
+
+    assert process.returncode == 1
+    assert logs == []
 
 
 async def test_stop_reaps_an_exited_registered_process(tmp_path: Path) -> None:
@@ -1516,3 +1561,277 @@ async def test_tail_reads_codexloop_flat_events_keyed_by_type(tmp_path: Path) ->
     assert events[0].payload["thread_id"] == "t-1"
     assert events[1].payload["done_marker"] == "CODEXLOOP_TASK_FULLY_COMPLETE"
     assert events[1].payload["complete"] is True
+
+
+# ── the per-engine environment overlay and doctor arguments (ADR-0038) ────────
+
+
+async def test_start_layers_the_env_overlay_over_the_isolated_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The overlay is how qwenloop learns the one local endpoint. It lands after the
+    orchestrator's venv is stripped, so it cannot bring that venv back, and it wins over
+    an inherited value of the same name."""
+    from unittest.mock import AsyncMock
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+    from vibey.infrastructure.engines import loop_process_adapter as module
+    from vibey.infrastructure.engines.descriptors import QWENLOOP
+
+    captured: dict[str, object] = {}
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        process = AsyncMock()
+        process.pid = 4243
+        process.returncode = None
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setenv("VIRTUAL_ENV", "/orchestrator/.venv")
+    monkeypatch.setenv("QWENLOOP_MODEL", "inherited")
+
+    adapter = LoopProcessAdapter(
+        descriptor=QWENLOOP,
+        env_overlay={"QWENLOOP_BASE_URL": "http://127.0.0.1:11434/v1", "QWENLOOP_MODEL": "q"},
+    )
+    handle = await adapter.start(
+        RunSpec(
+            run_id=uuid4(),
+            worktree_path=tmp_path,
+            prompt="do the thing",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+    )
+    _active_processes.pop(handle.run_id, None)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["QWENLOOP_BASE_URL"] == "http://127.0.0.1:11434/v1"
+    assert env["QWENLOOP_MODEL"] == "q"
+    assert "VIRTUAL_ENV" not in env
+
+
+def _recording_binary(tmp_path: Path, name: str) -> tuple[Path, Path]:
+    """A fake engine whose `doctor` writes its arguments and one env var to a file."""
+    record = tmp_path / f"{name}.record"
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        name,
+        f'if [ "$1" = "--version" ]; then echo "{name} 0.8.0"; '
+        f'else echo "$@|${{QWENLOOP_BASE_URL:-unset}}" > "{record}"; fi',
+    )
+    return bin_dir, record
+
+
+async def test_preflight_passes_the_descriptors_doctor_args_and_the_overlay(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """claudeloop-local's doctor must probe the local backend its profile names, not
+    the Anthropic login a profile never uses -- so `--profile <name>` reaches doctor --
+    and qwenloop's doctor must see the endpoint the run will use."""
+    from dataclasses import replace
+
+    bin_dir, record = _recording_binary(tmp_path, "fakeloop")
+    monkeypatch.setenv("PATH", f"{bin_dir}:{__import__('os').environ['PATH']}")
+    descriptor = replace(CLAUDELOOP, binary="fakeloop", doctor_args=("--profile", "local"))
+
+    result = await LoopProcessAdapter(
+        descriptor=descriptor, env_overlay={"QWENLOOP_BASE_URL": "http://h:1/v1"}
+    ).preflight()
+
+    assert result.installed and result.auth_ok and result.version == "0.8.0"
+    assert record.read_text().strip() == "doctor --profile local|http://h:1/v1"
+
+
+async def test_preflight_without_an_overlay_inherits_the_environment_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dataclasses import replace
+
+    bin_dir, record = _recording_binary(tmp_path, "plainloop")
+    monkeypatch.setenv("PATH", f"{bin_dir}:{__import__('os').environ['PATH']}")
+    monkeypatch.delenv("QWENLOOP_BASE_URL", raising=False)
+
+    await LoopProcessAdapter(descriptor=replace(CLAUDELOOP, binary="plainloop")).preflight()
+
+    assert record.read_text().strip() == "doctor|unset"
+
+
+def test_claudeloop_local_classifies_through_claudeloops_own_vocabulary() -> None:
+    from vibey.domain.capacity import AuthenticationFailed
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP_LOCAL)
+
+    assert isinstance(adapter.classify({"capacity": "BackendMisconfigured"}), AuthenticationFailed)
+    assert adapter.attribute(78, "") is FailureClass.ENGINE
+
+
+# ── bounded reaping of preflight probes, and the spawn's venv guard (#283) ────
+
+
+def _loop_descriptor(binary: str):  # type: ignore[no-untyped-def]
+    from dataclasses import replace
+
+    return replace(CLAUDELOOP, binary=binary, auth_env=("VIBEY_TEST_REAP_MISSING_KEY",))
+
+
+async def test_a_timed_out_doctor_dies_with_its_whole_group(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The kill used to reach only the probe. Its background `sleep` then held the
+    output pipes, and the unbounded wait after the kill waited on the sleep. The probe
+    now leads a group of its own, and the whole group dies."""
+    import asyncio
+    import os
+
+    from structlog.testing import capture_logs
+
+    from tests.infrastructure.process.escapes import background_script, dead_within, read_pids
+
+    pidfile = tmp_path / "background.pid"
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        "reaploop",
+        f'if [ "$1" = "--version" ]; then echo "reaploop 1.0.0"; exit 0; fi\n'
+        f"{background_script(pidfile)}",
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.delenv("VIBEY_TEST_REAP_MISSING_KEY", raising=False)
+    adapter = LoopProcessAdapter(descriptor=_loop_descriptor("reaploop"), doctor_timeout=1.0)
+    loop = asyncio.get_running_loop()
+
+    started = loop.time()
+    with capture_logs() as logs:
+        result = await adapter.preflight()
+
+    assert loop.time() - started < 10
+    assert result.version == "1.0.0"
+    assert result.auth_ok is False
+    (background,) = await read_pids(pidfile)
+    assert await dead_within(background, seconds=5)
+    assert not [entry for entry in logs if entry["event"] == "engine_process_not_reaped"]
+
+
+async def test_a_doctor_whose_escaped_child_holds_the_pipes_is_abandoned_after_the_grace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No group kill reaches a child that left the group, and on CPython 3.12 the wait
+    after the kill does not return while it holds the pipes. Preflight gives up after
+    `kill_grace_seconds`, logs which engine's probe it left, and carries on."""
+    import asyncio
+    import os
+    import shlex
+    import sys
+
+    from structlog.testing import capture_logs
+
+    from tests.infrastructure.process.escapes import ESCAPE, dead_within, read_pids, release
+
+    script, pidfile = tmp_path / "escape.py", tmp_path / "escape.pids"
+    script.write_text(ESCAPE)
+    command = shlex.join([sys.executable, str(script), str(pidfile), "linger"])
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        "escapeloop",
+        f'if [ "$1" = "--version" ]; then echo "escapeloop 1.0.0"; exit 0; fi\nexec {command}',
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.delenv("VIBEY_TEST_REAP_MISSING_KEY", raising=False)
+    adapter = LoopProcessAdapter(
+        descriptor=_loop_descriptor("escapeloop"), doctor_timeout=1.0, kill_grace_seconds=0.2
+    )
+    loop = asyncio.get_running_loop()
+
+    started = loop.time()
+    with capture_logs() as logs:
+        result = await adapter.preflight()
+    escaped, doctor = await read_pids(pidfile)
+    try:
+        assert loop.time() - started < 10
+        assert result.auth_ok is False
+        (warning,) = [entry for entry in logs if entry["event"] == "engine_process_not_reaped"]
+        assert warning["pid"] == doctor
+        assert warning["engine"] == "claudeloop"
+        assert warning["kill_grace_seconds"] == 0.2
+        assert await dead_within(doctor, seconds=5)
+    finally:
+        await release(escaped)
+
+
+_SYSTEM_PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+
+async def _captured_start_kwargs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, object]:
+    from unittest.mock import AsyncMock
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+    from vibey.infrastructure.engines import loop_process_adapter as module
+
+    captured: dict[str, object] = {}
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        process = AsyncMock()
+        process.pid = 4244
+        process.returncode = None
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    handle = await LoopProcessAdapter(descriptor=CLAUDELOOP).start(
+        RunSpec(
+            run_id=uuid4(),
+            worktree_path=tmp_path,
+            prompt="do the thing",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+    )
+    _active_processes.pop(handle.run_id, None)
+    return captured
+
+
+async def test_start_on_a_system_python_keeps_usr_bin_on_the_engines_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Outside a venv, sys.prefix is `/usr`. Passing it as a venv prefix stripped
+    /usr/bin and /usr/local/bin -- git, sh, the engine CLIs -- from every session."""
+    import sys
+
+    monkeypatch.setattr(sys, "prefix", "/usr")
+    monkeypatch.setattr(sys, "base_prefix", "/usr")
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    monkeypatch.setenv("PATH", _SYSTEM_PATH)
+
+    captured = await _captured_start_kwargs(tmp_path, monkeypatch)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["PATH"] == _SYSTEM_PATH
+    # The engine run stays in the worker's session; only the probes get their own.
+    assert captured["start_new_session"] is False
+
+
+async def test_start_from_a_venv_interpreter_strips_that_venv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sys
+
+    monkeypatch.setattr(sys, "prefix", "/orchestrator/.venv")
+    monkeypatch.setattr(sys, "base_prefix", "/usr")
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    monkeypatch.setenv("PATH", f"/orchestrator/.venv/bin:{_SYSTEM_PATH}")
+
+    captured = await _captured_start_kwargs(tmp_path, monkeypatch)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["PATH"] == _SYSTEM_PATH

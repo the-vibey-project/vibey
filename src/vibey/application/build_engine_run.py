@@ -6,12 +6,13 @@ in how a run is driven or persisted."""
 
 from dataclasses import dataclass
 
-from vibey.application.dto import JobRecord, RunHandle
+from vibey.application.dto import HumanGateRequest, JobRecord, RunHandle
 from vibey.application.interfaces import (
     BuildLedger,
 )
 from vibey.application.ports import EngineAdapter
 from vibey.domain.correlation import DELIVERY_CORRELATION
+from vibey.domain.engine import EXIT_CODE_BACKEND_MISCONFIGURED, EngineDescriptor
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.ledger import EventKind
 
@@ -25,6 +26,38 @@ class RunOutcome:
     optional ``run_exit_code`` capability -- EXIT_CODE_WIND_DOWN here is
     the graceful-handoff signal. None for adapters without the capability
     or while the process is still running."""
+    diagnostic_tail: str = ""
+    """Bounded engine output retained for failure attribution."""
+
+    def misconfiguration_gate(
+        self, descriptor: EngineDescriptor, work_item_id: str | None
+    ) -> HumanGateRequest | None:
+        """The human gate for a run that ended on its own backend's configuration.
+
+        Exit 78 (EX_CONFIG) is the runner saying its backend cannot serve this run:
+        claudeloop's `BackendMisconfigured` -- an unreachable local server, a model
+        that is not pulled or fails to load, a context window too small for one
+        request. No retry fixes any of that, and a retry burns an attempt of a
+        bounded ladder on the same fault, so the job parks and asks for the fix.
+        Answering the gate retries the job; the engine's own `doctor` names the cause.
+
+        Returns None for any other exit, so both BUILD handlers ask the same question
+        and cannot disagree about the answer.
+        """
+        if self.exit_code != EXIT_CODE_BACKEND_MISCONFIGURED:
+            return None
+        doctor = " ".join((descriptor.binary, "doctor", *descriptor.doctor_args))
+        engine = descriptor.engine_id.value
+        return HumanGateRequest(
+            kind="engine_misconfigured",
+            prompt=(
+                f"engine {engine} stopped on work item {work_item_id!r} with exit "
+                f"{EXIT_CODE_BACKEND_MISCONFIGURED}: its backend is misconfigured (an "
+                "unreachable server, a model not pulled or failing to load, or a context "
+                f"window too small). Run `{doctor}` to see which, fix it, then answer "
+                "anything to retry."
+            ),
+        )
 
 
 async def run_and_record(
@@ -43,6 +76,7 @@ async def run_and_record(
     correlation_id = correlation.for_project(job.project_id).value
     complete = False
     capacity_rejected = False
+    diagnostics: list[str] = []
     async for event in engine.tail(handle):
         await ledger.record(
             project_id=job.project_id,
@@ -57,6 +91,19 @@ async def run_and_record(
             complete = True
         if event.kind == EventKind.CAPACITY_REJECTED.value:
             capacity_rejected = True
+        for key in (
+            "stderr_tail",
+            "stdout",
+            "stderr",
+            "diagnostic",
+            "message",
+            "error",
+            "detail",
+            "output",
+        ):
+            value = event.payload.get(key)
+            if isinstance(value, str) and value.strip():
+                diagnostics.append(value.strip())
 
     # Read the exit code only after the tail drains: the adapter's process
     # reference stays alive until stop() releases it, and a pre-drain read
@@ -67,7 +114,21 @@ async def run_and_record(
         raw = read_exit_code(handle)
         if isinstance(raw, int):
             exit_code = raw
-    return RunOutcome(complete=complete, capacity_rejected=capacity_rejected, exit_code=exit_code)
+    read_diagnostics = getattr(engine, "diagnostic_tail", None)
+    if callable(read_diagnostics):
+        raw_diagnostics = read_diagnostics(handle)
+        if isinstance(raw_diagnostics, str) and raw_diagnostics.strip():
+            diagnostics.append(raw_diagnostics.strip())
+    diagnostic_tail = "\n".join(diagnostics)[-8_000:]
+    release_diagnostics = getattr(engine, "release_diagnostics", None)
+    if callable(release_diagnostics):
+        release_diagnostics(handle)
+    return RunOutcome(
+        complete=complete,
+        capacity_rejected=capacity_rejected,
+        exit_code=exit_code,
+        diagnostic_tail=diagnostic_tail,
+    )
 
 
 # Re-exported for the same reason `application/ports.py` re-exports the

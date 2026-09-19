@@ -252,7 +252,19 @@ class BuildImplementHandler:
                 stop=stop,
             )
         if not run_outcome.complete:
-            return Failure(FailureClass.WORK, "engine run did not report completion")
+            # A run its own backend could not serve is not the work's failure, and no
+            # retry fixes it: park for the human who can (exit 78, ADR-0038).
+            misconfigured = run_outcome.misconfiguration_gate(
+                self._engine.descriptor, job.work_item_id
+            )
+            if misconfigured is not None:
+                return Park(misconfigured)
+            if run_outcome.exit_code is None:
+                return Failure(FailureClass.WORK, "engine run did not report completion")
+            return Failure(
+                self._engine.attribute(run_outcome.exit_code, run_outcome.diagnostic_tail),
+                f"engine run did not report completion (exit code {run_outcome.exit_code})",
+            )
 
         repair_finding_id = str(job.payload.get("repair_finding_id", ""))
         if repair_finding_id:

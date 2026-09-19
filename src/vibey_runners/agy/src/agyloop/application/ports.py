@@ -15,6 +15,7 @@ from agyloop.application.interfaces import (
     AuditLog,
     AuthLane,
     AuthResolution,
+    AutonomousRunnerInterface,
     CapacityProbe,
     Clock,
     ControlInbox,
@@ -38,6 +39,7 @@ from agyloop.application.interfaces import (
 
 __all__ = [
     "AgentGateway",
+    "AutonomousRunnerInterface",
     "ApiGateway",
     "AuditLog",
     "CapacityProbe",

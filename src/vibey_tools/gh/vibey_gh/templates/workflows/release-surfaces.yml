@@ -180,24 +180,6 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
-      - name: Inject social signals (sub-doctrine 4.a)
-        if: __VIBEY_GH_SOCIAL_SIGNALS__
-        run: |
-          set -euo pipefail
-          # Self-hosting-aware: this repository IS vibey-gh when the import already
-          # resolves from source; every adopter installs it from `vibey`, the
-          # distribution `vibey_gh` ships inside (ADR-0037).
-          python - <<'PY' || python -m pip install --quiet vibey
-          import vibey_gh  # noqa: F401
-          PY
-          python - <<'PY'
-          from pathlib import Path
-          from vibey_gh.config import load_config
-          from vibey_gh.social_signals import inject
-          done = inject("channel-site", load_config(Path(".")))
-          print("social signals injected" if done else
-                "social signals: nothing injected (surface off or landing page missing)")
-          PY
       - name: Build the channel site with ProperDocs
         env:
           CHANNEL: ${{ needs.context.outputs.channel }}
@@ -428,6 +410,7 @@ jobs:
               --author "${AUTHOR:-${GITHUB_REPOSITORY%%/*}}"
             cp book-out/book.epub channel-site/book.epub
             cp book-out/book-print.html channel-site/book-print.html
+            cp book-out/book.docx channel-site/book.docx
             # The KDP paperback interior wants a PDF, and the runner already carries a
             # Chromium: one headless print honours the @page 6in x 9in rules in the
             # print HTML, so the artifact is the uploadable interior itself.
@@ -446,13 +429,15 @@ jobs:
             else
               echo "::warning::no Chromium on this runner; book.pdf skipped, print HTML published"
             fi
-            echo "book: published book.epub and book-print.html on the channel site"
+            echo "book: published book.epub, book.docx and book-print.html on the channel site"
           fi
           if [ "__VIBEY_GH_DOC_PAPER__" = "true" ] && [ -f docs/paper.md ] \
               && vibey-gh paper --help >/dev/null 2>&1; then
             AUTHOR='__VIBEY_GH_DOC_AUTHOR__'
             vibey-gh paper --author "${AUTHOR:-${GITHUB_REPOSITORY%%/*}}" \
               --output paper-out/paper.tex
+            vibey-gh paper --author "${AUTHOR:-${GITHUB_REPOSITORY%%/*}}" \
+              --output paper-out/paper.docx --format docx
             # Tectonic: one pinned, checksummed binary — a full TeX Live would cost
             # minutes per deploy for one PDF.
             curl -sL -o /tmp/tectonic.tar.gz \
@@ -461,7 +446,8 @@ jobs:
             tar -xzf /tmp/tectonic.tar.gz -C /tmp
             (cd paper-out && /tmp/tectonic paper.tex)
             cp paper-out/paper.pdf channel-site/paper.pdf
-            echo "paper: published paper.pdf on the channel site"
+            cp paper-out/paper.docx channel-site/paper.docx
+            echo "paper: published paper.pdf and paper.docx on the channel site"
           fi
           printf '%s\n' "$CHANNEL" > channel-site/release-channel.txt
           CHANNEL="$CHANNEL" REPOSITORY="$GITHUB_REPOSITORY" RELEASE_SHA="$RELEASE_SHA" \
@@ -646,8 +632,10 @@ jobs:
           site = pathlib.Path("channel-site")
           surfaces = {
               "paper_pdf": (site / "paper.pdf").is_file(),
+              "paper_docx": (site / "paper.docx").is_file(),
               "paper_html": (site / "paper" / "index.html").is_file(),
               "book_epub": (site / "book.epub").is_file(),
+              "book_docx": (site / "book.docx").is_file(),
               "book_pdf": (site / "book.pdf").is_file(),
               "book_print": (site / "book-print.html").is_file(),
               "governance": sorted(
@@ -662,6 +650,31 @@ jobs:
               encoded = json.dumps(surfaces).replace("\\", "\\\\").replace("'", "\\'").replace("</", "<\\/")
               script.write_text(script.read_text().replace("__DOC_SURFACES__", encoded))
           print("surfaces on this channel: " + ", ".join(k for k, v in surfaces.items() if v))
+          PY
+      # AFTER the build, because it edits what the build wrote: `inject` splices into
+      # channel-site/index.html, ahead of the funding footer the build step appends, and
+      # returns False when that page does not exist yet. Placed before the build, it ran
+      # against an empty directory on every deploy and a 4.a surface an adopter had
+      # switched on published nothing, reporting only "nothing injected". Its own step,
+      # not more lines in the build script above, which is already past the
+      # 21,000-character expression cap and survives only while it holds no `${{ }}`.
+      - name: Inject social signals (sub-doctrine 4.a)
+        if: __VIBEY_GH_SOCIAL_SIGNALS__
+        run: |
+          set -euo pipefail
+          # Self-hosting-aware: this repository IS vibey-gh when the import already
+          # resolves from source; every adopter installs it from `vibey`, the
+          # distribution `vibey_gh` ships inside (ADR-0037).
+          python - <<'PY' || python -m pip install --quiet vibey
+          import vibey_gh  # noqa: F401
+          PY
+          python - <<'PY'
+          from pathlib import Path
+          from vibey_gh.config import load_config
+          from vibey_gh.social_signals import inject
+          done = inject("channel-site", load_config(Path(".")))
+          print("social signals injected" if done else
+                "social signals: nothing injected (surface off or landing page missing)")
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -1109,6 +1122,7 @@ jobs:
                   (name, href)
                   for name, href, file in (
                       ("PDF", f"{channel}/paper.pdf", "paper.pdf"),
+                      ("DOCX", f"{channel}/paper.docx", "paper.docx"),
                       ("HTML", f"{channel}/paper/", "paper/index.html"),
                   )
                   if (base / file).is_file()
@@ -1117,6 +1131,7 @@ jobs:
                   (name, href)
                   for name, href, file in (
                       ("PDF", f"{channel}/book.pdf", "book.pdf"),
+                      ("DOCX", f"{channel}/book.docx", "book.docx"),
                       ("EPUB", f"{channel}/book.epub", "book.epub"),
                       ("print HTML", f"{channel}/book-print.html", "book-print.html"),
                   )
@@ -1204,8 +1219,10 @@ jobs:
           # llms.txt, which is exactly the kind of loss nothing in a diff shows.
           SURFACE_LINES=""
           [ -f pages/main/paper.pdf ] && SURFACE_LINES="${SURFACE_LINES}- [Research paper (PDF)](${PAGES_ROOT}main/paper.pdf)"$'\n'
+          [ -f pages/main/paper.docx ] && SURFACE_LINES="${SURFACE_LINES}- [Research paper (DOCX)](${PAGES_ROOT}main/paper.docx)"$'\n'
           [ -f pages/main/paper/index.html ] && SURFACE_LINES="${SURFACE_LINES}- [Research paper (HTML)](${PAGES_ROOT}main/paper/)"$'\n'
           [ -f pages/main/book.pdf ] && SURFACE_LINES="${SURFACE_LINES}- [The book (PDF)](${PAGES_ROOT}main/book.pdf)"$'\n'
+          [ -f pages/main/book.docx ] && SURFACE_LINES="${SURFACE_LINES}- [The book (DOCX)](${PAGES_ROOT}main/book.docx)"$'\n'
           [ -f pages/main/book.epub ] && SURFACE_LINES="${SURFACE_LINES}- [The book (EPUB)](${PAGES_ROOT}main/book.epub)"$'\n'
           [ -f pages/main/book-print.html ] && SURFACE_LINES="${SURFACE_LINES}- [The book (print HTML)](${PAGES_ROOT}main/book-print.html)"$'\n'
           [ -f pages/main/governance/constitution/index.html ] && SURFACE_LINES="${SURFACE_LINES}- [Governance: the Constitution, the doctrines, the commandments, the bill of rights](${PAGES_ROOT}main/governance/constitution/)"$'\n'
@@ -1265,7 +1282,7 @@ jobs:
         run: |
           set -euo pipefail
           present=()
-          for name in paper.pdf book.epub book.pdf book-print.html; do
+          for name in paper.pdf paper.docx book.epub book.docx book.pdf book-print.html; do
             if [ -s "channel-site/$name" ]; then
               present+=("channel-site/$name")
             fi

@@ -18,6 +18,7 @@ from agyloop.application.interfaces.agent import (
 from agyloop.application.interfaces.api import (
     ApiGateway,
 )
+from agyloop.application.interfaces.class_contracts import AutonomousRunnerInterface
 from agyloop.application.interfaces.control import (
     ControlInbox,
     RunControl,
@@ -52,6 +53,7 @@ from agyloop.application.interfaces.ui import (
 
 __all__ = [
     "AgentGateway",
+    "AutonomousRunnerInterface",
     "ApiGateway",
     "AuditLog",
     "CapacityProbe",

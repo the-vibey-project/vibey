@@ -309,12 +309,13 @@ and [CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibe
 
 ## Release automation
 
-This repository's own release pipeline — the fingerprint check, version bumps, the merge
-train, promotion, and branch realignment — runs on
-[`vibey-gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh)
-rather than a bespoke copy of that tooling. The sections below exist to satisfy `vibey-gh`'s own documentation contract
-(`vibey-gh check` verifies they're present), and document that automation for whoever
-next touches a workflow file — not the marketplace itself, covered above.
+This package has had no release pipeline of its own since it was absorbed into
+[vibey](https://github.com/the-vibey-project/vibey) (vibey ADR-0021). The fingerprint check,
+version derivation, the merge train, promotion, and branch realignment are the monorepo's,
+run by [`vibey-gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh)
+from the repository root, and this package ships inside the one `vibey` distribution (vibey
+ADR-0037). The sections below describe that automation as it applies here, for whoever next
+touches it — not the marketplace itself, covered above.
 
 ### Why vibey-gh
 
@@ -338,13 +339,18 @@ vibey-gh check --ci              # exactly what CI runs
 vibey-gh version --since origin/main --explain
 ```
 
+`vibey-gh` reads the nearest `.vibey-gh.toml` walking upward, and this directory has none,
+so every command above acts on the repository root, from here or from anywhere else in the
+tree.
+
 ### Configuration
 
-Everything project-specific is in
-[`.vibey-gh.toml`](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/.vibey-gh.toml):
+Everything project-specific is in the repository root's
+[`.vibey-gh.toml`](https://github.com/the-vibey-project/vibey/blob/develop/.vibey-gh.toml):
 which files carry the fingerprint header, which files hold the version, which paths count
-as content versus code for a version bump, which workflow templates are managed, and who
-the merge train trusts.
+as content versus code for a version bump (this package's `src/`, `plugins/` and
+`.claude-plugin/marketplace.json`), which workflow templates are managed, and who the merge
+train trusts.
 
 ### Architecture
 
@@ -360,20 +366,28 @@ Permanent branches (`develop`, `main`) may advance but are never deleted or forc
 `develop` is realigned onto `main` only when the two trees are byte-identical, so the
 realignment can never discard work. A pull request's evidence is tied to its exact head
 commit — a check or review against an earlier commit doesn't count once the branch moves.
-Full detail in [.github/AUTOMATION.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/.github/AUTOMATION.md#ai-trust-boundary).
+The trust-boundary write-up the standalone repository kept was in its `.github/AUTOMATION.md`
+before the package was absorbed and that file was removed.
 
 ### Workflows
 
-Sixteen workflows in total: four hand-authored (`CI`, `Release`, `Release artifacts`,
-`Currency research`) and twelve managed by `vibey-gh install`, pinned exactly via
-`[install] pin_version = true` (`provenance.yml`, `codeql.yml`, `pr-automation.yml`,
-`merge-train.yml`, `promote-to-main.yml`, `branch-intake.yml`,
-`automation-bootstrap.yml`, `github-release.yml`, `repository-profile.yml`,
-`conventional-commits.yml`, `release-repair.yml`, `release-surfaces.yml`). The
-hand-authored `docs.yml` was retired when `release-surfaces.yml` was adopted, since the
-two would otherwise contest ownership of GitHub Pages. Full inventory, including which of
-`vibey-gh`'s shipped templates are deliberately not adopted and why, is in
-[.github/AUTOMATION.md](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_tools/skills/.github/AUTOMATION.md#workflow-inventory).
+This package has no workflows of its own. GitHub runs only the repository root's
+[`.github/workflows/`](https://github.com/the-vibey-project/vibey/tree/develop/.github/workflows),
+and this package's gates are rows of the root `ci.yml` `tools` job:
+`tools/validate_manifests.py`, `tools/check_links.py` and the unittest suite, on Python 3.10
+and 3.12.
+
+The standalone repository carried sixteen — four hand-authored (`CI`, `Release`,
+`Release artifacts`, `Currency research`) and twelve rendered by `vibey-gh install`
+(`provenance.yml`, `codeql.yml`, `pr-automation.yml`, `merge-train.yml`,
+`promote-to-main.yml`, `branch-intake.yml`, `automation-bootstrap.yml`,
+`github-release.yml`, `repository-profile.yml`, `conventional-commits.yml`,
+`release-repair.yml`, `release-surfaces.yml`) — plus its own `.vibey-gh.toml` and git hooks.
+None of it fired after the absorption, and it was removed under vibey #189; the full
+inventory was in `.github/AUTOMATION.md` before the package was absorbed and that file was
+removed.
+Two of them have no counterpart among the root workflows: the weekly `Currency research`
+pull request and the `CodeQL` scan.
 
 ### Troubleshooting
 
@@ -383,8 +397,9 @@ two would otherwise contest ownership of GitHub Pages. Full inventory, including
   change `.vibey-gh.toml` instead, then run `vibey-gh install` again.
 - **CI is red on a fingerprint check after a `vibey-gh` upgrade** — this happened once: a
   floating version specifier let CI silently jump from 1.2.0 to 1.16.0, which changed the
-  default fingerprint text and added a documentation contract. Every install of `vibey-gh`
-  in this repository is now pinned to an exact version for that reason.
+  default fingerprint text and added a documentation contract. In the monorepo `vibey-gh`
+  is installed from the tree (`[install] self_source` in the root `.vibey-gh.toml`), never
+  from an index (vibey ADR-0037), so the version CI runs is the one in the commit.
 
 ### Licence
 

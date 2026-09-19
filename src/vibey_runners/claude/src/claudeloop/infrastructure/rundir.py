@@ -52,6 +52,11 @@ class RunMeta:
     effort: str | None = None
     preset: str | None = None
     capacity: str | None = None
+    # Which backend this run talks to (domain.backend.BackendIdentity as text) and
+    # the profile that selected it. Read back by `resume` so a session is never
+    # continued against a backend that did not produce its transcript.
+    backend: str | None = None
+    profile: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -73,6 +78,8 @@ class RunMeta:
             effort=data.get("effort"),
             preset=data.get("preset"),
             capacity=data.get("capacity"),
+            backend=data.get("backend"),
+            profile=data.get("profile"),
         )
 
 

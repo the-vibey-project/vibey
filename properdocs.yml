@@ -43,6 +43,8 @@ nav:
   - Guides:
       - Kubernetes: guides/kubernetes.md
       - Greeter live demo: guides/greeter-live-demo.md
+       - Local models on Ollama: guides/local-models-ollama.md
+       - What gets published: guides/ledger-publication.md
   - Reference:
       - CLI: reference/cli.md
       - Configuration: reference/configuration.md
@@ -85,4 +87,5 @@ nav:
           - "0035 — Verify independence is the default, not an absolute": architecture/decisions/0035-independence-is-the-default-not-an-absolute.md
           - "0036 — The merge queue is declared, not clicked": architecture/decisions/0036-the-merge-queue-is-declared-not-clicked.md
           - "0037 — One distribution, one version — the whole family ships inside vibey": architecture/decisions/0037-one-distribution-one-version.md
+          - "0038 — Local engines are preferred first (8.a) — claudeloop-local, tiered selection, and sovereign DESIGN/DECOMPOSE by default when enabled": architecture/decisions/0038-local-engines-are-preferred-first.md
   - Research paper: paper.md

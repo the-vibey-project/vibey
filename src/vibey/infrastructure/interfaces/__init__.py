@@ -11,6 +11,40 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from vibey.application.dto import RunSpec
+from vibey.infrastructure.interfaces.class_contracts import (
+    ClaudeLoopDesignProviderInterface,
+    ClaudeLoopWorkPlanProducerInterface,
+    ConnectionEventAppenderInterface,
+    InvalidMigrationLockTimeoutInterface,
+    JsonlShardStoreInterface,
+    LocalEngineSwitchInterface,
+    LoopProcessAdapterInterface,
+    MigrationInsideTransactionInterface,
+    MigrationLockTimeoutInterface,
+    PostgresBuildLedgerInterface,
+    PostgresDesignLedgerInterface,
+    PostgresEngineHealthRepositoryInterface,
+    PostgresJobRepositoryInterface,
+    PostgresLedgerRepositoryInterface,
+    PostgresLedgerSearchRepositoryInterface,
+    PostgresMigratorInterface,
+    PostgresProjectRepositoryInterface,
+    PostgresReviewLedgerInterface,
+    PostgresRotationCursorRepositoryInterface,
+    ScriptedDesignProviderInterface,
+    StaticSiteWriterInterface,
+    SubprocessAutomatedReviewRunnerInterface,
+    SubprocessGateRunnerInterface,
+    TierManagerInterface,
+    UrllibOllamaTransportInterface,
+    VibeyGhFeasibilityAdapterInterface,
+    VibeySkillsContextCompilerInterface,
+    ZlibCodecInterface,
+)
+from vibey.infrastructure.interfaces.cluster_preflight_interface import (
+    ClusterPreflightInterface,
+    EngineAuthCheckInterface,
+)
 from vibey.infrastructure.interfaces.logging_interface import CorrelationLogContextInterface
 
 if TYPE_CHECKING:  # concrete result types live beside their adapter
@@ -32,6 +66,36 @@ class CommandExecutor(Protocol):
 
 __all__ = [
     "BoundedClaudeLoop",
+    "ClaudeLoopDesignProviderInterface",
+    "ClaudeLoopWorkPlanProducerInterface",
+    "ClusterPreflightInterface",
     "CommandExecutor",
+    "ConnectionEventAppenderInterface",
     "CorrelationLogContextInterface",
+    "EngineAuthCheckInterface",
+    "InvalidMigrationLockTimeoutInterface",
+    "JsonlShardStoreInterface",
+    "LocalEngineSwitchInterface",
+    "LoopProcessAdapterInterface",
+    "MigrationInsideTransactionInterface",
+    "MigrationLockTimeoutInterface",
+    "PostgresBuildLedgerInterface",
+    "PostgresDesignLedgerInterface",
+    "PostgresEngineHealthRepositoryInterface",
+    "PostgresJobRepositoryInterface",
+    "PostgresLedgerRepositoryInterface",
+    "PostgresLedgerSearchRepositoryInterface",
+    "PostgresMigratorInterface",
+    "PostgresProjectRepositoryInterface",
+    "PostgresReviewLedgerInterface",
+    "PostgresRotationCursorRepositoryInterface",
+    "ScriptedDesignProviderInterface",
+    "StaticSiteWriterInterface",
+    "SubprocessAutomatedReviewRunnerInterface",
+    "SubprocessGateRunnerInterface",
+    "TierManagerInterface",
+    "UrllibOllamaTransportInterface",
+    "VibeySkillsContextCompilerInterface",
+    "VibeyGhFeasibilityAdapterInterface",
+    "ZlibCodecInterface",
 ]

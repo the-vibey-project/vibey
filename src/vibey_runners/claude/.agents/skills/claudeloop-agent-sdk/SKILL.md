@@ -100,6 +100,55 @@ one-token prompt, `max_turns=1`, no tools, `setting_sources=None`, and
 and doesn't pollute the working session's history with "OK" turns. A
 rejected probe isn't billed by the API.
 
+## Backend profiles — the env overlay reaches the turn AND the probe
+
+A `[profiles.<name>]` table (`--profile` / `CLAUDELOOP_PROFILE`) picks the
+endpoint Claude Code talks to. The decisions live in `domain/backend.py`
+(`BackendProfile`, `BackendRuntime`, `BackendIdentity`); `infrastructure/backend.py`
+reads the TOML and the environment; `bootstrap.py` hands the resolved
+`BackendRuntime` to both `ClaudeAgentGateway` and `ClaudeCapacityProbe`.
+
+- **The SDK merges `options.env` over `os.environ`**, so the overlay wins. That
+  is the only way to *remove* an inherited value: a local profile sets
+  `ANTHROPIC_API_KEY=""` so a paid key never reaches a local server. Never
+  "just not set" a key you mean to scrub.
+- **`build_turn_options` and `build_probe_options` both take `env=` and
+  `cli_path=`.** A probe built without the overlay re-checks capacity on
+  Anthropic while the run talks to Ollama — the defect this fixed.
+- **Local (`base_url` set) implies:** every tier named and no `claude-*` id;
+  Claude Code's haiku/sonnet/opus aliases mapped onto the tiers; `--effort`
+  not forwarded (`pass_effort`); `--max-budget-usd` not forwarded and
+  `TurnAccumulator(cost_mode="zero")` records $0 — Claude Code prices an
+  unrecognised model at its default model's rate (observed: $0.0008365 for one
+  free qwen2.5-coder:1.5b turn) — while `ResultMessage.usage` token counts are
+  kept; `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`; web search / deep research
+  refused.
+- **Errors a local backend produces** (captured from the bundled CLI against
+  Ollama 0.34.2) — `AssistantMessage.error` / `ResultMessage.api_error_status`:
+  model not pulled → `"model_not_found"` / 404; server down → `"server_error"` /
+  `None` with "Connection refused … (ConnectionRefused)"; model failed to load →
+  `"server_error"` / 500; queue full → `"server_error"` / 503; conversation over
+  `context_window` → `"invalid_request"` / `None`, "Prompt is too long" (Claude
+  Code reserves `max_output_tokens` out of the window). `TurnAccumulator`
+  passes `local_backend=True` into `TurnSignals` so `classify` can read them
+  (see `claudeloop-domain-model`). Claude Code retries a refused connection up
+  to `CLAUDE_CODE_MAX_RETRIES` times first — about three minutes at the
+  default before claudeloop sees it; `extra_env` can lower it.
+- **A model that writes tool calls as text does nothing — and can fake Done.**
+  Observed live: qwen2.5-coder:14b on Ollama answers even a one-tool request
+  with `{"name": ..., "arguments": ...}` as a *text* block; inside Claude Code it
+  wrote its Write call and its StructuredOutput call as text, appended the done
+  marker, and the run reported Done for a file it never created. Hence a local
+  profile's `done_marker_fallback = false` (only a structured verdict completes
+  a run; `AutonomousRunner(done_marker_fallback=...)` →
+  `evaluate(marker_fallback=...)`) and `doctor`'s `backend-tools` check, which
+  POSTs one trivial tool to `/v1/messages` per tier and wants a `tool_use` block.
+- **`AssistantMessageError` in the SDK types does not list `model_not_found`;**
+  the CLI sends it anyway. Compare strings, not the Literal.
+- **Resume never crosses backends:** run meta records `backend`
+  (`anthropic` | `gateway:<url>` | `local:<url>`) and `profile`;
+  `bootstrap.check_resume_backend` refuses a mismatch.
+
 ## `CLAUDE_CODE_RETRY_WATCHDOG` — deliberately off by default
 
 Do not set this env var in the default agent gateway configuration. It
@@ -114,4 +163,5 @@ of the probe-based waiting policy.
 `docs/architecture/decisions/0002-agent-sdk-over-subprocess.md`,
 `docs/architecture/decisions/0005-retry-watchdog-off-by-default.md`,
 `docs/architecture/decisions/0007-ask-user-question-denied-with-guidance.md`,
-`docs/guides/never-blocking.md`, `docs/guides/rate-limits-and-credits.md`.
+`docs/guides/never-blocking.md`, `docs/guides/rate-limits-and-credits.md`,
+`docs/guides/local-backend.md`.

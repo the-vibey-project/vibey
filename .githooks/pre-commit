@@ -1,5 +1,5 @@
 #!/bin/sh
 # vibey-gh manages no pre-commit hook, so git calls this directly. Runs the pre-commit
-# framework's pre-commit stage. framework-hook.sh, beside this file, finds that hook in a
-# plain clone and in a linked worktree alike, and warns when it is not installed.
+# framework's pre-commit stage. framework-hook.sh, beside this file, finds that hook in
+# a plain clone and in a linked worktree alike, and warns when it is not installed.
 exec "$(dirname "$0")/framework-hook.sh" pre-commit "$@"

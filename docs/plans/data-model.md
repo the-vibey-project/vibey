@@ -285,6 +285,96 @@ CREATE RULE event_no_delete AS ON DELETE TO event DO INSTEAD NOTHING;
 The `RULE`s make `UPDATE` and `DELETE` silent no-ops rather than errors: a stray
 write affects zero rows.
 
+**`kind` is open text, read forward-compatibly (vibey#275).** The column has no
+constraint and no enum type, so a newer vibey writes a kind an older one has never
+heard of. During a rolling upgrade (KEDA-scaled workers on mixed versions) and
+after a rollback, older readers meet such rows. Readers must never raise on one:
+one row would make the project's whole ledger unreadable to every older worker,
+and a lease that dies on it is re-leased to another worker that dies the same way.
+So the rule is readers forward compatible, writers strict:
+
+- **Read, kept.** `EventRowMapper` — the one row mapper every reader of this
+  table shares — parses `kind` through `domain/ledger.py::EventKindParser`. A
+  value this vibey knows is its `EventKind` member. Anything else is an
+  `UnrecognizedEventKind` carrying the stored text verbatim; it is never
+  dropped and never raised. `LedgerEvent.kind` is `EventKind |
+  UnrecognizedEventKind`.
+- **Handed on, whole.** The event is in every range, in the full ledger written
+  into a receiving worktree (under its own kind, byte for byte what a newer
+  vibey writes), and in `digest_range` — which folds `seq` and the payload
+  digest, not the kind, so R6 is unchanged. The hash chain folds `kind.value`,
+  and an unrecognized kind's value is the stored text, so older and newer
+  readers compute the same links.
+- **Interpreted by nobody.** Every projection, the no-loss gate's R1–R5 and R7–R8,
+  the budget brake and the dashboard match kinds by identity against `EventKind`
+  members, so an unrecognized kind matches none of them and is skipped. The
+  design ledger's `DesignEvent` view leaves it out explicitly. An older vibey
+  therefore cannot act on what a newer kind means. The next engine still gets the
+  row in the full ledger.
+- **Never written.** `LedgerEventDraft.kind` is `EventKind`, so vibey can only
+  append a kind it knows. `to_drafts` refuses to re-append an unrecognized one.
+
+The same exposure exists for `phase` and `provenance` (Postgres enums read into
+closed Python enums) and `engine_id` (text read into `EngineId`). vibey#275
+covers `kind` only, the column new releases actually extend.
+
+**Search indexes.** `vibey ledger search` (sub-doctrine 7.a, #137) adds three
+indexes for the dimensions 0002's could not serve:
+
+```sql
+-- 0012_event_search_indexes.sql
+CREATE INDEX event_digest              ON event (digest);
+CREATE INDEX event_project_produced_at ON event (project_id, produced_at);
+CREATE INDEX event_project_engine      ON event (project_id, engine_id, seq);
+```
+
+`event_digest` is not unique and must not become so: `digest` is the SHA-256 of
+the canonical payload alone, so every event with the same payload (`{}` is common)
+shares one. A digest search returns a set; a record is named by `event_id`. The
+free-text criterion (`payload::text ILIKE`) has no index — `event_payload_gin` is
+`jsonb_path_ops`, which answers containment, not substrings — so it scans one
+project's rows.
+
+**The hash chain is derived, not stored.** There is no `prev_hash` column. The
+`RULE`s above would silently discard a migration's backfill `UPDATE`, and a column
+filled only by new appends would leave all existing history outside the chain.
+Instead `domain/ledger_chain.py` recomputes it from the rows: each event's link is
+the SHA-256 of the previous link and every column of the event (the payload through
+its digest), starting from a per-project genesis. A window of events verifies alone
+from the link before it, which is the hook the storage tiers' chunk hashes fold over
+(#114).
+
+**The published shard is a projection, not a copy.** `vibey ledger export` (#137)
+writes nothing to the database and adds no column: it reads a project's rows, derives
+the chain above over **every** event, and writes a JSON Lines file for the repository
+to commit — sub-doctrine 7.a's "the shard the repository holds":
+
+```text
+{"shard": {"format": "vibey-ledger-shard/v1", "project_id": …, "project_name": …,
+           "holds": "full" | "window", "tier": "standard (untiered)",
+           "ledger":    {"first_seq", "last_seq", "event_count"},
+           "chain":     {"scheme", "head", "findings"},
+           "policy":    {"scheme", "fingerprint"},
+           "published": {"count", "digest_range"},
+           "withheld":  {"events": {<reason>: n, …}, "fields", "paths", "emails", "credentials"},
+           "trims":     {<event_id>: {"fields", "paths", "emails", "credentials"}, …}}}
+{<one published record: the same object as .vibey/handoff/ledger.jsonl>}
+…
+```
+
+Each record line is `domain/ledger_record.py`'s object — the one the handoff ledger
+writes — after the publication policy (`domain/publication_policy.py`) has run:
+default-deny by kind and payload field, engine chatter and `untrusted` events withheld
+whole, absolute paths and email addresses replaced, `repo_path` never kept, and
+credential redaction (`infrastructure/ledger/redact.py`) last. A record's `digest` is
+recomputed over what was published, so every record checks against its own digest,
+and `published.digest_range` is `digest_range` over the published records. The
+`chain.head` is the ledger's, not the shard's: it commits to the unpublished events
+too, so only a holder of the full ledger can recompute it — which is the point, since
+it is what an archival node (#114) checks a shard against. The header's counts must
+add up (`event_count` = published + withheld) and `vibey ledger site` refuses a shard
+whose counts, digests or ranges do not.
+
 **`correlation_id` is the delivery's; `causation_id` is the run's.** Every event
 of one delivery — DESIGN, BUILD, REVIEW and the deploy stage set, in every cycle
 — carries the same `correlation_id`, so `event_correlation` answers "show me
@@ -425,6 +515,14 @@ CREATE INDEX job_dep_reverse ON job_dependency (depends_on_job_id);
 `ON CONFLICT (project_id, idempotency_key) DO NOTHING` and, on conflict, returns the
 existing row, so a handler that crashes after enqueueing but before settling its own
 job cannot create duplicate work when the job is replayed.
+
+A handler that enqueues several jobs as one unit uses `enqueue_batch`: the same
+per-row statement for every request, all inside one transaction, so a crash part-way
+through commits none of them. A request may name its dependencies by idempotency key
+(`depends_on_keys`) as well as by job id; a key is resolved inside the transaction,
+against the batch's earlier rows first and then `job`, and one that names no job
+raises and rolls the batch back rather than enqueueing a job with a dependency missing.
+`build.decompose` fans its whole plan out this way (phase-protocols §2.1).
 
 `awaiting_capacity` and `cancelled` are defined in the enum, but no repository
 query sets them today: a capacity rejection is a `defer` back to `ready` with an
@@ -716,7 +814,7 @@ CREATE INDEX human_gate_open ON human_gate (project_id, raised_at)
 `choice`, `approval`, `attempts_exhausted`, `budget_exhausted`,
 `escalation_exhausted`, `verify_repair_exhausted`, `integrate_repair_exhausted`,
 `handoff_gate_failed`,
-`too_many_wind_downs`, `deploy_interview`, `deploy_acceptance`,
+`too_many_wind_downs`, `research_evidence`, `deploy_interview`, `deploy_acceptance`,
 `deploy_demo_review` and `deploy_failure_triage`. Bounded repair and escalation
 ladders park on these gates rather than failing (ADR-0024). Gates are answered
 with `vibey answer GATE_ID`.
@@ -804,13 +902,17 @@ SELECT pg_advisory_unlock($1);
 lock pins its pooled connection until release, because returning the connection to
 the pool would drop the lock silently.
 
+**Migrations** are serialized by a second session-level advisory lock, under the key
+of `sha256('vibey.migrate')`, which a start *waits* for rather than deferring — see §7.
+
 ---
 
 ## 6. Retention (planned)
 
 Nothing is pruned, partitioned or garbage-collected today. Every table grows
 without bound, `event` is a single heap table (0002), and there is no `vibey gc`
-command. `vibey ledger` exposes only `show`. The intended policy, none of it
+command. `vibey ledger` reads (`show`, `search`) and publishes (`export`, `site`); it never
+prunes. The intended policy, none of it
 implemented:
 
 | Table | Intended policy |
@@ -841,18 +943,80 @@ CREATE TABLE IF NOT EXISTS schema_migration (
 `checksum` is the sha256 hex of the file's text. Each pending migration runs in its
 own transaction together with its `schema_migration` insert.
 
-There is no `vibey migrate` command. `build_app()` in `src/vibey/bootstrap.py` calls
-`apply_migrations(conn, discover_migrations(migrations_dir()))` every time it opens
-the pool, so every CLI command that opens the database, and every worker start,
-brings the schema up to date.
+There is no `vibey migrate` command. `build_app()` in `src/vibey/bootstrap.py` runs
+`PostgresMigrator.from_environ(os.environ).apply(conn, discover_migrations(migrations_dir()))`
+every time it opens the pool, so every CLI command that opens the database, and every
+worker start, brings the schema up to date.
 `migrations_dir()` resolves to `<checkout>/migrations` from a source tree and to
 `/app/migrations` in the container image. Every start also re-verifies checksums:
-`apply_migrations` raises `MigrationChecksumError` if an already-applied migration's
-file has changed — an edited migration is a bug, not a convenience. A
-`check_only=True` keyword (verify, apply nothing) exists on `apply_migrations` but
-has no CLI flag and no caller yet.
+`apply` raises `MigrationChecksumError` if an already-applied migration's file has
+changed — an edited migration is a bug, not a convenience. A `check_only=True`
+keyword (verify, apply nothing) exists on `apply` but has no CLI flag and no caller
+yet. The module-level `apply_migrations(conn, migrations)` is a façade over
+`PostgresMigrator().apply` with the default wait; the test harness migrates its
+template database through it.
+
+### 7.1 The migration lock
+
+Replicas that start together — a KEDA scale-out, a Helm rollout — would each read the
+same applied set and race to apply the same pending migration; on a fresh database
+even the `CREATE TABLE IF NOT EXISTS schema_migration` above collides on the
+catalog's unique index. So every run takes a session-level advisory lock first, and
+holds it until the last pending migration has committed:
+
+```sql
+BEGIN;
+SELECT set_config('lock_timeout', '300000ms', true);  -- the bound: this statement only
+SELECT pg_advisory_lock($1);   -- $1 = signed int64 of sha256('vibey.migrate')[:8]
+COMMIT;                        -- the lock is session-level, so it outlives the COMMIT
+-- CREATE TABLE IF NOT EXISTS schema_migration; read it; apply each pending
+-- migration in its own transaction (as above)
+SELECT pg_advisory_unlock($1); -- in a finally: a failed migration wedges nobody
+```
+
+One process migrates; the rest queue on the lock, then read a settled applied set and
+find nothing to do. The key (`PostgresMigrator.LOCK_KEY`, `-1686359016981790252`) is
+derived the way ADR-0029 derives the integrate key, so the two can never collide.
+It is a class constant rather than a setting: it is the contract between every
+process that migrates one database — the old and new releases of a rolling upgrade
+included — and two processes configured with different keys would not exclude each
+other at all. Advisory locks are scoped to one database, so separate deployments never
+contend and need no key of their own. A test pins the value so it cannot drift
+between releases.
+
+**This lock blocks, deliberately.** ADR-0029's never-block clause governs a worker
+holding a job, which defers on contention because it has other work it could do. The
+migration lock is taken inside `build_app()`, before anything has been claimed, by a
+process that cannot do anything until the schema is current; the only alternative to
+waiting is exiting and being restarted to wait again.
+
+**The wait is bounded.** `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` (default `300`; `0`
+waits indefinitely, Postgres's own meaning for `lock_timeout = 0`; fractions round up
+to the next millisecond, never down to `0`) sets how long a start queues behind
+another process's migration. When it runs out the start fails with
+`MigrationLockTimeout`, naming the key and the backend pid still holding it (read
+from `pg_locks`, filtered to this database) — so a wedged holder surfaces as a
+failed start with a pid to inspect in `pg_stat_activity`, not as a pod that looks
+healthy and never arrives. A value that is not a number of seconds between `0` and
+Postgres's ceiling (`2147483.647`) fails the start with
+`InvalidMigrationLockTimeout` before the pool opens; it is never replaced by the
+default. The bound is `SET LOCAL` for the acquiring statement only, so the migrations
+themselves never run under it.
+
+`apply` refuses (`MigrationInsideTransaction`) a connection that already has a
+transaction open: inside an outer transaction nothing would commit until after the
+lock was released, and a second process could read the old applied set anyway.
+
+### 7.2 Tests
 
 `tests/infrastructure/db/test_migrator.py` applies the full set to a fresh Postgres
 and asserts the expected tables exist, re-applies the set as a no-op, and re-applies
-it over a database that already holds a `project` row. There is no per-version
+it over a database that already holds a `project` row. Against real Postgres, with
+two sessions on one database, it also proves the lock: two starts racing a slow
+migration apply it exactly once (with the lock disabled the same test fails on the
+`schema_migration` catalog race); a second start queues on the lock before touching
+anything and then finds the schema settled; a bounded wait behind a wedged holder
+raises `MigrationLockTimeout` naming the holder's pid, and leaves no `lock_timeout`
+or open transaction behind; the lock is released after a run and after a failed
+migration; and a migration does not inherit the wait bound. There is no per-version
 upgrade fixture yet: no test seeds data at migration N−1 and then applies N.

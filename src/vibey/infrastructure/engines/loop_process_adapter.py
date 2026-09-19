@@ -16,11 +16,12 @@ import json
 import os
 import shutil
 import subprocess  # nosec B404 - fixed argv, never shell=True
-import sys
 from collections.abc import AsyncIterator, Mapping
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
+from typing import TextIO
 
 import structlog
 
@@ -40,6 +41,15 @@ from vibey.domain.ledger import EventKind
 from vibey.infrastructure.engines.argv import build_argv
 from vibey.infrastructure.engines.classify import attribute_failure, classify_capacity
 from vibey.infrastructure.engines.loop_events import translate_event_type
+from vibey.infrastructure.process import (
+    DEFAULT_KILL_GRACE_SECONDS,
+    OrchestratorPythonEnv,
+    ProcessReaper,
+)
+from vibey.infrastructure.process.interfaces import (
+    OrchestratorPythonEnvInterface,
+    ProcessReaperInterface,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -47,6 +57,7 @@ logger = structlog.get_logger(__name__)
 # garbage collected (which would close stdin and kill the child process).
 # Key: run_id (UUID), Value: asyncio.subprocess.Process
 _active_processes: dict[object, asyncio.subprocess.Process] = {}
+_diagnostic_files: dict[object, tuple[TextIO, TextIO]] = {}
 
 # `<binary> run --help` output, keyed by binary name. Fetched once per
 # process lifetime; --help is static for a given install, so there's
@@ -61,23 +72,6 @@ def _render_plan(descriptor: EngineDescriptor, prompt: str) -> str:
 
     summary = next((line.strip() for line in prompt.splitlines() if line.strip()), "Complete task")
     return f"# Work Plan\n\n- [ ] {summary}\n\n## Instructions\n\n{prompt}\n"
-
-
-async def _communicate(
-    process: asyncio.subprocess.Process, *, timeout: float
-) -> tuple[bytes, bytes]:
-    """Collect subprocess output and always reap a failed or timed-out child."""
-    communication = asyncio.create_task(process.communicate())
-    try:
-        return await asyncio.wait_for(communication, timeout=timeout)
-    except BaseException:
-        communication.cancel()
-        with suppress(asyncio.CancelledError, Exception):
-            await communication
-        if process.returncode is None:
-            process.kill()
-        await process.wait()
-        raise
 
 
 class ProcessError(VibeyError):
@@ -127,6 +121,86 @@ class LoopProcessAdapter:
     doctor verifies credentials over the network and takes ~60s warm --
     the old hardcoded 30s meant every real claudeloop preflight timed out
     into the env-var fallback, which cannot see CLI-credential auth."""
+    env_overlay: Mapping[str, str] = field(default_factory=dict)
+    """Variables this engine's processes get on top of the environment they would
+    otherwise inherit -- applied last, after the orchestrator's Python environment
+    is stripped, to the run and to its preflight alike, so the doctor probes the
+    same backend the run will use. How qwenloop learns the one local endpoint
+    (`QWENLOOP_BASE_URL` from `VIBEY_OLLAMA_URL`, ADR-0038); empty for every
+    engine whose configuration lives in its own files."""
+    kill_grace_seconds: float = DEFAULT_KILL_GRACE_SECONDS
+    """How long a killed preflight probe (`--version`, `doctor`) may take to be
+    reaped before the adapter gives up on it and logs `engine_process_not_reaped`
+    (#283). The adapter is built without the project's config, so this is a
+    constructor value, like `doctor_timeout`."""
+    python_env: OrchestratorPythonEnvInterface = field(
+        default_factory=OrchestratorPythonEnv, compare=False, repr=False
+    )
+    """Where vibey's own Python environment lives, stripped from every engine
+    session. Shared with the gate runner, so the two apply the same guard."""
+    _reaper: ProcessReaperInterface = field(init=False, compare=False, repr=False)
+
+    def __post_init__(self) -> None:
+        # Built once, here, so an invalid grace fails when the adapter is built rather
+        # than on the first probe that times out.
+        object.__setattr__(
+            self,
+            "_reaper",
+            ProcessReaper(
+                grace_seconds=self.kill_grace_seconds,
+                event="engine_process_not_reaped",
+                context={"engine": self.descriptor.engine_id.value},
+            ),
+        )
+
+    async def _spawn(
+        self,
+        *argv: str,
+        env: Mapping[str, str] | None = None,
+        stdout: int | TextIO,
+        stderr: int | TextIO,
+        cwd: Path | None = None,
+        start_new_session: bool = False,
+    ) -> asyncio.subprocess.Process:
+        """`asyncio.create_subprocess_exec`, with `env_overlay` layered over `env` last.
+
+        `env=None` means "inherit", exactly as for the stdlib call; with no overlay
+        the call is unchanged, so an engine without one behaves as it always has.
+        `start_new_session=True` makes the child lead a process group of its own, which
+        `_communicate`'s kill needs to reach everything the child started.
+        """
+        merged: dict[str, str] | None = None
+        if env is not None or self.env_overlay:
+            merged = {**(os.environ if env is None else env), **self.env_overlay}
+        return await asyncio.create_subprocess_exec(
+            *argv,
+            stdout=stdout,
+            stderr=stderr,
+            cwd=cwd,
+            env=merged,
+            start_new_session=start_new_session,
+        )
+
+    async def _communicate(
+        self, process: asyncio.subprocess.Process, *, timeout: float
+    ) -> tuple[bytes, bytes]:
+        """Collect a probe's output. On a timeout, a cancellation or any other failure,
+        kill its whole group and reap it within `kill_grace_seconds`, then re-raise.
+
+        The kill used to reach only the probe itself, and the wait after it had no
+        bound. Any helper the probe had started kept its pipes open, so preflight,
+        and the worker with it, waited for as long as the helper lived (#283). The
+        probe now leads its own group, so the kill reaches its helpers. A helper that
+        left the group is logged and left behind, not waited on."""
+        communication = asyncio.create_task(process.communicate())
+        try:
+            return await asyncio.wait_for(communication, timeout=timeout)
+        except BaseException:
+            communication.cancel()
+            with suppress(asyncio.CancelledError, Exception):
+                await communication
+            await self._reaper.kill_and_reap(process)
+            raise
 
     @property
     def help_text(self) -> str | None:
@@ -185,13 +259,14 @@ class LoopProcessAdapter:
 
         # Try to get version
         try:
-            proc = await asyncio.create_subprocess_exec(
+            proc = await self._spawn(
                 self.descriptor.binary,
                 "--version",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                start_new_session=True,
             )
-            stdout, stderr = await _communicate(proc, timeout=10.0)
+            stdout, stderr = await self._communicate(proc, timeout=10.0)
             version_output = (stdout or stderr).decode().strip()
             version = version_output.split()[-1] if version_output else None
         except (TimeoutError, Exception) as e:
@@ -206,13 +281,15 @@ class LoopProcessAdapter:
         auth_ok = False
         detail = ""
         try:
-            proc = await asyncio.create_subprocess_exec(
+            proc = await self._spawn(
                 self.descriptor.binary,
                 "doctor",
+                *self.descriptor.doctor_args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                start_new_session=True,
             )
-            stdout, stderr = await _communicate(proc, timeout=self.doctor_timeout)
+            stdout, stderr = await self._communicate(proc, timeout=self.doctor_timeout)
             auth_ok = proc.returncode == 0
             if not auth_ok:
                 detail = (stderr or stdout).decode().strip()[:500]
@@ -252,31 +329,37 @@ class LoopProcessAdapter:
         # Build argv using existing argv.py
         argv = build_argv(self.descriptor, spec)
 
-        # Spawn the process
-        # Don't use PIPE for stdout/stderr since we never drain them - that would
-        # cause the child to block when the pipe buffer fills, or cause Python to
-        # close stdin on GC when the process object goes out of scope. Use DEVNULL
-        # instead since we read state from files, not stdout.
+        # Spawn the process. Output goes to bounded-lifetime files rather than pipes:
+        # pipes can deadlock a long-running engine when nobody drains them, while
+        # DEVNULL throws away the only diagnostic that can distinguish a failed task
+        # from a failed backend (PR #299).
+        diagnostic_dir = spec.worktree_path / ".vibey" / "diagnostics"
+        diagnostic_dir.mkdir(parents=True, exist_ok=True)
+        stdout_file = (diagnostic_dir / f"{spec.run_id}.stdout").open("w", encoding="utf-8")
+        stderr_file = (diagnostic_dir / f"{spec.run_id}.stderr").open("w", encoding="utf-8")
         try:
             logger.debug(
                 "spawning_process",
                 engine=self.descriptor.engine_id.value,
                 argv=" ".join(argv),
-                stdout="DEVNULL",
-                stderr="DEVNULL",
+                stdout=str(stdout_file.name),
+                stderr=str(stderr_file.name),
             )
-            process = await asyncio.create_subprocess_exec(
+            process = await self._spawn(
                 *argv,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
+                stdout=stdout_file,
+                stderr=stderr_file,
                 cwd=spec.worktree_path,
-                env=isolate_python_env(
-                    os.environ,
-                    venv_prefixes=(os.environ.get("VIRTUAL_ENV"), sys.prefix),
-                ),
+                # The interpreter's prefix counts as vibey's only when it is a venv.
+                # On a system Python it is `/usr`, and stripping it took /usr/bin
+                # from every engine session (#283).
+                env=isolate_python_env(os.environ, venv_prefixes=self.python_env.venv_prefixes()),
             )
         except Exception as e:
+            stdout_file.close()
+            stderr_file.close()
             raise ProcessError(f"Failed to spawn {self.descriptor.binary}: {e}") from e
+        _diagnostic_files[spec.run_id] = (stdout_file, stderr_file)
 
         logger.info(
             "engine_started",
@@ -510,6 +593,32 @@ class LoopProcessAdapter:
         process = _active_processes.get(handle.run_id)
         return None if process is None else process.returncode
 
+    def diagnostic_tail(self, handle: RunHandle) -> str:
+        """Return the child output retained for failure attribution.
+
+        The application owns the policy for classifying this text; this adapter only
+        preserves it across a process that exits before writing a structured event.
+        """
+        parts: list[str] = []
+        for label, index in (("stderr", 1), ("stdout", 0)):
+            files = _diagnostic_files.get(handle.run_id)
+            if files is None:
+                continue
+            file = files[index]
+            path = Path(file.name)
+            if path.exists():
+                text = path.read_text(encoding="utf-8", errors="replace").strip()
+                if text:
+                    parts.append(f"[{label}] {text}")
+        return "\n".join(parts)[-8_000:]
+
+    def release_diagnostics(self, handle: RunHandle) -> None:
+        """Close and forget the retained child-output handles after it is consumed."""
+        files = _diagnostic_files.pop(handle.run_id, None)
+        if files is not None:
+            for file in files:
+                file.close()
+
     async def stop(self, handle: RunHandle) -> StopSummary:
         """Send stop signal and collect stop-summary.md."""
         # Write stop signal to inbox
@@ -544,6 +653,7 @@ class LoopProcessAdapter:
                 logger.debug("snapshot_remaining_work_failed", run_id=str(handle.run_id))
 
         # Clean up the process reference
+        self.release_diagnostics(handle)
         process = _active_processes.pop(handle.run_id, None)
         if process is not None:
             if process.returncode is None:

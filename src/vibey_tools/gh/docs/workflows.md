@@ -74,7 +74,13 @@ The `evaluate` job holds read-only `contents: read`, `issues: read`, and `pull-r
 read`. It runs trusted default-branch workflow code, installs the published `vibey-gh`
 package, resolves the subject and comment ID from either the dispatch inputs or the
 triggering event, and calls `vibey-gh conversation evaluate` to compute one of `skip`,
-`blocked`, `answer`, or `act` with a stated reason. `evaluate` checks, in order: the
+`blocked`, `answer`, or `act` with a stated reason. The comment is resolved exactly: a
+comment on the thread is found there, and an inline review comment — which `gh issue view`
+does not return — is fetched from the pull request review API and confirmed to belong to
+this pull request. An ID that names neither fails the job; it is never replaced by the
+newest comment, which would answer a request nobody made in the comment that was written.
+Whether the thread is a pull request is read from its URL (`.../pull/N`), the only field
+`gh issue view` returns that says so. `evaluate` checks, in order: the
 automation's own identities (never answered), whether conversation is enabled, whether the
 comment mentions the configured trigger, whether the thread is open, whether this exact
 comment was already answered, whether the author is trusted or `respond_to_untrusted` is
@@ -84,7 +90,8 @@ the privileged `respond` job.
 The `respond` job checks out trusted automation under `automation/` and the thread's branch
 (a pull request head) or the default branch (an issue) under `target/`, both with
 `persist-credentials: false` for the read-only pull-request case. A trusted step renders the
-thread into `briefing/thread.md` with `vibey-gh conversation context`; the pinned Claude Code
+thread into `briefing/thread.md` with `vibey-gh conversation context` (for an inline review
+comment, with the file, line and diff hunk it was written on); the pinned Claude Code
 Action then runs from a disposable credential-free Git context with
 `Read,Glob,Grep,Edit,Write` and no `Bash`, `gh`, or `Agent` tool, and is told the briefing is
 an untrusted report rather than an instruction. When `may_change_files` is false — every case
@@ -170,7 +177,10 @@ the server-side half of the provenance rule — backstopping the pre-push hook, 
 in a clone and can be skipped with `--no-verify` or simply never installed. A promotion PR
 from `develop` into `main` checks provenance without rewriting or re-auditing
 already-admitted history; an ordinary PR checks only the commits it adds, via `--commits
-BASE_SHA..HEAD`.
+BASE_SHA..HEAD`. A PR counts as a promotion only when its head branch belongs to this
+repository (`github.event.pull_request.head.repo.full_name` equals `github.repository`,
+both passed through `env:`). A fork PR from a branch that happens to be named `develop` is
+audited commit by commit like any other.
 
 ## Docs (documentation contract and maintenance)
 
@@ -212,8 +222,9 @@ repair-attempt budget is exhausted.
 `review-fallback` runs only when `[pr_automation.fallback].enabled` is set, the primary
 `review` job produced no verdict at all (not a review that ran and found something), the
 event is not a fork pull request (`trusted_only`), and the run is not a dry run. Unlike
-every other job in this workflow it targets a distinct `[self-hosted, vibey-local-gh]`
-runner rather than `ubuntu-latest`, and holds only `contents: read` — no secret, and no
+every other job in this workflow it targets a distinct `[self-hosted, <runner_label>]`
+runner (the label is `[pr_automation.fallback] runner_label`, default `vibey-local`)
+rather than `ubuntu-latest`, and holds only `contents: read` — no secret, and no
 token capable of mutating the repository. It fetches the exact-head diff with `gh pr diff`,
 falling back to a local merge-base reconstruction when GitHub's diff API refuses a pull
 request beyond roughly 300 changed files, then runs `vibey-gh local-review` against an
@@ -277,9 +288,14 @@ SHA, returning it to ordinary review and repair with no exemption.
 `Promote` (workflow file `promote-to-main.yml`) runs on completion of `Merge train`, a
 weekly Monday schedule, and manual dispatch. With `contents: write` and `pull-requests:
 write`, it runs `vibey-gh promote`, which compares `develop` and `main` by tree content
-rather than commit count, derives the next version, and opens or reuses a promotion pull
-request; that PR then goes through the same scans, `PR automation` gate, and a rebase
-merge to `main` as any other change. `AUTOMERGE_TOKEN` is required here because a
+rather than commit count, derives the next version, and opens a promotion pull request —
+or, when one is already open, rewrites its title and body from the current derivation, so
+the version and file count a reviewer approves are the ones the merge will publish, and a
+version that changed since the pull request was opened is said in its body. The body says
+it publishes nothing only when the version equals `main`'s. The rewrite uses `gh pr edit`,
+falling back to the REST endpoint when an older `gh` is refused over Projects (classic);
+if both fail, the run notes it and the promotion proceeds. That PR then goes through the
+same scans, `PR automation` gate, and a rebase merge to `main` as any other change. `AUTOMERGE_TOKEN` is required here because a
 ruleset-required approving review cannot be satisfied by the default `GITHUB_TOKEN`.
 
 ## Release

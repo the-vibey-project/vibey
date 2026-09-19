@@ -76,10 +76,12 @@ uv run lint-imports
 ```
 
 If it fails, the error names the contract and the violating import. See
-`.importlinter` for the four contracts: `onion-layers`,
-`domain-independence`, `application-independence`, and `interfaces-declare-only`
-— the last of which today covers `application/interfaces` only, although the
-declare-only rule applies to every `interfaces/` package. See ADR-0016.
+`.importlinter` for the contracts: `onion-layers`, `domain-independence`,
+`application-independence`, and the declare-only contracts that keep each
+`interfaces/` package from importing its consumers (`interfaces-declare-only`
+for `application/interfaces`, `infrastructure-interfaces-declare-only`,
+`vibey-gh-interfaces-declare-only`). The declare-only rule applies to every
+`interfaces/` package. See ADR-0016.
 
 See the `vibey-architecture` skill before fixing a violation.
 
@@ -137,15 +139,16 @@ push went ahead but none of that stage's gates ran. Run them by hand before you 
 
 ## The other CI jobs
 
-`ci.yml` runs six jobs on every push and PR to `develop`/`main`:
+`ci.yml` runs seven jobs on every push and PR to `develop`/`main`:
 
 | Job | What it checks |
 |---|---|
 | `uv-lock` | `uv lock --check`. `gates`, `tools` and `tools-lint` depend on it. The lock carries vibey's own version, so a version bump without `uv lock` fails here first. |
 | `gates` | The seven gates above, against a `postgres:17` service. |
-| `tools` | Each absorbed tool's own suite on its own Python floors (ADR-0022). |
+| `tools` | Each absorbed tenant's own suite on its own Python floors, plus, on its floor row, its own static gates from the row's `static` key: its mypy, `lint-imports` and bandit. agyloop, codexloop and vibey-skills also run their own strict docs builds (the `docs` key) (ADR-0022). |
 | `tools-lint` | vibey-gh's own linters and its managed-automation drift check. |
-| `image` | Builds `deploy/docker/Dockerfile` for amd64 and arm64 and asserts four image contracts: the entrypoint runs, it runs as non-root uid 10001, it has no compiler/uv/pip, and migrations ship in the image. |
+| `image` | Builds `deploy/docker/Dockerfile` for amd64 and arm64 and asserts each `Image contract - …` step: the entrypoint runs, it runs as non-root uid 10001, it has no compiler/uv/pip, migrations ship in the image, and every console script is on PATH. |
+| `chart` | Render-only: `deploy/helm/golden/render.sh` runs `helm lint --strict` and `helm template` for each profile (defaults, `ollama.enabled`, the GPU + qwenloop wiring, and the KEDA query unbound and bound to a project) and diffs each render against its committed golden under `deploy/helm/golden/`, with helm pinned. After an intended chart change, regenerate with `deploy/helm/golden/render.sh --update`. |
 | `cluster-smoke` | Helm install of `deploy/helm/vibey` on minikube and four cluster contracts: a projectless worker parks instead of crash-looping, the worker picks up a project created in-cluster, the KEDA ScaledObject reconciles against real Postgres, and a worker drains promptly on SIGTERM (ADR-0025, ADR-0026). |
 
 Other workflows also gate a merge: `provenance.yml` (runs on every push and PR),

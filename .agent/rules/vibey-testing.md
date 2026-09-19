@@ -29,6 +29,11 @@ excluded and everything runs under pytest-xdist.
 and repoints `VIBEY_TEST_DATABASE_URL` at the clone. The role in the DSN must be
 able to connect to the `postgres` database and run `CREATE DATABASE`.
 
+The template is migrated from the running checkout and then reused, so two
+checkouts whose `migrations/` differ -- parallel worktrees, one adding a migration
+-- must not share it: set `VIBEY_TEST_TEMPLATE_DB` to a name of the checkout's own
+(default `vibey_test_template`).
+
 ```bash
 export VIBEY_TEST_DATABASE_URL="postgresql://$(whoami)@localhost:5432/vibey_test"
 uv run pytest tests/domain -p no:cacheprovider            # one area, xdist on
@@ -92,8 +97,19 @@ conftest falls back to `postgresql://<current user>@localhost:5432/vibey_test`.
 - Exclusion honored: an engine in `requirement.excluded` is never returned.
 
 **No-loss gate soundness** (`tests/domain/test_noloss.py`):
-- For any ledger and any brief that *omits* a closable item, the gate returns
-  a violation naming that item. Generated adversarially via Hypothesis.
+- For any ledger and any brief that *omits* owed items, the gate names each
+  omitted item under its own rule, and nothing else. The expected brief comes
+  from the independent reference model in `tests/domain/test_noloss_reference.py`
+  -- never from `open_items`, which the gate itself uses -- over ledgers with
+  arbitrary ids, interleaved kinds, answers, resolutions and supersedes, several
+  verdicts, and a presentation order unrelated to seq.
+- The suite is marked `noloss`. `gates` runs it at Hypothesis' default 100
+  examples; the required CI check `No-loss property suite (10,000 examples)`
+  runs `uv run pytest -m noloss --hypothesis-profile=noloss
+  --hypothesis-show-statistics -p no:cacheprovider`. Never add a per-test
+  `@settings(max_examples=...)` there: it overrides the profile.
+- These files are protected (`.github/CODEOWNERS`, `[merge_train]
+  protected_paths`): the merge train will not merge a change to them.
 
 **Credits-never-have-a-deadline** (`tests/domain/test_circuit.py`):
 - `schedule_probe(CreditsExhausted(...), ...)` can only return a `BackoffProbe`,
@@ -103,8 +119,10 @@ conftest falls back to `postgresql://<current user>@localhost:5432/vibey_test`.
 **Deterministic brief is provably lossless** (`tests/domain/test_briefing.py`):
 - `build_deterministic_brief()` (the floor brief producer) is built from the
   same projections (`domain/projections.py`) that `domain/noloss.py::verify()`
-  checks, so it passes the gate by construction. Hypothesis property test
-  generates random ledgers and asserts `verify(...).ok`.
+  checks -- its decisions from `open_items` itself -- so it passes the gate by
+  construction. Property tests over the same adversarial ledgers assert
+  `verify(...).ok` and that it carries exactly what the reference model says
+  is owed.
 
 ## The chaos test
 
@@ -112,7 +130,15 @@ conftest falls back to `postgresql://<current user>@localhost:5432/vibey_test`.
 against real Postgres, each randomly abandoning a claimed job mid-flight (the
 observable effect of a kill: no ack, no nack, lease just expires), with a
 concurrent reaper reclaiming expired leases. It proves the property that
-matters: **zero double-execution, zero lost jobs** across 500 jobs.
+matters: **zero double-commit, zero lost jobs** across 500 jobs.
+
+Delivery is at-least-once. On a loaded machine claim-to-ack outlives the 150 ms
+lease, the job is reaped and claimed again, and the work runs twice. The ack is
+fenced on `lease_owner`, so the stale ack is refused and exactly one ack per job
+returns `True`. The test therefore counts *committed* executions (acks that
+returned `True`), fails if any job is committed twice or never, and only prints
+the raw execution count (`pytest -rP` shows the tally). Don't lengthen the lease
+to quiet a failure: that hides the fence the test exists to exercise.
 
 This is a scoped-down substitute for the implementation plan's literal spec
 (8 OS processes, `SIGKILL` every 2s via testcontainers) — no Docker daemon

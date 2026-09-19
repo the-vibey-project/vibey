@@ -11,7 +11,7 @@ from vibey.application.build_verify_handler import (
     VerifyIndependencePolicy,
 )
 from vibey.application.dto import EngineEvent
-from vibey.application.worker import Failure, Success
+from vibey.application.worker import Defer, Failure, Success
 from vibey.domain.engine import EngineId
 from vibey.domain.job import FailureClass
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP
@@ -80,6 +80,7 @@ async def test_successful_verify_runs_gates_reviews_the_diff_and_enqueues_integr
         reviewer=reviewer,
         ledger=ledger,
         jobs=jobs,
+        clock=FixedClock(),
     )
 
     job = _job()
@@ -109,6 +110,7 @@ async def test_rejects_wrong_kind_and_missing_work_item_id(tmp_path: Path) -> No
         reviewer=reviewer,
         ledger=FakeLedger(),
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
     )
 
     wrong_kind = replace(make_job(uuid4()), kind="build.implement")
@@ -129,6 +131,7 @@ async def test_rejects_a_reviewer_that_matches_the_implementer(tmp_path: Path) -
         reviewer=reviewer,
         ledger=FakeLedger(),
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
     )
 
     job = _job(requirement={"implementer_engine_id": "claudeloop"})
@@ -150,6 +153,7 @@ async def test_a_one_engine_pool_verifies_its_own_work_and_says_so(tmp_path: Pat
         reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
         ledger=ledger,
         jobs=jobs,
+        clock=FixedClock(),
         independence=VerifyIndependencePolicy(
             pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
         ),
@@ -187,6 +191,7 @@ async def test_a_pool_with_a_second_engine_still_rejects_a_self_review(tmp_path:
         reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
         ledger=ledger,
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
         independence=VerifyIndependencePolicy(
             pool=frozenset({EngineId.CLAUDELOOP, EngineId.CODEXLOOP}), clock=FixedClock()
         ),
@@ -208,6 +213,7 @@ async def test_a_rotated_reviewer_records_no_waiver(tmp_path: Path) -> None:
         reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
         ledger=ledger,
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
         independence=VerifyIndependencePolicy(
             pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
         ),
@@ -229,6 +235,7 @@ async def test_a_failing_gate_command_fails_as_work(tmp_path: Path) -> None:
         reviewer=reviewer,
         ledger=FakeLedger(),
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
     )
 
     outcome = await handler.handle(_job())
@@ -248,6 +255,7 @@ async def test_no_criteria_checked_fails_as_work(tmp_path: Path) -> None:
         reviewer=reviewer,
         ledger=FakeLedger(),
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
     )
 
     job = _job(payload={"verification": {"commands": (), "criteria_checked": ()}})
@@ -271,12 +279,69 @@ async def test_reviewer_rejection_fails_as_work(tmp_path: Path) -> None:
         reviewer=reviewer,
         ledger=FakeLedger(),
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
     )
 
     job = _job(requirement={"implementer_engine_id": "claudeloop"})
     outcome = await handler.handle(job)
 
     assert outcome == Failure(FailureClass.WORK, "diff review did not approve this work item")
+
+
+async def test_reviewer_rejection_with_exit_code_uses_engine_attribution(tmp_path: Path) -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    reviewer = ScriptedEngine(
+        descriptor=CODEXLOOP,
+        base_dir=tmp_path / "engine",
+        script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
+        exit_code_script=[137],
+    )
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=reviewer,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert outcome == Failure(
+        FailureClass.ENGINE,
+        "diff review did not approve this work item (exit code 137)",
+    )
+
+
+async def test_a_reviewer_whose_backend_is_misconfigured_parks_rather_than_rejects(
+    tmp_path: Path,
+) -> None:
+    """Exit 78: the reviewer never judged the diff, so recording a rejection would be
+    false and retrying would repeat the same fault. The job parks for the fix."""
+    from vibey.application.worker import Park
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    reviewer = ScriptedEngine(
+        descriptor=CLAUDELOOP_LOCAL,
+        base_dir=tmp_path / "engine",
+        script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
+        exit_code_script=[78],
+    )
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=reviewer,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "qwenloop"}))
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "engine_misconfigured"
+    assert "`claudeloop doctor --profile local`" in outcome.request.prompt
 
 
 def test_gate_output_tail_prefers_both_streams_and_labels_stdout() -> None:
@@ -361,6 +426,7 @@ async def test_first_gate_failure_raises_a_finding_and_enqueues_a_repair(tmp_pat
         reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "r"),
         ledger=ledger,
         jobs=jobs,
+        clock=FixedClock(),
         repair=_repair_policy([]),
     )
 
@@ -397,6 +463,7 @@ async def test_gate_failure_with_a_repair_in_flight_only_defers(tmp_path: Path) 
         reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "r"),
         ledger=ledger,
         jobs=jobs,
+        clock=FixedClock(),
         repair=_repair_policy([open_finding]),
     )
 
@@ -424,6 +491,7 @@ async def test_exhausted_repair_rounds_park_for_a_human(tmp_path: Path) -> None:
         reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "r"),
         ledger=FakeLedger(),
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
         repair=_repair_policy(history),
     )
 
@@ -454,6 +522,7 @@ async def test_success_resolves_this_items_open_findings(tmp_path: Path) -> None
         reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "r"),
         ledger=ledger,
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
         repair=_repair_policy(events),
     )
 
@@ -473,6 +542,7 @@ async def test_without_a_repair_policy_gate_failure_stays_a_plain_failure(
         reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "r"),
         ledger=FakeLedger(),
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
     )
 
     outcome = await handler.handle(_job())
@@ -521,6 +591,7 @@ async def test_an_answered_gate_can_grant_more_repair_rounds(tmp_path: Path) -> 
             reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "r"),
             ledger=FakeLedger(),
             jobs=FakeJobRepository(),
+            clock=FixedClock(),
             repair=policy,
         )
 
@@ -555,6 +626,7 @@ async def test_a_failing_gate_on_a_solo_pool_records_no_waiver(tmp_path: Path) -
         reviewer=ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine"),
         ledger=ledger,
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
         independence=VerifyIndependencePolicy(
             pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
         ),
@@ -585,6 +657,7 @@ async def test_a_rejected_self_review_on_a_solo_pool_records_no_waiver(tmp_path:
         ),
         ledger=ledger,
         jobs=FakeJobRepository(),
+        clock=FixedClock(),
         independence=VerifyIndependencePolicy(
             pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
         ),
@@ -614,3 +687,124 @@ def test_granted_amount_parses_floats_and_rejects_junk() -> None:
     assert granted_amount({"max_dollars": True}, "max_dollars") is None
     assert granted_amount({"max_dollars": "plenty"}, "max_dollars") is None
     assert granted_amount({"unrelated": 1}, "max_dollars") is None
+
+
+# ── a capacity rejection outranks the diff review's verdict (#215) ───────────
+
+
+def _capacity_rejected_review() -> list[dict[str, object]]:
+    """A reviewer run that hits capacity AND claims completion in the same
+    run -- the exact shape the non-negotiable is about: whatever the verdict
+    says, the capacity rejection wins."""
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    return [
+        {"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}},
+        {
+            "kind": "CapacityRejected",
+            "at": now,
+            "payload": {"capacity_state": "CreditsExhausted", "can_purchase": True},
+        },
+        {
+            "kind": "VerdictRendered",
+            "at": now,
+            "payload": {"complete": True, "remaining_work": [], "summary": "looks fine"},
+        },
+    ]
+
+
+async def test_a_capacity_rejected_review_defers_as_capacity_not_a_work_failure(
+    tmp_path: Path,
+) -> None:
+    """#215: verify discarded `capacity_rejected` and went straight to the
+    verdict, so a reviewer out of credits either burned an attempt as a WORK
+    failure or -- with a completing verdict beside it -- passed the item. It
+    must be a capacity Defer (refunded attempt, circuit opened) and nothing
+    downstream of an approval may happen."""
+    ledger = FakeLedger()
+    jobs = FakeJobRepository()
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=ScriptedEngine(
+            descriptor=CODEXLOOP,
+            base_dir=tmp_path / "engine",
+            script=_capacity_rejected_review(),
+        ),
+        ledger=ledger,
+        jobs=jobs,
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert outcome == Defer(
+        retry_at=FixedClock().now() + timedelta(minutes=5),
+        detail="engine codexloop reported capacity rejection during the diff review",
+        capacity=True,
+    )
+    # The rejection itself is still on the record; only the approval is not.
+    assert any(event.kind == "CapacityRejected" for event in ledger.recorded)
+    # No build.integrate: the item was never approved.
+    assert jobs._jobs == {}
+
+
+async def test_a_capacity_rejected_self_review_writes_no_waiver_and_resolves_nothing(
+    tmp_path: Path,
+) -> None:
+    """The success path writes to an append-only ledger: it resolves this
+    item's open repair findings and, on a solo pool, records that the item
+    "was verified by its own implementer". A reviewer that ran out of
+    capacity verified nothing, so neither entry may be written."""
+    from vibey.domain.ledger import EventKind
+
+    job = _job(requirement={"implementer_engine_id": "claudeloop"})
+    open_finding = _finding_event(job.cycle, EventKind.FINDING_RAISED, "f_verify_item-1_aaaa1111")
+    ledger = FakeLedger()
+    jobs = FakeJobRepository()
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=ScriptedEngine(
+            descriptor=CLAUDELOOP,
+            base_dir=tmp_path / "engine",
+            script=_capacity_rejected_review(),
+        ),
+        ledger=ledger,
+        jobs=jobs,
+        clock=FixedClock(),
+        repair=_repair_policy([open_finding]),
+        independence=VerifyIndependencePolicy(
+            pool=frozenset({EngineId.CLAUDELOOP}), clock=FixedClock()
+        ),
+    )
+
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Defer)
+    assert outcome.capacity is True
+    assert "claudeloop" in outcome.detail
+    kinds = [event.kind for event in ledger.recorded]
+    assert "DecisionRecorded" not in kinds
+    assert "FindingResolved" not in kinds
+    assert jobs._jobs == {}
+
+
+async def test_the_capacity_backoff_is_configurable(tmp_path: Path) -> None:
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=ScriptedEngine(
+            descriptor=CODEXLOOP,
+            base_dir=tmp_path / "engine",
+            script=_capacity_rejected_review(),
+        ),
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        capacity_backoff=timedelta(minutes=17),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert isinstance(outcome, Defer)
+    assert outcome.retry_at == FixedClock().now() + timedelta(minutes=17)
