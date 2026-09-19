@@ -74,8 +74,10 @@ There is a fourth, larger duplication that the file-hash scan does not
 see: CI workflows, release configuration, docs scaffolding, and the four
 agent-surface router files existed in near-identical form in every repo.
 The monorepo made most of the CI half moot — only root workflows run, and
-release-please is retired (ADR-0028) — but the subtrees still carry their
-inert `.github/` trees and their own docs scaffolding.
+release-please is retired (ADR-0028). The subtrees' inert `.github/`
+trees, `.githooks/` and `.vibey-gh.toml` files were removed under #189
+(every tenant but `src/vibey_tools/gh`, which is vibey-gh itself); their
+own docs scaffolding remains.
 
 ## The vibey-bootstrap scope question — decide this first
 
@@ -192,7 +194,8 @@ prompts.
 6. Extract the measured 440 lines (`handoff_marker`, `verbosity`,
    `forecast`) into `vibey-runners-common`; the runners consume it.
 7. Remove the subtrees' inert `.github/` trees and share docs
-   scaffolding — the CI/release half is mostly done by the monorepo.
+   scaffolding. **`.github/` half done** under #189, with the tenants'
+   `.githooks/` and `.vibey-gh.toml`; the shared docs scaffolding is open.
 8. Feed the reconciliation backlog (the ~85 diverged modules) in as
    individual, prioritized items. Do not attempt this as one change.
 

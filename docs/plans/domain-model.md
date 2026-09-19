@@ -1006,15 +1006,36 @@ class WorkItem:
     files_touched_hint: tuple[str, ...]
     verification: VerificationSpec
 
+class DecompositionPlanner:  # behind domain/interfaces/plan_interface.py
+    def violations(
+        self, items: Sequence[PlannedItemInterface], *,
+        criteria_ids: Sequence[str], walking_skeleton_item_id: str,
+    ) -> tuple[str, ...]:
+        """Returns every violation, each named; empty means the decomposition
+        can enter BUILD. Judged over the whole plan, before anything is
+        enqueued. Checks: no duplicate item_id; every depends_on target
+        exists; no dependency cycle (each strongly connected group named once,
+        a self-dependency included); every acceptance criterion maps to >= 1
+        work item (an unmapped criterion is a decomposition bug, not a
+        judgment call); the named walking-skeleton item exists and has no
+        dependencies — it goes first, alone, and must go green before anything
+        else starts."""
+
+    def in_dependency_order[ItemT: PlannedItemInterface](
+        self, items: Sequence[ItemT]
+    ) -> tuple[ItemT, ...]:
+        """The same items, every dependency before its dependents. Stable (of
+        the items ready together, the one listed first goes first), so an
+        ordered plan comes back unchanged and the skeleton stays first. A
+        cycle raises ValueError rather than returning part of the plan."""
+
+DECOMPOSITION_PLANNER: DecompositionPlannerInterface = DecompositionPlanner()
+
 def validate_decomposition(
     items: Sequence[WorkItem], *, criteria_ids: Sequence[str], walking_skeleton_item_id: str,
 ) -> tuple[str, ...]:
-    """Returns violations; empty means the decomposition can enter BUILD.
-    Checks: no duplicate item_id; every depends_on target exists; every
-    acceptance criterion maps to >= 1 work item (an unmapped criterion is a
-    decomposition bug, not a judgment call); the named walking-skeleton item
-    exists and has no dependencies — it goes first, alone, and must go green
-    before anything else starts."""
+    """A facade over DECOMPOSITION_PLANNER.violations, kept because the
+    work-plan producers call this name."""
 
 def build_parallelism(*, config_parallelism: int | None, eligible_items: int, cpu_count: int) -> int:
     """min(config, eligible_items * 2, cpu_count). config_parallelism comes

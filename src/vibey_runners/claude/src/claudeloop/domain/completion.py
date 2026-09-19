@@ -55,14 +55,25 @@ def evaluate(
     cost_usd: float = 0.0,
     empty_turn_streak: int = 0,
     empty_turn_limit: int = 3,
+    output_tokens: int = 0,
+    marker_fallback: bool = True,
 ) -> CompletionVerdict:
     """Decide what a single turn's outcome means for the overall task.
 
     Precedence: a structured verdict is authoritative when present. Only when it is
     absent do we fall back to substring-matching the legacy marker in raw text.
 
-    Empty zero-cost turns with no structured verdict are soft-failed: treated as
-    wait-only Continue, or Blocked after ``empty_turn_limit`` consecutive empties.
+    Empty turns with no structured verdict are soft-failed: treated as wait-only
+    Continue, or Blocked after ``empty_turn_limit`` consecutive empties. A turn is
+    empty when it produced no text, cost nothing, AND generated no output tokens —
+    the token count is what keeps this meaningful on a local backend, where every
+    turn is recorded at zero cost (domain/backend.py, cost_mode "zero").
+
+    ``marker_fallback=False`` turns the substring fallback off, so only a
+    structured verdict can complete a run. A local backend defaults to that:
+    Claude Code delivers the structured verdict through a tool call, and a model
+    that cannot make real tool calls was observed writing both its tool calls and
+    the done marker as plain text — a "Done" for work that never happened.
     """
     if structured is not None:
         if structured.blocked_on:
@@ -71,10 +82,10 @@ def evaluate(
             return Done(summary=structured.summary)
         return Continue(remaining_work=structured.remaining_work)
 
-    if done_marker in output_text:
+    if marker_fallback and done_marker in output_text:
         return Done(summary="")
 
-    if not output_text.strip() and cost_usd <= 0.0:
+    if not output_text.strip() and cost_usd <= 0.0 and output_tokens <= 0:
         if empty_turn_streak + 1 >= empty_turn_limit:
             return Blocked(reason="repeated empty model responses")
         return Continue(
