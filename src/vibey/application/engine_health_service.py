@@ -15,6 +15,7 @@ from vibey.domain.capacity import (
     CreditsExhausted,
     WindowExhausted,
 )
+from vibey.domain.circuit import CIRCUIT_STATE_PARSER, CircuitState, StoredCircuitState
 from vibey.domain.engine import EngineId
 
 
@@ -31,7 +32,7 @@ class EngineHealthService:
 
     def _circuit_after_preflight(
         self, record: EngineHealthRecord, preflight: PreflightResult
-    ) -> str:
+    ) -> StoredCircuitState:
         """The circuit an authentication-opened engine carries after a preflight.
 
         `AuthenticationFailed` is the one capacity rejection that schedules
@@ -55,13 +56,13 @@ class EngineHealthService:
             and record.circuit == "half_open"
             and not preflight.auth_ok
         ):
-            return "open"
+            return CircuitState.OPEN
         if (
             record.circuit == "open"
             and record.capacity_state == "AuthenticationFailed"
             and preflight.auth_ok
         ):
-            return "half_open"
+            return CircuitState.HALF_OPEN
         return record.circuit
 
     async def get_or_create(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
@@ -79,7 +80,7 @@ class EngineHealthService:
             conformance_ok=False,
             conformance_at=None,
             auth_ok_at=None,
-            circuit="closed",
+            circuit=CircuitState.CLOSED,
             capacity_state=None,
             resets_at=None,
             probe_next_at=None,
@@ -101,6 +102,10 @@ class EngineHealthService:
         doctor's to grant (update_from_preflight), and a routine startup
         sweep must never silently revoke or forge it."""
         record = await self.get_or_create(project_id, engine_id)
+        # A newer worker owns this circuit. Neither startup nor doctor may
+        # rewrite it or reinterpret it as healthy (vibey#287).
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
         now = datetime.now(UTC)
         updated = EngineHealthRecord(
             project_id=record.project_id,
@@ -132,6 +137,8 @@ class EngineHealthService:
         """Update health record based on preflight check results."""
         record = await self.get_or_create(project_id, engine_id)
 
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
         now = datetime.now(UTC)
         auth_ok_at = now if preflight.auth_ok else None
 
@@ -165,13 +172,15 @@ class EngineHealthService:
         """Record a capacity rejection and update circuit state accordingly."""
         record = await self.get_or_create(project_id, engine_id)
 
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
         circuit_state = record.circuit
         capacity_state_str: str | None = None
         resets_at = None
         probe_next_at = None
 
         if isinstance(capacity_state, CreditsExhausted):
-            circuit_state = "open"
+            circuit_state = CircuitState.OPEN
             capacity_state_str = "CreditsExhausted"
             # No resets_at for credits exhausted (enforced by DB constraint)
             # Probe on exponential backoff
@@ -181,13 +190,13 @@ class EngineHealthService:
             probe_next_at = datetime.now(UTC) + timedelta(minutes=min(5 * (2**probe_attempt), 30))
 
         elif isinstance(capacity_state, WindowExhausted):
-            circuit_state = "open"
+            circuit_state = CircuitState.OPEN
             capacity_state_str = "WindowExhausted"
             resets_at = capacity_state.resets_at
             probe_next_at = capacity_state.resets_at  # Probe when window resets
 
         elif isinstance(capacity_state, AuthenticationFailed):
-            circuit_state = "open"
+            circuit_state = CircuitState.OPEN
             capacity_state_str = "AuthenticationFailed"
             # Deliberately no resets_at and no probe_next_at: waiting cannot
             # fix a credential, so inventing a deadline here would be the
@@ -221,6 +230,8 @@ class EngineHealthService:
         """Record that an engine was selected for work."""
         record = await self.get_or_create(project_id, engine_id)
 
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
         updated = EngineHealthRecord(
             project_id=record.project_id,
             engine_id=record.engine_id,
@@ -246,6 +257,8 @@ class EngineHealthService:
         """Record a successful execution (clears consecutive failures)."""
         record = await self.get_or_create(project_id, engine_id)
 
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
         # Successful execution: reset consecutive failures, update EWMA
         updated = EngineHealthRecord(
             project_id=record.project_id,
@@ -255,7 +268,7 @@ class EngineHealthService:
             conformance_ok=record.conformance_ok,
             conformance_at=record.conformance_at,
             auth_ok_at=record.auth_ok_at,
-            circuit="closed",  # Close circuit on success
+            circuit=CircuitState.CLOSED,
             capacity_state=None,  # Clear capacity state
             resets_at=None,
             probe_next_at=None,

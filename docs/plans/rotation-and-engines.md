@@ -11,8 +11,10 @@
 > designed, the text says so and marks the design *not implemented* instead
 > of deleting it. The main differences from the original plan:
 >
-> - There are **five** engines. `qwenloop` is an opt-in local standby
->   (ADR-0015) and the sovereign DESIGN provider (ADR-0027).
+> - There are **six** engine ids over five runners. `qwenloop` and
+>   `claudeloop-local` (the claudeloop binary on a local backend profile) are
+>   opt-in local engines, **preferred first** (ADR-0015, ADR-0038); qwenloop's
+>   model is also the sovereign DESIGN/DECOMPOSE provider (ADR-0027).
 > - Engine selection (SWRR) runs only for `build.implement` and `build.verify`.
 >   Every other job kind runs on a single injected provider or on no engine
 >   (see [phase-protocols.md](phase-protocols.md) §8).
@@ -128,13 +130,14 @@ missing, it falls back to the highest projection at or below it.
 live in `domain/engine.py`.
 
 All descriptors live in one module, `infrastructure/engines/descriptors.py`.
-`DEFAULT_DESCRIPTORS` holds the four paid engines, `ALL_DESCRIPTORS` adds
-`QWENLOOP`, and `BY_ENGINE_ID` indexes them. Descriptors are **data, not code
+`DEFAULT_DESCRIPTORS` holds the four paid engines, `LOCAL_DESCRIPTORS` the two
+local ones (`QWENLOOP`, `CLAUDELOOP_LOCAL`), `ALL_DESCRIPTORS` all six, and
+`BY_ENGINE_ID` indexes them. Descriptors are **data, not code
 paths**. A new engine needs a new `EngineId`, a descriptor, a capacity
 classifier, an event-type map entry (§8.3), and an adapter configuration.
-`domain/rotation.py` does not change. The fifth engine, `qwenloop`, landed
-this way. It also carries a standby rule in `application/engine_selector.py`
-(§5.5).
+`domain/rotation.py` does not change. The fifth and sixth engines, `qwenloop`
+and `claudeloop-local`, landed this way; their `tier = LOCAL` is what the
+selector's tier preference reads (§5.5).
 
 ---
 
@@ -407,26 +410,39 @@ records the reason in `last_error`, and gives back the attempt. The job
 becomes claimable again once `run_after` passes. No `NOTIFY` is sent when a
 circuit half-opens; half-open is evaluated lazily at the next selection.
 
-### 5.5 The qwenloop standby tier
+### 5.5 The local tier, preferred first
 
-`qwenloop` (ADR-0015) is opt-in: set `[features] qwenloop = true` in
-`vibey.toml` or `VIBEY_FEATURE_QWENLOOP=1`. The environment variable, when
-set, overrides the `vibey.toml` flag in the worker and in `vibey doctor`.
-Configuration parsing reads only the `vibey.toml` flag: without it,
-`qwenloop` in `[engines] enabled` or in a per-phase engine list is rejected.
+*Was "the qwenloop standby tier"; amended 2026-09-18 by ADR-0038.*
 
-When the feature is on, `bootstrap.py` adds a qwenloop `LoopProcessAdapter`
-and passes `standby_engine=QWENLOOP` to `SelectingEngineProvider`. Before each
-selection, the provider preflights the standby and refreshes its health row
-with `conformance_ok = installed and auth_ok`. qwenloop therefore does not
-need a recorded `vibey doctor --conformance` run. After `eligible()` runs,
-`EngineSelector` drops qwenloop from the candidates whenever any paid engine
-is eligible, so a zero-dollar local model cannot crowd paid engines out of
-SWRR. qwenloop is selected only when no paid engine is eligible.
+The local engines are opt-in, each behind its own switch: `qwenloop`
+(`[features] qwenloop` / `VIBEY_FEATURE_QWENLOOP`, ADR-0015) and
+`claudeloop-local` (`[features] claudeloop_local` /
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL`, ADR-0038). The environment variable, when
+set, overrides the flag. One resolver,
+`infrastructure/engines/local_engines.py::LocalEngineSettings`, answers for
+bootstrap, `vibey worker`, `vibey work` and `vibey doctor`. Configuration
+parsing rejects either engine in `[engines] enabled` or a per-phase engine list
+until its feature is on.
 
-Separately, qwenloop is the sovereign DESIGN provider (ADR-0027).
-`vibey work --provider qwenloop` and `vibey worker --provider qwenloop` run
-DESIGN jobs on qwenloop directly, outside rotation.
+When a switch is on, `bootstrap.py` adds that engine's `LoopProcessAdapter`
+(qwenloop with the `VIBEY_OLLAMA_URL` overlay, claudeloop-local built from
+`[engines.claudeloop_local]`) and passes the enabled ids as `local_engines` to
+`SelectingEngineProvider`. Before each selection the provider preflights every
+enabled local engine in its pool and refreshes its health row with
+`conformance_ok = installed and auth_ok`, so a local engine needs no recorded
+`vibey doctor --conformance` run.
+
+Selection then prefers the LOCAL tier (sub-doctrine 8.a): `EngineSelector`
+builds a candidate for every eligible engine, and `domain/rotation.py::
+preferred_tier` offers SWRR only the candidates of the first tier in
+`TIER_PREFERENCE = (LOCAL, PAID)` that holds one with a positive effective
+weight. A paid engine is selected only when no local engine is eligible. The
+provider passes its pool as the allow-list, so a stale health row for a local
+engine switched off since can never be preferred.
+
+Separately, qwenloop's model is the sovereign DESIGN and DECOMPOSE provider
+(ADR-0027): `vibey work` and `vibey worker` use it when `--provider qwenloop` is
+given, and by default whenever a local engine is switched on (ADR-0038).
 
 ---
 

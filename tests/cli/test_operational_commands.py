@@ -14,6 +14,7 @@ from vibey.application.dto import EngineHealthRecord, EnqueueRequest
 from vibey.bootstrap import build_app, database_url
 from vibey.cli.main import app
 from vibey.domain.circuit import CircuitState
+from vibey.domain.engine import EngineId
 from vibey.domain.job import idempotency_key
 from vibey.domain.ledger import EventKind, Provenance
 from vibey.domain.phase import Phase
@@ -55,7 +56,7 @@ async def _seed_status_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -121,7 +122,7 @@ async def _seed_engines_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -165,7 +166,7 @@ async def _seed_cost_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -365,6 +366,44 @@ def test_ledger_show_with_kind_filter(tmp_path: Path) -> None:
     res = runner.invoke(app, ["ledger", "show", str(pid), "--kind", "QuestionAsked"])
     assert res.exit_code == 0, res.output
     assert "QuestionAsked" in res.stdout
+    assert "AnswerGiven" not in res.stdout
+    by_name = runner.invoke(app, ["ledger", "show", str(pid), "--kind", "answer_given"])
+    assert "AnswerGiven" in by_name.stdout
+    assert "QuestionAsked" not in by_name.stdout
+    assert by_name.stderr == ""
+
+
+async def _seed_ledger_project_with_a_newer_kind(tmp_path: Path) -> UUID:
+    pid = await _seed_ledger_project(tmp_path)
+    async with build_app() as resources, resources.ledger._pool.acquire() as conn:
+        # A newer vibey's appender, through the same SQL function.
+        await conn.execute(
+            "SELECT append_event($1, 1, 'intake', 'FutureKindX', NULL, NULL, NULL, $1, "
+            "'agent', now(), '{}'::jsonb, 'test-digest-3')",
+            pid,
+        )
+    return pid
+
+
+def test_ledger_show_reads_a_kind_this_vibey_does_not_know(tmp_path: Path) -> None:
+    """vibey#275: one row a newer vibey wrote used to crash `ledger show`."""
+    pid = asyncio.run(_seed_ledger_project_with_a_newer_kind(tmp_path))
+
+    res = runner.invoke(app, ["ledger", "show", str(pid)])
+    assert res.exit_code == 0, res.output
+    assert "[INTAKE] FutureKindX" in res.stdout
+
+    only = runner.invoke(app, ["ledger", "show", str(pid), "--kind", "FutureKindX"])
+    assert only.exit_code == 0, only.output
+    assert "#3" in only.stdout
+    assert "QuestionAsked" not in only.stdout
+    assert "'FutureKindX' is not an event kind this vibey knows" in only.stderr
+
+
+def test_ledger_show_refuses_an_empty_kind_before_connecting() -> None:
+    res = runner.invoke(app, ["ledger", "show", "--kind", " "])
+    assert res.exit_code == 2
+    assert "unknown event kind" in res.output
 
 
 def test_status_with_no_engines_shows_no_engines_message(tmp_path: Path) -> None:
@@ -792,34 +831,106 @@ def test_doctor_omits_the_sovereign_engine_when_it_is_off(
 def test_the_feature_flag_reads_the_environment_first(
     monkeypatch: pytest.MonkeyPatch, value: str, expected: bool
 ) -> None:
-    from vibey.cli.main import _qwenloop_feature_enabled
+    from vibey.cli.main import _local_engines_from_toml
+    from vibey.domain.engine import EngineId
 
     monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", value)
-    assert _qwenloop_feature_enabled() is expected
+    assert _local_engines_from_toml().enabled(EngineId.QWENLOOP) is expected
 
 
 def test_the_feature_flag_falls_back_to_project_config(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Same precedence as `bootstrap.qwenloop_enabled`, so the health check and the
-    worker can never disagree about which engines exist."""
-    from vibey.cli.main import _qwenloop_feature_enabled
+    """Same resolver as the worker's, so the health check and the worker can never
+    disagree about which engines exist."""
+    from vibey.cli.main import _local_engines_from_toml
+    from vibey.domain.engine import EngineId
+
+    def on(engine_id: EngineId) -> bool:
+        return _local_engines_from_toml(tmp_path).enabled(engine_id)
 
     monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
-    assert _qwenloop_feature_enabled(tmp_path) is False  # no config at all
+    monkeypatch.delenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", raising=False)
+    assert on(EngineId.QWENLOOP) is False  # no config at all
 
-    (tmp_path / "vibey.toml").write_text("[features]\nqwenloop = true\n", encoding="utf-8")
-    assert _qwenloop_feature_enabled(tmp_path) is True
+    (tmp_path / "vibey.toml").write_text(
+        "[features]\nqwenloop = true\nclaudeloop_local = true\n", encoding="utf-8"
+    )
+    assert on(EngineId.QWENLOOP) is True
+    assert on(EngineId.CLAUDELOOP_LOCAL) is True
 
     (tmp_path / "vibey.toml").write_text("[features]\nqwenloop = false\n", encoding="utf-8")
-    assert _qwenloop_feature_enabled(tmp_path) is False
+    assert on(EngineId.QWENLOOP) is False
 
     (tmp_path / "vibey.toml").write_text('[project]\nname = "x"\n', encoding="utf-8")
-    assert _qwenloop_feature_enabled(tmp_path) is False  # no features table
+    assert on(EngineId.QWENLOOP) is False  # no features table
 
     # A malformed config reports "off" rather than crashing a health check.
     (tmp_path / "vibey.toml").write_text("this is not toml {{{", encoding="utf-8")
-    assert _qwenloop_feature_enabled(tmp_path) is False
+    assert on(EngineId.QWENLOOP) is False
+
+
+def test_doctor_lists_claudeloop_local_when_it_is_switched_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The second local engine is as visible as the first: doctor lists it, and probes
+    it with its profile -- the backend its runs will use, not an Anthropic login."""
+    from unittest.mock import patch
+
+    from vibey.application.dto import PreflightResult
+
+    monkeypatch.setenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", "1")
+    monkeypatch.setenv("VIBEY_CLAUDELOOP_LOCAL_PROFILE", "ollama")
+    seen: list[tuple[str, ...]] = []
+
+    async def preflight(self):  # type: ignore[no-untyped-def]
+        seen.append((self.descriptor.engine_id.value, *self.descriptor.doctor_args))
+        return PreflightResult(installed=True, version="0.8.0", auth_ok=True)
+
+    with patch(
+        "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+        new=preflight,
+    ):
+        res = runner.invoke(app, ["doctor"])
+
+    assert res.exit_code == 0, res.output
+    assert "claudeloop-local" in res.output
+    assert ("claudeloop-local", "--profile", "ollama") in seen
+    assert ("claudeloop",) in seen  # the paid engines are still listed
+
+
+def test_doctor_omits_claudeloop_local_when_it_is_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import AsyncMock, patch
+
+    from vibey.application.dto import PreflightResult
+
+    monkeypatch.setenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", "0")
+    with patch(
+        "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+        new=AsyncMock(return_value=PreflightResult(installed=True, version="1", auth_ok=True)),
+    ):
+        res = runner.invoke(app, ["doctor"])
+
+    assert res.exit_code == 0, res.output
+    assert "claudeloop-local" not in res.output
+
+
+def test_doctor_can_be_asked_for_claudeloop_local_by_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from unittest.mock import AsyncMock, patch
+
+    from vibey.application.dto import PreflightResult
+
+    monkeypatch.delenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", raising=False)
+    with patch(
+        "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+        new=AsyncMock(return_value=PreflightResult(installed=True, version="1", auth_ok=True)),
+    ):
+        res = runner.invoke(app, ["doctor", "--engine", "claudeloop-local"])
+
+    assert res.exit_code == 0, res.output
+    assert res.output.startswith("claudeloop-local")
 
 
 def test_doctor_specific_engine() -> None:
@@ -1270,6 +1381,98 @@ def test_worker_sweeps_qwenloop_when_the_feature_is_on(
             return tuple(sorted(r.engine_id.value for r in records))
 
     assert asyncio.run(check()) == ("qwenloop",)
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_sweeps_claudeloop_local_when_its_feature_is_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The same resolver adds the second local engine to the pool the startup sweep
+    preflights -- and, with no --provider, runs DESIGN/DECOMPOSE on the sovereign
+    providers (8.a, #115 B5)."""
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
+    monkeypatch.setenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", "1")
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("local-proj", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once", "--engines", "claudeloop-local"])
+    assert res.exit_code == 0, res.output
+    assert "no recorded conformance for claudeloop-local" in res.output
+    assert "provider=qwenloop" in res.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_defaults_to_the_sovereign_providers_from_the_project_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
+    monkeypatch.delenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", raising=False)
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create(
+                "config-proj",
+                tmp_path,
+                max_cycles=1,
+                config={"features": {"qwenloop": True}},
+            )
+
+    asyncio.run(seed())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once"])
+    assert res.exit_code == 0, res.output
+    assert "provider=qwenloop" in res.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_an_explicit_provider_still_wins_over_the_sovereign_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "1")
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("explicit-proj", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once", "--provider", "scripted"])
+    assert res.exit_code == 0, res.output
+    assert "provider=scripted" in res.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
+def test_with_no_local_engine_the_default_provider_is_still_scripted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
+    monkeypatch.delenv("VIBEY_FEATURE_CLAUDELOOP_LOCAL", raising=False)
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("paid-proj", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once"])
+    assert res.exit_code == 0, res.output
+    assert "provider=scripted" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")

@@ -67,19 +67,44 @@ def test_every_shipped_workflow_template_parses(path):
     assert parsed.get("jobs")
 
 
+# A `claude_args` value chosen at run time: `'${{ <condition> && '<a>' || '<b>' }}'`. The
+# exact-head review picks its schema this way (#133), and until GitHub resolves it neither
+# branch is visible to a shell tokenizer -- so each branch is substituted back and checked
+# as the argument the action will actually receive.
+_RUNTIME_CHOICE = re.compile(r"'\$\{\{ .+? && '(?P<first>[^']*)' \|\| '(?P<second>[^']*)' \}\}'")
+
+
+def _resolved_lines(line: str) -> list[str]:
+    """`line` as the action sees it once any run-time choice in it is resolved, per branch."""
+    choice = _RUNTIME_CHOICE.search(line)
+    if not choice:
+        return [line]
+    return [
+        line[: choice.start()] + f"'{choice[branch]}'" + line[choice.end() :]
+        for branch in ("first", "second")
+    ]
+
+
 def test_every_claude_json_schema_survives_argument_tokenization():
+    """Read from the RENDERED templates, because that is what runs: the exact-head review's
+    schemas are placeholders in the template, filled from `ReviewContract.json_schema()` at
+    install time, so the raw file holds six schemas and two markers rather than eight. The
+    review's two sit in one run-time choice, and each branch must tokenize on its own."""
     schemas = []
     for path in WORKFLOW_TEMPLATES:
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if "--json-schema " not in line:
+        rendered = render_workflow(path, GhConfig(root=Path(".")))
+        for raw in rendered.splitlines():
+            if "--json-schema " not in raw:
                 continue
-            tokens = shlex.split(line.strip())
-            index = tokens.index("--json-schema")
-            schema = json.loads(tokens[index + 1])
-            assert schema["type"] == "object"
-            assert schema["properties"]
-            schemas.append((path.name, schema))
-    assert len(schemas) == 7
+            for line in _resolved_lines(raw):
+                tokens = shlex.split(line.strip())
+                index = tokens.index("--json-schema")
+                assert len(tokens) == index + 2, f"{path.name}: the schema must be one argument"
+                schema = json.loads(tokens[index + 1])
+                assert schema["type"] == "object"
+                assert schema["properties"]
+                schemas.append((path.name, schema))
+    assert len(schemas) == 8
 
 
 def test_every_claude_tool_list_survives_argument_tokenization():
@@ -538,6 +563,9 @@ def test_security_and_api_drift_workflows_are_real_managed_gates():
     assert "--log-failed" in text
     assert "diagnostic bundle truncated at 200000 bytes" in text
     assert "Read that file before" in text
+    # The schema is rendered from the review contract at install time, so the quoted field
+    # names are looked for where they actually appear; the jq that aggregates them is not.
+    rendered = render_workflow(WORKFLOWS / "pr-automation.yml", GhConfig(root=Path(".")))
     for field in (
         "complete",
         "accurate",
@@ -556,9 +584,15 @@ def test_security_and_api_drift_workflows_are_real_managed_gates():
         "release_process_sufficient",
         "links_valid",
     ):
-        assert f'"{field}"' in text
-        assert f".{field} == true" in text
-    assert "((.findings // []) | length == 0)" in text
+        assert f'"{field}"' in rendered
+        # Folded into `pass` by the composer, which reads the judgments from the review
+        # contract instead of a list spelt out in the workflow: each one, alone false,
+        # fails the verdict.
+        assert _composed_pass({field: False}) is False, field
+    assert _composed_pass({}) is True
+    assert _composed_pass({"findings": [{"path": "README.md"}]}) is False
+    assert ".complete == true" not in text
+    assert 'vibey-gh pr-automation combine --paid "$STRUCTURED" --half "$HALF"' in text
     assert "Exact-head semantic review result:" in text
     # Only an explicit `true` verdict may pass the gate; every other value, including
     # the empty string a failed review job leaves behind, fails closed.
@@ -827,9 +861,9 @@ def test_readability_gate_judges_the_opening_and_the_audience_order():
         "example naming anything that does not exist fails this judgment",
     ):
         assert phrase in flat, phrase
-    # The judgments gate `.pass` in the aggregation, not just the schema.
+    # The judgments gate `.pass` in the composed verdict, not just the schema.
     for field in ("opening_accessible", "opening_bluf", "audience_order"):
-        assert f".{field} == true" in text
+        assert _composed_pass({field: False}) is False, field
     # The local fallback never asserts them: a diff-only model has no basis to certify a
     # README's opening, so they are reported unevaluated instead.
     from vibey_gh import local_review
@@ -2390,6 +2424,17 @@ def test_search_console_token_refuses_a_whole_tag():
         DocumentationConfig(google_site_verification='<meta name="google-site-verification">')
 
 
+def _composed_pass(changes: dict) -> bool:
+    """The `pass` the review job persists for a full-review answer with `changes` applied."""
+    from vibey_gh.review_composition import FULL, REVIEW_COMPOSER
+    from vibey_gh.review_contract import REVIEW_CONTRACT
+
+    answer = {"pass": True, "summary": "ok", "findings": []}
+    answer |= {name: True for name in REVIEW_CONTRACT.requires_wider_context}
+    answer |= changes
+    return REVIEW_COMPOSER.compose(answer, half=FULL, head_sha="abc")["verdict"]["pass"]
+
+
 def test_the_gate_tells_a_local_decline_apart_from_no_verdict_at_all():
     """Three states, not two. `FALLBACK_PASSED` can be `true` (local pass), `false` (the
     local lane RAN and reported a blocking finding), or empty (nothing reviewed).
@@ -2405,13 +2450,14 @@ def test_the_gate_tells_a_local_decline_apart_from_no_verdict_at_all():
     beats a claim that nothing was found.
     """
     text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
-    assert '[ "$FALLBACK_PASSED" = true ]' in text
-    assert '[ -n "$FALLBACK_PASSED" ]' in text
+    assert '[ "$SOVEREIGN_PASSED" = true ]' in text
+    assert '[ -n "$SOVEREIGN_PASSED" ]' in text
     assert "local fallback found a blocking defect" in text
     # The decline branch must send the reader to the evidence, and must not claim the
-    # weaker reviewer's verdict is authoritative.
-    decline = text.split('elif [ -n "$FALLBACK_PASSED" ]')[1].split("else")[0]
-    assert "Local review fallback" in decline and "TRUNCATED" in decline
+    # weaker reviewer's verdict is authoritative. The job it names is the sovereign lane's,
+    # which is the one that produced the verdict since the lanes split (#133).
+    decline = text.split('elif [ -n "$SOVEREIGN_PASSED" ]')[1].split("else")[0]
+    assert "Sovereign diff review" in decline and "TRUNCATED" in decline
     assert "a lead, not a ruling" in decline
     # The genuine no-verdict branch keeps the infrastructure wording, and now says
     # explicitly that the local lane produced nothing either.
@@ -2433,9 +2479,19 @@ def test_a_decline_with_nothing_to_point_at_is_not_called_a_defect():
     step further in.
     """
     text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
-    assert "findings: ${{ steps.result.outputs.findings }}" in text
-    assert "FALLBACK_FINDINGS: ${{ needs.review-fallback.outputs.findings }}" in text
-    assert '[ "${FALLBACK_FINDINGS:-0}" -gt 0 ]' in text
+    jobs = yaml.safe_load(text)["jobs"]
+    # Asserted on the sovereign job ITSELF (the fallback's successor, #133). A substring
+    # search for the output line matched the paid review job's identical declaration
+    # instead, so this test once passed for as long as the fallback never declared the
+    # output -- and the gate read an empty count, which turned every local decline into
+    # "could not complete the review".
+    sovereign = jobs["review-sovereign"]
+    assert sovereign["outputs"]["findings"] == "${{ steps.result.outputs.findings }}"
+    result = next(s for s in sovereign["steps"] if s.get("id") == "result")
+    assert 'echo "findings=' in result["run"]
+    gate_env = jobs["gate"]["steps"][0]["env"]
+    assert gate_env["SOVEREIGN_FINDINGS"] == "${{ needs.review-sovereign.outputs.findings }}"
+    assert '[ "${SOVEREIGN_FINDINGS:-0}" -gt 0 ]' in text
     assert "local fallback could not complete the review" in text
 
     cannot = text.split('title="PR automation: local fallback could not complete the review"')[1]
@@ -2443,6 +2499,41 @@ def test_a_decline_with_nothing_to_point_at_is_not_called_a_defect():
     assert "WITHOUT reporting any finding" in cannot
     assert "not a defect claim about the change" in cannot
     assert "split the pull request" in cannot
+
+
+def test_both_review_lanes_write_every_output_they_declare():
+    """A declared output nothing writes is always empty, and an empty string reads as an
+    answer: `passed == ''` is how the gate recognises "no verdict at all". So every output
+    either review job declares is traced to the step it names, and that step must write it.
+    Both lanes count their findings the same way, which is how the gate that names the lane
+    behind each half has the same fact from each."""
+    jobs = yaml.safe_load((WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8"))["jobs"]
+    declared_by_lane = {
+        "review": {"passed", "findings", "structured", "half", "carried", "halves", "repairable"},
+        "review-sovereign": {"passed", "findings", "verdict", "model"},
+    }
+    for name, expected in declared_by_lane.items():
+        outputs = jobs[name]["outputs"]
+        assert set(outputs) == expected, name
+        for output, value in outputs.items():
+            step_id = re.fullmatch(r"\$\{\{ steps\.([\w-]+)\.outputs\.([\w-]+) \}\}", value)
+            assert step_id and step_id[2] == output, f"{name}.{output} = {value}"
+            step = next(s for s in jobs[name]["steps"] if s.get("id") == step_id[1])
+            assert f'echo "{output}=' in step["run"], f"{name} never writes {output}"
+
+
+@pytest.mark.parametrize("path", WORKFLOW_TEMPLATES, ids=lambda p: p.name)
+def test_every_needs_output_a_workflow_reads_is_declared_by_that_job(path):
+    """GitHub evaluates `needs.<job>.outputs.<name>` to an empty string when the job never
+    declared `<name>` -- no error, no warning, just a value that looks like an answer. That
+    is exactly how the gate's fallback-findings branch sat dead: the fallback job wrote the
+    count, never declared it, and the gate read ''. `actionlint` reports this as an
+    undefined property; this is the same check, where it cannot be skipped."""
+    rendered = render_workflow(path, GhConfig(root=Path(".")))
+    jobs = yaml.safe_load(rendered)["jobs"]
+    for job, output in re.findall(r"needs\.([\w-]+)\.outputs\.([\w-]+)", rendered):
+        declared = jobs[job].get("outputs") or {}
+        assert output in declared, f"{path.name}: needs.{job}.outputs.{output} is never declared"
 
 
 def _restore_decision_block() -> str:

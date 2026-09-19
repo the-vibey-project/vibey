@@ -172,10 +172,13 @@ DESIGN jobs run in-process on one `DesignProvider`, chosen with
 `vibey work --provider` or `vibey worker --provider`:
 
 - `qwenloop` is the sovereign provider and the preferred way to run
-  (ADR-0027). Set `VIBEY_EVIDENCE_DIR` to a directory of operator-supplied
-  reading: `design.research` refuses to invent sources without it, and
-  because synthesis depends on research, the phase stops there. With this
-  provider the worker's decomposer is the scripted one.
+  (ADR-0027), on the Ollama server at `VIBEY_OLLAMA_URL` with the model
+  `VIBEY_OLLAMA_MODEL` (or `--ollama-model`). Set `VIBEY_EVIDENCE_DIR` to a
+  directory of operator-supplied reading: `design.research` refuses to invent
+  sources without it, and parks a `research_evidence` gate on the first
+  attempt naming the file it wants. Because synthesis depends on research,
+  the phase waits there until the reading is supplied and the gate answered.
+  With this provider the worker's decomposer is the sovereign one too (§2.1).
 - `claudeloop` drives the interview, research, synthesis, and decomposition
   through a claudeloop session, bounded by `--max-turns` and `--max-dollars`.
 - `scripted` is the test provider and the default.
@@ -388,8 +391,14 @@ class WorkItem:
 ```
 
 The decomposer is the worker's `WorkPlanProducer`: scripted by default,
-claudeloop with `--provider claudeloop`, scripted again with
-`--provider qwenloop`.
+claudeloop with `--provider claudeloop`, and the sovereign
+`QwenloopWorkPlanProducer` with `--provider qwenloop`. The sovereign one asks
+the local model under a JSON schema whose `acceptance_ids` and
+`criteria_checked` entries are an enum of the spec's own criterion ids and
+whose items must each carry at least one verification command and one checked
+criterion; after decoding it also requires every dependency to precede its
+dependent. A plan that breaks any rule is refused whole, before anything is
+enqueued.
 
 Two hard rules the decomposition must satisfy, checked structurally
 (`domain/plan.py::validate_decomposition`):
@@ -1050,7 +1059,7 @@ next run.
 | `QUESTION_ID=ANSWER …` and/or `--defaults` | the pairs; `--defaults` adds `accept_defaults: true` | `question` (DESIGN interview). `--defaults` answers every question, blocking ones included, with its default; explicit pairs win. |
 | `--verdict VALUE` | `{"verdict": VALUE}` | `approval` (`accept`, `changes`, `cancel`), `deploy_demo_review` (`approve`, `request_changes`) |
 | `--choice VALUE` | `{"choice": VALUE}` | `choice` (`local_only`, `deploy`), `deploy_failure_triage` |
-| `--raw '<json object>'` | the object | grants: `{"max_attempts": N}` (`escalation_exhausted`, `attempts_exhausted`), `{"max_rounds": N}` (`verify_repair_exhausted`, `integrate_repair_exhausted`), `{"max_dollars": N}` / `{"max_turns": N}` (`budget_exhausted`); review feedback or questions (`approval`); deployment elicitation (`deploy_interview`); consent (`deploy_acceptance`) |
+| `--raw '<json object>'` | the object | grants: `{"max_attempts": N}` (`escalation_exhausted`, `attempts_exhausted`), `{"max_rounds": N}` (`verify_repair_exhausted`, `integrate_repair_exhausted`), `{"max_dollars": N}` / `{"max_turns": N}` (`budget_exhausted`); review feedback or questions (`approval`); deployment elicitation (`deploy_interview`); consent (`deploy_acceptance`); `{}` retries once the reading is in place (`research_evidence`) |
 
 **Planned, not implemented.** Gates with a `default_answer` and a
 `timeout_at` would auto-resolve — for low-stakes choices during overnight

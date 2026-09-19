@@ -175,7 +175,8 @@ class DeploySynthesizeHandler:
             answers: Mapping[str, object] = {}
             for event in events:
                 if (
-                    event.kind == EventKind.ANSWER_GIVEN
+                    event.interpretable
+                    and event.kind == EventKind.ANSWER_GIVEN
                     and event.payload.get("stage") == "deploy_elicitation"
                 ):
                     answer = event.payload.get("answer")

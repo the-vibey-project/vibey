@@ -9,7 +9,7 @@ import shutil
 import subprocess  # nosec B404
 import time
 import uuid
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Annotated
 
@@ -17,13 +17,15 @@ import typer
 from platformdirs import user_cache_path
 
 from qwenloop import __version__
-from qwenloop.application.backend_selection import Hardware, select_backend
+from qwenloop.application.backend_selection import BackendSelector, Hardware
 from qwenloop.application.interfaces import InferenceServer
 from qwenloop.application.runner import AutonomousRunner
 from qwenloop.application.storm import build_plan
+from qwenloop.domain.config import QwenConfig
 from qwenloop.domain.model import (
     EXIT_CODE_WIND_DOWN,
     Backend,
+    BackendChoice,
     ModelProfile,
     RunState,
     RunStatus,
@@ -34,15 +36,44 @@ from qwenloop.infrastructure.github import (
     list_open_pull_requests,
     list_repo_names,
 )
-from qwenloop.infrastructure.inference import LlamaCppServer, VllmServer
+from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer, VllmServer
 from qwenloop.infrastructure.model_cache import ModelCache
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE, PROFILES
 from qwenloop.infrastructure.run_store import FileRunStore
+from qwenloop.infrastructure.settings import SettingsLoader
 from qwenloop.infrastructure.tools import SandboxTools
 
 _DEFAULT_STORM_OWNER = "adammatthewsteinberger"
 _DEFAULT_STORM_AUTHOR = "Adam Matthew Steinberger"
 _DEFAULT_REPOS_ROOT = Path.home() / "git"
+#: What `server start`/`status` print in place of an attached endpoint's API key.
+_REDACTED = "<redacted>"
+
+# The endpoint flags every command that picks a server shares. Each falls back to its
+# environment variable, then to the config file, then to the default (ADR-0018).
+BackendOption = Annotated[
+    Backend | None,
+    typer.Option(
+        "--backend",
+        help="auto, llama.cpp, vllm, or openai-compat. Unset: config `backend`, else auto.",
+    ),
+]
+BaseUrlOption = Annotated[
+    str | None,
+    typer.Option(
+        "--base-url",
+        help="OpenAI-compatible base URL to attach to, /v1 included (e.g. Ollama's "
+        "http://127.0.0.1:11434/v1). Unset: $QWENLOOP_BASE_URL, else config `base_url`.",
+    ),
+]
+ModelOption = Annotated[
+    str | None,
+    typer.Option(
+        "--model",
+        help="Model name the endpoint serves. Unset: $QWENLOOP_MODEL, else config `model`, "
+        "else qwen2.5-coder:14b.",
+    ),
+]
 
 app = typer.Typer(name="qwenloop", no_args_is_help=True, add_completion=False)
 model_app = typer.Typer(no_args_is_help=True)
@@ -73,8 +104,12 @@ def run(
     cwd: Path = typer.Option(Path("."), "--cwd"),
     preset: str = typer.Option("standard", "--preset"),
     effort: str = typer.Option("standard", "--effort"),
-    backend: Backend = typer.Option(Backend.AUTO, "--backend"),
-    max_turns: int = typer.Option(40, "--max-turns"),
+    backend: BackendOption = None,
+    max_turns: int | None = typer.Option(
+        None, "--max-turns", help="Turn limit. Unset: config `max_turns`, else 40."
+    ),
+    base_url: BaseUrlOption = None,
+    model: ModelOption = None,
     storm: bool = typer.Option(
         False,
         "--storm",
@@ -97,32 +132,89 @@ def run(
     if storm:
         if plan is not None:
             raise typer.BadParameter("pass either PLAN or --storm, not both")
+        config = _load_config(backend=backend, max_turns=max_turns, base_url=base_url, model=model)
         _run_storm(
             owner=owner,
             repos_root=repos_root,
             repos=list(repo),
             author=author,
-            backend=backend,
-            max_turns=max_turns,
+            config=config,
         )
         return
     if plan is None:
         raise typer.BadParameter("PLAN is required unless --storm is set")
-    _run_single(plan, run_id, cwd, backend, max_turns)
+    config = _load_config(backend=backend, max_turns=max_turns, base_url=base_url, model=model)
+    _run_single(plan, run_id, cwd, config)
 
 
-def _run_single(plan: Path, run_id: str, cwd: Path, backend: Backend, max_turns: int) -> None:
-    actual_id = run_id or str(uuid.uuid4())
-    selected = select_backend(
-        backend,
+def _load_config(**overrides: object) -> QwenConfig:
+    """Layer the config file, the environment, and this command's flags into one config.
+
+    Module-level for the reason every helper in this module is: typer commands are plain
+    functions, and this is the step they share. A bad file or value exits 2 naming it.
+    """
+    try:
+        return SettingsLoader(os.environ).load(overrides)
+    except (OSError, ValueError) as exc:
+        raise typer.BadParameter(f"qwenloop configuration: {exc}") from exc
+
+
+def _select(config: QwenConfig) -> BackendChoice:
+    """The backend `config` resolves to on this machine (see `BackendSelector`)."""
+    return BackendSelector().select(
+        config.backend,
         Hardware(platform.system(), _nvidia_vram()),
         vllm_installed=shutil.which("vllm") is not None,
+        endpoint_configured=config.endpoint_configured,
     )
-    profile = NVIDIA_BF16 if selected.backend is Backend.VLLM else PORTABLE
-    server = VllmServer() if selected.backend is Backend.VLLM else LlamaCppServer()
+
+
+def _attach(config: QwenConfig) -> OpenAICompatServer:
+    """The openai-compat endpoint `config` names, or Ollama's default address if none."""
+    return OpenAICompatServer(
+        config.endpoint_url,
+        config.model,
+        api_key=SettingsLoader(os.environ).api_key,
+        timeout_seconds=config.endpoint_timeout_seconds,
+        context_window=config.context_window,
+    )
+
+
+def _server_for(config: QwenConfig) -> tuple[InferenceServer, ModelProfile]:
+    """The server and profile a run uses. The composition step `run`, `--storm`, and
+    `server start` share, so an endpoint reaches all three through one abstraction."""
+    selected = _select(config).backend
+    if selected is Backend.OPENAI_COMPAT:
+        attached = _attach(config)
+        return attached, attached.profile
+    if selected is Backend.VLLM:
+        return VllmServer(), replace(NVIDIA_BF16, context_window=config.context_window)
+    return LlamaCppServer(), replace(PORTABLE, context_window=config.context_window)
+
+
+def _public(info: ServerInfo) -> dict[str, object]:
+    """`info` for printing. An attached endpoint's token is the operator's own API key,
+    so it is never echoed; a managed server's is the per-launch one qwenloop minted."""
+    data = asdict(info)
+    if not info.owned and info.token:
+        data["token"] = _REDACTED
+    return data
+
+
+def _run_single(plan: Path, run_id: str, cwd: Path, config: QwenConfig) -> None:
+    actual_id = run_id or str(uuid.uuid4())
+    server, profile = _server_for(config)
     try:
         state = asyncio.run(
-            _run_plan(server, profile, cwd, actual_id, plan.read_text(encoding="utf-8"), max_turns)
+            _run_plan(
+                server,
+                profile,
+                cwd,
+                actual_id,
+                plan.read_text(encoding="utf-8"),
+                config.max_turns,
+                startup_timeout_seconds=config.startup_timeout_seconds,
+            )
         )
     except (OSError, RuntimeError) as exc:
         typer.echo(f"qwenloop unavailable: {exc}", err=True)
@@ -140,12 +232,15 @@ async def _run_plan(
     run_id: str,
     plan_text: str,
     max_turns: int,
+    *,
+    startup_timeout_seconds: int,
 ) -> RunState:
-    """Start the managed server if needed, then drive one AutonomousRunner run to a verdict."""
+    """Start (or, for an attached endpoint, check) the server if it is not healthy, then
+    drive one AutonomousRunner run to a verdict."""
     info = server.inspect(profile)
     if info is None or not await server.health(info):
         info = await server.start(profile)
-        info = await _wait_until_ready(server, info, timeout_seconds=180)
+        info = await _wait_until_ready(server, info, timeout_seconds=startup_timeout_seconds)
     runner = AutonomousRunner(server, FileRunStore(cwd), SandboxTools(cwd))
     return await runner.run(
         run_id=run_id,
@@ -169,18 +264,11 @@ def _run_storm(
     repos_root: Path,
     repos: list[str],
     author: str,
-    backend: Backend,
-    max_turns: int,
+    config: QwenConfig,
 ) -> None:
     """Sweep every target repo's backlog through qwenloop, continuing past a failed repo."""
     targets = repos or _discover_storm_repos(owner, repos_root)
-    selected = select_backend(
-        backend,
-        Hardware(platform.system(), _nvidia_vram()),
-        vllm_installed=shutil.which("vllm") is not None,
-    )
-    profile = NVIDIA_BF16 if selected.backend is Backend.VLLM else PORTABLE
-    server = VllmServer() if selected.backend is Backend.VLLM else LlamaCppServer()
+    server, profile = _server_for(config)
 
     attempted = 0
     completed = 0
@@ -198,7 +286,15 @@ def _run_storm(
         attempted += 1
         try:
             state = asyncio.run(
-                _run_plan(server, profile, repo_dir, str(uuid.uuid4()), plan_text, max_turns)
+                _run_plan(
+                    server,
+                    profile,
+                    repo_dir,
+                    str(uuid.uuid4()),
+                    plan_text,
+                    config.max_turns,
+                    startup_timeout_seconds=config.startup_timeout_seconds,
+                )
             )
         except (OSError, RuntimeError) as exc:
             typer.echo(f"{name}\tunavailable\t{exc}")
@@ -257,7 +353,18 @@ def remove(profile: str, yes: bool = typer.Option(False, "--yes")) -> None:
 
 
 @app.command()
-def doctor() -> None:
+def doctor(
+    backend: BackendOption = None,
+    base_url: BaseUrlOption = None,
+    model: ModelOption = None,
+) -> None:
+    """Exit 0 only when a run could start. With an endpoint configured that means it
+    answers and serves the model; otherwise that llama-server or vllm is installed."""
+    config = _load_config(backend=backend, base_url=base_url, model=model)
+    choice = _select(config)
+    if choice.backend is Backend.OPENAI_COMPAT:
+        _doctor_endpoint(_attach(config), choice)
+        return
     portable = shutil.which("llama-server") is not None
     nvidia = shutil.which("vllm") is not None
     typer.echo(f"llama-server: {'ok' if portable else 'missing'}")
@@ -265,6 +372,20 @@ def doctor() -> None:
     typer.echo("Models are never downloaded by doctor; run qwenloop model install explicitly.")
     if not portable and not nvidia:
         raise typer.Exit(code=1)
+
+
+def _doctor_endpoint(server: OpenAICompatServer, choice: BackendChoice) -> None:
+    """Prove an attached endpoint is reachable and serves the model, or fail naming which."""
+    typer.echo(f"backend: {choice.backend.value} ({choice.reason})")
+    typer.echo(f"endpoint: {server.base_url}")
+    try:
+        served = asyncio.run(server.check())
+    except RuntimeError as exc:
+        typer.echo(f"model: {server.model} unavailable")
+        typer.echo(f"qwenloop doctor: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"model: {served} ok")
+    typer.echo("Models are never downloaded by doctor; the endpoint serves its own.")
 
 
 @app.command()
@@ -362,25 +483,38 @@ for _name in (
 
 
 @server_app.command("status")
-def server_status() -> None:
-    info = LlamaCppServer().inspect(PORTABLE) or VllmServer().inspect(NVIDIA_BF16)
-    typer.echo(json.dumps(asdict(info) if info else {"running": False}, default=str))
+def server_status(
+    backend: BackendOption = None,
+    base_url: BaseUrlOption = None,
+    model: ModelOption = None,
+) -> None:
+    config = _load_config(backend=backend, base_url=base_url, model=model)
+    if _select(config).backend is Backend.OPENAI_COMPAT:
+        attached = _attach(config)
+        info = attached.inspect(attached.profile)
+        healthy = asyncio.run(attached.health(info))
+        typer.echo(json.dumps(_public(replace(info, healthy=healthy)), default=str))
+        return
+    managed = LlamaCppServer().inspect(PORTABLE) or VllmServer().inspect(NVIDIA_BF16)
+    typer.echo(json.dumps(_public(managed) if managed else {"running": False}, default=str))
 
 
 @server_app.command("start")
-def server_start(backend: Backend = Backend.AUTO) -> None:
-    selected = select_backend(
-        backend,
-        Hardware(platform.system(), _nvidia_vram()),
-        vllm_installed=shutil.which("vllm") is not None,
-    )
-    profile = NVIDIA_BF16 if selected.backend is Backend.VLLM else PORTABLE
-    server = VllmServer() if selected.backend is Backend.VLLM else LlamaCppServer()
+def server_start(
+    backend: BackendOption = None,
+    base_url: BaseUrlOption = None,
+    model: ModelOption = None,
+) -> None:
+    """Start the managed server, or check that the configured endpoint is ready."""
+    config = _load_config(backend=backend, base_url=base_url, model=model)
+    server, profile = _server_for(config)
 
     async def execute() -> None:
         info = await server.start(profile)
-        ready = await _wait_until_ready(server, info, timeout_seconds=180)
-        typer.echo(json.dumps(asdict(ready), default=str))
+        ready = await _wait_until_ready(
+            server, info, timeout_seconds=config.startup_timeout_seconds
+        )
+        typer.echo(json.dumps(_public(ready), default=str))
 
     try:
         asyncio.run(execute())
