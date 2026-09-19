@@ -2,7 +2,8 @@
 """Root test configuration — per-worker database via PostgreSQL template pattern.
 
 Session startup creates ``vibey_test_template`` (migrated once, reused across
-sessions) and clones it into ``vibey_test_<worker_id>`` for this process.
+sessions; ``VIBEY_TEST_TEMPLATE_DB`` renames it) and clones it into
+``vibey_test_<worker_id>`` for this process.
 ``VIBEY_TEST_DATABASE_URL`` is repointed so every downstream fixture and test
 helper picks up the isolated per-worker database transparently.
 """
@@ -15,11 +16,32 @@ from pathlib import Path
 
 import asyncpg
 import pytest
+from hypothesis import HealthCheck, settings
 
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
+# The no-loss lane: `pytest -m noloss --hypothesis-profile=noloss`, the CI job "No-loss
+# property suite (10,000 examples)". 10,000 is the definition of done in
+# docs/plans/implementation-plan.md, and tests/domain/test_noloss_reference.py (protected)
+# pins these values, so lowering them here fails that module instead of shrinking the
+# suite. No deadline and no too_slow check: one example builds and gates a ledger of up to
+# thirty events, and a slow CI runner is not a property failure. Loaded only when asked
+# for -- every other run keeps Hypothesis' default profile. Never shadow it with a per-test
+# `@settings(max_examples=...)`, which would override the profile for that test.
+settings.register_profile(
+    "noloss",
+    max_examples=10_000,
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+
 _MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
-_TEMPLATE_DB = "vibey_test_template"
+# The template is migrated from THIS checkout's migrations and then reused by
+# every later session on the same server. Two checkouts whose migrations
+# differ -- parallel worktrees, one carrying a migration the other lacks --
+# would otherwise leak schema into each other's clones. Name it per checkout
+# with VIBEY_TEST_TEMPLATE_DB; the default is the name it has always had.
+_TEMPLATE_DB = os.environ.get("VIBEY_TEST_TEMPLATE_DB", "vibey_test_template")
 _BASE_DSN: str | None = None
 
 

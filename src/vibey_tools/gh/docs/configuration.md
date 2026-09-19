@@ -28,11 +28,29 @@ defaults below. Paths are repository-relative unless stated otherwise.
 | `merge_train.owner` | string / empty | Normalized repository-owner login. |
 | `merge_train.trusted_authors` | string list / empty | Authors exempt from outside-author review. |
 | `merge_train.restack_conflicts` | boolean / `true` | Let the train merge the integration branch into a conflicting or behind head itself, locally, before reporting it as stuck. GitHub computes mergeability without this repository's `.gitattributes`, so a path declared `merge=union` (see `install.union_merge_paths`) is called a conflict there and resolves here. The restacked pull request merges on the NEXT train run, once its checks have re-run against the tree that now exists. Forks are never written to, whatever this is set to. `false` reports the conflict and leaves it to a person. |
+| `merge_train.protected_paths` | string list / empty | Paths the train never merges unattended. A pull request that touches one — or whose changed files it cannot list completely — is reported `needs a human merge` instead of merged, because the train's fallback to `gh pr merge --admin` would bypass the code-owner review a ruleset asks for (see `require_code_owner_review`). Shell-style globs matched case-sensitively against the whole repository-root path, where `*` also crosses `/`: `tests/live/*` protects that whole tree. A rename counts as a change to its old path too. The list comes from the paginated REST files endpoint and is checked against GitHub's own `changedFiles` count, so a truncated listing refuses rather than passes. A promotion from the integration branch is exempt: everything it carries already merged there under this check. Entries must be unique and non-empty, and a leading `/` (the CODEOWNERS habit) is refused at load because no listed path starts with one. Empty protects nothing — the behaviour before this key existed. |
 | `install.workflows` | string list / all managed workflows | Exact managed subset; `[]` installs hooks and CLI assets only. |
 | `install.union_merge_paths` | string list / `["CHANGELOG.md"]` | Files declared `merge=union` in `.gitattributes`, so two branches appending to the same section merge instead of conflicting. Appended to an existing `.gitattributes`, never rewriting it. `[]` declares none. |
-| `install.self_source` | string / `"."` | Where a repository that **is** the tooling keeps its own copy, for the workflows that install it. Declared rather than discovered on purpose: a workflow that searched the tree for a `pyproject.toml` declaring `name = "vibey-gh"` would be reading a pull request's own files, and a branch that adds one anywhere would get it installed with that job's permissions. The rendered workflows verify the path before using it and fall back to the published release if it does not hold the tooling. |
+| `install.self_source` | string / `"."` | Where a repository that **is** the tooling keeps its own copy, for the workflows that install it. Declared rather than discovered on purpose: a workflow that searched the tree for a `pyproject.toml` declaring `name = "vibey-gh"` would be reading a pull request's own files, and a branch that adds one anywhere would get it installed with that job's permissions. The rendered workflows verify the path before using it and fall back to the published release if it does not hold the tooling. It also anchors `automation-bootstrap.yml`'s change scope: `gh pr diff` reports repository-root paths, so a vendored copy's automation-core files are admitted under this prefix and nowhere else. |
 | `install.fallback_package` | string / `"vibey"` | The distribution the managed workflows install when `self_source` does not hold the tooling — the branch every adopter takes, since their `self_source` default `"."` never matches. A key rather than a constant so a fork, or an internal index publishing under another name, can point it at their own distribution instead of one they cannot publish to. It is the package `pin_version` pins. |
 | `install.pin_version` | boolean / `false` | Pin every managed workflow's `pip install vibey` — the distribution that carries `vibey-gh` — to the exact version that rendered it (`vibey==X.Y.Z`), instead of the latest release on every run. `false` keeps the historical floating install. The self-hosting path (this repository, and anything else installing from its own `pyproject.toml`) is never pinned — it installs from source regardless. Running `vibey-gh install` from a newer release moves the pin forward as one visible diff. |
+
+## `[platform]`
+
+Which forge the repository lives on, and where. `kind` chooses the forge adapter: the only
+code that knows which platform it is speaking to, so everything above it asks forge-neutral
+questions ([ADR 0001](adr/0001-forge-neutral-nouns.md), #138).
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `kind` | string / `"github"` | The forge. The standard names `github`, `gitlab` and `forgejo`, but only `github` has an adapter today; `gitlab` and `forgejo` are refused when the configuration loads, with "the … adapter is not implemented yet", because the commands that have not moved onto the adapter still speak to GitHub directly and would drive the wrong forge without saying so. Any other value is refused as unknown. |
+| `host` | string / `"github.com"` | The forge's host, as a bare host name with an optional port (`ghe.example.com`, `git.internal:8443`); a scheme, path or whitespace is refused. `github.com` is the host `gh` assumes on its own, so it changes nothing, and a `GH_HOST` already in the environment still applies. Any other host is handed to `gh` as `GH_HOST`, for a GitHub Enterprise Server. |
+
+Apart from that refusal, which every command makes, only the reads that have moved onto the
+adapter use this table today: the open pull request heads and the releases that the
+clean-repo survey (`vibey-gh tidy`, `check --ci`) reads.
+With the defaults, those run exactly the `gh` command lines, in the same directory and
+environment, that they ran before `[platform]` existed.
 
 ## `[ai]`
 
@@ -79,7 +97,7 @@ expression is refused at load time.
 |---|---|---|
 | `enabled` | boolean / `true` | Enable event-driven evaluation, review, repair, and gating. |
 | `scan_workflows` | string list / CI, Provenance, CodeQL, Docs, Conventional Commits | Workflow names that trigger evaluation. Every name must be a workflow with a `pull_request` or `pull_request_target` trigger — one that only runs on `push` can never complete for a pull request, so `state` never leaves `pending`, the gate never publishes, and — made a required check — no pull request can ever merge. `vibey-gh check` fails on any named workflow that exists but cannot fire for a pull request; a name absent from `.github/workflows/` is not an error. |
-| `ignored_checks` | string list / orchestration checks | Checks excluded from the ordinary rollup. Own checks are always ignored. |
+| `ignored_checks` | string list / orchestration checks | Checks excluded from the ordinary rollup. Own checks are always ignored. Also subtracted from `[rulesets.integration] required_checks` to give the gates `automation-bootstrap.yml` waits on. |
 | `max_repair_attempts` | integer / `3` (1–10) | Repair budget per contributor lineage. |
 | `model` | string / `claude-sonnet-5` | Review and repair model. |
 | `review_untrusted_authors` | boolean / `true` | Require exact-head outside-author review. |
@@ -104,26 +122,48 @@ fails closed when repository visibility is not private.
 
 ### `[pr_automation.fallback]`
 
-Reviews with a local model when the paid path returns **no verdict at all** — an exhausted
-API key, expired credentials, an unavailable model. Because the gate is a required check,
-that failure otherwise turns a billing problem into a hard stop on every pull request.
+The sovereign review lane: a local model on the operator's own runner that reviews the
+**diff-groundable half** of every pull request's exact-head review (`pass`, `summary`,
+`findings`) FIRST, whenever its heartbeat is fresh (sub-doctrine 8.a, #133). The table keeps
+its original name because it began as a fallback, and it still is one: the same verdict is
+what the gate reads when the paid path returns **no verdict at all** — an exhausted API
+key, expired credentials, an unavailable model. Because the gate is a required check, that
+failure otherwise turns a billing problem into a hard stop on every pull request.
+
+Whose review it carries is decided per pull request. For a **trusted** author (the owner or
+`trusted_authors`) in this repository, the local verdict carries the diff half and the paid
+reviewer answers only the sixteen documentation-contract judgments, reporting its own prose
+and findings as `wider_summary` and `wider_findings`; the gate names the lane behind each
+half. For **any other** same-repository author the local verdict is held in reserve: the
+paid review still covers the whole change, including its correctness and security review,
+and the local verdict is read only if that review returns no verdict. A fork never reaches
+the lane while `trusted_only` is on.
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `enabled` | boolean / `true` | Whether the fallback job is rendered at all. **On by default, per sub-doctrine 8.a:** the sovereign path is the preference, so it is not the one that has to be opted into. That costs an adopter nothing until they stand a runner up, because the **heartbeat** gates scheduling rather than this flag — a repository with no fresh `heartbeat_ref` never offers the lane. Once a runner does exist, keep `trusted_only` true: GitHub says self-hosted runners should "almost never be used for public repositories". |
-| `runner_label` | string / `"vibey-local"` | Label the fallback job targets, alongside `self-hosted`. |
+| `enabled` | boolean / `true` | Whether the sovereign job (`review-sovereign`) can run at all. **On by default, per sub-doctrine 8.a:** the sovereign path is the preference, so it is not the one that has to be opted into. That costs an adopter nothing until they stand a runner up, because the **heartbeat** gates scheduling rather than this flag — a repository with no fresh `heartbeat_ref` never offers the lane. Once a runner does exist, keep `trusted_only` true: GitHub says self-hosted runners should "almost never be used for public repositories". |
+| `runner_label` | string / `"vibey-local"` | Label the sovereign job targets, alongside `self-hosted`. |
 | `model` | string / `"qwen2.5-coder:14b"` | Model tag served by the Ollama-compatible endpoint. |
 | `base_url` | string / `"http://127.0.0.1:11434"` | Where the local model listens. |
-| `trusted_only` | boolean / `true` | Never run the fallback for a fork pull request. |
-| `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the fallback reads back, so "is the local lane alive?" is answered by something the lane itself had to write. |
+| `trusted_only` | boolean / `true` | Never run the sovereign lane for a fork pull request. |
+| `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the workflow reads back, so "is the local lane alive?" is answered by something the lane itself had to write. |
 | `heartbeat_max_age_minutes` | integer / `15` | How stale that heartbeat may be before the local lane is treated as down. A ref that stopped moving is indistinguishable from a runner that stopped, which is the point — both mean do not route work there. |
 | `max_diff_chars` | integer / `60000` | Diff is truncated past this, and the model is told it was. |
 | `timeout_seconds` | integer / `600` | Bound on one review. |
 
-It never overrides a review that actually ran: the job requires the primary to have
-produced no verdict, so findings are never discarded in favour of a weaker opinion. The
-diff is passed to the model as text — repository code is never executed, and the model has
-no shell, no tools, and no network beyond the local port.
+It never overrides a judgment the paid lane made: when the local verdict carries the diff
+half, the paid reviewer is not asked that half at all, and when it is held in reserve it is
+read only if the paid review produced no verdict — so findings are never discarded in
+favour of a weaker opinion. A local finding is never handed to automated repair: the gate
+points a human at it, and a later evaluation of the same head reviews it again. The diff is
+passed to the model as text — repository code is never executed, and the model has no
+shell, no tools, and no network beyond the local port.
+
+The lanes run **serially**: the paid review waits for the local one, because which half it
+answers depends on what the local lane returned. That costs the local review's latency
+(bounded by `timeout_seconds`) on every pull request the lane is offered for. A heartbeat
+that goes stale after the lane was offered leaves the job queued until GitHub times it out,
+and the paid review waits with it; keep `heartbeat_max_age_minutes` short.
 
 Fetching that diff prefers `gh pr diff`, but GitHub's diff API refuses pull requests beyond
 roughly 300 changed files — exactly the shape of a large migration or adoption sweep, which
@@ -137,8 +177,11 @@ The verdict is deliberately narrower than the primary review's. Ollama constrain
 to the schema, so the output *shape* is guaranteed; the *judgments* are not, and a 14B model
 will emit confident booleans it has no basis for. So it assesses only what it can ground in
 a diff — `pass`, `summary`, `findings` — and reports the documentation-contract fields as
-unevaluated. The gate titles the result `PR automation: gate (local fallback)` so a
-degraded verdict is never mistaken for a full one.
+unevaluated. Its summary names the role it ran in (`[SOVEREIGN LANE — model]` or
+`[LOCAL FALLBACK — model]`), and the gate titles a split verdict
+`PR automation: gate (diff: sovereign lane, documentation: paid lane)` and a fallback one
+`PR automation: gate (local fallback)`, so a narrower verdict is never mistaken for a full
+one.
 
 `trusted_only` carries the safety argument. GitHub says self-hosted runners should "almost
 never be used for public repositories" because any user can open a pull request against
@@ -603,10 +646,11 @@ names are not configured here — `[rulesets.integration]` always targets
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `required_checks` | string list / integration: `["Provenance", "Analyze Python", "Documentation contract", "PR automation / gate"]`; release: the same without the gate | Required status-check contexts — **check-run names, not workflow names** (see below). Empty omits the check requirement entirely. |
+| `required_checks` | string list / integration: `["Provenance", "Analyze Python", "Documentation contract", "PR automation / gate"]`; release: the same without the gate | Required status-check contexts — **check-run names, not workflow names** (see below). Empty omits the check requirement entirely. The integration list, less `[pr_automation] ignored_checks` and the gates it routes around, is also what `automation-bootstrap.yml` waits on (see below); empty there means the bootstrap refuses every merge. |
 | `strict_required_checks` | boolean / `true` | Require the branch to be up to date with its base before merging. |
 | `required_approvals` | integer / integration: `0`, release: `1` (0–6) | Required approving reviews. Integration defaults to `0` because PR automation gates it instead. |
 | `dismiss_stale_reviews` | boolean / `true` | Dismiss stale reviews when new commits are pushed. |
+| `require_code_owner_review` | boolean / `false` | Require an approving review from the owner `.github/CODEOWNERS` names on a pull request that touches an owned path. Inert without a CODEOWNERS file. Off by default because, with one, it blocks every such pull request until that owner approves. The merge train's `--admin` fallback bypasses this review, so pair it with `[merge_train] protected_paths` for any path that must never merge unattended. |
 | `require_conversation_resolution` | boolean / `true` | Require every review thread to be resolved before merging. |
 | `require_linear_history` | boolean / `true` | Forbid merge commits onto the branch. |
 | `require_signed_commits` | boolean / `false` | Require every commit to be signed. |
@@ -668,6 +712,24 @@ real names, open a recent pull request's checks tab, or:
 gh api "repos/OWNER/REPO/commits/$(git rev-parse HEAD)/check-runs" \
   --jq '.check_runs[].name' | sort -u
 ```
+
+### The integration list also gates the automation bootstrap
+
+`automation-bootstrap.yml` — the admin-only path that merges a repair to privileged workflow
+code past PR automation — waits on these names too, so it never names a check this
+repository does not produce. `vibey-gh install` renders `[rulesets.integration]
+required_checks` into the deployed workflow, less `[pr_automation] ignored_checks` and the
+gates the bootstrap exists to route around (`gate`, `PR automation / gate`,
+`Automation bootstrap / gate`). With the defaults that is `Provenance`, `Analyze Python`,
+and `Documentation contract`; a repository whose CI reports one job named `gates` and
+requires only that waits on `gates` alone. Change the list, then re-run `vibey-gh install`
+and commit the re-rendered workflow — `vibey-gh check --ci` reports the drift until you do.
+
+The step fails closed: an empty list, a head with no check runs, a named gate that is
+absent, or any other check run that is not green each refuse the merge, and the error names
+the absent gates. A name that opens a `${{ }}` expression is refused at render time,
+because the list is rendered into the step's environment. See
+[Workflows](workflows.md#automation-bootstrap) for the whole gate.
 
 Reconciliation is idempotent read-compare-write, the same shape `repository-profile.yml`
 already uses for settings and topics: an existing rule type the configuration does not

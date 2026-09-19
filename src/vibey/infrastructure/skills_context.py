@@ -12,6 +12,7 @@ from typing import Any
 
 from vibey.application.dto import JobRecord
 from vibey.application.interfaces import SkillsContextResult
+from vibey.infrastructure.process import DEFAULT_KILL_GRACE_SECONDS, ProcessReaper
 
 _MODES = frozenset({"off", "shadow", "inject"})
 _DEFAULT_BUDGET = 6_000
@@ -30,6 +31,7 @@ class VibeySkillsContextCompiler:
         budget: int = _DEFAULT_BUDGET,
         command: Sequence[str] | None = None,
         timeout_seconds: float = 120.0,
+        kill_grace_seconds: float = DEFAULT_KILL_GRACE_SECONDS,
     ) -> None:
         if mode not in _MODES - {"off"}:
             raise ValueError("skills context mode must be 'shadow' or 'inject'")
@@ -46,6 +48,10 @@ class VibeySkillsContextCompiler:
         if not self._command or any(not part for part in self._command):
             raise ValueError("skills context command must not be empty")
         self._timeout_seconds = timeout_seconds
+        # Raises ValueError for a grace that is not a positive, finite number.
+        self._reaper = ProcessReaper(
+            grace_seconds=kill_grace_seconds, event="skills_context_process_not_reaped"
+        )
         self._index_lock = asyncio.Lock()
 
     async def compile(self, *, job: object, worktree_path: Path) -> SkillsContextResult:
@@ -128,19 +134,21 @@ class VibeySkillsContextCompiler:
                 raise OSError(f"vibey-skills index build failed: {_bounded(stderr)}")
 
     async def _run(self, *argv: str) -> tuple[int, str, str]:
+        # The CLI leads a process group of its own, so the kill below reaches anything
+        # it started. The reap is bounded too. Killing the CLI alone and then waiting
+        # with no bound meant waiting as long as any descendant held the pipes (#283).
         process = await asyncio.create_subprocess_exec(
             *argv,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            start_new_session=True,
         )
         try:
             stdout, stderr = await asyncio.wait_for(
                 process.communicate(), timeout=self._timeout_seconds
             )
         except BaseException:
-            if process.returncode is None:
-                process.kill()
-            await process.wait()
+            await self._reaper.kill_and_reap(process)
             raise
         return (
             process.returncode or 0,
@@ -168,6 +176,9 @@ def compiler_from_config(
     timeout = raw.get("timeout_seconds", 120.0)
     if not isinstance(timeout, int | float) or isinstance(timeout, bool):
         raise ValueError("skills_context.timeout_seconds must be numeric")
+    kill_grace = raw.get("kill_grace_seconds", DEFAULT_KILL_GRACE_SECONDS)
+    if not isinstance(kill_grace, int | float) or isinstance(kill_grace, bool):
+        raise ValueError("skills_context.kill_grace_seconds must be numeric")
     command_raw = raw.get("command")
     command: tuple[str, ...] | None = None
     if command_raw is not None:
@@ -190,6 +201,7 @@ def compiler_from_config(
         budget=budget,
         command=command,
         timeout_seconds=float(timeout),
+        kill_grace_seconds=float(kill_grace),
     )
 
 

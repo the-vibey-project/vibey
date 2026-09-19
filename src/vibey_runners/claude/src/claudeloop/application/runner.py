@@ -267,6 +267,7 @@ class AutonomousRunner:
         wait_policy: WaitPolicyConfig = DEFAULT_WAIT_POLICY_CONFIG,
         progress_wait: ProgressWaitConfig = DEFAULT_PROGRESS_WAIT_CONFIG,
         done_marker: str | None = None,
+        done_marker_fallback: bool = True,
         run_id: str = "anonymous",
         notifier: Notifier | None = None,
         run_control: RunControl[ControlCommand] | None = None,
@@ -305,6 +306,7 @@ class AutonomousRunner:
         self._wait_policy = wait_policy
         self._progress_wait = progress_wait
         self._done_marker = done_marker
+        self._done_marker_fallback = done_marker_fallback
         self._run_id = run_id
         self._notifier = notifier or _NullNotifier()
         self._control = run_control or _NullRunControl()
@@ -506,6 +508,7 @@ class AutonomousRunner:
                         isinstance(verdict, Continue)
                         and not (outcome.output_text or "").strip()
                         and outcome.cost_usd <= 0.0
+                        and outcome.output_tokens <= 0
                         and outcome.verdict is None
                     ):
                         self._empty_turn_streak += 1
@@ -529,6 +532,8 @@ class AutonomousRunner:
                             "attempt": attempt,
                             "capacity": type(capacity).__name__,
                             "cost_usd": outcome.cost_usd,
+                            "input_tokens": outcome.input_tokens,
+                            "output_tokens": outcome.output_tokens,
                             "run_id": self._run_id,
                             "session_id": session_id,
                             "trace_id": self._trace_id,
@@ -542,6 +547,8 @@ class AutonomousRunner:
                         {
                             "capacity": type(capacity).__name__,
                             "cost_usd": outcome.cost_usd,
+                            "input_tokens": outcome.input_tokens,
+                            "output_tokens": outcome.output_tokens,
                             "verdict": type(verdict).__name__,
                             "model": self._profile.model,
                             "effort": self._profile.effort,
@@ -1749,7 +1756,9 @@ class AutonomousRunner:
     def _completion_verdict(self, outcome: TurnOutcome) -> CompletionVerdict:
         kwargs: dict[str, Any] = {
             "cost_usd": outcome.cost_usd,
+            "output_tokens": outcome.output_tokens,
             "empty_turn_streak": self._empty_turn_streak,
+            "marker_fallback": self._done_marker_fallback,
         }
         if self._done_marker:
             kwargs["done_marker"] = self._done_marker
