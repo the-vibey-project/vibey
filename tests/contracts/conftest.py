@@ -13,11 +13,6 @@ import pytest_asyncio
 
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
-TEST_DATABASE_URL = os.environ.get(
-    "VIBEY_TEST_DATABASE_URL",
-    f"postgresql://{getpass.getuser()}@localhost:5432/vibey_test",
-)
-
 MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "migrations"
 
 
@@ -26,9 +21,24 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         item.add_marker(pytest.mark.integration)
 
 
+@pytest.fixture
+def database_url() -> str:
+    """This worker's database URL, read when a test runs and never at import.
+
+    ``pytest tests/contracts -n N`` makes this an initial conftest, imported
+    before the root conftest's ``pytest_configure`` repoints
+    ``VIBEY_TEST_DATABASE_URL`` at the worker's clone. A module-level read
+    there captured the controller's database for every worker.
+    """
+    return os.environ.get(
+        "VIBEY_TEST_DATABASE_URL",
+        f"postgresql://{getpass.getuser()}@localhost:5432/vibey_test",
+    )
+
+
 @pytest_asyncio.fixture
-async def migrated_pool() -> AsyncIterator[asyncpg.Pool]:
-    pool = await asyncpg.create_pool(TEST_DATABASE_URL, min_size=1, max_size=5)
+async def migrated_pool(database_url: str) -> AsyncIterator[asyncpg.Pool]:
+    pool = await asyncpg.create_pool(database_url, min_size=1, max_size=5)
     assert pool is not None
     async with pool.acquire() as conn:
         await conn.execute("DROP SCHEMA public CASCADE")
