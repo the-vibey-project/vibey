@@ -152,7 +152,16 @@ package: a tenant that needs a sibling installs it from the tree first.
 | `src/vibey_tools/gh` | `pip install -e ".[dev]"`, `python -m pytest -q` (100% branch floor), `black --check vibey_gh test`, `isort --check-only vibey_gh test`, `mypy vibey_gh`, and the managed-automation drift check; Python 3.11–3.13 |
 | `src/vibey_tools/skills` | `python3 tools/validate_manifests.py`, `python3 tools/check_links.py`, `PYTHONPATH=src python3 -m unittest discover -s tests`; Python 3.10 and 3.12 |
 | `src/vibey_tools/bootstrap` | `pip install -e ../gh` (it imports `vibey_gh`), `pip install -e ".[test,all]"`, `pytest test/ -m "not integration" --cov=vibey_bootstrap` (100% line floor); Python 3.11–3.12 |
-| `src/vibey_runners/*` | each runner's own `ruff`, `mypy --strict`, `lint-imports` and `pytest`, per its `CONTRIBUTING.md` |
+| `src/vibey_runners/*` | its `tools` row: the suite with the four per-layer 100% branch floors (qwenloop: one whole-package floor, in its addopts), on each runner's own interpreters. Each runner's own `mypy`, `lint-imports` and `bandit` are not in CI yet (they lived only in its nested workflow, which never fired) — run them per its `CONTRIBUTING.md` |
+
+A tenant carries no `.github/`, `.githooks/` or `.vibey-gh.toml` of its own.
+GitHub reads only the root's workflows and templates, git runs only the root's
+hooks (`core.hooksPath`), and vibey-gh stops at the nearest `.vibey-gh.toml`
+walking upward — so a leftover tenant copy fires nothing and can only
+misdirect a `vibey-gh` command run from inside that tenant. The copies the
+absorbed repositories arrived with were removed under #189 and stay in git
+history. `src/vibey_tools/gh` is the one exception: it is vibey-gh itself,
+and ci.yml's `tools-lint` job verifies its rendered copy has no drift.
 
 A change to a vibey-gh template (`src/vibey_tools/gh/vibey_gh/templates/`)
 must be re-rendered at both roots, or the drift check fails:
