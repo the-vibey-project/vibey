@@ -28,12 +28,14 @@ here guaranteed not to make things worse, since it removes a flag that
 would otherwise be rejected outright.
 """
 
+from vibey.domain.config import ClaudeloopLocalConfig
 from vibey.domain.effort import Effort
 from vibey.domain.engine import (
     Capability,
     EngineDescriptor,
     EngineId,
     EngineInvocation,
+    EngineTier,
     IsolationLevel,
 )
 
@@ -262,7 +264,94 @@ QWENLOOP = EngineDescriptor(
     cost_per_mtok_out=0.0,
     context_window=32_768,
     base_weight=1,
+    tier=EngineTier.LOCAL,
 )
+
+
+class ClaudeloopLocalDescriptors:
+    """The claudeloop-local descriptor for one configured backend profile (ADR-0038).
+
+    Declared by `interfaces/descriptors_interface.py`. A class rather than a constant
+    because two of its facts are the operator's, not the code's: the claudeloop
+    profile it runs (which carries the local server's base_url and model tiers) and
+    the context window that profile was sized for.
+
+    - **Same binary, same run layout.** `claudeloop`, `.claudeloop` runs and the
+      claudeloop done marker: the profile changes where Claude Code sends requests,
+      not how claudeloop writes a run.
+    - **Effort is a model tier, never `--effort`.** A local profile does not forward
+      `--effort` (claudeloop's `pass_effort` is off there), so every level passes
+      `--profile <name>` plus a `--preset` that picks the profile's `model_low`,
+      `model_medium` or `model_high`. The honest ceiling is STANDARD: HIGH and MAX
+      run the profile's top tier and say they achieved STANDARD, so fidelity scoring
+      sees a local model for what it is rather than for what it was asked to be.
+    - **No credential, no price.** `auth_env=()` and 0/0 per million tokens: the
+      profile scrubs the paid key, and claudeloop records every local turn at $0.
+    - **STRUCTURED_VERDICT only when claimed.** A local model has to prove it can
+      make the tool call a verdict is (`structured_verdict` in the config, then
+      conformance); claimed and unproven, conformance fails and the engine is
+      ineligible rather than trusted to report its own completion.
+    """
+
+    # claudeloop's own vocabulary: `--preset low|medium|high` selects the model
+    # tier, and a local profile maps each tier onto one of its own models.
+    _PRESETS: dict[Effort, tuple[str, Effort]] = {
+        Effort.TRIVIAL: ("low", Effort.TRIVIAL),
+        Effort.LOW: ("low", Effort.LOW),
+        Effort.STANDARD: ("medium", Effort.STANDARD),
+        Effort.HIGH: ("high", Effort.STANDARD),
+        Effort.MAX: ("high", Effort.STANDARD),
+    }
+    _CAPABILITIES = frozenset(
+        {
+            Capability.SAVEPOINTS,
+            Capability.UNWIND,
+            Capability.MID_RUN_PROMPT,
+            Capability.MID_RUN_MODEL,
+            Capability.SLASH_COMMANDS,
+            Capability.SNAPSHOT,
+            Capability.SANDBOX,
+        }
+    )
+
+    def build(self, config: ClaudeloopLocalConfig | None = None) -> EngineDescriptor:
+        settings = config if config is not None else ClaudeloopLocalConfig()
+        profile = ("--profile", settings.profile)
+        capabilities = set(self._CAPABILITIES)
+        if settings.structured_verdict:
+            capabilities.add(Capability.STRUCTURED_VERDICT)
+        return EngineDescriptor(
+            engine_id=EngineId.CLAUDELOOP_LOCAL,
+            binary=CLAUDELOOP.binary,
+            # The release that shipped claudeloop's `--profile`; the conformance
+            # `flags` check is what actually refuses a binary without it.
+            min_version="0.8.0",
+            state_dir=CLAUDELOOP.state_dir,
+            done_marker=CLAUDELOOP.done_marker,
+            auth_env=(),
+            capabilities=frozenset(capabilities),
+            effort_projection={
+                effort: EngineInvocation(
+                    (*profile, "--preset", preset),
+                    achieved=achieved,
+                    notes=""
+                    if achieved is effort
+                    else "a local model's honest ceiling is STANDARD; runs the top tier",
+                )
+                for effort, (preset, achieved) in self._PRESETS.items()
+            },
+            session_verb=CLAUDELOOP.session_verb,
+            isolation_flags=CLAUDELOOP.isolation_flags,
+            cost_per_mtok_in=0.0,
+            cost_per_mtok_out=0.0,
+            context_window=settings.context_window,
+            base_weight=1,
+            tier=EngineTier.LOCAL,
+            doctor_args=profile,
+        )
+
+
+CLAUDELOOP_LOCAL = ClaudeloopLocalDescriptors().build()
 
 DEFAULT_DESCRIPTORS: tuple[EngineDescriptor, ...] = (
     CLAUDELOOP,
@@ -270,6 +359,8 @@ DEFAULT_DESCRIPTORS: tuple[EngineDescriptor, ...] = (
     CURSORLOOP,
     AGYLOOP,
 )
-ALL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (*DEFAULT_DESCRIPTORS, QWENLOOP)
+# The local engines, each opt-in behind its own feature switch (ADR-0015, ADR-0038).
+LOCAL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (QWENLOOP, CLAUDELOOP_LOCAL)
+ALL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (*DEFAULT_DESCRIPTORS, *LOCAL_DESCRIPTORS)
 
 BY_ENGINE_ID: dict[EngineId, EngineDescriptor] = {d.engine_id: d for d in ALL_DESCRIPTORS}

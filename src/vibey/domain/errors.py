@@ -59,3 +59,25 @@ class InvalidAnswer(VibeyError):
 
 class UnknownProvider(VibeyError):
     """The requested engine provider is not one vibey knows how to build."""
+
+
+class SovereignResearchUnavailable(VibeyError):
+    """A research provider refused a topic rather than invent a source.
+
+    A local model has no web access. Returning its recollection with a `source` field
+    would put a fabricated citation into a design spec, which is worse than having no
+    research step: a wrong answer that looks sourced survives review, and a missing one
+    does not. Doctrine 10 requires the floor be declared to a human at the moment it is
+    known, which is what this is (ADR-0027).
+
+    It lives in the domain, not beside the provider that raises it, so the application's
+    research handler can turn the refusal into a human gate without importing
+    infrastructure. `evidence_name` is the file the provider looked for, or None when the
+    topic reduces to no usable file name and no evidence file could ever match it.
+    """
+
+    def __init__(self, topic: str, detail: str, *, evidence_name: str | None = None) -> None:
+        self.topic = topic
+        self.detail = detail
+        self.evidence_name = evidence_name
+        super().__init__(detail)

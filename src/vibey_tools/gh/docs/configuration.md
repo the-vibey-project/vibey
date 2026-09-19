@@ -104,26 +104,48 @@ fails closed when repository visibility is not private.
 
 ### `[pr_automation.fallback]`
 
-Reviews with a local model when the paid path returns **no verdict at all** — an exhausted
-API key, expired credentials, an unavailable model. Because the gate is a required check,
-that failure otherwise turns a billing problem into a hard stop on every pull request.
+The sovereign review lane: a local model on the operator's own runner that reviews the
+**diff-groundable half** of every pull request's exact-head review (`pass`, `summary`,
+`findings`) FIRST, whenever its heartbeat is fresh (sub-doctrine 8.a, #133). The table keeps
+its original name because it began as a fallback, and it still is one: the same verdict is
+what the gate reads when the paid path returns **no verdict at all** — an exhausted API
+key, expired credentials, an unavailable model. Because the gate is a required check, that
+failure otherwise turns a billing problem into a hard stop on every pull request.
+
+Whose review it carries is decided per pull request. For a **trusted** author (the owner or
+`trusted_authors`) in this repository, the local verdict carries the diff half and the paid
+reviewer answers only the sixteen documentation-contract judgments, reporting its own prose
+and findings as `wider_summary` and `wider_findings`; the gate names the lane behind each
+half. For **any other** same-repository author the local verdict is held in reserve: the
+paid review still covers the whole change, including its correctness and security review,
+and the local verdict is read only if that review returns no verdict. A fork never reaches
+the lane while `trusted_only` is on.
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `enabled` | boolean / `true` | Whether the fallback job is rendered at all. **On by default, per sub-doctrine 8.a:** the sovereign path is the preference, so it is not the one that has to be opted into. That costs an adopter nothing until they stand a runner up, because the **heartbeat** gates scheduling rather than this flag — a repository with no fresh `heartbeat_ref` never offers the lane. Once a runner does exist, keep `trusted_only` true: GitHub says self-hosted runners should "almost never be used for public repositories". |
-| `runner_label` | string / `"vibey-local"` | Label the fallback job targets, alongside `self-hosted`. |
+| `enabled` | boolean / `true` | Whether the sovereign job (`review-sovereign`) can run at all. **On by default, per sub-doctrine 8.a:** the sovereign path is the preference, so it is not the one that has to be opted into. That costs an adopter nothing until they stand a runner up, because the **heartbeat** gates scheduling rather than this flag — a repository with no fresh `heartbeat_ref` never offers the lane. Once a runner does exist, keep `trusted_only` true: GitHub says self-hosted runners should "almost never be used for public repositories". |
+| `runner_label` | string / `"vibey-local"` | Label the sovereign job targets, alongside `self-hosted`. |
 | `model` | string / `"qwen2.5-coder:14b"` | Model tag served by the Ollama-compatible endpoint. |
 | `base_url` | string / `"http://127.0.0.1:11434"` | Where the local model listens. |
-| `trusted_only` | boolean / `true` | Never run the fallback for a fork pull request. |
-| `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the fallback reads back, so "is the local lane alive?" is answered by something the lane itself had to write. |
+| `trusted_only` | boolean / `true` | Never run the sovereign lane for a fork pull request. |
+| `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the workflow reads back, so "is the local lane alive?" is answered by something the lane itself had to write. |
 | `heartbeat_max_age_minutes` | integer / `15` | How stale that heartbeat may be before the local lane is treated as down. A ref that stopped moving is indistinguishable from a runner that stopped, which is the point — both mean do not route work there. |
 | `max_diff_chars` | integer / `60000` | Diff is truncated past this, and the model is told it was. |
 | `timeout_seconds` | integer / `600` | Bound on one review. |
 
-It never overrides a review that actually ran: the job requires the primary to have
-produced no verdict, so findings are never discarded in favour of a weaker opinion. The
-diff is passed to the model as text — repository code is never executed, and the model has
-no shell, no tools, and no network beyond the local port.
+It never overrides a judgment the paid lane made: when the local verdict carries the diff
+half, the paid reviewer is not asked that half at all, and when it is held in reserve it is
+read only if the paid review produced no verdict — so findings are never discarded in
+favour of a weaker opinion. A local finding is never handed to automated repair: the gate
+points a human at it, and a later evaluation of the same head reviews it again. The diff is
+passed to the model as text — repository code is never executed, and the model has no
+shell, no tools, and no network beyond the local port.
+
+The lanes run **serially**: the paid review waits for the local one, because which half it
+answers depends on what the local lane returned. That costs the local review's latency
+(bounded by `timeout_seconds`) on every pull request the lane is offered for. A heartbeat
+that goes stale after the lane was offered leaves the job queued until GitHub times it out,
+and the paid review waits with it; keep `heartbeat_max_age_minutes` short.
 
 Fetching that diff prefers `gh pr diff`, but GitHub's diff API refuses pull requests beyond
 roughly 300 changed files — exactly the shape of a large migration or adoption sweep, which
@@ -137,8 +159,11 @@ The verdict is deliberately narrower than the primary review's. Ollama constrain
 to the schema, so the output *shape* is guaranteed; the *judgments* are not, and a 14B model
 will emit confident booleans it has no basis for. So it assesses only what it can ground in
 a diff — `pass`, `summary`, `findings` — and reports the documentation-contract fields as
-unevaluated. The gate titles the result `PR automation: gate (local fallback)` so a
-degraded verdict is never mistaken for a full one.
+unevaluated. Its summary names the role it ran in (`[SOVEREIGN LANE — model]` or
+`[LOCAL FALLBACK — model]`), and the gate titles a split verdict
+`PR automation: gate (diff: sovereign lane, documentation: paid lane)` and a fallback one
+`PR automation: gate (local fallback)`, so a narrower verdict is never mistaken for a full
+one.
 
 `trusted_only` carries the safety argument. GitHub says self-hosted runners should "almost
 never be used for public repositories" because any user can open a pull request against
