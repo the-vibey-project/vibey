@@ -29,6 +29,10 @@ Every project-specific decision lives here so the logic beside it can stay gener
     branch_prefix  = "vibey-gh/issue"   # namespace every proposal branch lives under
     required_label = "vibey-gh:solve"   # what opts an outside author's issue in
 
+    [platform]
+    kind = "github"         # which forge the repository lives on; github is the one adapter
+    host = "github.com"     # that forge's host, for GitHub Enterprise Server and its like
+
 Absent keys fall back to the defaults below, so a repository that agrees with them needs
 no file at all. `tomllib` is stdlib from 3.11, which this package already requires.
 """
@@ -40,6 +44,8 @@ import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+
+from vibey_gh.forge import ForgeKind
 
 CONFIG_NAME = ".vibey-gh.toml"
 
@@ -219,6 +225,56 @@ class WorkflowNamesConfig:
     release_repair: str = "Release repair"
     github_release: str = "GitHub Release"
     repository_profile: str = "Repository profile"
+
+
+# The forges `[platform] kind` accepts today: the ones with an adapter. `ForgeKind` names
+# more, because the standard is written for every forge (#138), but a kind with no adapter
+# is refused here, at load, rather than accepted and then quietly driven as GitHub by every
+# module that has not moved onto the adapter yet. `ForgeSelector.kinds` must equal this,
+# and a test holds them together.
+ADAPTED_PLATFORM_KINDS = (ForgeKind.GITHUB.value,)
+
+# A bare host name, optionally with a port: what `gh` takes as `GH_HOST`. No scheme, path,
+# user or whitespace, so the value cannot smuggle anything else into the client's reading.
+_HOST_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?")
+
+
+@dataclass(frozen=True)
+class PlatformConfig:
+    """Which forge this repository lives on, and where (#138).
+
+    `kind` selects the forge adapter, which is the only code allowed to know what platform
+    it is speaking to. `host` is that forge's host: `github.com`, the default, is the host
+    `gh` assumes on its own and changes nothing; any other host (a GitHub Enterprise Server)
+    is handed to `gh` as `GH_HOST`, so every call the adapter makes goes there.
+
+    Only the calls that have moved onto the adapter read this — today the clean-repo
+    survey's two forge reads. Every other command still runs `gh` the way it always has,
+    which is exactly why a kind without an adapter is refused rather than half-honoured.
+    """
+
+    kind: str = ForgeKind.GITHUB.value
+    host: str = "github.com"
+
+    def __post_init__(self) -> None:
+        kinds = tuple(kind.value for kind in ForgeKind)
+        if self.kind not in kinds:
+            raise ValueError(f"platform.kind must be one of {', '.join(kinds)}: {self.kind!r}")
+        if self.kind not in ADAPTED_PLATFORM_KINDS:
+            raise ValueError(self.not_adapted(self.kind))
+        if not isinstance(self.host, str) or not _HOST_RE.fullmatch(self.host):
+            raise ValueError(
+                "platform.host must be a bare host name, optionally with a port "
+                f"(no scheme or path): {self.host!r}"
+            )
+
+    @staticmethod
+    def not_adapted(kind: str) -> str:
+        """The one sentence for a forge the standard names but no adapter drives yet."""
+        return (
+            f"platform.kind = {kind!r}: the {kind} adapter is not implemented yet; "
+            f"vibey-gh drives {', '.join(ADAPTED_PLATFORM_KINDS)} only (#138)"
+        )
 
 
 @dataclass(frozen=True)
@@ -545,6 +601,7 @@ def _ruleset(
         strict_required_checks=section.get("strict_required_checks", True),
         required_approvals=section.get("required_approvals", default_approvals),
         dismiss_stale_reviews=section.get("dismiss_stale_reviews", True),
+        require_code_owner_review=section.get("require_code_owner_review", False),
         require_conversation_resolution=section.get("require_conversation_resolution", True),
         require_linear_history=section.get("require_linear_history", True),
         require_signed_commits=section.get("require_signed_commits", False),
@@ -581,7 +638,9 @@ class IssueAutomationConfig:
     retain_schedule_backstop: bool = True
     # Post a bounded local-model triage comment when the paid solve produced nothing —
     # the issue path's counterpart to [pr_automation.fallback], sharing its runner, model
-    # and limits. Off by default: it needs that self-hosted runner to exist.
+    # and limits. On by default per sub-doctrine 8.a (#277): the sovereign path is the
+    # preference, not the opt-in. A repository with no runner loses nothing, because the
+    # job is scheduled only while the sovereign heartbeat is fresh, not on this flag alone.
     fallback_enabled: bool = True
 
     def __post_init__(self) -> None:
@@ -856,6 +915,11 @@ class RulesetConfig:
     strict_required_checks: bool = True
     required_approvals: int = 0
     dismiss_stale_reviews: bool = True
+    # A review from the owner CODEOWNERS names, on a pull request touching an owned path.
+    # False by default because it is inert without a CODEOWNERS file and, with one, blocks
+    # every pull request touching an owned path until that owner approves -- a decision
+    # about who may merge what, which an upgrade must never make for an adopter.
+    require_code_owner_review: bool = False
     require_conversation_resolution: bool = True
     require_linear_history: bool = True
     require_signed_commits: bool = False
@@ -1204,6 +1268,78 @@ class MarketplaceConfig:
 
 
 @dataclass(frozen=True)
+class EstimateConfig:
+    """`[estimate]`: what `vibey-gh estimate` reads, and what each stage requires (#134).
+
+    Every key has a default that reproduces the shipped behaviour, so an adopter writes
+    only what differs (ADR-0018):
+
+    - `offline` (true): the command never leaves this machine. It reads the machine's own
+      memory, and the model runner only when the runner is on this machine; everything
+      else stays `unknown` rather than being probed over the network.
+    - `model` (empty): the local model the fit coordinates are measured against. Empty
+      means `[pr_automation.fallback] model`, the model the local lane actually runs.
+    - `stages` (empty): the pipeline, in order. Empty means the nine stages
+      `vibey_gh.feasibility` declares, install through main-validation.
+    - `requirements`: per stage, `"material.property" = minimum` on the 0..1 scale where
+      1 is peak. A stage named here REPLACES that stage's default vector outright, so the
+      file says exactly what the stage needs rather than a delta to be merged in one's
+      head. Held as `(stage, ((coordinate, minimum), ...))` so the config stays frozen.
+    - `report_first` (["agency"]): materials whose shortfalls lead the report. Agency is
+      the common killer -- a run that cannot merge is infeasible however healthy the
+      hardware -- so it is first by default.
+
+    Only the SHAPE is checked here. Whether `agency` is a material and `develop` a stage
+    is `vibey_gh.feasibility`'s vocabulary, and it is checked there, where the words are
+    defined, rather than copied into a second list that could drift from them.
+    """
+
+    offline: bool = True
+    model: str = ""
+    stages: tuple[str, ...] = ()
+    requirements: tuple[tuple[str, tuple[tuple[str, float], ...]], ...] = ()
+    report_first: tuple[str, ...] = ("agency",)
+
+    def __post_init__(self) -> None:
+        _unique_nonempty("estimate.stages", self.stages)
+        _unique_nonempty("estimate.report_first", self.report_first)
+        _unique_nonempty("estimate.requirements", tuple(stage for stage, _ in self.requirements))
+        for stage, needs in self.requirements:
+            for coordinate, minimum in needs:
+                material, dot, prop = coordinate.partition(".")
+                if not material or not dot or not prop or "." in prop:
+                    raise ValueError(
+                        f"estimate.requirements.{stage}: {coordinate!r} is not 'material.property'"
+                    )
+                if (
+                    isinstance(minimum, bool)
+                    or not isinstance(minimum, int | float)
+                    or not 0.0 <= minimum <= 1.0
+                ):
+                    raise ValueError(
+                        f"estimate.requirements.{stage}.{coordinate} must be a number from"
+                        f" 0 to 1, where 1 is peak: {minimum!r}"
+                    )
+
+    @classmethod
+    def from_table(cls, section: dict) -> EstimateConfig:
+        """`[estimate]` as TOML hands it over, with each stage's table frozen."""
+        raw = section.get("requirements", {})
+        if not isinstance(raw, dict) or not all(isinstance(v, dict) for v in raw.values()):
+            raise ValueError(
+                "estimate.requirements must be a table of stage tables, e.g."
+                ' [estimate.requirements.main] "agency.availability" = 1.0'
+            )
+        return cls(
+            offline=bool(section.get("offline", True)),
+            model=str(section.get("model", "")),
+            stages=tuple(section.get("stages", ())),
+            requirements=tuple((stage, tuple(needs.items())) for stage, needs in raw.items()),
+            report_first=tuple(section.get("report_first", cls.report_first)),
+        )
+
+
+@dataclass(frozen=True)
 class GhConfig:
     root: Path
     text: str = DEFAULT_TEXT
@@ -1224,6 +1360,11 @@ class GhConfig:
     # writes to a branch it does not own. Off, the train reports the conflict exactly as
     # it did before and a person clears it.
     restack_conflicts: bool = True
+    # Globs the merge train refuses to merge unattended: a pull request touching one is
+    # reported as needing a human merge, and never reaches the `--admin` fallback that
+    # would bypass a code-owner review (vibey_gh.protected_paths). Empty protects nothing,
+    # which is how the train behaved before the key existed.
+    protected_paths: tuple[str, ...] = ()
     ai: AiConfig = AiConfig()
     pr_automation: PrAutomationConfig = PrAutomationConfig()
     issue_automation: IssueAutomationConfig = IssueAutomationConfig()
@@ -1234,11 +1375,13 @@ class GhConfig:
     yank: YankConfig = YankConfig()
     social_signals: SocialSignalsConfig = SocialSignalsConfig()
     tidy: TidyConfig = TidyConfig()
+    platform: PlatformConfig = PlatformConfig()
     workflow_names: WorkflowNamesConfig = WorkflowNamesConfig()
     rulesets: RulesetsConfig = RulesetsConfig()
     repository_profile: RepositoryProfileConfig = RepositoryProfileConfig()
     documentation: DocumentationConfig = DocumentationConfig()
     marketplace: MarketplaceConfig = MarketplaceConfig()
+    estimate: EstimateConfig = EstimateConfig()
     # Which bundled workflow templates this repository wants installed and kept current.
     # None means all of them, which is the right default for a repository adopting the
     # whole thing. A repository with its own richer workflows sets `workflows = []` and
@@ -1291,6 +1434,19 @@ class GhConfig:
             raise ValueError(
                 f"issue_automation.branch_prefix must not shadow a permanent branch: {prefix!r}"
             )
+        patterns = self.protected_paths
+        if not isinstance(patterns, tuple) or not all(isinstance(p, str) for p in patterns):
+            # A bare TOML string would otherwise be split into one-character globs.
+            raise ValueError("merge_train.protected_paths must be a list of strings")
+        _unique_nonempty("merge_train.protected_paths", patterns)
+        for pattern in patterns:
+            if pattern.startswith("/"):
+                # CODEOWNERS anchors a pattern with `/`; a pull request's listed paths never
+                # start with one, so this glob would match nothing and protect nothing.
+                raise ValueError(
+                    "merge_train.protected_paths entries are repository-root relative,"
+                    f" without a leading '/': {pattern!r}"
+                )
 
     @property
     def header(self) -> str:
@@ -1431,6 +1587,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     ver = data.get("version", {})
     br = data.get("branches", {})
     tr = data.get("merge_train", {})
+    protected = tr.get("protected_paths", ())
     inst = data.get("install", {})
     auto = data.get("pr_automation", {})
     observability = auto.get("observability", {})
@@ -1445,6 +1602,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     profile = data.get("repository_profile", {})
     documentation = data.get("documentation", {})
     marketplace = data.get("marketplace", {})
+    platform = data.get("platform", {})
     automation = PrAutomationConfig(
         enabled=auto.get("enabled", True),
         scan_workflows=tuple(auto.get("scan_workflows", DEFAULT_SCAN_WORKFLOWS)),
@@ -1494,6 +1652,10 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         owner=tr.get("owner", ""),
         trusted_authors=tuple(tr.get("trusted_authors", ())),
         restack_conflicts=bool(tr.get("restack_conflicts", True)),
+        # A list becomes the tuple the field holds; anything else -- a bare string above
+        # all, which `tuple()` would split into one-character globs -- reaches
+        # `GhConfig.__post_init__` as it is, and is refused there.
+        protected_paths=tuple(protected) if isinstance(protected, list) else protected,
         ai=AiConfig(
             base_url=data.get("ai", {}).get("base_url", ""),
             auth_secret=data.get("ai", {}).get("auth_secret", AiConfig.auth_secret),
@@ -1539,12 +1701,17 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             notify_contributor_branches=realigning.get("notify_contributor_branches", True),
         ),
         social_signals=_social_signals(data.get("social_signals", {})),
+        estimate=EstimateConfig.from_table(data.get("estimate", {})),
         workflow_names=_workflow_names(data.get("workflow_names", {})),
         tidy=TidyConfig(
             enabled=data.get("tidy", {}).get("enabled", True),
             keep_branches=tuple(data.get("tidy", {}).get("keep_branches", ())),
             trust_forge_deletions=data.get("tidy", {}).get("trust_forge_deletions", True),
             fail_check=data.get("tidy", {}).get("fail_check", False),
+        ),
+        platform=PlatformConfig(
+            kind=platform.get("kind", PlatformConfig.kind),
+            host=platform.get("host", PlatformConfig.host),
         ),
         yank=YankConfig(
             pypi=yanking.get("pypi", False),

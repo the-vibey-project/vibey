@@ -38,7 +38,11 @@ from vibey.application.design_research_handler import DesignResearchHandler
 from vibey.application.design_synthesis_handler import DesignSpecHandler, DesignSynthesizeHandler
 from vibey.application.dto import JobRecord, ProjectRecord
 from vibey.application.engine_health_service import EngineHealthService
-from vibey.application.engine_selection import RotationRecordingHandler, SelectingEngineProvider
+from vibey.application.engine_selection import (
+    RotationRecordingHandler,
+    SelectingEngineProvider,
+    SpendMeteringLedger,
+)
 from vibey.application.engine_selector import EngineSelector
 from vibey.application.interfaces import (
     AzureClientPort,
@@ -79,7 +83,11 @@ from vibey.infrastructure.db.review_ledger import PostgresReviewLedger
 from vibey.infrastructure.db.rotation_cursor_repository import PostgresRotationCursorRepository
 from vibey.infrastructure.db.visual_inventory_repository import FileVisualInventoryRepository
 from vibey.infrastructure.deploy.state_repository import FileDeploymentStateRepository
-from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCRIPTORS, QWENLOOP
+from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCRIPTORS
+from vibey.infrastructure.engines.local_engines import (
+    LocalEndpointEnvironment,
+    LocalEngineSettings,
+)
 from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
@@ -281,21 +289,6 @@ def _independence_policy(
     return VerifyIndependencePolicy(pool=pool, clock=clock)
 
 
-def qwenloop_enabled(config: Mapping[str, object]) -> bool:
-    """Whether the sovereign standby engine is switched on for this project.
-
-    Public, and a function rather than a method, because it is the one answer the
-    composition root and its only caller outside it -- the `worker` command, which
-    has to preflight exactly the engine pool this module will run -- must agree on.
-    A second copy of the precedence rule is how they drifted apart before.
-    """
-    override = os.environ.get("VIBEY_FEATURE_QWENLOOP")
-    if override is not None:
-        return override.strip().lower() in {"1", "true", "yes", "on"}
-    features = config.get("features")
-    return isinstance(features, Mapping) and features.get("qwenloop") is True
-
-
 def build_full_worker(
     *,
     resources: AppResources,
@@ -320,9 +313,12 @@ def build_full_worker(
     wiring is an explicit later decision, never an accidental default.
     """
     adapters = dict(engine_adapters if engine_adapters is not None else resources.engine_adapters)
-    standby_enabled = qwenloop_enabled(project.config)
-    if standby_enabled and EngineId.QWENLOOP not in adapters:
-        adapters[EngineId.QWENLOOP] = LoopProcessAdapter(descriptor=QWENLOOP)
+    # The one resolver for "which local engines are on" (ADR-0038): the `worker`
+    # command asks the same one, so the pool it preflights is the pool this runs.
+    # An injected adapter wins (the faked harness passes ScriptedEngines here).
+    local = LocalEngineSettings(environ=os.environ, config=project.config)
+    for engine_id, local_adapter in local.adapters(LocalEndpointEnvironment(os.environ)).items():
+        adapters.setdefault(engine_id, local_adapter)
     azure = azure_client if azure_client is not None else InMemoryAzureClientAdapter()
     clock = resources.clock
     repo_root = Path(project.repo_path)
@@ -337,46 +333,61 @@ def build_full_worker(
         clock=clock,
         owner=owner,
         allow_list=allow_list,
-        standby_engine=EngineId.QWENLOOP if standby_enabled else None,
+        local_engines=local.enabled_engines,
     )
     # The runaway brake: caps come from the project's own config
     # (max_cycle_dollars / max_cycle_turns, set at `vibey new`). Without
     # either, spend stays uncapped -- opting in is explicit, never a
-    # silent default that would surprise existing projects.
-    raw_dollars = project.config.get("max_cycle_dollars")
-    raw_turns = project.config.get("max_cycle_turns")
+    # silent default that would surprise existing projects. The parse is
+    # LedgerBudgetSource's own, the same one `vibey cost` reports from.
+    max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
     budget_source: LedgerBudgetSource | None = None
-    if isinstance(raw_dollars, int | float) or isinstance(raw_turns, int):
+    if max_dollars is not None or max_turns is not None:
         budget_source = LedgerBudgetSource(
-            resources.ledger,
-            max_dollars=float(raw_dollars) if isinstance(raw_dollars, int | float) else None,
-            max_turns=raw_turns if isinstance(raw_turns, int) else None,
+            resources.ledger, max_dollars=max_dollars, max_turns=max_turns
         )
     wind_down = WindDownOrchestrator(
         ledger=resources.ledger,
-        handoff_service=RotationHandoffService(resources.engine_selector, allow_list=allow_list),
+        # The pool, like the provider's own selection: a wind-down must hand off to an
+        # engine this worker can actually run, never to a stale health row's engine.
+        handoff_service=RotationHandoffService(
+            resources.engine_selector, allow_list=engine_provider.pool
+        ),
         handoffs=resources.handoffs,
         jobs=resources.jobs,
         clock=clock,
         write_ledger=write_full_ledger,
     )
     skills_context = compiler_from_config(project.config, repo_path=repo_root)
+    # One runner for every gate command -- build.verify's gates and diff,
+    # build.integrate's gates, REVIEW's automated checks -- built from the
+    # project's `gates` config (per-command timeout, kill grace, Python-env
+    # isolation; ADR-0018). Unset keys keep the defaults.
+    gate_runner = SubprocessGateRunner.from_config(project.config)
 
-    def _recording(handler: JobHandler, adapter: EngineAdapter) -> JobHandler:
+    def _recording(
+        handler: JobHandler, adapter: EngineAdapter, meter: SpendMeteringLedger
+    ) -> JobHandler:
         return RotationRecordingHandler(
             inner=handler,
             health=resources.engine_health_service,
             project_id=project.project_id,
             engine_id=adapter.descriptor.engine_id,
+            meter=meter,
         )
 
+    # One spend meter per job, around the ledger its handler writes through:
+    # what the selected engine's session cost is charged to that engine's
+    # health record when the job settles (issue #209). The ledger itself sees
+    # every event unchanged.
     async def _implement(job: JobRecord) -> JobHandler:
         adapter = await engine_provider.select_for(job)
+        meter = SpendMeteringLedger(resources.build_ledger)
         handler = BuildImplementHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
             provisioner=AgentSurfaceProvisioner(),
             engine=adapter,
-            ledger=resources.build_ledger,
+            ledger=meter,
             jobs=resources.jobs,
             clock=clock,
             wind_down=wind_down,
@@ -384,27 +395,29 @@ def build_full_worker(
             budget_source=budget_source,
             skills_context=skills_context,
         )
-        return _recording(handler, adapter)
+        return _recording(handler, adapter, meter)
 
     async def _verify(job: JobRecord) -> JobHandler:
         adapter = await engine_provider.select_for(job)
+        meter = SpendMeteringLedger(resources.build_ledger)
         handler = BuildVerifyHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
-            gates=SubprocessGateRunner(),
+            gates=gate_runner,
             reviewer=adapter,
-            ledger=resources.build_ledger,
+            ledger=meter,
             jobs=resources.jobs,
+            clock=clock,
             repair=VerifyRepairPolicy(
                 ledger_reader=resources.ledger, clock=clock, gates=resources.gates
             ),
             independence=_independence_policy(project.config, engine_provider.pool, clock),
         )
-        return _recording(handler, adapter)
+        return _recording(handler, adapter, meter)
 
     async def _integrate(job: JobRecord) -> JobHandler:
         return BuildIntegrateHandler(
             integration=IntegrationBranch(repo_root, cycle=job.cycle),
-            gates=SubprocessGateRunner(),
+            gates=gate_runner,
             ledger=resources.build_ledger,
             jobs=resources.jobs,
             clock=clock,
@@ -460,7 +473,7 @@ def build_full_worker(
             automated_reviewer=SubprocessAutomatedReviewRunner.from_config(
                 project.config,
                 projects=resources.projects,
-                gates=SubprocessGateRunner(),
+                gates=gate_runner,
             ),
         ),
         "review.collect": ReviewCollectHandler(

@@ -48,6 +48,18 @@ verification status per engine:
   CURSOR_API_KEY is available here. Cursorloop also has no wrapper-level
   session/turn/verdict boundary event in events.jsonl at all, unlike the
   other three engines -- only in-turn SDK message types.
+
+One turn, one TURN_COMPLETED. The budget brake (LedgerBudgetSource) counts
+every TURN_COMPLETED in a cycle as a turn against ``max_cycle_turns``, so
+each engine maps only the runner's own turn boundary to it -- one event per
+real turn -- and nothing else. Text that rides alongside a turn
+(claudeloop/agyloop ``chatter.*`` echoes, qwenloop's streamed
+``text_delta`` fragments) maps to TRANSCRIPT_RECORDED: kept in the ledger
+for replay, never counted. Before #266 ``chatter.assistant`` also mapped to
+TURN_COMPLETED, so under claudeloop's default ``log_chatter=summary`` a
+cycle hit its turn cap after half the configured turns, and every qwenloop
+token delta counted as a turn. TURN_REQUESTED follows the same rule
+(``turn.starting`` only, not ``chatter.prompt``).
 """
 
 from vibey.domain.engine import EngineId
@@ -64,10 +76,18 @@ LOOP_EVENT_MAP: dict[EngineId, dict[str, EventKind]] = {
         # matching docstrings on _project_capacity in both runner.py files).
         "run.started": EventKind.SESSION_SEEDED,
         "preflight": EventKind.SESSION_SEEDED,
-        "chatter.prompt": EventKind.TURN_REQUESTED,
+        # turn.starting and turn.completed are the runner's own turn
+        # boundaries, emitted exactly once per turn whatever log_chatter is
+        # set to. chatter.prompt and chatter.assistant echo the same turn's
+        # text -- under the default log_chatter=summary, both fire every
+        # turn -- so they are transcript, never a second turn.
         "turn.starting": EventKind.TURN_REQUESTED,
-        "chatter.assistant": EventKind.TURN_COMPLETED,
+        "chatter.prompt": EventKind.TRANSCRIPT_RECORDED,
+        "chatter.assistant": EventKind.TRANSCRIPT_RECORDED,
         "turn.completed": EventKind.TURN_COMPLETED,
+        # chatter.delta (streamed fragments, log_chatter=full only) stays
+        # unmapped: chatter.assistant already carries the assembled text,
+        # and mapping every delta would append one ledger row per fragment.
         "chatter.tool": EventKind.TOOL_INVOKED,
         "savepoint": EventKind.SAVEPOINT_CREATED,
         # capacity.forecast is proactive headroom telemetry emitted only
@@ -89,8 +109,13 @@ LOOP_EVENT_MAP: dict[EngineId, dict[str, EventKind]] = {
         "turn.started": EventKind.TURN_REQUESTED,
         "turn.completed": EventKind.TURN_COMPLETED,
         # turn.failed is still a turn boundary -- success/failure lives in
-        # the payload, mirroring how VERDICT_RENDERED enrichment elsewhere
-        # checks payload fields rather than encoding it into the kind.
+        # the payload (its ``error`` object), mirroring how VERDICT_RENDERED
+        # enrichment elsewhere checks payload fields rather than encoding it
+        # into the kind. It is not a double count: codex ends every turn
+        # with exactly one of turn.completed or turn.failed, never both. It
+        # counts toward the turn cap on purpose -- a failed turn is still a
+        # turn attempt the vendor served, and a run failing turn after turn
+        # is exactly the runaway the cap exists to stop.
         "turn.failed": EventKind.TURN_COMPLETED,
         # "item" is codex's generic envelope for a discrete unit of agent
         # work -- command execution, patch application, MCP tool calls,
@@ -144,9 +169,12 @@ LOOP_EVENT_MAP: dict[EngineId, dict[str, EventKind]] = {
         # Agyloop events (captured from real agyloop 0.1.0 events.jsonl)
         "run.started": EventKind.SESSION_SEEDED,
         "preflight": EventKind.SESSION_SEEDED,
-        "chatter.prompt": EventKind.TURN_REQUESTED,
+        # Same turn-boundary rule as claudeloop: agyloop's runner emits
+        # turn.starting/turn.completed once per turn and echoes the turn's
+        # text as chatter.prompt/chatter.assistant alongside them.
         "turn.starting": EventKind.TURN_REQUESTED,
-        "chatter.assistant": EventKind.TURN_COMPLETED,
+        "chatter.prompt": EventKind.TRANSCRIPT_RECORDED,
+        "chatter.assistant": EventKind.TRANSCRIPT_RECORDED,
         "turn.completed": EventKind.TURN_COMPLETED,
         "sdk.event": EventKind.TOOL_INVOKED,
         "savepoint": EventKind.SAVEPOINT_CREATED,
@@ -164,12 +192,21 @@ LOOP_EVENT_MAP: dict[EngineId, dict[str, EventKind]] = {
     },
     EngineId.QWENLOOP: {
         "run.started": EventKind.SESSION_SEEDED,
-        "text_delta": EventKind.TURN_COMPLETED,
+        # text_delta is one streamed fragment of the model's answer -- many
+        # per turn -- so it is transcript. turn.completed is qwenloop's own
+        # per-turn boundary (application/runner.py appends one after each
+        # model call's stream ends), the only qwenloop event that counts.
+        "text_delta": EventKind.TRANSCRIPT_RECORDED,
+        "turn.completed": EventKind.TURN_COMPLETED,
         "tool_result": EventKind.TOOL_INVOKED,
         "completed": EventKind.VERDICT_RENDERED,
         "failed": EventKind.VERDICT_RENDERED,
     },
 }
+# claudeloop-local is the claudeloop binary on a local backend profile: the same
+# runner writes the same events.jsonl, so it reads through the same map -- one
+# entry, not a copy that could drift from it (ADR-0038).
+LOOP_EVENT_MAP[EngineId.CLAUDELOOP_LOCAL] = LOOP_EVENT_MAP[EngineId.CLAUDELOOP]
 
 
 def translate_event_type(engine_id: EngineId, event_type: str) -> EventKind | None:

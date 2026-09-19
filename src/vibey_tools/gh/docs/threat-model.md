@@ -20,6 +20,25 @@ to. The default grants no authority it does not already imply, since anyone able
 a ruleset can equally rewrite it; a repository wanting the stricter posture sets
 `bypass_actors = []` and accepts that recovery then means editing the ruleset by hand.
 
+Branch names are metadata the pull request's author chooses, so no gate may take a
+shortcut on a branch name alone. The provenance gate skips its per-commit trailer audit
+for a promotion, a pull request from the integration branch into the release branch. It
+now takes that shortcut only when the pull request's head repository is this repository.
+Before, a fork with a branch named like the integration branch qualified too, and the gate
+skipped the audit of that fork's commits. A fork's pull request is now audited commit by
+commit. So is one whose fork was deleted, whose head repository GitHub reports as empty.
+
+The local git hooks run with the developer's own authority on whatever branch is checked
+out, and a branch fetched from someone else holds that author's content. The working tree
+is therefore untrusted input to the hooks. They never search it for the tooling; they
+honour only a declared `[install] self_source`. Every interpreter they start runs with
+`PYTHONSAFEPATH=1`, which keeps the working directory off `sys.path`, so a `vibey_gh/`
+package placed at the top of the tree is not imported. Self-hosting is the deliberate
+exception. A repository that declares `self_source` runs that declared copy, and on a
+checked-out branch that is the branch's copy. The hooks also never reduce a project's
+existing checks. A pre-existing hook, chained as `<hook>.local`, can still refuse a commit
+or a push, and the managed hook exits with its status.
+
 The integration and release branch rulesets are themselves reconciled, not merely assumed:
 `vibey_gh.rulesets` builds each desired ruleset from configuration and compares it against
 what GitHub actually has before `repository-profile.yml` applies the difference.
@@ -123,36 +142,18 @@ used only to recover from a broken privileged workflow that a normal PR cannot r
 because privileged workflow code is loaded from the trusted base branch, not the PR head.
 Only a repository administrator can trigger it, and only with explicit `workflow_dispatch`
 authorization naming an exact PR and head SHA. Before merging, the workflow independently
-re-verifies that the PR is open, non-draft, targets the integration branch, and matches the
-supplied head exactly; that its changed files are confined to workflow, template, or
-automation-core paths; and that every check run on that exact SHA other than the
-routed-around PR-automation gate completed green, with every independent gate present among
-them. It then performs a `--match-head-commit` admin squash merge, which bypasses ordinary
-`PRAutomation` and `Guard` review but never deletes a permanent branch. This trades the
-semantic review step for an administrator's explicit authorization plus the same
-independent deterministic gates, scoped to the one case those gates cannot otherwise
-unblock.
+re-verifies that the PR is open, non-draft, targets `develop`, and matches the supplied head
+exactly; that its changed files are confined to workflow, template, or automation-core
+paths; and that every non-gate check run on that exact SHA — including CodeQL, API drift,
+documentation, provenance, build, and lint — completed successfully. It then performs a
+`--match-head-commit` admin squash merge, which bypasses ordinary `PRAutomation` and `Guard`
+review but never deletes a permanent branch. This trades the semantic review step for an
+administrator's explicit authorization plus the same independent deterministic gates,
+scoped to the one case those gates cannot otherwise unblock.
 
-Which gates count as independent is therefore part of this boundary, and so is the scope
-pattern, and both are rendered from reviewed configuration rather than written into the
-template. The gates are `[rulesets.integration] required_checks` — the names GitHub already
-enforces on the target branch — less `[pr_automation] ignored_checks` and the routed-around
-gates. A fixed list once named checks most repositories never produce, so the path failed
-closed for everyone. Deriving it from the ruleset makes the bootstrap demand what the branch
-it merges into already demands, less only the gate it exists to route around and what PR
-automation itself ignores — and every other check run on the head must still be green.
-Three properties keep that derivation from becoming a way around the gate:
-an empty list refuses the merge (nothing independent would have been verified); a
-configured name that opens a `${{ }}` expression is refused at render time, since the list
-lands in the step's environment and Actions would evaluate it; and the scope's
-`[install] self_source` prefix is rendered with every ERE metacharacter escaped and any
-control character refused, so a vendored subtree narrows the scope to that subtree instead
-of widening it. Both values are fixed in the deployed workflow the administrator dispatches
-— the default branch's copy unless they deliberately choose another ref — so a pull request
-that edits `.vibey-gh.toml` changes nothing here until it has been merged and re-rendered.
-
-The opt-in local-model review fallback introduces a distinct asset and a distinct
-boundary: a repository-provided `[self-hosted, vibey-local-gh]` runner, rather than a
+The local-model review fallback (on by default) introduces a distinct asset and a distinct
+boundary: a repository-provided `[self-hosted, <runner_label>]` runner — the label is
+`[pr_automation.fallback] runner_label`, default `vibey-local` — rather than a
 GitHub-hosted one, that GitHub itself warns should almost never serve a public repository
 because any accountholder can open a pull request against it. The `trusted_only` setting
 (on by default) is what removes that exposure — it excludes fork pull requests from

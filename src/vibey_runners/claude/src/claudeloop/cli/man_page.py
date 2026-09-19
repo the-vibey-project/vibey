@@ -51,7 +51,7 @@ SYNOPSIS
        claudeloop reset --yes
        claudeloop watch [--run-id ID] [--follow]
        claudeloop sessions [--cwd PATH]
-       claudeloop doctor
+       claudeloop doctor [--profile NAME]
        claudeloop api [OPTIONS] COMMAND [ARGS]...
 
 
@@ -181,9 +181,14 @@ COMMANDS
        sessions [--cwd PATH]
               List known Claude Code sessions (read-only).
 
-       doctor
-              Pre-flight checks: Claude CLI present, authentication, configured
-              MCP servers, anthropic SDK import, api surface wiring, cwd safety.
+       doctor [--profile NAME]
+              Pre-flight checks: Claude CLI present (the one bundled with
+              claude-agent-sdk, else claude on PATH — the order the SDK
+              launches them in), authentication, configured MCP
+              servers, anthropic SDK import, api surface wiring, cwd safety.
+              With a local backend profile: its token resolves, its base_url
+              answers, every model it names is present, and each tier makes
+              real tool calls (a model that writes them as text does nothing).
 
        api
               Generated REST/SDK commands (e.g. claudeloop api models list).
@@ -220,9 +225,18 @@ OPTIONS (common run / resume)
        --max-wait SECONDS
               Cap on how long to wait on capacity before failing.
 
+       --profile NAME
+              Backend profile: a [profiles.NAME] table in claudeloop.toml or
+              ~/.config/claudeloop/config.toml.  A profile with base_url runs
+              against a local Anthropic-compatible server such as Ollama —
+              free, with the paid ANTHROPIC_API_KEY blanked and cost recorded
+              as $0.  resume refuses a session last run on another backend.
+              Default: Anthropic.  See {_DOCS}guides/local-backend/
+
        --model NAME
               Alias (low|medium|high) or raw Anthropic model id.  Default
-              alias low → claude-sonnet-4-5.
+              alias low → claude-sonnet-4-5 (a profile's own tiers on a
+              local backend, where claude-* ids are refused).
 
        --effort LEVEL
               Effort: low|medium|high|xhigh|max (default medium).
@@ -285,11 +299,19 @@ EXIT STATUS
        1      Failure (blocked, budget/max-wait exhausted, auth failed, doctor
               check failed, or other error).
 
-       2      Usage error (e.g. prompt without exactly one of --now/--at-break).
+       2      Usage error (e.g. prompt without exactly one of --now/--at-break,
+              an unknown or invalid --profile, or resuming a session on a
+              backend other than the one it last ran on).
 
-       75     Wound down on purpose (claudeloop wind-down); the current turn
-              finished, runs/<id>/handoff.json names every artifact produced,
-              and a supervisor can resume elsewhere.
+       75     Wound down on purpose (claudeloop wind-down) — from run and
+              resume alike; the current turn finished, runs/<id>/handoff.json
+              names every artifact produced, and a supervisor can resume
+              elsewhere.
+
+       78     Backend misconfigured: the backend, as configured, cannot serve
+              the run — unreachable, model missing, or model failed to load
+              (typically out of memory).  Waiting will not fix it; a human
+              must.  Check with claudeloop doctor --profile NAME.
 
        130    Soft-stopped by claudeloop stop (or equivalent interrupt path).
 
@@ -335,7 +357,7 @@ ENVIRONMENT
        CLAUDELOOP_DONE_MARKER, CLAUDELOOP_CONTINUE_PROMPT,
        CLAUDELOOP_MAX_BUFFER_SIZE, CLAUDELOOP_RETRY_WATCHDOG,
        CLAUDELOOP_PERMISSION_MODE, CLAUDELOOP_TOOL_APPROVAL_TIMEOUT_SECONDS,
-       CLAUDELOOP_WEB_SEARCH, CLAUDELOOP_DEEP_RESEARCH, …
+       CLAUDELOOP_WEB_SEARCH, CLAUDELOOP_DEEP_RESEARCH, CLAUDELOOP_PROFILE, …
               Override runner settings.  See the configuration guide.
 
        CLAUDELOOP_ALLOW_TEST_AGENT, CLAUDELOOP_TEST_AGENT_SCRIPT
@@ -363,6 +385,11 @@ EXAMPLES
 
               claudeloop savepoints
               claudeloop unwind --to 2
+
+       Run for free against a local Ollama (a [profiles.local] table):
+
+              claudeloop doctor --profile local
+              claudeloop run handoff.md --profile local
 
        Raise the SDK JSON buffer (rarely needed above the 50 MiB default):
 

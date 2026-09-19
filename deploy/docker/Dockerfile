@@ -17,15 +17,77 @@
 # (bootstrap resolves them relative to its own file: /app/src/vibey/…
 # -> /app/migrations), so a chart install never depends on someone
 # running SQL by hand first.
+#
+# One vendor engine binary ships too: `codex`, which codexloop drives. It is
+# upstream's static musl build, verified by digest in the build stage and
+# copied into the runtime stage alone -- no Node, no npm, no installer. CI
+# asserts that as well: `codex --version` prints the pinned version, and
+# neither node nor npm is on PATH.
 
 FROM ghcr.io/astral-sh/uv:0.9-python3.12-bookworm-slim AS build
 
 # The context-engine release is temporarily locked to an immutable Git commit
 # until it has a newly versioned wheel. Git remains confined to this disposable
 # build stage; only the resolved virtual environment is copied into runtime.
+# curl is here for the codex fetch below and, like git, never leaves this stage.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git ca-certificates \
+    && apt-get install -y --no-install-recommends git ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
+
+# codex, the vendor CLI codexloop drives (`codex exec`, `codex app-server`), as
+# upstream's static musl build: one self-contained executable, where the npm
+# package would have brought Node and npm into the runtime layer -- the very
+# package manager this image exists not to carry.
+#
+# Pinned by version and by the sha256 of each architecture's release tarball.
+# Before those digests were written here they were checked two independent
+# ways: each is the digest GitHub records for the asset
+# (`gh api repos/openai/codex/releases/tags/rust-v<version>`, assets[].digest)
+# and was recomputed over a fresh download; and the binary inside each tarball
+# hashes to the entry OpenAI's release workflow
+# (.github/workflows/rust-release.yml at that tag) signed into Rekor -- the
+# `.sigstore` bundle published beside the asset, verified with sigstore-python
+# against that workflow identity. LICENSE and NOTICE come from the same tag,
+# digest-pinned too, because Apache-2.0 asks for both to travel with the binary.
+#
+# `dpkg --print-architecture`, not TARGETARCH: cluster-smoke builds with the
+# classic builder (DOCKER_BUILDKIT=0), which never sets TARGETARCH, and dpkg
+# reports the architecture this stage really runs as, emulated or not.
+#
+# Placed before the dependency layer so it caches across every source change.
+# To bump, change CODEX_VERSION and every digest together; a stale digest
+# fails the build here, at `sha256sum -c`, and never later.
+ARG CODEX_VERSION=0.154.0
+ARG CODEX_SHA256_AMD64=d7e18b2597ae8f242f5f31ee9e90deef48dbc9edd634d9868fb6435d08c07f02
+ARG CODEX_SHA256_ARM64=583b48df32804213bdcd338c2e5adb06b34340821fa757a726cc0a524fa33c27
+ARG CODEX_LICENSE_SHA256=d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc
+ARG CODEX_NOTICE_SHA256=9d71575ecfd9a843fc1677b0efb08053c6ba9fd686a0de1a6f5382fd3c220915
+RUN set -eu; \
+    arch="$(dpkg --print-architecture)"; \
+    case "$arch" in \
+      amd64) triple=x86_64-unknown-linux-musl; sha="$CODEX_SHA256_AMD64" ;; \
+      arm64) triple=aarch64-unknown-linux-musl; sha="$CODEX_SHA256_ARM64" ;; \
+      *) echo "no pinned codex build for $arch" >&2; exit 1 ;; \
+    esac; \
+    tag="rust-v${CODEX_VERSION}"; \
+    mkdir -p /opt/codex/bin /opt/codex/share /tmp/codex; \
+    cd /tmp/codex; \
+    curl --proto '=https' --tlsv1.2 -fsSL -o codex.tar.gz \
+      "https://github.com/openai/codex/releases/download/${tag}/codex-${triple}.tar.gz"; \
+    curl --proto '=https' --tlsv1.2 -fsSL -o LICENSE \
+      "https://raw.githubusercontent.com/openai/codex/${tag}/LICENSE"; \
+    curl --proto '=https' --tlsv1.2 -fsSL -o NOTICE \
+      "https://raw.githubusercontent.com/openai/codex/${tag}/NOTICE"; \
+    printf '%s  %s\n' \
+      "$sha" codex.tar.gz \
+      "$CODEX_LICENSE_SHA256" LICENSE \
+      "$CODEX_NOTICE_SHA256" NOTICE \
+      | sha256sum -c -; \
+    tar -xzf codex.tar.gz "codex-${triple}"; \
+    install -m 0755 "codex-${triple}" /opt/codex/bin/codex; \
+    install -m 0644 LICENSE NOTICE /opt/codex/share/; \
+    cd /; \
+    rm -rf /tmp/codex
 
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 \
@@ -129,6 +191,11 @@ WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
 COPY --from=build /app/migrations /app/migrations
 COPY --from=build /app/src /app/src
+
+# The codex executable alone, plus the license and notice it ships under.
+# Nothing it was fetched with -- curl, the tarball -- follows it here.
+COPY --from=build /opt/codex/bin/codex /usr/local/bin/codex
+COPY --from=build /opt/codex/share/ /usr/share/doc/codex/
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \

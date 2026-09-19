@@ -21,9 +21,13 @@ by our [Code of Conduct](https://github.com/the-vibey-project/vibey/blob/develop
 
 ## The fingerprint
 
-Every code change carries it, and CI enforces it. Source files in `tools/`, `src/`,
-`docs/*.py` and `.github/workflows/` take a header comment; **every commit** takes a
-`Made-With:` trailer, which covers the changes that cannot hold a comment.
+Every code change carries it, and CI enforces it. Every Python file here takes a header
+comment (the repository root's `.vibey-gh.toml` fingerprints `src/**/*.py`, which reaches
+`tools/`, `src/`, `tests/` and `docs/*.py`); **every commit** takes a `Made-With:` trailer,
+which covers the changes that cannot hold a comment.
+
+This directory has no `.vibey-gh.toml`, hooks or workflows of its own, so the commands
+below act on the repository root from here:
 
 ```bash
 pip install -e ../gh             # vibey-gh from the tree; or: pip install -e ".[dev]"

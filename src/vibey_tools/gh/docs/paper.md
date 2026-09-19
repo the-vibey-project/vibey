@@ -164,12 +164,24 @@ Production is therefore a commodity in the economic sense: substitutable, pricea
 and predictable. Scarcity does not live in $T$. It lives in $G$.
 
 **Evidence, from this system's own operation.** The escalation of §sovereign
-operation drove one machine from one to thirty-two concurrent generations. Across
-sixty-one generations the success rate was $1.00$ and throughput held a band of
-$1.4 \pm 0.25$ per minute — a tolerance window of roughly $\pm 18\%$, tighter than
-most machining tolerances quoted in units of the part. Latency degraded, but
-*predictably*: linear at $22\,\mathrm{s}$ per added job through $N = 12$, then
-superlinear at $59\,\mathrm{s}$ per job by $N = 16$.
+operation, recorded in `docs/sovereignty-stress-2026-08-30.md`, drove one machine from
+one to 128 concurrent generations. All 52 generations through $N = 16$ succeeded.
+Across the nine rungs from $N = 2$ to $N = 32$, 102 of 107 succeeded (95.3%, no rung
+below 87.5%), and throughput stayed between 0.99 and 2.00 per minute (mean 1.38,
+sample standard deviation 0.33) while offered concurrency rose sixteen-fold. That is a
+band about a quarter of its mean wide, not a constant. Latency did *not* degrade
+predictably: the run fitted a linear model and then a superlinear one, and the record
+falsified both.
+
+*Correction (2026-09-18, #192).* An earlier version of this paragraph reported 61
+generations at a success rate of $1.00$, a band of $1.4 \pm 0.25$ per minute (a
+window of roughly $\pm 18\%$), and latency linear at $22\,\mathrm{s}$ per added job
+through $N = 12$, then superlinear at $59\,\mathrm{s}$ per job by $N = 16$. No
+contiguous run of rungs in the record totals 61 generations, four of the nine rungs
+from $N = 2$ to $N = 32$ lie outside $1.4 \pm 0.25$, and the record itself falsifies
+both latency models. The figures above are recomputed from the record's table by
+`scripts/paper_evidence.py` at the repository root, and the repository's
+`docs/paper.md` carries the full analysis.
 
 The stronger evidence is operational rather than synthetic. Over one session this
 system produced on the order of forty pull requests, fifteen issues, three papers,
@@ -197,9 +209,14 @@ while coordination scales with the number of channels between them, $\binom{n}{2
 Waste turns negative beyond $n^{*} = 2p/c + 1$ regardless of how cheap production
 becomes — indeed *faster* production lowers $n^{*}$, so commoditizing the work
 shifts the binding constraint further toward governance rather than away from it.
-The superlinear queue latency measured above is the same structure observed in
-silicon: added participants multiply synchronization surface, not throughput. Brooks
-stated this for human teams; the measurement here suggests it is substrate-independent.
+Brooks stated this for human teams.
+
+*Correction (2026-09-18, #192).* An earlier version added that the superlinear queue
+latency measured above was the same structure observed in silicon, and so suggested
+the model is substrate-independent. The record does not support that: the
+superlinear latency model was falsified at $N = 32$, which returned the stable
+region's highest throughput because continuous batching lets concurrent generations
+share forward passes. The coordination model is offered for human teams only.
 
 **Scope, stated honestly.** This is evidenced, not proven: one machine, one model,
 one session. And the claim holds for *production*, not for *judgment*. In the same
@@ -272,6 +289,18 @@ declares a floor, and it fails loudly at the floor rather than silently. Tonight
 escalation supplied instances of all six coordinates in a single session, including
 the reliability-without-availability case: a local reviewer answering 93.8% of
 requests while returning incorrect verdicts on every nuanced judgment.
+
+The full eighteen-coordinate state is carried by `vibey-gh estimate`, the first
+implementation of this calculus beyond the fit. It measures the same two coordinates
+through the fit and records the other sixteen as unknown, never inventing a value for
+them. It evaluates $x \succeq r_o$ at every stage a run must pass, with three possible
+answers: feasible, infeasible, or unknown. An unmeasured coordinate can lower the
+confidence of the verdict, but it can never turn it into feasible. Agency shortfalls
+are reported first. $T$, $C$ and the repair gradient $-\nabla_d T$ are not computed yet,
+because $\phi$ has not been measured, and the estimate says so rather than substituting
+a heuristic. Durations come from the same graded estimator as the fit's service time,
+so every prediction can be set against the actual result that follows it (see the
+configuration reference, `[estimate]`).
 
 ## Related work
 

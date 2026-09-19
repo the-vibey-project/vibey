@@ -684,3 +684,106 @@ class TestClaudeCapacityProbe:
         mock_client.connect.assert_awaited_once()
         mock_client.query.assert_awaited_once()
         mock_client.disconnect.assert_awaited_once()
+
+
+class TestBackendRuntime:
+    """A backend profile reaches every SDK call the gateway and probe make."""
+
+    @staticmethod
+    def _local_runtime():
+        from claudeloop.domain.backend import BackendProfile
+
+        return BackendProfile(
+            name="local",
+            base_url="http://127.0.0.1:11434",
+            model_low="qwen2.5-coder:14b",
+            model_medium="qwen2.5-coder:14b",
+            model_high="qwen2.5-coder:32b",
+            cli_path="/opt/claude",
+        ).runtime(auth_token="ollama")
+
+    @staticmethod
+    def _result(**fields):
+        from claude_agent_sdk import ResultMessage
+
+        base = {
+            "subtype": "success",
+            "duration_ms": 1,
+            "duration_api_ms": 1,
+            "is_error": False,
+            "num_turns": 1,
+            "session_id": "sess-local",
+            "total_cost_usd": 0.0008365,
+            "usage": {"input_tokens": 157, "output_tokens": 2},
+            "result": "OK",
+        }
+        base.update(fields)
+        return ResultMessage(**base)
+
+    def test_default_gateway_options_are_plain_anthropic(self) -> None:
+        options = _make_gateway(max_budget_usd=5.0, effort="high")._options()
+        assert options.env == {"CLAUDE_CODE_MAX_RETRIES": "10"}
+        assert options.max_budget_usd == 5.0
+        assert options.effort == "high"
+        assert options.cli_path is None
+
+    def test_local_gateway_options_carry_the_overlay_and_drop_phantom_budgets(self) -> None:
+        gw = _make_gateway(
+            max_budget_usd=5.0,
+            effort="high",
+            model="qwen2.5-coder:14b",
+            backend=self._local_runtime(),
+        )
+        options = gw._options()
+        assert options.env["ANTHROPIC_BASE_URL"] == "http://127.0.0.1:11434"
+        assert options.env["ANTHROPIC_API_KEY"] == ""
+        assert options.env["CLAUDE_CODE_MAX_RETRIES"] == "10"
+        # Claude Code would enforce this against its guess about a free model.
+        assert options.max_budget_usd is None
+        # pass_effort defaults off for a local profile.
+        assert options.effort is None
+        assert options.cli_path == "/opt/claude"
+        assert options.model == "qwen2.5-coder:14b"
+
+    @pytest.mark.asyncio
+    async def test_local_send_turn_records_zero_cost_and_keeps_tokens(self) -> None:
+        gw = _make_gateway(backend=self._local_runtime())
+        mock_client = AsyncMock()
+        result_msg = self._result()
+
+        async def fake_receive():
+            yield result_msg
+
+        mock_client.receive_response = fake_receive
+        with patch(
+            "claudeloop.infrastructure.agent.gateway.ClaudeSDKClient",
+            return_value=mock_client,
+        ):
+            outcome = await gw.send_turn("hi")
+        assert outcome.cost_usd == 0.0
+        assert (outcome.input_tokens, outcome.output_tokens) == (157, 2)
+        assert outcome.signals.local_backend is True
+        assert outcome.raw_events[0]["reported_cost_usd"] == 0.0008365
+
+    @pytest.mark.asyncio
+    async def test_local_probe_asks_the_same_backend(self) -> None:
+        probe = ClaudeCapacityProbe(
+            cwd="/tmp/test", model="qwen2.5-coder:14b", backend=self._local_runtime()
+        )
+        mock_client = AsyncMock()
+        result_msg = self._result(session_id="probe")
+
+        async def fake_receive():
+            yield result_msg
+
+        mock_client.receive_response = fake_receive
+        with patch(
+            "claudeloop.infrastructure.agent.gateway.ClaudeSDKClient",
+            return_value=mock_client,
+        ) as client_cls:
+            outcome = await probe.probe()
+        options = client_cls.call_args.kwargs["options"]
+        assert options.env["ANTHROPIC_BASE_URL"] == "http://127.0.0.1:11434"
+        assert options.cli_path == "/opt/claude"
+        assert outcome.cost_usd == 0.0
+        assert outcome.signals.local_backend is True
