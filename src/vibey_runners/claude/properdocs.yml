@@ -38,6 +38,7 @@ nav:
   - Guides:
       - Autonomous runs, end to end: guides/autonomous-runs.md
       - Rate limits vs. credits: guides/rate-limits-and-credits.md
+      - Running for free on a local backend (Ollama): guides/local-backend.md
       - Never blocking on a human: guides/never-blocking.md
       - Completion detection: guides/completion-detection.md
       - The generated REST surface: guides/rest-api-surface.md

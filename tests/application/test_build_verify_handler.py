@@ -4,8 +4,6 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
-import pytest
-
 from tests.application.fakes import FakeJobRepository, make_job
 from vibey.application.build_verify_handler import (
     BuildVerifyHandler,
@@ -290,21 +288,20 @@ async def test_reviewer_rejection_fails_as_work(tmp_path: Path) -> None:
     assert outcome == Failure(FailureClass.WORK, "diff review did not approve this work item")
 
 
-@pytest.mark.parametrize(
-    ("exit_code", "failure_class"),
-    [(137, FailureClass.ENGINE), (-9, FailureClass.ENGINE), (1, FailureClass.WORK)],
-)
-async def test_a_reviewer_that_died_is_the_engines_failure_not_the_works(
-    tmp_path: Path, exit_code: int, failure_class: FailureClass
+async def test_a_reviewer_whose_backend_is_misconfigured_parks_rather_than_rejects(
+    tmp_path: Path,
 ) -> None:
-    """#209: a reviewer killed mid-review used to fail the item as WORK --
-    blaming the diff -- and never counted against the reviewer's circuit."""
+    """Exit 78: the reviewer never judged the diff, so recording a rejection would be
+    false and retrying would repeat the same fault. The job parks for the fix."""
+    from vibey.application.worker import Park
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
     now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
     reviewer = ScriptedEngine(
-        descriptor=CODEXLOOP,
+        descriptor=CLAUDELOOP_LOCAL,
         base_dir=tmp_path / "engine",
         script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
-        exit_code_script=[exit_code],
+        exit_code_script=[78],
     )
     handler = BuildVerifyHandler(
         worktrees=FakeWorktrees(tmp_path),
@@ -315,11 +312,11 @@ async def test_a_reviewer_that_died_is_the_engines_failure_not_the_works(
         clock=FixedClock(),
     )
 
-    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "qwenloop"}))
 
-    assert outcome == Failure(
-        failure_class, f"diff review did not approve this work item (exit code {exit_code})"
-    )
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "engine_misconfigured"
+    assert "`claudeloop doctor --profile local`" in outcome.request.prompt
 
 
 def test_gate_output_tail_prefers_both_streams_and_labels_stdout() -> None:

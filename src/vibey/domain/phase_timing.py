@@ -81,7 +81,7 @@ from vibey.domain.interfaces.phase_timing_interface import (
     PhaseTimingProjectionInterface,
 )
 from vibey.domain.ledger import EventKind, LedgerEvent
-from vibey.domain.phase import Phase
+from vibey.domain.phase import StoredPhase
 
 TURN_EVENT_CAVEAT: Final = (
     "turn_completed_events counts TurnCompleted ledger events, not turns. "
@@ -170,7 +170,7 @@ class PhaseVisit:
     """One stay in one phase. See ``PhaseVisitInterface``."""
 
     cycle: int
-    phase: Phase
+    phase: StoredPhase
     entered_seq: int
     entered_at: datetime
     entry_observed: bool
@@ -205,7 +205,7 @@ class PhaseTotal:
     """Every visit to one ``(cycle, phase)``. See ``PhaseTotalInterface``."""
 
     cycle: int
-    phase: Phase
+    phase: StoredPhase
     visits: int
     duration: timedelta | None
     measured: bool
@@ -217,7 +217,7 @@ class UnattributedSpend:
     """Spend no visit could own. See ``UnattributedSpendInterface``."""
 
     cycle: int
-    phase: Phase
+    phase: StoredPhase
     spend: PhaseSpend
 
 
@@ -253,8 +253,8 @@ class PhaseTimingProjection:
         self._require_one_project(ordered)
 
         visits: list[PhaseVisit] = []
-        latest: dict[tuple[int, Phase], int] = {}
-        unattributed: dict[tuple[int, Phase], PhaseSpend] = {}
+        latest: dict[tuple[int, StoredPhase], int] = {}
+        unattributed: dict[tuple[int, StoredPhase], PhaseSpend] = {}
 
         if ordered and ordered[0].kind is not EventKind.PHASE_TRANSITIONED:
             self._open(visits, latest, ordered[0], entry_observed=False)
@@ -296,7 +296,7 @@ class PhaseTimingProjection:
     @staticmethod
     def _open(
         visits: list[PhaseVisit],
-        latest: dict[tuple[int, Phase], int],
+        latest: dict[tuple[int, StoredPhase], int],
         event: LedgerEvent,
         *,
         entry_observed: bool,
@@ -317,7 +317,7 @@ class PhaseTimingProjection:
 
     @staticmethod
     def _totals(visits: Sequence[PhaseVisit]) -> tuple[PhaseTotal, ...]:
-        grouped: dict[tuple[int, Phase], list[PhaseVisit]] = {}
+        grouped: dict[tuple[int, StoredPhase], list[PhaseVisit]] = {}
         for visit in visits:
             grouped.setdefault((visit.cycle, visit.phase), []).append(visit)
         totals: list[PhaseTotal] = []

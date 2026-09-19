@@ -4,23 +4,19 @@ business logic for updating health records based on conformance, capacity
 states, and selection outcomes.
 """
 
-import math
-from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
 from vibey.application.dto import EngineHealthRecord, PreflightResult
 from vibey.application.interfaces.engines import EngineHealthRepository
-from vibey.application.interfaces.system import Clock
 from vibey.domain.capacity import (
     AuthenticationFailed,
     CapacityState,
     CreditsExhausted,
     WindowExhausted,
 )
-from vibey.domain.circuit import ENGINE_FAILURE_POLICY
+from vibey.domain.circuit import CIRCUIT_STATE_PARSER, CircuitState, StoredCircuitState
 from vibey.domain.engine import EngineId
-from vibey.domain.interfaces.circuit_interface import EngineFailurePolicyInterface
 
 
 class EngineHealthService:
@@ -31,27 +27,12 @@ class EngineHealthService:
     module rather than a mirrored `*_interface.py`; the reason is written there.
     """
 
-    def __init__(
-        self,
-        repository: EngineHealthRepository,
-        *,
-        failure_policy: EngineFailurePolicyInterface = ENGINE_FAILURE_POLICY,
-        clock: Clock | None = None,
-    ) -> None:
-        """``failure_policy`` decides when ENGINE-class failures open a circuit
-        and when it is probed again (default: open at 3, probe after 5 minutes
-        doubling to 30). ``clock`` dates that probe; unset, it is the system
-        clock, which is what the rest of this service has always read."""
+    def __init__(self, repository: EngineHealthRepository) -> None:
         self._repository = repository
-        self._failure_policy = failure_policy
-        self._clock = clock
-
-    def _now(self) -> datetime:
-        return self._clock.now() if self._clock is not None else datetime.now(UTC)
 
     def _circuit_after_preflight(
         self, record: EngineHealthRecord, preflight: PreflightResult
-    ) -> str:
+    ) -> StoredCircuitState:
         """The circuit an authentication-opened engine carries after a preflight.
 
         `AuthenticationFailed` is the one capacity rejection that schedules
@@ -75,13 +56,13 @@ class EngineHealthService:
             and record.circuit == "half_open"
             and not preflight.auth_ok
         ):
-            return "open"
+            return CircuitState.OPEN
         if (
             record.circuit == "open"
             and record.capacity_state == "AuthenticationFailed"
             and preflight.auth_ok
         ):
-            return "half_open"
+            return CircuitState.HALF_OPEN
         return record.circuit
 
     async def get_or_create(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
@@ -99,7 +80,7 @@ class EngineHealthService:
             conformance_ok=False,
             conformance_at=None,
             auth_ok_at=None,
-            circuit="closed",
+            circuit=CircuitState.CLOSED,
             capacity_state=None,
             resets_at=None,
             probe_next_at=None,
@@ -121,6 +102,10 @@ class EngineHealthService:
         doctor's to grant (update_from_preflight), and a routine startup
         sweep must never silently revoke or forge it."""
         record = await self.get_or_create(project_id, engine_id)
+        # A newer worker owns this circuit. Neither startup nor doctor may
+        # rewrite it or reinterpret it as healthy (vibey#287).
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
         now = datetime.now(UTC)
         updated = EngineHealthRecord(
             project_id=record.project_id,
@@ -152,6 +137,8 @@ class EngineHealthService:
         """Update health record based on preflight check results."""
         record = await self.get_or_create(project_id, engine_id)
 
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
         now = datetime.now(UTC)
         auth_ok_at = now if preflight.auth_ok else None
 
@@ -185,13 +172,15 @@ class EngineHealthService:
         """Record a capacity rejection and update circuit state accordingly."""
         record = await self.get_or_create(project_id, engine_id)
 
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
         circuit_state = record.circuit
         capacity_state_str: str | None = None
         resets_at = None
         probe_next_at = None
 
         if isinstance(capacity_state, CreditsExhausted):
-            circuit_state = "open"
+            circuit_state = CircuitState.OPEN
             capacity_state_str = "CreditsExhausted"
             # No resets_at for credits exhausted (enforced by DB constraint)
             # Probe on exponential backoff
@@ -201,13 +190,13 @@ class EngineHealthService:
             probe_next_at = datetime.now(UTC) + timedelta(minutes=min(5 * (2**probe_attempt), 30))
 
         elif isinstance(capacity_state, WindowExhausted):
-            circuit_state = "open"
+            circuit_state = CircuitState.OPEN
             capacity_state_str = "WindowExhausted"
             resets_at = capacity_state.resets_at
             probe_next_at = capacity_state.resets_at  # Probe when window resets
 
         elif isinstance(capacity_state, AuthenticationFailed):
-            circuit_state = "open"
+            circuit_state = CircuitState.OPEN
             capacity_state_str = "AuthenticationFailed"
             # Deliberately no resets_at and no probe_next_at: waiting cannot
             # fix a credential, so inventing a deadline here would be the
@@ -235,16 +224,14 @@ class EngineHealthService:
 
         return await self._repository.upsert(updated)
 
-    async def record_selection(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
-        """Record that an engine was selected for work.
-
-        It used to take a ``cost_usd`` too, which its one caller never passed,
-        so every engine's spend read $0.00 in ``vibey engines``, ``vibey
-        status`` and the dashboard (issue #209). What a run costs is only
-        known after it runs; ``record_spend`` is where that lands.
-        """
+    async def record_selection(
+        self, project_id: UUID, engine_id: EngineId, cost_usd: float = 0.0
+    ) -> EngineHealthRecord:
+        """Record that an engine was selected for work."""
         record = await self.get_or_create(project_id, engine_id)
 
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
         updated = EngineHealthRecord(
             project_id=record.project_id,
             engine_id=record.engine_id,
@@ -260,69 +247,18 @@ class EngineHealthService:
             probe_attempt=record.probe_attempt,
             consecutive_fail=record.consecutive_fail,
             ewma_failure=record.ewma_failure,
-            cost_usd_cycle=record.cost_usd_cycle,
+            cost_usd_cycle=record.cost_usd_cycle + cost_usd,
             selected_count=record.selected_count + 1,
         )
 
         return await self._repository.upsert(updated)
 
-    async def record_spend(
-        self, project_id: UUID, engine_id: EngineId, cost_usd: float
-    ) -> EngineHealthRecord:
-        """Add a BUILD session's metered spend to the engine's running total.
-
-        ``cost_usd_cycle`` is named for a cycle but nothing resets it, so it is
-        the engine's BUILD-session spend across every cycle of the project.
-        The cycle's own total, DESIGN included, is the ledger's -- ``vibey
-        cost`` reads it there. A negative or non-finite amount is refused
-        rather than stored: it can only come from a corrupt engine payload,
-        and the column is money.
-        """
-        if not math.isfinite(cost_usd) or cost_usd < 0:
-            raise ValueError(f"engine spend must be a finite amount >= 0, got {cost_usd!r}")
-        record = await self.get_or_create(project_id, engine_id)
-        return await self._repository.upsert(
-            replace(record, cost_usd_cycle=record.cost_usd_cycle + cost_usd)
-        )
-
-    async def record_failure(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
-        """Record one ENGINE-class failure; open the circuit at the threshold.
-
-        Below the threshold only the counters move. At it, the circuit opens
-        and ``probe_next_at`` is set from the failure policy's backoff --
-        never one without the other, because ``EngineSelector`` half-opens an
-        OPEN circuit only once a scheduled time passes, and an OPEN engine is
-        never selected, so a circuit opened with no probe time could never
-        close again. The capacity state and ``resets_at`` are cleared at the
-        same moment: the circuit is now open for a failure, not a rejection,
-        and a stale ``resets_at`` would half-open it at once.
-        """
-        record = await self.get_or_create(project_id, engine_id)
-        consecutive = record.consecutive_fail + 1
-        ewma = min(1.0, record.ewma_failure * 0.9 + 0.1)
-        if not self._failure_policy.trips(consecutive):
-            return await self._repository.upsert(
-                replace(record, consecutive_fail=consecutive, ewma_failure=ewma)
-            )
-        return await self._repository.upsert(
-            replace(
-                record,
-                circuit="open",
-                capacity_state=None,
-                resets_at=None,
-                probe_next_at=self._failure_policy.probe_at(
-                    now=self._now(), consecutive_failures=consecutive
-                ),
-                probe_attempt=record.probe_attempt + 1,
-                consecutive_fail=consecutive,
-                ewma_failure=ewma,
-            )
-        )
-
     async def record_success(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
         """Record a successful execution (clears consecutive failures)."""
         record = await self.get_or_create(project_id, engine_id)
 
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
         # Successful execution: reset consecutive failures, update EWMA
         updated = EngineHealthRecord(
             project_id=record.project_id,
@@ -332,7 +268,7 @@ class EngineHealthService:
             conformance_ok=record.conformance_ok,
             conformance_at=record.conformance_at,
             auth_ok_at=record.auth_ok_at,
-            circuit="closed",  # Close circuit on success
+            circuit=CircuitState.CLOSED,
             capacity_state=None,  # Clear capacity state
             resets_at=None,
             probe_next_at=None,

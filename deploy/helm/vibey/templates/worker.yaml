@@ -62,6 +62,8 @@ spec:
           args:
             - worker
             {{- if .Values.worker.project }}
+            {{- /* Validates the value; the KEDA scaler interpolates it into SQL. */}}
+            {{- $_ := include "vibey.workerProjectHex" . }}
             - --project
             - {{ .Values.worker.project | quote }}
             {{- end }}
@@ -92,6 +94,29 @@ spec:
                 secretKeyRef:
                   name: {{ $.Values.engineAuth.existingSecret }}
                   key: {{ .key }}
+            {{- end }}
+            {{- if .Values.ollama.enabled }}
+            {{- $ollamaURL := include "vibey.ollamaURL" . }}
+            # vibey's own sovereign providers want the server root.
+            - name: VIBEY_OLLAMA_URL
+              value: {{ $ollamaURL | quote }}
+            - name: VIBEY_OLLAMA_MODEL
+              value: {{ .Values.ollama.model | quote }}
+            # qwenloop's openai-compat backend wants the OpenAI base URL, /v1
+            # included; a base URL alone is what makes `auto` select it.
+            - name: QWENLOOP_BASE_URL
+              value: {{ printf "%s/v1" $ollamaURL | quote }}
+            - name: QWENLOOP_MODEL
+              value: {{ .Values.ollama.model | quote }}
+            {{- if .Values.ollama.qwenloopFeature }}
+            # The one qwenloop switch that reaches a worker (ADR-0015): a
+            # project's [features] table never makes it into the record.
+            - name: VIBEY_FEATURE_QWENLOOP
+              value: "1"
+            {{- end }}
+            {{- end }}
+            {{- with .Values.worker.extraEnv }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           volumeMounts:
             - name: worktrees

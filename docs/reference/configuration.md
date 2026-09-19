@@ -16,9 +16,9 @@ active runtime path" status the README gives `infrastructure/notify/` and
 
 | Input | Read by | What it controls |
 |---|---|---|
-| `./vibey.toml`, key `[features].qwenloop` only | `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`) | Whether `qwenloop` is added to the health sweep. The file is read from the current directory with `parse_toml_string`, never validated by `parse_config`; a missing or malformed file counts as `qwenloop = false`. Every other table on this page is ignored. |
-| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker` and every job handler | Cycle cap, per-cycle spend and turn caps, skills-context policy, and (in principle) `features.qwenloop` — see below. |
-| Environment variables | See [Environment variables](#environment-variables) | Database DSN, the qwenloop switch, the sovereign DESIGN provider's evidence directory. |
+| `./vibey.toml`, keys `[features].qwenloop`, `[features].claudeloop_local` and `[engines.claudeloop_local]` only | `vibey doctor` (`infrastructure/engines/local_engines.py` `LocalEngineSettings.from_toml`) | Which local engines are added to the health sweep, and the profile claudeloop-local is probed with. The file is read from the current directory with `parse_toml_string`, never validated by `parse_config`; a missing or malformed file counts as every switch off. Every other table on this page is ignored. |
+| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, `vibey work` and every job handler | Cycle cap, per-cycle spend and turn caps, skills-context policy, REVIEW's [automated checks](#review), the [gate-command](#gates) timeout and environment isolation, and (in principle) the local-engine keys above — see below. |
+| Environment variables | See [Environment variables](#environment-variables) | Database DSN, the local-engine switches and claudeloop-local's profile, the one local Ollama endpoint and model, the sovereign providers' timeout, and the sovereign DESIGN provider's evidence directory. |
 
 The project record is written once, at creation, by one of two paths:
 
@@ -37,16 +37,24 @@ Neither path passes through `parse_config`, and neither writes or reads a
 `vibey.toml`. No command updates these values on an existing project.
 
 Neither path writes a `features` key either, so the worker's check of the
-stored `features.qwenloop` is always false for projects created today:
-**`VIBEY_FEATURE_QWENLOOP` is the switch that reaches the worker.**
+stored `features.qwenloop` / `features.claudeloop_local` is always false for
+projects created today: **`VIBEY_FEATURE_QWENLOOP` and
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL` are the switches that reach the worker.** All
+three commands ask one resolver, `LocalEngineSettings`, so they cannot disagree
+about which local engines exist ([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md)).
 
 ## Environment variables
 
 | Variable | Read by | Effect |
 |---|---|---|
 | `VIBEY_PG_URL` | `bootstrap.database_url()` (every command that opens the queue) | PostgreSQL DSN. Required; there is no default — `vibey` exits with `DatabaseNotConfigured` if it is unset. |
-| `VIBEY_FEATURE_QWENLOOP` | `vibey worker` (`bootstrap.qwenloop_enabled`), `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`), and `load_config_from_path` | Overrides `features.qwenloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other value disables. When set it wins over both the stored project record and `./vibey.toml`. Only `load_config_from_path` rejects a non-boolean value. For the worker, enabling it adds a qwenloop adapter and makes qwenloop the standby engine for BUILD rotation. |
-| `VIBEY_EVIDENCE_DIR` | `vibey work --provider qwenloop`, `vibey worker --provider qwenloop` | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source, and the phase stops there. |
+| `VIBEY_FEATURE_QWENLOOP` | `vibey worker`, `vibey work`, `vibey doctor` (all through `LocalEngineSettings`), and `load_config_from_path` | Overrides `features.qwenloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other value disables. When set it wins over both the stored project record and `./vibey.toml`. Only `load_config_from_path` rejects a non-boolean value. For the worker, enabling it adds a qwenloop adapter to the LOCAL tier, which BUILD selection prefers before any paid engine; for `work` and `worker`, any local engine switched on makes `qwenloop` the default `--provider`. |
+| `VIBEY_FEATURE_CLAUDELOOP_LOCAL` | same | The same switch for `claudeloop-local` (`features.claudeloop_local`): the claudeloop binary on a local backend profile, in the LOCAL tier beside qwenloop. |
+| `VIBEY_CLAUDELOOP_LOCAL_PROFILE` | `LocalEngineSettings` | Overrides `[engines.claudeloop_local].profile` when set and non-empty: the claudeloop `[profiles.NAME]` every claudeloop-local run and its `doctor` pass as `--profile NAME`. |
+| `VIBEY_EVIDENCE_DIR` | `vibey work --provider qwenloop`, `vibey worker --provider qwenloop` (`QwenloopDesignProvider.from_environment`) | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)): `<topic>.md` or `<topic>.txt`, first line `source: <where it came from>`. Unset or empty, research refuses rather than inventing a source, and the research job parks a `research_evidence` human gate on its first attempt naming the file it wants; supply it and answer the gate to retry. |
+| `VIBEY_OLLAMA_URL` | `vibey work` / `vibey worker` on the qwenloop provider (`OllamaChatClient.from_environment`), and the qwenloop engine (`LocalEndpointEnvironment`) | The one local endpoint setting, in root form. The sovereign DESIGN and DECOMPOSE providers talk to it; default `http://127.0.0.1:11434`; empty counts as unset. Anything but an `http`/`https` URL with a host is a `ConfigError` (exit 3). When set, the qwenloop engine's process also gets `QWENLOOP_BASE_URL=<url>/v1` unless that is already set, attaching qwenloop to this server; unset, qwenloop keeps its own backend selection. claudeloop-local reads its endpoint from its claudeloop profile's `base_url`. vibey-gh's local-review fallback reads the same variable. |
+| `VIBEY_OLLAMA_MODEL` | same | The local model both sovereign providers use, and — with `VIBEY_OLLAMA_URL` set — qwenloop's `QWENLOOP_MODEL` unless that is already set. Default `qwen2.5-coder:14b`; `--ollama-model` on either command takes precedence. |
+| `VIBEY_OLLAMA_TIMEOUT` | same | Seconds one local generation may take. Default `900`; anything but a positive whole number is a `ConfigError` (exit 3). |
 
 ## Schema semantics
 
@@ -66,8 +74,9 @@ accepted), and `[deploy].target` / `[deploy].iac` accept any string.
 
 Engine names: an unknown engine name in `[engines].enabled` or as a key of
 `[engines].weights` fails validation with a `ConfigError` naming the offending
-path, as does `qwenloop` in `[engines].enabled` or any `[phases.*].engines`
-list before `features.qwenloop = true`. `[phases.*].engines` entries are
+path, as does `qwenloop` (or `claudeloop-local`) in `[engines].enabled` or any
+`[phases.*].engines` list before `features.qwenloop` (or
+`features.claudeloop_local`) is `true`. `[phases.*].engines` entries are
 otherwise not validated — unknown names and engines outside
 `[engines].enabled` are accepted as written — and `[engines].weights` may name
 `qwenloop` without the feature flag. Unknown tables (for example
@@ -142,12 +151,31 @@ Unlike `[budget]` above, this key **is** read at runtime, by
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `enabled` | array of strings | `["claudeloop", "codexloop", "cursorloop", "agyloop"]` | Must be a subset of the known engines below. If omitted while `features.qwenloop = true`, `qwenloop` is appended to the default automatically; an explicit list is never extended. |
+| `enabled` | array of strings | `["claudeloop", "codexloop", "cursorloop", "agyloop"]` | Must be a subset of the known engines below. If omitted, every local engine whose feature is `true` (`qwenloop`, then `claudeloop-local`) is appended to the default automatically; an explicit list is never extended. |
 | `weights` | table of string→int | `{}` | Per-engine weight for smooth weighted round robin ([ADR-0005](../architecture/decisions/0005-smooth-weighted-round-robin.md)). Keys must be known engines; values are not validated. |
 
-Known engine ids: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, and
-`qwenloop` (valid in `enabled` and `[phases.*].engines` only once
-`features.qwenloop = true`).
+Known engine ids: `claudeloop`, `codexloop`, `cursorloop`, `agyloop` (tier
+PAID), and the local engines `qwenloop` and `claudeloop-local` (tier LOCAL; each
+valid in `enabled` and `[phases.*].engines` only once its feature is `true`).
+BUILD selection prefers the LOCAL tier and falls back to PAID only when no local
+engine is eligible ([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md)).
+
+### `[engines.claudeloop_local]`
+
+claudeloop-local's own settings. Read at runtime by `LocalEngineSettings` — from
+`./vibey.toml` for `vibey doctor`, from the stored project record for the worker —
+and validated there and by `parse_config` alike.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `profile` | string | `"local"` | The claudeloop `[profiles.NAME]` table (in `claudeloop.toml` or `~/.config/claudeloop/config.toml`) every run and `doctor` passes as `--profile NAME`. The profile, not vibey, carries the local server's `base_url` and model tiers. Must not be blank. `VIBEY_CLAUDELOOP_LOCAL_PROFILE` overrides it. |
+| `context_window` | integer | `32768` | The descriptor's context window; keep it equal to the profile's `context_window` and the server's `OLLAMA_CONTEXT_LENGTH`. Must be a positive integer. |
+| `structured_verdict` | boolean | `false` | Claim the STRUCTURED_VERDICT capability. Off by default; turned on, `vibey doctor --conformance` must see a `VerdictRendered` event from the configured model or the engine fails conformance and is not selected. |
+
+Effort: every level passes `--profile NAME --preset low|medium|high` (never
+`--effort`, which a local profile does not forward); HIGH and MAX run the `high`
+preset and report `achieved = STANDARD`, the honest ceiling. Cost is 0/0. The
+recipe is in the [local models guide](../guides/local-models-ollama.md).
 
 ## `[phases.design]`, `[phases.build]`, `[phases.review]`
 
@@ -185,20 +213,24 @@ parallelism = 4
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `qwenloop` | boolean | `false` | Must be `true` before `qwenloop` can appear in `[engines].enabled` or any `[phases.*].engines` list. |
+| `claudeloop_local` | boolean | `false` | The same for `claudeloop-local`. |
 
-Runtime: `vibey doctor` reads this key from `./vibey.toml`. `vibey worker`
-reads it from the project's stored config record, which `vibey new` and the
-operator never write, so for the worker `VIBEY_FEATURE_QWENLOOP=1` is
-currently the only way to enable qwenloop. The environment variable overrides
-both. Without it, the worker's default adapter set has no qwenloop adapter.
+Runtime: `vibey doctor` reads these keys from `./vibey.toml`. `vibey worker` and
+`vibey work` read them from the project's stored config record, which `vibey new`
+and the operator never write, so for those two `VIBEY_FEATURE_QWENLOOP=1` /
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL=1` are currently the way to switch them on. Each
+environment variable overrides its key. With either local engine on, `vibey work`
+and `vibey worker` default `--provider` to `qwenloop` (the sovereign DESIGN and
+DECOMPOSE providers); an explicit `--provider` still wins.
 
 ## `[qwenloop]`
 
 Only meaningful when `features.qwenloop = true`. In engine-driven BUILD
-rotation qwenloop is a standby tier — selected only when no paid engine is
-eligible ([ADR-0015](../architecture/decisions/0015-qwenloop-standby.md)).
-It is also the sovereign DESIGN provider, selected explicitly with
-`vibey work --provider qwenloop` or `vibey worker --provider qwenloop`
+rotation qwenloop is in the LOCAL tier, preferred before any paid engine
+([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md),
+amending [ADR-0015](../architecture/decisions/0015-qwenloop-standby.md)'s
+standby). It is also the sovereign DESIGN provider — the default `--provider`
+once a local engine is switched on
 ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)).
 These keys mirror the runner's own `QwenConfig`
 (`src/vibey_runners/qwen/src/qwenloop/domain/config.py`, which additionally
@@ -230,6 +262,7 @@ operator's `spec.skillsContext` object (copied verbatim).
 | `mode` | string | `"off"` | `off`, `shadow` (measure only, never changes prompts), or `inject` (append successful packets to BUILD prompts). Any other value raises when the worker is built. |
 | `budget` | integer | `6000` | Token budget for retrieval, 1,000–32,000 (enforced by the `vibey new` flag, the operator CRD, and `VibeySkillsContextCompiler`). |
 | `timeout_seconds` | number | `120.0` | Skills compile timeout; must be positive. Settable only through `spec.skillsContext`. |
+| `kill_grace_seconds` | number | `5` | How long to wait for a `vibey-skills` process that overran `timeout_seconds` (or whose compile was cancelled) to be reaped after its process group is killed with `SIGKILL`. It only runs out when a process that left the group still holds its output open; the worker then logs `skills_context_process_not_reaped` and moves on rather than wait on it, and a timed-out compile still falls back to the existing prompt ([#283](https://github.com/the-vibey-project/vibey/issues/283)). Must be a finite number greater than zero. Settable only through `spec.skillsContext`. |
 | `command` | array of non-empty strings | unset (`<python> -m vibey_skills.cli`) | Override for the `vibey-skills` command. Read by `compiler_from_config` but not declared in the `VibeyProject` CRD schema, so neither creation path sets it today. |
 | `index_path` | string | `.vibey/skills-context/index` under the repo | Path to the skills index; relative paths resolve under the repo. Read by `compiler_from_config` but not declared in the CRD schema, so neither creation path sets it today. |
 
@@ -262,6 +295,58 @@ vibey's own `bandit -q -r src/vibey` is enforced for real as gate 6 of
 A malformed `review` object (not an object, a command list that is not a list
 of non-empty string arrays) raises when the worker is built, rather than
 silently running nothing.
+
+These commands run through the same gate runner as BUILD's, so they see the
+environment described under [Gate commands](#gates): the default `ruff` has to
+be installed where the project can reach it, not only inside vibey's venv.
+
+## Gate commands (project config record — not a `vibey.toml` table) { #gates }
+
+`VibeyConfig` has no `gates` field; a `[gates]` table in `vibey.toml` is
+silently ignored by `parse_config`, and the worker never loads `vibey.toml`
+anyway. The values live in the project's stored config record under a `gates`
+object, and `SubprocessGateRunner.from_config`
+(`infrastructure/build/gate_runner.py`) reads them when
+`bootstrap.build_full_worker` builds the worker. That one runner executes every
+gate command the worker runs: `build.verify`'s verification commands and its
+`git diff`, `build.integrate`'s integration gates, and REVIEW's
+[automated checks](#review).
+
+Every gate command:
+
+- runs with every `GIT_*` variable removed, always;
+- runs, by default, with vibey's own Python environment removed —
+  `VIRTUAL_ENV`, `VIRTUAL_ENV_PROMPT`, `PYTHONHOME`, `PYTHONPATH`, and the
+  `PATH` entries under the active venv and under the running interpreter's
+  prefix when that interpreter is a venv. It is the same isolation engine
+  sessions get, so a gate's bare `pip install -e .` cannot land inside vibey's
+  venv and its bare `python` or `pytest` never resolves to vibey's
+  interpreter;
+- reads `/dev/null` as stdin, so a command that prompts gets end-of-file
+  instead of waiting;
+- leads a process group of its own. When it overruns `timeout_seconds`, the
+  whole group is killed with `SIGKILL` and the gate **fails with exit code
+  124** and the message `gate command timed out after <N>s and was killed:
+  <command>` — a failing gate for the repair loop, the way a command that
+  cannot start fails with 127, not an error and not a wait. When the task
+  running it is cancelled (Ctrl-C on the worker, event-loop shutdown), the
+  group is killed the same way before the cancellation propagates;
+- has output that is not valid UTF-8 decoded with replacement characters
+  rather than raising.
+
+Neither `vibey new` nor the operator's `VibeyProject` spec writes this object
+today; like `review`, the record is written directly.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `timeout_seconds` | number | `1800` (30 minutes) | Per command, not per job; a project's whole test suite is usually one command. Must be a finite number greater than zero. |
+| `kill_grace_seconds` | number | `5` | How long to wait for a killed command to be reaped. `SIGKILL` cannot be caught, so this only runs out when a process that left the command's group (a daemon in a session of its own) still holds its output open; the worker logs `gate_process_not_reaped` and moves on rather than wait on it. Must be a finite number greater than zero. The same kill-and-reap (`infrastructure/process/reaper.py`) bounds [`skills_context.kill_grace_seconds`](#skills_context) and the engines' preflight probes ([#283](https://github.com/the-vibey-project/vibey/issues/283)). |
+| `isolate_python_env` | bool | `true` | `false` passes vibey's Python environment through to gate commands, as before [#212](https://github.com/the-vibey-project/vibey/issues/212) — for a project whose gates rely on tools installed beside vibey, such as the `ruff` and `bandit` of a development checkout's venv. `GIT_*` is stripped either way. |
+
+`true` and `false` are rejected as timeouts rather than read as `1` and `0`.
+A malformed `gates` object — not an object, a non-boolean
+`isolate_python_env`, a timeout that is not a positive finite number — raises
+when the worker is built.
 
 ## Full example
 

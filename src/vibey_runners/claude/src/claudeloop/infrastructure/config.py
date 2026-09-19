@@ -1,7 +1,14 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Configuration precedence: CLI flags > environment variables > config file >
 built-in defaults. See docs/getting-started/configuration.md for the full
-settings table this backs."""
+settings table this backs.
+
+Backend profiles are the one structured setting: ``[profiles.<name>]`` tables in
+either config file (a same-named table in ``./claudeloop.toml`` replaces the one
+in the home file whole), selected by ``profile`` — itself an ordinary setting, so
+``--profile`` beats ``CLAUDELOOP_PROFILE`` beats ``profile = "..."`` in a file.
+The selected profile is resolved into ``RunnerConfig.backend`` and checked
+against the rest of the config before anything runs."""
 
 from __future__ import annotations
 
@@ -16,6 +23,8 @@ if sys.version_info >= (3, 11):  # pragma: no cover - exactly one branch runs pe
 else:  # pragma: no cover - exactly one branch runs per interpreter
     import tomli as tomllib
 
+from claudeloop.domain.backend import BackendProfile
+from claudeloop.domain.interfaces import BackendProfileInterface
 from claudeloop.domain.model_profile import (
     DEFAULT_MODEL_HIGH,
     DEFAULT_MODEL_LOW,
@@ -24,8 +33,13 @@ from claudeloop.domain.model_profile import (
     ModelEffortProfile,
     resolve_profile,
 )
+from claudeloop.infrastructure.backend import BackendProfileLoader
+from claudeloop.infrastructure.interfaces import BackendProfileLoaderInterface
 
 _ENV_PREFIX = "CLAUDELOOP_"
+# Fields resolved by load_config itself rather than read as one scalar from a
+# file or an environment variable.
+_STRUCTURED_FIELDS = frozenset({"backend"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,13 +76,18 @@ class RunnerConfig:
     progress_wait_initial_seconds: float = 30.0
     progress_wait_factor: float = 2.0
     progress_wait_ceiling_seconds: float = 300.0
+    # Name of the [profiles.<name>] table to run against; None → Anthropic.
+    profile: str | None = None
+    # The resolved profile. Set by load_config, never read from a file or env var.
+    backend: BackendProfileInterface = BackendProfile()
 
     def aliases(self) -> ModelAliases:
-        return ModelAliases(
-            low=self.model_low,
-            medium=self.model_medium,
-            high=self.model_high,
+        """The low/medium/high table. A profile's own tiers replace the top-level
+        ``model_*`` settings while it is selected."""
+        low, medium, high = self.backend.tier_models(
+            low=self.model_low, medium=self.model_medium, high=self.model_high
         )
+        return ModelAliases(low=low, medium=medium, high=high)
 
     def resolved_profile(self) -> ModelEffortProfile:
         return resolve_profile(
@@ -99,6 +118,8 @@ class RunnerConfig:
 def _from_env() -> dict[str, Any]:
     overrides: dict[str, Any] = {}
     for f in fields(RunnerConfig):
+        if f.name in _STRUCTURED_FIELDS:
+            continue
         env_name = _ENV_PREFIX + f.name.upper()
         raw = os.environ.get(env_name)
         if raw is None:
@@ -107,12 +128,15 @@ def _from_env() -> dict[str, Any]:
     return overrides
 
 
-def _from_file(path: Path) -> dict[str, Any]:
+def _read_file(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {}
     with path.open("rb") as fh:
-        data = tomllib.load(fh)
-    known = {f.name for f in fields(RunnerConfig)}
+        return tomllib.load(fh)
+
+
+def _from_file(data: dict[str, Any]) -> dict[str, Any]:
+    known = {f.name for f in fields(RunnerConfig)} - _STRUCTURED_FIELDS
     return {k: v for k, v in data.items() if k in known}
 
 
@@ -132,13 +156,23 @@ def load_config(
     cwd: Path,
     home: Path | None = None,
     cli_overrides: dict[str, Any] | None = None,
+    profile_loader: BackendProfileLoaderInterface | None = None,
 ) -> RunnerConfig:
+    """Raises ValueError (BackendProfileError) when the selected profile is unknown
+    or invalid, or does not fit the rest of the config — a ``claude-*`` model on a
+    local backend, or web search / deep research, which a local backend cannot
+    serve."""
+    loader = profile_loader or BackendProfileLoader()
     config = RunnerConfig()
 
     file_overrides: dict[str, Any] = {}
+    profiles: dict[str, BackendProfileInterface] = {}
     home_config = (home or Path.home()) / ".config" / "claudeloop" / "config.toml"
-    file_overrides.update(_from_file(home_config))
-    file_overrides.update(_from_file(cwd / "claudeloop.toml"))
+    for path in (home_config, cwd / "claudeloop.toml"):
+        data = _read_file(path)
+        file_overrides.update(_from_file(data))
+        if "profiles" in data:
+            profiles.update(loader.parse(data["profiles"], source=str(path)))
     if file_overrides:
         config = replace(config, **file_overrides)
 
@@ -151,4 +185,8 @@ def load_config(
         if cleaned:
             config = replace(config, **cleaned)
 
+    backend = loader.select(profiles, config.profile)
+    config = replace(config, backend=backend)
+    backend.check_model(config.resolved_profile().model)
+    backend.check_tools(web_search=config.web_search, deep_research=config.deep_research)
     return config

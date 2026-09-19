@@ -7,7 +7,7 @@ otherwise learn: whether a runner carrying the sovereign label is online **now**
 
 Without that fact the compliant-looking change is a trap, and it is worth naming
 because it has already cost this project a production outage in another costume.
-`review-fallback` runs on a self-hosted runner. Disabled, the job *skips*, and a
+`review-sovereign` runs on a self-hosted runner. Disabled, the job *skips*, and a
 skipped job counts as completed. Enabled with no runner online, it **queues** — not
 failed, not cancelled, simply pending. The job that publishes the required
 `PR automation / gate` check needs it and is guarded by `always()`, which waits for

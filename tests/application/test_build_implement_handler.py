@@ -772,3 +772,52 @@ async def test_a_budget_grant_raises_the_cap_and_the_session_runs(tmp_path: Path
     await gates.answer(gate.gate_id, answer={"max_dollars": 11, "max_turns": 30}, answered_by="op")
     still_parked = await handler.handle(job)
     assert isinstance(still_parked, Park)
+
+
+# ── exit 78: a backend the runner declared misconfigured (ADR-0038) ──────────
+
+
+async def test_exit_78_parks_for_a_human_instead_of_failing_into_a_retry(tmp_path: Path) -> None:
+    """claudeloop exits 78 (EX_CONFIG) for `BackendMisconfigured`: an unreachable
+    local server, a model not pulled, a context too small. A WORK failure would retry
+    the same fault until the ladder ran out; a park asks the one party who can fix it."""
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP_LOCAL,
+        base_dir=tmp_path / "engine",
+        script=_wind_down_script(),
+        exit_code_script=[78],
+    )
+    jobs = FakeJobRepository()
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=jobs,
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job())
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "engine_misconfigured"
+    assert "claudeloop-local" in outcome.request.prompt
+    assert "'item-1'" in outcome.request.prompt
+    assert "`claudeloop doctor --profile local`" in outcome.request.prompt
+    # Nothing downstream was enqueued: the item never ran.
+    assert await jobs.claim(_job().project_id, owner="t", lease=timedelta(seconds=5)) is None
+
+
+async def test_a_completed_run_is_complete_whatever_its_exit_code(tmp_path: Path) -> None:
+    """The park is for a run its backend could not serve; a run that reported
+    completion was served, and it proceeds to verify."""
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP, base_dir=tmp_path / "engine", exit_code_script=[78]
+    )
+    handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
+
+    outcome = await handler.handle(_job(payload={"title": "t"}))
+
+    assert isinstance(outcome, Success)

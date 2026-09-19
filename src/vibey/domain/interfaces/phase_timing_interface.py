@@ -9,12 +9,16 @@ Protocols so a consumer -- the forecast slice of issue #88 -- can depend on
 the shape without depending on ``domain/phase_timing.py``.
 """
 
-from collections.abc import Mapping, Sequence
-from datetime import datetime, timedelta
-from typing import Protocol, runtime_checkable
+from __future__ import annotations
 
-from vibey.domain.ledger import LedgerEvent
-from vibey.domain.phase import Phase
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from datetime import datetime, timedelta
+
+    from vibey.domain.ledger import LedgerEvent
+    from vibey.domain.phase import StoredPhase
 
 
 @runtime_checkable
@@ -37,7 +41,7 @@ class PhaseSpendInterface(Protocol):
         """The ``turns`` explicitly reported on ``BudgetSpent`` events."""
         ...
 
-    def plus(self, other: "PhaseSpendInterface") -> "PhaseSpendInterface":
+    def plus(self, other: PhaseSpendInterface) -> PhaseSpendInterface:
         """The sum of two spends. Never mutates either operand."""
         ...
 
@@ -50,13 +54,6 @@ class LedgerSpendRuleInterface(Protocol):
         """What one event spent, or None if it is not a spend event at all."""
         ...
 
-    def spend_of_payload(
-        self, kind: str, payload: Mapping[str, object]
-    ) -> PhaseSpendInterface | None:
-        """The same rule for an event that is not on the ledger yet, given its
-        ``EventKind`` value string and its payload."""
-        ...
-
 
 @runtime_checkable
 class PhaseVisitInterface(Protocol):
@@ -67,7 +64,7 @@ class PhaseVisitInterface(Protocol):
     def cycle(self) -> int: ...
 
     @property
-    def phase(self) -> Phase: ...
+    def phase(self) -> StoredPhase: ...
 
     @property
     def entered_seq(self) -> int: ...
@@ -123,7 +120,7 @@ class PhaseTotalInterface(Protocol):
     def cycle(self) -> int: ...
 
     @property
-    def phase(self) -> Phase: ...
+    def phase(self) -> StoredPhase: ...
 
     @property
     def visits(self) -> int: ...
@@ -151,7 +148,7 @@ class UnattributedSpendInterface(Protocol):
     def cycle(self) -> int: ...
 
     @property
-    def phase(self) -> Phase: ...
+    def phase(self) -> StoredPhase: ...
 
     @property
     def spend(self) -> PhaseSpendInterface: ...

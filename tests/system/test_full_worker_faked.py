@@ -68,8 +68,16 @@ def _git(repo: Path, *argv: str) -> None:
 # `review.security_commands` travels from the project config record through
 # `bootstrap.build_full_worker` into a real subprocess. `src` here is the
 # scratch repo's own source directory, which `_make_repo` populates.
+#
+# The scratch project has no tooling of its own: `bandit` and `ruff` are the ones
+# installed beside vibey, which gate commands no longer see by default (#212 --
+# vibey's Python environment is stripped from every gate). So it opts out through
+# `gates.isolate_python_env`, the honest description of a project whose gates rely
+# on vibey's tools, and also the end-to-end proof that the `gates` object travels
+# the same route `review` does.
 _REVIEW_CONFIG: dict[str, object] = {
-    "review": {"security_commands": [["bandit", "-q", "-r", "src"]]}
+    "review": {"security_commands": [["bandit", "-q", "-r", "src"]]},
+    "gates": {"isolate_python_env": False},
 }
 
 

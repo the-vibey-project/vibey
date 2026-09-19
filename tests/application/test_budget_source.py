@@ -4,6 +4,7 @@
 events carry no dollars in production) plus explicit BUDGET_SPENT."""
 
 import asyncio
+import dataclasses
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -14,7 +15,13 @@ from hypothesis import strategies as st
 
 from vibey.application.budget_source import LedgerBudgetSource
 from vibey.application.interfaces import LedgerBudgetSourceInterface
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
+from vibey.domain.ledger import (
+    EventKind,
+    LedgerEvent,
+    Provenance,
+    UnrecognizedEventKind,
+    digest_event,
+)
 from vibey.domain.phase import Phase
 from vibey.domain.phase_timing import PhaseSpend
 
@@ -234,3 +241,21 @@ async def test_the_spend_rule_is_a_constructor_argument() -> None:
     budget = await LedgerBudgetSource(_Reader(events), spend_rule=FlatRule()).current(uuid4(), 1)
 
     assert (budget.dollars_spent, budget.turns_spent) == (4.0, 2)
+
+
+async def test_a_kind_this_vibey_does_not_know_spends_nothing() -> None:
+    """vibey#275: a newer vibey's event is kept in the ledger but is not spend
+    this vibey can account for -- even when its payload looks like spend."""
+    spend = {"dollars": 40.0, "turns": 40, "cost_usd": 40.0}
+    newer = [
+        dataclasses.replace(
+            _event(1, EventKind.TURN_COMPLETED, spend), kind=UnrecognizedEventKind(raw)
+        )
+        for raw in ("TranscriptRecorded", "CostEstimated", "turncompleted")
+    ]
+    events = [_event(1, EventKind.BUDGET_SPENT, {"dollars": 0.5, "turns": 1}), *newer]
+
+    budget = await LedgerBudgetSource(_Reader(events)).current(uuid4(), 1)
+
+    assert budget.dollars_spent == 0.5
+    assert budget.turns_spent == 1

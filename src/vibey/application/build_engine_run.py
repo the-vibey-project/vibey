@@ -6,14 +6,14 @@ in how a run is driven or persisted."""
 
 from dataclasses import dataclass
 
-from vibey.application.dto import JobRecord, RunHandle
+from vibey.application.dto import HumanGateRequest, JobRecord, RunHandle
 from vibey.application.interfaces import (
     BuildLedger,
 )
 from vibey.application.ports import EngineAdapter
 from vibey.domain.correlation import DELIVERY_CORRELATION
+from vibey.domain.engine import EXIT_CODE_BACKEND_MISCONFIGURED, EngineDescriptor
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
-from vibey.domain.job import FailureClass
 from vibey.domain.ledger import EventKind
 
 
@@ -27,27 +27,35 @@ class RunOutcome:
     the graceful-handoff signal. None for adapters without the capability
     or while the process is still running."""
 
-    def incomplete_failure_class(self, engine: EngineAdapter) -> FailureClass:
-        """Whose fault a run that did not complete is.
+    def misconfiguration_gate(
+        self, descriptor: EngineDescriptor, work_item_id: str | None
+    ) -> HumanGateRequest | None:
+        """The human gate for a run that ended on its own backend's configuration.
 
-        Without an exit code, or with a clean one, the run simply ended
-        without a completing verdict: that is the work's (``WORK``), as it
-        always was. A non-zero exit is the adapter's to attribute, because
-        only the adapter can tell the project's own failure from the runner
-        dying -- ``attribute`` classifies 124 (timed out), 137 and -9 (killed)
-        as ``ENGINE``. Until this asked it, both BUILD handlers hard-coded
-        ``WORK`` and no ``Failure(ENGINE)`` could be produced in production,
-        so a crashing engine never counted toward opening its circuit (issue
-        #209). No output tail is passed: the handlers do not hold one.
+        Exit 78 (EX_CONFIG) is the runner saying its backend cannot serve this run:
+        claudeloop's `BackendMisconfigured` -- an unreachable local server, a model
+        that is not pulled or fails to load, a context window too small for one
+        request. No retry fixes any of that, and a retry burns an attempt of a
+        bounded ladder on the same fault, so the job parks and asks for the fix.
+        Answering the gate retries the job; the engine's own `doctor` names the cause.
+
+        Returns None for any other exit, so both BUILD handlers ask the same question
+        and cannot disagree about the answer.
         """
-        if self.exit_code is None or self.exit_code == 0:
-            return FailureClass.WORK
-        return engine.attribute(self.exit_code, "")
-
-    @property
-    def exit_note(self) -> str:
-        """`` (exit code N)`` for a failure detail, or nothing when unknown."""
-        return "" if self.exit_code is None else f" (exit code {self.exit_code})"
+        if self.exit_code != EXIT_CODE_BACKEND_MISCONFIGURED:
+            return None
+        doctor = " ".join((descriptor.binary, "doctor", *descriptor.doctor_args))
+        engine = descriptor.engine_id.value
+        return HumanGateRequest(
+            kind="engine_misconfigured",
+            prompt=(
+                f"engine {engine} stopped on work item {work_item_id!r} with exit "
+                f"{EXIT_CODE_BACKEND_MISCONFIGURED}: its backend is misconfigured (an "
+                "unreachable server, a model not pulled or failing to load, or a context "
+                f"window too small). Run `{doctor}` to see which, fix it, then answer "
+                "anything to retry."
+            ),
+        )
 
 
 async def run_and_record(
