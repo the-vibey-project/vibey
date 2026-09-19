@@ -286,8 +286,10 @@ replay rejection survives CLI process restarts and concurrent receivers. Deploym
 place `VIBEY_GH_WEBHOOK_STATE_DIR` on durable, access-controlled storage and retain the raw
 request bytes for HMAC verification; see [the CLI and adapter reference](docs/cli.md).
 
-The opt-in local-model review/triage fallback runs on a self-hosted runner, which GitHub
-itself warns against exposing to public-repository pull requests. `trusted_only` (default
+The local-model review/triage fallback runs on a self-hosted runner, which GitHub itself
+warns against exposing to public-repository pull requests. It is on by default
+(sub-doctrine 8.a) but scheduled only while the sovereign heartbeat is fresh, so a
+repository that never stands a runner up never offers it work. `trusted_only` (default
 `true`) keeps fork PRs off that runner entirely, and the job holds only `contents: read` —
 no secret, and no token capable of pushing, merging, or mutating the repository. Trusted
 steps use `gh`/`git` to assemble the diff or issue text; only the local model's own
@@ -344,7 +346,8 @@ existing `.gitattributes` is appended to, never rewritten.
 `install` writes the git hooks and workflow files into your repository and points
 `core.hooksPath` at them. A hook you already have is moved aside to `<name>.local` and
 chained, never discarded — adopting this should not silently drop checks somebody thought
-were important.
+were important. When that hook refuses, the managed hook exits with its status, so the
+commit or push is refused too.
 
 ## What it does
 
@@ -479,10 +482,12 @@ Repositories must configure `ANTHROPIC_API_KEY`; `AUTOMERGE_TOKEN` is required w
 default Actions token cannot push or merge through the repository ruleset. Installation
 does not create either secret.
 
-A repository that sets `[pr_automation.fallback].enabled = true` gets one more line of
-defense before that gate fails outright: when the primary review returns no verdict at
+With `[pr_automation.fallback].enabled` (on by default) and a live local lane, a
+repository gets one more line of defense before that gate fails outright: when the
+primary review returns no verdict at
 all, a `review-fallback` job sends the diff to a local Ollama model on a self-hosted
-`vibey-local-gh`-labelled runner (never for a fork PR unless `trusted_only = false`) and
+runner carrying the `[pr_automation.fallback] runner_label` label (default
+`vibey-local`; never for a fork PR unless `trusted_only = false`) and
 runs `vibey-gh local-review`. A clean local verdict passes the gate under the honestly
 weaker title `PR automation: gate (local fallback)`; the local model never overrides an
 actual finding, and it holds no repository credentials at all. See
@@ -1115,6 +1120,12 @@ install` from the newer release, and the pin moves forward as one visible diff y
 and commit like any other change. The self-hosting path this repository uses to install
 itself from source is never pinned, since it cannot depend on a published release that may
 not exist yet.
+
+The pin is the release `vibey-gh` is running from, so run it from one: `uvx --from
+vibey==X.Y.Z vibey-gh install` renders `vibey==X.Y.Z`. An editable or other source-tree
+install carries the last release's number while its templates may be ahead of it, so it
+pins nothing: the install stays floating, and `install` and `check` print a `notice:`
+saying so rather than leaving the key silently inert.
 
 
 `trusted_authors` is matched after normalising `app/name` and `name[bot]` to the same

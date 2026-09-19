@@ -1,11 +1,30 @@
 # Runbook: loop-runner containers — each *loop repo ships its own k8s
 
-> **Status (2026-09-15):** open. No Phase 0 lane spike is recorded for any
+> **Status (2026-09-18):** open. No Phase 0 lane spike is recorded for any
 > runner. The runners are no longer separate repositories: all five
 > (with qwenloop) are uv workspace members under `src/vibey_runners/`
 > (imported with history 2026-09-10, ADR-0021). Only qwenloop has a
-> Dockerfile, and it does not meet the contract below. The vibey image still
-> ships no engines. Read "repo" below as "runner package in this repository".
+> Dockerfile, and it does not meet the contract below. Read "repo" below as
+> "runner package in this repository".
+>
+> **Two slices of issue #121 have landed on the vibey side, ahead of the
+> spike:**
+>
+> - **codex is in the vibey image** — upstream's static musl build, pinned by
+>   version and per-architecture sha256 and copied into the runtime stage
+>   alone, with no Node or npm (`deploy/docker/Dockerfile`; CI asserts
+>   `codex --version` and that `node`/`npm`/`npx` are absent). That settles
+>   two of codexloop's Phase 0 questions: the binary is a single
+>   dependency-free executable, and it is Apache-2.0, so redistributing it
+>   inside an image is permitted with its `LICENSE` and `NOTICE`, which ship
+>   beside it. Headless API-key auth in a pod is still unproven by a live
+>   session.
+> - **The vibey chart can run Ollama for qwenloop** (`ollama.enabled`,
+>   `deploy/helm/vibey/templates/ollama.yaml`): weights are pulled at
+>   install by a Job onto a PVC, and a GPU is optional (`ollama.gpu`). That
+>   answers qwenloop's "where do weights come from in-cluster" for the vibey
+>   worker, through qwenloop's `openai-compat` backend rather than a
+>   qwenloop image.
 
 ## Goal
 
@@ -56,9 +75,12 @@ docs. Two consumers are served by the same artifacts:
   verification job than an implementation job. **This is the single
   biggest de-risking fact in this runbook.**
 - vibey invokes runners as **subprocess CLIs**
-  (`infrastructure/engines/loop_process_adapter.py`), and the current
-  vibey image ships **no engines at all** — nothing in-cluster can run a
-  real engine today.
+  (`infrastructure/engines/loop_process_adapter.py`). Since ADR-0037 the
+  vibey image carries every runner's console script, and since #121's
+  S1a slice it carries the `codex` vendor binary too; `claude`,
+  `cursor-sdk-bridge` and `agy` are still absent, so codexloop and
+  qwenloop (against the chart's Ollama) are the only engines a pod could
+  run today, and neither has run a live session in-cluster yet.
 
 ### The fact that shapes everything
 
@@ -77,7 +99,10 @@ whether a container can authenticate at all — vendor CLIs generally assume
 an interactive TTY login, which does not exist in a cluster.
 
 qwenloop needs no vendor binary or API key, but it needs model weights in
-the image or on a volume, and a GPU for the vLLM profile.
+the image or on a volume, and a GPU for the vLLM profile. For the vibey
+worker this now has an answer that needs neither: the chart's optional
+Ollama server holds the weights on its own volume, and qwenloop attaches
+to it as an OpenAI-compatible endpoint (`QWENLOOP_BASE_URL`).
 
 Do not plan the images until this is settled per runner. It is Phase 0.
 
@@ -161,6 +186,15 @@ src/vibey_runners/<runner>/
 
 ### The `vibey-engines` image (this side)
 
+> **Deviation, 2026-09-18.** `codex` went into the base vibey image, not
+> into a separate engines image. It is one static executable with no
+> runtime dependencies, so it costs the base image nothing but its size
+> (about 260 MB uncompressed on amd64, 230 MB on arm64), and a second image
+> for one file would have been a second build, a second contract suite and
+> a second tag to keep in step. The design below still stands for the
+> vendor CLIs that need a runtime (`claude` on Node) or a proprietary
+> installer (`cursor-sdk-bridge`, `agy`).
+
 Once the runner images exist, `deploy/docker/Dockerfile.engines` layers
 the runners onto the vibey base and vibey's chart grows an
 `image.engines` value the worker Deployment can select. Prefer installing
@@ -204,6 +238,9 @@ environment, one resolver run, no five-way base-image skew. The per-repo images 
 - A decision on vendor-CLI redistribution if any runner lands on CLI-only.
 - For qwenloop: where model weights come from in-cluster (baked, volume,
   or pulled at start) and GPU node availability for the vLLM profile.
+  For the vibey worker the chart now answers "pulled at install onto a
+  volume" (`ollama.enabled`); a standalone qwenloop image still needs its
+  own answer, and GPU node availability is still the operator's.
 
 ## Risks
 

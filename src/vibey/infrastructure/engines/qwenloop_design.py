@@ -15,15 +15,15 @@ prompt-to-JSON this needs — and going direct buys the property that matters he
 probability of any token that would break it, so malformed JSON is not reachable. The
 paid provider has to hunt for ```json fences and cope with prose wrapped around the
 answer; this cannot receive either. The weaker model is, on shape alone, the more
-reliable of the two.
+reliable of the two. The exchange itself lives in `ollama_chat.OllamaChatClient`, shared
+with the sovereign DECOMPOSE producer, so the endpoint and model are configured once
+(`VIBEY_OLLAMA_URL`, `VIBEY_OLLAMA_MODEL`) rather than hard-coded here.
 
 What it cannot do is research, and that is stated rather than worked around — see
 `research()`.
 """
 
-import json
-import urllib.request
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from vibey.application.design import (
@@ -34,7 +34,9 @@ from vibey.application.design import (
     ResearchResult,
     build_question_batch,
 )
+from vibey.application.design_research_handler import EVIDENCE_DIR_ENV
 from vibey.domain.engine import EngineId
+from vibey.domain.errors import SovereignResearchUnavailable
 from vibey.domain.spec import (
     AcceptanceCriterion,
     Constraint,
@@ -43,6 +45,14 @@ from vibey.domain.spec import (
     NonFunctionalRequirement,
 )
 from vibey.infrastructure.engines.design_json import as_object_list, events_json
+from vibey.infrastructure.engines.interfaces.ollama_chat_interface import (
+    OllamaChatClientInterface,
+)
+from vibey.infrastructure.engines.ollama_chat import OllamaChatClient
+
+# Re-exported: the refusal moved to the domain so the research handler can catch it
+# without importing infrastructure, and this import path should not break.
+__all__ = ["QwenloopDesignProvider", "SovereignResearchUnavailable"]
 
 QUESTIONS_SCHEMA: dict[str, object] = {
     "type": "object",
@@ -164,17 +174,6 @@ RESEARCH_SYSTEM = (
 )
 
 
-class SovereignResearchUnavailable(RuntimeError):
-    """Raised instead of inventing a source.
-
-    The local model has no web access. Returning its recollection with a `source` field
-    would put fabricated citations into a design spec, which is worse than having no
-    research step: a wrong answer that looks sourced survives review, and a missing one
-    does not. Doctrine 10 requires the floor be declared to a human at the moment it is
-    known, which is what this is.
-    """
-
-
 class QwenloopDesignProvider:
     """DESIGN on a local model, over Ollama's chat API with a compiled grammar."""
 
@@ -185,18 +184,26 @@ class QwenloopDesignProvider:
     def __init__(
         self,
         *,
-        model: str = "qwen2.5-coder:14b",
-        base_url: str = "http://127.0.0.1:11434",
-        timeout: int = 900,
+        chat: OllamaChatClientInterface | None = None,
         evidence_dir: Path | None = None,
     ) -> None:
-        self._model = model
-        self._base_url = base_url.rstrip("/")
-        self._timeout = timeout
+        self._chat = chat if chat is not None else OllamaChatClient()
         self._evidence_dir = evidence_dir
 
+    @classmethod
+    def from_environment(
+        cls, environ: Mapping[str, str], *, chat: OllamaChatClientInterface | None = None
+    ) -> "QwenloopDesignProvider":
+        """The provider with its evidence directory read from `VIBEY_EVIDENCE_DIR`.
+
+        Unset (or empty) means no evidence directory: research then refuses rather than
+        inventing a source, and the research job parks a `research_evidence` gate.
+        """
+        evidence = environ.get(EVIDENCE_DIR_ENV)
+        return cls(chat=chat, evidence_dir=Path(evidence) if evidence else None)
+
     async def batch(self, stage: DesignStage, prior_events: Sequence[DesignEvent]) -> QuestionBatch:
-        data = await self._ask(
+        data = await self._chat.ask(
             QUESTION_SYSTEM,
             f"Stage: {stage.value}\nPrior ledger events: {events_json(prior_events)}",
             QUESTIONS_SCHEMA,
@@ -226,19 +233,22 @@ class QwenloopDesignProvider:
         So the operator supplies the reading, and the model does what it can actually do
         honestly: read it and summarise it. The `source` is taken from the file's own
         first line, never minted — if the operator did not say where it came from, this
-        refuses rather than attributing the text to nobody.
+        refuses rather than attributing the text to nobody. A refusal is the domain's
+        `SovereignResearchUnavailable`, which the research handler turns into a
+        `research_evidence` gate on the first attempt instead of a retry loop that could
+        never succeed.
         """
         document = self._evidence_for(topic)
         if document is None:
             raise SovereignResearchUnavailable(
-                f"the sovereign DESIGN provider cannot research {topic!r}: a local model has"
+                topic,
+                f"The sovereign DESIGN provider cannot research {topic!r}: a local model has"
                 " no web access, and answering from recollection would put a fabricated"
-                f" source into the spec. Supply the reading as {topic}.md in the evidence"
-                " directory — first line `source: <where it came from>` — or run this stage"
-                " on a lane that can actually retrieve it."
+                f" source into the spec. {self._missing_evidence(topic)}",
+                evidence_name=self._evidence_name(topic),
             )
         source, body = document
-        data = await self._ask(
+        data = await self._chat.ask(
             RESEARCH_SYSTEM,
             f"Topic: {topic}\nSource: {source}\n\n{body}",
             RESEARCH_SCHEMA,
@@ -260,7 +270,7 @@ class QwenloopDesignProvider:
         """
         if self._evidence_dir is None:
             return None
-        stem = "".join(c for c in topic.lower() if c.isalnum() or c in "-_")
+        stem = self._evidence_stem(topic)
         if not stem:
             return None
         for suffix in (".md", ".txt"):
@@ -272,20 +282,43 @@ class QwenloopDesignProvider:
             first, _, rest = text.partition("\n")
             if not first.lower().startswith("source:"):
                 raise SovereignResearchUnavailable(
+                    topic,
                     f"{path} carries no `source:` first line, so the material cannot be"
                     " attributed. Evidence without a provenance line is indistinguishable"
-                    " from something a model made up, which is the failure this avoids."
+                    " from something a model made up, which is the failure this avoids.",
+                    evidence_name=path.name,
                 )
             source = first.split(":", 1)[1].strip()
             if not source or not rest.strip():
                 raise SovereignResearchUnavailable(
-                    f"{path} declares an empty source or carries no body"
+                    topic,
+                    f"{path} declares an empty source or carries no body",
+                    evidence_name=path.name,
                 )
             return source, rest.strip()
         return None
 
+    def _evidence_stem(self, topic: str) -> str:
+        return "".join(c for c in topic.lower() if c.isalnum() or c in "-_")
+
+    def _evidence_name(self, topic: str) -> str | None:
+        """The file research would read for this topic, or None if no file can match."""
+        stem = self._evidence_stem(topic)
+        return f"{stem}.md" if stem else None
+
+    def _missing_evidence(self, topic: str) -> str:
+        """Why no evidence was found -- the three causes want three different fixes."""
+        name = self._evidence_name(topic)
+        if name is None:
+            return "The topic reduces to no usable file name, so no evidence file can match it."
+        if self._evidence_dir is None:
+            return f"No evidence directory is configured ({EVIDENCE_DIR_ENV} is unset)."
+        return f"No {name} (or .txt) exists in {self._evidence_dir}."
+
     async def synthesize(self, events: Sequence[DesignEvent]) -> DesignSpec:
-        data = await self._ask(SPEC_SYSTEM, f"Ledger events: {events_json(events)}", SPEC_SCHEMA)
+        data = await self._chat.ask(
+            SPEC_SYSTEM, f"Ledger events: {events_json(events)}", SPEC_SCHEMA
+        )
         try:
             constraints = as_object_list(data.get("constraints", []), "constraints")
             criteria = as_object_list(data.get("criteria"), "criteria")
@@ -328,57 +361,3 @@ class QwenloopDesignProvider:
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"invalid DesignSpec JSON: {exc}") from exc
-
-    async def _ask(self, system: str, user: str, schema: dict[str, object]) -> dict[str, object]:
-        payload = {
-            "model": self._model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            # The grammar. Malformed JSON is unreachable, so this boundary needs no
-            # fence-hunting and no repair pass.
-            "format": schema,
-            "stream": False,
-            # temperature 0 because a DESIGN stage that asks different questions on an
-            # unchanged ledger cannot be reasoned about. num_ctx sized to the prompt:
-            # Ollama's default window is far smaller than a full ledger, and overflowing
-            # it degrades generation from seconds to never-finishes rather than erroring.
-            "options": {"temperature": 0, "num_ctx": _num_ctx(len(system) + len(user))},
-        }
-        body = await _post_json(f"{self._base_url}/api/chat", payload, timeout=self._timeout)
-        message = body.get("message")
-        if not isinstance(message, dict) or not isinstance(message.get("content"), str):
-            raise ValueError("Ollama response carried no message content")
-        value = json.loads(message["content"])
-        # Constrained decoding guarantees the schema, but this is a boundary with an
-        # external process: assert the top-level shape rather than trust it, so a gateway
-        # that is not actually Ollama cannot hand back something that is not an answer.
-        if not isinstance(value, dict):
-            raise ValueError(f"expected a JSON object, got {type(value).__name__}")
-        return value
-
-
-def _num_ctx(prompt_chars: int) -> int:
-    """A context window that actually fits the prompt; code tokenises near 3 chars/token."""
-    return min(32768, max(4096, prompt_chars // 3 + 2048))
-
-
-async def _post_json(url: str, payload: dict[str, object], *, timeout: int) -> dict[str, object]:
-    import asyncio
-
-    def send() -> dict[str, object]:
-        request = urllib.request.Request(  # nosec B310 - fixed http(s) URL from config
-            url,
-            data=json.dumps(payload).encode(),
-            headers={"Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310
-            result = json.loads(response.read())
-        if not isinstance(result, dict):
-            raise ValueError("Ollama returned a non-object response")
-        return result
-
-    # urllib is blocking; keep it off the event loop so a slow local generation cannot
-    # stall the conductor's other work.
-    return await asyncio.to_thread(send)

@@ -534,3 +534,90 @@ def test_the_selector_satisfies_its_declared_seam() -> None:
         descriptors=BY_ENGINE_ID,
     )
     assert isinstance(selector, EngineSelectorInterface)
+
+
+# ── tiers: sovereign before paid (sub-doctrine 8.a, ADR-0038) ────────────────
+
+
+async def test_a_healthy_local_engine_is_preferred_over_every_paid_one() -> None:
+    selector, project_id = await _setup(
+        engines=[EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.QWENLOOP]
+    )
+
+    for _ in range(6):
+        engine_id, selection = await selector.select_engine(
+            project_id, JobRequirement(effort=Effort.STANDARD)
+        )
+        assert engine_id is EngineId.QWENLOOP
+        # SWRR ran over the local tier alone: no paid engine was a candidate.
+        assert {c.engine_id for c in selection.candidates} == {EngineId.QWENLOOP}
+
+
+async def test_local_engines_share_the_work_by_swrr_within_their_tier() -> None:
+    selector, project_id = await _setup(
+        engines=[EngineId.CLAUDELOOP, EngineId.QWENLOOP, EngineId.CLAUDELOOP_LOCAL]
+    )
+
+    picked = [
+        (await selector.select_engine(project_id, JobRequirement(effort=Effort.STANDARD)))[0]
+        for _ in range(4)
+    ]
+
+    assert set(picked) == {EngineId.QWENLOOP, EngineId.CLAUDELOOP_LOCAL}
+
+
+async def test_paid_engines_are_the_fallback_when_no_local_engine_is_eligible() -> None:
+    selector, project_id = await _setup(engines=[EngineId.CLAUDELOOP, EngineId.CODEXLOOP])
+    mixed_selector, local_project = await _setup(engines=[EngineId.CLAUDELOOP, EngineId.QWENLOOP])
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+    assert engine_id in {EngineId.CLAUDELOOP, EngineId.CODEXLOOP}
+
+    # The local engine excluded (a wind-down away from it, or a verify of its work).
+    engine_id, _ = await mixed_selector.select_engine(
+        local_project,
+        JobRequirement(effort=Effort.LOW, excluded=frozenset({EngineId.QWENLOOP})),
+    )
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+async def test_an_open_local_circuit_hands_the_job_to_a_paid_engine() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
+    await repo.upsert(
+        _healthy_record(
+            project_id,
+            EngineId.CLAUDELOOP_LOCAL,
+            circuit="open",
+            capacity_state="AuthenticationFailed",
+        )
+    )
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+async def test_a_local_tier_decayed_to_zero_weight_does_not_strand_the_job() -> None:
+    """Preference is decided by who can win a round, not by who is present: a local
+    engine whose failure average has reached 1.0 carries no weight, and a healthy paid
+    engine takes the job instead of `select` refusing the whole round."""
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.AGYLOOP))
+    await repo.upsert(_healthy_record(project_id, EngineId.QWENLOOP, ewma_failure=1.0))
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.AGYLOOP

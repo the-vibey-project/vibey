@@ -98,14 +98,17 @@ Vendor transcripts (`~/.claude/projects/**/*.jsonl`, codex rollouts, cursor
 bridge logs) are copied in as *attachments* referenced by events — they are
 evidence, not state.
 
-**Event kinds (25 total, `domain/ledger.py::EventKind`):** `SessionSeeded`,
-`TurnRequested`, `TurnCompleted`, `ToolInvoked`, `FileEdited`, `VerdictRendered`,
+**Event kinds (26 total, `domain/ledger.py::EventKind`):** `SessionSeeded`,
+`TurnRequested`, `TurnCompleted`, `ToolInvoked`, `TranscriptRecorded`, `FileEdited`,
+`VerdictRendered`,
 `CapacityRejected`, `QuestionAsked`, `AnswerGiven`, `DecisionRecorded`,
 `AssumptionStated`, `FindingRaised`, `FindingResolved`, `ArtifactProduced`,
 `SavePointCreated`, `HandoffInitiated`, `HandoffAccepted`, `PhaseTransitioned`,
 `BudgetSpent`, and the ADR-0014 opt-in gate events `VisualDesignOptedIn`,
 `VisualDesignDeclined`, `VisualDesignAccepted`, `VisualDesignWaived`,
 `DeploymentOptedIn`, `DeploymentDeclined`.
+
+**Readers are forward compatible, writers strict (vibey#275):** a stored kind this vibey does not know is read as `UnrecognizedEventKind` (so `LedgerEvent.kind` is `EventKind | UnrecognizedEventKind`), kept in every range, full ledger and digest, skipped by every projection, and never written. Match kinds with `is EventKind.X` and narrow with `isinstance(kind, EventKind)` before using a member-only attribute.
 
 **Closable events:** `QuestionAsked`, `DecisionRecorded`, `AssumptionStated`,
 `FindingRaised` — these are the events the no-loss gate checks.

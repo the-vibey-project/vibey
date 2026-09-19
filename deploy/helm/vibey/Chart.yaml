@@ -3,7 +3,7 @@ name: vibey
 description: A queue-based, six-phase conductor for autonomous software delivery
 type: application
 # Chart version tracks the chart's own shape; appVersion tracks the image.
-version: 0.1.0
+version: 0.2.0
 appVersion: "0.1.2"
 home: https://github.com/the-vibey-project/vibey
 sources:

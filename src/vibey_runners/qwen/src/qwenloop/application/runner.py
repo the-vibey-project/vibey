@@ -105,6 +105,7 @@ class AutonomousRunner:
             state.transcript = _trim_transcript(state.transcript, profile.context_window)
             text_parts: list[str] = []
             tool_called = False
+            input_before, output_before = state.input_tokens, state.output_tokens
             async for chunk in self._server.chat_stream(server_info, state.transcript):
                 state.input_tokens += chunk.input_tokens
                 state.output_tokens += chunk.output_tokens
@@ -123,6 +124,19 @@ class AutonomousRunner:
                         run_id, {"type": "tool_result", "name": name, "result": result}
                     )
                     state.transcript.append(ChatMessage("tool", _truncate_tool_result(str(result))))
+            # One boundary per model call, once its stream has ended: the event a reader
+            # counts turns from. text_delta fires once per streamed fragment, so counting
+            # those overstated turns by the length of every answer (vibey's turn cap did).
+            self._store.append_event(
+                run_id,
+                {
+                    "type": "turn.completed",
+                    "turn": turn,
+                    "input_tokens": state.input_tokens - input_before,
+                    "output_tokens": state.output_tokens - output_before,
+                    "tool_called": tool_called,
+                },
+            )
             answer = "".join(text_parts)
             if answer:
                 state.transcript.append(ChatMessage("assistant", answer))

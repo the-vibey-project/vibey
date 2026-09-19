@@ -52,7 +52,8 @@ class DeployReviewDemoHandler:
         dep_events = [
             e
             for e in events
-            if e.kind == EventKind.ARTIFACT_PRODUCED
+            if e.interpretable
+            and e.kind == EventKind.ARTIFACT_PRODUCED
             and e.payload.get("artifact_type") == "deployment_verification"
         ]
 
@@ -129,7 +130,9 @@ class DeployReviewTriageHandler:
             return Failure(FailureClass.VIBEY, "expected deploy.triage job")
 
         events = await self._ledger.all_for_project(job.project_id)
-        finding_events = [e for e in events if e.kind == EventKind.FINDING_RAISED]
+        finding_events = [
+            e for e in events if e.interpretable and e.kind == EventKind.FINDING_RAISED
+        ]
 
         failure_class = DeploymentFailureClass.POLICY_DENIAL.value
         error_msg = "Unknown deployment failure"

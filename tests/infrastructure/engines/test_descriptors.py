@@ -89,3 +89,75 @@ def test_saturates_at_truth_table(descriptor) -> None:  # type: ignore[no-untype
     for effort in ALL_EFFORTS:
         achieved = descriptor.invoke(effort).achieved
         assert descriptor.saturates_at(effort) == (achieved < effort)
+
+
+# ── claudeloop-local (ADR-0038) ───────────────────────────────────────────────
+
+
+def test_claudeloop_local_is_the_claudeloop_binary_on_a_profile_at_no_cost() -> None:
+    from vibey.domain.engine import EngineTier
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    assert CLAUDELOOP_LOCAL.engine_id is EngineId.CLAUDELOOP_LOCAL
+    assert CLAUDELOOP_LOCAL.binary == CLAUDELOOP.binary
+    assert CLAUDELOOP_LOCAL.state_dir == CLAUDELOOP.state_dir
+    assert CLAUDELOOP_LOCAL.done_marker == CLAUDELOOP.done_marker
+    assert CLAUDELOOP_LOCAL.auth_env == ()
+    assert (CLAUDELOOP_LOCAL.cost_per_mtok_in, CLAUDELOOP_LOCAL.cost_per_mtok_out) == (0.0, 0.0)
+    assert CLAUDELOOP_LOCAL.tier is EngineTier.LOCAL
+    assert CLAUDELOOP_LOCAL.doctor_args == ("--profile", "local")
+
+
+def test_claudeloop_local_honest_ceiling_is_standard_even_at_max() -> None:
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    assert [CLAUDELOOP_LOCAL.invoke(e).achieved for e in ALL_EFFORTS] == [
+        Effort.TRIVIAL,
+        Effort.LOW,
+        Effort.STANDARD,
+        Effort.STANDARD,
+        Effort.STANDARD,
+    ]
+    assert CLAUDELOOP_LOCAL.saturates_at(Effort.HIGH)
+    assert CLAUDELOOP_LOCAL.saturates_at(Effort.MAX)
+    assert "ceiling" in CLAUDELOOP_LOCAL.invoke(Effort.MAX).notes
+    assert CLAUDELOOP_LOCAL.invoke(Effort.STANDARD).notes == ""
+
+
+def test_claudeloop_local_is_built_from_its_configured_profile() -> None:
+    from vibey.domain.config import ClaudeloopLocalConfig
+    from vibey.infrastructure.engines.descriptors import ClaudeloopLocalDescriptors
+    from vibey.infrastructure.engines.interfaces import ClaudeloopLocalDescriptorsInterface
+
+    factory = ClaudeloopLocalDescriptors()
+    built = factory.build(ClaudeloopLocalConfig(profile="gpu-box", context_window=65_536))
+
+    assert isinstance(factory, ClaudeloopLocalDescriptorsInterface)
+    assert built.invoke(Effort.HIGH).argv == ("--profile", "gpu-box", "--preset", "high")
+    assert built.doctor_args == ("--profile", "gpu-box")
+    assert built.context_window == 65_536
+
+
+def test_claudeloop_local_claims_a_structured_verdict_only_when_configured_to() -> None:
+    """A local model has to prove it can make the tool call a verdict is. Unclaimed by
+    default; claimed, conformance must prove it or the engine is ineligible."""
+    from vibey.domain.config import ClaudeloopLocalConfig
+    from vibey.domain.engine import Capability
+    from vibey.infrastructure.engines.descriptors import (
+        CLAUDELOOP_LOCAL,
+        ClaudeloopLocalDescriptors,
+    )
+
+    assert Capability.STRUCTURED_VERDICT not in CLAUDELOOP_LOCAL.capabilities
+    claimed = ClaudeloopLocalDescriptors().build(ClaudeloopLocalConfig(structured_verdict=True))
+    assert Capability.STRUCTURED_VERDICT in claimed.capabilities
+    # A local profile does not forward --effort, so effort cannot change mid-run either.
+    assert Capability.MID_RUN_EFFORT not in claimed.capabilities
+
+
+def test_the_local_descriptors_are_exactly_the_local_tier() -> None:
+    from vibey.domain.engine import EngineTier
+    from vibey.infrastructure.engines.descriptors import DEFAULT_DESCRIPTORS, LOCAL_DESCRIPTORS
+
+    assert {d.tier for d in LOCAL_DESCRIPTORS} == {EngineTier.LOCAL}
+    assert {d.tier for d in DEFAULT_DESCRIPTORS} == {EngineTier.PAID}
