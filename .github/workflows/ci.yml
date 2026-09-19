@@ -94,9 +94,11 @@ jobs:
         run: uv run pip-audit
 
   tools:
-    name: ${{ matrix.package }} on ${{ matrix.python }}
+    # A row runs on ubuntu unless it names another `os`; only a row that does gets the
+    # suffix, so every ubuntu row keeps the check name it already had.
+    name: ${{ matrix.package }} on ${{ matrix.python }}${{ matrix.os && format(' ({0})', matrix.os) || '' }}
     needs: [uv-lock]
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -122,6 +124,17 @@ jobs:
           # must not quietly lower what it was already held to: vibey-gh carries a 100%
           # BRANCH floor over 984 tests and vibey-bootstrap a 100% LINE floor over 1057,
           # and both are enforced by their own pyproject addopts, not by anything here.
+          #
+          # `static` is the other half of what a tenant arrived with: its own mypy,
+          # lint-imports and bandit, from its own directory against its own configuration.
+          # The root gates never reach this code -- their mypy, bandit and .importlinter are
+          # scoped to src/vibey -- and the tenants' nested workflows, the only place these
+          # ever ran, never fired in this repository (#263). A tenant's `static` runs once,
+          # on its floor row: every tenant pins `[tool.mypy] python_version`, so another
+          # interpreter repeats the same verdict. codexloop is the exception, because its
+          # own CI ran these on every cell, macOS included, and a `sys.platform` branch
+          # type-checks differently per OS. vibey-gh's static gates stay in `tools-lint`;
+          # vibey-skills declares none, being stdlib-only with no type or import config.
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.11",
              install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.12",
@@ -132,11 +145,33 @@ jobs:
           - {package: vibey-skills, dir: src/vibey_tools/skills, python: "3.10",
              install: 'pip install -e .',
              test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'}
-          - {package: vibey-skills, dir: src/vibey_tools/skills, python: "3.12",
-             install: 'pip install -e .',
-             test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'}
+          - package: vibey-skills
+            dir: src/vibey_tools/skills
+            python: "3.12"
+            install: 'pip install -e .'
+            test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
+            # Its own `docs` job, verbatim: --strict is what makes 700-odd generated pages
+            # trustworthy, and the counts prove every plugin and skill produced one.
+            docs: |
+              pip install -e ".[docs]"
+              mkdocs build --strict
+              plugins=$(python3 -c "import json;print(len(json.load(open('.claude-plugin/marketplace.json'))['plugins']))")
+              skills=$(find plugins -name SKILL.md | wc -l | tr -d ' ')
+              built_plugins=$(find site/reference -mindepth 2 -maxdepth 2 -name index.html | wc -l | tr -d ' ')
+              built_skills=$(find site/reference -mindepth 3 -maxdepth 3 -name index.html | wc -l | tr -d ' ')
+              echo "plugins $plugins -> $built_plugins ; skills $skills -> $built_skills"
+              test "$plugins" = "$built_plugins"
+              test "$skills" = "$built_skills"
+          # vibey-bootstrap's nested CI never ran a static gate at all. Its own pre-commit
+          # hook did, and these are that hook's commands, verbatim: its configured
+          # (non-strict) mypy, and bandit at medium severity and up. `dev` joins the floor
+          # row's install because that is where the hook's tools are declared. The hook's
+          # black and isort are not ported: root `ruff format --check .` already owns this
+          # tree's formatting, and holding one file to two formatters is the trap vibey-gh
+          # already lives with.
           - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.11",
-             install: 'pip install -e ../gh && pip install -e ".[test,all]"',
+             install: 'pip install -e ../gh && pip install -e ".[test,all,dev]"',
+             static: 'python -m mypy vibey_bootstrap/ && python -m bandit -r vibey_bootstrap/ -ll -q',
              test: 'pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term'}
           - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.12",
              install: 'pip install -e ../gh && pip install -e ".[test,all]"',
@@ -170,10 +205,28 @@ jobs:
           # Interpreters are each runner's own matrix. claudeloop publishes a 3.10 floor and
           # is the only member of this tree that does; per ADR-0022 a floor nothing runs on
           # is a claim, so all four of its interpreters run.
+          #
+          # vibey-runners-common ships no suite, so it has no `test` and the suite step
+          # skips it (tests/meta/test_tools_matrix_covers_every_package.py counts only rows
+          # that do carry one). Its row exists for `static`: it declares a strict mypy and
+          # two import contracts, and until this row nothing had ever run either.
+          - package: vibey-runners-common
+            dir: src/vibey_runners/common
+            python: "3.10"
+            install: 'pip install -e ".[dev]"'
+            static: 'mypy --strict src/vibey_runners/common && lint-imports'
+          # claudeloop's own CI ran these on 3.12; they run here on its 3.10 floor. The
+          # frontmatter check was its `skills` job: Claude Code loads a malformed SKILL.md
+          # silently, so nothing else would notice.
           - package: claudeloop
             dir: src/vibey_runners/claude
             python: "3.10"
             install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: >-
+              mypy --strict src/claudeloop &&
+              lint-imports &&
+              bandit -q -r src/claudeloop &&
+              python scripts/check_skill_frontmatter.py
             test: >-
               pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
               pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
@@ -209,12 +262,15 @@ jobs:
           # codexloop, cursorloop and agyloop each replaced four instrumented runs with one,
           # then filtered the single data file per layer -- `coverage report --include` keeps
           # each floor's verdict independent, so this is their command, not a cheaper one.
-          # codexloop's former nested workflow also covered macos-latest; this job is
-          # ubuntu-only, so that half is still ungated here (see the follow-up on the commit).
+          # codexloop's own matrix was {ubuntu, macos} x {3.12, 3.13}, with every gate in every
+          # cell, so all four cells are here. The macOS pair was dropped at the absorption and
+          # restored under #263.
           - package: codexloop
             dir: src/vibey_runners/codex
             python: "3.12"
             install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: 'mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop'
+            docs: "pip install 'properdocs==1.6.7' 'properdocs-theme-mkdocs==1.6.7' && properdocs build --strict"
             test: >-
               pytest -q --cov=codexloop --cov-branch --cov-report= &&
               coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
@@ -225,6 +281,31 @@ jobs:
             dir: src/vibey_runners/codex
             python: "3.13"
             install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: 'mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop'
+            test: >-
+              pytest -q --cov=codexloop --cov-branch --cov-report= &&
+              coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/application/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/cli/*' --fail-under=100
+          - package: codexloop
+            dir: src/vibey_runners/codex
+            python: "3.12"
+            os: macos-latest
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: 'mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop'
+            test: >-
+              pytest -q --cov=codexloop --cov-branch --cov-report= &&
+              coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/application/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/cli/*' --fail-under=100
+          - package: codexloop
+            dir: src/vibey_runners/codex
+            python: "3.13"
+            os: macos-latest
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: 'mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop'
             test: >-
               pytest -q --cov=codexloop --cov-branch --cov-report= &&
               coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
@@ -235,6 +316,7 @@ jobs:
             dir: src/vibey_runners/cursor
             python: "3.12"
             install: 'pip install -e ".[dev]"'
+            static: 'mypy --strict src/cursorloop && lint-imports && bandit -q -r src/cursorloop'
             test: >-
               pytest tests --cov=cursorloop --cov-branch --cov-report= &&
               coverage report --include='src/cursorloop/domain/*' --fail-under=100 &&
@@ -255,10 +337,18 @@ jobs:
           # real FS/git/CLI adapters, no account and no network. Its own CI ran it on every
           # interpreter in the matrix, and `-m system` on the command line overrides the
           # `not system` in addopts, which is how that deselection is meant to be undone.
+          # The grep in `static` was agyloop's own, in the same job as its lint-imports: a
+          # second net under the "No Anthropic" contract that needs no import graph.
           - package: agyloop
             dir: src/vibey_runners/agy
             python: "3.12"
             install: 'pip install -e ".[dev]"'
+            static: >-
+              mypy --strict src/agyloop &&
+              lint-imports &&
+              bandit -q -r src/agyloop &&
+              ! grep -R -E '(^|[[:space:]])(from|import)[[:space:]]+(anthropic|claude_agent_sdk)' src
+            docs: "pip install 'properdocs==1.6.7' 'properdocs-theme-mkdocs==1.6.7' && properdocs build --strict"
             test: >-
               pytest tests --cov=agyloop --cov-branch --cov-report= &&
               coverage report --include='src/agyloop/domain/*' --fail-under=100 &&
@@ -290,6 +380,7 @@ jobs:
             dir: src/vibey_runners/qwen
             python: "3.12"
             install: 'pip install -e ".[dev]"'
+            static: 'mypy --strict src/qwenloop && lint-imports && bandit -q -r src/qwenloop'
             test: 'python -m pytest -q'
           - package: qwenloop
             dir: src/vibey_runners/qwen
@@ -378,14 +469,35 @@ jobs:
               print(*strays, sep="\n")
               sys.exit(1)
           PY
+      # A row's own mypy, lint-imports and bandit, run before its suite because they fail
+      # in seconds. Keyed like `network_test`, so a row without `static` skips the step.
+      # tests/meta/test_tools_matrix_covers_every_package.py derives from each tenant's
+      # own pyproject which of these it configures, and fails if no row runs one.
+      - name: Its own static gates
+        if: matrix.static
+        working-directory: ${{ matrix.dir }}
+        run: ${{ matrix.static }}
       # VIBEY_GH_NETWORK_TESTS is unset here, so every `network` test is skipped and the
       # package's own --cov-fail-under=100 is enforced on what remains. That makes this
       # step the gate on a property the package would otherwise only assert: its 100%
       # branch floor is reachable with no index, no remote and no socket. Put a branch
       # behind a network-only test again and this fails, which is the whole point.
+      #
+      # Conditional only so that a static-only row (vibey-runners-common, which ships no
+      # suite) can exist. A tenant that has a suite and no row carrying `test` fails the
+      # membership test in tests/meta, so the condition cannot quietly drop one.
       - name: Its own suite, unchanged
+        if: matrix.test
         working-directory: ${{ matrix.dir }}
         run: ${{ matrix.test }}
+      # A tenant's own strict docs build, for the three whose CI had one: agyloop and
+      # codexloop (properdocs, pinned as they pinned it) and vibey-skills (mkdocs). It runs
+      # after the suite and installs its own toolchain, so the suite's environment is the
+      # row's `install` and nothing else. One row per tenant, on ubuntu 3.12, as theirs did.
+      - name: Its own docs build
+        if: matrix.docs
+        working-directory: ${{ matrix.dir }}
+        run: ${{ matrix.docs }}
       # And the other half: the tests that DO leave the machine. These observe the world
       # rather than this repository -- that PyPI still has no yank API, that a real `uv
       # lock` still rewrites the pin -- so a failure here is news about someone else's
@@ -473,9 +585,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # The Dockerfile makes four claims in prose. Prose does not survive
-      # a refactor, so each one is asserted here: collapse the two stages
-      # or drop the USER line and this job fails instead of shipping.
+      # Every claim the Dockerfile makes in prose is asserted here, one
+      # `Image contract - ...` step each. Prose does not survive a refactor:
+      # collapse the two stages or drop the USER line and this job fails
+      # instead of shipping. The docs name these steps rather than count
+      # them, so adding one cannot leave a stale number behind.
       - name: Image contract - entrypoint runs
         run: |
           out=$(docker run --rm vibey:ci --version)

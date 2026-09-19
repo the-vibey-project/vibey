@@ -64,16 +64,29 @@ forbidden_modules =
 
 # The interfaces packages are the bottom of their layer: they declare the
 # seams, so they must never import the code that consumes them.
+#
+# The consumers are mostly `vibey.application`'s own modules, and until #263 this
+# contract named none of them: an interface importing `vibey.application.worker` was
+# reported KEPT, and so was every other planted import from inside the layer.
+# `vibey.application.*` names them all, including modules added later. A forbidden contract
+# skips any pair where one module contains the other, so the source is not forbidden from
+# itself. The two ignored imports are a seam's vocabulary, not its consumers:
+# `design` and `dto` hold the records a seam's signatures name, and both import
+# only `vibey.domain`.
 [importlinter:contract:interfaces-declare-only]
 name = Interfaces declare seams, never consume them
 type = forbidden
 source_modules =
     vibey.application.interfaces
 forbidden_modules =
+    vibey.application.*
     vibey.infrastructure
     vibey.cli
     vibey.tui
     vibey.bootstrap
+ignore_imports =
+    vibey.application.interfaces.** -> vibey.application.design
+    vibey.application.interfaces.** -> vibey.application.dto
 
 # The same rule, one layer down. `vibey.infrastructure.db.interfaces` (ADR-0016's
 # mirrored form) and the legacy flat `vibey.infrastructure.interfaces` declare seams
