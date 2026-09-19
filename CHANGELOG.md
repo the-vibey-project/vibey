@@ -12,6 +12,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+No changes yet.
+
+## [1.5.0] (2026-09-19)
+
 ### BREAKING CHANGES
 
 * **packaging:** one distribution, one version — `pip install vibey` now delivers the whole

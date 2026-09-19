@@ -29,9 +29,9 @@ on:
 # TREE when a repository self-hosts, so on a pull request the credentialed step would be
 # running the contributor's own code. The survey reporting "not surveyed" here is the
 # correct outcome, not a bug to fix with a secret -- it belongs in a job whose checkout is
-# trusted. The one exception is the short, static commit-fetch step below: it uses the
-# read-only token before any checkout-sourced tooling is installed or executed, and keeps
-# the token out of git config and every later step.
+# trusted. The pinned checkout action is the only component allowed to use the read-only
+# token, and `persist-credentials: false` removes it before any checkout-sourced tooling
+# runs. No pull-request-controlled shell step receives a forge credential.
 permissions:
   contents: read
 
@@ -46,33 +46,14 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          # Needed to walk the commits a pull request adds.
+          # Never inspect the synthetic merge ref: provenance must walk the contributor's
+          # exact head against the exact base supplied by the event.
+          repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          # The next step may execute tooling from this checkout. Do not leave the
-          # runner's GITHUB_TOKEN in .git/config where that code can read it.
+          # The next steps execute tooling from this checkout. Do not leave the runner's
+          # GITHUB_TOKEN in .git/config where that code can read it.
           persist-credentials: false
-
-      # A pull-request checkout can contain the synthetic merge ref without making the
-      # exact base/head objects available to a later shallow operation. Fetch those SHAs
-      # before installing anything from the checkout. The token exists only in this
-      # trusted, static step and is supplied as a one-shot Git header; it is never written
-      # to .git/config or exposed to the checkout-sourced tooling.
-      - name: Fetch exact provenance commits
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha != '' }}
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PROVENANCE_FETCH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          auth=$(printf 'x-access-token:%s' "$PROVENANCE_FETCH_TOKEN" | base64 --wrap=0)
-          git -c "http.extraheader=AUTHORIZATION: basic $auth" \
-            fetch --quiet --depth=50 origin "$BASE_SHA"
-          # A fork's head may not be advertised by the base repository. The checkout's
-          # merge ref normally already contains it; if not, the provenance command below
-          # fails closed when the requested range cannot be walked.
-          git -c "http.extraheader=AUTHORIZATION: basic $auth" \
-            fetch --quiet --depth=50 origin "$HEAD_SHA" 2>/dev/null || true
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5

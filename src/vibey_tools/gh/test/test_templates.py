@@ -2480,20 +2480,28 @@ def test_provenance_walks_the_pull_requests_head_not_the_merge_ref():
     text = (WORKFLOWS / "provenance.yml").read_text(encoding="utf-8")
     assert "HEAD_SHA: ${{ github.event.pull_request.head.sha }}" in text
     assert '--commits "${BASE_SHA}..${HEAD_SHA}"' in text
-    # ...and both SHAs have to be fetched before checkout-sourced tooling is installed.
+    # ...and checkout must materialise the exact head with its complete history before
+    # checkout-sourced tooling is installed. The checkout action may use its token
+    # internally, but no pull-request-controlled shell step may receive that token.
     workflow = yaml.safe_load(text)
     steps = workflow["jobs"]["provenance"]["steps"]
-    fetch_step = next(
-        step for step in steps if step.get("name") == "Fetch exact provenance commits"
+    checkout = steps[0]
+    assert checkout["uses"].startswith("actions/checkout@")
+    assert checkout["with"]["repository"] == (
+        "${{ github.event_name == 'pull_request' && "
+        "github.event.pull_request.head.repo.full_name || github.repository }}"
     )
+    assert checkout["with"]["ref"] == (
+        "${{ github.event_name == 'pull_request' && "
+        "github.event.pull_request.head.sha || github.sha }}"
+    )
+    assert checkout["with"]["fetch-depth"] == 0
+    assert checkout["with"]["persist-credentials"] is False
     install_index = next(
         i for i, step in enumerate(steps) if step.get("name") == "Install the tooling"
     )
-    fetch_index = steps.index(fetch_step)
-    assert fetch_index < install_index
-    assert fetch_step["env"]["PROVENANCE_FETCH_TOKEN"] == "${{ github.token }}"
-    assert 'fetch --quiet --depth=50 origin "$BASE_SHA"' in fetch_step["run"]
-    assert 'fetch --quiet --depth=50 origin "$HEAD_SHA"' in fetch_step["run"]
+    assert steps.index(checkout) < install_index
+    assert not any(step.get("name") == "Fetch exact provenance commits" for step in steps)
     check_step = next(step for step in steps if step.get("name") == "Check provenance")
     assert "git fetch" not in check_step["run"]
     assert '--commits "${BASE_SHA}..HEAD"' not in text
@@ -2655,18 +2663,17 @@ def test_the_promotion_shortcut_is_taken_only_for_this_repository_s_own_branch(
     assert ("Promotion PR" in done.stdout) is promotion
 
 
-def test_the_provenance_job_scopes_forge_credential_to_trusted_fetch():
-    """Only the trusted preflight fetch may receive a forge credential.
+def test_the_provenance_job_never_passes_a_forge_credential_to_shell():
+    """No pull-request-controlled shell step may receive a forge credential.
 
     `provenance.yml` installs the tooling from the CHECKED-OUT TREE where a repository
     self-hosts (`self_source`), and it runs on `pull_request`. So the step that invokes
     `vibey-gh` is running the contributor's own code, and any credential in that
     environment is a credential handed to whatever the pull request contains.
 
-    The exact commit range is fetched before that installation, in a static step that
-    uses a one-shot read-only header. The token is not persisted in `.git/config` and is
-    not present in the later step that runs the checkout's code. This test keeps that
-    boundary explicit while still supporting private repositories.
+    The exact pull-request head is materialised with full history by the pinned checkout
+    action. The action may use the read-only token internally, but it is not persisted in
+    `.git/config` and is not present in any shell step that runs checkout-sourced code.
     """
     text = (WORKFLOWS / "provenance.yml").read_text(encoding="utf-8")
     workflow = yaml.safe_load(text)
@@ -2684,21 +2691,25 @@ def test_the_provenance_job_scopes_forge_credential_to_trusted_fetch():
         assert not secrets, "the provenance job must not receive any secret"
 
     steps = workflow["jobs"]["provenance"]["steps"]
-    fetch_step = next(
-        step for step in steps if step.get("name") == "Fetch exact provenance commits"
-    )
     check_step = next(step for step in steps if step.get("name") == "Check provenance")
-    assert fetch_step["env"] == {
-        "BASE_SHA": "${{ github.event.pull_request.base.sha }}",
-        "HEAD_SHA": "${{ github.event.pull_request.head.sha }}",
-        "PROVENANCE_FETCH_TOKEN": "${{ github.token }}",
-    }
-    assert "PROVENANCE_FETCH_TOKEN" not in check_step["env"]
+    assert not any(
+        "${{ github.token }}" in str(value) for env in declared for value in env.values()
+    )
+    assert not any("PROVENANCE_FETCH_TOKEN" in env for env in declared)
     assert "git fetch" not in check_step["run"]
 
     # Read-only on contents alone. Anything wider is a wider grant to that same code.
     assert workflow["permissions"] == {"contents": "read"}
     checkout = workflow["jobs"]["provenance"]["steps"][0]
+    assert checkout["with"]["repository"] == (
+        "${{ github.event_name == 'pull_request' && "
+        "github.event.pull_request.head.repo.full_name || github.repository }}"
+    )
+    assert checkout["with"]["ref"] == (
+        "${{ github.event_name == 'pull_request' && "
+        "github.event.pull_request.head.sha || github.sha }}"
+    )
+    assert checkout["with"]["fetch-depth"] == 0
     assert checkout["with"]["persist-credentials"] is False
     # The premise the assertions above rest on: this job really does install and run the
     # checkout's own tooling, so if that ever stops being true these can be revisited.
