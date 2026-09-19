@@ -21,6 +21,7 @@ from vibey.infrastructure.engines.loop_process_adapter import (
     EXIT_CODE_WIND_DOWN,
     LoopProcessAdapter,
     _active_processes,
+    _diagnostic_files,
     _render_plan,
 )
 
@@ -59,6 +60,34 @@ def test_attribute_wind_down() -> None:
     adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
     result = adapter.attribute(75, "")
     assert isinstance(result, FailureClass)
+
+
+def test_diagnostic_tail_reads_and_releases_child_output(tmp_path: Path) -> None:
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    handle = _make_handle(tmp_path)
+
+    assert adapter.diagnostic_tail(handle) == ""
+    missing_stdout = (tmp_path / "missing-stdout").open("w", encoding="utf-8")
+    empty_stderr = (tmp_path / "empty-stderr").open("w", encoding="utf-8")
+    Path(missing_stdout.name).unlink()
+    _diagnostic_files[handle.run_id] = (missing_stdout, empty_stderr)
+    assert adapter.diagnostic_tail(handle) == ""
+    adapter.release_diagnostics(handle)
+
+    stdout_path = tmp_path / "stdout"
+    stderr_path = tmp_path / "stderr"
+    stdout_file = stdout_path.open("w", encoding="utf-8")
+    stderr_file = stderr_path.open("w", encoding="utf-8")
+    stdout_file.write("work output\n")
+    stderr_file.write("engine traceback\n")
+    stdout_file.flush()
+    stderr_file.flush()
+    _diagnostic_files[handle.run_id] = (stdout_file, stderr_file)
+
+    assert adapter.diagnostic_tail(handle) == "[stderr] engine traceback\n[stdout] work output"
+    adapter.release_diagnostics(handle)
+    assert handle.run_id not in _diagnostic_files
+    adapter.release_diagnostics(handle)
 
 
 async def test_send_prompt_writes_inbox_file(tmp_path: Path) -> None:

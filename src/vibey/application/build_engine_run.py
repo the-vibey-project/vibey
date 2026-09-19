@@ -26,6 +26,8 @@ class RunOutcome:
     optional ``run_exit_code`` capability -- EXIT_CODE_WIND_DOWN here is
     the graceful-handoff signal. None for adapters without the capability
     or while the process is still running."""
+    diagnostic_tail: str = ""
+    """Bounded engine output retained for failure attribution."""
 
     def misconfiguration_gate(
         self, descriptor: EngineDescriptor, work_item_id: str | None
@@ -74,6 +76,7 @@ async def run_and_record(
     correlation_id = correlation.for_project(job.project_id).value
     complete = False
     capacity_rejected = False
+    diagnostics: list[str] = []
     async for event in engine.tail(handle):
         await ledger.record(
             project_id=job.project_id,
@@ -88,6 +91,19 @@ async def run_and_record(
             complete = True
         if event.kind == EventKind.CAPACITY_REJECTED.value:
             capacity_rejected = True
+        for key in (
+            "stderr_tail",
+            "stdout",
+            "stderr",
+            "diagnostic",
+            "message",
+            "error",
+            "detail",
+            "output",
+        ):
+            value = event.payload.get(key)
+            if isinstance(value, str) and value.strip():
+                diagnostics.append(value.strip())
 
     # Read the exit code only after the tail drains: the adapter's process
     # reference stays alive until stop() releases it, and a pre-drain read
@@ -98,7 +114,21 @@ async def run_and_record(
         raw = read_exit_code(handle)
         if isinstance(raw, int):
             exit_code = raw
-    return RunOutcome(complete=complete, capacity_rejected=capacity_rejected, exit_code=exit_code)
+    read_diagnostics = getattr(engine, "diagnostic_tail", None)
+    if callable(read_diagnostics):
+        raw_diagnostics = read_diagnostics(handle)
+        if isinstance(raw_diagnostics, str) and raw_diagnostics.strip():
+            diagnostics.append(raw_diagnostics.strip())
+    diagnostic_tail = "\n".join(diagnostics)[-8_000:]
+    release_diagnostics = getattr(engine, "release_diagnostics", None)
+    if callable(release_diagnostics):
+        release_diagnostics(handle)
+    return RunOutcome(
+        complete=complete,
+        capacity_rejected=capacity_rejected,
+        exit_code=exit_code,
+        diagnostic_tail=diagnostic_tail,
+    )
 
 
 # Re-exported for the same reason `application/ports.py` re-exports the

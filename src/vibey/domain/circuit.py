@@ -11,6 +11,7 @@ from vibey.domain.capacity import (
     CreditsExhausted,
     WindowExhausted,
 )
+from vibey.domain.interfaces.circuit_interface import EngineFailurePolicyInterface
 from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
 from vibey.domain.stored_value import StoredValueParser, UnrecognizedValue
 
@@ -113,3 +114,48 @@ def schedule_probe(capacity: CapacityState, *, now: datetime, attempt: int) -> P
             return BackoffProbe(next_at=now + delay, attempt=attempt)
         case _:
             return None  # AuthenticationFailed or unknown -- waiting cannot fix credentials
+
+
+ENGINE_FAILURE_THRESHOLD: Final = 3
+"""Consecutive ENGINE-class failures that open an engine's circuit."""
+
+ENGINE_FAILURE_PROBE_BASE: Final = timedelta(minutes=5)
+"""Probe delay when the failure threshold is first reached."""
+
+ENGINE_FAILURE_PROBE_CAP: Final = timedelta(minutes=30)
+"""Maximum delay between probes of an engine that keeps failing."""
+
+
+@dataclass(frozen=True, slots=True)
+class EngineFailurePolicy:
+    """When ENGINE-class failures open a circuit and when it is probed again.
+
+    Declared by ``EngineFailurePolicyInterface``. Opening without a probe time
+    would be a one-way door because an open engine cannot be selected to prove
+    it has recovered.
+    """
+
+    threshold: int = ENGINE_FAILURE_THRESHOLD
+    probe_base: timedelta = ENGINE_FAILURE_PROBE_BASE
+    probe_cap: timedelta = ENGINE_FAILURE_PROBE_CAP
+
+    def __post_init__(self) -> None:
+        if isinstance(self.threshold, bool) or self.threshold < 1:
+            raise ValueError("an engine-failure threshold is a whole number of at least 1")
+        if self.probe_base <= timedelta(0):
+            raise ValueError("an engine-failure probe delay must be positive")
+        if self.probe_cap < self.probe_base:
+            raise ValueError("an engine-failure probe cap cannot be below its base delay")
+
+    def trips(self, consecutive_failures: int) -> bool:
+        """Whether the consecutive-failure count has reached the threshold."""
+        return consecutive_failures >= self.threshold
+
+    def probe_at(self, *, now: datetime, consecutive_failures: int) -> datetime:
+        """Return the next probe time, exponentially backed off and capped."""
+        attempt = max(consecutive_failures - self.threshold, 0)
+        return now + _backoff(attempt, base=self.probe_base, cap=self.probe_cap)
+
+
+ENGINE_FAILURE_POLICY: Final[EngineFailurePolicyInterface] = EngineFailurePolicy()
+"""The shared default, annotated so static typing verifies its interface."""

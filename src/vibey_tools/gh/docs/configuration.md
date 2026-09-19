@@ -141,7 +141,7 @@ the lane while `trusted_only` is on.
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `enabled` | boolean / `true` | Whether the sovereign job (`review-sovereign`) can run at all. **On by default, per sub-doctrine 8.a:** the sovereign path is the preference, so it is not the one that has to be opted into. That costs an adopter nothing until they stand a runner up, because the **heartbeat** gates scheduling rather than this flag — a repository with no fresh `heartbeat_ref` never offers the lane. Once a runner does exist, keep `trusted_only` true: GitHub says self-hosted runners should "almost never be used for public repositories". |
+| `enabled` | boolean / `true` | Whether the sovereign fallback job (`review-sovereign`) can run at all. **On by default, per sub-doctrine 8.a:** the sovereign path is the preference, so it is not the one that has to be opted into. That costs an adopter nothing until they stand a runner up, because the **heartbeat** gates scheduling rather than this flag — a repository with no fresh `heartbeat_ref` never offers the lane. Once a runner does exist, keep `trusted_only` true: GitHub says self-hosted runners should "almost never be used for public repositories". |
 | `runner_label` | string / `"vibey-local"` | Label the sovereign job targets, alongside `self-hosted`. |
 | `model` | string / `"qwen2.5-coder:14b"` | Model tag served by the Ollama-compatible endpoint. |
 | `base_url` | string / `"http://127.0.0.1:11434"` | Where the local model listens. |

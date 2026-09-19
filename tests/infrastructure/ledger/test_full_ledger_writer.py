@@ -167,7 +167,7 @@ def test_a_line_that_is_not_a_record_is_refused(line: str, message: str) -> None
 class _NewerEventKind(StrEnum):
     """Stands in for a newer vibey's `EventKind`, which has a member this one lacks."""
 
-    TRANSCRIPT_RECORDED = "TranscriptRecorded"
+    TRANSCRIPT_RECORDED = "TranscriptRecordedV2"
 
 
 def test_an_unrecognized_kind_is_handed_on_exactly_as_a_newer_vibey_would(
@@ -182,7 +182,7 @@ def test_an_unrecognized_kind_is_handed_on_exactly_as_a_newer_vibey_would(
         for e in events
     ]
     as_older_reads = [
-        dataclasses.replace(e, kind=UnrecognizedEventKind("TranscriptRecorded"))
+        dataclasses.replace(e, kind=UnrecognizedEventKind("TranscriptRecordedV2"))
         if e.seq == 2
         else e
         for e in events
@@ -197,5 +197,5 @@ def test_an_unrecognized_kind_is_handed_on_exactly_as_a_newer_vibey_would(
     assert older_ref.event_count == 3
     assert older_ref.digest == digest_range(events)
     lines = [json.loads(line) for line in older_path.read_text().splitlines()]
-    assert lines[1]["kind"] == "TranscriptRecorded"
+    assert lines[1]["kind"] == "TranscriptRecordedV2"
     assert lines[1]["payload"] == {"transcript_ref": "runs/1/t.jsonl"}

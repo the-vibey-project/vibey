@@ -195,7 +195,7 @@ def test_digest_range_does_not_fold_the_kind() -> None:
     payloads = [{"seed_digest": "d1"}, {"transcript_ref": "t1"}, {"dollars": 0.5}]
     as_newer_reads = [_event(i, EventKind.TURN_COMPLETED, p) for i, p in enumerate(payloads, 1)]
     as_older_reads = [
-        dataclasses.replace(e, kind=UnrecognizedEventKind("TranscriptRecorded"))
+        dataclasses.replace(e, kind=UnrecognizedEventKind("TranscriptRecordedV2"))
         if e.seq == 2
         else e
         for e in as_newer_reads

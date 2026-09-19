@@ -21,6 +21,7 @@ from vibey.application.interfaces import (
     LedgerSiteWriter,
     SearchTokenizerInterface,
     ShardHeaderInterface,
+    ShardHoldingInterface,
 )
 from vibey.application.ledger_publication import (
     SEARCH_TOKENIZER,
@@ -144,6 +145,7 @@ def test_the_fakes_satisfy_the_ports() -> None:
     assert isinstance(_Store(), LedgerShardStore)
     assert isinstance(_Writer(), LedgerSiteWriter)
     assert isinstance(SEARCH_TOKENIZER, SearchTokenizerInterface)
+    assert isinstance(ShardHolding.FULL, ShardHoldingInterface)
 
 
 # -- export ------------------------------------------------------------------------

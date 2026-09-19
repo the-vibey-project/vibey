@@ -7,9 +7,23 @@ from claudeloop.infrastructure.interfaces.backend_interface import (
     BackendProfileLoaderInterface,
     RunBackendHistoryInterface,
 )
+from claudeloop.infrastructure.interfaces.class_contracts import (
+    ClaudeAgentGatewayInterface,
+    ClaudeCapacityProbeInterface,
+    RealDoctorEnvironmentInterface,
+    RunMetaInterface,
+    RunnerConfigInterface,
+    TurnAccumulatorInterface,
+)
 
 __all__ = [
     "BackendEnvironmentResolverInterface",
+    "ClaudeAgentGatewayInterface",
+    "ClaudeCapacityProbeInterface",
     "BackendProfileLoaderInterface",
     "RunBackendHistoryInterface",
+    "RealDoctorEnvironmentInterface",
+    "RunMetaInterface",
+    "RunnerConfigInterface",
+    "TurnAccumulatorInterface",
 ]

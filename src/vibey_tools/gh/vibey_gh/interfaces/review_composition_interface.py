@@ -36,3 +36,17 @@ class ReviewComposerPort(Protocol):
         Raises `ValueError` for an unknown half or a missing sovereign verdict, and
         `TypeError` for an answer that is not a JSON object.
         """
+
+
+@runtime_checkable
+class ReviewComposerInterface(ReviewComposerPort, Protocol):
+    """The concrete two-lane review composer."""
+
+    def compose(
+        self,
+        paid: Mapping[str, Any],
+        *,
+        half: str,
+        sovereign: Mapping[str, Any] | None = None,
+        head_sha: str = "",
+    ) -> dict[str, Any]: ...

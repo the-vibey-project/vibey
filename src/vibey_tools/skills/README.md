@@ -366,8 +366,8 @@ Permanent branches (`develop`, `main`) may advance but are never deleted or forc
 `develop` is realigned onto `main` only when the two trees are byte-identical, so the
 realignment can never discard work. A pull request's evidence is tied to its exact head
 commit — a check or review against an earlier commit doesn't count once the branch moves.
-The trust-boundary write-up the standalone repository kept is in its `.github/AUTOMATION.md`,
-[as it stood before removal](https://github.com/the-vibey-project/vibey/blob/4e9adf18b660a9be8b6a8a9b20b879d58325d9d4/src/vibey_tools/skills/.github/AUTOMATION.md#ai-trust-boundary).
+The trust-boundary write-up the standalone repository kept was in its `.github/AUTOMATION.md`
+before the package was absorbed and that file was removed.
 
 ### Workflows
 
@@ -384,8 +384,8 @@ The standalone repository carried sixteen — four hand-authored (`CI`, `Release
 `github-release.yml`, `repository-profile.yml`, `conventional-commits.yml`,
 `release-repair.yml`, `release-surfaces.yml`) — plus its own `.vibey-gh.toml` and git hooks.
 None of it fired after the absorption, and it was removed under vibey #189; the full
-inventory is in `.github/AUTOMATION.md`
-[as it stood before removal](https://github.com/the-vibey-project/vibey/blob/4e9adf18b660a9be8b6a8a9b20b879d58325d9d4/src/vibey_tools/skills/.github/AUTOMATION.md#workflow-inventory).
+inventory was in `.github/AUTOMATION.md` before the package was absorbed and that file was
+removed.
 Two of them have no counterpart among the root workflows: the weekly `Currency research`
 pull request and the `CodeQL` scan.
 

@@ -13,6 +13,7 @@ from vibey.infrastructure.db.interfaces.ledger_search_repository_interface impor
     LedgerSearchCompilerInterface,
     SearchStatementInterface,
 )
+from vibey.infrastructure.db.interfaces.migrator_interface import MigratorInterface
 from vibey.infrastructure.db.interfaces.project_repository_interface import (
     PhaseTransitionedDraftBuilderInterface,
     ProjectRowMapperInterface,

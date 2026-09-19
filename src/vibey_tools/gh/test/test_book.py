@@ -23,11 +23,13 @@ from vibey_gh import book
 from vibey_gh.chapter_sanitizer import ChapterSanitizer
 from vibey_gh.interfaces.book_interface import (
     BookChapterInterface,
+    BookErrorInterface,
     EpubPackageInterface,
     NavReaderInterface,
     PrintInteriorInterface,
     TableOfContentsInterface,
 )
+from vibey_gh.interfaces.docx_interface import DocxWriterInterface
 
 NAV = """site_name: demo
 nav:
@@ -133,6 +135,9 @@ def test_the_epub_is_kdp_shaped(tmp_path):
         assert spine.index("index") < spine.index("start-index") < spine.index("reference")
         toc = z.read("OEBPS/toc.xhtml").decode()
         assert 'epub:type="toc"' in toc and "Welcome" in toc
+    with zipfile.ZipFile(written["docx"]) as z:
+        document = z.read("word/document.xml").decode()
+    assert "Demo Book" in document and "Welcome" in document
 
 
 def test_the_print_html_carries_the_kdp_trim(tmp_path):
@@ -192,7 +197,7 @@ def test_the_cli_builds_a_book_and_reports_the_paths(tmp_path, capsys, monkeypat
     )
     out = capsys.readouterr().out
     assert code == 0
-    assert "book.epub" in out and "book-print.html" in out
+    assert "book.epub" in out and "book.docx" in out and "book-print.html" in out
     # No layout flag given, so the interior is the standard one.
     printed = (tmp_path / "book" / "book-print.html").read_text()
     assert "size:6in 9in;margin:0.75in 0.5in 0.75in 0.5in" in printed
@@ -800,6 +805,12 @@ def test_the_interior_and_the_package_are_injectable_seams(tmp_path):
         def write(self, path, meta, chapters, bodies, now) -> None:
             path.write_text(meta["date"])
 
+    class Docx:
+        def write(self, path, **kwargs) -> None:
+            assert kwargs["title"] == "T"
+            assert kwargs["author"] == "A"
+            path.write_bytes(b"docx")
+
     written = book.build_book(
         _site(tmp_path),
         NAV,
@@ -807,17 +818,23 @@ def test_the_interior_and_the_package_are_injectable_seams(tmp_path):
         {"title": "T", "author": "A", "date": "2030-02-03"},
         interior=Interior(),
         package=Package(),
+        docx_writer=Docx(),
     )
     assert written["print_html"].read_text() == "3 chapters, 2030"
     assert written["epub"].read_text() == "2030-02-03"
+    assert written["docx"].read_bytes() == b"docx"
 
 
 def test_each_class_satisfies_the_interface_declared_beside_it():
+    assert isinstance(book.BookError("x"), BookErrorInterface)
     assert isinstance(book.NavReader(), NavReaderInterface)
     assert isinstance(book.TableOfContents([]), TableOfContentsInterface)
     assert isinstance(book.PrintInterior(), PrintInteriorInterface)
     assert isinstance(book.EpubPackage(), EpubPackageInterface)
     assert isinstance(book.BookChapter("t", "t.md"), BookChapterInterface)
+    from vibey_gh.docx import DocxWriter
+
+    assert isinstance(DocxWriter(), DocxWriterInterface)
 
 
 def _cli_book(tmp_path: Path, *flags: str) -> int:
