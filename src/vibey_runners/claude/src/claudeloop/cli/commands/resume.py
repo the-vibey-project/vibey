@@ -12,9 +12,11 @@ from claudeloop.application.usecases.resume_session import (
     resume_explicit,
 )
 from claudeloop.cli.asyncio import async_command
+from claudeloop.cli.outcome import RunOutcomeReporter
 from claudeloop.cli.render import render_session_warning
 from claudeloop.cli.time_parse import parse_wind_down_at
 from claudeloop.domain.errors import InvalidSessionSelectorError
+from claudeloop.domain.handoff_marker import HANDOFF_MARKER_FILENAME
 from claudeloop.infrastructure.config import load_config
 from claudeloop.infrastructure.logging import configure_logging
 from claudeloop.infrastructure.stream_ui import BufferingStreamUi, run_textual_app
@@ -34,6 +36,11 @@ def resume(
     max_turns: int | None = typer.Option(None, "--max-turns"),
     max_dollars: float | None = typer.Option(None, "--max-dollars"),
     max_wait_seconds: float | None = typer.Option(None, "--max-wait"),
+    profile: str | None = typer.Option(
+        None,
+        "--profile",
+        help="Backend profile: a [profiles.NAME] config table (must match the session's)",
+    ),
     model: str | None = typer.Option(
         None, "--model", help="Alias (low|medium|high) or raw Anthropic model id"
     ),
@@ -62,6 +69,7 @@ def resume(
         max_turns=max_turns,
         max_dollars=max_dollars,
         max_wait_seconds=max_wait_seconds,
+        profile=profile,
         model=model,
         effort=effort,
         preset=preset,
@@ -84,6 +92,7 @@ async def _resume(
     max_turns: int | None,
     max_dollars: float | None,
     max_wait_seconds: float | None,
+    profile: str | None,
     model: str | None,
     effort: str | None,
     preset: str | None,
@@ -104,23 +113,28 @@ async def _resume(
         except ValueError as exc:
             typer.echo(f"Invalid --wind-down-at: {exc}", err=True)
             raise typer.Exit(code=2) from exc
-    config = load_config(
-        cwd=cwd,
-        cli_overrides={
-            "max_turns": max_turns,
-            "max_dollars": max_dollars,
-            "max_wait_seconds": max_wait_seconds,
-            "model": model,
-            "effort": effort,
-            "preset": preset,
-            "log_level": log_level,
-            "log_chatter": log_chatter,
-            "done_marker": done_marker,
-            "log_file": str(log_file) if log_file else None,
-            "auto_model": auto_model,
-            "stream_ui": stream_ui,
-        },
-    )
+    try:
+        config = load_config(
+            cwd=cwd,
+            cli_overrides={
+                "max_turns": max_turns,
+                "max_dollars": max_dollars,
+                "max_wait_seconds": max_wait_seconds,
+                "profile": profile,
+                "model": model,
+                "effort": effort,
+                "preset": preset,
+                "log_level": log_level,
+                "log_chatter": log_chatter,
+                "done_marker": done_marker,
+                "log_file": str(log_file) if log_file else None,
+                "auto_model": auto_model,
+                "stream_ui": stream_ui,
+            },
+        )
+    except ValueError as exc:
+        typer.echo(f"Invalid configuration: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
     structlog_path = log_file or (Path(config.log_file) if config.log_file else None)
     configure_logging(
         log_file=structlog_path,
@@ -140,15 +154,21 @@ async def _resume(
         resolved_id = ref.session_id
 
     live_ui = BufferingStreamUi() if stream_ui else None
-    context = bootstrap.build_runner(
-        cwd=cwd,
-        config=config,
-        session_id=resolved_id,
-        resume=resolved_id,
-        log_file=structlog_path,
-        stream_ui=live_ui,
-        wind_down_at=wind_down_at,
-    )
+    try:
+        # A transcript made on one backend is not resumed on another.
+        bootstrap.check_resume_backend(cwd=cwd, session_id=resolved_id, config=config)
+        context = bootstrap.build_runner(
+            cwd=cwd,
+            config=config,
+            session_id=resolved_id,
+            resume=resolved_id,
+            log_file=structlog_path,
+            stream_ui=live_ui,
+            wind_down_at=wind_down_at,
+        )
+    except ValueError as exc:
+        typer.echo(f"{exc}", err=True)
+        raise typer.Exit(code=2) from exc
     typer.echo(f"Run id: {context.run_id}", err=True)
     typer.echo(f"Trace id: {context.trace_id}", err=True)
 
@@ -175,9 +195,9 @@ async def _resume(
         continue_prompt=continue_prompt or "Continue exactly where you left off.",
     )
 
-    if not result.success:
-        typer.echo(f"Run failed: {result.reason}", err=True)
-        if "stopped" in result.reason:
-            raise typer.Exit(code=130)
-        raise typer.Exit(code=1)
-    typer.echo(f"Done: {result.reason}")
+    RunOutcomeReporter().report(
+        result,
+        handoff_marker=context.run_dir.root / HANDOFF_MARKER_FILENAME,
+        stop_summary=context.run_dir.stop_summary_path,
+        profile=config.backend.name,
+    )

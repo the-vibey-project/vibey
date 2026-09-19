@@ -2,13 +2,18 @@
 
 # vibey engine adapters
 
-Vibey drives five autonomous session runners: `claudeloop`, `codexloop`,
-`cursorloop`, `agyloop` (the paid pool, `DEFAULT_DESCRIPTORS`) and `qwenloop`
-(a local model; opt-in via `[features] qwenloop = true` or
-`VIBEY_FEATURE_QWENLOOP`, ADR-0015). qwenloop is also the sovereign DESIGN
-provider (`infrastructure/engines/qwenloop_design.py`, selected with
-`vibey worker --provider qwenloop`, ADR-0027; sub-doctrine 8.a makes the sovereign
-path the preference, not the fallback). The runners' source lives in this
+Vibey drives five autonomous session runners through six engine ids:
+`claudeloop`, `codexloop`, `cursorloop`, `agyloop` (the paid pool,
+`DEFAULT_DESCRIPTORS`, tier PAID) and two opt-in local engines (tier LOCAL,
+`LOCAL_DESCRIPTORS`): `qwenloop` (`VIBEY_FEATURE_QWENLOOP` / `[features]
+qwenloop`, ADR-0015) and `claudeloop-local` — the claudeloop binary run with a
+local backend profile (`--profile NAME`), switched on by
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL` / `[features] claudeloop_local` (ADR-0038).
+Under sub-doctrine 8.a local engines are **preferred first**: selection runs
+SWRR within the LOCAL tier and falls back to PAID only when no local engine is
+eligible. qwenloop's model is also the sovereign DESIGN/DECOMPOSE provider
+(`qwenloop_design.py`, `qwenloop_decompose.py`, ADR-0027), the default
+`--provider` whenever a local engine is switched on (ADR-0038). The runners' source lives in this
 repository under `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}`
 (ADR-0021); vibey drives the installed binaries, not those packages' Python
 APIs. Each has its own CLI surface, effort vocabulary,
@@ -42,6 +47,23 @@ it's short):
 - `def attribute(exit_code: int, tail: str) -> FailureClass` — attributes a dead
   process to a `FailureClass` (`capacity`, `engine`, `work`, `vibey`)
 
+`LoopProcessAdapter.env_overlay` layers per-engine variables over the spawned
+process's environment (run and preflight alike) after the orchestrator's venv is
+stripped — how qwenloop gets `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` from the one
+setting `VIBEY_OLLAMA_URL` (`local_engines.py::LocalEndpointEnvironment`).
+Preflight runs `<binary> doctor` plus `descriptor.doctor_args`
+(claudeloop-local: `--profile NAME`).
+
+Preflight's `--version` and `doctor` probes each lead a process group of their own.
+On a timeout or a cancellation, `infrastructure/process/reaper.py::ProcessReaper`
+kills the whole group and reaps it within `LoopProcessAdapter.kill_grace_seconds`,
+logging `engine_process_not_reaped` if a descendant that left the group still holds
+the pipes. The gate runner and the skills-context compiler use the same reaper.
+Never hand-roll a kill followed by an unbounded `process.wait()` (#283, ADR-0017).
+The run's environment strips the interpreter's prefix only when it is a venv
+(`infrastructure/process/python_env.py::OrchestratorPythonEnv`, shared with the gate
+runner), so a system-Python install keeps `/usr/bin`.
+
 `start()` internally calls `infrastructure/engines/argv.py::build_argv()` —
 that's a plain function, not an adapter method; it takes both the descriptor
 and the `RunSpec` (`build_argv(descriptor, spec)`), not just the spec.
@@ -56,9 +78,13 @@ by descriptors, not one class per engine.
 
 Engine choice for engine-driven BUILD jobs goes through
 `SelectingEngineProvider → application/engine_selector.py::EngineSelector`
-(SWRR over `domain/rotation.py`), wired in `bootstrap.py`. Selection requires
-populated `engine_health` rows, so an engine with no recorded conformance is
-never selected.
+(SWRR over `domain/rotation.py`), wired in `bootstrap.py`. The selector builds a
+candidate per eligible engine and `domain/rotation.py::preferred_tier` offers SWRR
+only the first tier in `TIER_PREFERENCE` (LOCAL, PAID) holding a candidate that
+can win. The provider passes its pool (adapters ∩ `--engines`) as the allow-list,
+and refreshes every enabled local engine's health from its `doctor` before each
+selection. Selection requires populated `engine_health` rows, so an engine with
+no recorded conformance is never selected.
 
 Before `build.implement` seeds a fresh run, it can ask the `vibey-skills` CLI for
 a skills-context packet (`infrastructure/skills_context.py::VibeySkillsContextCompiler`,
@@ -68,10 +94,15 @@ ADR-0031). The packet is recorded as a `vibey_skills_context_packet` artifact.
 ## Engine descriptors
 
 `infrastructure/engines/descriptors.py` defines `CLAUDELOOP`, `CODEXLOOP`,
-`CURSORLOOP`, `AGYLOOP`, `QWENLOOP` — one `EngineDescriptor` per engine.
-`DEFAULT_DESCRIPTORS` is the paid four, `ALL_DESCRIPTORS` adds qwenloop, and
-`BY_ENGINE_ID` maps every `EngineId`. The worker adds a `LoopProcessAdapter` for
-qwenloop only when the feature flag is on.
+`CURSORLOOP`, `AGYLOOP`, `QWENLOOP`, `CLAUDELOOP_LOCAL` — one `EngineDescriptor`
+per engine. claudeloop-local's is *built* from `[engines.claudeloop_local]`
+(`profile`, `context_window`, `structured_verdict`) by
+`ClaudeloopLocalDescriptors.build()`; the constant is the default profile `local`.
+`DEFAULT_DESCRIPTORS` is the paid four, `LOCAL_DESCRIPTORS` the two local ones,
+`ALL_DESCRIPTORS` all six, and `BY_ENGINE_ID` maps every `EngineId`. The worker
+adds adapters for the local engines that are switched on through
+`local_engines.py::LocalEngineSettings` — the one resolver bootstrap, `worker`,
+`work` and `doctor` share.
 
 Each descriptor (`domain/engine.py::EngineDescriptor`) declares:
 - `engine_id`, `binary` — the executable name (e.g., `"claudeloop"`), `min_version`
@@ -83,6 +114,8 @@ Each descriptor (`domain/engine.py::EngineDescriptor`) declares:
 - `auth_env` — environment variables that must be set (empty for qwenloop)
 - `session_verb`, `isolation_flags` (per `IsolationLevel`)
 - `cost_per_mtok_in`/`cost_per_mtok_out`, `context_window`, `base_weight` (rotation weight)
+- `tier` (`EngineTier.PAID` default, `LOCAL` for qwenloop and claudeloop-local) and
+  `doctor_args` (extra `doctor` arguments; claudeloop-local: `--profile NAME`)
 - `supports_cwd_flag` (default `True`; codexloop: `False`) and `plan_flag`
   (default `None` = positional plan path; cursorloop: `"--plan"`)
 
@@ -99,6 +132,8 @@ effort_projection={
 ```
 
 qwenloop projects effort onto `--max-turns` (8, 16, 40, 64, 96).
+claudeloop-local passes `--profile NAME --preset low|low|medium|high|high` and
+never `--effort`; HIGH and MAX report `achieved=STANDARD`, its honest ceiling.
 
 If an engine **saturates**, the descriptor sets `achieved` to the tier it
 actually delivers. codexloop is the extreme case: its `run` has no effort flag,
@@ -128,7 +163,7 @@ produces the command line — read the real function, it is short. As of
 5. `--cwd <worktree_path>`, only when `descriptor.supports_cwd_flag` (codexloop:
    `False`).
 
-25 golden files under `tests/infrastructure/engines/golden/` (5 engines × 5
+30 golden files under `tests/infrastructure/engines/golden/` (6 engines × 5
 efforts; `test_argv.py` parametrizes over `ALL_DESCRIPTORS`) capture the
 expected argv for each combination — the source of truth for the exact current
 shape.
@@ -136,8 +171,14 @@ shape.
 ## Capacity classification
 
 `infrastructure/engines/classify.py::classify_capacity(engine_id, raw)` dispatches
-to one private classifier per engine (all five) and maps vendor-specific
-error shapes to vibey's `CapacityState`:
+to one private classifier per engine (claudeloop-local shares claudeloop's) and
+maps vendor-specific error shapes to vibey's `CapacityState`. claudeloop writes
+its capacity as the class *name* (`"capacity": "CreditsExhausted"`); both that and
+the `{"state": ...}` mapping are read, and `BackendMisconfigured` maps to
+`AuthenticationFailed` (terminal, never credits). Exit 78 (EX_CONFIG,
+`EXIT_CODE_BACKEND_MISCONFIGURED`) is attributed to ENGINE, and an incomplete run
+that exited 78 parks its BUILD job on an `engine_misconfigured` gate
+(`RunOutcome.misconfiguration_gate`) instead of retrying:
 
 ```python
 Available | WindowExhausted | CreditsExhausted | AuthenticationFailed

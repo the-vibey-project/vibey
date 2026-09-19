@@ -121,6 +121,7 @@ async def test_decompose_implement_verify_integrate_run_end_to_end_through_the_q
                 reviewer=ScriptedEngine(descriptor=CODEXLOOP, base_dir=tmp_path / "engine"),
                 ledger=PostgresBuildLedger(ledger_repo),
                 jobs=jobs,
+                clock=FixedClock(),
             ),
             "build.integrate": BuildIntegrateHandler(
                 integration=IntegrationBranch(repo_path, cycle=1),

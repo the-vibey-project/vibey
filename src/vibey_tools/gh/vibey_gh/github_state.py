@@ -10,6 +10,10 @@ response to a real 404 and is not worth getting subtly different twice.
 
 Pull requests and issues are the same object to this API: `gh pr comment` and
 `gh issue comment` create, and `repos/{repo}/issues/comments/{id}` edits either one.
+
+Every `gh` call made here rides on `vibey_gh.gh_transport`, and so does every call made
+through `gh_json`, `repository` and `upsert_comment` from the modules that share this state.
+The argv and working directory are the ones this module built before the transport existed.
 """
 
 from __future__ import annotations
@@ -17,16 +21,21 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 from collections.abc import Sequence
 from typing import Any, cast
 
+from vibey_gh.gh_transport import GhTransport
+from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface
 
+_transport: GhTransportInterface = GhTransport()
+
+
+# Module-level rather than a method (vibey ADR-0016), like the other two `gh` entry points
+# below: these three are a facade that six modules call by name, that `pr_automation` binds
+# once at import, and that their tests replace by attribute. Keeping the names where they
+# are is what lets the transport underneath change without any of those callers noticing.
 def gh_json(*args: str) -> Any:
-    run = subprocess.run(["gh", *args], capture_output=True, text=True, check=False)
-    if run.returncode:
-        raise RuntimeError(f"gh {' '.join(args)}: {run.stderr.strip()}")
-    return json.loads(run.stdout or "null")
+    return _transport.json(args)
 
 
 def marker_pattern(marker: str) -> re.Pattern[str]:
@@ -57,6 +66,7 @@ def render_body(marker: str, payload: dict[str, Any], heading: str, summary: str
     return f"<!-- {marker}:{encoded} -->\n## {heading}\n\n{summary.strip()}\n"
 
 
+# Module-level: part of the facade described above `gh_json`.
 def repository() -> str:
     """The `owner/name` every `gh` call is given explicitly rather than inferring."""
     name = os.environ.get("GH_REPO")
@@ -65,6 +75,7 @@ def repository() -> str:
     return name
 
 
+# Module-level: part of the facade described above `gh_json`.
 def upsert_comment(
     number: int,
     body: str,
@@ -82,27 +93,20 @@ def upsert_comment(
             existing = comment
             break
     if existing is None:
-        run = subprocess.run(
-            ["gh", subject, "comment", str(number), "--repo", repository_name, "--body", body],
-            capture_output=True,
-            text=True,
-            check=False,
+        run = _transport.run(
+            [subject, "comment", str(number), "--repo", repository_name, "--body", body]
         )
     elif existing.get("databaseId") is not None:
         comment_id = existing["databaseId"]
-        run = subprocess.run(
+        run = _transport.run(
             [
-                "gh",
                 "api",
                 f"repos/{repository_name}/issues/comments/{comment_id}",
                 "--method",
                 "PATCH",
                 "--field",
                 f"body={body}",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
+            ]
         )
     else:
         # GraphQL comments sometimes expose only an opaque `IC_...` node ID. Passing
@@ -114,9 +118,8 @@ def upsert_comment(
             "mutation($id:ID!,$body:String!){updateIssueComment(input:{id:$id,body:$body})"
             "{issueComment{id}}}"
         )
-        run = subprocess.run(
+        run = _transport.run(
             [
-                "gh",
                 "api",
                 "graphql",
                 "--field",
@@ -125,10 +128,7 @@ def upsert_comment(
                 f"id={comment_id}",
                 "--field",
                 f"body={body}",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
+            ]
         )
     if run.returncode:
         raise RuntimeError(f"{error}: {run.stderr.strip()}")

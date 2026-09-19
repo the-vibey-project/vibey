@@ -82,14 +82,17 @@ class WorkerLoop:
         # Lease duration is per-kind (a build.implement run takes hours; a
         # triage takes minutes). The kind isn't known until after the claim,
         # so claim at the short default and immediately extend once resolved.
+        # An extension that fails or is refused is said by `_beat` and the job
+        # carries on at the default, which the heartbeat loop keeps alive (or
+        # reports lost) at that lease's own cadence -- it is not a reason to
+        # drop a job this worker has already claimed (#211).
         lease = self._lease
         if self._lease_for_kind is not None:
             resolved = self._lease_for_kind(job.kind)
-            if resolved != self._lease:
-                await self._jobs.heartbeat(job.id, owner=self._owner, lease=resolved)
+            if resolved != self._lease and await self._beat(job, lease=resolved):
                 lease = resolved
 
-        heartbeat_task = asyncio.ensure_future(self._heartbeat_forever(job.id, lease=lease))
+        heartbeat_task = asyncio.ensure_future(self._heartbeat_forever(job, lease=lease))
         try:
             try:
                 outcome: Outcome = await self._handler.handle(job)
@@ -107,7 +110,8 @@ class WorkerLoop:
 
     async def _settle(self, job: JobRecord, outcome: Outcome) -> None:
         if isinstance(outcome, Success):
-            await self._jobs.ack(job.id, owner=self._owner)
+            acked = await self._jobs.ack(job.id, owner=self._owner)
+            self._landed(acked, event="job.ack_rejected", job=job)
         elif isinstance(outcome, Failure):
             await self._settle_failure(job, outcome)
         elif isinstance(outcome, Park):
@@ -132,17 +136,7 @@ class WorkerLoop:
                 retry_at=outcome.retry_at,
                 error={"class": FailureClass.CAPACITY.value, "detail": outcome.detail},
             )
-            if not deferred:
-                # Warning, not info: nothing was deferred, the work this worker
-                # just did was discarded, and something else now owns the job.
-                self._log.warning(
-                    "job.defer_rejected",
-                    job_id=str(job.id),
-                    project_id=str(job.project_id),
-                    phase=job.phase.value,
-                    kind=job.kind,
-                    reason="lease no longer held by this worker",
-                )
+            if not self._landed(deferred, event="job.defer_rejected", job=job):
                 return
             # Capacity is the one that warrants a warning. Routine
             # verify-repair waits are Defers too (see `Defer.capacity`), and
@@ -151,10 +145,7 @@ class WorkerLoop:
             say = self._log.warning if outcome.capacity else self._log.info
             say(
                 "job.deferred",
-                job_id=str(job.id),
-                project_id=str(job.project_id),
-                phase=job.phase.value,
-                kind=job.kind,
+                **self._job_fields(job),
                 work_item=job.work_item_id,
                 capacity=outcome.capacity,
                 reason=outcome.detail,
@@ -174,14 +165,26 @@ class WorkerLoop:
         """
         error = {"class": outcome.failure_class.value, "detail": outcome.detail}
         if job.attempts < job.max_attempts:
-            await self._jobs.nack(job.id, owner=self._owner, error=error)
+            nacked = await self._jobs.nack(job.id, owner=self._owner, error=error)
+            self._landed(nacked, event="job.nack_rejected", job=job)
             return
 
         gate = await self._gates.latest_for_job(job.id)
         granted = self._granted_attempts(gate)
         if granted is not None and granted > job.attempts:
-            await self._jobs.grant_attempts(job.id, owner=self._owner, max_attempts=granted)
-            await self._jobs.nack(job.id, owner=self._owner, error=error)
+            # `granted > attempts >= max_attempts`, and only a lease-guarded
+            # write ever changes the row's bound, so the grant always widens
+            # it: a refusal here can only mean the lease is gone. The nack is
+            # then skipped, not merely logged -- a nack without the grant is
+            # the 'failed' dead end this branch exists to avoid, and it would
+            # be refused by the same lease guard anyway.
+            widened = await self._jobs.grant_attempts(
+                job.id, owner=self._owner, max_attempts=granted
+            )
+            if not self._landed(widened, event="job.grant_rejected", job=job):
+                return
+            nacked = await self._jobs.nack(job.id, owner=self._owner, error=error)
+            self._landed(nacked, event="job.nack_rejected", job=job)
             return
 
         limit = job.max_attempts
@@ -227,16 +230,75 @@ class WorkerLoop:
         existing = await self._gates.latest_for_job(job.id)
         if existing is None or existing.answer is not None:
             await self._gates.raise_gate(job.project_id, job.id, request)
-        await self._jobs.park(job.id, owner=self._owner)
+        parked = await self._jobs.park(job.id, owner=self._owner)
+        self._landed(parked, event="job.park_rejected", job=job)
 
-    async def _heartbeat_forever(self, job_id: UUID, *, lease: timedelta) -> None:
+    async def _heartbeat_forever(self, job: JobRecord, *, lease: timedelta) -> None:
+        """Keeps the lease alive while the handler runs.
+
+        Nothing this loop meets may escape it. `run_once` awaits the task in
+        its `finally`, so an exception stored here used to re-raise there:
+        `_settle` was never reached, a finished -- and paid-for -- session was
+        never acked, and the exception took the worker process down, with
+        every parallel drive loop in it (#211). A beat that fails is a
+        transient, said by `_beat` and retried at the next interval; beating
+        at a third of the lease leaves room to miss one. A beat the queue
+        *refuses* is different: the lease is gone and the row may already be
+        another worker's, so there is nothing left to keep alive -- stop.
+        """
         interval = lease.total_seconds() / 3
         try:
             while True:
                 await asyncio.sleep(interval)
-                await self._jobs.heartbeat(job_id, owner=self._owner, lease=lease)
+                if await self._beat(job, lease=lease) is False:
+                    return
         except asyncio.CancelledError:
             pass
+
+    async def _beat(self, job: JobRecord, *, lease: timedelta) -> bool | None:
+        """One lease extension, which never raises.
+
+        True: extended. False: refused -- this worker no longer holds the
+        lease (said at warning as `job.lease_lost`). None: the call itself
+        failed (a pool timeout, a failover), so whether the lease is still
+        held is unknown; said at warning as `job.heartbeat_failed`, and the
+        next beat finds out.
+        """
+        try:
+            held = await self._jobs.heartbeat(job.id, owner=self._owner, lease=lease)
+        except Exception as exc:  # noqa: BLE001 - a transient fault must not reach the settle path
+            self._log.warning("job.heartbeat_failed", **self._job_fields(job), error=repr(exc))
+            return None
+        return self._landed(held, event="job.lease_lost", job=job)
+
+    def _landed(self, applied: bool, *, event: str, job: JobRecord) -> bool:
+        """Says so when a lease-guarded queue write did not land, and hands
+        the answer back so the caller can stop.
+
+        Every write this loop makes to a claimed job -- heartbeat, ack, nack,
+        grant, park, defer -- is guarded on the lease and reports whether it
+        took. False means the lease expired mid-handler and the row has been
+        reaped or claimed by another worker: the transition did not happen,
+        and on a settle the work this worker just did is discarded. That is
+        said at warning, never raised: raising would kill the worker process,
+        and every parallel drive loop in it, over a job that is no longer this
+        worker's to settle.
+        """
+        if not applied:
+            self._log.warning(
+                event, **self._job_fields(job), reason="lease no longer held by this worker"
+            )
+        return applied
+
+    @staticmethod
+    def _job_fields(job: JobRecord) -> dict[str, str]:
+        """The coordinates every line about a job carries."""
+        return {
+            "job_id": str(job.id),
+            "project_id": str(job.project_id),
+            "phase": job.phase.value,
+            "kind": job.kind,
+        }
 
 
 # Re-exported for the same reason `application/ports.py` re-exports the

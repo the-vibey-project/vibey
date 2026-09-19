@@ -105,8 +105,9 @@ def test_every_shipped_tree_is_in_the_container_build_context(shipped: str) -> N
 def test_the_root_manifest_itself_derives_a_release() -> None:
     """`pyproject.toml` decides what ships, so a change confined to it must release.
 
-    Precedent: src/vibey_tools/bootstrap/.vibey-gh.toml has carried `pyproject.toml` in
-    its own `code_paths` since before this repository did.
+    Precedent: vibey-bootstrap's standalone `.vibey-gh.toml` carried `pyproject.toml` in
+    its own `code_paths` before this repository did. That file was inert here and was
+    removed under #189; `git show 4e9adf18:src/vibey_tools/bootstrap/.vibey-gh.toml`.
     """
     assert any("pyproject.toml".startswith(prefix) for prefix in _version_prefixes()), (
         "pyproject.toml now decides what ships but reaches no `[version]` prefix"

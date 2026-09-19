@@ -103,6 +103,8 @@ evidence, not state.
 `VisualDesignDeclined`, `VisualDesignAccepted`, `VisualDesignWaived`,
 `DeploymentOptedIn`, `DeploymentDeclined`.
 
+**Readers are forward compatible, writers strict (vibey#275):** a stored kind this vibey does not know is read as `UnrecognizedEventKind` (so `LedgerEvent.kind` is `EventKind | UnrecognizedEventKind`), kept in every range, full ledger and digest, skipped by every projection, and never written. Match kinds with `is EventKind.X` and narrow with `isinstance(kind, EventKind)` before using a member-only attribute.
+
 **Closable events:** `QuestionAsked`, `DecisionRecorded`, `AssumptionStated`,
 `FindingRaised` — these are the events the no-loss gate checks.
 

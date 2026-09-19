@@ -171,8 +171,9 @@ nav:
       - Notice: NOTICE.md
 
 # Material's first-class GA4 integration -- renders the canonical gtag snippet on every
-# page. The id also lives in .vibey-gh.toml [documentation] for a future release-surfaces
-# adoption; the two must stay the same value.
+# page. The standalone repository also kept it in its own .vibey-gh.toml [documentation];
+# that file never applied in the monorepo and was removed under vibey #189, so this is the
+# only copy.
 extra:
   analytics:
     provider: google

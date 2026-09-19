@@ -14,6 +14,7 @@ from typing import Any
 from structlog.stdlib import BoundLogger
 
 from claudeloop.application.usecases import run_control as run_control_uc
+from claudeloop.domain.backend import BackendIdentity
 from claudeloop.domain.snapshot import SnapshotRef
 from claudeloop.infrastructure.chat_meta import ChatMetaStore
 from claudeloop.infrastructure.control import FileRunControl
@@ -21,12 +22,16 @@ from claudeloop.infrastructure.git_savepoints import GitSavePointStore
 from claudeloop.infrastructure.logging import get_logger
 from claudeloop.infrastructure.resources.store import RunResourceStore
 from claudeloop.infrastructure.rundir import (
+    RunMeta,
     _pid_alive,
     list_run_directories,
     resolve_run_directory,
 )
 from claudeloop.infrastructure.snapshot import RunSnapshotBuilder
 from claudeloop.infrastructure.state_bus import FileStateBus
+
+# Resource kinds that switch on Anthropic server-side tools (see resources/adapter.py).
+_SERVER_TOOL_KINDS = frozenset({"web-search", "research"})
 
 
 def _logger() -> BoundLogger:
@@ -73,12 +78,21 @@ def enqueue_prompt(
     return result
 
 
+def _run_backend(meta: RunMeta) -> BackendIdentity | None:
+    """The backend a run recorded in its meta, or None for a run from before
+    backends were recorded. Module-level like every other helper in this façade."""
+    return BackendIdentity.parse(meta.backend) if meta.backend else None
+
+
 def enqueue_model(
     cwd: Path, model: str, *, run_id: str | None = None
 ) -> run_control_uc.EnqueueResult:
     directory = resolve_run_directory(cwd, run_id)
     inbox = FileRunControl(directory.inbox)
     meta = directory.read_meta()
+    backend = _run_backend(meta)
+    if backend is not None:
+        backend.check_model(model)
     result = run_control_uc.request_set_model(inbox, model, run_id=meta.run_id)
     _logger().info("ops.model_enqueued", run_id=result.run_id, model=model)
     return result
@@ -172,6 +186,9 @@ def enqueue_resource(
     directory = resolve_run_directory(cwd, run_id)
     inbox = FileRunControl(directory.inbox)
     meta = directory.read_meta()
+    backend = _run_backend(meta)
+    if backend is not None and action != "rm" and kind.strip().lower() in _SERVER_TOOL_KINDS:
+        backend.check_server_tools()
     result = run_control_uc.request_resource_mutate(
         inbox,
         action=action,

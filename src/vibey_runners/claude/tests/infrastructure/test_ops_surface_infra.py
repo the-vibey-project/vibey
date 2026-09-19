@@ -175,3 +175,46 @@ def test_bootstrap_ops_enqueue_and_memory(tmp_path: Path) -> None:
     shared = bootstrap_ops.chat_share(tmp_path, "sess-1")
     assert "bundle_path" in shared
     assert bootstrap_ops.chat_show(tmp_path, "sess-1")["pinned"] is True
+
+
+# --- live-run guards on a local backend (the run's meta records its backend) ---
+
+
+def _local_run(tmp_path: Path, backend: str | None) -> str:
+    directory = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path, run_id="live")
+    if backend is not None:
+        directory.update_meta(backend=backend)
+    return "live"
+
+
+def test_switching_a_local_run_to_a_claude_model_is_refused(tmp_path: Path) -> None:
+    run_id = _local_run(tmp_path, "local:http://127.0.0.1:11434")
+    with pytest.raises(ValueError, match="does not serve the Anthropic model"):
+        bootstrap_ops.enqueue_model(tmp_path, "claude-opus-4-6", run_id=run_id)
+    assert bootstrap_ops.enqueue_model(tmp_path, "high", run_id=run_id).command_type == (
+        "set_model"
+    )
+
+
+@pytest.mark.parametrize("kind", ["web-search", "research", " Web-Search "])
+def test_server_side_tools_are_refused_on_a_local_run(tmp_path: Path, kind: str) -> None:
+    run_id = _local_run(tmp_path, "local:http://127.0.0.1:11434")
+    with pytest.raises(ValueError, match="server-side tools"):
+        bootstrap_ops.enqueue_resource(tmp_path, action="add", kind=kind, value="q", run_id=run_id)
+
+
+def test_removing_a_server_side_tool_is_always_allowed(tmp_path: Path) -> None:
+    run_id = _local_run(tmp_path, "local:http://127.0.0.1:11434")
+    result = bootstrap_ops.enqueue_resource(
+        tmp_path, action="rm", kind="web-search", value="", run_id=run_id
+    )
+    assert result.command_type == "resource_mutate"
+
+
+@pytest.mark.parametrize("backend", ["anthropic", None])
+def test_anthropic_and_legacy_runs_are_not_guarded(tmp_path: Path, backend: str | None) -> None:
+    run_id = _local_run(tmp_path, backend)
+    assert bootstrap_ops.enqueue_model(tmp_path, "claude-opus-4-6", run_id=run_id).command_type
+    assert bootstrap_ops.enqueue_resource(
+        tmp_path, action="add", kind="web-search", value="q", run_id=run_id
+    ).command_type

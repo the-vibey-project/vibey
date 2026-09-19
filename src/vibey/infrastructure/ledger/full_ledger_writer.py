@@ -9,32 +9,51 @@ re-reading the database."""
 import json
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Final
 
 from vibey.domain.handoff import LedgerRef
+from vibey.domain.interfaces.ledger_record_interface import LedgerRecordCodecInterface
 from vibey.domain.ledger import LedgerEvent, digest_range
+from vibey.domain.ledger_record import LEDGER_RECORDS, InvalidLedgerRecord
+from vibey.infrastructure.ledger.interfaces.full_ledger_writer_interface import (
+    LedgerLinesInterface,
+)
 
 
-def _event_to_json_line(event: LedgerEvent) -> str:
-    return json.dumps(
-        {
-            "event_id": str(event.event_id),
-            "project_id": str(event.project_id),
-            "cycle": event.cycle,
-            "phase": event.phase.value,
-            "seq": event.seq,
-            "kind": event.kind.value,
-            "engine_id": event.engine_id.value if event.engine_id is not None else None,
-            "job_id": str(event.job_id) if event.job_id is not None else None,
-            "causation_id": str(event.causation_id) if event.causation_id is not None else None,
-            "correlation_id": str(event.correlation_id),
-            "provenance": event.provenance.value,
-            "produced_at": event.produced_at.isoformat(),
-            "payload": event.payload,
-            "digest": event.digest,
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-    )
+class LedgerLines:
+    """One ledger event per line of JSON, and back.
+
+    The object on each line is the shared ledger record (domain/ledger_record.py);
+    this class adds only the line: keys sorted, no whitespace, so the same event
+    always writes the same bytes. The handoff ledger and the published shard
+    (`vibey ledger export`) both write through it, so the two cannot drift.
+    """
+
+    def __init__(self, records: LedgerRecordCodecInterface = LEDGER_RECORDS) -> None:
+        self._records = records
+
+    def encode(self, event: LedgerEvent) -> str:
+        return json.dumps(self._records.to_fields(event), sort_keys=True, separators=(",", ":"))
+
+    def decode(self, line: str) -> LedgerEvent:
+        try:
+            fields = json.loads(line, parse_constant=self._refuse_constant)
+        except json.JSONDecodeError as exc:
+            raise InvalidLedgerRecord(f"not JSON: {exc.msg}") from exc
+        if not isinstance(fields, dict):
+            raise InvalidLedgerRecord("a record line must be a JSON object")
+        return self._records.from_fields(fields)
+
+    @staticmethod
+    def _refuse_constant(name: str) -> object:
+        # Python's json reads NaN and Infinity, which no other JSON reader
+        # accepts; a record carrying one could never be served back out.
+        raise InvalidLedgerRecord(f"{name} is not a JSON number")
+
+
+LEDGER_LINES: Final[LedgerLinesInterface] = LedgerLines()
+"""The line codec every ledger file shares. Annotated with the interface so `mypy
+--strict` checks the class against its declared seam."""
 
 
 def write_full_ledger(
@@ -44,7 +63,7 @@ def write_full_ledger(
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w") as f:
         for event in ordered:
-            f.write(_event_to_json_line(event) + "\n")
+            f.write(LEDGER_LINES.encode(event) + "\n")
 
     if not ordered:
         return LedgerRef(uri=uri, from_seq=0, to_seq=0, event_count=0, digest=digest_range(()))

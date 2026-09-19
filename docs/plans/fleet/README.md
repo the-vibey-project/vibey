@@ -70,8 +70,7 @@ unrecognized-argument error.
 
 ## Protected paths
 
-A run must not modify these without explicit human review (enforced by
-`land.sh`'s refusal, not just convention):
+A run must not modify these without explicit human review:
 
 - `tests/infrastructure/db/test_chaos.py` — the chaos test
 - `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py` — the
@@ -80,8 +79,23 @@ A run must not modify these without explicit human review (enforced by
 - `tests/live/**` — the two-mode harness (`-m live` faked, `-m paid` real),
   landed with vibey PR #17
 
-No CI job or CODEOWNERS rule enforces these paths; `land.sh` is the only guard,
-and it is dormant.
+**`land.sh`'s refusal is superseded** (#213). It was the only guard, it was dormant,
+and it targeted repositories that no longer exist. The rule is now enforced from
+configuration, in the repository itself:
+
+- `.github/CODEOWNERS` owns these paths (and itself), and `require_code_owner_review =
+  true` on both rulesets in `.vibey-gh.toml` makes GitHub demand the owner's approval;
+- `[merge_train] protected_paths` in `.vibey-gh.toml` makes the merge train refuse such
+  a pull request outright ("needs a human merge"), because the train's `--admin`
+  fallback would bypass the code-owner review;
+- `tests/meta/test_protected_paths_agree.py` fails when those two lists drift apart or
+  a pattern stops matching any tracked file.
+
+The no-loss suite is also no longer only protected but measured: CI's required
+`No-loss property suite (10,000 examples)` job runs it at the definition of done's
+10,000 examples per property. `land.sh` keeps its old `PROTECTED_PATTERN` only because
+this page and `run.sh` still describe the dormant fleet flow; it is not the source of
+truth, and the list above is.
 
 ## Known gaps that shape the launcher today
 

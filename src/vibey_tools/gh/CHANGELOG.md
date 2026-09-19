@@ -5,6 +5,135 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Add `[merge_train] protected_paths`: globs the merge train never merges unattended
+  (vibey #213). A pull request touching one is reported `needs a human merge` instead of
+  merged, because the train falls back to `gh pr merge --admin` when a plain merge is
+  refused, and an admin merge bypasses the code-owner review a ruleset asks for — so the
+  refusal must come first, from configuration. The changed files come from the paginated
+  REST files endpoint, not `pr view --json files` (one GraphQL page of at most 100), a
+  rename counts as a change to its old path, and a listing that fails or falls short of
+  GitHub's own `changedFiles` count refuses rather than passes. A promotion from the
+  integration branch is exempt. The decision lives in `ProtectedPathsGuard`
+  (`vibey_gh/protected_paths.py`) behind `interfaces/protected_paths_interface.py`. Entries
+  must be unique and non-empty, and a leading `/` or a bare string is refused at load,
+  since either would protect nothing. Empty by default: nothing changes until a repository
+  declares paths.
+- Add `require_code_owner_review` to `[rulesets.integration]` and `[rulesets.release]`. It
+  was a literal `false` in every reconciled ruleset, so no repository could ask GitHub to
+  demand its CODEOWNERS' approval. Default `false`: with a CODEOWNERS file it blocks every
+  pull request touching an owned path until that owner approves, which an upgrade must
+  never switch on.
+
+- Fix `automation-bootstrap.yml`, the admin-only path for merging a repair to broken
+  privileged workflow code, which could never merge (#214). It required six hard-coded
+  check names — `Documentation contract`, `Provenance`, `Build`, `Lint`, `Analyze Python`,
+  and `MCP, API, CLI, SDK, and webhook parity` — under `jq -e`, and `Build`, `Lint` and the
+  parity check came from this project's own non-template workflows, so no adopting
+  repository could ever produce them; the vibey monorepo produced none but one. The gates
+  are now rendered by `vibey-gh install` from `[rulesets.integration] required_checks`,
+  less `[pr_automation] ignored_checks` and the gates the path routes around (`gate`,
+  `PR automation / gate`, `Automation bootstrap / gate`), into the step's `env:` as a JSON
+  list that `jq --argjson` reads — so a name with a quote, comma or parentheses survives —
+  and the run summary lists them instead of claiming a fixed set. It still fails closed:
+  an empty list, a head with no check runs, an absent gate or any red run refuses the
+  merge, and the error now names the absent gates. A configured name that opens a `${{ }}`
+  expression is refused at render time. **Behaviour change for a repository whose
+  `required_checks` differ from those six:** the bootstrap now waits on its own list —
+  this tenant's configuration renders `Lint`, `Build`, `Test (3.11)`–`Test (3.13)`,
+  `Provenance`, `CodeQL`, `Documentation contract` and the parity check, so `Analyze Python`
+  is no longer required here and the three test jobs and `CodeQL` are.
+- Fix the same workflow's change-scope check for a vendored copy. `gh pr diff` reports
+  repository-root paths, and the pattern assumed the standalone layout, so a repair under
+  `src/vibey_tools/gh/` was refused file by file. The pattern is now rendered from
+  `[install] self_source` with every ERE metacharacter escaped and control characters
+  refused, and it admits that subtree's own deployed workflows and
+  `vibey_gh/automation_bootstrap.py` — the new home of this derivation — alongside the
+  existing automation-core paths. A standalone repository renders the pattern it always
+  had, plus that one module.
+- Add `vibey-gh forge-snapshot`, slice S1 of vibey#136: a read-only capture of a GitHub
+  repository's issues, issue comments, pull requests (class `change-request`), reviews,
+  review comments, labels, milestones, releases with their asset manifests, and tags, into
+  `--out DIR` as one append-only JSON Lines file per class. Every record is the forge's JSON
+  verbatim inside a `vibey.forge-record/1` envelope (forge, repository, neutral class, native
+  class, native id, `captured_at`), with a `payload_sha256` content digest and a `sha256`
+  seal over the rest of the record, both over the vibey ledger's canonical form, and `prev`
+  linking it to the record before it in its file. `DIR/manifest.json`
+  (`vibey.forge-manifest/1`) records each class's status (`captured`, `could-not-look`,
+  `not-selected`), counts, chain head and cursor, a `resume_since`, and an `excluded` list
+  naming every artifact class not captured, with its reason — 33 of them, from timeline
+  events and review-thread resolution to secrets, which the forge never returns. Built on
+  `GhTransport.survey`, so a class the forge could not be asked about keeps its file and its
+  cursor and is never written as empty; the command then exits 1. Listings use
+  `gh api --paginate --slurp` (GitHub CLI 2.48+); pull requests, which GitHub cannot filter
+  by `since`, are paged newest-update-first and the walk stops at the cursor. `--since
+  resume` continues every chain from the manifest's resume point, and content already
+  recorded is counted as unchanged rather than written again, so a rerun appends nothing.
+  Three classes behind three seams in `vibey_gh/interfaces/forge_snapshot_interface.py`:
+  `GithubForgeReader`, `JsonlSnapshotStore` and `ForgeSnapshot`. Registered as a capability
+  on every surface. Documented in `docs/forge-snapshot.md`.
+- Add `vibey_gh.gh_transport.GhTransport`, the one seam for running `gh`, declared in
+  `vibey_gh/interfaces/gh_transport_interface.py`. The package had grown seven private
+  runners that disagree about what a failure is, so rather than a fourth answer it offers
+  the three they give, each byte-identical to its original: `json` raises like
+  `github_state.gh_json`, `probe` reports `(ok, out)` like `promote._gh` (or, with
+  `strip=False, with_stderr=True`, like the merge train's `_gh`), and `survey` returns
+  `(value, problem)` like `tidy._gh_json`, so "could not ask" never reads as "nothing
+  there". `github_state.gh_json`, `repository` and `upsert_comment` now delegate to it,
+  keeping their names so every caller and every test that replaces them is untouched. That
+  re-routes conversation, PR and issue automation, reconcile, rulesets and flatten through
+  the transport with the same argv and working directory: `test/test_gh_transport.py`
+  drives the code as it stood before and the code now through one fake `gh` on PATH and
+  requires identical argv lists, directories, `calls.txt` bytes and outcomes. The fake
+  itself moves into `test/conftest.py` as `FakeGh`, which also records each call's exact
+  argv, directory and (on request) standard input, for any test to reuse. The other
+  modules keep their own runners for now and move over one at a time.
+- Put the sovereign review lane FIRST on the half of the review it can carry (sub-doctrine
+  8.a, #133 slice 2 of 3, Option A: serial). `evaluate` decides the lane once:
+  `sovereign_lane` (enabled, a fresh heartbeat, and under `trusted_only` a same-repository
+  head) and `sovereign_carries` (that, and a trusted author). `review-fallback` becomes
+  `review-sovereign` ("Sovereign diff review"), runs before the paid `review`, and reports
+  `passed`, `findings`, `verdict` and `model`. The paid review waits for it: when the local
+  lane carries the diff half and returned a verdict, the reviewer is held to
+  `ReviewContract.json_schema([REQUIRES_WIDER_CONTEXT])` — rendered as
+  `__VIBEY_GH_REVIEW_WIDER_SCHEMA__` and chosen by a GitHub expression at run time — and
+  told the diff half is carried; otherwise it answers the full schema exactly as before. The
+  wider half asked alone reports its own `wider_summary` and `wider_findings`
+  (`ReviewContract.wider_summary_field` / `wider_findings_field`), so the two lanes never
+  write the same names. `vibey-gh pr-automation combine` (`vibey_gh.review_composition`,
+  `ReviewComposer` behind `ReviewComposerPort`) composes the verdict, replaces the `jq` that
+  listed the sixteen judgments, and emits `carried` (field to lane), `halves`, `findings`
+  and `repairable`. The gate names the lane behind each half. A failure carried by the
+  sovereign lane alone is never repaired: `repair` and `mirror-fork` also require
+  `repairable`, and a later evaluation of that head reviews it again
+  (`AutomationState.review_repairable`). An outside author's local verdict is held in
+  reserve and read only when the paid review returns no verdict. `local-review --role
+  sovereign|fallback` labels the verdict by the role it ran in. A frozen golden capture of
+  the previous gate and `jq` (`test/golden/`) pins that no heartbeat behaves exactly as
+  before and no credit exactly as the local fallback did.
+- Render the exact-head review's `--json-schema` from `ReviewContract.json_schema()` rather
+  than keeping a hand-written copy in `pr-automation.yml`. The template now carries
+  `__VIBEY_GH_REVIEW_SCHEMA__`, which `install.render_workflow` fills — compact, with any
+  apostrophe written as `\u0027` so the single-quoted `claude_args` argument cannot be broken
+  by a configured field. `ReviewContract` gains a `field_schemas` table (field name to JSON
+  Schema fragment, in schema key order) and `json_schema(halves)`, which renders the full
+  schema or either half on its own; `ReviewContractPort` declares both. The rendered schema
+  is byte-identical to the literal it replaces, and a test pins that. Slice 1 of 3 of #133:
+  no lane ordering changes yet.
+- Fix the gate's "local fallback found a blocking defect" branch, which could never fire.
+  `review-fallback` wrote a `findings` count but did not declare it as a job output, so
+  `needs.review-fallback.outputs.findings` was always empty and every local decline was
+  reported as "could not complete the review" — sending the reader away from a finding that
+  was in the job log. The test meant to guard it matched the paid review job's identical
+  `findings:` line instead; it now reads the fallback job itself, and a new test fails any
+  template that reads a `needs.<job>.outputs.<name>` the job never declares. The paid
+  `review` job's `findings` output, likewise declared and never written, is now written.
+- Correct the paper's commodity-thesis evidence (`docs/paper.md`) against the tracked
+  stress record, with dated correction notes: the "61 generations at 1.00 success,
+  1.4 ± 0.25 per minute" figures and the linear-then-superlinear latency law matched
+  nothing in `docs/sovereignty-stress-2026-08-30.md`, which itself falsifies both
+  latency models. The paragraph now reports 52/52 through N = 16, 102/107 from N = 2 to
+  32, and a 0.99–2.00 per minute band, and the "same structure in silicon" claim is
+  withdrawn (the-vibey-project/vibey#192).
 - Fix `conversation`'s pull-request check, which could never be true in production.
   `evaluate` and `context` read `isPullRequest`, but `fetch_subject` never requested it and
   could not have: it is not a `gh issue view --json` field, and `gh` rejects it rather than
