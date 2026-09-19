@@ -287,7 +287,7 @@ things those runners deliberately do not do:
 | Document | What's in it |
 |---|---|
 | [Architecture map](docs/project.mmd) | Comprehensive Mermaid diagram: every layer, the six phases, the ledger/handoff data flow, the security boundary, and the release channels |
-| [Research paper](https://the-vibey-project.github.io/vibey/main/paper/) · [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf) | *Ledger-Mediated Orchestration: Vendor-Independent Autonomous Software Delivery over a Pool of Coding Agents* — the ledger invariant, queue semantics, gate soundness, and vendor independence, stated formally |
+| [Research paper](https://the-vibey-project.github.io/vibey/main/paper/) · [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf) | *Ledger-Mediated Orchestration: Vendor-Independent Autonomous Software Delivery over a Pool of Coding Agents* — the ledger invariant, queue semantics and gate soundness, the engine family, the exact-head release calculus, and a measured production-rate regularity with its falsification conditions: the family's one paper |
 | [The book](https://the-vibey-project.github.io/vibey/main/book.pdf) · [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) · [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html) | Every page of the documentation site, in reading order, as one downloadable book |
 | [CLI reference](docs/reference/cli.md) | Every command, subcommand, flag, and default |
 | [Configuration reference](docs/reference/configuration.md) | The full `vibey.toml` schema, with defaults and an example file |

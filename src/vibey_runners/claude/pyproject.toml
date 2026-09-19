@@ -143,7 +143,8 @@ testpaths = ["tests"]
 # `--cov=claudeloop.domain --cov=claudeloop.application --cov-fail-under=100`)
 # back out to the whole package, defeating the per-layer gate without any
 # error. Coverage scope and its gate are passed explicitly at each call site
-# instead — see docs/contributing/testing.md and .github/workflows/ci.yml.
+# instead — see docs/contributing/testing.md and the claudeloop rows of the
+# repository root's .github/workflows/ci.yml `tools` job.
 addopts = "--cov-report=term-missing -m \"not live and not system\""
 asyncio_mode = "auto"
 markers = [

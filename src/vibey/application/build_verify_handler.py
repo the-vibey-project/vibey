@@ -373,7 +373,7 @@ class BuildVerifyHandler:
         raised: list[str] = []
         resolved: set[str] = set()
         for event in await repair.ledger_reader.all_for_project(job.project_id):
-            if event.cycle != job.cycle:
+            if not event.interpretable or event.cycle != job.cycle:
                 continue
             finding_id = str(event.payload.get("finding_id", ""))
             if not finding_id.startswith(prefix):

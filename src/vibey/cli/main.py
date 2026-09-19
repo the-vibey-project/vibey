@@ -35,6 +35,7 @@ from vibey.bootstrap import (
     build_visual_worker,
 )
 from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
     InvalidAnswer,
@@ -42,8 +43,10 @@ from vibey.domain.errors import (
     UnknownProvider,
     WrongPhase,
 )
-from vibey.domain.ledger import EventKind
-from vibey.domain.phase import Phase, VisualDecision
+from vibey.domain.job import JobState
+from vibey.domain.ledger import EventKind, LedgerEventKind
+from vibey.domain.ledger_query import EVENT_KINDS, InvalidLedgerQuery
+from vibey.domain.phase import Phase, StoredPhase, VisualDecision
 from vibey.domain.spec import (
     AcceptanceCriterion,
     Constraint,
@@ -80,6 +83,7 @@ deploy_app = typer.Typer(name="deploy", invoke_without_command=True)
 app.add_typer(deploy_app, name="deploy")
 ledger_app = typer.Typer(name="ledger", invoke_without_command=True)
 app.add_typer(ledger_app, name="ledger")
+ledger_app.command("search")(ledger_search)
 
 
 def _version_callback(value: bool) -> None:
@@ -375,6 +379,8 @@ async def _work_once(
         project = await resources.projects.get(project_id)
         if project is None:
             raise UnknownProject(f"unknown project {project_id}")
+        if not isinstance(project.phase, Phase):
+            raise WrongPhase(f"project phase {project.phase.value!r} is unknown; upgrade vibey")
         owner = f"cli-{os.getpid()}"
         if project.phase is Phase.VISUAL_DESIGN:
             visual_provider: VisualInventoryProducer
@@ -481,7 +487,7 @@ def accept_design(
     decline and go straight to BUILD.
     """
 
-    async def accept() -> tuple[Path, Phase]:
+    async def accept() -> tuple[Path, StoredPhase]:
         async with build_app() as resources:
             project = await resources.projects.get(project_id)
             if project is None:
@@ -515,7 +521,7 @@ def visual(ctx: typer.Context) -> None:
         raise typer.Exit()
 
 
-async def _settle_visual(project_id: UUID, decision: VisualDecision) -> Phase:
+async def _settle_visual(project_id: UUID, decision: VisualDecision) -> StoredPhase:
     async with build_app() as resources:
         settled = await VisualAcceptanceService(
             projects=resources.projects,
@@ -699,7 +705,7 @@ def status(
                     "queue_depth": {k.value: v for k, v in state.queue_depth.items()},
                     "circuits": [
                         {
-                            "engine_id": c.engine_id,
+                            "engine_id": c.engine_id.value,
                             "installed": c.installed,
                             "version": c.version,
                             "conformance_ok": c.conformance_ok,
@@ -721,12 +727,12 @@ def status(
                 dep = f" | Deploy: {state.deployment_decision}" if state.deployment_decision else ""
                 typer.echo(f"Project: {state.project_name} ({state.project_id})")
                 typer.echo(
-                    f"Phase: {state.phase.name} | Cycle: {state.cycle}/{state.max_cycles}{vis}{dep}"
+                    f"Phase: {state.phase_label} | Cycle: {state.cycle}/{state.max_cycles}{vis}{dep}"
                 )
                 typer.echo(f"Repo: {state.repo_path}")
                 typer.echo("\nQueue Depth:")
                 for k, v in state.queue_depth.items():
-                    typer.echo(f"  {k.name}: {v}")
+                    typer.echo(f"  {k.name if isinstance(k, JobState) else k.value}: {v}")
                 typer.echo("\nCircuits:")
                 if not state.circuits:
                     typer.echo("  (no engines recorded)")
@@ -842,6 +848,18 @@ def ledger_show(
     kind: Annotated[str | None, typer.Option("--kind")] = None,
 ) -> None:
     """Show the append-only event ledger history."""
+    # `--kind` reads a label the way `ledger search --kind` does, from the same
+    # resolver: a known kind by value or name, any case; anything else matched
+    # exactly as written, so a kind a newer vibey recorded is still findable
+    # from this one (vibey#275).
+    wanted: LedgerEventKind | None = None
+    if kind is not None:
+        try:
+            wanted = EVENT_KINDS.resolve(kind)
+        except InvalidLedgerQuery as exc:
+            raise typer.BadParameter(str(exc)) from exc
+        for note in PRESENTER.kind_notes((wanted,)):
+            typer.echo(note, err=True)
 
     async def show_events() -> None:
         async with build_app() as resources:
@@ -855,24 +873,23 @@ def ledger_show(
 
             events = await resources.ledger.all_for_project(target_id)
             if phase is not None:
+                # A phase a newer vibey wrote (vibey#287) has only its stored text,
+                # so it matches by value; a member matches by value or by name.
                 events = tuple(
                     e
                     for e in events
                     if e.phase.value.lower() == phase.lower()
-                    or e.phase.name.lower() == phase.lower()
+                    or (isinstance(e.phase, Phase) and e.phase.name.lower() == phase.lower())
                 )
-            if kind is not None:
-                events = tuple(
-                    e
-                    for e in events
-                    if e.kind.value.lower() == kind.lower() or e.kind.name.lower() == kind.lower()
-                )
+            if wanted is not None:
+                events = tuple(e for e in events if e.kind == wanted)
 
             displayed = events[-limit:] if len(events) > limit else events
             for e in displayed:
                 ts = e.produced_at.strftime("%Y-%m-%d %H:%M:%S")
                 eng = f" [{e.engine_id.value}]" if e.engine_id else ""
-                typer.echo(f"#{e.seq:<4} {ts} [{e.phase.name}] {e.kind.value}{eng}")
+                shown = e.phase.name if isinstance(e.phase, Phase) else e.phase.value
+                typer.echo(f"#{e.seq:<4} {ts} [{shown}] {e.kind.value}{eng}")
 
     asyncio.run(show_events())
 
@@ -921,7 +938,10 @@ def deploy_status(
                     endpoint = str(outputs["endpoint"])
 
             typer.echo(f"Project:    {project.name} ({project.project_id})")
-            typer.echo(f"Phase:      {project.phase.name}")
+            phase_label = (
+                project.phase.name if isinstance(project.phase, Phase) else project.phase.value
+            )
+            typer.echo(f"Phase:      {phase_label}")
             typer.echo(f"Cycle:      {project.cycle}/{project.max_cycles}")
             typer.echo(f"Endpoint:   {endpoint}")
 
@@ -1393,6 +1413,13 @@ def worker(
                 project = await _resolve_project()
             if project is None:
                 typer.echo("no projects found; create one with `vibey new` first")
+                raise typer.Exit(1)
+            if not isinstance(project.phase, Phase):
+                typer.echo(
+                    f"project {project.project_id} has unknown phase {project.phase.value!r}; "
+                    "refusing to dispatch; upgrade vibey",
+                    err=True,
+                )
                 raise typer.Exit(1)
 
             # Sovereign by default once a local engine is on (8.a, #115 B5); an explicit

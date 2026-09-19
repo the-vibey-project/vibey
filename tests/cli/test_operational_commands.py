@@ -14,6 +14,7 @@ from vibey.application.dto import EngineHealthRecord, EnqueueRequest
 from vibey.bootstrap import build_app, database_url
 from vibey.cli.main import app
 from vibey.domain.circuit import CircuitState
+from vibey.domain.engine import EngineId
 from vibey.domain.job import idempotency_key
 from vibey.domain.ledger import EventKind, Provenance
 from vibey.domain.phase import Phase
@@ -55,7 +56,7 @@ async def _seed_status_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -121,7 +122,7 @@ async def _seed_engines_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -165,7 +166,7 @@ async def _seed_cost_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -365,6 +366,44 @@ def test_ledger_show_with_kind_filter(tmp_path: Path) -> None:
     res = runner.invoke(app, ["ledger", "show", str(pid), "--kind", "QuestionAsked"])
     assert res.exit_code == 0, res.output
     assert "QuestionAsked" in res.stdout
+    assert "AnswerGiven" not in res.stdout
+    by_name = runner.invoke(app, ["ledger", "show", str(pid), "--kind", "answer_given"])
+    assert "AnswerGiven" in by_name.stdout
+    assert "QuestionAsked" not in by_name.stdout
+    assert by_name.stderr == ""
+
+
+async def _seed_ledger_project_with_a_newer_kind(tmp_path: Path) -> UUID:
+    pid = await _seed_ledger_project(tmp_path)
+    async with build_app() as resources, resources.ledger._pool.acquire() as conn:
+        # A newer vibey's appender, through the same SQL function.
+        await conn.execute(
+            "SELECT append_event($1, 1, 'intake', 'FutureKindX', NULL, NULL, NULL, $1, "
+            "'agent', now(), '{}'::jsonb, 'test-digest-3')",
+            pid,
+        )
+    return pid
+
+
+def test_ledger_show_reads_a_kind_this_vibey_does_not_know(tmp_path: Path) -> None:
+    """vibey#275: one row a newer vibey wrote used to crash `ledger show`."""
+    pid = asyncio.run(_seed_ledger_project_with_a_newer_kind(tmp_path))
+
+    res = runner.invoke(app, ["ledger", "show", str(pid)])
+    assert res.exit_code == 0, res.output
+    assert "[INTAKE] FutureKindX" in res.stdout
+
+    only = runner.invoke(app, ["ledger", "show", str(pid), "--kind", "FutureKindX"])
+    assert only.exit_code == 0, only.output
+    assert "#3" in only.stdout
+    assert "QuestionAsked" not in only.stdout
+    assert "'FutureKindX' is not an event kind this vibey knows" in only.stderr
+
+
+def test_ledger_show_refuses_an_empty_kind_before_connecting() -> None:
+    res = runner.invoke(app, ["ledger", "show", "--kind", " "])
+    assert res.exit_code == 2
+    assert "unknown event kind" in res.output
 
 
 def test_status_with_no_engines_shows_no_engines_message(tmp_path: Path) -> None:

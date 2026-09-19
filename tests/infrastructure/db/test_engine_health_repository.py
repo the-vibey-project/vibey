@@ -20,7 +20,7 @@ def _record(
 ) -> EngineHealthRecord:
     defaults: dict[str, object] = {
         "project_id": project_id,
-        "engine_id": engine_id,
+        "engine_id": EngineId(engine_id),
         "installed": True,
         "version": "1.2.3",
         "conformance_ok": True,
