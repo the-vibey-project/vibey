@@ -5,6 +5,23 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Fix `[install] pin_version` for every adopter (vibey#259). Since 1.0.0 `install` rendered a
+  floating `python -m pip install --quiet vibey` for every repository that was not the
+  fallback distribution itself. The reasoning was that nothing could know which `vibey`
+  release carries which `vibey_gh`, but the installed distribution's own metadata records
+  exactly that. The pin now resolves in order:
+  1. the repository's own `[project] version`, where it IS `[install] fallback_package`
+     (unchanged, and the only case a version bump re-renders);
+  2. the installed `fallback_package` release that provides the running `vibey_gh`, when it
+     was built rather than installed from a source tree, per PEP 610's `direct_url.json`, and
+     its RECORD lists the running file;
+  3. otherwise floating, with a `notice:` from `install` and `check` saying why.
+  `uvx --from vibey==X.Y.Z vibey-gh install` now renders `"vibey==X.Y.Z"` again. The
+  decision lives in `vibey_gh/fallback_pin.py`. `FallbackPinResolver` and
+  `InstalledDistributions` each have an interface under `interfaces/`, and the metadata is
+  injected, so the tests no longer depend on how the virtualenv running them was installed.
+  `render_workflow`, `install`, `installed` and `rerender_version_pinned` take the resolved
+  pin as `fallback_pin=`, so one command asks the interpreter once.
 - Fix the managed `commit-msg` hook, which ignored a refusal from the project's own chained
   `commit-msg.local`. It chained with `[ -x … ] && "…"` and runs without `set -e`, so the
   failing status was dropped and the commit went ahead. It now exits with that status.

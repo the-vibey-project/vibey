@@ -326,12 +326,13 @@ def apply_version(cfg: GhConfig, new: str) -> list[str]:
         written.append("uv.lock")
 
     # The managed workflows are the other artefact derived from this number. With
-    # `[install] pin_version` on, each one pins the fallback install to the repository's
-    # own `[project] version`, so a bump that does not re-render leaves every deployed
-    # workflow pinning the PREVIOUS release -- and the drift check fails on the release
-    # commit itself. Exactly the lockfile's failure mode, fixed in the same breath rather
-    # than left to a runbook step. Imported here, not at module scope: `install` reads
-    # `pyproject.toml` for the pin and must read it AFTER this function has rewritten it.
+    # `[install] pin_version` on in the repository that IS the fallback distribution, each
+    # one pins the fallback install to its own `[project] version`, so a bump that does not
+    # re-render leaves every deployed workflow pinning the PREVIOUS release -- and the
+    # drift check fails on the release commit itself. Exactly the lockfile's failure mode,
+    # fixed in the same breath rather than left to a runbook step. Imported here, not at
+    # module scope: `install` reads `pyproject.toml` for the pin and must read it AFTER
+    # this function has rewritten it.
     from vibey_gh.install import rerender_version_pinned
 
     written.extend(rerender_version_pinned(cfg))

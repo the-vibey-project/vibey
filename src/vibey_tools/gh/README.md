@@ -1117,6 +1117,12 @@ and commit like any other change. The self-hosting path this repository uses to 
 itself from source is never pinned, since it cannot depend on a published release that may
 not exist yet.
 
+The pin is the release `vibey-gh` is running from, so run it from one: `uvx --from
+vibey==X.Y.Z vibey-gh install` renders `vibey==X.Y.Z`. An editable or other source-tree
+install carries the last release's number while its templates may be ahead of it, so it
+pins nothing: the install stays floating, and `install` and `check` print a `notice:`
+saying so rather than leaving the key silently inert.
+
 
 `trusted_authors` is matched after normalising `app/name` and `name[bot]` to the same
 thing. `gh` reports a bot author with the `app/` prefix while the rest of GitHub writes
