@@ -5,6 +5,15 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Test that the rendered `commit-msg` and `pre-push` hooks reach their `<hook>.local`
+  sibling when git runs them from a linked worktree, where `.git` is a file rather than
+  a directory. The test drives a real `git commit` and `git push` against a bare remote,
+  from both a main checkout and a worktree. It checks that pre-push's refs arrive on stdin
+  intact, and that no rendered hook spells a path inside `.git/`. The templates were
+  already correct: they find their sibling through `$(dirname "$0")`. The defect behind
+  vibey #282 was in the monorepo's own `.local` shims, which looked for the pre-commit
+  framework at the literal `.git/hooks/<stage>`. This test stops the templates from
+  picking up the same assumption.
 - Fix `vibey-gh promote` reusing an open promotion pull request without writing anything
   back (#235). It recomputed the version and the file count correctly and left the title
   and body as the run that OPENED the pull request wrote them, so #231 read
