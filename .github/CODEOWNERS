@@ -1,0 +1,31 @@
+# The protected paths of this repository, and who alone may approve a change to them.
+#
+# The no-loss property suite, the chaos test, the full-cycle system test and the two-mode
+# live harness are the tests that prove vibey works, so a build must not be able to weaken
+# them on its own say-so (docs/plans/implementation-plan.md, "Bootstrapping: vibey builds
+# vibey"). Until #213 nothing enforced that rule: the only guard was a refusal in
+# scripts/fleet/land.sh, a dormant script aimed at repositories that no longer exist.
+#
+# It is enforced three ways now, and each covers a gap in the others:
+#
+# - this file names the owner, and `require_code_owner_review = true` on both rulesets in
+#   .vibey-gh.toml makes GitHub demand that owner's approval before such a change merges;
+# - `[merge_train] protected_paths` in .vibey-gh.toml makes the merge train refuse the
+#   change outright ("needs a human merge"), because the train falls back to
+#   `gh pr merge --admin` and an admin merge bypasses the code-owner review;
+# - tests/meta/test_protected_paths_agree.py fails if this list and that one drift apart,
+#   or if a pattern stops matching any file.
+#
+# This file owns itself, so the protection cannot be removed by the kind of change it
+# guards against. Bots do not belong here: an entry grants review AUTHORITY, and an
+# automated reviewer able to satisfy its own requirement is not a review.
+#
+# Patterns are root-anchored and written so the same text, less its leading `/`, is also
+# the merge train's glob -- which is what the agreement test compares.
+
+/tests/domain/test_noloss*.py                  @adammatthewsteinberger
+/tests/domain/test_briefing.py                 @adammatthewsteinberger
+/tests/infrastructure/db/test_chaos.py         @adammatthewsteinberger
+/tests/system/test_delivery_stage_set.py       @adammatthewsteinberger
+/tests/live/**                                 @adammatthewsteinberger
+/.github/CODEOWNERS                            @adammatthewsteinberger

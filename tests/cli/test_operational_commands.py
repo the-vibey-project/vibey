@@ -14,6 +14,7 @@ from vibey.application.dto import EngineHealthRecord, EnqueueRequest
 from vibey.bootstrap import build_app, database_url
 from vibey.cli.main import app
 from vibey.domain.circuit import CircuitState
+from vibey.domain.engine import EngineId
 from vibey.domain.job import idempotency_key
 from vibey.domain.ledger import EventKind, Provenance
 from vibey.domain.phase import Phase
@@ -55,7 +56,7 @@ async def _seed_status_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -121,7 +122,7 @@ async def _seed_engines_project(tmp_path: Path) -> UUID:
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -150,22 +151,22 @@ def test_engines_command(tmp_path: Path) -> None:
     assert "$2.00" in res.stdout
 
 
-async def _seed_cost_project(tmp_path: Path) -> UUID:
+async def _seed_cost_project(tmp_path: Path, config: dict[str, object] | None = None) -> UUID:
+    """A project whose spend is in the ledger -- $2.50 over one BUILD turn and
+    $0.75 over one DESIGN turn -- while its engine_health row still says $0,
+    the way it does in production today (issue #209)."""
     async with build_app() as resources:
         project = await resources.projects.create(
             "ops-cost-proj",
             tmp_path,
             max_cycles=5,
-            config={
-                "project": {"name": "ops-cost-proj"},
-                "budget": {"max_dollars_per_cycle": 40.0, "max_dollars_total": 250.0},
-            },
+            config={"project": {"name": "ops-cost-proj"}, **(config or {})},
         )
         health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
         await health_repo.upsert(
             EngineHealthRecord(
                 project_id=project.project_id,
-                engine_id="claudeloop",
+                engine_id=EngineId.CLAUDELOOP,
                 installed=True,
                 version="1.0.0",
                 conformance_ok=True,
@@ -178,20 +179,78 @@ async def _seed_cost_project(tmp_path: Path) -> UUID:
                 probe_attempt=0,
                 consecutive_fail=0,
                 ewma_failure=0.0,
-                cost_usd_cycle=3.75,
+                cost_usd_cycle=0.0,
                 selected_count=4,
             )
         )
+        spend = (
+            (Phase.BUILD, EventKind.TURN_COMPLETED, {"verdict": "Done", "cost_usd": 2.5}),
+            (Phase.DESIGN, EventKind.BUDGET_SPENT, {"dollars": 0.75, "turns": 1}),
+        )
+        for n, (phase, kind, payload) in enumerate(spend):
+            await resources.ledger.append(
+                LedgerEventDraft(
+                    project_id=project.project_id,
+                    cycle=project.cycle,
+                    phase=phase,
+                    kind=kind,
+                    engine_id=None,
+                    job_id=None,
+                    causation_id=None,
+                    correlation_id=project.project_id,
+                    provenance=Provenance.TRUSTED,
+                    produced_at=datetime.now(UTC),
+                    payload=payload,
+                    digest=f"cost-digest-{n}",
+                )
+            )
         return project.project_id
 
 
-def test_cost_command(tmp_path: Path) -> None:
-    project_id = asyncio.run(_seed_cost_project(tmp_path))
+def test_cost_command_shows_the_enforced_caps_and_the_ledger_spend(tmp_path: Path) -> None:
+    """The bug this guards (#210): `vibey cost` printed caps from a `budget`
+    key nothing writes, so a project capped at $10 was shown "$40.00", and
+    its spend came from engine_health, which is $0 in production."""
+    project_id = asyncio.run(
+        _seed_cost_project(tmp_path, {"max_cycle_dollars": 10.0, "max_cycle_turns": 50})
+    )
     res = runner.invoke(app, ["cost", str(project_id)])
     assert res.exit_code == 0, res.output
-    assert "claudeloop" in res.stdout
-    assert "$3.75" in res.stdout
-    assert "Cycle Budget" in res.stdout
+    assert "Cycle spend:      $3.25 (2 turns)" in res.stdout
+    assert "Cycle dollar cap: $10.00" in res.stdout
+    assert "Cycle turn cap:   50" in res.stdout
+    assert "Cap reached" not in res.stdout
+    # Nothing enforces a lifetime cap, so none is printed.
+    assert "Total Budget" not in res.stdout
+    # The per-engine count is rotation selections, never labelled turns.
+    assert "claudeloop: $0.00 (4 selections)" in res.stdout
+    # The per-engine figure is metered BUILD spend that nothing resets (#209),
+    # so it must not be labelled as this cycle's.
+    assert "Per-engine (BUILD sessions, all cycles):" in res.stdout
+    assert "current cycle" not in res.stdout
+
+
+def test_cost_command_uncapped_ignores_the_legacy_budget_table(tmp_path: Path) -> None:
+    project_id = asyncio.run(
+        _seed_cost_project(
+            tmp_path,
+            {"budget": {"max_dollars_per_cycle": 40.0, "max_dollars_total": 250.0}},
+        )
+    )
+    res = runner.invoke(app, ["cost", str(project_id)])
+    assert res.exit_code == 0, res.output
+    assert "Cycle dollar cap: none (uncapped)" in res.stdout
+    assert "Cycle turn cap:   none" in res.stdout
+    assert "$40.00" not in res.stdout
+    assert "$250.00" not in res.stdout
+
+
+def test_cost_command_says_when_the_cap_has_tripped(tmp_path: Path) -> None:
+    project_id = asyncio.run(_seed_cost_project(tmp_path, {"max_cycle_dollars": 3}))
+    res = runner.invoke(app, ["cost", str(project_id)])
+    assert res.exit_code == 0, res.output
+    assert "Cycle dollar cap: $3.00" in res.stdout
+    assert "Cap reached: the next BUILD session parks a budget_exhausted gate." in res.stdout
 
 
 async def _seed_ledger_project(tmp_path: Path) -> UUID:
@@ -317,7 +376,8 @@ def test_cost_uses_latest_project_when_no_id_given(tmp_path: Path) -> None:
     asyncio.run(_seed_cost_project(tmp_path))
     res = runner.invoke(app, ["cost"])
     assert res.exit_code == 0, res.output
-    assert "Cycle Budget" in res.stdout
+    assert "ops-cost-proj" in res.stdout
+    assert "Cycle dollar cap: none (uncapped)" in res.stdout
 
 
 def test_cost_no_projects_exits_with_error() -> None:
@@ -365,6 +425,44 @@ def test_ledger_show_with_kind_filter(tmp_path: Path) -> None:
     res = runner.invoke(app, ["ledger", "show", str(pid), "--kind", "QuestionAsked"])
     assert res.exit_code == 0, res.output
     assert "QuestionAsked" in res.stdout
+    assert "AnswerGiven" not in res.stdout
+    by_name = runner.invoke(app, ["ledger", "show", str(pid), "--kind", "answer_given"])
+    assert "AnswerGiven" in by_name.stdout
+    assert "QuestionAsked" not in by_name.stdout
+    assert by_name.stderr == ""
+
+
+async def _seed_ledger_project_with_a_newer_kind(tmp_path: Path) -> UUID:
+    pid = await _seed_ledger_project(tmp_path)
+    async with build_app() as resources, resources.ledger._pool.acquire() as conn:
+        # A newer vibey's appender, through the same SQL function.
+        await conn.execute(
+            "SELECT append_event($1, 1, 'intake', 'FutureKindX', NULL, NULL, NULL, $1, "
+            "'agent', now(), '{}'::jsonb, 'test-digest-3')",
+            pid,
+        )
+    return pid
+
+
+def test_ledger_show_reads_a_kind_this_vibey_does_not_know(tmp_path: Path) -> None:
+    """vibey#275: one row a newer vibey wrote used to crash `ledger show`."""
+    pid = asyncio.run(_seed_ledger_project_with_a_newer_kind(tmp_path))
+
+    res = runner.invoke(app, ["ledger", "show", str(pid)])
+    assert res.exit_code == 0, res.output
+    assert "[INTAKE] FutureKindX" in res.stdout
+
+    only = runner.invoke(app, ["ledger", "show", str(pid), "--kind", "FutureKindX"])
+    assert only.exit_code == 0, only.output
+    assert "#3" in only.stdout
+    assert "QuestionAsked" not in only.stdout
+    assert "'FutureKindX' is not an event kind this vibey knows" in only.stderr
+
+
+def test_ledger_show_refuses_an_empty_kind_before_connecting() -> None:
+    res = runner.invoke(app, ["ledger", "show", "--kind", " "])
+    assert res.exit_code == 2
+    assert "unknown event kind" in res.output
 
 
 def test_status_with_no_engines_shows_no_engines_message(tmp_path: Path) -> None:
@@ -1862,15 +1960,71 @@ def test_doctor_cluster_passes_against_a_migrated_database(
 
     asyncio.run(migrate())
     monkeypatch.chdir(tmp_path)
+    for var in _ENGINE_KEY_VARS:
+        monkeypatch.delenv(var, raising=False)
 
-    # No engine binaries: the scripted-provider image, which is the state
-    # of the published image today and not a fault.
-    with patch("shutil.which", return_value=None):
+    # Every engine on PATH and no key: the default chart install on the image
+    # since ADR-0037, which bundles every runner. Not a fault -- the worker was
+    # never told to use an engine.
+    with patch("shutil.which", side_effect=lambda binary: f"/app/.venv/bin/{binary}"):
         res = runner.invoke(app, ["doctor", "--cluster"])
 
     assert res.exit_code == 0, res.output
+    assert "PASS engine-auth" in res.output
     assert "PASS database" in res.output
     assert "PASS migrations" in res.output
+
+
+# Every variable cluster_preflight.ENGINE_API_KEY_ENVS accepts, so a developer's
+# own shell cannot decide these tests.
+_ENGINE_KEY_VARS = (
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "OPENAI_API_KEY",
+    "AZURE_OPENAI_API_KEY",
+    "CODEX_API_KEY",
+    "CURSOR_API_KEY",
+    "GOOGLE_API_KEY",
+    "GEMINI_API_KEY",
+    "GOOGLE_APPLICATION_CREDENTIALS",
+)
+
+
+def test_doctor_cluster_holds_the_worker_to_its_engines_allow_list(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The same install told `--engines claudeloop` with no key mounted is the
+    misconfiguration this check exists for: Ready, and no BUILD job can run."""
+    from unittest.mock import patch
+
+    monkeypatch.chdir(tmp_path)
+    for var in _ENGINE_KEY_VARS:
+        monkeypatch.delenv(var, raising=False)
+
+    with patch("shutil.which", side_effect=lambda binary: f"/app/.venv/bin/{binary}"):
+        res = runner.invoke(
+            app, ["doctor", "--cluster", "--engines", "claudeloop", "--provider", "scripted"]
+        )
+
+    assert res.exit_code == 1
+    assert "FAIL engine-auth" in res.output
+    assert "installed but unauthenticated: claudeloop" in res.output
+
+
+def test_doctor_cluster_refuses_a_worker_flag_the_worker_would_refuse() -> None:
+    res = runner.invoke(app, ["doctor", "--cluster", "--engines", "gpt"])
+
+    assert res.exit_code == 2
+    assert "Invalid worker flag" in res.output
+
+
+@pytest.mark.parametrize("flag", [["--engines", "claudeloop"], ["--provider", "scripted"]])
+def test_doctor_worker_flags_without_cluster_are_refused_not_ignored(flag: list[str]) -> None:
+    """Silently dropping them would read as a check that ran."""
+    res = runner.invoke(app, ["doctor", *flag])
+
+    assert res.exit_code == 2
+    assert "apply only with --cluster" in res.output
 
 
 def test_doctor_cluster_exits_nonzero_when_the_database_is_unreachable(

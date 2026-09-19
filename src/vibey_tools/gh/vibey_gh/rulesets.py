@@ -59,7 +59,7 @@ def desired_rules(policy: RulesetConfig) -> list[dict[str, Any]]:
             "parameters": {
                 "required_approving_review_count": policy.required_approvals,
                 "dismiss_stale_reviews_on_push": policy.dismiss_stale_reviews,
-                "require_code_owner_review": False,
+                "require_code_owner_review": policy.require_code_owner_review,
                 "require_last_push_approval": False,
                 "required_review_thread_resolution": policy.require_conversation_resolution,
             },

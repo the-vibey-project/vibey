@@ -1,7 +1,22 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The append-only, vendor-neutral event ledger (ADR-0003). This module is
 pure projection logic over an in-memory event sequence -- persistence lives
-in infrastructure/."""
+in infrastructure/.
+
+**Readers are forward compatible; writers are strict (vibey#275).** The ledger is
+shared by every vibey in the fleet, and during a rolling upgrade or after a
+rollback some of them are older than the rows they read. A kind this version has
+no `EventKind` member for is read as an `UnrecognizedEventKind` carrying the
+stored text: kept, never dropped and never raised, so it still reaches every full
+ledger handed on and every digest folded over the range. Every projection here
+matches kinds by identity against `EventKind` members, so an unrecognized kind
+matches none of them and is skipped. Writing stays strict: a draft carries an
+`EventKind`, so vibey can only ever append a kind it knows.
+
+The same holds for the event's other closed vocabularies (vibey#287): `phase`,
+`engine_id` and `provenance` are read through `vibey/domain/stored_value.py`, so a
+phase, an engine or a trust class a newer vibey wrote is kept as its stored text.
+"""
 
 import hashlib
 import json
@@ -9,10 +24,14 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
+from typing import ClassVar, Final
 from uuid import UUID
 
-from vibey.domain.engine import EngineId
-from vibey.domain.phase import Phase
+from vibey.domain.engine import StoredEngineId
+from vibey.domain.interfaces.ledger_interface import EventKindParserInterface
+from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
+from vibey.domain.phase import Phase, StoredPhase
+from vibey.domain.stored_value import StoredValueParser, UnrecognizedValue
 
 
 class EventKind(StrEnum):
@@ -20,6 +39,11 @@ class EventKind(StrEnum):
     TURN_REQUESTED = "TurnRequested"
     TURN_COMPLETED = "TurnCompleted"
     TOOL_INVOKED = "ToolInvoked"
+    # Turn text kept for replay -- a prompt echo, an assistant message, or a
+    # streamed fragment. Never a turn boundary: TURN_REQUESTED and
+    # TURN_COMPLETED are exactly one each per real turn, and the budget brake
+    # counts TURN_COMPLETED, so text that rides alongside a turn lands here.
+    TRANSCRIPT_RECORDED = "TranscriptRecorded"
     FILE_EDITED = "FileEdited"
     VERDICT_RENDERED = "VerdictRendered"
     CAPACITY_REJECTED = "CapacityRejected"
@@ -41,6 +65,60 @@ class EventKind(StrEnum):
     VISUAL_DESIGN_WAIVED = "VisualDesignWaived"
     DEPLOYMENT_OPTED_IN = "DeploymentOptedIn"
     DEPLOYMENT_DECLINED = "DeploymentDeclined"
+
+
+_KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)
+
+
+@dataclass(frozen=True, slots=True)
+class UnrecognizedEventKind:
+    """A stored event kind this version of vibey has no `EventKind` member for.
+
+    A newer vibey wrote it -- the newer pods of a rolling upgrade, or the release
+    a rollback stepped back from -- or an older one did and a later release
+    retired the kind. Either way the row is real, append-only history. A reader
+    keeps it, so it reaches every full ledger handed on and every range digest;
+    what no reader can do is interpret it, so every projection skips it.
+
+    Never names a known kind: construction refuses one, so a known event can
+    never hide behind this type and slip past an `is EventKind.X` check.
+    """
+
+    value: str
+    """The kind exactly as stored -- the same text a newer vibey would read as its
+    own member's value, so a hash chain or a JSON record built from `.value`
+    comes out identical on both versions."""
+
+    def __post_init__(self) -> None:
+        if self.value in _KNOWN_KIND_VALUES:
+            raise ValueError(
+                f"{self.value!r} is a known event kind; read it as EventKind({self.value!r})"
+            )
+
+    def __str__(self) -> str:
+        return self.value
+
+
+type LedgerEventKind = EventKind | UnrecognizedEventKind
+"""What a stored event's kind reads as: a member this vibey knows, or the text of
+one it does not. Narrow with `isinstance(kind, EventKind)` before using anything
+only a member has (its `name`, `CLOSABLE`, a `Mapping[EventKind, ...]` key)."""
+
+
+class EventKindParser:
+    """Reads a stored kind. Never raises: a value this vibey knows is its
+    `EventKind` member, and anything else is an `UnrecognizedEventKind` carrying
+    the exact text. Matching is exact -- `event.kind` holds a member's value
+    verbatim, so a case variant is not that member, it is another kind."""
+
+    def parse(self, raw: str) -> LedgerEventKind:
+        if raw in _KNOWN_KIND_VALUES:
+            return EventKind(raw)
+        return UnrecognizedEventKind(raw)
+
+
+EVENT_KIND_PARSER: Final[EventKindParserInterface] = EventKindParser()
+"""The parser every ledger reader shares. Stateless, so one instance serves."""
 
 
 CLOSABLE: frozenset[EventKind] = frozenset(
@@ -75,21 +153,54 @@ class Provenance(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class UnrecognizedProvenance(UnrecognizedValue):
+    """A stored provenance this vibey has no `Provenance` member for (vibey#287).
+
+    A trust class a newer vibey added. An older reader keeps the event and its
+    stored text, but it cannot rate a trust class it does not know, so it never
+    treats the event as carrying any of the three it does.
+    """
+
+    members: ClassVar[frozenset[str]] = frozenset(p.value for p in Provenance)
+
+
+type StoredProvenance = Provenance | UnrecognizedProvenance
+"""What a stored provenance reads as: a member, or the text of one this vibey does
+not know. Narrow with `isinstance(provenance, Provenance)` before writing it."""
+
+PROVENANCE_PARSER: Final[StoredValueParserInterface[Provenance, UnrecognizedProvenance]] = (
+    StoredValueParser(Provenance, UnrecognizedProvenance)
+)
+"""The parser every reader of a `provenance` column shares. Stateless."""
+
+
+@dataclass(frozen=True, slots=True)
 class LedgerEvent:
+    """One event as a reader sees it. Every closed vocabulary on it is read
+    forward-compatibly -- `kind` since vibey#275, `phase`, `engine_id` and
+    `provenance` since vibey#287 -- so an event a newer vibey wrote is kept whole,
+    and a writer's draft (`LedgerEventDraft`) takes only members."""
+
     event_id: UUID
     project_id: UUID
     cycle: int
-    phase: Phase
+    phase: StoredPhase
     seq: int
-    kind: EventKind
-    engine_id: EngineId | None
+    kind: LedgerEventKind
+    engine_id: StoredEngineId | None
     job_id: UUID | None
     causation_id: UUID | None
     correlation_id: UUID
-    provenance: Provenance
+    provenance: StoredProvenance
     produced_at: datetime
     payload: Mapping[str, object]
     digest: str
+
+    @property
+    def interpretable(self) -> bool:
+        """Semantic projections need a known phase and trust class. Accounting
+        and lossless ledger export instead retain every event (vibey#287)."""
+        return isinstance(self.phase, Phase) and isinstance(self.provenance, Provenance)
 
 
 def canonical_bytes(payload: Mapping[str, object]) -> bytes:
@@ -121,6 +232,8 @@ def open_items(events: Sequence[LedgerEvent], kind: EventKind) -> tuple[str, ...
 
     opened: dict[str, int] = {}
     for e in sorted(events, key=lambda x: x.seq):
+        if not e.interpretable:
+            continue
         if e.kind is kind:
             item_id = str(e.payload[id_field])
             opened[item_id] = e.seq

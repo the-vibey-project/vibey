@@ -274,3 +274,21 @@ class TestResolveRunDirectoryWithActivePid:
 
         resolved = resolve_run_directory(tmp_path)
         assert resolved.root.name == "active"
+
+
+class TestRunMetaBackend:
+    def test_backend_and_profile_round_trip(self, tmp_path: Path) -> None:
+        directory = RunDirectory.create(tmp_path / "runs", cwd=tmp_path, run_id="r1")
+        assert directory.read_meta().backend is None
+        directory.update_meta(backend="local:http://127.0.0.1:11434", profile="local")
+        meta = directory.read_meta()
+        assert meta.backend == "local:http://127.0.0.1:11434"
+        assert meta.profile == "local"
+        assert RunMeta.from_dict(meta.to_dict()) == meta
+
+    def test_meta_written_before_backends_were_recorded_still_loads(self) -> None:
+        meta = RunMeta.from_dict(
+            {"run_id": "old", "pid": 1, "cwd": "/x", "started_at": "2026-08-01T00:00:00+00:00"}
+        )
+        assert meta.backend is None
+        assert meta.profile is None

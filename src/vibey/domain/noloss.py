@@ -275,14 +275,15 @@ def verify(
     attempts: int = 1,
 ) -> GateResult:
     """Pure. No model call. This function is the reason rotation is safe."""
+    understood = tuple(event for event in ledger if event.interpretable)
     checks: dict[GateRule, tuple[Violation, ...]] = {
-        GateRule.R1_REMAINING: _check_r1_remaining(ledger, brief),
-        GateRule.R2_QUESTIONS: _check_r2_questions(ledger, brief),
-        GateRule.R3_DECISIONS: _check_r3_decisions(ledger, brief),
-        GateRule.R4_ASSUMPTIONS: _check_r4_assumptions(ledger, brief),
-        GateRule.R5_FINDINGS: _check_r5_findings(ledger, brief),
+        GateRule.R1_REMAINING: _check_r1_remaining(understood, brief),
+        GateRule.R2_QUESTIONS: _check_r2_questions(understood, brief),
+        GateRule.R3_DECISIONS: _check_r3_decisions(understood, brief),
+        GateRule.R4_ASSUMPTIONS: _check_r4_assumptions(understood, brief),
+        GateRule.R5_FINDINGS: _check_r5_findings(understood, brief),
         GateRule.R6_RANGE: _check_r6_range(ledger, ref),
-        GateRule.R7_ARTIFACTS: _check_r7_artifacts(ledger, brief),
+        GateRule.R7_ARTIFACTS: _check_r7_artifacts(understood, brief),
         GateRule.R8_BUDGET: _check_r8_budget(ledger, budget),
         GateRule.R9_CONSTRAINTS: _check_r9_constraints(brief, spec_constraints),
         GateRule.R10_CONTAINMENT: _check_r10_containment(brief),

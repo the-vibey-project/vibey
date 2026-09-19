@@ -2,8 +2,11 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import ClassVar, Final
 
 from vibey.domain.effort import Effort
+from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
+from vibey.domain.stored_value import StoredValueParser, UnrecognizedValue
 
 # The *loop runners' shared "graceful wind-down" exit code: the engine ran
 # out of window capacity mid-item and stopped cleanly after writing its
@@ -45,6 +48,31 @@ class EngineTier(StrEnum):
 # preference, not the fallback -- a paid engine is chosen only when no local
 # engine is eligible (ADR-0038, amending ADR-0015's standby rule).
 TIER_PREFERENCE: tuple[EngineTier, ...] = (EngineTier.LOCAL, EngineTier.PAID)
+
+
+@dataclass(frozen=True, slots=True)
+class UnrecognizedEngineId(UnrecognizedValue):
+    """A stored engine id this vibey has no `EngineId` member for (vibey#287).
+
+    The `engine_id` columns are plain text, so a newer vibey adds an engine without
+    a migration -- #281's `claudeloop-local` is the first -- and its health rows,
+    rotation cursors, ledger events and job requirements reach the older workers of a
+    rolling upgrade at once. An older worker can never run such an engine, so it
+    never selects one; what it must not do is crash on the row.
+    """
+
+    members: ClassVar[frozenset[str]] = frozenset(engine.value for engine in EngineId)
+
+
+type StoredEngineId = EngineId | UnrecognizedEngineId
+"""What a stored engine id reads as: a member this vibey knows, or the text of one
+it does not. Narrow with `isinstance(engine_id, EngineId)` before using it as a key
+of a `Mapping[EngineId, ...]` or handing it to anything that runs an engine."""
+
+ENGINE_ID_PARSER: Final[StoredValueParserInterface[EngineId, UnrecognizedEngineId]] = (
+    StoredValueParser(EngineId, UnrecognizedEngineId)
+)
+"""The parser every reader of an `engine_id` column shares. Stateless."""
 
 
 class Capability(StrEnum):

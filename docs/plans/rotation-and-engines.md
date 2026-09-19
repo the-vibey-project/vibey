@@ -294,9 +294,12 @@ cap before every attempt. It parks a `budget_exhausted` gate when the cap is
 reached. On attempts after the first, it also parks when the payload's
 `projected_cost_per_attempt` would exceed the cap. Answering
 `--raw '{"max_dollars": N}'` or `--raw '{"max_turns": N}'` raises the cap for
-that job. With neither setting, spend is uncapped. The `vibey.toml` keys
-`max_dollars_per_cycle` and `max_turns_per_item` are parsed, but the brake
-ignores them, and only `vibey cost` displays the former.
+that job only; the stored cap is unchanged. With neither setting, spend is
+uncapped. The worker and `vibey cost` read both caps through one parser,
+`LedgerBudgetSource.caps_from_config`, so the cap `vibey cost` prints is the
+cap the brake enforces. The `vibey.toml` keys `max_dollars_per_cycle` and
+`max_turns_per_item` are parsed into the config model, but nothing reads
+them at runtime: not the brake, and not `vibey cost`.
 
 ---
 
@@ -454,10 +457,11 @@ given, and by default whenever a local engine is switched on (ADR-0038).
 stateDiagram-v2
     [*] --> closed
     closed --> open: capacity rejection recorded
+    closed --> open: 3rd consecutive ENGINE failure (probe_next_at set)
     open --> half_open: resets_at or probe_next_at reached (evaluated at selection)
     open --> half_open: auth restored (preflight, AuthenticationFailed only)
     half_open --> closed: selected run succeeds
-    half_open --> open: rejected again
+    half_open --> open: rejected again, or ENGINE failure at the threshold
     closed --> closed: success (reset failure count)
 ```
 
@@ -467,8 +471,25 @@ The circuit is the `circuit` column of each project's `engine_health` row.
 - `record_capacity_rejection` opens the circuit on **every** recorded
   rejection (`CreditsExhausted`, `WindowExhausted`, or `AuthenticationFailed`)
   and increments `consecutive_fail`.
+- `record_failure` records one `ENGINE`-class failure (§6.3): it increments
+  `consecutive_fail` and the failure EWMA, and once `consecutive_fail`
+  reaches the threshold it opens the circuit **and** sets `probe_next_at`.
+  Both at once, never one without the other: an `OPEN` circuit is never
+  selected, and the selector half-opens one only when a scheduled time has
+  passed, so a circuit opened with no probe time could never close again. The
+  same write clears `capacity_state` and `resets_at` -- the circuit is now open
+  for a failure, and a stale `resets_at` would half-open it immediately.
 - `record_success` closes the circuit and clears the capacity state,
   `resets_at`, `probe_next_at`, the probe attempt, and `consecutive_fail`.
+
+The threshold and the probe backoff are `domain/circuit.py::EngineFailurePolicy`:
+`ENGINE_FAILURE_THRESHOLD = 3` (the "opens after 3" `FailureClass.ENGINE` has
+always promised), a first probe 5 minutes after the trip, doubling with every
+further failure to a 30-minute cap -- the same 5-minute floor and 30-minute cap
+as `CreditsExhausted`. Each is a field with a default; `EngineHealthService`
+takes the policy as a constructor argument. `consecutive_fail` counts capacity
+rejections as well as engine failures, and only a success resets it, so two
+rejections followed by a crash also trip it.
 
 `RotationRecordingHandler` wraps the `build.implement` and `build.verify`
 handlers. A `Success` calls `record_success`. A capacity-classed `Defer`
@@ -477,11 +498,14 @@ calls `record_capacity_rejection` with
 caller of `record_capacity_rejection`. A circuit opened by a `build.implement`
 capacity rejection therefore half-opens once the handler's 5-minute capacity
 backoff passes. Non-capacity `Defer`s, such as repair waits and lock
-contention, never touch the circuit.
+contention, never touch the circuit. A `Failure` whose class is `ENGINE`
+calls `record_failure`; `WORK` and `VIBEY` failures record nothing.
 
-The original plan also opened the circuit after "3 consecutive transient
-failures". That is *not implemented*: `consecutive_fail` is recorded, but no
-code compares it with a threshold.
+A failure below the threshold moves only the counters. So a half-open probe
+that fails with one `ENGINE` failure, on an engine whose count is still below
+3, leaves the circuit `OPEN` with its old, already-passed probe time -- the
+engine is probed again on the next claim rather than backed off. Re-opening
+on any failed probe regardless of the count is not implemented.
 
 ### 6.2 Probe timing — where credits ≠ rate limit lives
 
@@ -524,8 +548,7 @@ mark a healthy engine unhealthy because the project has a bug.
 ```
 FailureClass (domain/job.py):
   CAPACITY     → circuit opens                 (provider said no)
-  ENGINE       → designed: circuit opens after 3 (crash, hang, malformed output)
-                 today: classified, but nothing opens the circuit on it
+  ENGINE       → circuit opens after 3, with a probe time (crash, kill, timeout)
   WORK         → circuit untouched             (tests failed, compile error)
   VIBEY        → circuit untouched, job retries (our bug)
 ```
@@ -535,8 +558,18 @@ classification. A WORK signal in the output tail wins over any incidental
 traceback. A zero exit code is WORK. Engine markers, or exit codes 124, 137,
 and -9, are ENGINE. The adapter exposes this as `attribute()`, because only
 the adapter can tell a non-zero exit caused by `pytest` from one caused by
-the runner dying. No application code calls `attribute()` yet, so the
-circuit responds only to capacity-classed `Defer`s (§6.1).
+the runner dying.
+
+Both BUILD handlers ask it. When a run ends without a completing verdict,
+`build_engine_run.py::RunOutcome.incomplete_failure_class` returns `WORK` if
+there is no exit code or a clean one -- what the handlers always returned --
+and otherwise `engine.attribute(exit_code, "")`. So a runner killed or timed
+out mid-session (137, -9, 124) is now an `ENGINE` failure against that engine,
+and the failure detail names the exit code. An ordinary non-zero exit such as
+1 stays `WORK`. The handlers hold no output tail, so the tail markers do not
+come into it; only the exit code does. Before issue #209 both handlers
+hard-coded `WORK`, and nothing in production could produce an `ENGINE`
+failure at all.
 
 ---
 
@@ -682,15 +715,30 @@ skipped, so a new runner event cannot crash vibey.
 
 | Engine | Runner event → ledger `EventKind` |
 |---|---|
-| `claudeloop` | `run.started`, `preflight` → `SESSION_SEEDED`; `chatter.prompt`, `turn.starting` → `TURN_REQUESTED`; `chatter.assistant`, `turn.completed` → `TURN_COMPLETED`; `chatter.tool` → `TOOL_INVOKED`; `savepoint` → `SAVEPOINT_CREATED`; `capacity.forecast` → `BUDGET_SPENT`; `finished` → `VERDICT_RENDERED` |
+| `claudeloop` | `run.started`, `preflight` → `SESSION_SEEDED`; `turn.starting` → `TURN_REQUESTED`; `turn.completed` → `TURN_COMPLETED`; `chatter.prompt`, `chatter.assistant` → `TRANSCRIPT_RECORDED`; `chatter.tool` → `TOOL_INVOKED`; `savepoint` → `SAVEPOINT_CREATED`; `capacity.forecast` → `BUDGET_SPENT`; `finished` → `VERDICT_RENDERED` (`chatter.delta` unmapped) |
 | `codexloop` | `thread.started` → `SESSION_SEEDED`; `turn.started` → `TURN_REQUESTED`; `turn.completed`, `turn.failed` → `TURN_COMPLETED`; `item.started`, `item.completed` → `TOOL_INVOKED`; `rate_limits.updated` → `BUDGET_SPENT`; `run.verdict` → `VERDICT_RENDERED` |
 | `cursorloop` | `tool_call` → `TOOL_INVOKED`; `usage` → `BUDGET_SPENT` (no session, turn, or verdict boundary events) |
 | `agyloop` | as claudeloop, except `sdk.event` (not `chatter.tool`) → `TOOL_INVOKED`, and `savepoint`, `savepoint.created`, `savepoint.skipped` → `SAVEPOINT_CREATED` |
-| `qwenloop` | `run.started` → `SESSION_SEEDED`; `text_delta` → `TURN_COMPLETED`; `tool_result` → `TOOL_INVOKED`; `completed`, `failed` → `VERDICT_RENDERED` |
+| `qwenloop` | `run.started` → `SESSION_SEEDED`; `turn.completed` → `TURN_COMPLETED`; `text_delta` → `TRANSCRIPT_RECORDED`; `tool_result` → `TOOL_INVOKED`; `completed`, `failed` → `VERDICT_RENDERED` |
 
 `capacity.forecast` and `rate_limits.updated` are headroom telemetry, emitted
 while capacity is still available. They map to `BUDGET_SPENT`, never to a
 capacity rejection.
+
+**One turn, one `TURN_COMPLETED`.** The budget brake (`LedgerBudgetSource`)
+counts every `TURN_COMPLETED` in a cycle against `max_cycle_turns`, so each
+engine maps only its runner's own turn boundary to it. Text that rides
+alongside a turn maps to `TRANSCRIPT_RECORDED`: it stays in the ledger for
+replay and is never counted. That covers the `chatter.prompt` and
+`chatter.assistant` echoes that claudeloop and agyloop write every turn under
+their default `log_chatter=summary`, and qwenloop's `text_delta`, one per
+streamed fragment. qwenloop writes its own `turn.completed` once per model
+call for exactly this reason. codexloop's `turn.failed` counts as a turn
+attempt: codex ends every turn with exactly one of `turn.completed` or
+`turn.failed`, and a run that fails turn after turn is the runaway the cap
+exists to stop. `claudeloop`'s `chatter.delta` stays unmapped, because
+`chatter.assistant` already carries the assembled text. cursorloop writes no
+turn boundary, so it contributes no `TURN_COMPLETED` at all.
 
 ---
 
@@ -710,7 +758,20 @@ codexloop    0.3.0      open       1      61         $6.12
 The columns are `engine_id`, `version`, `circuit`, `consecutive_fail`,
 `selected_count`, and `cost_usd_cycle`. Base weight, effective weight,
 saturation, and the last capacity state are stored or computable but not yet
-shown. `vibey cost` and the ledger carry spend.
+shown.
+
+**`COST` is the engine's BUILD-session spend, and it accumulates across
+cycles.** The composition root builds a `SpendMeteringLedger` for every
+`build.implement` and `build.verify` job, around the BUILD ledger that job's
+handler writes through. It forwards every event unchanged and sums the spend
+by `domain/phase_timing.py::LedgerSpendRule` -- the same rule the budget brake
+applies -- and `RotationRecordingHandler` charges the total to the selected
+engine with `EngineHealthService.record_spend` when the job settles, whatever
+the outcome, and even when the handler raises. Nothing resets the column,
+despite its name, and DESIGN's spend is not in it. The cycle's own total,
+DESIGN included, is the ledger's: `vibey cost` prints it. Until issue #209 the
+column was fed only by `record_selection`'s `cost_usd` argument, which its one
+caller never passed, so it read `$0.00` everywhere.
 
 **Planned exports (not implemented).** `infrastructure/otel.py` holds an
 in-memory `TelemetryMetrics` recorder (selections, queue latency, phase

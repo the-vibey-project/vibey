@@ -86,10 +86,11 @@ Phase A — foundation (unblocks everything else)
 Phase B — scale-out
   05-server-mode-kubernetes    # LANDED on minikube (#73/#74/#76, ADR-0025):
                                # image, chart, KEDA, kopf operator + CRD,
-                               # doctor --cluster. Open: engines in the image,
-                               # server Deployment, cloud presets, AKS/EKS/GKE
-  16-loop-runner-containers    # open; runners are workspace members under
-                               # src/vibey_runners/; feeds 05's engines image
+                               # doctor --cluster. Open: engines working
+                               # headless in the image (16), server
+                               # Deployment, cloud presets, AKS/EKS/GKE
+  16-loop-runner-containers    # open; the image carries every runner since
+                               # ADR-0037, so what is left is Phase 0
 Phase C — integration surfaces
   19-monorepo-and-shared-libraries
                                # LANDED DIFFERENTLY: subtree imports + uv

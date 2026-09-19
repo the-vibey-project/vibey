@@ -168,14 +168,17 @@ uv run pip-audit
 (cd src/vibey_tools/gh && pip install -e ".[dev]" && python -m pytest -q)
 (cd src/vibey_tools/skills && pip install -e . && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests)
 (cd src/vibey_tools/bootstrap && pip install -e ../gh && pip install -e ".[test,all]" && pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term)
+# ...and on each tenant's floor row, its own static gates (the row's `static` key), e.g.
+(cd src/vibey_runners/claude && pip install -e ../common && pip install -e ".[dev]" && mypy --strict src/claudeloop && lint-imports && bandit -q -r src/claudeloop)
 
 # CI job `tools-lint`: vibey-gh's own linters
 (cd src/vibey_tools/gh && python -m black --check vibey_gh test && isort --check-only vibey_gh test && python -m mypy vibey_gh)
 ```
 
-CI (`.github/workflows/ci.yml`) also runs `image` (amd64 and arm64 builds with
-four image contracts) and `cluster-smoke` (Helm install on minikube with four
-cluster contracts). `tools-lint` additionally checks that vibey-gh's managed
+CI (`.github/workflows/ci.yml`) also runs `image` (amd64 and arm64 builds; each
+`Image contract - …` step asserts one claim the Dockerfile makes) and
+`cluster-smoke` (Helm install on minikube; each `Contract - …` step asserts one
+cluster behaviour). `tools-lint` additionally checks that vibey-gh's managed
 automation has no drift.
 
 ## Where to go for everything else

@@ -37,6 +37,7 @@ def build_deterministic_brief(
     invariants: Sequence[str] = (),
     style_rules: Sequence[str] = (),
 ) -> HandoffBrief:
+    events = tuple(event for event in events if event.interpretable)
     open_view = build_open_items(events)
     decision_log = build_decision_log(events)
 
@@ -82,10 +83,16 @@ def build_deterministic_brief(
     remaining_raw = verdict.payload.get("remaining_work", []) if verdict is not None else []
     remaining_texts = [str(t) for t in remaining_raw] if isinstance(remaining_raw, list) else []
 
+    # Which decisions to carry comes from the gate's own projection (R3 checks
+    # `open_items`), and only the wording from the decision log. The log's
+    # `superseded_by` answers a different question -- was this id EVER named by a
+    # supersede -- so a decision recorded after the supersede that names it, or
+    # reinstated after being superseded, was dropped here while the gate still
+    # counted it open: a floor that failed its own gate (#213).
+    recorded = {entry.decision_id: entry for entry in decision_log}
     decisions = tuple(
-        DecisionRef(decision_id=e.decision_id, restatement=e.title or e.choice)
-        for e in decision_log
-        if e.superseded_by is None
+        DecisionRef(decision_id=did, restatement=recorded[did].title or recorded[did].choice)
+        for did in open_view.decisions
     )
 
     next_action = remaining_texts[0] if remaining_texts else "Review and accept."

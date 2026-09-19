@@ -13,17 +13,19 @@ import asyncpg
 import pytest
 
 from vibey.bootstrap import build_app, migrations_dir
+from vibey.domain.engine import EngineId
 from vibey.infrastructure.cluster_preflight import (
     ClusterCheck,
+    ClusterPreflight,
+    EngineAuthCheck,
     all_ok,
     check_database,
     check_dsn_resolves_cluster_wide,
-    check_engine_auth,
     check_migrations,
     check_not_root,
     check_workspace_writable,
-    run_cluster_preflight,
 )
+from vibey.infrastructure.interfaces import ClusterPreflightInterface, EngineAuthCheckInterface
 
 pytestmark = pytest.mark.integration
 
@@ -37,6 +39,23 @@ def _test_dsn() -> str:
 
 # An unroutable port on loopback: refused immediately rather than hanging.
 _DEAD_DSN = "postgresql://nobody@127.0.0.1:1/nothing"
+
+
+def _every_binary(binary: str) -> str:
+    """The image since ADR-0037: one wheel, every runner's console script on PATH."""
+    return f"/app/.venv/bin/{binary}"
+
+
+def _no_binary(_binary: str) -> None:
+    return None
+
+
+_EVERY_KEY = {
+    "ANTHROPIC_API_KEY": "x",
+    "OPENAI_API_KEY": "x",
+    "CURSOR_API_KEY": "x",
+    "GOOGLE_API_KEY": "x",
+}
 
 
 @pytest.mark.parametrize(
@@ -85,29 +104,146 @@ def test_workspace_unwritable_reports_the_reason(tmp_path: Path) -> None:
     assert "does-not-exist" in check.detail
 
 
-def test_no_engine_binaries_is_the_scripted_image_not_a_fault() -> None:
-    check = check_engine_auth({}, which=lambda _binary: None)
+def test_the_default_chart_install_passes_although_every_engine_ships() -> None:
+    """The regression this check had after ADR-0037: the one wheel puts all four
+    paid engines on PATH, so a default install (`--provider scripted`, no
+    `worker.engines`, no keys) -- the install CI deploys -- reported FAIL for
+    engines the worker was never asked to use."""
+    check = EngineAuthCheck(which=_every_binary).check({})
+    assert check.ok, check.detail
+    assert "nothing required" in check.detail
+    assert "--provider scripted" in check.detail
+    assert "4 engine binaries on PATH, none with an API key" in check.detail
+    # The one fact a bare PASS would hide: nothing engine-driven can run.
+    assert "no engine-driven (BUILD) job can run" in check.detail
+
+
+def test_an_image_without_engine_binaries_passes_the_same_way() -> None:
+    check = EngineAuthCheck(which=_no_binary).check({})
     assert check.ok
-    assert "scripted" in check.detail
+    assert "0 engine binaries on PATH" in check.detail
 
 
-def test_installed_engine_without_credentials_fails() -> None:
-    """Subscription login is a TTY flow; in a cluster an engine binary with
-    no API key can never authenticate."""
-    check = check_engine_auth({}, which=lambda binary: f"/usr/bin/{binary}")
+def test_without_an_allow_list_the_verdict_names_what_can_and_cannot_authenticate() -> None:
+    check = EngineAuthCheck(which=_every_binary).check({"ANTHROPIC_API_KEY": "x"})
+    assert check.ok
+    assert "API key present: claudeloop" in check.detail
+    assert "without one: agyloop, codexloop, cursorloop" in check.detail
+    assert "--engines" in check.detail
+
+
+def test_without_an_allow_list_every_key_present_names_no_gap() -> None:
+    check = EngineAuthCheck(which=_every_binary).check(_EVERY_KEY)
+    assert check.ok
+    assert "API key present: agyloop, claudeloop, codexloop, cursorloop" in check.detail
+    assert "without one" not in check.detail
+
+
+def test_an_allow_listed_engine_without_credentials_fails() -> None:
+    """Subscription login is a TTY flow; in a cluster an engine the worker was
+    told to use, with no API key, can never authenticate."""
+    engines = frozenset({EngineId.CLAUDELOOP})
+    check = EngineAuthCheck(which=_every_binary, allow_list=engines).check({})
     assert not check.ok
-    assert "unauthenticated" in check.detail
+    assert "installed but unauthenticated: claudeloop" in check.detail
+    assert "engineAuth.keys" in check.detail
 
 
-def test_installed_engine_with_credentials_passes() -> None:
-    environ = {
-        "ANTHROPIC_API_KEY": "x",
-        "OPENAI_API_KEY": "x",
-        "CURSOR_API_KEY": "x",
-        "GOOGLE_API_KEY": "x",
-    }
-    check = check_engine_auth(environ, which=lambda binary: f"/usr/bin/{binary}")
+def test_only_the_allow_list_is_judged() -> None:
+    """codexloop has no key either, but the worker was not told to use it."""
+    engines = frozenset({EngineId.CLAUDELOOP})
+    check = EngineAuthCheck(which=_every_binary, allow_list=engines).check(
+        {"ANTHROPIC_AUTH_TOKEN": "x"}
+    )
+    assert check.ok, check.detail
+    assert check.detail == "1 engine(s) this worker uses: claudeloop; every API key present"
+
+
+def test_an_allow_listed_engine_missing_from_path_fails() -> None:
+    engines = frozenset({EngineId.CODEXLOOP})
+    check = EngineAuthCheck(which=_no_binary, allow_list=engines).check(_EVERY_KEY)
+    assert not check.ok
+    assert check.detail == "required but not on PATH: codexloop"
+
+
+def test_missing_and_unauthenticated_are_reported_together() -> None:
+    def only_claude(binary: str) -> str | None:
+        return f"/bin/{binary}" if binary == "claudeloop" else None
+
+    engines = frozenset({EngineId.CLAUDELOOP, EngineId.CODEXLOOP})
+    check = EngineAuthCheck(which=only_claude, allow_list=engines).check({})
+    assert not check.ok
+    assert check.detail.startswith("required but not on PATH: codexloop; ")
+    assert "installed but unauthenticated: claudeloop" in check.detail
+
+
+def test_every_allow_listed_engine_authenticated_passes() -> None:
+    engines = frozenset(EngineId(e) for e in ("claudeloop", "codexloop", "cursorloop", "agyloop"))
+    check = EngineAuthCheck(which=_every_binary, allow_list=engines).check(_EVERY_KEY)
     assert check.ok
+    assert "4 engine(s) this worker uses" in check.detail
+
+
+def test_an_allow_listed_engine_that_takes_no_key_is_judged_on_presence_alone() -> None:
+    """qwenloop runs a local model; there is no API key for it to lack."""
+    engines = frozenset({EngineId.QWENLOOP})
+    check = EngineAuthCheck(which=_every_binary, allow_list=engines).check({})
+    assert check.ok, check.detail
+    assert "(qwenloop takes no API key)" in check.detail
+
+
+def test_the_claudeloop_provider_requires_claudeloop_without_an_allow_list() -> None:
+    """DESIGN runs claudeloop as a subprocess under `--provider claudeloop`,
+    whatever the BUILD allow-list says."""
+    check = EngineAuthCheck(which=_every_binary, provider="claudeloop").check({})
+    assert not check.ok
+    assert "installed but unauthenticated: claudeloop" in check.detail
+
+
+def test_the_provider_engine_joins_the_allow_list() -> None:
+    engines = frozenset({EngineId.CODEXLOOP})
+    check = EngineAuthCheck(which=_every_binary, allow_list=engines, provider="claudeloop").check(
+        {"ANTHROPIC_API_KEY": "x", "CODEX_API_KEY": "x"}
+    )
+    assert check.ok
+    assert "2 engine(s) this worker uses: claudeloop, codexloop" in check.detail
+
+
+def test_the_qwenloop_provider_requires_no_engine() -> None:
+    """It talks to a local Ollama over HTTP, not through the qwenloop binary."""
+    check = EngineAuthCheck(which=_every_binary, provider="qwenloop").check({})
+    assert check.ok
+    assert "--provider qwenloop: nothing required" in check.detail
+
+
+def test_an_unknown_provider_is_refused_at_construction() -> None:
+    with pytest.raises(ValueError, match="provider must be one of"):
+        EngineAuthCheck(which=_every_binary, provider="gpt")
+
+
+def test_built_from_the_workers_flags_spelled_as_the_worker_takes_them() -> None:
+    check = EngineAuthCheck.for_worker(
+        engines="claudeloop, codexloop", provider=None, which=_every_binary
+    ).check({"ANTHROPIC_API_KEY": "x", "OPENAI_API_KEY": "x"})
+    assert check.detail.startswith("2 engine(s) this worker uses: claudeloop, codexloop")
+
+
+def test_an_empty_engines_flag_means_no_allow_list_as_it_does_for_the_worker() -> None:
+    """The chart omits --engines when worker.engines is "", and the worker
+    reads an empty value as unset."""
+    check = EngineAuthCheck.for_worker(engines="", provider="scripted", which=_every_binary)
+    assert "nothing required" in check.check({}).detail
+
+
+def test_an_unknown_engine_in_the_flag_is_refused() -> None:
+    with pytest.raises(ValueError, match="not a valid EngineId"):
+        EngineAuthCheck.for_worker(engines="claudeloop,gpt", provider=None, which=_every_binary)
+
+
+def test_the_classes_satisfy_their_declared_interfaces() -> None:
+    engine_auth = EngineAuthCheck(which=_no_binary)
+    assert isinstance(engine_auth, EngineAuthCheckInterface)
+    assert isinstance(ClusterPreflight(engine_auth=engine_auth), ClusterPreflightInterface)
 
 
 async def test_database_check_connects_and_hands_back_the_connection() -> None:
@@ -203,13 +339,15 @@ async def test_full_preflight_against_a_live_database(tmp_path: Path) -> None:
     # with a trusting local Postgres and fails on CI.
     async with build_app(url=_test_dsn()):
         pass
-    checks = await run_cluster_preflight(
+    # Every engine on PATH and no key: the default chart install on the
+    # ADR-0037 image, which must pass the whole sweep.
+    preflight = ClusterPreflight(engine_auth=EngineAuthCheck(which=_every_binary))
+    checks = await preflight.run(
         dsn=_test_dsn(),
         workspace=tmp_path,
         migrations_dir=migrations_dir(),
         environ={},
         uid=10001,
-        which=lambda _binary: None,
     )
     assert all_ok(checks), [c for c in checks if not c.ok]
     assert {c.name for c in checks} == {
@@ -227,13 +365,13 @@ async def test_preflight_skips_the_migration_check_when_the_database_is_unreacha
 ) -> None:
     """No connection means no migration verdict -- reporting one anyway
     would be inventing a fact about a database nobody reached."""
-    checks = await run_cluster_preflight(
+    preflight = ClusterPreflight(engine_auth=EngineAuthCheck(which=_no_binary))
+    checks = await preflight.run(
         dsn=_DEAD_DSN,
         workspace=tmp_path,
         migrations_dir=migrations_dir(),
         environ={},
         uid=10001,
-        which=lambda _binary: None,
     )
     assert not all_ok(checks)
     assert "migrations" not in {c.name for c in checks}
