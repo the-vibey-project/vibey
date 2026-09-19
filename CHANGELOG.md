@@ -30,6 +30,34 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Code Refactoring
+
+* **gh:** one transport for every `gh` call vibey-gh makes, beginning with the shared
+  marker-comment state. `vibey_gh.gh_transport.GhTransport`, declared by
+  `vibey_gh/interfaces/gh_transport_interface.py`, gives the three answers the package's
+  seven private `gh` runners already give — raise, report success as a boolean, or return
+  a problem string — each byte-identical to the runner it replaces. `github_state` now
+  rides on it, and with it every forge call that conversation, PR and issue automation,
+  reconcile, rulesets and flatten make through `github_state`; before/after tests driving
+  the old code and the new through the same fake `gh` on PATH show the same argv, working
+  directory and outcome, so GitHub sees no difference. The first slice of the platform
+  abstraction (#138), which the forge snapshot (#136) and capture (#145) build on
+
+### Features
+
+* **gh:** `vibey-gh forge-snapshot --out DIR [--classes …] [--since MOMENT|resume]`, a
+  read-only capture of a GitHub repository's own state into plain files the project owns
+  (#136, slice S1). Issues, comments, change requests, reviews, review comments, labels,
+  milestones, releases with their asset manifests, and tags each go to `DIR/<class>.jsonl`
+  as append-only `vibey.forge-record/1` records: the forge's JSON verbatim in a forge-neutral
+  envelope, sealed with a SHA-256 over the vibey ledger's own canonical form and hash-chained
+  to the record before it. `DIR/manifest.json` gives every class's status, counts, chain head
+  and resume cursor, and names every artifact class it does not capture with the reason. A
+  class the forge could not be asked about is recorded as `could-not-look` and never written
+  as empty. `--since` resumes and continues every chain; content already recorded is never
+  written twice, so a rerun appends nothing. Nothing is written to the vibey ledger yet: that
+  writer (S4) needs #114. Schema: `src/vibey_tools/gh/docs/forge-snapshot.md`
+
 ### Bug Fixes
 
 * **worker:** a heartbeat that fails no longer throws away finished work or kills the worker. `_heartbeat_forever` caught only `CancelledError`, so a pool timeout or a Postgres failover ended the task with the exception stored; `run_once` re-raised it from its `finally`, `_settle` never ran — a session that had succeeded was never acked, its lease expired and another worker paid to redo it — and the exception took the worker process down with every parallel drive loop in it. A beat that raises is now said as `job.heartbeat_failed` at warning and retried at the next interval; a beat the queue refuses is said once as `job.lease_lost` and the loop stops beating. The per-kind lease extension right after the claim is guarded the same way and carries on at the default lease. The settle writes stop discarding their answers too: an `ack`, `nack`, `grant_attempts` or `park` refused by the lease guard is said at warning as `job.ack_rejected`, `job.nack_rejected`, `job.grant_rejected` or `job.park_rejected`, the way `job.defer_rejected` already was, and a refused grant skips the nack that would otherwise have failed the job outright. `WorkerLoop` gains its declared seam, `application.interfaces.WorkerLoopInterface` (ADR-0016) ([#211](https://github.com/the-vibey-project/vibey/issues/211))

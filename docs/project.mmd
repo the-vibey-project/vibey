@@ -174,7 +174,7 @@ flowchart TB
 
     subgraph Monorepo["uv workspace monorepo — pyproject.toml [tool.uv.workspace] (ADR-0021, ADR-0022)"]
         Runners["src/vibey_runners/<br/>claude: claudeloop 0.8.0 · codex: codexloop 0.4.0 ·<br/>cursor: cursorloop 0.7.0 · agy: agyloop 0.5.0 ·<br/>qwen: qwenloop 0.2.0 · common: vibey-runners-common 0.1.0<br/>(the *loop session runners; versioned in-tree, published only<br/>inside the vibey distribution — ADR-0037)"]
-        ToolGh["src/vibey_tools/gh — vibey-gh 1.73.0<br/>provenance · PR automation · merge train · promote ·<br/>release · realign · github-release · release surfaces ·<br/>book · paper · corpus-index (ADR-0028)"]
+        ToolGh["src/vibey_tools/gh — vibey-gh 1.73.0<br/>provenance · PR automation · merge train · promote ·<br/>release · realign · github-release · release surfaces ·<br/>book · paper · corpus-index · forge-snapshot (ADR-0028)"]
         ToolSkills["src/vibey_tools/skills — vibey-skills<br/>Agent Skills marketplace + context compiler CLI"]
         ToolBootstrap["src/vibey_tools/bootstrap — vibey-bootstrap 4.2.3<br/>Azure App Configuration · Key Vault · App Insights bootstrap library"]
         LiveHarness["tests/live — two-mode live harness (ADR-0030)<br/>faked: ScriptedEngine, no subprocess ·<br/>paid: real engine binaries against real models"]

@@ -9,8 +9,10 @@ in this case, writes into the real job summary.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -42,6 +44,78 @@ def pytest_collection_modifyitems(config, items):
 def _no_ambient_actions_env(monkeypatch):
     for name in _ACTIONS_ENV:
         monkeypatch.delenv(name, raising=False)
+
+
+class FakeGh:
+    """A `gh` on PATH that replays scripted answers and records what it was asked.
+
+    A real executable rather than a patched `subprocess.run`, because a mock cannot tell you
+    the command line is wrong. Answers are keyed by the argv joined with single spaces; each
+    may carry `out`, `err` and `code`, and an argv with no answer exits 3 saying so.
+
+    Two records of every invocation, for two kinds of assertion. `calls()` is the joined
+    argv, one line each, for reading a command line at a glance. `invocations()` is the argv
+    as the list the process received, the directory it ran in, and its standard input --
+    what a join cannot show: an argument that itself contains a space, or where it ran.
+    Standard input is read only when the answer sets `"read_stdin": true`, so a call that
+    pipes nothing cannot leave the fake waiting on the terminal.
+    """
+
+    def __init__(self, bin_dir: Path) -> None:
+        self.bin_dir = bin_dir
+        executable = bin_dir / "gh"
+        executable.write_text(f"""#!/usr/bin/env python3
+import json, os, pathlib, sys
+here = pathlib.Path({str(bin_dir)!r})
+argv = sys.argv[1:]
+key = " ".join(argv)
+entry = json.loads((here / "answers.json").read_text()).get(key)
+stdin = sys.stdin.read() if entry is not None and entry.get("read_stdin") else None
+with (here / "calls.txt").open("a") as fh:
+    fh.write(key + "\\n")
+with (here / "invocations.jsonl").open("a") as fh:
+    fh.write(json.dumps({{"argv": argv, "cwd": os.getcwd(), "stdin": stdin}}) + "\\n")
+if entry is None:
+    sys.stderr.write("no scripted answer\\n")
+    raise SystemExit(3)
+sys.stdout.write(entry.get("out", ""))
+sys.stderr.write(entry.get("err", ""))
+raise SystemExit(entry.get("code", 0))
+""")
+        executable.chmod(0o755)
+        self.script({})
+
+    def script(self, answers: dict[str, dict[str, Any]]) -> None:
+        """Replace every scripted answer."""
+        (self.bin_dir / "answers.json").write_text(json.dumps(answers))
+
+    def calls(self) -> list[str]:
+        """Each invocation's argv joined by single spaces, in the order they were made."""
+        path = self.bin_dir / "calls.txt"
+        return path.read_text().splitlines() if path.exists() else []
+
+    def invocations(self) -> list[dict[str, Any]]:
+        """Each invocation's exact `argv`, `cwd` and `stdin`, in the order they were made."""
+        path = self.bin_dir / "invocations.jsonl"
+        lines = path.read_text().splitlines() if path.exists() else []
+        return [json.loads(line) for line in lines]
+
+    def forget(self) -> None:
+        """Clear both records, keeping the answers, so one test can compare two runs."""
+        for name in ("calls.txt", "invocations.jsonl"):
+            (self.bin_dir / name).unlink(missing_ok=True)
+
+
+# Module-level for the same reason as the hook above: pytest resolves fixtures by name. It
+# lives here rather than in the one module that first needed it so that every module can
+# drive real `gh` command lines through it; a module that defines its own `fake_gh`
+# overrides this one for itself.
+@pytest.fixture
+def fake_gh(tmp_path: Path, monkeypatch) -> FakeGh:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    return FakeGh(bin_dir)
 
 
 # Module-level rather than a class (vibey ADR-0016) because pytest resolves a fixture by

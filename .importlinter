@@ -126,5 +126,16 @@ forbidden_modules =
     vibey_gh.fitloop
     vibey_gh.doctor
     vibey_gh.install
+    vibey_gh.forge_snapshot
+    vibey_gh.gh_transport
+    vibey_gh.github_state
     vibey_gh.review_composition
     vibey_gh.conversation
+# The flatten seam names its `FlattenPlan` record under `TYPE_CHECKING`, so at runtime it
+# imports nothing from `vibey_gh.flatten`. Counted as an edge, though, it reaches every
+# module `flatten` does, and `flatten` asks the forge through `github_state` and so through
+# `gh_transport`, which would leave the transport's own implementation unforbiddable to its
+# own seam. The typing-only edge is set aside; every import an interface makes at runtime
+# is still checked.
+ignore_imports =
+    vibey_gh.interfaces.flatten_interface -> vibey_gh.flatten
