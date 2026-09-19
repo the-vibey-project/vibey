@@ -39,7 +39,7 @@ from vibey.domain.effort import (
     effort_for_attempt,
     forces_rotation,
 )
-from vibey.domain.engine import EngineId, JobRequirement
+from vibey.domain.engine import ENGINE_ID_PARSER, EngineId, JobRequirement
 from vibey.domain.errors import EscalationExhausted, NoEligibleEngine
 from vibey.domain.phase import Phase
 
@@ -84,13 +84,21 @@ def selection_inputs_for_job(
     # not go back to the engine that wound down" constraint rides here.
     raw_excluded = job.requirement.get("excluded_engine_ids")
     if isinstance(raw_excluded, list | tuple):
-        excluded.update(EngineId(str(entry)) for entry in raw_excluded)
+        # An engine this worker cannot run is a vacuous exclusion. Keep the raw
+        # requirement on the job; only dispatch inputs drop unknown ids.
+        excluded.update(
+            engine
+            for entry in raw_excluded
+            if (engine := ENGINE_ID_PARSER.known(str(entry))) is not None
+        )
 
     if job.kind == "build.verify":
         # The diff review runs at LOW and must come from a different engine
         # than the implementer (phase-protocols.md 2.3).
-        implementer = str(job.requirement.get("implementer_engine_id", "") or "")
-        if implementer:
+        implementer = ENGINE_ID_PARSER.known(
+            str(job.requirement.get("implementer_engine_id", "") or "")
+        )
+        if implementer is not None:
             # ...but independence is the default, not an absolute. A pool
             # that cannot supply a second reviewer gets a self-review that
             # says so, because the alternative measured on a one-engine
@@ -101,9 +109,9 @@ def selection_inputs_for_job(
             # "is the pool exactly one engine" so it also holds when a
             # durable excluded_engine_ids list has already taken the other
             # candidates -- a rule, not a special case (ADR-0018).
-            remaining = None if pool is None else pool - excluded - {EngineId(implementer)}
+            remaining = None if pool is None else pool - excluded - {implementer}
             if remaining is None or remaining:
-                excluded.add(EngineId(implementer))
+                excluded.add(implementer)
             else:
                 independence_waived = True
         effort = Effort.LOW
@@ -117,7 +125,7 @@ def selection_inputs_for_job(
             # exhausted-ladder Park. Select as if HIGH so a needless
             # nack/crash can't preempt the human gate.
             effort = Effort.HIGH
-        previous = EngineId(job.assigned_engine) if job.assigned_engine else None
+        previous = ENGINE_ID_PARSER.known(job.assigned_engine or "")
         if attempt > 1 and previous is not None:
             previous_effort = effort_for_attempt(base, min(attempt - 1, BUILD_LADDER_EXHAUSTED))
             if forces_rotation(previous_effort, effort):

@@ -43,8 +43,8 @@ with payloads.
 | Code | Meaning |
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
-| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value. |
+| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `ledger search`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `ledger show` or `ledger search` with an empty `--kind`; `ledger search` with an unknown `--actor`, a `--digest` that is not a full hex SHA-256, an unreadable `--since`/`--until`, an empty time window, or an empty `--text`. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 
@@ -59,7 +59,7 @@ Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
 `VibeyError` keep their Python traceback.
 
 The other commands (`answer`, `watch`, `recover`, `status`, `engines`,
-`cost`, `ledger show`, every `deploy` subcommand, `doctor`, `operator`) are
+`cost`, `ledger show`, `ledger search`, every `deploy` subcommand, `doctor`, `operator`) are
 not guarded. Their own checks exit 1 or 2 as listed above; any other error,
 including an unset `VIBEY_PG_URL`, surfaces as a Python traceback.
 
@@ -141,9 +141,15 @@ visual-inventory job. Live engine use is explicit and capped. Prints
 
 | Option | Default | What it does |
 |---|---|---|
-| `--provider {scripted,claudeloop,qwenloop}` | `scripted` | `scripted` needs no live engine. `claudeloop` runs a real, paid session capped by `--max-turns` and `--max-dollars`; its spend is recorded as `budget_spent` ledger events so the budget brake counts it. `qwenloop` runs the sovereign local DESIGN provider (ADR-0015, ADR-0027) and reads research material from `$VIBEY_EVIDENCE_DIR`; with that unset, research refuses rather than inventing a source, and DESIGN stops there. Any other value exits 3 with `Error: provider must be 'scripted', 'claudeloop', or 'qwenloop'`. |
+| `--provider {scripted,claudeloop,qwenloop}` | `scripted` | `scripted` needs no live engine. `claudeloop` runs a real, paid session capped by `--max-turns` and `--max-dollars`; its spend is recorded as `budget_spent` ledger events so the budget brake counts it. `qwenloop` runs the sovereign local DESIGN provider (ADR-0015, ADR-0027) against the Ollama server at `$VIBEY_OLLAMA_URL` and reads research material from `$VIBEY_EVIDENCE_DIR`. A research job with no matching evidence parks a `research_evidence` gate on its first attempt, naming the file it wants, rather than inventing a source; supply the file and answer the gate to retry. Any other value exits 3 with `Error: provider must be 'scripted', 'claudeloop', or 'qwenloop'`. |
 | `--max-turns N` | `1` | Turn cap for this one job (min 1). |
 | `--max-dollars F` | `0.25` | Dollar cap for this one job (0.01–10). |
+| `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `qwen2.5-coder:14b` | Local model for `--provider qwenloop`; ignored by the other providers. |
+
+With `--provider qwenloop`, a `VIBEY_OLLAMA_URL` that is not an `http(s)` URL with a
+host, or a `VIBEY_OLLAMA_TIMEOUT` that is not a positive whole number, exits 3 with
+`Error: <VARIABLE>: ...` before any job runs. `work` runs DESIGN only, so it has no
+decomposer; `vibey worker` chooses that.
 
 In VISUAL_DESIGN only `--provider scripted` works; any other provider exits
 3 with `Error: no live VisualInventoryProducer is implemented yet; use --provider scripted`.
@@ -247,17 +253,63 @@ worker's budget brake; `vibey cost` does not print it.
 
 ## `vibey ledger`
 
-Bare `vibey ledger` prints help. Subcommand:
+Bare `vibey ledger` prints help. Subcommands:
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
 | `ledger show [PROJECT_ID]` | `--limit N` / `-n` | `50` | Show the most recent N events (min 1). |
 | | `--phase PHASE` | unset | Filter to one phase, by name or value, case-insensitive (`BUILD`, `deploy_design`). |
-| | `--kind KIND` | unset | Filter to one event kind, by name or value, case-insensitive. |
+| | `--kind KIND` | unset | Filter to one event kind, by name or value, case-insensitive. A kind this vibey does not know is matched exactly as written (see **Kinds from a newer vibey** below). |
+| `ledger search [PROJECT_ID]` | `--id EVENT_ID` | unset | Exactly this record. |
+| | `--digest SHA256` | unset | Every record whose payload has this digest: the full 64-character hex SHA-256, any case. |
+| | `--actor ACTOR` | unset | Who produced it: an engine id (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`), a provenance (`trusted`, `agent`, `untrusted`), or `vibey` for events vibey wrote on its own account. Case-insensitive. |
+| | `--since TIME` | unset | Produced at or after this ISO-8601 date or time (inclusive). |
+| | `--until TIME` | unset | Produced before this ISO-8601 date or time (exclusive). |
+| | `--kind KIND` (repeatable) | unset | Any of these kinds, each by name or value, case-insensitive. A kind this vibey does not know is matched exactly as written (see **Kinds from a newer vibey** below). |
+| | `--text TEXT` | unset | Appears in the payload, literally and case-insensitively. |
+| | `--limit N` / `-n` | `50` | At most N events, the most recent matches (min 1). |
+| | `--json` | off | Print the result as JSON instead. |
 
-Prints one line per event, oldest first:
+`ledger show` prints one line per event, oldest first:
 `#<seq> <YYYY-MM-DD HH:MM:SS> [<PHASE>] <kind> [<engine>]`. Filters apply
-before `--limit`. Defaults to the most recently created project.
+before `--limit`. Defaults to the most recently created project. It loads the
+whole project ledger and filters it in Python.
+
+`ledger search` is the search: every criterion, and the limit, runs in
+Postgres as one parameterised statement, so it reads only the rows it
+returns. Criteria combine with AND; none at all means the latest `--limit`
+events. It prints the same line as `show` plus ` id=<event_id>
+digest=<first 12 hex>`, oldest first, then one closing line: `N matching
+events`, `no events match`, or — when more matched than `--limit` let
+through — `showing the latest N; older matches were left out -- narrow the
+search or raise --limit`. `--json` prints `{"project_id", "truncated",
+"events"}`, each event with every column, payload included.
+
+- **A digest names a payload, not a record.** The ledger's digest is the
+  SHA-256 of the canonical payload alone, so events with the same payload
+  (`{}` is common) share one, and `--digest` can return several records.
+  `--id` is the only criterion that names one record.
+- **Time.** `--since`/`--until` take anything Python's
+  `datetime.fromisoformat` reads (`2026-09-18`, `2026-09-18T14:30:00Z`,
+  `2026-09-18T14:30:00+02:00`). A value with no zone is read as UTC. The
+  window is half-open, so adjacent windows never both claim an event.
+- **Text.** `--text` matches the payload's JSON text as Postgres renders it,
+  keys included, with `%`, `_` and `\` taken literally. JSON escaping
+  applies: a quote inside a payload string is stored as `\"`. No index
+  serves it, so it scans the project's rows.
+- **Scope.** One project: `PROJECT_ID`, or the most recently created
+  project. An unknown `PROJECT_ID` prints `unknown project <id>` and exits 1.
+- **Checked first.** Every option is validated before a connection is
+  opened, so bad input exits 2 even when the database is unreachable.
+- **Kinds from a newer vibey.** During a rolling upgrade, or after a
+  rollback, the ledger can hold event kinds this version has never heard of.
+  `show` and `search` list them under their stored name, like any other
+  event (vibey#275). A `--kind` that names no kind this vibey knows is
+  searched for exactly as written -- surrounding spaces dropped, case kept --
+  and each command prints `note: '<kind>' is not an event kind this vibey
+  knows; matching it exactly as written ...` to stderr, so a typo that finds
+  nothing is visible, and `--json` stdout stays one document. An empty
+  `--kind` exits 2.
 
 ## `vibey deploy`
 
@@ -334,9 +386,10 @@ every phase for one project.
 | `--engines LIST` | the four paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). A list that matches none of the worker's engines — `--engines qwenloop` with the feature off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)` and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. |
 | `--parallelism N` / `-j N` | `1` | Concurrent job loops, 1–16. The effective count is clamped to twice the number of allowed engines and to the CPU count, and is never below 1. |
 | `--once` | off | Process one job and exit (`processed one job` or `no ready job`), instead of running forever. |
-| `--provider {scripted,claudeloop,qwenloop}` | `scripted` | DESIGN and decomposition providers. `scripted` is fully offline. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `qwenloop` uses the sovereign local DESIGN provider (reads `$VIBEY_EVIDENCE_DIR`) with scripted decomposition. Any other value exits 2. |
+| `--provider {scripted,claudeloop,qwenloop}` | `scripted` | DESIGN and decomposition providers. `scripted` is fully offline. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `qwenloop` uses the sovereign local providers for both (ADR-0027): DESIGN reads `$VIBEY_EVIDENCE_DIR` and parks a `research_evidence` gate when a research topic has no evidence, and decomposition asks the local model for a plan under a JSON schema whose criterion ids are the spec's own, refusing the whole plan if any item lacks a verification command or checked criterion, or if dependencies are out of order. Both talk to the one Ollama server at `$VIBEY_OLLAMA_URL`. Any other value exits 2. |
 | `--max-turns N` | `25` | Turn cap per claudeloop DESIGN or decomposition session (min 1). |
 | `--max-dollars F` | `2.0` | Dollar cap per claudeloop DESIGN or decomposition session (0.01–10). |
+| `--ollama-model NAME` | `$VIBEY_OLLAMA_MODEL`, else `qwen2.5-coder:14b` | Local model for `--provider qwenloop`, used for DESIGN and decomposition alike; ignored by the other providers. A bad `VIBEY_OLLAMA_URL` or `VIBEY_OLLAMA_TIMEOUT` exits 3 once the project is resolved, before any job runs. |
 | `--project ID` | latest | Project to work on. |
 | `--wait-for-project SECONDS` | unset (min 1.0) | Poll every N seconds for a project instead of exiting 1 when none exists yet — for long-lived deployments, where exiting means a restart loop. |
 | `--azure {memory,az}` | `memory` | Azure client for the deploy stage set. `memory` is an in-memory adapter that touches no real infrastructure. `az` uses the real Azure CLI and mutates real resources on consented deploys; the worker runs `az account show` first and exits 1 if you are not logged in. Any other value exits 2. |
@@ -370,7 +423,10 @@ Variables read by code under `src/vibey`:
 | Variable | Read by | Effect |
 |---|---|---|
 | `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor --record`; `doctor --cluster` | PostgreSQL DSN. There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). |
-| `VIBEY_EVIDENCE_DIR` | `work --provider qwenloop`, `worker --provider qwenloop` | Directory of reading material for the qwenloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
+| `VIBEY_EVIDENCE_DIR` | `work --provider qwenloop`, `worker --provider qwenloop` | Directory of reading material for the qwenloop DESIGN provider's research stage: one `<topic>.md` (or `.txt`) per topic, first line `source: <where it came from>`. Unset or empty means no evidence; each research job then parks a `research_evidence` gate naming the file it wants. |
+| `VIBEY_OLLAMA_URL` | `work --provider qwenloop`, `worker --provider qwenloop` | The Ollama server both sovereign providers use. Default `http://127.0.0.1:11434`; empty counts as unset. Must be an `http` or `https` URL with a host, or the command exits 3. The same variable points vibey-gh's local-review fallback at its server. |
+| `VIBEY_OLLAMA_MODEL` | `work --provider qwenloop`, `worker --provider qwenloop` | The local model. Default `qwen2.5-coder:14b`; `--ollama-model` overrides it. |
+| `VIBEY_OLLAMA_TIMEOUT` | `work --provider qwenloop`, `worker --provider qwenloop` | Seconds to wait for one local generation. Default `900`; anything but a positive whole number exits 3. |
 | `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop; any other set value disables it. When set it overrides config. When unset, `doctor` falls back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config. |
 | `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |
 | `OPENAI_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `AZURE_OPENAI_API_KEY`, `CODEX_API_KEY`) | codexloop credentials. |

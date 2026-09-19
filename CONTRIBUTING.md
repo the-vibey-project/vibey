@@ -41,9 +41,10 @@ Requires **Python 3.12+**, **PostgreSQL**, and **macOS or Linux**. Windows is
 not a supported target. The suite reads `VIBEY_TEST_DATABASE_URL` (default
 `postgresql://$USER@localhost:5432/vibey_test`); that role needs `CREATEDB`,
 because the session builds a migrated `vibey_test_template` and clones one
-`vibey_test_<worker>` per xdist worker. The default suite needs no engine
-binaries and no paid accounts: tests marked `paid` are deselected unless you
-ask for them (ADR-0030).
+`vibey_test_<worker>` per xdist worker. Parallel checkouts whose migrations
+differ each set `VIBEY_TEST_TEMPLATE_DB` to a template name of their own. The
+default suite needs no engine binaries and no paid accounts: tests marked
+`paid` are deselected unless you ask for them (ADR-0030).
 
 ## The branch model
 
@@ -154,6 +155,15 @@ package: a tenant that needs a sibling installs it from the tree first.
 | `src/vibey_tools/bootstrap` | `pip install -e ../gh` (it imports `vibey_gh`), `pip install -e ".[test,all]"`, `pytest test/ -m "not integration" --cov=vibey_bootstrap` (100% line floor); Python 3.11–3.12. On the 3.11 floor row, also `.[dev]` and its own pre-commit hook's `python -m mypy vibey_bootstrap/` and `python -m bandit -r vibey_bootstrap/ -ll -q` |
 | `src/vibey_runners/common` | `pip install -e ".[dev]"`, `mypy --strict src/vibey_runners/common`, `lint-imports`; Python 3.10. It ships no suite |
 | `src/vibey_runners/*` | the suite with the four per-layer 100% branch floors (qwenloop: one whole-package floor, in its addopts) on each runner's own interpreters. On the floor row, also its own `mypy --strict src/<pkg>`, `lint-imports` and `bandit -q -r src/<pkg>`, plus agyloop's vendor-import grep and claudeloop's skill-frontmatter check. codexloop runs every gate on ubuntu and macOS, 3.12 and 3.13, as its own CI did. agyloop and codexloop also run `properdocs build --strict` (properdocs 1.6.7) on ubuntu 3.12 |
+
+A tenant carries no `.github/`, `.githooks/` or `.vibey-gh.toml` of its own.
+GitHub reads only the root's workflows and templates, git runs only the root's
+hooks (`core.hooksPath`), and vibey-gh stops at the nearest `.vibey-gh.toml`
+walking upward — so a leftover tenant copy fires nothing and can only
+misdirect a `vibey-gh` command run from inside that tenant. The copies the
+absorbed repositories arrived with were removed under #189 and stay in git
+history. `src/vibey_tools/gh` is the one exception: it is vibey-gh itself,
+and ci.yml's `tools-lint` job verifies its rendered copy has no drift.
 
 A change to a vibey-gh template (`src/vibey_tools/gh/vibey_gh/templates/`)
 must be re-rendered at both roots, or the drift check fails:
