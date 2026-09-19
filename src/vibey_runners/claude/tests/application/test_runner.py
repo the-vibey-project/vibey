@@ -51,6 +51,7 @@ def make_runner(
     run_control: FakeRunControl | None = None,
     notifier: FakeNotifier | None = None,
     save_points: FakeSavePointStore | None = None,
+    done_marker_fallback: bool = True,
 ) -> tuple[
     AutonomousRunner,
     FakeAgentGateway,
@@ -71,6 +72,7 @@ def make_runner(
     runner = AutonomousRunner(
         agent_gateway=gateway,
         capacity_probe=probe,
+        done_marker_fallback=done_marker_fallback,
         clock=clock,
         sleeper=sleeper,
         audit_log=audit,
@@ -460,6 +462,80 @@ async def test_empty_zero_cost_turns_increment_streak_then_block() -> None:
     assert result.success is False
     assert result.reason == "repeated empty model responses"
     assert len(gateway.sent_prompts) == 3
+
+
+async def test_zero_cost_turns_that_generated_tokens_are_not_empty() -> None:
+    """A local backend records every turn at $0. Tool-only turns with no text
+    still generated tokens, so they must not count toward the empty streak."""
+    busy = ScriptedTurn(
+        signals=available_signals(), verdict=None, output_text="", cost_usd=0.0, output_tokens=300
+    )
+    runner, gateway, _a, _p, _s, _n, events = make_runner(
+        turns=[busy, busy, busy, ScriptedTurn(signals=available_signals(), verdict=DONE_VERDICT)],
+        probes=[available_signals()],
+    )
+    result = await runner.run(initial_prompt="start", continue_prompt="keep going")
+    assert result.success is True
+    assert len(gateway.sent_prompts) == 4
+    completed = [p for name, p in events.events if name == "turn.completed"]
+    assert completed[0]["output_tokens"] == 300
+    assert completed[0]["input_tokens"] == 0
+
+
+async def test_a_text_marker_cannot_complete_a_run_without_the_marker_fallback() -> None:
+    """Captured live: qwen2.5-coder:14b on Ollama wrote its Write call and its
+    StructuredOutput call as JSON text, then the done marker — and the run
+    reported Done for a file it never created. With the fallback off (a local
+    backend's default) only a structured verdict completes the run."""
+    fake_done = ScriptedTurn(
+        signals=available_signals(),
+        verdict=None,
+        output_text='{"name": "StructuredOutput", "arguments": {"complete": true}}\n'
+        "TEST_DONE_MARKER",
+        output_tokens=156,
+    )
+    runner, gateway, _a, _p, _s, _n, _e = make_runner(
+        turns=[fake_done, ScriptedTurn(signals=available_signals(), verdict=DONE_VERDICT)],
+        probes=[available_signals()],
+        done_marker_fallback=False,
+    )
+    result = await runner.run(initial_prompt="start", continue_prompt="keep going")
+    assert result.success is True
+    assert len(gateway.sent_prompts) == 2
+
+
+async def test_the_marker_fallback_still_completes_a_run_by_default() -> None:
+    runner, gateway, _a, _p, _s, _n, _e = make_runner(
+        turns=[
+            ScriptedTurn(
+                signals=available_signals(),
+                verdict=None,
+                output_text="all done\nTEST_DONE_MARKER",
+            )
+        ],
+        probes=[available_signals()],
+    )
+    result = await runner.run(initial_prompt="start", continue_prompt="keep going")
+    assert result.success is True
+    assert len(gateway.sent_prompts) == 1
+
+
+async def test_backend_misconfigured_turn_ends_the_run_with_its_reason() -> None:
+    """A local backend that went away mid-run ends the run — once — with the
+    reason the CLI maps to exit 78, rather than re-sending turns into a void."""
+    down = TurnSignals(
+        assistant_error="server_error",
+        result_text="API Error: Connection refused (ConnectionRefused)",
+        local_backend=True,
+    )
+    runner, gateway, _a, _p, _s, _n, _e = make_runner(
+        turns=[ScriptedTurn(signals=down, verdict=None, output_text="")],
+        probes=[available_signals()],
+    )
+    result = await runner.run(initial_prompt="start", continue_prompt="keep going")
+    assert result.success is False
+    assert result.reason.startswith("backend misconfigured (unreachable)")
+    assert len(gateway.sent_prompts) == 1
 
 
 async def test_sticky_credits_survives_available_probe() -> None:

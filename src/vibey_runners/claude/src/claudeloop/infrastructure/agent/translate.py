@@ -33,10 +33,28 @@ EventListener = Callable[[dict[str, object]], None]
 
 class TurnAccumulator:
     """Collects one turn's worth of SDK messages (everything from a prompt send
-    to the terminating ResultMessage) and reduces them to a TurnOutcome."""
+    to the terminating ResultMessage) and reduces them to a TurnOutcome.
 
-    def __init__(self, *, on_event: EventListener | None = None) -> None:
+    ``cost_mode="zero"`` (a local backend, domain/backend.py) records every turn
+    at $0: Claude Code prices a model it does not recognise at its default
+    model's rate, so ``total_cost_usd`` there is a guess about a model that costs
+    nothing. The guess is kept on the raw event as ``reported_cost_usd`` for the
+    record; token counts are kept as they are. ``local_backend`` is passed to the
+    classifier so local HTTP errors are read as local ones.
+    """
+
+    def __init__(
+        self,
+        *,
+        on_event: EventListener | None = None,
+        cost_mode: str = "reported",
+        local_backend: bool = False,
+    ) -> None:
         self._on_event = on_event
+        self._zero_cost = cost_mode == "zero"
+        self._local_backend = local_backend
+        self._input_tokens = 0
+        self._output_tokens = 0
         self._rate_limit_status: str | None = None
         self._rate_limit_type: str | None = None
         self._resets_at: int | None = None  # unix timestamp; converted in build()
@@ -68,6 +86,9 @@ class TurnAccumulator:
 
     def feed(self, message: object) -> None:
         event = _message_to_event(message)
+        if self._zero_cost and isinstance(message, ResultMessage):
+            event["reported_cost_usd"] = event["total_cost_usd"]
+            event["total_cost_usd"] = 0.0
         self._raw_events.append(event)
         if self._on_event is not None:
             self._on_event(event)
@@ -115,8 +136,9 @@ class TurnAccumulator:
             self._session_id = message.session_id or self._session_id
             if message.api_error_status is not None:
                 self._api_error_status = message.api_error_status
-            if message.total_cost_usd is not None:
+            if message.total_cost_usd is not None and not self._zero_cost:
                 self._cost_usd = message.total_cost_usd
+            self._ingest_usage(message.usage)
             if message.result:
                 self._result_text = message.result
                 self._text_parts.append(message.result)
@@ -124,6 +146,18 @@ class TurnAccumulator:
                 self._structured = message.structured_output
             self._ingest_credit_signals_from_errors(message.errors or [])
             self._ingest_credit_signals_from_error_details(message)
+
+    def _ingest_usage(self, usage: object) -> None:
+        if not isinstance(usage, dict):
+            return
+        self._input_tokens = self._count(usage.get("input_tokens"), self._input_tokens)
+        self._output_tokens = self._count(usage.get("output_tokens"), self._output_tokens)
+
+    @staticmethod
+    def _count(value: object, fallback: int) -> int:
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+        return fallback
 
     def _ingest_credit_signals_from_errors(self, errors: Sequence[object]) -> None:
         for err in errors:
@@ -191,6 +225,7 @@ class TurnAccumulator:
             disabled_reason=self._disabled_reason,
             can_purchase=self._can_purchase,
             result_text=result_text,
+            local_backend=self._local_backend,
         )
         verdict = None
         if self._structured is not None:
@@ -212,6 +247,8 @@ class TurnAccumulator:
             session_id=self._session_id,
             cost_usd=self._cost_usd,
             raw_events=tuple(self._raw_events),
+            input_tokens=self._input_tokens,
+            output_tokens=self._output_tokens,
         )
 
 
@@ -276,6 +313,7 @@ def _message_to_event(message: object) -> dict[str, object]:
         payload["session_id"] = message.session_id
         payload["api_error_status"] = message.api_error_status
         payload["total_cost_usd"] = message.total_cost_usd
+        payload["usage"] = message.usage
         payload["result"] = message.result
         payload["errors"] = list(message.errors or [])
         payload["structured_output"] = message.structured_output

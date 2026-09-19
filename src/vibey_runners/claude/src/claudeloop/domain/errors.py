@@ -25,3 +25,13 @@ class AuthenticationFailedError(AutoclaudeError):
 
     Never retryable — the run loop must abort rather than wait.
     """
+
+
+class BackendProfileError(AutoclaudeError, ValueError):
+    """Raised when a ``[profiles.<name>]`` backend profile is invalid or cannot be
+    used as asked (unknown name, missing model tier, a ``claude-*`` id sent to a
+    local backend, a tool the backend cannot serve).
+
+    A ``ValueError`` as well, so every CLI path that already turns a bad value
+    into a usage error (exit 2) handles it without a new except clause.
+    """
