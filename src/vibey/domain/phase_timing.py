@@ -127,7 +127,7 @@ class LedgerSpendRule:
 
     def spend_of(self, event: LedgerEvent) -> PhaseSpend | None:
         """What one event spent, or None if it is not a spend event at all."""
-        return self.spend_of_payload(event.kind, event.payload)
+        return self.spend_of_payload(event.kind.value, event.payload)
 
     def spend_of_payload(self, kind: str, payload: Mapping[str, object]) -> PhaseSpend | None:
         """The same rule, for an event not yet on the ledger: its kind as the

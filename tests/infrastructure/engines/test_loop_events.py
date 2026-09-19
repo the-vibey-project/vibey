@@ -318,6 +318,20 @@ _EXPECTED_MAPS: dict[EngineId, dict[str, EventKind]] = {
         "capacity.forecast": EventKind.BUDGET_SPENT,
         "finished": EventKind.VERDICT_RENDERED,
     },
+    # claudeloop-local uses the same binary event vocabulary through a local
+    # backend profile; the implementation table aliases this map as well.
+    EngineId.CLAUDELOOP_LOCAL: {
+        "run.started": EventKind.SESSION_SEEDED,
+        "preflight": EventKind.SESSION_SEEDED,
+        "turn.starting": EventKind.TURN_REQUESTED,
+        "chatter.prompt": EventKind.TRANSCRIPT_RECORDED,
+        "chatter.assistant": EventKind.TRANSCRIPT_RECORDED,
+        "turn.completed": EventKind.TURN_COMPLETED,
+        "chatter.tool": EventKind.TOOL_INVOKED,
+        "savepoint": EventKind.SAVEPOINT_CREATED,
+        "capacity.forecast": EventKind.BUDGET_SPENT,
+        "finished": EventKind.VERDICT_RENDERED,
+    },
     EngineId.CODEXLOOP: {
         "thread.started": EventKind.SESSION_SEEDED,
         "turn.started": EventKind.TURN_REQUESTED,
@@ -373,6 +387,7 @@ def test_mapping_table_is_exactly_the_expected_one(engine_id: EngineId) -> None:
 # cursorloop has none: its events.jsonl carries no turn boundary at all.
 _TURN_BOUNDARIES: dict[EngineId, frozenset[str]] = {
     EngineId.CLAUDELOOP: frozenset({"turn.completed"}),
+    EngineId.CLAUDELOOP_LOCAL: frozenset({"turn.completed"}),
     EngineId.CODEXLOOP: frozenset({"turn.completed", "turn.failed"}),
     EngineId.CURSORLOOP: frozenset(),
     EngineId.AGYLOOP: frozenset({"turn.completed"}),

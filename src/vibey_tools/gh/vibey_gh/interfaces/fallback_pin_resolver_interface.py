@@ -34,6 +34,20 @@ class FallbackPin:
 
 
 @runtime_checkable
+class FallbackPinInterface(Protocol):
+    """The read-only result shape returned by the fallback pin resolver."""
+
+    @property
+    def version(self) -> str | None: ...
+
+    @property
+    def from_repository(self) -> bool: ...
+
+    @property
+    def notice(self) -> str | None: ...
+
+
+@runtime_checkable
 class FallbackPinResolverInterface(Protocol):
     """Decides the fallback pin for one repository's configuration."""
 

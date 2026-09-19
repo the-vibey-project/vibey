@@ -306,7 +306,7 @@ async def test_a_kind_this_vibey_does_not_know_is_handed_on_whole(tmp_path: Path
     transcript = {"transcript_ref": "runs/1/transcript.jsonl", "cost_usd": 12.0}
     newer = replace(
         _event(project_id, 7, EventKind.TURN_COMPLETED, transcript),
-        kind=UnrecognizedEventKind("TranscriptRecorded"),
+        kind=UnrecognizedEventKind("TranscriptRecordedV2"),
     )
     events = (*known[:3], replace(newer, seq=4), *(replace(e, seq=e.seq + 1) for e in known[3:]))
     orchestrator, handoffs, _, writer = await _orchestrator(project_id, events)
@@ -320,7 +320,9 @@ async def test_a_kind_this_vibey_does_not_know_is_handed_on_whole(tmp_path: Path
     )
 
     assert isinstance(outcome, Success), outcome
-    assert [e.kind for e in writer.written].count(UnrecognizedEventKind("TranscriptRecorded")) == 1
+    assert [e.kind for e in writer.written].count(
+        UnrecognizedEventKind("TranscriptRecordedV2")
+    ) == 1
     assert len(writer.written) == len(events)
     (envelope,) = handoffs.envelopes
     assert envelope.gate.ok

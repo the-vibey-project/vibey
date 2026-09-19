@@ -182,6 +182,12 @@ def review(argv: list[str] | None = None) -> int:
     parser.add_argument("--base-url", default=defaults.base_url)
     parser.add_argument("--max-chars", type=int, default=defaults.max_diff_chars)
     parser.add_argument("--timeout", type=int, default=defaults.timeout_seconds)
+    parser.add_argument(
+        "--role",
+        choices=("fallback", "sovereign"),
+        default="fallback",
+        help="label the result as the sovereign diff lane or the paid-review fallback",
+    )
     args = parser.parse_args(argv)
 
     if args.diff:
@@ -203,8 +209,9 @@ def review(argv: list[str] | None = None) -> int:
         print(f"local model returned an unusable response: {error}", file=sys.stderr)
         return 1
 
+    lane = "SOVEREIGN LANE" if args.role == "sovereign" else "LOCAL FALLBACK"
     verdict["summary"] = (
-        f"[LOCAL FALLBACK — {args.model}] {verdict.get('summary', '').strip()} "
+        f"[{lane} — {args.model}] {verdict.get('summary', '').strip()} "
         f"{REVIEW_CONTRACT.unevaluated_notice}"
     ).strip()
     verdict.update(REVIEW_CONTRACT.placeholders())

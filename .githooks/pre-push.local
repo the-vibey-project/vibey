@@ -1,11 +1,5 @@
 #!/bin/sh
-# vibey-gh owns core.hooksPath, so .git/hooks is never consulted again and the
-# pre-commit framework's hooks would silently stop running -- a worse failure
-# than any gate they enforce, because everything keeps looking green.
-#
-# Delegates to the framework's OWN generated hook rather than calling
-# `pre-commit run`: that script knows where its environment lives, and a git
-# hook does not inherit an activated virtualenv, so re-invoking by name finds
-# the wrong tools or none at all.
-[ -x ".git/hooks/pre-push" ] || exit 0
-exec ".git/hooks/pre-push" "$@"
+# Chained from vibey-gh's pre-push hook. Runs the pre-commit framework's pre-push stage,
+# which holds the local gate suite. framework-hook.sh, beside this file, finds that hook
+# in a plain clone and in a linked worktree alike, and warns when it is not installed.
+exec "$(dirname "$0")/framework-hook.sh" pre-push "$@"

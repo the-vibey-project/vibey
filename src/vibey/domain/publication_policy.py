@@ -46,7 +46,7 @@ from enum import StrEnum
 from hashlib import sha256
 from operator import attrgetter
 from types import MappingProxyType
-from typing import Final
+from typing import Final, cast
 from uuid import UUID
 
 from vibey.domain.errors import VibeyError
@@ -295,7 +295,10 @@ class PublicationPolicy:
         )
 
     def _publish(self, event: LedgerEvent) -> tuple[LedgerEvent, TrimCountsInterface]:
-        keep = self._rules.allowed[event.kind] - self._rules.never_published
+        # `_reason` withholds every unrecognized kind before `_publish` is called.
+        # The cast records that invariant without importing a newer kind's meaning.
+        kind = cast(EventKind, event.kind)
+        keep = self._rules.allowed[kind] - self._rules.never_published
         payload: dict[str, object] = {}
         trim: TrimCountsInterface = NO_TRIM
         for key, value in event.payload.items():

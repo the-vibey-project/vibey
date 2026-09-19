@@ -136,6 +136,31 @@ class PreflightResult:
 
 
 @dataclass(frozen=True, slots=True)
+class FeasibilityAssessment:
+    """The conductor-facing projection of the family's feasibility verdict.
+
+    ``status`` is one of ``feasible``, ``infeasible`` or ``unknown``.  A first
+    repair exists only for a measured shortfall; an unknown coordinate is never
+    turned into advice pretending the system measured it.
+    """
+
+    status: str
+    blocked_at: str | None
+    first_repair: str | None
+    confidence: float
+    required: int
+    required_measured: int
+
+
+@dataclass(frozen=True, slots=True)
+class StartupPreflightReport:
+    """Everything the worker startup sweep learned before it claims work."""
+
+    ineligible_engines: tuple[EngineId, ...]
+    feasibility: FeasibilityAssessment
+
+
+@dataclass(frozen=True, slots=True)
 class StopSummary:
     run_id: UUID
     complete: bool

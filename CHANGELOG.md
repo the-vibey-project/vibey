@@ -32,6 +32,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **db:** replicas that start together no longer race to apply the same migration. Every
+  `build_app()` — every worker start and every CLI command that opens the queue — applied
+  pending migrations with no lock, so pods brought up together by a KEDA scale-out or a Helm
+  rollout each read the same applied set and ran the same migration; on a fresh database even
+  the `schema_migration` bootstrap collided on the catalog. The new `PostgresMigrator` holds a
+  session-level Postgres advisory lock (key `sha256('vibey.migrate')`, derived as ADR-0029
+  derives the integrate key) from before it reads the applied set until the last migration has
+  committed, and releases it in a `finally`: one process migrates, the rest wait and find
+  nothing to do. The wait is bounded by `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` (default `300`,
+  `0` waits indefinitely); when it runs out the start fails with `MigrationLockTimeout` naming
+  the backend pid that holds the lock, and a value that is not a usable number of seconds fails
+  the start before the pool opens rather than falling back. `apply_migrations` remains as a
+  façade with the default wait (#114)
 * **gh:** `vibey-gh promote` rewrites a reused promotion pull request's title and body from
   the current derivation instead of leaving them as the run that opened it wrote them
   (#235). #231 kept reading `chore(release): 0.8.0` and "5 file(s) differ" while it
@@ -165,6 +178,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   fails the command with a clear message rather than answering a different comment. A review
   comment's briefing also carries the file, line and diff hunk it was written on (#145)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+* **hooks:** a commit or push made from a linked git worktree now runs the pre-commit framework's gates. Before this fix it ran none of them and said nothing. The tracked shims `.githooks/pre-commit`, `commit-msg.local` and `pre-push.local` looked for the framework's hook at the literal `.git/hooks/<stage>`. In a worktree `.git` is a file, so that path never exists and each shim exited 0 without a word. The push went out with no test suite, mypy, import-linter, coverage gates, bandit or pip-audit. All three shims now hand over to one helper, `.githooks/framework-hook.sh`. It resolves the hook through `git rev-parse --git-common-dir`, which is where `pre-commit install` writes. `--git-path` would not work: it honours `core.hooksPath` and resolves back to `.githooks`. When the repository declares the framework but its hook for a stage is not installed, the helper warns and names that stage, and the commit or push still goes ahead. The declaring config is `VIBEY_FRAMEWORK_HOOK_CONFIG`, which defaults to `.pre-commit-config.yaml`. The helper also stops passing the `GIT_DIR` that git exports to a worktree's hooks (a plain clone's hooks get none) when it names the repository git would find anyway. The first gated push from a worktree showed why. The suite inherited that `GIT_DIR`, and `vibey.application.conformance`'s scratch `git init` rewrote the shared git config to `core.bare = true`, which broke the main checkout, while its `git commit --allow-empty` landed on the pushing branch. `tests/meta/test_githooks_reach_the_framework.py` drives the real hooks through `git commit` and `git push` from a main checkout and from a linked worktree, and reproduces that damage to prove it can no longer land (#282)
 * **tests:** the chaos test counts *committed* executions (acks that returned `True`) and asserts 500 committed, none twice and none lost. It used to log every execution before the fenced ack and ignore the result, so on a loaded machine, where claim-to-ack outlives the 150 ms lease, at-least-once redelivery read as double execution. The raw count is still printed, and the lease is unchanged. `tests/infrastructure/db/conftest.py` and `tests/contracts/conftest.py` now read `VIBEY_TEST_DATABASE_URL` inside a fixture rather than at import, so `pytest tests/infrastructure/db -n 4` gives each worker its own database instead of one shared `vibey_test_main_main`. A serial run or an xdist controller now names its database per process (`vibey_test_main_<pid>_<hex>`), so parallel checkouts no longer terminate and drop each other's database (#262)
 * **gh:** `vibey-gh install` no longer fails with a traceback, after writing every file, on a machine without the GitHub CLI; the secret check degrades to the notice `gh not found; skipping secret/permission checks` (#264)
 * **gh:** `python -m vibey_gh` now runs the CLI; the package had no `__main__` module (#264)
