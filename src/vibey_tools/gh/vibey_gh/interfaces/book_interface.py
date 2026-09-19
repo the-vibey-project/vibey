@@ -10,6 +10,14 @@ from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
+class BookErrorInterface(Protocol):
+    """The actionable exception surface exposed by the book exporter."""
+
+    @property
+    def args(self) -> tuple[object, ...]: ...
+
+
+@runtime_checkable
 class MainExtractorInterface(Protocol):
     """Walks a rendered page and collects the content element's subtree.
 
@@ -51,6 +59,10 @@ class BookChapterInterface(Protocol):
     @property
     def sections(self) -> tuple[str, ...]:
         """The nav section headings enclosing this chapter, outermost first."""
+
+    @property
+    def depth(self) -> int:
+        """The number of enclosing nav sections, used for nested contents."""
 
     @property
     def slug(self) -> str:

@@ -13,7 +13,7 @@ import asyncpg
 
 from vibey.application.dto import EnqueueRequest, JobRecord
 from vibey.domain.engine import EngineId
-from vibey.domain.job import JobState
+from vibey.domain.job import JOB_STATE_PARSER, JobState, StoredJobState
 from vibey.domain.phase import Phase
 
 
@@ -350,15 +350,15 @@ class PostgresJobRepository:
             )
             return int(count)
 
-    async def queue_depth(self, project_id: UUID) -> dict[JobState, int]:
+    async def queue_depth(self, project_id: UUID) -> Mapping[StoredJobState, int]:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 "SELECT state, count(*) as count FROM job WHERE project_id = $1 GROUP BY state",
                 project_id,
             )
-            counts: dict[JobState, int] = {s: 0 for s in JobState}
+            counts: dict[StoredJobState, int] = {state: 0 for state in JobState}
             for row in rows:
-                counts[JobState(row["state"])] = row["count"]
+                counts[JOB_STATE_PARSER.parse(str(row["state"]))] = int(row["count"])
             return counts
 
     async def get(self, job_id: UUID) -> JobRecord | None:

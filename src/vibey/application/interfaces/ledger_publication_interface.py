@@ -11,18 +11,28 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from vibey.domain.interfaces.publication_policy_interface import TrimCountsInterface
 from vibey.domain.ledger import LedgerEvent
 from vibey.domain.publication_policy import WithheldReason
 
-if TYPE_CHECKING:
-    # Only a property names it, and the module it lives in imports this one: a
-    # runtime import would be a cycle. Every method annotation resolves at runtime
-    # (tests/application/test_interfaces_convention.py).
-    from vibey.application.ledger_publication import ShardHolding
+
+@runtime_checkable
+class ShardHoldingInterface(Protocol):
+    """The serialized value of how much ledger history a shard covers."""
+
+    @property
+    def value(self) -> str: ...
+
+
+@runtime_checkable
+class InvalidLedgerShardInterface(Protocol):
+    """The diagnostic surface carried by an invalid shard exception."""
+
+    @property
+    def args(self) -> tuple[object, ...]: ...
 
 
 @runtime_checkable
@@ -41,7 +51,7 @@ class ShardHeaderInterface(Protocol):
     def project_name(self) -> str: ...
 
     @property
-    def holds(self) -> ShardHolding:
+    def holds(self) -> ShardHoldingInterface:
         """The whole ledger from its first event, or a window of it."""
         ...
 

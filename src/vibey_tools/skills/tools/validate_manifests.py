@@ -198,7 +198,12 @@ def main() -> int:
             )
 
     # --- every plugin.json on disk is registered --------------------------
-    plugin_dirs = sorted(p for p in (ROOT / "plugins").iterdir() if p.is_dir())
+    # Tooling may leave hidden working directories under plugins (for example
+    # `.claude/.cc-writes`). They are not marketplace plugins and must not be
+    # mistaken for missing manifests.
+    plugin_dirs = sorted(
+        p for p in (ROOT / "plugins").iterdir() if p.is_dir() and not p.name.startswith(".")
+    )
     for plugin_dir in plugin_dirs:
         manifest_path = plugin_dir / ".claude-plugin" / "plugin.json"
         if not manifest_path.is_file():

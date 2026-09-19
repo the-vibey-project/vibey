@@ -4,19 +4,28 @@ business logic for updating health records based on conformance, capacity
 states, and selection outcomes.
 """
 
+import math
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
 from vibey.application.dto import EngineHealthRecord, PreflightResult
 from vibey.application.interfaces.engines import EngineHealthRepository
+from vibey.application.interfaces.system import Clock
 from vibey.domain.capacity import (
     AuthenticationFailed,
     CapacityState,
     CreditsExhausted,
     WindowExhausted,
 )
-from vibey.domain.circuit import CIRCUIT_STATE_PARSER, CircuitState, StoredCircuitState
+from vibey.domain.circuit import (
+    CIRCUIT_STATE_PARSER,
+    ENGINE_FAILURE_POLICY,
+    CircuitState,
+    StoredCircuitState,
+)
 from vibey.domain.engine import EngineId
+from vibey.domain.interfaces.circuit_interface import EngineFailurePolicyInterface
 
 
 class EngineHealthService:
@@ -27,8 +36,19 @@ class EngineHealthService:
     module rather than a mirrored `*_interface.py`; the reason is written there.
     """
 
-    def __init__(self, repository: EngineHealthRepository) -> None:
+    def __init__(
+        self,
+        repository: EngineHealthRepository,
+        *,
+        failure_policy: EngineFailurePolicyInterface = ENGINE_FAILURE_POLICY,
+        clock: Clock | None = None,
+    ) -> None:
         self._repository = repository
+        self._failure_policy = failure_policy
+        self._clock = clock
+
+    def _now(self) -> datetime:
+        return self._clock.now() if self._clock is not None else datetime.now(UTC)
 
     def _circuit_after_preflight(
         self, record: EngineHealthRecord, preflight: PreflightResult
@@ -187,7 +207,7 @@ class EngineHealthService:
             from datetime import timedelta
 
             probe_attempt = record.probe_attempt + 1
-            probe_next_at = datetime.now(UTC) + timedelta(minutes=min(5 * (2**probe_attempt), 30))
+            probe_next_at = self._now() + timedelta(minutes=min(5 * (2**probe_attempt), 30))
 
         elif isinstance(capacity_state, WindowExhausted):
             circuit_state = CircuitState.OPEN
@@ -224,10 +244,8 @@ class EngineHealthService:
 
         return await self._repository.upsert(updated)
 
-    async def record_selection(
-        self, project_id: UUID, engine_id: EngineId, cost_usd: float = 0.0
-    ) -> EngineHealthRecord:
-        """Record that an engine was selected for work."""
+    async def record_selection(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
+        """Count a selection; the run's cost is recorded only after it is known."""
         record = await self.get_or_create(project_id, engine_id)
 
         if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
@@ -247,11 +265,50 @@ class EngineHealthService:
             probe_attempt=record.probe_attempt,
             consecutive_fail=record.consecutive_fail,
             ewma_failure=record.ewma_failure,
-            cost_usd_cycle=record.cost_usd_cycle + cost_usd,
+            cost_usd_cycle=record.cost_usd_cycle,
             selected_count=record.selected_count + 1,
         )
 
         return await self._repository.upsert(updated)
+
+    async def record_spend(
+        self, project_id: UUID, engine_id: EngineId, cost_usd: float
+    ) -> EngineHealthRecord:
+        """Add one finished engine session's measured spend to its total."""
+        if not math.isfinite(cost_usd) or cost_usd < 0:
+            raise ValueError(f"engine spend must be a finite amount >= 0, got {cost_usd!r}")
+        record = await self.get_or_create(project_id, engine_id)
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
+        return await self._repository.upsert(
+            replace(record, cost_usd_cycle=record.cost_usd_cycle + cost_usd)
+        )
+
+    async def record_failure(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
+        """Record an ENGINE failure and schedule a probe once policy trips."""
+        record = await self.get_or_create(project_id, engine_id)
+        if CIRCUIT_STATE_PARSER.known(str(record.circuit)) is None:
+            return record
+        consecutive = record.consecutive_fail + 1
+        ewma = min(1.0, record.ewma_failure * 0.9 + 0.1)
+        if not self._failure_policy.trips(consecutive):
+            return await self._repository.upsert(
+                replace(record, consecutive_fail=consecutive, ewma_failure=ewma)
+            )
+        return await self._repository.upsert(
+            replace(
+                record,
+                circuit=CircuitState.OPEN,
+                capacity_state=None,
+                resets_at=None,
+                probe_next_at=self._failure_policy.probe_at(
+                    now=self._now(), consecutive_failures=consecutive
+                ),
+                probe_attempt=record.probe_attempt + 1,
+                consecutive_fail=consecutive,
+                ewma_failure=ewma,
+            )
+        )
 
     async def record_success(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
         """Record a successful execution (clears consecutive failures)."""

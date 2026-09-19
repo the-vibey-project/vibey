@@ -288,6 +288,31 @@ async def test_reviewer_rejection_fails_as_work(tmp_path: Path) -> None:
     assert outcome == Failure(FailureClass.WORK, "diff review did not approve this work item")
 
 
+async def test_reviewer_rejection_with_exit_code_uses_engine_attribution(tmp_path: Path) -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    reviewer = ScriptedEngine(
+        descriptor=CODEXLOOP,
+        base_dir=tmp_path / "engine",
+        script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
+        exit_code_script=[137],
+    )
+    handler = BuildVerifyHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        gates=FakeGateRunner(),
+        reviewer=reviewer,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job(requirement={"implementer_engine_id": "claudeloop"}))
+
+    assert outcome == Failure(
+        FailureClass.ENGINE,
+        "diff review did not approve this work item (exit code 137)",
+    )
+
+
 async def test_a_reviewer_whose_backend_is_misconfigured_parks_rather_than_rejects(
     tmp_path: Path,
 ) -> None:

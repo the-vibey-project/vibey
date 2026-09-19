@@ -19,9 +19,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vibey_gh import dependabot
+from vibey_gh.automation_bootstrap import AutomationBootstrapGate
 from vibey_gh.config import GhConfig, load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPin
+from vibey_gh.review_contract import REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
 
 TEMPLATES = Path(__file__).parent / "templates" / "githooks"
 WORKFLOWS = Path(__file__).parent / "templates" / "workflows"
@@ -204,6 +206,16 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace("__VIBEY_GH_INTEGRATION_BRANCH__", cfg.integration_branch)
     wanted = wanted.replace("__VIBEY_GH_RELEASE_BRANCH__", cfg.release_branch)
     wanted = wanted.replace("__VIBEY_GH_MODEL__", cfg.pr_automation.model)
+    wanted = wanted.replace(
+        "__VIBEY_GH_REVIEW_SCHEMA__",
+        json.dumps(REVIEW_CONTRACT.json_schema(), separators=(",", ":")).replace("'", r"\u0027"),
+    )
+    wanted = wanted.replace(
+        "__VIBEY_GH_REVIEW_WIDER_SCHEMA__",
+        json.dumps(
+            REVIEW_CONTRACT.json_schema([REQUIRES_WIDER_CONTEXT]), separators=(",", ":")
+        ).replace("'", r"\u0027"),
+    )
     # Every workflow name the chain depends on, from one source: a template's own
     # `name:` and the `workflow_run` triggers that watch it render from the same
     # field, so a rename can never leave a trigger pointing at a workflow that no
@@ -434,6 +446,7 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     ]
     wanted = wanted.replace("__VIBEY_GH_PLUGIN_MARKETPLACES__", indent.join(marketplaces))
     wanted = wanted.replace("__VIBEY_GH_PLUGINS__", indent.join(cfg.pr_automation.plugins))
+    wanted = AutomationBootstrapGate().render(wanted, cfg)
     if source.name != "pr-automation.yml":
         return _strip_trailing_space(wanted)
     workflows = json.dumps(list(cfg.pr_automation.scan_workflows))
@@ -454,9 +467,15 @@ def installation_notices() -> tuple[str, ...]:
     notices = [
         "enable Actions read/write permissions and allow Actions to create pull requests",
     ]
-    run = subprocess.run(
-        ["gh", "secret", "list", "--json", "name"], capture_output=True, text=True, check=False
-    )
+    try:
+        run = subprocess.run(
+            ["gh", "secret", "list", "--json", "name"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return (*notices, "gh not found; skipping secret/permission checks")
     if run.returncode == 0:
         try:
             present = {str(item["name"]) for item in json.loads(run.stdout)}

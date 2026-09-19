@@ -969,3 +969,27 @@ def test_the_sovereign_job_and_its_old_name_are_both_our_own_checks():
     assert "Sovereign diff review" in pa.OWN_JOBS
     assert "Local review fallback" in pa.OWN_JOBS
     assert "PR automation / Sovereign diff review" in pa.OWN_CHECKS
+
+
+def test_the_cli_composes_the_full_review_envelope(capsys):
+    import json
+
+    from vibey_gh import cli
+    from vibey_gh.review_contract import REVIEW_CONTRACT
+
+    paid = {name: True for name in REVIEW_CONTRACT.requires_wider_context}
+    paid["findings"] = []
+    code = cli.main(
+        [
+            "pr-automation",
+            "combine",
+            "--paid",
+            json.dumps(paid),
+            "--half",
+            "full",
+            "--head-sha",
+            "abc",
+        ]
+    )
+    assert code == 0
+    assert json.loads(capsys.readouterr().out)["verdict"]["head_sha"] == "abc"

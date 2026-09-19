@@ -33,7 +33,8 @@ uv sync --extra dev
 # and pre-push hooks are never installed and the suite never runs locally.
 uv run pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 # Then the provenance hooks. This points core.hooksPath at .githooks; the
-# tracked .githooks/*.local shims chain back to the framework hooks above.
+# tracked .githooks/*.local shims chain back to the framework hooks above,
+# resolving the common git directory to ensure they run in linked worktrees.
 uv run vibey-gh install
 ```
 
@@ -274,8 +275,8 @@ copies of everything are published under `/develop/`.
 ## Getting help
 
 See [SUPPORT.md](SUPPORT.md) for the right channel. Usage questions belong
-in [Discussions](https://github.com/the-vibey-project/vibey/discussions),
-not bug reports.
+in [Discussions](https://github.com/the-vibey-project/vibey/discussions), not
+bug reports.
 
 ## Code of Conduct
 

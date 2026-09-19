@@ -1672,6 +1672,8 @@ def test_worker_warns_about_engines_without_conformance(tmp_path: Path) -> None:
     assert res.exit_code == 0, res.output
     assert "no recorded conformance" in res.output
     assert "doctor --conformance --record" in res.output
+    assert "preflight feasibility: INFEASIBLE" in res.output
+    assert "first repair: agent.availability" in res.output
 
     async def check() -> int:
         async with build_app() as resources:
@@ -1708,6 +1710,8 @@ def test_worker_stays_quiet_when_every_engine_has_conformance(tmp_path: Path) ->
         res = runner.invoke(app, ["worker", "--once"])
     assert res.exit_code == 0, res.output
     assert "no recorded conformance" not in res.output
+    assert "preflight feasibility: UNKNOWN" in res.output
+    assert "no measured shortfall" in res.output
 
 
 def test_doctor_record_persists_preflight_only(tmp_path: Path) -> None:

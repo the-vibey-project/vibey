@@ -47,12 +47,39 @@ class ForgeRead:
     problem: str = ""
 
 
+@runtime_checkable
+class ForgeReadInterface(Protocol):
+    @property
+    def forge_class(self) -> str: ...
+
+    @property
+    def native_class(self) -> str: ...
+
+    @property
+    def observations(self) -> tuple[Observation, ...]: ...
+
+    @property
+    def high_water(self) -> str | None: ...
+
+    @property
+    def problem(self) -> str: ...
+
+
 @dataclass(frozen=True)
 class ChainHead:
     """Where one class's chain stands: how many records it holds, and the digest of the last."""
 
     records: int
     head: str | None
+
+
+@runtime_checkable
+class ChainHeadInterface(Protocol):
+    @property
+    def records(self) -> int: ...
+
+    @property
+    def head(self) -> str | None: ...
 
 
 @dataclass(frozen=True)
@@ -63,6 +90,21 @@ class AppendOutcome:
     unchanged: int
     records: int
     head: str | None
+
+
+@runtime_checkable
+class AppendOutcomeInterface(Protocol):
+    @property
+    def appended(self) -> int: ...
+
+    @property
+    def unchanged(self) -> int: ...
+
+    @property
+    def records(self) -> int: ...
+
+    @property
+    def head(self) -> str | None: ...
 
 
 @runtime_checkable

@@ -1,14 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Composition root: the only module that wires concrete adapters to ports."""
 
-import asyncio
 import os
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from uuid import UUID
 
 import asyncpg
 
@@ -47,6 +45,7 @@ from vibey.application.engine_selector import EngineSelector
 from vibey.application.interfaces import (
     AzureClientPort,
     Clock,
+    ConductorPreflightInterface,
     DesignProvider,
     EngineAdapter,
     JobHandler,
@@ -54,6 +53,7 @@ from vibey.application.interfaces import (
     WorkPlanProducer,
 )
 from vibey.application.job_dispatcher import JobDispatcher
+from vibey.application.preflight import ConductorPreflight
 from vibey.application.review_collect_handler import ReviewCollectHandler
 from vibey.application.review_demo_handler import ReviewDemoHandler
 from vibey.application.review_deployment_choice_handler import ReviewDeploymentChoiceHandler
@@ -94,6 +94,7 @@ from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
+from vibey.infrastructure.preflight_feasibility import VibeyGhFeasibilityAdapter
 from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
 from vibey.infrastructure.review_artifact_writer import FileReviewArtifactWriter
 from vibey.infrastructure.skills_context import compiler_from_config
@@ -116,6 +117,7 @@ class AppResources:
     engine_health_repo: PostgresEngineHealthRepository
     rotation_cursors: PostgresRotationCursorRepository
     engine_health_service: EngineHealthService
+    conductor_preflight: ConductorPreflightInterface
     engine_selector: EngineSelector
     rotation_handoff: RotationHandoffService
     engine_adapters: Mapping[EngineId, EngineAdapter]
@@ -226,35 +228,6 @@ def lease_for_kind(kind: str) -> timedelta:
     return _KIND_LEASES.get(kind, timedelta(minutes=2))
 
 
-async def preflight_sweep(
-    *,
-    resources: AppResources,
-    project_id: UUID,
-    adapters: Mapping[EngineId, EngineAdapter],
-) -> tuple[EngineId, ...]:
-    """Refresh installed/version/auth for every configured engine, then
-    return the engines still ineligible for engine-driven jobs (no recorded
-    conformance) so the caller can warn -- conformance itself is granted
-    only by `vibey doctor --conformance --record`.
-
-    Preflights run concurrently: each engine's doctor does real network
-    auth verification (~60s for claudeloop), and running them in sequence
-    made worker startup scale linearly with engine count."""
-    engine_ids = tuple(adapters)
-    preflights = await asyncio.gather(
-        *(adapters[engine_id].preflight() for engine_id in engine_ids)
-    )
-    for engine_id, preflight in zip(engine_ids, preflights, strict=True):
-        await resources.engine_health_service.record_preflight(project_id, engine_id, preflight)
-    records = await resources.engine_health_service.list_for_project(project_id)
-    by_id = {record.engine_id: record for record in records}
-    return tuple(
-        engine_id
-        for engine_id in adapters
-        if engine_id not in by_id or not by_id[engine_id].conformance_ok
-    )
-
-
 def _independent_review_required(config: Mapping[str, object]) -> bool:
     """Whether this project refuses a verify the implementer reviews itself.
 
@@ -288,6 +261,16 @@ def _independence_policy(
     if _independent_review_required(config):
         return None
     return VerifyIndependencePolicy(pool=pool, clock=clock)
+
+
+def qwenloop_enabled(config: Mapping[str, object]) -> bool:
+    """Return the resolved qwenloop feature switch for a project.
+
+    The worker and CLI share ``LocalEngineSettings`` for all local engines; this
+    compatibility helper keeps the long-standing bootstrap import while delegating
+    precedence to that single resolver.
+    """
+    return LocalEngineSettings(environ=os.environ, config=config).enabled(EngineId.QWENLOOP)
 
 
 def build_full_worker(
@@ -636,6 +619,10 @@ async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
         engine_health_repo = PostgresEngineHealthRepository(pool)
         rotation_cursors = PostgresRotationCursorRepository(pool)
         engine_health_service = EngineHealthService(engine_health_repo)
+        conductor_preflight = ConductorPreflight(
+            health=engine_health_service,
+            feasibility=VibeyGhFeasibilityAdapter(),
+        )
         engine_selector = EngineSelector(
             health_service=engine_health_service,
             cursor_repository=rotation_cursors,
@@ -662,6 +649,7 @@ async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
             engine_health_repo=engine_health_repo,
             rotation_cursors=rotation_cursors,
             engine_health_service=engine_health_service,
+            conductor_preflight=conductor_preflight,
             engine_selector=engine_selector,
             rotation_handoff=rotation_handoff,
             engine_adapters=engine_adapters,
