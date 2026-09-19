@@ -3,20 +3,26 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from vibey_gh import fit
 from vibey_gh.cli import main
 from vibey_gh.fit import (
     ADMIT,
+    DEFAULT_OLLAMA_URL,
     DEFER,
     FLOOR,
+    OLLAMA_URL_ENV,
+    ContextSizer,
     DarwinMemorySampler,
     Estimate,
     LinuxMemorySampler,
     Machine,
     Model,
     Observation,
+    OllamaModelSampler,
     TextFileReader,
     decide,
     estimate_from,
@@ -26,9 +32,18 @@ from vibey_gh.fit import (
     sample_model,
     saturating_wait,
 )
+from vibey_gh.fitloop import JOURNAL_ENV
+from vibey_gh.interfaces.context_sizer_interface import ContextSizerInterface
 
 MACHINE = Machine(total_gb=25.77, free_gb=2.97, swap_used_gb=6.5, swap_total_gb=7.0)
 MODEL = Model(name="qwen2.5-coder:14b", size_gb=10.52, context_length=9390)
+
+
+@pytest.fixture(autouse=True)
+def _journal_stays_in_the_test(monkeypatch, tmp_path):
+    """`vibey-gh fit` journals by default, to a file in the user's home. No test may
+    reach it."""
+    monkeypatch.setenv(JOURNAL_ENV, str(tmp_path / "default-journal.jsonl"))
 
 
 def test_available_is_free_memory_plus_unspoken_paging_space():
@@ -529,3 +544,228 @@ def test_the_fit_cli_says_out_loud_that_the_machine_could_not_be_read(
     out = capsys.readouterr().out
     assert "machine memory could not be read" in out
     assert "FLOOR" in out
+
+
+# -- the model side, read from a runner that has not loaded it (#135) -------------------
+
+
+def _runner(responses: dict[str, str], seen: list[tuple[str, ...]] | None = None):
+    """A runner that answers each endpoint with a fixed body, and remembers every request."""
+
+    def run(*cmd: str) -> str:
+        if seen is not None:
+            seen.append(cmd)
+        return next((body for path, body in responses.items() if cmd[-1].endswith(path)), "")
+
+    return run
+
+
+def _sampler(responses: dict[str, str], seen: list[tuple[str, ...]] | None = None, **kw):
+    return OllamaModelSampler(
+        "http://runner:11434", environ={}, curl="/bin/curl", run=_runner(responses, seen), **kw
+    )
+
+
+_HELD = json.dumps({"models": [{"name": "qwen2.5-coder:14b", "size": 8988124069}]})
+
+
+def test_a_model_held_but_not_loaded_is_read_from_its_metadata():
+    """`/api/ps` lists only what is loaded, so before this a model the runner held on disk
+    read exactly like one it did not have, and every cold call was refused at the floor.
+    `/api/tags` confirms it is held; `/api/show` states its context; `resident` is false
+    because its size is now the weights on disk rather than a resident measurement."""
+    seen: list[tuple[str, ...]] = []
+    sampler = _sampler(
+        {
+            "/api/ps": '{"models": []}',
+            "/api/tags": _HELD,
+            # The architecture's own key wins over any other `*.context_length`.
+            "/api/show": json.dumps(
+                {
+                    "model_info": {
+                        "general.architecture": "qwen2",
+                        "llama.context_length": 4096,
+                        "qwen2.context_length": 32768,
+                    }
+                }
+            ),
+        },
+        seen,
+    )
+    model = sampler.sample("qwen2.5-coder:14b")
+    assert model == Model(
+        name="qwen2.5-coder:14b", size_gb=8.99, context_length=32768, resident=False
+    )
+    assert [cmd[-1] for cmd in seen] == [
+        "http://runner:11434/api/ps",
+        "http://runner:11434/api/tags",
+        "http://runner:11434/api/show",
+    ]
+    show = seen[-1]
+    body = json.loads(show[show.index("-d") + 1])
+    assert body == {"model": "qwen2.5-coder:14b", "name": "qwen2.5-coder:14b"}
+    assert seen[0][:4] == ("/bin/curl", "-s", "-m", "10")
+
+
+def test_a_loaded_model_is_read_from_what_is_resident_and_nothing_else():
+    seen: list[tuple[str, ...]] = []
+    ps = json.dumps(
+        {"models": [{"model": "qwen2.5-coder:14b", "size": 10520000000, "context_length": 9390}]}
+    )
+    model = _sampler({"/api/ps": ps}, seen).sample("qwen2.5-coder:14b")
+    assert model == MODEL and model.resident
+    assert len(seen) == 1
+
+
+def test_a_model_the_runner_does_not_hold_is_none_and_its_metadata_is_never_asked_for():
+    seen: list[tuple[str, ...]] = []
+    sampler = _sampler({"/api/ps": '{"models": []}', "/api/tags": _HELD}, seen)
+    assert sampler.sample("llama3:70b") is None
+    assert not any(cmd[-1].endswith("/api/show") for cmd in seen)
+
+
+@pytest.mark.parametrize("tags", ["", "not json", "[1, 2]", '{"models": null}'])
+def test_a_runner_that_will_not_say_what_it_holds_yields_no_model(tags):
+    """Presence unconfirmed is not presence: the floor, rather than a model assumed held."""
+    assert _sampler({"/api/ps": '{"models": []}', "/api/tags": tags}).sample("m") is None
+
+
+@pytest.mark.parametrize(
+    "show, context",
+    [
+        ("", 0),
+        ("[]", 0),
+        ('{"model_info": "not a mapping"}', 0),
+        ('{"model_info": {"general.architecture": "qwen2"}}', 0),
+        ('{"model_info": {"x.context_length": "big", "y.context_length": true}}', 0),
+        ('{"model_info": {"llama.context_length": 8192}}', 8192),
+        (
+            json.dumps(
+                {
+                    "model_info": {
+                        "general.architecture": "qwen2",
+                        "qwen2.context_length": 0,
+                        "rope.context_length": 16384,
+                    }
+                }
+            ),
+            16384,
+        ),
+    ],
+)
+def test_metadata_that_states_no_usable_context_reads_as_zero(show, context):
+    """A held model is still a model when its metadata is thin; zero is the absence of a
+    context reading, exactly as a loaded model that states none reports it."""
+    responses = {"/api/ps": '{"models": []}', "/api/tags": _HELD, "/api/show": show}
+    model = _sampler(responses).sample("qwen2.5-coder:14b")
+    assert model is not None and not model.resident
+    assert model.context_length == context and model.size_gb == 8.99
+
+
+@pytest.mark.parametrize(
+    "asked, listed",
+    [
+        ("llama3", "llama3:latest"),
+        ("registry.local:5000/team/llama3", "registry.local:5000/team/llama3:latest"),
+    ],
+)
+def test_a_bare_name_is_the_latest_tag_as_the_runner_resolves_it(asked, listed):
+    ps = json.dumps({"models": [{"name": listed, "size": 4.7e9, "context_length": 8192}]})
+    model = _sampler({"/api/ps": ps}).sample(asked)
+    assert model is not None and model.name == asked and model.size_gb == 4.7
+
+
+def test_a_tagged_name_is_not_widened_to_latest():
+    ps = json.dumps({"models": [{"name": "llama3:latest", "size": 4.7e9}]})
+    responses = {"/api/ps": ps, "/api/tags": ps}
+    assert _sampler(responses).sample("llama3:8b") is None
+
+
+def test_the_request_timeout_is_a_setting_not_a_constant():
+    seen: list[tuple[str, ...]] = []
+    _sampler({}, seen, timeout_s=3).sample("m")
+    assert seen[0][2:4] == ("-m", "3")
+
+
+@pytest.mark.parametrize(
+    "explicit, environ, fallback, expected",
+    [
+        ("http://flag:1/", {OLLAMA_URL_ENV: "http://env:2"}, DEFAULT_OLLAMA_URL, "http://flag:1"),
+        (None, {OLLAMA_URL_ENV: "http://env:2/"}, DEFAULT_OLLAMA_URL, "http://env:2"),
+        ("", {OLLAMA_URL_ENV: ""}, DEFAULT_OLLAMA_URL, "http://127.0.0.1:11434"),
+        (None, {}, "http://configured:3", "http://configured:3"),
+    ],
+)
+def test_the_runner_is_the_flag_then_the_environment_then_the_fallback(
+    explicit, environ, fallback, expected
+):
+    """`VIBEY_OLLAMA_URL` is what the fallback workflows already export; before this,
+    `sample_model` ignored it and always read 127.0.0.1."""
+    resolved = OllamaModelSampler.resolve_base_url(explicit, environ=environ, fallback=fallback)
+    assert resolved == expected
+    sampler = OllamaModelSampler(explicit, environ=environ, fallback_url=fallback)
+    assert sampler.base_url == expected
+
+
+def test_sample_model_reads_the_runner_the_environment_names(monkeypatch):
+    urls: list[str] = []
+    monkeypatch.setenv(OLLAMA_URL_ENV, "http://env-runner:7/")
+    monkeypatch.setattr(fit.shutil, "which", lambda _: "/usr/bin/curl")
+    monkeypatch.setattr(fit, "_run", lambda *cmd: urls.append(cmd[-1]) or "")
+    assert sample_model("m") is None
+    assert urls == ["http://env-runner:7/api/ps", "http://env-runner:7/api/tags"]
+    urls.clear()
+    assert sample_model("m", "http://flag:8") is None
+    assert urls[0] == "http://flag:8/api/ps"
+
+
+def test_a_model_that_is_not_loaded_says_its_size_is_a_lower_bound():
+    """Weights on disk understate what loading occupies; the verdict must say which
+    reading it was built on rather than let one pass for the other."""
+    cold = Model(name="qwen2.5-coder:14b", size_gb=8.99, context_length=32768, resident=False)
+    comfortable = Machine(total_gb=64.0, free_gb=40.0, swap_used_gb=0.0, swap_total_gb=8.0)
+    est = estimate_from([Observation(4096, 60.0, 1)])
+    verdict = decide(comfortable, cold, est, queue_depth=0, payload_bytes=4096, deadline_s=900)
+    assert verdict.verdict == ADMIT
+    stated = (
+        "qwen2.5-coder:14b is not loaded: 8.99 GB is its weights on disk, a lower bound on"
+        " what loading it will occupy — the context's KV cache comes on top"
+    )
+    assert verdict.notes == (stated,)
+    warm = decide(comfortable, MODEL, est, queue_depth=0, payload_bytes=4096, deadline_s=900)
+    assert warm.notes == ()
+
+
+# -- one context sizer for every local call (#135) -------------------------------------
+
+
+@pytest.mark.parametrize(
+    "chars", [0, 1, 6143, 6144, 6147, 60_000, 92_159, 92_160, 92_163, 10_000_000]
+)
+def test_the_default_sizer_is_exactly_the_rule_local_review_shipped_with(chars):
+    """Moving the rule into one class must not move a single window: these are the
+    values `local_review._num_ctx` returned, across both clamps and the line between."""
+    expected = min(32768, max(4096, chars // 3 + 2048))
+    assert ContextSizer().num_ctx(chars) == expected
+
+
+def test_every_number_in_the_sizer_is_a_setting():
+    sizer = ContextSizer(
+        floor_tokens=1024, ceiling_tokens=8192, chars_per_token=4, reserve_tokens=512
+    )
+    assert sizer.num_ctx(0) == 1024
+    assert sizer.num_ctx(4000) == 1512
+    assert sizer.num_ctx(1_000_000) == 8192
+    assert isinstance(sizer, ContextSizerInterface)
+
+
+@pytest.mark.parametrize(
+    "kw, message",
+    [
+        ({"chars_per_token": 0}, "chars_per_token"),
+        ({"floor_tokens": 9000, "ceiling_tokens": 8192}, "floor_tokens"),
+    ],
+)
+def test_a_sizer_that_could_not_size_anything_is_refused(kw, message):
+    with pytest.raises(ValueError, match=message):
+        ContextSizer(**kw)

@@ -374,7 +374,8 @@ async def test_tail_yields_translated_events(tmp_path: Path) -> None:
 
     assert len(events) == 2
     assert events[0].kind == "SessionSeeded"
-    assert events[1].kind == "TurnCompleted"
+    # chatter.assistant echoes a turn's text; only turn.completed is a turn.
+    assert events[1].kind == "TranscriptRecorded"
 
 
 async def test_tail_skips_unknown_event_types(tmp_path: Path) -> None:

@@ -1,11 +1,13 @@
 # Runbook: server mode — Kubernetes everywhere (minikube → AKS/EKS/GKE)
 
-> **Status (2026-09-15):** landed on minikube (PRs #73, #74, #76, 2026-08-21;
+> **Status (2026-09-18):** landed on minikube (PRs #73, #74, #76, 2026-08-21;
 > ADR-0025, ADR-0026) — image, Helm chart, KEDA `ScaledObject`, kopf operator
 > + `VibeyProject` CRD, `vibey doctor --cluster`, `docs/guides/kubernetes.md`.
-> Open: item 1 (engines in the image; see 16), the `server` Deployment
-> (depends on 12), item 6 (cloud presets), PodDisruptionBudget, and the paid
-> live and AKS/EKS/GKE verification runs.
+> Since ADR-0037 (PR #234) the image carries every runner, so "engines in the
+> image" is done as packaging; what stays open in item 1 is making each one
+> work headless there (runbook 16, Phase 0). Also open: the `server`
+> Deployment (depends on 12), item 6 (cloud presets), PodDisruptionBudget,
+> and the paid live and AKS/EKS/GKE verification runs.
 
 ## Goal
 
@@ -26,23 +28,30 @@ subscription login doesn't exist in a cluster.
   tini as PID 1 so SIGTERM reaches the worker's drain latch — ADR-0026) and
   a Helm chart (`deploy/helm/vibey/`: worker Deployment, in-cluster
   Postgres, KEDA `ScaledObject`, operator Deployment, `VibeyProject` CRD).
-  CI builds the image for amd64 + arm64, asserts each `Image contract - …` step, and runs
+  CI builds the image for amd64 + arm64 with five image contracts and runs
   a minikube job with four cluster contracts (projectless worker parks,
   in-cluster project is picked up, the `ScaledObject` reconciles against
   real Postgres, a worker drains promptly on SIGTERM).
-- Engines are still host CLIs: the image copies `src/vibey` only and
-  carries no `*loop` binary, so in-cluster runs use `--provider scripted`.
-  claudeloop et al. still authenticate via subscription login on the Mac.
+- The image carries every runner. ADR-0037 made the one `vibey` wheel
+  ship all five, and the Dockerfile copies each package root, so
+  `claudeloop`, `codexloop`, `cursorloop`, `agyloop` and `qwenloop` are on
+  `PATH` in every pod (CI's `image` job asserts all eleven console
+  scripts). The chart still defaults to `--provider scripted` with no
+  engine keys, and no runner has yet completed a session in-cluster: on a
+  laptop they still authenticate via subscription login.
 - `infrastructure/container/runtime.py` holds container runtime helpers;
   `infrastructure/cluster_preflight.py` backs `vibey doctor --cluster` and
-  already maps each of the four hosted-model engines (not qwenloop) to
-  the API-key environment variables it accepts.
+  maps each of the four hosted-model engines (not qwenloop) to the API-key
+  environment variables it accepts. Its `engine-auth` check judges the
+  engines the worker is told to use (`doctor --cluster --engines …
+  --provider …`, the worker's own flags), not every binary on `PATH`.
 
 ## Design
 
-1. **Images**: one `vibey` base image (uv-built, non-root, distroless-ish)
-   and one `vibey-engines` image layering the loop runners + their
-   API-key configuration. Engine API-key mode: each runner must support
+1. **Images**: one `vibey` image (uv-built, non-root, distroless-ish).
+   The second `vibey-engines` image first designed here is moot since
+   ADR-0037: the one wheel carries the loop runners, so the one image does
+   too. Engine API-key mode: each runner must support
    `ANTHROPIC_API_KEY`/`OPENAI_API_KEY`/`GOOGLE_API_KEY` auth (runner-side
    work item where missing — subscription login is a TTY flow).
 2. **Helm chart** (`deploy/helm/vibey/`): Deployments for `worker` (N
@@ -68,8 +77,8 @@ subscription login doesn't exist in a cluster.
    level-triggered timer reconciles status. AKS/EKS/GKE-specific bits
    (workload identity per cloud) are to live in values presets:
    `values-aks.yaml`, `values-eks.yaml`, `values-gke.yaml`. These presets
-   do not exist yet; the header comment in `values.yaml` mentions them
-   ahead of their existence, and the Kubernetes guide says so.
+   do not exist yet, and both `values.yaml`'s header comment and the
+   Kubernetes guide say so.
 5. **Worktrees in-cluster**: a PVC per worker for git worktrees; repos
    cloned via deploy keys mounted as Secrets.
 6. **Keep-awake is a non-problem here** (10 covers desktops).
@@ -77,9 +86,11 @@ subscription login doesn't exist in a cluster.
 ## Work items
 
 1. Engine API-key auth across the five runners (per-runner work items).
-   Open.
-2. Dockerfiles + CI image builds (multi-arch: arm64 + amd64). Done for
-   vibey (#73); engine images are 16.
+   Open: the runners ship in the image (ADR-0037), but none is proven
+   headless there yet — see 16, Phase 0.
+2. Dockerfiles + CI image builds (multi-arch: arm64 + amd64). Done (#73);
+   since ADR-0037 the one image carries the runners too, so there is no
+   separate engines image to build.
 3. Helm chart + kind/minikube smoke test in CI (helm install → seed a
    scripted-engine project → DONE local). Chart and minikube job done
    (#73); the CI contracts stop at pickup, not DONE. No `server`

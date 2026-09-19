@@ -177,7 +177,10 @@ the server-side half of the provenance rule — backstopping the pre-push hook, 
 in a clone and can be skipped with `--no-verify` or simply never installed. A promotion PR
 from `develop` into `main` checks provenance without rewriting or re-auditing
 already-admitted history; an ordinary PR checks only the commits it adds, via `--commits
-BASE_SHA..HEAD`.
+BASE_SHA..HEAD`. A PR counts as a promotion only when its head branch belongs to this
+repository (`github.event.pull_request.head.repo.full_name` equals `github.repository`,
+both passed through `env:`). A fork PR from a branch that happens to be named `develop` is
+audited commit by commit like any other.
 
 ## Docs (documentation contract and maintenance)
 
@@ -203,87 +206,38 @@ recovery schedule; and on manual dispatch.
 Top-level permissions are `actions: read`, `checks: read`, `contents: read`, and
 `pull-requests: read`, with individual jobs elevating further. `evaluate` resolves the PR
 and its exact head SHA and calls `vibey-gh pr-automation evaluate` to compute an aggregate
-`state` (`ready`, `review`, `repair`, `conflict`, `blocked`, or `pending`).
-`review-sovereign` and `review` split the exact-head review between two lanes, along the
-line `vibey_gh/review_contract.py` draws: the **diff-groundable half** (`pass`, `summary`,
-`findings`), which a reviewer holding only the diff can answer, and the
-**requires-wider-context half** (the sixteen documentation-contract judgments), which needs
-the whole proposed repository. Sub-doctrine 8.a makes the sovereign path the preference, so
-the sovereign lane goes first whenever it can.
-
-`evaluate` decides the lane once, in its `Decide the sovereign lane` step, and publishes two
-outputs. `sovereign_lane` is `true` when `[pr_automation.fallback].enabled` is set, the
-operator's runner has published a fresh heartbeat (`vibey-gh sovereign`), and — under
-`trusted_only` — the head lives in this repository. `sovereign_carries` is `true` when, in
-addition, the author is trusted: only then does the local verdict carry the diff half. An
-outside author's change is still reviewed for correctness and security by the paid model,
-never by a small local one alone.
-
-`review-sovereign` runs when `sovereign_lane` is `true` and the state is `ready` or
-`review`. Unlike every other job in this workflow it targets a distinct
-`[self-hosted, vibey-local-gh]` runner rather than `ubuntu-latest`, and holds only
-`contents: read` — no secret, and no token capable of mutating the repository. It fetches
-the exact-head diff with `gh pr diff`, falling back to a local merge-base reconstruction
-when GitHub's diff API refuses a pull request beyond roughly 300 changed files, then runs
-`vibey-gh local-review --role sovereign|fallback` against an Ollama-compatible endpoint
-(`qwen2.5-coder:14b` by default) with the diff as the only input: no shell, no tools, and
-no network beyond the local inference port reach the model. It reports `passed`,
-`findings` (a count), `verdict` (the whole verdict as compact JSON) and `model`. See
-[Configuration](configuration.md#pr_automationfallback) for the full field reference and
-[Security](security.md) for the trust boundary this runner introduces.
-
-`review` runs after it (serially, so it knows what the sovereign lane returned), checks out
-the untrusted head read-only beside trusted automation, and runs the pinned Claude Code
-Action, restricted to `Read,Glob,Grep` plus a scoped inline-comment tool and read-only
-`gh pr` commands. Its first step, `Choose the half this reviewer answers`, sets `half`:
-`requires-wider-context` when the sovereign lane carries the diff half and returned a
-verdict for it, `full` otherwise — no heartbeat, an outside author, a fork, or a local
-model that failed. The JSON Schema the reviewer is held to is not written in the template:
-`vibey-gh install` renders both candidates from `ReviewContract.json_schema()` and a
-GitHub expression picks one at run time, so the schema and the split cannot drift apart.
-The wider half asked alone carries its own report fields, `wider_summary` and
-`wider_findings`, because `summary` and `findings` are the sovereign lane's. `review` then
-runs `vibey-gh pr-automation combine`, which is the one place that decides what "passed"
-means: with the whole review from the paid lane it is the rule the review has always been
-held to — every documentation judgment `true` and no findings — and with the halves split
-it is both halves passing. The composed verdict is persisted with `record-review`, and the
-job reports `passed`, `findings`, `structured` (what repair is handed), `half`, `carried`
-(every verdict field mapped to the lane that answered it), `halves` (each half's lane,
-outcome and findings count) and `repairable`.
-
-`mirror-fork` opens a repository-owned replacement PR when a fork needs repair or has a
-conflict. `repair` collects exact-head failed-check evidence into `diagnostics/`, runs
-Claude with `Read,Glob,Grep,Edit,Write` and no execution tools, and — only when the branch
-is still at the expected head — publishes one commit back to the PR branch. Both act on a
-review failure only when `repairable` is `true`: a failure carried by the sovereign lane
-alone is a lead for a human, never an automated repair, and a later evaluation of that head
-reviews it again rather than spending a repair attempt. `resolve-conflict` materializes a
-same-repository merge conflict, lets Claude edit only the conflicting paths, and publishes
-one resolution commit. `escalate` labels and comments once when the
+`state` (`ready`, `review`, `repair`, `conflict`, `blocked`, or `pending`). `review`
+(when state is `ready` or `review`) checks out the untrusted head read-only beside trusted
+automation and runs the pinned Claude Code Action, restricted to `Read,Glob,Grep` plus a
+scoped inline-comment tool and read-only `gh pr` commands, to produce the structured
+semantic review this repair task itself receives as input. `mirror-fork` opens a
+repository-owned replacement PR when a fork needs repair or has a conflict. `repair`
+collects exact-head failed-check evidence into `diagnostics/`, runs Claude with
+`Read,Glob,Grep,Edit,Write` and no execution tools, and — only when the branch is still at
+the expected head — publishes one commit back to the PR branch. `resolve-conflict`
+materializes a same-repository merge conflict, lets Claude edit only the conflicting
+paths, and publishes one resolution commit. `escalate` labels and comments once when the
 repair-attempt budget is exhausted.
 
-`gate` publishes the final `PR automation / gate` check run for the exact head and, on
-success, dispatches `merge-train.yml`. When the review was split, the check run names the
-lane behind each half: on success it is titled
-`PR automation: gate (diff: sovereign lane, documentation: paid lane)`, and a failure is
-titled by the half that failed — `PR automation: review findings (documentation half, paid
-lane)`, `PR automation: review findings (both halves)`,
-`PR automation: sovereign lane found a blocking defect in the diff`, or
-`PR automation: sovereign lane could not complete the diff review` — with a summary that
-says what each lane carried, which model it was, and what it found. When the paid lane
-answered the whole review, the gate reads exactly as it always has. When the paid review
-returned no verdict at all, the sovereign lane's verdict — carrying or held in reserve — is
-read as the fallback: if it found nothing blocking, the gate still succeeds but titles the
-check run `PR automation: gate (local fallback)` so the weaker signal is never mistaken for
-the primary review's. When it declined, the gate tells two cases apart by the lane's
-`findings` count: with at least one finding it titles the check run
-`PR automation: local fallback found a blocking defect` and points at the
-`Sovereign diff review` job's log and archived verdict — a lead to verify, not a ruling,
-since that reviewer saw only a possibly truncated diff; with none, it titles it
-`PR automation: local fallback could not complete the review`, which means the diff was too
-large to judge rather than that anything is wrong with it. When neither lane produced a
-usable verdict, the gate titles the check run `PR automation: review incomplete` for an
-operator to resolve.
+`review-fallback` runs only when `[pr_automation.fallback].enabled` is set, the primary
+`review` job produced no verdict at all (not a review that ran and found something), the
+event is not a fork pull request (`trusted_only`), and the run is not a dry run. Unlike
+every other job in this workflow it targets a distinct `[self-hosted, <runner_label>]`
+runner (the label is `[pr_automation.fallback] runner_label`, default `vibey-local`)
+rather than `ubuntu-latest`, and holds only `contents: read` — no secret, and no
+token capable of mutating the repository. It fetches the exact-head diff with `gh pr diff`,
+falling back to a local merge-base reconstruction when GitHub's diff API refuses a pull
+request beyond roughly 300 changed files, then runs `vibey-gh local-review` against an
+Ollama-compatible endpoint (`qwen2.5-coder:14b` by default) with the diff as the only input:
+no shell, no tools, and no network beyond the local inference port reach the model. See
+[Configuration](configuration.md#pr_automationfallback) for the full field reference and
+[Security](security.md) for the trust boundary this runner introduces. `gate` publishes the
+final `PR automation / gate` check run for the exact head and, on success, dispatches
+`merge-train.yml`. When the primary review returned no verdict and the fallback ran and
+found nothing blocking, the gate still succeeds but titles the check run
+`PR automation: gate (local fallback)` so the weaker signal is never mistaken for the
+primary review's; when neither produced a usable verdict, it titles the check run
+`PR automation: review incomplete` for an operator to resolve.
 
 Every `[pr_automation].scan_workflows` entry names a `workflow_run` this aggregation
 waits on, so each one must be a workflow that runs on `pull_request` or

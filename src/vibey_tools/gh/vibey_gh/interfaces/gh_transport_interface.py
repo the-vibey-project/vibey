@@ -27,6 +27,13 @@ WorkingDirectory: TypeAlias = str | PathLike[str]
 class GhTransportInterface(Protocol):
     """Runs the forge's client with an argument vector this process built itself."""
 
+    @property
+    def executable(self) -> str:
+        """The client this transport runs. It names the command in every problem the
+        transport reports, and a caller reporting a problem of its own names it the same
+        way, so a person reads one name for one program."""
+        ...
+
     def run(
         self,
         args: Sequence[str],

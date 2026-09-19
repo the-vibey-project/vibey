@@ -98,8 +98,9 @@ Vendor transcripts (`~/.claude/projects/**/*.jsonl`, codex rollouts, cursor
 bridge logs) are copied in as *attachments* referenced by events — they are
 evidence, not state.
 
-**Event kinds (25 total, `domain/ledger.py::EventKind`):** `SessionSeeded`,
-`TurnRequested`, `TurnCompleted`, `ToolInvoked`, `FileEdited`, `VerdictRendered`,
+**Event kinds (26 total, `domain/ledger.py::EventKind`):** `SessionSeeded`,
+`TurnRequested`, `TurnCompleted`, `ToolInvoked`, `TranscriptRecorded`, `FileEdited`,
+`VerdictRendered`,
 `CapacityRejected`, `QuestionAsked`, `AnswerGiven`, `DecisionRecorded`,
 `AssumptionStated`, `FindingRaised`, `FindingResolved`, `ArtifactProduced`,
 `SavePointCreated`, `HandoffInitiated`, `HandoffAccepted`, `PhaseTransitioned`,

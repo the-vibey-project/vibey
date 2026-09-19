@@ -14,8 +14,13 @@ from vibey_gh.interfaces.review_composition_interface import ReviewComposerPort
 from vibey_gh.interfaces.review_contract_interface import ReviewContractPort
 
 __all__ = [
+    "BookChapterInterface",
     "ChapterSanitizerInterface",
+    "EpubPackageInterface",
     "MainExtractorInterface",
+    "NavReaderInterface",
+    "PrintInteriorInterface",
     "ReviewComposerPort",
     "ReviewContractPort",
+    "TableOfContentsInterface",
 ]

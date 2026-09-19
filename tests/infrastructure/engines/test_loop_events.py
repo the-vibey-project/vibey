@@ -1,6 +1,8 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Tests for loop_events.py event type mapping."""
 
+import pytest
+
 from vibey.domain.engine import EngineId
 from vibey.domain.ledger import EventKind
 from vibey.infrastructure.engines.loop_events import LOOP_EVENT_MAP, translate_event_type
@@ -37,11 +39,14 @@ def test_agyloop_finished_maps_to_verdict_rendered() -> None:
 
 
 def test_agyloop_turn_events() -> None:
-    """Verify turn-related events map correctly."""
-    assert translate_event_type(EngineId.AGYLOOP, "chatter.prompt") == EventKind.TURN_REQUESTED
+    """Only the runner's own turn boundaries are turns; the chatter that
+    echoes the same turn's text is transcript."""
     assert translate_event_type(EngineId.AGYLOOP, "turn.starting") == EventKind.TURN_REQUESTED
-    assert translate_event_type(EngineId.AGYLOOP, "chatter.assistant") == EventKind.TURN_COMPLETED
     assert translate_event_type(EngineId.AGYLOOP, "turn.completed") == EventKind.TURN_COMPLETED
+    assert translate_event_type(EngineId.AGYLOOP, "chatter.prompt") == EventKind.TRANSCRIPT_RECORDED
+    assert (
+        translate_event_type(EngineId.AGYLOOP, "chatter.assistant") == EventKind.TRANSCRIPT_RECORDED
+    )
 
 
 def test_agyloop_session_events() -> None:
@@ -124,13 +129,26 @@ def test_claudeloop_finished_maps_to_verdict_rendered() -> None:
 
 
 def test_claudeloop_turn_events() -> None:
-    """Verify turn-related events map correctly."""
-    assert translate_event_type(EngineId.CLAUDELOOP, "chatter.prompt") == EventKind.TURN_REQUESTED
+    """Only the runner's own turn boundaries are turns. Under the default
+    log_chatter=summary, chatter.prompt and chatter.assistant fire every turn
+    beside turn.starting and turn.completed -- mapping them to turn kinds
+    counted every turn twice."""
     assert translate_event_type(EngineId.CLAUDELOOP, "turn.starting") == EventKind.TURN_REQUESTED
-    assert (
-        translate_event_type(EngineId.CLAUDELOOP, "chatter.assistant") == EventKind.TURN_COMPLETED
-    )
     assert translate_event_type(EngineId.CLAUDELOOP, "turn.completed") == EventKind.TURN_COMPLETED
+    assert (
+        translate_event_type(EngineId.CLAUDELOOP, "chatter.prompt") == EventKind.TRANSCRIPT_RECORDED
+    )
+    assert (
+        translate_event_type(EngineId.CLAUDELOOP, "chatter.assistant")
+        == EventKind.TRANSCRIPT_RECORDED
+    )
+
+
+def test_claudeloop_stream_deltas_stay_unmapped() -> None:
+    """chatter.delta is a streamed fragment; chatter.assistant already
+    carries the assembled text, so deltas are skipped rather than appended
+    to the ledger one row per fragment."""
+    assert translate_event_type(EngineId.CLAUDELOOP, "chatter.delta") is None
 
 
 def test_claudeloop_session_events() -> None:
@@ -273,11 +291,113 @@ def test_cursorloop_unknown_event_returns_none() -> None:
     assert translate_event_type(EngineId.CURSORLOOP, "capacity.limited") is None
 
 
-def test_claudeloop_local_reads_claudeloops_events_through_the_same_map() -> None:
-    """The same binary writes the same events.jsonl; one map, not a drifting copy."""
-    assert LOOP_EVENT_MAP[EngineId.CLAUDELOOP_LOCAL] is LOOP_EVENT_MAP[EngineId.CLAUDELOOP]
-    assert translate_event_type(EngineId.CLAUDELOOP_LOCAL, "finished") == EventKind.VERDICT_RENDERED
+def test_qwenloop_turn_and_delta_events() -> None:
+    """text_delta is one streamed fragment of an answer -- many per turn --
+    so it is transcript; qwenloop's own turn.completed is the turn."""
+    assert translate_event_type(EngineId.QWENLOOP, "turn.completed") == EventKind.TURN_COMPLETED
+    assert translate_event_type(EngineId.QWENLOOP, "text_delta") == EventKind.TRANSCRIPT_RECORDED
+    assert translate_event_type(EngineId.QWENLOOP, "tool_result") == EventKind.TOOL_INVOKED
+    assert translate_event_type(EngineId.QWENLOOP, "completed") == EventKind.VERDICT_RENDERED
+    assert translate_event_type(EngineId.QWENLOOP, "failed") == EventKind.VERDICT_RENDERED
 
 
-def test_every_engine_has_an_event_map() -> None:
+# The whole table, engine by engine. Exact equality on purpose: a new entry
+# or a changed kind is a decision about what the ledger -- and the budget
+# brake that counts TURN_COMPLETED from it -- sees, and it should have to
+# change this table in the same diff.
+_EXPECTED_MAPS: dict[EngineId, dict[str, EventKind]] = {
+    EngineId.CLAUDELOOP: {
+        "run.started": EventKind.SESSION_SEEDED,
+        "preflight": EventKind.SESSION_SEEDED,
+        "turn.starting": EventKind.TURN_REQUESTED,
+        "chatter.prompt": EventKind.TRANSCRIPT_RECORDED,
+        "chatter.assistant": EventKind.TRANSCRIPT_RECORDED,
+        "turn.completed": EventKind.TURN_COMPLETED,
+        "chatter.tool": EventKind.TOOL_INVOKED,
+        "savepoint": EventKind.SAVEPOINT_CREATED,
+        "capacity.forecast": EventKind.BUDGET_SPENT,
+        "finished": EventKind.VERDICT_RENDERED,
+    },
+    EngineId.CODEXLOOP: {
+        "thread.started": EventKind.SESSION_SEEDED,
+        "turn.started": EventKind.TURN_REQUESTED,
+        "turn.completed": EventKind.TURN_COMPLETED,
+        "turn.failed": EventKind.TURN_COMPLETED,
+        "item.started": EventKind.TOOL_INVOKED,
+        "item.completed": EventKind.TOOL_INVOKED,
+        "rate_limits.updated": EventKind.BUDGET_SPENT,
+        "run.verdict": EventKind.VERDICT_RENDERED,
+    },
+    EngineId.CURSORLOOP: {
+        "tool_call": EventKind.TOOL_INVOKED,
+        "usage": EventKind.BUDGET_SPENT,
+    },
+    EngineId.AGYLOOP: {
+        "run.started": EventKind.SESSION_SEEDED,
+        "preflight": EventKind.SESSION_SEEDED,
+        "turn.starting": EventKind.TURN_REQUESTED,
+        "chatter.prompt": EventKind.TRANSCRIPT_RECORDED,
+        "chatter.assistant": EventKind.TRANSCRIPT_RECORDED,
+        "turn.completed": EventKind.TURN_COMPLETED,
+        "sdk.event": EventKind.TOOL_INVOKED,
+        "savepoint": EventKind.SAVEPOINT_CREATED,
+        "savepoint.created": EventKind.SAVEPOINT_CREATED,
+        "savepoint.skipped": EventKind.SAVEPOINT_CREATED,
+        "capacity.forecast": EventKind.BUDGET_SPENT,
+        "finished": EventKind.VERDICT_RENDERED,
+    },
+    EngineId.QWENLOOP: {
+        "run.started": EventKind.SESSION_SEEDED,
+        "text_delta": EventKind.TRANSCRIPT_RECORDED,
+        "turn.completed": EventKind.TURN_COMPLETED,
+        "tool_result": EventKind.TOOL_INVOKED,
+        "completed": EventKind.VERDICT_RENDERED,
+        "failed": EventKind.VERDICT_RENDERED,
+    },
+}
+
+
+def test_every_engine_has_a_mapping_table() -> None:
     assert set(LOOP_EVENT_MAP) == set(EngineId)
+    assert set(_EXPECTED_MAPS) == set(EngineId)
+
+
+@pytest.mark.parametrize("engine_id", list(EngineId), ids=lambda e: e.value)
+def test_mapping_table_is_exactly_the_expected_one(engine_id: EngineId) -> None:
+    assert LOOP_EVENT_MAP[engine_id] == _EXPECTED_MAPS[engine_id]
+
+
+# The one event type per engine that closes a real turn. codexloop has two
+# because codex ends every turn with exactly one of them -- turn.completed or
+# turn.failed, never both -- so a turn still yields exactly one TURN_COMPLETED.
+# cursorloop has none: its events.jsonl carries no turn boundary at all.
+_TURN_BOUNDARIES: dict[EngineId, frozenset[str]] = {
+    EngineId.CLAUDELOOP: frozenset({"turn.completed"}),
+    EngineId.CODEXLOOP: frozenset({"turn.completed", "turn.failed"}),
+    EngineId.CURSORLOOP: frozenset(),
+    EngineId.AGYLOOP: frozenset({"turn.completed"}),
+    EngineId.QWENLOOP: frozenset({"turn.completed"}),
+}
+
+
+@pytest.mark.parametrize("engine_id", list(EngineId), ids=lambda e: e.value)
+def test_only_a_turn_boundary_maps_to_turn_completed(engine_id: EngineId) -> None:
+    """LedgerBudgetSource counts every TURN_COMPLETED as a turn against
+    max_cycle_turns, so nothing but the runner's own turn boundary may map
+    to it -- not chatter, not stream deltas."""
+    turn_types = {
+        event_type
+        for event_type, kind in LOOP_EVENT_MAP[engine_id].items()
+        if kind is EventKind.TURN_COMPLETED
+    }
+    assert turn_types == _TURN_BOUNDARIES[engine_id]
+
+
+@pytest.mark.parametrize("engine_id", list(EngineId), ids=lambda e: e.value)
+def test_at_most_one_event_type_requests_a_turn(engine_id: EngineId) -> None:
+    requested = [
+        event_type
+        for event_type, kind in LOOP_EVENT_MAP[engine_id].items()
+        if kind is EventKind.TURN_REQUESTED
+    ]
+    assert len(requested) <= 1

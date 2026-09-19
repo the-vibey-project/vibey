@@ -20,6 +20,25 @@ to. The default grants no authority it does not already imply, since anyone able
 a ruleset can equally rewrite it; a repository wanting the stricter posture sets
 `bypass_actors = []` and accepts that recovery then means editing the ruleset by hand.
 
+Branch names are metadata the pull request's author chooses, so no gate may take a
+shortcut on a branch name alone. The provenance gate skips its per-commit trailer audit
+for a promotion, a pull request from the integration branch into the release branch. It
+now takes that shortcut only when the pull request's head repository is this repository.
+Before, a fork with a branch named like the integration branch qualified too, and the gate
+skipped the audit of that fork's commits. A fork's pull request is now audited commit by
+commit. So is one whose fork was deleted, whose head repository GitHub reports as empty.
+
+The local git hooks run with the developer's own authority on whatever branch is checked
+out, and a branch fetched from someone else holds that author's content. The working tree
+is therefore untrusted input to the hooks. They never search it for the tooling; they
+honour only a declared `[install] self_source`. Every interpreter they start runs with
+`PYTHONSAFEPATH=1`, which keeps the working directory off `sys.path`, so a `vibey_gh/`
+package placed at the top of the tree is not imported. Self-hosting is the deliberate
+exception. A repository that declares `self_source` runs that declared copy, and on a
+checked-out branch that is the branch's copy. The hooks also never reduce a project's
+existing checks. A pre-existing hook, chained as `<hook>.local`, can still refuse a commit
+or a push, and the managed hook exits with its status.
+
 The integration and release branch rulesets are themselves reconciled, not merely assumed:
 `vibey_gh.rulesets` builds each desired ruleset from configuration and compares it against
 what GitHub actually has before `repository-profile.yml` applies the difference.
@@ -132,31 +151,23 @@ review but never deletes a permanent branch. This trades the semantic review ste
 administrator's explicit authorization plus the same independent deterministic gates,
 scoped to the one case those gates cannot otherwise unblock.
 
-The local-model review lane introduces a distinct asset and a distinct boundary: a
-repository-provided `[self-hosted, vibey-local-gh]` runner, rather than a GitHub-hosted
-one, that GitHub itself warns should almost never serve a public repository because any
-accountholder can open a pull request against it. The `trusted_only` setting (on by
-default) is what removes that exposure — it excludes fork pull requests from
-`review-sovereign` entirely, so only a same-repository head, whose author GitHub has
-already authorized, ever reaches that runner. Since #133 the job runs FIRST whenever the
-operator's heartbeat is fresh, so its exposure is every eligible pull request rather than
-only those whose paid review failed; the boundary is unchanged. It holds `contents: read`
-and nothing else: no secret, and no token capable of pushing, merging, or mutating the
-repository, so compromising that runner cannot itself authorize a merge. The diff still
-reaches a model as text; the local model has no shell, no tools, and no network beyond the
-loopback inference port, matching the no-execution rule the primary review follows.
-
-Its verdict now decides something for some authors, and the limits on what it may decide
-are the controls. A small local model's judgments are unreliable even though Ollama's
-schema-constrained decoding guarantees the response shape, so: its verdict carries the
-diff-groundable half only for a trusted author, and an outside author's change keeps the
-paid lane's correctness and security review; it never certifies the documentation-contract
-fields, which the paid lane answers against the whole repository; a finding it reports is
-never handed to automated repair, so a false positive cannot make a paid agent rewrite a
-branch; and the gate names the lane behind each half — or titles a fallback verdict
-`PR automation: gate (local fallback)` — so a narrower signal can never silently stand in
-for the paid review's. A compromised runner can still fail a trusted author's pull request
-or pass its diff half; it cannot pass the documentation half, reach a fork, or merge.
+The local-model review fallback (on by default) introduces a distinct asset and a distinct
+boundary: a repository-provided `[self-hosted, <runner_label>]` runner — the label is
+`[pr_automation.fallback] runner_label`, default `vibey-local` — rather than a
+GitHub-hosted one, that GitHub itself warns should almost never serve a public repository
+because any accountholder can open a pull request against it. The `trusted_only` setting
+(on by default) is what removes that exposure — it excludes fork pull requests from
+`review-fallback` entirely, so only a same-repository head, whose author GitHub has
+already authorized, ever reaches that runner. The job runs only when the primary Claude
+review produced no verdict at all, never when a review ran and returned findings, and it
+holds `contents: read` and nothing else: no secret, and no token capable of pushing,
+merging, or mutating the repository, so compromising that runner cannot itself authorize a
+merge. The diff still reaches a model as text; the local model has no shell, no tools, and
+no network beyond the loopback inference port, matching the no-execution rule the primary
+review follows. Because a small local model's judgments are unreliable even though Ollama's
+schema-constrained decoding guarantees the response shape, the fallback's verdict omits the
+documentation-contract fields and the gate names the result `PR automation: gate (local
+fallback)`, so a degraded signal can never silently stand in for the primary review's.
 
 The AI action's Git-discovery requirement is isolated from source and persisted credentials.
 During model execution, workspace-root `.git` points only to an ephemeral empty repository.

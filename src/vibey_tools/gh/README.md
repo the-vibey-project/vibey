@@ -286,8 +286,10 @@ replay rejection survives CLI process restarts and concurrent receivers. Deploym
 place `VIBEY_GH_WEBHOOK_STATE_DIR` on durable, access-controlled storage and retain the raw
 request bytes for HMAC verification; see [the CLI and adapter reference](docs/cli.md).
 
-The opt-in local-model review/triage fallback runs on a self-hosted runner, which GitHub
-itself warns against exposing to public-repository pull requests. `trusted_only` (default
+The local-model review/triage fallback runs on a self-hosted runner, which GitHub itself
+warns against exposing to public-repository pull requests. It is on by default
+(sub-doctrine 8.a) but scheduled only while the sovereign heartbeat is fresh, so a
+repository that never stands a runner up never offers it work. `trusted_only` (default
 `true`) keeps fork PRs off that runner entirely, and the job holds only `contents: read` —
 no secret, and no token capable of pushing, merging, or mutating the repository. Trusted
 steps use `gh`/`git` to assemble the diff or issue text; only the local model's own
@@ -307,7 +309,6 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 | `vibey-gh pr-automation evaluate --pr N --head-sha SHA` | Return the stable structured decision for one exact PR head. |
 | `vibey-gh pr-automation ready-draft --pr N --head-sha SHA` | Mark a stable exact draft head ready without racing newer commits. |
 | `vibey-gh pr-automation record-review` / `record-repair` | Persist machine-readable lineage state used by retries and exact-head gating. |
-| `vibey-gh pr-automation combine --paid JSON --half HALF --head-sha SHA [--sovereign JSON]` | Compose one review verdict from the paid lane and, when it carried the diff half, the sovereign lane — naming the lane behind each field. |
 | `vibey-gh pr-automation mirror-fork --pr N` | Preserve a fork head in a linked repository-owned replacement PR when repair needs write access. |
 | `vibey-gh pr-automation ensure-labels` | Idempotently create the automation’s operational labels. |
 | `vibey-gh issue-automation evaluate --issue N` | Return the stable structured decision for one issue, including its solution branch. |
@@ -324,7 +325,7 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 | `vibey-gh local-authority --once` | The capped-lane sync loop: green local branches reach their remotes by themselves while local is the source of truth; drop `--once` for the daemon form. |
 | `vibey-gh failover --once` | The operator-seat failover engine: paid lane down, the seat moves to the first healthy local agent (qwenloop, then opencode) and moves back on recovery — configured per machine in `~/.config/vibey-gh/failover.toml`, off until enabled; drop `--once` for the daemon form. |
 | `vibey-gh report-superseded --index pypi\|testpypi --project NAME --version VERSION` | Report which prior releases a published version supersedes, since PyPI has no yank API; never yanks anything itself. Add `--governance-since REF` to evaluate Article V.4: a ratified governance change names every previous release, zero exceptions. |
-| `vibey-gh local-review [--diff FILE] [--role sovereign\|fallback]` | Review a diff with a local Ollama-compatible model. It runs first whenever the sovereign lane's heartbeat is fresh, and carries the diff half of the review for a trusted author; see `[pr_automation.fallback]`. |
+| `vibey-gh local-review [--diff FILE]` | Review a diff with a local Ollama-compatible model when the primary paid review returns no verdict at all. Opt-in fallback; see `[pr_automation.fallback]`. |
 | `vibey-gh doctor` | Offline adoption preflight: reads `.vibey-gh.toml`, `pyproject.toml`, and `.github/workflows/` on disk (no network, no credentials, no execution) to catch a config key silently ignored in the wrong section, a merge train stuck forever with no installed gate workflow, a ruff rule that fails every stamped file, contending Pages deployers, and superseded fingerprint headers. |
 | `vibey-gh local-triage [--issue FILE]` | Triage an issue with the same local model when the primary paid solver produces nothing. Always marks the result `needs_human`. |
 | `vibey-gh pr-automation self-heal [--pr N]` | Refill a spent repair budget, itself bounded so a permanent failure still stops. |
@@ -345,7 +346,8 @@ existing `.gitattributes` is appended to, never rewritten.
 `install` writes the git hooks and workflow files into your repository and points
 `core.hooksPath` at them. A hook you already have is moved aside to `<name>.local` and
 chained, never discarded — adopting this should not silently drop checks somebody thought
-were important.
+were important. When that hook refuses, the managed hook exits with its status, so the
+commit or push is refused too.
 
 ## What it does
 
@@ -480,20 +482,18 @@ Repositories must configure `ANTHROPIC_API_KEY`; `AUTOMERGE_TOKEN` is required w
 default Actions token cannot push or merge through the repository ruleset. Installation
 does not create either secret.
 
-The review is split in two, and the half a diff can carry runs on your own machine first
-(sub-doctrine 8.a). With `[pr_automation.fallback].enabled = true` (the default) and a
-fresh heartbeat from a self-hosted `vibey-local-gh`-labelled runner, a `review-sovereign`
-job sends the diff to a local Ollama model and runs `vibey-gh local-review` — never for a
-fork PR unless `trusted_only = false`, and never with a repository credential. For a
-trusted author its verdict carries the diff half (`pass`, `summary`, `findings`), the paid
-reviewer answers only the sixteen documentation-contract judgments, and the gate names the
-lane behind each half. For anyone else the local verdict is held in reserve: the paid
-review still covers the whole change, and the local verdict is read only if that review
-returns no verdict at all, under the honestly weaker title
-`PR automation: gate (local fallback)`. A local finding is a lead for a human and never
-starts an automated repair. See [`[pr_automation.fallback]`](docs/configuration.md) for
-every field and [Threat model](docs/threat-model.md) for what that self-hosted runner is
-and is not trusted for.
+With `[pr_automation.fallback].enabled` (on by default) and a live local lane, a
+repository gets one more line of defense before that gate fails outright: when the
+primary review returns no verdict at
+all, a `review-fallback` job sends the diff to a local Ollama model on a self-hosted
+runner carrying the `[pr_automation.fallback] runner_label` label (default
+`vibey-local`; never for a fork PR unless `trusted_only = false`) and
+runs `vibey-gh local-review`. A clean local verdict passes the gate under the honestly
+weaker title `PR automation: gate (local fallback)`; the local model never overrides an
+actual finding, and it holds no repository credentials at all. See
+[`[pr_automation.fallback]`](docs/configuration.md) for every field and
+[Threat model](docs/threat-model.md) for what that self-hosted runner is and is not trusted
+for.
 
 ```bash
 vibey-gh pr-automation evaluate --pr 123 --head-sha HEAD_SHA
@@ -849,10 +849,10 @@ reason documented in detail in `docs/cli.md`:
   are operator-supplied commands, and it stays disabled until the operator writes
   `enabled = true` — an engine that hands the operator seat around must never gain a
   remote surface or a default-on path.
-- `local-review` is the sovereign lane's diff review, which runs first whenever the
-  lane's heartbeat is fresh; `local-triage` is a local-model fallback that only runs when
-  the primary paid solver produced nothing. Both require a self-hosted runner and a local
-  Ollama-compatible model, and must never gain remote/API/webhook exposure.
+- `local-review` and `local-triage` are local-model fallbacks that only run when the
+  primary paid review or solver produced no verdict at all. They require a self-hosted
+  runner and a local Ollama-compatible model, and must never gain remote/API/webhook
+  exposure.
 - `doctor` is a purely local, read-only diagnostic: it reads files already on disk (no
   network, no credentials, no execution) to judge whether the local configuration and
   installed workflows will function. There is no remote resource for an API, MCP, or
@@ -890,6 +890,10 @@ book and the research paper are published at the root of each channel site and l
 from every page's navigation and footer, from the channel picker, and from `llms.txt` —
 always from what the deploy actually produced — and, on the release channel, attached to
 that version's GitHub Release as permanent assets.
+The book is a paperback interior, not a printed web page: mirrored margins with the
+gutter on the binding side, page numbers, running heads, a part page per nav section and
+a contents grouped the way the nav is, justified and hyphenated text — with every physical
+dimension (trim, margins, gutter, type) a `vibey-gh book` flag defaulting to KDP's 6x9in.
 
 GitHub Packages does not provide a PyPI registry. The workflow therefore publishes the
 exact wheel and source distribution from the successful `Release` run as an OCI artifact
@@ -1123,6 +1127,12 @@ install` from the newer release, and the pin moves forward as one visible diff y
 and commit like any other change. The self-hosting path this repository uses to install
 itself from source is never pinned, since it cannot depend on a published release that may
 not exist yet.
+
+The pin is the release `vibey-gh` is running from, so run it from one: `uvx --from
+vibey==X.Y.Z vibey-gh install` renders `vibey==X.Y.Z`. An editable or other source-tree
+install carries the last release's number while its templates may be ahead of it, so it
+pins nothing: the install stays floating, and `install` and `check` print a `notice:`
+saying so rather than leaving the key silently inert.
 
 
 `trusted_authors` is matched after normalising `app/name` and `name[bot]` to the same
