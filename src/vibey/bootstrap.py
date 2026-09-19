@@ -38,7 +38,11 @@ from vibey.application.design_research_handler import DesignResearchHandler
 from vibey.application.design_synthesis_handler import DesignSpecHandler, DesignSynthesizeHandler
 from vibey.application.dto import JobRecord, ProjectRecord
 from vibey.application.engine_health_service import EngineHealthService
-from vibey.application.engine_selection import RotationRecordingHandler, SelectingEngineProvider
+from vibey.application.engine_selection import (
+    RotationRecordingHandler,
+    SelectingEngineProvider,
+    SpendMeteringLedger,
+)
 from vibey.application.engine_selector import EngineSelector
 from vibey.application.interfaces import (
     AzureClientPort,
@@ -334,15 +338,13 @@ def build_full_worker(
     # The runaway brake: caps come from the project's own config
     # (max_cycle_dollars / max_cycle_turns, set at `vibey new`). Without
     # either, spend stays uncapped -- opting in is explicit, never a
-    # silent default that would surprise existing projects.
-    raw_dollars = project.config.get("max_cycle_dollars")
-    raw_turns = project.config.get("max_cycle_turns")
+    # silent default that would surprise existing projects. The parse is
+    # LedgerBudgetSource's own, the same one `vibey cost` reports from.
+    max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
     budget_source: LedgerBudgetSource | None = None
-    if isinstance(raw_dollars, int | float) or isinstance(raw_turns, int):
+    if max_dollars is not None or max_turns is not None:
         budget_source = LedgerBudgetSource(
-            resources.ledger,
-            max_dollars=float(raw_dollars) if isinstance(raw_dollars, int | float) else None,
-            max_turns=raw_turns if isinstance(raw_turns, int) else None,
+            resources.ledger, max_dollars=max_dollars, max_turns=max_turns
         )
     wind_down = WindDownOrchestrator(
         ledger=resources.ledger,
@@ -363,21 +365,29 @@ def build_full_worker(
     # isolation; ADR-0018). Unset keys keep the defaults.
     gate_runner = SubprocessGateRunner.from_config(project.config)
 
-    def _recording(handler: JobHandler, adapter: EngineAdapter) -> JobHandler:
+    def _recording(
+        handler: JobHandler, adapter: EngineAdapter, meter: SpendMeteringLedger
+    ) -> JobHandler:
         return RotationRecordingHandler(
             inner=handler,
             health=resources.engine_health_service,
             project_id=project.project_id,
             engine_id=adapter.descriptor.engine_id,
+            meter=meter,
         )
 
+    # One spend meter per job, around the ledger its handler writes through:
+    # what the selected engine's session cost is charged to that engine's
+    # health record when the job settles (issue #209). The ledger itself sees
+    # every event unchanged.
     async def _implement(job: JobRecord) -> JobHandler:
         adapter = await engine_provider.select_for(job)
+        meter = SpendMeteringLedger(resources.build_ledger)
         handler = BuildImplementHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
             provisioner=AgentSurfaceProvisioner(),
             engine=adapter,
-            ledger=resources.build_ledger,
+            ledger=meter,
             jobs=resources.jobs,
             clock=clock,
             wind_down=wind_down,
@@ -385,15 +395,16 @@ def build_full_worker(
             budget_source=budget_source,
             skills_context=skills_context,
         )
-        return _recording(handler, adapter)
+        return _recording(handler, adapter, meter)
 
     async def _verify(job: JobRecord) -> JobHandler:
         adapter = await engine_provider.select_for(job)
+        meter = SpendMeteringLedger(resources.build_ledger)
         handler = BuildVerifyHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
             gates=gate_runner,
             reviewer=adapter,
-            ledger=resources.build_ledger,
+            ledger=meter,
             jobs=resources.jobs,
             clock=clock,
             repair=VerifyRepairPolicy(
@@ -401,7 +412,7 @@ def build_full_worker(
             ),
             independence=_independence_policy(project.config, engine_provider.pool, clock),
         )
-        return _recording(handler, adapter)
+        return _recording(handler, adapter, meter)
 
     async def _integrate(job: JobRecord) -> JobHandler:
         return BuildIntegrateHandler(

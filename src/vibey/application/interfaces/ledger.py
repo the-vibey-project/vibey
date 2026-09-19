@@ -70,6 +70,24 @@ class BuildLedger(Protocol):
 
 
 @runtime_checkable
+class SpendMeteringLedgerInterface(BuildLedger, Protocol):
+    """A ``BuildLedger`` that also meters the spend recorded through it.
+
+    ``application/engine_selection.py::SpendMeteringLedger`` implements it: it
+    forwards every event to the ledger it wraps, unchanged, and sums what
+    ``domain/phase_timing.py::LedgerSpendRule`` says each one spent. One is
+    built per BUILD job, so ``dollars`` is that job's engine session spend --
+    what ``RotationRecordingHandler`` charges to the selected engine's health
+    record once the job settles.
+    """
+
+    @property
+    def dollars(self) -> float:
+        """The dollars recorded through this ledger so far."""
+        ...
+
+
+@runtime_checkable
 class DesignLedger(Protocol):
     async def append(
         self,

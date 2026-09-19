@@ -151,16 +151,16 @@ def test_engines_command(tmp_path: Path) -> None:
     assert "$2.00" in res.stdout
 
 
-async def _seed_cost_project(tmp_path: Path) -> UUID:
+async def _seed_cost_project(tmp_path: Path, config: dict[str, object] | None = None) -> UUID:
+    """A project whose spend is in the ledger -- $2.50 over one BUILD turn and
+    $0.75 over one DESIGN turn -- while its engine_health row still says $0,
+    the way it does in production today (issue #209)."""
     async with build_app() as resources:
         project = await resources.projects.create(
             "ops-cost-proj",
             tmp_path,
             max_cycles=5,
-            config={
-                "project": {"name": "ops-cost-proj"},
-                "budget": {"max_dollars_per_cycle": 40.0, "max_dollars_total": 250.0},
-            },
+            config={"project": {"name": "ops-cost-proj"}, **(config or {})},
         )
         health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
         await health_repo.upsert(
@@ -179,20 +179,78 @@ async def _seed_cost_project(tmp_path: Path) -> UUID:
                 probe_attempt=0,
                 consecutive_fail=0,
                 ewma_failure=0.0,
-                cost_usd_cycle=3.75,
+                cost_usd_cycle=0.0,
                 selected_count=4,
             )
         )
+        spend = (
+            (Phase.BUILD, EventKind.TURN_COMPLETED, {"verdict": "Done", "cost_usd": 2.5}),
+            (Phase.DESIGN, EventKind.BUDGET_SPENT, {"dollars": 0.75, "turns": 1}),
+        )
+        for n, (phase, kind, payload) in enumerate(spend):
+            await resources.ledger.append(
+                LedgerEventDraft(
+                    project_id=project.project_id,
+                    cycle=project.cycle,
+                    phase=phase,
+                    kind=kind,
+                    engine_id=None,
+                    job_id=None,
+                    causation_id=None,
+                    correlation_id=project.project_id,
+                    provenance=Provenance.TRUSTED,
+                    produced_at=datetime.now(UTC),
+                    payload=payload,
+                    digest=f"cost-digest-{n}",
+                )
+            )
         return project.project_id
 
 
-def test_cost_command(tmp_path: Path) -> None:
-    project_id = asyncio.run(_seed_cost_project(tmp_path))
+def test_cost_command_shows_the_enforced_caps_and_the_ledger_spend(tmp_path: Path) -> None:
+    """The bug this guards (#210): `vibey cost` printed caps from a `budget`
+    key nothing writes, so a project capped at $10 was shown "$40.00", and
+    its spend came from engine_health, which is $0 in production."""
+    project_id = asyncio.run(
+        _seed_cost_project(tmp_path, {"max_cycle_dollars": 10.0, "max_cycle_turns": 50})
+    )
     res = runner.invoke(app, ["cost", str(project_id)])
     assert res.exit_code == 0, res.output
-    assert "claudeloop" in res.stdout
-    assert "$3.75" in res.stdout
-    assert "Cycle Budget" in res.stdout
+    assert "Cycle spend:      $3.25 (2 turns)" in res.stdout
+    assert "Cycle dollar cap: $10.00" in res.stdout
+    assert "Cycle turn cap:   50" in res.stdout
+    assert "Cap reached" not in res.stdout
+    # Nothing enforces a lifetime cap, so none is printed.
+    assert "Total Budget" not in res.stdout
+    # The per-engine count is rotation selections, never labelled turns.
+    assert "claudeloop: $0.00 (4 selections)" in res.stdout
+    # The per-engine figure is metered BUILD spend that nothing resets (#209),
+    # so it must not be labelled as this cycle's.
+    assert "Per-engine (BUILD sessions, all cycles):" in res.stdout
+    assert "current cycle" not in res.stdout
+
+
+def test_cost_command_uncapped_ignores_the_legacy_budget_table(tmp_path: Path) -> None:
+    project_id = asyncio.run(
+        _seed_cost_project(
+            tmp_path,
+            {"budget": {"max_dollars_per_cycle": 40.0, "max_dollars_total": 250.0}},
+        )
+    )
+    res = runner.invoke(app, ["cost", str(project_id)])
+    assert res.exit_code == 0, res.output
+    assert "Cycle dollar cap: none (uncapped)" in res.stdout
+    assert "Cycle turn cap:   none" in res.stdout
+    assert "$40.00" not in res.stdout
+    assert "$250.00" not in res.stdout
+
+
+def test_cost_command_says_when_the_cap_has_tripped(tmp_path: Path) -> None:
+    project_id = asyncio.run(_seed_cost_project(tmp_path, {"max_cycle_dollars": 3}))
+    res = runner.invoke(app, ["cost", str(project_id)])
+    assert res.exit_code == 0, res.output
+    assert "Cycle dollar cap: $3.00" in res.stdout
+    assert "Cap reached: the next BUILD session parks a budget_exhausted gate." in res.stdout
 
 
 async def _seed_ledger_project(tmp_path: Path) -> UUID:
@@ -318,7 +376,8 @@ def test_cost_uses_latest_project_when_no_id_given(tmp_path: Path) -> None:
     asyncio.run(_seed_cost_project(tmp_path))
     res = runner.invoke(app, ["cost"])
     assert res.exit_code == 0, res.output
-    assert "Cycle Budget" in res.stdout
+    assert "ops-cost-proj" in res.stdout
+    assert "Cycle dollar cap: none (uncapped)" in res.stdout
 
 
 def test_cost_no_projects_exits_with_error() -> None:

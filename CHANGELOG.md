@@ -294,6 +294,48 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   fails the command with a clear message rather than answering a different comment. A review
   comment's briefing also carries the file, line and diff hunk it was written on (#145)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+* **build:** a capacity rejection during `build.verify`'s diff review now defers the job as capacity instead of being discarded. `run_and_record` reported `capacity_rejected`, but the verify handler never read it and judged the run on its verdict alone — so a reviewer out of capacity either failed as `WORK` (burning an unrefunded attempt, up to the `attempts_exhausted` park, while `RotationRecordingHandler` left the exhausted engine's circuit closed and kept handing it the same job) or, with a completing verdict in the same run, approved the item outright — the non-negotiable "a capacity rejection always outranks a completion claim" broken both ways. It now returns `Defer(capacity=True)` after `capacity_backoff` (a constructor keyword defaulting to 5 minutes, exactly as on `build.implement`), before any repair finding is resolved or any independence waiver is written, and `BuildVerifyHandler` takes a required `clock` ([#215](https://github.com/the-vibey-project/vibey/issues/215))
+* **cli:** `vibey cost` prints the budget caps the brake actually enforces. It read a `budget`
+  table that nothing writes and printed $40.00 per cycle and $250.00 total whatever the
+  project's `--max-cycle-dollars` was, and took its spend from `engine_health`, which reads
+  $0. It now shows the stored `max_cycle_dollars` / `max_cycle_turns` (or `none (uncapped)` /
+  `none`) through `LedgerBudgetSource.caps_from_config`, the one parser the worker's brake
+  also uses, and the cycle's ledger spend (DESIGN included) from the brake's own sum. The
+  lifetime cap line is gone because nothing enforces one, and the per-engine count is labelled
+  `selections`, not `turns`. The shared parser also stops reading a stored `true` as a
+  one-turn or one-dollar cap ([#210](https://github.com/the-vibey-project/vibey/issues/210))
+* **engines:** engine health records what each engine spent and when it failed. The cost
+  column that `vibey engines`, `vibey status` and the dashboard show read $0.00 forever,
+  because `record_selection` took a `cost_usd` its one caller never passed. Each
+  `build.implement` and `build.verify` job now writes through a per-job `SpendMeteringLedger`
+  that forwards every event unchanged and sums spend by `LedgerSpendRule`, and
+  `RotationRecordingHandler` charges the total to the selected engine with the new
+  `EngineHealthService.record_spend` however the job ends, even if its handler raises. The
+  column is BUILD-session spend and accumulates across cycles; `vibey cost` keeps the cycle
+  total on the ledger and now labels the per-engine rows `BUILD sessions, all cycles`.
+  Failures were half-missing too: an incomplete run's non-zero exit is now attributed by the
+  adapter (`attribute`), so a runner killed or timed out (137, -9, 124) is an `ENGINE`
+  failure where both handlers hard-coded `WORK`, and the new `record_failure` opens the
+  circuit after 3 consecutive failures (`EngineFailurePolicy`, configurable) while setting
+  `probe_next_at` (5 minutes, doubling to 30), so the engine half-opens for a probe rather
+  than leaving rotation for good. `LedgerBudgetSource` now applies `LedgerSpendRule` instead
+  of its own copy, and the shared rule no longer counts a `bool` as a dollar or a turn
+  ([#209](https://github.com/the-vibey-project/vibey/issues/209))
+### Features
+
+* **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
+  pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
+  ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
+  that left it, ordered by `seq`, the wall-clock time between them, and what the visit spent
+  by the budget brake's own rule, now published in the domain as `LedgerSpendRule`. Visits
+  roll up per `(cycle, phase)`, because a phase can be visited twice in one cycle. The
+  projection predicts nothing, and it never passes a guess off as a measurement. An open
+  visit has no duration. A visit whose recorded clocks run backwards is clamped to zero and
+  flagged `clock_skewed`. A visit whose entry the range never saw is flagged too. Only a
+  visit that is none of these counts as `measured`. Spend that no visit can own is reported
+  as `unattributed` instead of being dropped. There is no turn count: engine translation
+  writes more than one `TurnCompleted` per real turn, so the projection reports
+  `turn_completed_events` with a caveat beside it
 ### Features
 
 * **ledger:** `vibey ledger export PROJECT --out FILE` publishes a project's ledger as a

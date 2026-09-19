@@ -161,9 +161,32 @@ class EngineHealthServiceInterface(Protocol):
         """
         ...
 
-    async def record_selection(
-        self, project_id: UUID, engine_id: EngineId, cost_usd: float = 0.0
-    ) -> EngineHealthRecord: ...
+    async def record_selection(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
+        """Counts one selection. Spend is not a selection's to report: it is
+        only known once the run has happened -- see `record_spend`."""
+        ...
+
+    async def record_spend(
+        self, project_id: UUID, engine_id: EngineId, cost_usd: float
+    ) -> EngineHealthRecord:
+        """Adds a finished BUILD session's metered spend to `cost_usd_cycle`.
+
+        The column accumulates across cycles; nothing resets it. Raises
+        `ValueError` for a negative or non-finite amount rather than storing
+        one.
+        """
+        ...
+
+    async def record_failure(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord:
+        """Records one ENGINE-class failure (`domain/job.py::FailureClass`).
+
+        Increments `consecutive_fail` and the failure EWMA. At the configured
+        `EngineFailurePolicyInterface` threshold it opens the circuit AND sets
+        `probe_next_at`, so the engine half-opens for a probe once that time
+        passes rather than staying out of rotation for good. `WORK` and
+        `VIBEY` failures are not the engine's fault and never come here.
+        """
+        ...
 
     async def record_success(self, project_id: UUID, engine_id: EngineId) -> EngineHealthRecord: ...
 
