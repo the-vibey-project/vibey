@@ -215,7 +215,7 @@ flowchart TB
         Pages --> Book["…/main/book.pdf · book.epub · book-print.html<br/>(vibey-gh book, KDP interior)"]
         Pages --> Paper["…/main/paper/ (docs/paper.md) · paper.pdf<br/>(vibey-gh paper → LaTeX, Tectonic)"]
         Pages -.->|"only if corpus-index.json exists at the repo root — it does not"| CorpusShip["…/channel/corpus-index.json"]
-        DockerImg["deploy/docker/Dockerfile<br/>two-stage, no compiler/uv/pip in the runtime layer,<br/>uid 10001, tini -g as PID 1 (ADR-0026)"] --> HelmChart["deploy/helm/vibey chart (ADR-0025)<br/>worker Deployment · in-cluster Postgres 17 ·<br/>VibeyProject CRD (installCRD: true) · kopf operator (off by default) ·<br/>KEDA ScaledObject (off by default, 0–4 replicas)"]
+        DockerImg["deploy/docker/Dockerfile<br/>two-stage, no compiler/uv/pip/node/npm in the runtime layer,<br/>uid 10001, tini -g as PID 1 (ADR-0026),<br/>codex as a pinned, digest-verified static binary"] --> HelmChart["deploy/helm/vibey chart (ADR-0025)<br/>worker Deployment · in-cluster Postgres 17 ·<br/>VibeyProject CRD (installCRD: true) · kopf operator (off by default) ·<br/>KEDA ScaledObject (off by default, 0–4 replicas, scoped to the worker's project) ·<br/>Ollama for qwenloop / sovereign DESIGN (off by default)"]
         HelmChart --> K8sCluster[("Kubernetes cluster<br/>minikube verified in ci.yml cluster-smoke<br/>no cloud values presets ship yet")]
     end
 

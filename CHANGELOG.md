@@ -45,6 +45,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **deploy:** the Helm chart (0.2.0) can run an in-cluster Ollama for the sovereign path. `ollama.enabled` (default `false`) adds a weights PVC, a ClusterIP Service on 11434, a single-replica `ollama/ollama:0.34.2` Deployment pinned by index digest and run as uid 10001 with its own security context, an optional `nvidia.com/gpu` limit (`ollama.gpu`), and a Job that `ollama pull`s `ollama.model` (default `qwen2.5-coder:14b`) and is named after a hash of its own pod template, so it re-pulls only when the model, image or endpoint changes. The worker gets `VIBEY_OLLAMA_URL`/`VIBEY_OLLAMA_MODEL`, `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` (with `/v1`) and, unless `ollama.qwenloopFeature=false`, `VIBEY_FEATURE_QWENLOOP=1`, all fully qualified like the DSN; `OLLAMA_CONTEXT_LENGTH` defaults to 32768 because qwenloop runs a 32K context. `worker.extraEnv` is new too. Defaults render byte-for-byte as before apart from the chart label, and a new `chart` CI job lints and diffs five profiles against goldens in `deploy/helm/golden/` (#121)
+* **deploy:** the container image carries `codex`, the CLI codexloop drives, as upstream's static musl build 0.154.0: fetched in the build stage for `dpkg --print-architecture`, checked against a pinned per-architecture sha256 (plus its `LICENSE` and `NOTICE`), and copied into the runtime stage alone — no Node, no npm. The `image` job now asserts `codex --version` prints the pinned version and that `node`, `npm` and `npx` are absent (#121)
+
+### Bug Fixes
+
+* **deploy:** the KEDA ScaledObject counted claimable jobs across every project, while a worker claims only its own (`JobRepository.claim`, `j.project_id = $3`), so another project's backlog scaled up workers that could never claim it. The query is now scoped to `worker.project` when set, and otherwise to the newest project, by the same `ORDER BY created_at DESC` the worker binds with. The ScaledObject's name and labels are unchanged. `worker.project` is validated as a UUID at render time, since it now reaches SQL. `tests/infrastructure/db/test_keda_scaler_query.py` runs the rendered SQL from the goldens against the real schema and asserts it counts exactly what `JobRepository.claim` can take (#121)
 * **gh:** `vibey-gh forge-snapshot --out DIR [--classes …] [--since MOMENT|resume]`, a
   read-only capture of a GitHub repository's own state into plain files the project owns
   (#136, slice S1). Issues, comments, change requests, reviews, review comments, labels,
