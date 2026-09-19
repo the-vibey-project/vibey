@@ -2478,8 +2478,22 @@ def test_provenance_walks_the_pull_requests_head_not_the_merge_ref():
     text = (WORKFLOWS / "provenance.yml").read_text(encoding="utf-8")
     assert "HEAD_SHA: ${{ github.event.pull_request.head.sha }}" in text
     assert '--commits "${BASE_SHA}..${HEAD_SHA}"' in text
-    # ...and the head has to be fetchable before it can be walked.
-    assert 'git fetch --quiet --depth=50 origin "${HEAD_SHA}"' in text
+    # ...and both SHAs have to be fetched before checkout-sourced tooling is installed.
+    workflow = yaml.safe_load(text)
+    steps = workflow["jobs"]["provenance"]["steps"]
+    fetch_step = next(
+        step for step in steps if step.get("name") == "Fetch exact provenance commits"
+    )
+    install_index = next(
+        i for i, step in enumerate(steps) if step.get("name") == "Install the tooling"
+    )
+    fetch_index = steps.index(fetch_step)
+    assert fetch_index < install_index
+    assert fetch_step["env"]["PROVENANCE_FETCH_TOKEN"] == "${{ github.token }}"
+    assert 'fetch --quiet --depth=50 origin "$BASE_SHA"' in fetch_step["run"]
+    assert 'fetch --quiet --depth=50 origin "$HEAD_SHA"' in fetch_step["run"]
+    check_step = next(step for step in steps if step.get("name") == "Check provenance")
+    assert "git fetch" not in check_step["run"]
     assert '--commits "${BASE_SHA}..HEAD"' not in text
 
 
@@ -2639,27 +2653,24 @@ def test_the_promotion_shortcut_is_taken_only_for_this_repository_s_own_branch(
     assert ("Promotion PR" in done.stdout) is promotion
 
 
-def test_the_provenance_job_carries_no_forge_credential():
-    """The job that runs contributor-controlled code must never hold a token.
+def test_the_provenance_job_scopes_forge_credential_to_trusted_fetch():
+    """Only the trusted preflight fetch may receive a forge credential.
 
     `provenance.yml` installs the tooling from the CHECKED-OUT TREE where a repository
     self-hosts (`self_source`), and it runs on `pull_request`. So the step that invokes
     `vibey-gh` is running the contributor's own code, and any credential in that
     environment is a credential handed to whatever the pull request contains.
 
-    This was almost lost once: `check --ci` also surveys cloud clutter through `gh`, that
-    survey reports "not surveyed" without a token, and the obvious repair is to add
-    `GH_TOKEN` and `pull-requests: read` right here. The obvious repair is the
-    vulnerability. This test exists so the next person making that fix is stopped by a
-    red suite rather than by a reviewer who happens to notice -- the survey belongs in a
-    job whose checkout is trusted, not in this one.
+    The exact commit range is fetched before that installation, in a static step that
+    uses a one-shot read-only header. The token is not persisted in `.git/config` and is
+    not present in the later step that runs the checkout's code. This test keeps that
+    boundary explicit while still supporting private repositories.
     """
     text = (WORKFLOWS / "provenance.yml").read_text(encoding="utf-8")
     workflow = yaml.safe_load(text)
 
-    # Structural, not textual: the comment above the permissions block names `GH_TOKEN`
-    # precisely so nobody re-adds it, and a raw substring search would read that warning
-    # as the very thing it warns about. What matters is what is ASSIGNED.
+    # Structural, not textual: a raw substring search would read the security comments
+    # as assignments. What matters is what is actually assigned to each step.
     declared: list[dict] = [workflow.get("env") or {}]
     for job in workflow["jobs"].values():
         declared.append(job.get("env") or {})
@@ -2669,6 +2680,19 @@ def test_the_provenance_job_carries_no_forge_credential():
         assert "GH_TOKEN" not in env, "the provenance job must not receive a forge credential"
         secrets = [value for value in env.values() if "secrets." in str(value)]
         assert not secrets, "the provenance job must not receive any secret"
+
+    steps = workflow["jobs"]["provenance"]["steps"]
+    fetch_step = next(
+        step for step in steps if step.get("name") == "Fetch exact provenance commits"
+    )
+    check_step = next(step for step in steps if step.get("name") == "Check provenance")
+    assert fetch_step["env"] == {
+        "BASE_SHA": "${{ github.event.pull_request.base.sha }}",
+        "HEAD_SHA": "${{ github.event.pull_request.head.sha }}",
+        "PROVENANCE_FETCH_TOKEN": "${{ github.token }}",
+    }
+    assert "PROVENANCE_FETCH_TOKEN" not in check_step["env"]
+    assert "git fetch" not in check_step["run"]
 
     # Read-only on contents alone. Anything wider is a wider grant to that same code.
     assert workflow["permissions"] == {"contents": "read"}
