@@ -23,14 +23,15 @@ on:
   # its own pull request (ADR-0036).
   merge_group:
 
-# Deliberately minimal, and deliberately WITHOUT a forge credential. `check --ci` also
-# surveys cloud clutter through `gh pr list` and `gh release list`, and it is tempting to
-# add `pull-requests: read` and a `GH_TOKEN` here so that survey can run. Do not: the job
-# below installs the tooling from the CHECKED-OUT TREE when a repository self-hosts, so on
-# a pull request the credentialed step would be running the contributor's own code. A
-# token in this job is a token handed to whatever that pull request contains. The survey
-# reporting "not surveyed" here is the correct outcome, not a bug to fix with a secret --
-# it belongs in a job whose checkout is trusted.
+# Deliberately minimal. `check --ci` also surveys cloud clutter through `gh pr list` and
+# `gh release list`, and it is tempting to add `pull-requests: read` and a `GH_TOKEN` here
+# so that survey can run. Do not: the job below installs the tooling from the CHECKED-OUT
+# TREE when a repository self-hosts, so on a pull request the credentialed step would be
+# running the contributor's own code. The survey reporting "not surveyed" here is the
+# correct outcome, not a bug to fix with a secret -- it belongs in a job whose checkout is
+# trusted. The one exception is the short, static commit-fetch step below: it uses the
+# read-only token before any checkout-sourced tooling is installed or executed, and keeps
+# the token out of git config and every later step.
 permissions:
   contents: read
 
@@ -47,6 +48,31 @@ jobs:
         with:
           # Needed to walk the commits a pull request adds.
           fetch-depth: 0
+          # The next step may execute tooling from this checkout. Do not leave the
+          # runner's GITHUB_TOKEN in .git/config where that code can read it.
+          persist-credentials: false
+
+      # A pull-request checkout can contain the synthetic merge ref without making the
+      # exact base/head objects available to a later shallow operation. Fetch those SHAs
+      # before installing anything from the checkout. The token exists only in this
+      # trusted, static step and is supplied as a one-shot Git header; it is never written
+      # to .git/config or exposed to the checkout-sourced tooling.
+      - name: Fetch exact provenance commits
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha != '' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PROVENANCE_FETCH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          auth=$(printf 'x-access-token:%s' "$PROVENANCE_FETCH_TOKEN" | base64 --wrap=0)
+          git -c "http.extraheader=AUTHORIZATION: basic $auth" \
+            fetch --quiet --depth=50 origin "$BASE_SHA"
+          # A fork's head may not be advertised by the base repository. The checkout's
+          # merge ref normally already contains it; if not, the provenance command below
+          # fails closed when the requested range cannot be walked.
+          git -c "http.extraheader=AUTHORIZATION: basic $auth" \
+            fetch --quiet --depth=50 origin "$HEAD_SHA" 2>/dev/null || true
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -117,8 +143,6 @@ jobs:
             echo "Promotion PR: checking repository provenance without rewriting or re-auditing admitted history."
             vibey-gh check --ci
           elif [ -n "${BASE_SHA:-}" ]; then
-            git fetch --quiet --depth=50 origin "${BASE_SHA}" 2>/dev/null || true
-            git fetch --quiet --depth=50 origin "${HEAD_SHA}" 2>/dev/null || true
             vibey-gh check --ci --commits "${BASE_SHA}..${HEAD_SHA}"
           else
             vibey-gh check --ci
