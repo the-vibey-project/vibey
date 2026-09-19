@@ -20,7 +20,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from vibey_gh import dependabot
+from vibey_gh.automation_bootstrap import AutomationBootstrapGate
 from vibey_gh.config import GhConfig, load_config
+from vibey_gh.interfaces.automation_bootstrap_gate_interface import (
+    AutomationBootstrapGateInterface,
+)
 from vibey_gh.review_contract import REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
 
 TEMPLATES = Path(__file__).parent / "templates" / "githooks"
@@ -420,6 +424,10 @@ def render_workflow(source: Path, cfg: GhConfig) -> str:
         wanted = wanted.replace(marker, "true" if enabled else "false")
     wanted = wanted.replace("__VIBEY_GH_RELEASE_TAG_PREFIX__", cfg.github_release.tag_prefix)
     wanted = wanted.replace("__VIBEY_GH_SELF_SOURCE__", cfg.self_source)
+    # automation-bootstrap.yml's independent gates and change scope, derived from the
+    # integration ruleset and `self_source` rather than written into the template (#214).
+    bootstrap: AutomationBootstrapGateInterface = AutomationBootstrapGate()
+    wanted = bootstrap.render(wanted, cfg)
     # The workflow templates spell the DEFAULT distribution literally rather than
     # carrying a placeholder, so the shipped YAML stays readable and greppable and the
     # tests that assert on it keep asserting on something. Rewriting the default line to

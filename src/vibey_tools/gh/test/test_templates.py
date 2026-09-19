@@ -1294,15 +1294,6 @@ def test_automation_bootstrap_is_explicit_exact_head_and_permanent_branch_safe()
     assert 'test "$permission" = admin' in text
     assert 'test "$(jq -r .headRefOid' in text
     assert '--match-head-commit "$EXPECTED_SHA"' in text
-    for required in (
-        "Documentation contract",
-        "Provenance",
-        "Build",
-        "Lint",
-        "Analyze Python",
-        "MCP, API, CLI, SDK, and webhook parity",
-    ):
-        assert required in text
     assert '[ "$head" != "$INTEGRATION_BRANCH" ]' in text
     assert '[ "$head" != "$RELEASE_BRANCH" ]' in text
     assert '[ "$head" != develop ]' in text
@@ -1310,35 +1301,329 @@ def test_automation_bootstrap_is_explicit_exact_head_and_permanent_branch_safe()
     assert "--delete-branch" not in text
 
 
-def test_automation_bootstrap_scope_check_rejects_files_outside_automation_core():
-    import subprocess
-
-    text = (WORKFLOWS / "automation-bootstrap.yml").read_text(encoding="utf-8")
-    match = re.search(
-        r"if grep -Ev '([^']+)' changed-files\.txt; then\n"
-        r"\s*echo \"::error::changed files are not confined to automation-core paths\" >&2\n"
-        r"\s*exit 1\n"
-        r"\s*fi",
-        text,
+def test_automation_bootstrap_names_no_check_of_its_own():
+    """#214: the path once waited on six literal names, five of which a repository whose CI
+    names its jobs differently never produces -- and `Build`, `Lint` and the parity check
+    came from vibey-gh's own hand-written workflows, not from any template, so it failed
+    closed for every adopter, exactly when it was needed. The gates are now rendered from
+    `[rulesets.integration] required_checks`; the template names none."""
+    template = (WORKFLOWS / "automation-bootstrap.yml").read_text(encoding="utf-8")
+    for literal in (
+        "Documentation contract",
+        "Build",
+        "Lint",
+        "Analyze Python",
+        "MCP, API, CLI, SDK, and webhook parity",
+        "__VIBEY_GH_WF_PROVENANCE__",
+    ):
+        assert literal not in template, f"the template still hard-codes {literal!r}"
+    for placeholder in (
+        "REQUIRED_CHECKS: __VIBEY_GH_BOOTSTRAP_REQUIRED_CHECKS__",
+        "EXCLUDED_CHECKS: __VIBEY_GH_BOOTSTRAP_EXCLUDED_CHECKS__",
+        "CHANGED_FILE_SCOPE: __VIBEY_GH_BOOTSTRAP_SCOPE__",
+    ):
+        assert placeholder in template
+    assert "__VIBEY_GH_BOOTSTRAP_" not in render_workflow(
+        WORKFLOWS / "automation-bootstrap.yml", GhConfig(root=Path("."))
     )
-    assert match, "expected a fail-closed scope check in automation-bootstrap.yml"
-    pattern = match.group(1)
 
-    in_scope_only = (
-        "vibey_gh/templates/workflows/automation-bootstrap.yml\ntest/test_templates.py\n"
+
+def _bootstrap_config(
+    root: Path,
+    *,
+    required: tuple[str, ...] | None = None,
+    ignored: tuple[str, ...] | None = None,
+    self_source: str = ".",
+) -> GhConfig:
+    from vibey_gh.config import RulesetConfig, RulesetsConfig
+
+    cfg = dataclasses.replace(GhConfig(root=root), self_source=self_source)
+    if required is not None:
+        integration = RulesetConfig(required_checks=required)
+        cfg = dataclasses.replace(cfg, rulesets=RulesetsConfig(integration=integration))
+    if ignored is not None:
+        automation = dataclasses.replace(cfg.pr_automation, ignored_checks=ignored)
+        cfg = dataclasses.replace(cfg, pr_automation=automation)
+    return cfg
+
+
+def _bootstrap_env(cfg: GhConfig) -> dict[str, str]:
+    """The step's rendered `env:`, read back through YAML exactly as Actions reads it."""
+    parsed = yaml.safe_load(render_workflow(WORKFLOWS / "automation-bootstrap.yml", cfg))
+    (step,) = parsed["jobs"]["merge"]["steps"]
+    return {key: str(value) for key, value in step["env"].items()}
+
+
+def test_automation_bootstrap_renders_its_gates_from_the_integration_ruleset(tmp_path):
+    defaults = _bootstrap_env(GhConfig(root=tmp_path))
+    rendered = json.loads(defaults["REQUIRED_CHECKS"])
+    assert rendered == ["Provenance", "Analyze Python", "Documentation contract"]
+    excluded = json.loads(defaults["EXCLUDED_CHECKS"])
+    assert excluded == ["gate", "PR automation / gate", "Automation bootstrap / gate"]
+
+    monorepo = _bootstrap_env(_bootstrap_config(tmp_path, required=("gates",)))
+    assert json.loads(monorepo["REQUIRED_CHECKS"]) == ["gates"]
+
+    # Never waits on the gates it routes around, nor on what PR automation ignores: a
+    # required name the step also filters out could never be satisfied.
+    routed = _bootstrap_config(
+        tmp_path,
+        required=("gate", "PR automation / gate", "Automation bootstrap / gate", "Flaky", "gates"),
+        ignored=("Flaky",),
     )
-    mixed_scope = in_scope_only + "vibey_gh/versioning.py\n"
+    assert json.loads(_bootstrap_env(routed)["REQUIRED_CHECKS"]) == ["gates"]
 
-    def confinement_check_passes(changed_files: str) -> bool:
-        # Mirrors the workflow's own gate: `if grep -Ev ...; then <fail>; fi` fails the
-        # step when grep finds an out-of-scope line (exit 0), and passes when grep finds
-        # none (exit 1, no matches).
-        script = f"grep -Ev '{pattern}' <<'EOF'\n{changed_files}EOF\n"
-        result = subprocess.run(["sh", "-c", script], capture_output=True, text=True, check=False)
-        return result.returncode != 0
+    awkward = 'Test "py", (3.12)'
+    quoted = _bootstrap_env(_bootstrap_config(tmp_path, required=(awkward, "gates")))
+    assert json.loads(quoted["REQUIRED_CHECKS"]) == [awkward, "gates"]
 
-    assert confinement_check_passes(in_scope_only)
-    assert not confinement_check_passes(mixed_scope)
+
+_FAKE_GH = """#!/bin/sh
+# Answers the bootstrap step's gh calls from files under $FAKE_GH and records every call.
+printf '%s\\n' "$*" >> "$FAKE_GH/calls"
+case "$*" in
+  "api repos/"*"/permission --jq .permission") cat "$FAKE_GH/permission" ;;
+  "pr view "*) cat "$FAKE_GH/pr.json" ;;
+  "pr diff "*) cat "$FAKE_GH/files" ;;
+  "api repos/"*"/check-runs?per_page=100") cat "$FAKE_GH/checks.json" ;;
+  "pr merge "*|"api repos/"*"/git/refs/heads/"*) ;;
+  *) echo "unexpected gh call: $*" >&2; exit 99 ;;
+esac
+"""
+_STANDALONE_REPAIR = (
+    ".github/workflows/automation-bootstrap.yml",
+    "vibey_gh/templates/workflows/automation-bootstrap.yml",
+    "vibey_gh/automation_bootstrap.py",
+    "test/test_templates.py",
+)
+_MONOREPO_SOURCE = "src/vibey_tools/gh"
+_MONOREPO_REPAIR = (
+    ".github/workflows/automation-bootstrap.yml",
+    f"{_MONOREPO_SOURCE}/.github/workflows/automation-bootstrap.yml",
+    f"{_MONOREPO_SOURCE}/vibey_gh/templates/workflows/automation-bootstrap.yml",
+    f"{_MONOREPO_SOURCE}/vibey_gh/install.py",
+    f"{_MONOREPO_SOURCE}/test/test_templates.py",
+)
+_DEFAULT_GATES_GREEN = (
+    ("Provenance", "success"),
+    ("Analyze Python", "success"),
+    ("Documentation contract", "success"),
+)
+
+
+@dataclasses.dataclass(frozen=True)
+class _BootstrapRun:
+    returncode: int
+    stderr: str
+    merged: bool
+    summary: str
+
+
+def _run_bootstrap(
+    tmp_path: Path,
+    cfg: GhConfig,
+    *,
+    files: tuple[str, ...],
+    check_runs: tuple[tuple[str, str | None], ...],
+    permission: str = "admin",
+) -> _BootstrapRun:
+    """Run the RENDERED step under bash and jq, with `gh` answered from fixtures.
+
+    This is the step GitHub runs, not a copy of its logic: the script and its `env:` both
+    come from `render_workflow`, so a quoting slip between the YAML, the shell, and jq
+    fails here rather than in the one emergency nobody can rehearse. A `None` conclusion
+    is a check run still in progress.
+    """
+    import os
+    import shutil
+
+    if shutil.which("bash") is None or shutil.which("jq") is None:  # pragma: no cover
+        pytest.skip("the bootstrap step needs bash and jq, which every GitHub runner has")
+    parsed = yaml.safe_load(render_workflow(WORKFLOWS / "automation-bootstrap.yml", cfg))
+    (step,) = parsed["jobs"]["merge"]["steps"]
+    fake = tmp_path / "fake"
+    fake.mkdir()
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "gh").write_text(_FAKE_GH, encoding="utf-8")
+    (bin_dir / "gh").chmod(0o755)
+    (fake / "permission").write_text(f"{permission}\n", encoding="utf-8")
+    pr = {
+        "state": "OPEN",
+        "isDraft": False,
+        "headRefOid": "abc123",
+        "headRefName": "fix/automation",
+        "baseRefName": cfg.integration_branch,
+        "isCrossRepository": False,
+    }
+    (fake / "pr.json").write_text(json.dumps(pr), encoding="utf-8")
+    (fake / "files").write_text("".join(f"{path}\n" for path in files), encoding="utf-8")
+    runs = [
+        {
+            "name": name,
+            "status": "completed" if conclusion else "in_progress",
+            "conclusion": conclusion,
+        }
+        for name, conclusion in check_runs
+    ]
+    (fake / "checks.json").write_text(json.dumps({"check_runs": runs}), encoding="utf-8")
+    summary = tmp_path / "summary.md"
+    env = {key: str(value) for key, value in step["env"].items() if "${{" not in str(value)}
+    env.update(
+        PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+        FAKE_GH=str(fake),
+        GH_TOKEN="token",
+        REPO="owner/repo",
+        PR="7",
+        EXPECTED_SHA="abc123",
+        GITHUB_ACTOR="operator",
+        GITHUB_STEP_SUMMARY=str(summary),
+    )
+    result = subprocess.run(
+        ["bash", "-c", step["run"]],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,  # the exit status IS the assertion
+    )
+    calls = (fake / "calls").read_text(encoding="utf-8").splitlines()
+    return _BootstrapRun(
+        returncode=result.returncode,
+        stderr=result.stderr,
+        merged=any(call.startswith("pr merge ") for call in calls),
+        summary=summary.read_text(encoding="utf-8") if summary.exists() else "",
+    )
+
+
+def test_automation_bootstrap_merges_once_the_configured_gates_are_green(tmp_path):
+    run = _run_bootstrap(
+        tmp_path,
+        GhConfig(root=tmp_path),
+        files=_STANDALONE_REPAIR,
+        check_runs=_DEFAULT_GATES_GREEN
+        + (
+            ("Docs preview", "skipped"),
+            ("Dependency review", "neutral"),
+            # The gates this path routes around: red, and not waited on.
+            ("gate", "failure"),
+            ("PR automation / gate", "failure"),
+        ),
+    )
+    assert run.returncode == 0, run.stderr
+    assert run.merged
+    gates = "Provenance, Analyze Python, Documentation contract"
+    assert f"Independent gates present and green on the exact head: {gates}" in run.summary
+
+
+def test_automation_bootstrap_merges_a_monorepo_repair_on_its_own_gates(tmp_path):
+    """This repository's shape: one `gates` job, and vibey-gh vendored under a subtree.
+    `gh pr diff` reports repository-root paths, so the standalone scope rejected every
+    one of its files, and no `Lint` or `Build` ever reported."""
+    cfg = _bootstrap_config(tmp_path, required=("gates",), self_source=_MONOREPO_SOURCE)
+    run = _run_bootstrap(
+        tmp_path,
+        cfg,
+        files=_MONOREPO_REPAIR,
+        check_runs=(
+            ("gates", "success"),
+            ("uv.lock is in sync with pyproject.toml", "success"),
+            ("Absorbed tools - their own linters", "success"),
+        ),
+    )
+    assert run.returncode == 0, run.stderr
+    assert run.merged
+    assert "Independent gates present and green on the exact head: gates" in run.summary
+
+
+@pytest.mark.parametrize(
+    "check_runs, absent",
+    [
+        (_DEFAULT_GATES_GREEN[:2], "Documentation contract"),
+        ((), "Provenance, Analyze Python, Documentation contract"),
+        (_DEFAULT_GATES_GREEN[:2] + (("Documentation contract", "failure"),), "none"),
+        (_DEFAULT_GATES_GREEN[:2] + (("Documentation contract", None),), "none"),
+        (_DEFAULT_GATES_GREEN + (("Lint", "failure"),), "none"),
+        (_DEFAULT_GATES_GREEN + (("Test (3.12)", "cancelled"),), "none"),
+    ],
+    ids=["one-absent", "none-reported", "one-red", "one-running", "other-red", "cancelled"],
+)
+def test_automation_bootstrap_refuses_unless_every_gate_is_present_and_green(
+    tmp_path, check_runs, absent
+):
+    run = _run_bootstrap(
+        tmp_path, GhConfig(root=tmp_path), files=_STANDALONE_REPAIR, check_runs=check_runs
+    )
+    assert run.returncode != 0
+    assert not run.merged
+    assert f"absent: {absent})" in run.stderr
+
+
+def test_automation_bootstrap_fails_closed_when_no_gate_is_declared(tmp_path):
+    """An empty `required_checks` leaves nothing independent to verify, so the admin merge
+    refuses outright rather than proceeding on whatever happened to run."""
+    run = _run_bootstrap(
+        tmp_path,
+        _bootstrap_config(tmp_path, required=()),
+        files=_STANDALONE_REPAIR,
+        check_runs=_DEFAULT_GATES_GREEN,
+    )
+    assert run.returncode != 0
+    assert not run.merged
+    assert "required: []" in run.stderr
+
+
+def test_automation_bootstrap_matches_a_name_with_quotes_commas_and_parentheses(tmp_path):
+    awkward = 'Test "py", (3.12)'
+    required = (awkward, "it's, (really) \\ here")
+    run = _run_bootstrap(
+        tmp_path,
+        _bootstrap_config(tmp_path, required=required),
+        files=_STANDALONE_REPAIR,
+        check_runs=tuple((name, "success") for name in required),
+    )
+    assert run.returncode == 0, run.stderr
+    assert run.merged
+    assert f"{awkward}, it's, (really) \\ here" in run.summary
+
+
+@pytest.mark.parametrize(
+    "self_source, stray",
+    [
+        (".", "vibey_gh/versioning.py"),
+        (".", "docs/workflows.md"),
+        (_MONOREPO_SOURCE, "src/vibey/cli/main.py"),
+        (_MONOREPO_SOURCE, "vibey_gh/install.py"),
+        (_MONOREPO_SOURCE, f"{_MONOREPO_SOURCE}/vibey_gh/versioning.py"),
+        (_MONOREPO_SOURCE, f"{_MONOREPO_SOURCE}/docs/workflows.md"),
+        (_MONOREPO_SOURCE, "src/vibey_tools/ghost/test/test_x.py"),
+    ],
+)
+def test_automation_bootstrap_scope_check_rejects_files_outside_automation_core(
+    tmp_path, self_source, stray
+):
+    files = _STANDALONE_REPAIR if self_source == "." else _MONOREPO_REPAIR
+    run = _run_bootstrap(
+        tmp_path,
+        _bootstrap_config(tmp_path, self_source=self_source),
+        files=files + (stray,),
+        check_runs=_DEFAULT_GATES_GREEN,
+    )
+    assert run.returncode != 0
+    assert not run.merged
+    assert "changed files are not confined to automation-core paths" in run.stderr
+
+
+def test_automation_bootstrap_refuses_a_dispatcher_who_is_not_an_administrator(tmp_path):
+    run = _run_bootstrap(
+        tmp_path,
+        GhConfig(root=tmp_path),
+        files=_STANDALONE_REPAIR,
+        check_runs=_DEFAULT_GATES_GREEN,
+        permission="write",
+    )
+    assert run.returncode != 0
+    assert not run.merged
 
 
 def test_pr_review_requires_verified_repository_paths():

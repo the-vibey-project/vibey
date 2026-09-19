@@ -323,6 +323,26 @@ def test_pull_request_rule_carries_approvals_and_conversation_resolution():
     assert rule["parameters"]["required_review_thread_resolution"] is True
 
 
+def test_code_owner_review_is_off_unless_declared_and_on_when_it_is():
+    """It was a literal `False` in the payload, so no repository could ask for it (#213).
+    The default stays off: with a CODEOWNERS file it blocks every pull request touching an
+    owned path until that owner approves, which an upgrade must never switch on."""
+    default = next(r for r in rs.desired_rules(policy()) if r["type"] == rs.PULL_REQUEST)
+    assert default["parameters"]["require_code_owner_review"] is False
+    declared = policy(require_code_owner_review=True)
+    rule = next(r for r in rs.desired_rules(declared) if r["type"] == rs.PULL_REQUEST)
+    assert rule["parameters"]["require_code_owner_review"] is True
+
+
+def test_code_owner_review_loads_per_branch_from_toml(tmp_path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        "[rulesets.integration]\nrequire_code_owner_review = true\n"
+    )
+    cfg = load_config(tmp_path)
+    assert cfg.rulesets.integration.require_code_owner_review is True
+    assert cfg.rulesets.release.require_code_owner_review is False
+
+
 def test_status_checks_rule_is_omitted_when_no_checks_are_declared():
     rules = rs.desired_rules(policy(required_checks=()))
     assert rs.STATUS_CHECKS not in [r["type"] for r in rules]

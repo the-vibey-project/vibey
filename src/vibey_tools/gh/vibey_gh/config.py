@@ -545,6 +545,7 @@ def _ruleset(
         strict_required_checks=section.get("strict_required_checks", True),
         required_approvals=section.get("required_approvals", default_approvals),
         dismiss_stale_reviews=section.get("dismiss_stale_reviews", True),
+        require_code_owner_review=section.get("require_code_owner_review", False),
         require_conversation_resolution=section.get("require_conversation_resolution", True),
         require_linear_history=section.get("require_linear_history", True),
         require_signed_commits=section.get("require_signed_commits", False),
@@ -856,6 +857,11 @@ class RulesetConfig:
     strict_required_checks: bool = True
     required_approvals: int = 0
     dismiss_stale_reviews: bool = True
+    # A review from the owner CODEOWNERS names, on a pull request touching an owned path.
+    # False by default because it is inert without a CODEOWNERS file and, with one, blocks
+    # every pull request touching an owned path until that owner approves -- a decision
+    # about who may merge what, which an upgrade must never make for an adopter.
+    require_code_owner_review: bool = False
     require_conversation_resolution: bool = True
     require_linear_history: bool = True
     require_signed_commits: bool = False
@@ -1224,6 +1230,11 @@ class GhConfig:
     # writes to a branch it does not own. Off, the train reports the conflict exactly as
     # it did before and a person clears it.
     restack_conflicts: bool = True
+    # Globs the merge train refuses to merge unattended: a pull request touching one is
+    # reported as needing a human merge, and never reaches the `--admin` fallback that
+    # would bypass a code-owner review (vibey_gh.protected_paths). Empty protects nothing,
+    # which is how the train behaved before the key existed.
+    protected_paths: tuple[str, ...] = ()
     ai: AiConfig = AiConfig()
     pr_automation: PrAutomationConfig = PrAutomationConfig()
     issue_automation: IssueAutomationConfig = IssueAutomationConfig()
@@ -1291,6 +1302,19 @@ class GhConfig:
             raise ValueError(
                 f"issue_automation.branch_prefix must not shadow a permanent branch: {prefix!r}"
             )
+        patterns = self.protected_paths
+        if not isinstance(patterns, tuple) or not all(isinstance(p, str) for p in patterns):
+            # A bare TOML string would otherwise be split into one-character globs.
+            raise ValueError("merge_train.protected_paths must be a list of strings")
+        _unique_nonempty("merge_train.protected_paths", patterns)
+        for pattern in patterns:
+            if pattern.startswith("/"):
+                # CODEOWNERS anchors a pattern with `/`; a pull request's listed paths never
+                # start with one, so this glob would match nothing and protect nothing.
+                raise ValueError(
+                    "merge_train.protected_paths entries are repository-root relative,"
+                    f" without a leading '/': {pattern!r}"
+                )
 
     @property
     def header(self) -> str:
@@ -1431,6 +1455,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     ver = data.get("version", {})
     br = data.get("branches", {})
     tr = data.get("merge_train", {})
+    protected = tr.get("protected_paths", ())
     inst = data.get("install", {})
     auto = data.get("pr_automation", {})
     observability = auto.get("observability", {})
@@ -1494,6 +1519,10 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         owner=tr.get("owner", ""),
         trusted_authors=tuple(tr.get("trusted_authors", ())),
         restack_conflicts=bool(tr.get("restack_conflicts", True)),
+        # A list becomes the tuple the field holds; anything else -- a bare string above
+        # all, which `tuple()` would split into one-character globs -- reaches
+        # `GhConfig.__post_init__` as it is, and is refused there.
+        protected_paths=tuple(protected) if isinstance(protected, list) else protected,
         ai=AiConfig(
             base_url=data.get("ai", {}).get("base_url", ""),
             auth_secret=data.get("ai", {}).get("auth_secret", AiConfig.auth_secret),

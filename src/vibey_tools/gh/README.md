@@ -669,6 +669,7 @@ required_checks = [
 strict_required_checks = true          # branch must be up to date before merging
 required_approvals = 0                 # PR automation gates instead
 dismiss_stale_reviews = true
+require_code_owner_review = false      # true: CODEOWNERS' owner must approve owned paths
 require_conversation_resolution = true
 require_linear_history = true
 require_signed_commits = false
@@ -932,6 +933,7 @@ release     = "main"
 [merge_train]
 owner           = "your-login"
 trusted_authors = ["your-login", "dependabot[bot]"]
+protected_paths = []                       # globs the train never merges unattended
 ```
 
 

@@ -436,11 +436,34 @@ number, the exact reviewed head SHA, and an explicit `authorize` boolean. It exi
 the case where privileged workflow code itself is broken and a PR therefore cannot repair
 its own gate. With `contents: write`, `pull-requests: write`, and `checks: read`, the job
 verifies that the dispatching actor holds administrator permission; that the PR is open,
-non-draft, targets `develop`, and exactly matches the dispatched head SHA; that changed
-files are confined to workflow, template, or automation-core paths; and that every non-gate
-check run on that exact SHA — including CodeQL, the API-drift parity check,
-the Documentation contract, Provenance, Build, and Lint — completed successfully. Only then does it perform an
-admin `--match-head-commit` squash merge into `develop`, bypassing ordinary PR automation
-review, and delete the source branch, and only when that branch is same-repository and not
-a configured or literal permanent branch. See [Security](security.md) and
-[Threat model](threat-model.md) for the full rationale.
+non-draft, targets the integration branch, and exactly matches the dispatched head SHA;
+that changed files are confined to workflow, template, or automation-core paths; and that
+the exact SHA's check runs are all present and green. Only then does it perform an admin
+`--match-head-commit` squash merge into the integration branch, bypassing ordinary PR
+automation review, and delete the source branch, and only when that branch is
+same-repository and not a configured or literal permanent branch. See
+[Security](security.md) and [Threat model](threat-model.md) for the full rationale.
+
+Nothing in that gate is a literal in the template; both halves are rendered from
+configuration by `vibey-gh install`:
+
+- **Independent gates.** `[rulesets.integration] required_checks` — the check-run names
+  GitHub already enforces on the branch this merges into — less
+  `[pr_automation] ignored_checks` and the gates this path exists to route around (`gate`,
+  `PR automation / gate`, `Automation bootstrap / gate`). Every one of them must be present
+  and completed with `success`, `neutral`, or `skipped`; every other check run on the head,
+  apart from those three routed-around gates, must be green as well. The step fails closed
+  when the list is empty, when no check run has reported, or when any named gate is absent,
+  and its error names the absent ones. With the defaults that is `Provenance`,
+  `Analyze Python`, and `Documentation contract`; a repository whose CI reports one `gates`
+  job and requires only that waits on `gates`.
+- **Change scope.** The deployed workflows under `.github/workflows/`, plus
+  `vibey_gh/templates/workflows/`, `vibey_gh/{automation_bootstrap,cli,install,merge_train,pr_automation}.py`,
+  and `test/` — anchored at `[install] self_source`, because `gh pr diff` reports
+  repository-root paths. A monorepo that vendors the tooling at `src/tools/gh` admits
+  `src/tools/gh/vibey_gh/install.py` (and that subtree's own deployed workflows), not
+  `vibey_gh/install.py`.
+
+A green render proves only that the step is wired to the right names. That the gate passes
+on a real repair can be shown only by a live `workflow_dispatch`, which is the one rehearsal
+the path allows.

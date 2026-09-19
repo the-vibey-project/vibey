@@ -200,6 +200,54 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   fails the command with a clear message rather than answering a different comment. A review
   comment's briefing also carries the file, line and diff hunk it was written on (#145)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+* **gh:** the automation-bootstrap recovery path could never merge. It waited on six
+  literal check names — `Documentation contract`, `Provenance`, `Build`, `Lint`,
+  `Analyze Python`, and the parity check — five of which never report here, and `Build`,
+  `Lint` and the parity check came only from vibey-gh's own hand-written workflows, so the
+  emergency path failed closed for every adopter exactly when it was needed. Its scope check
+  assumed the standalone layout too, and `gh pr diff` reports repository-root paths, so
+  every `src/vibey_tools/gh/…` file was refused. Both are now rendered from configuration:
+  the gates are `[rulesets.integration] required_checks` less
+  `[pr_automation] ignored_checks` and the gate the path routes around (`["gates"]` here),
+  and the scope is anchored at `[install] self_source`. Still fail-closed — an empty list,
+  an absent gate or any red check refuses the merge, and the error names what is absent
+  ([#214](https://github.com/the-vibey-project/vibey/issues/214))
+* **briefing:** the deterministic floor brief carries every decision the no-loss gate still
+  counts open. It chose decisions by the decision log's `superseded_by`, which records whether
+  an id was EVER named by a supersede, whatever the order, so a decision recorded after the
+  supersede naming it -- or reinstated after being superseded -- was dropped while R3, which
+  reads `open_items`, still required it: the floor that is lossless by construction failed its
+  own gate, so a handoff through `DeterministicBriefProducer` (the production default) spent
+  its three STRICT attempts on the same brief and escalated to full-transcript mode. It now
+  takes the ids from `open_items` and only the wording from the log. Found by the widened
+  no-loss suite
+  ([#213](https://github.com/the-vibey-project/vibey/issues/213))
+
+### Features
+
+* **noloss:** the no-loss property suite runs the 10,000 adversarial examples the definition
+  of done asks for, and they are adversarial. It ran Hypothesis' default 100 over a space of
+  256 ledgers (four counts from 0..3, sequential ids, every kind contiguous), so a larger
+  `max_examples` alone would have stopped at the space's edge; its adversarial check was four
+  `parametrize` cases; and its expected brief came from the same `open_items` the gate uses,
+  so it graded the gate with the gate's own answer key. The ledgers now have arbitrary ids
+  from one shared pool, every kind interleaved, answers, resolutions and supersedes, several
+  verdicts, and a presentation order unrelated to seq; the expectation comes from an
+  independent reference model (`tests/domain/test_noloss_reference.py`); and the adversarial
+  property drops a random subset of what the brief owes and requires every dropped item named
+  under its own rule, and nothing else. A `noloss` Hypothesis profile (10,000 examples, no
+  deadline) and marker drive the new required CI check `No-loss property suite (10,000
+  examples)` on both branches, which prints Hypothesis' statistics on every run
+  ([#213](https://github.com/the-vibey-project/vibey/issues/213))
+* **governance:** the protected tests are protected by something. The no-loss suite, the
+  chaos test, the full-cycle system test and `tests/live/` were guarded only by a refusal in
+  the dormant `scripts/fleet/land.sh`, which targets repositories that no longer exist. A
+  root `.github/CODEOWNERS` now owns them (and itself), both rulesets set
+  `require_code_owner_review = true`, and `[merge_train] protected_paths` makes the merge
+  train refuse such a pull request as "needs a human merge" before its `--admin` fallback
+  could bypass that review; `tests/meta/test_protected_paths_agree.py` keeps the two lists
+  identical. The ruleset keys take effect on the operator's next `vibey-gh reconcile`
+  ([#213](https://github.com/the-vibey-project/vibey/issues/213))
 ### Features
 
 * **gh:** the exact-head review's `--json-schema` is rendered from

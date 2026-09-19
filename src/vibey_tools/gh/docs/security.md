@@ -89,11 +89,14 @@ The automation-bootstrap workflow is a second guarded exception: a manually disp
 admin-only squash merge that bypasses the ordinary PR-automation review because privileged
 workflow code is loaded from the trusted base branch and a PR cannot self-repair it. It
 requires administrator permission on the actor, an open non-draft PR that exactly matches
-the dispatched head SHA and targets `develop`, changed files confined to workflow,
-template, or automation-core paths, and every non-gate check run on that exact SHA —
-including CodeQL, API drift, documentation, provenance, build, and lint — completed
-successfully before the `--match-head-commit` merge runs. It never deletes a permanent
-branch. See [Threat model](threat-model.md) for the full rationale.
+the dispatched head SHA and targets the integration branch, changed files confined to
+workflow, template, or automation-core paths under `[install] self_source`, and — before
+the `--match-head-commit` merge runs — every check run on that exact SHA green and every
+independent gate present among them. The gates are the integration ruleset's own
+`required_checks`, less `[pr_automation] ignored_checks` and the PR-automation gate this
+path routes around, rendered into the workflow rather than written into it; an empty list
+refuses the merge rather than waving it through. It never deletes a permanent branch. See
+[Threat model](threat-model.md) for the full rationale.
 
 The local-model review lane (`[pr_automation.fallback]`, `vibey_gh.local_review`, the
 `local-review`/`local-triage` CLI commands) is a distinct security boundary from every
