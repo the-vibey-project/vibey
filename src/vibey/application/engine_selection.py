@@ -39,7 +39,7 @@ from vibey.domain.effort import (
     effort_for_attempt,
     forces_rotation,
 )
-from vibey.domain.engine import EngineId, JobRequirement
+from vibey.domain.engine import ENGINE_ID_PARSER, EngineId, JobRequirement
 from vibey.domain.errors import EscalationExhausted, NoEligibleEngine
 from vibey.domain.phase import Phase
 
@@ -84,13 +84,21 @@ def selection_inputs_for_job(
     # not go back to the engine that wound down" constraint rides here.
     raw_excluded = job.requirement.get("excluded_engine_ids")
     if isinstance(raw_excluded, list | tuple):
-        excluded.update(EngineId(str(entry)) for entry in raw_excluded)
+        # An engine this worker cannot run is a vacuous exclusion. Keep the raw
+        # requirement on the job; only dispatch inputs drop unknown ids.
+        excluded.update(
+            engine
+            for entry in raw_excluded
+            if (engine := ENGINE_ID_PARSER.known(str(entry))) is not None
+        )
 
     if job.kind == "build.verify":
         # The diff review runs at LOW and must come from a different engine
         # than the implementer (phase-protocols.md 2.3).
-        implementer = str(job.requirement.get("implementer_engine_id", "") or "")
-        if implementer:
+        implementer = ENGINE_ID_PARSER.known(
+            str(job.requirement.get("implementer_engine_id", "") or "")
+        )
+        if implementer is not None:
             # ...but independence is the default, not an absolute. A pool
             # that cannot supply a second reviewer gets a self-review that
             # says so, because the alternative measured on a one-engine
@@ -101,9 +109,9 @@ def selection_inputs_for_job(
             # "is the pool exactly one engine" so it also holds when a
             # durable excluded_engine_ids list has already taken the other
             # candidates -- a rule, not a special case (ADR-0018).
-            remaining = None if pool is None else pool - excluded - {EngineId(implementer)}
+            remaining = None if pool is None else pool - excluded - {implementer}
             if remaining is None or remaining:
-                excluded.add(EngineId(implementer))
+                excluded.add(implementer)
             else:
                 independence_waived = True
         effort = Effort.LOW
@@ -117,7 +125,7 @@ def selection_inputs_for_job(
             # exhausted-ladder Park. Select as if HIGH so a needless
             # nack/crash can't preempt the human gate.
             effort = Effort.HIGH
-        previous = EngineId(job.assigned_engine) if job.assigned_engine else None
+        previous = ENGINE_ID_PARSER.known(job.assigned_engine or "")
         if attempt > 1 and previous is not None:
             previous_effort = effort_for_attempt(base, min(attempt - 1, BUILD_LADDER_EXHAUSTED))
             if forces_rotation(previous_effort, effort):
@@ -149,7 +157,7 @@ class SelectingEngineProvider:
         owner: str,
         allow_list: frozenset[EngineId] | None = None,
         backoff: timedelta = timedelta(minutes=5),
-        standby_engine: EngineId | None = None,
+        local_engines: tuple[EngineId, ...] = (),
     ) -> None:
         self._selector = selector
         self._health = health
@@ -157,10 +165,11 @@ class SelectingEngineProvider:
         self._jobs = jobs
         self._clock = clock
         self._owner = owner
-        self._allow_list = allow_list
         self._backoff = backoff
-        self._standby_engine = standby_engine
         self._pool = frozenset(adapters) if allow_list is None else frozenset(adapters) & allow_list
+        # Local engines have no cron that records their health, so each selection
+        # refreshes theirs first -- only for those this worker can dispatch to.
+        self._local_engines = tuple(engine for engine in local_engines if engine in self._pool)
 
     @property
     def pool(self) -> frozenset[EngineId]:
@@ -173,21 +182,28 @@ class SelectingEngineProvider:
 
     async def select_for(self, job: JobRecord) -> EngineAdapter:
         inputs = selection_inputs_for_job(job, pool=self._pool)
-        if self._standby_engine is not None:
-            standby = self._adapters.get(self._standby_engine)
-            if standby is not None:
-                preflight = await standby.preflight()
-                await self._health.update_from_preflight(
-                    job.project_id,
-                    self._standby_engine,
-                    preflight,
-                    conformance_ok=preflight.installed and preflight.auth_ok,
-                )
+        for engine_id in self._local_engines:
+            # A local engine's `doctor` is its readiness check: the server is up, the
+            # model is pulled, and (for claudeloop-local) the model answers a tool
+            # call. That is what makes it eligible, and it is refreshed here because
+            # nothing else would -- the price ADR-0015 accepted for qwenloop, now paid
+            # for every local engine the operator switched on (ADR-0038).
+            preflight = await self._adapters[engine_id].preflight()
+            await self._health.update_from_preflight(
+                job.project_id,
+                engine_id,
+                preflight,
+                conformance_ok=preflight.installed and preflight.auth_ok,
+            )
         try:
+            # The pool, never None: the selector reads every health row the project
+            # has, and a row outlives the switch that created it. Offered an engine
+            # this worker has no adapter for -- a local engine switched off since,
+            # now *preferred* by tier -- it would defer the job forever.
             engine_id, _selection = await self._selector.select_engine(
                 job.project_id,
                 inputs.requirement,
-                allow_list=self._allow_list,
+                allow_list=self._pool,
                 affinity_engine=inputs.affinity,
             )
         except NoEligibleEngine as exc:

@@ -58,17 +58,20 @@ uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines c
 - `--provider claudeloop` makes the DESIGN interview and the BUILD
   decomposition use live ClaudeLoop calls (the default `scripted` provider
   is for tests).
-- `--provider qwenloop` is the sovereign alternative to the paid DESIGN
-  provider (ADR-0027). It runs the interview on a local model
-  (`QwenloopDesignProvider`: Ollama at `http://127.0.0.1:11434` with
-  `qwen2.5-coder:14b`). A local model has no web access, so research reads
-  operator-supplied evidence: set `VIBEY_EVIDENCE_DIR` to a directory holding
-  one `<topic>.md` per research topic (`prior-art.md`, `libraries.md`,
-  `api-docs.md`) whose first line is `source: <where it came from>`. A missing file makes the research job
-  refuse rather than invent a source, and synthesis waits on every research
-  job. In this mode the BUILD decomposition uses the scripted producer, not a
-  live model. This demo uses claudeloop because it exercises paid-pool
-  rotation.
+- `--provider qwenloop` is the sovereign alternative to the paid DESIGN and
+  decomposition providers (ADR-0027). It runs the interview and the BUILD
+  decomposition on a local model (`QwenloopDesignProvider` and
+  `QwenloopWorkPlanProducer`, sharing one Ollama client: the server at
+  `VIBEY_OLLAMA_URL`, default `http://127.0.0.1:11434`, and the model
+  `VIBEY_OLLAMA_MODEL` or `--ollama-model`, default `qwen2.5-coder:14b`). A
+  local model has no web access, so research reads operator-supplied
+  evidence: set `VIBEY_EVIDENCE_DIR` to a directory holding one
+  `<topic>.md` per research topic (`prior-art.md`, `libraries.md`,
+  `api-docs.md`) whose first line is `source: <where it came from>`. A
+  missing file parks the research job on a `research_evidence` gate naming
+  the file rather than inventing a source; add the file and answer the gate
+  to retry. Synthesis waits on every research job. This demo uses
+  claudeloop because it exercises paid-pool rotation.
 
   ```bash
   export VIBEY_EVIDENCE_DIR=~/demos/greeter-evidence
@@ -209,6 +212,15 @@ per-engine "turns" figure is the selection count, not turns);
   for the repair round to close. Circuits and backoffs clear on their own;
   an open circuit past its reset deadline half-opens automatically at the
   next selection and closes itself on the first success.
+- **A `job.heartbeat_failed` warning** — a lease heartbeat could not reach
+  Postgres (a pool timeout, a failover). The worker keeps running and
+  retries at the next beat; one line is a blip, a run of them means the
+  database is unreachable and the lease will lapse.
+- **A `job.lease_lost` or `job.<ack|nack|grant|park|defer>_rejected`
+  warning** — this worker's lease on the job expired (the handler outlived
+  it, or heartbeats kept failing) and the row was reaped or claimed by
+  another worker. The worker stays up, but the outcome it just produced was
+  not recorded; the job runs again under whoever holds it now.
 - **A `verify_repair_exhausted` / `integrate_repair_exhausted` gate** —
   the item burned its bounded repair rounds. Grant more with
   `vibey answer <gate-id> --raw '{"max_rounds": 6}'` (the prompt suggests

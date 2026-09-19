@@ -271,6 +271,13 @@ class BuildVerifyHandler:
                 capacity=True,
             )
         if not run_outcome.complete:
+            # A reviewer whose backend could not serve the review never judged the
+            # diff: park for the fix rather than record a rejection (exit 78).
+            misconfigured = run_outcome.misconfiguration_gate(
+                self._reviewer.descriptor, job.work_item_id
+            )
+            if misconfigured is not None:
+                return Park(misconfigured)
             return Failure(FailureClass.WORK, "diff review did not approve this work item")
 
         if self._repair is not None:
@@ -366,7 +373,7 @@ class BuildVerifyHandler:
         raised: list[str] = []
         resolved: set[str] = set()
         for event in await repair.ledger_reader.all_for_project(job.project_id):
-            if event.cycle != job.cycle:
+            if not event.interpretable or event.cycle != job.cycle:
                 continue
             finding_id = str(event.payload.get("finding_id", ""))
             if not finding_id.startswith(prefix):

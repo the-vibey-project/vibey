@@ -12,28 +12,49 @@ import asyncpg
 from vibey.application.dto import ProjectRecord
 from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
+from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
 from vibey.domain.ledger import EventKind, Provenance, digest_event
-from vibey.domain.phase import Phase
+from vibey.domain.phase import PHASE_PARSER, Phase, UnrecognizedPhase
 from vibey.infrastructure.db.interfaces import (
     EventAppenderInterface,
     PhaseTransitionedDraftBuilderInterface,
+    ProjectRowMapperInterface,
 )
 from vibey.infrastructure.db.ledger_repository import DEFAULT_EVENT_APPENDER
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
 
 
-def _row_to_project(row: asyncpg.Record) -> ProjectRecord:
-    return ProjectRecord(
-        project_id=row["id"],
-        name=row["name"],
-        repo_path=Path(row["repo_path"]),
-        phase=Phase(row["phase"]),
-        cycle=row["cycle"],
-        max_cycles=row["max_cycles"],
-        config=json.loads(row["config"]),
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
-    )
+class ProjectRowMapper:
+    """Turns one `project` row into a `ProjectRecord`, one way for every reader.
+
+    `phase` is a Postgres enum a newer vibey widens with a migration, so it is read
+    forward-compatibly (vibey#287): a phase this vibey does not know comes back as
+    an `UnrecognizedPhase`, never a `ValueError`. Reading the project must never be
+    what takes a worker down; deciding not to work on it is the caller's job, and
+    the claim already refuses every job of such a project.
+    """
+
+    def __init__(
+        self, phases: StoredValueParserInterface[Phase, UnrecognizedPhase] = PHASE_PARSER
+    ) -> None:
+        self._phases = phases
+
+    def to_record(self, row: asyncpg.Record) -> ProjectRecord:
+        return ProjectRecord(
+            project_id=row["id"],
+            name=row["name"],
+            repo_path=Path(row["repo_path"]),
+            phase=self._phases.parse(row["phase"]),
+            cycle=row["cycle"],
+            max_cycles=row["max_cycles"],
+            config=json.loads(row["config"]),
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+
+PROJECT_ROWS: Final[ProjectRowMapperInterface] = ProjectRowMapper()
+"""The one row mapper every reader of `project` shares. Stateless, so one instance serves."""
 
 
 class PhaseTransitionedDraftBuilder:
@@ -76,16 +97,25 @@ class PhaseTransitionedDraftBuilder:
         caller's to name, not this builder's to invent; what is missing is the
         call sites, and that is the work, not the signature.
         """
+        phase = settled.phase
+        if not isinstance(phase, Phase):
+            # The CAS only ever sets a phase its caller named, so this is a row that
+            # changed under it. Writers stay strict (vibey#287): never ledger a
+            # phase this vibey cannot vouch for.
+            raise ValueError(
+                f"project {settled.project_id} settled in phase {phase.value!r}, which "
+                "this vibey does not know; it will not ledger a move into it"
+            )
         payload: dict[str, object] = {
             "from": expected.value,
-            "to": settled.phase.value,
+            "to": phase.value,
             "cycle": settled.cycle,
             "guard": guard,
         }
         return LedgerEventDraft(
             project_id=settled.project_id,
             cycle=settled.cycle,
-            phase=settled.phase,
+            phase=phase,
             kind=EventKind.PHASE_TRANSITIONED,
             engine_id=None,
             job_id=None,
@@ -110,10 +140,12 @@ class PostgresProjectRepository:
         *,
         appender: EventAppenderInterface = DEFAULT_EVENT_APPENDER,
         drafts: PhaseTransitionedDraftBuilderInterface = DEFAULT_TRANSITION_DRAFTS,
+        rows: ProjectRowMapperInterface = PROJECT_ROWS,
     ) -> None:
         self._pool = pool
         self._events = appender
         self._drafts = drafts
+        self._rows = rows
 
     async def create(
         self,
@@ -137,17 +169,17 @@ class PostgresProjectRepository:
             )
             if row is None:
                 raise LookupError("project insert returned no row")
-            return _row_to_project(row)
+            return self._rows.to_record(row)
 
     async def get(self, project_id: UUID) -> ProjectRecord | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow("SELECT * FROM project WHERE id = $1", project_id)
-            return _row_to_project(row) if row is not None else None
+            return self._rows.to_record(row) if row is not None else None
 
     async def get_latest(self) -> ProjectRecord | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow("SELECT * FROM project ORDER BY created_at DESC LIMIT 1")
-            return _row_to_project(row) if row is not None else None
+            return self._rows.to_record(row) if row is not None else None
 
     async def transition(
         self,
@@ -204,6 +236,6 @@ class PostgresProjectRepository:
                 raise ValueError(
                     f"project {project_id} is not in expected phase {expected.value!r}"
                 )
-            settled = _row_to_project(row)
+            settled = self._rows.to_record(row)
             await self._events.append(conn, self._drafts.build(settled, expected, guard))
             return settled

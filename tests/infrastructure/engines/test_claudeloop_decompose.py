@@ -10,6 +10,8 @@ from vibey.domain.effort import Effort
 from vibey.domain.spec import AcceptanceCriterion, DesignSpec
 from vibey.infrastructure.engines.claudeloop_decompose import ClaudeLoopWorkPlanProducer
 from vibey.infrastructure.engines.claudeloop_process import ClaudeLoopResult
+from vibey.infrastructure.engines.design_json import WorkPlanDecoder
+from vibey.infrastructure.engines.interfaces import WorkPlanDecoderInterface
 
 
 class FakeProcess:
@@ -250,3 +252,60 @@ async def test_decompose_prompt_carries_the_verification_house_rules(tmp_path: P
     assert "clean checkout" in prompt
     assert "tests/" in prompt
     assert "chained via depends_on" in prompt
+
+
+async def test_decompose_names_an_unknown_effort_rather_than_a_missing_key(
+    tmp_path: Path,
+) -> None:
+    """The shared decoder used to let `Effort["BOGUS"]`'s KeyError reach the missing-key
+    handler, reporting an item "missing BOGUS" -- a key nobody asked for."""
+    payload = json.dumps(
+        {
+            "items": [
+                {
+                    "item_id": "ws",
+                    "title": "skeleton",
+                    "acceptance_ids": ["AC-1"],
+                    "est_effort": "enormous",
+                    "verification": {"commands": [], "criteria_checked": ["AC-1"]},
+                }
+            ]
+        }
+    )
+    producer = ClaudeLoopWorkPlanProducer(process=FakeProcess([payload]), worktree_path=tmp_path)
+    with pytest.raises(ValueError, match="unknown est_effort 'enormous'"):
+        await producer.decompose(_spec())
+
+
+async def test_decompose_goes_through_the_shared_decoder(tmp_path: Path) -> None:
+    """The paid and sovereign producers decode through one WorkPlanDecoder (ADR-0027:
+    decoders are shared), and the paid one takes it at its seam."""
+
+    class CountingDecoder(WorkPlanDecoder):
+        def __init__(self) -> None:
+            self.validated = 0
+
+        def require_valid(self, items, criteria_ids, *, strict=False):  # type: ignore[no-untyped-def]
+            self.validated += 1
+            assert strict is False  # the paid path keeps its own, looser, contract
+            super().require_valid(items, criteria_ids, strict=strict)
+
+    decoder = CountingDecoder()
+    producer = ClaudeLoopWorkPlanProducer(
+        process=FakeProcess([_valid_items()]), worktree_path=tmp_path, decoder=decoder
+    )
+
+    await producer.decompose(_spec())
+
+    assert decoder.validated == 1
+    assert isinstance(
+        ClaudeLoopWorkPlanProducer(process=FakeProcess([]), worktree_path=tmp_path)._decoder,
+        WorkPlanDecoderInterface,
+    )
+
+
+def test_the_shared_decoder_reports_an_empty_plan_rather_than_indexing_it() -> None:
+    assert WorkPlanDecoder().violations((), ["AC-1"]) == ("decomposition produced no work items",)
+    assert WorkPlanDecoder().violations((), ["AC-1"], strict=True) == (
+        "decomposition produced no work items",
+    )
