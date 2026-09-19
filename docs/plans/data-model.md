@@ -344,6 +344,37 @@ its digest), starting from a per-project genesis. A window of events verifies al
 from the link before it, which is the hook the storage tiers' chunk hashes fold over
 (#114).
 
+**The published shard is a projection, not a copy.** `vibey ledger export` (#137)
+writes nothing to the database and adds no column: it reads a project's rows, derives
+the chain above over **every** event, and writes a JSON Lines file for the repository
+to commit — sub-doctrine 7.a's "the shard the repository holds":
+
+```text
+{"shard": {"format": "vibey-ledger-shard/v1", "project_id": …, "project_name": …,
+           "holds": "full" | "window", "tier": "standard (untiered)",
+           "ledger":    {"first_seq", "last_seq", "event_count"},
+           "chain":     {"scheme", "head", "findings"},
+           "policy":    {"scheme", "fingerprint"},
+           "published": {"count", "digest_range"},
+           "withheld":  {"events": {<reason>: n, …}, "fields", "paths", "emails", "credentials"},
+           "trims":     {<event_id>: {"fields", "paths", "emails", "credentials"}, …}}}
+{<one published record: the same object as .vibey/handoff/ledger.jsonl>}
+…
+```
+
+Each record line is `domain/ledger_record.py`'s object — the one the handoff ledger
+writes — after the publication policy (`domain/publication_policy.py`) has run:
+default-deny by kind and payload field, engine chatter and `untrusted` events withheld
+whole, absolute paths and email addresses replaced, `repo_path` never kept, and
+credential redaction (`infrastructure/ledger/redact.py`) last. A record's `digest` is
+recomputed over what was published, so every record checks against its own digest,
+and `published.digest_range` is `digest_range` over the published records. The
+`chain.head` is the ledger's, not the shard's: it commits to the unpublished events
+too, so only a holder of the full ledger can recompute it — which is the point, since
+it is what an archival node (#114) checks a shard against. The header's counts must
+add up (`event_count` = published + withheld) and `vibey ledger site` refuses a shard
+whose counts, digests or ranges do not.
+
 **`correlation_id` is the delivery's; `causation_id` is the run's.** Every event
 of one delivery — DESIGN, BUILD, REVIEW and the deploy stage set, in every cycle
 — carries the same `correlation_id`, so `event_correlation` answers "show me
@@ -869,7 +900,8 @@ the pool would drop the lock silently.
 
 Nothing is pruned, partitioned or garbage-collected today. Every table grows
 without bound, `event` is a single heap table (0002), and there is no `vibey gc`
-command. `vibey ledger` exposes only `show`. The intended policy, none of it
+command. `vibey ledger` reads (`show`, `search`) and publishes (`export`, `site`); it never
+prunes. The intended policy, none of it
 implemented:
 
 | Table | Intended policy |

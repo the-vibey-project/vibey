@@ -35,6 +35,7 @@ from vibey.bootstrap import (
     build_visual_worker,
 )
 from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
@@ -84,6 +85,8 @@ app.add_typer(deploy_app, name="deploy")
 ledger_app = typer.Typer(name="ledger", invoke_without_command=True)
 app.add_typer(ledger_app, name="ledger")
 ledger_app.command("search")(ledger_search)
+ledger_app.command("export")(ledger_export)
+ledger_app.command("site")(ledger_site)
 
 
 def _version_callback(value: bool) -> None:

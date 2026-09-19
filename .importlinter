@@ -88,16 +88,23 @@ ignore_imports =
     vibey.application.interfaces.** -> vibey.application.design
     vibey.application.interfaces.** -> vibey.application.dto
 
-# The same rule, one layer down. `vibey.infrastructure.db.interfaces`,
-# `vibey.infrastructure.build.interfaces` (ADR-0016's mirrored form) and the legacy flat
-# `vibey.infrastructure.interfaces` declare seams that infrastructure itself implements,
-# so the application contract's "nothing else from its own tree" clause cannot bind
-# here: a seam over an asyncpg connection or a `LedgerEventDraft` has to name those
-# types or it constrains nothing. What DOES bind is the direction -- a seam never
-# reaches up into the code that consumes it.
-# `vibey.infrastructure.engines.interfaces` joined with the sovereign DECOMPOSE
-# producer and the shared Ollama client (#115), and
-# `vibey.infrastructure.process.interfaces` with the shared kill-and-reap (#283).
+    # The same rule, one layer down. `vibey.infrastructure.db.interfaces` and
+    # The same rule, one layer down. `vibey.infrastructure.db.interfaces`,
+    # `LedgerEventDraft` has to name those types or it constrains nothing. What DOES bind
+    # `vibey.infrastructure.build.interfaces` (ADR-0016's mirrored form) and the legacy flat
+    # `vibey.infrastructure.engines.interfaces` joined with the sovereign DECOMPOSE
+    # `vibey.infrastructure.interfaces` declare seams that infrastructure itself implements,
+    # `vibey.infrastructure.ledger.interfaces` (ADR-0016's mirrored form) and the legacy
+    # `vibey.infrastructure.process.interfaces` with the shared kill-and-reap (#283).
+    # flat `vibey.infrastructure.interfaces` declare seams
+    # from its own tree" clause cannot bind here: a seam over an asyncpg connection or a
+    # here: a seam over an asyncpg connection or a `LedgerEventDraft` has to name those
+    # is the direction -- a seam never reaches up into the code that consumes it.
+    # producer and the shared Ollama client (#115), and
+    # reaches up into the code that consumes it.
+    # so the application contract's "nothing else from its own tree" clause cannot bind
+    # that infrastructure itself implements, so the application contract's "nothing else
+    # types or it constrains nothing. What DOES bind is the direction -- a seam never
 [importlinter:contract:infrastructure-interfaces-declare-only]
 name = Infrastructure interfaces declare seams, never consume them
 type = forbidden
@@ -106,6 +113,7 @@ source_modules =
     vibey.infrastructure.db.interfaces
     vibey.infrastructure.build.interfaces
     vibey.infrastructure.engines.interfaces
+    vibey.infrastructure.ledger.interfaces
     vibey.infrastructure.process.interfaces
 forbidden_modules =
     vibey.cli

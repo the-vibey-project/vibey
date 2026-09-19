@@ -59,7 +59,7 @@ Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
 `VibeyError` keep their Python traceback.
 
 The other commands (`answer`, `watch`, `recover`, `status`, `engines`,
-`cost`, `ledger show`, `ledger search`, every `deploy` subcommand, `doctor`, `operator`) are
+`cost`, `ledger show`, `ledger search`, `ledger export`, `ledger site`, every `deploy` subcommand, `doctor`, `operator`) are
 not guarded. Their own checks exit 1 or 2 as listed above; any other error,
 including an unset `VIBEY_PG_URL`, surfaces as a Python traceback.
 
@@ -270,6 +270,10 @@ Bare `vibey ledger` prints help. Subcommands:
 | | `--text TEXT` | unset | Appears in the payload, literally and case-insensitively. |
 | | `--limit N` / `-n` | `50` | At most N events, the most recent matches (min 1). |
 | | `--json` | off | Print the result as JSON instead. |
+| `ledger export PROJECT_ID` | `--out FILE` / `-o` | required | Write the project's public shard to `FILE` (JSON Lines), replacing it. Needs the database. |
+| `ledger site` | `--from FILE` | required | A shard written by `ledger export`. Must exist. |
+| | `--out DIR` / `-o` | required | The directory to write the site into; created if absent. |
+| | `--json-only` | off, but required | Build the JSON surface. Required until the human-first record pages exist, so a script written today keeps its meaning when they arrive. |
 
 `ledger show` prints one line per event, oldest first:
 `#<seq> <YYYY-MM-DD HH:MM:SS> [<PHASE>] <kind> [<engine>]`. Filters apply
@@ -311,6 +315,53 @@ search or raise --limit`. `--json` prints `{"project_id", "truncated",
   knows; matching it exactly as written ...` to stderr, so a typo that finds
   nothing is visible, and `--json` stdout stays one document. An empty
   `--kind` exits 2.
+
+`ledger export` and `ledger site` publish a ledger (sub-doctrine 7.a, #137):
+anyone can then search it without credentials. What is published and what is
+withheld is the subject of [What gets published](../guides/ledger-publication.md);
+in short, the ledger is never published itself, only a default-deny projection of
+it.
+
+`ledger export` reads one project's whole ledger and writes its **shard**: one
+header line, `{"shard": {...}}`, then one published record per line in the
+handoff ledger's format, in seq order. The header states the project's id and
+name (never its `repo_path`), the seq range the shard covers, whether that is the
+whole ledger (`holds: full`) or a window, the storage tier (`standard (untiered)`
+until #114), the ledger's own hash-chain head over every event including the
+withheld ones, the policy's fingerprint, `digest_range` over the published
+records, and every count of what the policy withheld. The same ledger always
+writes the same bytes, so a committed shard only changes when the ledger does. It
+prints four lines:
+
+```text
+exported 2 of 3 ledger event(s) of project greeter (<id>) to ledger/greeter.jsonl
+1 event withheld by policy (0 untrusted provenance, 1 engine chatter, 0 kind not allowlisted)
+from published records: 1 field(s) withheld, 1 absolute path(s) and 0 email address(es) stripped, 0 record(s) with a credential redacted
+chain head <64 hex> at seq 3, verified
+```
+
+When the ledger's own chain walk disagrees with itself (a digest that is not its
+payload's, a gap in `seq`), the last line says how many disagreements it found
+and that the head is published unverified. An unknown `PROJECT_ID` prints
+`unknown project <id>` and exits 1; unlike `ledger search`, there is no default
+project, because publishing the wrong one cannot be taken back.
+
+`ledger site` opens no database. It reads the shard, checks it — the format, one
+project, rising seqs inside the stated range, unique ids, every record's digest,
+the published count, `digest_range`, and that the withheld counts add up — and
+writes three things into `DIR`:
+
+| Path | What it holds |
+|---|---|
+| `records/<event_id>.json` | The published record, what the policy removed from inside it (`withheld`: fields, paths, emails, credentials), and its published neighbours (`previous`, `next`: id, seq, digest). |
+| `index.json` | One entry per record for client-side search: `id`, `seq`, `kind`, `phase`, `actor` (the engine, or `vibey`), `time` (UTC), `digest`, and `tokens` — the lower-cased words of the payload, each once. |
+| `manifest.json` | The project, `holds`, `tier`, `seq_range`, the published range, `digest_range`, the chain head and whether it verified, the policy fingerprint, every withheld count by reason, and a one-line `statement` (`3 events withheld by policy`). |
+
+Every document is sorted-key JSON with `<`, `>` and `&` escaped, so a payload
+that says `<script>` stays data even when a page inlines it, and the same shard
+always builds the same bytes. `.json` files under `records/` that the shard no
+longer holds are removed; nothing else in `DIR` is touched. A file that is not a
+shard prints `invalid shard <file>: <reason>` and exits 1.
 
 ## `vibey deploy`
 
