@@ -874,13 +874,36 @@ def _book(args) -> int:
         "publisher": args.publisher,
         "description": args.description,
         "language": args.language,
+        "edition": args.edition,
+        "identifier": args.identifier,
+        "date": args.date,
+    }
+    # Only the layout flags actually given: an absent one is the interior's own default,
+    # so the defaults live in one place and are not restated here.
+    layout = {
+        name: getattr(args, name)
+        for name in (
+            "margin_top",
+            "margin_bottom",
+            "margin_outside",
+            "gutter",
+            "font_size",
+            "line_height",
+            "font_family",
+            "code_font_family",
+            "running_head_length",
+        )
+        if getattr(args, name) is not None
     }
     try:
+        if args.trim is not None:
+            layout["trim_width"], layout["trim_height"] = book.PrintInterior.parse_trim(args.trim)
         written = book.build_book(
             site_dir=Path(args.site_dir),
             config_text=Path(args.config_file).read_text(encoding="utf-8"),
             output_dir=Path(args.output_dir),
             meta={k: v for k, v in meta.items() if v},
+            interior=book.PrintInterior(**layout),
         )
     except (book.BookError, OSError) as error:
         print(f"vibey-gh book: {error}", file=sys.stderr)
@@ -1577,7 +1600,49 @@ def main(argv: list[str] | None = None) -> int:
     bk.add_argument("--subtitle", default="")
     bk.add_argument("--publisher", default="")
     bk.add_argument("--description", default="")
-    bk.add_argument("--language", default="en")
+    bk.add_argument("--language", default="en", help="BCP 47 tag: <html lang>, xml:lang")
+    bk.add_argument(
+        "--edition",
+        default="",
+        help="folded into the derived EPUB identifier: a new edition is a new book",
+    )
+    bk.add_argument(
+        "--identifier",
+        default="",
+        help="the EPUB dc:identifier as given (e.g. urn:isbn:...); default derived and stable",
+    )
+    bk.add_argument("--date", default="", help="publication date YYYY-MM-DD (default: today)")
+    # The print interior's physical parameters (ADR-0018). Omitted, each is the interior's
+    # own default -- the standard KDP 6x9in paperback -- quoted from it in the help.
+    from vibey_gh import book
+
+    bk.add_argument(
+        "--trim",
+        help="trim size WIDTHxHEIGHT, bare numbers in inches, e.g. 5.5x8.5 or 148mmx210mm"
+        f" (default {book.DEFAULT_TRIM_WIDTH}x{book.DEFAULT_TRIM_HEIGHT})",
+    )
+    bk.add_argument(
+        "--gutter",
+        help="inside (binding) margin; KDP's minimum grows with page count: 24-150 pages"
+        " 0.375in, 151-300 0.5in, 301-500 0.625in, 501-700 0.75in, 701-828 0.875in"
+        f" (default {book.DEFAULT_GUTTER})",
+    )
+    for flag, default, what in (
+        ("--margin-top", book.DEFAULT_MARGIN_TOP, "top margin"),
+        ("--margin-bottom", book.DEFAULT_MARGIN_BOTTOM, "bottom margin"),
+        ("--margin-outside", book.DEFAULT_MARGIN_OUTSIDE, "outside (fore-edge) margin"),
+        ("--font-size", book.DEFAULT_FONT_SIZE, "body type size, bare numbers in pt"),
+        ("--line-height", book.DEFAULT_LINE_HEIGHT, "body leading"),
+        ("--font-family", book.DEFAULT_FONT_FAMILY, "body CSS font stack"),
+        ("--code-font-family", book.DEFAULT_CODE_FONT_FAMILY, "code CSS font stack"),
+    ):
+        bk.add_argument(flag, help=f"{what} (default {default})")
+    bk.add_argument(
+        "--running-head-length",
+        type=int,
+        help="characters of a chapter title kept in its running head"
+        f" (default {book.DEFAULT_RUNNING_HEAD_LENGTH})",
+    )
     bk.set_defaults(func=_book)
 
     lt = sub.add_parser(
