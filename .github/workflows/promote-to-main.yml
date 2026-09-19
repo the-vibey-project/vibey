@@ -80,7 +80,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey==1.1.0"
+            python -m pip install --quiet "vibey==1.3.0"
           fi
 
       - name: Promote

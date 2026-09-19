@@ -3,7 +3,7 @@
 without a database (real-DB behavior is covered separately against
 Postgres in tests/infrastructure/db/)."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -17,9 +17,53 @@ class FakeJobRepository:
     def __init__(self, jobs: list[JobRecord] | None = None) -> None:
         self._jobs: dict[UUID, JobRecord] = {j.id: j for j in (jobs or [])}
         self.calls: list[str] = []
+        # job id -> the job ids it depends on, as `enqueue_batch` resolved them.
+        self.dependencies: dict[UUID, tuple[UUID, ...]] = {}
 
     async def enqueue(self, request: EnqueueRequest) -> JobRecord:
-        job = JobRecord(
+        job = self._record(request)
+        self._jobs[job.id] = job
+        return job
+
+    async def enqueue_batch(self, requests: Sequence[EnqueueRequest]) -> tuple[JobRecord, ...]:
+        """All-or-nothing and idempotent per request, like the Postgres batch:
+        nothing lands until every request has resolved its dependency keys."""
+        self.calls.append("enqueue_batch")
+        by_key = {(job.project_id, job.idempotency_key): job for job in self._jobs.values()}
+        staged: dict[UUID, JobRecord] = {}
+        staged_dependencies: dict[UUID, tuple[UUID, ...]] = {}
+        records: list[JobRecord] = []
+        for request in requests:
+            depends_on = [*request.depends_on]
+            for key in request.depends_on_keys:
+                dependency = by_key.get((request.project_id, key))
+                if dependency is None:
+                    raise LookupError(f"depends_on_keys names unknown job {key!r}")
+                depends_on.append(dependency.id)
+            existing = by_key.get((request.project_id, request.idempotency_key))
+            if existing is not None:
+                records.append(existing)
+                continue
+            job = self._record(request)
+            by_key[(job.project_id, job.idempotency_key)] = job
+            staged[job.id] = job
+            staged_dependencies[job.id] = tuple(depends_on)
+            records.append(job)
+        self._jobs.update(staged)
+        self.dependencies.update(staged_dependencies)
+        return tuple(records)
+
+    async def list_for_cycle(
+        self, project_id: UUID, *, cycle: int, kind: str
+    ) -> tuple[JobRecord, ...]:
+        return tuple(
+            job
+            for job in self._jobs.values()
+            if job.project_id == project_id and job.cycle == cycle and job.kind == kind
+        )
+
+    def _record(self, request: EnqueueRequest) -> JobRecord:
+        return JobRecord(
             id=uuid4(),
             project_id=request.project_id,
             cycle=request.cycle,
@@ -41,8 +85,6 @@ class FakeJobRepository:
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
-        self._jobs[job.id] = job
-        return job
 
     async def claim(self, project_id: UUID, *, owner: str, lease: timedelta) -> JobRecord | None:
         self.calls.append("claim")

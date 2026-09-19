@@ -34,10 +34,12 @@ from vibey_gh.config import (
     BranchSyncConfig,
     ConversationConfig,
     DocumentationConfig,
+    EstimateConfig,
     GhConfig,
     GithubReleaseConfig,
     IssueAutomationConfig,
     MarketplaceConfig,
+    PlatformConfig,
     PrAutomationConfig,
     PrAutomationFallbackConfig,
     PrAutomationObservabilityConfig,
@@ -69,7 +71,7 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "fingerprint": {"sources", "text", "superseded_texts", "trailer"},
     "version": {"files", "content_paths", "code_paths"},
     "branches": {"integration", "release"},
-    "merge_train": {"owner", "trusted_authors", "restack_conflicts"},
+    "merge_train": {"owner", "trusted_authors", "restack_conflicts", "protected_paths"},
     "install": {"workflows", "pin_version", "union_merge_paths", "self_source", "fallback_package"},
     "pr_automation": _fields(PrAutomationConfig) | {"observability", "fallback"},
     "issue_automation": _fields(IssueAutomationConfig),
@@ -84,7 +86,11 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "repository_profile": _fields(RepositoryProfileConfig),
     "social_signals": _fields(SocialSignalsConfig) | {"entries"},
     "tidy": _fields(TidyConfig),
+    "platform": _fields(PlatformConfig),
     "workflow_names": _fields(WorkflowNamesConfig),
+    # `requirements` is one table per stage, and stage names are adopter-defined; the
+    # loader and `vibey_gh.feasibility` validate what is inside it, loudly.
+    "estimate": _fields(EstimateConfig),
     # free-form: per-branch tables validated by their own machinery
     "rulesets": None,
 }

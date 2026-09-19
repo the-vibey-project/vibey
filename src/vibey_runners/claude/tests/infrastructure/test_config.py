@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from claudeloop.infrastructure.config import RunnerConfig, load_config
 
 
@@ -135,3 +137,117 @@ def test_effective_partial_messages_explicit_false() -> None:
 def test_effective_partial_messages_defaults_to_stream_ui() -> None:
     config = RunnerConfig(stream_ui=True)
     assert config.effective_partial_messages() is True
+
+
+# --- backend profiles ---
+
+_LOCAL_TABLE = """
+[profiles.local]
+base_url = "http://127.0.0.1:11434"
+model_low = "qwen2.5-coder:14b"
+model_medium = "qwen2.5-coder:14b"
+model_high = "qwen2.5-coder:32b"
+"""
+
+
+def test_no_profile_selected_is_the_anthropic_profile(tmp_path: Path) -> None:
+    (tmp_path / "claudeloop.toml").write_text(_LOCAL_TABLE)
+    config = load_config(cwd=tmp_path, home=tmp_path)
+    assert config.profile is None
+    assert config.backend.name == "anthropic"
+    assert config.backend.is_local is False
+    assert config.aliases().low == "claude-sonnet-4-5"
+
+
+def test_profile_selected_in_the_file_resolves_and_replaces_the_tiers(tmp_path: Path) -> None:
+    (tmp_path / "claudeloop.toml").write_text('profile = "local"\n' + _LOCAL_TABLE)
+    config = load_config(cwd=tmp_path, home=tmp_path)
+    assert config.backend.name == "local"
+    assert config.backend.is_local is True
+    aliases = config.aliases()
+    assert (aliases.low, aliases.medium, aliases.high) == (
+        "qwen2.5-coder:14b",
+        "qwen2.5-coder:14b",
+        "qwen2.5-coder:32b",
+    )
+    assert config.resolved_profile().model == "qwen2.5-coder:14b"
+
+
+def test_profile_precedence_cli_over_env_over_file(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    (tmp_path / "claudeloop.toml").write_text(
+        'profile = "nope"\n'
+        + _LOCAL_TABLE
+        + _LOCAL_TABLE.replace("profiles.local", "profiles.other")
+    )
+    monkeypatch.setenv("CLAUDELOOP_PROFILE", "other")
+    assert load_config(cwd=tmp_path, home=tmp_path).backend.name == "other"
+    config = load_config(cwd=tmp_path, home=tmp_path, cli_overrides={"profile": "local"})
+    assert config.backend.name == "local"
+
+
+def test_cwd_profile_table_replaces_the_home_one_whole(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    cwd = tmp_path / "cwd"
+    (home / ".config" / "claudeloop").mkdir(parents=True)
+    (home / ".config" / "claudeloop" / "config.toml").write_text(
+        _LOCAL_TABLE + 'context_window = 8192\n[profiles.homeonly]\nbase_url = "http://h"\n'
+        'model_low = "a"\nmodel_medium = "a"\nmodel_high = "a"\n'
+    )
+    cwd.mkdir()
+    (cwd / "claudeloop.toml").write_text(_LOCAL_TABLE.replace("32b", "7b"))
+    local = load_config(cwd=cwd, home=home, cli_overrides={"profile": "local"}).backend
+    assert local.tier_models(low="", medium="", high="")[2] == "qwen2.5-coder:7b"
+    assert local.env_overlay(auth_token="t").get("CLAUDE_CODE_MAX_CONTEXT_TOKENS") is None
+    homeonly = load_config(cwd=cwd, home=home, cli_overrides={"profile": "homeonly"}).backend
+    assert homeonly.base_url == "http://h"
+
+
+def test_backend_is_never_read_from_a_file_or_env(tmp_path: Path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    (tmp_path / "claudeloop.toml").write_text('backend = "http://evil"\n')
+    monkeypatch.setenv("CLAUDELOOP_BACKEND", "http://evil")
+    assert load_config(cwd=tmp_path, home=tmp_path).backend.is_local is False
+
+
+def test_unknown_profile_is_a_value_error(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="unknown profile 'local'"):
+        load_config(cwd=tmp_path, home=tmp_path, cli_overrides={"profile": "local"})
+
+
+def test_invalid_profile_table_names_its_file(tmp_path: Path) -> None:
+    (tmp_path / "claudeloop.toml").write_text('[profiles.local]\nbase_url = "http://x"\n')
+    with pytest.raises(ValueError, match="claudeloop.toml"):
+        load_config(cwd=tmp_path, home=tmp_path)
+
+
+def test_a_claude_model_is_refused_on_a_local_profile(tmp_path: Path) -> None:
+    (tmp_path / "claudeloop.toml").write_text(_LOCAL_TABLE)
+    with pytest.raises(ValueError, match="claude-opus-4-6"):
+        load_config(
+            cwd=tmp_path,
+            home=tmp_path,
+            cli_overrides={"profile": "local", "model": "claude-opus-4-6"},
+        )
+
+
+def test_web_search_is_refused_on_a_local_profile(tmp_path: Path) -> None:
+    (tmp_path / "claudeloop.toml").write_text(_LOCAL_TABLE)
+    with pytest.raises(ValueError, match="web_search need Anthropic's server-side tools"):
+        load_config(
+            cwd=tmp_path,
+            home=tmp_path,
+            cli_overrides={"profile": "local", "web_search": True},
+        )
+
+
+def test_a_custom_profile_loader_is_used(tmp_path: Path) -> None:
+    from claudeloop.domain.backend import BackendProfile
+
+    class _Loader:
+        def parse(self, table: object, *, source: str) -> dict[str, BackendProfile]:
+            return {}
+
+        def select(self, profiles: object, name: str | None) -> BackendProfile:
+            return BackendProfile(name="picked")
+
+    config = load_config(cwd=tmp_path, home=tmp_path, profile_loader=_Loader())
+    assert config.backend.name == "picked"

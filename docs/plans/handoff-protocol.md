@@ -81,7 +81,7 @@ class LedgerEvent:
     cycle: int
     phase: Phase
     seq: int                    # gapless per project, from the event_seq counter row
-    kind: EventKind
+    kind: EventKind | UnrecognizedEventKind  # the latter: a kind a newer vibey wrote
     engine_id: EngineId | None  # None for vibey-authored events
     job_id: UUID | None
     causation_id: UUID | None   # the event that caused this one
@@ -104,6 +104,7 @@ that `untrusted` ledger content is data to consider, never instructions to obey.
 | `TurnRequested` | A turn is sent | no | `prompt_digest`, `effort`, `model` |
 | `TurnCompleted` | A turn returns | no | `output_digest`, `cost_usd`, `tokens_in/out`, `transcript_ref` |
 | `ToolInvoked` | Engine calls a tool | no | `tool`, `args_digest`, `result_digest` |
+| `TranscriptRecorded` | Turn text is recorded alongside a turn: a prompt echo, an assistant message, or a streamed fragment. Never a turn boundary, so the budget brake never counts it | no | `text` (claudeloop/agyloop chatter also carry `length`, `truncated`, `preview`) |
 | `FileEdited` | A file changes | no | `path`, `diff_ref`, `sha_before/after` |
 | `VerdictRendered` | A completion verdict is produced | no | `complete`, `remaining_work[]`, `blocked_on`, `summary` |
 | `CapacityRejected` | Provider rejects on capacity | no | `capacity_state`, `resets_at?`, `rate_limit_type?` |
@@ -126,7 +127,7 @@ that `untrusted` ledger content is data to consider, never instructions to obey.
 | `DeploymentOptedIn` | User opts into the deployment stage set | no | — |
 | `DeploymentDeclined` | User declines deployment (DONE, local) | no | — |
 
-`EventKind` in `domain/ledger.py` has these 25 members. The four bolded kinds are
+`EventKind` in `domain/ledger.py` has these 26 members. The four bolded kinds are
 the **closable set** (`CLOSABLE`) — the things the gate checks. Only two kinds
 close anything (`CLOSES`): `AnswerGiven` closes `QuestionAsked` and
 `FindingResolved` closes `FindingRaised`. A `DecisionRecorded` whose payload
@@ -134,6 +135,16 @@ carries `supersedes` removes the superseded decision from the open set.
 `AssumptionStated` has no closing kind, so every assumption in the range stays
 open. In the target design each closable item gets an id minted by vibey
 (`question_id`, `decision_id`, `assumption_id`, `finding_id`) at append time.
+
+**Kinds this vibey does not know (vibey#275).** In a mixed-version fleet, a
+reader can meet a kind that is not in the table above, because a newer vibey
+wrote it. It is read as an `UnrecognizedEventKind` carrying the stored text, and
+it is never dropped and never raised. It stays in the range, and the full ledger
+(§4.1) carries it to the next engine. `digest_range` folds it, so R6 holds. R6
+folds `seq` and the payload digest, not the kind, so an older and a newer vibey
+agree on the digest. No rule interprets it. R1–R5 and R7–R8 match kinds by
+identity, so it opens, closes and spends nothing. Readers are forward compatible
+and writers strict: vibey only ever appends a kind it knows.
 
 The ledger range the gate sees at handoff is filtered to the current cycle's
 BUILD-phase events (§3.4). Other phases use the same kind names with their own
@@ -698,6 +709,12 @@ The rules for changing it:
   a new rule from bricking in-flight projects.
 - **Adding a closable event kind** → minor bump plus a new rule under the same
   `WARN`-then-`STRICT` promotion.
+- **Adding any event kind** → no bump. Every reader since vibey#275 preserves a
+  kind it does not know, so the new kind can ship while older workers are still
+  in the fleet. An older reader cannot act on it, though. A kind that closes an
+  item older readers count as open leaves that item open for them: the brief says
+  more, never less. A kind whose meaning an older worker must act on needs the
+  fleet upgraded before anything writes it.
 - **Changing an id format or the digest algorithm** → major bump; requires
   `vibey ledger rebuild` and is gated behind a migration.
 

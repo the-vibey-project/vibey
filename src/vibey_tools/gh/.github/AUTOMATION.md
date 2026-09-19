@@ -47,7 +47,7 @@ events. A skipped stale run is expected. A current-head failure is never bypasse
 | `conventional-commits.yml` | Conventional Commits | Audits commit subjects and may safely normalize a linear same-repository topic branch with an exact-head lease. |
 | `documentation.yml` | Docs | Enforces the FOSS, human, agent, plugin-marketplace, Mermaid, SEO, crawler, and LLM documentation contract. |
 | `pr-automation.yml` | PR automation | Aggregates current-head scans, runs semantic review (with an opt-in self-hosted local-model fallback when the primary review returns no verdict), performs bounded repair or conflict resolution, persists lineage state, and publishes the merge gate. |
-| `automation-bootstrap.yml` | Automation bootstrap | Provides an explicitly authorized one-time path for merging a workflow repair when the older base workflow cannot repair itself. |
+| `automation-bootstrap.yml` | Automation bootstrap | Provides an explicitly authorized one-time path for merging a workflow repair when the older base workflow cannot repair itself; it waits on the integration ruleset's `required_checks` (less `ignored_checks` and the routed-around gate) and confines the change to automation-core paths under `[install] self_source`. |
 | `merge-train.yml` | Merge train | Squash-merges eligible PRs to `develop` and rebase-merges eligible promotion PRs to `main`. |
 | `promote-to-main.yml` | Promote | Opens or reuses the asynchronous `develop -> main` promotion PR after integration succeeds. |
 | `release.yml` | Release | Publishes development builds from `develop` to TestPyPI and production builds from `main` to PyPI. |
@@ -84,15 +84,18 @@ maintainability, architecture-boundary, and test-quality review. Forks are inspe
 never mutated with privileged credentials; required edits use a linked repository-owned
 replacement PR that preserves the contributor and exact head.
 
-A repository that sets `[pr_automation.fallback].enabled = true` and provides a
-self-hosted runner labelled `vibey-local-gh` gets one more line of defense: when the
-primary review above returns no verdict at all (never when it ran and found something), a
-`review-fallback` job sends the diff to a local Ollama-compatible model and calls
-`vibey-gh local-review`. It holds no repository secret, never checks out PR source, and
-`trusted_only` (default `true`) keeps fork PRs off that runner entirely. A clean local
-verdict passes the gate under the honestly weaker title `PR automation: gate (local
-fallback)`; `vibey-gh local-triage` is the equivalent for issue automation and always
-forces `needs_human=true`. See [Configuration](../docs/configuration.md) and
+With `[pr_automation.fallback].enabled = true` (the default) and a self-hosted runner
+labelled `vibey-local-gh` whose heartbeat is fresh, the review's diff half runs on that
+runner FIRST (sub-doctrine 8.a): a `review-sovereign` job sends the diff to a local
+Ollama-compatible model and calls `vibey-gh local-review`. It holds no repository secret,
+never checks out PR source, and `trusted_only` (default `true`) keeps fork PRs off that
+runner entirely. For a trusted author the local verdict carries `pass`, `summary` and
+`findings`, the paid review above answers only the documentation-contract judgments, and
+the gate names the lane behind each half; a local finding never starts an automated
+repair. For any other author the local verdict is held in reserve and read only when the
+paid review returns no verdict at all, under the honestly weaker title `PR automation:
+gate (local fallback)`. `vibey-gh local-triage` is the equivalent fallback for issue
+automation and always forces `needs_human=true`. See [Configuration](../docs/configuration.md) and
 [Threat model](../docs/threat-model.md).
 
 ## Autonomous issue solutions
@@ -215,7 +218,10 @@ to act on. See [Releases](../docs/releases.md).
 4. For missing secrets, permissions, billing, registry denial, unavailable services, or
    settings, correct the operator condition and redispatch.
 5. When a workflow bug blocks its own repair, use Automation bootstrap only with the exact
-   PR, exact head SHA, and explicit authorization.
+   PR, exact head SHA, and explicit authorization. It merges only when every gate in
+   `[rulesets.integration] required_checks` (less `[pr_automation] ignored_checks`) is
+   present and green on that head; if it names an absent gate, fix the configured list and
+   re-render rather than waiting for a check the repository does not produce.
 6. When the budget is exhausted, inspect retained runs and push a deliberate human fix to
    create a new lineage.
 
