@@ -45,6 +45,32 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   the backend pid that holds the lock, and a value that is not a usable number of seconds fails
   the start before the pool opens rather than falling back. `apply_migrations` remains as a
   façade with the default wait (#114)
+* **gh:** `vibey-gh promote` rewrites a reused promotion pull request's title and body from
+  the current derivation instead of leaving them as the run that opened it wrote them
+  (#235). #231 kept reading `chore(release): 0.8.0` and "5 file(s) differ" while it
+  proposed a 178-file 1.0.0. The body now opens with a `vibey-gh-promotion` record of the
+  version the pull request was opened at, says when that differs from the version it now
+  carries, and says the merge publishes nothing only when the version equals the release
+  branch's. An edit refused over Projects (classic) falls back to the REST endpoint; a
+  refresh that fails is a note, not a failed promotion.
+* **cluster:** `vibey doctor --cluster` passes a default chart install again. Since the one wheel
+  put every runner on `PATH` (ADR-0037), `engine-auth` judged all four paid engines in every pod
+  and failed the default `--provider scripted` install, which mounts no keys; `cluster-smoke`
+  deploys exactly that install but never runs the preflight, so CI did not notice. The check now
+  judges the engines the worker is told to use: `doctor --cluster` takes the worker's own
+  `--engines` and `--provider` (chart `worker.engines`, `worker.provider`), requires each of those
+  to be on `PATH` with an API key, and with neither reports, as a pass, which engines in the
+  worker's default pool have a key — so a default install says plainly that no engine-driven job
+  can run. Either flag without `--cluster` exits 2. The check and the sweep behind it are classes
+  with declared interfaces (ADR-0016)
+  ([#121](https://github.com/the-vibey-project/vibey/issues/121))
+* **docs:** the Kubernetes guide, runbooks 05 and 16, `values.yaml`'s header and ADR-0025's status
+  stop saying engines do not ship in the image; runbook 16's separate engines image is recorded as
+  moot and its remainder narrowed to Phase 0 (codexloop needs an external `codex`; `claudeloop
+  doctor` looks for `claude` on `PATH` only, not the copy `claude-agent-sdk` bundles). qwenloop's
+  orphaned `deploy/docker/Dockerfile` — built by nothing, keeping `pip`, no fixed uid — is deleted;
+  `docker run --entrypoint qwenloop <vibey image>` runs it
+  ([#121](https://github.com/the-vibey-project/vibey/issues/121))
 ### Features
 
 * **gh:** the book is a paperback interior, not a printed web page (#162). `book-print.html`
@@ -152,6 +178,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   fails the command with a clear message rather than answering a different comment. A review
   comment's briefing also carries the file, line and diff hunk it was written on (#145)
 * **agyloop:** `agyloop run` and `agyloop resume` exit 75 (`EXIT_WIND_DOWN`) with `Wound down:` when the run wound down on purpose, instead of `Run failed:` and exit 1. vibey's BUILD handler starts the no-loss handoff only on exit 75, so an agyloop wind-down could never reach it. The mapping lives once, in `agyloop/cli/run_outcome.py` behind `cli/interfaces/`, and the runner and CLI now share one `WIND_DOWN_REASON_PREFIX`. It is inert until agyloop's bootstrap enables a wind-down policy and wires the marker and stop-summary writers (#208)
+* **tests:** the chaos test counts *committed* executions (acks that returned `True`) and asserts 500 committed, none twice and none lost. It used to log every execution before the fenced ack and ignore the result, so on a loaded machine, where claim-to-ack outlives the 150 ms lease, at-least-once redelivery read as double execution. The raw count is still printed, and the lease is unchanged. `tests/infrastructure/db/conftest.py` and `tests/contracts/conftest.py` now read `VIBEY_TEST_DATABASE_URL` inside a fixture rather than at import, so `pytest tests/infrastructure/db -n 4` gives each worker its own database instead of one shared `vibey_test_main_main`. A serial run or an xdist controller now names its database per process (`vibey_test_main_<pid>_<hex>`), so parallel checkouts no longer terminate and drop each other's database (#262)
 * **gh:** `vibey-gh install` no longer fails with a traceback, after writing every file, on a machine without the GitHub CLI; the secret check degrades to the notice `gh not found; skipping secret/permission checks` (#264)
 * **gh:** `python -m vibey_gh` now runs the CLI; the package had no `__main__` module (#264)
 * **gh:** the docs and the config comment for `[issue_automation] fallback_enabled` now give its real default, `true`: #277 turned both local fallbacks on by default under sub-doctrine 8.a and left them saying "off" (#264)

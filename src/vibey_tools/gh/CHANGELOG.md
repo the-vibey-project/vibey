@@ -5,6 +5,27 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Fix `vibey-gh promote` reusing an open promotion pull request without writing anything
+  back (#235). It recomputed the version and the file count correctly and left the title
+  and body as the run that OPENED the pull request wrote them, so #231 read
+  `chore(release): 0.8.0` and "5 file(s) differ" while proposing a 178-file 1.0.0 — the
+  figures a human reads when deciding to approve a release. On reuse the pull request is
+  now read with its own `gh pr view N --json title,body` and, only when its words differ,
+  rewritten through the same `PromotionPullRequest.title()` the create path uses and a
+  body rendered from this run. The body opens with a
+  `<!-- vibey-gh-promotion:{"opened":…,"version":…} -->` record (read back with
+  `github_state.marker_pattern`/`parse_payload`; a pre-record promotion falls back to its
+  `chore(release): <version>` title, and anything else is unknown, never guessed), says
+  "Opened as `X`; now `Y`" with the derivation's reason when the version moved, and says
+  the merge publishes nothing ONLY when the version equals the release branch's — a
+  bumped promotion says what merging publishes and what the release branch is at, and an
+  unreadable release version is neither promised nor denied. `gh pr edit` refused over the
+  Projects (classic) sunset falls back to `gh api repos/{owner}/{repo}/pulls/N -X PATCH`;
+  any refresh failure is a note beginning `reusing #N`, and the promotion proceeds.
+  `Promotion` gains `reason`, `released` and `previous`. The class's seam, and the
+  `PromotionInterface` shape it reads a promotion through, are declared in
+  `vibey_gh/interfaces/promotion_pull_request_interface.py` (ADR-0016) — declared rather
+  than imported, because `promote` reaches `install` and the seam may not.
 - `vibey-gh book` prints a paperback interior, not a web page (#162). The print CSS mirrors
   its margins recto to verso with the gutter on the binding side, puts a folio in a
   bottom-centre margin box on every body page and none on the numberless front matter

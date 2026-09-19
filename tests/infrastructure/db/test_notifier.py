@@ -8,12 +8,10 @@ import pytest
 
 from vibey.infrastructure.db.notifier import PostgresJobReadyNotifier
 
-from .conftest import TEST_DATABASE_URL
-
 
 @pytest.fixture
-def notifier() -> PostgresJobReadyNotifier:
-    return PostgresJobReadyNotifier(TEST_DATABASE_URL)
+def notifier(database_url: str) -> PostgresJobReadyNotifier:
+    return PostgresJobReadyNotifier(database_url)
 
 
 async def test_wait_for_job_ready_returns_true_when_notified(

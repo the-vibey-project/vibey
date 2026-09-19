@@ -656,8 +656,11 @@ guards and the selector are pure functions under a 100% branch-coverage floor pe
 architectural layer, with property tests on the selector and the credits type. At the
 *chaos* level, concurrent workers process a job set against a real PostgreSQL while
 each randomly abandons claimed jobs mid-flight and a concurrent reaper reclaims the
-expired leases; the verified property is no double execution, no lost job, and every
-job terminal. At the *live* level, a runbook drives one project from design through
+expired leases; the verified property is no double commit, no lost job, and every
+job terminal. Execution itself is at-least-once: a worker that outlives its lease
+may run a job that another worker has reclaimed, but the acknowledgement is fenced
+on the lease owner, so the stale one is refused and exactly one commits per job.
+At the *live* level, a runbook drives one project from design through
 build and review to local completion on two paid engines, `claudeloop` and
 `agyloop`, including a forced rotation between them. Live runs over the other
 engines rest today on a scripted-binary conformance suite that asserts each runner's
