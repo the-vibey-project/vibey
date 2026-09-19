@@ -157,3 +157,72 @@ def test_parse_duration_from_now_returns_none_for_non_matching_pattern() -> None
 
     assert _parse_duration_from_now("30m") is None
     assert _parse_duration_from_now("abc") is None
+
+
+# ── claudeloop's real capacity shape, and its backend misconfiguration ───────
+
+
+@pytest.mark.parametrize("engine_id", [EngineId.CLAUDELOOP, EngineId.CLAUDELOOP_LOCAL])
+@pytest.mark.parametrize(
+    "name, expected",
+    [
+        ("CreditsExhausted", CreditsExhausted),
+        ("WindowExhausted", WindowExhausted),
+        ("AuthenticationFailed", AuthenticationFailed),
+        ("BackendMisconfigured", AuthenticationFailed),
+        ("Available", Available),
+    ],
+)
+def test_claudeloop_capacity_is_read_as_the_class_name_it_really_writes(
+    engine_id: EngineId, name: str, expected: type
+) -> None:
+    """claudeloop's runner writes `"capacity": "CreditsExhausted"` -- the class name --
+    on `turn.completed`. The classifier only understood a mapping with a `state`, so
+    every real payload read as Available, credits exhaustion included."""
+    assert isinstance(classify_capacity(engine_id, {"capacity": name}), expected)
+
+
+def test_a_capacity_name_claudeloop_never_wrote_is_available() -> None:
+    assert isinstance(classify_capacity(EngineId.CLAUDELOOP, {"capacity": "Mystery"}), Available)
+
+
+def test_a_credits_class_name_still_never_carries_a_resets_at() -> None:
+    state = classify_capacity(EngineId.CLAUDELOOP_LOCAL, {"capacity": "CreditsExhausted"})
+    assert isinstance(state, CreditsExhausted)
+    assert not hasattr(state, "resets_at")
+
+
+def test_a_misconfigured_backend_is_terminal_and_names_its_reason() -> None:
+    """Waiting fixes nothing here, so never WindowExhausted; and it is not a credits
+    event, so never CreditsExhausted. The same terminal state qwenloop's
+    `configuration_error` maps to."""
+    state = classify_capacity(
+        EngineId.CLAUDELOOP_LOCAL,
+        {
+            "capacity": {
+                "state": "backend_misconfigured",
+                "reason": "unreachable",
+                "detail": "Connection refused",
+            }
+        },
+    )
+
+    assert state == AuthenticationFailed(
+        detail="backend misconfigured: unreachable: Connection refused"
+    )
+
+
+def test_a_misconfigured_backend_without_detail_still_says_what_it_is() -> None:
+    state = classify_capacity(
+        EngineId.CLAUDELOOP, {"capacity": {"state": "backend_misconfigured", "reason": None}}
+    )
+
+    assert state == AuthenticationFailed(detail="backend misconfigured")
+
+
+def test_exit_78_is_the_engines_configuration_not_the_work() -> None:
+    assert attribute_failure(78, "backend misconfigured (unreachable)") is FailureClass.ENGINE
+
+
+def test_a_failing_test_suite_still_wins_over_exit_78() -> None:
+    assert attribute_failure(78, "FAILED tests/test_x.py::test_y") is FailureClass.WORK

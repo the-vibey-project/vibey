@@ -28,7 +28,8 @@ sources = [
 #
 # `pyproject.toml` is in `code_paths` because the root manifest now decides what ships --
 # which packages, which console scripts, which extras -- so a change confined to it must
-# still reach a release. Precedent: src/vibey_tools/bootstrap/.vibey-gh.toml.
+# still reach a release. Precedent: vibey-bootstrap's own standalone .vibey-gh.toml, inert
+# here and removed under #189 (`git show 4e9adf18:src/vibey_tools/bootstrap/.vibey-gh.toml`).
 [version]
 # CITATION.cff is here because GitHub renders it as "Cite this repository" and citation
 # managers read it directly, so it is the most visible number the project has -- and it
@@ -60,6 +61,20 @@ release     = "main"
 [merge_train]
 owner           = "adammatthewsteinberger"
 trusted_authors = ["adammatthewsteinberger", "claude[bot]", "github-actions[bot]", "vibey[bot]"]
+# The protected paths (#213): the tests that prove vibey works, which a build must never
+# weaken on its own say-so (docs/plans/implementation-plan.md, "Bootstrapping"). A pull
+# request touching one is reported "needs a human merge" and never merged by the train --
+# whose `--admin` fallback would otherwise bypass the code-owner review that
+# `require_code_owner_review` below asks GitHub for. The same list, anchored with `/`, is
+# .github/CODEOWNERS; tests/meta/test_protected_paths_agree.py keeps the two identical.
+protected_paths = [
+  "tests/domain/test_noloss*.py",
+  "tests/domain/test_briefing.py",
+  "tests/infrastructure/db/test_chaos.py",
+  "tests/system/test_delivery_stage_set.py",
+  "tests/live/**",
+  ".github/CODEOWNERS",
+]
 
 [install]
 # This repository vendors the tooling at src/vibey_tools/gh. Declared rather than
@@ -105,9 +120,17 @@ enabled = true
 # OrganizationAdmin plus RepositoryRole:5 (admin): the merge train needs a seat that can
 # land a green PR, and a ruleset the automation cannot satisfy is a ruleset somebody
 # switches off.
+#
+# The no-loss lane is the second check: ci.yml's job of that exact name runs the no-loss
+# property suite at the 10,000 examples the definition of done asks for (#213). `gates`
+# runs the same tests at Hypothesis' default 100, which is a smoke test, not the claim.
+# This list also renders into automation-bootstrap.yml, so re-run `vibey-gh install`
+# after changing it.
 [rulesets.integration]
-required_checks  = ["gates"]
+required_checks  = ["gates", "No-loss property suite (10,000 examples)"]
 required_approvals = 1
+# The owner in .github/CODEOWNERS must approve a change to a protected path.
+require_code_owner_review = true
 bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
 
 # The queue exists because a green pull request is not a green merge: its checks ran
@@ -124,8 +147,11 @@ enabled = true
 # main additionally pins the lock: every other CI job `needs` the uv-lock job, so a release
 # branch that drifts there is a release branch whose gates never ran.
 [rulesets.release]
-required_checks  = ["gates", "uv.lock is in sync with pyproject.toml"]
+required_checks  = [
+  "gates", "No-loss property suite (10,000 examples)", "uv.lock is in sync with pyproject.toml",
+]
 required_approvals = 1
+require_code_owner_review = true
 bypass_actors    = ["OrganizationAdmin", "RepositoryRole:5"]
 
 # Declared and off, rather than absent. Promotion is one controlled rebase of develop into

@@ -1,5 +1,45 @@
 # Changelog
 
+## [Unreleased]
+
+### Features
+
+* **backend profiles:** `--profile NAME` / `CLAUDELOOP_PROFILE` selects a `[profiles.NAME]`
+  table in `claudeloop.toml` or `~/.config/claudeloop/config.toml`. A profile with
+  `base_url` runs against Ollama or any Anthropic-compatible server for free: the paid
+  `ANTHROPIC_API_KEY` is blanked, `claude-*` ids and web search / deep research are
+  refused, every tier must be named, cost is recorded as $0 while token counts are kept,
+  `--max-budget-usd` and `--effort` are not forwarded, and the capacity probe talks to the
+  same backend as the turns. Keys: `base_url`, `auth_token`, `auth_token_env`,
+  `model_low` / `model_medium` / `model_high`, `small_fast_model`, `subagent_model`,
+  `context_window`, `max_output_tokens`, `cost_mode`, `pass_effort`,
+  `disable_nonessential_traffic`, `cli_path`, `extra_env`. See
+  [the local-backend guide](docs/guides/local-backend.md) (the-vibey-project/vibey#236)
+* **capacity:** `BackendMisconfigured` — a terminal capacity state for a backend that
+  cannot serve the run as configured (unreachable, model not found, model failed to load,
+  or a context window too small for Claude Code's prompt — "Prompt is too long").
+  `run` and `resume` exit 78 for it. A local HTTP 503 (queue full) is
+  `WindowExhausted(rate_limit_type="local")` and waits
+* **doctor:** `--profile NAME`; for a local profile it checks the token resolves, the
+  endpoint answers, every model the profile names is present, and each tier answers a
+  one-tool request with a real `tool_use` block (`backend-tools`)
+* **completion:** `done_marker_fallback` (profile key; off on a local backend) — when off,
+  only a structured verdict can complete a run. Found live: a model that writes its tool
+  calls as text typed the done marker and "completed" a task it never did
+* **run meta:** `meta.json` records `backend` and `profile`; `resume` refuses a session
+  last run against a different backend, and a live local run refuses `claudeloop model
+  claude-*`, `web-search` and `research`
+
+### Bug Fixes
+
+* **resume:** exits 75 on a wind-down, like `run`, instead of reporting a failure (exit 1)
+* **doctor:** falls back to the CLI bundled with claude-agent-sdk when `claude` is not on
+  `PATH`, for the version, login and MCP checks alike (the-vibey-project/vibey#121, S1b)
+* **classify:** Claude Code's `model_not_found` error ends the run (exit 78) instead of
+  being read as `Available` and re-sent every turn
+* **completion:** the empty-turn heuristic also looks at output tokens, so a zero-cost turn
+  that only called tools is not counted as an empty response
+
 ## [0.6.1](https://github.com/the-vibey-project/claudeloop/compare/claudeloop-v0.6.0...claudeloop-v0.6.1) (2026-08-20)
 
 

@@ -177,7 +177,10 @@ the server-side half of the provenance rule — backstopping the pre-push hook, 
 in a clone and can be skipped with `--no-verify` or simply never installed. A promotion PR
 from `develop` into `main` checks provenance without rewriting or re-auditing
 already-admitted history; an ordinary PR checks only the commits it adds, via `--commits
-BASE_SHA..HEAD`.
+BASE_SHA..HEAD`. A PR counts as a promotion only when its head branch belongs to this
+repository (`github.event.pull_request.head.repo.full_name` equals `github.repository`,
+both passed through `env:`). A fork PR from a branch that happens to be named `develop` is
+audited commit by commit like any other.
 
 ## Docs (documentation contract and maintenance)
 
@@ -219,8 +222,9 @@ repair-attempt budget is exhausted.
 `review-fallback` runs only when `[pr_automation.fallback].enabled` is set, the primary
 `review` job produced no verdict at all (not a review that ran and found something), the
 event is not a fork pull request (`trusted_only`), and the run is not a dry run. Unlike
-every other job in this workflow it targets a distinct `[self-hosted, vibey-local-gh]`
-runner rather than `ubuntu-latest`, and holds only `contents: read` — no secret, and no
+every other job in this workflow it targets a distinct `[self-hosted, <runner_label>]`
+runner (the label is `[pr_automation.fallback] runner_label`, default `vibey-local`)
+rather than `ubuntu-latest`, and holds only `contents: read` — no secret, and no
 token capable of mutating the repository. It fetches the exact-head diff with `gh pr diff`,
 falling back to a local merge-base reconstruction when GitHub's diff API refuses a pull
 request beyond roughly 300 changed files, then runs `vibey-gh local-review` against an

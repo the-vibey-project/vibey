@@ -49,7 +49,7 @@ in one vendor's chat session.
 | Runs on | macOS / Linux, local. No cloud control plane required. |
 | Language | Python 3.12+ |
 | Queue | PostgreSQL (`FOR UPDATE SKIP LOCKED`) |
-| Engines | [`claudeloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude), [`codexloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex), [`cursorloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor), [`agyloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy), plus the opt-in [`qwenloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) — a local standby engine and sovereign DESIGN provider (ADR-0015, ADR-0027). All five ship inside the `vibey` distribution ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)). |
+| Engines | [`claudeloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude), [`codexloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex), [`cursorloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor), [`agyloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy), plus the opt-in [`qwenloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) — a local engine and the sovereign DESIGN provider — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038). All five runners ship inside the `vibey` distribution ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)). |
 | State dir | `.vibey/` |
 | Env prefix | `VIBEY_` |
 | Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |
@@ -79,11 +79,15 @@ to the database for a project, and `--cluster` runs the in-cluster preflight
 (DSN, workspace, secrets, database, migrations) instead.
 
 `qwenloop` installs with everything else; what is opt-in is the *feature*, not
-the install. With `VIBEY_FEATURE_QWENLOOP=1` set, the worker adds it as the
-standby engine and `vibey doctor` lists it; `vibey doctor` also honours `[features] qwenloop = true`
-in a `./vibey.toml`. Separately, `vibey worker --provider qwenloop` (or
-`vibey work --provider qwenloop`) uses it for the DESIGN interview; BUILD
-decomposition under that provider stays scripted.
+the install. Two local engines have a switch each: `VIBEY_FEATURE_QWENLOOP=1`
+and `VIBEY_FEATURE_CLAUDELOOP_LOCAL=1` (claudeloop on a local backend profile).
+A switched-on local engine is **preferred first** for BUILD — a paid engine runs
+only when no local one is eligible — and `vibey doctor` lists it; `vibey doctor`
+also honours `[features] qwenloop = true` / `claudeloop_local = true` in a
+`./vibey.toml`. With a local engine on and no `--provider`, `vibey work` and
+`vibey worker` run DESIGN and DECOMPOSE on the sovereign providers too (ADR-0038).
+`VIBEY_OLLAMA_URL` is the one endpoint setting; the
+[local models guide](guides/local-models-ollama.md) has the Ollama recipe.
 
 To add deterministic, budgeted context packets from the `vibey-skills`
 marketplace, enable it per project — `vibey-skills` ships in the same
@@ -132,9 +136,10 @@ vibey answer <gate-id> --choice local_only   # decline deployment → DONE (loca
 ```
 
 `vibey doctor --record` needs a project to record against, so run it after
-`vibey new`. `vibey worker` defaults to `--provider scripted`, a test double;
-pass `--provider claudeloop` for a live DESIGN interview and BUILD
-decomposition (`qwenloop` gives a live, local DESIGN interview only). No
+`vibey new`. `vibey worker` defaults to `--provider scripted`, a test double —
+or to `--provider qwenloop` when a local engine is switched on; pass
+`--provider claudeloop` for a live, paid DESIGN interview and BUILD
+decomposition, or `--provider qwenloop` for the same on a local model. No
 command prints open gate ids yet; read them from the `human_gate` table:
 
 ```bash
@@ -171,10 +176,12 @@ Every command's flags and defaults are in the
 `[qwenloop]` — is fully implemented and unit-tested in
 `domain/config.py`/`infrastructure/config_loader.py`, with defaults and an
 example file in the [configuration reference](reference/configuration.md).
-**Only one key is read at runtime today:** `[features] qwenloop = true`.
-`vibey doctor` reads it from `./vibey.toml` in the current directory, and the
-worker reads the same key from the project's stored config (which no CLI flag
-sets yet); `VIBEY_FEATURE_QWENLOOP` overrides both. No other table is read by
+**Only the local-engine keys are read at runtime today:** `[features] qwenloop`,
+`[features] claudeloop_local` and `[engines.claudeloop_local]`. `vibey doctor`
+reads them from `./vibey.toml` in the current directory, and the worker reads the
+same keys from the project's stored config (which no CLI flag sets yet);
+`VIBEY_FEATURE_QWENLOOP`, `VIBEY_FEATURE_CLAUDELOOP_LOCAL` and
+`VIBEY_CLAUDELOOP_LOCAL_PROFILE` override them. No other table is read by
 `cli/`, `bootstrap.py`, the worker, or the operator —
 `infrastructure/config_loader.py` is exercised only by its tests — so setting
 any other key has no effect. Treat the rest the same as
@@ -272,12 +279,13 @@ things those runners deliberately do not do:
 | Document | What's in it |
 |---|---|
 | [Architecture map](https://github.com/the-vibey-project/vibey/blob/main/docs/project.mmd) | Comprehensive Mermaid diagram: every layer, the six phases, the ledger/handoff data flow, the security boundary, and the release channels |
-| [Research paper](https://the-vibey-project.github.io/vibey/main/paper/) · [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf) | *Ledger-Mediated Orchestration: Vendor-Independent Autonomous Software Delivery over a Pool of Coding Agents* — the ledger invariant, queue semantics, gate soundness, and vendor independence, stated formally |
+| [Research paper](https://the-vibey-project.github.io/vibey/main/paper/) · [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf) | *Ledger-Mediated Orchestration: Vendor-Independent Autonomous Software Delivery over a Pool of Coding Agents* — the ledger invariant, queue semantics and gate soundness, the engine family, the exact-head release calculus, and a measured production-rate regularity with its falsification conditions: the family's one paper |
 | [The book](https://the-vibey-project.github.io/vibey/main/book.pdf) · [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) · [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html) | Every page of the documentation site, in reading order, as one downloadable book |
 | [CLI reference](reference/cli.md) | Every command, subcommand, flag, and default |
 | [Configuration reference](reference/configuration.md) | The full `vibey.toml` schema, with defaults and an example file |
 | [Kubernetes guide](guides/kubernetes.md) | Container, Helm chart, KEDA autoscaling, and its own troubleshooting section |
 | [Greeter live-demo runbook](guides/greeter-live-demo.md) | A full paid run, end to end, with the zero-touch contracts |
+| [What gets published](guides/ledger-publication.md) | What `vibey ledger export` publishes of a ledger, what it withholds, and how it counts both |
 | [Expansion runbooks](https://github.com/the-vibey-project/vibey/blob/main/docs/runbooks/expansion/) | 21 workstreams: JIRA, more clouds, Kubernetes server mode, clients, store submissions, … |
 | [Architecture & roadmap](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/architecture-and-roadmap.md) | The master design: context, containers, layers, phases, risks, milestones |
 | [Domain model](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/domain-model.md) | Every value object, ADT, and invariant in `domain/` |
@@ -287,7 +295,7 @@ things those runners deliberately do not do:
 | [Phase protocols](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/main/CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (37 ADRs) |
+| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (38 ADRs) |
 
 ## Status
 
@@ -388,7 +396,7 @@ exist.
 | codexloop | [`src/vibey_runners/codex`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) | The same design retargeted onto OpenAI Codex |
 | cursorloop | [`src/vibey_runners/cursor`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) | The same design retargeted onto Cursor |
 | agyloop | [`src/vibey_runners/agy`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) | The same design retargeted onto Google Antigravity / Gemini |
-| qwenloop | [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) | The same design on a local Qwen 2.5 Coder model (llama.cpp or vLLM) — the opt-in standby engine and sovereign DESIGN provider |
+| qwenloop | [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) | The same design on a local Qwen 2.5 Coder model (llama.cpp or vLLM) — an opt-in local engine, preferred first when switched on, and the sovereign DESIGN provider |
 | vibey-skills | [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) | The Agent Skills marketplace (a Claude Code plugin marketplace) and its context packets |
 | vibey-gh | [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) | Provenance fingerprints, derived version bumps, a merge train, and branch realignment; it owns vibey's own release (ADR-0028) |
 | vibey-bootstrap | [`src/vibey_tools/bootstrap`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) | Azure bootstrap library for App Configuration, Key Vault, and App Insights integration |

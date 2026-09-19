@@ -1,5 +1,8 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import asyncio
+import io
+import json
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -8,7 +11,8 @@ from typer.testing import CliRunner
 from qwenloop import __version__
 from qwenloop.cli.app import app
 from qwenloop.domain.model import Backend, RunState, RunStatus, ServerInfo
-from qwenloop.infrastructure.profiles import PORTABLE
+from qwenloop.infrastructure.inference import OpenAICompatServer
+from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE
 
 runner = CliRunner()
 
@@ -413,3 +417,280 @@ def test_storm_continues_past_unavailable_repo(
     assert "a\tunavailable\tno runtime" in result.stdout
     assert "b\tunavailable\tno runtime" in result.stdout
     assert "qwenstorm complete: 0/2 repos completed" in result.stdout
+
+
+# --- openai-compat endpoint mode (Ollama first) -------------------------------------------
+
+OLLAMA_MODELS = b'{"object": "list", "data": [{"id": "qwen2.5-coder:14b"}]}'
+
+
+class FakeHttp:
+    """`urlopen` for an Ollama-shaped endpoint. No socket is ever opened."""
+
+    def __init__(self, models: bytes | BaseException = OLLAMA_MODELS) -> None:
+        self.models = models
+        self.urls: list[str] = []
+
+    def __call__(self, request, timeout):  # type: ignore[no-untyped-def]
+        del timeout
+        self.urls.append(request.full_url)
+        if isinstance(self.models, BaseException):
+            raise self.models
+        return _Body(self.models)
+
+
+class _Body(io.BytesIO):
+    status = 200
+
+
+class RecordingRunner:
+    """Stands in for AutonomousRunner and remembers what each run was handed."""
+
+    calls: list[dict[str, object]] = []
+
+    def __init__(self, server, *_args):  # type: ignore[no-untyped-def]
+        self.server = server
+
+    async def run(self, **kwargs):  # type: ignore[no-untyped-def]
+        RecordingRunner.calls.append({**kwargs, "server": self.server})
+        return RunState(str(kwargs["run_id"]), status=RunStatus.COMPLETED, turns=2)
+
+
+@pytest.fixture
+def recording_runner(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
+    RecordingRunner.calls = []
+    monkeypatch.setattr("qwenloop.cli.app.AutonomousRunner", RecordingRunner)
+    return RecordingRunner.calls
+
+
+def _no_managed_servers(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Forbidden:
+        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+            raise AssertionError("an endpoint run must never build a managed server")
+
+    monkeypatch.setattr("qwenloop.cli.app.LlamaCppServer", Forbidden)
+    monkeypatch.setattr("qwenloop.cli.app.VllmServer", Forbidden)
+
+
+def test_run_attaches_to_the_endpoint_named_by_flag(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, recording_runner: list[dict[str, object]]
+) -> None:
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    http = FakeHttp()
+    monkeypatch.setattr("urllib.request.urlopen", http)
+    _no_managed_servers(monkeypatch)
+    result = runner.invoke(
+        app,
+        ["run", str(plan), "--cwd", str(tmp_path), "--base-url", "http://127.0.0.1:11434/v1"],
+    )
+    assert result.exit_code == 0, result.output
+    call = recording_runner[0]
+    info = call["server_info"]
+    assert isinstance(call["server"], OpenAICompatServer)
+    assert isinstance(info, ServerInfo)
+    assert (info.backend, info.model, info.owned) == (
+        Backend.OPENAI_COMPAT,
+        "qwen2.5-coder:14b",
+        False,
+    )
+    assert http.urls == ["http://127.0.0.1:11434/v1/models"]
+
+
+def test_run_attaches_through_the_environment_with_config_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    isolated_settings: Path,
+    recording_runner: list[dict[str, object]],
+) -> None:
+    isolated_settings.write_text(
+        'model = "qwen2.5-coder:14b"\nmax_turns = 7\ncontext_window = 8192\n', encoding="utf-8"
+    )
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "http://gpu-box:11434/v1")
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    _no_managed_servers(monkeypatch)
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    assert runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)]).exit_code == 0
+    call = recording_runner[0]
+    assert call["max_turns"] == 7
+    profile = call["profile"]
+    assert profile.context_window == 8192  # type: ignore[attr-defined]
+    assert profile.repository == "http://gpu-box:11434/v1"  # type: ignore[attr-defined]
+
+
+def test_run_flag_beats_config_for_max_turns(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    isolated_settings: Path,
+    recording_runner: list[dict[str, object]],
+) -> None:
+    isolated_settings.write_text("max_turns = 7\n", encoding="utf-8")
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            str(plan),
+            "--cwd",
+            str(tmp_path),
+            "--backend",
+            "openai-compat",
+            "--max-turns",
+            "96",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert recording_runner[0]["max_turns"] == 96
+
+
+def test_run_fails_loudly_when_the_endpoint_lacks_the_model(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp(b'{"data": [{"id": "llama3:8b"}]}'))
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    result = runner.invoke(
+        app, ["run", str(plan), "--cwd", str(tmp_path), "--base-url", "http://h:1/v1"]
+    )
+    assert result.exit_code == 1
+    assert "qwenloop unavailable: model 'qwen2.5-coder:14b' is not served" in result.stderr
+    assert "ollama pull qwen2.5-coder:14b" in result.stderr
+
+
+def test_bad_configuration_exits_2_naming_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "file:///etc/passwd")
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    result = runner.invoke(app, ["run", str(plan)])
+    assert result.exit_code == 2
+    assert "qwenloop configuration" in result.output
+    assert "base_url must be an http" in result.output
+
+
+def test_storm_sweeps_through_the_same_endpoint(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, recording_runner: list[dict[str, object]]
+) -> None:
+    (tmp_path / "a" / ".git").mkdir(parents=True)
+    (tmp_path / "b" / ".git").mkdir(parents=True)
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    _no_managed_servers(monkeypatch)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_issues", lambda _owner, _repo: None)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: None)
+    result = runner.invoke(
+        app,
+        ["run", "--storm", "--repos-root", str(tmp_path), "--repo", "a", "--repo", "b"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "qwenstorm complete: 2/2 repos completed" in result.stdout
+    backends = {call["server_info"].backend for call in recording_runner}  # type: ignore[attr-defined]
+    assert backends == {Backend.OPENAI_COMPAT}
+
+
+def test_doctor_passes_when_the_endpoint_serves_the_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setattr("shutil.which", lambda _name: None)  # no llama-server, no vllm
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 0, result.output
+    assert "backend: openai-compat (an OpenAI-compatible endpoint is configured)" in result.stdout
+    assert "endpoint: http://127.0.0.1:11434/v1" in result.stdout
+    assert "model: qwen2.5-coder:14b ok" in result.stdout
+
+
+def test_doctor_fails_loudly_when_the_endpoint_is_down(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("shutil.which", lambda _name: "/bin/tool")  # binaries do not rescue it
+    monkeypatch.setattr(
+        "urllib.request.urlopen", FakeHttp(urllib.error.URLError("Connection refused"))
+    )
+    result = runner.invoke(app, ["doctor", "--backend", "openai-compat"])
+    assert result.exit_code == 1
+    assert "endpoint: http://127.0.0.1:11434/v1" in result.stdout
+    assert "model: qwen2.5-coder:14b unavailable" in result.stdout
+    assert "qwenloop doctor: openai-compat endpoint" in result.stderr
+    assert "is unreachable (Connection refused)" in result.stderr
+
+
+def test_doctor_fails_loudly_when_the_model_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    result = runner.invoke(
+        app, ["doctor", "--base-url", "http://h:1/v1", "--model", "qwen2.5-coder:32b"]
+    )
+    assert result.exit_code == 1
+    assert "'qwen2.5-coder:32b' is not served by http://h:1/v1" in result.stderr
+
+
+def test_server_status_reports_the_endpoint_without_its_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("QWENLOOP_API_KEY", "sk-very-secret")
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    result = runner.invoke(app, ["server", "status", "--base-url", "http://h:1/v1"])
+    assert result.exit_code == 0
+    status = json.loads(result.stdout)
+    assert status["backend"] == "openai-compat"
+    assert status["healthy"] is True
+    assert status["owned"] is False
+    assert status["token"] == "<redacted>"
+    assert "sk-very-secret" not in result.stdout
+
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp(urllib.error.URLError("down")))
+    down = json.loads(
+        runner.invoke(app, ["server", "status", "--base-url", "http://h:1/v1"]).stdout
+    )
+    assert down["healthy"] is False
+
+
+def test_server_status_shows_a_managed_servers_own_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "x", True, True, 1, "per-launch")
+
+    class Server:
+        def inspect(self, _profile):  # type: ignore[no-untyped-def]
+            return info
+
+    monkeypatch.setattr("qwenloop.cli.app.LlamaCppServer", Server)
+    status = json.loads(runner.invoke(app, ["server", "status"]).stdout)
+    assert status["token"] == "per-launch"
+
+
+def test_server_start_checks_the_endpoint_instead_of_spawning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    _no_managed_servers(monkeypatch)
+    result = runner.invoke(app, ["server", "start", "--base-url", "http://h:1/v1"])
+    assert result.exit_code == 0, result.output
+    started = json.loads(result.stdout)
+    assert (started["backend"], started["healthy"], started["pid"]) == ("openai-compat", True, None)
+
+
+def test_server_start_honours_vllm_and_the_configured_timeout_and_window(
+    monkeypatch: pytest.MonkeyPatch, isolated_settings: Path
+) -> None:
+    isolated_settings.write_text(
+        "startup_timeout_seconds = 11\ncontext_window = 16384\n", encoding="utf-8"
+    )
+    seen: dict[str, object] = {}
+    info = ServerInfo(Backend.VLLM, NVIDIA_BF16.name, "x", True, False, 5, "t")
+
+    class Vllm:
+        async def start(self, profile):  # type: ignore[no-untyped-def]
+            seen["profile"] = profile
+            return info
+
+    async def ready(_server, value, *, timeout_seconds):  # type: ignore[no-untyped-def]
+        seen["timeout"] = timeout_seconds
+        return value
+
+    monkeypatch.setattr("qwenloop.cli.app.VllmServer", Vllm)
+    monkeypatch.setattr("qwenloop.cli.app._wait_until_ready", ready)
+    result = runner.invoke(app, ["server", "start", "--backend", "vllm"])
+    assert result.exit_code == 0, result.output
+    assert seen["timeout"] == 11
+    assert seen["profile"].name == NVIDIA_BF16.name  # type: ignore[attr-defined]
+    assert seen["profile"].context_window == 16384  # type: ignore[attr-defined]

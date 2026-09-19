@@ -70,12 +70,14 @@ names — the tree ships as one `vibey` distribution (ADR-0037).
 - **Engines:** claudeloop, codexloop, cursorloop, agyloop — the paid pool,
   rotated per BUILD job via smooth weighted round robin
   (`SelectingEngineProvider` → `EngineSelector` → `domain/rotation.select()`,
-  ADR-0005). `qwenloop` is a fifth, default-off local engine
-  (`VIBEY_FEATURE_QWENLOOP` or `[features] qwenloop`). In BUILD rotation it is a
-  standby, considered only when enabled and no eligible paid engine is
-  available (ADR-0015). For DESIGN it is the sovereign provider
-  (`vibey worker --provider qwenloop`, ADR-0027), the preferred path under
-  sub-doctrine 8.a.
+  ADR-0005). Two default-off local engines — `qwenloop`
+  (`VIBEY_FEATURE_QWENLOOP` or `[features] qwenloop`) and `claudeloop-local`, the
+  claudeloop binary on a local backend profile (`VIBEY_FEATURE_CLAUDELOOP_LOCAL`
+  or `[features] claudeloop_local`) — are **preferred first** under sub-doctrine
+  8.a: SWRR runs within the LOCAL tier, and the paid pool is the fallback when no
+  local engine is eligible (ADR-0038, amending ADR-0015). With a local engine on
+  and no `--provider`, DESIGN and DECOMPOSE run on the sovereign providers
+  (ADR-0027, ADR-0038). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
 - **Handoff:** when `CreditsExhausted`, vibey verifies brief against no-loss
   gate (10 rules: R1–R10), writes full ledger to receiving worktree, seeds
   next engine.
@@ -114,14 +116,17 @@ uv run pip-audit
 (cd src/vibey_tools/gh && pip install -e ".[dev]" && python -m pytest -q)
 (cd src/vibey_tools/skills && pip install -e . && python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests)
 (cd src/vibey_tools/bootstrap && pip install -e ../gh && pip install -e ".[test,all]" && pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term)
+# ...and on each tenant's floor row, its own static gates (the row's `static` key), e.g.
+(cd src/vibey_runners/claude && pip install -e ../common && pip install -e ".[dev]" && mypy --strict src/claudeloop && lint-imports && bandit -q -r src/claudeloop)
 
 # CI job `tools-lint`: vibey-gh's own linters
 (cd src/vibey_tools/gh && python -m black --check vibey_gh test && isort --check-only vibey_gh test && python -m mypy vibey_gh)
 ```
 
-CI (`.github/workflows/ci.yml`) also runs `image` (amd64 and arm64 builds with
-four image contracts) and `cluster-smoke` (Helm install on minikube with four
-cluster contracts). `tools-lint` additionally checks that vibey-gh's managed
+CI (`.github/workflows/ci.yml`) also runs `image` (amd64 and arm64 builds; each
+`Image contract - …` step asserts one claim the Dockerfile makes) and
+`cluster-smoke` (Helm install on minikube; each `Contract - …` step asserts one
+cluster behaviour). `tools-lint` additionally checks that vibey-gh's managed
 automation has no drift.
 
 ## Surfaces
@@ -142,7 +147,7 @@ automation has no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (37 ADRs: 0001–0037) |
+| ADRs | `docs/architecture/decisions/` (38 ADRs: 0001–0038) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |
