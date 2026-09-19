@@ -39,7 +39,9 @@ import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
+from vibey_gh.estimation import GradedEstimator, Sample
 from vibey_gh.interfaces.context_sizer_interface import ContextSizerInterface
+from vibey_gh.interfaces.graded_estimator_interface import GradedEstimatorInterface
 from vibey_gh.interfaces.memory_sampler_interface import MemorySamplerInterface
 from vibey_gh.interfaces.model_sampler_interface import ModelSamplerInterface
 from vibey_gh.interfaces.text_file_reader_interface import TextFileReaderInterface
@@ -196,6 +198,13 @@ class Observation:
     payload_bytes: int
     elapsed_s: float
     concurrent: int
+
+    @property
+    def sample(self) -> Sample:
+        """This observation as the shared estimator reads it: payload in KB against the
+        seconds it took. The one conversion `estimate_from` and `vibey-gh estimate` both
+        use, so the two can never disagree about what an observation says."""
+        return Sample(x=self.payload_bytes / 1024, y=self.elapsed_s)
 
 
 @dataclass(frozen=True)
@@ -675,38 +684,36 @@ def sample_model(name: str, base_url: str | None = None) -> Model | None:
     return OllamaModelSampler(base_url).sample(name)
 
 
-def estimate_from(observations: list[Observation], floor_slots: float = 1.0) -> Estimate:
+def estimate_from(
+    observations: list[Observation],
+    floor_slots: float = 1.0,
+    *,
+    estimator: GradedEstimatorInterface | None = None,
+) -> Estimate:
     """Fit s and τ to what actually ran.
 
     τ is `base + rate × KB` by least squares when the payload sizes differ; a
     single size cannot separate the two terms, so it all goes to `base` and the
     rate stays zero rather than being invented. s is total generation-seconds over
     wall-equivalent seconds, which is what the rung data actually measures.
+
+    τ is fitted by the family's one graded estimator (`vibey_gh.estimation`, #88/#134)
+    rather than by arithmetic of its own; this function keeps only what is the fit's --
+    the slots, and the rounding its callers have always seen. `estimator` replaces it
+    for a caller that needs another (a test, or a quantity that may go negative).
     """
     if not observations:
         return Estimate(slots=floor_slots, base_s=0.0, rate_s_per_kb=0.0, samples=0)
 
-    xs = [o.payload_bytes / 1024 for o in observations]
-    ys = [o.elapsed_s for o in observations]
-    n = len(observations)
-    mean_x = sum(xs) / n
-    mean_y = sum(ys) / n
-    var_x = sum((x - mean_x) ** 2 for x in xs)
-    if var_x > 0:
-        rate = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys)) / var_x
-        base = mean_y - rate * mean_x
-    else:
-        rate, base = 0.0, mean_y
-    # Negative fits are physically meaningless; fall back to the flat mean.
-    if base < 0 or rate < 0:
-        rate, base = 0.0, mean_y
-
+    samples = [o.sample for o in observations]
+    line = (GradedEstimator() if estimator is None else estimator).fit(samples)
+    n = line.n
     concurrent = max((o.concurrent for o in observations), default=1)
     slots = max(float(min(concurrent, n)), floor_slots)
     return Estimate(
         slots=round(slots, 2),
-        base_s=round(base, 1),
-        rate_s_per_kb=round(rate, 3),
+        base_s=round(line.intercept, 1),
+        rate_s_per_kb=round(line.slope, 3),
         samples=n,
     )
 

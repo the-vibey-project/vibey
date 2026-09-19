@@ -143,7 +143,8 @@ testpaths = ["tests"]
 # `--cov=claudeloop.domain --cov=claudeloop.application --cov-fail-under=100`)
 # back out to the whole package, defeating the per-layer gate without any
 # error. Coverage scope and its gate are passed explicitly at each call site
-# instead — see docs/contributing/testing.md and .github/workflows/ci.yml.
+# instead — see docs/contributing/testing.md and the claudeloop rows of the
+# repository root's .github/workflows/ci.yml `tools` job.
 addopts = "--cov-report=term-missing -m \"not live and not system\""
 asyncio_mode = "auto"
 markers = [
@@ -196,3 +197,45 @@ forbidden_modules = [
     "claudeloop.bootstrap",
 ]
 
+
+# ADR-0016: code lives in classes with an interface beside them, in a mirrored
+# `interfaces/` package, and every such package declares seams without consuming
+# them. The tenant converges module by module; these are the packages that exist.
+[[tool.importlinter.contracts]]
+name = "Domain interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = ["claudeloop.domain.interfaces"]
+forbidden_modules = [
+    "claudeloop.domain.backend",
+    "claudeloop.application",
+    "claudeloop.infrastructure",
+    "claudeloop.cli",
+    "claudeloop.bootstrap",
+    "claudeloop.bootstrap_ops",
+]
+
+[[tool.importlinter.contracts]]
+name = "Infrastructure interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = ["claudeloop.infrastructure.interfaces"]
+forbidden_modules = [
+    "claudeloop.infrastructure.backend",
+    "claudeloop.infrastructure.config",
+    "claudeloop.infrastructure.agent",
+    "claudeloop.cli",
+    "claudeloop.bootstrap",
+    "claudeloop.bootstrap_ops",
+]
+
+[[tool.importlinter.contracts]]
+name = "CLI interfaces declare seams, never consume them"
+type = "forbidden"
+source_modules = ["claudeloop.cli.interfaces"]
+forbidden_modules = [
+    "claudeloop.cli.outcome",
+    "claudeloop.cli.commands",
+    "claudeloop.cli.app",
+    "claudeloop.infrastructure",
+    "claudeloop.bootstrap",
+    "claudeloop.bootstrap_ops",
+]

@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from claudeloop.domain.backend import BACKEND_MISCONFIGURED_PREFIX
+
 
 @dataclass(frozen=True, slots=True)
 class Available:
@@ -45,10 +47,33 @@ class AuthenticationFailed:
     detail: str = ""
 
 
-CapacityState = Available | WindowExhausted | CreditsExhausted | AuthenticationFailed
+@dataclass(frozen=True, slots=True)
+class BackendMisconfigured:
+    """Terminal — the backend, as configured, cannot serve this run, and neither
+    waiting nor retrying will change that: it needs a human. Raised for a model
+    the backend does not have (any backend), and on a local backend for one that
+    is not answering at all, or one that failed to load the model (typically out
+    of memory). ``reason`` is a short machine token; ``detail`` is the backend's
+    own words."""
+
+    reason: str
+    detail: str = ""
+
+    def describe(self) -> str:
+        """The run's failure reason. Always starts with BACKEND_MISCONFIGURED_PREFIX
+        (domain/backend.py) so the CLI can map it to its own exit status."""
+        text = f"{BACKEND_MISCONFIGURED_PREFIX} ({self.reason})"
+        detail = " ".join(self.detail.split())
+        return f"{text}: {detail}" if detail else text
+
+
+CapacityState = (
+    Available | WindowExhausted | CreditsExhausted | AuthenticationFailed | BackendMisconfigured
+)
 
 
 def is_waitable(state: CapacityState) -> bool:
     """Whether the run loop should ever schedule a wait/probe cycle for this state.
-    AuthenticationFailed is the only capacity state that must abort outright."""
-    return not isinstance(state, AuthenticationFailed)
+    AuthenticationFailed and BackendMisconfigured must abort outright: neither
+    credentials nor a missing model are fixed by a clock."""
+    return not isinstance(state, (AuthenticationFailed, BackendMisconfigured))

@@ -1,6 +1,7 @@
 # Default values target a local minikube install with an in-cluster
-# PostgreSQL. Cloud presets (values-aks/eks/gke.yaml) override the pieces
-# that differ; nothing here assumes a managed service.
+# PostgreSQL. There are no per-cloud presets yet: for a managed database
+# set postgres.enabled=false and dsn.existingSecret. Nothing here assumes
+# a managed service.
 
 image:
   repository: vibey
@@ -15,7 +16,13 @@ worker:
   # mid-turn: the pod stops claiming immediately, then drains.
   terminationGracePeriodSeconds: 7200
   parallelism: 2
+  # DESIGN/decompose provider: scripted, claudeloop, or qwenloop. qwenloop
+  # is the sovereign path; with ollama.enabled it talks to the in-cluster
+  # server below.
   provider: scripted
+  # Comma-separated engine allow-list (--engines); empty means all. Naming
+  # qwenloop needs the qwenloop feature switched on (ollama.qwenloopFeature,
+  # or VIBEY_FEATURE_QWENLOOP in extraEnv).
   engines: ""
   # A worker without --project silently binds to whichever project was
   # created last; in a cluster that is a footgun, so the chart requires it
@@ -33,6 +40,11 @@ worker:
   worktrees:
     size: 5Gi
     storageClass: ""
+  # Additional environment for the worker container, as Kubernetes EnvVar
+  # objects -- for instance VIBEY_OLLAMA_TIMEOUT, VIBEY_EVIDENCE_DIR, or an
+  # external Ollama endpoint when ollama.enabled is false. Appended after
+  # everything the chart sets itself.
+  extraEnv: []
 
 postgres:
   # Toggle off and point dsn.existingSecret at a managed instance
@@ -87,6 +99,95 @@ operator:
       memory: 128Mi
     limits:
       memory: 512Mi
+
+ollama:
+  # An in-cluster Ollama server for the sovereign path (sub-doctrine 8.a,
+  # ADR-0015, ADR-0027). When enabled, the chart runs it with a volume for
+  # its weights, pulls `model` onto that volume with a Job, and points the
+  # worker at it: VIBEY_OLLAMA_URL/VIBEY_OLLAMA_MODEL for vibey's own
+  # sovereign providers, QWENLOOP_BASE_URL/QWENLOOP_MODEL for qwenloop's
+  # OpenAI-compatible backend. Off by default: a 14B model wants a node with
+  # the memory (and ideally the GPU) to hold it, and a default install
+  # should not assume one.
+  enabled: false
+  image:
+    repository: ollama/ollama
+    # Pinned twice over: the tag is for the reader, the digest (the
+    # multi-arch index, amd64 + arm64) is what is actually pulled. Bump
+    # both together; an empty digest falls back to the tag alone.
+    tag: "0.34.2"
+    digest: "sha256:da6e0dc5651df159e45686fd663c4dbe1624a52c44d7280eeac1551d8f865532"
+    pullPolicy: IfNotPresent
+  # The model the pull Job fetches and the worker is told to use. The
+  # default is the one vibey and qwenloop already default to, so a stock
+  # worker and a stock qwenloop agree without further configuration.
+  model: qwen2.5-coder:14b
+  # OLLAMA_CONTEXT_LENGTH. qwenloop runs a 32K context and Ollama's default
+  # window is far smaller; empty leaves Ollama's own default in place.
+  contextLength: 32768
+  service:
+    port: 11434
+  storage:
+    # qwen2.5-coder:14b is ~9 GB; this leaves room for a second model.
+    size: 30Gi
+    storageClass: ""
+  # CPU inference of a 14B model at a 32K context: weights plus KV cache.
+  # Lower these only together with a smaller model or context.
+  resources:
+    requests:
+      cpu: "2"
+      memory: 16Gi
+    limits:
+      memory: 24Gi
+  gpu:
+    # Adds `<resourceName>: <count>` to the container's limits. Pair it with
+    # nodeSelector/tolerations for the GPU pool, and runtimeClassName where
+    # the cluster needs one (e.g. "nvidia").
+    enabled: false
+    resourceName: nvidia.com/gpu
+    count: 1
+  runtimeClassName: ""
+  # Additional server environment as EnvVar objects, e.g. OLLAMA_NUM_PARALLEL
+  # or OLLAMA_KEEP_ALIVE.
+  extraEnv: []
+  # Its own security context, not the chart-wide one below. The image runs
+  # as root by default; the chart runs it as uid 10001 instead, with HOME
+  # and OLLAMA_MODELS on the weights volume so that uid can write there.
+  # Setting runAsUser 0 and runAsNonRoot false restores the image default
+  # here without loosening the worker.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+  pull:
+    # A Job that waits for the server, then `ollama pull`s `model` onto its
+    # volume. Idempotent: layers already on the volume are not fetched again.
+    enabled: true
+    backoffLimit: 6
+    # Ceiling for waiting plus downloading; null removes it.
+    activeDeadlineSeconds: 3600
+    # null keeps the finished Job (and its log) until the next upgrade.
+    ttlSecondsAfterFinished: null
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+  # Also switch on the qwenloop feature in the worker
+  # (VIBEY_FEATURE_QWENLOOP=1, ADR-0015): qwenloop becomes the BUILD
+  # standby and `worker.engines: qwenloop` is accepted. false runs Ollama
+  # for vibey's sovereign DESIGN provider only.
+  qwenloopFeature: true
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
 keda:
   # Off by default: KEDA is a cluster-wide operator that may not be

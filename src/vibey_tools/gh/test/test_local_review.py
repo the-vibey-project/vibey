@@ -588,3 +588,36 @@ def test_the_prompt_names_the_idioms_that_look_like_defects_and_are_not():
     assert "Only report a finding you can point at a specific added or modified line for" in (
         SYSTEM_PROMPT
     )
+
+
+def test_a_verdict_names_the_role_it_ran_in(monkeypatch, capsys, tmp_path):
+    """Since the sovereign lane goes first (#133) its verdict is not always a fallback. The
+    summary travels into the state comment, so a verdict that carried the diff half says
+    so, and only one that stood in for a failed paid review calls itself a fallback."""
+    diff = tmp_path / "d.diff"
+    diff.write_text("+ added a line\n", encoding="utf-8")
+    _model_returns(monkeypatch, _verdict())
+
+    assert local_review.review(["--diff", str(diff), "--role", "sovereign"]) == 0
+    carried = json.loads(capsys.readouterr().out)
+    assert local_review.review(["--diff", str(diff)]) == 0
+    fallback = json.loads(capsys.readouterr().out)
+
+    assert carried["summary"].startswith("[SOVEREIGN LANE — ")
+    assert "FALLBACK" not in carried["summary"]
+    assert "NOT evaluated" in carried["summary"]
+    assert fallback["summary"].startswith("[LOCAL FALLBACK — ")
+    with pytest.raises(SystemExit):
+        local_review.review(["--diff", str(diff), "--role", "primary"])
+
+
+def test_the_cli_forwards_the_role(monkeypatch, tmp_path):
+    from vibey_gh import cli
+
+    diff = tmp_path / "d.diff"
+    diff.write_text("+ a line\n", encoding="utf-8")
+    seen: list[list[str]] = []
+    monkeypatch.setattr(local_review, "review", lambda argv: seen.append(argv) or 0)
+
+    assert cli.main(["local-review", "--diff", str(diff), "--role", "sovereign"]) == 0
+    assert seen == [["--diff", str(diff), "--role", "sovereign"]]

@@ -20,6 +20,7 @@ from claudeloop.application.ports import AgentGateway, CapacityProbe, StreamUi
 from claudeloop.application.runner import AutonomousRunner
 from claudeloop.domain.budget import Budget
 from claudeloop.domain.control import SlashCommand
+from claudeloop.domain.errors import BackendProfileError
 from claudeloop.domain.permission import parse_user_permission_mode
 from claudeloop.domain.plan import WorkPlan
 from claudeloop.domain.verbosity import LogPlan
@@ -28,6 +29,7 @@ from claudeloop.infrastructure.agent.catalog import SdkSessionCatalog
 from claudeloop.infrastructure.agent.gateway import ClaudeAgentGateway, ClaudeCapacityProbe
 from claudeloop.infrastructure.agent.scripted import resolve_test_agent_from_env
 from claudeloop.infrastructure.audit import JsonlAuditLog
+from claudeloop.infrastructure.backend import BackendEnvironmentResolver, RunBackendHistory
 from claudeloop.infrastructure.chatter_log import summarize_tool
 from claudeloop.infrastructure.clock import AnyioSleeper, SystemClock
 from claudeloop.infrastructure.config import RunnerConfig
@@ -35,6 +37,7 @@ from claudeloop.infrastructure.control import FileRunControl
 from claudeloop.infrastructure.doctor_env import RealDoctorEnvironment
 from claudeloop.infrastructure.events import JsonlRunEventSink
 from claudeloop.infrastructure.git_savepoints import GitSavePointStore
+from claudeloop.infrastructure.interfaces import BackendEnvironmentResolverInterface
 from claudeloop.infrastructure.lock import FileSessionLock
 from claudeloop.infrastructure.logging import (
     StructlogAppLogger,
@@ -84,7 +87,13 @@ def build_runner(
     append_system_prompt: str | None = None,
     wind_down_at: datetime | None = None,
 ) -> RunnerContext:
+    # Resolve the backend before anything touches disk: a profile whose
+    # auth_token_env is unset must fail as a usage error, not leave a run behind.
+    resolver = build_backend_resolver()
+    backend_runtime = resolver.runtime(config.backend)
+    backend_identity = resolver.identity(config.backend)
     run_dir = RunDirectory.create(runs_root_for(cwd), cwd=cwd, plan_path=plan_path, run_id=run_id)
+    run_dir.update_meta(backend=str(backend_identity), profile=config.backend.name)
     run_id = run_dir.read_meta().run_id
     trace_id = str(uuid.uuid4())
     profile = config.resolved_profile()
@@ -188,12 +197,14 @@ def build_runner(
             system_prompt_append=str(gw_payload.get("system_prompt_append") or ""),
             allowed_tools=list(gw_payload.get("allowed_tools") or []) or None,
             tool_approval_timeout=config.tool_approval_timeout_seconds,
+            backend=backend_runtime,
         )
         probe = ClaudeCapacityProbe(
             cwd=str(cwd),
             on_event=_on_event,
             max_buffer_size=config.max_buffer_size,
             model=profile.model,
+            backend=backend_runtime,
         )
     app_log.info(
         "runner.config",
@@ -210,6 +221,9 @@ def build_runner(
         done_marker=config.done_marker,
         retry_watchdog=config.retry_watchdog,
         cwd=str(cwd),
+        backend=str(backend_identity),
+        profile=config.backend.name,
+        cost_mode=backend_runtime.cost_mode,
     )
     clock = SystemClock()
     sleeper = AnyioSleeper(clock)
@@ -265,6 +279,7 @@ def build_runner(
         wait_policy=wait_policy,
         progress_wait=progress_wait,
         done_marker=config.done_marker,
+        done_marker_fallback=backend_runtime.done_marker_fallback,
         run_id=run_id,
         notifier=notifier,
         run_control=run_control,
@@ -312,6 +327,20 @@ def build_session_catalog() -> SdkSessionCatalog:
 
 def build_doctor_environment() -> DoctorEnvironment:
     return RealDoctorEnvironment()
+
+
+def build_backend_resolver() -> BackendEnvironmentResolverInterface:
+    return BackendEnvironmentResolver()
+
+
+def check_resume_backend(*, cwd: Path, session_id: str, config: RunnerConfig) -> None:
+    """Refuse to resume a session against a backend other than the one it last ran
+    on. Raises BackendProfileError (a ValueError) naming both."""
+    previous = RunBackendHistory(cwd).last_backend(session_id)
+    current = build_backend_resolver().identity(config.backend)
+    refusal = current.resume_refusal(previous)
+    if refusal is not None:
+        raise BackendProfileError(f"refusing to resume {session_id}: {refusal}")
 
 
 _CACHED_API_GROUP: click.Group | None = None
