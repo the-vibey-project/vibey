@@ -33,6 +33,10 @@ it's short):
   returns a handle over its run directory
 - `def tail(handle: RunHandle) -> AsyncIterator[EngineEvent]` — streams the
   runner's `events.jsonl`, translated into vibey's own event vocabulary
+  through `loop_events.py::LOOP_EVENT_MAP`. Only the runner's own turn
+  boundary maps to `TurnCompleted`, one per real turn, because the budget
+  brake counts it; chatter and stream deltas that echo a turn's text map
+  to `TranscriptRecorded`
 - `async def send_prompt(handle, text, *, now: bool) -> None` — writes the
   runner's control-plane inbox
 - `async def stop(handle: RunHandle) -> StopSummary` — soft-stops the run;

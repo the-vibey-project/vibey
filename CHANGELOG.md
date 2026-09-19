@@ -84,6 +84,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `turn_completed_events` with a caveat beside it
 ### Bug Fixes
 
+* **engines:** the per-cycle turn cap (`max_cycle_turns`) now counts real turns. `chatter.assistant` mapped to `TurnCompleted` next to `turn.completed`, so claudeloop and agyloop, under their default `log_chatter=summary`, parked a cycle as `budget_exhausted` at about half its configured turns. Every qwenloop `text_delta` counted as a turn as well. Chatter and stream deltas now map to a new `TranscriptRecorded` event kind, which stays in the ledger for replay but is never counted. qwenloop now writes one `turn.completed` per model call, its only event that counts as a turn, and `chatter.prompt` no longer duplicates `TurnRequested`. codexloop's `turn.failed` still counts, once, as a turn attempt. Dollars were never double counted (#266)
 * **engines:** vibey read claudeloop's capacity only as a `{"state": …}` mapping, but
   claudeloop writes the class name (`"capacity": "CreditsExhausted"`), so every real
   claudeloop capacity payload classified as `Available`. Both shapes are read now, and
