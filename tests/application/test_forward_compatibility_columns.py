@@ -153,6 +153,7 @@ async def test_engine_selector_skips_unrecognized_engines_and_circuits() -> None
         selected_count=0,
     )
     # 3. Valid known engine record
+    fresh_auth = datetime.now(UTC)
     valid_record = EngineHealthRecord(
         project_id=project_id,
         engine_id=EngineId.CLAUDELOOP,
@@ -160,7 +161,7 @@ async def test_engine_selector_skips_unrecognized_engines_and_circuits() -> None
         version="1.0",
         conformance_ok=True,
         conformance_at=NOW,
-        auth_ok_at=NOW,
+        auth_ok_at=fresh_auth,
         circuit=CircuitState.CLOSED,
         capacity_state=None,
         resets_at=None,

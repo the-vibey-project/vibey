@@ -4,8 +4,8 @@ import tempfile
 from pathlib import Path
 
 
-def run_cmd(cmd, cwd=None):
-    return subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd)
+def run_cmd(cmd: list[str], cwd: Path | None = None):
+    return subprocess.run(cmd, capture_output=True, text=True, cwd=cwd, check=False)
 
 
 def test_worktree_hooks_resolve_common_dir():
@@ -13,9 +13,14 @@ def test_worktree_hooks_resolve_common_dir():
         root = Path(tmpdir)
 
         # 1. Initialize main repo
-        run_cmd("git init", cwd=root)
-        run_cmd("git config user.email 'test@example.com'", cwd=root)
-        run_cmd("git config user.name 'Test User'", cwd=root)
+        assert run_cmd(["git", "init"], cwd=root).returncode == 0
+        assert (
+            run_cmd(["git", "config", "user.email", "test@example.com"], cwd=root).returncode == 0
+        )
+        assert run_cmd(["git", "config", "user.name", "Test User"], cwd=root).returncode == 0
+        (root / "README.md").write_text("seed\n")
+        assert run_cmd(["git", "add", "README.md"], cwd=root).returncode == 0
+        assert run_cmd(["git", "commit", "-m", "seed"], cwd=root).returncode == 0
 
         # 2. Create a dummy hook in .git/hooks/pre-push
         hooks_dir = root / ".git" / "hooks"
@@ -26,7 +31,8 @@ def test_worktree_hooks_resolve_common_dir():
 
         # 3. Create a linked worktree
         worktree_dir = root / "worktree"
-        run_cmd(f"git worktree add {worktree_dir}", cwd=root)
+        worktree = run_cmd(["git", "worktree", "add", str(worktree_dir)], cwd=root)
+        assert worktree.returncode == 0, worktree.stderr
 
         # 4. Setup .githooks in the worktree (simulating vibey-gh install)
         githooks_dir = worktree_dir / ".githooks"
@@ -46,7 +52,7 @@ fi
         shim_file.chmod(0o755)
 
         # 5. Run the shim from the worktree
-        res = run_cmd("./.githooks/pre-push.local", cwd=worktree_dir)
+        res = run_cmd(["./.githooks/pre-push.local"], cwd=worktree_dir)
 
         assert res.returncode == 0
         assert "HOOK_EXECUTED" in res.stdout
@@ -55,13 +61,19 @@ fi
 def test_worktree_hooks_warning_when_missing():
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
-        run_cmd("git init", cwd=root)
-        run_cmd("git config user.email 'test@example.com'", cwd=root)
-        run_cmd("git config user.name 'Test User'", cwd=root)
+        assert run_cmd(["git", "init"], cwd=root).returncode == 0
+        assert (
+            run_cmd(["git", "config", "user.email", "test@example.com"], cwd=root).returncode == 0
+        )
+        assert run_cmd(["git", "config", "user.name", "Test User"], cwd=root).returncode == 0
+        (root / "README.md").write_text("seed\n")
+        assert run_cmd(["git", "add", "README.md"], cwd=root).returncode == 0
+        assert run_cmd(["git", "commit", "-m", "seed"], cwd=root).returncode == 0
 
         # Create worktree
         worktree_dir = root / "worktree"
-        run_cmd(f"git worktree add {worktree_dir}", cwd=root)
+        worktree = run_cmd(["git", "worktree", "add", str(worktree_dir)], cwd=root)
+        assert worktree.returncode == 0, worktree.stderr
 
         # Create .pre-commit-config.yaml INSIDE the worktree to trigger warning
         (worktree_dir / ".pre-commit-config.yaml").write_text("repos: []")
@@ -87,7 +99,7 @@ fi
         shim_file.chmod(0o755)
 
         # Run shim - should print warning
-        res = run_cmd("./.githooks/pre-push.local", cwd=worktree_dir)
+        res = run_cmd(["./.githooks/pre-push.local"], cwd=worktree_dir)
 
         assert res.returncode == 0
         assert "Warning: pre-commit framework declared" in res.stdout

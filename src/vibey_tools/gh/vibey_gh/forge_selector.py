@@ -11,8 +11,11 @@ some other road fails with the same sentence instead of getting an adapter for t
 
 from __future__ import annotations
 
+import os
+import subprocess
 from collections.abc import Callable, Mapping
 from types import MappingProxyType
+from urllib.parse import urlsplit
 
 from vibey_gh.config import ADAPTED_PLATFORM_KINDS, GhConfig, PlatformConfig
 from vibey_gh.forge import ForgeKind
@@ -65,22 +68,41 @@ class ForgeSelector(ForgeSelectorInterface):
     def _github(cfg: GhConfig) -> ForgeAdapterInterface:
         host = cfg.platform.host
         transport = GhTransport(host=None if host == GH_DEFAULT_HOST else host)
-        return GitHubForge(root=cfg.root, transport=transport)
+        return GitHubForge(root=cfg.root, repository=_repository(cfg), transport=transport)
 
     @staticmethod
     def _gitlab(cfg: GhConfig) -> ForgeAdapterInterface:
-        # GitLab uses a private token from the platform config.
         transport = GitLabTransport(
             host=cfg.platform.host,
-            token=str(getattr(cfg.platform, "token", "")),
+            token=os.environ.get(cfg.platform.token_env, "") if cfg.platform.token_env else "",
         )
-        return GitLabForge(root=cfg.root, transport=transport)
+        return GitLabForge(root=cfg.root, repository=_repository(cfg), transport=transport)
 
     @staticmethod
     def _forgejo(cfg: GhConfig) -> ForgeAdapterInterface:
-        # Forgejo uses a private token from the platform config.
         transport = ForgejoTransport(
             host=cfg.platform.host,
-            token=str(getattr(cfg.platform, "token", "")),
+            token=os.environ.get(cfg.platform.token_env, "") if cfg.platform.token_env else "",
         )
-        return ForgejoForge(root=cfg.root, transport=transport)
+        return ForgejoForge(root=cfg.root, repository=_repository(cfg), transport=transport)
+
+
+def _repository(cfg: GhConfig) -> str:
+    """Bind an adapter to configured repository identity or the local origin URL."""
+    if cfg.platform.repository:
+        return cfg.platform.repository
+    result = subprocess.run(
+        ["git", "config", "--get", "remote.origin.url"],
+        cwd=cfg.root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    remote = result.stdout.strip().removesuffix(".git")
+    if not remote:
+        return ""
+    if "://" in remote:
+        path = urlsplit(remote).path
+    else:
+        path = remote.rsplit(":", 1)[-1]
+    return path.strip("/")

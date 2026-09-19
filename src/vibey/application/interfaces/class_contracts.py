@@ -340,6 +340,9 @@ class RunOutcomeInterface(Protocol):
     @property
     def exit_code(self) -> int | None: ...
 
+    @property
+    def diagnostic_tail(self) -> str: ...
+
     def misconfiguration_gate(self, descriptor: object, work_item_id: str | None) -> object:
         """Return the repair gate for backend exit 78, or ``None``."""
         ...

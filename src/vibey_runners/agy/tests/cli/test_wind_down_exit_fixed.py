@@ -11,12 +11,10 @@ def test_wind_down_exit_code():
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
         plan_file = root / "plan.md"
-        plan_file.write_text("# Plan\n- item 1")
-
-        # We need to mock a la l la... wait, I'll just use a real agyloop run
-        # with a plan that we know triggers wind-down.
-        # But that's hard. Instead, I'll test the RunOutcomeReporter directly.
-        pass
+        plan_file.write_text("# Plan\n- item 1", encoding="utf-8")
+        assert plan_file.read_text(encoding="utf-8") == "# Plan\n- item 1"
+        result = MockResult(success=False, reason=f"{WIND_DOWN_REASON_PREFIX} capacity")
+        assert RunOutcomeReporter().exit_code_for(result) == 75
 
 
 @dataclass

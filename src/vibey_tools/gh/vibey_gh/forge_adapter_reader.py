@@ -49,6 +49,13 @@ class ForgeAdapterReader(ForgeReaderInterface):
     adapter: ForgeAdapterInterface
     per_page: int = 100
 
+    def __post_init__(self) -> None:
+        # The reader owns the repository identity. Bind built-in adapters here so every
+        # endpoint uses the same namespace; test doubles may already be repository-neutral.
+        bind = getattr(self.adapter, "for_repository", None)
+        if callable(bind):
+            object.__setattr__(self, "adapter", bind(self.repository))
+
     def read(self, forge_class: str, since: str | None) -> ForgeRead:
         spec = ForgeClass.named(forge_class)
 
@@ -77,7 +84,7 @@ class ForgeAdapterReader(ForgeReaderInterface):
                 break
             page += 1
 
-        return self._observed(spec, items)
+        return self._observed(spec, items, self._high_water(items))
 
     def _reviews(self, spec: ForgeClass, since: str | None) -> ForgeRead:
         # Reviews are walked through change requests.
@@ -96,7 +103,10 @@ class ForgeAdapterReader(ForgeReaderInterface):
 
         items: list[dict[str, Any]] = []
         for native_id, payload in pr_read.observations:
-            number = payload.get("number")
+            # GitLab calls the per-project change-request number `iid`; GitHub and
+            # Forgejo call the same identity `number`. The snapshot keeps native JSON,
+            # so normalization belongs at this seam rather than in an adapter.
+            number = payload.get("number", payload.get("iid"))
             if not isinstance(number, int):
                 continue
 
@@ -126,6 +136,8 @@ class ForgeAdapterReader(ForgeReaderInterface):
         observations: list[Observation] = []
         for item in items:
             native_id = item.get(spec.id_field)
+            if native_id is None and spec.name == "change-request":
+                native_id = item.get("iid")
             if (
                 not isinstance(native_id, (int, str))
                 or isinstance(native_id, bool)
@@ -138,3 +150,18 @@ class ForgeAdapterReader(ForgeReaderInterface):
                 )
             observations.append((str(native_id), item))
         return ForgeRead(spec.name, spec.native_class, tuple(observations), high_water)
+
+    @staticmethod
+    def _high_water(items: Sequence[dict[str, Any]]) -> str | None:
+        moments: list[datetime] = []
+        for item in items:
+            for key in ("updated_at", "updatedAt", "updated", "created_at", "createdAt"):
+                value = item.get(key)
+                if not isinstance(value, str):
+                    continue
+                try:
+                    moments.append(moment(value))
+                except ValueError:
+                    continue
+                break
+        return stamp(max(moments)) if moments else None

@@ -37,6 +37,10 @@ from vibey_gh.forge import (
 class ForgeAdapterInterface(Protocol):
     """One repository on one forge, asked about in forge-neutral terms."""
 
+    def for_repository(self, repository: str) -> ForgeAdapterInterface:
+        """Return the same adapter bound to the repository namespace it will call."""
+        ...
+
     # --- Generic Walk (for snapshots) ---
 
     def list_artifacts(

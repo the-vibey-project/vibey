@@ -2,14 +2,15 @@
 """The seam for talking to a forge's API or CLI (vibey ADR-0016; #138).
 
 Code above this seam asks for data or requests a change; the transport handles
-the protocol (HTTP, CLI, etc.) and authentication. A transport returns a a raw
+the protocol (HTTP, CLI, etc.) and authentication. A transport returns a raw
 JSON-like result and a problem, so a caller knows if a failure was a protocol
 error (e.g., 401 Unauthorized) or a data error (e.g., an empty list).
 
-    All transports are read-only against a specific host. The host is configured
-    via `.vibey-gh.toml`.  The shared seam is the decoded `survey` operation;
-    command-oriented transports may expose richer operations through their own
-    interface (for example, `GhTransportInterface.run`).
+    The shared seam is the decoded `survey` operation. Its argument sequence carries
+    a path followed optionally by an HTTP method and JSON body, so adapters can use
+    the same contract for reads and mutations without smuggling platform-specific
+    request objects across the seam. Command-oriented transports may expose richer
+    operations through their own interface (for example, `GhTransportInterface.run`).
 """
 
 from __future__ import annotations

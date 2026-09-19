@@ -2,8 +2,8 @@
 """`[platform]`, the forge-neutral nouns, and the selector that turns one into an adapter.
 
 `[platform]` is live configuration, not a table waiting for a reader: `kind` chooses the
-adapter the clean-repo survey asks, `host` reaches `gh` as `GH_HOST`, and a kind with no
-adapter is refused at load with a sentence saying so.
+adapter the clean-repo survey asks, `host` reaches the selected forge, and repository
+identity plus token environment names are bound before an API call is made.
 """
 
 from __future__ import annotations
@@ -93,13 +93,28 @@ def test_the_platform_table_is_read(tmp_path):
 
 
 @pytest.mark.parametrize("kind", ["gitlab", "forgejo"])
-def test_a_forge_without_an_adapter_is_refused_at_load_and_says_so(tmp_path, kind):
-    with pytest.raises(ValueError) as refused:
-        _config(tmp_path, f'[platform]\nkind = "{kind}"\n')
-    assert str(refused.value) == (
-        f"platform.kind = {kind!r}: the {kind} adapter is not implemented yet; "
-        "vibey-gh drives github only (#138)"
+def test_adapted_forges_are_accepted_at_load(tmp_path, kind):
+    cfg = _config(
+        tmp_path,
+        f'[platform]\nkind = "{kind}"\nrepository = "group/tool"\ntoken_env = "FORGE_TOKEN"\n',
     )
+    assert cfg.platform.kind == kind
+    assert cfg.platform.repository == "group/tool"
+    assert cfg.platform.token_env == "FORGE_TOKEN"
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("repository", "/owner/name", "platform.repository"),
+        ("repository", "owner/", "platform.repository"),
+        ("repository", "owner name", "platform.repository"),
+        ("token_env", "not-a-variable", "platform.token_env"),
+    ],
+)
+def test_platform_rejects_unusable_repository_and_secret_configuration(field, value, message):
+    with pytest.raises(ValueError, match=message):
+        PlatformConfig(**{field: value})
 
 
 @pytest.mark.parametrize("kind", ["bitbucket", "GitHub", "", 3])
@@ -182,6 +197,35 @@ def test_unenabled_platform_factories_still_build_their_injected_seams(tmp_path)
     assert isinstance(gitlab.transport, GitLabTransport)
     assert isinstance(forgejo, ForgejoForge)
     assert isinstance(forgejo.transport, ForgejoTransport)
+
+
+def test_selector_binds_an_explicit_repository_and_reads_one_from_origin(tmp_path):
+    explicit = _config(
+        tmp_path,
+        '[platform]\nkind = "gitlab"\nrepository = "group/subgroup/tool"\n',
+    )
+    selected = ForgeSelector._gitlab(explicit)
+    assert selected.repository == "group/subgroup/tool"
+
+    import subprocess
+
+    subprocess.run(["git", "init", "-q", str(tmp_path / "repo")], check=True)
+    repo = tmp_path / "repo"
+    subprocess.run(
+        ["git", "remote", "add", "origin", "git@gitlab.example:group/tool.git"],
+        cwd=repo,
+        check=True,
+    )
+    from vibey_gh.config import GhConfig
+
+    assert ForgeSelector._forgejo(GhConfig(root=repo)).repository == "group/tool"
+
+    subprocess.run(
+        ["git", "remote", "set-url", "origin", "https://github.example/group/tool.git"],
+        cwd=repo,
+        check=True,
+    )
+    assert ForgeSelector._github(GhConfig(root=repo)).repository == "group/tool"
 
 
 # --------------------------------------------------------- the host reaches the client

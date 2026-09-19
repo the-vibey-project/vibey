@@ -21,6 +21,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TextIO
 
 import structlog
 
@@ -56,6 +57,7 @@ logger = structlog.get_logger(__name__)
 # garbage collected (which would close stdin and kill the child process).
 # Key: run_id (UUID), Value: asyncio.subprocess.Process
 _active_processes: dict[object, asyncio.subprocess.Process] = {}
+_diagnostic_files: dict[object, tuple[TextIO, TextIO]] = {}
 
 # `<binary> run --help` output, keyed by binary name. Fetched once per
 # process lifetime; --help is static for a given install, so there's
@@ -155,8 +157,8 @@ class LoopProcessAdapter:
         self,
         *argv: str,
         env: Mapping[str, str] | None = None,
-        stdout: int,
-        stderr: int,
+        stdout: int | TextIO,
+        stderr: int | TextIO,
         cwd: Path | None = None,
         start_new_session: bool = False,
     ) -> asyncio.subprocess.Process:
@@ -327,23 +329,26 @@ class LoopProcessAdapter:
         # Build argv using existing argv.py
         argv = build_argv(self.descriptor, spec)
 
-        # Spawn the process
-        # Don't use PIPE for stdout/stderr since we never drain them - that would
-        # cause the child to block when the pipe buffer fills, or cause Python to
-        # close stdin on GC when the process object goes out of scope. Use DEVNULL
-        # instead since we read state from files, not stdout.
+        # Spawn the process. Output goes to bounded-lifetime files rather than pipes:
+        # pipes can deadlock a long-running engine when nobody drains them, while
+        # DEVNULL throws away the only diagnostic that can distinguish a failed task
+        # from a failed backend (PR #299).
+        diagnostic_dir = spec.worktree_path / ".vibey" / "diagnostics"
+        diagnostic_dir.mkdir(parents=True, exist_ok=True)
+        stdout_file = (diagnostic_dir / f"{spec.run_id}.stdout").open("w", encoding="utf-8")
+        stderr_file = (diagnostic_dir / f"{spec.run_id}.stderr").open("w", encoding="utf-8")
         try:
             logger.debug(
                 "spawning_process",
                 engine=self.descriptor.engine_id.value,
                 argv=" ".join(argv),
-                stdout="DEVNULL",
-                stderr="DEVNULL",
+                stdout=str(stdout_file.name),
+                stderr=str(stderr_file.name),
             )
             process = await self._spawn(
                 *argv,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
+                stdout=stdout_file,
+                stderr=stderr_file,
                 cwd=spec.worktree_path,
                 # The interpreter's prefix counts as vibey's only when it is a venv.
                 # On a system Python it is `/usr`, and stripping it took /usr/bin
@@ -351,7 +356,10 @@ class LoopProcessAdapter:
                 env=isolate_python_env(os.environ, venv_prefixes=self.python_env.venv_prefixes()),
             )
         except Exception as e:
+            stdout_file.close()
+            stderr_file.close()
             raise ProcessError(f"Failed to spawn {self.descriptor.binary}: {e}") from e
+        _diagnostic_files[spec.run_id] = (stdout_file, stderr_file)
 
         logger.info(
             "engine_started",
@@ -585,6 +593,32 @@ class LoopProcessAdapter:
         process = _active_processes.get(handle.run_id)
         return None if process is None else process.returncode
 
+    def diagnostic_tail(self, handle: RunHandle) -> str:
+        """Return the child output retained for failure attribution.
+
+        The application owns the policy for classifying this text; this adapter only
+        preserves it across a process that exits before writing a structured event.
+        """
+        parts: list[str] = []
+        for label, index in (("stderr", 1), ("stdout", 0)):
+            files = _diagnostic_files.get(handle.run_id)
+            if files is None:
+                continue
+            file = files[index]
+            path = Path(file.name)
+            if path.exists():
+                text = path.read_text(encoding="utf-8", errors="replace").strip()
+                if text:
+                    parts.append(f"[{label}] {text}")
+        return "\n".join(parts)[-8_000:]
+
+    def release_diagnostics(self, handle: RunHandle) -> None:
+        """Close and forget the retained child-output handles after it is consumed."""
+        files = _diagnostic_files.pop(handle.run_id, None)
+        if files is not None:
+            for file in files:
+                file.close()
+
     async def stop(self, handle: RunHandle) -> StopSummary:
         """Send stop signal and collect stop-summary.md."""
         # Write stop signal to inbox
@@ -619,6 +653,7 @@ class LoopProcessAdapter:
                 logger.debug("snapshot_remaining_work_failed", run_id=str(handle.run_id))
 
         # Clean up the process reference
+        self.release_diagnostics(handle)
         process = _active_processes.pop(handle.run_id, None)
         if process is not None:
             if process.returncode is None:

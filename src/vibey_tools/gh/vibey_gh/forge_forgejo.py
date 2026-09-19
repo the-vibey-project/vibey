@@ -7,8 +7,9 @@ Implements `vibey_gh.interfaces.forge_adapter_interface` on the `ForgejoTranspor
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
+from urllib.parse import quote
 
 from vibey_gh.forge import (
     ChangeRequest,
@@ -27,7 +28,11 @@ class ForgejoForge(ForgeAdapterInterface):
     """One Forgejo repository, reached through `ForgejoTransport`."""
 
     root: WorkingDirectory
+    repository: str = ""
     transport: ForgeTransportInterface = field(default_factory=ForgejoTransport)
+
+    def for_repository(self, repository: str) -> ForgejoForge:
+        return replace(self, repository=repository)
 
     def list_artifacts(
         self,
@@ -37,10 +42,10 @@ class ForgejoForge(ForgeAdapterInterface):
         limit: int = 100,
     ) -> tuple[list[dict[str, Any]], str]:
         paths = {
-            "issue": "repos/{{repo}}/issues",
-            "change-request": "repos/{{repo}}/pulls",
-            "release": "repos/{{repo}}/releases",
-            "label": "repos/{{repo}}/labels",
+            "issue": f"repos/{self._repository()}/issues",
+            "change-request": f"repos/{self._repository()}/pulls",
+            "release": f"repos/{self._repository()}/releases",
+            "label": f"repos/{self._repository()}/labels",
         }
         path = paths.get(forge_class)
         if path is None:
@@ -58,7 +63,7 @@ class ForgejoForge(ForgeAdapterInterface):
     def open_change_request_heads(self, *, limit: int) -> tuple[frozenset[str], str]:
         # Forgejo/Gitea: /repos/{owner}/{repo}/pulls
         pulls, problem = self.transport.survey(
-            ["repos/{{repo}}/pulls?state=open&limit=" + str(limit)], cwd=self.root
+            [f"repos/{self._repository()}/pulls?state=open&limit={limit}"], cwd=self.root
         )
         heads = frozenset(
             head
@@ -71,7 +76,7 @@ class ForgejoForge(ForgeAdapterInterface):
     def releases(self, *, limit: int) -> tuple[tuple[ForgeRelease, ...], str]:
         # Forgejo/Gitea: /repos/{owner}/{repo}/releases
         rows, problem = self.transport.survey(
-            ["repos/{{repo}}/releases?limit=" + str(limit)], cwd=self.root
+            [f"repos/{self._repository()}/releases?limit={limit}"], cwd=self.root
         )
         releases = tuple(
             ForgeRelease(
@@ -85,7 +90,9 @@ class ForgejoForge(ForgeAdapterInterface):
         return releases, problem
 
     def get_change_request(self, number: int) -> tuple[ChangeRequest | None, str]:
-        val, problem = self.transport.survey(["repos/{{repo}}/pulls/" + str(number)], cwd=self.root)
+        val, problem = self.transport.survey(
+            [f"repos/{self._repository()}/pulls/{number}"], cwd=self.root
+        )
         if problem:
             return None, problem
         if not isinstance(val, dict):
@@ -102,7 +109,7 @@ class ForgejoForge(ForgeAdapterInterface):
 
     def get_issue(self, number: int) -> tuple[ForgeIssue | None, str]:
         val, problem = self.transport.survey(
-            ["repos/{{repo}}/issues/" + str(number)], cwd=self.root
+            [f"repos/{self._repository()}/issues/{number}"], cwd=self.root
         )
         if problem:
             return None, problem
@@ -118,11 +125,11 @@ class ForgejoForge(ForgeAdapterInterface):
     def get_issue_thread(self, number: int) -> tuple[tuple[ForgeComment, ...], str]:
         # Forgejo: /repos/{owner}/{repo}/issues/{id}/comments
         val, problem = self.transport.survey(
-            ["repos/{{repo}}/issues/" + str(number) + "/comments"], cwd=self.root
+            [f"repos/{self._repository()}/issues/{number}/comments"], cwd=self.root
         )
         if problem:
             val, problem = self.transport.survey(
-                ["repos/{{repo}}/pulls/" + str(number) + "/comments"], cwd=self.root
+                [f"repos/{self._repository()}/pulls/{number}/comments"], cwd=self.root
             )
 
         if problem:
@@ -141,7 +148,9 @@ class ForgejoForge(ForgeAdapterInterface):
 
     def get_reviews(self, number: int) -> tuple[tuple[ForgeReview, ...], str]:
         # Forgejo reviews are simpler; we can check for approval status
-        _, problem = self.transport.survey(["repos/{{repo}}/pulls/" + str(number)], cwd=self.root)
+        _, problem = self.transport.survey(
+            [f"repos/{self._repository()}/pulls/{number}"], cwd=self.root
+        )
         if problem:
             return (), problem
         # Simplification: use the PR state or specific approval fields if available
@@ -149,7 +158,7 @@ class ForgejoForge(ForgeAdapterInterface):
 
     def get_check_results(self, head_sha: str) -> tuple[tuple[Any, ...], str]:
         val, problem = self.transport.survey(
-            ["repos/{{repo}}/commits/" + head_sha + "/statuses"], cwd=self.root
+            [f"repos/{self._repository()}/commits/{head_sha}/statuses"], cwd=self.root
         )
         if problem:
             return (), problem
@@ -164,11 +173,11 @@ class ForgejoForge(ForgeAdapterInterface):
     def create_comment(self, number: int, body: str) -> tuple[ForgeComment | None, str]:
         # Try issues then PRs
         _, problem = self.transport.survey(
-            ["repos/{{repo}}/issues/" + str(number) + "/comments", "POST", body], cwd=self.root
+            [f"repos/{self._repository()}/issues/{number}/comments", "POST", body], cwd=self.root
         )
         if problem:
             _, problem = self.transport.survey(
-                ["repos/{{repo}}/pulls/" + str(number) + "/comments", "POST", body], cwd=self.root
+                [f"repos/{self._repository()}/pulls/{number}/comments", "POST", body], cwd=self.root
             )
         if problem:
             return None, problem
@@ -183,7 +192,8 @@ class ForgejoForge(ForgeAdapterInterface):
         if body:
             payload["body"] = body
         _, problem = self.transport.survey(
-            ["repos/{{repo}}/pulls/" + str(number), "PATCH", json.dumps(payload)], cwd=self.root
+            [f"repos/{self._repository()}/pulls/{number}", "PATCH", json.dumps(payload)],
+            cwd=self.root,
         )
         if problem:
             return None, problem
@@ -194,7 +204,7 @@ class ForgejoForge(ForgeAdapterInterface):
     ) -> tuple[bool, str]:
         # Forgejo: POST /repos/{owner}/{repo}/pulls/{id}/merge
         _, problem = self.transport.survey(
-            ["repos/{{repo}}/pulls/" + str(number) + "/merge", "POST", ""], cwd=self.root
+            [f"repos/{self._repository()}/pulls/{number}/merge", "POST", ""], cwd=self.root
         )
         if problem:
             return False, problem
@@ -205,7 +215,7 @@ class ForgejoForge(ForgeAdapterInterface):
     ) -> tuple[ForgeRelease | None, str]:
         payload = {"tag_name": tag, "name": name, "note": body}
         _, problem = self.transport.survey(
-            ["repos/{{repo}}/releases", "POST", json.dumps(payload)], cwd=self.root
+            [f"repos/{self._repository()}/releases", "POST", json.dumps(payload)], cwd=self.root
         )
         if problem:
             return None, problem
@@ -214,21 +224,31 @@ class ForgejoForge(ForgeAdapterInterface):
     def set_protected_ref(self, ref: str, protected: bool) -> tuple[bool, str]:
         if protected:
             _, problem = self.transport.survey(
-                ["repos/{{repo}}/branch_protections", "POST", json.dumps({"branch": ref})],
+                [
+                    f"repos/{self._repository()}/branch_protections",
+                    "POST",
+                    json.dumps({"branch": ref}),
+                ],
                 cwd=self.root,
             )
         else:
             _, problem = self.transport.survey(
-                ["repos/{{repo}}/branch_protections/" + ref, "DELETE", ""], cwd=self.root
+                [f"repos/{self._repository()}/branch_protections/{ref}", "DELETE", ""],
+                cwd=self.root,
             )
         if problem:
             return False, problem
         return True, ""
 
     def get_protected_refs(self) -> tuple[frozenset[str], str]:
-        val, problem = self.transport.survey(["repos/{{repo}}/branch_protections"], cwd=self.root)
+        val, problem = self.transport.survey(
+            [f"repos/{self._repository()}/branch_protections"], cwd=self.root
+        )
         if problem:
             return frozenset(), problem
         if not isinstance(val, list):
             return frozenset(), "Expected list of protected branches"
         return frozenset(str(b.get("branch", "")) for b in val if isinstance(b, dict)), ""
+
+    def _repository(self) -> str:
+        return quote(self.repository, safe="/")

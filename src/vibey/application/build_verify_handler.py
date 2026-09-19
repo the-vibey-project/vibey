@@ -281,7 +281,7 @@ class BuildVerifyHandler:
             if run_outcome.exit_code is None:
                 return Failure(FailureClass.WORK, "diff review did not approve this work item")
             return Failure(
-                self._reviewer.attribute(run_outcome.exit_code, ""),
+                self._reviewer.attribute(run_outcome.exit_code, run_outcome.diagnostic_tail),
                 f"diff review did not approve this work item (exit code {run_outcome.exit_code})",
             )
 

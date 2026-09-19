@@ -14,8 +14,9 @@ the clone's own remote rather than from anything this process tells it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
+from urllib.parse import urlencode
 
 from vibey_gh.forge import (
     ChangeRequest,
@@ -38,7 +39,11 @@ class GitHubForge(ForgeAdapterInterface):
     """One GitHub repository, reached through `gh` run in its clone at `root`."""
 
     root: WorkingDirectory
+    repository: str = ""
     transport: GhTransportInterface = field(default_factory=GhTransport)
+
+    def for_repository(self, repository: str) -> GitHubForge:
+        return replace(self, repository=repository)
 
     def list_artifacts(
         self,
@@ -49,45 +54,31 @@ class GitHubForge(ForgeAdapterInterface):
     ) -> tuple[list[dict[str, Any]], str]:
         # Map neutral class name to gh endpoint
         mapping = {
-            "issue": "repos/{{repo}}/issues?state=all&sort=updated&direction=asc",
-            "comment": "repos/{{repo}}/issues/comments?sort=updated&direction=asc",
-            "change-request": "repos/{{repo}}/pulls?state=all&sort=updated&direction=desc",
-            "review": "repos/{{repo}}/pulls/{number}/reviews",
-            "review-comment": "repos/{{repo}}/pulls/comments?sort=updated&direction=asc",
-            "label": "repos/{{repo}}/labels",
-            "milestone": "repos/{{repo}}/milestones?state=all",
-            "release": "repos/{{repo}}/releases",
-            "tag": "repos/{{repo}}/tags",
+            "issue": f"repos/{self._repository()}/issues?state=all&sort=updated&direction=asc",
+            "comment": f"repos/{self._repository()}/issues/comments?sort=updated&direction=asc",
+            "change-request": f"repos/{self._repository()}/pulls?state=all&sort=updated&direction=desc",
+            "review-comment": f"repos/{self._repository()}/pulls/comments?sort=updated&direction=asc",
+            "label": f"repos/{self._repository()}/labels",
+            "milestone": f"repos/{self._repository()}/milestones?state=all",
+            "release": f"repos/{self._repository()}/releases",
+            "tag": f"repos/{self._repository()}/tags",
         }
         path = mapping.get(forge_class)
         if not path:
             return [], f"GitHub adapter does not support artifact class {forge_class!r}"
 
-        args = ["api", path]
-        if since:
-            args += [
-                "--paginate",
-                f"--since {since}",
-            ]  # Simplified; gh api doesn't always support --since
-
-        # Handle pagination for `gh api`
-        # Note: we use `gh api` for general listings to avoid the `gh pr list` limits
-        args += ["--paginate", "--slurp"]
-
-        # We use a specialized survey for pagination
-        val, problem = self.transport.survey(args, cwd=self.root)
+        query = {"page": str(page), "per_page": str(limit)}
+        if since and forge_class in {"issue", "comment", "review-comment"}:
+            query["since"] = since
+        separator = "&" if "?" in path else "?"
+        val, problem = self.transport.survey(
+            ["api", path + separator + urlencode(query)], cwd=self.root
+        )
         if problem:
             return [], problem
-        # The survey returns a list of pages (due to --slurp)
         if not isinstance(val, list):
-            return [], "Expected list of pages"
-
-        # Flatten pages
-        items = []
-        for page_items in val:
-            if isinstance(page_items, list):
-                items.extend(page_items)
-        return items, ""
+            return [], "Expected list of artifacts"
+        return [item for item in val if isinstance(item, dict)], ""
 
     def open_change_request_heads(self, *, limit: int) -> tuple[frozenset[str], str]:
         pulls, problem = self._listing("pr", "list", "--json", "headRefName", "--limit", str(limit))
@@ -176,7 +167,7 @@ class GitHubForge(ForgeAdapterInterface):
 
     def get_reviews(self, number: int) -> tuple[tuple[ForgeReview, ...], str]:
         val, problem = self.transport.survey(
-            ["api", f"repos/{{repo}}/pulls/{number}/reviews"], cwd=self.root
+            ["api", f"repos/{self._repository()}/pulls/{number}/reviews"], cwd=self.root
         )
         if problem:
             return (), problem
@@ -195,7 +186,7 @@ class GitHubForge(ForgeAdapterInterface):
 
     def get_check_results(self, head_sha: str) -> tuple[tuple[Any, ...], str]:
         val, problem = self.transport.survey(
-            ["api", f"repos/{{repo}}/commits/{head_sha}/check-runs"], cwd=self.root
+            ["api", f"repos/{self._repository()}/commits/{head_sha}/check-runs"], cwd=self.root
         )
         if problem:
             return (), problem
@@ -256,14 +247,17 @@ class GitHubForge(ForgeAdapterInterface):
     def set_protected_ref(self, ref: str, protected: bool) -> tuple[bool, str]:
         method = "PUT" if protected else "DELETE"
         _, problem = self.transport.survey(
-            ["api", f"repos/{{repo}}/branches/{ref}/protection", "--method", method], cwd=self.root
+            ["api", f"repos/{self._repository()}/branches/{ref}/protection", "--method", method],
+            cwd=self.root,
         )
         if problem:
             return False, problem
         return True, ""
 
     def get_protected_refs(self) -> tuple[frozenset[str], str]:
-        val, problem = self.transport.survey(["api", "repos/{{repo}}/branches"], cwd=self.root)
+        val, problem = self.transport.survey(
+            ["api", f"repos/{self._repository()}/branches"], cwd=self.root
+        )
         if problem:
             return frozenset(), problem
         if not isinstance(val, list):
@@ -281,3 +275,6 @@ class GitHubForge(ForgeAdapterInterface):
             label = " ".join((self.transport.executable, *args[:2]))
             return [], f"`{label}` returned a JSON object where a listing was expected"
         return value, ""
+
+    def _repository(self) -> str:
+        return self.repository

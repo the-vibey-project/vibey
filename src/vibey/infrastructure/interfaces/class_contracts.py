@@ -160,6 +160,10 @@ class LoopProcessAdapterInterface(EngineAdapter, Protocol):
 
     def run_exit_code(self, handle: object) -> int | None: ...
 
+    def diagnostic_tail(self, handle: object) -> str: ...
+
+    def release_diagnostics(self, handle: object) -> None: ...
+
 
 @runtime_checkable
 class UrllibOllamaTransportInterface(OllamaTransportInterface, Protocol):

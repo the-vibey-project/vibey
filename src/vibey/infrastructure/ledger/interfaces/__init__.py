@@ -11,10 +11,12 @@ from vibey.infrastructure.ledger.interfaces.static_export_interface import (
     HtmlSafeJsonInterface,
     ShardHeaderCodecInterface,
 )
+from vibey.infrastructure.ledger.interfaces.tier_store_interface import LedgerTierStoreInterface
 
 __all__ = [
     "CompressionCodecInterface",
     "HtmlSafeJsonInterface",
     "LedgerLinesInterface",
+    "LedgerTierStoreInterface",
     "ShardHeaderCodecInterface",
 ]

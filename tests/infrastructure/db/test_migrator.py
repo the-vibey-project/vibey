@@ -67,6 +67,62 @@ async def test_apply_all_real_migrations_to_a_fresh_database(pg_conn: asyncpg.Co
         assert expected in table_names
 
 
+async def test_event_partition_migration_preserves_append_only_live_schema(
+    pg_conn: asyncpg.Connection,
+) -> None:
+    migrations = discover_migrations(MIGRATIONS_DIR)
+    await apply_migrations(pg_conn, migrations[:-1])
+    project_id = await pg_conn.fetchval(
+        "INSERT INTO project (name, repo_path, config) VALUES ($1, $2, '{}'::jsonb) RETURNING id",
+        "partitioned",
+        "/tmp/partitioned",
+    )
+    old_seq = await pg_conn.fetchval(
+        """
+        SELECT append_event(
+            $1, 1, 'build'::phase, 'BeforePartition', NULL, NULL, NULL, $1,
+            'agent'::provenance, '{}'::jsonb, 'before'
+        )
+        """,
+        project_id,
+    )
+    assert old_seq == 1
+
+    await apply_migrations(pg_conn, migrations)
+    assert (
+        await pg_conn.fetchval("SELECT relkind FROM pg_class WHERE oid = 'event'::regclass") == b"p"
+    )
+    assert (
+        await pg_conn.fetchval(
+            "SELECT digest FROM event WHERE project_id = $1 AND seq = 1", project_id
+        )
+        == "before"
+    )
+
+    seq = await pg_conn.fetchval(
+        """
+        SELECT append_event(
+            $1, 1, 'build'::phase, 'Partitioned', NULL, NULL, NULL, $1,
+            'agent'::provenance, '{}'::jsonb, 'digest'
+        )
+        """,
+        project_id,
+    )
+    assert seq == 2
+    assert (
+        await pg_conn.fetchval("SELECT count(*) FROM event WHERE project_id = $1", project_id) == 2
+    )
+
+    await pg_conn.execute("UPDATE event SET digest = 'changed' WHERE project_id = $1", project_id)
+    await pg_conn.execute("DELETE FROM event WHERE project_id = $1", project_id)
+    assert (
+        await pg_conn.fetchval(
+            "SELECT digest FROM event WHERE project_id = $1 AND seq = 2", project_id
+        )
+        == "digest"
+    )
+
+
 async def test_applying_migrations_twice_is_a_no_op(pg_conn: asyncpg.Connection) -> None:
     migrations = discover_migrations(MIGRATIONS_DIR)
 

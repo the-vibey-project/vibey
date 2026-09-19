@@ -149,6 +149,11 @@ def pytest_configure(config: pytest.Config) -> None:
     os.environ["_VIBEY_TEST_BASE_DSN"] = _BASE_DSN
     worker_dsn = asyncio.run(_setup(_BASE_DSN))
     os.environ["VIBEY_TEST_DATABASE_URL"] = worker_dsn
+    # Some integration tests exercise the application entry point directly, whose
+    # production setting is VIBEY_PG_URL rather than the fixture-specific name.
+    # Point both names at the same isolated worker database so those tests cannot
+    # fall through to an unset configuration or a shared database.
+    os.environ["VIBEY_PG_URL"] = worker_dsn
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:

@@ -49,10 +49,12 @@ def _forgejo(transport: ScriptedTransport) -> ForgejoForge:
 
 
 def test_github_artifact_listing_and_list_verbs_cover_the_shape_contract():
-    transport = ScriptedTransport(([[{"id": 1}, "ignored"], {"id": 2}], ""))
+    transport = ScriptedTransport(([{"id": 1}, "ignored", {"id": 2}], ""))
     items, problem = _github(transport).list_artifacts("issue", since="2026-01-01", page=2, limit=3)
-    assert items == [{"id": 1}, "ignored"] and not problem
-    assert "--since 2026-01-01" in transport.calls[0]
+    assert items == [{"id": 1}, {"id": 2}] and not problem
+    assert "page=2" in transport.calls[0][1]
+    assert "per_page=3" in transport.calls[0][1]
+    assert "since=2026-01-01" in transport.calls[0][1]
 
     assert _github(ScriptedTransport()).list_artifacts("unknown")[1] == (
         "GitHub adapter does not support artifact class 'unknown'"
@@ -60,7 +62,7 @@ def test_github_artifact_listing_and_list_verbs_cover_the_shape_contract():
     assert _github(ScriptedTransport(([], "down"))).list_artifacts("issue") == ([], "down")
     assert _github(ScriptedTransport(({}, ""))).list_artifacts("issue") == (
         [],
-        "Expected list of pages",
+        "Expected list of artifacts",
     )
 
     heads = _github(
@@ -432,6 +434,25 @@ def test_forge_adapter_reader_pages_reviews_and_rejects_lossy_shapes():
         "could not be listed"
         in ForgeAdapterReader("github", "o/r", listing_error).read("review", None).problem
     )
+    iid = Adapter({("change-request", 1): ([{"iid": 7}], "")})
+    iid_read = ForgeAdapterReader("gitlab", "o/r", iid).read("change-request", None)
+    assert iid_read.observations == (("7", {"iid": 7}),)
+    stamped = Adapter({("issue", 1): ([{"id": 1, "updated_at": "2026-01-02T00:00:00Z"}], "")})
+    assert (
+        ForgeAdapterReader("github", "o/r", stamped).read("issue", None).high_water
+        == "2026-01-02T00:00:00Z"
+    )
+    assert (
+        ForgeAdapterReader._high_water(
+            [{"id": 1, "updated_at": "not-a-time", "created_at": "2026-01-01T00:00:00Z"}]
+        )
+        == "2026-01-01T00:00:00Z"
+    )
+    assert _github(ScriptedTransport()).for_repository("o/r").repository == "o/r"
+    assert _gitlab(ScriptedTransport()).for_repository("o/r").repository == "o/r"
+    assert _forgejo(ScriptedTransport()).for_repository("o/r").repository == "o/r"
+    bound_reader = ForgeAdapterReader("github", "o/r", _github(ScriptedTransport()))
+    assert bound_reader.adapter.repository == "o/r"
     with pytest.raises(ValueError, match="unknown artifact class"):
         ForgeAdapterReader("github", "o/r", Adapter({})).read("unknown", None)
 
@@ -474,6 +495,8 @@ def test_http_transports_cover_success_and_failures(monkeypatch, transport_type,
     monkeypatch.setattr("urllib.request.urlopen", success)
     assert transport.survey(["projects/1/issues"])[0] == [{"id": 1}]
     assert seen[header.lower()] in {"secret", "token secret"}
+    assert transport.survey(["projects/1/issues", "POST", '{"body":"x"}'])[0] == [{"id": 1}]
+    assert seen["content-type"] == "application/json"
 
     monkeypatch.setattr("urllib.request.urlopen", lambda request: _HttpResponse('{"ok": true}'))
     assert transport.survey(["one"])[0] == {"ok": True}

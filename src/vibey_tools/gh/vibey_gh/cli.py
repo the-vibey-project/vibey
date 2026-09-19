@@ -880,6 +880,7 @@ def _paper(args) -> int:
 
 def _book(args) -> int:
     from vibey_gh import book
+    from vibey_gh.docx import DocxError
 
     meta = {
         "title": args.title,
@@ -919,7 +920,7 @@ def _book(args) -> int:
             meta={k: v for k, v in meta.items() if v},
             interior=book.PrintInterior(**layout),
         )
-    except (book.BookError, OSError) as error:
+    except (book.BookError, DocxError, OSError) as error:
         print(f"vibey-gh book: {error}", file=sys.stderr)
         return 1
     for kind, path in written.items():

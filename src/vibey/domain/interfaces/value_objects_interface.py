@@ -208,6 +208,7 @@ class LedgerEventInterface(Protocol):
     @property
     def digest(self) -> str: ...
 
+    @property
     def interpretable(self) -> bool: ...
 
 

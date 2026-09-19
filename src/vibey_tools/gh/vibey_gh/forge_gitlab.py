@@ -7,8 +7,9 @@ Implements `vibey_gh.interfaces.forge_adapter_interface` on the `GitLabTransport
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
+from urllib.parse import quote
 
 from vibey_gh.forge import (
     ChangeRequest,
@@ -27,7 +28,11 @@ class GitLabForge(ForgeAdapterInterface):
     """One GitLab repository, reached through `GitLabTransport`."""
 
     root: WorkingDirectory
+    repository: str = ""
     transport: ForgeTransportInterface = field(default_factory=GitLabTransport)
+
+    def for_repository(self, repository: str) -> GitLabForge:
+        return replace(self, repository=repository)
 
     def list_artifacts(
         self,
@@ -37,10 +42,10 @@ class GitLabForge(ForgeAdapterInterface):
         limit: int = 100,
     ) -> tuple[list[dict[str, Any]], str]:
         paths = {
-            "issue": "projects/{{repo}}/issues",
-            "change-request": "projects/{{repo}}/merge_requests",
-            "release": "projects/{{repo}}/releases",
-            "label": "projects/{{repo}}/labels",
+            "issue": f"projects/{self._project()}/issues",
+            "change-request": f"projects/{self._project()}/merge_requests",
+            "release": f"projects/{self._project()}/releases",
+            "label": f"projects/{self._project()}/labels",
         }
         path = paths.get(forge_class)
         if path is None:
@@ -58,7 +63,8 @@ class GitLabForge(ForgeAdapterInterface):
     def open_change_request_heads(self, *, limit: int) -> tuple[frozenset[str], str]:
         # GitLab: /projects/:id/merge_requests
         pulls, problem = self.transport.survey(
-            ["projects/{{repo}}/merge_requests?state=opened&per_page=" + str(limit)], cwd=self.root
+            [f"projects/{self._project()}/merge_requests?state=opened&per_page={limit}"],
+            cwd=self.root,
         )
         heads = frozenset(
             head
@@ -70,7 +76,7 @@ class GitLabForge(ForgeAdapterInterface):
     def releases(self, *, limit: int) -> tuple[tuple[ForgeRelease, ...], str]:
         # GitLab: /projects/:id/releases
         rows, problem = self.transport.survey(
-            ["projects/{{repo}}/releases?per_page=" + str(limit)], cwd=self.root
+            [f"projects/{self._project()}/releases?per_page={limit}"], cwd=self.root
         )
         releases = tuple(
             ForgeRelease(
@@ -85,7 +91,7 @@ class GitLabForge(ForgeAdapterInterface):
 
     def get_change_request(self, number: int) -> tuple[ChangeRequest | None, str]:
         val, problem = self.transport.survey(
-            ["projects/{{repo}}/merge_requests/" + str(number)], cwd=self.root
+            [f"projects/{self._project()}/merge_requests/{number}"], cwd=self.root
         )
         if problem:
             return None, problem
@@ -103,7 +109,7 @@ class GitLabForge(ForgeAdapterInterface):
 
     def get_issue(self, number: int) -> tuple[ForgeIssue | None, str]:
         val, problem = self.transport.survey(
-            ["projects/{{repo}}/issues/" + str(number)], cwd=self.root
+            [f"projects/{self._project()}/issues/{number}"], cwd=self.root
         )
         if problem:
             return None, problem
@@ -120,11 +126,11 @@ class GitLabForge(ForgeAdapterInterface):
         # Issues and MRs have separate comment endpoints in GitLab
         # We try issues first, then MRs
         val, problem = self.transport.survey(
-            ["projects/{{repo}}/issues/" + str(number) + "/notes"], cwd=self.root
+            [f"projects/{self._project()}/issues/{number}/notes"], cwd=self.root
         )
         if problem:
             val, problem = self.transport.survey(
-                ["projects/{{repo}}/merge_requests/" + str(number) + "/notes"], cwd=self.root
+                [f"projects/{self._project()}/merge_requests/{number}/notes"], cwd=self.root
             )
 
         if problem:
@@ -144,7 +150,7 @@ class GitLabForge(ForgeAdapterInterface):
     def get_reviews(self, number: int) -> tuple[tuple[ForgeReview, ...], str]:
         # GitLab reviews are "Approvals" or "Discussions"
         val, problem = self.transport.survey(
-            ["projects/{{repo}}/merge_requests/" + str(number) + "/approvals"], cwd=self.root
+            [f"projects/{self._project()}/merge_requests/{number}/approvals"], cwd=self.root
         )
         if problem:
             return (), problem
@@ -163,7 +169,7 @@ class GitLabForge(ForgeAdapterInterface):
     def get_check_results(self, head_sha: str) -> tuple[tuple[Any, ...], str]:
         # GitLab: /projects/:id/commits/:sha/statuses
         val, problem = self.transport.survey(
-            ["projects/{{repo}}/commits/" + head_sha + "/statuses"], cwd=self.root
+            [f"projects/{self._project()}/commits/{head_sha}/statuses"], cwd=self.root
         )
         if problem:
             return (), problem
@@ -178,11 +184,11 @@ class GitLabForge(ForgeAdapterInterface):
     def create_comment(self, number: int, body: str) -> tuple[ForgeComment | None, str]:
         # We'll try creating on issue, then MR
         _, problem = self.transport.survey(
-            ["projects/{{repo}}/issues/" + str(number) + "/notes", "POST", body], cwd=self.root
+            [f"projects/{self._project()}/issues/{number}/notes", "POST", body], cwd=self.root
         )
         if problem:
             _, problem = self.transport.survey(
-                ["projects/{{repo}}/merge_requests/" + str(number) + "/notes", "POST", body],
+                [f"projects/{self._project()}/merge_requests/{number}/notes", "POST", body],
                 cwd=self.root,
             )
         if problem:
@@ -198,7 +204,7 @@ class GitLabForge(ForgeAdapterInterface):
         if body:
             payload["description"] = body
         _, problem = self.transport.survey(
-            ["projects/{{repo}}/merge_requests/" + str(number), "PUT", json.dumps(payload)],
+            [f"projects/{self._project()}/merge_requests/{number}", "PUT", json.dumps(payload)],
             cwd=self.root,
         )
         if problem:
@@ -211,7 +217,7 @@ class GitLabForge(ForgeAdapterInterface):
         # GitLab: POST /projects/:id/merge_requests/:iid/merge
         # method: squash is handled via a different API or project setting
         _, problem = self.transport.survey(
-            ["projects/{{repo}}/merge_requests/" + str(number) + "/merge", "POST", ""],
+            [f"projects/{self._project()}/merge_requests/{number}/merge", "POST", ""],
             cwd=self.root,
         )
         if problem:
@@ -223,7 +229,7 @@ class GitLabForge(ForgeAdapterInterface):
     ) -> tuple[ForgeRelease | None, str]:
         payload = {"tag_name": tag, "name": name, "description": body}
         _, problem = self.transport.survey(
-            ["projects/{{repo}}/releases", "POST", json.dumps(payload)], cwd=self.root
+            [f"projects/{self._project()}/releases", "POST", json.dumps(payload)], cwd=self.root
         )
         if problem:
             return None, problem
@@ -233,12 +239,17 @@ class GitLabForge(ForgeAdapterInterface):
         # GitLab: /projects/:id/protected_branches
         if protected:
             _, problem = self.transport.survey(
-                ["projects/{{repo}}/protected_branches", "POST", json.dumps({"name": ref})],
+                [
+                    f"projects/{self._project()}/protected_branches",
+                    "POST",
+                    json.dumps({"name": ref}),
+                ],
                 cwd=self.root,
             )
         else:
             _, problem = self.transport.survey(
-                ["projects/{{repo}}/protected_branches/" + ref, "DELETE", ""], cwd=self.root
+                [f"projects/{self._project()}/protected_branches/{ref}", "DELETE", ""],
+                cwd=self.root,
             )
         if problem:
             return False, problem
@@ -246,10 +257,13 @@ class GitLabForge(ForgeAdapterInterface):
 
     def get_protected_refs(self) -> tuple[frozenset[str], str]:
         val, problem = self.transport.survey(
-            ["projects/{{repo}}/protected_branches"], cwd=self.root
+            [f"projects/{self._project()}/protected_branches"], cwd=self.root
         )
         if problem:
             return frozenset(), problem
         if not isinstance(val, list):
             return frozenset(), "Expected list of protected branches"
         return frozenset(str(b.get("name", "")) for b in val if isinstance(b, dict)), ""
+
+    def _project(self) -> str:
+        return quote(self.repository, safe="")

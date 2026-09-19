@@ -262,7 +262,7 @@ class BuildImplementHandler:
             if run_outcome.exit_code is None:
                 return Failure(FailureClass.WORK, "engine run did not report completion")
             return Failure(
-                self._engine.attribute(run_outcome.exit_code, ""),
+                self._engine.attribute(run_outcome.exit_code, run_outcome.diagnostic_tail),
                 f"engine run did not report completion (exit code {run_outcome.exit_code})",
             )
 

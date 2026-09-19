@@ -53,10 +53,15 @@ class ForgejoTransport(ForgeTransportInterface):
             return [], "No API path provided"
 
         path = args[0]
+        method = args[1].upper() if len(args) > 1 else "GET"
+        body = args[2] if len(args) > 2 else ""
+        data = body.encode("utf-8") if body else None
         url = f"https://{self.host}/api/v1/{path}"
 
-        req = urllib.request.Request(url)
+        req = urllib.request.Request(url, data=data, method=method)
         req.add_header("Authorization", f"token {self.token}")
+        if data is not None:
+            req.add_header("Content-Type", "application/json")
 
         try:
             with urllib.request.urlopen(req) as resp:
