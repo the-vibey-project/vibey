@@ -23,6 +23,8 @@ from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
 from vibey.domain.ledger_record import LEDGER_RECORDS
 from vibey.domain.phase import Phase
 from vibey.domain.publication_policy import (
+    BILLING_POLICY,
+    BILLING_RULES,
     DEFAULT_ALLOWLIST,
     DEFAULT_POLICY,
     DEFAULT_RULES,
@@ -355,6 +357,27 @@ def test_a_widened_rule_set_publishes_what_it_names() -> None:
         "dollars": 2
     }
     assert policy.decide(_event(provenance=Provenance.UNTRUSTED)).record is not None
+
+
+def test_billing_projection_is_explicit_and_keeps_only_metered_fields() -> None:
+    assert isinstance(BILLING_POLICY, PublicationPolicyInterface)
+    assert BILLING_RULES.chatter == frozenset()
+    turn = _event(
+        kind=EventKind.TURN_COMPLETED,
+        provenance=Provenance.AGENT,
+        payload={"cost_usd": 2.5, "text": "private output"},
+    )
+    budget = _event(
+        seq=2,
+        kind=EventKind.BUDGET_SPENT,
+        payload={"dollars": 1.5, "turns": 3, "secret": "hidden"},
+    )
+    tool = _event(seq=3, kind=EventKind.TOOL_INVOKED, payload={"body": "private"})
+    outcome = BILLING_POLICY.apply((turn, budget, tool))
+    assert len(outcome.records) == 3
+    assert outcome.records[0].payload == {"cost_usd": 2.5}
+    assert outcome.records[1].payload == {"dollars": 1.5, "turns": 3}
+    assert outcome.records[2].payload == {}
 
 
 def test_trim_counts_add_field_by_field() -> None:

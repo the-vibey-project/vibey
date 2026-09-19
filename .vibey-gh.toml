@@ -193,6 +193,20 @@ scan_workflows = ["CI", "Provenance", "Conventional Commits"]
 # author can amend before merge is cheaper than a rewrite they cannot avoid after it.
 normalise_commit_subjects = true
 
+# The delivery forecast is a repository-owned, append-only projection.  The workflow
+# refreshes it on integration changes, issue/PR changes and a schedule; these paths and
+# the four phi constants are still keys so another adopter can keep the same calculator
+# while choosing a different archive or empirical dilation.
+[estimate.forecast]
+ledger = ".vibey/delivery-estimates.jsonl"
+report = "docs/estimate.md"
+billing_ledger = ".vibey/billing-ledger.jsonl"
+phi_floor = 0.1
+phi_epsilon = 0.01
+phi_exponent = 1.0
+unknown_factor = 1.0
+size_weights = { xs = 0.5, s = 1.0, m = 3.0, l = 6.0, xl = 12.0 }
+
 [pr_automation.fallback]
 # Reviews with a local model when the paid path returns NO VERDICT AT ALL. It never
 # overrides a review that ran, `trusted_only` keeps fork PRs off the self-hosted runner,

@@ -1316,6 +1316,24 @@ class EstimateConfig:
     stages: tuple[str, ...] = ()
     requirements: tuple[tuple[str, tuple[tuple[str, float], ...]], ...] = ()
     report_first: tuple[str, ...] = ("agency",)
+    # Continuous delivery forecast outputs.  They are repository-relative by default so
+    # the append-only history and the human page can travel with the code that produced
+    # them.  A repository may point them at an archival mount or disable the writer at the
+    # CLI without changing the calculus.
+    forecast_ledger: str = ".vibey/delivery-estimates.jsonl"
+    forecast_report: str = "docs/estimate.md"
+    forecast_billing_ledger: str = ".vibey/billing-ledger.jsonl"
+    forecast_phi_floor: float = 0.1
+    forecast_phi_epsilon: float = 0.01
+    forecast_phi_exponent: float = 1.0
+    forecast_phi_unknown_factor: float = 1.0
+    forecast_size_weights: tuple[tuple[str, float], ...] = (
+        ("xs", 0.5),
+        ("s", 1.0),
+        ("m", 3.0),
+        ("l", 6.0),
+        ("xl", 12.0),
+    )
 
     def __post_init__(self) -> None:
         _unique_nonempty("estimate.stages", self.stages)
@@ -1337,6 +1355,22 @@ class EstimateConfig:
                         f"estimate.requirements.{stage}.{coordinate} must be a number from"
                         f" 0 to 1, where 1 is peak: {minimum!r}"
                     )
+        if not self.forecast_ledger.strip() or not self.forecast_report.strip():
+            raise ValueError("estimate.forecast ledger and report paths must be non-empty")
+        if not self.forecast_billing_ledger.strip():
+            raise ValueError("estimate.forecast billing ledger path must be non-empty")
+        if not 0.0 <= self.forecast_phi_floor < 1.0:
+            raise ValueError("estimate.forecast_phi_floor must be at least 0 and below 1")
+        if self.forecast_phi_epsilon <= 0:
+            raise ValueError("estimate.forecast_phi_epsilon must be positive")
+        if self.forecast_phi_exponent <= 0:
+            raise ValueError("estimate.forecast_phi_exponent must be positive")
+        if self.forecast_phi_unknown_factor < 1.0:
+            raise ValueError("estimate.forecast_phi_unknown_factor must be at least 1")
+        labels = tuple(label for label, _ in self.forecast_size_weights)
+        _unique_nonempty("estimate.forecast_size_weights", labels)
+        if any(value <= 0 for _, value in self.forecast_size_weights):
+            raise ValueError("estimate.forecast_size_weights values must be positive")
 
     @classmethod
     def from_table(cls, section: dict) -> EstimateConfig:
@@ -1347,12 +1381,33 @@ class EstimateConfig:
                 "estimate.requirements must be a table of stage tables, e.g."
                 ' [estimate.requirements.main] "agency.availability" = 1.0'
             )
+        forecast = section.get("forecast", {})
+        if not isinstance(forecast, dict):
+            raise TypeError("estimate.forecast must be a table")
+        weights = forecast.get(
+            "size_weights",
+            {"xs": 0.5, "s": 1.0, "m": 3.0, "l": 6.0, "xl": 12.0},
+        )
+        if not isinstance(weights, dict):
+            raise TypeError("estimate.forecast.size_weights must be a table of label = weight")
         return cls(
             offline=bool(section.get("offline", True)),
             model=str(section.get("model", "")),
             stages=tuple(section.get("stages", ())),
             requirements=tuple((stage, tuple(needs.items())) for stage, needs in raw.items()),
             report_first=tuple(section.get("report_first", cls.report_first)),
+            forecast_ledger=str(forecast.get("ledger", ".vibey/delivery-estimates.jsonl")),
+            forecast_report=str(forecast.get("report", "docs/estimate.md")),
+            forecast_billing_ledger=str(
+                forecast.get("billing_ledger", ".vibey/billing-ledger.jsonl")
+            ),
+            forecast_phi_floor=float(forecast.get("phi_floor", 0.1)),
+            forecast_phi_epsilon=float(forecast.get("phi_epsilon", 0.01)),
+            forecast_phi_exponent=float(forecast.get("phi_exponent", 1.0)),
+            forecast_phi_unknown_factor=float(forecast.get("unknown_factor", 1.0)),
+            forecast_size_weights=tuple(
+                (str(label), float(value)) for label, value in weights.items()
+            ),
         )
 
 

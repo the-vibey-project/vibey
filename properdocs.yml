@@ -43,8 +43,10 @@ nav:
   - Guides:
       - Kubernetes: guides/kubernetes.md
       - Greeter live demo: guides/greeter-live-demo.md
-       - Local models on Ollama: guides/local-models-ollama.md
-       - What gets published: guides/ledger-publication.md
+      - Local models on Ollama: guides/local-models-ollama.md
+      - What gets published: guides/ledger-publication.md
+      - Continuous delivery estimate: guides/delivery-estimate.md
+  - Current estimate: estimate.md
   - Reference:
       - CLI: reference/cli.md
       - Configuration: reference/configuration.md
