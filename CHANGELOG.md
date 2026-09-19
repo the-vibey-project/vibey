@@ -30,6 +30,26 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   publish cease to exist as shipped artifacts even though CI keeps testing them
   ([ADR-0037](docs/architecture/decisions/0037-one-distribution-one-version.md))
 
+### Bug Fixes
+
+* **cluster:** `vibey doctor --cluster` passes a default chart install again. Since the one wheel
+  put every runner on `PATH` (ADR-0037), `engine-auth` judged all four paid engines in every pod
+  and failed the default `--provider scripted` install, which mounts no keys; `cluster-smoke`
+  deploys exactly that install but never runs the preflight, so CI did not notice. The check now
+  judges the engines the worker is told to use: `doctor --cluster` takes the worker's own
+  `--engines` and `--provider` (chart `worker.engines`, `worker.provider`), requires each of those
+  to be on `PATH` with an API key, and with neither reports, as a pass, which engines in the
+  worker's default pool have a key — so a default install says plainly that no engine-driven job
+  can run. Either flag without `--cluster` exits 2. The check and the sweep behind it are classes
+  with declared interfaces (ADR-0016)
+  ([#121](https://github.com/the-vibey-project/vibey/issues/121))
+* **docs:** the Kubernetes guide, runbooks 05 and 16, `values.yaml`'s header and ADR-0025's status
+  stop saying engines do not ship in the image; runbook 16's separate engines image is recorded as
+  moot and its remainder narrowed to Phase 0 (codexloop needs an external `codex`; `claudeloop
+  doctor` looks for `claude` on `PATH` only, not the copy `claude-agent-sdk` bundles). qwenloop's
+  orphaned `deploy/docker/Dockerfile` — built by nothing, keeping `pip`, no fixed uid — is deleted;
+  `docker run --entrypoint qwenloop <vibey image>` runs it
+  ([#121](https://github.com/the-vibey-project/vibey/issues/121))
 ### Features
 
 * **gh:** the book is a paperback interior, not a printed web page (#162). `book-print.html`

@@ -1960,15 +1960,71 @@ def test_doctor_cluster_passes_against_a_migrated_database(
 
     asyncio.run(migrate())
     monkeypatch.chdir(tmp_path)
+    for var in _ENGINE_KEY_VARS:
+        monkeypatch.delenv(var, raising=False)
 
-    # No engine binaries: the scripted-provider image, which is the state
-    # of the published image today and not a fault.
-    with patch("shutil.which", return_value=None):
+    # Every engine on PATH and no key: the default chart install on the image
+    # since ADR-0037, which bundles every runner. Not a fault -- the worker was
+    # never told to use an engine.
+    with patch("shutil.which", side_effect=lambda binary: f"/app/.venv/bin/{binary}"):
         res = runner.invoke(app, ["doctor", "--cluster"])
 
     assert res.exit_code == 0, res.output
+    assert "PASS engine-auth" in res.output
     assert "PASS database" in res.output
     assert "PASS migrations" in res.output
+
+
+# Every variable cluster_preflight.ENGINE_API_KEY_ENVS accepts, so a developer's
+# own shell cannot decide these tests.
+_ENGINE_KEY_VARS = (
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "OPENAI_API_KEY",
+    "AZURE_OPENAI_API_KEY",
+    "CODEX_API_KEY",
+    "CURSOR_API_KEY",
+    "GOOGLE_API_KEY",
+    "GEMINI_API_KEY",
+    "GOOGLE_APPLICATION_CREDENTIALS",
+)
+
+
+def test_doctor_cluster_holds_the_worker_to_its_engines_allow_list(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The same install told `--engines claudeloop` with no key mounted is the
+    misconfiguration this check exists for: Ready, and no BUILD job can run."""
+    from unittest.mock import patch
+
+    monkeypatch.chdir(tmp_path)
+    for var in _ENGINE_KEY_VARS:
+        monkeypatch.delenv(var, raising=False)
+
+    with patch("shutil.which", side_effect=lambda binary: f"/app/.venv/bin/{binary}"):
+        res = runner.invoke(
+            app, ["doctor", "--cluster", "--engines", "claudeloop", "--provider", "scripted"]
+        )
+
+    assert res.exit_code == 1
+    assert "FAIL engine-auth" in res.output
+    assert "installed but unauthenticated: claudeloop" in res.output
+
+
+def test_doctor_cluster_refuses_a_worker_flag_the_worker_would_refuse() -> None:
+    res = runner.invoke(app, ["doctor", "--cluster", "--engines", "gpt"])
+
+    assert res.exit_code == 2
+    assert "Invalid worker flag" in res.output
+
+
+@pytest.mark.parametrize("flag", [["--engines", "claudeloop"], ["--provider", "scripted"]])
+def test_doctor_worker_flags_without_cluster_are_refused_not_ignored(flag: list[str]) -> None:
+    """Silently dropping them would read as a check that ran."""
+    res = runner.invoke(app, ["doctor", *flag])
+
+    assert res.exit_code == 2
+    assert "apply only with --cluster" in res.output
 
 
 def test_doctor_cluster_exits_nonzero_when_the_database_is_unreachable(
