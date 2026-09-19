@@ -11,11 +11,15 @@ Key choices, each tied to an ADR:
 - max_buffer_size defaults above the SDK's 1MB floor so large tool results
   (big file reads, base64 blobs) don't abort the run — see
   anthropics/claude-agent-sdk-python#98.
+- ``env`` is the backend profile's overlay (domain/backend.py). The SDK merges
+  options.env over the inherited process environment, so it wins — which is
+  how a local profile blanks an inherited ANTHROPIC_API_KEY. It is applied to
+  the turn AND the probe: a probe without it would still ask Anthropic.
 """
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -70,10 +74,14 @@ def build_turn_options(
     can_use_tool: CanUseTool | None = None,
     system_prompt_append: str = "",
     allowed_tools: list[str] | None = None,
+    env: Mapping[str, str] | None = None,
+    cli_path: str | None = None,
 ) -> ClaudeAgentOptions:
-    env: dict[str, str] = {"CLAUDE_CODE_MAX_RETRIES": "10"}
+    merged_env: dict[str, str] = {"CLAUDE_CODE_MAX_RETRIES": "10"}
     if retry_watchdog:
-        env["CLAUDE_CODE_RETRY_WATCHDOG"] = "1"
+        merged_env["CLAUDE_CODE_RETRY_WATCHDOG"] = "1"
+    # The backend overlay last, so a profile's extra_env can tune the defaults above.
+    merged_env.update(env or {})
 
     append = AUTONOMY_SYSTEM_PROMPT_FRAGMENT
     if system_prompt_append.strip():
@@ -112,7 +120,7 @@ def build_turn_options(
         "max_budget_usd": max_budget_usd,
         "model": model,
         "effort": cast(EffortOpt | None, effort),
-        "env": env,
+        "env": merged_env,
         "max_buffer_size": (
             DEFAULT_MAX_BUFFER_SIZE if max_buffer_size is None else max_buffer_size
         ),
@@ -129,6 +137,8 @@ def build_turn_options(
         kwargs["can_use_tool"] = can_use_tool
     if allowed_tools:
         kwargs["allowed_tools"] = allowed_tools
+    if cli_path:
+        kwargs["cli_path"] = cli_path
 
     return ClaudeAgentOptions(**kwargs)
 
@@ -139,13 +149,16 @@ def build_probe_options(
     resume: str | None = None,
     max_buffer_size: int | None = None,
     model: str | None = None,
+    env: Mapping[str, str] | None = None,
+    cli_path: str | None = None,
 ) -> ClaudeAgentOptions:
     """Deliberately minimal: one throwaway turn purely to re-check capacity.
     No CLAUDE.md, no tools, no persisted transcript. See
     docs/architecture/decisions/0004-adaptive-waiting-with-probes-not-sleep.md.
 
     ``model`` should match the run's active model so a spend-limit on Fable
-    (or similar) is not masked by a default-model probe succeeding.
+    (or similar) is not masked by a default-model probe succeeding. ``env`` is
+    the same backend overlay the turns get, so the probe asks the same backend.
     """
     kwargs: dict[str, Any] = {
         "cwd": cwd,
@@ -162,4 +175,8 @@ def build_probe_options(
     }
     if model:
         kwargs["model"] = model
+    if env:
+        kwargs["env"] = dict(env)
+    if cli_path:
+        kwargs["cli_path"] = cli_path
     return ClaudeAgentOptions(**kwargs)

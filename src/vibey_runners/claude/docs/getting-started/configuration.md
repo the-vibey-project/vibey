@@ -34,6 +34,7 @@ CLI flag yet (noted below).
 | Log level | `--log-level` (`run`, `resume`) | `CLAUDELOOP_LOG_LEVEL` | `INFO` | dual console + optional file (see [logging guide](../guides/logging-and-observability.md)) |
 | Structlog file | `--log-file` (`run`, `resume`) | `CLAUDELOOP_LOG_FILE` | unset | optional JSON file transport — never the audit JSONL path |
 | Use Claude Code's built-in retry watchdog instead of probing | config file/env only | `CLAUDELOOP_RETRY_WATCHDOG` | off | see [ADR 0005](../architecture/decisions/0005-retry-watchdog-off-by-default.md) |
+| Backend profile | `--profile` (`run`, `resume`, `doctor`) | `CLAUDELOOP_PROFILE` | unset (Anthropic) | names a `[profiles.<name>]` table — see [Backend profiles](#backend-profiles) |
 
 Per-run **audit** and **events** always live under
 `.claudeloop/runs/<run_id>/` (`audit.jsonl`, `events.jsonl`, `snapshots/`) and
@@ -59,6 +60,52 @@ max_turns = 50
 log_level = "DEBUG"
 credits_probe_interval_seconds = 60
 ```
+
+## Backend profiles
+
+A profile says which Anthropic-compatible endpoint a run talks to. With none
+selected, a run talks to Anthropic exactly as it always has. A profile with a
+`base_url` is **local** — Ollama, or any server that speaks the Anthropic
+Messages API — and runs for free. The full walkthrough, with what changes and
+why, is [Running for free on a local backend](../guides/local-backend.md).
+
+Profiles are tables in either config file. A same-named table in
+`./claudeloop.toml` replaces the one in `~/.config/claudeloop/config.toml`
+whole (keys are not merged across files). `profile` selects one and follows the
+normal precedence: `--profile` beats `CLAUDELOOP_PROFILE` beats `profile = "…"`
+in a file. The name `anthropic` always means the default, unless you define a
+table with that name.
+
+```toml
+profile = "local"          # optional: make it the default for this project
+
+[profiles.local]
+base_url = "http://127.0.0.1:11434"
+model_low = "qwen2.5-coder:14b"
+model_medium = "qwen2.5-coder:14b"
+model_high = "qwen2.5-coder:32b"
+```
+
+| Key | Default | Effect |
+|---|---|---|
+| `base_url` | `""` (Anthropic) | Endpoint → `ANTHROPIC_BASE_URL`. Setting it makes the profile local. `http://` or `https://` only. |
+| `auth_token` | `"ollama"` | Token sent to a local backend (`ANTHROPIC_AUTH_TOKEN`). Ollama ignores it; Claude Code needs one. |
+| `auth_token_env` | `""` | Read the token from this environment variable instead — for a backend that checks it. Local profiles only; an unset variable is refused. |
+| `model_low` / `model_medium` / `model_high` | `""` | The three tiers `--model low\|medium\|high`, `--preset` and the auto-model policy move between. **Required** on a local profile, and a `claude-*` id is refused there. On the Anthropic profile they override the top-level `model_*` keys when set. |
+| `small_fast_model` | `""` (local: `model_low`) | Claude Code's background model → `ANTHROPIC_DEFAULT_HAIKU_MODEL` and `ANTHROPIC_SMALL_FAST_MODEL`. |
+| `subagent_model` | `""` | Model for subagents → `CLAUDE_CODE_SUBAGENT_MODEL`. |
+| `context_window` | `0` (Claude Code's default) | → `CLAUDE_CODE_MAX_CONTEXT_TOKENS` and `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. Set it to the context the backend actually serves. |
+| `max_output_tokens` | `0` (Claude Code's default) | → `CLAUDE_CODE_MAX_OUTPUT_TOKENS`. |
+| `cost_mode` | `"reported"` (local: `"zero"`) | `"zero"` records every turn at $0 — Claude Code prices unknown models at its default model's rate. Refused on the Anthropic profile, where it would hide real spend. |
+| `pass_effort` | `true` (local: `false`) | Whether `--effort` is sent to Claude Code at all. |
+| `disable_nonessential_traffic` | `false` (local: `true`) | → `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` (telemetry, update checks). |
+| `done_marker_fallback` | `true` (local: `false`) | Whether the done-marker text may complete a run when no structured verdict arrived. Off locally: the structured verdict is itself a tool call, so a model that cannot call tools must not be able to claim Done by typing the marker. |
+| `cli_path` | `""` | Launch this Claude Code CLI instead of the one claude-agent-sdk finds (bundled first, then `claude` on `PATH`). |
+| `extra_env` | `{}` | Any further environment for Claude Code, applied last — e.g. `extra_env = { CLAUDE_CODE_MAX_RETRIES = 2 }`. It may not set `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` or `ANTHROPIC_API_KEY`; those belong to the keys above. |
+
+An unknown key, a wrongly typed value, or an invalid combination is refused
+when the config is loaded, naming the file it came from, and `run` / `resume` /
+`doctor` exit 2 before anything starts.
 
 ## Adding a CLI flag for the config-file/env-only settings
 

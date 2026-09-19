@@ -438,3 +438,143 @@ async def test_count_unsettled_treats_failed_as_settled(
     failed = await repo.get(failing.id)
     assert failed is not None and failed.state is JobState.FAILED
     assert await repo.count_unsettled(project_id, cycle=1, phase=Phase.BUILD) == 0
+
+
+# --- enqueue_batch: the fan-out is one transaction (#265) ---
+
+
+async def _dependencies(pool: asyncpg.Pool, job_id: UUID) -> set[UUID]:
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT depends_on_job_id FROM job_dependency WHERE job_id = $1", job_id
+        )
+    return {row["depends_on_job_id"] for row in rows}
+
+
+async def _count_keys(pool: asyncpg.Pool, project_id: UUID, keys: list[str]) -> dict[str, int]:
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT idempotency_key, count(*) AS n FROM job
+            WHERE project_id = $1 AND idempotency_key = ANY($2::text[])
+            GROUP BY idempotency_key
+            """,
+            project_id,
+            keys,
+        )
+    return {row["idempotency_key"]: row["n"] for row in rows}
+
+
+def _plan(project_id: UUID) -> list[EnqueueRequest]:
+    return [
+        _request(project_id, subject="skeleton"),
+        _request(project_id, subject="item-2", depends_on_keys=("key-skeleton",)),
+        _request(project_id, subject="item-3", depends_on_keys=("key-skeleton", "key-item-2")),
+    ]
+
+
+async def test_enqueue_batch_commits_every_request_with_its_key_dependencies(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+
+    skeleton, item_2, item_3 = await repo.enqueue_batch(_plan(project_id))
+
+    assert [job.payload["subject"] for job in (skeleton, item_2, item_3)] == [
+        "skeleton",
+        "item-2",
+        "item-3",
+    ]
+    assert await _dependencies(migrated_pool, skeleton.id) == set()
+    assert await _dependencies(migrated_pool, item_2.id) == {skeleton.id}
+    assert await _dependencies(migrated_pool, item_3.id) == {skeleton.id, item_2.id}
+
+    # The edges gate the queue exactly as id-named ones do.
+    first = await repo.claim(project_id, owner="w1", lease=LEASE)
+    assert first is not None and first.id == skeleton.id
+    assert await repo.claim(project_id, owner="w1", lease=LEASE) is None
+
+
+async def test_a_crash_mid_batch_commits_nothing_and_a_replay_makes_one_job_per_item(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    plan = _plan(project_id)
+    keys = [request.idempotency_key for request in plan]
+    # Two rows are written inside the transaction, then the third request
+    # blows up before its INSERT -- a worker dying mid-fan-out.
+    poisoned = [*plan[:2], _request(project_id, subject="item-3", payload={"x": object()})]
+
+    with pytest.raises(TypeError):
+        await repo.enqueue_batch(poisoned)
+    assert await _count_keys(migrated_pool, project_id, keys) == {}
+
+    first = await repo.enqueue_batch(plan)
+    replayed = await repo.enqueue_batch(plan)
+
+    assert await _count_keys(migrated_pool, project_id, keys) == dict.fromkeys(keys, 1)
+    assert [job.id for job in replayed] == [job.id for job in first]
+    assert await _dependencies(migrated_pool, first[2].id) == {first[0].id, first[1].id}
+
+
+async def test_enqueue_batch_rolls_back_when_a_key_names_no_job(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    # A dependency listed AFTER its dependent is not visible yet: the batch is
+    # processed in order, and a key that resolves to nothing undoes it all.
+    out_of_order = [
+        _request(project_id, subject="skeleton"),
+        _request(project_id, subject="item-2", depends_on_keys=("key-item-3",)),
+        _request(project_id, subject="item-3"),
+    ]
+
+    with pytest.raises(LookupError, match="'key-item-3'"):
+        await repo.enqueue_batch(out_of_order)
+
+    assert await repo.list_for_cycle(project_id, cycle=1, kind="build.implement") == ()
+
+
+async def test_depends_on_keys_resolve_against_jobs_already_committed(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    upstream = await repo.enqueue(_request(project_id, subject="upstream"))
+
+    (batched,) = await repo.enqueue_batch(
+        [_request(project_id, subject="batched", depends_on_keys=("key-upstream",))]
+    )
+    single = await repo.enqueue(
+        _request(project_id, subject="single", depends_on_keys=("key-upstream",))
+    )
+
+    assert await _dependencies(migrated_pool, batched.id) == {upstream.id}
+    assert await _dependencies(migrated_pool, single.id) == {upstream.id}
+
+
+async def test_enqueue_with_a_key_that_names_no_job_inserts_nothing(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+
+    with pytest.raises(LookupError, match="neither an earlier request"):
+        await repo.enqueue(_request(project_id, depends_on_keys=("key-ghost",)))
+
+    assert await repo.list_for_cycle(project_id, cycle=1, kind="build.implement") == ()
+
+
+async def test_list_for_cycle_scopes_by_project_cycle_and_kind_oldest_first(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    first = await repo.enqueue(_request(project_id, subject="first"))
+    second = await repo.enqueue(_request(project_id, subject="second"))
+    await repo.enqueue(_request(project_id, subject="other-cycle", cycle=2))
+    await repo.enqueue(_request(project_id, subject="other-kind", kind="build.verify"))
+    claimed = await repo.claim(project_id, owner="w1", lease=LEASE)
+    assert claimed is not None
+
+    listed = await repo.list_for_cycle(project_id, cycle=1, kind="build.implement")
+
+    assert [job.id for job in listed] == [first.id, second.id]
+    assert await repo.list_for_cycle(uuid4(), cycle=1, kind="build.implement") == ()

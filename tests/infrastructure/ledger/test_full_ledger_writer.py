@@ -6,6 +6,8 @@ from enum import StrEnum
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
+
 from vibey.domain.ledger import (
     EventKind,
     LedgerEvent,
@@ -14,11 +16,15 @@ from vibey.domain.ledger import (
     digest_event,
     digest_range,
 )
+from vibey.domain.ledger_record import InvalidLedgerRecord
 from vibey.domain.phase import Phase
 from vibey.infrastructure.ledger.full_ledger_writer import (
+    LEDGER_LINES,
+    LedgerLines,
     read_full_ledger_line_count,
     write_full_ledger,
 )
+from vibey.infrastructure.ledger.interfaces import LedgerLinesInterface
 
 PROJECT_ID = uuid4()
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
@@ -118,6 +124,41 @@ def test_custom_uri_is_used_in_the_ref(tmp_path: Path) -> None:
     path = tmp_path / "ledger.jsonl"
     ref = write_full_ledger([_event(1)], path, uri="custom/path.jsonl")
     assert ref.uri == "custom/path.jsonl"
+
+
+# -- the line codec both ledger files share ---------------------------------------
+
+
+def test_the_line_codec_satisfies_its_interface_and_round_trips() -> None:
+    event = _event(4, payload={"text": "<b>bold</b> & more"})
+    line = LEDGER_LINES.encode(event)
+
+    assert isinstance(LEDGER_LINES, LedgerLinesInterface)
+    assert "\n" not in line
+    assert LEDGER_LINES.decode(line) == event
+    assert LedgerLines().encode(event) == line
+
+
+def test_the_handoff_file_is_written_by_the_line_codec(tmp_path: Path) -> None:
+    events = [_event(1), _event(2)]
+    path = tmp_path / "ledger.jsonl"
+    write_full_ledger(events, path)
+    assert path.read_text().splitlines() == [LEDGER_LINES.encode(event) for event in events]
+
+
+@pytest.mark.parametrize(
+    ("line", "message"),
+    [
+        ("{not json", "not JSON"),
+        ("[1, 2]", "a record line must be a JSON object"),
+        ('{"n": NaN}', "NaN is not a JSON number"),
+        ('{"n": -Infinity}', "-Infinity is not a JSON number"),
+        ('{"seq": 1}', "missing field"),
+    ],
+)
+def test_a_line_that_is_not_a_record_is_refused(line: str, message: str) -> None:
+    with pytest.raises(InvalidLedgerRecord, match=message):
+        LEDGER_LINES.decode(line)
 
 
 # -- a kind this vibey does not know (vibey#275) -----------------------------

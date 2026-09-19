@@ -63,7 +63,7 @@ flowchart TB
         IAzure["azure/az_cli.py · iac.py · arm.py · adapter.py"]
         INotify["notify/service.py · notify/webhook.py<br/>HMAC-SHA256 signed webhooks (+ desktop.py · events.py)<br/>IMPLEMENTED + TESTED, NOT constructed by bootstrap.py"]
         IProvision["provision/agent_surface.py<br/>writes the generated block into CLAUDE.md · AGENTS.md ·<br/>CURSOR.md · GEMINI.md · QWEN.md in each worktree (ADR-0011)"]
-        IRedact["ledger/redact.py — credential/token/secret redaction<br/>ledger/full_ledger_writer.py"]
+        IRedact["ledger/redact.py — credential/token/secret redaction<br/>ledger/full_ledger_writer.py<br/>ledger/static_export.py — published shard + static JSON site (7.a)"]
         ILogging["logging.py — structlog Logger adapter (observability port)"]
         ISkillsContext["skills_context.py<br/>VibeySkillsContextCompiler (ADR-0031)<br/>runs python -m vibey_skills.cli"]
         IOtel["otel.py<br/>TelemetryTracer + TelemetryMetrics<br/>+ calculate_rotation_fairness()<br/>IMPLEMENTED + TESTED, NOT constructed by bootstrap.py"]
@@ -174,7 +174,7 @@ flowchart TB
 
     subgraph Monorepo["uv workspace monorepo — pyproject.toml [tool.uv.workspace] (ADR-0021, ADR-0022)"]
         Runners["src/vibey_runners/<br/>claude: claudeloop 0.8.0 · codex: codexloop 0.4.0 ·<br/>cursor: cursorloop 0.7.0 · agy: agyloop 0.5.0 ·<br/>qwen: qwenloop 0.2.0 · common: vibey-runners-common 0.1.0<br/>(the *loop session runners; versioned in-tree, published only<br/>inside the vibey distribution — ADR-0037)"]
-        ToolGh["src/vibey_tools/gh — vibey-gh 1.73.0<br/>provenance · PR automation · merge train · promote ·<br/>release · realign · github-release · release surfaces ·<br/>book · paper · corpus-index (ADR-0028)"]
+        ToolGh["src/vibey_tools/gh — vibey-gh 1.73.0<br/>provenance · PR automation · merge train · promote ·<br/>release · realign · github-release · release surfaces ·<br/>book · paper · corpus-index · forge-snapshot (ADR-0028)"]
         ToolSkills["src/vibey_tools/skills — vibey-skills<br/>Agent Skills marketplace + context compiler CLI"]
         ToolBootstrap["src/vibey_tools/bootstrap — vibey-bootstrap 4.2.3<br/>Azure App Configuration · Key Vault · App Insights bootstrap library"]
         LiveHarness["tests/live — two-mode live harness (ADR-0030)<br/>faked: ScriptedEngine, no subprocess ·<br/>paid: real engine binaries against real models"]
@@ -215,7 +215,7 @@ flowchart TB
         Pages --> Book["…/main/book.pdf · book.epub · book-print.html<br/>(vibey-gh book, KDP interior)"]
         Pages --> Paper["…/main/paper/ (docs/paper.md) · paper.pdf<br/>(vibey-gh paper → LaTeX, Tectonic)"]
         Pages -.->|"only if corpus-index.json exists at the repo root — it does not"| CorpusShip["…/channel/corpus-index.json"]
-        DockerImg["deploy/docker/Dockerfile<br/>two-stage, no compiler/uv/pip in the runtime layer,<br/>uid 10001, tini -g as PID 1 (ADR-0026)"] --> HelmChart["deploy/helm/vibey chart (ADR-0025)<br/>worker Deployment · in-cluster Postgres 17 ·<br/>VibeyProject CRD (installCRD: true) · kopf operator (off by default) ·<br/>KEDA ScaledObject (off by default, 0–4 replicas)"]
+        DockerImg["deploy/docker/Dockerfile<br/>two-stage, no compiler/uv/pip/node/npm in the runtime layer,<br/>uid 10001, tini -g as PID 1 (ADR-0026),<br/>codex as a pinned, digest-verified static binary"] --> HelmChart["deploy/helm/vibey chart (ADR-0025)<br/>worker Deployment · in-cluster Postgres 17 ·<br/>VibeyProject CRD (installCRD: true) · kopf operator (off by default) ·<br/>KEDA ScaledObject (off by default, 0–4 replicas, scoped to the worker's project) ·<br/>Ollama for qwenloop / sovereign DESIGN (off by default)"]
         HelmChart --> K8sCluster[("Kubernetes cluster<br/>minikube verified in ci.yml cluster-smoke<br/>no cloud values presets ship yet")]
     end
 

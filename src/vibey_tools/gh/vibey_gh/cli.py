@@ -555,6 +555,70 @@ def _tidy(args) -> int:
     return 1
 
 
+def _forge_snapshot(args) -> int:
+    """Capture the forge's state into `--out` (vibey#136, slice S1); read-only against the forge.
+
+    Exit 0 when every selected class was captured, 1 when any could not be looked at (the
+    rest are still written, and the manifest says which), 2 for arguments that name no
+    capture at all. A class the forge would not answer for is reported by name with the
+    forge's reason, never as a class with nothing in it.
+    """
+    from datetime import timedelta
+
+    from vibey_gh import github_state
+    from vibey_gh.forge_snapshot import (
+        RESUME,
+        ForgeSnapshot,
+        GithubForgeReader,
+        JsonlSnapshotStore,
+        SnapshotStoreError,
+    )
+    from vibey_gh.gh_transport import GhTransport
+
+    prefix = "vibey-gh forge-snapshot:"
+    classes = None
+    if args.classes is not None:
+        classes = [name.strip() for name in args.classes.split(",") if name.strip()]
+    try:
+        repository = args.repo or github_state.repository()
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
+        print(f"{prefix} could not tell which repository to read: {exc}", file=sys.stderr)
+        return 1
+    out = Path(args.out)
+    try:
+        reader = GithubForgeReader(GhTransport(), repository, per_page=args.per_page)
+        store = JsonlSnapshotStore(out, forge=reader.forge, repository=reader.repository)
+        capture = ForgeSnapshot(reader, store, clock_skew=timedelta(seconds=args.clock_skew))
+        manifest = capture.capture(classes=classes, since=args.since)
+    except (SnapshotStoreError, OSError) as exc:
+        print(f"{prefix} {exc}", file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(f"{prefix} {exc}", file=sys.stderr)
+        return 2
+    print(f"{prefix} {manifest['forge']} {manifest['repository']} into {out}")
+    if args.since == RESUME and manifest["since"] is None:
+        print(f"{prefix} no resume point was recorded, so this capture is a full one")
+    for name, entry in manifest["classes"].items():
+        if entry["status"] == "captured":
+            head = (entry["head"] or "none")[:12]
+            print(
+                f"  {name}: {entry['observed']} observed, {entry['appended']} appended,"
+                f" {entry['unchanged']} unchanged; {entry['records']} record(s), head {head}"
+            )
+        elif entry["status"] == "could-not-look":
+            print(f"  {name}: COULD NOT LOOK, nothing written: {entry['problem']}", file=sys.stderr)
+        else:
+            print(f"  {name}: not selected")
+    print(
+        f"{prefix} {len(manifest['excluded'])} artifact class(es) not captured, each named"
+        f" with its reason in {out / 'manifest.json'}"
+    )
+    if manifest["resume_since"] is not None:
+        print(f"{prefix} resume with --since {manifest['resume_since']} (or --since {RESUME})")
+    return 0 if manifest["complete"] else 1
+
+
 def _corpus_index(args) -> int:
     from vibey_gh import corpus
 
@@ -1265,6 +1329,34 @@ def main(argv: list[str] | None = None) -> int:
     )
     fo.add_argument("--once", action="store_true", help="one probe and transition, then exit")
     fo.set_defaults(func=_failover)
+
+    fs = sub.add_parser(
+        "forge-snapshot",
+        help="read-only capture of issues, change requests, reviews, releases and more into"
+        " hash-chained JSONL (#136)",
+    )
+    fs.add_argument("--out", required=True, help="the snapshot directory; created if missing")
+    fs.add_argument(
+        "--classes",
+        help="comma-separated artifact classes (default: every supported class), e.g."
+        " issue,comment,change-request",
+    )
+    fs.add_argument(
+        "--since",
+        help="ISO 8601 moment to capture from, or 'resume' for the manifest's resume point;"
+        " omitted, the capture is a full one",
+    )
+    fs.add_argument("--repo", default="", help="owner/name (default: $GH_REPO, then gh's own)")
+    fs.add_argument("--per-page", type=int, default=100, help="listing page size, 1 to 100")
+    fs.add_argument(
+        "--clock-skew",
+        type=int,
+        default=300,
+        metavar="SECONDS",
+        help="how far this machine's clock may run ahead of the forge's; a cursor taken from"
+        " it is set back this far (default 300)",
+    )
+    fs.set_defaults(func=_forge_snapshot)
 
     ci_ = sub.add_parser(
         "corpus-index",

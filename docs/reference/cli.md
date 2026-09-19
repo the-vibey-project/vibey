@@ -59,7 +59,7 @@ Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
 `VibeyError` keep their Python traceback.
 
 The other commands (`answer`, `watch`, `recover`, `status`, `engines`,
-`cost`, `ledger show`, `ledger search`, every `deploy` subcommand, `doctor`, `operator`) are
+`cost`, `ledger show`, `ledger search`, `ledger export`, `ledger site`, every `deploy` subcommand, `doctor`, `operator`) are
 not guarded. Their own checks exit 1 or 2 as listed above; any other error,
 including an unset `VIBEY_PG_URL`, surfaces as a Python traceback.
 
@@ -221,8 +221,10 @@ reset, read from PostgreSQL's `UPDATE n` status tag.
 
 Show the project's name, phase, cycle, visual and deployment decisions,
 repository path, queue depth per job state, and engine circuits (circuit
-state, consecutive failures, cycle cost). Defaults to the most recently
-created project.
+state, consecutive failures, cost). Defaults to the most recently created
+project. The cost is `engine_health.cost_usd_cycle`: the engine's metered
+BUILD-session spend, which accumulates across cycles (see
+[`vibey cost`](#vibey-cost-project_id)).
 
 | Option | Default | What it does |
 |---|---|---|
@@ -231,26 +233,53 @@ created project.
 ## `vibey engines [PROJECT_ID]`
 
 Show recorded engine health for a project as a table: engine, version,
-circuit-breaker state, consecutive failures, selection count, and cycle
-cost. Rows exist only for engines that `vibey doctor --record` or a worker's
-startup preflight has recorded; with none it prints
-`no engines recorded for project`. Defaults to the most recently created
-project.
+circuit-breaker state, consecutive failures, selection count, and cost. The
+cost is the engine's BUILD-session spend, accumulated across cycles (see
+[`vibey cost`](#vibey-cost-project_id)). Rows exist only for engines that
+`vibey doctor --record` or a worker's startup preflight has recorded; with
+none it prints `no engines recorded for project`. Defaults to the most
+recently created project.
 
 ## `vibey cost [PROJECT_ID]`
 
-Show per-engine spend for the current cycle, read from `engine_health`, with
-a total and two budget caps. The `(N turns)` figure after each engine is its
-selection count, not a turn count. Defaults to the most recently created
-project.
+Show the current cycle's spend against the caps the worker's budget brake
+enforces. Defaults to the most recently created project.
 
-The caps come from a `budget` table in the project's stored config
-(`max_dollars_per_cycle`, `max_dollars_total`), with fallbacks of $40.00 and
-$250.00. No code path writes that table today — not `vibey new`, not the
-Kubernetes operator, and no runtime code reads `[budget]` from `vibey.toml` — so the command
-prints the $40.00 / $250.00 placeholders. The cap that is enforced is
-`--max-cycle-dollars` / `--max-cycle-turns` from `vibey new`, applied by the
-worker's budget brake; `vibey cost` does not print it.
+```text
+Project: my-app (Cycle 1)
+Cycle spend:      $3.25 (2 turns)
+Cycle dollar cap: $10.00
+Cycle turn cap:   none
+
+Per-engine (BUILD sessions, all cycles):
+  • claudeloop: $1.40 (4 selections)
+```
+
+- **Cycle spend** is the brake's own number: `LedgerBudgetSource` summing the
+  cycle's `TurnCompleted` (`cost_usd`) and `BudgetSpent` (`dollars`, `turns`)
+  ledger events. It includes DESIGN's spend as well as BUILD's.
+- **Cycle dollar cap** and **Cycle turn cap** are the project's stored
+  `max_cycle_dollars` / `max_cycle_turns` (`vibey new --max-cycle-dollars` /
+  `--max-cycle-turns`, or the operator's `spec.maxCycleDollars` /
+  `spec.maxCycleTurns`), read through the same parser the worker uses. An
+  unset cap prints `none (uncapped)` for dollars and `none` for turns. A
+  `budget` table in the stored config is not read, and there is no lifetime
+  cap to print because nothing enforces one.
+- When spend has reached a cap the command adds
+  `Cap reached: the next BUILD session parks a budget_exhausted gate.`
+- A cap raised by answering a `budget_exhausted` gate with
+  `--raw '{"max_dollars": N}'` or `--raw '{"max_turns": N}'` applies to that
+  one job only, so it is not shown here; the command always prints the
+  project's stored cap.
+- **Per-engine** rows come from `engine_health`: its `cost_usd_cycle` column
+  and the number of times rotation selected the engine (a selection count,
+  not a turn count). The cost is each engine's **BUILD-session spend, and it
+  accumulates across cycles**: every `build.implement` and `build.verify` job
+  meters what its engine session recorded, by the same spend rule the brake
+  uses, and charges it to the engine that ran it when the job settles (issue
+  #209). Nothing resets the column despite its name, and DESIGN's spend is
+  not in it, so the rows need not sum to the cycle spend above — that figure
+  is the one the brake enforces.
 
 ## `vibey ledger`
 
@@ -270,6 +299,10 @@ Bare `vibey ledger` prints help. Subcommands:
 | | `--text TEXT` | unset | Appears in the payload, literally and case-insensitively. |
 | | `--limit N` / `-n` | `50` | At most N events, the most recent matches (min 1). |
 | | `--json` | off | Print the result as JSON instead. |
+| `ledger export PROJECT_ID` | `--out FILE` / `-o` | required | Write the project's public shard to `FILE` (JSON Lines), replacing it. Needs the database. |
+| `ledger site` | `--from FILE` | required | A shard written by `ledger export`. Must exist. |
+| | `--out DIR` / `-o` | required | The directory to write the site into; created if absent. |
+| | `--json-only` | off, but required | Build the JSON surface. Required until the human-first record pages exist, so a script written today keeps its meaning when they arrive. |
 
 `ledger show` prints one line per event, oldest first:
 `#<seq> <YYYY-MM-DD HH:MM:SS> [<PHASE>] <kind> [<engine>]`. Filters apply
@@ -311,6 +344,53 @@ search or raise --limit`. `--json` prints `{"project_id", "truncated",
   knows; matching it exactly as written ...` to stderr, so a typo that finds
   nothing is visible, and `--json` stdout stays one document. An empty
   `--kind` exits 2.
+
+`ledger export` and `ledger site` publish a ledger (sub-doctrine 7.a, #137):
+anyone can then search it without credentials. What is published and what is
+withheld is the subject of [What gets published](../guides/ledger-publication.md);
+in short, the ledger is never published itself, only a default-deny projection of
+it.
+
+`ledger export` reads one project's whole ledger and writes its **shard**: one
+header line, `{"shard": {...}}`, then one published record per line in the
+handoff ledger's format, in seq order. The header states the project's id and
+name (never its `repo_path`), the seq range the shard covers, whether that is the
+whole ledger (`holds: full`) or a window, the storage tier (`standard (untiered)`
+until #114), the ledger's own hash-chain head over every event including the
+withheld ones, the policy's fingerprint, `digest_range` over the published
+records, and every count of what the policy withheld. The same ledger always
+writes the same bytes, so a committed shard only changes when the ledger does. It
+prints four lines:
+
+```text
+exported 2 of 3 ledger event(s) of project greeter (<id>) to ledger/greeter.jsonl
+1 event withheld by policy (0 untrusted provenance, 1 engine chatter, 0 kind not allowlisted)
+from published records: 1 field(s) withheld, 1 absolute path(s) and 0 email address(es) stripped, 0 record(s) with a credential redacted
+chain head <64 hex> at seq 3, verified
+```
+
+When the ledger's own chain walk disagrees with itself (a digest that is not its
+payload's, a gap in `seq`), the last line says how many disagreements it found
+and that the head is published unverified. An unknown `PROJECT_ID` prints
+`unknown project <id>` and exits 1; unlike `ledger search`, there is no default
+project, because publishing the wrong one cannot be taken back.
+
+`ledger site` opens no database. It reads the shard, checks it — the format, one
+project, rising seqs inside the stated range, unique ids, every record's digest,
+the published count, `digest_range`, and that the withheld counts add up — and
+writes three things into `DIR`:
+
+| Path | What it holds |
+|---|---|
+| `records/<event_id>.json` | The published record, what the policy removed from inside it (`withheld`: fields, paths, emails, credentials), and its published neighbours (`previous`, `next`: id, seq, digest). |
+| `index.json` | One entry per record for client-side search: `id`, `seq`, `kind`, `phase`, `actor` (the engine, or `vibey`), `time` (UTC), `digest`, and `tokens` — the lower-cased words of the payload, each once. |
+| `manifest.json` | The project, `holds`, `tier`, `seq_range`, the published range, `digest_range`, the chain head and whether it verified, the policy fingerprint, every withheld count by reason, and a one-line `statement` (`3 events withheld by policy`). |
+
+Every document is sorted-key JSON with `<`, `>` and `&` escaped, so a payload
+that says `<script>` stays data even when a page inlines it, and the same shard
+always builds the same bytes. `.json` files under `records/` that the shard no
+longer holds are removed; nothing else in `DIR` is touched. A file that is not a
+shard prints `invalid shard <file>: <reason>` and exits 1.
 
 ## `vibey deploy`
 

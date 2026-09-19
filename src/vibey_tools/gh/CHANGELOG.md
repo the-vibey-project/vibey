@@ -50,6 +50,43 @@ This file follows Keep a Changelog and semantic versioning conventions.
   `vibey_gh/automation_bootstrap.py` — the new home of this derivation — alongside the
   existing automation-core paths. A standalone repository renders the pattern it always
   had, plus that one module.
+- Add `vibey-gh forge-snapshot`, slice S1 of vibey#136: a read-only capture of a GitHub
+  repository's issues, issue comments, pull requests (class `change-request`), reviews,
+  review comments, labels, milestones, releases with their asset manifests, and tags, into
+  `--out DIR` as one append-only JSON Lines file per class. Every record is the forge's JSON
+  verbatim inside a `vibey.forge-record/1` envelope (forge, repository, neutral class, native
+  class, native id, `captured_at`), with a `payload_sha256` content digest and a `sha256`
+  seal over the rest of the record, both over the vibey ledger's canonical form, and `prev`
+  linking it to the record before it in its file. `DIR/manifest.json`
+  (`vibey.forge-manifest/1`) records each class's status (`captured`, `could-not-look`,
+  `not-selected`), counts, chain head and cursor, a `resume_since`, and an `excluded` list
+  naming every artifact class not captured, with its reason — 33 of them, from timeline
+  events and review-thread resolution to secrets, which the forge never returns. Built on
+  `GhTransport.survey`, so a class the forge could not be asked about keeps its file and its
+  cursor and is never written as empty; the command then exits 1. Listings use
+  `gh api --paginate --slurp` (GitHub CLI 2.48+); pull requests, which GitHub cannot filter
+  by `since`, are paged newest-update-first and the walk stops at the cursor. `--since
+  resume` continues every chain from the manifest's resume point, and content already
+  recorded is counted as unchanged rather than written again, so a rerun appends nothing.
+  Three classes behind three seams in `vibey_gh/interfaces/forge_snapshot_interface.py`:
+  `GithubForgeReader`, `JsonlSnapshotStore` and `ForgeSnapshot`. Registered as a capability
+  on every surface. Documented in `docs/forge-snapshot.md`.
+- Add `vibey_gh.gh_transport.GhTransport`, the one seam for running `gh`, declared in
+  `vibey_gh/interfaces/gh_transport_interface.py`. The package had grown seven private
+  runners that disagree about what a failure is, so rather than a fourth answer it offers
+  the three they give, each byte-identical to its original: `json` raises like
+  `github_state.gh_json`, `probe` reports `(ok, out)` like `promote._gh` (or, with
+  `strip=False, with_stderr=True`, like the merge train's `_gh`), and `survey` returns
+  `(value, problem)` like `tidy._gh_json`, so "could not ask" never reads as "nothing
+  there". `github_state.gh_json`, `repository` and `upsert_comment` now delegate to it,
+  keeping their names so every caller and every test that replaces them is untouched. That
+  re-routes conversation, PR and issue automation, reconcile, rulesets and flatten through
+  the transport with the same argv and working directory: `test/test_gh_transport.py`
+  drives the code as it stood before and the code now through one fake `gh` on PATH and
+  requires identical argv lists, directories, `calls.txt` bytes and outcomes. The fake
+  itself moves into `test/conftest.py` as `FakeGh`, which also records each call's exact
+  argv, directory and (on request) standard input, for any test to reuse. The other
+  modules keep their own runners for now and move over one at a time.
 - Put the sovereign review lane FIRST on the half of the review it can carry (sub-doctrine
   8.a, #133 slice 2 of 3, Option A: serial). `evaluate` decides the lane once:
   `sovereign_lane` (enabled, a fresh heartbeat, and under `trusted_only` a same-repository
