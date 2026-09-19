@@ -10,27 +10,35 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import os
 import re
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
+import vibey_gh
 from vibey_gh.config import (
     DEFAULT_SCAN_WORKFLOWS,
     AiConfig,
     DocumentationConfig,
     GhConfig,
+    SocialSignalsConfig,
     load_config,
 )
+from vibey_gh.fallback_pin import FallbackPinResolver, InstalledDistributions
 from vibey_gh.install import (
     FALLBACK_DISTRIBUTION,
     FALLBACK_INSTALL,
+    HOOKS_DIR,
     TEMPLATES,
     WORKFLOWS,
+    install,
     installed,
+    render_hook,
     render_workflow,
 )
 
@@ -471,6 +479,37 @@ def test_release_surfaces_adds_nothing_to_the_install_by_default(tmp_path: Path)
     # without one runs an install of exactly the two packages and nothing else.
     assert 'if [ -n "docs/requirements.txt" ]' in rendered
     assert '[ -f "docs/requirements.txt" ]' in rendered
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_social_signals_are_injected_into_the_built_site_not_before_it(
+    tmp_path: Path, enabled: bool
+):
+    """The 4.a step ran BEFORE `properdocs build`, so `inject()` found no
+    channel-site/index.html and returned False on every deploy: a surface an adopter had
+    switched on published nothing, and nothing was red (#264). It must follow the build,
+    which also writes the funding footer it anchors to, and precede everything that
+    publishes channel-site/ -- the artifact upload and the copy into the Pages tree."""
+    cfg = GhConfig(root=tmp_path, social_signals=SocialSignalsConfig(enabled=enabled))
+    rendered = render_workflow(WORKFLOWS / "release-surfaces.yml", cfg)
+    steps = yaml.safe_load(rendered)["jobs"]["docs"]["steps"]
+
+    def index(predicate) -> int:
+        found = [i for i, step in enumerate(steps) if predicate(step)]
+        assert len(found) == 1, found
+        return found[0]
+
+    def uploads_the_site(step) -> bool:
+        artifact = str(step.get("uses", "")).startswith("actions/upload-artifact@")
+        return artifact and step.get("with", {}).get("path") == "channel-site/"
+
+    inject = index(lambda s: "social_signals import inject" in s.get("run", ""))
+    build = index(lambda s: "--site-dir channel-site" in s.get("run", ""))
+    upload = index(uploads_the_site)
+    restore = index(lambda s: s.get("name") == "Restore the other release channel")
+    assert build < inject < upload < restore
+    # Gated on the surface: `if:` renders the literal [social_signals] enabled.
+    assert steps[inject]["if"] is enabled
 
 
 def test_documentation_workflow_authors_guarded_refresh_prs():
@@ -1294,15 +1333,6 @@ def test_automation_bootstrap_is_explicit_exact_head_and_permanent_branch_safe()
     assert 'test "$permission" = admin' in text
     assert 'test "$(jq -r .headRefOid' in text
     assert '--match-head-commit "$EXPECTED_SHA"' in text
-    for required in (
-        "Documentation contract",
-        "Provenance",
-        "Build",
-        "Lint",
-        "Analyze Python",
-        "MCP, API, CLI, SDK, and webhook parity",
-    ):
-        assert required in text
     assert '[ "$head" != "$INTEGRATION_BRANCH" ]' in text
     assert '[ "$head" != "$RELEASE_BRANCH" ]' in text
     assert '[ "$head" != develop ]' in text
@@ -1310,35 +1340,329 @@ def test_automation_bootstrap_is_explicit_exact_head_and_permanent_branch_safe()
     assert "--delete-branch" not in text
 
 
-def test_automation_bootstrap_scope_check_rejects_files_outside_automation_core():
-    import subprocess
-
-    text = (WORKFLOWS / "automation-bootstrap.yml").read_text(encoding="utf-8")
-    match = re.search(
-        r"if grep -Ev '([^']+)' changed-files\.txt; then\n"
-        r"\s*echo \"::error::changed files are not confined to automation-core paths\" >&2\n"
-        r"\s*exit 1\n"
-        r"\s*fi",
-        text,
+def test_automation_bootstrap_names_no_check_of_its_own():
+    """#214: the path once waited on six literal names, five of which a repository whose CI
+    names its jobs differently never produces -- and `Build`, `Lint` and the parity check
+    came from vibey-gh's own hand-written workflows, not from any template, so it failed
+    closed for every adopter, exactly when it was needed. The gates are now rendered from
+    `[rulesets.integration] required_checks`; the template names none."""
+    template = (WORKFLOWS / "automation-bootstrap.yml").read_text(encoding="utf-8")
+    for literal in (
+        "Documentation contract",
+        "Build",
+        "Lint",
+        "Analyze Python",
+        "MCP, API, CLI, SDK, and webhook parity",
+        "__VIBEY_GH_WF_PROVENANCE__",
+    ):
+        assert literal not in template, f"the template still hard-codes {literal!r}"
+    for placeholder in (
+        "REQUIRED_CHECKS: __VIBEY_GH_BOOTSTRAP_REQUIRED_CHECKS__",
+        "EXCLUDED_CHECKS: __VIBEY_GH_BOOTSTRAP_EXCLUDED_CHECKS__",
+        "CHANGED_FILE_SCOPE: __VIBEY_GH_BOOTSTRAP_SCOPE__",
+    ):
+        assert placeholder in template
+    assert "__VIBEY_GH_BOOTSTRAP_" not in render_workflow(
+        WORKFLOWS / "automation-bootstrap.yml", GhConfig(root=Path("."))
     )
-    assert match, "expected a fail-closed scope check in automation-bootstrap.yml"
-    pattern = match.group(1)
 
-    in_scope_only = (
-        "vibey_gh/templates/workflows/automation-bootstrap.yml\ntest/test_templates.py\n"
+
+def _bootstrap_config(
+    root: Path,
+    *,
+    required: tuple[str, ...] | None = None,
+    ignored: tuple[str, ...] | None = None,
+    self_source: str = ".",
+) -> GhConfig:
+    from vibey_gh.config import RulesetConfig, RulesetsConfig
+
+    cfg = dataclasses.replace(GhConfig(root=root), self_source=self_source)
+    if required is not None:
+        integration = RulesetConfig(required_checks=required)
+        cfg = dataclasses.replace(cfg, rulesets=RulesetsConfig(integration=integration))
+    if ignored is not None:
+        automation = dataclasses.replace(cfg.pr_automation, ignored_checks=ignored)
+        cfg = dataclasses.replace(cfg, pr_automation=automation)
+    return cfg
+
+
+def _bootstrap_env(cfg: GhConfig) -> dict[str, str]:
+    """The step's rendered `env:`, read back through YAML exactly as Actions reads it."""
+    parsed = yaml.safe_load(render_workflow(WORKFLOWS / "automation-bootstrap.yml", cfg))
+    (step,) = parsed["jobs"]["merge"]["steps"]
+    return {key: str(value) for key, value in step["env"].items()}
+
+
+def test_automation_bootstrap_renders_its_gates_from_the_integration_ruleset(tmp_path):
+    defaults = _bootstrap_env(GhConfig(root=tmp_path))
+    rendered = json.loads(defaults["REQUIRED_CHECKS"])
+    assert rendered == ["Provenance", "Analyze Python", "Documentation contract"]
+    excluded = json.loads(defaults["EXCLUDED_CHECKS"])
+    assert excluded == ["gate", "PR automation / gate", "Automation bootstrap / gate"]
+
+    monorepo = _bootstrap_env(_bootstrap_config(tmp_path, required=("gates",)))
+    assert json.loads(monorepo["REQUIRED_CHECKS"]) == ["gates"]
+
+    # Never waits on the gates it routes around, nor on what PR automation ignores: a
+    # required name the step also filters out could never be satisfied.
+    routed = _bootstrap_config(
+        tmp_path,
+        required=("gate", "PR automation / gate", "Automation bootstrap / gate", "Flaky", "gates"),
+        ignored=("Flaky",),
     )
-    mixed_scope = in_scope_only + "vibey_gh/versioning.py\n"
+    assert json.loads(_bootstrap_env(routed)["REQUIRED_CHECKS"]) == ["gates"]
 
-    def confinement_check_passes(changed_files: str) -> bool:
-        # Mirrors the workflow's own gate: `if grep -Ev ...; then <fail>; fi` fails the
-        # step when grep finds an out-of-scope line (exit 0), and passes when grep finds
-        # none (exit 1, no matches).
-        script = f"grep -Ev '{pattern}' <<'EOF'\n{changed_files}EOF\n"
-        result = subprocess.run(["sh", "-c", script], capture_output=True, text=True, check=False)
-        return result.returncode != 0
+    awkward = 'Test "py", (3.12)'
+    quoted = _bootstrap_env(_bootstrap_config(tmp_path, required=(awkward, "gates")))
+    assert json.loads(quoted["REQUIRED_CHECKS"]) == [awkward, "gates"]
 
-    assert confinement_check_passes(in_scope_only)
-    assert not confinement_check_passes(mixed_scope)
+
+_FAKE_GH = """#!/bin/sh
+# Answers the bootstrap step's gh calls from files under $FAKE_GH and records every call.
+printf '%s\\n' "$*" >> "$FAKE_GH/calls"
+case "$*" in
+  "api repos/"*"/permission --jq .permission") cat "$FAKE_GH/permission" ;;
+  "pr view "*) cat "$FAKE_GH/pr.json" ;;
+  "pr diff "*) cat "$FAKE_GH/files" ;;
+  "api repos/"*"/check-runs?per_page=100") cat "$FAKE_GH/checks.json" ;;
+  "pr merge "*|"api repos/"*"/git/refs/heads/"*) ;;
+  *) echo "unexpected gh call: $*" >&2; exit 99 ;;
+esac
+"""
+_STANDALONE_REPAIR = (
+    ".github/workflows/automation-bootstrap.yml",
+    "vibey_gh/templates/workflows/automation-bootstrap.yml",
+    "vibey_gh/automation_bootstrap.py",
+    "test/test_templates.py",
+)
+_MONOREPO_SOURCE = "src/vibey_tools/gh"
+_MONOREPO_REPAIR = (
+    ".github/workflows/automation-bootstrap.yml",
+    f"{_MONOREPO_SOURCE}/.github/workflows/automation-bootstrap.yml",
+    f"{_MONOREPO_SOURCE}/vibey_gh/templates/workflows/automation-bootstrap.yml",
+    f"{_MONOREPO_SOURCE}/vibey_gh/install.py",
+    f"{_MONOREPO_SOURCE}/test/test_templates.py",
+)
+_DEFAULT_GATES_GREEN = (
+    ("Provenance", "success"),
+    ("Analyze Python", "success"),
+    ("Documentation contract", "success"),
+)
+
+
+@dataclasses.dataclass(frozen=True)
+class _BootstrapRun:
+    returncode: int
+    stderr: str
+    merged: bool
+    summary: str
+
+
+def _run_bootstrap(
+    tmp_path: Path,
+    cfg: GhConfig,
+    *,
+    files: tuple[str, ...],
+    check_runs: tuple[tuple[str, str | None], ...],
+    permission: str = "admin",
+) -> _BootstrapRun:
+    """Run the RENDERED step under bash and jq, with `gh` answered from fixtures.
+
+    This is the step GitHub runs, not a copy of its logic: the script and its `env:` both
+    come from `render_workflow`, so a quoting slip between the YAML, the shell, and jq
+    fails here rather than in the one emergency nobody can rehearse. A `None` conclusion
+    is a check run still in progress.
+    """
+    import os
+    import shutil
+
+    if shutil.which("bash") is None or shutil.which("jq") is None:  # pragma: no cover
+        pytest.skip("the bootstrap step needs bash and jq, which every GitHub runner has")
+    parsed = yaml.safe_load(render_workflow(WORKFLOWS / "automation-bootstrap.yml", cfg))
+    (step,) = parsed["jobs"]["merge"]["steps"]
+    fake = tmp_path / "fake"
+    fake.mkdir()
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "gh").write_text(_FAKE_GH, encoding="utf-8")
+    (bin_dir / "gh").chmod(0o755)
+    (fake / "permission").write_text(f"{permission}\n", encoding="utf-8")
+    pr = {
+        "state": "OPEN",
+        "isDraft": False,
+        "headRefOid": "abc123",
+        "headRefName": "fix/automation",
+        "baseRefName": cfg.integration_branch,
+        "isCrossRepository": False,
+    }
+    (fake / "pr.json").write_text(json.dumps(pr), encoding="utf-8")
+    (fake / "files").write_text("".join(f"{path}\n" for path in files), encoding="utf-8")
+    runs = [
+        {
+            "name": name,
+            "status": "completed" if conclusion else "in_progress",
+            "conclusion": conclusion,
+        }
+        for name, conclusion in check_runs
+    ]
+    (fake / "checks.json").write_text(json.dumps({"check_runs": runs}), encoding="utf-8")
+    summary = tmp_path / "summary.md"
+    env = {key: str(value) for key, value in step["env"].items() if "${{" not in str(value)}
+    env.update(
+        PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+        FAKE_GH=str(fake),
+        GH_TOKEN="token",
+        REPO="owner/repo",
+        PR="7",
+        EXPECTED_SHA="abc123",
+        GITHUB_ACTOR="operator",
+        GITHUB_STEP_SUMMARY=str(summary),
+    )
+    result = subprocess.run(
+        ["bash", "-c", step["run"]],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,  # the exit status IS the assertion
+    )
+    calls = (fake / "calls").read_text(encoding="utf-8").splitlines()
+    return _BootstrapRun(
+        returncode=result.returncode,
+        stderr=result.stderr,
+        merged=any(call.startswith("pr merge ") for call in calls),
+        summary=summary.read_text(encoding="utf-8") if summary.exists() else "",
+    )
+
+
+def test_automation_bootstrap_merges_once_the_configured_gates_are_green(tmp_path):
+    run = _run_bootstrap(
+        tmp_path,
+        GhConfig(root=tmp_path),
+        files=_STANDALONE_REPAIR,
+        check_runs=_DEFAULT_GATES_GREEN
+        + (
+            ("Docs preview", "skipped"),
+            ("Dependency review", "neutral"),
+            # The gates this path routes around: red, and not waited on.
+            ("gate", "failure"),
+            ("PR automation / gate", "failure"),
+        ),
+    )
+    assert run.returncode == 0, run.stderr
+    assert run.merged
+    gates = "Provenance, Analyze Python, Documentation contract"
+    assert f"Independent gates present and green on the exact head: {gates}" in run.summary
+
+
+def test_automation_bootstrap_merges_a_monorepo_repair_on_its_own_gates(tmp_path):
+    """This repository's shape: one `gates` job, and vibey-gh vendored under a subtree.
+    `gh pr diff` reports repository-root paths, so the standalone scope rejected every
+    one of its files, and no `Lint` or `Build` ever reported."""
+    cfg = _bootstrap_config(tmp_path, required=("gates",), self_source=_MONOREPO_SOURCE)
+    run = _run_bootstrap(
+        tmp_path,
+        cfg,
+        files=_MONOREPO_REPAIR,
+        check_runs=(
+            ("gates", "success"),
+            ("uv.lock is in sync with pyproject.toml", "success"),
+            ("Absorbed tools - their own linters", "success"),
+        ),
+    )
+    assert run.returncode == 0, run.stderr
+    assert run.merged
+    assert "Independent gates present and green on the exact head: gates" in run.summary
+
+
+@pytest.mark.parametrize(
+    "check_runs, absent",
+    [
+        (_DEFAULT_GATES_GREEN[:2], "Documentation contract"),
+        ((), "Provenance, Analyze Python, Documentation contract"),
+        (_DEFAULT_GATES_GREEN[:2] + (("Documentation contract", "failure"),), "none"),
+        (_DEFAULT_GATES_GREEN[:2] + (("Documentation contract", None),), "none"),
+        (_DEFAULT_GATES_GREEN + (("Lint", "failure"),), "none"),
+        (_DEFAULT_GATES_GREEN + (("Test (3.12)", "cancelled"),), "none"),
+    ],
+    ids=["one-absent", "none-reported", "one-red", "one-running", "other-red", "cancelled"],
+)
+def test_automation_bootstrap_refuses_unless_every_gate_is_present_and_green(
+    tmp_path, check_runs, absent
+):
+    run = _run_bootstrap(
+        tmp_path, GhConfig(root=tmp_path), files=_STANDALONE_REPAIR, check_runs=check_runs
+    )
+    assert run.returncode != 0
+    assert not run.merged
+    assert f"absent: {absent})" in run.stderr
+
+
+def test_automation_bootstrap_fails_closed_when_no_gate_is_declared(tmp_path):
+    """An empty `required_checks` leaves nothing independent to verify, so the admin merge
+    refuses outright rather than proceeding on whatever happened to run."""
+    run = _run_bootstrap(
+        tmp_path,
+        _bootstrap_config(tmp_path, required=()),
+        files=_STANDALONE_REPAIR,
+        check_runs=_DEFAULT_GATES_GREEN,
+    )
+    assert run.returncode != 0
+    assert not run.merged
+    assert "required: []" in run.stderr
+
+
+def test_automation_bootstrap_matches_a_name_with_quotes_commas_and_parentheses(tmp_path):
+    awkward = 'Test "py", (3.12)'
+    required = (awkward, "it's, (really) \\ here")
+    run = _run_bootstrap(
+        tmp_path,
+        _bootstrap_config(tmp_path, required=required),
+        files=_STANDALONE_REPAIR,
+        check_runs=tuple((name, "success") for name in required),
+    )
+    assert run.returncode == 0, run.stderr
+    assert run.merged
+    assert f"{awkward}, it's, (really) \\ here" in run.summary
+
+
+@pytest.mark.parametrize(
+    "self_source, stray",
+    [
+        (".", "vibey_gh/versioning.py"),
+        (".", "docs/workflows.md"),
+        (_MONOREPO_SOURCE, "src/vibey/cli/main.py"),
+        (_MONOREPO_SOURCE, "vibey_gh/install.py"),
+        (_MONOREPO_SOURCE, f"{_MONOREPO_SOURCE}/vibey_gh/versioning.py"),
+        (_MONOREPO_SOURCE, f"{_MONOREPO_SOURCE}/docs/workflows.md"),
+        (_MONOREPO_SOURCE, "src/vibey_tools/ghost/test/test_x.py"),
+    ],
+)
+def test_automation_bootstrap_scope_check_rejects_files_outside_automation_core(
+    tmp_path, self_source, stray
+):
+    files = _STANDALONE_REPAIR if self_source == "." else _MONOREPO_REPAIR
+    run = _run_bootstrap(
+        tmp_path,
+        _bootstrap_config(tmp_path, self_source=self_source),
+        files=files + (stray,),
+        check_runs=_DEFAULT_GATES_GREEN,
+    )
+    assert run.returncode != 0
+    assert not run.merged
+    assert "changed files are not confined to automation-core paths" in run.stderr
+
+
+def test_automation_bootstrap_refuses_a_dispatcher_who_is_not_an_administrator(tmp_path):
+    run = _run_bootstrap(
+        tmp_path,
+        GhConfig(root=tmp_path),
+        files=_STANDALONE_REPAIR,
+        check_runs=_DEFAULT_GATES_GREEN,
+        permission="write",
+    )
+    assert run.returncode != 0
+    assert not run.merged
 
 
 def test_pr_review_requires_verified_repository_paths():
@@ -1461,6 +1785,293 @@ def test_a_repository_that_is_vibey_gh_runs_its_own_working_tree(hook):
     # Narrow on purpose: an adopting repository must fall straight through to its
     # installed CLI, so the test is the package name *and* the package directory.
     assert '[ -d "$dir/vibey_gh" ]' in text
+
+
+# What the hooks DO when they run, not only what they say. Each test below drives the
+# rendered hook as a real shell script, in an environment with nothing ambient in it.
+
+
+def _stub(bin_dir: Path, name: str, body: str) -> None:
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    path = bin_dir / name
+    path.write_text("#!/bin/sh\n" + body, encoding="utf-8")
+    path.chmod(0o755)
+
+
+def _isolated_env(tmp_path: Path, bin_dir: Path, *, git: bool = False) -> dict[str, str]:
+    """No virtualenv, no PYTHONPATH, no git config, and only `bin_dir` ahead of the system.
+
+    A developer's own PATH usually carries a `vibey-gh` (this repository's virtualenv, a
+    pipx install), which a hook finds first -- and which would make a test about how the
+    hook resolves the tool pass for the wrong reason. Git's directory is added only for the
+    tests that commit, and always behind the stubs.
+    """
+    import shutil
+
+    path = [str(bin_dir)]
+    if git:
+        found = shutil.which("git")
+        assert found, "git is required to exercise the hooks"
+        path.append(os.path.dirname(found))
+    home = tmp_path / "home"
+    home.mkdir(exist_ok=True)
+    return {
+        "PATH": os.pathsep.join([*path, "/usr/bin", "/bin"]),
+        "HOME": str(home),
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@example.com",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@example.com",
+    }
+
+
+def _python3(bin_dir: Path, *flags: str) -> None:
+    """`python3` on the isolated PATH: this interpreter, which has vibey_gh installed."""
+    _stub(bin_dir, "python3", f'exec "{sys.executable}" {" ".join(flags)} "$@"\n')
+
+
+def _hook_functions(hook: str, root: Path) -> str:
+    """`vibey_gh_self` and `vibey_gh`, exactly as the rendered hook carries them."""
+    text = render_hook(TEMPLATES / hook, GhConfig(root=root))
+    start = text.index("vibey_gh_self() {")
+    resolver = text.index("\nvibey_gh() {", start)
+    return text[start : text.index("\n}\n", resolver) + 3]
+
+
+def _resolve(hook: str, root: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    """Ask the hook's own resolver for the trailer key, from the top of `root`."""
+    script = "set -eu\n" + _hook_functions(hook, root) + "\nvibey_gh trailer-key\n"
+    return subprocess.run(
+        ["sh", "-c", script], cwd=root, env=env, capture_output=True, text=True, check=False
+    )
+
+
+def _plant(root: Path, marker: Path) -> None:
+    """A `vibey_gh` package in a working tree that records it was imported."""
+    package = root / "vibey_gh"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text(
+        f"import pathlib\npathlib.Path({str(marker)!r}).write_text('imported')\n",
+        encoding="utf-8",
+    )
+    (package / "cli.py").write_text("print('planted')\n", encoding="utf-8")
+
+
+def _stand_in_tool(root: Path, answer: str) -> None:
+    """A vibey-gh source tree whose CLI prints `answer` and its arguments."""
+    (root / "vibey_gh").mkdir(parents=True)
+    (root / "pyproject.toml").write_text('name = "vibey-gh"\n', encoding="utf-8")
+    (root / "vibey_gh" / "__init__.py").write_text("", encoding="utf-8")
+    (root / "vibey_gh" / "cli.py").write_text(
+        f"import sys\nprint({answer!r}, *sys.argv[1:])\n", encoding="utf-8"
+    )
+
+
+# An optional keyword, any assignment prefix, then the interpreter itself.
+_PYTHON3_COMMAND = re.compile(
+    r"^(?:(?:if|elif|then|else|!)\s+)?((?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*)python3\b"
+)
+
+
+def _python3_commands(hook_text: str) -> list[str]:
+    """Every simple command in a hook that runs `python3`, with continuations joined."""
+    commands = []
+    for line in hook_text.replace("\\\n", " ").splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        code = line.split(" # ", 1)[0]
+        for command in re.split(r"&&|\|\||;|\|", code):
+            if re.search(r"\bpython3\b", command):
+                commands.append(" ".join(command.split()))
+    return commands
+
+
+@pytest.mark.parametrize("hook", ["pre-push", "commit-msg"])
+def test_every_python3_the_hook_runs_ignores_the_working_directory(hook, tmp_path):
+    """PYTHONSAFEPATH=1 on each `python3`, as an assignment on that very command.
+
+    `python3 -c` and `python3 -m` put the current directory first on sys.path, and a hook
+    runs from the top of the working tree -- whatever branch is checked out. Each
+    invocation carries the variable itself: an `export` would also reach the project's
+    `.local` hook and every tool that runs, which is not this hook's to change.
+    """
+    commands = _python3_commands(render_hook(TEMPLATES / hook, GhConfig(root=tmp_path)))
+    # Three import probes and the three runs they guard: self-hosted, installed, and the
+    # pre-split layout. A count that drops means the parse stopped seeing them.
+    assert len(commands) == 6, commands
+    for command in commands:
+        match = _PYTHON3_COMMAND.match(command)
+        assert match, f"python3 is not the command here: {command}"
+        assert "PYTHONSAFEPATH=1" in match.group(1).split(), command
+
+
+@pytest.mark.parametrize("hook", ["pre-push", "commit-msg"])
+def test_the_hook_never_imports_a_vibey_gh_from_the_working_tree(hook, tmp_path):
+    """The installed case: a branch's own `vibey_gh/` must not be what the hook executes."""
+    repo = tmp_path / "repo"
+    marker = tmp_path / "planted-was-imported"
+    _plant(repo, marker)
+    bin_dir = tmp_path / "bin"
+    _python3(bin_dir)
+    env = _isolated_env(tmp_path, bin_dir)
+
+    # The plant is live: the same interpreter without the guard imports it. Without this
+    # the assertion below could pass only because the plant never worked.
+    subprocess.run(
+        [str(bin_dir / "python3"), "-c", "import vibey_gh.cli"],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        check=False,
+    )
+    assert marker.exists()
+    marker.unlink()
+
+    done = _resolve(hook, repo, env)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == GhConfig(root=repo).trailer_key
+    assert not marker.exists(), "the hook imported a vibey_gh package from the working tree"
+
+
+@pytest.mark.parametrize("hook", ["pre-push", "commit-msg"])
+def test_a_self_hosted_hook_still_runs_the_source_it_declares(hook, tmp_path):
+    """PYTHONSAFEPATH drops the working directory, never PYTHONPATH.
+
+    So the declared source still runs -- including `.`, a standalone repository's own
+    root -- and a package planted beside a declared subdirectory no longer shadows it.
+    """
+    bin_dir = tmp_path / "bin"
+    _python3(bin_dir)
+    env = _isolated_env(tmp_path, bin_dir)
+
+    mono = tmp_path / "mono"
+    _stand_in_tool(mono / "tools" / "gh", "declared")
+    (mono / ".vibey-gh.toml").write_text('[install]\nself_source = "tools/gh"\n')
+    marker = tmp_path / "planted-was-imported"
+    _plant(mono, marker)
+    done = _resolve(hook, mono, env)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "declared trailer-key"
+    assert not marker.exists(), "a top-level vibey_gh shadowed the declared source"
+
+    standalone = tmp_path / "standalone"
+    _stand_in_tool(standalone, "standalone")
+    (standalone / ".vibey-gh.toml").write_text("[install]\n")
+    done = _resolve(hook, standalone, env)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == "standalone trailer-key"
+
+
+def _repositories_that_host_vibey_gh() -> list[Path]:
+    """This tenant, and the workspace root that declares it when checked out inside one."""
+    tenant = Path(__file__).resolve().parent.parent
+    roots = [tenant]
+    for parent in tenant.parents:
+        if (parent / ".vibey-gh.toml").is_file():
+            roots.append(parent)
+            break
+    return roots
+
+
+@pytest.mark.parametrize("root", _repositories_that_host_vibey_gh(), ids=lambda p: p.name)
+@pytest.mark.parametrize("hook", ["pre-push", "commit-msg"])
+def test_this_repository_s_hooks_still_run_its_own_source(hook, root, tmp_path):
+    """The real package, in this repository's real layout, under PYTHONSAFEPATH.
+
+    `python3 -S` has no site-packages and so no installed vibey_gh: the only way this
+    answers is the self-hosted branch importing the source the configuration declares.
+    """
+    bin_dir = tmp_path / "bin"
+    _python3(bin_dir, "-S")
+    done = _resolve(hook, root, _isolated_env(tmp_path, bin_dir))
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == load_config(root).trailer_key
+
+
+def _adopter_whose_hook_exits(tmp_path: Path, hook: str, status: int) -> tuple[Path, dict]:
+    """An adopting repository whose own `hook` exits `status`, after `vibey-gh install`.
+
+    Installed the way an adopter gets it: the pre-existing hook is moved to `<hook>.local`
+    and the managed hook chains to it. The CLI is a stand-in that answers the trailer
+    queries and passes `check`, which is all either hook asks of it.
+    """
+    repo = tmp_path / "repo"
+    (repo / HOOKS_DIR).mkdir(parents=True)
+    bin_dir = tmp_path / "bin"
+    answers = [
+        'case "$1" in',
+        "  trailer-key) echo Made-With ;;",
+        '  trailer) echo "Made-With: t" ;;',
+        "esac",
+    ]
+    _stub(bin_dir, "vibey-gh", "\n".join(answers) + "\n")
+    env = _isolated_env(tmp_path, bin_dir, git=True)
+    subprocess.run(["git", "init", "-q", "."], cwd=repo, env=env, check=True)
+    (repo / HOOKS_DIR / hook).write_text(f"#!/bin/sh\nexit {status}\n", encoding="utf-8")
+    actions = {a.hook: a.outcome for a in install(GhConfig(root=repo, managed_workflows=()))}
+    assert actions[hook] == "chained"
+    return repo, env
+
+
+@pytest.mark.parametrize("status", [0, 1])
+def test_a_project_commit_msg_hook_that_refuses_the_message_refuses_the_commit(status, tmp_path):
+    """The chain has to carry the status out, because commit-msg runs without `set -e`.
+
+    It once read `[ -x .local ] && .local "$@"`, which discards a failure: a project hook
+    that rejected the message was ignored and the commit went ahead anyway.
+    """
+    repo, env = _adopter_whose_hook_exits(tmp_path, "commit-msg", status)
+    done = subprocess.run(
+        ["git", "commit", "--allow-empty", "-q", "-m", "feat: guarded"],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    head = subprocess.run(
+        ["git", "log", "-1", "--format=%B"],
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if status:
+        assert done.returncode != 0, "git accepted a commit the project hook refused"
+        assert head.returncode != 0, "a commit exists although the project hook refused it"
+    else:
+        assert done.returncode == 0, done.stderr
+        assert head.stdout.rstrip().endswith("Made-With: t")
+
+
+@pytest.mark.parametrize("shell", ["sh", "bash"])
+@pytest.mark.parametrize("status", [0, 1, 3])
+@pytest.mark.parametrize("hook", ["commit-msg", "pre-push"])
+def test_the_hook_exits_with_the_project_hook_s_status(hook, status, shell, tmp_path):
+    """Exactly that status, under either shell a hook may meet, on both hooks.
+
+    pre-push already propagated it through `set -e` and being the last line; it now also
+    says so with `|| exit $?`, and this holds it there.
+    """
+    repo, env = _adopter_whose_hook_exits(tmp_path, hook, status)
+    message = repo / "MESSAGE"
+    message.write_text("feat: guarded\n", encoding="utf-8")
+    argv = [str(message)] if hook == "commit-msg" else ["origin", "https://example.invalid/r"]
+    done = subprocess.run(
+        [shell, str(repo / HOOKS_DIR / hook), *argv],
+        cwd=repo,
+        env=env,
+        input="",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == status, done.stderr
+    if hook == "commit-msg" and status:
+        # Refused before anything touched the message.
+        assert message.read_text(encoding="utf-8") == "feat: guarded\n"
 
 
 def test_no_code_token_can_keep_a_colour_meant_for_a_white_page():
@@ -1933,6 +2544,88 @@ def test_promotion_checks_provenance_without_rewriting_or_reauditing_history():
     assert 'vibey-gh check --ci --commits "${BASE_SHA}..${HEAD_SHA}"' in text
 
 
+def _provenance_steps(root: Path) -> list[dict]:
+    rendered = render_workflow(WORKFLOWS / "provenance.yml", GhConfig(root=root))
+    return yaml.safe_load(rendered)["jobs"]["provenance"]["steps"]
+
+
+def _check_provenance_step(root: Path) -> dict:
+    (step,) = [s for s in _provenance_steps(root) if s.get("name") == "Check provenance"]
+    return step
+
+
+def test_the_promotion_shortcut_reads_where_the_head_lives_through_env(tmp_path):
+    """Branch names are the contributor's to choose; the head repository is not.
+
+    And the value reaches the script through `env:` only. A `${{ }}` inside `run:` is
+    pasted into the shell source before bash ever sees it, so no expression belongs there.
+    """
+    step = _check_provenance_step(tmp_path)
+    assert step["env"]["HEAD_REPO"] == "${{ github.event.pull_request.head.repo.full_name }}"
+    assert step["env"]["THIS_REPO"] == "${{ github.repository }}"
+    assert '[ "$HEAD_REPO" = "$THIS_REPO" ]' in step["run"]
+    for each in _provenance_steps(tmp_path):
+        assert "${{" not in (each.get("run") or ""), each.get("name")
+
+
+_BASE, _HEAD = "b" * 40, "h" * 40
+_PROMOTION = dict(BASE_REF="main", HEAD_REF="develop", BASE_SHA=_BASE, HEAD_SHA=_HEAD)
+_AUDIT = f"check --ci --commits {_BASE}..{_HEAD}"
+
+
+@pytest.mark.parametrize(
+    ("event", "expected", "promotion"),
+    [
+        pytest.param(
+            {**_PROMOTION, "HEAD_REPO": "owner/project"}, "check --ci", True, id="promotion"
+        ),
+        pytest.param(
+            {**_PROMOTION, "HEAD_REPO": "someone/fork"}, _AUDIT, False, id="fork-named-develop"
+        ),
+        pytest.param({**_PROMOTION, "HEAD_REPO": ""}, _AUDIT, False, id="fork-since-deleted"),
+        pytest.param(
+            {**_PROMOTION, "HEAD_REF": "feat/x", "HEAD_REPO": "owner/project"},
+            _AUDIT,
+            False,
+            id="topic-branch",
+        ),
+        pytest.param({}, "check --ci", False, id="push"),
+    ],
+)
+def test_the_promotion_shortcut_is_taken_only_for_this_repository_s_own_branch(
+    event, expected, promotion, tmp_path
+):
+    """The step's own script, run the way Actions runs it, against each event shape.
+
+    A fork can name its branch after the integration branch and open a pull request into
+    the release branch. By branch names alone that is a promotion, and a promotion skips
+    the per-commit audit -- so the fork's commits would be waved through unexamined.
+    """
+    step = _check_provenance_step(tmp_path)
+    bin_dir = tmp_path / "bin"
+    calls = tmp_path / "calls"
+    _stub(bin_dir, "vibey-gh", f'printf "%s\\n" "$*" >> "{calls}"\n')
+    _stub(bin_dir, "git", "exit 0\n")  # the fetches are best-effort; nothing to reach here
+    env = {"PATH": os.pathsep.join([str(bin_dir), "/usr/bin", "/bin"]), "HOME": str(tmp_path)}
+    # Actions sets every declared variable, to "" where the expression was empty.
+    env |= {name: str(value) for name, value in step["env"].items() if "${{" not in str(value)}
+    for name in ("BASE_SHA", "BASE_REF", "HEAD_REF", "HEAD_SHA", "HEAD_REPO"):
+        env[name] = event.get(name, "")
+    env["THIS_REPO"] = "owner/project"
+
+    done = subprocess.run(
+        ["bash", "-c", step["run"]],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr
+    assert calls.read_text(encoding="utf-8").splitlines() == [expected]
+    assert ("Promotion PR" in done.stdout) is promotion
+
+
 def test_the_provenance_job_carries_no_forge_credential():
     """The job that runs contributor-controlled code must never hold a token.
 
@@ -2020,27 +2713,49 @@ def test_pin_version_floats_when_the_repository_declares_no_release(tmp_path: Pa
     """
     if pyproject is not None:
         tmp_path.joinpath("pyproject.toml").write_text(pyproject, encoding="utf-8")
-    text = render_workflow(WORKFLOWS / "merge-train.yml", GhConfig(root=tmp_path, pin_version=True))
+    cfg = GhConfig(root=tmp_path, pin_version=True)
+    # Nothing installed to witness a release either, stated rather than left to whatever
+    # the virtualenv running this suite happens to hold.
+    pin = FallbackPinResolver(InstalledDistributions(search_path=[])).resolve(cfg)
+    text = render_workflow(WORKFLOWS / "merge-train.yml", cfg, fallback_pin=pin)
     assert FALLBACK_INSTALL in text
     assert f"{FALLBACK_DISTRIBUTION}==" not in text
 
 
+class _PublishedRelease:
+    """`vibey` 1.0.0, installed from an index, and the source of the running vibey-gh."""
+
+    def version(self, distribution: str) -> str | None:
+        return "1.0.0" if distribution == FALLBACK_DISTRIBUTION else None
+
+    def installed_from_source(self, distribution: str) -> bool:
+        return False
+
+    def installs(self, distribution: str, path: Path) -> bool:
+        return True
+
+
 def test_pin_version_cannot_invent_a_release_for_a_repository_that_is_not_it(tmp_path: Path):
-    """An adopter turning the key on must not get a version this tooling guessed.
+    """An adopter turning the key on gets the release it runs from, never a guess.
 
     `vibey_gh.__version__` numbers a package inside `vibey` (ADR-0037), and an adopter's
-    own version numbers their project; neither names a `vibey` release. A pin built from
-    either resolves to nothing inside the adopter's job. Floating always resolves.
+    own version numbers their project; neither names a `vibey` release, and a pin built
+    from either resolves to nothing inside the adopter's job. The installed `vibey`
+    release that `vibey-gh` is running from does name one, and every managed template
+    carries it.
     """
     tmp_path.joinpath("pyproject.toml").write_text(
         '[project]\nname = "somebody-else"\nversion = "9.9.9"\n', encoding="utf-8"
     )
+    cfg = GhConfig(root=tmp_path, pin_version=True)
+    pin = FallbackPinResolver(_PublishedRelease()).resolve(cfg)
     for path in WORKFLOW_TEMPLATES:
-        text = render_workflow(path, GhConfig(root=tmp_path, pin_version=True))
+        text = render_workflow(path, cfg, fallback_pin=pin)
         assert "9.9.9" not in text
-        assert f"{FALLBACK_DISTRIBUTION}==" not in text
+        assert f"=={vibey_gh.__version__}" not in text
+        assert FALLBACK_INSTALL not in text
         if FALLBACK_INSTALL in path.read_text(encoding="utf-8"):
-            assert FALLBACK_INSTALL in text
+            assert f'"{FALLBACK_DISTRIBUTION}==1.0.0"' in text
 
 
 def test_every_managed_third_party_action_is_immutably_pinned():

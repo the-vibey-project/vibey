@@ -30,8 +30,10 @@ flowchart TB
     Conversation["Conversation (comment-driven answer and bounded change, vibey_gh.conversation)"]
     GithubState["Durable marker-comment state (vibey_gh.github_state)"]
     GhTransport["Forge CLI transport (vibey_gh.gh_transport): one seam, three result shapes"]
-    ForgeSnapshot["Forge snapshot (vibey_gh.forge_snapshot): read-only capture, JSONL hash chains, every class captured or excluded with a reason"]
-    SnapshotFiles[("Snapshot directory: class.jsonl chains + manifest.json")]
+    ForgeNouns["Forge-neutral nouns (vibey_gh.forge): ChangeRequest, ForgeRelease, CheckResult, ProtectedRef, ..."]
+    ForgeSelector["Forge selection (vibey_gh.forge_selector): [platform] kind picks the adapter"]
+    ForgeAdapter["Forge adapter (vibey_gh.forge_github.GitHubForge): verbs answer value and problem"]
+    Tidy["Clean-repo survey (vibey_gh.tidy): technical clutter, never human mess"]
     MergeTrain[Merge train]
     Promotion[Promotion]
     Versioning[Versioning]
@@ -43,9 +45,7 @@ flowchart TB
     Reconcile["Stranded-branch reconciliation (vibey_gh.reconcile)"]
     Rulesets["Branch ruleset reconciliation (vibey_gh.rulesets)"]
     Doctor["Offline adoption preflight (vibey_gh.doctor)"]
-    LocalFallback["Local-model review (vibey_gh.local_review): local-review with a sovereign or fallback role, and local-triage"]
-    ReviewContract["Review contract (vibey_gh.review_contract): diff-groundable vs wider-context halves, the wider half's own report fields, and both review JSON Schemas"]
-    ReviewComposition["Review composition (vibey_gh.review_composition, pr-automation combine): one verdict from both lanes, the lane behind every field, repairable only for the paid half"]
+    LocalFallback["Local-model fallback (vibey_gh.local_review): local-review + local-triage"]
     Yank["Yank/supersede reporting (vibey_gh.yank, report-superseded)"]
     LocalAuthority["Local-authority sync loop (vibey_gh.local_authority): capped-lane source of truth"]
     Failover["Operator-seat failover (vibey_gh.failover): qwenloop, then opencode; paid lane leads"]
@@ -73,8 +73,7 @@ flowchart TB
     Guard[Exact SHA, branch, lease, and policy guards]
     Bootstrap[Admin-authorized automation bootstrap]
     ReviewIncomplete["Review incomplete: no verdict, operator action required"]
-    FallbackDeclined["Local verdict declined: a blocking finding to verify (never auto-repaired), or a diff too large to judge"]
-    LocalReviewFallback["Sovereign diff review, review-sovereign (runs FIRST on a fresh heartbeat; self-hosted runner, no push credential, Ollama, trusted_only excludes forks)"]
+    LocalReviewFallback["Local-model review fallback (self-hosted runner, no push credential, Ollama, trusted_only excludes forks)"]
     LocalTriageFallback["Local-model triage fallback (same self-hosted runner boundary, issues: write only, one deduplicated analysis comment, never code)"]
     SupersededReport["Superseded-release report (read-only index query; PyPI has no yank API, a human clicks)"]
     UntrustedIssue[Untrusted contributor issue text]
@@ -163,23 +162,13 @@ flowchart TB
   EphemeralGit --> Sandbox
   Trusted --> Sandbox
   Sandbox --> Review
-  PRAutomation -->|fresh heartbeat, not a fork: sovereign lane first| LocalReviewFallback
-  LocalReviewFallback -->|trusted author: carries the diff half, paid answers the wider half only| Review
-  LocalReviewFallback -->|outside author: held in reserve, paid answers the whole review| Review
-  Review -->|paid answer + sovereign verdict| ReviewComposition
-  ReviewComposition -->|repairable: the paid half failed| Repair
-  ReviewComposition -->|gate names the lane behind each half| MergeTrain
-  ReviewComposition -->|the sovereign half alone failed: a lead for a human| FallbackDeclined
+  Review --> Repair
   Repair --> Guard
   Review -->|no verdict| ReviewIncomplete
   ReviewIncomplete -->|operator corrects condition, then reruns| Review
-  Review -->|no verdict: the sovereign verdict is read as the fallback| LocalReviewFallback
-  LocalReviewFallback -->|found nothing blocking: gate (local fallback)| MergeTrain
-  LocalReviewFallback -->|unreachable or unusable too| ReviewIncomplete
-  LocalReviewFallback -->|declined; its findings count says which| FallbackDeclined
-  ReviewContract -->|renders both review --json-schema candidates at install| Install
-  ReviewContract -->|diff-groundable half and its placeholders| LocalFallback
-  ReviewContract -->|the halves and the wider half's report fields| ReviewComposition
+  Review -->|no verdict, trusted_only excludes forks| LocalReviewFallback
+  LocalReviewFallback -->|fallback found nothing blocking: gate (local fallback)| MergeTrain
+  LocalReviewFallback -->|fallback also unreachable or unusable| ReviewIncomplete
   IssueAutomation -->|paid solve produced nothing| LocalTriageFallback
   LocalTriageFallback -->|bounded triage comment, needs_human forced true| IssueAutomation
   Release -->|after each publish| SupersededReport
@@ -279,10 +268,12 @@ flowchart TB
   ConversationReply --> Guard
   Conversation --> GithubState
   GithubState -->|every gh call, argv and cwd unchanged| GhTransport
-  Maintainer -->|"forge-snapshot --out DIR"| ForgeSnapshot
-  CLI --> ForgeSnapshot
-  ForgeSnapshot -->|"survey: could not look is never read as empty"| GhTransport
-  ForgeSnapshot -->|"append-only, sealed and chained, manifest names every exclusion"| SnapshotFiles
+  CLI --> Tidy
+  Tidy -->|open change-request heads, releases| ForgeSelector
+  Config -->|"[platform] kind and host"| ForgeSelector
+  ForgeSelector -->|github; gitlab and forgejo refused until adapted| ForgeAdapter
+  ForgeAdapter -->|answers in| ForgeNouns
+  ForgeAdapter -->|same argv and cwd as before| GhTransport
   Conversation --> Trusted
   Maintainer -->|installs the marketplace for a project session| ClaudeSettings
   ClaudeSettings --> DevPlugin

@@ -23,7 +23,7 @@ topic branch push
   -> PR automation publishes an exact-head gate
   -> Merge train squash-merges into develop
   -> Release publishes the preview package and documentation channel
-  -> Promote opens or reuses develop -> main
+  -> Promote opens develop -> main, or refreshes the open PR's title and body
   -> The same exact-head scans and review gate the promotion PR
   -> Merge train rebase-merges into main
   -> Release, GitHub Release, Pages, GHCR, and repository profile converge
@@ -47,9 +47,9 @@ events. A skipped stale run is expected. A current-head failure is never bypasse
 | `conventional-commits.yml` | Conventional Commits | Audits commit subjects and may safely normalize a linear same-repository topic branch with an exact-head lease. |
 | `documentation.yml` | Docs | Enforces the FOSS, human, agent, plugin-marketplace, Mermaid, SEO, crawler, and LLM documentation contract. |
 | `pr-automation.yml` | PR automation | Aggregates current-head scans, runs semantic review (with an opt-in self-hosted local-model fallback when the primary review returns no verdict), performs bounded repair or conflict resolution, persists lineage state, and publishes the merge gate. |
-| `automation-bootstrap.yml` | Automation bootstrap | Provides an explicitly authorized one-time path for merging a workflow repair when the older base workflow cannot repair itself. |
+| `automation-bootstrap.yml` | Automation bootstrap | Provides an explicitly authorized one-time path for merging a workflow repair when the older base workflow cannot repair itself; it waits on the integration ruleset's `required_checks` (less `ignored_checks` and the routed-around gate) and confines the change to automation-core paths under `[install] self_source`. |
 | `merge-train.yml` | Merge train | Squash-merges eligible PRs to `develop` and rebase-merges eligible promotion PRs to `main`. |
-| `promote-to-main.yml` | Promote | Opens or reuses the asynchronous `develop -> main` promotion PR after integration succeeds. |
+| `promote-to-main.yml` | Promote | Opens the asynchronous `develop -> main` promotion PR after integration succeeds, or refreshes the open one's title and body. |
 | `release.yml` | Release | Publishes development builds from `develop` to TestPyPI and production builds from `main` to PyPI. |
 | `github-release.yml` | GitHub Release | Creates or reuses the immutable production tag and generated-notes GitHub Release for the exact released SHA. |
 | `release-surfaces.yml` | Release surfaces | Publishes OCI package artifacts and the persistent Production and Preview ProperDocs sites. |
@@ -218,7 +218,10 @@ to act on. See [Releases](../docs/releases.md).
 4. For missing secrets, permissions, billing, registry denial, unavailable services, or
    settings, correct the operator condition and redispatch.
 5. When a workflow bug blocks its own repair, use Automation bootstrap only with the exact
-   PR, exact head SHA, and explicit authorization.
+   PR, exact head SHA, and explicit authorization. It merges only when every gate in
+   `[rulesets.integration] required_checks` (less `[pr_automation] ignored_checks`) is
+   present and green on that head; if it names an absent gate, fix the configured list and
+   re-render rather than waiting for a check the repository does not produce.
 6. When the budget is exhausted, inspect retained runs and push a deliberate human fix to
    create a new lineage.
 

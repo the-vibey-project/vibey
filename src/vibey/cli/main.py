@@ -1140,6 +1140,21 @@ def doctor(
             help="In-cluster preflight instead: DSN, workspace, secrets, database, migrations",
         ),
     ] = False,
+    worker_engines: Annotated[
+        str | None,
+        typer.Option(
+            "--engines",
+            help="With --cluster: the worker's --engines allow-list (chart worker.engines); "
+            "engine-auth requires exactly these",
+        ),
+    ] = None,
+    worker_provider: Annotated[
+        str | None,
+        typer.Option(
+            "--provider",
+            help="With --cluster: the worker's --provider (chart worker.provider)",
+        ),
+    ] = None,
 ) -> None:
     """Check engine health, auth status, and optionally run conformance."""
     from vibey.application.conformance import run_conformance
@@ -1241,15 +1256,31 @@ def doctor(
         import shutil
 
         from vibey.bootstrap import database_url, migrations_dir
-        from vibey.infrastructure.cluster_preflight import all_ok, run_cluster_preflight
+        from vibey.infrastructure.cluster_preflight import (
+            ClusterPreflight,
+            EngineAuthCheck,
+            all_ok,
+        )
+        from vibey.infrastructure.interfaces.cluster_preflight_interface import (
+            ClusterPreflightInterface,
+        )
 
-        checks = await run_cluster_preflight(
+        # The engine check needs what the worker was TOLD to run, not what is on
+        # PATH: every runner ships in the image (ADR-0037), so presence says nothing.
+        try:
+            engine_auth = EngineAuthCheck.for_worker(
+                engines=worker_engines, provider=worker_provider, which=shutil.which
+            )
+        except ValueError as exc:
+            typer.echo(f"Invalid worker flag: {exc}")
+            raise typer.Exit(EXIT_USAGE) from exc
+        preflight: ClusterPreflightInterface = ClusterPreflight(engine_auth=engine_auth)
+        checks = await preflight.run(
             dsn=database_url(),
             workspace=Path.cwd(),
             migrations_dir=migrations_dir(),
             environ=os.environ,
             uid=os.getuid(),
-            which=shutil.which,
         )
         for check in checks:
             mark = "PASS" if check.ok else "FAIL"
@@ -1260,6 +1291,9 @@ def doctor(
     if cluster:
         asyncio.run(run_cluster_doctor())
         return
+    if worker_engines is not None or worker_provider is not None:
+        typer.echo("--engines and --provider describe the worker; they apply only with --cluster")
+        raise typer.Exit(EXIT_USAGE)
 
     asyncio.run(run_doctor())
 

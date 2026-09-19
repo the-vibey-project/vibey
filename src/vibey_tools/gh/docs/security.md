@@ -85,6 +85,29 @@ normalizer entirely. Provenance still checks the complete repository state, but 
 re-audit or rewrite historical subjects already admitted to the protected integration
 branch.
 
+Provenance recognizes a promotion by where the head branch lives, not by branch names
+alone. The shortcut that skips the per-commit trailer audit applies only when the head is
+the integration branch of this repository and the base is the release branch. Both
+repository names reach the script through `env:`, never as inline expressions. Whoever
+opens a pull request chooses its branch name. Before this check, a fork could name its
+branch after the integration branch and open a pull request into the release branch. The
+gate then treated it as a promotion and skipped the audit of its commits. The gate now
+audits a fork pull request commit by commit, like any other contribution. That includes a
+fork that has since been deleted, whose head repository GitHub reports as empty.
+
+The local git hooks hold two more properties. First, a project hook stays in force when the
+installer moves it aside to `<hook>.local`. If it refuses, the managed hook exits with its
+status, so git refuses the commit or push too. `commit-msg` runs without `set -e`, and an
+earlier revision dropped that status: a commit went ahead even though the project's own
+hook had rejected its message. Second, every `python3` a hook starts runs with
+`PYTHONSAFEPATH=1`. That keeps the top of the working tree, whatever branch is checked out,
+off the interpreter's import path. Without it, a branch containing a `vibey_gh/` package
+would have that package imported and run by the hook in place of the installed tool. A
+repository that self-hosts the tooling still runs its declared `[install] self_source`,
+because that path reaches the interpreter through `PYTHONPATH`, which the variable leaves
+alone. Python 3.11 and newer honour it, and vibey-gh already requires 3.11. Older
+interpreters ignore it.
+
 The automation-bootstrap workflow is a second guarded exception: a manually dispatched,
 admin-only squash merge that bypasses the ordinary PR-automation review because privileged
 workflow code is loaded from the trusted base branch and a PR cannot self-repair it. It
@@ -95,28 +118,24 @@ including CodeQL, API drift, documentation, provenance, build, and lint — comp
 successfully before the `--match-head-commit` merge runs. It never deletes a permanent
 branch. See [Threat model](threat-model.md) for the full rationale.
 
-The local-model review lane (`[pr_automation.fallback]`, `vibey_gh.local_review`, the
+The local-model review fallback (`[pr_automation.fallback]`, `vibey_gh.local_review`, the
 `local-review`/`local-triage` CLI commands) is a distinct security boundary from every
 other AI path in this project: it runs on a repository-provided
-`[self-hosted, vibey-local-gh]` runner rather than a GitHub-hosted one. Since #133 it runs
-FIRST, before the paid review, whenever its heartbeat is fresh — so it sees every eligible
-pull request, not only the ones whose paid review failed. GitHub's own guidance is that
+`[self-hosted, <runner_label>]` runner (the label is `[pr_automation.fallback] runner_label`,
+default `vibey-local`) rather than a GitHub-hosted one, only when the
+primary Claude review returned no verdict at all. GitHub's own guidance is that
 self-hosted runners should almost never serve a public repository, because any contributor
 can open a pull request against one; `trusted_only` (default on) removes that risk by
-excluding fork pull requests from the lane entirely, leaving them to the paid review alone.
-The `review-sovereign` job holds only `contents: read` — no secret and no token capable of
-mutating the repository — and the diff reaches a locally served Ollama-compatible model as
-text; the model has no shell, no tools, and no network beyond the local inference port.
-Ollama's `format` parameter constrains decoding to the response schema, so the output shape
-is guaranteed, but a small local model's judgments are not. Three rules follow from that.
-The local verdict carries the diff half only for a trusted author; an outside author's
-change keeps the paid correctness and security review. It never certifies the
-documentation-contract fields, which stay with the paid lane or are reported unevaluated.
-And a local finding never triggers automated repair — the paid agent that edits branches
-acts only on the paid lane's findings. The gate names the lane behind each half, and titles
-a fallback verdict `PR automation: gate (local fallback)`, so a narrower review is never
-mistaken for a full one. See [Configuration](configuration.md#pr_automationfallback) for
-the field reference.
+excluding fork pull requests from the fallback entirely, leaving them to fail closed to
+`PR automation: review incomplete` like any other unresolved review. The `review-fallback`
+job holds only `contents: read` — no secret and no token capable of mutating the
+repository — and the diff reaches a locally served Ollama-compatible model as text; the
+model has no shell, no tools, and no network beyond the local inference port. Ollama's
+`format` parameter constrains decoding to the response schema, so the output shape is
+guaranteed, but a small local model's judgments are not: the fallback verdict omits the
+documentation-contract fields the primary review certifies, and the gate names the result
+`PR automation: gate (local fallback)` so it is never mistaken for a full review. See
+[Configuration](configuration.md#pr_automationfallback) for the field reference.
 
 Webhook receivers must use a strong `VIBEY_GH_WEBHOOK_SECRET`, verify HMAC over the exact
 raw body, and place `VIBEY_GH_WEBHOOK_STATE_DIR` on access-controlled durable storage.
@@ -124,7 +143,8 @@ Accepted IDs use atomic mode-0600 marker creation, preventing replay across rest
 concurrent CLI processes. Operators own TLS, rate limits, request-size limits, backups,
 retention, and safe pruning of expired claims.
 
-The opt-in `[pr_automation.fallback]` local-model review/triage path runs on a self-hosted
+The `[pr_automation.fallback]` local-model review/triage path — on by default, but
+scheduled only while the sovereign heartbeat is fresh — runs on a self-hosted
 runner rather than a GitHub-hosted one, so it sits outside the credential-free ephemeral
 Git context described above by design: it holds no repository secret at all
 (`permissions: contents: read`), never checks out PR source, and reaches only a local

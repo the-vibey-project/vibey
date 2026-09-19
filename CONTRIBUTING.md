@@ -202,7 +202,10 @@ A small set of test files encode contracts that must not drift
 `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`,
 and everything under `tests/live/`). Do not modify them without explicit
 maintainer sign-off in the PR description; changes to them are reviewed as
-contract changes, not test edits.
+contract changes, not test edits. The list is `[merge_train] protected_paths`
+in `.vibey-gh.toml`, mirrored by `.github/CODEOWNERS`: the owner's review is
+required, and the merge train refuses such a pull request as "needs a human
+merge", so the maintainer merges it by hand.
 
 ## Agent surfaces
 

@@ -3,11 +3,14 @@
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 import pytest
 
 from vibey_gh import sovereign
 from vibey_gh.cli import main
-from vibey_gh.config import PrAutomationFallbackConfig
+from vibey_gh.config import IssueAutomationConfig, PrAutomationFallbackConfig, load_config
 from vibey_gh.sovereign import beat, probe
 
 REF = "refs/vibey-gh/sovereign-heartbeat"
@@ -159,6 +162,34 @@ def test_the_sovereign_lane_is_available_by_default_now(monkeypatch):
     scheduling — a repository with no heartbeat simply never offers the lane."""
     assert PrAutomationFallbackConfig().enabled is True
     assert PrAutomationFallbackConfig().heartbeat_max_age_minutes == 15
+
+
+def test_the_documented_fallback_defaults_are_the_code_defaults(tmp_path):
+    """#277 turned BOTH local fallbacks on; the issue path's config comment and its
+    configuration.md row went on saying "off by default" (#264). The dataclass and the
+    loader spell the default separately, so both are asserted, and so is the docs row."""
+    issue_default = IssueAutomationConfig().fallback_enabled
+    assert issue_default is True
+    assert load_config(tmp_path).issue_automation.fallback_enabled is issue_default
+    docs = Path(__file__).resolve().parent.parent / "docs" / "configuration.md"
+    lines = docs.read_text(encoding="utf-8").splitlines()
+    issue_row = next(line for line in lines if line.startswith("| `fallback_enabled` |"))
+    pr_row = next(
+        line for line in lines if line.startswith("| `enabled` |") and "fallback job" in line
+    )
+    for row in (issue_row, pr_row):
+        assert row.split("|")[2].strip() == "boolean / `true`", row
+
+
+def test_the_docs_name_the_runner_label_key_not_one_repositorys_value():
+    """Five pages said the lane runs on `[self-hosted, vibey-local-gh]` -- the label
+    vibey-gh's OWN .vibey-gh.toml sets -- while `runner_label` defaults to `vibey-local`
+    (#264). A literal runs-on in prose may only be the placeholder or the default."""
+    tenant = Path(__file__).resolve().parent.parent
+    allowed = {"<runner_label>", PrAutomationFallbackConfig().runner_label}
+    for page in [tenant / "README.md", *sorted((tenant / "docs").glob("*.md"))]:
+        for label in re.findall(r"\[self-hosted, ([^\]]+)\]", page.read_text(encoding="utf-8")):
+            assert label in allowed, f"{page.name} names runner label {label!r}"
 
 
 @pytest.mark.parametrize(

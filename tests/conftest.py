@@ -16,8 +16,24 @@ from pathlib import Path
 
 import asyncpg
 import pytest
+from hypothesis import HealthCheck, settings
 
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
+
+# The no-loss lane: `pytest -m noloss --hypothesis-profile=noloss`, the CI job "No-loss
+# property suite (10,000 examples)". 10,000 is the definition of done in
+# docs/plans/implementation-plan.md, and tests/domain/test_noloss_reference.py (protected)
+# pins these values, so lowering them here fails that module instead of shrinking the
+# suite. No deadline and no too_slow check: one example builds and gates a ledger of up to
+# thirty events, and a slow CI runner is not a property failure. Loaded only when asked
+# for -- every other run keeps Hypothesis' default profile. Never shadow it with a per-test
+# `@settings(max_examples=...)`, which would override the profile for that test.
+settings.register_profile(
+    "noloss",
+    max_examples=10_000,
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+)
 
 _MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 # The template is migrated from THIS checkout's migrations and then reused by

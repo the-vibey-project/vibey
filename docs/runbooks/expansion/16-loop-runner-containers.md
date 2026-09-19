@@ -1,47 +1,35 @@
-# Runbook: loop-runner containers — each *loop repo ships its own k8s
+# Runbook: loop-runner containers — every *loop runs headless in the vibey image
 
-> **Status (2026-09-18):** open. No Phase 0 lane spike is recorded for any
-> runner. The runners are no longer separate repositories: all five
-> (with qwenloop) are uv workspace members under `src/vibey_runners/`
-> (imported with history 2026-09-10, ADR-0021). Only qwenloop has a
-> Dockerfile, and it does not meet the contract below. Read "repo" below as
-> "runner package in this repository".
->
-> **Two slices of issue #121 have landed on the vibey side, ahead of the
-> spike:**
->
-> - **codex is in the vibey image** — upstream's static musl build, pinned by
->   version and per-architecture sha256 and copied into the runtime stage
->   alone, with no Node or npm (`deploy/docker/Dockerfile`; CI asserts
->   `codex --version` and that `node`/`npm`/`npx` are absent). That settles
->   two of codexloop's Phase 0 questions: the binary is a single
->   dependency-free executable, and it is Apache-2.0, so redistributing it
->   inside an image is permitted with its `LICENSE` and `NOTICE`, which ship
->   beside it. Headless API-key auth in a pod is still unproven by a live
->   session.
-> - **The vibey chart can run Ollama for qwenloop** (`ollama.enabled`,
->   `deploy/helm/vibey/templates/ollama.yaml`): weights are pulled at
->   install by a Job onto a PVC, and a GPU is optional (`ollama.gpu`). That
->   answers qwenloop's "where do weights come from in-cluster" for the vibey
->   worker, through qwenloop's `openai-compat` backend rather than a
->   qwenloop image.
+> **Status (2026-09-18):** open, and narrower than written. ADR-0037 (PR #234)
+> made the one `vibey` wheel carry all five runners, and the vibey image
+> copies every package root, so each runner's console script is already on
+> `PATH` in the vibey image (CI's `image` job asserts it). The separate
+> `vibey-engines` image this runbook designed is therefore moot. What is
+> left is **Phase 0**: proving each runner completes a session headless in
+> that image. No spike is recorded for any runner, and two gaps are already
+> known — codexloop drives an external `codex` binary the image does not
+> carry, and claudeloop runs through the Claude CLI bundled inside
+> `claude-agent-sdk` while `claudeloop doctor` checks `PATH` only, so it
+> reports the CLI missing in-image. The runners are workspace members under
+> `src/vibey_runners/` (ADR-0021); read "repo" below as "runner package in
+> this repository". Standalone per-runner images and charts remain optional.
 
 ## Goal
 
 Each of the four session runners — `claudeloop`, `codexloop`,
-`cursorloop`, `agyloop` — becomes independently deployable on Kubernetes:
-its own image, its own Helm chart, its own multi-arch CI publish, its own
-docs. Two consumers are served by the same artifacts:
+`cursorloop`, `agyloop` — runs a real session on Kubernetes. Two consumers:
 
-1. **Standalone.** Each runner is a separately *usable* tool with its own users —
-   though since ADR-0037 it is not a separately *published* one, so a standalone
-   image installs `vibey` and runs the runner's own console script.
-   `helm install claudeloop` should run an autonomous session in a cluster without
-   the vibey conductor anywhere in the picture.
-2. **The `vibey-engines` image.** Runbook 05's design calls for a second
-   image layering the runners on top of the vibey base. That image
-   consumes what this workstream produces instead of reinventing four
-   installs.
+1. **The vibey worker.** It runs the runners as subprocesses from its own
+   image, which since ADR-0037 already contains them. This consumer needs
+   Phase 0 and nothing else from this runbook: no second image, no
+   `image.engines` value.
+2. **Standalone.** Each runner is a separately *usable* tool with its own users —
+   though since ADR-0037 it is not a separately *published* one. The vibey
+   image already serves a standalone run: `docker run --rm --entrypoint
+   /usr/bin/tini vibey:dev -g -- claudeloop run …` keeps tini as PID 1 for
+   SIGTERM (ADR-0026); `--entrypoint claudeloop` is enough for a one-shot
+   command. A `helm install claudeloop` chart that runs a session without the
+   vibey conductor anywhere in the picture is the optional remainder.
 
 ## Current state (originally verified 2026-08-21; versions and layout updated 2026-09-15)
 
@@ -56,10 +44,12 @@ docs. Two consumers are served by the same artifacts:
 - All five are workspace members of this repository, share vibey's onion
   layout (`domain/application/infrastructure/cli`), and ship inside the one
   `vibey` distribution rather than publishing as their own projects (ADR-0037).
-- **Only qwenloop has a `deploy/` directory**
-  (`src/vibey_runners/qwen/deploy/docker/Dockerfile`): two stages, but the
-  runtime layer keeps `pip`, has no fixed uid, and uses the default
-  `python:3.12-slim` base — it must be brought to the contract below.
+- **No runner has a `deploy/` directory.** qwenloop's
+  `deploy/docker/Dockerfile` was deleted on 2026-09-18: its runtime layer
+  kept `pip`, had no fixed uid, copied the whole tenant with `COPY . .`, and
+  nothing built it. The vibey image is the runner image —
+  `docker run --rm --entrypoint qwenloop vibey:dev --help` runs qwenloop
+  from it, and the same works for every runner's console script.
 - Each subtree still carries its old `.github/` tree, but only the root
   workflows run. The root CI `tools` matrix covers `vibey-gh`,
   `vibey-skills` and `vibey-bootstrap`; it has no runner entries and no
@@ -75,12 +65,10 @@ docs. Two consumers are served by the same artifacts:
   verification job than an implementation job. **This is the single
   biggest de-risking fact in this runbook.**
 - vibey invokes runners as **subprocess CLIs**
-  (`infrastructure/engines/loop_process_adapter.py`). Since ADR-0037 the
-  vibey image carries every runner's console script, and since #121's
-  S1a slice it carries the `codex` vendor binary too; `claude`,
-  `cursor-sdk-bridge` and `agy` are still absent, so codexloop and
-  qwenloop (against the chart's Ollama) are the only engines a pod could
-  run today, and neither has run a live session in-cluster yet.
+  (`infrastructure/engines/loop_process_adapter.py`), and since ADR-0037
+  the vibey image ships every runner. Nothing in-cluster has run a real
+  engine yet: the chart defaults to `--provider scripted` with no keys, and
+  Phase 0 below is unproven for every runner.
 
 ### The fact that shapes everything
 
@@ -98,13 +86,32 @@ vendor agent binary on PATH.** That decides image size, base image, and
 whether a container can authenticate at all — vendor CLIs generally assume
 an interactive TTY login, which does not exist in a cluster.
 
-qwenloop needs no vendor binary or API key, but it needs model weights in
-the image or on a volume, and a GPU for the vLLM profile. For the vibey
-worker this now has an answer that needs neither: the chart's optional
-Ollama server holds the weights on its own volume, and qwenloop attaches
-to it as an OpenAI-compatible endpoint (`QWENLOOP_BASE_URL`).
+What the vibey image holds for each, measured against the tree on
+2026-09-18:
 
-Do not plan the images until this is settled per runner. It is Phase 0.
+- **claudeloop** — the Claude CLI ships *inside* the `claude-agent-sdk`
+  wheel (`claude_agent_sdk/_bundled/claude`; the lockfile resolves
+  manylinux wheels for amd64 and arm64), and the SDK tries that copy before
+  `PATH`, so a session may need nothing more. But `claudeloop doctor`
+  (`infrastructure/doctor_env.py`) looks for `claude` on `PATH` only and
+  reports `claude-cli` failed in the image. vibey's preflight takes an
+  engine's auth verdict from that doctor.
+- **codexloop** — drives an external `codex` binary (`codex exec`,
+  `codex app-server --stdio`). It is not in any wheel, so the image does
+  not have it.
+- **cursorloop** — `cursor-sdk-bridge` arrives with the `cursor-sdk`
+  dependency (manylinux wheels for both arches) and lands in the venv's
+  `bin/`, which is on `PATH`. Whether it runs headless in a pod is the
+  spike's question.
+- **agyloop** — no `agy` binary is installed by any wheel; its
+  `--gateway sdk` lane may not need one, which is what its spike should
+  confirm.
+
+qwenloop needs no vendor binary or API key, but it needs model weights in
+the image or on a volume, and a GPU for the vLLM profile.
+
+Do not add anything to the image until this is settled per runner. It is
+Phase 0.
 
 ## Design
 
@@ -120,127 +127,100 @@ authenticated only by an API key from the environment?*
   runner-side work item in that runner's package: promote the API gateway
   to a lane the loop can select, mirroring agyloop's `--gateway`. That is
   a genuine feature, sized separately, and it must land
-  before that runner's image is worth building.
+  before that runner is worth enabling in-cluster.
 
 The spike's output per runner is one of two verdicts, recorded in that
 runner's docs:
 
-- **SDK lane works** → slim image, `python:3.12-slim`, no Node, no vendor
-  CLI, no TTY problem. This is the container-native path and the one to
-  fight for.
-- **CLI lane only** → the image must carry the vendor binary (Node +
-  npm-installed agent CLI for `claude`/`codex`; a proprietary installer
-  for `cursor-sdk-bridge`/`agy`), and headless API-key auth for that
-  binary must be proven before anything else is built. Vendor licensing
-  for redistribution inside an image is a real question here, not a
-  formality — answer it in the spike, not after publishing.
+- **SDK lane works** → nothing to add to the vibey image: no Node, no
+  vendor CLI, no TTY problem. This is the container-native path and the
+  one to fight for.
+- **CLI lane only** → the vibey image must carry the vendor binary. `claude`
+  and `cursor-sdk-bridge` already arrive inside their SDK wheels; `codex`
+  needs Node and an npm install, and `agy` a proprietary installer. Headless
+  API-key auth for that binary must be proven before anything else is
+  built. Vendor licensing for redistribution inside an image is a real
+  question here, not a formality — answer it in the spike, not after
+  publishing.
 
-### Per-runner artifacts (identical shape in all five)
+### What ADR-0037 made moot
 
-```
-src/vibey_runners/<runner>/
-  deploy/
-    docker/Dockerfile        # two-stage, non-root, uid 10001
-    helm/<runner>/
-      Chart.yaml
-      values.yaml
-      templates/{_helpers.tpl,job.yaml,secret.yaml,rbac.yaml}
-  docs/kubernetes.md
-.github/workflows/ci.yml     # root: one runner-matrix image job, multi-arch -> ghcr.io
-```
+This runbook originally designed a per-runner `deploy/` tree (a Dockerfile,
+a Job-shaped Helm chart, `docs/kubernetes.md`) in each of the five
+packages, a root CI matrix publishing five images to
+`ghcr.io/the-vibey-project/<runner>`, and a `Dockerfile.engines` layering
+the runners onto the vibey base behind an `image.engines` chart value.
 
-1. **Dockerfile.** Copy vibey's two-stage pattern
-   (`deploy/docker/Dockerfile`) — it is already load-bearing and its
-   reasoning transfers exactly: the runtime layer carries no compiler and
-   no package manager, because a compromised agent session inside the
-   container should not find build tools waiting. Same `/app` WORKDIR in
-   both stages for the editable-install path pointer. `git` is a genuine
-   runtime dependency — these runners work in real worktrees.
-   `ENTRYPOINT ["<runner>"]`, `CMD ["--help"]` (with tini as PID 1 when
-   the runner must drain on SIGTERM, as vibey's image does — ADR-0026): an image that silently
-   starts a session when someone runs it to inspect the filesystem is a
-   footgun. Note the Python floor differs — claudeloop allows 3.10, the
-   others require 3.12; pin every image to 3.12 anyway so one base layer
-   is shared and cached across all five.
+Since ADR-0037 the vibey image *is* the engines image: one Python
+environment, one resolver run, every runner on `PATH`, already built
+multi-arch by the `image` job. So:
 
-2. **Chart: a Job, not a Deployment.** These are one-shot autonomous
-   session runners, not servers — they start, work, and finish. A
-   Deployment would restart a *successfully completed* session forever.
-   `Job` with `backoffLimit: 0` and `restartPolicy: Never` is the honest
-   shape; offer `CronJob` for scheduled runs. This is the sharpest
-   divergence from vibey's chart and must not be copied from it blindly.
+- **`Dockerfile.engines` and `image.engines` are dropped.** The worker
+  Deployment already runs the image that carries the runners.
+- **Five per-runner images are not needed to run an engine.** A standalone
+  run uses the vibey image with a different entrypoint (see Goal). A
+  per-runner image would repackage the same wheel under a second tag, and
+  "do not invent a second versioning scheme" now points the same way: the
+  image's version is `vibey`'s.
+- **What survives is optional:** a Job-shaped chart per runner, for anyone
+  who wants `helm install claudeloop` without the conductor. If it is
+  built, the reasoning below still holds and should not be lost:
+  - **A Job, not a Deployment.** These are one-shot autonomous session
+    runners — they start, work, and finish. A Deployment would restart a
+    *successfully completed* session forever. `Job` with
+    `backoffLimit: 0` and `restartPolicy: Never` is the honest shape;
+    offer `CronJob` for scheduled runs. This is the sharpest divergence
+    from vibey's chart and must not be copied from it blindly.
+  - **Secrets.** API keys come from a Secret, never values.yaml — the same
+    `engineAuth.existingSecret` convention vibey's chart already uses, so
+    one Secret can serve a vibey worker and a standalone runner alike.
+  - **Workspace.** A PVC for the repo under work, cloned via a deploy key
+    mounted as a Secret. Reuse vibey's worktree PVC conventions.
 
-3. **Secrets.** API keys come from a Secret, never values.yaml — the same
-   `engineAuth.existingSecret` convention vibey's chart already uses, so
-   one Secret can serve a vibey worker and a standalone runner alike.
-
-4. **Workspace.** A PVC for the repo under work, cloned via a deploy key
-   mounted as a Secret. Reuse vibey's worktree PVC conventions.
-
-5. **CI.** A matrix entry in the root CI image job:
-   `docker/build-push-action` multi-arch (arm64 + amd64) to
-   `ghcr.io/the-vibey-project/<runner>`, tagged with the version
-   `vibey-gh promote` releases so image tags track the PyPI version
-   already published. Do not invent a second
-   versioning scheme.
-
-### The `vibey-engines` image (this side)
-
-> **Deviation, 2026-09-18.** `codex` went into the base vibey image, not
-> into a separate engines image. It is one static executable with no
-> runtime dependencies, so it costs the base image nothing but its size
-> (about 260 MB uncompressed on amd64, 230 MB on arm64), and a second image
-> for one file would have been a second build, a second contract suite and
-> a second tag to keep in step. The design below still stands for the
-> vendor CLIs that need a runtime (`claude` on Node) or a proprietary
-> installer (`cursor-sdk-bridge`, `agy`).
-
-Once the runner images exist, `deploy/docker/Dockerfile.engines` layers
-the runners onto the vibey base and vibey's chart grows an
-`image.engines` value the worker Deployment can select. Prefer installing
-the five **runner packages from the workspace tree** into one image —
-the way vibey's Dockerfile already installs `vibey-skills` from
-`src/vibey_tools/skills` — over `COPY --from` of five images: one Python
-environment, one resolver run, no five-way base-image skew. The per-repo images remain the standalone deliverable.
+What Phase 0 finds may still put something into the image — `codex`, or a
+vendor CLI for cursorloop or agyloop. That goes into
+`deploy/docker/Dockerfile`'s runtime stage, bound by the same contract as
+the rest of it (no compiler, no package manager, uid 10001), and only
+after the redistribution question below is answered.
 
 ## Work items
 
-1. Phase 0 lane spike × 4 hosted-model runners, plus a weights-and-GPU
-   spike for qwenloop; record the verdict per runner (blocks 2–4).
+1. Phase 0 lane spike × 4 hosted-model runners, run inside the vibey image,
+   plus a weights-and-GPU spike for qwenloop; record the verdict per runner
+   (blocks 2–4).
 2. Runner-side `--gateway` work in whichever runners the spike says need it.
-3. Dockerfile × 5 (qwenloop's rewritten to the contract) + local
-   `docker run <runner> doctor` green.
-4. Helm chart × 5 (Job/CronJob shape) + minikube install per runner.
-5. Root CI runner-matrix image job, multi-arch, wired to `vibey-gh`
-   promoted versions.
-6. `docs/kubernetes.md` × 5.
-7. `Dockerfile.engines` + `image.engines` in vibey's chart.
-8. One real greeter on minikube driven by a containerized engine — the
-   first time vibey runs a live engine in-cluster.
+3. `claudeloop doctor` finds the Claude CLI that `claude-agent-sdk` bundles,
+   not only one on `PATH` — until it does, it exits 1 in the image and
+   vibey's preflight records claudeloop's auth as failed even with a key
+   mounted.
+4. Whatever vendor binary Phase 0 proves necessary (`codex` first) added to
+   the vibey image's runtime stage, under its existing contracts.
+5. One real greeter on minikube driven by an in-image engine — the first
+   time vibey runs a live engine in-cluster.
+6. Optional: a Job-shaped Helm chart per runner for standalone use.
 
 ## Verification
 
-- `docker run --rm -e <KEY> <runner>:dev doctor` passes for all five.
-- `helm install <runner>` on minikube → a scripted session reaches
-  completion → Job `Complete`, pod exits 0, no restarts.
+- `docker run --rm -e <KEY> --entrypoint <runner> vibey:dev doctor` passes
+  for each runner.
+- `vibey doctor --cluster --engines <runner>` passes inside a worker pod
+  with that runner's key mounted.
 - One paid live session per runner in-cluster, API-key authenticated.
-- vibey worker running the engines image selects a real engine and
-  completes a BUILD job — verified against `vibey doctor --conformance`
-  recording a real conformance, which today is empty in-cluster
-  ("no recorded conformance for agyloop, claudeloop, codexloop,
-  cursorloop" is the live warning from the running worker).
+- A vibey worker selects a real engine and completes a BUILD job —
+  verified against `vibey doctor --conformance` recording a real
+  conformance, which today is empty in-cluster ("no recorded conformance
+  for agyloop, claudeloop, codexloop, cursorloop" is the live warning from
+  the running worker).
 
 ## Needs from operator
 
 - LLM API keys for each vendor (the same set runbook 05 needs).
-- A GHCR namespace (or other registry) and a token with `packages:write`.
+- A GHCR namespace (or other registry) and a token with `packages:write`,
+  if the vibey image is to be published at all (it is not today).
 - Deploy keys for any private repo a runner is pointed at.
 - A decision on vendor-CLI redistribution if any runner lands on CLI-only.
 - For qwenloop: where model weights come from in-cluster (baked, volume,
   or pulled at start) and GPU node availability for the vLLM profile.
-  For the vibey worker the chart now answers "pulled at install onto a
-  volume" (`ollama.enabled`); a standalone qwenloop image still needs its
-  own answer, and GPU node availability is still the operator's.
 
 ## Risks
 
@@ -248,12 +228,12 @@ environment, one resolver run, no five-way base-image skew. The per-repo images 
   authenticate headlessly by API key, that runner is not clusterable this
   quarter regardless of how good its chart is. Better to learn it in a
   one-day spike than after five charts are written.
-- **Five runner packages drift.** The chart shape must be copied deliberately, not
-  by cargo cult — a Job here, a Deployment in vibey, for a stated reason.
-  Consider a shared chart library only after all five exist and the
-  duplication is measured, not before.
-- **Python floor mismatch.** claudeloop's 3.10 floor tempts a second base
-  image; resist it.
+- **Five runner charts drift**, if the optional charts are built. The chart
+  shape must be copied deliberately, not by cargo cult — a Job here, a
+  Deployment in vibey, for a stated reason. Consider a shared chart library
+  only after all five exist and the duplication is measured, not before.
+- **The image grows with every vendor binary.** Each one Phase 0 adds lands
+  on every worker pod, whether or not that deployment uses the engine.
 - **Coverage gates.** Each runner keeps its own 100% floors after absorption
   (ADR-0022). Runner-side `--gateway` work is real code in that runner's
   coverage budget, not a packaging change.

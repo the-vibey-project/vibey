@@ -20,6 +20,7 @@ from vibey_gh import (
     install,
     issue_automation,
     merge_train,
+    operation_estimate,
     pr_automation,
     promote,
     realign,
@@ -29,6 +30,8 @@ from vibey_gh import (
     versioning,
 )
 from vibey_gh.config import load_config
+from vibey_gh.fallback_pin import FallbackPinResolver
+from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
 from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
 
@@ -70,9 +73,11 @@ def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...
     return clutter, report.problems
 
 
-def _check(args) -> int:
+def _check(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
-    ok, problems = install.installed(cfg, local=not args.ci)
+    # Resolved once, so the drift verdict and the notice below describe the same pin.
+    pin = (resolver or FallbackPinResolver()).resolve(cfg)
+    ok, problems = install.installed(cfg, local=not args.ci, fallback_pin=pin)
     report = fingerprints.check(cfg, rev_range=args.commits, apply=args.apply)
     docs = documentation.check(cfg)
     scan = pr_automation.check_scan_workflows(cfg)
@@ -131,6 +136,12 @@ def _check(args) -> int:
             + ("" if cfg.tidy.fail_check else " (advisory; `[tidy] fail_check = true` fails)"),
             file=sys.stderr,
         )
+    # Advisory, never a verdict: a floating install still resolves. Printed because a pin
+    # that cannot resolve renders floating, so a deployed workflow that still carries the
+    # pin reads "out of date" above with no cause named, and a drift report with no cause
+    # named is how one diagnosis went through three wrong hypotheses (#273).
+    if pin.notice:
+        print(f"  notice: {pin.notice}", file=sys.stderr)
 
     if clean:
         scope = f"{report.checked_files} source file(s)"
@@ -149,12 +160,15 @@ def _check(args) -> int:
     return 1
 
 
-def _install(args) -> int:
+def _install(args, resolver: FallbackPinResolverInterface | None = None) -> int:
     cfg = load_config()
-    for action in install.install(cfg):
+    pin = (resolver or FallbackPinResolver()).resolve(cfg)
+    for action in install.install(cfg, fallback_pin=pin):
         print(f"  {action.hook}: {action.outcome}")
     for notice in install.installation_notices():
         print(f"  notice: {notice}")
+    if pin.notice:
+        print(f"  notice: {pin.notice}")
     print(f"vibey-gh: installed into {cfg.root}")
     return 0
 
@@ -695,17 +709,27 @@ def _fit(args) -> int:
     from pathlib import Path
 
     from vibey_gh import fit
-    from vibey_gh.fitloop import FitLoop, recorded_observations
+    from vibey_gh.fitloop import FitLoop
 
+    # The runner the model is read from: --base-url, else VIBEY_OLLAMA_URL, else the one
+    # the local review is configured to call -- so the fit describes the runner it gates.
+    base_url = fit.OllamaModelSampler.resolve_base_url(
+        args.base_url, fallback=load_config().pr_automation.fallback.base_url
+    )
     machine = fit.sample_machine()
-    model = fit.sample_model(args.model)
-    # With --journal the decision is recorded with everything needed to re-derive it,
-    # and prior observations in that journal inform this projection — which is what
-    # makes repeated invocations a control loop rather than a series of guesses.
-    journal = Path(args.journal) if args.journal else None
-    loop = FitLoop(args.model, journal=journal)
-    if journal:
-        loop._observations.extend(recorded_observations(journal))
+    model = fit.sample_model(args.model, base_url)
+    # The decision is recorded with everything needed to re-derive it, and prior
+    # observations in the journal inform this projection — which is what makes repeated
+    # Unless --no-journal:
+    # --journal, else VIBEY_GH_FIT_JOURNAL, else ~/.local/state/vibey-gh/fit.jsonl.
+    if args.no_journal:
+        journal = None
+    elif args.journal:
+        journal = Path(args.journal)
+    else:
+        journal = FitLoop.default_journal()
+    loop = FitLoop(args.model, journal=journal, base_url=base_url)
+    loop.replay()
     if args.observed_seconds is not None:
         loop.observe(
             payload_bytes=args.payload_bytes,
@@ -727,12 +751,15 @@ def _fit(args) -> int:
     if not machine.readable:
         print("vibey-gh fit: machine memory could not be read — that reading is unknown, not empty")
     if model is None:
-        print(f"vibey-gh fit: model {args.model} could not be read from the runner")
+        print(f"vibey-gh fit: model {args.model} could not be read from the runner at {base_url}")
     else:
         print(
             f"vibey-gh fit: model {model.name} {model.size_gb} GB, context {model.context_length}"
+            + ("" if model.resident else " — not loaded; size is its weights on disk")
         )
     print(f"vibey-gh fit: {verdict.verdict.upper()} — {verdict.reason}")
+    if journal is not None:
+        print(f"vibey-gh fit: journal {journal}")
     if verdict.headroom_gb:
         print(f"vibey-gh fit: headroom wanted: {verdict.headroom_gb} GB")
     for note in verdict.notes:
@@ -741,6 +768,57 @@ def _fit(args) -> int:
     if advice:
         print(f"vibey-gh fit: ACTION NEEDED — {advice}")
     return 0 if verdict.ok else 1
+
+
+def _estimate(args) -> int:
+    # Module-level like every other handler in this file: argparse dispatches through
+    # `set_defaults(func=...)`. It only resolves configuration and prints; the estimate
+    # itself is `OperationEstimator`'s (ADR-0016).
+    from vibey_gh import fit
+    from vibey_gh.feasibility import FeasibilityEvaluator, Pipeline
+    from vibey_gh.fitloop import FitLoop
+
+    cfg = load_config()
+    try:
+        pipeline = Pipeline.from_config(cfg.estimate)
+        evaluator = FeasibilityEvaluator(report_first=cfg.estimate.report_first)
+    except ValueError as exc:
+        print(f"vibey-gh estimate: {exc}", file=sys.stderr)
+        return 2
+    # The same runner and model the local lane uses, unless told otherwise: --base-url,
+    # else VIBEY_OLLAMA_URL, else [pr_automation.fallback] base_url; --model, else
+    # [estimate] model, else [pr_automation.fallback] model.
+    base_url = fit.OllamaModelSampler.resolve_base_url(
+        args.base_url, fallback=cfg.pr_automation.fallback.base_url
+    )
+    model = args.model or cfg.estimate.model or cfg.pr_automation.fallback.model
+    # Read, never written: the fit loop's own observations inform the duration.
+    if args.no_journal:
+        journal = None
+    elif args.journal:
+        journal = Path(args.journal)
+    else:
+        journal = FitLoop.default_journal()
+    estimator = operation_estimate.OperationEstimator(
+        model,
+        base_url=base_url,
+        offline=cfg.estimate.offline and not args.online,
+        journal=journal,
+        pipeline=pipeline,
+        evaluator=evaluator,
+    )
+    try:
+        result = estimator.estimate(
+            args.operation, start=args.start, payload_bytes=args.payload_bytes
+        )
+    except ValueError as exc:
+        print(f"vibey-gh estimate: {exc}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result.as_dict(), indent=2, sort_keys=True, ensure_ascii=False))
+    else:
+        print("\n".join(result.lines()))
+    return result.exit_code
 
 
 def _doctor(args) -> int:
@@ -757,8 +835,10 @@ def _doctor(args) -> int:
             f"vibey-gh doctor: {errors} problem(s) that will break the automation", file=sys.stderr
         )
         return 1
-    if findings:
-        print(f"vibey-gh doctor: no blockers; {len(findings)} warning(s)")
+    # An "info" finding is printed above but is not a warning, so it is not counted as one.
+    warnings = sum(1 for f in findings if f.severity == "warning")
+    if warnings:
+        print(f"vibey-gh doctor: no blockers; {warnings} warning(s)")
     else:
         print("vibey-gh doctor: the automation should function")
     return 0
@@ -794,13 +874,36 @@ def _book(args) -> int:
         "publisher": args.publisher,
         "description": args.description,
         "language": args.language,
+        "edition": args.edition,
+        "identifier": args.identifier,
+        "date": args.date,
+    }
+    # Only the layout flags actually given: an absent one is the interior's own default,
+    # so the defaults live in one place and are not restated here.
+    layout = {
+        name: getattr(args, name)
+        for name in (
+            "margin_top",
+            "margin_bottom",
+            "margin_outside",
+            "gutter",
+            "font_size",
+            "line_height",
+            "font_family",
+            "code_font_family",
+            "running_head_length",
+        )
+        if getattr(args, name) is not None
     }
     try:
+        if args.trim is not None:
+            layout["trim_width"], layout["trim_height"] = book.PrintInterior.parse_trim(args.trim)
         written = book.build_book(
             site_dir=Path(args.site_dir),
             config_text=Path(args.config_file).read_text(encoding="utf-8"),
             output_dir=Path(args.output_dir),
             meta={k: v for k, v in meta.items() if v},
+            interior=book.PrintInterior(**layout),
         )
     except (book.BookError, OSError) as error:
         print(f"vibey-gh book: {error}", file=sys.stderr)
@@ -1396,11 +1499,80 @@ def main(argv: list[str] | None = None) -> int:
         help="record what this payload ACTUALLY took, feeding the estimate (#263)",
     )
     ft.add_argument(
+        "--base-url",
+        default="",
+        help="the Ollama runner to read the model from (default: $VIBEY_OLLAMA_URL, else"
+        " [pr_automation.fallback] base_url)",
+    )
+    ft_journal = ft.add_mutually_exclusive_group()
+    ft_journal.add_argument(
         "--journal",
         help="record this decision, and read prior ones back, so repeated calls"
-        " form a self-adjusting loop (#263)",
+        " form a self-adjusting loop (#263) (default: $VIBEY_GH_FIT_JOURNAL, else"
+        " ~/.local/state/vibey-gh/fit.jsonl)",
+    )
+    ft_journal.add_argument(
+        "--no-journal",
+        action="store_true",
+        help="decide from this call alone: record nothing and read nothing back",
     )
     ft.set_defaults(func=_fit)
+
+    es = sub.add_parser(
+        "estimate",
+        help="before a run (#134): feasibility along the whole pipeline, duration, cost,"
+        " and each coordinate's distance from peak -- unknown where unmeasured",
+    )
+    es.add_argument(
+        "--operation",
+        required=True,
+        help="the stage the run must reach, e.g. develop or main (default stages: install,"
+        " interview, feature-branch, develop, develop-deployment, develop-validation, main,"
+        " main-deployment, main-validation; [estimate] stages replaces them)",
+    )
+    es.add_argument(
+        "--from",
+        dest="start",
+        default=None,
+        help="the stage the run starts at (default: the first stage)",
+    )
+    es.add_argument("--json", action="store_true", help="print the estimate as JSON")
+    es.add_argument(
+        "--model",
+        default="",
+        help="the local model the fit coordinates are measured against (default: [estimate]"
+        " model, else [pr_automation.fallback] model)",
+    )
+    es.add_argument(
+        "--base-url",
+        default="",
+        help="the Ollama runner to read the model from (default: $VIBEY_OLLAMA_URL, else"
+        " [pr_automation.fallback] base_url)",
+    )
+    es.add_argument(
+        "--payload-bytes",
+        type=int,
+        default=operation_estimate.DEFAULT_PAYLOAD_BYTES,
+        help="size of the work the local model's service time is projected for",
+    )
+    es.add_argument(
+        "--online",
+        action="store_true",
+        help="also read a runner that is not on this machine (default: offline, unless"
+        " [estimate] offline = false)",
+    )
+    es_journal = es.add_mutually_exclusive_group()
+    es_journal.add_argument(
+        "--journal",
+        help="the fit journal whose observations inform the duration; read, never written"
+        " (default: $VIBEY_GH_FIT_JOURNAL, else ~/.local/state/vibey-gh/fit.jsonl)",
+    )
+    es_journal.add_argument(
+        "--no-journal",
+        action="store_true",
+        help="read no observations: the duration is unknown",
+    )
+    es.set_defaults(func=_estimate)
 
     pp = sub.add_parser(
         "paper",
@@ -1428,7 +1600,49 @@ def main(argv: list[str] | None = None) -> int:
     bk.add_argument("--subtitle", default="")
     bk.add_argument("--publisher", default="")
     bk.add_argument("--description", default="")
-    bk.add_argument("--language", default="en")
+    bk.add_argument("--language", default="en", help="BCP 47 tag: <html lang>, xml:lang")
+    bk.add_argument(
+        "--edition",
+        default="",
+        help="folded into the derived EPUB identifier: a new edition is a new book",
+    )
+    bk.add_argument(
+        "--identifier",
+        default="",
+        help="the EPUB dc:identifier as given (e.g. urn:isbn:...); default derived and stable",
+    )
+    bk.add_argument("--date", default="", help="publication date YYYY-MM-DD (default: today)")
+    # The print interior's physical parameters (ADR-0018). Omitted, each is the interior's
+    # own default -- the standard KDP 6x9in paperback -- quoted from it in the help.
+    from vibey_gh import book
+
+    bk.add_argument(
+        "--trim",
+        help="trim size WIDTHxHEIGHT, bare numbers in inches, e.g. 5.5x8.5 or 148mmx210mm"
+        f" (default {book.DEFAULT_TRIM_WIDTH}x{book.DEFAULT_TRIM_HEIGHT})",
+    )
+    bk.add_argument(
+        "--gutter",
+        help="inside (binding) margin; KDP's minimum grows with page count: 24-150 pages"
+        " 0.375in, 151-300 0.5in, 301-500 0.625in, 501-700 0.75in, 701-828 0.875in"
+        f" (default {book.DEFAULT_GUTTER})",
+    )
+    for flag, default, what in (
+        ("--margin-top", book.DEFAULT_MARGIN_TOP, "top margin"),
+        ("--margin-bottom", book.DEFAULT_MARGIN_BOTTOM, "bottom margin"),
+        ("--margin-outside", book.DEFAULT_MARGIN_OUTSIDE, "outside (fore-edge) margin"),
+        ("--font-size", book.DEFAULT_FONT_SIZE, "body type size, bare numbers in pt"),
+        ("--line-height", book.DEFAULT_LINE_HEIGHT, "body leading"),
+        ("--font-family", book.DEFAULT_FONT_FAMILY, "body CSS font stack"),
+        ("--code-font-family", book.DEFAULT_CODE_FONT_FAMILY, "code CSS font stack"),
+    ):
+        bk.add_argument(flag, help=f"{what} (default {default})")
+    bk.add_argument(
+        "--running-head-length",
+        type=int,
+        help="characters of a chapter title kept in its running head"
+        f" (default {book.DEFAULT_RUNNING_HEAD_LENGTH})",
+    )
     bk.set_defaults(func=_book)
 
     lt = sub.add_parser(

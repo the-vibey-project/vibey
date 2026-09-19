@@ -501,6 +501,7 @@ def affinity_factor(*, holds_warm_session: bool, rotation_forced: bool) -> float
 class EventKind(StrEnum):
     SESSION_SEEDED = "SessionSeeded"; TURN_REQUESTED = "TurnRequested"
     TURN_COMPLETED = "TurnCompleted"; TOOL_INVOKED = "ToolInvoked"
+    TRANSCRIPT_RECORDED = "TranscriptRecorded"  # turn text; never a turn boundary
     FILE_EDITED = "FileEdited"; VERDICT_RENDERED = "VerdictRendered"
     CAPACITY_REJECTED = "CapacityRejected"
     QUESTION_ASKED = "QuestionAsked"; ANSWER_GIVEN = "AnswerGiven"

@@ -127,7 +127,10 @@ None of these keys is read at runtime. The live brake is the project's stored
 `spec.maxCycleTurns`). `LedgerBudgetSource` sums them live from the current
 cycle's `TurnCompleted` and `BudgetSpent` ledger events — never estimated
 ahead of time — and tripping either parks a `budget_exhausted` gate. With
-neither set, spend is uncapped.
+neither set, spend is uncapped. Each engine writes exactly one `TurnCompleted`
+per real turn; the chatter and streamed text that accompany a turn are
+recorded as `TranscriptRecorded` and never counted
+([rotation and engines §8.3](../plans/rotation-and-engines.md#83-event-type-maps)).
 
 The worker and `vibey cost` read the two caps through one parser,
 `LedgerBudgetSource.caps_from_config`, so `vibey cost` prints the cap the

@@ -290,6 +290,18 @@ escalation supplied instances of all six coordinates in a single session, includ
 the reliability-without-availability case: a local reviewer answering 93.8% of
 requests while returning incorrect verdicts on every nuanced judgment.
 
+The full eighteen-coordinate state is carried by `vibey-gh estimate`, the first
+implementation of this calculus beyond the fit. It measures the same two coordinates
+through the fit and records the other sixteen as unknown, never inventing a value for
+them. It evaluates $x \succeq r_o$ at every stage a run must pass, with three possible
+answers: feasible, infeasible, or unknown. An unmeasured coordinate can lower the
+confidence of the verdict, but it can never turn it into feasible. Agency shortfalls
+are reported first. $T$, $C$ and the repair gradient $-\nabla_d T$ are not computed yet,
+because $\phi$ has not been measured, and the estimate says so rather than substituting
+a heuristic. Durations come from the same graded estimator as the fit's service time,
+so every prediction can be set against the actual result that follows it (see the
+configuration reference, `[estimate]`).
+
 ## Related work
 
 Platform-native automation (merge queues, required checks) enforces revision-bound
