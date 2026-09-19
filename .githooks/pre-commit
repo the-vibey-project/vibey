@@ -1,21 +1,5 @@
 #!/bin/sh
-# vibey-gh owns core.hooksPath, so .git/hooks is never consulted again and the
-# pre-commit framework's hooks would silently stop running -- a worse failure
-# than any gate they enforce, because everything keeps looking green.
-#
-# Delegates to the framework's OWN generated hook rather than calling
-# `pre-commit run`: that script knows where its environment lives, and a git
-# hook does not inherit an activated virtualenv, so re-invoking by name finds
-# the wrong tools or none at all.
-
-COMMON_DIR=$(git rev-parse --git-common-dir)
-HOOK_PATH="$COMMON_DIR/hooks/pre-commit"
-
-if [ -x "$HOOK_PATH" ]; then
-    exec "$HOOK_PATH" "$@"
-elif [ -f ".pre-commit-config.yaml" ]; then
-    echo "⚠️  Warning: pre-commit framework declared but hook not installed at $HOOK_PATH. Skipping pre-commit gates."
-    exit 0
-else
-    exit 0
-fi
+# vibey-gh manages no pre-commit hook, so git calls this directly. Runs the pre-commit
+# framework's pre-commit stage. framework-hook.sh, beside this file, finds that hook in
+# a plain clone and in a linked worktree alike, and warns when it is not installed.
+exec "$(dirname "$0")/framework-hook.sh" pre-commit "$@"
