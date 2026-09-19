@@ -1,11 +1,20 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Ports implemented by infrastructure adapters."""
+"""Ports implemented by infrastructure adapters.
+
+Interfaces declare; they never consume. New seams live in their own mirrored
+`<module>_interface.py` beside this package's original ports (ADR-0016).
+"""
 
 from collections.abc import AsyncIterator, Sequence
 from pathlib import Path
 from typing import Protocol
 
+from qwenloop.application.interfaces.backend_selection_interface import (
+    BackendSelectorInterface,
+)
 from qwenloop.domain.model import ChatChunk, ChatMessage, ModelProfile, ServerInfo
+
+__all__ = ["BackendSelectorInterface", "InferenceServer", "RunStore", "ToolExecutor"]
 
 
 class InferenceServer(Protocol):
