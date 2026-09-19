@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
 
+import pytest
 import structlog
 
 from tests.application.fakes import FakeHumanGateRepository, FakeJobRepository, make_job
@@ -17,11 +18,13 @@ from vibey.bootstrap import (
     _independent_review_required,
     build_design_worker,
     build_visual_worker,
+    qwenloop_enabled,
 )
 from vibey.domain.engine import EngineId
 from vibey.domain.job import JobState
 from vibey.domain.phase import Phase
 from vibey.domain.verbosity import LogPlan
+from vibey.infrastructure.db.migrator import InvalidMigrationLockTimeout, PostgresMigrator
 from vibey.infrastructure.engines.claudeloop_design import ClaudeLoopDesignProvider
 from vibey.infrastructure.engines.qwenloop_design import QwenloopDesignProvider
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
@@ -46,6 +49,31 @@ class SovereignDesignProvider(ScriptedDesignProvider):
     """A stand-in for the sovereign provider: same answers, different actor."""
 
     engine_id: EngineId | None = EngineId.QWENLOOP
+
+
+def test_qwenloop_feature_resolution(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
+    assert not qwenloop_enabled({})
+    assert qwenloop_enabled({"features": {"qwenloop": True}})
+
+    monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "true")
+    assert qwenloop_enabled({})
+
+    monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "false")
+    assert not qwenloop_enabled({"features": {"qwenloop": True}})
+
+
+async def test_a_bad_migration_lock_wait_fails_the_start_before_touching_the_database(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Port 1 on loopback refuses every connection: reaching it would raise a
+    # connection error, so the configuration error proves build_app read the
+    # setting -- through the migrator it wires -- before opening the pool.
+    monkeypatch.setenv(PostgresMigrator.LOCK_TIMEOUT_ENV, "a while")
+
+    with pytest.raises(InvalidMigrationLockTimeout):
+        async with bootstrap.build_app(url="postgresql://nobody@127.0.0.1:1/nothing"):
+            pass
 
 
 def test_every_composed_worker_is_given_the_structured_logger() -> None:

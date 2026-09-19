@@ -32,6 +32,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **db:** replicas that start together no longer race to apply the same migration. Every
+  `build_app()` — every worker start and every CLI command that opens the queue — applied
+  pending migrations with no lock, so pods brought up together by a KEDA scale-out or a Helm
+  rollout each read the same applied set and ran the same migration; on a fresh database even
+  the `schema_migration` bootstrap collided on the catalog. The new `PostgresMigrator` holds a
+  session-level Postgres advisory lock (key `sha256('vibey.migrate')`, derived as ADR-0029
+  derives the integrate key) from before it reads the applied set until the last migration has
+  committed, and releases it in a `finally`: one process migrates, the rest wait and find
+  nothing to do. The wait is bounded by `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` (default `300`,
+  `0` waits indefinitely); when it runs out the start fails with `MigrationLockTimeout` naming
+  the backend pid that holds the lock, and a value that is not a usable number of seconds fails
+  the start before the pool opens rather than falling back. `apply_migrations` remains as a
+  façade with the default wait (#114)
 * **gh:** `vibey-gh promote` rewrites a reused promotion pull request's title and body from
   the current derivation instead of leaving them as the run that opened it wrote them
   (#235). #231 kept reading `chore(release): 0.8.0` and "5 file(s) differ" while it

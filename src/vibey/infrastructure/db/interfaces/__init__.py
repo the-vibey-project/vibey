@@ -27,6 +27,7 @@ __all__ = [
     "EventRowMapperInterface",
     "JobRowMapperInterface",
     "LedgerSearchCompilerInterface",
+    "MigratorInterface",
     "PhaseTransitionedDraftBuilderInterface",
     "ProjectRowMapperInterface",
     "RotationCursorRowMapperInterface",
