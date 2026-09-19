@@ -58,6 +58,7 @@ from vibey.application.interfaces.ledger import (
     DesignLedger,
     HandoffStore,
     LedgerReader,
+    LedgerSearch,
     PhaseLedger,
 )
 from vibey.application.interfaces.observability import (
@@ -133,6 +134,7 @@ __all__ = [
     "JobReadyNotifier",
     "JobRepository",
     "LedgerReader",
+    "LedgerSearch",
     "MergeOutcome",
     "Outcome",
     "Park",

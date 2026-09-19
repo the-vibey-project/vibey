@@ -45,6 +45,13 @@ This file follows Keep a Changelog and semantic versioning conventions.
   `findings:` line instead; it now reads the fallback job itself, and a new test fails any
   template that reads a `needs.<job>.outputs.<name>` the job never declares. The paid
   `review` job's `findings` output, likewise declared and never written, is now written.
+- Correct the paper's commodity-thesis evidence (`docs/paper.md`) against the tracked
+  stress record, with dated correction notes: the "61 generations at 1.00 success,
+  1.4 ± 0.25 per minute" figures and the linear-then-superlinear latency law matched
+  nothing in `docs/sovereignty-stress-2026-08-30.md`, which itself falsifies both
+  latency models. The paragraph now reports 52/52 through N = 16, 102/107 from N = 2 to
+  32, and a 0.99–2.00 per minute band, and the "same structure in silicon" claim is
+  withdrawn (the-vibey-project/vibey#192).
 - Fix `conversation`'s pull-request check, which could never be true in production.
   `evaluate` and `context` read `isPullRequest`, but `fetch_subject` never requested it and
   could not have: it is not a `gh issue view --json` field, and `gh` rejects it rather than

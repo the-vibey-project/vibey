@@ -8,9 +8,9 @@ becoming a second source of truth."""
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from vibey.domain.engine import EngineId
+from vibey.domain.engine import StoredEngineId
 from vibey.domain.ledger import EventKind, LedgerEvent, open_items
-from vibey.domain.phase import Phase
+from vibey.domain.phase import StoredPhase
 from vibey.domain.review import (
     Ambiguity,
     AssumptionDelta,
@@ -55,7 +55,7 @@ def build_decision_log(events: Sequence[LedgerEvent]) -> tuple[DecisionLogEntry,
     entries: dict[str, DecisionLogEntry] = {}
 
     for event in sorted(events, key=lambda e: e.seq):
-        if event.kind is not EventKind.DECISION_RECORDED:
+        if not event.interpretable or event.kind is not EventKind.DECISION_RECORDED:
             continue
         decision_id = str(event.payload["decision_id"])
         supersedes = event.payload.get("supersedes")
@@ -87,14 +87,18 @@ def build_decision_log(events: Sequence[LedgerEvent]) -> tuple[DecisionLogEntry,
 
 @dataclass(frozen=True, slots=True)
 class CostReportEntry:
-    phase: Phase
-    engine_id: EngineId | None
+    """Spend per phase and engine. A phase or an engine a newer vibey wrote
+    (vibey#287) gets a row of its own under its stored name: money spent is spent,
+    whichever vibey knows what the engine is."""
+
+    phase: StoredPhase
+    engine_id: StoredEngineId | None
     turns: int
     dollars: float
 
 
 def build_cost_report(events: Sequence[LedgerEvent]) -> tuple[CostReportEntry, ...]:
-    totals: dict[tuple[Phase, EngineId | None], list[float]] = {}
+    totals: dict[tuple[StoredPhase, StoredEngineId | None], list[float]] = {}
 
     for event in events:
         if event.kind is not EventKind.BUDGET_SPENT:
@@ -159,7 +163,7 @@ def build_work_ledger(events: Sequence[LedgerEvent]) -> tuple[WorkLedgerEntry, .
     """
     latest: dict[str, LedgerEvent] = {}
     for event in sorted(events, key=lambda e: e.seq):
-        if event.kind is not EventKind.VERDICT_RENDERED:
+        if not event.interpretable or event.kind is not EventKind.VERDICT_RENDERED:
             continue
         if event.causation_id is None:
             # See the docstring: DESIGN and REVIEW verdicts land here, and are
@@ -190,6 +194,8 @@ def build_deltas(events: Sequence[LedgerEvent]) -> DeltasReport:
     resolved_findings: set[str] = set()
 
     for event in sorted(events, key=lambda e: e.seq):
+        if not event.interpretable:
+            continue
         if event.kind is EventKind.ASSUMPTION_STATED:
             aid = str(event.payload.get("assumption_id", ""))
             text = str(event.payload.get("text", ""))
@@ -274,6 +280,8 @@ def answer_why_question(events: Sequence[LedgerEvent], question: str) -> str:
     assumptions: list[dict[str, object]] = []
 
     for e in events:
+        if not e.interpretable:
+            continue
         if e.kind is EventKind.DECISION_RECORDED:
             decisions.append(dict(e.payload))
         elif e.kind is EventKind.ASSUMPTION_STATED:

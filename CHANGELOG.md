@@ -32,6 +32,41 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **qwenloop:** qwenloop can now attach to an OpenAI-compatible server that is already running, with Ollama as the main target, instead of spawning llama-server or vllm, so the BUILD lane can run for free on an operator's existing Ollama. Before this change, `qwenloop doctor` exited 1 whenever llama-server and vllm were both missing, and vibey reads that exit as an auth failure, so qwenloop could never be selected on a machine that had only Ollama. Set `QWENLOOP_BASE_URL=http://127.0.0.1:11434/v1` (or pass `--base-url`, or set `base_url` in qwenloop's new TOML config file) and `auto` selects the new `openai-compat` backend. The model name is set explicitly (`QWENLOOP_MODEL`, `--model`, or `model`; the default is `qwen2.5-coder:14b`), and an optional API key is read only from `QWENLOOP_API_KEY`. `doctor` exits 0 only when the endpoint answers and serves the model, and says which check failed otherwise. `run`, `run --storm`, `server start`, and `server status` all use the same backend. qwenloop never starts or stops an attached server, and prints its API key as `<redacted>`. One more fix: vLLM is now launched with `--served-model-name`, so the model name each request sends is one vLLM actually serves ([qwenloop ADR 0003](src/vibey_runners/qwen/docs/architecture/decisions/0003-attach-openai-compatible-endpoint.md))
+### Bug Fixes
+
+* **repo:** the absorbed tenants no longer carry the standalone automation they arrived
+  with (#189). 155 inert files are gone — 117 under the seven non-gh tenants' `.github/`,
+  31 tenant `.githooks/` files and 7 tenant `.vibey-gh.toml` — none of which GitHub or git
+  ever acted on here, and nothing in CI depended on (ADR-0022). 43 of those workflows asked
+  an index for `vibey-gh==X.Y.Z`
+  84 times, against ADR-0037 Decision 2; and because vibey-gh stops at the nearest
+  `.vibey-gh.toml`, any `vibey-gh` command run from inside a tenant loaded that tenant's
+  stale standalone config instead of the repository's. `src/vibey_tools/gh` keeps its own,
+  which is drift-gated.
+### Features
+
+* **design:** sovereign DECOMPOSE — `vibey worker --provider qwenloop` now plans BUILD on
+  the local model (`QwenloopWorkPlanProducer`) instead of the scripted test fake, whose
+  items carried no verification commands. The plan is decoded under a JSON schema whose
+  criterion ids are an enum of the spec's own, every item must carry a verification
+  command and a checked criterion, dependencies must precede their dependents, and a plan
+  that breaks any rule is refused whole rather than partly enqueued. Decoders are shared
+  with the claudeloop producer (`design_json.WorkPlanDecoder`) (#115)
+* **design:** one configurable Ollama client for both sovereign providers —
+  `VIBEY_OLLAMA_URL` (default `http://127.0.0.1:11434`, `http`/`https` only),
+  `VIBEY_OLLAMA_MODEL` (default `qwen2.5-coder:14b`, overridden by `--ollama-model` on
+  `vibey work` and `vibey worker`) and `VIBEY_OLLAMA_TIMEOUT` (default 900 s) replace
+  values that were hard-coded in the DESIGN provider (#115)
+
+### Bug Fixes
+
+* **design:** a research topic the sovereign provider cannot source now parks a
+  `research_evidence` human gate on its first attempt, naming the topic, the evidence
+  file it wants and `VIBEY_EVIDENCE_DIR`. It used to fail as a generic error, retry six
+  times with backoff, and then park an `attempts_exhausted` gate asking for more attempts
+  that could never succeed. `SovereignResearchUnavailable` moved to `vibey.domain.errors`
+  so the handler can catch it (#115)
 * **domain:** phase timing, the measured history a time-and-cost estimator needs (#88). A
   pure projection, `PhaseTimingProjection` in `domain/phase_timing.py`, reads one project's
   ledger and reports every phase visit: the `PhaseTransitioned` that entered it and the one
@@ -47,6 +82,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `turn_completed_events` with a caveat beside it
 ### Bug Fixes
 
+* **paper:** `docs/paper.md` is now the family's one paper. It absorbs the theses of the runner, `vibey-gh`, `vibey-skills` and `vibey-bootstrap` papers (checked against the code, which had drifted from several of them) and drops the "companion paper" framing. A new section, *Production rate and governance*, states the measured regularity behind #192 — on one machine, successful throughput stayed between 0.99 and 2.00 generations per minute while offered concurrency rose sixteen-fold — as a band, not a constant or a law, with its modulators, the zero-shortfall time-to-completion it predicts, and what would falsify it. The 61-generation, `1.4 ± 0.25`/min figures it replaces matched nothing in the tracked stress record. `scripts/paper_evidence.py` recomputes every number from the record and git history, and `tests/meta/test_paper_renders.py` guards the renderer's line-at-a-time rule, which had printed three of the old paper's formulas as literal TeX ([#192](https://github.com/the-vibey-project/vibey/issues/192), [#155](https://github.com/the-vibey-project/vibey/issues/155))
 * **gh:** a mention on a pull request can now reach the "act" path at all. `vibey-gh
   conversation` decided pull-request-ness from `isPullRequest`, a field `gh issue view` does
   not serve (it rejects it), so every thread read as an issue and a trusted request was
@@ -87,6 +123,27 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   so the gate always read an empty string and reported every local decline as "could not
   complete the review", pointing away from a finding that sat in the job log. The paid
   review job's `findings` output, declared but never written, is now written too (#133)
+* **ledger:** ledger readers are forward compatible with event kinds a newer vibey wrote. Every reader parsed `event.kind` with `EventKind(...)`, a closed enum, so during a rolling upgrade or after a rollback one row of a new kind (#270's `TranscriptRecorded` is the first) raised `ValueError` in every older worker that read the project, and the fleet died one lease at a time. Now the shared `EventRowMapper` reads an unknown kind as `UnrecognizedEventKind` carrying the stored text: kept in every range, in the full ledger handed to the next engine (byte for byte what a newer vibey writes) and in `digest_range` (R6 unchanged), skipped by every projection, the gate, the budget brake and the dashboard, and never written. `vibey ledger show --kind` and `vibey ledger search --kind` match a kind they do not know exactly as written and say so on stderr; `EventKindResolver(accept_unrecognized=False)` keeps the old refusal. Must land before #270 and any other new `EventKind` member (#275)
+* **domain:** forward-compatible readers for closed vocabularies across database columns. Readers of `engine_id`, `phase`, `provenance`, `job.state`, and `circuit` parse rows into enum members or `UnrecognizedValue` instances rather than crashing with `ValueError` on rows written by newer versions. Older workers keep unrecognized values in storage without mutation and skip domain projections that require known semantics, while writers remain strictly validated. Must land before #281 adds `claudeloop-local` (#287)
+
+### Features
+
+* **ledger:** `vibey ledger search` finds ledger records by record id (`--id`), payload digest
+  (`--digest`, which names a payload, so it can match several records), actor (`--actor`: an
+  engine id, a provenance, or `vibey` for events vibey wrote itself), time window
+  (`--since`/`--until`, half-open, ISO-8601), any of several kinds (repeatable `--kind`), and
+  literal case-insensitive text in the payload (`--text`), scoped to one project. Every
+  criterion and the `--limit` run in SQL as one parameterised statement — nothing typed reaches
+  the SQL text — and the result says when older matches were cut; `--json` prints every field
+  of every event. Migration 0012 adds the digest, production-time and per-engine indexes the
+  search reads. The first slice of sub-doctrine 7.a, the searchable ledger (#137)
+* **ledger:** the ledger has a hash chain, derived from the rows rather than stored beside them
+  (`domain/ledger_chain.py`). Each event's link is the SHA-256 of the previous link and every
+  stored field of the event, from a per-project genesis; `verify` walks a whole ledger or a
+  window from a trusted link, recomputes each payload's digest, and reports every gap,
+  duplicate, foreign event, digest mismatch and disagreeing anchor rather than the first one.
+  A window verifies alone from the link before it, which is what the storage tiers' chunk
+  hashes will fold over (#114, #137)
 
 ## [0.8.0] (2026-09-16)
 

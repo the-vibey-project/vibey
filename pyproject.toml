@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vibey"
-version = "1.1.0"
+version = "1.2.0"
 description = "A queue-based, six-phase conductor with optional visual design and Azure deployment."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -262,7 +262,9 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-include = ["src/**/*.py", "tests/**/*.py"]
+# scripts/ is here for the same reason it is a `[fingerprint]` source in .vibey-gh.toml:
+# a tracked Python file the gates cannot see is one nobody is checking.
+include = ["src/**/*.py", "tests/**/*.py", "scripts/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
