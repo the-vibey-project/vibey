@@ -720,7 +720,7 @@ def _fit(args) -> int:
     model = fit.sample_model(args.model, base_url)
     # The decision is recorded with everything needed to re-derive it, and prior
     # observations in the journal inform this projection — which is what makes repeated
-    # invocations a control loop rather than a series of guesses. On unless --no-journal:
+    # Unless --no-journal:
     # --journal, else VIBEY_GH_FIT_JOURNAL, else ~/.local/state/vibey-gh/fit.jsonl.
     if args.no_journal:
         journal = None
