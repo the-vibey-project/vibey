@@ -8,6 +8,7 @@ import json
 import os
 import sys
 from dataclasses import asdict
+from datetime import UTC, datetime
 from pathlib import Path
 
 from vibey_gh import (
@@ -821,6 +822,113 @@ def _estimate(args) -> int:
     return result.exit_code
 
 
+def _forecast(args) -> int:
+    """Refresh the append-only delivery estimate and its human report."""
+    from vibey_gh import github_state
+    from vibey_gh.delivery_estimate import DeliveryEstimator, PhiConfig, WorkHistoryCalculator
+    from vibey_gh.delivery_sources import DeliverySourceReader
+    from vibey_gh.estimate_ledger import BillingLedgerReader, DeliveryEstimateLedger
+    from vibey_gh.gh_transport import GhTransport
+
+    cfg = load_config()
+    try:
+        repository = args.repo or cfg.platform.repository or github_state.repository()
+        host = cfg.platform.host if cfg.platform.host != "github.com" else None
+        source = DeliverySourceReader(transport=GhTransport(host=host)).read(
+            repository, root=cfg.root, limit=args.limit
+        )
+        history = WorkHistoryCalculator(cfg.estimate.forecast_size_weights).calculate(source)
+        billing_reference = Path(args.billing_ledger or cfg.estimate.forecast_billing_ledger)
+        billing_path = (
+            billing_reference if billing_reference.is_absolute() else cfg.root / billing_reference
+        )
+        billing = BillingLedgerReader().read(billing_path)
+        billing_problems = tuple(
+            problem.replace(str(billing_path), str(billing_reference))
+            for problem in billing.problems
+        )
+        ledger = DeliveryEstimateLedger()
+        ledger_path = Path(args.record) if args.record else cfg.root / cfg.estimate.forecast_ledger
+        prior_records = ledger.read(ledger_path) if not args.no_record else ()
+        state = _forecast_state(args.materials)
+        estimator = DeliveryEstimator(
+            phi=PhiConfig(
+                floor=cfg.estimate.forecast_phi_floor,
+                epsilon=cfg.estimate.forecast_phi_epsilon,
+                exponent=cfg.estimate.forecast_phi_exponent,
+                unknown_factor=cfg.estimate.forecast_phi_unknown_factor,
+            )
+        )
+        at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        forecast = estimator.calculate(
+            history,
+            billing.usage,
+            state=state,
+            recorded_at=at,
+            source_fingerprint=source.fingerprint,
+            prior_records=prior_records,
+            assumptions=(
+                f"repository={repository}",
+                f"source_revision={source.source_revision}",
+                f"billing_ledger={billing_reference}",
+            ),
+            problems=(*source.problems, *billing_problems),
+        )
+        if not args.no_record:
+            ledger.record(forecast, ledger_path)
+        report_path = Path(args.report) if args.report else cfg.root / cfg.estimate.forecast_report
+        if not args.no_report:
+            ledger.write_report(forecast, report_path)
+        summary = Path(args.summary) if args.summary else _summary_path()
+        if summary is not None:
+            summary.parent.mkdir(parents=True, exist_ok=True)
+            summary.write_text("\n".join(forecast.lines()) + "\n", encoding="utf-8")
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
+        print(f"vibey-gh forecast: {exc}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps(forecast.as_dict(), indent=2, sort_keys=True, ensure_ascii=False))
+    else:
+        print("\n".join(forecast.lines()))
+    return 1 if args.strict and forecast.problems else 0
+
+
+def _forecast_state(path: Path | None):
+    from vibey_gh.feasibility import Coordinate, StateVector
+
+    if path is None:
+        return StateVector.unknown()
+    document = json.loads(path.read_text(encoding="utf-8"))
+    rows = document.get("materials") if isinstance(document, dict) else document
+    if not isinstance(rows, list):
+        raise TypeError("materials input must be a list or an object with a materials list")
+    measurements = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise TypeError("each material reading must be an object")
+        coordinate = row.get("coordinate")
+        if not isinstance(coordinate, str) or coordinate.count(".") != 1:
+            raise ValueError("each material reading needs coordinate='material.property'")
+        material, prop = coordinate.split(".")
+        raw_value = row.get("value")
+        value = None if raw_value is None else float(raw_value)
+        measurements.append(
+            Coordinate(
+                material,
+                prop,
+                value,
+                str(row.get("source", "provided by --materials")),
+                float(row["measured_at"]) if row.get("measured_at") is not None else None,
+            )
+        )
+    return StateVector.unknown().with_measurements(measurements)
+
+
+def _summary_path() -> Path | None:
+    value = os.environ.get("GITHUB_STEP_SUMMARY", "")
+    return Path(value) if value else None
+
+
 def _doctor(args) -> int:
     from vibey_gh import doctor
 
@@ -1588,6 +1696,62 @@ def main(argv: list[str] | None = None) -> int:
         help="read no observations: the duration is unknown",
     )
     es.set_defaults(func=_estimate)
+
+    fc = sub.add_parser(
+        "forecast",
+        help="continuously estimate remaining delivery time and all billing-system usage",
+    )
+    fc.add_argument("--repo", default="", help="owner/name (default: configured forge repository)")
+    fc.add_argument(
+        "--limit",
+        type=int,
+        default=1000,
+        help="maximum historical issues and pull requests to read (default: 1000)",
+    )
+    fc.add_argument(
+        "--billing-ledger",
+        type=Path,
+        help="core `vibey ledger export` JSONL used for actual dollars, turns and event usage",
+    )
+    fc.add_argument(
+        "--materials",
+        type=Path,
+        help="JSON material readings: a list of {coordinate, value, source} objects",
+    )
+    record_mode = fc.add_mutually_exclusive_group()
+    record_mode.add_argument(
+        "--record",
+        type=Path,
+        help="append to this estimate ledger (default: [estimate.forecast] ledger)",
+    )
+    record_mode.add_argument(
+        "--no-record",
+        action="store_true",
+        help="calculate without reading or appending the estimate ledger",
+    )
+    report_mode = fc.add_mutually_exclusive_group()
+    report_mode.add_argument(
+        "--report",
+        type=Path,
+        help="write the human report here (default: [estimate.forecast] report)",
+    )
+    report_mode.add_argument(
+        "--no-report",
+        action="store_true",
+        help="do not write the human report",
+    )
+    fc.add_argument(
+        "--summary",
+        type=Path,
+        help="also write the report lines to this path (default: $GITHUB_STEP_SUMMARY)",
+    )
+    fc.add_argument("--json", action="store_true", help="print the complete forecast as JSON")
+    fc.add_argument(
+        "--strict",
+        action="store_true",
+        help="return non-zero when a source could not be read; default keeps the forecast visible",
+    )
+    fc.set_defaults(func=_forecast)
 
     pp = sub.add_parser(
         "paper",

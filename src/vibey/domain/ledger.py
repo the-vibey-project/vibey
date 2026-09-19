@@ -65,6 +65,9 @@ class EventKind(StrEnum):
     VISUAL_DESIGN_WAIVED = "VisualDesignWaived"
     DEPLOYMENT_OPTED_IN = "DeploymentOptedIn"
     DEPLOYMENT_DECLINED = "DeploymentDeclined"
+    # A derived, append-only delivery forecast. It is not spend itself: the payload
+    # carries measured usage, planned usage and the material/calculus basis.
+    DELIVERY_ESTIMATE_RECORDED = "DeliveryEstimateRecorded"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)

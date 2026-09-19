@@ -269,6 +269,7 @@ def test_the_estimate_section_loads_from_the_configuration_file(tmp_path):
         ({"requirements": (("a", (("agency.", 1.0),)),)}, "is not 'material.property'"),
         ({"requirements": (("a", (("a.b.c", 1.0),)),)}, "is not 'material.property'"),
         ({"requirements": (("a", (("agency.availability", 1.5),)),)}, "from 0 to 1"),
+        ({"requirements": (("a", (("agency.availability", math.inf),)),)}, "from 0 to 1"),
         ({"requirements": (("a", (("agency.availability", True),)),)}, "from 0 to 1"),
         ({"requirements": (("a", (("agency.availability", "1"),)),)}, "from 0 to 1"),
     ],

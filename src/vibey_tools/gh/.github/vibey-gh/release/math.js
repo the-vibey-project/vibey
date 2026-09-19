@@ -70,13 +70,24 @@
   };
 
   const convertLatexFences = () => {
-    document.querySelectorAll("pre > code.language-latex, pre > code.latex").forEach((code) => {
+    // ProperDocs/MkDocs versions have emitted both a class on <code> and a class on
+    // <pre>. Match both forms, and run independently of MathJax so a slow or blocked
+    // typesetter cannot leave the theorem source looking like a code listing.
+    document.querySelectorAll(
+      "pre > code.language-latex, pre > code.latex, pre.language-latex > code, pre.latex > code",
+    ).forEach((code) => {
       const replacement = convert(code);
       if (replacement) {
         code.parentElement.replaceWith(replacement);
       }
     });
   };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", convertLatexFences, { once: true });
+  } else {
+    convertLatexFences();
+  }
 
   window.MathJax = {
     tex: {
