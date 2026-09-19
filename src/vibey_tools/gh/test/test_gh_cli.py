@@ -1080,3 +1080,77 @@ def test_failover_cli_runs_once_with_explicit_paths(repo, capsys, tmp_path, monk
     monkeypatch.setenv("HOME", str(tmp_path))
     assert main(["failover", "--once"]) == 0
     assert "disabled" in capsys.readouterr().out
+
+
+def test_pr_automation_combine_composes_the_review_the_workflow_persists(repo, capsys, tmp_path):
+    """`combine` is the one place the workflow asks what "passed" means (#133). Whole, it
+    is the old jq rule; split, it needs the sovereign lane's verdict and says which lane
+    carried which field."""
+    from vibey_gh.review_contract import REVIEW_CONTRACT
+
+    judgments = {name: True for name in REVIEW_CONTRACT.requires_wider_context}
+    full = {"pass": False, **judgments, "summary": "ok", "findings": []}
+    assert (
+        main(
+            [
+                "pr-automation",
+                "combine",
+                "--paid",
+                json.dumps(full),
+                "--half",
+                "full",
+                "--head-sha",
+                "abc",
+            ]
+        )
+        == 0
+    )
+    envelope = json.loads(capsys.readouterr().out)
+    assert envelope["verdict"]["pass"] is True and envelope["verdict"]["head_sha"] == "abc"
+
+    sovereign = tmp_path / "sovereign.json"
+    sovereign.write_text(json.dumps({"pass": True, "summary": "[SOVEREIGN LANE — m] ✓"}))
+    wider = {**judgments, "wider_summary": "docs", "wider_findings": []}
+    assert (
+        main(
+            [
+                "pr-automation",
+                "combine",
+                "--paid",
+                json.dumps(wider),
+                "--half",
+                "requires-wider-context",
+                "--sovereign",
+                str(sovereign),
+                "--head-sha",
+                "abc",
+            ]
+        )
+        == 0
+    )
+    out = capsys.readouterr().out
+    assert "✓" in out  # written as text, not escaped: the verdict is read by people too
+    envelope = json.loads(out)
+    assert envelope["carried"]["pass"] == "sovereign"
+    assert envelope["verdict"]["pass"] is True
+
+    # An empty --sovereign is the workflow saying the lane produced nothing: a wider-only
+    # answer then refuses to compose, so the review job fails closed rather than passing.
+    assert (
+        main(
+            [
+                "pr-automation",
+                "combine",
+                "--paid",
+                json.dumps(wider),
+                "--half",
+                "requires-wider-context",
+                "--sovereign",
+                "",
+                "--head-sha",
+                "abc",
+            ]
+        )
+        == 1
+    )
+    assert "sovereign lane's verdict is needed" in capsys.readouterr().err

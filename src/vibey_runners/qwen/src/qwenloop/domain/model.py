@@ -13,6 +13,9 @@ class Backend(StrEnum):
     AUTO = "auto"
     LLAMA_CPP = "llama.cpp"
     VLLM = "vllm"
+    # Attach to an OpenAI-compatible server someone else runs (Ollama is the primary
+    # target) instead of spawning llama-server or vllm. See ADR 0003.
+    OPENAI_COMPAT = "openai-compat"
 
 
 class RunStatus(StrEnum):
@@ -50,7 +53,24 @@ class ServerInfo:
     owned: bool
     healthy: bool
     pid: int | None = None
-    token: str = ""
+    # Kept out of repr: for an attached endpoint this is the operator's own API key.
+    token: str = field(default="", repr=False)
+    # The model name every request sends. Explicit rather than derived from `profile`,
+    # because an attached endpoint names its models its own way (Ollama: `qwen2.5-coder:14b`).
+    # Empty means "send the profile name", which is what a managed server serves.
+    model: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class Hardware:
+    system: str
+    nvidia_vram_bytes: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class BackendChoice:
+    backend: Backend
+    reason: str
 
 
 @dataclass(frozen=True, slots=True)

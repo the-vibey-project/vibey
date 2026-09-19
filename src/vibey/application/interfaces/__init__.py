@@ -58,6 +58,7 @@ from vibey.application.interfaces.ledger import (
     DesignLedger,
     HandoffStore,
     LedgerReader,
+    LedgerSearch,
     PhaseLedger,
 )
 from vibey.application.interfaces.observability import (
@@ -89,6 +90,9 @@ from vibey.application.interfaces.system import (
 from vibey.application.interfaces.visual import (
     VisualInventoryProducer,
     VisualInventoryRepository,
+)
+from vibey.application.interfaces.worker_interface import (
+    WorkerLoopInterface,
 )
 
 __all__ = [
@@ -133,6 +137,7 @@ __all__ = [
     "JobReadyNotifier",
     "JobRepository",
     "LedgerReader",
+    "LedgerSearch",
     "MergeOutcome",
     "Outcome",
     "Park",
@@ -146,5 +151,6 @@ __all__ = [
     "VerifyWorktrees",
     "VisualInventoryProducer",
     "VisualInventoryRepository",
+    "WorkerLoopInterface",
     "WorkPlanProducer",
 ]

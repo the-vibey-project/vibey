@@ -10,6 +10,12 @@ from __future__ import annotations
 
 from vibey_gh.interfaces.book_interface import MainExtractorInterface
 from vibey_gh.interfaces.chapter_sanitizer_interface import ChapterSanitizerInterface
+from vibey_gh.interfaces.review_composition_interface import ReviewComposerPort
 from vibey_gh.interfaces.review_contract_interface import ReviewContractPort
 
-__all__ = ["ChapterSanitizerInterface", "MainExtractorInterface", "ReviewContractPort"]
+__all__ = [
+    "ChapterSanitizerInterface",
+    "MainExtractorInterface",
+    "ReviewComposerPort",
+    "ReviewContractPort",
+]

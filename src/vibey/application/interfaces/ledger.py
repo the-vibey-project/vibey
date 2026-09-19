@@ -20,6 +20,10 @@ from vibey.domain.handoff import (
     HandoffEnvelope,
     Violation,
 )
+from vibey.domain.interfaces.ledger_query_interface import (
+    LedgerQueryInterface,
+    LedgerSearchResultInterface,
+)
 from vibey.domain.ledger import EventKind, LedgerEvent
 
 
@@ -99,6 +103,23 @@ class LedgerReader(Protocol):
     orchestrator's source for the events the no-loss gate verifies."""
 
     async def all_for_project(self, project_id: UUID) -> tuple[LedgerEvent, ...]: ...
+
+
+@runtime_checkable
+class LedgerSearch(Protocol):
+    """Searches one project's ledger (sub-doctrine 7.a, the searchable ledger).
+
+    Every criterion is applied by the store, limit included -- a search never
+    loads the whole project ledger to filter it afterwards, which is what
+    `LedgerReader.all_for_project` is for and what a search must not become.
+    """
+
+    async def search(
+        self, project_id: UUID, query: LedgerQueryInterface
+    ) -> LedgerSearchResultInterface:
+        """The most recent `query.limit` matches, oldest first, and whether
+        older matches were left out."""
+        ...
 
 
 @runtime_checkable

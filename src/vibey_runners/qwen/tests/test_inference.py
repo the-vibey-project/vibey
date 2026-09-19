@@ -9,12 +9,14 @@ import pytest
 from qwenloop.domain.model import Backend, ChatMessage, ServerInfo
 from qwenloop.infrastructure.inference import (
     LlamaCppServer,
+    OpenAICompatServer,
     OpenAIServer,
     VllmServer,
     _http_error_detail,
     _parse_text_tool_calls,
     _pid_alive,
 )
+from qwenloop.infrastructure.interfaces import AttachedServerInterface, ManagedServerInterface
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE
 
 
@@ -130,7 +132,13 @@ def test_server_argv_and_inspect(tmp_path: Path) -> None:
     model.write_bytes(b"x")
     assert "--jinja" in llama._argv(PORTABLE, 1234, "token")
     vllm = VllmServer(tmp_path)
-    assert "hermes" in vllm._argv(NVIDIA_BF16, 1234, "token")
+    vllm_argv = vllm._argv(NVIDIA_BF16, 1234, "token")
+    assert "hermes" in vllm_argv
+    # vLLM answers only to the name it serves; the name requests send is the profile's.
+    served = vllm_argv.index("--served-model-name")
+    assert vllm_argv[served + 1] == NVIDIA_BF16.name
+    assert isinstance(llama, ManagedServerInterface)
+    assert isinstance(vllm, ManagedServerInterface)
     state = tmp_path / "servers" / f"{PORTABLE.name}.json"
     state.parent.mkdir()
     state.write_text("bad")
@@ -188,7 +196,10 @@ async def test_start_persists_owned_server(monkeypatch: pytest.MonkeyPatch, tmp_
     server = LlamaCppServer(tmp_path)
     info = await server.start(PORTABLE)
     assert info.pid == 42
-    assert server.inspect(PORTABLE) is not None
+    assert info.model == PORTABLE.name
+    inspected = server.inspect(PORTABLE)
+    assert inspected is not None
+    assert inspected.model == PORTABLE.name
 
     monkeypatch.setattr("qwenloop.infrastructure.inference._pid_alive", lambda _pid: True)
     reused = await server.start(PORTABLE)
@@ -366,3 +377,241 @@ def test_qwen_text_tool_calls_are_normalized() -> None:
 
     normalized, _ = _parse_text_tool_calls('<tool_call>{"name":"shell","arguments":[]}</tool_call>')
     assert normalized == [{"name": "shell", "arguments": {}}]
+
+
+class Recorder:
+    """A fake `urlopen` that answers from a table and remembers every request."""
+
+    def __init__(self, answers: dict[str, object]) -> None:
+        self.answers = answers
+        self.requests: list[object] = []
+
+    def __call__(self, request, timeout):  # type: ignore[no-untyped-def]
+        self.requests.append(request)
+        self.timeout = timeout
+        answer = self.answers[request.full_url.rsplit("/", 1)[-1]]
+        if isinstance(answer, BaseException):
+            raise answer
+        return UrlResponse(answer if isinstance(answer, bytes) else json.dumps(answer).encode())
+
+
+OLLAMA_MODELS = {
+    "object": "list",
+    "data": [
+        {"id": "qwen2.5-coder:14b", "object": "model", "owned_by": "library"},
+        {"id": "llama3:latest", "object": "model", "owned_by": "library"},
+    ],
+}
+CHAT_REPLY = {
+    "choices": [{"message": {"content": "hello"}}],
+    "usage": {"prompt_tokens": 3, "completion_tokens": 1},
+}
+
+
+def ollama(**kwargs: object) -> OpenAICompatServer:
+    return OpenAICompatServer("http://127.0.0.1:11434/v1/", "qwen2.5-coder:14b", **kwargs)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("url", ["file:///etc/passwd", "127.0.0.1:11434", "http://"])
+def test_attached_server_refuses_a_non_http_url(url: str) -> None:
+    with pytest.raises(ValueError, match="http:// or https://"):
+        OpenAICompatServer(url, "m")
+
+
+@pytest.mark.parametrize("url", ["http://u@host/v1"])
+def test_attached_server_refuses_embedded_credentials(url: str) -> None:
+    with pytest.raises(ValueError, match="must not include credentials"):
+        OpenAICompatServer(url, "m")
+
+
+def test_attached_server_profile_and_inspect_pin_nothing_and_own_nothing() -> None:
+    server = ollama(api_key="sk-x", context_window=8192)
+    assert isinstance(server, AttachedServerInterface)
+    assert server.base_url == "http://127.0.0.1:11434/v1"
+    profile = server.profile
+    assert profile.name == "qwen2.5-coder:14b"
+    assert profile.backend is Backend.OPENAI_COMPAT
+    assert profile.repository == "http://127.0.0.1:11434/v1"
+    assert profile.sha256 is None
+    assert profile.context_window == 8192
+    info = server.inspect(profile)
+    assert info.backend is Backend.OPENAI_COMPAT
+    assert info.endpoint == "http://127.0.0.1:11434/v1"
+    assert (info.owned, info.healthy, info.pid) == (False, False, None)
+    assert (info.token, info.model) == ("sk-x", "qwen2.5-coder:14b")
+
+
+@pytest.mark.asyncio
+async def test_attached_check_finds_the_model_and_sends_no_empty_bearer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = Recorder({"models": OLLAMA_MODELS})
+    monkeypatch.setattr("urllib.request.urlopen", fake)
+    server = ollama(timeout_seconds=7)
+    assert await server.check() == "qwen2.5-coder:14b"
+    assert fake.requests[0].full_url == "http://127.0.0.1:11434/v1/models"  # type: ignore[attr-defined]
+    assert not fake.requests[0].has_header("Authorization")  # type: ignore[attr-defined]
+    assert fake.timeout == 7
+
+
+@pytest.mark.asyncio
+async def test_attached_check_sends_the_api_key_when_there_is_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = Recorder({"models": OLLAMA_MODELS})
+    monkeypatch.setattr("urllib.request.urlopen", fake)
+    await ollama(api_key="sk-local").check()
+    assert fake.requests[0].get_header("Authorization") == "Bearer sk-local"  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_attached_check_accepts_ollamas_implicit_latest_tag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"models": OLLAMA_MODELS}))
+    assert await OpenAICompatServer("http://h/v1", "llama3").check() == "llama3:latest"
+    with pytest.raises(RuntimeError, match="'llama3:8b' is not served"):
+        await OpenAICompatServer("http://h/v1", "llama3:8b").check()
+
+
+@pytest.mark.asyncio
+async def test_attached_check_names_the_missing_model_and_what_is_served(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"models": OLLAMA_MODELS}))
+    with pytest.raises(RuntimeError) as caught:
+        await OpenAICompatServer("http://h/v1", "qwen2.5-coder:32b").check()
+    message = str(caught.value)
+    assert "'qwen2.5-coder:32b' is not served by http://h/v1" in message
+    assert "qwen2.5-coder:14b, llama3:latest" in message
+    assert "ollama pull qwen2.5-coder:32b" in message
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen", Recorder({"models": {"object": "list", "data": []}})
+    )
+    with pytest.raises(RuntimeError, match="it serves: no models at all"):
+        await ollama().check()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("failure", "expected"),
+    [
+        (
+            urllib.error.URLError(ConnectionRefusedError(61, "Connection refused")),
+            "Connection refused",
+        ),
+        (TimeoutError("timed out"), "timed out"),
+    ],
+)
+async def test_attached_check_reports_an_unreachable_endpoint(
+    monkeypatch: pytest.MonkeyPatch, failure: BaseException, expected: str
+) -> None:
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"models": failure}))
+    with pytest.raises(RuntimeError) as caught:
+        await ollama().check()
+    message = str(caught.value)
+    assert "http://127.0.0.1:11434/v1/models is unreachable" in message
+    assert expected in message
+    assert "ollama serve" in message
+
+
+@pytest.mark.asyncio
+async def test_attached_check_reports_a_refusal_with_the_servers_own_words(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    refusal = urllib.error.HTTPError(
+        "u", 401, "Unauthorized", {}, io.BytesIO(b'{"error": {"message": "bad key"}}')
+    )
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"models": refusal}))
+    with pytest.raises(RuntimeError, match="refused the model list: HTTP 401: bad key"):
+        await ollama().check()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("body", [b"<html>not json</html>", b'["a"]', b'{"data": "nope"}'])
+async def test_attached_check_refuses_a_body_that_is_not_a_model_list(
+    monkeypatch: pytest.MonkeyPatch, body: bytes
+) -> None:
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"models": body}))
+    with pytest.raises(RuntimeError, match="did not answer with an OpenAI-compatible model list"):
+        await ollama().check()
+
+
+@pytest.mark.asyncio
+async def test_attached_model_list_skips_entries_without_an_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    listing = {"data": ["junk", {"object": "model"}, {"id": "qwen2.5-coder:14b"}]}
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"models": listing}))
+    assert await ollama().check() == "qwen2.5-coder:14b"
+
+
+@pytest.mark.asyncio
+async def test_attached_start_spawns_nothing_and_health_follows_the_check(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def forbidden(*_args, **_kwargs):  # type: ignore[no-untyped-def]
+        raise AssertionError("an attached server must never spawn a process")
+
+    monkeypatch.setattr("asyncio.create_subprocess_exec", forbidden)
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"models": OLLAMA_MODELS}))
+    server = ollama()
+    started = await server.start(server.profile)
+    assert started.healthy
+    assert not started.owned
+    assert started.pid is None
+    assert await server.health(started)
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen", Recorder({"models": urllib.error.URLError("down")})
+    )
+    assert not await server.health(started)
+    with pytest.raises(RuntimeError, match="unreachable"):
+        await server.start(server.profile)
+
+
+@pytest.mark.asyncio
+async def test_attached_stop_never_touches_a_process(monkeypatch: pytest.MonkeyPatch) -> None:
+    def forbidden(*_args):  # type: ignore[no-untyped-def]
+        raise AssertionError("an attached server must never be signalled")
+
+    monkeypatch.setattr("os.killpg", forbidden)
+    server = ollama()
+    await server.stop(server.inspect(server.profile))
+    await server.stop(ServerInfo(Backend.OPENAI_COMPAT, "m", "x", True, True, 1))
+
+
+@pytest.mark.asyncio
+async def test_attached_install_points_at_the_endpoint_instead() -> None:
+    server = ollama()
+    with pytest.raises(RuntimeError, match="ollama pull qwen2.5-coder:14b"):
+        await server.install(server.profile)
+
+
+@pytest.mark.asyncio
+async def test_attached_chat_sends_the_configured_model_to_the_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = Recorder({"completions": CHAT_REPLY})
+    monkeypatch.setattr("urllib.request.urlopen", fake)
+    server = ollama()
+    info = server.inspect(server.profile)
+    chunks = [chunk async for chunk in server.chat_stream(info, [ChatMessage("user", "hi")])]
+    assert chunks[-1].text == "hello"
+    request = fake.requests[0]
+    assert request.full_url == "http://127.0.0.1:11434/v1/chat/completions"  # type: ignore[attr-defined]
+    assert json.loads(request.data)["model"] == "qwen2.5-coder:14b"  # type: ignore[attr-defined]
+    assert not request.has_header("Authorization")  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_managed_chat_falls_back_to_the_profile_name(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    fake = Recorder({"completions": CHAT_REPLY})
+    monkeypatch.setattr("urllib.request.urlopen", fake)
+    legacy = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://local/v1", True, True, 1, "t")
+    _ = [chunk async for chunk in LlamaCppServer(tmp_path).chat_stream(legacy, [])]
+    assert json.loads(fake.requests[0].data)["model"] == PORTABLE.name  # type: ignore[attr-defined]
+    assert fake.requests[0].get_header("Authorization") == "Bearer t"  # type: ignore[attr-defined]

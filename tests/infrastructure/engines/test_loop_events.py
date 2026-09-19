@@ -271,3 +271,13 @@ def test_cursorloop_unknown_event_returns_none() -> None:
     entries, now removed) return None and are gracefully skipped."""
     assert translate_event_type(EngineId.CURSORLOOP, "unknown.event.type") is None
     assert translate_event_type(EngineId.CURSORLOOP, "capacity.limited") is None
+
+
+def test_claudeloop_local_reads_claudeloops_events_through_the_same_map() -> None:
+    """The same binary writes the same events.jsonl; one map, not a drifting copy."""
+    assert LOOP_EVENT_MAP[EngineId.CLAUDELOOP_LOCAL] is LOOP_EVENT_MAP[EngineId.CLAUDELOOP]
+    assert translate_event_type(EngineId.CLAUDELOOP_LOCAL, "finished") == EventKind.VERDICT_RENDERED
+
+
+def test_every_engine_has_an_event_map() -> None:
+    assert set(LOOP_EVENT_MAP) == set(EngineId)

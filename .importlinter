@@ -64,29 +64,49 @@ forbidden_modules =
 
 # The interfaces packages are the bottom of their layer: they declare the
 # seams, so they must never import the code that consumes them.
+#
+# The consumers are mostly `vibey.application`'s own modules, and until #263 this
+# contract named none of them: an interface importing `vibey.application.worker` was
+# reported KEPT, and so was every other planted import from inside the layer.
+# `vibey.application.*` names them all, including modules added later. A forbidden contract
+# skips any pair where one module contains the other, so the source is not forbidden from
+# itself. The two ignored imports are a seam's vocabulary, not its consumers:
+# `design` and `dto` hold the records a seam's signatures name, and both import
+# only `vibey.domain`.
 [importlinter:contract:interfaces-declare-only]
 name = Interfaces declare seams, never consume them
 type = forbidden
 source_modules =
     vibey.application.interfaces
 forbidden_modules =
+    vibey.application.*
     vibey.infrastructure
     vibey.cli
     vibey.tui
     vibey.bootstrap
+ignore_imports =
+    vibey.application.interfaces.** -> vibey.application.design
+    vibey.application.interfaces.** -> vibey.application.dto
 
-# The same rule, one layer down. `vibey.infrastructure.db.interfaces` (ADR-0016's
-# mirrored form) and the legacy flat `vibey.infrastructure.interfaces` declare seams
-# that infrastructure itself implements, so the application contract's "nothing else
-# from its own tree" clause cannot bind here: a seam over an asyncpg connection or a
-# `LedgerEventDraft` has to name those types or it constrains nothing. What DOES bind
-# is the direction -- a seam never reaches up into the code that consumes it.
+# The same rule, one layer down. `vibey.infrastructure.db.interfaces`,
+# `vibey.infrastructure.build.interfaces` (ADR-0016's mirrored form) and the legacy flat
+# `vibey.infrastructure.interfaces` declare seams that infrastructure itself implements,
+# so the application contract's "nothing else from its own tree" clause cannot bind
+# here: a seam over an asyncpg connection or a `LedgerEventDraft` has to name those
+# types or it constrains nothing. What DOES bind is the direction -- a seam never
+# reaches up into the code that consumes it.
+# `vibey.infrastructure.engines.interfaces` joined with the sovereign DECOMPOSE
+# producer and the shared Ollama client (#115), and
+# `vibey.infrastructure.process.interfaces` with the shared kill-and-reap (#283).
 [importlinter:contract:infrastructure-interfaces-declare-only]
 name = Infrastructure interfaces declare seams, never consume them
 type = forbidden
 source_modules =
     vibey.infrastructure.interfaces
     vibey.infrastructure.db.interfaces
+    vibey.infrastructure.build.interfaces
+    vibey.infrastructure.engines.interfaces
+    vibey.infrastructure.process.interfaces
 forbidden_modules =
     vibey.cli
     vibey.tui
@@ -109,6 +129,7 @@ forbidden_modules =
     vibey_gh.forge_snapshot
     vibey_gh.gh_transport
     vibey_gh.github_state
+    vibey_gh.review_composition
     vibey_gh.conversation
 # The flatten seam names its `FlattenPlan` record under `TYPE_CHECKING`, so at runtime it
 # imports nothing from `vibey_gh.flatten`. Counted as an edge, though, it reaches every
