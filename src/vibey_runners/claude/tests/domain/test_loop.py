@@ -5,6 +5,7 @@ from claudeloop.domain.budget import Budget, BudgetLedger
 from claudeloop.domain.capacity import (
     AuthenticationFailed,
     Available,
+    BackendMisconfigured,
     CreditsExhausted,
     WindowExhausted,
 )
@@ -182,3 +183,43 @@ def test_max_wait_exceeded_gives_up_rather_than_waiting_forever():
     )
     assert state.phase == Phase.FAILED
     assert decision == Finish(success=False, reason="max wait exceeded")
+
+
+# --- backend misconfiguration is terminal at every decision point ---
+
+_MISCONFIGURED = BackendMisconfigured(reason="unreachable", detail="Connection refused")
+_REASON = "backend misconfigured (unreachable): Connection refused"
+
+
+def test_preflight_backend_misconfigured_is_terminal():
+    state, decision = decide_preflight(fresh_state(), _MISCONFIGURED, now=NOW)
+    assert state.phase == Phase.FAILED
+    assert state.failure_reason == _REASON
+    assert decision == Finish(success=False, reason=_REASON)
+
+
+def test_after_turn_backend_misconfigured_is_terminal_even_with_done_verdict():
+    """Like authentication: a turn that could not reach its model did not finish
+    anything, whatever its text says."""
+    state, decision = decide_after_turn(
+        fresh_state(), capacity=_MISCONFIGURED, verdict=Done(), now=NOW
+    )
+    assert state.phase == Phase.FAILED
+    assert decision == Finish(success=False, reason=_REASON)
+
+
+def test_after_probe_backend_misconfigured_is_terminal_not_rescheduled():
+    state, decision = decide_after_probe(fresh_state(), _MISCONFIGURED, now=NOW)
+    assert state.phase == Phase.FAILED
+    assert decision == Finish(success=False, reason=_REASON)
+
+
+def test_local_queue_full_waits_like_any_other_window():
+    state, decision = decide_after_turn(
+        fresh_state(),
+        capacity=WindowExhausted(rate_limit_type="local"),
+        verdict=Continue(),
+        now=NOW,
+    )
+    assert state.phase == Phase.WAITING
+    assert isinstance(decision, ScheduleProbe)

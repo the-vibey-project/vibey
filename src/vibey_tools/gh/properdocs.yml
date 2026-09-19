@@ -27,6 +27,7 @@ nav:
   - Architecture: architecture.md
   - Configuration: configuration.md
   - CLI: cli.md
+  - Forge snapshot: forge-snapshot.md
   - Workflows: workflows.md
   - Operations: operations.md
   - Security: security.md

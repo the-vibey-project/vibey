@@ -84,15 +84,18 @@ maintainability, architecture-boundary, and test-quality review. Forks are inspe
 never mutated with privileged credentials; required edits use a linked repository-owned
 replacement PR that preserves the contributor and exact head.
 
-A repository that sets `[pr_automation.fallback].enabled = true` and provides a
-self-hosted runner labelled `vibey-local-gh` gets one more line of defense: when the
-primary review above returns no verdict at all (never when it ran and found something), a
-`review-fallback` job sends the diff to a local Ollama-compatible model and calls
-`vibey-gh local-review`. It holds no repository secret, never checks out PR source, and
-`trusted_only` (default `true`) keeps fork PRs off that runner entirely. A clean local
-verdict passes the gate under the honestly weaker title `PR automation: gate (local
-fallback)`; `vibey-gh local-triage` is the equivalent for issue automation and always
-forces `needs_human=true`. See [Configuration](../docs/configuration.md) and
+With `[pr_automation.fallback].enabled = true` (the default) and a self-hosted runner
+labelled `vibey-local-gh` whose heartbeat is fresh, the review's diff half runs on that
+runner FIRST (sub-doctrine 8.a): a `review-sovereign` job sends the diff to a local
+Ollama-compatible model and calls `vibey-gh local-review`. It holds no repository secret,
+never checks out PR source, and `trusted_only` (default `true`) keeps fork PRs off that
+runner entirely. For a trusted author the local verdict carries `pass`, `summary` and
+`findings`, the paid review above answers only the documentation-contract judgments, and
+the gate names the lane behind each half; a local finding never starts an automated
+repair. For any other author the local verdict is held in reserve and read only when the
+paid review returns no verdict at all, under the honestly weaker title `PR automation:
+gate (local fallback)`. `vibey-gh local-triage` is the equivalent fallback for issue
+automation and always forces `needs_human=true`. See [Configuration](../docs/configuration.md) and
 [Threat model](../docs/threat-model.md).
 
 ## Autonomous issue solutions

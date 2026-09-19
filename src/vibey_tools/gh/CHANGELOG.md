@@ -26,6 +26,111 @@ This file follows Keep a Changelog and semantic versioning conventions.
   `PromotionInterface` shape it reads a promotion through, are declared in
   `vibey_gh/interfaces/promotion_pull_request_interface.py` (ADR-0016) — declared rather
   than imported, because `promote` reaches `install` and the seam may not.
+- Add `vibey-gh forge-snapshot`, slice S1 of vibey#136: a read-only capture of a GitHub
+  repository's issues, issue comments, pull requests (class `change-request`), reviews,
+  review comments, labels, milestones, releases with their asset manifests, and tags, into
+  `--out DIR` as one append-only JSON Lines file per class. Every record is the forge's JSON
+  verbatim inside a `vibey.forge-record/1` envelope (forge, repository, neutral class, native
+  class, native id, `captured_at`), with a `payload_sha256` content digest and a `sha256`
+  seal over the rest of the record, both over the vibey ledger's canonical form, and `prev`
+  linking it to the record before it in its file. `DIR/manifest.json`
+  (`vibey.forge-manifest/1`) records each class's status (`captured`, `could-not-look`,
+  `not-selected`), counts, chain head and cursor, a `resume_since`, and an `excluded` list
+  naming every artifact class not captured, with its reason — 33 of them, from timeline
+  events and review-thread resolution to secrets, which the forge never returns. Built on
+  `GhTransport.survey`, so a class the forge could not be asked about keeps its file and its
+  cursor and is never written as empty; the command then exits 1. Listings use
+  `gh api --paginate --slurp` (GitHub CLI 2.48+); pull requests, which GitHub cannot filter
+  by `since`, are paged newest-update-first and the walk stops at the cursor. `--since
+  resume` continues every chain from the manifest's resume point, and content already
+  recorded is counted as unchanged rather than written again, so a rerun appends nothing.
+  Three classes behind three seams in `vibey_gh/interfaces/forge_snapshot_interface.py`:
+  `GithubForgeReader`, `JsonlSnapshotStore` and `ForgeSnapshot`. Registered as a capability
+  on every surface. Documented in `docs/forge-snapshot.md`.
+- Add `vibey_gh.gh_transport.GhTransport`, the one seam for running `gh`, declared in
+  `vibey_gh/interfaces/gh_transport_interface.py`. The package had grown seven private
+  runners that disagree about what a failure is, so rather than a fourth answer it offers
+  the three they give, each byte-identical to its original: `json` raises like
+  `github_state.gh_json`, `probe` reports `(ok, out)` like `promote._gh` (or, with
+  `strip=False, with_stderr=True`, like the merge train's `_gh`), and `survey` returns
+  `(value, problem)` like `tidy._gh_json`, so "could not ask" never reads as "nothing
+  there". `github_state.gh_json`, `repository` and `upsert_comment` now delegate to it,
+  keeping their names so every caller and every test that replaces them is untouched. That
+  re-routes conversation, PR and issue automation, reconcile, rulesets and flatten through
+  the transport with the same argv and working directory: `test/test_gh_transport.py`
+  drives the code as it stood before and the code now through one fake `gh` on PATH and
+  requires identical argv lists, directories, `calls.txt` bytes and outcomes. The fake
+  itself moves into `test/conftest.py` as `FakeGh`, which also records each call's exact
+  argv, directory and (on request) standard input, for any test to reuse. The other
+  modules keep their own runners for now and move over one at a time.
+- Put the sovereign review lane FIRST on the half of the review it can carry (sub-doctrine
+  8.a, #133 slice 2 of 3, Option A: serial). `evaluate` decides the lane once:
+  `sovereign_lane` (enabled, a fresh heartbeat, and under `trusted_only` a same-repository
+  head) and `sovereign_carries` (that, and a trusted author). `review-fallback` becomes
+  `review-sovereign` ("Sovereign diff review"), runs before the paid `review`, and reports
+  `passed`, `findings`, `verdict` and `model`. The paid review waits for it: when the local
+  lane carries the diff half and returned a verdict, the reviewer is held to
+  `ReviewContract.json_schema([REQUIRES_WIDER_CONTEXT])` — rendered as
+  `__VIBEY_GH_REVIEW_WIDER_SCHEMA__` and chosen by a GitHub expression at run time — and
+  told the diff half is carried; otherwise it answers the full schema exactly as before. The
+  wider half asked alone reports its own `wider_summary` and `wider_findings`
+  (`ReviewContract.wider_summary_field` / `wider_findings_field`), so the two lanes never
+  write the same names. `vibey-gh pr-automation combine` (`vibey_gh.review_composition`,
+  `ReviewComposer` behind `ReviewComposerPort`) composes the verdict, replaces the `jq` that
+  listed the sixteen judgments, and emits `carried` (field to lane), `halves`, `findings`
+  and `repairable`. The gate names the lane behind each half. A failure carried by the
+  sovereign lane alone is never repaired: `repair` and `mirror-fork` also require
+  `repairable`, and a later evaluation of that head reviews it again
+  (`AutomationState.review_repairable`). An outside author's local verdict is held in
+  reserve and read only when the paid review returns no verdict. `local-review --role
+  sovereign|fallback` labels the verdict by the role it ran in. A frozen golden capture of
+  the previous gate and `jq` (`test/golden/`) pins that no heartbeat behaves exactly as
+  before and no credit exactly as the local fallback did.
+- Render the exact-head review's `--json-schema` from `ReviewContract.json_schema()` rather
+  than keeping a hand-written copy in `pr-automation.yml`. The template now carries
+  `__VIBEY_GH_REVIEW_SCHEMA__`, which `install.render_workflow` fills — compact, with any
+  apostrophe written as `\u0027` so the single-quoted `claude_args` argument cannot be broken
+  by a configured field. `ReviewContract` gains a `field_schemas` table (field name to JSON
+  Schema fragment, in schema key order) and `json_schema(halves)`, which renders the full
+  schema or either half on its own; `ReviewContractPort` declares both. The rendered schema
+  is byte-identical to the literal it replaces, and a test pins that. Slice 1 of 3 of #133:
+  no lane ordering changes yet.
+- Fix the gate's "local fallback found a blocking defect" branch, which could never fire.
+  `review-fallback` wrote a `findings` count but did not declare it as a job output, so
+  `needs.review-fallback.outputs.findings` was always empty and every local decline was
+  reported as "could not complete the review" — sending the reader away from a finding that
+  was in the job log. The test meant to guard it matched the paid review job's identical
+  `findings:` line instead; it now reads the fallback job itself, and a new test fails any
+  template that reads a `needs.<job>.outputs.<name>` the job never declares. The paid
+  `review` job's `findings` output, likewise declared and never written, is now written.
+- Correct the paper's commodity-thesis evidence (`docs/paper.md`) against the tracked
+  stress record, with dated correction notes: the "61 generations at 1.00 success,
+  1.4 ± 0.25 per minute" figures and the linear-then-superlinear latency law matched
+  nothing in `docs/sovereignty-stress-2026-08-30.md`, which itself falsifies both
+  latency models. The paragraph now reports 52/52 through N = 16, 102/107 from N = 2 to
+  32, and a 0.99–2.00 per minute band, and the "same structure in silicon" claim is
+  withdrawn (the-vibey-project/vibey#192).
+- Fix `conversation`'s pull-request check, which could never be true in production.
+  `evaluate` and `context` read `isPullRequest`, but `fetch_subject` never requested it and
+  could not have: it is not a `gh issue view --json` field, and `gh` rejects it rather than
+  ignoring it. Every thread therefore read as an issue, `may_change_files` was never true,
+  and the "act" path was unreachable. The tests missed it because they built the thread by
+  hand with `isPullRequest=True` and replaced `fetch_subject`. PR-ness is now read from the
+  one field `gh issue view` does serve that says so — `url`, `.../pull/N` against
+  `.../issues/N` — in a single place, `ConversationThread.is_pull_request`, declared by
+  `interfaces/conversation_interface.py`. New tests run the real `fetch_subject` against a
+  scripted `gh` on PATH (a shared `scripted_gh` fixture in `test/conftest.py`).
+- Fix mentions in inline pull-request review comments, which evaluated the wrong comment. The
+  workflow passes a review comment's ID for `pull_request_review_comment`, but review
+  comments are not part of `gh issue view`'s thread, so the lookup missed and silently fell
+  back to the newest issue-level comment — answering, and on a pull request acting on, a
+  request nobody made there. `ConversationThread.comment` now resolves an ID the thread
+  does not hold through `gh api repos/{repo}/pulls/comments/{id}` (the repository from
+  `github_state.repository()`, so `GH_REPO` is honoured), confirms it belongs to this pull
+  request, and otherwise raises: `conversation evaluate` and `context` exit nonzero with a
+  message naming the ID and the thread. No ID still means the newest comment. A review
+  comment's briefing now also carries the file, line and diff hunk it was written on,
+  placed after the request so truncation takes it first.
 
 - Fix `release-surfaces.yml`, which GitHub had been rejecting outright as an invalid
   workflow file — `(Line: 670, Col: 14): Exceeded max expression length 21000`. The

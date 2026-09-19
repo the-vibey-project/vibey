@@ -26,7 +26,7 @@ subscription login doesn't exist in a cluster.
   tini as PID 1 so SIGTERM reaches the worker's drain latch — ADR-0026) and
   a Helm chart (`deploy/helm/vibey/`: worker Deployment, in-cluster
   Postgres, KEDA `ScaledObject`, operator Deployment, `VibeyProject` CRD).
-  CI builds the image for amd64 + arm64 with four image contracts and runs
+  CI builds the image for amd64 + arm64, asserts each `Image contract - …` step, and runs
   a minikube job with four cluster contracts (projectless worker parks,
   in-cluster project is picked up, the `ScaledObject` reconciles against
   real Postgres, a worker drains promptly on SIGTERM).

@@ -14,23 +14,34 @@ Three pieces:
   and durably assigns the engine to the job; ``NoEligibleEngine`` becomes
   ``CapacityDeferred`` so an empty/unhealthy engine table defers the job
   instead of burning an attempt.
+- ``SpendMeteringLedger`` -- wraps the BUILD ledger a job's handler writes
+  through, forwards every event unchanged, and meters the spend by the one
+  ledger spend rule, so what the engine cost is known when the job settles.
 - ``RotationRecordingHandler`` -- wraps the constructed handler so the
   selected engine's health record sees the outcome: Success closes the
   circuit, a capacity Defer opens it (which is what makes the *next* claim
-  rotate away automatically).
+  rotate away automatically), an ENGINE-class Failure counts toward opening
+  it, and whatever the meter saw is charged to the engine either way.
 """
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import timedelta
 from uuid import UUID
 
-from vibey.application.dto import JobRecord
+from vibey.application.dto import EngineEvent, JobRecord
 from vibey.application.engine_health_service import EngineHealthService
 from vibey.application.engine_selector import EngineSelector
-from vibey.application.interfaces import Clock, EngineAdapter, JobHandler
+from vibey.application.interfaces import (
+    BuildLedger,
+    Clock,
+    EngineAdapter,
+    JobHandler,
+    SpendMeteringLedgerInterface,
+)
 from vibey.application.ports import JobRepository
-from vibey.application.worker import CapacityDeferred, Defer, Outcome, Success
+from vibey.application.worker import CapacityDeferred, Defer, Failure, Outcome, Success
 from vibey.domain.capacity import WindowExhausted
 from vibey.domain.effort import (
     BUILD_LADDER_EXHAUSTED,
@@ -39,9 +50,12 @@ from vibey.domain.effort import (
     effort_for_attempt,
     forces_rotation,
 )
-from vibey.domain.engine import EngineId, JobRequirement
+from vibey.domain.engine import ENGINE_ID_PARSER, EngineId, JobRequirement
 from vibey.domain.errors import EscalationExhausted, NoEligibleEngine
+from vibey.domain.interfaces.phase_timing_interface import LedgerSpendRuleInterface
+from vibey.domain.job import FailureClass
 from vibey.domain.phase import Phase
+from vibey.domain.phase_timing import LEDGER_SPEND_RULE
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,13 +98,21 @@ def selection_inputs_for_job(
     # not go back to the engine that wound down" constraint rides here.
     raw_excluded = job.requirement.get("excluded_engine_ids")
     if isinstance(raw_excluded, list | tuple):
-        excluded.update(EngineId(str(entry)) for entry in raw_excluded)
+        # An engine this worker cannot run is a vacuous exclusion. Keep the raw
+        # requirement on the job; only dispatch inputs drop unknown ids.
+        excluded.update(
+            engine
+            for entry in raw_excluded
+            if (engine := ENGINE_ID_PARSER.known(str(entry))) is not None
+        )
 
     if job.kind == "build.verify":
         # The diff review runs at LOW and must come from a different engine
         # than the implementer (phase-protocols.md 2.3).
-        implementer = str(job.requirement.get("implementer_engine_id", "") or "")
-        if implementer:
+        implementer = ENGINE_ID_PARSER.known(
+            str(job.requirement.get("implementer_engine_id", "") or "")
+        )
+        if implementer is not None:
             # ...but independence is the default, not an absolute. A pool
             # that cannot supply a second reviewer gets a self-review that
             # says so, because the alternative measured on a one-engine
@@ -101,9 +123,9 @@ def selection_inputs_for_job(
             # "is the pool exactly one engine" so it also holds when a
             # durable excluded_engine_ids list has already taken the other
             # candidates -- a rule, not a special case (ADR-0018).
-            remaining = None if pool is None else pool - excluded - {EngineId(implementer)}
+            remaining = None if pool is None else pool - excluded - {implementer}
             if remaining is None or remaining:
-                excluded.add(EngineId(implementer))
+                excluded.add(implementer)
             else:
                 independence_waived = True
         effort = Effort.LOW
@@ -117,7 +139,7 @@ def selection_inputs_for_job(
             # exhausted-ladder Park. Select as if HIGH so a needless
             # nack/crash can't preempt the human gate.
             effort = Effort.HIGH
-        previous = EngineId(job.assigned_engine) if job.assigned_engine else None
+        previous = ENGINE_ID_PARSER.known(job.assigned_engine or "")
         if attempt > 1 and previous is not None:
             previous_effort = effort_for_attempt(base, min(attempt - 1, BUILD_LADDER_EXHAUSTED))
             if forces_rotation(previous_effort, effort):
@@ -149,7 +171,7 @@ class SelectingEngineProvider:
         owner: str,
         allow_list: frozenset[EngineId] | None = None,
         backoff: timedelta = timedelta(minutes=5),
-        standby_engine: EngineId | None = None,
+        local_engines: tuple[EngineId, ...] = (),
     ) -> None:
         self._selector = selector
         self._health = health
@@ -157,10 +179,11 @@ class SelectingEngineProvider:
         self._jobs = jobs
         self._clock = clock
         self._owner = owner
-        self._allow_list = allow_list
         self._backoff = backoff
-        self._standby_engine = standby_engine
         self._pool = frozenset(adapters) if allow_list is None else frozenset(adapters) & allow_list
+        # Local engines have no cron that records their health, so each selection
+        # refreshes theirs first -- only for those this worker can dispatch to.
+        self._local_engines = tuple(engine for engine in local_engines if engine in self._pool)
 
     @property
     def pool(self) -> frozenset[EngineId]:
@@ -173,21 +196,28 @@ class SelectingEngineProvider:
 
     async def select_for(self, job: JobRecord) -> EngineAdapter:
         inputs = selection_inputs_for_job(job, pool=self._pool)
-        if self._standby_engine is not None:
-            standby = self._adapters.get(self._standby_engine)
-            if standby is not None:
-                preflight = await standby.preflight()
-                await self._health.update_from_preflight(
-                    job.project_id,
-                    self._standby_engine,
-                    preflight,
-                    conformance_ok=preflight.installed and preflight.auth_ok,
-                )
+        for engine_id in self._local_engines:
+            # A local engine's `doctor` is its readiness check: the server is up, the
+            # model is pulled, and (for claudeloop-local) the model answers a tool
+            # call. That is what makes it eligible, and it is refreshed here because
+            # nothing else would -- the price ADR-0015 accepted for qwenloop, now paid
+            # for every local engine the operator switched on (ADR-0038).
+            preflight = await self._adapters[engine_id].preflight()
+            await self._health.update_from_preflight(
+                job.project_id,
+                engine_id,
+                preflight,
+                conformance_ok=preflight.installed and preflight.auth_ok,
+            )
         try:
+            # The pool, never None: the selector reads every health row the project
+            # has, and a row outlives the switch that created it. Offered an engine
+            # this worker has no adapter for -- a local engine switched off since,
+            # now *preferred* by tier -- it would defer the job forever.
             engine_id, _selection = await self._selector.select_engine(
                 job.project_id,
                 inputs.requirement,
-                allow_list=self._allow_list,
+                allow_list=self._pool,
                 affinity_engine=inputs.affinity,
             )
         except NoEligibleEngine as exc:
@@ -206,13 +236,73 @@ class SelectingEngineProvider:
         return adapter
 
 
+class SpendMeteringLedger:
+    """A ``BuildLedger`` that meters the spend recorded through it.
+
+    Declared by ``interfaces/ledger.py::SpendMeteringLedgerInterface``. Every
+    event goes to the wrapped ledger first and unchanged; only once that write
+    has returned is the event's spend -- by ``LedgerSpendRule``, the same rule
+    the budget brake sums (ADR-0017) -- added to ``dollars``. So the meter
+    never counts an event the ledger did not take, and it never keeps a
+    second opinion of what a dollar is.
+
+    Build one per job. ``dollars`` is then that job's engine session spend,
+    which is what ``RotationRecordingHandler`` charges to the engine.
+    """
+
+    def __init__(
+        self,
+        inner: BuildLedger,
+        *,
+        spend_rule: LedgerSpendRuleInterface = LEDGER_SPEND_RULE,
+    ) -> None:
+        self._inner = inner
+        self._spend_rule = spend_rule
+        self._dollars = 0.0
+
+    @property
+    def dollars(self) -> float:
+        return self._dollars
+
+    async def record(
+        self,
+        *,
+        project_id: UUID,
+        cycle: int,
+        job_id: UUID,
+        engine_id: EngineId | None,
+        correlation_id: UUID,
+        causation_id: UUID | None = None,
+        event: EngineEvent,
+    ) -> None:
+        await self._inner.record(
+            project_id=project_id,
+            cycle=cycle,
+            job_id=job_id,
+            engine_id=engine_id,
+            correlation_id=correlation_id,
+            causation_id=causation_id,
+            event=event,
+        )
+        spend = self._spend_rule.spend_of_payload(event.kind, event.payload)
+        if spend is not None:
+            self._dollars += spend.dollars
+
+
 class RotationRecordingHandler:
     """Feeds the selected engine's outcome back into its health record.
 
     Success closes the circuit; a capacity Defer records a rejection whose
     probe deadline is the Defer's own retry_at (vibey's scheduling state,
     not a fabricated vendor payload) -- opening the circuit is what makes
-    the next claim's selection rotate to a different engine.
+    the next claim's selection rotate to a different engine. An ENGINE-class
+    Failure is recorded as one, which opens the circuit at the failure
+    policy's threshold; WORK and VIBEY failures are the code's or vibey's
+    fault, never the engine's, and record nothing.
+
+    With a ``meter`` -- the ``SpendMeteringLedger`` the inner handler writes
+    through -- the job's spend is charged to the engine however the job
+    ends, including when the handler raises: the money was spent either way.
     """
 
     def __init__(
@@ -222,14 +312,19 @@ class RotationRecordingHandler:
         health: EngineHealthService,
         project_id: UUID,
         engine_id: EngineId,
+        meter: SpendMeteringLedgerInterface | None = None,
     ) -> None:
         self._inner = inner
         self._health = health
         self._project_id = project_id
         self._engine_id = engine_id
+        self._meter = meter
 
     async def handle(self, job: JobRecord) -> Outcome:
-        outcome = await self._inner.handle(job)
+        try:
+            outcome = await self._inner.handle(job)
+        finally:
+            await self._charge_spend()
         if isinstance(outcome, Success):
             await self._health.record_success(self._project_id, self._engine_id)
         elif isinstance(outcome, Defer) and outcome.capacity:
@@ -242,4 +337,17 @@ class RotationRecordingHandler:
                 self._engine_id,
                 WindowExhausted(resets_at=outcome.retry_at),
             )
+        elif isinstance(outcome, Failure) and outcome.failure_class is FailureClass.ENGINE:
+            await self._health.record_failure(self._project_id, self._engine_id)
         return outcome
+
+    async def _charge_spend(self) -> None:
+        """Charge the meter's total to the engine, if there is anything to
+        charge. A total that is not a finite positive number is skipped
+        rather than refused: this runs in a ``finally``, and raising here
+        would replace the handler's own exception with a bookkeeping one."""
+        if self._meter is None:
+            return
+        dollars = self._meter.dollars
+        if math.isfinite(dollars) and dollars > 0:
+            await self._health.record_spend(self._project_id, self._engine_id, dollars)

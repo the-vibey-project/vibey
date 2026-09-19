@@ -11,8 +11,10 @@
 > designed, the text says so and marks the design *not implemented* instead
 > of deleting it. The main differences from the original plan:
 >
-> - There are **five** engines. `qwenloop` is an opt-in local standby
->   (ADR-0015) and the sovereign DESIGN provider (ADR-0027).
+> - There are **six** engine ids over five runners. `qwenloop` and
+>   `claudeloop-local` (the claudeloop binary on a local backend profile) are
+>   opt-in local engines, **preferred first** (ADR-0015, ADR-0038); qwenloop's
+>   model is also the sovereign DESIGN/DECOMPOSE provider (ADR-0027).
 > - Engine selection (SWRR) runs only for `build.implement` and `build.verify`.
 >   Every other job kind runs on a single injected provider or on no engine
 >   (see [phase-protocols.md](phase-protocols.md) §8).
@@ -128,13 +130,14 @@ missing, it falls back to the highest projection at or below it.
 live in `domain/engine.py`.
 
 All descriptors live in one module, `infrastructure/engines/descriptors.py`.
-`DEFAULT_DESCRIPTORS` holds the four paid engines, `ALL_DESCRIPTORS` adds
-`QWENLOOP`, and `BY_ENGINE_ID` indexes them. Descriptors are **data, not code
+`DEFAULT_DESCRIPTORS` holds the four paid engines, `LOCAL_DESCRIPTORS` the two
+local ones (`QWENLOOP`, `CLAUDELOOP_LOCAL`), `ALL_DESCRIPTORS` all six, and
+`BY_ENGINE_ID` indexes them. Descriptors are **data, not code
 paths**. A new engine needs a new `EngineId`, a descriptor, a capacity
 classifier, an event-type map entry (§8.3), and an adapter configuration.
-`domain/rotation.py` does not change. The fifth engine, `qwenloop`, landed
-this way. It also carries a standby rule in `application/engine_selector.py`
-(§5.5).
+`domain/rotation.py` does not change. The fifth and sixth engines, `qwenloop`
+and `claudeloop-local`, landed this way; their `tier = LOCAL` is what the
+selector's tier preference reads (§5.5).
 
 ---
 
@@ -291,9 +294,12 @@ cap before every attempt. It parks a `budget_exhausted` gate when the cap is
 reached. On attempts after the first, it also parks when the payload's
 `projected_cost_per_attempt` would exceed the cap. Answering
 `--raw '{"max_dollars": N}'` or `--raw '{"max_turns": N}'` raises the cap for
-that job. With neither setting, spend is uncapped. The `vibey.toml` keys
-`max_dollars_per_cycle` and `max_turns_per_item` are parsed, but the brake
-ignores them, and only `vibey cost` displays the former.
+that job only; the stored cap is unchanged. With neither setting, spend is
+uncapped. The worker and `vibey cost` read both caps through one parser,
+`LedgerBudgetSource.caps_from_config`, so the cap `vibey cost` prints is the
+cap the brake enforces. The `vibey.toml` keys `max_dollars_per_cycle` and
+`max_turns_per_item` are parsed into the config model, but nothing reads
+them at runtime: not the brake, and not `vibey cost`.
 
 ---
 
@@ -407,26 +413,39 @@ records the reason in `last_error`, and gives back the attempt. The job
 becomes claimable again once `run_after` passes. No `NOTIFY` is sent when a
 circuit half-opens; half-open is evaluated lazily at the next selection.
 
-### 5.5 The qwenloop standby tier
+### 5.5 The local tier, preferred first
 
-`qwenloop` (ADR-0015) is opt-in: set `[features] qwenloop = true` in
-`vibey.toml` or `VIBEY_FEATURE_QWENLOOP=1`. The environment variable, when
-set, overrides the `vibey.toml` flag in the worker and in `vibey doctor`.
-Configuration parsing reads only the `vibey.toml` flag: without it,
-`qwenloop` in `[engines] enabled` or in a per-phase engine list is rejected.
+*Was "the qwenloop standby tier"; amended 2026-09-18 by ADR-0038.*
 
-When the feature is on, `bootstrap.py` adds a qwenloop `LoopProcessAdapter`
-and passes `standby_engine=QWENLOOP` to `SelectingEngineProvider`. Before each
-selection, the provider preflights the standby and refreshes its health row
-with `conformance_ok = installed and auth_ok`. qwenloop therefore does not
-need a recorded `vibey doctor --conformance` run. After `eligible()` runs,
-`EngineSelector` drops qwenloop from the candidates whenever any paid engine
-is eligible, so a zero-dollar local model cannot crowd paid engines out of
-SWRR. qwenloop is selected only when no paid engine is eligible.
+The local engines are opt-in, each behind its own switch: `qwenloop`
+(`[features] qwenloop` / `VIBEY_FEATURE_QWENLOOP`, ADR-0015) and
+`claudeloop-local` (`[features] claudeloop_local` /
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL`, ADR-0038). The environment variable, when
+set, overrides the flag. One resolver,
+`infrastructure/engines/local_engines.py::LocalEngineSettings`, answers for
+bootstrap, `vibey worker`, `vibey work` and `vibey doctor`. Configuration
+parsing rejects either engine in `[engines] enabled` or a per-phase engine list
+until its feature is on.
 
-Separately, qwenloop is the sovereign DESIGN provider (ADR-0027).
-`vibey work --provider qwenloop` and `vibey worker --provider qwenloop` run
-DESIGN jobs on qwenloop directly, outside rotation.
+When a switch is on, `bootstrap.py` adds that engine's `LoopProcessAdapter`
+(qwenloop with the `VIBEY_OLLAMA_URL` overlay, claudeloop-local built from
+`[engines.claudeloop_local]`) and passes the enabled ids as `local_engines` to
+`SelectingEngineProvider`. Before each selection the provider preflights every
+enabled local engine in its pool and refreshes its health row with
+`conformance_ok = installed and auth_ok`, so a local engine needs no recorded
+`vibey doctor --conformance` run.
+
+Selection then prefers the LOCAL tier (sub-doctrine 8.a): `EngineSelector`
+builds a candidate for every eligible engine, and `domain/rotation.py::
+preferred_tier` offers SWRR only the candidates of the first tier in
+`TIER_PREFERENCE = (LOCAL, PAID)` that holds one with a positive effective
+weight. A paid engine is selected only when no local engine is eligible. The
+provider passes its pool as the allow-list, so a stale health row for a local
+engine switched off since can never be preferred.
+
+Separately, qwenloop's model is the sovereign DESIGN and DECOMPOSE provider
+(ADR-0027): `vibey work` and `vibey worker` use it when `--provider qwenloop` is
+given, and by default whenever a local engine is switched on (ADR-0038).
 
 ---
 
@@ -438,10 +457,11 @@ DESIGN jobs on qwenloop directly, outside rotation.
 stateDiagram-v2
     [*] --> closed
     closed --> open: capacity rejection recorded
+    closed --> open: 3rd consecutive ENGINE failure (probe_next_at set)
     open --> half_open: resets_at or probe_next_at reached (evaluated at selection)
     open --> half_open: auth restored (preflight, AuthenticationFailed only)
     half_open --> closed: selected run succeeds
-    half_open --> open: rejected again
+    half_open --> open: rejected again, or ENGINE failure at the threshold
     closed --> closed: success (reset failure count)
 ```
 
@@ -451,8 +471,25 @@ The circuit is the `circuit` column of each project's `engine_health` row.
 - `record_capacity_rejection` opens the circuit on **every** recorded
   rejection (`CreditsExhausted`, `WindowExhausted`, or `AuthenticationFailed`)
   and increments `consecutive_fail`.
+- `record_failure` records one `ENGINE`-class failure (§6.3): it increments
+  `consecutive_fail` and the failure EWMA, and once `consecutive_fail`
+  reaches the threshold it opens the circuit **and** sets `probe_next_at`.
+  Both at once, never one without the other: an `OPEN` circuit is never
+  selected, and the selector half-opens one only when a scheduled time has
+  passed, so a circuit opened with no probe time could never close again. The
+  same write clears `capacity_state` and `resets_at` -- the circuit is now open
+  for a failure, and a stale `resets_at` would half-open it immediately.
 - `record_success` closes the circuit and clears the capacity state,
   `resets_at`, `probe_next_at`, the probe attempt, and `consecutive_fail`.
+
+The threshold and the probe backoff are `domain/circuit.py::EngineFailurePolicy`:
+`ENGINE_FAILURE_THRESHOLD = 3` (the "opens after 3" `FailureClass.ENGINE` has
+always promised), a first probe 5 minutes after the trip, doubling with every
+further failure to a 30-minute cap -- the same 5-minute floor and 30-minute cap
+as `CreditsExhausted`. Each is a field with a default; `EngineHealthService`
+takes the policy as a constructor argument. `consecutive_fail` counts capacity
+rejections as well as engine failures, and only a success resets it, so two
+rejections followed by a crash also trip it.
 
 `RotationRecordingHandler` wraps the `build.implement` and `build.verify`
 handlers. A `Success` calls `record_success`. A capacity-classed `Defer`
@@ -461,11 +498,14 @@ calls `record_capacity_rejection` with
 caller of `record_capacity_rejection`. A circuit opened by a `build.implement`
 capacity rejection therefore half-opens once the handler's 5-minute capacity
 backoff passes. Non-capacity `Defer`s, such as repair waits and lock
-contention, never touch the circuit.
+contention, never touch the circuit. A `Failure` whose class is `ENGINE`
+calls `record_failure`; `WORK` and `VIBEY` failures record nothing.
 
-The original plan also opened the circuit after "3 consecutive transient
-failures". That is *not implemented*: `consecutive_fail` is recorded, but no
-code compares it with a threshold.
+A failure below the threshold moves only the counters. So a half-open probe
+that fails with one `ENGINE` failure, on an engine whose count is still below
+3, leaves the circuit `OPEN` with its old, already-passed probe time -- the
+engine is probed again on the next claim rather than backed off. Re-opening
+on any failed probe regardless of the count is not implemented.
 
 ### 6.2 Probe timing — where credits ≠ rate limit lives
 
@@ -508,8 +548,7 @@ mark a healthy engine unhealthy because the project has a bug.
 ```
 FailureClass (domain/job.py):
   CAPACITY     → circuit opens                 (provider said no)
-  ENGINE       → designed: circuit opens after 3 (crash, hang, malformed output)
-                 today: classified, but nothing opens the circuit on it
+  ENGINE       → circuit opens after 3, with a probe time (crash, kill, timeout)
   WORK         → circuit untouched             (tests failed, compile error)
   VIBEY        → circuit untouched, job retries (our bug)
 ```
@@ -519,8 +558,18 @@ classification. A WORK signal in the output tail wins over any incidental
 traceback. A zero exit code is WORK. Engine markers, or exit codes 124, 137,
 and -9, are ENGINE. The adapter exposes this as `attribute()`, because only
 the adapter can tell a non-zero exit caused by `pytest` from one caused by
-the runner dying. No application code calls `attribute()` yet, so the
-circuit responds only to capacity-classed `Defer`s (§6.1).
+the runner dying.
+
+Both BUILD handlers ask it. When a run ends without a completing verdict,
+`build_engine_run.py::RunOutcome.incomplete_failure_class` returns `WORK` if
+there is no exit code or a clean one -- what the handlers always returned --
+and otherwise `engine.attribute(exit_code, "")`. So a runner killed or timed
+out mid-session (137, -9, 124) is now an `ENGINE` failure against that engine,
+and the failure detail names the exit code. An ordinary non-zero exit such as
+1 stays `WORK`. The handlers hold no output tail, so the tail markers do not
+come into it; only the exit code does. Before issue #209 both handlers
+hard-coded `WORK`, and nothing in production could produce an `ENGINE`
+failure at all.
 
 ---
 
@@ -694,7 +743,20 @@ codexloop    0.3.0      open       1      61         $6.12
 The columns are `engine_id`, `version`, `circuit`, `consecutive_fail`,
 `selected_count`, and `cost_usd_cycle`. Base weight, effective weight,
 saturation, and the last capacity state are stored or computable but not yet
-shown. `vibey cost` and the ledger carry spend.
+shown.
+
+**`COST` is the engine's BUILD-session spend, and it accumulates across
+cycles.** The composition root builds a `SpendMeteringLedger` for every
+`build.implement` and `build.verify` job, around the BUILD ledger that job's
+handler writes through. It forwards every event unchanged and sums the spend
+by `domain/phase_timing.py::LedgerSpendRule` -- the same rule the budget brake
+applies -- and `RotationRecordingHandler` charges the total to the selected
+engine with `EngineHealthService.record_spend` when the job settles, whatever
+the outcome, and even when the handler raises. Nothing resets the column,
+despite its name, and DESIGN's spend is not in it. The cycle's own total,
+DESIGN included, is the ledger's: `vibey cost` prints it. Until issue #209 the
+column was fed only by `record_selection`'s `cost_usd` argument, which its one
+caller never passed, so it read `$0.00` everywhere.
 
 **Planned exports (not implemented).** `infrastructure/otel.py` holds an
 in-memory `TelemetryMetrics` recorder (selections, queue latency, phase

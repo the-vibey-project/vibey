@@ -31,9 +31,11 @@ import re
 import subprocess
 from dataclasses import asdict, dataclass, field
 from typing import Any, cast
+from urllib.parse import urlparse
 
 from vibey_gh import github_state
 from vibey_gh.config import GhConfig, normalise_actor
+from vibey_gh.interfaces.conversation_interface import ConversationThreadInterface
 from vibey_gh.issue_automation import sanitize
 
 STATE_MARKER = "vibey-gh-conversation"
@@ -142,6 +144,78 @@ def matches_comment(comment: dict[str, Any], wanted: str) -> bool:
     return wanted in {comment_identity(comment), str(comment.get("id") or "")}
 
 
+class ConversationThread(ConversationThreadInterface):
+    """One fetched issue or pull request, and the comments a mention can name on it.
+
+    Built from what `fetch_subject` returns, the `gh issue view` shape. It is the one place
+    either question below is answered, so `evaluate`, `context` and the command line cannot
+    disagree about what kind of thread they are looking at or which comment a mention is.
+    """
+
+    def __init__(self, subject: dict[str, Any]) -> None:
+        self._subject = subject
+
+    @property
+    def number(self) -> int:
+        return int(self._subject["number"])
+
+    @property
+    def is_pull_request(self) -> bool:
+        """Read from the thread's own URL: `.../pull/N` for a pull request, else an issue.
+
+        `gh issue view` serves a pull request as readily as an issue and has no field that
+        names the difference. `isPullRequest`, which this was once read from, is not one of
+        its JSON fields — `gh` rejects it rather than ignoring it — so it was never
+        requested, never present, and every thread read as an issue: no trusted request on
+        a pull request was ever allowed to change a file. The URL is the field that says.
+        """
+        path = urlparse(str(self._subject.get("url") or "")).path
+        segments = [part for part in path.split("/") if part]
+        return len(segments) >= 2 and segments[-2] == "pull"
+
+    def comment(self, wanted: str) -> dict[str, Any]:
+        """The comment `wanted` names, or the newest one on the thread when it is empty.
+
+        A pull request carries two kinds of comment and `gh issue view` returns only one of
+        them. A comment written on a line of the diff is a *review* comment, reachable only
+        through the pull request review API, and the workflow hands over the ID of whichever
+        kind mentioned the trigger — so an ID the thread does not hold is looked up there.
+
+        An ID that names nothing — not on the thread, not a review comment on this pull
+        request — is an error. It never falls back to the newest comment, which would
+        answer, and on a pull request act on, a request nobody made in the comment that was
+        actually written.
+        """
+        comments = [item for item in self._subject.get("comments") or [] if isinstance(item, dict)]
+        if not wanted:
+            return comments[-1] if comments else {}
+        for item in comments:
+            if matches_comment(item, wanted):
+                return item
+        if self.is_pull_request and wanted.isdigit():
+            return self._review_comment(wanted)
+        raise RuntimeError(
+            f"comment {wanted} is not on #{self.number}; "
+            "refusing to answer a different comment in its place"
+        )
+
+    def _review_comment(self, wanted: str) -> dict[str, Any]:
+        """A review comment by number, confirmed to belong to this pull request."""
+        endpoint = f"repos/{github_state.repository()}/pulls/comments/{wanted}"
+        try:
+            found = github_state.gh_json("api", endpoint)
+        except RuntimeError as exc:
+            raise RuntimeError(
+                f"comment {wanted} is neither on #{self.number} nor a review comment on it: {exc}"
+            ) from exc
+        # The endpoint is repository-wide, so a review comment from any other pull request
+        # resolves too. Answering it here would put one thread's request on another.
+        pull = str(found.get("pull_request_url") or "") if isinstance(found, dict) else ""
+        if pull.rstrip("/").rsplit("/", 1)[-1] != str(self.number):
+            raise RuntimeError(f"review comment {wanted} is not on pull request #{self.number}")
+        return cast(dict[str, Any], found)
+
+
 def _is_own_comment(author: str, cfg: GhConfig) -> bool:
     """The automation's own identities, which must never be answered.
 
@@ -173,7 +247,7 @@ def evaluate(
     comment_id = comment_identity(comment)
     author = str((comment.get("author") or comment.get("user") or {}).get("login", ""))
     body = str(comment.get("body") or "")
-    is_pr = bool(subject.get("isPullRequest") or subject.get("pull_request"))
+    is_pr = ConversationThread(subject).is_pull_request
     trusted = _trusted(author, cfg)
     state = stored or ConversationState(subject=number)
 
@@ -235,7 +309,7 @@ def context(
 ) -> str:
     """Render the thread as a bounded, explicitly untrusted briefing."""
     number = int(subject["number"])
-    kind = "pull request" if subject.get("isPullRequest") else "issue"
+    kind = "pull request" if ConversationThread(subject).is_pull_request else "issue"
     author = str((comment.get("author") or comment.get("user") or {}).get("login", "")) or "unknown"
     lines = [
         f"# Untrusted conversation on {kind} #{number}",
@@ -266,6 +340,22 @@ def context(
         str(comment.get("body") or "").strip() or "(empty)",
         "````",
     ]
+    if comment.get("path"):
+        # A review comment is written on a line of the diff, and "handle the empty case
+        # here" means nothing without the line it was written on. The hunk is contributor
+        # code, so it sits in the same untrusted fence as everything else, and after the
+        # request so that truncation takes it before it takes the request.
+        line = comment.get("line") or comment.get("original_line")
+        where = f"`{sanitize(str(comment['path']), limit=300)}`"
+        where += f", line {line}" if line else ""
+        lines += [
+            "",
+            f"Written as a review comment on {where}, against this part of the diff:",
+            "",
+            "````diff",
+            str(comment.get("diff_hunk") or "").strip() or "(no diff hunk was returned)",
+            "````",
+        ]
     document = "\n".join(lines).rstrip() + "\n"
     encoded = document.encode("utf-8")
     if len(encoded) > max_bytes:
@@ -277,7 +367,11 @@ def context(
 
 
 def fetch_subject(number: int) -> dict[str, Any]:
-    """One issue or pull request, with its thread. `gh issue view` serves both."""
+    """One issue or pull request, with its thread. `gh issue view` serves both.
+
+    It does not say which it served except through `url`, which is why `url` is requested:
+    `ConversationThread.is_pull_request` reads the answer from it.
+    """
     return cast(
         dict[str, Any],
         github_state.gh_json(

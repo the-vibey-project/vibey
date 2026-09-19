@@ -317,50 +317,10 @@ def test_dev_version_strips_non_digits_and_survives_a_digitless_build(tmp_path):
 # ---------------------------------------------------------------- merge train
 
 
-@pytest.fixture
-def fake_gh(tmp_path: Path, monkeypatch) -> Path:
-    """A `gh` on PATH that replays scripted answers and records what it was asked.
-
-    Answers live in `answers.json`, keyed by the joined argv; `calls.txt` records every
-    invocation, so a test can assert on the command line the module actually built.
-    """
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    gh = bin_dir / "gh"
-    gh.write_text(f"""#!/usr/bin/env python3
-import json, pathlib, sys
-here = pathlib.Path({str(bin_dir)!r})
-with (here / "calls.txt").open("a") as fh:
-    fh.write(" ".join(sys.argv[1:]) + "\\n")
-answers = json.loads((here / "answers.json").read_text())
-entry = answers.get(" ".join(sys.argv[1:]))
-if entry is None:
-    sys.stderr.write("no scripted answer\\n")
-    raise SystemExit(3)
-sys.stdout.write(entry.get("out", ""))
-sys.stderr.write(entry.get("err", ""))
-raise SystemExit(entry.get("code", 0))
-""")
-    gh.chmod(0o755)
-    (bin_dir / "answers.json").write_text("{}")
-    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
-    return bin_dir
-
-
-def script(bin_dir: Path, answers: dict) -> None:
-    (bin_dir / "answers.json").write_text(json.dumps(answers))
-
-
-def calls(bin_dir: Path) -> list[str]:
-    path = bin_dir / "calls.txt"
-    return path.read_text().splitlines() if path.exists() else []
-
-
 def test_open_pull_requests_lists_then_views_each_one(fake_gh):
     cfg = GhConfig(root=Path.cwd(), integration_branch="develop")
     listing = "pr list --base develop --state open --json number --jq sort_by(.number)"
-    script(
-        fake_gh,
+    fake_gh.script(
         {
             listing: {"out": json.dumps([{"number": 4}, {"number": 7}])},
             f"pr view 4 --json {merge_train._PR_FIELDS}": {
@@ -376,8 +336,7 @@ def test_open_pull_requests_lists_then_views_each_one(fake_gh):
 
 def test_an_empty_listing_yields_no_pull_requests(fake_gh):
     cfg = GhConfig(root=Path.cwd(), integration_branch="develop")
-    script(
-        fake_gh,
+    fake_gh.script(
         {"pr list --base develop --state open --json number --jq sort_by(.number)": {"out": ""}},
     )
     assert merge_train.open_pull_requests(cfg) == []
@@ -385,44 +344,44 @@ def test_an_empty_listing_yields_no_pull_requests(fake_gh):
 
 def test_a_failing_gh_call_raises_with_its_stderr(fake_gh):
     cfg = GhConfig(root=Path.cwd(), integration_branch="develop")
-    script(fake_gh, {})
+    fake_gh.script({})
     with pytest.raises(RuntimeError, match="no scripted answer"):
         merge_train.open_pull_requests(cfg)
 
 
 def test_merge_prefers_a_plain_merge(fake_gh):
-    script(fake_gh, {"pr merge 5 --squash": {"code": 0}})
+    fake_gh.script({"pr merge 5 --squash": {"code": 0}})
     assert merge_train.merge(5) == (True, False, "")
-    assert calls(fake_gh) == ["pr merge 5 --squash"]
+    assert fake_gh.calls() == ["pr merge 5 --squash"]
 
 
 def test_merge_injects_a_squash_body_when_given_one(fake_gh):
     """The trailer rides in the squash body. A bot's pull request body never carries it,
     and without this the train manufactures the exact trailer-less commit the provenance
     check exists to refuse — five of which once blocked a promotion outright."""
-    script(fake_gh, {"pr merge 5 --squash --body deps\n\nMade-With: x": {"code": 0}})
+    fake_gh.script({"pr merge 5 --squash --body deps\n\nMade-With: x": {"code": 0}})
     assert merge_train.merge(5, "squash", "deps\n\nMade-With: x") == (True, False, "")
-    assert calls(fake_gh)[0].startswith("pr merge 5 --squash --body")
+    assert fake_gh.calls()[0].startswith("pr merge 5 --squash --body")
 
 
 def test_merge_never_injects_a_body_into_a_rebase(fake_gh):
     """A rebase preserves the branch's own commits; --body would be rejected by gh."""
-    script(fake_gh, {"pr merge 5 --rebase": {"code": 0}})
+    fake_gh.script({"pr merge 5 --rebase": {"code": 0}})
     assert merge_train.merge(5, "rebase", "ignored") == (True, False, "")
-    assert calls(fake_gh) == ["pr merge 5 --rebase"]
+    assert fake_gh.calls() == ["pr merge 5 --rebase"]
 
 
 def test_merge_falls_back_to_admin_and_reports_the_bypass(fake_gh):
-    script(fake_gh, {"pr merge 5 --rebase --admin": {"code": 0}})
+    fake_gh.script({"pr merge 5 --rebase --admin": {"code": 0}})
     assert merge_train.merge(5, "rebase") == (True, True, "")
-    assert calls(fake_gh)[-1].endswith("--admin")
+    assert fake_gh.calls()[-1].endswith("--admin")
 
 
 def test_merge_reports_failure_when_even_admin_is_refused(fake_gh):
     """The third element is the diagnosis. Discarding it once turned a token-scope
     problem into an hour of ruleset archaeology: every failure read "the ruleset
     refused it" while the API was naming the actual cause the whole time."""
-    script(fake_gh, {})
+    fake_gh.script({})
     merged, bypassed, error = merge_train.merge(5)
     assert (merged, bypassed) == (False, True)
     assert error  # the scripted stub's own refusal text, but never empty
@@ -447,8 +406,7 @@ def test_only_same_repo_topic_branches_are_cleanup_candidates(pr, expected):
 
 
 def test_topic_branch_cleanup_uses_the_exact_ref(fake_gh):
-    script(
-        fake_gh,
+    fake_gh.script(
         {
             "repo view --json nameWithOwner": {"out": '{"nameWithOwner":"o/r"}'},
             "api repos/o/r/git/refs/heads/fix/thing --method DELETE": {},
@@ -458,8 +416,7 @@ def test_topic_branch_cleanup_uses_the_exact_ref(fake_gh):
 
 
 def test_topic_branch_cleanup_reports_api_refusal(fake_gh):
-    script(
-        fake_gh,
+    fake_gh.script(
         {"repo view --json nameWithOwner": {"out": '{"nameWithOwner":"o/r"}'}},
     )
     assert merge_train.delete_head_branch({"headRefName": "fix/thing"}) is False
@@ -835,8 +792,7 @@ def a_held_verdict(number: int = 7) -> merge_train.Verdict:
 
 def test_holding_labels_the_pull_request_and_mentions_the_owner(fake_gh):
     cfg = GhConfig(root=Path.cwd(), owner="theowner")
-    script(
-        fake_gh,
+    fake_gh.script(
         {
             "pr edit 7 --add-label needs-human-review": {},
             "pr view 7 --json comments -q .comments[].body": {"out": "some unrelated comment\n"},
@@ -845,7 +801,7 @@ def test_holding_labels_the_pull_request_and_mentions_the_owner(fake_gh):
     )
     merge_train.hold_for_review(a_held_verdict(), cfg)
 
-    joined = "\n".join(calls(fake_gh))
+    joined = "\n".join(fake_gh.calls())
     assert "pr edit 7 --add-label needs-human-review" in joined
     assert "@theowner" in joined and "@outsider" in joined
     assert "awaiting your review" in joined
@@ -855,20 +811,19 @@ def test_a_missing_label_is_created_then_applied(fake_gh):
     cfg = GhConfig(root=Path.cwd(), owner="theowner")
     # No scripted answer for `pr edit`, so it fails — as it does when the label does not
     # exist in the repository yet.
-    script(fake_gh, {"pr view 7 --json comments -q .comments[].body": {"out": ""}})
+    fake_gh.script({"pr view 7 --json comments -q .comments[].body": {"out": ""}})
     merge_train.hold_for_review(a_held_verdict(), cfg)
 
-    made = [c for c in calls(fake_gh) if c.startswith("label create")]
+    made = [c for c in fake_gh.calls() if c.startswith("label create")]
     assert made and "needs-human-review" in made[0] and "D93F0B" in made[0]
     # and it retries the edit afterwards
-    assert len([c for c in calls(fake_gh) if c.startswith("pr edit 7")]) == 2
+    assert len([c for c in fake_gh.calls() if c.startswith("pr edit 7")]) == 2
 
 
 def test_the_owner_is_mentioned_only_once(fake_gh):
     """Repeating it every week would train the owner to ignore it."""
     cfg = GhConfig(root=Path.cwd(), owner="theowner")
-    script(
-        fake_gh,
+    fake_gh.script(
         {
             "pr edit 7 --add-label needs-human-review": {},
             "pr view 7 --json comments -q .comments[].body": {
@@ -877,31 +832,31 @@ def test_the_owner_is_mentioned_only_once(fake_gh):
         },
     )
     merge_train.hold_for_review(a_held_verdict(), cfg)
-    assert not [c for c in calls(fake_gh) if c.startswith("pr comment")]
+    assert not [c for c in fake_gh.calls() if c.startswith("pr comment")]
 
 
 def test_without_a_configured_owner_nobody_is_mentioned(fake_gh):
     cfg = GhConfig(root=Path.cwd(), owner="")
-    script(fake_gh, {"pr edit 7 --add-label needs-human-review": {}})
+    fake_gh.script({"pr edit 7 --add-label needs-human-review": {}})
     merge_train.hold_for_review(a_held_verdict(), cfg)
-    assert not [c for c in calls(fake_gh) if c.startswith("pr comment")]
+    assert not [c for c in fake_gh.calls() if c.startswith("pr comment")]
 
 
 def test_an_empty_label_skips_labelling_but_still_notifies(fake_gh):
     cfg = GhConfig(root=Path.cwd(), owner="theowner")
-    script(fake_gh, {"pr view 7 --json comments -q .comments[].body": {"out": ""}})
+    fake_gh.script({"pr view 7 --json comments -q .comments[].body": {"out": ""}})
     merge_train.hold_for_review(a_held_verdict(), cfg, label="")
 
-    assert not [c for c in calls(fake_gh) if c.startswith("pr edit")]
-    assert [c for c in calls(fake_gh) if c.startswith("pr comment")]
+    assert not [c for c in fake_gh.calls() if c.startswith("pr edit")]
+    assert [c for c in fake_gh.calls() if c.startswith("pr comment")]
 
 
 def test_a_gh_that_cannot_read_the_comments_still_notifies(fake_gh):
     """Better a duplicate mention than a silent hold."""
     cfg = GhConfig(root=Path.cwd(), owner="theowner")
-    script(fake_gh, {"pr edit 7 --add-label needs-human-review": {}})
+    fake_gh.script({"pr edit 7 --add-label needs-human-review": {}})
     merge_train.hold_for_review(a_held_verdict(), cfg)
-    assert [c for c in calls(fake_gh) if c.startswith("pr comment")]
+    assert [c for c in fake_gh.calls() if c.startswith("pr comment")]
 
 
 def test_the_trust_gate_marks_the_verdict_as_held():

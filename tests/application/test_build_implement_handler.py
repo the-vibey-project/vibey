@@ -376,6 +376,38 @@ async def test_run_without_a_completion_verdict_fails_as_work(tmp_path: Path) ->
     assert outcome == Failure(FailureClass.WORK, "engine run did not report completion")
 
 
+@pytest.mark.parametrize(
+    ("exit_code", "failure_class"),
+    [
+        (137, FailureClass.ENGINE),  # SIGKILL, as a shell reports it
+        (-9, FailureClass.ENGINE),  # SIGKILL, as asyncio reports it
+        (124, FailureClass.ENGINE),  # timeout(1)
+        (1, FailureClass.WORK),  # an ordinary non-zero exit is not the engine's fault
+        (0, FailureClass.WORK),  # a clean exit without a verdict is the work's
+    ],
+)
+async def test_an_incomplete_run_is_attributed_by_the_engine_from_its_exit_code(
+    tmp_path: Path, exit_code: int, failure_class: FailureClass
+) -> None:
+    """#209: both BUILD handlers hard-coded WORK, so no ENGINE failure could
+    ever be produced in production and a dying runner never counted toward
+    opening its circuit. The adapter's `attribute` now decides."""
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP,
+        base_dir=tmp_path / "engine",
+        script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
+        exit_code_script=[exit_code],
+    )
+    handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
+
+    outcome = await handler.handle(_job())
+
+    assert outcome == Failure(
+        failure_class, f"engine run did not report completion (exit code {exit_code})"
+    )
+
+
 # ── wind-down (exit code 75) ─────────────────────────────────────────────────
 
 
@@ -447,7 +479,10 @@ async def test_exit_75_without_an_orchestrator_keeps_the_old_failure_path(
 
     outcome = await handler.handle(_job())
 
-    assert outcome == Failure(FailureClass.WORK, "engine run did not report completion")
+    # Still WORK: without an orchestrator, 75 is an ordinary non-zero exit.
+    assert outcome == Failure(
+        FailureClass.WORK, "engine run did not report completion (exit code 75)"
+    )
 
 
 async def test_normal_exit_with_an_orchestrator_never_winds_down(tmp_path: Path) -> None:
@@ -737,3 +772,52 @@ async def test_a_budget_grant_raises_the_cap_and_the_session_runs(tmp_path: Path
     await gates.answer(gate.gate_id, answer={"max_dollars": 11, "max_turns": 30}, answered_by="op")
     still_parked = await handler.handle(job)
     assert isinstance(still_parked, Park)
+
+
+# ── exit 78: a backend the runner declared misconfigured (ADR-0038) ──────────
+
+
+async def test_exit_78_parks_for_a_human_instead_of_failing_into_a_retry(tmp_path: Path) -> None:
+    """claudeloop exits 78 (EX_CONFIG) for `BackendMisconfigured`: an unreachable
+    local server, a model not pulled, a context too small. A WORK failure would retry
+    the same fault until the ladder ran out; a park asks the one party who can fix it."""
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP_LOCAL,
+        base_dir=tmp_path / "engine",
+        script=_wind_down_script(),
+        exit_code_script=[78],
+    )
+    jobs = FakeJobRepository()
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=jobs,
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job())
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "engine_misconfigured"
+    assert "claudeloop-local" in outcome.request.prompt
+    assert "'item-1'" in outcome.request.prompt
+    assert "`claudeloop doctor --profile local`" in outcome.request.prompt
+    # Nothing downstream was enqueued: the item never ran.
+    assert await jobs.claim(_job().project_id, owner="t", lease=timedelta(seconds=5)) is None
+
+
+async def test_a_completed_run_is_complete_whatever_its_exit_code(tmp_path: Path) -> None:
+    """The park is for a run its backend could not serve; a run that reported
+    completion was served, and it proceeds to verify."""
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP, base_dir=tmp_path / "engine", exit_code_script=[78]
+    )
+    handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
+
+    outcome = await handler.handle(_job(payload={"title": "t"}))
+
+    assert isinstance(outcome, Success)

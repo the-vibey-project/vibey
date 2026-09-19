@@ -307,6 +307,7 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 | `vibey-gh pr-automation evaluate --pr N --head-sha SHA` | Return the stable structured decision for one exact PR head. |
 | `vibey-gh pr-automation ready-draft --pr N --head-sha SHA` | Mark a stable exact draft head ready without racing newer commits. |
 | `vibey-gh pr-automation record-review` / `record-repair` | Persist machine-readable lineage state used by retries and exact-head gating. |
+| `vibey-gh pr-automation combine --paid JSON --half HALF --head-sha SHA [--sovereign JSON]` | Compose one review verdict from the paid lane and, when it carried the diff half, the sovereign lane — naming the lane behind each field. |
 | `vibey-gh pr-automation mirror-fork --pr N` | Preserve a fork head in a linked repository-owned replacement PR when repair needs write access. |
 | `vibey-gh pr-automation ensure-labels` | Idempotently create the automation’s operational labels. |
 | `vibey-gh issue-automation evaluate --issue N` | Return the stable structured decision for one issue, including its solution branch. |
@@ -323,7 +324,7 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 | `vibey-gh local-authority --once` | The capped-lane sync loop: green local branches reach their remotes by themselves while local is the source of truth; drop `--once` for the daemon form. |
 | `vibey-gh failover --once` | The operator-seat failover engine: paid lane down, the seat moves to the first healthy local agent (qwenloop, then opencode) and moves back on recovery — configured per machine in `~/.config/vibey-gh/failover.toml`, off until enabled; drop `--once` for the daemon form. |
 | `vibey-gh report-superseded --index pypi\|testpypi --project NAME --version VERSION` | Report which prior releases a published version supersedes, since PyPI has no yank API; never yanks anything itself. Add `--governance-since REF` to evaluate Article V.4: a ratified governance change names every previous release, zero exceptions. |
-| `vibey-gh local-review [--diff FILE]` | Review a diff with a local Ollama-compatible model when the primary paid review returns no verdict at all. Opt-in fallback; see `[pr_automation.fallback]`. |
+| `vibey-gh local-review [--diff FILE] [--role sovereign\|fallback]` | Review a diff with a local Ollama-compatible model. It runs first whenever the sovereign lane's heartbeat is fresh, and carries the diff half of the review for a trusted author; see `[pr_automation.fallback]`. |
 | `vibey-gh doctor` | Offline adoption preflight: reads `.vibey-gh.toml`, `pyproject.toml`, and `.github/workflows/` on disk (no network, no credentials, no execution) to catch a config key silently ignored in the wrong section, a merge train stuck forever with no installed gate workflow, a ruff rule that fails every stamped file, contending Pages deployers, and superseded fingerprint headers. |
 | `vibey-gh local-triage [--issue FILE]` | Triage an issue with the same local model when the primary paid solver produces nothing. Always marks the result `needs_human`. |
 | `vibey-gh pr-automation self-heal [--pr N]` | Refill a spent repair budget, itself bounded so a permanent failure still stops. |
@@ -479,16 +480,20 @@ Repositories must configure `ANTHROPIC_API_KEY`; `AUTOMERGE_TOKEN` is required w
 default Actions token cannot push or merge through the repository ruleset. Installation
 does not create either secret.
 
-A repository that sets `[pr_automation.fallback].enabled = true` gets one more line of
-defense before that gate fails outright: when the primary review returns no verdict at
-all, a `review-fallback` job sends the diff to a local Ollama model on a self-hosted
-`vibey-local-gh`-labelled runner (never for a fork PR unless `trusted_only = false`) and
-runs `vibey-gh local-review`. A clean local verdict passes the gate under the honestly
-weaker title `PR automation: gate (local fallback)`; the local model never overrides an
-actual finding, and it holds no repository credentials at all. See
-[`[pr_automation.fallback]`](docs/configuration.md) for every field and
-[Threat model](docs/threat-model.md) for what that self-hosted runner is and is not trusted
-for.
+The review is split in two, and the half a diff can carry runs on your own machine first
+(sub-doctrine 8.a). With `[pr_automation.fallback].enabled = true` (the default) and a
+fresh heartbeat from a self-hosted `vibey-local-gh`-labelled runner, a `review-sovereign`
+job sends the diff to a local Ollama model and runs `vibey-gh local-review` — never for a
+fork PR unless `trusted_only = false`, and never with a repository credential. For a
+trusted author its verdict carries the diff half (`pass`, `summary`, `findings`), the paid
+reviewer answers only the sixteen documentation-contract judgments, and the gate names the
+lane behind each half. For anyone else the local verdict is held in reserve: the paid
+review still covers the whole change, and the local verdict is read only if that review
+returns no verdict at all, under the honestly weaker title
+`PR automation: gate (local fallback)`. A local finding is a lead for a human and never
+starts an automated repair. See [`[pr_automation.fallback]`](docs/configuration.md) for
+every field and [Threat model](docs/threat-model.md) for what that self-hosted runner is
+and is not trusted for.
 
 ```bash
 vibey-gh pr-automation evaluate --pr 123 --head-sha HEAD_SHA
@@ -844,10 +849,10 @@ reason documented in detail in `docs/cli.md`:
   are operator-supplied commands, and it stays disabled until the operator writes
   `enabled = true` — an engine that hands the operator seat around must never gain a
   remote surface or a default-on path.
-- `local-review` and `local-triage` are local-model fallbacks that only run when the
-  primary paid review or solver produced no verdict at all. They require a self-hosted
-  runner and a local Ollama-compatible model, and must never gain remote/API/webhook
-  exposure.
+- `local-review` is the sovereign lane's diff review, which runs first whenever the
+  lane's heartbeat is fresh; `local-triage` is a local-model fallback that only runs when
+  the primary paid solver produced nothing. Both require a self-hosted runner and a local
+  Ollama-compatible model, and must never gain remote/API/webhook exposure.
 - `doctor` is a purely local, read-only diagnostic: it reads files already on disk (no
   network, no credentials, no execution) to judge whether the local configuration and
   installed workflows will function. There is no remote resource for an API, MCP, or

@@ -30,6 +30,7 @@ from vibey_gh import (
 )
 from vibey_gh.config import load_config
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
+from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
 
 
 def _cloud_clutter(cfg, surveyed: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -316,6 +317,15 @@ def _pr_automation(args) -> int:
             kind = args.action.removeprefix("record-")
             state = pr_automation.record(args.pr, _read_json(args.input), kind)
             print(json.dumps(asdict(state), sort_keys=True))
+        elif args.action == "combine":
+            # An empty --sovereign is how the workflow says the sovereign lane produced no
+            # verdict; the composer then refuses a wider-half-only answer rather than
+            # passing a review whose diff half nobody carried.
+            sovereign = _read_json(args.sovereign) if args.sovereign else None
+            envelope = REVIEW_COMPOSER.compose(
+                _read_json(args.paid), half=args.half, sovereign=sovereign, head_sha=args.head_sha
+            )
+            print(json.dumps(envelope, ensure_ascii=False))
         elif args.action == "mirror-fork":
             print(json.dumps(pr_automation.mirror_fork(args.pr, cfg), sort_keys=True))
         elif args.action == "self-heal":
@@ -543,6 +553,70 @@ def _tidy(args) -> int:
         " `vibey-gh tidy --apply` removes the provably-lossless classes"
     )
     return 1
+
+
+def _forge_snapshot(args) -> int:
+    """Capture the forge's state into `--out` (vibey#136, slice S1); read-only against the forge.
+
+    Exit 0 when every selected class was captured, 1 when any could not be looked at (the
+    rest are still written, and the manifest says which), 2 for arguments that name no
+    capture at all. A class the forge would not answer for is reported by name with the
+    forge's reason, never as a class with nothing in it.
+    """
+    from datetime import timedelta
+
+    from vibey_gh import github_state
+    from vibey_gh.forge_snapshot import (
+        RESUME,
+        ForgeSnapshot,
+        GithubForgeReader,
+        JsonlSnapshotStore,
+        SnapshotStoreError,
+    )
+    from vibey_gh.gh_transport import GhTransport
+
+    prefix = "vibey-gh forge-snapshot:"
+    classes = None
+    if args.classes is not None:
+        classes = [name.strip() for name in args.classes.split(",") if name.strip()]
+    try:
+        repository = args.repo or github_state.repository()
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError) as exc:
+        print(f"{prefix} could not tell which repository to read: {exc}", file=sys.stderr)
+        return 1
+    out = Path(args.out)
+    try:
+        reader = GithubForgeReader(GhTransport(), repository, per_page=args.per_page)
+        store = JsonlSnapshotStore(out, forge=reader.forge, repository=reader.repository)
+        capture = ForgeSnapshot(reader, store, clock_skew=timedelta(seconds=args.clock_skew))
+        manifest = capture.capture(classes=classes, since=args.since)
+    except (SnapshotStoreError, OSError) as exc:
+        print(f"{prefix} {exc}", file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(f"{prefix} {exc}", file=sys.stderr)
+        return 2
+    print(f"{prefix} {manifest['forge']} {manifest['repository']} into {out}")
+    if args.since == RESUME and manifest["since"] is None:
+        print(f"{prefix} no resume point was recorded, so this capture is a full one")
+    for name, entry in manifest["classes"].items():
+        if entry["status"] == "captured":
+            head = (entry["head"] or "none")[:12]
+            print(
+                f"  {name}: {entry['observed']} observed, {entry['appended']} appended,"
+                f" {entry['unchanged']} unchanged; {entry['records']} record(s), head {head}"
+            )
+        elif entry["status"] == "could-not-look":
+            print(f"  {name}: COULD NOT LOOK, nothing written: {entry['problem']}", file=sys.stderr)
+        else:
+            print(f"  {name}: not selected")
+    print(
+        f"{prefix} {len(manifest['excluded'])} artifact class(es) not captured, each named"
+        f" with its reason in {out / 'manifest.json'}"
+    )
+    if manifest["resume_since"] is not None:
+        print(f"{prefix} resume with --since {manifest['resume_since']} (or --since {RESUME})")
+    return 0 if manifest["complete"] else 1
 
 
 def _corpus_index(args) -> int:
@@ -783,6 +857,7 @@ def _local_review(args) -> int:
         ("--base-url", args.base_url),
         ("--max-chars", args.max_chars),
         ("--timeout", args.timeout),
+        ("--role", args.role),
     ):
         if value is not None:
             forwarded += [flag, str(value)]
@@ -792,29 +867,25 @@ def _local_review(args) -> int:
 def _conversation(args) -> int:
     cfg = load_config()
     try:
-        subject = conversation.fetch_subject(args.subject)
-        comments = list(subject.get("comments") or [])
-        comment: dict = {}
-        if args.comment_id:
-            comment = next(
-                (item for item in comments if conversation.matches_comment(item, args.comment_id)),
-                comments[-1] if comments else {},
-            )
-        else:
-            comment = comments[-1] if comments else {}
-        if args.action == "evaluate":
-            decision = conversation.evaluate(
-                comment, subject, cfg, stored=conversation.parse_state(comments)
-            )
-            print(decision.to_json())
-        elif args.action == "context":
-            document = conversation.context(subject, comment, cfg, max_bytes=args.max_bytes)
-            if args.output:
-                args.output.parent.mkdir(parents=True, exist_ok=True)
-                args.output.write_text(document, encoding="utf-8")
-                print(f"vibey-gh: wrote {len(document.encode())} bytes to {args.output}")
+        if args.action in ("evaluate", "context"):
+            subject = conversation.fetch_subject(args.subject)
+            # Resolved, never guessed: an ID naming no comment on this thread or its review
+            # is an error here, not a licence to answer the newest comment in its place.
+            comment = conversation.ConversationThread(subject).comment(args.comment_id or "")
+            if args.action == "evaluate":
+                comments = list(subject.get("comments") or [])
+                decision = conversation.evaluate(
+                    comment, subject, cfg, stored=conversation.parse_state(comments)
+                )
+                print(decision.to_json())
             else:
-                print(document, end="")
+                document = conversation.context(subject, comment, cfg, max_bytes=args.max_bytes)
+                if args.output:
+                    args.output.parent.mkdir(parents=True, exist_ok=True)
+                    args.output.write_text(document, encoding="utf-8")
+                    print(f"vibey-gh: wrote {len(document.encode())} bytes to {args.output}")
+                else:
+                    print(document, end="")
         elif args.action == "reply":
             body = _read_text(args.body)
             if not conversation.reply(args.subject, body, cfg):
@@ -1029,6 +1100,29 @@ def main(argv: list[str] | None = None) -> int:
         record.add_argument("--pr", type=int, required=True)
         record.add_argument("--input", required=True, help="JSON object, file, or - for stdin")
         record.set_defaults(func=_pr_automation)
+    combine = automation_sub.add_parser(
+        "combine",
+        help="compose one review verdict from the lane or lanes that answered it",
+    )
+    combine.add_argument(
+        "--paid", required=True, help="the paid reviewer's answer: JSON object, file, or -"
+    )
+    combine.add_argument(
+        "--half",
+        required=True,
+        choices=PAID_HALVES,
+        help="what the paid reviewer answered: the full schema, or the wider half alone",
+    )
+    combine.add_argument(
+        "--sovereign",
+        default="",
+        help=(
+            "the sovereign lane's diff-half verdict (JSON object or file); required with"
+            " --half requires-wider-context, empty when that lane produced none"
+        ),
+    )
+    combine.add_argument("--head-sha", required=True)
+    combine.set_defaults(func=_pr_automation)
     mirror = automation_sub.add_parser(
         "mirror-fork", help="open a repository-owned replacement for a fork PR"
     )
@@ -1166,13 +1260,21 @@ def main(argv: list[str] | None = None) -> int:
 
     local = sub.add_parser(
         "local-review",
-        help="review a diff with a local model when the paid review path returns no verdict",
+        help="review a diff with a local model: the sovereign lane's diff half, or the fallback",
     )
     local.add_argument("--diff", help="path to a diff file (default: stdin)")
     local.add_argument("--model", help="override [pr_automation.fallback] model")
     local.add_argument("--base-url", help="override [pr_automation.fallback] base_url")
     local.add_argument("--max-chars", type=int, help="override max_diff_chars")
     local.add_argument("--timeout", type=int, help="override timeout_seconds")
+    local.add_argument(
+        "--role",
+        choices=("fallback", "sovereign"),
+        help=(
+            "how the verdict labels itself: 'sovereign' when it carries the diff half,"
+            " 'fallback' (the default) when it stands in for a paid review that failed"
+        ),
+    )
     local.set_defaults(func=_local_review)
 
     doc = sub.add_parser(
@@ -1227,6 +1329,34 @@ def main(argv: list[str] | None = None) -> int:
     )
     fo.add_argument("--once", action="store_true", help="one probe and transition, then exit")
     fo.set_defaults(func=_failover)
+
+    fs = sub.add_parser(
+        "forge-snapshot",
+        help="read-only capture of issues, change requests, reviews, releases and more into"
+        " hash-chained JSONL (#136)",
+    )
+    fs.add_argument("--out", required=True, help="the snapshot directory; created if missing")
+    fs.add_argument(
+        "--classes",
+        help="comma-separated artifact classes (default: every supported class), e.g."
+        " issue,comment,change-request",
+    )
+    fs.add_argument(
+        "--since",
+        help="ISO 8601 moment to capture from, or 'resume' for the manifest's resume point;"
+        " omitted, the capture is a full one",
+    )
+    fs.add_argument("--repo", default="", help="owner/name (default: $GH_REPO, then gh's own)")
+    fs.add_argument("--per-page", type=int, default=100, help="listing page size, 1 to 100")
+    fs.add_argument(
+        "--clock-skew",
+        type=int,
+        default=300,
+        metavar="SECONDS",
+        help="how far this machine's clock may run ahead of the forge's; a cursor taken from"
+        " it is set back this far (default 300)",
+    )
+    fs.set_defaults(func=_forge_snapshot)
 
     ci_ = sub.add_parser(
         "corpus-index",

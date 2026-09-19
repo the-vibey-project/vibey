@@ -9,10 +9,11 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
+from vibey.domain.circuit import StoredCircuitState
 from vibey.domain.effort import Effort
-from vibey.domain.engine import EngineId, IsolationLevel
-from vibey.domain.job import FailureClass, JobState
-from vibey.domain.phase import Phase
+from vibey.domain.engine import EngineId, IsolationLevel, StoredEngineId
+from vibey.domain.job import FailureClass, StoredJobState
+from vibey.domain.phase import Phase, StoredPhase
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,14 +30,23 @@ class EnqueueRequest:
     max_attempts: int = 7
     run_after: datetime | None = None
     depends_on: tuple[UUID, ...] = ()
+    depends_on_keys: tuple[str, ...] = ()
+    """Dependencies named by idempotency key (same project) rather than job id:
+    the only way to name a job whose id does not exist yet, i.e. an earlier
+    request of the same `JobRepository.enqueue_batch`. Resolved inside the
+    enqueue's own transaction; a key that names no job raises LookupError."""
 
 
 @dataclass(frozen=True, slots=True)
 class ProjectRecord:
+    """A project row. `phase` is read forward-compatibly (vibey#287): a phase a
+    newer vibey added comes back as an `UnrecognizedPhase`, and a worker that meets
+    one declines the project rather than guessing what the phase means."""
+
     project_id: UUID
     name: str
     repo_path: Path
-    phase: Phase
+    phase: StoredPhase
     cycle: int
     max_cycles: int
     config: Mapping[str, object]
@@ -46,12 +56,15 @@ class ProjectRecord:
 
 @dataclass(frozen=True, slots=True)
 class JobRecord:
+    """A job row. `phase` and `state` are read forward-compatibly (vibey#287);
+    the claim never hands a worker a job whose phase it does not know."""
+
     id: UUID
     project_id: UUID
     cycle: int
-    phase: Phase
+    phase: StoredPhase
     kind: str
-    state: JobState
+    state: StoredJobState
     priority: int
     work_item_id: str | None
     payload: Mapping[str, object]
@@ -166,14 +179,19 @@ class ConformanceReport:
 
 @dataclass(frozen=True, slots=True)
 class EngineHealthRecord:
+    """One engine's health row. `engine_id` is read forward-compatibly
+    (vibey#287): a row a newer vibey wrote for an engine this one does not know
+    comes back under its stored id, is shown to the operator, and is never selected
+    or written."""
+
     project_id: UUID
-    engine_id: EngineId
+    engine_id: StoredEngineId
     installed: bool
     version: str | None
     conformance_ok: bool
     conformance_at: datetime | None
     auth_ok_at: datetime | None
-    circuit: str
+    circuit: StoredCircuitState
     capacity_state: str | None
     resets_at: datetime | None
     probe_next_at: datetime | None
@@ -192,9 +210,11 @@ class FailureAttribution:
 
 @dataclass(frozen=True, slots=True)
 class RotationCursor:
-    """SWRR cursor state for one engine in one project."""
+    """SWRR cursor state for one engine in one project. A cursor a newer vibey
+    keeps for an engine this one does not know is read under its stored id
+    (vibey#287), left out of selection, and never rewritten."""
 
     project_id: UUID
-    engine_id: EngineId
+    engine_id: StoredEngineId
     current: int
     order: int

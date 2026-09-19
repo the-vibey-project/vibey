@@ -29,6 +29,7 @@ CAPABILITIES = (
     "realign",
     "reconcile-branches",
     "rulesets",
+    "forge-snapshot",
 )
 SURFACES = ("mcp", "api", "cli", "sdk", "webhook")
 

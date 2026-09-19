@@ -724,6 +724,80 @@ def test_conversation_cli_reports_failures(repo, monkeypatch, capsys):
     assert "not found" in capsys.readouterr().err
 
 
+_THREAD_VIEW = "issue view 7 --repo o/r --json number,title,body,state,author,labels,comments,url"
+_REVIEW_COMMENT = "api repos/o/r/pulls/comments/901"
+_PULL_THREAD = {
+    "number": 7,
+    "title": "t",
+    "body": "",
+    "state": "OPEN",
+    "author": {"login": "owner"},
+    "labels": [],
+    "url": "https://github.com/o/r/pull/7",
+    "comments": [
+        {
+            "id": "IC_a",
+            "url": "https://github.com/o/r/pull/7#issuecomment-5001",
+            "author": {"login": "owner"},
+            "body": "@vibey-gh something older and unrelated",
+        }
+    ],
+}
+
+
+def test_conversation_cli_answers_the_review_comment_that_mentioned_it(repo, scripted_gh, capsys):
+    """End to end through a real `gh`, with nothing inside vibey-gh replaced: the pull
+    request is recognised as one, and the inline review comment that carried the mention is
+    the one evaluated and briefed — not the newest comment on the thread."""
+    review = {
+        "id": 901,
+        "user": {"login": "owner"},
+        "body": "@vibey-gh handle the empty case",
+        "path": "src/a.py",
+        "line": 3,
+        "diff_hunk": "@@ -1 +1 @@\n+x = 1",
+        "pull_request_url": "https://api.github.com/repos/o/r/pulls/7",
+    }
+    (scripted_gh / "answers.json").write_text(
+        json.dumps(
+            {
+                _THREAD_VIEW: {"out": json.dumps(_PULL_THREAD)},
+                _REVIEW_COMMENT: {"out": json.dumps(review)},
+            }
+        )
+    )
+
+    assert main(["conversation", "evaluate", "--subject", "7", "--comment-id", "901"]) == 0
+    decision = json.loads(capsys.readouterr().out)
+    assert decision["comment_id"] == "901" and decision["is_pull_request"] is True
+    assert decision["state"] == "act" and decision["may_change_files"] is True
+
+    assert main(["conversation", "context", "--subject", "7", "--comment-id", "901"]) == 0
+    briefing = capsys.readouterr().out
+    assert "Untrusted conversation on pull request #7" in briefing
+    request = briefing.split("## The request to answer")[1]
+    assert "handle the empty case" in request and "something older" not in request
+
+
+def test_conversation_cli_fails_loudly_on_a_comment_it_cannot_find(repo, scripted_gh, capsys):
+    """A comment ID that names nothing used to fall back to the newest comment on the thread
+    and answer that instead. It is now an error, with nothing evaluated or briefed."""
+    (scripted_gh / "answers.json").write_text(
+        json.dumps(
+            {
+                _THREAD_VIEW: {"out": json.dumps(_PULL_THREAD)},
+                _REVIEW_COMMENT: {"err": "gh: Not Found (HTTP 404)\n", "code": 1},
+            }
+        )
+    )
+    for action in ("evaluate", "context"):
+        assert main(["conversation", action, "--subject", "7", "--comment-id", "901"]) == 1
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "901 is neither on #7 nor a review comment on it" in captured.err
+        assert "Not Found (HTTP 404)" in captured.err
+
+
 def test_reconcile_branches_cli_reports_each_decision(repo, monkeypatch, capsys):
     monkeypatch.setattr(
         reconcile,
@@ -1006,3 +1080,77 @@ def test_failover_cli_runs_once_with_explicit_paths(repo, capsys, tmp_path, monk
     monkeypatch.setenv("HOME", str(tmp_path))
     assert main(["failover", "--once"]) == 0
     assert "disabled" in capsys.readouterr().out
+
+
+def test_pr_automation_combine_composes_the_review_the_workflow_persists(repo, capsys, tmp_path):
+    """`combine` is the one place the workflow asks what "passed" means (#133). Whole, it
+    is the old jq rule; split, it needs the sovereign lane's verdict and says which lane
+    carried which field."""
+    from vibey_gh.review_contract import REVIEW_CONTRACT
+
+    judgments = {name: True for name in REVIEW_CONTRACT.requires_wider_context}
+    full = {"pass": False, **judgments, "summary": "ok", "findings": []}
+    assert (
+        main(
+            [
+                "pr-automation",
+                "combine",
+                "--paid",
+                json.dumps(full),
+                "--half",
+                "full",
+                "--head-sha",
+                "abc",
+            ]
+        )
+        == 0
+    )
+    envelope = json.loads(capsys.readouterr().out)
+    assert envelope["verdict"]["pass"] is True and envelope["verdict"]["head_sha"] == "abc"
+
+    sovereign = tmp_path / "sovereign.json"
+    sovereign.write_text(json.dumps({"pass": True, "summary": "[SOVEREIGN LANE — m] ✓"}))
+    wider = {**judgments, "wider_summary": "docs", "wider_findings": []}
+    assert (
+        main(
+            [
+                "pr-automation",
+                "combine",
+                "--paid",
+                json.dumps(wider),
+                "--half",
+                "requires-wider-context",
+                "--sovereign",
+                str(sovereign),
+                "--head-sha",
+                "abc",
+            ]
+        )
+        == 0
+    )
+    out = capsys.readouterr().out
+    assert "✓" in out  # written as text, not escaped: the verdict is read by people too
+    envelope = json.loads(out)
+    assert envelope["carried"]["pass"] == "sovereign"
+    assert envelope["verdict"]["pass"] is True
+
+    # An empty --sovereign is the workflow saying the lane produced nothing: a wider-only
+    # answer then refuses to compose, so the review job fails closed rather than passing.
+    assert (
+        main(
+            [
+                "pr-automation",
+                "combine",
+                "--paid",
+                json.dumps(wider),
+                "--half",
+                "requires-wider-context",
+                "--sovereign",
+                "",
+                "--head-sha",
+                "abc",
+            ]
+        )
+        == 1
+    )
+    assert "sovereign lane's verdict is needed" in capsys.readouterr().err
