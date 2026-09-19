@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import dataclasses
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -6,12 +7,16 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from vibey.domain.interfaces import EventKindParserInterface, UnrecognizedEventKindInterface
 from vibey.domain.ledger import (
     CLOSABLE,
     CLOSES,
+    EVENT_KIND_PARSER,
     EventKind,
+    EventKindParser,
     LedgerEvent,
     Provenance,
+    UnrecognizedEventKind,
     canonical_bytes,
     digest_event,
     digest_range,
@@ -136,3 +141,88 @@ _event_kind_strategy = st.sampled_from(list(EventKind))
 @given(seq=st.integers(1, 10_000), payload_value=st.text(max_size=20))
 def test_digest_event_never_raises(seq: int, payload_value: str) -> None:
     digest_event({"seq": seq, "v": payload_value})
+
+
+# -- forward-compatible readers (vibey#275) ----------------------------------
+
+_KNOWN_VALUES = frozenset(kind.value for kind in EventKind)
+
+
+@pytest.mark.parametrize("kind", list(EventKind))
+def test_every_known_kind_parses_to_its_member(kind: EventKind) -> None:
+    assert EventKindParser().parse(kind.value) is kind
+
+
+def test_a_kind_this_vibey_does_not_know_parses_to_its_exact_text() -> None:
+    parsed = EVENT_KIND_PARSER.parse("FutureKindX")
+    assert parsed == UnrecognizedEventKind("FutureKindX")
+    assert parsed.value == "FutureKindX"
+    assert str(parsed) == "FutureKindX"
+
+
+def test_a_case_variant_of_a_known_kind_is_not_that_kind() -> None:
+    """The column holds a member's value verbatim, so matching is exact: a
+    reader never reinterprets a row as a kind it was not written as."""
+    parsed = EVENT_KIND_PARSER.parse("turncompleted")
+    assert isinstance(parsed, UnrecognizedEventKind)
+    assert parsed is not EventKind.TURN_COMPLETED
+
+
+@pytest.mark.parametrize("kind", list(EventKind))
+def test_an_unrecognized_kind_can_never_name_a_known_one(kind: EventKind) -> None:
+    with pytest.raises(ValueError, match="is a known event kind"):
+        UnrecognizedEventKind(kind.value)
+
+
+def test_an_unrecognized_kind_is_a_value() -> None:
+    a, b = UnrecognizedEventKind("FutureKindX"), UnrecognizedEventKind("FutureKindX")
+    assert a == b
+    assert {a, b} == {a}
+    assert a != UnrecognizedEventKind("FutureKindY")
+    for kind in EventKind:
+        assert a != kind
+        assert kind != a
+
+
+def test_the_parser_and_the_value_satisfy_their_declared_seams() -> None:
+    assert isinstance(EVENT_KIND_PARSER, EventKindParserInterface)
+    assert isinstance(UnrecognizedEventKind("FutureKindX"), UnrecognizedEventKindInterface)
+
+
+def test_digest_range_does_not_fold_the_kind() -> None:
+    """R6 is unchanged: the same rows fold to the same digest whether the
+    reader knows the kind (a newer vibey) or does not (this one)."""
+    payloads = [{"seed_digest": "d1"}, {"transcript_ref": "t1"}, {"dollars": 0.5}]
+    as_newer_reads = [_event(i, EventKind.TURN_COMPLETED, p) for i, p in enumerate(payloads, 1)]
+    as_older_reads = [
+        dataclasses.replace(e, kind=UnrecognizedEventKind("TranscriptRecorded"))
+        if e.seq == 2
+        else e
+        for e in as_newer_reads
+    ]
+    assert digest_range(as_older_reads) == digest_range(as_newer_reads)
+
+
+@given(
+    raw=st.text().filter(lambda value: value not in _KNOWN_VALUES),
+    payload_value=st.text(max_size=20),
+)
+def test_an_unrecognized_kind_never_changes_digest_range(raw: str, payload_value: str) -> None:
+    known = [
+        _event(1, EventKind.SESSION_SEEDED, {"seed_digest": "d1"}),
+        _event(2, EventKind.TURN_COMPLETED, {"v": payload_value}),
+    ]
+    unknown = [known[0], dataclasses.replace(known[1], kind=EVENT_KIND_PARSER.parse(raw))]
+    assert isinstance(unknown[1].kind, UnrecognizedEventKind)
+    assert digest_range(unknown) == digest_range(known)
+
+
+def test_open_items_ignores_an_unrecognized_kind_carrying_an_id_field() -> None:
+    """Even a payload shaped like a closing event closes nothing: only a
+    kind this vibey knows can open or close an item."""
+    q1 = _event(1, EventKind.QUESTION_ASKED, {"question_id": "q1", "text": "?", "blocking": False})
+    lookalike = _event(
+        2, EventKind.ANSWER_GIVEN, {"question_id": "q1", "text": "answered by a newer kind"}
+    )
+    lookalike = dataclasses.replace(lookalike, kind=UnrecognizedEventKind("QuestionWithdrawn"))
+    assert open_items([q1, lookalike], EventKind.QUESTION_ASKED) == ("q1",)

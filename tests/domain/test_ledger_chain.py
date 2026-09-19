@@ -5,6 +5,7 @@ disagreement is reported rather than the first one returned as False."""
 import dataclasses
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta, timezone
+from enum import StrEnum
 from uuid import UUID, uuid4
 
 import pytest
@@ -18,7 +19,13 @@ from vibey.domain.interfaces import (
     ChainVerificationInterface,
     LedgerChainInterface,
 )
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
+from vibey.domain.ledger import (
+    EventKind,
+    LedgerEvent,
+    Provenance,
+    UnrecognizedEventKind,
+    digest_event,
+)
 from vibey.domain.ledger_chain import (
     CHAIN_SCHEME,
     LEDGER_CHAIN,
@@ -337,3 +344,33 @@ def test_any_split_verifies_as_two_chunks_that_agree_with_the_whole(
     assert older.ok
     assert newer.ok
     assert newer.head == full.head
+
+
+# -- a mixed-version fleet (vibey#275) ---------------------------------------
+
+
+class _NewerEventKind(StrEnum):
+    """Stands in for a newer vibey's `EventKind`, which has a member this one lacks."""
+
+    TRANSCRIPT_RECORDED = "TranscriptRecorded"
+
+
+def test_an_older_vibey_computes_the_same_links_over_a_newer_kind() -> None:
+    """The chain folds `kind.value`, and an unrecognized kind's value is the
+    stored text verbatim -- so tamper evidence agrees across a rolling upgrade."""
+    ledger = _ledger(3)
+    as_newer_reads = [
+        dataclasses.replace(e, kind=_NewerEventKind.TRANSCRIPT_RECORDED) if e.seq == 2 else e
+        for e in ledger
+    ]
+    as_older_reads = [
+        dataclasses.replace(e, kind=UnrecognizedEventKind("TranscriptRecorded"))
+        if e.seq == 2
+        else e
+        for e in ledger
+    ]
+    newer = LedgerChain().verify(PROJECT, as_newer_reads)
+    older = LedgerChain().verify(PROJECT, as_older_reads)
+    assert older.ok
+    assert older.head == newer.head
+    assert [link.link for link in older.links] == [link.link for link in newer.links]

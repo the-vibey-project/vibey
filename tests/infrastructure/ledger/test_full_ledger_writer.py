@@ -1,12 +1,21 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import dataclasses
 import json
 from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
 
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event, digest_range
+from vibey.domain.ledger import (
+    EventKind,
+    LedgerEvent,
+    Provenance,
+    UnrecognizedEventKind,
+    digest_event,
+    digest_range,
+)
 from vibey.domain.ledger_record import InvalidLedgerRecord
 from vibey.domain.phase import Phase
 from vibey.infrastructure.ledger.full_ledger_writer import (
@@ -150,3 +159,43 @@ def test_the_handoff_file_is_written_by_the_line_codec(tmp_path: Path) -> None:
 def test_a_line_that_is_not_a_record_is_refused(line: str, message: str) -> None:
     with pytest.raises(InvalidLedgerRecord, match=message):
         LEDGER_LINES.decode(line)
+
+
+# -- a kind this vibey does not know (vibey#275) -----------------------------
+
+
+class _NewerEventKind(StrEnum):
+    """Stands in for a newer vibey's `EventKind`, which has a member this one lacks."""
+
+    TRANSCRIPT_RECORDED = "TranscriptRecorded"
+
+
+def test_an_unrecognized_kind_is_handed_on_exactly_as_a_newer_vibey_would(
+    tmp_path: Path,
+) -> None:
+    """The no-loss non-negotiable: the event is in the file, under its own
+    kind, byte for byte what a vibey that knows the kind would write -- and
+    the ref's digest is the one that vibey computes too."""
+    events = [_event(1), _event(2, {"transcript_ref": "runs/1/t.jsonl"}), _event(3)]
+    as_newer_reads = [
+        dataclasses.replace(e, kind=_NewerEventKind.TRANSCRIPT_RECORDED) if e.seq == 2 else e
+        for e in events
+    ]
+    as_older_reads = [
+        dataclasses.replace(e, kind=UnrecognizedEventKind("TranscriptRecorded"))
+        if e.seq == 2
+        else e
+        for e in events
+    ]
+    older_path, newer_path = tmp_path / "older.jsonl", tmp_path / "newer.jsonl"
+
+    older_ref = write_full_ledger(as_older_reads, older_path)
+    newer_ref = write_full_ledger(as_newer_reads, newer_path)
+
+    assert older_path.read_bytes() == newer_path.read_bytes()
+    assert older_ref == newer_ref
+    assert older_ref.event_count == 3
+    assert older_ref.digest == digest_range(events)
+    lines = [json.loads(line) for line in older_path.read_text().splitlines()]
+    assert lines[1]["kind"] == "TranscriptRecorded"
+    assert lines[1]["payload"] == {"transcript_ref": "runs/1/t.jsonl"}

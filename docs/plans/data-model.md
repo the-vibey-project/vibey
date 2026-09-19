@@ -285,6 +285,39 @@ CREATE RULE event_no_delete AS ON DELETE TO event DO INSTEAD NOTHING;
 The `RULE`s make `UPDATE` and `DELETE` silent no-ops rather than errors: a stray
 write affects zero rows.
 
+**`kind` is open text, read forward-compatibly (vibey#275).** The column has no
+constraint and no enum type, so a newer vibey writes a kind an older one has never
+heard of. During a rolling upgrade (KEDA-scaled workers on mixed versions) and
+after a rollback, older readers meet such rows. Readers must never raise on one:
+one row would make the project's whole ledger unreadable to every older worker,
+and a lease that dies on it is re-leased to another worker that dies the same way.
+So the rule is readers forward compatible, writers strict:
+
+- **Read, kept.** `EventRowMapper` — the one row mapper every reader of this
+  table shares — parses `kind` through `domain/ledger.py::EventKindParser`. A
+  value this vibey knows is its `EventKind` member. Anything else is an
+  `UnrecognizedEventKind` carrying the stored text verbatim; it is never
+  dropped and never raised. `LedgerEvent.kind` is `EventKind |
+  UnrecognizedEventKind`.
+- **Handed on, whole.** The event is in every range, in the full ledger written
+  into a receiving worktree (under its own kind, byte for byte what a newer
+  vibey writes), and in `digest_range` — which folds `seq` and the payload
+  digest, not the kind, so R6 is unchanged. The hash chain folds `kind.value`,
+  and an unrecognized kind's value is the stored text, so older and newer
+  readers compute the same links.
+- **Interpreted by nobody.** Every projection, the no-loss gate's R1–R5 and R7–R8,
+  the budget brake and the dashboard match kinds by identity against `EventKind`
+  members, so an unrecognized kind matches none of them and is skipped. The
+  design ledger's `DesignEvent` view leaves it out explicitly. An older vibey
+  therefore cannot act on what a newer kind means. The next engine still gets the
+  row in the full ledger.
+- **Never written.** `LedgerEventDraft.kind` is `EventKind`, so vibey can only
+  append a kind it knows. `to_drafts` refuses to re-append an unrecognized one.
+
+The same exposure exists for `phase` and `provenance` (Postgres enums read into
+closed Python enums) and `engine_id` (text read into `EngineId`). vibey#275
+covers `kind` only, the column new releases actually extend.
+
 **Search indexes.** `vibey ledger search` (sub-doctrine 7.a, #137) adds three
 indexes for the dimensions 0002's could not serve:
 
@@ -773,7 +806,7 @@ CREATE INDEX human_gate_open ON human_gate (project_id, raised_at)
 `choice`, `approval`, `attempts_exhausted`, `budget_exhausted`,
 `escalation_exhausted`, `verify_repair_exhausted`, `integrate_repair_exhausted`,
 `handoff_gate_failed`,
-`too_many_wind_downs`, `deploy_interview`, `deploy_acceptance`,
+`too_many_wind_downs`, `research_evidence`, `deploy_interview`, `deploy_acceptance`,
 `deploy_demo_review` and `deploy_failure_triage`. Bounded repair and escalation
 ladders park on these gates rather than failing (ADR-0024). Gates are answered
 with `vibey answer GATE_ID`.

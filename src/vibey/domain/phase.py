@@ -6,10 +6,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal
+from typing import ClassVar, Final, Literal
 
 from vibey.domain.errors import InvalidPhaseError
+from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
 from vibey.domain.review import Ambiguity, FindingRef, UserVerdict
+from vibey.domain.stored_value import StoredValueParser, UnrecognizedValue
 
 
 class Phase(StrEnum):
@@ -24,6 +26,31 @@ class Phase(StrEnum):
     DEPLOY = "deploy"  # legacy single-phase bridge
     DONE = "done"
     ABANDONED = "abandoned"
+
+
+@dataclass(frozen=True, slots=True)
+class UnrecognizedPhase(UnrecognizedValue):
+    """A stored phase this vibey has no `Phase` member for (vibey#287).
+
+    `phase` is a Postgres enum, so a newer vibey widens it with a migration -- and a
+    rolling upgrade runs that migration while older workers are still in the fleet.
+    An event, a job or a project row can then carry a phase an older worker has
+    never heard of. It keeps the row; it never acts on the phase: no transition out
+    of it is legal here, no job in it is claimed, and a project in it is declined.
+    """
+
+    members: ClassVar[frozenset[str]] = frozenset(phase.value for phase in Phase)
+
+
+type StoredPhase = Phase | UnrecognizedPhase
+"""What a stored phase reads as: a member this vibey knows, or the text of one it
+does not. Narrow with `isinstance(phase, Phase)` before using `name` or a
+`Mapping[Phase, ...]` key, or before writing it anywhere."""
+
+PHASE_PARSER: Final[StoredValueParserInterface[Phase, UnrecognizedPhase]] = StoredValueParser(
+    Phase, UnrecognizedPhase
+)
+"""The parser every reader of a `phase` column shares. Stateless."""
 
 
 class CompletionMode(StrEnum):
@@ -91,7 +118,7 @@ _EDGES: dict[Phase, frozenset[Phase]] = {
 
 @dataclass(frozen=True, slots=True)
 class PhaseState:
-    phase: Phase
+    phase: StoredPhase
     cycle: int
     max_cycles: int
     entered_at: datetime
@@ -287,6 +314,15 @@ _GUARDS = {
 
 
 def evaluate_transition(state: PhaseState, request: TransitionRequest) -> TransitionOutcome:
+    if not isinstance(state.phase, Phase):
+        # A phase a newer vibey added (vibey#287): this machine has no edges out of
+        # it, and guessing one would be a misroute. A newer vibey moves it on.
+        return Denied(
+            (
+                f"{state.phase.value!r} is not a phase this vibey knows; no transition "
+                "out of it is legal here",
+            )
+        )
     if request.to not in _EDGES.get(state.phase, frozenset()):
         return Denied((f"{state.phase} -> {request.to} is not a legal edge",))
 

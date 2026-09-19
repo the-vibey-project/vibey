@@ -14,7 +14,7 @@ from vibey.domain.interfaces import (
     LedgerQueryInterface,
     LedgerSearchResultInterface,
 )
-from vibey.domain.ledger import EventKind, Provenance, digest_event
+from vibey.domain.ledger import EventKind, Provenance, UnrecognizedEventKind, digest_event
 from vibey.domain.ledger_query import (
     ACTORS,
     DEFAULT_SEARCH_LIMIT,
@@ -92,11 +92,37 @@ def test_a_kind_resolves_by_value_or_by_name_in_any_case(kind: EventKind) -> Non
     assert resolver.resolve(f" {kind.value.upper()} ") is kind
 
 
-def test_an_unknown_kind_lists_the_kinds() -> None:
+def test_a_kind_this_vibey_does_not_know_is_searched_for_as_written() -> None:
+    """vibey#275: a newer vibey's kind must be findable from an older CLI."""
+    resolver = EventKindResolver()
+    assert resolver.accepts_unrecognized is True
+    assert resolver.resolve("  FutureKindX ") == UnrecognizedEventKind("FutureKindX")
+    # Case is kept: the stored text is matched exactly, and a newer vibey's
+    # values are as case-sensitive as this one's.
+    assert resolver.resolve("futurekindx") == UnrecognizedEventKind("futurekindx")
+    assert EVENT_KINDS.resolve("FutureKindX") == UnrecognizedEventKind("FutureKindX")
+
+
+def test_a_strict_resolver_refuses_an_unknown_kind_and_lists_the_kinds() -> None:
+    resolver = EventKindResolver(accept_unrecognized=False)
+    assert resolver.accepts_unrecognized is False
     with pytest.raises(InvalidLedgerQuery) as caught:
-        EventKindResolver().resolve("Nonsense")
+        resolver.resolve("Nonsense")
     assert "'Nonsense'" in str(caught.value)
     assert EventKind.FINDING_RAISED.value in str(caught.value)
+    # A known kind still resolves.
+    assert resolver.resolve("findingraised") is EventKind.FINDING_RAISED
+
+
+@pytest.mark.parametrize("label", ["", "   "])
+def test_an_empty_kind_label_is_refused_even_by_default(label: str) -> None:
+    with pytest.raises(InvalidLedgerQuery, match="unknown event kind"):
+        EventKindResolver().resolve(label)
+
+
+def test_a_query_can_mix_known_and_unrecognized_kinds() -> None:
+    kinds = frozenset({EventKind.FINDING_RAISED, UnrecognizedEventKind("FutureKindX")})
+    assert LedgerQuery(kinds=kinds).kinds == kinds
 
 
 # -- the query --------------------------------------------------------------

@@ -13,7 +13,7 @@ is a usage error (exit 2) even when the database is unreachable.
 
 import asyncio
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from contextlib import AbstractAsyncContextManager
 from datetime import UTC, datetime, tzinfo
 from typing import Annotated, Final
@@ -34,7 +34,7 @@ from vibey.domain.interfaces.ledger_query_interface import (
     LedgerQueryInterface,
     LedgerSearchResultInterface,
 )
-from vibey.domain.ledger import LedgerEvent
+from vibey.domain.ledger import LedgerEvent, LedgerEventKind, UnrecognizedEventKind
 from vibey.domain.ledger_query import (
     ACTORS,
     DEFAULT_SEARCH_LIMIT,
@@ -43,6 +43,7 @@ from vibey.domain.ledger_query import (
     InvalidLedgerQuery,
     LedgerQuery,
 )
+from vibey.domain.phase import Phase
 from vibey.infrastructure.db.ledger_search_repository import PostgresLedgerSearchRepository
 
 DEFAULT_DIGEST_WIDTH: Final = 12
@@ -98,11 +99,22 @@ class LedgerSearchPresenter:
         }
         return json.dumps(document, indent=2, default=str)
 
+    def kind_notes(self, kinds: Iterable[LedgerEventKind]) -> list[str]:
+        unrecognized = sorted(k.value for k in kinds if isinstance(k, UnrecognizedEventKind))
+        return [
+            f"note: {value!r} is not an event kind this vibey knows; matching it exactly "
+            "as written (a newer vibey may have recorded it)"
+            for value in unrecognized
+        ]
+
     def _line(self, event: LedgerEvent) -> str:
         stamp = event.produced_at.strftime("%Y-%m-%d %H:%M:%S")
         engine = f" [{event.engine_id.value}]" if event.engine_id is not None else ""
+        # A phase a newer vibey wrote (vibey#287) has no member name; its stored
+        # text is what the operator can search for, so that is what is shown.
+        phase = event.phase.name if isinstance(event.phase, Phase) else event.phase.value
         return (
-            f"#{event.seq:<4} {stamp} [{event.phase.name}] {event.kind.value}{engine} "
+            f"#{event.seq:<4} {stamp} [{phase}] {event.kind.value}{engine} "
             f"id={event.event_id} digest={event.digest[: self._digest_width]}"
         )
 
@@ -178,6 +190,9 @@ class LedgerSearchCommand:
     async def run(
         self, project_id: UUID | None, query: LedgerQueryInterface, *, as_json: bool
     ) -> None:
+        # To stderr, so `--json` stays one parseable document on stdout.
+        for note in self._presenter.kind_notes(query.kinds):
+            typer.echo(note, err=True)
         async with self._open_app() as resources:
             target = await self._project(resources, project_id)
             # The pool the ledger repository already holds, the way the other
@@ -240,7 +255,9 @@ def ledger_search(
     kind: Annotated[
         list[str] | None,
         typer.Option(
-            "--kind", help="Event kind, by name or value, any case. Repeat for any of several."
+            "--kind",
+            help="Event kind, by name or value, any case. Repeat for any of several. A "
+            "kind this vibey does not know (a newer one wrote it) is matched exactly.",
         ),
     ] = None,
     text: Annotated[

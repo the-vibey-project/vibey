@@ -3,8 +3,8 @@
 vocabularies a searcher types by hand.
 
 Mirrors `vibey/domain/ledger_query.py` (ADR-0016). Interfaces declare; they never
-consume. The vocabulary types a seam is declared over -- `EventKind`, `ActorScope`,
-`LedgerEvent` -- are imported under TYPE_CHECKING only, so this module has no
+consume. The vocabulary types a seam is declared over -- `LedgerEventKind`,
+`ActorScope`, `LedgerEvent` -- are imported under TYPE_CHECKING only, so this module has no
 runtime dependency on the code that implements it.
 """
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
-    from vibey.domain.ledger import EventKind, LedgerEvent
+    from vibey.domain.ledger import LedgerEvent, LedgerEventKind
     from vibey.domain.ledger_query import ActorScope
 
 
@@ -48,8 +48,9 @@ class ActorResolverInterface(Protocol):
 class EventKindResolverInterface(Protocol):
     """Resolves a typed event-kind label, by value or name, any case."""
 
-    def resolve(self, label: str) -> EventKind:
-        """Raises `InvalidLedgerQuery` for a label that names no kind."""
+    def resolve(self, label: str) -> LedgerEventKind:
+        """A known member, or -- when the resolver accepts one -- the label as an
+        unrecognized kind to match exactly. Raises `InvalidLedgerQuery` otherwise."""
         ...
 
 
@@ -83,8 +84,9 @@ class LedgerQueryInterface(Protocol):
         ...
 
     @property
-    def kinds(self) -> frozenset[EventKind]:
-        """Any of these kinds; empty means every kind."""
+    def kinds(self) -> frozenset[LedgerEventKind]:
+        """Any of these kinds; empty means every kind. An unrecognized kind
+        matches its stored text exactly."""
         ...
 
     @property

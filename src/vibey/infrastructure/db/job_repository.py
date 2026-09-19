@@ -7,44 +7,89 @@ correctness rests on Postgres's guarantees, not ours."""
 import json
 from collections.abc import Mapping
 from datetime import datetime, timedelta
+from typing import Final
 from uuid import UUID
 
 import asyncpg
 
 from vibey.application.dto import EnqueueRequest, JobRecord
 from vibey.domain.engine import EngineId
-from vibey.domain.job import JobState
-from vibey.domain.phase import Phase
+from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
+from vibey.domain.job import JOB_STATE_PARSER, JobState, StoredJobState, UnrecognizedJobState
+from vibey.domain.phase import PHASE_PARSER, Phase, UnrecognizedPhase
+from vibey.infrastructure.db.interfaces import JobRowMapperInterface
 
 
-def _row_to_job_record(row: asyncpg.Record) -> JobRecord:
-    return JobRecord(
-        id=row["id"],
-        project_id=row["project_id"],
-        cycle=row["cycle"],
-        phase=Phase(row["phase"]),
-        kind=row["kind"],
-        state=JobState(row["state"]),
-        priority=row["priority"],
-        work_item_id=row["work_item_id"],
-        payload=json.loads(row["payload"]),
-        requirement=json.loads(row["requirement"]),
-        idempotency_key=row["idempotency_key"],
-        attempts=row["attempts"],
-        max_attempts=row["max_attempts"],
-        run_after=row["run_after"],
-        lease_owner=row["lease_owner"],
-        lease_expires_at=row["lease_expires_at"],
-        assigned_engine=row["assigned_engine"],
-        last_error=json.loads(row["last_error"]) if row["last_error"] is not None else None,
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
-    )
+class JobRowMapper:
+    """Turns one `job` row into a `JobRecord`, one way for every reader.
+
+    `phase` and `state` are Postgres enums a newer vibey widens with a migration,
+    so both are read forward-compatibly (vibey#287): a value this vibey does not
+    know comes back as its stored text, never a `ValueError`. The claim never
+    hands a worker a job whose phase it does not know; `get`, `enqueue`'s
+    read-back and `queue_depth` can still meet one, and must not crash on it.
+    """
+
+    def __init__(
+        self,
+        *,
+        phases: StoredValueParserInterface[Phase, UnrecognizedPhase] = PHASE_PARSER,
+        states: StoredValueParserInterface[JobState, UnrecognizedJobState] = JOB_STATE_PARSER,
+    ) -> None:
+        self._phases = phases
+        self._states = states
+
+    def state(self, raw: str) -> StoredJobState:
+        """One stored `job.state`, read the way `to_record` reads it."""
+        return self._states.parse(raw)
+
+    def to_record(self, row: asyncpg.Record) -> JobRecord:
+        return JobRecord(
+            id=row["id"],
+            project_id=row["project_id"],
+            cycle=row["cycle"],
+            phase=self._phases.parse(row["phase"]),
+            kind=row["kind"],
+            state=self.state(row["state"]),
+            priority=row["priority"],
+            work_item_id=row["work_item_id"],
+            payload=json.loads(row["payload"]),
+            requirement=json.loads(row["requirement"]),
+            idempotency_key=row["idempotency_key"],
+            attempts=row["attempts"],
+            max_attempts=row["max_attempts"],
+            run_after=row["run_after"],
+            lease_owner=row["lease_owner"],
+            lease_expires_at=row["lease_expires_at"],
+            assigned_engine=row["assigned_engine"],
+            last_error=json.loads(row["last_error"]) if row["last_error"] is not None else None,
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
+
+
+JOB_ROWS: Final[JobRowMapperInterface] = JobRowMapper()
+"""The one row mapper every reader of `job` shares. Stateless, so one instance serves."""
 
 
 class PostgresJobRepository:
-    def __init__(self, pool: asyncpg.Pool) -> None:
+    """The queue. `phases` is the set of phases this worker claims jobs in, and
+    whose projects it claims jobs from: by default every `Phase` this vibey knows
+    (vibey#287). A job in a phase outside it -- one a newer vibey added -- or in a
+    project that a newer vibey moved into such a phase is not claimed here; it
+    waits, `ready`, for a worker that knows what the phase means. Narrowing the set
+    confines a worker to part of the phase machine."""
+
+    def __init__(
+        self,
+        pool: asyncpg.Pool,
+        *,
+        rows: JobRowMapperInterface = JOB_ROWS,
+        phases: frozenset[Phase] = frozenset(Phase),
+    ) -> None:
         self._pool = pool
+        self._rows = rows
+        self._claimable_phases = sorted(phase.value for phase in phases)
 
     async def enqueue(self, request: EnqueueRequest) -> JobRecord:
         async with self._pool.acquire() as conn, conn.transaction():
@@ -84,7 +129,7 @@ class PostgresJobRepository:
                         "enqueue: conflicting idempotency key but no existing row found "
                         f"(project_id={request.project_id}, key={request.idempotency_key!r})"
                     )
-                return _row_to_job_record(row)
+                return self._rows.to_record(row)
 
             job_id = row["id"]
             for dep_id in request.depends_on:
@@ -101,7 +146,7 @@ class PostgresJobRepository:
             # NOTIFY's payload cannot be a bind parameter; project_id is a
             # UUID we generated/validated ourselves, never free text.
             await conn.execute(f"NOTIFY vibey_job_ready, '{request.project_id}'")
-            return _row_to_job_record(row)
+            return self._rows.to_record(row)
 
     async def claim(self, project_id: UUID, *, owner: str, lease: timedelta) -> JobRecord | None:
         async with self._pool.acquire() as conn:
@@ -118,6 +163,11 @@ class PostgresJobRepository:
                     WHERE j.state = 'ready'
                       AND j.run_after <= now()
                       AND j.project_id = $3
+                      AND j.phase::text = ANY($4::text[])
+                      AND EXISTS (
+                          SELECT 1 FROM project pr
+                          WHERE pr.id = j.project_id AND pr.phase::text = ANY($4::text[])
+                      )
                       AND NOT EXISTS (
                           SELECT 1 FROM job_dependency d
                           JOIN job p ON p.id = d.depends_on_job_id
@@ -132,8 +182,9 @@ class PostgresJobRepository:
                 owner,
                 lease,
                 project_id,
+                self._claimable_phases,
             )
-            return _row_to_job_record(row) if row is not None else None
+            return self._rows.to_record(row) if row is not None else None
 
     async def heartbeat(self, job_id: UUID, *, owner: str, lease: timedelta) -> bool:
         async with self._pool.acquire() as conn:
@@ -278,21 +329,21 @@ class PostgresJobRepository:
             )
             return int(count)
 
-    async def queue_depth(self, project_id: UUID) -> dict[JobState, int]:
+    async def queue_depth(self, project_id: UUID) -> dict[StoredJobState, int]:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 "SELECT state, count(*) as count FROM job WHERE project_id = $1 GROUP BY state",
                 project_id,
             )
-            counts: dict[JobState, int] = {s: 0 for s in JobState}
+            counts: dict[StoredJobState, int] = dict.fromkeys(JobState, 0)
             for row in rows:
-                counts[JobState(row["state"])] = row["count"]
+                counts[self._rows.state(row["state"])] = row["count"]
             return counts
 
     async def get(self, job_id: UUID) -> JobRecord | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow("SELECT * FROM job WHERE id = $1", job_id)
-            return _row_to_job_record(row) if row is not None else None
+            return self._rows.to_record(row) if row is not None else None
 
 
 def _rowcount(command_tag: str) -> int:

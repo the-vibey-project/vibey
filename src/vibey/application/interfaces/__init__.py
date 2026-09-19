@@ -101,6 +101,9 @@ from vibey.application.interfaces.visual import (
     VisualInventoryProducer,
     VisualInventoryRepository,
 )
+from vibey.application.interfaces.worker_interface import (
+    WorkerLoopInterface,
+)
 
 __all__ = [
     "Logger",
@@ -166,5 +169,6 @@ __all__ = [
     "VerifyWorktrees",
     "VisualInventoryProducer",
     "VisualInventoryRepository",
+    "WorkerLoopInterface",
     "WorkPlanProducer",
 ]
