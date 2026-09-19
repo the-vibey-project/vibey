@@ -5,7 +5,7 @@ This is the half of the flow that was missing. The merge train fills the integra
 branch; something has to move it to the release branch, and doing that by hand is how a
 release ends up on the wrong branch — or how an unbumped version publishes nothing.
 
-Three things it gets right that a hand-written workflow usually does not:
+Four things it gets right that a hand-written workflow usually does not:
 
 **It compares by CONTENT, not by commit count.** The release branch is rebase-merged, so
 its commits are rewritten copies with different SHAs; the integration branch will always
@@ -19,18 +19,37 @@ proceeds; it just does not publish.
 
 **It waits for the checks.** A pull request opened seconds ago has no results yet, and
 merging blind is how a red build reaches the release branch.
+
+**It keeps the pull request's words current.** A promotion that stays open across runs is
+reused, and its title and body are rewritten from the current derivation every time — a
+reviewer approving a release reads the version it will publish, not the one it was opened
+at (#235). The version it was opened at is kept, and said, when the two differ.
 """
 
 from __future__ import annotations
 
+import json
+import re
 import subprocess
 from dataclasses import dataclass, field
 
-from vibey_gh import versioning
+from vibey_gh import github_state, versioning
 from vibey_gh.config import GhConfig, load_config
+from vibey_gh.interfaces.promotion_pull_request_interface import PromotionInterface
 
 DEFAULT_METHOD = "rebase"
 CHECK_TIMEOUT_SECONDS = 1800
+# The promotion pull request's own record, carried at the top of its body the way the
+# `vibey-gh-pr-automation` and `vibey-gh-issue-automation` state markers carry theirs.
+PROMOTION_MARKER = "vibey-gh-promotion"
+# A promotion opened before the marker existed never had its title changed, so the title
+# is an honest record of the version it was opened at — when it has this exact shape.
+_TITLE_VERSION = re.compile(r"^chore\(release\): (\S+)$")
+_VERSION = re.compile(r"\S+")
+# `gh pr edit` reads the pull request over GraphQL first, and a gh old enough to still ask
+# for `projectCards` is refused outright now that Projects (classic) is sunset — the edit
+# never happens, whatever the token may do. The REST endpoint asks for no such field.
+_PROJECTS_CLASSIC = re.compile(r"projects \(classic\)|projectcards", re.IGNORECASE)
 
 
 @dataclass
@@ -40,6 +59,9 @@ class Promotion:
     changed_files: int = 0
     version: str = ""
     bumped: str | None = None  # the derived version, or None when nothing was due
+    reason: str = ""  # what the derivation said, verbatim
+    released: str | None = None  # the release branch's version, or None when unreadable
+    previous: str | None = None  # the version a reused pull request was opened at, if known
     pull_request: int | None = None
     merged: bool = False
     bypassed: bool = False
@@ -79,6 +101,13 @@ def open_pull_request(cfg: GhConfig) -> int | None:
 
 
 def create_pull_request(cfg: GhConfig, body: str) -> int | None:
+    """Open the promotion pull request, titled by the one spelling an edit also uses.
+
+    Module-level beside `open_pull_request`, `checks_pass` and `merge` (ADR-0016's method
+    of last resort, and the reason): the four are the `gh` verbs `promote` sequences, and
+    moving one of them alone into `PromotionPullRequest` would split a set that converges
+    together. The title is not spelled here; it is asked of the class that also edits it.
+    """
     ok, out = _gh(
         cfg,
         "pr",
@@ -88,7 +117,7 @@ def create_pull_request(cfg: GhConfig, body: str) -> int | None:
         "--head",
         cfg.integration_branch,
         "--title",
-        f"chore(release): {versioning.read_version(cfg)}",
+        PromotionPullRequest(cfg).title(versioning.read_version(cfg)),
         "--body",
         body,
     )
@@ -120,6 +149,11 @@ def promote(
     method: str = DEFAULT_METHOD,
     wait: bool = False,
 ) -> Promotion:
+    """Promote the integration branch, opening a pull request or refreshing the open one.
+
+    Module-level under ADR-0016 because it is this module's published entry point: `cli`
+    dispatches to it by name and callers substitute it by name.
+    """
     cfg = cfg or load_config()
     result = Promotion()
     integration, release = cfg.integration_branch, cfg.release_branch
@@ -131,11 +165,15 @@ def promote(
 
     changed = _git(cfg, "diff", "--name-only", f"origin/{release}", f"origin/{integration}")
     result.changed_files = len([line for line in changed.stdout.splitlines() if line])
+    # What the release branch already carries — the version an upload would find on the
+    # index. The pull request's body says whether merging publishes from THIS comparison,
+    # not from a caveat printed on every promotion whatever it proposes.
+    result.released = versioning.read_version_at(cfg, f"origin/{release}")
 
     # Derive the version on the integration branch, where the release will be cut from.
     _git(cfg, "checkout", "--quiet", "-B", integration, f"origin/{integration}")
     new, why = versioning.decide(cfg, f"origin/{release}")
-    result.bumped = new
+    result.bumped, result.reason = new, why
     result.say(f"version: {why}")
 
     if new and not dry_run:
@@ -180,14 +218,16 @@ def promote(
         result.say("dry run — stopping before opening the pull request")
         return result
 
+    pull_request = PromotionPullRequest(cfg)
     number = open_pull_request(cfg)
     if number is None:
-        number = create_pull_request(cfg, _body(cfg, result))
+        number = create_pull_request(cfg, pull_request.body(result))
         if number is None:
             raise RuntimeError("could not open the promotion pull request")
         result.say(f"opened #{number}")
     else:
-        result.say(f"reusing #{number}")
+        # Reused, so its words were written by an earlier run about an earlier state.
+        pull_request.refresh(number, result)
     result.pull_request = number
 
     if not wait:
@@ -210,13 +250,156 @@ def promote(
     return result
 
 
-def _body(cfg: GhConfig, result: Promotion) -> str:
-    return (
-        f"Promotion opened by `vibey-gh promote`.\n\n"
-        f"{result.changed_files} file(s) differ from `{cfg.release_branch}`. The package "
-        f"version is `{result.version}` — merging publishes it, and an upload skips a "
-        f"version the index already holds, so a promotion nobody bumped publishes "
-        f"nothing.\n\n"
-        f"Merged with `--{DEFAULT_METHOD}`, which is the only method consistent with a "
-        f"linear-history rule."
-    )
+class PromotionPullRequest:
+    """Implements `PromotionPullRequestInterface` with `gh`, against the repository at
+    `cfg.root` — the same directory every other `gh` call in this module resolves from."""
+
+    def __init__(self, cfg: GhConfig) -> None:
+        self._cfg = cfg
+
+    def title(self, version: str) -> str:
+        return f"chore(release): {version}"
+
+    def body(self, result: PromotionInterface) -> str:
+        release = self._cfg.release_branch
+        # The version the pull request was first opened at is carried forward, not
+        # overwritten: it is how long the promotion has been open, and a record holding
+        # only the current version would forget it the run after it was first said.
+        opened = result.previous or result.version
+        # "Written", not "opened": a promotion a human opened is rewritten all the same.
+        intro = (
+            "Written by `vibey-gh promote`, and rewritten from the current derivation every "
+            "time it runs while this pull request is open."
+        )
+        differ = f"{result.changed_files} file(s) differ from `{release}`."
+        paragraphs = [intro, f"{differ} {self._publishes(result)}"]
+        if opened != result.version:
+            derivation = f" (version derivation: {result.reason})" if result.reason else ""
+            paragraphs.append(f"Opened as `{opened}`; now `{result.version}`{derivation}.")
+        paragraphs.append(
+            f"Merged with `--{DEFAULT_METHOD}`, which is the only method consistent with a "
+            "linear-history rule."
+        )
+        return github_state.render_body(
+            PROMOTION_MARKER,
+            {"opened": opened, "version": result.version},
+            f"Promote `{self._cfg.integration_branch}` to `{release}`",
+            "\n\n".join(paragraphs),
+        )
+
+    def _publishes(self, result: PromotionInterface) -> str:
+        release = self._cfg.release_branch
+        if result.released is None:
+            # Unreadable is not the same as unbumped: say what is known, and no more.
+            return (
+                f"The package version is `{result.version}`; the version on `{release}` "
+                "could not be read, so whether merging publishes it depends on whether "
+                "the index already holds it."
+            )
+        if result.version == result.released:
+            return (
+                f"The package version is `{result.version}`, the same as `{release}`'s, "
+                "and an upload skips a version the index already holds — so merging this "
+                "promotion publishes nothing."
+            )
+        return f"Merging publishes `{result.version}` (`{release}` is at `{result.released}`)."
+
+    def recorded_version(self, title: str, body: str) -> str | None:
+        pattern = github_state.marker_pattern(PROMOTION_MARKER)
+        payload = github_state.parse_payload([body], pattern) or {}
+        for key in ("opened", "version"):
+            value = payload.get(key)
+            if isinstance(value, str) and _VERSION.fullmatch(value):
+                return value
+        match = _TITLE_VERSION.match(title.strip())
+        return match.group(1) if match else None
+
+    def read(self, number: int) -> tuple[str, str]:
+        # Its own call, never a wider `pr list`: the list answers "is there one", and
+        # folding the words into it would make every caller of that question pay for them.
+        run = self._gh("pr", "view", str(number), "--json", "title,body")
+        if run.returncode:
+            raise RuntimeError(self._detail(run, "gh pr view"))
+        try:
+            data = json.loads(run.stdout or "null")
+        except json.JSONDecodeError:
+            data = None
+        if isinstance(data, dict):
+            return str(data.get("title") or ""), str(data.get("body") or "")
+        raise RuntimeError(f"gh pr view {number} did not return a title and body")
+
+    def write(self, number: int, title: str, body: str) -> None:
+        edit = self._gh("pr", "edit", str(number), "--title", title, "--body", body)
+        if edit.returncode == 0:
+            return
+        detail = self._detail(edit, "gh pr edit")
+        if not _PROJECTS_CLASSIC.search(detail):
+            raise RuntimeError(detail)
+        # `{owner}` and `{repo}` are gh's own placeholders, filled from the repository at
+        # `cfg.root` exactly as `gh pr edit` would have resolved it. `-f` sends the text
+        # as a raw string, so a body that happens to start with `@` is not read as a file.
+        patch = self._gh(
+            "api",
+            f"repos/{{owner}}/{{repo}}/pulls/{number}",
+            "--method",
+            "PATCH",
+            "-f",
+            f"title={title}",
+            "-f",
+            f"body={body}",
+        )
+        if patch.returncode:
+            raise RuntimeError(
+                f"{detail}; the REST fallback failed too — {self._detail(patch, 'gh api')}"
+            )
+
+    def refresh(self, number: int, result: PromotionInterface) -> None:
+        current: tuple[str, str] | None
+        try:
+            current = self.read(number)
+        except RuntimeError as exc:
+            # Refreshed anyway: a stale title is the defect, and not knowing what the pull
+            # request says now is no reason to leave it saying it.
+            current = None
+            result.say(
+                f"could not read #{number}'s title and body, so the version it was opened "
+                f"at is unknown — {exc}"
+            )
+        if current is not None:
+            result.previous = self.recorded_version(*current)
+        title, body = self.title(result.version), self.body(result)
+        if current is not None and self._same(current, (title, body)):
+            result.say(f"reusing #{number}; its title and body are already current")
+            return
+        try:
+            self.write(number, title, body)
+        except RuntimeError as exc:
+            # A note, not a crash: the pull request is still the promotion, and the merge
+            # gate still judges its exact head. Its words are what could not be fixed.
+            result.say(f"reusing #{number}; could not refresh its title/body — {exc}")
+            return
+        moved = ""
+        if result.previous is not None and result.previous != result.version:
+            moved = f" (opened as {result.previous}, now {result.version})"
+        result.say(f"reusing #{number}; refreshed its title and body{moved}")
+
+    def _gh(self, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["gh", *args], cwd=self._cfg.root, capture_output=True, text=True, check=False
+        )
+
+    @staticmethod
+    def _detail(run: subprocess.CompletedProcess, what: str) -> str:
+        # gh names the actual refusal on stderr; hiding it turns a token-scope problem
+        # into guessing, which is the lesson the version-bump push above already records.
+        text = " ".join(((run.stderr or run.stdout) or "").split())[:300]
+        return text or f"{what} exited {run.returncode}"
+
+    @staticmethod
+    def _same(current: tuple[str, str], wanted: tuple[str, str]) -> bool:
+        # The forge may hand a body back with CRLF line ends or without its final newline;
+        # neither is a difference worth an edit.
+        def norm(text: str) -> str:
+            return text.replace("\r\n", "\n").strip()
+
+        return all(norm(a) == norm(b) for a, b in zip(current, wanted, strict=True))

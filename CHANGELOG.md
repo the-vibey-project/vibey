@@ -32,6 +32,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Bug Fixes
 
+* **gh:** `vibey-gh promote` rewrites a reused promotion pull request's title and body from
+  the current derivation instead of leaving them as the run that opened it wrote them
+  (#235). #231 kept reading `chore(release): 0.8.0` and "5 file(s) differ" while it
+  proposed a 178-file 1.0.0. The body now opens with a `vibey-gh-promotion` record of the
+  version the pull request was opened at, says when that differs from the version it now
+  carries, and says the merge publishes nothing only when the version equals the release
+  branch's. An edit refused over Projects (classic) falls back to the REST endpoint; a
+  refresh that fails is a note, not a failed promotion.
 * **cluster:** `vibey doctor --cluster` passes a default chart install again. Since the one wheel
   put every runner on `PATH` (ADR-0037), `engine-auth` judged all four paid engines in every pod
   and failed the default `--provider scripted` install, which mounts no keys; `cluster-smoke`
