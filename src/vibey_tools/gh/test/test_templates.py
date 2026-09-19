@@ -2672,6 +2672,8 @@ def test_the_provenance_job_carries_no_forge_credential():
 
     # Read-only on contents alone. Anything wider is a wider grant to that same code.
     assert workflow["permissions"] == {"contents": "read"}
+    checkout = workflow["jobs"]["provenance"]["steps"][0]
+    assert checkout["with"]["persist-credentials"] is False
     # The premise the assertions above rest on: this job really does install and run the
     # checkout's own tooling, so if that ever stops being true these can be revisited.
     assert 'python -m pip install --quiet -e "$self"' in text
