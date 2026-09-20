@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Adapter between BUILD application events (raw EngineAdapter output) and
 the durable event ledger. Translation lives here, not in application/,
 because infrastructure/engines/tailer.py is off-limits to application/ under
@@ -24,6 +25,7 @@ class PostgresBuildLedger:
         job_id: UUID,
         engine_id: EngineId | None,
         correlation_id: UUID,
+        causation_id: UUID | None = None,
         event: EngineEvent,
     ) -> None:
         draft = translate_event(
@@ -34,6 +36,7 @@ class PostgresBuildLedger:
             engine_id=engine_id,
             job_id=job_id,
             correlation_id=correlation_id,
+            causation_id=causation_id,
         )
         if draft is not None:
             await self._ledger.append(draft)

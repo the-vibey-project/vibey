@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import asyncio
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -6,6 +7,7 @@ import asyncpg
 import pytest
 
 from vibey.application.dto import EnqueueRequest
+from vibey.domain.engine import EngineId
 from vibey.domain.job import JobState
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
@@ -163,6 +165,53 @@ async def test_nack_marks_failed_once_max_attempts_reached(
     assert record.state is JobState.FAILED
 
 
+async def test_grant_attempts_widens_the_bound_so_the_next_nack_retries(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    """ADR-0024: the grant has to reach the row, because nack decides
+    'failed' from the row's own max_attempts."""
+    repo = PostgresJobRepository(migrated_pool)
+    job = await repo.enqueue(_request(project_id, max_attempts=1))
+    await repo.claim(project_id, owner="worker-1", lease=LEASE)
+
+    assert await repo.grant_attempts(job.id, owner="worker-1", max_attempts=4) is True
+    await repo.nack(job.id, owner="worker-1", error={"message": "boom"})
+
+    record = await repo.get(job.id)
+    assert record is not None
+    assert record.max_attempts == 4
+    assert record.state is JobState.READY
+
+
+async def test_grant_attempts_never_narrows_the_bound(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    job = await repo.enqueue(_request(project_id, max_attempts=7))
+    await repo.claim(project_id, owner="worker-1", lease=LEASE)
+
+    assert await repo.grant_attempts(job.id, owner="worker-1", max_attempts=7) is False
+    assert await repo.grant_attempts(job.id, owner="worker-1", max_attempts=2) is False
+
+    record = await repo.get(job.id)
+    assert record is not None
+    assert record.max_attempts == 7
+
+
+async def test_grant_attempts_refuses_a_lease_it_does_not_hold(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    job = await repo.enqueue(_request(project_id, max_attempts=1))
+    await repo.claim(project_id, owner="worker-1", lease=LEASE)
+
+    assert await repo.grant_attempts(job.id, owner="worker-2", max_attempts=9) is False
+
+    record = await repo.get(job.id)
+    assert record is not None
+    assert record.max_attempts == 1
+
+
 async def test_park_sets_awaiting_human_and_releases_lease(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:
@@ -308,3 +357,224 @@ async def test_enqueue_raises_lookup_error_when_both_fetchrows_return_none() -> 
     repo = PostgresJobRepository(_NullPool())  # type: ignore[arg-type]
     with pytest.raises(LookupError, match="conflicting idempotency key"):
         await repo.enqueue(_request(uuid4()))
+
+
+async def test_assign_engine_records_selection_on_leased_job(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    await repo.enqueue(_request(project_id))
+    job = await repo.claim(project_id, owner="w1", lease=LEASE)
+    assert job is not None
+
+    ok = await repo.assign_engine(job.id, owner="w1", engine_id=EngineId.CLAUDELOOP)
+
+    assert ok is True
+    fetched = await repo.get(job.id)
+    assert fetched is not None
+    assert fetched.assigned_engine == "claudeloop"
+
+
+async def test_assign_engine_refuses_wrong_owner(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    await repo.enqueue(_request(project_id))
+    job = await repo.claim(project_id, owner="w1", lease=LEASE)
+    assert job is not None
+
+    ok = await repo.assign_engine(job.id, owner="somebody-else", engine_id=EngineId.AGYLOOP)
+
+    assert ok is False
+    fetched = await repo.get(job.id)
+    assert fetched is not None
+    assert fetched.assigned_engine is None
+
+
+async def test_assign_engine_refuses_unleased_job(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    job = await repo.enqueue(_request(project_id))
+
+    ok = await repo.assign_engine(job.id, owner="w1", engine_id=EngineId.CLAUDELOOP)
+
+    assert ok is False
+
+
+async def test_count_unsettled_scopes_by_cycle_phase_and_terminal_states(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    settled = await repo.enqueue(_request(project_id, subject="done-item"))
+    open_job = await repo.enqueue(_request(project_id, subject="open-item"))
+    await repo.enqueue(_request(project_id, subject="other-cycle", cycle=2))
+    await repo.enqueue(
+        _request(project_id, subject="other-phase", phase=Phase.REVIEW, kind="review.demo")
+    )
+
+    claimed = await repo.claim(project_id, owner="w1", lease=LEASE)
+    assert claimed is not None and claimed.id == settled.id
+    # A leased job still counts as unsettled.
+    assert await repo.count_unsettled(project_id, cycle=1, phase=Phase.BUILD) == 2
+    await repo.ack(settled.id, owner="w1")
+
+    assert await repo.count_unsettled(project_id, cycle=1, phase=Phase.BUILD) == 1
+    assert (
+        await repo.count_unsettled(project_id, cycle=1, phase=Phase.BUILD, exclude=open_job.id) == 0
+    )
+
+
+async def test_count_unsettled_treats_failed_as_settled(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    failing = await repo.enqueue(_request(project_id, subject="failing-item", max_attempts=1))
+
+    claimed = await repo.claim(project_id, owner="w1", lease=LEASE)
+    assert claimed is not None and claimed.id == failing.id
+    await repo.nack(failing.id, owner="w1", error={"class": "work", "detail": "x"})
+
+    failed = await repo.get(failing.id)
+    assert failed is not None and failed.state is JobState.FAILED
+    assert await repo.count_unsettled(project_id, cycle=1, phase=Phase.BUILD) == 0
+
+
+# --- enqueue_batch: the fan-out is one transaction (#265) ---
+
+
+async def _dependencies(pool: asyncpg.Pool, job_id: UUID) -> set[UUID]:
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT depends_on_job_id FROM job_dependency WHERE job_id = $1", job_id
+        )
+    return {row["depends_on_job_id"] for row in rows}
+
+
+async def _count_keys(pool: asyncpg.Pool, project_id: UUID, keys: list[str]) -> dict[str, int]:
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT idempotency_key, count(*) AS n FROM job
+            WHERE project_id = $1 AND idempotency_key = ANY($2::text[])
+            GROUP BY idempotency_key
+            """,
+            project_id,
+            keys,
+        )
+    return {row["idempotency_key"]: row["n"] for row in rows}
+
+
+def _plan(project_id: UUID) -> list[EnqueueRequest]:
+    return [
+        _request(project_id, subject="skeleton"),
+        _request(project_id, subject="item-2", depends_on_keys=("key-skeleton",)),
+        _request(project_id, subject="item-3", depends_on_keys=("key-skeleton", "key-item-2")),
+    ]
+
+
+async def test_enqueue_batch_commits_every_request_with_its_key_dependencies(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+
+    skeleton, item_2, item_3 = await repo.enqueue_batch(_plan(project_id))
+
+    assert [job.payload["subject"] for job in (skeleton, item_2, item_3)] == [
+        "skeleton",
+        "item-2",
+        "item-3",
+    ]
+    assert await _dependencies(migrated_pool, skeleton.id) == set()
+    assert await _dependencies(migrated_pool, item_2.id) == {skeleton.id}
+    assert await _dependencies(migrated_pool, item_3.id) == {skeleton.id, item_2.id}
+
+    # The edges gate the queue exactly as id-named ones do.
+    first = await repo.claim(project_id, owner="w1", lease=LEASE)
+    assert first is not None and first.id == skeleton.id
+    assert await repo.claim(project_id, owner="w1", lease=LEASE) is None
+
+
+async def test_a_crash_mid_batch_commits_nothing_and_a_replay_makes_one_job_per_item(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    plan = _plan(project_id)
+    keys = [request.idempotency_key for request in plan]
+    # Two rows are written inside the transaction, then the third request
+    # blows up before its INSERT -- a worker dying mid-fan-out.
+    poisoned = [*plan[:2], _request(project_id, subject="item-3", payload={"x": object()})]
+
+    with pytest.raises(TypeError):
+        await repo.enqueue_batch(poisoned)
+    assert await _count_keys(migrated_pool, project_id, keys) == {}
+
+    first = await repo.enqueue_batch(plan)
+    replayed = await repo.enqueue_batch(plan)
+
+    assert await _count_keys(migrated_pool, project_id, keys) == dict.fromkeys(keys, 1)
+    assert [job.id for job in replayed] == [job.id for job in first]
+    assert await _dependencies(migrated_pool, first[2].id) == {first[0].id, first[1].id}
+
+
+async def test_enqueue_batch_rolls_back_when_a_key_names_no_job(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    # A dependency listed AFTER its dependent is not visible yet: the batch is
+    # processed in order, and a key that resolves to nothing undoes it all.
+    out_of_order = [
+        _request(project_id, subject="skeleton"),
+        _request(project_id, subject="item-2", depends_on_keys=("key-item-3",)),
+        _request(project_id, subject="item-3"),
+    ]
+
+    with pytest.raises(LookupError, match="'key-item-3'"):
+        await repo.enqueue_batch(out_of_order)
+
+    assert await repo.list_for_cycle(project_id, cycle=1, kind="build.implement") == ()
+
+
+async def test_depends_on_keys_resolve_against_jobs_already_committed(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    upstream = await repo.enqueue(_request(project_id, subject="upstream"))
+
+    (batched,) = await repo.enqueue_batch(
+        [_request(project_id, subject="batched", depends_on_keys=("key-upstream",))]
+    )
+    single = await repo.enqueue(
+        _request(project_id, subject="single", depends_on_keys=("key-upstream",))
+    )
+
+    assert await _dependencies(migrated_pool, batched.id) == {upstream.id}
+    assert await _dependencies(migrated_pool, single.id) == {upstream.id}
+
+
+async def test_enqueue_with_a_key_that_names_no_job_inserts_nothing(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+
+    with pytest.raises(LookupError, match="neither an earlier request"):
+        await repo.enqueue(_request(project_id, depends_on_keys=("key-ghost",)))
+
+    assert await repo.list_for_cycle(project_id, cycle=1, kind="build.implement") == ()
+
+
+async def test_list_for_cycle_scopes_by_project_cycle_and_kind_oldest_first(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    first = await repo.enqueue(_request(project_id, subject="first"))
+    second = await repo.enqueue(_request(project_id, subject="second"))
+    await repo.enqueue(_request(project_id, subject="other-cycle", cycle=2))
+    await repo.enqueue(_request(project_id, subject="other-kind", kind="build.verify"))
+    claimed = await repo.claim(project_id, owner="w1", lease=LEASE)
+    assert claimed is not None
+
+    listed = await repo.list_for_cycle(project_id, cycle=1, kind="build.implement")
+
+    assert [job.id for job in listed] == [first.id, second.id]
+    assert await repo.list_for_cycle(uuid4(), cycle=1, kind="build.implement") == ()

@@ -1,12 +1,14 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """In-memory fakes for application/ports.py, used to unit test worker.py
 without a database (real-DB behavior is covered separately against
 Postgres in tests/infrastructure/db/)."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from vibey.application.dto import EnqueueRequest, HumanGateRecord, HumanGateRequest, JobRecord
+from vibey.domain.engine import EngineId
 from vibey.domain.job import JobState
 from vibey.domain.phase import Phase
 
@@ -15,9 +17,53 @@ class FakeJobRepository:
     def __init__(self, jobs: list[JobRecord] | None = None) -> None:
         self._jobs: dict[UUID, JobRecord] = {j.id: j for j in (jobs or [])}
         self.calls: list[str] = []
+        # job id -> the job ids it depends on, as `enqueue_batch` resolved them.
+        self.dependencies: dict[UUID, tuple[UUID, ...]] = {}
 
     async def enqueue(self, request: EnqueueRequest) -> JobRecord:
-        job = JobRecord(
+        job = self._record(request)
+        self._jobs[job.id] = job
+        return job
+
+    async def enqueue_batch(self, requests: Sequence[EnqueueRequest]) -> tuple[JobRecord, ...]:
+        """All-or-nothing and idempotent per request, like the Postgres batch:
+        nothing lands until every request has resolved its dependency keys."""
+        self.calls.append("enqueue_batch")
+        by_key = {(job.project_id, job.idempotency_key): job for job in self._jobs.values()}
+        staged: dict[UUID, JobRecord] = {}
+        staged_dependencies: dict[UUID, tuple[UUID, ...]] = {}
+        records: list[JobRecord] = []
+        for request in requests:
+            depends_on = [*request.depends_on]
+            for key in request.depends_on_keys:
+                dependency = by_key.get((request.project_id, key))
+                if dependency is None:
+                    raise LookupError(f"depends_on_keys names unknown job {key!r}")
+                depends_on.append(dependency.id)
+            existing = by_key.get((request.project_id, request.idempotency_key))
+            if existing is not None:
+                records.append(existing)
+                continue
+            job = self._record(request)
+            by_key[(job.project_id, job.idempotency_key)] = job
+            staged[job.id] = job
+            staged_dependencies[job.id] = tuple(depends_on)
+            records.append(job)
+        self._jobs.update(staged)
+        self.dependencies.update(staged_dependencies)
+        return tuple(records)
+
+    async def list_for_cycle(
+        self, project_id: UUID, *, cycle: int, kind: str
+    ) -> tuple[JobRecord, ...]:
+        return tuple(
+            job
+            for job in self._jobs.values()
+            if job.project_id == project_id and job.cycle == cycle and job.kind == kind
+        )
+
+    def _record(self, request: EnqueueRequest) -> JobRecord:
+        return JobRecord(
             id=uuid4(),
             project_id=request.project_id,
             cycle=request.cycle,
@@ -39,8 +85,6 @@ class FakeJobRepository:
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
-        self._jobs[job.id] = job
-        return job
 
     async def claim(self, project_id: UUID, *, owner: str, lease: timedelta) -> JobRecord | None:
         self.calls.append("claim")
@@ -100,6 +144,14 @@ class FakeJobRepository:
         )
         return True
 
+    async def grant_attempts(self, job_id: UUID, *, owner: str, max_attempts: int) -> bool:
+        self.calls.append("grant_attempts")
+        job = self._jobs.get(job_id)
+        if job is None or job.lease_owner != owner or job.max_attempts >= max_attempts:
+            return False
+        self._jobs[job_id] = _with(job, max_attempts=max_attempts)
+        return True
+
     async def defer(
         self,
         job_id: UUID,
@@ -125,6 +177,28 @@ class FakeJobRepository:
 
     async def reap(self) -> int:
         return 0
+
+    async def assign_engine(self, job_id: UUID, *, owner: str, engine_id: EngineId) -> bool:
+        self.calls.append("assign_engine")
+        job = self._jobs.get(job_id)
+        if job is None or job.lease_owner != owner or job.state is not JobState.LEASED:
+            return False
+        self._jobs[job_id] = _with(job, assigned_engine=engine_id.value)
+        return True
+
+    async def count_unsettled(
+        self, project_id: UUID, *, cycle: int, phase: Phase, exclude: UUID | None = None
+    ) -> int:
+        terminal = {JobState.SUCCEEDED, JobState.FAILED, JobState.CANCELLED}
+        return sum(
+            1
+            for job in self._jobs.values()
+            if job.project_id == project_id
+            and job.cycle == cycle
+            and job.phase is phase
+            and job.state not in terminal
+            and job.id != exclude
+        )
 
     async def queue_depth(self, project_id: UUID) -> Mapping[str, int]:
         from collections import Counter
@@ -190,6 +264,13 @@ class FakeHumanGateRepository:
     async def latest_for_job(self, job_id: UUID) -> HumanGateRecord | None:
         matching = [record for record in self.raised if record.job_id == job_id]
         return matching[-1] if matching else None
+
+    async def open_for_project(self, project_id: UUID) -> tuple[HumanGateRecord, ...]:
+        return tuple(
+            record
+            for record in self.raised
+            if record.project_id == project_id and record.answered_at is None
+        )
 
 
 def _with(job: JobRecord, **overrides: object) -> JobRecord:

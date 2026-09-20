@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Real git-worktree lifecycle for BUILD work items (M6 task 6.2).
 
 Every mutating call is preceded by a self-healing step (`git worktree
@@ -56,7 +57,15 @@ class GitWorktreeManager:
         if await self._branch_exists(branch):
             await self._git("worktree", "add", str(path), branch)
         else:
-            await self._git("worktree", "add", "-b", branch, str(path), base_ref)
+            # base_ref is a preference, not a hard requirement: callers ask
+            # for the cycle's integration branch so item branches stack on
+            # already-integrated code, but before the first integrate that
+            # branch does not exist yet -- fall back to HEAD rather than
+            # failing every early item.
+            base = base_ref
+            if base != "HEAD" and not await self._branch_exists(base):
+                base = "HEAD"
+            await self._git("worktree", "add", "-b", branch, str(path), base)
         return path
 
     async def ensure(self, item_id: str, *, base_ref: str = "HEAD") -> Path:
@@ -118,6 +127,13 @@ class GitWorktreeManager:
 
     async def _prune(self) -> None:
         await self._git("worktree", "prune")
+        # Removing/pruning worktrees can leave the primary checkout marked
+        # core.bare=true (observed live during the expansion-13 build;
+        # same class as scripts/fleet/land.sh's guard). The primary
+        # checkout is never actually bare, so reasserting is always safe --
+        # and _prune() runs inside every mutating path (create, ensure,
+        # remove, reclaim_orphans), so no lifecycle escapes the guard.
+        await self._git("config", "core.bare", "false")
 
     async def _git(self, *args: str) -> None:
         argv = ("git", "-C", str(self._repo_root), *args)

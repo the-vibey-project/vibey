@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Durable ``review.deployment_choice`` handler (M7 task 7.7 & 7.8).
 
 Presents the explicit deployment opt-in / opt-out choice gate:
@@ -27,7 +28,10 @@ def can_enqueue_deployment_design(events: Sequence[LedgerEvent]) -> bool:
     enqueueing Phase 4 deployment jobs."""
     latest_decision: EventKind | None = None
     for e in sorted(events, key=lambda ev: ev.seq):
-        if e.kind in (EventKind.DEPLOYMENT_OPTED_IN, EventKind.DEPLOYMENT_DECLINED):
+        if e.interpretable and e.kind in (
+            EventKind.DEPLOYMENT_OPTED_IN,
+            EventKind.DEPLOYMENT_DECLINED,
+        ):
             latest_decision = e.kind
     return latest_decision is EventKind.DEPLOYMENT_OPTED_IN
 

@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Real-Postgres, real-git, real-worktree end-to-end covering M6's whole
 implement->verify->integrate loop: decompose -> worktree -> provision ->
 implement -> gates -> diff review -> merge into the integration branch ->
@@ -120,6 +121,7 @@ async def test_decompose_implement_verify_integrate_run_end_to_end_through_the_q
                 reviewer=ScriptedEngine(descriptor=CODEXLOOP, base_dir=tmp_path / "engine"),
                 ledger=PostgresBuildLedger(ledger_repo),
                 jobs=jobs,
+                clock=FixedClock(),
             ),
             "build.integrate": BuildIntegrateHandler(
                 integration=IntegrationBranch(repo_path, cycle=1),

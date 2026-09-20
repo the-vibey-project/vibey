@@ -1,9 +1,15 @@
-"""Adapter between REVIEW application events and the durable event ledger."""
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""Adapter between interactive-phase application events and the durable
+event ledger. Defaults to REVIEW; the deploy stage set constructs additional
+instances with their own phase so DEPLOY_* events are never mislabeled as
+REVIEW in the append-only ledger."""
 
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
+from vibey.domain.correlation import DELIVERY_CORRELATION
+from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
@@ -11,8 +17,16 @@ from vibey.infrastructure.engines.tailer import LedgerEventDraft
 
 
 class PostgresReviewLedger:
-    def __init__(self, ledger: PostgresLedgerRepository) -> None:
+    def __init__(
+        self,
+        ledger: PostgresLedgerRepository,
+        *,
+        phase: Phase = Phase.REVIEW,
+        correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
+    ) -> None:
         self._ledger = ledger
+        self._phase = phase
+        self._correlation = correlation
 
     async def all_for_project(self, project_id: UUID) -> tuple[LedgerEvent, ...]:
         return await self._ledger.all_for_project(project_id)
@@ -30,12 +44,12 @@ class PostgresReviewLedger:
             LedgerEventDraft(
                 project_id=project_id,
                 cycle=cycle,
-                phase=Phase.REVIEW,
+                phase=self._phase,
                 kind=kind,
                 engine_id=None,
                 job_id=job_id,
                 causation_id=None,
-                correlation_id=uuid4(),
+                correlation_id=self._correlation.for_project(project_id).value,
                 provenance=Provenance.TRUSTED,
                 produced_at=datetime.now(UTC),
                 payload=p,

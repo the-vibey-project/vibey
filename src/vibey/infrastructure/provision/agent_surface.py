@@ -1,4 +1,5 @@
-"""Materializes the four agent-guidance router files into a BUILD worktree
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""Materializes the agent-guidance router files into a BUILD worktree
 (M6 task 6.3, ADR-0011). Writes are content-addressed: a router file whose
 merged content already matches what's on disk is left untouched, so
 re-provisioning an already-correct worktree performs zero writes and, when
@@ -9,13 +10,11 @@ Generated files are registered in the worktree's shared `.git/info/exclude`
 CLAUDE.md etc. is never clobbered in its working tree and generated content
 never lands in a commit -- exactly ADR-0011's "Bad, but" tradeoff.
 
-The marketplace skill directories (`.claude/skills/`, `.agents/skills/`,
-`.cursor/rules/`, `.agent/`) from ADR-0011's table are not materialized here:
-there is no `vibey-skills` (formerly `vibe-engineering-skills`) marketplace available in this build
-environment to pull skill content from. Only the four router files -- the
-part that's genuinely self-contained -- are provisioned. Replace this
-docstring note, not the emitter's signature, once real marketplace access
-exists.
+The router files remain the stable cross-engine surface. When a project enables
+`skills_context`, Vibey invokes the independently versioned `vibey-skills`
+process/JSON contract and appends its bounded packet to the engine plan; the
+generated index and packets live under `.vibey/` and are excluded below. The
+full marketplace is deliberately not copied into every worktree.
 """
 
 from collections.abc import Sequence
@@ -40,6 +39,28 @@ class ProvisionError(VibeyError):
         super().__init__(f"{' '.join(argv)} failed: {stderr.strip()}")
 
 
+# Generated-artifact patterns registered alongside the router files in the
+# shared .git/info/exclude. Engine sessions commit with broad adds; without
+# these, compiled caches and coverage data land in item branches and their
+# binary add/add merge conflicts send integration into repair storms --
+# caught live in the greeter demo. The engines' own state dirs and vibey's
+# worktree/context tree are machinery, never product.
+_ARTIFACT_PATTERNS = (
+    "__pycache__/",
+    "*.pyc",
+    ".coverage",
+    "*.egg-info/",
+    ".pytest_cache/",
+    "htmlcov/",
+    ".vibey/",
+    ".claudeloop/",
+    ".codexloop/",
+    ".cursorloop/",
+    ".agyloop/",
+    ".qwenloop/",
+)
+
+
 class AgentSurfaceProvisioner:
     def __init__(self, *, executor: CommandExecutor | None = None) -> None:
         self._executor = executor or CleanGitEnvSubprocessExecutor()
@@ -56,7 +77,13 @@ class AgentSurfaceProvisioner:
                 written.append(path)
 
         if written:
-            await self._exclude(worktree_path, [path.name for path in written])
+            # First provision of a repo always writes routers, so the
+            # artifact patterns ride along here -- preserving the
+            # zero-git-calls property of an already-correct worktree.
+            await self._exclude(
+                worktree_path,
+                [path.name for path in written] + list(_ARTIFACT_PATTERNS),
+            )
         return tuple(written)
 
     async def _exclude(self, worktree_path: Path, names: Sequence[str]) -> None:

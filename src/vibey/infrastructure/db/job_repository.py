@@ -1,17 +1,19 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Postgres-backed JobRepository: the durable, crash-safe work queue.
 Every method here is a thin, faithful translation of the SQL in
 docs/plans/data-model.md section 3.4 -- no cleverness, so the queue's
 correctness rests on Postgres's guarantees, not ours."""
 
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta
 from uuid import UUID
 
 import asyncpg
 
 from vibey.application.dto import EnqueueRequest, JobRecord
-from vibey.domain.job import JobState
+from vibey.domain.engine import EngineId
+from vibey.domain.job import JOB_STATE_PARSER, JobState, StoredJobState
 from vibey.domain.phase import Phase
 
 
@@ -46,60 +48,132 @@ class PostgresJobRepository:
 
     async def enqueue(self, request: EnqueueRequest) -> JobRecord:
         async with self._pool.acquire() as conn, conn.transaction():
+            return await self._enqueue_on(conn, request, {})
+
+    async def enqueue_batch(self, requests: Sequence[EnqueueRequest]) -> tuple[JobRecord, ...]:
+        # One transaction for the lot: an exception part-way through -- a
+        # key that resolves to nothing, a constraint, a dropped connection,
+        # a killed worker -- rolls back every row the batch already wrote.
+        async with self._pool.acquire() as conn, conn.transaction():
+            enqueued: dict[tuple[UUID, str], UUID] = {}
+            records: list[JobRecord] = []
+            for request in requests:
+                record = await self._enqueue_on(conn, request, enqueued)
+                enqueued[(record.project_id, record.idempotency_key)] = record.id
+                records.append(record)
+            return tuple(records)
+
+    async def _enqueue_on(
+        self,
+        conn: asyncpg.Connection,
+        request: EnqueueRequest,
+        enqueued: Mapping[tuple[UUID, str], UUID],
+    ) -> JobRecord:
+        """One enqueue inside the caller's transaction. `enqueued` holds the
+        ids this transaction has already made, so `depends_on_keys` can name
+        a job that is not visible outside it yet."""
+        depends_on = [*request.depends_on]
+        for key in request.depends_on_keys:
+            depends_on.append(await self._job_id(conn, request.project_id, key, enqueued))
+
+        row = await conn.fetchrow(
+            """
+            INSERT INTO job (
+                project_id, cycle, phase, kind, priority, work_item_id,
+                payload, requirement, idempotency_key, max_attempts, run_after
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10,
+                COALESCE($11, now())
+            )
+            ON CONFLICT (project_id, idempotency_key) DO NOTHING
+            RETURNING *
+            """,
+            request.project_id,
+            request.cycle,
+            request.phase.value,
+            request.kind,
+            request.priority,
+            request.work_item_id,
+            json.dumps(dict(request.payload)),
+            json.dumps(dict(request.requirement)),
+            request.idempotency_key,
+            request.max_attempts,
+            request.run_after,
+        )
+
+        if row is None:
             row = await conn.fetchrow(
-                """
-                INSERT INTO job (
-                    project_id, cycle, phase, kind, priority, work_item_id,
-                    payload, requirement, idempotency_key, max_attempts, run_after
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10,
-                    COALESCE($11, now())
-                )
-                ON CONFLICT (project_id, idempotency_key) DO NOTHING
-                RETURNING *
-                """,
+                "SELECT * FROM job WHERE project_id = $1 AND idempotency_key = $2",
                 request.project_id,
-                request.cycle,
-                request.phase.value,
-                request.kind,
-                request.priority,
-                request.work_item_id,
-                json.dumps(dict(request.payload)),
-                json.dumps(dict(request.requirement)),
                 request.idempotency_key,
-                request.max_attempts,
-                request.run_after,
+            )
+            if row is None:
+                raise LookupError(
+                    "enqueue: conflicting idempotency key but no existing row found "
+                    f"(project_id={request.project_id}, key={request.idempotency_key!r})"
+                )
+            return _row_to_job_record(row)
+
+        job_id = row["id"]
+        for dep_id in depends_on:
+            await conn.execute(
+                """
+                INSERT INTO job_dependency (job_id, depends_on_job_id)
+                VALUES ($1, $2)
+                ON CONFLICT DO NOTHING
+                """,
+                job_id,
+                dep_id,
             )
 
-            if row is None:
-                row = await conn.fetchrow(
-                    "SELECT * FROM job WHERE project_id = $1 AND idempotency_key = $2",
-                    request.project_id,
-                    request.idempotency_key,
-                )
-                if row is None:
-                    raise LookupError(
-                        "enqueue: conflicting idempotency key but no existing row found "
-                        f"(project_id={request.project_id}, key={request.idempotency_key!r})"
-                    )
-                return _row_to_job_record(row)
+        # NOTIFY's payload cannot be a bind parameter; project_id is a
+        # UUID we generated/validated ourselves, never free text. Inside a
+        # transaction it is delivered at commit (and a rolled-back batch
+        # announces nothing), with duplicates in one transaction folded.
+        await conn.execute(f"NOTIFY vibey_job_ready, '{request.project_id}'")
+        return _row_to_job_record(row)
 
-            job_id = row["id"]
-            for dep_id in request.depends_on:
-                await conn.execute(
-                    """
-                    INSERT INTO job_dependency (job_id, depends_on_job_id)
-                    VALUES ($1, $2)
-                    ON CONFLICT DO NOTHING
-                    """,
-                    job_id,
-                    dep_id,
-                )
+    async def _job_id(
+        self,
+        conn: asyncpg.Connection,
+        project_id: UUID,
+        key: str,
+        enqueued: Mapping[tuple[UUID, str], UUID],
+    ) -> UUID:
+        """The id of the job `key` names: made earlier in this transaction,
+        or already committed. A key that names neither is a caller bug, and
+        raising is what rolls the batch back instead of enqueueing a job with
+        a dependency silently missing."""
+        made = enqueued.get((project_id, key))
+        if made is not None:
+            return made
+        existing: UUID | None = await conn.fetchval(
+            "SELECT id FROM job WHERE project_id = $1 AND idempotency_key = $2",
+            project_id,
+            key,
+        )
+        if existing is None:
+            raise LookupError(
+                f"enqueue: depends_on_keys names {key!r}, which is neither an earlier "
+                f"request of this batch nor an enqueued job (project_id={project_id})"
+            )
+        return existing
 
-            # NOTIFY's payload cannot be a bind parameter; project_id is a
-            # UUID we generated/validated ourselves, never free text.
-            await conn.execute(f"NOTIFY vibey_job_ready, '{request.project_id}'")
-            return _row_to_job_record(row)
+    async def list_for_cycle(
+        self, project_id: UUID, *, cycle: int, kind: str
+    ) -> tuple[JobRecord, ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT * FROM job
+                WHERE project_id = $1 AND cycle = $2 AND kind = $3
+                ORDER BY created_at ASC, id ASC
+                """,
+                project_id,
+                cycle,
+                kind,
+            )
+            return tuple(_row_to_job_record(row) for row in rows)
 
     async def claim(self, project_id: UUID, *, owner: str, lease: timedelta) -> JobRecord | None:
         async with self._pool.acquire() as conn:
@@ -197,6 +271,19 @@ class PostgresJobRepository:
             )
             return _rowcount(result) == 1
 
+    async def grant_attempts(self, job_id: UUID, *, owner: str, max_attempts: int) -> bool:
+        async with self._pool.acquire() as conn:
+            result = await conn.execute(
+                """
+                UPDATE job SET max_attempts = $3, updated_at = now()
+                WHERE id = $1 AND lease_owner = $2 AND max_attempts < $3
+                """,
+                job_id,
+                owner,
+                max_attempts,
+            )
+            return _rowcount(result) == 1
+
     async def defer(
         self,
         job_id: UUID,
@@ -232,15 +319,46 @@ class PostgresJobRepository:
             )
             return _rowcount(result)
 
-    async def queue_depth(self, project_id: UUID) -> dict[JobState, int]:
+    async def assign_engine(self, job_id: UUID, *, owner: str, engine_id: EngineId) -> bool:
+        async with self._pool.acquire() as conn:
+            result = await conn.execute(
+                """
+                UPDATE job SET assigned_engine = $3, updated_at = now()
+                WHERE id = $1 AND lease_owner = $2 AND state = 'leased'
+                """,
+                job_id,
+                owner,
+                engine_id.value,
+            )
+            return _rowcount(result) == 1
+
+    async def count_unsettled(
+        self, project_id: UUID, *, cycle: int, phase: Phase, exclude: UUID | None = None
+    ) -> int:
+        async with self._pool.acquire() as conn:
+            count = await conn.fetchval(
+                """
+                SELECT count(*) FROM job
+                WHERE project_id = $1 AND cycle = $2 AND phase = $3
+                  AND state NOT IN ('succeeded', 'failed', 'cancelled')
+                  AND ($4::uuid IS NULL OR id <> $4)
+                """,
+                project_id,
+                cycle,
+                phase.value,
+                exclude,
+            )
+            return int(count)
+
+    async def queue_depth(self, project_id: UUID) -> Mapping[StoredJobState, int]:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 "SELECT state, count(*) as count FROM job WHERE project_id = $1 GROUP BY state",
                 project_id,
             )
-            counts: dict[JobState, int] = {s: 0 for s in JobState}
+            counts: dict[StoredJobState, int] = {state: 0 for state in JobState}
             for row in rows:
-                counts[JobState(row["state"])] = row["count"]
+                counts[JOB_STATE_PARSER.parse(str(row["state"]))] = int(row["count"])
             return counts
 
     async def get(self, job_id: UUID) -> JobRecord | None:

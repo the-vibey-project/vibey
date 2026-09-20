@@ -1,0 +1,9 @@
+{
+  "name": "private-chat-engines",
+  "version": "0.1.0",
+  "description": "Private Chat Engines: the three architectural families that every messenger falls into — centralised end-to-end-encrypted, centralised server-encrypted cloud, and federated or decentralised — the threat-model taxonomy that decides every other choice, a comparison matrix, how the field reached its 2026 state, and the forces reshaping it. Signal's protocol stack from X3DH and the double ratchet through sealed sender, private contact discovery, key transparency and post-quantum ratcheting, plus the Foundation's cost structure, its legal fights, and why there is no Signal server to operate. Telegram's MTProto and cloud-chat compromise, why Secret Chats are one-to-one mobile-only and off by default, the Durov prosecution and the compliance turn, scale and economics, and the bot and Mini-App developer ecosystem. Matrix and Element's federation and room model, Olm and Megolm, Matrix 2.0, the ecosystem's organisations and funding, and a homeserver operator handbook including the European sovereignty deployments. The wider field assessed honestly — MLS and RFC 9420 with Wire, WhatsApp's interoperability opening, iMessage PQ3, Threema, Olvid, SimpleX, Session, Nostr, XMPP with OMEMO, Briar, Delta Chat, the dormant and the niche — with a policy annex. And builder and operator playbooks: choosing the protocol shape before touching cryptography, the crypto stack as checklists, the metadata budget every service must fill in, abuse and trust-and-safety under end-to-end encryption, maintained libraries, operations and incident checklists, and budget intuition from public numbers.",
+  "author": {
+    "name": "Adam Matthew Steinberger",
+    "email": "adam@matthewsteinberger.com"
+  }
+}

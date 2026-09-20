@@ -1,0 +1,376 @@
+---
+# Source: vibey/templates/ollama.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-ollama
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.2.0
+    app.kubernetes.io/component: ollama
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      # Weights are gigabytes and are the slow part. They live on a volume
+      # so a restarted pod serves at once instead of downloading again.
+      storage: 30Gi
+
+
+---
+# Source: vibey/templates/ollama.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-ollama
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.2.0
+    app.kubernetes.io/component: ollama
+spec:
+  type: ClusterIP
+  ports:
+    - port: 11434
+      targetPort: http
+      name: http
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: ollama
+
+
+---
+# Source: vibey/templates/ollama.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-ollama
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.2.0
+    app.kubernetes.io/component: ollama
+spec:
+  # One server per release. The weights volume is ReadWriteOnce, so a
+  # second replica could not mount it on another node, and a rolling update
+  # would deadlock with the new pod waiting on the old pod's volume --
+  # hence Recreate.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: ollama
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.2.0
+        app.kubernetes.io/component: ollama
+    spec:
+      # Not the chart-wide podSecurityContext. The ollama image runs as root
+      # by default and writes its key pair and weights under $HOME/.ollama;
+      # these values run it as a non-root uid instead, with HOME and the
+      # model store both pointed at the volume below so that uid can write
+      # them. Kept separate so a cluster that needs the image's own root
+      # default can restore it here without loosening the worker.
+      securityContext:
+        fsGroup: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: ollama
+          image: "ollama/ollama:0.34.2@sha256:da6e0dc5651df159e45686fd663c4dbe1624a52c44d7280eeac1551d8f865532"
+          imagePullPolicy: IfNotPresent
+          ports:
+            # The image binds 0.0.0.0:11434 (its OLLAMA_HOST); the Service
+            # port is what clients use and is configured separately.
+            - containerPort: 11434
+              name: http
+          env:
+            - name: HOME
+              value: /ollama
+            - name: OLLAMA_MODELS
+              value: /ollama/models
+            # qwenloop runs a 32K context. Ollama's own default window is a
+            # fraction of that and truncates longer prompts without saying so.
+            - name: OLLAMA_CONTEXT_LENGTH
+              value: "32768"
+          volumeMounts:
+            - name: data
+              mountPath: /ollama
+          # /api/version answers without touching a model, so neither probe
+          # loads gigabytes of weights or waits behind a running generation.
+          readinessProbe:
+            httpGet:
+              path: /api/version
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/version
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 6
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+          resources:
+            limits:
+              memory: 24Gi
+              nvidia.com/gpu: 1
+            requests:
+              cpu: "2"
+              memory: 16Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-ollama
+
+
+---
+# Source: vibey/templates/ollama.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # Named after its own pod template (see vibey.ollamaPullTemplate), and
+  # truncated so the hash always survives inside the 63-character limit.
+  name: vibey-vibey-ollama-pull-615461b2fb
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.2.0
+    app.kubernetes.io/component: ollama-pull
+spec:
+  backoffLimit: 6
+  activeDeadlineSeconds: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/component: ollama-pull
+    spec:
+      restartPolicy: Never
+      securityContext:
+        fsGroup: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: pull
+          image: "ollama/ollama:0.34.2@sha256:da6e0dc5651df159e45686fd663c4dbe1624a52c44d7280eeac1551d8f865532"
+          imagePullPolicy: IfNotPresent
+          # The ollama image has no curl. Its own CLI is the client instead:
+          # `ollama pull` POSTs /api/pull to the server named by OLLAMA_HOST and
+          # streams progress, and the weights land on the server's volume, not
+          # here. The model reaches the shell as an environment variable, never
+          # spliced into the script, so a value cannot become a command.
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -eu
+              # The Job and the server start together. A pull against a server
+              # that is not listening yet is an attempt burned for nothing.
+              until ollama list >/dev/null 2>&1; do
+                echo "waiting for ollama at $OLLAMA_HOST"
+                sleep 5
+              done
+              exec ollama pull "$OLLAMA_PULL_MODEL"
+          env:
+            - name: OLLAMA_HOST
+              value: "http://vibey-vibey-ollama.vibey.svc.cluster.local:11434"
+            - name: OLLAMA_PULL_MODEL
+              value: "qwen2.5-coder:14b"
+            # The client never needs a home of its own; point it somewhere a
+            # non-root uid can write rather than at an unwritable "/".
+            - name: HOME
+              value: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+
+---
+# Source: vibey/templates/worker.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vibey-vibey
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.2.0
+
+
+---
+# Source: vibey/templates/worker.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-worktrees
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.2.0
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+
+
+---
+# Source: vibey/templates/worker.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-worker
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.2.0
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.2.0
+        app.kubernetes.io/component: worker
+    spec:
+      serviceAccountName: vibey-vibey
+      # Long enough for an engine session to finish its current turn.
+      # Cutting a session mid-turn is not merely wasteful: the work is
+      # already paid for, and the ledger would carry a turn with no
+      # verdict.
+      terminationGracePeriodSeconds: 7200
+      securityContext:
+        fsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+      initContainers:
+        # The worker applies migrations itself at startup, but it cannot
+        # do that against a database that is not accepting connections
+        # yet. Waiting here keeps the failure mode "pod pending" rather
+        # than "CrashLoopBackOff with a stack trace".
+        - name: wait-for-postgres
+          image: postgres:17-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h vibey-vibey-postgres -U vibey -d vibey; do
+                echo "waiting for postgres..."
+                sleep 2
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+      containers:
+        - name: worker
+          image: "vibey:dev"
+          imagePullPolicy: Never
+          args:
+            - worker
+            - --provider
+            - "qwenloop"
+            - --engines
+            - "qwenloop"
+            - -j
+            - "2"
+            # A worker that exits when no project exists restart-loops
+            # until a human creates one, and the crash counter makes a
+            # healthy deployment look broken.
+            - --wait-for-project
+            - "15"
+          env:
+            - name: VIBEY_PG_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-dsn
+                  key: dsn
+            # vibey's own sovereign providers want the server root.
+            - name: VIBEY_OLLAMA_URL
+              value: "http://vibey-vibey-ollama.vibey.svc.cluster.local:11434"
+            - name: VIBEY_OLLAMA_MODEL
+              value: "qwen2.5-coder:14b"
+            # qwenloop's openai-compat backend wants the OpenAI base URL, /v1
+            # included; a base URL alone is what makes `auto` select it.
+            - name: QWENLOOP_BASE_URL
+              value: "http://vibey-vibey-ollama.vibey.svc.cluster.local:11434/v1"
+            - name: QWENLOOP_MODEL
+              value: "qwen2.5-coder:14b"
+            # The one qwenloop switch that reaches a worker (ADR-0015): a
+            # project's [features] table never makes it into the record.
+            - name: VIBEY_FEATURE_QWENLOOP
+              value: "1"
+          volumeMounts:
+            - name: worktrees
+              mountPath: /work
+          workingDir: /work
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+      volumes:
+        - name: worktrees
+          persistentVolumeClaim:
+            claimName: vibey-vibey-worktrees
+
+

@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from collections import Counter
 
 import pytest
@@ -11,6 +12,7 @@ from vibey.domain.engine import (
     EngineDescriptor,
     EngineId,
     EngineInvocation,
+    EngineTier,
     IsolationLevel,
     JobRequirement,
 )
@@ -23,6 +25,7 @@ from vibey.domain.rotation import (
     eligible,
     fidelity_factor,
     health_factor,
+    preferred_tier,
     select,
 )
 
@@ -310,3 +313,90 @@ def test_select_rejects_duplicate_engine_ids() -> None:
     ]
     with pytest.raises(ValueError, match="unique engine_id"):
         select(duplicated)
+
+
+def test_a_positive_weight_never_rounds_down_to_zero() -> None:
+    """A half-open probe on a base_weight-1 engine is 1 * 0.25 = 0.25;
+    round() made it 0, so the probe could never fire and the engine
+    stayed open forever -- caught by the unattended validation run."""
+    probe = Candidate(
+        engine_id=EngineId.AGYLOOP,
+        base_weight=1,
+        current=0,
+        order=0,
+        health_factor=0.25,
+        fidelity_factor=1.0,
+        cost_factor=1.0,
+        affinity_factor=1.0,
+    )
+    assert probe.effective_weight == 1
+
+    dead = Candidate(
+        engine_id=EngineId.CLAUDELOOP,
+        base_weight=3,
+        current=0,
+        order=1,
+        health_factor=0.0,
+        fidelity_factor=1.0,
+        cost_factor=1.0,
+        affinity_factor=1.0,
+    )
+    assert dead.effective_weight == 0
+
+    selection = select([probe, dead])
+    assert selection.engine_id is EngineId.AGYLOOP
+
+
+# --- preferred_tier(): sovereign before paid (8.a, ADR-0038) ---------------
+
+
+def _tiered(engine_id: EngineId, tier: EngineTier, *, order: int, health: float = 1.0) -> Candidate:
+    return Candidate(
+        engine_id=engine_id,
+        base_weight=1,
+        current=0,
+        order=order,
+        health_factor=health,
+        fidelity_factor=1.0,
+        cost_factor=1.0,
+        affinity_factor=1.0,
+        tier=tier,
+    )
+
+
+def test_a_candidate_is_paid_unless_it_says_otherwise() -> None:
+    assert _candidate(EngineId.CLAUDELOOP, order=0).tier is EngineTier.PAID
+
+
+def test_preferred_tier_offers_only_the_local_candidates_when_any_can_win() -> None:
+    local = _tiered(EngineId.QWENLOOP, EngineTier.LOCAL, order=1)
+    local_too = _tiered(EngineId.CLAUDELOOP_LOCAL, EngineTier.LOCAL, order=2)
+    paid = _tiered(EngineId.CLAUDELOOP, EngineTier.PAID, order=0)
+
+    assert preferred_tier([paid, local, local_too]) == (local, local_too)
+
+
+def test_preferred_tier_falls_back_to_paid_when_no_local_candidate_exists() -> None:
+    paid = _tiered(EngineId.CLAUDELOOP, EngineTier.PAID, order=0)
+    other = _tiered(EngineId.AGYLOOP, EngineTier.PAID, order=1)
+
+    assert preferred_tier([paid, other]) == (paid, other)
+
+
+def test_preferred_tier_skips_a_tier_that_cannot_win_a_round() -> None:
+    decayed = _tiered(EngineId.QWENLOOP, EngineTier.LOCAL, order=1, health=0.0)
+    paid = _tiered(EngineId.CLAUDELOOP, EngineTier.PAID, order=0)
+
+    assert preferred_tier([decayed, paid]) == (paid,)
+
+
+def test_preferred_tier_returns_everyone_when_nobody_can_win() -> None:
+    """`select` then refuses the round itself -- the truthful NoEligibleEngine."""
+    decayed = _tiered(EngineId.QWENLOOP, EngineTier.LOCAL, order=1, health=0.0)
+    dead = _tiered(EngineId.CLAUDELOOP, EngineTier.PAID, order=0, health=0.0)
+
+    offered = preferred_tier([decayed, dead])
+
+    assert offered == (decayed, dead)
+    with pytest.raises(NoEligibleEngine):
+        select(offered)

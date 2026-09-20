@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from vibey.domain.provision import (
     BEGIN_MARKER,
     END_MARKER,
@@ -23,6 +24,7 @@ def test_router_file_names_match_adr_0011() -> None:
         "AGENTS.md",
         "CURSOR.md",
         "GEMINI.md",
+        "QWEN.md",
     }
 
 

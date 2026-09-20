@@ -1,6 +1,7 @@
 [importlinter]
 root_packages =
     vibey
+    vibey_gh
 include_external_packages = True
 
 [importlinter:contract:onion-layers]
@@ -16,16 +17,33 @@ containers =
     vibey
 
 
+# Stdlib, itself, and any family package that is itself dependency-free (ADR-0017).
+# `vibey-gh`, `vibey-skills` and `vibey-runners-common` all declare `dependencies = []`,
+# so importing one adds nothing to the graph that stdlib-only did not already allow.
+# `vibey_bootstrap` is named below for a stated reason rather than by category: it carries
+# the Azure SDK and OpenTelemetry, so importing it here would pull a third-party graph in
+# transitively and break the invariant by the back door. Use it from infrastructure/.
+#
+# `vibey.bootstrap` -- the composition root -- is named for a different reason: it sits
+# outside the layer containers, so `onion-layers` does not reach it, and without this line
+# the innermost layer could import the outermost module. A `forbidden` contract checks the
+# source module's descendants, so this covers `vibey.domain.interfaces` too: an interface
+# declares a seam and never imports the code that wires it (ADR-0016).
+#
+# The rest of the rule is not an import question at all -- no I/O, no async, no clock, no
+# network -- and is enforced by tests/domain/test_domain_purity.py, which walks the AST.
 [importlinter:contract:domain-independence]
-name = domain imports nothing but stdlib and itself
+name = domain imports stdlib, itself, and only dependency-free family packages
 type = forbidden
 source_modules =
     vibey.domain
 forbidden_modules =
+    vibey_bootstrap
     vibey.application
     vibey.infrastructure
     vibey.cli
     vibey.tui
+    vibey.bootstrap
     asyncpg
     psycopg
     httpx
@@ -46,13 +64,86 @@ forbidden_modules =
 
 # The interfaces packages are the bottom of their layer: they declare the
 # seams, so they must never import the code that consumes them.
+#
+# The consumers are mostly `vibey.application`'s own modules, and until #263 this
+# contract named none of them: an interface importing `vibey.application.worker` was
+# reported KEPT, and so was every other planted import from inside the layer.
+# `vibey.application.*` names them all, including modules added later. A forbidden contract
+# skips any pair where one module contains the other, so the source is not forbidden from
+# itself. The two ignored imports are a seam's vocabulary, not its consumers:
+# `design` and `dto` hold the records a seam's signatures name, and both import
+# only `vibey.domain`.
 [importlinter:contract:interfaces-declare-only]
 name = Interfaces declare seams, never consume them
 type = forbidden
 source_modules =
     vibey.application.interfaces
 forbidden_modules =
+    vibey.application.*
     vibey.infrastructure
     vibey.cli
     vibey.tui
     vibey.bootstrap
+ignore_imports =
+    vibey.application.interfaces.** -> vibey.application.design
+    vibey.application.interfaces.** -> vibey.application.dto
+
+    # The same rule, one layer down. `vibey.infrastructure.db.interfaces` and
+    # The same rule, one layer down. `vibey.infrastructure.db.interfaces`,
+    # `LedgerEventDraft` has to name those types or it constrains nothing. What DOES bind
+    # `vibey.infrastructure.build.interfaces` (ADR-0016's mirrored form) and the legacy flat
+    # `vibey.infrastructure.engines.interfaces` joined with the sovereign DECOMPOSE
+    # `vibey.infrastructure.interfaces` declare seams that infrastructure itself implements,
+    # `vibey.infrastructure.ledger.interfaces` (ADR-0016's mirrored form) and the legacy
+    # `vibey.infrastructure.process.interfaces` with the shared kill-and-reap (#283).
+    # flat `vibey.infrastructure.interfaces` declare seams
+    # from its own tree" clause cannot bind here: a seam over an asyncpg connection or a
+    # here: a seam over an asyncpg connection or a `LedgerEventDraft` has to name those
+    # is the direction -- a seam never reaches up into the code that consumes it.
+    # producer and the shared Ollama client (#115), and
+    # reaches up into the code that consumes it.
+    # so the application contract's "nothing else from its own tree" clause cannot bind
+    # that infrastructure itself implements, so the application contract's "nothing else
+    # types or it constrains nothing. What DOES bind is the direction -- a seam never
+[importlinter:contract:infrastructure-interfaces-declare-only]
+name = Infrastructure interfaces declare seams, never consume them
+type = forbidden
+source_modules =
+    vibey.infrastructure.interfaces
+    vibey.infrastructure.db.interfaces
+    vibey.infrastructure.build.interfaces
+    vibey.infrastructure.engines.interfaces
+    vibey.infrastructure.ledger.interfaces
+    vibey.infrastructure.process.interfaces
+forbidden_modules =
+    vibey.cli
+    vibey.tui
+    vibey.bootstrap
+
+# The same rule for the first `interfaces/` package in the absorbed vibey-gh (ADR-0016:
+# tenants converge module by module, and a new module arrives with its seam declared).
+[importlinter:contract:vibey-gh-interfaces-declare-only]
+name = vibey_gh interfaces declare seams, never consume them
+type = forbidden
+source_modules =
+    vibey_gh.interfaces
+forbidden_modules =
+    vibey_gh.cli
+    vibey_gh.marketplace
+    vibey_gh.documentation
+    vibey_gh.fitloop
+    vibey_gh.doctor
+    vibey_gh.install
+    vibey_gh.forge_snapshot
+    vibey_gh.gh_transport
+    vibey_gh.github_state
+    vibey_gh.review_composition
+    vibey_gh.conversation
+# The flatten seam names its `FlattenPlan` record under `TYPE_CHECKING`, so at runtime it
+# imports nothing from `vibey_gh.flatten`. Counted as an edge, though, it reaches every
+# module `flatten` does, and `flatten` asks the forge through `github_state` and so through
+# `gh_transport`, which would leave the transport's own implementation unforbiddable to its
+# own seam. The typing-only edge is set aside; every import an interface makes at runtime
+# is still checked.
+ignore_imports =
+    vibey_gh.interfaces.flatten_interface -> vibey_gh.flatten

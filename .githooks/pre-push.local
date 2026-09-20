@@ -1,0 +1,5 @@
+#!/bin/sh
+# Chained from vibey-gh's pre-push hook. Runs the pre-commit framework's pre-push stage,
+# which holds the local gate suite. framework-hook.sh, beside this file, finds that hook
+# in a plain clone and in a linked worktree alike, and warns when it is not installed.
+exec "$(dirname "$0")/framework-hook.sh" pre-push "$@"

@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """descriptor + effort + isolation -> command line. The only place a
 RunSpec's abstract intent becomes a concrete argv for a specific vendor
 binary."""
@@ -14,11 +15,14 @@ def build_argv(descriptor: EngineDescriptor, spec: RunSpec) -> tuple[str, ...]:
         argv.append(spec.session_id)
     else:
         plan_path = spec.worktree_path / ".vibey" / "plans" / f"{spec.run_id}.md"
+        if descriptor.plan_flag is not None:
+            argv.append(descriptor.plan_flag)
         argv.append(str(plan_path))
         argv.extend(["--run-id", str(spec.run_id)])
 
     argv.extend(descriptor.invoke(spec.effort).argv)
     argv.extend(descriptor.isolation_flags.get(spec.isolation, ()))
-    argv.extend(["--cwd", str(spec.worktree_path)])
+    if descriptor.supports_cwd_flag:
+        argv.extend(["--cwd", str(spec.worktree_path)])
 
     return tuple(argv)

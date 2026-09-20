@@ -1,0 +1,37 @@
+site_name: qwenloop
+site_description: >-
+  Autonomous local Qwen 2.5 Coder agent runner for llama.cpp, vLLM, and Vibey.
+site_url: https://the-vibey-project.github.io/qwenloop/
+repo_url: https://github.com/the-vibey-project/qwenloop
+repo_name: adammatthewsteinberger/qwenloop
+edit_uri: edit/main/docs/
+
+# ProperDocs, matching vibey-gh, vibey-skills and the sibling loop runners. `theme: mkdocs`
+# because ProperDocs ships its own theme package; the styling lives in vibey.css.
+theme: mkdocs
+
+extra_css:
+  - stylesheets/vibey.css
+extra_javascript:
+  - javascripts/channel.js
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Capability matrix: capability-matrix.md
+  - Architecture:
+      - Decision records:
+          - "0001 — Local inference": architecture/decisions/0001-local-inference.md
+          - "0002 — Tool security": architecture/decisions/0002-tool-security.md
+          - "0003 — Attach to an OpenAI-compatible endpoint": architecture/decisions/0003-attach-openai-compatible-endpoint.md
+  - Research paper: paper.md

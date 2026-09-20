@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Every application-layer Protocol lives in `application/interfaces/`.
 
 The convention is only worth having if it cannot quietly erode: a Protocol
@@ -24,6 +25,18 @@ def _is_protocol(obj: object) -> bool:
     )
 
 
+def _inside_an_interfaces_package(module_name: str) -> bool:
+    """True for a module that lives in ANY `interfaces` package, at any depth.
+
+    ADR-0016 puts a contract beside the class it describes, so `interfaces/`
+    packages appear wherever classes do -- `application/interfaces/`,
+    `infrastructure/interfaces/`, `infrastructure/db/interfaces/`. Matching the
+    one package name a layer happened to start with would flag every nested one
+    as an offender, which is the opposite of the rule.
+    """
+    return module_name.endswith(".interfaces") or ".interfaces." in module_name
+
+
 def _iter_application_modules() -> list[str]:
     return [
         name
@@ -36,7 +49,7 @@ def _iter_application_modules() -> list[str]:
 def test_every_application_protocol_is_declared_in_interfaces() -> None:
     offenders: list[str] = []
     for module_name in _iter_application_modules():
-        if module_name.startswith(f"{interfaces.__name__}") or module_name.endswith(".ports"):
+        if _inside_an_interfaces_package(module_name) or module_name.endswith(".ports"):
             continue
         module = importlib.import_module(module_name)
         for attr_name, obj in vars(module).items():
@@ -117,13 +130,12 @@ def test_interface_annotations_all_resolve() -> None:
 def test_infrastructure_protocols_are_declared_in_its_own_interfaces() -> None:
     """Infrastructure-internal seams follow the same rule one layer down."""
     import vibey.infrastructure as infra_pkg
-    from vibey.infrastructure import interfaces as infra_interfaces
 
     offenders: list[str] = []
     for _, module_name, _ in pkgutil.walk_packages(
         infra_pkg.__path__, prefix=f"{infra_pkg.__name__}."
     ):
-        if module_name.startswith(infra_interfaces.__name__):
+        if _inside_an_interfaces_package(module_name):
             continue
         module = importlib.import_module(module_name)
         offenders += [

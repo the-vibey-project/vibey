@@ -1,0 +1,261 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Release
+
+# develop publishes a uniquely versioned dev build to TestPyPI; main publishes the
+# release artifact directly to PyPI. The two branch paths are deliberately disjoint:
+# publishing a final release version to TestPyPI first makes the main release depend
+# on a second registry and can collide with an immutable version uploaded there.
+on:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # `vibey-gh version --apply` re-locks uv.lock whenever it rewrites pyproject.toml,
+      # so uv must be on PATH. Without it every develop build failed with
+      # FileNotFoundError: 'uv' once the tree's own vibey-gh started stamping versions.
+      - uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41 # v7.1.2
+
+      - name: Stamp a dev version on develop
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          # This repository CARRIES vibey-gh, so the tooling that stamps the version is the
+          # tree's own copy, never a published release: `develop` is ahead of the last
+          # release nearly always, and an older parser refuses the newer configuration
+          # (observed: 1.56.0 rejected the `OrganizationAdmin` bypass actor that
+          # .vibey-gh.toml declares, and every develop release failed here). The path is
+          # the DECLARED `[install] self_source`, read at runtime rather than searched
+          # for, exactly as the managed workflows and the git hooks resolve it; an
+          # ordinary adopter, whose config declares no such path, installs the release.
+          self=$(python - <<'PY'
+          import pathlib
+          import tomllib
+          from pathlib import PurePosixPath
+
+          try:
+              data = tomllib.loads(pathlib.Path(".vibey-gh.toml").read_text(encoding="utf-8"))
+              install = data.get("install", {})
+              value = install.get("self_source", "") if isinstance(install, dict) else ""
+              path = PurePosixPath(value) if isinstance(value, str) else PurePosixPath()
+              if value and not path.is_absolute() and ".." not in path.parts and not value.startswith("~"):
+                  print(path.as_posix())
+          except (OSError, tomllib.TOMLDecodeError):
+              pass
+          PY
+          )
+          grep -qE '^name = "vibey-gh"' "${self:-.}/pyproject.toml" 2>/dev/null || self=""
+          if [ -n "$self" ]; then
+            python -m pip install --quiet -e "$self"
+          else
+            # `vibey`, not `vibey-gh`: ADR-0037 leaves one published distribution and
+            # `vibey_gh` ships inside it. Unpinned because this branch is hand-written
+            # rather than rendered -- a version here would be a number nobody re-renders,
+            # and this repository takes the branch above in any case.
+            python -m pip install --quiet vibey
+          fi
+          # An index version is immutable, so a develop build cannot reuse the release
+          # version; the dev suffix makes each push distinct and sorts it BEFORE the
+          # release it anticipates, which is the correct relationship.
+          vibey-gh version --dev "${GITHUB_RUN_NUMBER}" --apply
+          # The TestPyPI rehearsal publishes as vibey-dev: the name `vibey` on TestPyPI is
+          # squatted by an unrelated project ("AI-powered, vibe-aligned app generation"),
+          # was never ours, and can never be claimed -- index names are immutable. vibey-dev
+          # there is this project's own long-standing answer to that squat, and the
+          # release.yml trusted publisher already lives on it. Renamed in the runner only,
+          # exactly like the dev version above; the importable package stays `vibey`, and
+          # PyPI proper -- where we do own the name -- is untouched.
+          sed -i 's/^name = "vibey"$/name = "vibey-dev"/' pyproject.toml
+
+      - id: v
+        # Indented inside the block scalar on purpose: a heredoc body written at column 0
+        # would terminate the scalar and the workflow would not parse at all.
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import pathlib
+          import tomllib
+
+          data = tomllib.loads(pathlib.Path("pyproject.toml").read_text())
+          print("version=" + data["project"]["version"])
+          PY
+
+      - run: python -m pip install --quiet build && python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  testpypi:
+    name: Publish to TestPyPI
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write            # trusted publishing; no token is stored anywhere
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: dist, path: dist }
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  verify-testpypi:
+    name: Verify the TestPyPI artifact
+    needs: [build, testpypi]
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install that exact version from TestPyPI and run it
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
+          # --no-cache-dir: pip caches the simple index, and a cached index can never
+          # show an upload made seconds ago.
+          for i in $(seq 1 20); do
+            if pip install --no-cache-dir --quiet \
+                 --index-url https://test.pypi.org/simple/ \
+                 --extra-index-url https://pypi.org/simple/ \
+                 "vibey-dev==${VERSION}"; then
+              break
+            fi
+            echo "not indexed yet (attempt $i); waiting"
+            sleep 30
+          done
+          # The distribution is vibey-dev; the packages it installs are the whole
+          # family (ADR-0037). This is the ONLY place the artifact is proven against a
+          # real index before PyPI, so it exercises the contract the distribution now
+          # makes -- eleven console scripts -- rather than the one it used to make. A
+          # wheel that silently lost a tenant's `packages` entry passed the old
+          # `vibey --version` unchanged.
+          missing=""
+          for tool in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap \
+                      azbootstrap claudeloop codexloop cursorloop agyloop qwenloop; do
+            if command -v "$tool" >/dev/null 2>&1; then
+              echo "ok      $tool"
+            else
+              echo "MISSING $tool"; missing="$missing $tool"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::console scripts missing from the published wheel:$missing"
+            exit 1
+          fi
+          vibey --version
+          claudeloop --version
+          vibey-skills --version
+          vibey-gh --help >/dev/null
+          echo "installed ${VERSION} from TestPyPI; all eleven scripts resolve and run"
+
+  pypi:
+    name: Publish to PyPI
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: dist, path: dist }
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+
+  realign:
+    name: Realign develop with main
+    needs: [build, pypi]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # The workflow default is contents: read, which is right for the publishing jobs and
+    # wrong for this one — it pushes. Without this the push is a 403 that reads like a
+    # ruleset refusal and is not one.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Same reason as the promotion: checkout's extraheader beats a remote URL, so
+          # the force-with-lease push needs the token here.
+          token: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      # The same self-sourcing as the develop build above, for the same reason: the
+      # realign reads .vibey-gh.toml too, and an older parser refuses it.
+      - name: Install the tree's own vibey-gh
+        run: |
+          set -euo pipefail
+          # Parsed as TOML, scoped to [install], exactly as the develop build above: a
+          # regex would miss a single-quoted value or match a same-named key elsewhere.
+          self=$(python - <<'PY'
+          import pathlib
+          import tomllib
+          from pathlib import PurePosixPath
+
+          try:
+              data = tomllib.loads(pathlib.Path(".vibey-gh.toml").read_text(encoding="utf-8"))
+              install = data.get("install", {})
+              value = install.get("self_source", "") if isinstance(install, dict) else ""
+              path = PurePosixPath(value) if isinstance(value, str) else PurePosixPath()
+              if value and not path.is_absolute() and ".." not in path.parts and not value.startswith("~"):
+                  print(path.as_posix())
+          except (OSError, tomllib.TOMLDecodeError):
+              pass
+          PY
+          )
+          grep -qE '^name = "vibey-gh"' "${self:-.}/pyproject.toml" 2>/dev/null || self=""
+          if [ -n "$self" ]; then
+            python -m pip install --quiet -e "$self"
+          else
+            # `vibey`, not `vibey-gh`: ADR-0037 leaves one published distribution and
+            # `vibey_gh` ships inside it. Unpinned because this branch is hand-written
+            # rather than rendered -- a version here would be a number nobody re-renders,
+            # and this repository takes the branch above in any case.
+            python -m pip install --quiet vibey
+          fi
+
+      # main is rebase-merged, so its commits are rewritten copies with new SHAs and
+      # develop can never be fast-forwarded onto it. `realign` converges them only when
+      # the two TREES are identical, so it cannot discard work — if develop has anything
+      # main does not, it says so and stops.
+      # Needs a token with the admin role. develop's ruleset has a non_fast_forward rule
+      # and GitHub Actions is not one of its bypass actors, so the default GITHUB_TOKEN
+      # cannot force-push there no matter what `permissions` says. Skipping is honest
+      # when the secret is absent; failing every release for a missing optional secret
+      # trains people to ignore a red release.
+      #
+      # Nothing downstream depends on this. Promotion compares the branches by CONTENT,
+      # and neither ruleset uses a strict up-to-date policy, so a divergent develop does
+      # not block the next release — it is tidiness, not a gate.
+      - name: Realign
+        env:
+          HAS_TOKEN: ${{ secrets.AUTOMERGE_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          if [ "${HAS_TOKEN}" != "true" ]; then
+            echo "::notice::AUTOMERGE_TOKEN is not set, so develop cannot be realigned \
+          from here. Harmless: promotion compares by content, so a divergent develop does \
+          not block a release. To realign by hand: git push --force-with-lease origin main:develop"
+            exit 0
+          fi
+          git config user.name "vibey[bot]"
+          git config user.email "adam@matthewsteinberger.com"
+          vibey-gh realign

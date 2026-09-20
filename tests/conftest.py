@@ -1,0 +1,162 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""Root test configuration — per-worker database via PostgreSQL template pattern.
+
+Session startup creates ``vibey_test_template`` (migrated once, reused across
+sessions; ``VIBEY_TEST_TEMPLATE_DB`` renames it) and clones it into
+``vibey_test_<worker_id>`` for this process.
+``VIBEY_TEST_DATABASE_URL`` is repointed so every downstream fixture and test
+helper picks up the isolated per-worker database transparently.
+"""
+
+import asyncio
+import contextlib
+import getpass
+import os
+from pathlib import Path
+
+import asyncpg
+import pytest
+from hypothesis import HealthCheck, settings
+
+from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
+
+# The no-loss lane: `pytest -m noloss --hypothesis-profile=noloss`, the CI job "No-loss
+# property suite (10,000 examples)". 10,000 is the definition of done in
+# docs/plans/implementation-plan.md, and tests/domain/test_noloss_reference.py (protected)
+# pins these values, so lowering them here fails that module instead of shrinking the
+# suite. No deadline and no too_slow check: one example builds and gates a ledger of up to
+# thirty events, and a slow CI runner is not a property failure. Loaded only when asked
+# for -- every other run keeps Hypothesis' default profile. Never shadow it with a per-test
+# `@settings(max_examples=...)`, which would override the profile for that test.
+settings.register_profile(
+    "noloss",
+    max_examples=10_000,
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+
+_MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
+# The template is migrated from THIS checkout's migrations and then reused by
+# every later session on the same server. Two checkouts whose migrations
+# differ -- parallel worktrees, one carrying a migration the other lacks --
+# would otherwise leak schema into each other's clones. Name it per checkout
+# with VIBEY_TEST_TEMPLATE_DB; the default is the name it has always had.
+_TEMPLATE_DB = os.environ.get("VIBEY_TEST_TEMPLATE_DB", "vibey_test_template")
+_BASE_DSN: str | None = None
+
+
+def _resolve_base_dsn() -> str:
+    return os.environ.get(
+        "_VIBEY_TEST_BASE_DSN",
+        os.environ.get(
+            "VIBEY_TEST_DATABASE_URL",
+            f"postgresql://{getpass.getuser()}@localhost:5432/vibey_test",
+        ),
+    )
+
+
+def _replace_dbname(dsn: str, dbname: str) -> str:
+    base, _ = dsn.rsplit("/", 1)
+    return f"{base}/{dbname}"
+
+
+def _worker_id() -> str:
+    return os.environ.get("PYTEST_XDIST_WORKER", "main")
+
+
+# Drawn once per process, so _setup and _teardown name the same database; the
+# pid says whose it was if a crashed run leaves it behind.
+_LOCAL_RUN_ID = f"{os.getpid()}_{os.urandom(4).hex()}"
+
+
+def _worker_db_name() -> str:
+    # xdist hands each worker a per-run id. A serial (-n 0) run and the xdist
+    # controller get none, and the old fixed fallback named every such process,
+    # in every checkout on the server, vibey_test_main_main -- which each run's
+    # startup terminated and dropped from under whichever run was using it.
+    run_id = os.environ.get("PYTEST_XDIST_TESTRUNUID") or _LOCAL_RUN_ID
+    return f"vibey_test_{_worker_id()}_{run_id}"
+
+
+async def _setup(base_dsn: str) -> str:
+    """Create template (if needed) and per-worker clone; return worker DSN."""
+    admin_dsn = _replace_dbname(base_dsn, "postgres")
+    wdb = _worker_db_name()
+
+    conn = await asyncpg.connect(admin_dsn)
+    try:
+        # Serialise template creation + clone so no process connects to the
+        # template while another clones from it.
+        await conn.execute("SELECT pg_advisory_lock(hashtext($1))", _TEMPLATE_DB)
+        try:
+            exists = await conn.fetchval(
+                "SELECT 1 FROM pg_database WHERE datname = $1",
+                _TEMPLATE_DB,
+            )
+            if not exists:
+                await conn.execute(f'CREATE DATABASE "{_TEMPLATE_DB}"')
+
+            tmpl_conn = await asyncpg.connect(
+                _replace_dbname(base_dsn, _TEMPLATE_DB),
+            )
+            try:
+                migrations = discover_migrations(_MIGRATIONS_DIR)
+                await apply_migrations(tmpl_conn, migrations)
+            finally:
+                await tmpl_conn.close()
+
+            # Drop-if-exists handles crashed prior runs (AC-14).
+            await conn.execute(
+                "SELECT pg_terminate_backend(pid) "
+                "FROM pg_stat_activity "
+                "WHERE datname = $1 AND pid <> pg_backend_pid()",
+                wdb,
+            )
+            await conn.execute(f'DROP DATABASE IF EXISTS "{wdb}"')
+            await conn.execute(
+                f'CREATE DATABASE "{wdb}" TEMPLATE "{_TEMPLATE_DB}"',
+            )
+        finally:
+            await conn.execute(
+                "SELECT pg_advisory_unlock(hashtext($1))",
+                _TEMPLATE_DB,
+            )
+    finally:
+        await conn.close()
+
+    return _replace_dbname(base_dsn, wdb)
+
+
+async def _teardown(base_dsn: str) -> None:
+    wdb = _worker_db_name()
+    admin_dsn = _replace_dbname(base_dsn, "postgres")
+    conn = await asyncpg.connect(admin_dsn)
+    try:
+        await conn.execute(
+            "SELECT pg_terminate_backend(pid) "
+            "FROM pg_stat_activity "
+            "WHERE datname = $1 AND pid <> pg_backend_pid()",
+            wdb,
+        )
+        await conn.execute(f'DROP DATABASE IF EXISTS "{wdb}"')
+    finally:
+        await conn.close()
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    global _BASE_DSN
+    _BASE_DSN = _resolve_base_dsn()
+    os.environ["_VIBEY_TEST_BASE_DSN"] = _BASE_DSN
+    worker_dsn = asyncio.run(_setup(_BASE_DSN))
+    os.environ["VIBEY_TEST_DATABASE_URL"] = worker_dsn
+    # Some integration tests exercise the application entry point directly, whose
+    # production setting is VIBEY_PG_URL rather than the fixture-specific name.
+    # Point both names at the same isolated worker database so those tests cannot
+    # fall through to an unset configuration or a shared database.
+    os.environ["VIBEY_PG_URL"] = worker_dsn
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    if _BASE_DSN is not None:
+        with contextlib.suppress(Exception):
+            asyncio.run(_teardown(_BASE_DSN))

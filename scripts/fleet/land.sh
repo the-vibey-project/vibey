@@ -30,6 +30,11 @@ cd "$WT"
 # chaos test, or the full-cycle system test without a human. This mirrors
 # the plan's "Protected tests" guardrail (docs/plans/implementation-plan.md
 # "Bootstrapping: vibey builds vibey").
+#
+# SUPERSEDED (#213): the guardrail is enforced by .github/CODEOWNERS, the
+# rulesets' `require_code_owner_review`, and `[merge_train] protected_paths`
+# in .vibey-gh.toml -- that list is the source of truth, not this pattern.
+# Kept only while this dormant script is (docs/plans/fleet/README.md).
 PROTECTED_PATTERN='tests/infrastructure/db/test_chaos\.py|tests/domain/test_noloss.*\.py|tests/domain/test_briefing\.py|tests/system/test_delivery_stage_set\.py|^tests/live/'
 CHANGED="$(git diff origin/develop... --name-only || true)"
 if echo "$CHANGED" | grep -qE "$PROTECTED_PATTERN"; then
@@ -70,6 +75,12 @@ if gh pr checks "$PR_NUM" -R "adammatthewsteinberger/$REPO" --watch --fail-fast;
   echo "green — merging"
   gh pr merge "$PR_NUM" -R "adammatthewsteinberger/$REPO" --squash --delete-branch --admin
   git -C "$REPO_ROOT" worktree remove --force "$WT"
+  # Removing the last linked worktree has repeatedly (3 times observed, same
+  # repo, same trigger) left the primary checkout's own config with
+  # core.bare=true, which breaks `git status`/`git checkout` there until
+  # corrected -- root cause not yet identified, but the primary checkout is
+  # never actually bare, so it's always safe to reassert this.
+  git -C "$REPO_ROOT" config core.bare false
   echo "merged and worktree removed: $WT"
 else
   echo "PR #$PR_NUM is red — left open for a human. Run log: $WT/.*/run.log" >&2

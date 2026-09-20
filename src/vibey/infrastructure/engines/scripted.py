@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """ScriptedEngine: a fake runner that writes the real run-directory shape
 (architecture doc §8.1 / rotation-and-engines.md §8.1) without spawning a
 process or touching the network. Every later test in M3+ that needs "an
@@ -61,12 +62,30 @@ class ScriptedEngine:
     installed: bool = True
     auth_ok: bool = True
     script: list[dict[str, object]] | None = None
+    scripts: list[list[dict[str, object]]] | None = None
+    """Per-run event scripts, consumed one per ``start`` call in order.
+    When the queue is exhausted (or None), ``script`` -- and failing that
+    the default script -- covers every remaining run. This is what lets a
+    test script "run 1 winds down, run 2 completes" on one engine."""
+    exit_code_script: list[int | None] | None = None
+    """Per-run exit codes, consumed one per ``start`` in order; runs past
+    the end of the queue report None. EXIT_CODE_WIND_DOWN here scripts a
+    graceful wind-down for the ``run_exit_code`` capability."""
+    stop_remaining: tuple[str, ...] = ()
+    """What ``stop`` reports as StopSummary.remaining_work -- the scripted
+    stand-in for a real engine's final-snapshot remaining list."""
+    meta_status: str = "running"
+    """meta.json's status field. A real engine flips this to a terminal
+    value ("finished"/"failed"/"stopped") as it exits; scripting it lets a
+    test exercise the paths that read terminal status without racing a
+    real process."""
     help_text: str | None = None
     """`<binary> run --help` output stand-in. Defaults to a string
     containing every flag the descriptor claims, so the conformance
     suite's flags check passes by construction; a test can override this
     with an incomplete string to prove the check catches a real gap."""
     _handles: dict[UUID, Path] = field(default_factory=dict)
+    _exit_codes: dict[UUID, int | None] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.help_text is None:
@@ -77,6 +96,8 @@ class ScriptedEngine:
             }
             for flags in self.descriptor.isolation_flags.values():
                 all_flags.update(flags)
+            if self.descriptor.plan_flag is not None:
+                all_flags.add(self.descriptor.plan_flag)
             self.help_text = " ".join(sorted(all_flags))
 
     async def preflight(self) -> PreflightResult:
@@ -96,7 +117,7 @@ class ScriptedEngine:
             "pid": 0,
             "cwd": str(spec.worktree_path),
             "session_id": spec.session_id or f"sess-{spec.run_id}",
-            "status": "running",
+            "status": self.meta_status,
             "phase": None,
             "attempt": 1,
             "waiting_until": None,
@@ -107,7 +128,11 @@ class ScriptedEngine:
         }
         (run_dir / "meta.json").write_text(json.dumps(meta))
 
-        events = self.script or _default_script(spec.run_id, self.descriptor.done_marker)
+        per_run = self.scripts.pop(0) if self.scripts else None
+        events = per_run or self.script or _default_script(spec.run_id, self.descriptor.done_marker)
+        self._exit_codes[spec.run_id] = (
+            self.exit_code_script.pop(0) if self.exit_code_script else None
+        )
         with (run_dir / "events.jsonl").open("w") as f:
             for event in events:
                 f.write(json.dumps(event) + "\n")
@@ -150,10 +175,16 @@ class ScriptedEngine:
         command = "prompt-now" if now else "prompt-at-break"
         (inbox / f"{ts}-{command}.json").write_text(json.dumps({"command": command, "text": text}))
 
+    def run_exit_code(self, handle: RunHandle) -> int | None:
+        return self._exit_codes.get(handle.run_id)
+
     async def stop(self, handle: RunHandle) -> StopSummary:
         (handle.run_dir / "stop-summary.md").write_text("Scripted run stopped cleanly.\n")
         return StopSummary(
-            run_id=handle.run_id, complete=True, summary="Scripted run stopped cleanly."
+            run_id=handle.run_id,
+            complete=True,
+            summary="Scripted run stopped cleanly.",
+            remaining_work=self.stop_remaining,
         )
 
     async def snapshot(self, handle: RunHandle) -> SnapshotRef | None:

@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Phase ④ DEPLOY DESIGN acceptance handler and consent guard (Milestone 10 task 10.3)."""
 
 from collections.abc import Callable
@@ -5,6 +6,7 @@ from uuid import UUID
 
 from vibey.application.dto import EnqueueRequest, HumanGateRequest, JobRecord
 from vibey.application.interfaces import (
+    DeploymentConsentStore,
     PhaseLedger,
     ProjectTransitioner,
 )
@@ -27,6 +29,7 @@ class DeployAcceptanceHandler:
         projects: ProjectTransitioner | object,
         clock: Clock,
         spec_provider: Callable[[UUID], DeploymentSpec | None] | None = None,
+        consent_store: DeploymentConsentStore | None = None,
     ) -> None:
         self._ledger = ledger
         self._gates = gates
@@ -34,6 +37,7 @@ class DeployAcceptanceHandler:
         self._projects = projects
         self._clock = clock
         self._spec_provider = spec_provider
+        self._consent_store = consent_store
 
     async def handle(self, job: JobRecord) -> Outcome:
         if job.kind not in ("deploy.spec", "deploy.accept"):
@@ -90,6 +94,8 @@ class DeployAcceptanceHandler:
             granted_at=self._clock.now(),
             explicit_mutation_authorized=True,
         )
+        if self._consent_store is not None:
+            await self._consent_store.save_consent(job.project_id, consent)
 
         await self._ledger.append_event(
             project_id=job.project_id,

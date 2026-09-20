@@ -1,12 +1,12 @@
 # vibey-quality-gates (Antigravity mirror of `.claude/skills/vibey-quality-gates/SKILL.md`)
 
-description: The 7-gate CI sweep (ruff check, ruff format, mypy, per-layer coverage × 4, lint-imports, bandit, pip-audit) and what each gate catches.
-alwaysApply: false
-
 # vibey quality gates
 
-CI runs a 7-gate sweep. **All seven must pass** before a PR can merge. Run
-locally with `pre-commit run --all-files` or individually:
+CI runs a 7-gate sweep over the root `vibey` package, as the `gates` job in
+`.github/workflows/ci.yml`. **All seven must pass** — together with the other CI
+jobs below — before a PR can merge. Run them locally with
+`pre-commit run --all-files --hook-stage pre-push` (a plain
+`pre-commit run --all-files` runs only the ruff hooks) or individually:
 
 ## Gate 1: ruff check
 
@@ -16,6 +16,9 @@ anti-patterns.
 ```bash
 uv run ruff check .
 ```
+
+Root ruff covers `src/**/*.py` and `tests/**/*.py`, so it also lints the
+workspace tenants under `src/vibey_runners/` and `src/vibey_tools/`.
 
 ## Gate 2: ruff format --check
 
@@ -39,19 +42,24 @@ uv run mypy --strict src/vibey
 
 ## Gate 4: pytest per-layer coverage (100%)
 
-Four separate gates, one per layer. Each must hit **100% branch coverage** or
-the build fails.
+One test run produces a combined `.coverage` file; four per-layer reports
+enforce 100% branch coverage. Each must pass or the build fails.
 
 ```bash
-uv run pytest -q -p no:cacheprovider --cov=vibey.domain --cov-branch --cov-report=term-missing --cov-fail-under=100
-uv run pytest -q -p no:cacheprovider --cov=vibey.application --cov-branch --cov-report=term-missing --cov-fail-under=100
-uv run pytest -q -p no:cacheprovider --cov=vibey.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100
-uv run pytest -q -p no:cacheprovider --cov=vibey.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
+uv run coverage report --include='src/vibey/domain/*' --fail-under=100
+uv run coverage report --include='src/vibey/application/*' --fail-under=100
+uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100
+uv run coverage report --include='src/vibey/cli/*' --fail-under=100
 ```
 
 **Why per-layer, not aggregate?** Because `domain/` is the safety-critical
 layer and must never drop below 100%. An aggregate gate would allow a 95%
-domain to hide behind a 100% infrastructure.
+domain to hide behind a 100% infrastructure. See ADR-0023.
+
+The test run needs a reachable Postgres even for a subset: `tests/conftest.py`
+clones a migrated template database per xdist worker at session start. See the
+`vibey-testing` skill.
 
 ## Gate 5: lint-imports
 
@@ -63,8 +71,12 @@ uv run lint-imports
 ```
 
 If it fails, the error names the contract and the violating import. See
-`.importlinter` for the three contracts: `onion-layers`,
-`domain-independence`, `application-independence`.
+`.importlinter` for the contracts: `onion-layers`, `domain-independence`,
+`application-independence`, and the declare-only contracts that keep each
+`interfaces/` package from importing its consumers (`interfaces-declare-only`
+for `application/interfaces`, `infrastructure-interfaces-declare-only`,
+`vibey-gh-interfaces-declare-only`). The declare-only rule applies to every
+`interfaces/` package. See ADR-0016.
 
 See the `vibey-architecture` skill before fixing a violation.
 
@@ -86,18 +98,150 @@ dependencies.
 uv run pip-audit
 ```
 
-## Pre-commit hook
+## Hook diet
 
-All seven gates (plus the Conventional Commits check) run automatically via
-pre-commit. Install once:
+The seven gates are split across git hook stages so commits stay fast
+(`.pre-commit-config.yaml`):
+
+**Pre-commit stage** (runs on every `git commit`):
+- ruff (`--fix`) + ruff format, on changed files
+
+**Pre-push stage** (runs on every `git push`):
+- The plain parallel test suite (`uv run pytest -q -p no:cacheprovider`) — kept
+  so a test failure reports as itself rather than as a coverage-gate failure
+- mypy --strict
+- lint-imports
+- Per-layer 100% coverage gates (pytest --cov + four reports)
+- bandit
+- pip-audit
+
+**Commit-msg stage**: Conventional Commits enforcement.
+
+Install all three hook types once, then the provenance hooks. The order matters,
+because `pre-commit install` refuses to run while `core.hooksPath` is set:
 
 ```bash
-pre-commit install
+pre-commit install && pre-commit install --hook-type pre-push && pre-commit install --hook-type commit-msg
+uv run vibey-gh install
 ```
 
-The commit-msg hook rejects non-Conventional Commits. The pre-commit hook
-runs ruff, mypy, lint-imports, and the full test suite before allowing a
-commit.
+`vibey-gh install` points `core.hooksPath` at `.githooks`. The tracked shims there
+(`pre-commit`, `commit-msg.local`, `pre-push.local`) chain back to the framework
+through `git rev-parse --git-common-dir`, so one install covers the main checkout
+and every linked worktree (`git worktree add`). If a shim prints
+`warning: the pre-commit framework's <stage> hook is not installed`, the commit or
+push went ahead but none of that stage's gates ran. Run them by hand before you push.
+
+## The other CI jobs
+
+`ci.yml` runs seven jobs on every push and PR to `develop`/`main`:
+
+| Job | What it checks |
+|---|---|
+| `uv-lock` | `uv lock --check`. `gates`, `tools` and `tools-lint` depend on it. The lock carries vibey's own version, so a version bump without `uv lock` fails here first. |
+| `gates` | The seven gates above, against a `postgres:17` service. |
+| `tools` | Each absorbed tenant's own suite on its own Python floors, plus, on its floor row, its own static gates from the row's `static` key: its mypy, `lint-imports` and bandit. agyloop, codexloop and vibey-skills also run their own strict docs builds (the `docs` key) (ADR-0022). |
+| `tools-lint` | vibey-gh's own linters and its managed-automation drift check. |
+| `image` | Builds `deploy/docker/Dockerfile` for amd64 and arm64 and asserts each `Image contract - …` step: the entrypoint runs, it runs as non-root uid 10001, it has no compiler/uv/pip, migrations ship in the image, and every console script is on PATH. |
+| `chart` | Render-only: `deploy/helm/golden/render.sh` runs `helm lint --strict` and `helm template` for each profile (defaults, `ollama.enabled`, the GPU + qwenloop wiring, and the KEDA query unbound and bound to a project) and diffs each render against its committed golden under `deploy/helm/golden/`, with helm pinned. After an intended chart change, regenerate with `deploy/helm/golden/render.sh --update`. |
+| `cluster-smoke` | Helm install of `deploy/helm/vibey` on minikube and four cluster contracts: a projectless worker parks instead of crash-looping, the worker picks up a project created in-cluster, the KEDA ScaledObject reconciles against real Postgres, and a worker drains promptly on SIGTERM (ADR-0025, ADR-0026). |
+
+Other workflows also gate a merge: `provenance.yml` (runs on every push and PR),
+and `pr-automation.yml`, which re-evaluates a PR each time `CI` or `Provenance`
+completes (`[pr_automation] scan_workflows` in `.vibey-gh.toml`) and hands ready
+PRs to `merge-train.yml` (see the `vibey-releasing` skill).
+
+## Workspace tenants: their own checks
+
+The tenants under `src/vibey_runners/` and `src/vibey_tools/` keep the gates they
+arrived with (ADR-0021, ADR-0022). The root `mypy`, `bandit` and coverage gates
+cover `src/vibey` only. Run a tenant's checks from its own directory, with plain
+pip and a Python at its floor — the workspace lock resolves at 3.12, so a uv
+environment cannot exercise the 3.10 and 3.11 floors. Plain pip knows nothing
+about `[tool.uv.sources] workspace = true`, so a tenant that needs a sibling
+installs that sibling **from the tree first** -- no family package may be
+requested from an index, because none of them is published any more (ADR-0037).
+These are the `tools` and `tools-lint` commands, verbatim:
+
+```bash
+# vibey-gh (CI: Python 3.11, 3.12, 3.13; 100% branch floor in its own addopts)
+cd src/vibey_tools/gh
+pip install -e ".[dev]"
+python -m pytest -q
+python -m black --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+
+# vibey-skills (CI: Python 3.10, 3.12)
+cd src/vibey_tools/skills
+pip install -e .
+python3 tools/validate_manifests.py && python3 tools/check_links.py \
+  && PYTHONPATH=src python3 -m unittest discover -s tests
+
+# vibey-bootstrap (CI: Python 3.11, 3.12). It imports vibey_gh, so install that first.
+cd src/vibey_tools/bootstrap
+pip install -e ../gh && pip install -e ".[test,all]"
+pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term
+
+# claudeloop (CI: Python 3.10, 3.11, 3.12, 3.13 -- the only 3.10 floor in the tree)
+cd src/vibey_runners/claude
+pip install -e ../common && pip install -e ".[dev]"
+pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100
+pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100
+pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100
+pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+
+# codexloop (CI: Python 3.12, 3.13). cursorloop and agyloop are the same with the package
+# name swapped, minus `pip install -e ../common` (neither depends on it) and with
+# `pytest tests` in place of `pytest -q`; agyloop then ends on `pytest -m system`.
+cd src/vibey_runners/codex
+pip install -e ../common && pip install -e ".[dev]"
+pytest -q --cov=codexloop --cov-branch --cov-report=
+coverage report --include='src/codexloop/domain/*' --fail-under=100
+coverage report --include='src/codexloop/application/*' --fail-under=100
+coverage report --include='src/codexloop/infrastructure/*' --fail-under=100
+coverage report --include='src/codexloop/cli/*' --fail-under=100
+
+# qwenloop (CI: Python 3.12, 3.13, 3.14; its floor is already in its addopts)
+cd src/vibey_runners/qwen
+pip install -e ".[dev]"
+python -m pytest -q
+```
+
+vibey-gh's suite drives real git history and shells out to `gh`, so it needs
+both on `PATH` and a full clone -- a shallow one fails. It does **not** need
+`uv`: the single test that drives a real `uv lock` is marked `network`, below.
+
+Tests that leave the machine (a real package index, a real remote) carry
+`@pytest.mark.network` and are **skipped unless `VIBEY_GH_NETWORK_TESTS=1`**.
+Marker and variable are two halves of one mechanism -- the marker declares, and
+`test/conftest.py` does the skipping -- so a plain offline `python -m pytest`
+reaches the package's 100% branch floor with no flag to remember, and a run that
+reports `4 skipped` is correct rather than degraded. Every branch a `network`
+test touches must also be reachable offline, or that floor fails. Where an index
+is reachable, ask for them by name:
+
+```bash
+cd src/vibey_tools/gh
+VIBEY_GH_NETWORK_TESTS=1 python -m pytest -q -m network --no-cov
+```
+
+CI runs that on one matrix row with `continue-on-error`: it reports on somebody
+else's service, so it must never gate a merge.
+
+The runners (`src/vibey_runners/{claude,codex,cursor,agy,qwen}`) carry their own
+`tests/`, ruff, mypy and import-linter configuration in their `pyproject.toml`.
+Since 2026-09-15 the root `tools` matrix runs all five -- thirteen rows of it -- so a
+runner regression turns the `tools` job red. It reports rather than blocks: `tools`
+is not named in `required_checks` in `.vibey-gh.toml`, and no tools row ever has been.
+Read a runner's `[tool.pytest.ini_options]` before running anything by hand. agyloop's
+and cursorloop's addopts exclude `live` and `system` tests (agyloop's system harness is
+re-selected with `pytest -m system`, which is what the matrix does), and only qwenloop's
+addopts carry a coverage floor. The other four deliberately leave `--cov=` and
+`--cov-fail-under` out, because pytest-cov unions every `--cov=` it sees and one baked
+in there would widen the explicitly-scoped per-layer runs back out to the whole package
+-- so for them a bare `pytest` runs the tests but enforces no floor. Use the commands
+above, which are their own.
 
 ## What each gate catches
 

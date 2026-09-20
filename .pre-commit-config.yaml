@@ -8,23 +8,55 @@ repos:
 
   - repo: local
     hooks:
+      - id: test-suite
+        name: parallel test suite
+        entry: uv run pytest -q -p no:cacheprovider
+        language: system
+        pass_filenames: false
+        # `stages: [pre-push]`, like every other local hook below. Without it pre-commit
+        # runs this at EVERY stage, so `git commit` paid the full 1519-test suite —
+        # measured at 259s — even for a commit touching only docs or config.
+        #
+        # At pre-push it is also nearly redundant: `coverage-gates` runs the same suite
+        # with coverage, a strict superset. Between the two, one push ran the whole suite
+        # three times. Kept rather than deleted so a plain test failure is still reported
+        # as itself rather than as a coverage-gate failure.
+        stages: [pre-push]
+
       - id: mypy
         name: mypy --strict
         entry: uv run mypy --strict src/vibey
         language: system
         pass_filenames: false
+        stages: [pre-push]
 
       - id: lint-imports
         name: import-linter onion contract
         entry: uv run lint-imports
         language: system
         pass_filenames: false
+        stages: [pre-push]
 
-      - id: domain-purity
-        name: domain purity + full test suite
-        entry: uv run pytest
+      - id: coverage-gates
+        name: per-layer 100% coverage gates
+        entry: bash -c 'uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include="src/vibey/domain/*" --fail-under=100 && uv run coverage report --include="src/vibey/application/*" --fail-under=100 && uv run coverage report --include="src/vibey/infrastructure/*" --fail-under=100 && uv run coverage report --include="src/vibey/cli/*" --fail-under=100'
         language: system
         pass_filenames: false
+        stages: [pre-push]
+
+      - id: bandit
+        name: bandit
+        entry: uv run bandit -q -r src/vibey
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: pip-audit
+        name: pip-audit
+        entry: uv run pip-audit
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
 
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.4.0

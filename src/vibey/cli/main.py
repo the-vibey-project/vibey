@@ -1,15 +1,30 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+# Armed FIRST, before typer and the rest of the tree are imported. Kubernetes deletes a
+# pod by sending SIGTERM and waiting, and Linux discards a signal sent to PID 1 while its
+# disposition is still SIG_DFL -- it is not queued for later. Everything imported below
+# this line is time during which a scale-in would be thrown away, so the latch goes above
+# it. See vibey.cli.early_signals.
+from vibey.cli.early_signals import SIGTERM_LATCH
+
+SIGTERM_LATCH.arm()
+
 import asyncio
 import json
 import os
+import signal
+import subprocess  # nosec B404 - fixed argv, never shell=True
+from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import typer
 
 from vibey import __version__
 from vibey.application.design_acceptance import DesignAcceptanceService
-from vibey.application.dto import EnqueueRequest
+from vibey.application.dto import ProjectRecord
+from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.application.visual_acceptance import VisualAcceptanceService
 from vibey.bootstrap import (
     DesignProvider,
@@ -19,16 +34,20 @@ from vibey.bootstrap import (
     build_design_worker,
     build_visual_worker,
 )
-from vibey.cli.errors import guard
+from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.ledger_publication import ledger_export, ledger_site
+from vibey.cli.ledger_search import PRESENTER, ledger_search
+from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
     InvalidAnswer,
     UnknownProject,
     UnknownProvider,
     WrongPhase,
 )
-from vibey.domain.job import idempotency_key
-from vibey.domain.ledger import EventKind
-from vibey.domain.phase import Phase, VisualDecision
+from vibey.domain.job import JobState
+from vibey.domain.ledger import EventKind, LedgerEventKind
+from vibey.domain.ledger_query import EVENT_KINDS, InvalidLedgerQuery
+from vibey.domain.phase import Phase, StoredPhase, VisualDecision
 from vibey.domain.spec import (
     AcceptanceCriterion,
     Constraint,
@@ -37,11 +56,21 @@ from vibey.domain.spec import (
     NonFunctionalRequirement,
 )
 from vibey.domain.verbosity import resolve_log_plan
+from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.engines.claudeloop_design import ClaudeLoopDesignProvider
 from vibey.infrastructure.engines.claudeloop_process import (
     AsyncSubprocessExecutor,
     ClaudeLoopProcess,
+    SpendRecorder,
 )
+from vibey.infrastructure.engines.local_engines import LocalEngineSettings
+from vibey.infrastructure.engines.ollama_chat import (
+    DEFAULT_OLLAMA_MODEL,
+    OLLAMA_MODEL_ENV,
+    OLLAMA_URL_ENV,
+    OllamaChatClient,
+)
+from vibey.infrastructure.engines.qwenloop_design import QwenloopDesignProvider
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.logging import configure_logging
@@ -55,6 +84,9 @@ deploy_app = typer.Typer(name="deploy", invoke_without_command=True)
 app.add_typer(deploy_app, name="deploy")
 ledger_app = typer.Typer(name="ledger", invoke_without_command=True)
 app.add_typer(ledger_app, name="ledger")
+ledger_app.command("search")(ledger_search)
+ledger_app.command("export")(ledger_export)
+ledger_app.command("site")(ledger_site)
 
 
 def _version_callback(value: bool) -> None:
@@ -93,29 +125,54 @@ def main(
 
 
 async def _enqueue_design(project_id: UUID) -> str:
+    # The transition-and-enqueue logic lives in the application layer so the
+    # Kubernetes operator starts projects through the same path this does.
     async with build_app() as resources:
-        project = await resources.projects.get(project_id)
-        if project is None:
-            raise UnknownProject(f"unknown project {project_id}")
-        if project.phase is Phase.INTAKE:
-            project = await resources.projects.transition(
-                project_id, expected=Phase.INTAKE, to=Phase.DESIGN
-            )
-        if project.phase is not Phase.DESIGN:
-            raise WrongPhase(f"project is in {project.phase.value}, not design")
-        job = await resources.jobs.enqueue(
-            EnqueueRequest(
+        job_id = await enqueue_design_interview(
+            projects=resources.projects,
+            jobs=resources.jobs,
+            project_id=project_id,
+        )
+        return str(job_id)
+
+
+def _build_spend_recorder(
+    ledger: PostgresLedgerRepository, project_id: UUID, cycle: int, phase: Phase
+) -> SpendRecorder:
+    """Record a live run's spend where the budget brake can see it.
+
+    LedgerBudgetSource sums TurnCompleted and BudgetSpent. The BUILD path
+    gets TurnCompleted for free because LoopProcessAdapter tails the
+    engine's events.jsonl into the ledger. The DESIGN path runs claudeloop
+    directly and read that same file only for the last assistant message,
+    so its spend reached nothing -- the brake computed $0 for DESIGN and
+    could never trip, whatever cap the project carried. BudgetSpent with
+    explicit dollars/turns is the vendor-neutral shape the brake already
+    counts, so this needs no new event kind and no new counting logic.
+    """
+    from vibey.domain.ledger import Provenance, digest_event
+    from vibey.infrastructure.engines.tailer import LedgerEventDraft
+
+    async def record(turns: int, dollars: float) -> None:
+        payload: dict[str, object] = {"turns": turns, "dollars": dollars}
+        await ledger.append(
+            LedgerEventDraft(
                 project_id=project_id,
-                cycle=project.cycle,
-                phase=Phase.DESIGN,
-                kind="design.interview",
-                idempotency_key=idempotency_key(
-                    project_id, project.cycle, "design.interview", "interactive"
-                ),
-                requirement={"effort": "high"},
+                cycle=cycle,
+                phase=phase,
+                kind=EventKind.BUDGET_SPENT,
+                engine_id=EngineId.CLAUDELOOP,
+                job_id=None,
+                causation_id=None,
+                correlation_id=uuid4(),
+                provenance=Provenance.TRUSTED,
+                produced_at=datetime.now(UTC),
+                payload=payload,
+                digest=digest_event(payload),
             )
         )
-        return str(job.id)
+
+    return record
 
 
 @app.command("new")
@@ -123,16 +180,54 @@ def new_project(
     name: str,
     repo: Annotated[Path, typer.Option("--repo")] = Path("."),
     max_cycles: Annotated[int, typer.Option("--max-cycles", min=1)] = 10,
+    max_cycle_dollars: Annotated[
+        float | None,
+        typer.Option(
+            "--max-cycle-dollars",
+            min=0.01,
+            help="Cap engine spend per cycle; exceeding it parks a "
+            "budget_exhausted gate instead of starting more sessions",
+        ),
+    ] = None,
+    max_cycle_turns: Annotated[
+        int | None,
+        typer.Option("--max-cycle-turns", min=1, help="Cap engine turns per cycle"),
+    ] = None,
+    skills_context_mode: Annotated[
+        str,
+        typer.Option(
+            "--skills-context-mode",
+            help="Skills retrieval mode: off, shadow (measure only), or inject",
+        ),
+    ] = "off",
+    skills_context_budget: Annotated[
+        int,
+        typer.Option("--skills-context-budget", min=1_000, max=32_000),
+    ] = 6_000,
 ) -> None:
     """Create a project and enqueue its first DESIGN interview."""
 
     async def create() -> tuple[str, str]:
+        if skills_context_mode not in {"off", "shadow", "inject"}:
+            raise typer.BadParameter(
+                "must be off, shadow, or inject", param_hint="--skills-context-mode"
+            )
+        config: dict[str, object] = {"project": {"name": name, "repo": str(repo)}}
+        if max_cycle_dollars is not None:
+            config["max_cycle_dollars"] = max_cycle_dollars
+        if max_cycle_turns is not None:
+            config["max_cycle_turns"] = max_cycle_turns
+        if skills_context_mode != "off":
+            config["skills_context"] = {
+                "mode": skills_context_mode,
+                "budget": skills_context_budget,
+            }
         async with build_app() as resources:
             project = await resources.projects.create(
                 name,
                 repo,
                 max_cycles=max_cycles,
-                config={"project": {"name": name, "repo": str(repo)}},
+                config=config,
             )
         return str(project.project_id), await _enqueue_design(project.project_id)
 
@@ -156,6 +251,18 @@ def resume_design(project_id: UUID) -> None:
         typer.echo(f"design job {asyncio.run(_enqueue_design(project_id))}")
 
 
+def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
+    """The local-engine settings `vibey doctor` reads: `./vibey.toml` under the environment.
+
+    The same resolver the worker asks (ADR-0038), fed the file instead of the stored
+    project record, so the health check and the dispatcher agree about which engines
+    exist. They disagreed before: the worker ran qwenloop while `doctor` could not list
+    it. Module-level, like the typer commands that call it, because it is the CLI's
+    own reading of the working directory -- nothing else reads config from there.
+    """
+    return LocalEngineSettings.from_toml((root or Path.cwd()) / "vibey.toml", environ=os.environ)
+
+
 def _parse_question_answers(items: tuple[str, ...]) -> dict[str, object]:
     answers: dict[str, str] = {}
     for item in items:
@@ -167,30 +274,122 @@ def _parse_question_answers(items: tuple[str, ...]) -> dict[str, object]:
 
 
 @app.command("answer")
-def answer(gate_id: UUID, answers: list[str]) -> None:
-    """Answer a parked gate with one or more QUESTION_ID=ANSWER values."""
+def answer(
+    gate_id: UUID,
+    answers: Annotated[list[str] | None, typer.Argument()] = None,
+    choice: Annotated[
+        str | None,
+        typer.Option("--choice", help='Answer a choice gate: sends {"choice": VALUE}'),
+    ] = None,
+    verdict: Annotated[
+        str | None,
+        typer.Option("--verdict", help='Answer a verdict gate: sends {"verdict": VALUE}'),
+    ] = None,
+    raw: Annotated[
+        str | None,
+        typer.Option("--raw", help="Answer with an arbitrary JSON object"),
+    ] = None,
+    defaults: Annotated[
+        bool,
+        typer.Option(
+            "--defaults",
+            help="Interview gates: accept every question's default "
+            "(combinable with positional pairs, which win)",
+        ),
+    ] = False,
+) -> None:
+    """Answer a parked gate: QUESTION_ID=ANSWER pairs, --choice, --verdict, or --raw.
+
+    Interview gates take the positional pairs or --defaults (question keys
+    are model-minted and vary per run; --defaults needs none); review gates
+    take --verdict (accept/changes/cancel/approve/request_changes);
+    deployment and triage gates take --choice; --raw covers any other shape.
+    """
+    modes = [m for m in (answers, choice, verdict, raw) if m]
+    if defaults and (choice or verdict or raw):
+        typer.echo("--defaults only combines with positional QUESTION_ID=ANSWER pairs")
+        raise typer.Exit(2)
+    if len(modes) != 1 and not defaults:
+        typer.echo("provide exactly one of: QUESTION_ID=ANSWER pairs, --choice, --verdict, --raw")
+        raise typer.Exit(2)
+
+    payload: dict[str, object]
+    if choice is not None:
+        payload = {"choice": choice}
+    elif verdict is not None:
+        payload = {"verdict": verdict}
+    elif raw is not None:
+        try:
+            decoded = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            typer.echo(f"--raw must be valid JSON: {exc}")
+            raise typer.Exit(2) from exc
+        if not isinstance(decoded, dict):
+            typer.echo("--raw must be a JSON object")
+            raise typer.Exit(2)
+        payload = decoded
+    else:
+        payload = _parse_question_answers(tuple(answers or ()))
+        if defaults:
+            payload["accept_defaults"] = True
 
     async def submit() -> None:
         async with build_app() as resources:
-            await resources.gates.answer(
-                gate_id,
-                answer=_parse_question_answers(tuple(answers)),
-                answered_by="cli",
-            )
+            await resources.gates.answer(gate_id, answer=payload, answered_by="cli")
 
     asyncio.run(submit())
     typer.echo(f"answered {gate_id}")
 
 
-async def _work_once(project_id: UUID, provider: str, max_turns: int, max_dollars: float) -> bool:
+# One sentence for both commands' --ollama-model, so `work` and `worker` cannot drift.
+_OLLAMA_MODEL_HELP = (
+    "Local model for --provider qwenloop; ignored by the other providers. Default: "
+    f"${OLLAMA_MODEL_ENV}, else {DEFAULT_OLLAMA_MODEL}. The server is ${OLLAMA_URL_ENV}."
+)
+_PROVIDERS = ("scripted", "claudeloop", "qwenloop")
+# The same for --provider: its default is the one decision both commands must share.
+_PROVIDER_HELP = (
+    "DESIGN/DECOMPOSE provider: scripted, claudeloop, or qwenloop (the sovereign one, on "
+    "Ollama). Default: qwenloop when any local engine is switched on "
+    "(VIBEY_FEATURE_QWENLOOP / VIBEY_FEATURE_CLAUDELOOP_LOCAL, else [features] in the "
+    "project's config), otherwise scripted. An explicit value always wins."
+)
+
+
+def _resolve_provider(explicit: str | None, config: Mapping[str, object]) -> str:
+    """The provider to run: the operator's explicit choice, else the sovereign default.
+
+    Sub-doctrine 8.a, slice B5 of #115 (ADR-0038): an operator who has switched a local
+    engine on has said the sovereign path is how this project runs, so DESIGN and
+    DECOMPOSE default to the local providers too instead of the scripted fake. Paid
+    (`claudeloop`) is never a default; it is always a stated choice. Module-level, like
+    the typer commands that share it, so `work` and `worker` cannot disagree.
+    """
+    if explicit is not None:
+        return explicit
+    local = LocalEngineSettings(environ=os.environ, config=config)
+    return "qwenloop" if local.any_enabled else "scripted"
+
+
+async def _work_once(
+    project_id: UUID,
+    provider_opt: str | None,
+    max_turns: int,
+    max_dollars: float,
+    ollama_model: str | None = None,
+) -> bool:
     async with build_app() as resources:
         project = await resources.projects.get(project_id)
         if project is None:
             raise UnknownProject(f"unknown project {project_id}")
+        if not isinstance(project.phase, Phase):
+            raise WrongPhase(f"project phase {project.phase.value!r} is unknown; upgrade vibey")
         owner = f"cli-{os.getpid()}"
         if project.phase is Phase.VISUAL_DESIGN:
             visual_provider: VisualInventoryProducer
-            if provider == "scripted":
+            # No sovereign visual producer exists, so the sovereign default stops at
+            # DESIGN and DECOMPOSE: an unstated provider here is still the scripted one.
+            if provider_opt in (None, "scripted"):
                 visual_provider = ScriptedVisualProvider()
             else:
                 raise WrongPhase(
@@ -199,6 +398,7 @@ async def _work_once(project_id: UUID, provider: str, max_turns: int, max_dollar
             worker = build_visual_worker(resources=resources, provider=visual_provider, owner=owner)
             return await worker.run_once(project_id)
 
+        provider = _resolve_provider(provider_opt, project.config)
         design_provider: DesignProvider
         if provider == "scripted":
             design_provider = ScriptedDesignProvider()
@@ -207,13 +407,27 @@ async def _work_once(project_id: UUID, provider: str, max_turns: int, max_dollar
                 executor=AsyncSubprocessExecutor(),
                 max_turns=max_turns,
                 max_dollars=max_dollars,
+                spend_recorder=_build_spend_recorder(
+                    resources.ledger, project.project_id, project.cycle, project.phase
+                ),
             )
             design_provider = ClaudeLoopDesignProvider(
                 process=process,
                 worktree_path=project.repo_path,
             )
+        elif provider == "qwenloop":
+            # Doctrine 8.a: the sovereign path is the preferred way to run, so it has to
+            # be selectable here rather than reachable only through a paid engine.
+            # VIBEY_OLLAMA_URL / VIBEY_OLLAMA_MODEL (or --ollama-model) choose the local
+            # server and model. VIBEY_EVIDENCE_DIR is where the operator leaves reading
+            # for the research stage; without it research parks a `research_evidence`
+            # gate rather than inventing a source. `work` runs DESIGN only, so it has no
+            # decomposer to choose -- `worker` does.
+            design_provider = QwenloopDesignProvider.from_environment(
+                os.environ, chat=OllamaChatClient.from_environment(os.environ, model=ollama_model)
+            )
         else:
-            raise UnknownProvider("provider must be 'scripted' or 'claudeloop'")
+            raise UnknownProvider("provider must be 'scripted', 'claudeloop', or 'qwenloop'")
         worker = build_design_worker(
             resources=resources,
             project=project,
@@ -226,13 +440,19 @@ async def _work_once(project_id: UUID, provider: str, max_turns: int, max_dollar
 @app.command("work")
 def work_once(
     project_id: UUID,
-    provider: Annotated[str, typer.Option("--provider")] = "scripted",
+    provider: Annotated[str | None, typer.Option("--provider", help=_PROVIDER_HELP)] = None,
     max_turns: Annotated[int, typer.Option("--max-turns", min=1)] = 1,
     max_dollars: Annotated[float, typer.Option("--max-dollars", min=0.01, max=10)] = 0.25,
+    ollama_model: Annotated[
+        str | None,
+        typer.Option("--ollama-model", help=_OLLAMA_MODEL_HELP),
+    ] = None,
 ) -> None:
     """Process one ready DESIGN job; live ClaudeLoop use is explicit and capped."""
     with guard():
-        processed = asyncio.run(_work_once(project_id, provider, max_turns, max_dollars))
+        processed = asyncio.run(
+            _work_once(project_id, provider, max_turns, max_dollars, ollama_model)
+        )
     typer.echo("processed one job" if processed else "no ready job")
 
 
@@ -270,7 +490,7 @@ def accept_design(
     decline and go straight to BUILD.
     """
 
-    async def accept() -> tuple[Path, Phase]:
+    async def accept() -> tuple[Path, StoredPhase]:
         async with build_app() as resources:
             project = await resources.projects.get(project_id)
             if project is None:
@@ -304,7 +524,7 @@ def visual(ctx: typer.Context) -> None:
         raise typer.Exit()
 
 
-async def _settle_visual(project_id: UUID, decision: VisualDecision) -> Phase:
+async def _settle_visual(project_id: UUID, decision: VisualDecision) -> StoredPhase:
     async with build_app() as resources:
         settled = await VisualAcceptanceService(
             projects=resources.projects,
@@ -399,6 +619,54 @@ def watch_dashboard(
     asyncio.run(run_dashboard())
 
 
+@app.command("recover")
+def recover(
+    project_id: Annotated[
+        UUID | None, typer.Option("--project", help="Optional project ID to recover")
+    ] = None,
+    all_projects: Annotated[
+        bool, typer.Option("--all", help="Recover jobs for all projects")
+    ] = False,
+) -> None:
+    """Recover stuck leased jobs, setting them back to ready state."""
+    import re
+
+    import asyncpg
+
+    from vibey.bootstrap import database_url
+
+    async def run_recover() -> None:
+        if not project_id and not all_projects:
+            typer.echo("Must specify either --project <id> or --all")
+            raise typer.Exit(1)
+
+        conn = await asyncpg.connect(database_url())
+        try:
+            if all_projects:
+                result = await conn.execute(
+                    "UPDATE job SET state = 'ready', lease_owner = NULL, lease_expires_at = NULL, "
+                    "assigned_engine = NULL WHERE state = 'leased'"
+                )
+            else:
+                result = await conn.execute(
+                    "UPDATE job SET state = 'ready', lease_owner = NULL, lease_expires_at = NULL, "
+                    "assigned_engine = NULL WHERE state = 'leased' AND project_id = $1",
+                    project_id,
+                )
+
+            # asyncpg hands back the command status tag -- "UPDATE 3". The
+            # pattern here was once written r"UPDATE (\\d+)", which looks for a
+            # literal backslash and so never matched: the count printed 0
+            # however many rows had just been reset.
+            match = re.search(r"UPDATE (\d+)", result)
+            count = match.group(1) if match else "0"
+            typer.echo(f"Recovered {count} stuck job(s).")
+        finally:
+            await conn.close()
+
+    asyncio.run(run_recover())
+
+
 @app.command("status")
 def status(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
@@ -440,7 +708,7 @@ def status(
                     "queue_depth": {k.value: v for k, v in state.queue_depth.items()},
                     "circuits": [
                         {
-                            "engine_id": c.engine_id,
+                            "engine_id": c.engine_id.value,
                             "installed": c.installed,
                             "version": c.version,
                             "conformance_ok": c.conformance_ok,
@@ -462,12 +730,12 @@ def status(
                 dep = f" | Deploy: {state.deployment_decision}" if state.deployment_decision else ""
                 typer.echo(f"Project: {state.project_name} ({state.project_id})")
                 typer.echo(
-                    f"Phase: {state.phase.name} | Cycle: {state.cycle}/{state.max_cycles}{vis}{dep}"
+                    f"Phase: {state.phase_label} | Cycle: {state.cycle}/{state.max_cycles}{vis}{dep}"
                 )
                 typer.echo(f"Repo: {state.repo_path}")
                 typer.echo("\nQueue Depth:")
                 for k, v in state.queue_depth.items():
-                    typer.echo(f"  {k.name}: {v}")
+                    typer.echo(f"  {k.name if isinstance(k, JobState) else k.value}: {v}")
                 typer.echo("\nCircuits:")
                 if not state.circuits:
                     typer.echo("  (no engines recorded)")
@@ -526,7 +794,9 @@ def engines(
 def cost(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
 ) -> None:
-    """Show cost breakdown and budget consumption."""
+    """Show the cycle's spend against the caps the budget brake enforces."""
+    from vibey.application.budget_source import LedgerBudgetSource
+    from vibey.application.interfaces import LedgerBudgetSourceInterface
     from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 
     async def show_cost() -> None:
@@ -545,24 +815,40 @@ def cost(
                     raise typer.Exit(1)
                 project = proj
 
-            health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
-            records = await health_repo.list_for_project(project.project_id)
-            total_cost = sum(r.cost_usd_cycle for r in records)
-
-            budget_cfg = (
-                project.config.get("budget", {}) if isinstance(project.config, dict) else {}
+            # The brake's own numbers, not a second opinion (issue #210): the
+            # caps through the one parser the worker uses, and the spend from
+            # the ledger sum the worker checks before every BUILD session --
+            # which also carries DESIGN's spend, unlike engine_health. Typed as
+            # its interface so mypy holds the class to the declared seam.
+            max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
+            source: LedgerBudgetSourceInterface = LedgerBudgetSource(
+                resources.ledger, max_dollars=max_dollars, max_turns=max_turns
             )
-            cycle_cap = budget_cfg.get("max_dollars_per_cycle", 40.0)
-            total_cap = budget_cfg.get("max_dollars_total", 250.0)
+            budget = await source.current(project.project_id, project.cycle)
+            dollar_cap = f"${max_dollars:.2f}" if max_dollars is not None else "none (uncapped)"
+            turn_cap = str(max_turns) if max_turns is not None else "none"
 
             typer.echo(f"Project: {project.name} (Cycle {project.cycle})")
-            typer.echo(f"Total Spend (Cycle): ${total_cost:.2f}")
-            typer.echo(f"Cycle Budget Cap:    ${float(cycle_cap):.2f}")
+            typer.echo(
+                f"Cycle spend:      ${budget.dollars_spent:.2f} ({budget.turns_spent} turns)"
+            )
+            typer.echo(f"Cycle dollar cap: {dollar_cap}")
+            typer.echo(f"Cycle turn cap:   {turn_cap}")
+            if budget.any_exhausted:
+                typer.echo("Cap reached: the next BUILD session parks a budget_exhausted gate.")
 
-            typer.echo(f"Total Budget Cap:    ${float(total_cap):.2f}")
-            typer.echo("\nPer-Engine Spend (Current Cycle):")
+            # Per engine, from engine_health. Its cost column is each engine's
+            # metered BUILD-session spend (issue #209), which accumulates across
+            # cycles -- nothing resets it -- so it is labelled as such rather
+            # than as this cycle's, and it leaves DESIGN out. The count is how
+            # often rotation selected the engine, which is not a turn count.
+            health_repo = PostgresEngineHealthRepository(resources.ledger._pool)
+            records = await health_repo.list_for_project(project.project_id)
+            typer.echo("\nPer-engine (BUILD sessions, all cycles):")
             for r in records:
-                typer.echo(f"  • {r.engine_id}: ${r.cost_usd_cycle:.2f} ({r.selected_count} turns)")
+                typer.echo(
+                    f"  • {r.engine_id}: ${r.cost_usd_cycle:.2f} ({r.selected_count} selections)"
+                )
 
     asyncio.run(show_cost())
 
@@ -583,6 +869,18 @@ def ledger_show(
     kind: Annotated[str | None, typer.Option("--kind")] = None,
 ) -> None:
     """Show the append-only event ledger history."""
+    # `--kind` reads a label the way `ledger search --kind` does, from the same
+    # resolver: a known kind by value or name, any case; anything else matched
+    # exactly as written, so a kind a newer vibey recorded is still findable
+    # from this one (vibey#275).
+    wanted: LedgerEventKind | None = None
+    if kind is not None:
+        try:
+            wanted = EVENT_KINDS.resolve(kind)
+        except InvalidLedgerQuery as exc:
+            raise typer.BadParameter(str(exc)) from exc
+        for note in PRESENTER.kind_notes((wanted,)):
+            typer.echo(note, err=True)
 
     async def show_events() -> None:
         async with build_app() as resources:
@@ -596,24 +894,23 @@ def ledger_show(
 
             events = await resources.ledger.all_for_project(target_id)
             if phase is not None:
+                # A phase a newer vibey wrote (vibey#287) has only its stored text,
+                # so it matches by value; a member matches by value or by name.
                 events = tuple(
                     e
                     for e in events
                     if e.phase.value.lower() == phase.lower()
-                    or e.phase.name.lower() == phase.lower()
+                    or (isinstance(e.phase, Phase) and e.phase.name.lower() == phase.lower())
                 )
-            if kind is not None:
-                events = tuple(
-                    e
-                    for e in events
-                    if e.kind.value.lower() == kind.lower() or e.kind.name.lower() == kind.lower()
-                )
+            if wanted is not None:
+                events = tuple(e for e in events if e.kind == wanted)
 
             displayed = events[-limit:] if len(events) > limit else events
             for e in displayed:
                 ts = e.produced_at.strftime("%Y-%m-%d %H:%M:%S")
                 eng = f" [{e.engine_id.value}]" if e.engine_id else ""
-                typer.echo(f"#{e.seq:<4} {ts} [{e.phase.name}] {e.kind.value}{eng}")
+                shown = e.phase.name if isinstance(e.phase, Phase) else e.phase.value
+                typer.echo(f"#{e.seq:<4} {ts} [{shown}] {e.kind.value}{eng}")
 
     asyncio.run(show_events())
 
@@ -662,7 +959,10 @@ def deploy_status(
                     endpoint = str(outputs["endpoint"])
 
             typer.echo(f"Project:    {project.name} ({project.project_id})")
-            typer.echo(f"Phase:      {project.phase.name}")
+            phase_label = (
+                project.phase.name if isinstance(project.phase, Phase) else project.phase.value
+            )
+            typer.echo(f"Phase:      {phase_label}")
             typer.echo(f"Cycle:      {project.cycle}/{project.max_cycles}")
             typer.echo(f"Endpoint:   {endpoint}")
 
@@ -721,7 +1021,9 @@ def deploy_inspect(
 def deploy_plan(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
 ) -> None:
-    """Generate and evaluate IaC changeset safety against budgets and destructive operations."""
+    """Print a placeholder plan evaluation (NOT YET IMPLEMENTED: does not call
+    domain.deployment.evaluate_iac_plan or infrastructure.azure.iac.IacValidator
+    against the real IaC changeset, budget, or destructive-operation checks)."""
 
     async def run_plan() -> None:
         async with build_app() as resources:
@@ -740,9 +1042,9 @@ def deploy_plan(
                 project = proj
 
             typer.echo(f"Plan Evaluation for {project.name}:")
-            typer.echo("  • Status: Safe for automated apply")
-            typer.echo("  • Destructive Deletions: None")
-            typer.echo("  • Budget Adherence: Within monthly cap ($100.00)")
+            typer.echo("  • Status: NOT EVALUATED — this command is a placeholder")
+            typer.echo("  • Destructive Deletions: not checked (no real IaC plan was read)")
+            typer.echo("  • Budget Adherence: not checked (no real cost boundary was evaluated)")
 
     asyncio.run(run_plan())
 
@@ -751,7 +1053,9 @@ def deploy_plan(
 def deploy_cancel(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
 ) -> None:
-    """Halt in-flight deployment and clean up ephemeral cloud resources."""
+    """Print a placeholder cancellation notice (NOT YET IMPLEMENTED: does not
+    call AzureClientPort.delete_resource or otherwise touch any real cloud
+    resource, ledger event, or job/phase state)."""
 
     async def run_cancel() -> None:
         async with build_app() as resources:
@@ -769,7 +1073,10 @@ def deploy_cancel(
                     raise typer.Exit(1)
                 project = proj
 
-            typer.echo(f"Deployment cancelled and aborted for {project.name}.")
+            typer.echo(
+                f"deploy cancel is not yet implemented — no cloud resources for "
+                f"{project.name} were cancelled or cleaned up."
+            )
 
     asyncio.run(run_cancel())
 
@@ -778,7 +1085,9 @@ def deploy_cancel(
 def deploy_rollback(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
 ) -> None:
-    """Trigger immediate policy-bound rollback to previous stable deployment revision."""
+    """Print a placeholder rollback notice (NOT YET IMPLEMENTED: does not call
+    AzureClientPort.delete_resource or any other real rollback operation, and
+    does not transition any job/phase state)."""
 
     async def run_rollback() -> None:
         async with build_app() as resources:
@@ -796,7 +1105,10 @@ def deploy_rollback(
                     raise typer.Exit(1)
                 project = proj
 
-            typer.echo(f"Initiated rollback for {project.name} to previous stable revision.")
+            typer.echo(
+                f"deploy rollback is not yet implemented — no rollback was "
+                f"performed for {project.name}."
+            )
 
     asyncio.run(run_rollback())
 
@@ -810,36 +1122,92 @@ def doctor(
         str | None,
         typer.Option("--engine", help="Specific engine to check (default: all installed)"),
     ] = None,
+    record: Annotated[
+        bool,
+        typer.Option(
+            "--record",
+            help="Persist preflight (and conformance, with --conformance) to engine_health",
+        ),
+    ] = False,
+    record_project: Annotated[
+        UUID | None,
+        typer.Option("--project", help="Project to record health for (default: latest)"),
+    ] = None,
+    cluster: Annotated[
+        bool,
+        typer.Option(
+            "--cluster",
+            help="In-cluster preflight instead: DSN, workspace, secrets, database, migrations",
+        ),
+    ] = False,
+    worker_engines: Annotated[
+        str | None,
+        typer.Option(
+            "--engines",
+            help="With --cluster: the worker's --engines allow-list (chart worker.engines); "
+            "engine-auth requires exactly these",
+        ),
+    ] = None,
+    worker_provider: Annotated[
+        str | None,
+        typer.Option(
+            "--provider",
+            help="With --cluster: the worker's --provider (chart worker.provider)",
+        ),
+    ] = None,
 ) -> None:
     """Check engine health, auth status, and optionally run conformance."""
     from vibey.application.conformance import run_conformance
     from vibey.infrastructure.engines.classify import CREDITS_FIXTURES
-    from vibey.infrastructure.engines.descriptors import ALL_DESCRIPTORS, BY_ENGINE_ID
-    from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
+    from vibey.infrastructure.engines.descriptors import DEFAULT_DESCRIPTORS
+    from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment
 
     async def run_doctor() -> None:
+        import tempfile
+        from uuid import uuid4
+
+        # The worker runs every local engine that is switched on; without this the
+        # health check was the one place that could not see them, so the engine the
+        # operator is actually depending on stayed invisible unless they knew to ask
+        # for it by name. A preferred path you cannot inspect is not a preferred path.
+        # The same resolver builds claudeloop-local from its configured profile and
+        # gives qwenloop the endpoint the worker would, so doctor probes what runs.
+        local = _local_engines_from_toml()
+        endpoint = LocalEndpointEnvironment(os.environ)
         if engine is not None:
             from vibey.domain.engine import EngineId
 
             try:
-                eid = EngineId(engine)
+                eids = [EngineId(engine)]
             except ValueError as exc:
                 typer.echo(f"Unknown engine: {engine}")
                 raise typer.Exit(1) from exc
-            descriptors = [BY_ENGINE_ID[eid]]
         else:
-            descriptors = list(ALL_DESCRIPTORS)
+            eids = [d.engine_id for d in DEFAULT_DESCRIPTORS] + list(local.enabled_engines)
 
         all_ok = True
 
-        for desc in descriptors:
-            adapter = LoopProcessAdapter(descriptor=desc)
+        record_project_id: UUID | None = None
+        if record:
+            async with build_app() as resources:
+                if record_project is not None:
+                    target = await resources.projects.get(record_project)
+                else:
+                    target = await resources.projects.get_latest()
+            if target is None:
+                typer.echo("no projects found; create one with `vibey new` first")
+                raise typer.Exit(1)
+            record_project_id = target.project_id
+
+        for eid in eids:
+            adapter = local.adapter(eid, endpoint)
+            desc = adapter.descriptor
             preflight = await adapter.preflight()
 
             status = "installed" if preflight.installed else "NOT INSTALLED"
             version = preflight.version or "?"
             auth = "auth OK" if preflight.auth_ok else "auth FAIL"
-            typer.echo(f"{desc.engine_id.value:<12} {status:<14} v{version:<10} {auth}")
+            typer.echo(f"{desc.engine_id.value:<16} {status:<14} v{version:<10} {auth}")
 
             if preflight.detail:
                 typer.echo(f"  detail: {preflight.detail}")
@@ -850,7 +1218,17 @@ def doctor(
                 capacity_fixtures = [
                     ("credits", CREDITS_FIXTURES[desc.engine_id], CreditsExhausted)
                 ]
-                report = await run_conformance(adapter, capacity_fixtures=capacity_fixtures)
+                # Use a unique scratch directory per conformance run to avoid
+                # session-lock collisions in shared state
+                conformance_id = uuid4().hex[:8]
+                unique_worktree = str(
+                    Path(tempfile.gettempdir()) / f"vibey-conformance-{conformance_id}"
+                )
+                report = await run_conformance(
+                    adapter,
+                    capacity_fixtures=capacity_fixtures,
+                    trivial_worktree=unique_worktree,
+                )
                 for check in report.checks:
                     mark = "PASS" if check.ok else "FAIL"
                     detail = f" — {check.detail}" if check.detail else ""
@@ -858,10 +1236,89 @@ def doctor(
                 if not report.ok:
                     all_ok = False
 
+                if record_project_id is not None:
+                    async with build_app() as resources:
+                        await resources.engine_health_service.update_from_preflight(
+                            record_project_id, desc.engine_id, preflight, conformance_ok=report.ok
+                        )
+                    typer.echo(f"  recorded engine_health for {desc.engine_id.value}")
+            elif record_project_id is not None:
+                async with build_app() as resources:
+                    await resources.engine_health_service.record_preflight(
+                        record_project_id, desc.engine_id, preflight
+                    )
+                typer.echo(f"  recorded preflight for {desc.engine_id.value}")
+
         if conformance and not all_ok:
             raise typer.Exit(1)
 
+    async def run_cluster_doctor() -> None:
+        import shutil
+
+        from vibey.bootstrap import database_url, migrations_dir
+        from vibey.infrastructure.cluster_preflight import (
+            ClusterPreflight,
+            EngineAuthCheck,
+            all_ok,
+        )
+        from vibey.infrastructure.interfaces.cluster_preflight_interface import (
+            ClusterPreflightInterface,
+        )
+
+        # The engine check needs what the worker was TOLD to run, not what is on
+        # PATH: every runner ships in the image (ADR-0037), so presence says nothing.
+        try:
+            engine_auth = EngineAuthCheck.for_worker(
+                engines=worker_engines, provider=worker_provider, which=shutil.which
+            )
+        except ValueError as exc:
+            typer.echo(f"Invalid worker flag: {exc}")
+            raise typer.Exit(EXIT_USAGE) from exc
+        preflight: ClusterPreflightInterface = ClusterPreflight(engine_auth=engine_auth)
+        checks = await preflight.run(
+            dsn=database_url(),
+            workspace=Path.cwd(),
+            migrations_dir=migrations_dir(),
+            environ=os.environ,
+            uid=os.getuid(),
+        )
+        for check in checks:
+            mark = "PASS" if check.ok else "FAIL"
+            typer.echo(f"{mark} {check.name:<20} {check.detail}")
+        if not all_ok(checks):
+            raise typer.Exit(1)
+
+    if cluster:
+        asyncio.run(run_cluster_doctor())
+        return
+    if worker_engines is not None or worker_provider is not None:
+        typer.echo("--engines and --provider describe the worker; they apply only with --cluster")
+        raise typer.Exit(EXIT_USAGE)
+
     asyncio.run(run_doctor())
+
+
+@app.command("operator")
+def operator(
+    namespace: Annotated[
+        str | None,
+        typer.Option(
+            "--namespace",
+            help="Watch a single namespace (default: cluster-wide)",
+        ),
+    ] = None,
+) -> None:
+    """Run the Kubernetes operator: reconcile VibeyProject custom resources."""
+    # Imported here, not at module scope: kopf and the Kubernetes client are
+    # an optional extra, and `vibey worker` on a laptop should not require
+    # them to start.
+    try:
+        from vibey.infrastructure.operator import run as run_operator
+    except ImportError as exc:
+        typer.echo("operator support is not installed: pip install 'vibey[operator]'")
+        raise typer.Exit(1) from exc
+
+    run_operator(namespace=namespace)
 
 
 @app.command("worker")
@@ -875,67 +1332,312 @@ def worker(
         bool,
         typer.Option("--once", help="Process one job and exit"),
     ] = False,
+    provider_opt: Annotated[str | None, typer.Option("--provider", help=_PROVIDER_HELP)] = None,
+    max_turns: Annotated[int, typer.Option("--max-turns", min=1)] = 25,
+    max_dollars: Annotated[float, typer.Option("--max-dollars", min=0.01, max=10)] = 2.0,
+    ollama_model: Annotated[
+        str | None,
+        typer.Option("--ollama-model", help=_OLLAMA_MODEL_HELP),
+    ] = None,
+    project_opt: Annotated[
+        UUID | None,
+        typer.Option("--project", help="Project id (default: the latest project)"),
+    ] = None,
+    wait_for_project: Annotated[
+        float | None,
+        typer.Option(
+            "--wait-for-project",
+            min=1.0,
+            help=(
+                "Poll every N seconds for a project instead of exiting when none "
+                "exists. For long-lived deployments, where exiting means a "
+                "restart loop until someone creates one."
+            ),
+        ),
+    ] = None,
+    azure: Annotated[
+        str,
+        typer.Option(
+            "--azure",
+            help="Azure client for the deploy stage set: 'memory' (safe default, "
+            "no real infrastructure) or 'az' (the real Azure CLI; requires "
+            "`az login` and mutates real resources on consented deploys)",
+        ),
+    ] = "memory",
 ) -> None:
-    """Long-running worker: LISTEN vibey_job_ready, dispatch across phases."""
+    """Long-running worker: LISTEN vibey_job_ready, dispatch across all phases."""
+    from datetime import timedelta
+
+    from vibey.application.worker import WorkerLoop
+    from vibey.bootstrap import build_full_worker, database_url
     from vibey.domain.engine import EngineId
     from vibey.infrastructure.db.notifier import PostgresJobReadyNotifier
+    from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment
+    from vibey.infrastructure.engines.scripted_decompose import ScriptedWorkPlanProducer
 
+    allow_list: frozenset[EngineId] | None = None
     if engines_opt:
         try:
-            _ = frozenset(EngineId(e.strip()) for e in engines_opt.split(","))
+            allow_list = frozenset(EngineId(e.strip()) for e in engines_opt.split(","))
         except ValueError as exc:
             typer.echo(f"Invalid engine: {exc}")
             raise typer.Exit(2) from exc
+    if provider_opt is not None and provider_opt not in _PROVIDERS:
+        typer.echo("provider must be 'scripted', 'claudeloop', or 'qwenloop'")
+        raise typer.Exit(2)
+    if azure not in ("memory", "az"):
+        typer.echo("--azure must be 'memory' or 'az'")
+        raise typer.Exit(2)
+    azure_client = None
+    if azure == "az":
+        from vibey.infrastructure.azure.az_cli import AzCliClientAdapter
+
+        login_check = subprocess.run(  # nosec B603 B607 - fixed argv, never shell=True
+            ["az", "account", "show", "-o", "none"], capture_output=True, text=True
+        )
+        if login_check.returncode != 0:
+            typer.echo("--azure az requires a logged-in Azure CLI: run `az login` first")
+            raise typer.Exit(1)
+        azure_client = AzCliClientAdapter()
 
     async def run_worker() -> None:
-        from datetime import timedelta
+        from vibey.application.interfaces import WorkPlanProducer
+        from vibey.infrastructure.engines.claudeloop_decompose import ClaudeLoopWorkPlanProducer
+
+        # Kubernetes scale-in is SIGTERM, a wait, then SIGKILL. A
+        # worker that ignores SIGTERM keeps claiming jobs it cannot
+        # possibly finish: the kill lands mid-session, the lease is
+        # orphaned, and a paid turn is thrown away. Draining means
+        # exactly one thing -- finish the job in hand, claim no more --
+        # so the flag is read between jobs and nowhere else. Checking
+        # it mid-job would be the very truncation it exists to avoid.
+        #
+        # SIGTERM only, deliberately. Ctrl-C keeps its immediate-abort
+        # semantics: an operator who interrupts a foreground worker
+        # means now, not "in up to two hours".
+        #
+        # Registered as the very first thing once the event loop is
+        # running -- before any I/O (DB connect, project lookup). On a
+        # freshly scaled pod, kubelet's SIGTERM can arrive within
+        # milliseconds of the process starting, and PID 1 silently
+        # drops an unhandled signal rather than queuing it: a handler
+        # installed even one await later can lose the race and never
+        # see the signal that was actually sent.
+        draining = asyncio.Event()
+
+        def _begin_drain() -> None:
+            typer.echo("draining on SIGTERM: finishing in-flight job, claiming no more")
+            draining.set()
+
+        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, _begin_drain)
+
+        # The handler above is installed as early as the event loop allows, and that is
+        # still not early enough: everything before it -- interpreter start, imports,
+        # argument parsing -- is time in which SIGTERM sent to PID 1 is DISCARDED rather
+        # than queued, because its disposition was still SIG_DFL. A scale-in that lands in
+        # that window is not delivered late; it is never delivered, and the pod then runs
+        # until terminationGracePeriodSeconds expires. For a worker that is two hours.
+        #
+        # So ask the latch, armed at import time, whether it already happened. Observed on
+        # minikube: a pod deleted 0.2s after its container started, which then sat through
+        # the full grace period claiming jobs nobody was waiting for.
+        SIGTERM_LATCH.release()
+        if SIGTERM_LATCH.fired:
+            typer.echo("SIGTERM arrived during startup; draining immediately", err=True)
+            draining.set()
+
+        typer.echo("sigterm handler registered", err=True)
 
         async with build_app() as resources:
-            latest = await resources.projects.get_latest()
-            if latest is None:
+
+            async def _resolve_project() -> ProjectRecord | None:
+                if project_opt is not None:
+                    return await resources.projects.get(project_opt)
+                return await resources.projects.get_latest()
+
+            project = await _resolve_project()
+            # A one-shot CLI run should fail fast when there is nothing to
+            # work on. A long-lived deployment must not: exiting there is a
+            # restart loop that ends only when a human creates a project,
+            # and the crash counter makes a perfectly healthy worker look
+            # broken. Waiting is opt-in so the CLI default stays honest.
+            while project is None and wait_for_project is not None:
+                typer.echo(f"no project yet; polling every {wait_for_project:g}s")
+                await asyncio.sleep(wait_for_project)
+                project = await _resolve_project()
+            if project is None:
                 typer.echo("no projects found; create one with `vibey new` first")
                 raise typer.Exit(1)
+            if not isinstance(project.phase, Phase):
+                typer.echo(
+                    f"project {project.project_id} has unknown phase {project.phase.value!r}; "
+                    "refusing to dispatch; upgrade vibey",
+                    err=True,
+                )
+                raise typer.Exit(1)
 
-            project = latest
-            owner = f"worker-{os.getpid()}"
-            dsn = os.environ.get(
-                "VIBEY_PG_URL",
-                f"postgresql://{os.environ.get('USER', 'vibey')}@localhost:5432/vibey",
+            # Sovereign by default once a local engine is on (8.a, #115 B5); an explicit
+            # --provider still wins. Resolved here, after the project, because the
+            # project's own config is one of the two places the switch can live.
+            provider = _resolve_provider(provider_opt, project.config)
+            design_provider: DesignProvider
+            decomposer: WorkPlanProducer
+            if provider == "claudeloop":
+                process = ClaudeLoopProcess(
+                    executor=AsyncSubprocessExecutor(),
+                    max_turns=max_turns,
+                    max_dollars=max_dollars,
+                    spend_recorder=_build_spend_recorder(
+                        resources.ledger, project.project_id, project.cycle, project.phase
+                    ),
+                )
+                design_provider = ClaudeLoopDesignProvider(
+                    process=process,
+                    worktree_path=project.repo_path,
+                )
+                decomposer = ClaudeLoopWorkPlanProducer(
+                    process=process,
+                    worktree_path=project.repo_path,
+                )
+            elif provider == "qwenloop":
+                # Doctrine 8.a: the sovereign path is the preferred way to run, so the
+                # long-running worker has to be able to select it too, not just the
+                # one-shot `vibey work` -- and for DECOMPOSE as well as DESIGN. This used
+                # to hand BUILD's plan to ScriptedWorkPlanProducer, the test fake, whose
+                # items carry no verification commands. One client, so both providers
+                # talk to the same server and model.
+                from vibey.infrastructure.engines.qwenloop_decompose import (
+                    QwenloopWorkPlanProducer,
+                )
+
+                chat = OllamaChatClient.from_environment(os.environ, model=ollama_model)
+                design_provider = QwenloopDesignProvider.from_environment(os.environ, chat=chat)
+                decomposer = QwenloopWorkPlanProducer(chat=chat)
+            else:
+                design_provider = ScriptedDesignProvider()
+                decomposer = ScriptedWorkPlanProducer()
+
+            # The pool has to be the one `build_full_worker` will actually run, so ask
+            # the same resolver it does instead of keeping a second copy of the rule.
+            # Without this a local engine was the one engine the startup sweep could
+            # not see: it ran, but its conformance warning never appeared, so an
+            # operator depending on it had no way to learn it would never be selected.
+            # `--ollama-model` reaches qwenloop's process as QWENLOOP_MODEL too, so the
+            # BUILD engine and the DESIGN/DECOMPOSE providers run the same model.
+            local = LocalEngineSettings(environ=os.environ, config=project.config)
+            adapters = dict(resources.engine_adapters)
+            endpoint = LocalEndpointEnvironment(os.environ, model=ollama_model)
+            for engine_id, local_adapter in local.adapters(endpoint).items():
+                adapters.setdefault(engine_id, local_adapter)
+            if allow_list is not None:
+                allowed = {eid: a for eid, a in adapters.items() if eid in allow_list}
+                # An allow-list matching nothing used to start a worker with zero
+                # engines, which then deferred every engine-driven job every five
+                # minutes, forever, saying nothing. Nothing downstream can recover from
+                # that, so the only honest answer is to refuse at startup and say why.
+                if not allowed:
+                    available = ", ".join(sorted(e.value for e in adapters))
+                    typer.echo(
+                        f"--engines {engines_opt} matches none of this worker's engines "
+                        f"({available}); a local engine joins them only with its switch "
+                        "on -- VIBEY_FEATURE_QWENLOOP=1 or VIBEY_FEATURE_CLAUDELOOP_LOCAL=1, "
+                        "or [features] qwenloop / claudeloop_local in the project's config "
+                        "when that environment override is unset."
+                    )
+                    raise typer.Exit(EXIT_USAGE)
+                adapters = allowed
+
+            preflight_report = await resources.conductor_preflight.run(
+                project_id=project.project_id,
+                adapters=adapters,
+            )
+            ineligible = preflight_report.ineligible_engines
+            if ineligible:
+                names = ", ".join(sorted(e.value for e in ineligible))
+                typer.echo(
+                    f"warning: no recorded conformance for {names} -- engine-driven jobs "
+                    "will not select them until `vibey doctor --conformance --record` passes"
+                )
+
+            feasibility = preflight_report.feasibility
+            location = (
+                ""
+                if feasibility.blocked_at is None
+                else f" — blocked at stage {feasibility.blocked_at!r}"
+            )
+            basis = (
+                f"; first repair: {feasibility.first_repair}"
+                if feasibility.first_repair is not None
+                else (
+                    f"; {feasibility.required_measured} of {feasibility.required} "
+                    "required coordinates measured; no measured shortfall"
+                )
+            )
+            typer.echo(
+                f"preflight feasibility: {feasibility.status.upper()}{location}{basis}",
+                err=feasibility.status == "infeasible",
             )
 
-            notifier = PostgresJobReadyNotifier(dsn)
+            count = max(1, min(parallelism, len(adapters) * 2, os.cpu_count() or 1))
+            loops = [
+                build_full_worker(
+                    resources=resources,
+                    project=project,
+                    design_provider=design_provider,
+                    visual_provider=ScriptedVisualProvider(),
+                    decomposer=decomposer,
+                    owner=f"worker-{os.getpid()}-{i}",
+                    engine_adapters=adapters,
+                    allow_list=allow_list,
+                    azure_client=azure_client,
+                )
+                for i in range(count)
+            ]
+
+            notifier = PostgresJobReadyNotifier(database_url())
             await notifier.connect()
 
             typer.echo(
                 f"worker started: project={project.name} "
-                f"engines={engines_opt or 'all'} parallelism={parallelism}"
+                f"engines={engines_opt or 'all'} parallelism={count} provider={provider}"
             )
 
-            try:
-                while True:
-                    # Try to claim and process a job
-                    job = await resources.jobs.claim(
-                        project.project_id, owner=owner, lease=timedelta(seconds=120)
+            # TEMPORARY: pinning down why a scaled-in pod isn't draining within
+            # the expected ~60s on minikube (observed: stuck well past 5m, the
+            # SIGTERM handler registered above never firing its own echo).
+            # Cheap enough to leave on: one line per loop per iteration,
+            # nothing per-job.
+            async def drive(loop_: WorkerLoop, *, idx: int) -> None:
+                iteration = 0
+                while not draining.is_set():
+                    iteration += 1
+                    typer.echo(f"drive[{idx}] iter={iteration} calling run_once", err=True)
+                    worked = await loop_.run_once(project.project_id)
+                    typer.echo(
+                        f"drive[{idx}] iter={iteration} run_once returned worked={worked}", err=True
                     )
-                    if job is not None:
-                        typer.echo(f"claimed job {job.id} ({job.kind})")
-                        # For now, we just ack the job — full dispatch through
-                        # phase handlers will come when those handlers are wired
-                        # to the rotation infrastructure
-                        await resources.jobs.ack(job.id, owner=owner)
-                        typer.echo(f"completed job {job.id}")
+                    if worked:
+                        typer.echo("processed one job")
                         if once:
-                            break
+                            return
                         continue
-
                     if once:
                         typer.echo("no ready job")
-                        break
-
-                    # Wait for notification or poll timeout
+                        return
+                    await resources.jobs.reap()
+                    typer.echo(
+                        f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True
+                    )
                     await notifier.wait_for_job_ready(
                         project.project_id, timeout=timedelta(seconds=5)
                     )
+                typer.echo(f"drive[{idx}] draining flag observed, exiting loop", err=True)
+
+            try:
+                if once or count == 1:
+                    await drive(loops[0], idx=0)
+                else:
+                    await asyncio.gather(*(drive(loop_, idx=i) for i, loop_ in enumerate(loops)))
             finally:
                 await notifier.close()
 

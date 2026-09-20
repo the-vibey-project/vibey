@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The Azure control-plane seam used by the deployment stage set."""
 
 from __future__ import annotations
@@ -6,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol, runtime_checkable
+from uuid import UUID
 
 from vibey.domain.deployment import (
     AzureTargetScope,
@@ -64,3 +66,20 @@ class AzureClientPort(Protocol):
     ) -> None:
         """Deletes specified resource. Requires explicit mutation consent."""
         ...
+
+
+@runtime_checkable
+class DeploymentSpecStore(Protocol):
+    """Persists the synthesized DeploymentSpec so the execute/review stages'
+    spec_provider callables have something real to read."""
+
+    async def save_spec(self, project_id: UUID, spec: DeploymentSpec) -> None: ...
+
+
+@runtime_checkable
+class DeploymentConsentStore(Protocol):
+    """Persists the acceptance gate's consent. Consent is digest-bound to
+    one spec: a spec change after a loop-back produces a new digest, so a
+    stale consent can never be silently reused."""
+
+    async def save_consent(self, project_id: UUID, consent: DeploymentConsent) -> None: ...

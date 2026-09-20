@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Durable ``design.interview`` handler for the seven-stage protocol."""
 
 from collections.abc import Mapping, Sequence
@@ -34,7 +35,7 @@ class DesignInterviewHandler:
         gates: HumanGateRepository,
         questions: DesignQuestionProvider,
         clock: Clock,
-        interviewer: EngineId,
+        interviewer: EngineId | None,
     ) -> None:
         self._ledger = ledger
         self._jobs = jobs
@@ -61,6 +62,15 @@ class DesignInterviewHandler:
                 if gate is None or gate.answer is None or stage.value not in gate.prompt:
                     return Park(_gate_for(QuestionBatch(stage, questions)))
                 answers = _answers_from(gate.answer)
+                if bool(gate.answer.get("accept_defaults")):
+                    # The designed zero-touch path: every question not
+                    # explicitly answered takes its default, blocking ones
+                    # included. Question KEYS are model-minted and vary
+                    # per run, so an unattended caller cannot know them --
+                    # this contract needs none.
+                    answers = {
+                        question.question_id: question.default for question in questions
+                    } | answers
                 for event in answer_questions(questions, answers, now=self._clock.now()):
                     if str(event.payload["item_id"]) not in answered_ids:
                         await self._append(job, event)
@@ -110,9 +120,14 @@ class DesignInterviewHandler:
                 idempotency_key=idempotency_key(
                     job.project_id, job.cycle, "design.synthesize", "spec"
                 ),
+                # The "a different engine synthesises than interviewed"
+                # constraint is derived from whoever actually interviewed, never
+                # from a literal: on the sovereign path that is qwenloop, and on
+                # the scripted path no engine interviewed at all, so nothing is
+                # excluded.
                 requirement={
                     "effort": Effort.HIGH.name.lower(),
-                    "excluded": [self._interviewer.value],
+                    "excluded": [] if self._interviewer is None else [self._interviewer.value],
                 },
                 depends_on=tuple(item.id for item in research_jobs),
             )

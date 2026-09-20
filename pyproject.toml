@@ -4,27 +4,159 @@ build-backend = "hatchling.build"
 
 [project]
 name = "vibey"
-version = "0.1.0"
+version = "1.5.0"
 description = "A queue-based, six-phase conductor with optional visual design and Azure deployment."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
+# One distribution ships the whole family (ADR-0037), so this is the union of every
+# bundled package's runtime requirements -- not the conductor's alone. The engine SDKs
+# are here rather than behind an extra because `pip install vibey` now installs the
+# engine binaries themselves: `vibey doctor` resolves them with `shutil.which`, and an
+# engine on PATH that raises ImportError on its first line is worse than one that is
+# absent. vibey-bootstrap's Azure stack is the one runtime block that stayed an extra
+# (`vibey[azure]`, below) for exactly the reason `operator` is an extra.
 dependencies = [
+    # the conductor
     "typer>=0.15",
     "asyncpg>=0.30",
     "structlog>=24.4",
-    "textual>=0.86",
     "tomli-w>=1.1",
+    # the runners' shared TUI layer; floor raised from 0.86 because every *loop needs 1.0
+    "textual>=1.0",
+    # claudeloop. The two exact pins are API-drift gates, not caution: each runner asserts
+    # its SDK's discovered surface against a committed baseline, so a floating SDK fails
+    # that gate on the SDK's release schedule. Advancing a pin and regenerating the
+    # baseline is one reviewed change, in the tenant that owns it.
+    "claude-agent-sdk>=0.2.134",
+    "anthropic==1.2.0",
+    # codexloop
+    "openai==3.14.1",
+    # cursorloop
+    "cursor-sdk>=0.1",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    # agyloop
+    "google-antigravity>=0.1.10",
+    # cursorloop and agyloop
+    "anyio>=4.4",
+    # qwenloop
+    "platformdirs>=4.0",
 ]
 
+[project.urls]
+# Shown in the PyPI sidebar. The paper and the book are the documentation's two
+# downloadable forms, published beside it on the production channel.
+Homepage = "https://the-vibey-project.github.io/vibey/"
+Documentation = "https://the-vibey-project.github.io/vibey/main/"
+"Research paper" = "https://the-vibey-project.github.io/vibey/main/paper.pdf"
+Book = "https://the-vibey-project.github.io/vibey/main/book.pdf"
+Source = "https://github.com/the-vibey-project/vibey"
+Issues = "https://github.com/the-vibey-project/vibey/issues"
+Changelog = "https://github.com/the-vibey-project/vibey/blob/main/CHANGELOG.md"
+
+# Eleven console scripts, one install (ADR-0037). Each is the entry point its own tenant
+# declared while it was published separately; the name and target are unchanged, only the
+# distribution that carries them is. `azbootstrap` stays: it is vibey-bootstrap's
+# deprecated pre-4.0 alias, and dropping it here would be a second breaking change
+# smuggled in beside the first one.
 [project.scripts]
 vibey = "vibey.cli.main:app"
+claudeloop = "claudeloop.cli.app:main"
+codexloop = "codexloop.cli.app:main"
+cursorloop = "cursorloop.cli.app:main"
+agyloop = "agyloop.cli.app:main"
+qwenloop = "qwenloop.cli.app:main"
+vibey-gh = "vibey_gh.cli:main"
+vibey-skills = "vibey_skills.cli:main"
+vibe-skills = "vibey_skills.cli:deprecated_alias_main"
+vibey-bootstrap = "vibey_bootstrap.contrib.scaffold:main"
+azbootstrap = "vibey_bootstrap.contrib.scaffold:main_azbootstrap"
 
 [project.optional-dependencies]
+# kopf pulls the whole Kubernetes client stack. Nobody running `vibey
+# worker` on a laptop needs it, so the operator is an extra rather than a
+# base dependency: `pip install vibey[operator]`.
+operator = [
+    "kopf>=1.37",
+    "kubernetes>=31.0",
+]
+# Empty, and deliberately kept rather than deleted. `vibey_skills` now ships inside this
+# wheel -- infrastructure/skills_context.py spawns it as `sys.executable -m
+# vibey_skills.cli`, the same interpreter -- so the extra has nothing left to install. It
+# stays as a compatibility alias because removing a key is a less-configurable state
+# (sub-doctrine 12.c) and because `uv sync --extra skills` errors on an extra that is not
+# declared, where `pip install 'vibey[skills]'` would only warn.
+skills = []
+# vibey-bootstrap's Azure stack. An extra for the same reason `operator` is one: nobody
+# running `vibey worker` on a laptop needs the Azure SDK, App Insights and OpenTelemetry,
+# and folding them into `dependencies` would make this package's CVE-minimum pins
+# everybody's -- and pip-audit's surface the whole family's, on every install.
+# `import vibey_bootstrap` soft-fails without them, so the bundled `vibey-bootstrap`
+# console script still runs; the Azure paths are what need this.
+azure = [
+    "azure-appconfiguration-provider>=1.0.0",
+    "azure-appconfiguration>=1.9.0",
+    "azure-keyvault-secrets>=4.7.0",
+    "azure-identity>=1.15.0",
+    "azure-monitor-opentelemetry>=1.2.0",
+    "opentelemetry-api>=1.22.0",
+    # Security floors for transitive dependencies with known CVEs, carried over verbatim
+    # from vibey-bootstrap's own `dependencies`; see that file for the advisory ids.
+    "azure-core>=1.38.0",
+    "filelock>=3.20.3",
+    "urllib3>=2.7.0",
+    "cryptography>=50.0.0,<51",
+    "pyjwt>=2.13.0",
+]
+# Every third-party package any vibey-bootstrap extra named while it was published
+# separately, in one extra. `pip install vibey-bootstrap[scheduler]` has no successor
+# spelling per-feature -- there is one distribution now -- so the replacement is one
+# aggregate that makes every guarded optional import in vibey_bootstrap resolve.
+bootstrap-all = [
+    # The Azure set is spelled out rather than referenced as `vibey[azure]`. A
+    # self-requirement names THIS distribution, and release.yml renames the project to
+    # `vibey-dev` for TestPyPI -- so `vibey-dev[bootstrap-all]` would ask the index for
+    # `vibey[azure]`, a name this project does not own there. An extra that resolves to
+    # somebody else's package is worse than one that does not resolve at all.
+    "azure-appconfiguration-provider>=1.0.0",
+    "azure-appconfiguration>=1.9.0",
+    "azure-keyvault-secrets>=4.7.0",
+    "azure-identity>=1.15.0",
+    "azure-monitor-opentelemetry>=1.2.0",
+    "opentelemetry-api>=1.22.0",
+    "azure-core>=1.38.0",
+    "filelock>=3.20.3",
+    "urllib3>=2.7.0",
+    "cryptography>=50.0.0,<51",
+    "pyjwt>=2.13.0",
+    "fastapi>=0.110",
+    "starlette>=1.3.1",
+    "azure-servicebus>=7.11",
+    "azure-storage-blob>=12.19",
+    "azure-communication-email>=1.0",
+    "azure-cosmos>=4.5",
+    "azure-kusto-ingest>=4.0",
+    "azure-kusto-data>=4.0",
+    "azure-eventhub>=5.11",
+    "apscheduler>=3.10",
+    "tenacity>=8.0",
+    "pypdf>=6.13.3",
+    "requests>=2.32.0",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "pymongo>=4.6",
+]
+# claudeloop's optional speech-to-text, formerly `claudeloop[voice]`. The CLI falls back
+# to the system `say`/`espeak` without it.
+voice = [
+    "openai-whisper>=20231117; platform_system != 'Windows'",
+]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "pytest-cov>=6.0",
+    "pytest-xdist>=3.5",
     "hypothesis>=6.115",
     "ruff>=0.8",
     "mypy>=1.13",
@@ -32,30 +164,123 @@ dev = [
     "bandit>=1.8",
     "pip-audit>=2.7",
     "pre-commit>=4.0",
+    # The operator ships in the same package and carries the same 100%
+    # branch-coverage floor, so its dependencies must be present to test.
+    "kopf>=1.37",
+    "kubernetes>=31.0",
 ]
 
+# Ten importable trees, one wheel (ADR-0037). `packages` rather than `force-include` for
+# every one of them, and the reason is not taste:
+#
+#   * `packages` maps a directory to the top-level name in its LAST path segment, so each
+#     tenant lands under the name it already publishes with no renaming, and every data
+#     file inside it (py.typed markers, vibey_gh's workflow templates, vibey_bootstrap's
+#     contrib/templates, agyloop's API baselines, cursorloop's OpenAPI spec) comes with
+#     it. A force-include would be ten hand-written path pairs that silently miss whatever
+#     is added next.
+#   * Only a `packages` entry is exposed by an EDITABLE install. `.importlinter` names
+#     `vibey_gh` a root package, so `uv run lint-imports` needs `import vibey_gh` to work
+#     in a venv built by `uv sync` -- which installs this project editable and nothing
+#     else. force-include lands in the built wheel and not on the editable path.
+#
+# The force-includes below are the other shape, and they are carried up verbatim from the
+# tenants that already used it: content that must land somewhere it does not live. The
+# plugins tree has to stay at the repository root because Claude Code requires
+# `.claude-plugin/marketplace.json` there, and vibey-gh's release assets are documentation
+# sources served as package data.
 [tool.hatch.build.targets.wheel]
-packages = ["src/vibey"]
+packages = [
+    "src/vibey",
+    "src/vibey_runners/claude/src/claudeloop",
+    "src/vibey_runners/codex/src/codexloop",
+    "src/vibey_runners/cursor/src/cursorloop",
+    "src/vibey_runners/agy/src/agyloop",
+    "src/vibey_runners/qwen/src/qwenloop",
+    "src/vibey_runners/common/src/vibey_runners",
+    "src/vibey_tools/gh/vibey_gh",
+    "src/vibey_tools/bootstrap/vibey_bootstrap",
+    "src/vibey_tools/skills/src/vibey_skills",
+]
+
+# Every package root mapped explicitly, and this table is load-bearing rather than
+# redundant. `packages` alone would derive a source prefix from each entry's PARENT, giving
+# ten prefixes of which one -- plain `src`, from `src/vibey` -- is an ancestor of the other
+# nine. Hatchling sorts its sources and strips the first that matches, and `src/` sorts
+# before every longer path beginning with it, so `src/vibey_tools/gh/vibey_gh/cli.py` was
+# landing in the wheel as `vibey_tools/gh/vibey_gh/cli.py` and the editable build failed
+# outright on "src/vibey_tools is not a valid Python package". Naming each package's own
+# directory here does two things: it maps the path to the exact distribution name, and it
+# satisfies the guard in hatchling's `sources` that stops `packages` adding the parent
+# prefix at all. `src/vibey/` is not a prefix of `src/vibey_runners/` or `src/vibey_tools/`
+# -- the next character is `_`, not `/` -- so the ten no longer overlap.
+[tool.hatch.build.targets.wheel.sources]
+"src/vibey" = "vibey"
+"src/vibey_runners/claude/src/claudeloop" = "claudeloop"
+"src/vibey_runners/codex/src/codexloop" = "codexloop"
+"src/vibey_runners/cursor/src/cursorloop" = "cursorloop"
+"src/vibey_runners/agy/src/agyloop" = "agyloop"
+"src/vibey_runners/qwen/src/qwenloop" = "qwenloop"
+"src/vibey_runners/common/src/vibey_runners" = "vibey_runners"
+"src/vibey_tools/gh/vibey_gh" = "vibey_gh"
+"src/vibey_tools/bootstrap/vibey_bootstrap" = "vibey_bootstrap"
+"src/vibey_tools/skills/src/vibey_skills" = "vibey_skills"
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/vibey_tools/skills/plugins" = "vibey_skills/plugins"
+"src/vibey_tools/skills/.claude-plugin/marketplace.json" = "vibey_skills/marketplace.json"
+"src/vibey_tools/gh/docs/stylesheets/vibey.css" = "vibey_gh/templates/release/vibey.css"
+"src/vibey_tools/gh/docs/javascripts/channel.js" = "vibey_gh/templates/release/channel.js"
+"src/vibey_tools/gh/docs/javascripts/math.js" = "vibey_gh/templates/release/math.js"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.uv.workspace]
+# Two grouping directories, two globs. Both are globs so a new member registers itself,
+# which is why `common` needed no wiring when it was added after the runner import.
+members = ["src/vibey_runners/*", "src/vibey_tools/*"]
+
+# No `[tool.uv.sources]`. It held two entries, and both existed only to redirect a
+# requirement on a family package to the tree instead of to PyPI. No requirement on a
+# family package survives anywhere in this workspace (ADR-0037) -- they ship together, so
+# nothing asks an index for them -- which leaves nothing to redirect. The members are
+# still members: `[tool.uv.workspace]` above is what locks them, not this.
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "-m 'not paid'"
+addopts = "-m 'not paid' -n auto --maxprocesses=8"
 markers = [
     "integration: requires a running Postgres reachable via VIBEY_TEST_DATABASE_URL",
     "slow: takes more than a couple seconds to run",
     "system: delivery-stage-set end-to-end system test",
     "live: tests against real loop binaries (faked mode — scripted agents)",
     "paid: tests against real models (requires API keys, costs money)",
+    "noloss: the no-loss property suite; CI also runs it alone at 10,000 examples (-m noloss --hypothesis-profile=noloss)",
 ]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-include = ["src/**/*.py", "tests/**/*.py"]
+# scripts/ is here for the same reason it is a `[fingerprint]` source in .vibey-gh.toml:
+# a tracked Python file the gates cannot see is one nobody is checking.
+include = ["src/**/*.py", "tests/**/*.py", "scripts/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+# E501 only, and only because of the provenance header: an exact 234-character line
+# compared byte-for-byte, unwrappable without failing the check that mandates it. Width on
+# real code is still enforced by the formatter.
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# E402 (import not at top of file) for exactly one file, for exactly one statement.
+# `vibey/cli/main.py` arms the SIGTERM latch BEFORE importing typer and the rest of the
+# tree, because Linux discards a signal sent to PID 1 while its disposition is still
+# SIG_DFL -- every import below that line is time in which a Kubernetes scale-in would be
+# thrown away. The placement IS the fix; moving those imports up would undo it.
+"src/vibey/cli/main.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -68,8 +293,6 @@ module = "asyncpg.*"
 ignore_missing_imports = true
 
 [tool.coverage.run]
-source = ["src/vibey"]
+source = ["vibey"]
 branch = true
-
-[tool.coverage.report]
-fail_under = 100
+parallel = true

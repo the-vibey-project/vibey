@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -18,11 +19,18 @@ class FixedClock:
 class FakeDesignLedger:
     def __init__(self) -> None:
         self.events: list[DesignEvent] = []
+        self.engines: list[EngineId | None] = []
 
     async def append(
-        self, project_id: UUID, cycle: int, job_id: UUID, engine_id: EngineId, event: DesignEvent
+        self,
+        project_id: UUID,
+        cycle: int,
+        job_id: UUID,
+        engine_id: EngineId | None,
+        event: DesignEvent,
     ) -> None:
         self.events.append(event)
+        self.engines.append(engine_id)
 
     async def all_for_project(self, project_id: UUID) -> tuple[DesignEvent, ...]:
         return tuple(self.events)
@@ -240,3 +248,123 @@ async def test_replay_skips_already_answered_and_already_assumed_items() -> None
     ]
     assert len(answer_events) == 1
     assert len(assumption_events) == 1
+
+
+async def test_accept_defaults_answers_everything_including_blocking_questions() -> None:
+    """The zero-touch contract: question KEYS are model-minted and vary
+    per run, so an unattended caller cannot know them -- accept_defaults
+    takes every default, blocking included, with no keys at all."""
+    project_id = uuid4()
+    job = make_job(project_id)
+    ledger = FakeDesignLedger()
+    gates = FakeHumanGateRepository()
+    handler = DesignInterviewHandler(
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        gates=gates,
+        questions=TwoQuestionProvider(),
+        clock=FixedClock(),
+        interviewer=EngineId.CLAUDELOOP,
+    )
+    first = await handler.handle(job)
+    assert isinstance(first, Park)
+    gate = await gates.raise_gate(project_id, job.id, first.request)
+    await gates.answer(gate.gate_id, answer={"accept_defaults": True}, answered_by="driver")
+
+    outcome = await handler.handle(job)
+
+    # The stage advanced past both questions (blocking q-a included).
+    answered = [
+        event.payload["item_id"] for event in ledger.events if event.kind is EventKind.ANSWER_GIVEN
+    ]
+    assert "q-a" in answered and "q-b" in answered
+    answers = {
+        event.payload["item_id"]: event.payload["answer"]
+        for event in ledger.events
+        if event.kind is EventKind.ANSWER_GIVEN
+    }
+    assert answers["q-a"] == "def-a"
+    assert answers["q-b"] == "def-b"
+    # The handler advanced past the first stage: the next park (the
+    # provider reuses question ids) is for the FOLLOWING stage.
+    assert isinstance(outcome, Park)
+    assert not outcome.request.prompt.startswith("context_free")
+
+
+async def test_accept_defaults_keeps_explicit_answers_over_defaults() -> None:
+    project_id = uuid4()
+    job = make_job(project_id)
+    ledger = FakeDesignLedger()
+    gates = FakeHumanGateRepository()
+    handler = DesignInterviewHandler(
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        gates=gates,
+        questions=TwoQuestionProvider(),
+        clock=FixedClock(),
+        interviewer=EngineId.CLAUDELOOP,
+    )
+    first = await handler.handle(job)
+    assert isinstance(first, Park)
+    gate = await gates.raise_gate(project_id, job.id, first.request)
+    await gates.answer(
+        gate.gate_id,
+        answer={"accept_defaults": True, "answers": {"q-a": "explicit answer"}},
+        answered_by="driver",
+    )
+
+    await handler.handle(job)
+
+    answers = {
+        event.payload["item_id"]: event.payload["answer"]
+        for event in ledger.events
+        if event.kind is EventKind.ANSWER_GIVEN
+    }
+    assert answers["q-a"] == "explicit answer"
+    assert answers["q-b"] == "def-b"
+
+
+async def test_an_interview_no_engine_ran_names_none_and_excludes_none() -> None:
+    """The scripted path has no engine, so it claims none and bars none.
+
+    `excluded` on design.synthesize exists to keep synthesis off the engine that
+    interviewed. With no interviewer there is nobody to keep off, and inventing
+    one would put a false actor in an append-only record.
+    """
+    project_id = uuid4()
+    job = make_job(project_id)
+    job = job.__class__(
+        **{
+            field: getattr(job, field)
+            for field in job.__dataclass_fields__
+            if field not in {"phase", "kind"}
+        },
+        phase=Phase.DESIGN,
+        kind="design.interview",
+    )
+    jobs = FakeJobRepository()
+    gates = FakeHumanGateRepository()
+    ledger = FakeDesignLedger()
+    handler = DesignInterviewHandler(
+        ledger=ledger,
+        jobs=jobs,
+        gates=gates,
+        questions=ScriptedQuestionProvider(),
+        clock=FixedClock(),
+        interviewer=None,
+    )
+
+    for index, _stage in enumerate(DESIGN_STAGES):
+        outcome = await handler.handle(job)
+        assert isinstance(outcome, Park)
+        raised = await gates.raise_gate(project_id, job.id, outcome.request)
+        await gates.answer(
+            raised.gate_id,
+            answer={"answers": {f"q-{index + 1}": f"answer-{index + 1}"}},
+            answered_by="scripted-user",
+        )
+
+    assert isinstance(await handler.handle(job), Success)
+    assert set(ledger.engines) == {None}
+    synth = next(record for record in jobs._jobs.values() if record.kind == "design.synthesize")
+    assert synth.requirement["excluded"] == []

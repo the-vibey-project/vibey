@@ -1,4 +1,12 @@
-from vibey.infrastructure.ledger.redact import REDACTED, contains_secret, redact_payload
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+from vibey.domain.interfaces import CredentialRedactorInterface
+from vibey.infrastructure.ledger.redact import (
+    CREDENTIAL_REDACTOR,
+    REDACTED,
+    CredentialRedactor,
+    contains_secret,
+    redact_payload,
+)
 
 
 def test_sensitive_key_name_is_redacted_regardless_of_value() -> None:
@@ -68,3 +76,10 @@ def test_clean_payload_is_unchanged() -> None:
 def test_contains_secret_detects_a_planted_secret() -> None:
     payload = {"detail": "sk-" + "y" * 20}
     assert contains_secret(payload) is True
+
+
+def test_the_credential_redactor_is_redact_payload_behind_the_policys_seam() -> None:
+    payload = {"note": "use sk-abcdefghijklmnopqrstuvwx", "token": "t"}
+    assert isinstance(CREDENTIAL_REDACTOR, CredentialRedactorInterface)
+    assert CredentialRedactor().redact(payload) == redact_payload(payload)
+    assert CREDENTIAL_REDACTOR.redact(payload) == {"note": f"use {REDACTED}", "token": REDACTED}

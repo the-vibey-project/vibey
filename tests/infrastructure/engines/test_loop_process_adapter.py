@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Tests for infrastructure/engines/loop_process_adapter.py.
 
 Tests the LoopProcessAdapter's file-based operations (snapshot, send_prompt,
@@ -8,6 +9,8 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
+
 from vibey.application.dto import RunHandle
 from vibey.domain.capacity import CreditsExhausted
 from vibey.domain.engine import EngineId
@@ -17,6 +20,9 @@ from vibey.infrastructure.engines.descriptors import CLAUDELOOP, CODEXLOOP
 from vibey.infrastructure.engines.loop_process_adapter import (
     EXIT_CODE_WIND_DOWN,
     LoopProcessAdapter,
+    _active_processes,
+    _diagnostic_files,
+    _render_plan,
 )
 
 
@@ -54,6 +60,34 @@ def test_attribute_wind_down() -> None:
     adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
     result = adapter.attribute(75, "")
     assert isinstance(result, FailureClass)
+
+
+def test_diagnostic_tail_reads_and_releases_child_output(tmp_path: Path) -> None:
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    handle = _make_handle(tmp_path)
+
+    assert adapter.diagnostic_tail(handle) == ""
+    missing_stdout = (tmp_path / "missing-stdout").open("w", encoding="utf-8")
+    empty_stderr = (tmp_path / "empty-stderr").open("w", encoding="utf-8")
+    Path(missing_stdout.name).unlink()
+    _diagnostic_files[handle.run_id] = (missing_stdout, empty_stderr)
+    assert adapter.diagnostic_tail(handle) == ""
+    adapter.release_diagnostics(handle)
+
+    stdout_path = tmp_path / "stdout"
+    stderr_path = tmp_path / "stderr"
+    stdout_file = stdout_path.open("w", encoding="utf-8")
+    stderr_file = stderr_path.open("w", encoding="utf-8")
+    stdout_file.write("work output\n")
+    stderr_file.write("engine traceback\n")
+    stdout_file.flush()
+    stderr_file.flush()
+    _diagnostic_files[handle.run_id] = (stdout_file, stderr_file)
+
+    assert adapter.diagnostic_tail(handle) == "[stderr] engine traceback\n[stdout] work output"
+    adapter.release_diagnostics(handle)
+    assert handle.run_id not in _diagnostic_files
+    adapter.release_diagnostics(handle)
 
 
 async def test_send_prompt_writes_inbox_file(tmp_path: Path) -> None:
@@ -197,6 +231,23 @@ def test_adapter_works_with_any_descriptor() -> None:
     assert adapter.descriptor.engine_id == EngineId.CODEXLOOP
 
 
+def test_render_plan_adds_codexloop_checkbox_without_losing_prompt() -> None:
+    prompt = "Implement work item ws\n\nRun every verification gate."
+
+    rendered = _render_plan(CODEXLOOP, prompt)
+
+    assert rendered.startswith("# Work Plan\n\n- [ ] Implement work item ws\n")
+    assert rendered.endswith(f"## Instructions\n\n{prompt}\n")
+
+
+def test_render_plan_preserves_other_engine_prompts() -> None:
+    assert _render_plan(CLAUDELOOP, "plain prompt") == "plain prompt"
+
+
+def test_render_plan_handles_an_empty_codexloop_prompt() -> None:
+    assert "- [ ] Complete task" in _render_plan(CODEXLOOP, "")
+
+
 def _make_fake_binary(tmp_path: Path, name: str, script: str) -> Path:
     """Create a fake binary script and add its directory to PATH."""
     bin_dir = tmp_path / "bin"
@@ -207,6 +258,130 @@ def _make_fake_binary(tmp_path: Path, name: str, script: str) -> Path:
     return bin_dir
 
 
+def test_help_text_returns_none_when_binary_not_found() -> None:
+    fake_desc = CLAUDELOOP.__class__(
+        engine_id=EngineId.CLAUDELOOP,
+        binary="vibey_test_nonexistent_binary_for_help_text",
+        min_version="0.1.0",
+        state_dir=".test",
+        done_marker="TEST_DONE",
+        auth_env=("TEST_KEY",),
+        capabilities=frozenset(),
+        effort_projection=CLAUDELOOP.effort_projection,
+        session_verb="sessions",
+        isolation_flags=CLAUDELOOP.isolation_flags,
+        cost_per_mtok_in=1.0,
+        cost_per_mtok_out=5.0,
+        context_window=100_000,
+    )
+    adapter = LoopProcessAdapter(descriptor=fake_desc)
+    assert adapter.help_text is None
+
+
+def test_help_text_fetches_and_caches_real_output(tmp_path: Path) -> None:
+    import os
+
+    bin_dir = _make_fake_binary(
+        tmp_path, "fakecli_help1", 'echo "usage: fakecli_help1 run [OPTIONS] --my-flag <str>"'
+    )
+    old_path = os.environ.get("PATH", "")
+    os.environ["PATH"] = f"{bin_dir}:{old_path}"
+    try:
+        desc = CLAUDELOOP.__class__(
+            engine_id=EngineId.CLAUDELOOP,
+            binary="fakecli_help1",
+            min_version="0.1.0",
+            state_dir=".test",
+            done_marker="TEST_DONE",
+            auth_env=("TEST_KEY",),
+            capabilities=frozenset(),
+            effort_projection=CLAUDELOOP.effort_projection,
+            session_verb="sessions",
+            isolation_flags=CLAUDELOOP.isolation_flags,
+            cost_per_mtok_in=1.0,
+            cost_per_mtok_out=5.0,
+            context_window=100_000,
+        )
+        adapter = LoopProcessAdapter(descriptor=desc)
+
+        help_text = adapter.help_text
+
+        assert help_text is not None
+        assert "--my-flag" in help_text
+    finally:
+        os.environ["PATH"] = old_path
+
+
+def test_help_text_is_cached_after_first_fetch(tmp_path: Path) -> None:
+    """A binary invoked once for --help, not once per access."""
+    import os
+
+    counter_file = tmp_path / "invocation_count"
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        "fakecli_help2",
+        f'printf x >> {counter_file}\necho "usage: fakecli_help2 run [OPTIONS]"',
+    )
+    old_path = os.environ.get("PATH", "")
+    os.environ["PATH"] = f"{bin_dir}:{old_path}"
+    try:
+        desc = CLAUDELOOP.__class__(
+            engine_id=EngineId.CLAUDELOOP,
+            binary="fakecli_help2",
+            min_version="0.1.0",
+            state_dir=".test",
+            done_marker="TEST_DONE",
+            auth_env=("TEST_KEY",),
+            capabilities=frozenset(),
+            effort_projection=CLAUDELOOP.effort_projection,
+            session_verb="sessions",
+            isolation_flags=CLAUDELOOP.isolation_flags,
+            cost_per_mtok_in=1.0,
+            cost_per_mtok_out=5.0,
+            context_window=100_000,
+        )
+        adapter = LoopProcessAdapter(descriptor=desc)
+
+        first = adapter.help_text
+        second = adapter.help_text
+
+        assert first == second
+        assert counter_file.read_text() == "x"  # invoked exactly once
+    finally:
+        os.environ["PATH"] = old_path
+
+
+def test_help_text_returns_none_on_subprocess_error(tmp_path: Path) -> None:
+    import os
+    from unittest.mock import patch
+
+    bin_dir = _make_fake_binary(tmp_path, "fakecli_help3", 'echo "usage: fakecli_help3"')
+    old_path = os.environ.get("PATH", "")
+    os.environ["PATH"] = f"{bin_dir}:{old_path}"
+    try:
+        desc = CLAUDELOOP.__class__(
+            engine_id=EngineId.CLAUDELOOP,
+            binary="fakecli_help3",
+            min_version="0.1.0",
+            state_dir=".test",
+            done_marker="TEST_DONE",
+            auth_env=("TEST_KEY",),
+            capabilities=frozenset(),
+            effort_projection=CLAUDELOOP.effort_projection,
+            session_verb="sessions",
+            isolation_flags=CLAUDELOOP.isolation_flags,
+            cost_per_mtok_in=1.0,
+            cost_per_mtok_out=5.0,
+            context_window=100_000,
+        )
+        adapter = LoopProcessAdapter(descriptor=desc)
+
+        with patch("subprocess.run", side_effect=OSError("boom")):
+            assert adapter.help_text is None
+    finally:
+        os.environ["PATH"] = old_path
+
+
 async def test_tail_yields_translated_events(tmp_path: Path) -> None:
     adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
     run_dir = tmp_path / "test-run"
@@ -215,12 +390,12 @@ async def test_tail_yields_translated_events(tmp_path: Path) -> None:
 
     events_path = run_dir / "events.jsonl"
     events_path.write_text(
-        '{"event_type":"session.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
+        '{"event_type":"run.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
         '{"event_type":"chatter.assistant","at":"2026-01-01T00:00:01+00:00","payload":{"text":"hi"}}\n'
     )
 
     meta_path = run_dir / "meta.json"
-    meta_path.write_text('{"status":"complete"}')
+    meta_path.write_text('{"status":"finished"}')
 
     events = []
     async for event in adapter.tail(handle):
@@ -228,7 +403,8 @@ async def test_tail_yields_translated_events(tmp_path: Path) -> None:
 
     assert len(events) == 2
     assert events[0].kind == "SessionSeeded"
-    assert events[1].kind == "TurnCompleted"
+    # chatter.assistant echoes a turn's text; only turn.completed is a turn.
+    assert events[1].kind == "TranscriptRecorded"
 
 
 async def test_tail_skips_unknown_event_types(tmp_path: Path) -> None:
@@ -240,11 +416,11 @@ async def test_tail_skips_unknown_event_types(tmp_path: Path) -> None:
     events_path = run_dir / "events.jsonl"
     events_path.write_text(
         '{"event_type":"totally.unknown","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
-        '{"event_type":"session.started","at":"2026-01-01T00:00:01+00:00","payload":{}}\n'
+        '{"event_type":"run.started","at":"2026-01-01T00:00:01+00:00","payload":{}}\n'
     )
 
     meta_path = run_dir / "meta.json"
-    meta_path.write_text('{"status":"complete"}')
+    meta_path.write_text('{"status":"finished"}')
 
     events = []
     async for event in adapter.tail(handle):
@@ -263,11 +439,11 @@ async def test_tail_skips_events_missing_type(tmp_path: Path) -> None:
     events_path = run_dir / "events.jsonl"
     events_path.write_text(
         '{"payload":{"no":"type"}}\n'
-        '{"event_type":"session.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
+        '{"event_type":"run.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
     )
 
     meta_path = run_dir / "meta.json"
-    meta_path.write_text('{"status":"complete"}')
+    meta_path.write_text('{"status":"finished"}')
 
     events = []
     async for event in adapter.tail(handle):
@@ -285,11 +461,11 @@ async def test_tail_skips_invalid_json_lines(tmp_path: Path) -> None:
     events_path = run_dir / "events.jsonl"
     events_path.write_text(
         "not valid json\n"
-        '{"event_type":"session.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
+        '{"event_type":"run.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
     )
 
     meta_path = run_dir / "meta.json"
-    meta_path.write_text('{"status":"complete"}')
+    meta_path.write_text('{"status":"finished"}')
 
     events = []
     async for event in adapter.tail(handle):
@@ -306,11 +482,11 @@ async def test_tail_skips_blank_lines(tmp_path: Path) -> None:
 
     events_path = run_dir / "events.jsonl"
     events_path.write_text(
-        '\n   \n{"event_type":"session.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
+        '\n   \n{"event_type":"run.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
     )
 
     meta_path = run_dir / "meta.json"
-    meta_path.write_text('{"status":"complete"}')
+    meta_path.write_text('{"status":"finished"}')
 
     events = []
     async for event in adapter.tail(handle):
@@ -340,12 +516,10 @@ async def test_tail_uses_kind_field_fallback(tmp_path: Path) -> None:
     handle = _make_handle(run_dir)
 
     events_path = run_dir / "events.jsonl"
-    events_path.write_text(
-        '{"kind":"session.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
-    )
+    events_path.write_text('{"kind":"run.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n')
 
     meta_path = run_dir / "meta.json"
-    meta_path.write_text('{"status":"complete"}')
+    meta_path.write_text('{"status":"finished"}')
 
     events = []
     async for event in adapter.tail(handle):
@@ -363,11 +537,11 @@ async def test_tail_uses_timestamp_field_fallback(tmp_path: Path) -> None:
 
     events_path = run_dir / "events.jsonl"
     events_path.write_text(
-        '{"event_type":"session.started","timestamp":"2026-06-15T12:00:00+00:00","payload":{}}\n'
+        '{"event_type":"run.started","timestamp":"2026-06-15T12:00:00+00:00","payload":{}}\n'
     )
 
     meta_path = run_dir / "meta.json"
-    meta_path.write_text('{"status":"complete"}')
+    meta_path.write_text('{"status":"finished"}')
 
     events = []
     async for event in adapter.tail(handle):
@@ -384,10 +558,10 @@ async def test_tail_defaults_timestamp_to_now(tmp_path: Path) -> None:
     handle = _make_handle(run_dir)
 
     events_path = run_dir / "events.jsonl"
-    events_path.write_text('{"event_type":"session.started","payload":{}}\n')
+    events_path.write_text('{"event_type":"run.started","payload":{}}\n')
 
     meta_path = run_dir / "meta.json"
-    meta_path.write_text('{"status":"complete"}')
+    meta_path.write_text('{"status":"finished"}')
 
     events = []
     async for event in adapter.tail(handle):
@@ -447,6 +621,109 @@ async def test_stop_handles_invalid_snapshot_json(tmp_path: Path) -> None:
 
     summary = await adapter.stop(handle)
     assert summary.remaining_work == ()
+
+
+async def test_communicate_reaps_an_already_exited_process_on_error() -> None:
+    """The probe already exited, so its group is gone: the kill finds no one (ESRCH),
+    the reap returns at once, and the original error still propagates."""
+    import asyncio
+
+    from structlog.testing import capture_logs
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    process = await adapter._spawn(
+        "/bin/sh",
+        "-c",
+        "exit 1",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        start_new_session=True,
+    )
+    await process.wait()
+
+    async def failing_communicate() -> tuple[bytes, bytes]:
+        raise RuntimeError("communication failed")
+
+    process.communicate = failing_communicate  # type: ignore[method-assign]
+
+    with capture_logs() as logs, pytest.raises(RuntimeError, match="communication failed"):
+        await adapter._communicate(process, timeout=1.0)
+
+    assert process.returncode == 1
+    assert logs == []
+
+
+async def test_stop_reaps_an_exited_registered_process(tmp_path: Path) -> None:
+    import asyncio
+    from unittest.mock import MagicMock
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    (run_dir / "stop-summary.md").write_text("Stopped.")
+    handle = _make_handle(run_dir)
+    process = MagicMock()
+    process.returncode = 0
+    process.wait.return_value = asyncio.get_running_loop().create_future()
+    process.wait.return_value.set_result(0)
+    _active_processes[handle.run_id] = process
+
+    await adapter.stop(handle)
+
+    process.wait.assert_called_once_with()
+
+
+async def test_stop_waits_for_a_running_registered_process(tmp_path: Path) -> None:
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    (run_dir / "stop-summary.md").write_text("Stopped.")
+    handle = _make_handle(run_dir)
+    process = MagicMock()
+    process.returncode = None
+    process.wait.return_value = asyncio.get_running_loop().create_future()
+    process.wait.return_value.set_result(0)
+    _active_processes[handle.run_id] = process
+
+    with patch("asyncio.wait_for", new=AsyncMock(return_value=0)) as wait_for:
+        await adapter.stop(handle)
+
+    wait_for.assert_awaited_once()
+    assert wait_for.await_args.kwargs == {"timeout": 2.0}
+    process.wait.assert_called_once_with()
+    process.terminate.assert_not_called()
+
+
+@pytest.mark.parametrize("second_wait_fails", [False, True])
+async def test_stop_terminates_a_process_that_does_not_exit(
+    tmp_path: Path, second_wait_fails: bool
+) -> None:
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    (run_dir / "stop-summary.md").write_text("Stopped.")
+    handle = _make_handle(run_dir)
+    process = MagicMock()
+    process.returncode = None
+    process.wait.return_value = asyncio.get_running_loop().create_future()
+    process.wait.return_value.set_result(0)
+    _active_processes[handle.run_id] = process
+    side_effect = [TimeoutError("still running")]
+    if second_wait_fails:
+        side_effect.append(RuntimeError("terminate failed"))
+    else:
+        side_effect.append(0)
+
+    with patch("asyncio.wait_for", new=AsyncMock(side_effect=side_effect)):
+        await adapter.stop(handle)
+
+    process.terminate.assert_called_once_with()
 
 
 async def test_start_raises_process_error_on_spawn_failure(tmp_path: Path) -> None:
@@ -868,7 +1145,7 @@ async def test_tail_polls_until_complete(tmp_path: Path) -> None:
 
     events_path = run_dir / "events.jsonl"
     events_path.write_text(
-        '{"event_type":"session.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
+        '{"event_type":"run.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
     )
 
     meta_path = run_dir / "meta.json"
@@ -877,7 +1154,7 @@ async def test_tail_polls_until_complete(tmp_path: Path) -> None:
         await asyncio.sleep(0.6)
         meta_path.write_text('{"status":"running"}')
         await asyncio.sleep(0.6)
-        meta_path.write_text('{"status":"complete"}')
+        meta_path.write_text('{"status":"finished"}')
 
     task = asyncio.create_task(_write_meta_after_delay())
     events: list[object] = []
@@ -897,7 +1174,7 @@ async def test_tail_outer_exception_breaks_loop(tmp_path: Path) -> None:
 
     events_path = run_dir / "events.jsonl"
     events_path.write_text(
-        '{"event_type":"session.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
+        '{"event_type":"run.started","at":"2026-01-01T00:00:00+00:00","payload":{}}\n'
     )
 
     meta_path = run_dir / "meta.json"
@@ -908,6 +1185,39 @@ async def test_tail_outer_exception_breaks_loop(tmp_path: Path) -> None:
         events.append(event)
 
     assert len(events) == 1
+
+
+async def test_tail_gives_up_when_process_exits_without_terminal_status(
+    tmp_path: Path,
+) -> None:
+    """Regression: a process that exits (crash, early validation failure)
+    without ever writing a terminal meta.json status must not hang tail()
+    forever -- confirmed real via codexloop's own plan parser raising
+    before it ever touches meta.json's status field. Bounded by wait_for so
+    a regression fails this test loudly instead of hanging the suite."""
+    import asyncio
+    from types import SimpleNamespace
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+
+    events_path = run_dir / "events.jsonl"
+    events_path.write_text("")
+    # meta.json exists but never carries a terminal (or any) status field --
+    # exactly what codexloop's own meta.json looks like today.
+    (run_dir / "meta.json").write_text('{"run_id": "x", "pid": 1}')
+
+    _active_processes[handle.run_id] = SimpleNamespace(returncode=0)  # type: ignore[assignment]
+    try:
+        events2: list[object] = []
+        async with asyncio.timeout(5.0):
+            async for event in adapter.tail(handle):
+                events2.append(event)
+        assert events2 == []
+    finally:
+        _active_processes.pop(handle.run_id, None)
 
 
 async def test_stop_remaining_work_round_trips_through_snapshot(tmp_path: Path) -> None:
@@ -963,3 +1273,565 @@ async def test_stop_handles_corrupt_snapshot_gracefully(tmp_path: Path) -> None:
 
     assert summary.remaining_work == ()
     assert summary.complete is False
+
+
+async def test_tail_enriches_verdict_with_done_marker(tmp_path: Path) -> None:
+    """VerdictRendered events get done_marker injected into payload when missing."""
+    from vibey.infrastructure.engines.descriptors import AGYLOOP
+
+    adapter = LoopProcessAdapter(descriptor=AGYLOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+
+    events_path = run_dir / "events.jsonl"
+    # agyloop's "finished" event maps to VerdictRendered but doesn't have done_marker in payload
+    events_path.write_text(
+        '{"event_type":"finished","ts":"2026-01-01T00:00:00+00:00","payload":{"success":true,"reason":"Done"}}\n'
+    )
+
+    meta_path = run_dir / "meta.json"
+    meta_path.write_text('{"status":"finished"}')
+
+    events = []
+    async for event in adapter.tail(handle):
+        events.append(event)
+
+    assert len(events) == 1
+    assert events[0].kind == "VerdictRendered"
+    # The adapter should inject the done_marker from the descriptor
+    assert events[0].payload.get("done_marker") == "AGYLOOP_TASK_FULLY_COMPLETE"
+
+
+async def test_tail_does_not_enrich_failed_verdict_with_done_marker(tmp_path: Path) -> None:
+    """agyloop's "finished" event_type covers both success and failure,
+    distinguished only by payload["success"] -- a failed run must never get
+    a done_marker injected, or conformance/production code would read a
+    failed run as having completed successfully."""
+    from vibey.infrastructure.engines.descriptors import AGYLOOP
+
+    adapter = LoopProcessAdapter(descriptor=AGYLOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+
+    events_path = run_dir / "events.jsonl"
+    events_path.write_text(
+        '{"event_type":"finished","ts":"2026-01-01T00:00:00+00:00",'
+        '"payload":{"success":false,"reason":"budget exhausted"}}\n'
+    )
+
+    meta_path = run_dir / "meta.json"
+    meta_path.write_text('{"status":"failed"}')
+
+    events = []
+    async for event in adapter.tail(handle):
+        events.append(event)
+
+    assert len(events) == 1
+    assert events[0].kind == "VerdictRendered"
+    assert "done_marker" not in events[0].payload
+
+
+async def test_tail_does_not_enrich_verdict_missing_success_key(tmp_path: Path) -> None:
+    """A VerdictRendered event whose payload has no "success" key at all
+    (e.g. an engine like claudeloop, whose own structured-output schema uses
+    "complete" instead) must not get a done_marker injected -- there is no
+    positive confirmation of success to enrich from, and defaulting to True
+    when the key is merely absent would incorrectly treat "we don't know"
+    as "it succeeded"."""
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+
+    events_path = run_dir / "events.jsonl"
+    events_path.write_text(
+        '{"event_type":"finished","at":"2026-01-01T00:00:00+00:00",'
+        '"payload":{"complete":false,"summary":"still working"}}\n'
+    )
+
+    meta_path = run_dir / "meta.json"
+    meta_path.write_text('{"status":"finished"}')
+
+    events = []
+    async for event in adapter.tail(handle):
+        events.append(event)
+
+    assert len(events) == 1
+    assert events[0].kind == "VerdictRendered"
+    assert "done_marker" not in events[0].payload
+
+
+async def test_tail_preserves_existing_done_marker(tmp_path: Path) -> None:
+    """If an event already has done_marker in payload, don't overwrite it."""
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+
+    events_path = run_dir / "events.jsonl"
+    events_path.write_text(
+        '{"event_type":"finished","at":"2026-01-01T00:00:00+00:00",'
+        '"payload":{"done_marker":"CUSTOM_MARKER"}}\n'
+    )
+
+    meta_path = run_dir / "meta.json"
+    meta_path.write_text('{"status":"finished"}')
+
+    events = []
+    async for event in adapter.tail(handle):
+        events.append(event)
+
+    assert len(events) == 1
+    assert events[0].kind == "VerdictRendered"
+    # Should preserve the existing done_marker, not overwrite with descriptor's
+    assert events[0].payload.get("done_marker") == "CUSTOM_MARKER"
+
+
+async def test_run_exit_code_reads_the_live_process_registry(tmp_path: Path) -> None:
+    from types import SimpleNamespace
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+
+    # No registered process (never started, or stop() already released it).
+    assert adapter.run_exit_code(handle) is None
+
+    _active_processes[handle.run_id] = SimpleNamespace(returncode=None)  # type: ignore[assignment]
+    try:
+        assert adapter.run_exit_code(handle) is None  # still running
+        _active_processes[handle.run_id] = SimpleNamespace(returncode=75)  # type: ignore[assignment]
+        assert adapter.run_exit_code(handle) == 75
+    finally:
+        _active_processes.pop(handle.run_id, None)
+
+
+async def test_tail_normalizes_vendor_success_into_vibey_complete(tmp_path: Path) -> None:
+    """claudeloop/agyloop verdicts say {"success": bool}; every vibey
+    consumer reads {"complete": bool}. Caught live: a real claudeloop run
+    finished its item, rendered success=true, and the implement handler
+    still failed it as "did not report completion"."""
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+
+    (run_dir / "events.jsonl").write_text(
+        '{"event_type":"finished","ts":"2026-01-01T00:00:00+00:00",'
+        '"payload":{"success":true,"reason":"Done"}}\n'
+        '{"event_type":"finished","ts":"2026-01-01T00:00:01+00:00",'
+        '"payload":{"success":false,"reason":"Nope"}}\n'
+    )
+    (run_dir / "meta.json").write_text('{"status":"finished"}')
+
+    events = [event async for event in adapter.tail(handle)]
+
+    assert [e.payload.get("complete") for e in events] == [True, False]
+
+
+async def test_tail_never_overwrites_an_explicit_complete_key(tmp_path: Path) -> None:
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    run_dir = tmp_path / "test-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+
+    (run_dir / "events.jsonl").write_text(
+        '{"event_type":"finished","ts":"2026-01-01T00:00:00+00:00",'
+        '"payload":{"complete":false,"success":true}}\n'
+        '{"event_type":"finished","ts":"2026-01-01T00:00:01+00:00",'
+        '"payload":{"reason":"no completion field at all"}}\n'
+    )
+    (run_dir / "meta.json").write_text('{"status":"finished"}')
+
+    events = [event async for event in adapter.tail(handle)]
+
+    assert events[0].payload["complete"] is False
+    assert "complete" not in events[1].payload
+
+
+def test_isolate_python_env_strips_the_orchestrator_venv() -> None:
+    """Engine sessions inheriting vibey's env pip-installed INTO vibey's
+    own venv, twice, live -- shadowing modules for every later gate run."""
+    from vibey.infrastructure.engines.loop_process_adapter import isolate_python_env
+
+    env = {
+        "VIRTUAL_ENV": "/repo/.venv",
+        "VIRTUAL_ENV_PROMPT": "vibey",
+        "PYTHONPATH": "/repo/src",
+        "PYTHONHOME": "/somewhere",
+        "PATH": "/repo/.venv/bin:/usr/local/bin:/repo/.venv:/usr/bin",
+        "HOME": "/Users/dev",
+        "ANTHROPIC_API_KEY": "sk-test",
+    }
+
+    isolated = isolate_python_env(env, venv_prefixes=("/repo/.venv", None))
+
+    for stripped in ("VIRTUAL_ENV", "VIRTUAL_ENV_PROMPT", "PYTHONPATH", "PYTHONHOME"):
+        assert stripped not in isolated
+    assert isolated["PATH"] == "/usr/local/bin:/usr/bin"
+    # Everything the engine actually needs passes through untouched.
+    assert isolated["HOME"] == "/Users/dev"
+    assert isolated["ANTHROPIC_API_KEY"] == "sk-test"
+    # The input mapping is never mutated.
+    assert env["VIRTUAL_ENV"] == "/repo/.venv"
+
+
+def test_isolate_python_env_handles_missing_path_and_no_prefixes() -> None:
+    from vibey.infrastructure.engines.loop_process_adapter import isolate_python_env
+
+    no_path = isolate_python_env({"VIRTUAL_ENV": "/v"}, venv_prefixes=("/v",))
+    assert "PATH" not in no_path
+
+    no_prefixes = isolate_python_env({"PATH": "/v/bin:/usr/bin"}, venv_prefixes=(None,))
+    assert no_prefixes["PATH"] == "/v/bin:/usr/bin"
+
+    # A PATH entry that merely shares the prefix STRING is not under the
+    # venv directory and must survive.
+    lookalike = isolate_python_env(
+        {"PATH": "/repo/.venv-tools/bin:/repo/.venv/bin"}, venv_prefixes=("/repo/.venv",)
+    )
+    assert lookalike["PATH"] == "/repo/.venv-tools/bin"
+
+
+async def test_start_spawns_the_engine_with_an_isolated_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from unittest.mock import AsyncMock
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+    from vibey.infrastructure.engines import loop_process_adapter as module
+
+    captured: dict[str, object] = {}
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        process = AsyncMock()
+        process.pid = 4242
+        process.returncode = None
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setenv("VIRTUAL_ENV", "/orchestrator/.venv")
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    spec = RunSpec(
+        run_id=uuid4(),
+        worktree_path=tmp_path,
+        prompt="do the thing",
+        effort=Effort.LOW,
+        isolation=IsolationLevel.WORKTREE,
+    )
+    handle = await adapter.start(spec)
+    _active_processes.pop(handle.run_id, None)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert "VIRTUAL_ENV" not in env
+    assert "/orchestrator/.venv" not in env.get("PATH", "")
+
+
+async def test_tail_reads_codexloop_flat_events_keyed_by_type(tmp_path: Path) -> None:
+    """codexloop passes the wrapped codex CLI's stream through nearly
+    verbatim: the key is "type", not "event_type", and fields sit at the
+    top level with no payload envelope. Accepting only event_type/kind
+    dropped every codexloop event as "event_missing_type", which made its
+    whole LOOP_EVENT_MAP entry unreachable."""
+    adapter = LoopProcessAdapter(descriptor=CODEXLOOP)
+    run_dir = tmp_path / "cx-run"
+    run_dir.mkdir(parents=True)
+    handle = _make_handle(run_dir)
+
+    (run_dir / "events.jsonl").write_text(
+        '{"type":"thread.started","thread_id":"t-1"}\n'
+        '{"type":"run.verdict","success":true,"complete":true,'
+        '"done_marker":"CODEXLOOP_TASK_FULLY_COMPLETE"}\n'
+    )
+    (run_dir / "meta.json").write_text('{"status":"finished"}')
+
+    events = [event async for event in adapter.tail(handle)]
+
+    assert [e.kind for e in events] == ["SessionSeeded", "VerdictRendered"]
+    # A flat event is its own payload: dropping the non-"payload" fields
+    # would discard exactly what every consumer downstream reads.
+    assert events[0].payload["thread_id"] == "t-1"
+    assert events[1].payload["done_marker"] == "CODEXLOOP_TASK_FULLY_COMPLETE"
+    assert events[1].payload["complete"] is True
+
+
+# ── the per-engine environment overlay and doctor arguments (ADR-0038) ────────
+
+
+async def test_start_layers_the_env_overlay_over_the_isolated_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The overlay is how qwenloop learns the one local endpoint. It lands after the
+    orchestrator's venv is stripped, so it cannot bring that venv back, and it wins over
+    an inherited value of the same name."""
+    from unittest.mock import AsyncMock
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+    from vibey.infrastructure.engines import loop_process_adapter as module
+    from vibey.infrastructure.engines.descriptors import QWENLOOP
+
+    captured: dict[str, object] = {}
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        process = AsyncMock()
+        process.pid = 4243
+        process.returncode = None
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setenv("VIRTUAL_ENV", "/orchestrator/.venv")
+    monkeypatch.setenv("QWENLOOP_MODEL", "inherited")
+
+    adapter = LoopProcessAdapter(
+        descriptor=QWENLOOP,
+        env_overlay={"QWENLOOP_BASE_URL": "http://127.0.0.1:11434/v1", "QWENLOOP_MODEL": "q"},
+    )
+    handle = await adapter.start(
+        RunSpec(
+            run_id=uuid4(),
+            worktree_path=tmp_path,
+            prompt="do the thing",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+    )
+    _active_processes.pop(handle.run_id, None)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["QWENLOOP_BASE_URL"] == "http://127.0.0.1:11434/v1"
+    assert env["QWENLOOP_MODEL"] == "q"
+    assert "VIRTUAL_ENV" not in env
+
+
+def _recording_binary(tmp_path: Path, name: str) -> tuple[Path, Path]:
+    """A fake engine whose `doctor` writes its arguments and one env var to a file."""
+    record = tmp_path / f"{name}.record"
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        name,
+        f'if [ "$1" = "--version" ]; then echo "{name} 0.8.0"; '
+        f'else echo "$@|${{QWENLOOP_BASE_URL:-unset}}" > "{record}"; fi',
+    )
+    return bin_dir, record
+
+
+async def test_preflight_passes_the_descriptors_doctor_args_and_the_overlay(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """claudeloop-local's doctor must probe the local backend its profile names, not
+    the Anthropic login a profile never uses -- so `--profile <name>` reaches doctor --
+    and qwenloop's doctor must see the endpoint the run will use."""
+    from dataclasses import replace
+
+    bin_dir, record = _recording_binary(tmp_path, "fakeloop")
+    monkeypatch.setenv("PATH", f"{bin_dir}:{__import__('os').environ['PATH']}")
+    descriptor = replace(CLAUDELOOP, binary="fakeloop", doctor_args=("--profile", "local"))
+
+    result = await LoopProcessAdapter(
+        descriptor=descriptor, env_overlay={"QWENLOOP_BASE_URL": "http://h:1/v1"}
+    ).preflight()
+
+    assert result.installed and result.auth_ok and result.version == "0.8.0"
+    assert record.read_text().strip() == "doctor --profile local|http://h:1/v1"
+
+
+async def test_preflight_without_an_overlay_inherits_the_environment_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dataclasses import replace
+
+    bin_dir, record = _recording_binary(tmp_path, "plainloop")
+    monkeypatch.setenv("PATH", f"{bin_dir}:{__import__('os').environ['PATH']}")
+    monkeypatch.delenv("QWENLOOP_BASE_URL", raising=False)
+
+    await LoopProcessAdapter(descriptor=replace(CLAUDELOOP, binary="plainloop")).preflight()
+
+    assert record.read_text().strip() == "doctor|unset"
+
+
+def test_claudeloop_local_classifies_through_claudeloops_own_vocabulary() -> None:
+    from vibey.domain.capacity import AuthenticationFailed
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP_LOCAL)
+
+    assert isinstance(adapter.classify({"capacity": "BackendMisconfigured"}), AuthenticationFailed)
+    assert adapter.attribute(78, "") is FailureClass.ENGINE
+
+
+# ── bounded reaping of preflight probes, and the spawn's venv guard (#283) ────
+
+
+def _loop_descriptor(binary: str):  # type: ignore[no-untyped-def]
+    from dataclasses import replace
+
+    return replace(CLAUDELOOP, binary=binary, auth_env=("VIBEY_TEST_REAP_MISSING_KEY",))
+
+
+async def test_a_timed_out_doctor_dies_with_its_whole_group(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The kill used to reach only the probe. Its background `sleep` then held the
+    output pipes, and the unbounded wait after the kill waited on the sleep. The probe
+    now leads a group of its own, and the whole group dies."""
+    import asyncio
+    import os
+
+    from structlog.testing import capture_logs
+
+    from tests.infrastructure.process.escapes import background_script, dead_within, read_pids
+
+    pidfile = tmp_path / "background.pid"
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        "reaploop",
+        f'if [ "$1" = "--version" ]; then echo "reaploop 1.0.0"; exit 0; fi\n'
+        f"{background_script(pidfile)}",
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.delenv("VIBEY_TEST_REAP_MISSING_KEY", raising=False)
+    adapter = LoopProcessAdapter(descriptor=_loop_descriptor("reaploop"), doctor_timeout=1.0)
+    loop = asyncio.get_running_loop()
+
+    started = loop.time()
+    with capture_logs() as logs:
+        result = await adapter.preflight()
+
+    assert loop.time() - started < 10
+    assert result.version == "1.0.0"
+    assert result.auth_ok is False
+    (background,) = await read_pids(pidfile)
+    assert await dead_within(background, seconds=5)
+    assert not [entry for entry in logs if entry["event"] == "engine_process_not_reaped"]
+
+
+async def test_a_doctor_whose_escaped_child_holds_the_pipes_is_abandoned_after_the_grace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No group kill reaches a child that left the group, and on CPython 3.12 the wait
+    after the kill does not return while it holds the pipes. Preflight gives up after
+    `kill_grace_seconds`, logs which engine's probe it left, and carries on."""
+    import asyncio
+    import os
+    import shlex
+    import sys
+
+    from structlog.testing import capture_logs
+
+    from tests.infrastructure.process.escapes import ESCAPE, dead_within, read_pids, release
+
+    script, pidfile = tmp_path / "escape.py", tmp_path / "escape.pids"
+    script.write_text(ESCAPE)
+    command = shlex.join([sys.executable, str(script), str(pidfile), "linger"])
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        "escapeloop",
+        f'if [ "$1" = "--version" ]; then echo "escapeloop 1.0.0"; exit 0; fi\nexec {command}',
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.delenv("VIBEY_TEST_REAP_MISSING_KEY", raising=False)
+    adapter = LoopProcessAdapter(
+        descriptor=_loop_descriptor("escapeloop"), doctor_timeout=1.0, kill_grace_seconds=0.2
+    )
+    loop = asyncio.get_running_loop()
+
+    started = loop.time()
+    with capture_logs() as logs:
+        result = await adapter.preflight()
+    escaped, doctor = await read_pids(pidfile)
+    try:
+        assert loop.time() - started < 10
+        assert result.auth_ok is False
+        (warning,) = [entry for entry in logs if entry["event"] == "engine_process_not_reaped"]
+        assert warning["pid"] == doctor
+        assert warning["engine"] == "claudeloop"
+        assert warning["kill_grace_seconds"] == 0.2
+        assert await dead_within(doctor, seconds=5)
+    finally:
+        await release(escaped)
+
+
+_SYSTEM_PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+
+async def _captured_start_kwargs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, object]:
+    from unittest.mock import AsyncMock
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+    from vibey.infrastructure.engines import loop_process_adapter as module
+
+    captured: dict[str, object] = {}
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        process = AsyncMock()
+        process.pid = 4244
+        process.returncode = None
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    handle = await LoopProcessAdapter(descriptor=CLAUDELOOP).start(
+        RunSpec(
+            run_id=uuid4(),
+            worktree_path=tmp_path,
+            prompt="do the thing",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+    )
+    _active_processes.pop(handle.run_id, None)
+    return captured
+
+
+async def test_start_on_a_system_python_keeps_usr_bin_on_the_engines_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Outside a venv, sys.prefix is `/usr`. Passing it as a venv prefix stripped
+    /usr/bin and /usr/local/bin -- git, sh, the engine CLIs -- from every session."""
+    import sys
+
+    monkeypatch.setattr(sys, "prefix", "/usr")
+    monkeypatch.setattr(sys, "base_prefix", "/usr")
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    monkeypatch.setenv("PATH", _SYSTEM_PATH)
+
+    captured = await _captured_start_kwargs(tmp_path, monkeypatch)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["PATH"] == _SYSTEM_PATH
+    # The engine run stays in the worker's session; only the probes get their own.
+    assert captured["start_new_session"] is False
+
+
+async def test_start_from_a_venv_interpreter_strips_that_venv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sys
+
+    monkeypatch.setattr(sys, "prefix", "/orchestrator/.venv")
+    monkeypatch.setattr(sys, "base_prefix", "/usr")
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    monkeypatch.setenv("PATH", f"/orchestrator/.venv/bin:{_SYSTEM_PATH}")
+
+    captured = await _captured_start_kwargs(tmp_path, monkeypatch)
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["PATH"] == _SYSTEM_PATH

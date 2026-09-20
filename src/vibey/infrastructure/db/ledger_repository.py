@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The append-only event ledger, backed by the append_event() Postgres
 function (migrations/0002_event.sql) which claims a gapless per-project seq
 inside the same transaction as the insert -- the property rule R6 of the
@@ -5,41 +6,100 @@ no-loss gate depends on."""
 
 import json
 from collections.abc import Sequence
+from typing import Final
 from uuid import UUID
 
 import asyncpg
 
-from vibey.domain.engine import EngineId
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
-from vibey.domain.phase import Phase
+from vibey.domain.engine import ENGINE_ID_PARSER, EngineId, UnrecognizedEngineId
+from vibey.domain.interfaces.ledger_interface import EventKindParserInterface
+from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
+from vibey.domain.ledger import (
+    EVENT_KIND_PARSER,
+    PROVENANCE_PARSER,
+    EventKind,
+    LedgerEvent,
+    Provenance,
+    UnrecognizedProvenance,
+    digest_event,
+)
+from vibey.domain.phase import PHASE_PARSER, Phase, UnrecognizedPhase
+from vibey.infrastructure.db.interfaces import EventAppenderInterface, EventRowMapperInterface
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
 from vibey.infrastructure.ledger.redact import redact_payload
 
 
-def _row_to_event(row: asyncpg.Record) -> LedgerEvent:
-    return LedgerEvent(
-        event_id=row["event_id"],
-        project_id=row["project_id"],
-        cycle=row["cycle"],
-        phase=Phase(row["phase"]),
-        seq=row["seq"],
-        kind=EventKind(row["kind"]),
-        engine_id=EngineId(row["engine_id"]) if row["engine_id"] is not None else None,
-        job_id=row["job_id"],
-        causation_id=row["causation_id"],
-        correlation_id=row["correlation_id"],
-        provenance=Provenance(row["provenance"]),
-        produced_at=row["produced_at"],
-        payload=json.loads(row["payload"]),
-        digest=row["digest"],
-    )
+class EventRowMapper:
+    """Turns one `event` row into a `LedgerEvent`.
+
+    A class of its own so every reader of the table -- this repository, the
+    appender, the search repository -- maps a row one way. Two copies of the
+    mapping would drift the first time a column was added to one of them.
+
+    Every closed vocabulary on the row is read forward-compatibly: `kind` since
+    vibey#275, and `phase`, `engine_id` and `provenance` since vibey#287. A value a
+    newer vibey wrote comes back as its stored text in an `Unrecognized*` type,
+    never a `ValueError`. One row this version predates must not make a project's
+    whole ledger unreadable to every older worker in a rolling upgrade -- and
+    `engine_id` needs no migration to grow, so #281's `claudeloop-local` reaches
+    this mapper the moment a newer worker runs it.
+    """
+
+    def __init__(
+        self,
+        kinds: EventKindParserInterface = EVENT_KIND_PARSER,
+        *,
+        phases: StoredValueParserInterface[Phase, UnrecognizedPhase] = PHASE_PARSER,
+        engines: StoredValueParserInterface[EngineId, UnrecognizedEngineId] = ENGINE_ID_PARSER,
+        provenances: StoredValueParserInterface[
+            Provenance, UnrecognizedProvenance
+        ] = PROVENANCE_PARSER,
+    ) -> None:
+        self._kinds = kinds
+        self._phases = phases
+        self._engines = engines
+        self._provenances = provenances
+
+    def to_event(self, row: asyncpg.Record) -> LedgerEvent:
+        engine_id = row["engine_id"]
+        return LedgerEvent(
+            event_id=row["event_id"],
+            project_id=row["project_id"],
+            cycle=row["cycle"],
+            phase=self._phases.parse(row["phase"]),
+            seq=row["seq"],
+            kind=self._kinds.parse(row["kind"]),
+            engine_id=self._engines.parse(engine_id) if engine_id is not None else None,
+            job_id=row["job_id"],
+            causation_id=row["causation_id"],
+            correlation_id=row["correlation_id"],
+            provenance=self._provenances.parse(row["provenance"]),
+            produced_at=row["produced_at"],
+            payload=json.loads(row["payload"]),
+            digest=row["digest"],
+        )
 
 
-class PostgresLedgerRepository:
-    def __init__(self, pool: asyncpg.Pool) -> None:
-        self._pool = pool
+EVENT_ROWS: Final[EventRowMapperInterface] = EventRowMapper()
+"""The one row mapper every reader shares. Stateless, so one instance serves."""
 
-    async def append(self, draft: LedgerEventDraft) -> LedgerEvent:
+
+class ConnectionEventAppender:
+    """One append on a connection the caller owns.
+
+    Split out of `PostgresLedgerRepository` so a write that must be atomic
+    with something else -- a phase compare-and-set, say -- can put the event
+    and that other write in the SAME transaction. Appending after the other
+    statement's transaction committed would lose the event outright whenever
+    the worker dies in between, and the ledger is append-only: there is no
+    later correction that can put a missing event back where it belonged.
+    """
+
+    async def append(
+        self,
+        conn: asyncpg.pool.PoolConnectionProxy | asyncpg.Connection,
+        draft: LedgerEventDraft,
+    ) -> LedgerEvent:
         # Redaction happens here, immediately before the payload is
         # persisted, and the digest is recomputed over what actually lands
         # in the column -- never over the pre-redaction payload the caller
@@ -48,34 +108,58 @@ class PostgresLedgerRepository:
         redacted_payload = redact_payload(draft.payload)
         digest = digest_event(redacted_payload)
 
+        seq = await conn.fetchval(
+            """
+            SELECT append_event(
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12
+            )
+            """,
+            draft.project_id,
+            draft.cycle,
+            draft.phase.value,
+            draft.kind.value,
+            draft.engine_id.value if draft.engine_id is not None else None,
+            draft.job_id,
+            draft.causation_id,
+            draft.correlation_id,
+            draft.provenance.value,
+            draft.produced_at,
+            json.dumps(redacted_payload),
+            digest,
+        )
+        row = await conn.fetchrow(
+            "SELECT * FROM event WHERE project_id = $1 AND seq = $2",
+            draft.project_id,
+            seq,
+        )
+        if row is None:
+            raise LookupError(f"append_event returned seq {seq} but no row exists")
+        return EVENT_ROWS.to_event(row)
+
+
+DEFAULT_EVENT_APPENDER: Final[EventAppenderInterface] = ConnectionEventAppender()
+"""The one appender everything gets unless a caller substitutes one.
+
+A module-level instance rather than a call in a default argument so the seam
+is a plain keyword default: injecting costs the caller nothing, adds no
+branch to cover, and the class carries no state, so one shared instance is
+the same object every construction would have produced anyway.
+"""
+
+
+class PostgresLedgerRepository:
+    def __init__(
+        self,
+        pool: asyncpg.Pool,
+        *,
+        appender: EventAppenderInterface = DEFAULT_EVENT_APPENDER,
+    ) -> None:
+        self._pool = pool
+        self._appender = appender
+
+    async def append(self, draft: LedgerEventDraft) -> LedgerEvent:
         async with self._pool.acquire() as conn, conn.transaction():
-            seq = await conn.fetchval(
-                """
-                SELECT append_event(
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12
-                )
-                """,
-                draft.project_id,
-                draft.cycle,
-                draft.phase.value,
-                draft.kind.value,
-                draft.engine_id.value if draft.engine_id is not None else None,
-                draft.job_id,
-                draft.causation_id,
-                draft.correlation_id,
-                draft.provenance.value,
-                draft.produced_at,
-                json.dumps(redacted_payload),
-                digest,
-            )
-            row = await conn.fetchrow(
-                "SELECT * FROM event WHERE project_id = $1 AND seq = $2",
-                draft.project_id,
-                seq,
-            )
-            if row is None:
-                raise LookupError(f"append_event returned seq {seq} but no row exists")
-            return _row_to_event(row)
+            return await self._appender.append(conn, draft)
 
     async def range(
         self, project_id: UUID, *, from_seq: int, to_seq: int
@@ -91,14 +175,14 @@ class PostgresLedgerRepository:
                 from_seq,
                 to_seq,
             )
-            return tuple(_row_to_event(r) for r in rows)
+            return tuple(EVENT_ROWS.to_event(r) for r in rows)
 
     async def all_for_project(self, project_id: UUID) -> tuple[LedgerEvent, ...]:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 "SELECT * FROM event WHERE project_id = $1 ORDER BY seq", project_id
             )
-            return tuple(_row_to_event(r) for r in rows)
+            return tuple(EVENT_ROWS.to_event(r) for r in rows)
 
     async def latest_seq(self, project_id: UUID) -> int:
         async with self._pool.acquire() as conn:
@@ -110,21 +194,45 @@ class PostgresLedgerRepository:
 
 def to_drafts(events: Sequence[LedgerEvent]) -> tuple[LedgerEventDraft, ...]:
     """Round-trips persisted events back into drafts, for tests that need
-    to re-append a fixture range."""
-    return tuple(
-        LedgerEventDraft(
-            project_id=e.project_id,
-            cycle=e.cycle,
-            phase=e.phase,
-            kind=e.kind,
-            engine_id=e.engine_id,
-            job_id=e.job_id,
-            causation_id=e.causation_id,
-            correlation_id=e.correlation_id,
-            provenance=e.provenance,
-            produced_at=e.produced_at,
-            payload=dict(e.payload),
-            digest=e.digest,
+    to re-append a fixture range.
+
+    Raises `ValueError` for an event carrying a kind (vibey#275), a phase, an
+    engine id or a provenance (vibey#287) this vibey does not know: re-appending it
+    would be vibey writing a value it cannot vouch for, and writers stay strict.
+    """
+    drafts: list[LedgerEventDraft] = []
+    for e in events:
+        if not isinstance(e.kind, EventKind):
+            raise ValueError(
+                f"event seq {e.seq} has kind {e.kind.value!r}, which this vibey does not "
+                "know; it reads such an event but never writes one"
+            )
+        engine_id = e.engine_id
+        if (
+            not isinstance(e.phase, Phase)
+            or not isinstance(e.provenance, Provenance)
+            or isinstance(engine_id, UnrecognizedEngineId)
+        ):
+            raise ValueError(
+                f"event seq {e.seq} carries a phase, engine id or provenance this vibey "
+                f"does not know (phase {e.phase.value!r}, engine "
+                f"{engine_id.value if engine_id is not None else None!r}, provenance "
+                f"{e.provenance.value!r}); it reads such an event but never writes one"
+            )
+        drafts.append(
+            LedgerEventDraft(
+                project_id=e.project_id,
+                cycle=e.cycle,
+                phase=e.phase,
+                kind=e.kind,
+                engine_id=engine_id,
+                job_id=e.job_id,
+                causation_id=e.causation_id,
+                correlation_id=e.correlation_id,
+                provenance=e.provenance,
+                produced_at=e.produced_at,
+                payload=dict(e.payload),
+                digest=e.digest,
+            )
         )
-        for e in events
-    )
+    return tuple(drafts)

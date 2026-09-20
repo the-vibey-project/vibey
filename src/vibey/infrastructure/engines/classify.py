@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Vendor error -> vibey's CapacityState, and exit code + tail -> FailureClass
 (rotation-and-engines.md §6.2-6.3).
 
@@ -29,7 +30,7 @@ from vibey.domain.capacity import (
     CreditsExhausted,
     WindowExhausted,
 )
-from vibey.domain.engine import EngineId
+from vibey.domain.engine import EXIT_CODE_BACKEND_MISCONFIGURED, EngineId
 from vibey.domain.job import FailureClass
 
 _WORK_MARKERS = (
@@ -52,11 +53,41 @@ _ENGINE_MARKERS = (
 _VIBEY_MARKERS = ("VibeyInternalError",)
 
 
+# claudeloop's runner writes the capacity state's *class name* on `turn.completed`
+# and in its audit log (`"capacity": "CreditsExhausted"`, application/runner.py),
+# not the mapping `_classify_claudeloop` was first written against. Both shapes
+# are read; the class names map onto the mapping's own `state` vocabulary.
+_CLAUDELOOP_CAPACITY_NAMES = {
+    "CreditsExhausted": "credits_exhausted",
+    "WindowExhausted": "window_exhausted",
+    "AuthenticationFailed": "auth_failed",
+    "BackendMisconfigured": "backend_misconfigured",
+    "Available": "available",
+}
+
+
 def _classify_claudeloop(raw: Mapping[str, object]) -> CapacityState:
+    """claudeloop and claudeloop-local: one binary, one error vocabulary.
+
+    `BackendMisconfigured` -- a local backend that is unreachable, a model not pulled
+    or failing to load, a context window too small (claudeloop exits 78 for it) -- is
+    read as AuthenticationFailed: the one terminal, non-waitable state, the same one
+    qwenloop's `configuration_error` maps to. Waiting cannot fix a configuration, and
+    it must never become CreditsExhausted, which it is not.
+    """
     capacity = raw.get("capacity")
+    if isinstance(capacity, str):
+        state_name = _CLAUDELOOP_CAPACITY_NAMES.get(capacity)
+        capacity = {} if state_name is None else {"state": state_name}
     if not isinstance(capacity, Mapping):
         return Available()
     state = capacity.get("state")
+    if state == "backend_misconfigured":
+        reason = str(capacity.get("reason", "") or "")
+        detail = str(capacity.get("detail", "") or "")
+        return AuthenticationFailed(
+            detail=": ".join(part for part in ("backend misconfigured", reason, detail) if part)
+        )
     if state == "credits_exhausted":
         return CreditsExhausted(can_purchase=bool(capacity.get("can_purchase", True)))
     if state == "window_exhausted":
@@ -115,11 +146,29 @@ def _classify_agyloop(raw: Mapping[str, object]) -> CapacityState:
     return Available()
 
 
+def _classify_qwenloop(raw: Mapping[str, object]) -> CapacityState:
+    """Normalize qwenloop's local lifecycle states.
+
+    The credits shape exists only for shared conformance testing; qwenloop's
+    runtime never emits it for a local resource or configuration failure.
+    """
+    state = raw.get("local_state")
+    if state == "credits_exhausted":
+        return CreditsExhausted(can_purchase=False)
+    if state == "busy":
+        return WindowExhausted(resets_at=_parse_dt(raw.get("retry_at")), rate_limit_type="local")
+    if state == "configuration_error":
+        return AuthenticationFailed(detail=str(raw.get("detail", "")))
+    return Available()
+
+
 _CLASSIFIERS = {
     EngineId.CLAUDELOOP: _classify_claudeloop,
     EngineId.CODEXLOOP: _classify_codexloop,
     EngineId.CURSORLOOP: _classify_cursorloop,
     EngineId.AGYLOOP: _classify_agyloop,
+    EngineId.QWENLOOP: _classify_qwenloop,
+    EngineId.CLAUDELOOP_LOCAL: _classify_claudeloop,
 }
 
 
@@ -140,6 +189,10 @@ CREDITS_FIXTURES: dict[EngineId, dict[str, object]] = {
         "quota_metric": "billing.generate_content",
         "billing_exhausted": True,
     },
+    EngineId.QWENLOOP: {"local_state": "credits_exhausted"},
+    # The class-name shape claudeloop really writes; claudeloop-local's runtime
+    # never emits it, like qwenloop's, but the shared conformance check does.
+    EngineId.CLAUDELOOP_LOCAL: {"capacity": "CreditsExhausted"},
 }
 
 WINDOW_FIXTURES: dict[EngineId, dict[str, object]] = {
@@ -159,6 +212,15 @@ WINDOW_FIXTURES: dict[EngineId, dict[str, object]] = {
         "quota_metric": "generate_content_free_tier_requests",
         "retry_after": "30s",
     },
+    EngineId.QWENLOOP: {"local_state": "busy", "retry_at": "2026-01-01T00:05:00+00:00"},
+    # A local server answering 503 (busy loading a model): claudeloop waits on it.
+    EngineId.CLAUDELOOP_LOCAL: {
+        "capacity": {
+            "state": "window_exhausted",
+            "resets_at": "2026-01-01T00:05:00+00:00",
+            "rate_limit_type": "local",
+        }
+    },
 }
 
 AUTH_FIXTURES: dict[EngineId, dict[str, object]] = {
@@ -166,6 +228,8 @@ AUTH_FIXTURES: dict[EngineId, dict[str, object]] = {
     EngineId.CODEXLOOP: {"error": {"code": "invalid_api_key", "message": "bad key"}},
     EngineId.CURSORLOOP: {"status": 401, "type": "unauthorized", "message": "bad token"},
     EngineId.AGYLOOP: {"grpc_status": "UNAUTHENTICATED", "detail": "adc not found"},
+    EngineId.QWENLOOP: {"local_state": "configuration_error", "detail": "model missing"},
+    EngineId.CLAUDELOOP_LOCAL: {"capacity": "BackendMisconfigured"},
 }
 
 AVAILABLE_FIXTURES: dict[EngineId, dict[str, object]] = {
@@ -173,6 +237,8 @@ AVAILABLE_FIXTURES: dict[EngineId, dict[str, object]] = {
     EngineId.CODEXLOOP: {},
     EngineId.CURSORLOOP: {"status": 200},
     EngineId.AGYLOOP: {"grpc_status": "OK"},
+    EngineId.QWENLOOP: {"local_state": "available"},
+    EngineId.CLAUDELOOP_LOCAL: {"capacity": "Available"},
 }
 
 
@@ -204,6 +270,10 @@ def attribute_failure(exit_code: int, tail: str) -> FailureClass:
         return FailureClass.VIBEY
     if exit_code == 0:
         return FailureClass.WORK
-    if any(marker in tail for marker in _ENGINE_MARKERS) or exit_code in (124, 137, -9):
+    # A backend the runner itself declared misconfigured (exit 78) is the engine's
+    # configuration, not the project's code: ENGINE, below the WORK markers so a
+    # failing test suite in the same tail still reads as the work's fault.
+    engine_exits = (124, 137, -9, EXIT_CODE_BACKEND_MISCONFIGURED)
+    if any(marker in tail for marker in _ENGINE_MARKERS) or exit_code in engine_exits:
         return FailureClass.ENGINE
     return FailureClass.WORK

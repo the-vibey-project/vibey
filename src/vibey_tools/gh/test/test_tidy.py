@@ -1,0 +1,560 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""The clean repo (sub-doctrine 9.a): survey classes, the two losslessness proofs,
+and the human-messiness exemption."""
+
+from __future__ import annotations
+
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from vibey_gh import tidy
+from vibey_gh.config import GhConfig, TidyConfig, load_config
+
+
+def _sh(cwd: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
+    ).stdout
+
+
+# The two forge reads the survey makes, exactly as `gh` receives them. The fake answers
+# nothing else, so a command line that drifted gets no answer and the survey says so.
+PR_HEADS = "pr list --json headRefName --limit 200"
+RELEASES = "release list --json tagName,name,isDraft --limit 100"
+
+
+@pytest.fixture()
+def repos(tmp_path: Path, fake_gh):
+    """A local clone with an `origin`, one merged branch, one gone-upstream branch,
+    one live open-PR head, a stash, an untracked file, and an orphan tag."""
+    origin = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", origin], check=True)
+    work = tmp_path / "work"
+    subprocess.run(["git", "clone", "-q", str(origin), str(work)], check=True)
+    _sh(work, "config", "user.email", "t@example.com")
+    _sh(work, "config", "user.name", "t")
+    (work / "a.txt").write_text("a\n")
+    _sh(work, "add", "-A")
+    _sh(work, "commit", "-qm", "base")
+    _sh(work, "branch", "-M", "develop")
+    _sh(work, "push", "-qu", "origin", "develop")
+    _sh(work, "push", "-q", "origin", "develop:main")
+    _sh(work, "remote", "set-head", "origin", "develop")
+
+    # merged: tip is an ancestor of develop (the ancestry proof)
+    _sh(work, "branch", "merged-work", "develop")
+    _sh(work, "push", "-qu", "origin", "merged-work")
+
+    # gone: upstream deleted after a squash-style merge (the forge-event proof)
+    _sh(work, "checkout", "-qb", "gone-work")
+    (work / "b.txt").write_text("b\n")
+    _sh(work, "add", "-A")
+    _sh(work, "commit", "-qm", "squashed elsewhere")
+    _sh(work, "push", "-qu", "origin", "gone-work")
+    _sh(work, "push", "-q", "origin", "--delete", "gone-work")
+    _sh(work, "checkout", "-q", "develop")
+
+    # an open-PR head: unmerged remote branch that must never be touched
+    _sh(work, "checkout", "-qb", "pr-head")
+    (work / "c.txt").write_text("c\n")
+    _sh(work, "add", "-A")
+    _sh(work, "commit", "-qm", "open pr work")
+    _sh(work, "push", "-qu", "origin", "pr-head")
+    _sh(work, "checkout", "-q", "develop")
+    _sh(work, "branch", "-qD", "pr-head")
+
+    # an orphan tag on a commit no kept branch contains
+    _sh(work, "checkout", "-qb", "throwaway")
+    (work / "d.txt").write_text("d\n")
+    _sh(work, "add", "-A")
+    _sh(work, "commit", "-qm", "never merged")
+    _sh(work, "tag", "orphaned-tag")
+    _sh(work, "checkout", "-q", "develop")
+    _sh(work, "branch", "-qD", "throwaway")
+
+    # a tag on kept history (never orphan), a live local matching the open PR head,
+    # and an unmerged-but-tracked local: three things the survey must leave alone
+    _sh(work, "tag", "kept-tag", "develop")
+    _sh(work, "branch", "pr-head", "origin/pr-head")
+    _sh(work, "checkout", "-qb", "wip-local")
+    (work / "e.txt").write_text("e\n")
+    _sh(work, "add", "-A")
+    _sh(work, "commit", "-qm", "unfinished")
+    _sh(work, "push", "-qu", "origin", "wip-local")
+    _sh(work, "checkout", "-q", "develop")
+
+    (work / "wip.txt").write_text("human mess — welcome\n")
+    (work / "a.txt").write_text("stashable\n")
+    _sh(work, "stash", "push", "-q", "-m", "keep me")
+
+    # gh is a real process on PATH (`FakeGh`): one open PR (pr-head), one draft release
+    fake_gh.script(
+        {
+            PR_HEADS: {"out": '[{"headRefName": "pr-head"}]'},
+            RELEASES: {
+                "out": '[{"tagName": "v9.9.9-draft", "isDraft": true},'
+                ' {"tagName": "v1.0.0", "isDraft": false}]'
+            },
+        }
+    )
+    cfg = GhConfig(root=work)
+    return work, cfg
+
+
+def test_survey_finds_every_class_and_spares_the_human_mess(repos):
+    _work, cfg = repos
+    report = tidy.survey(cfg)
+    assert report.remote_merged == ("merged-work",)
+    assert report.local_merged == ("merged-work",)
+    assert report.local_gone == ("gone-work",)
+    assert "pr-head" not in report.remote_merged
+    assert report.draft_releases == ("v9.9.9-draft",)
+    assert report.orphan_tags == ("orphaned-tag",)
+    assert "kept-tag" not in report.orphan_tags
+    assert "pr-head" not in report.local_merged and "pr-head" not in report.local_gone
+    assert "wip-local" not in report.local_merged
+    assert report.stashes == 1
+    assert report.untracked >= 1
+    assert report.clean is False
+    assert report.deletable == 3
+
+
+def test_ci_mode_surveys_only_the_cloud_classes(repos):
+    _work, cfg = repos
+    report = tidy.survey(cfg, local=False)
+    assert report.remote_merged == ("merged-work",)
+    assert report.local_merged == ()
+    assert report.local_gone == ()
+    assert report.stashes == 0 and report.untracked == 0
+
+
+def test_apply_deletes_both_proof_classes_and_nothing_human(repos):
+    work, cfg = repos
+    report = tidy.survey(cfg)
+    actions = tidy.apply(cfg, report)
+    assert any("deleted origin/merged-work" in a for a in actions)
+    assert any("deleted local merged-work" in a for a in actions)
+    assert any("deleted local gone-work" in a for a in actions)
+    after = tidy.survey(cfg)
+    assert after.deletable == 0
+    # the human's material survives untouched
+    assert after.stashes == 1
+    assert after.untracked >= 1
+    assert (work / "wip.txt").exists()
+    # drafts and orphan tags remain: reported, never machine-removed
+    assert after.draft_releases == ("v9.9.9-draft",)
+    assert after.orphan_tags == ("orphaned-tag",)
+
+
+def test_forge_deletion_proof_can_be_declined(repos):
+    work, cfg = repos
+    cfg = GhConfig(root=work, tidy=TidyConfig(trust_forge_deletions=False))
+    report = tidy.survey(cfg)
+    tidy.apply(cfg, report)
+    names = _sh(work, "branch", "--format=%(refname:short)")
+    assert "gone-work" in names
+    assert "merged-work" not in names
+
+
+def test_missing_kept_branches_refuse_to_judge(tmp_path: Path):
+    work = tmp_path / "solo"
+    subprocess.run(["git", "init", "-q", work], check=True)
+    report = tidy.survey(GhConfig(root=work))
+    assert report.problems and "refusing to judge" in report.problems[0]
+    assert report.clean is False or report.deletable == 0
+
+
+def test_prunable_worktrees_are_detected_and_pruned(repos):
+    work, cfg = repos
+    healthy = work.parent / "healthy-wt"
+    _sh(work, "worktree", "add", "-q", "--detach", str(healthy), "develop")
+    wt = work.parent / "wt"
+    _sh(work, "worktree", "add", "-q", "--detach", str(wt), "develop")
+    import shutil
+
+    shutil.rmtree(wt)
+    report = tidy.survey(cfg)
+    assert len(report.prunable_worktrees) == 1
+    assert str(healthy) not in report.prunable_worktrees
+    actions = tidy.apply(cfg, report)
+    assert any("pruned 1 worktree" in a for a in actions)
+    assert tidy.survey(cfg).prunable_worktrees == ()
+
+
+def test_apply_reports_a_failed_deletion_without_raising(repos, monkeypatch):
+    _work, cfg = repos
+    report = tidy.survey(cfg)
+
+    class Fail:
+        returncode = 1
+
+    actions = tidy.apply(cfg, report, run=lambda *a, **k: Fail())
+    assert any("could not delete" in a for a in actions)
+
+
+def test_gh_failures_and_garbage_are_survivable(repos, monkeypatch):
+    _work, cfg = repos
+
+    real_run = subprocess.run
+
+    def garbled_gh(cmd, **kw):
+        if cmd and cmd[0] == "gh":
+
+            class R:
+                returncode = 0
+                stdout = "not json" if "pr" in cmd else '"a bare string is not a listing"'
+
+            return R()
+        return real_run(cmd, **kw)
+
+    monkeypatch.setattr(tidy.subprocess, "run", garbled_gh)
+    report = tidy.survey(cfg)
+    assert report.draft_releases == ()
+    # with pr list unreadable, no head is exempt — but nothing crashes
+    assert isinstance(report.remote_merged, tuple)
+
+    def refusing_gh(cmd, **kw):
+        if cmd and cmd[0] == "gh":
+
+            class R:
+                returncode = 1
+                stdout = ""
+                stderr = ""
+
+            return R()
+        return real_run(cmd, **kw)
+
+    monkeypatch.setattr(tidy.subprocess, "run", refusing_gh)
+    report = tidy.survey(cfg)
+    assert report.draft_releases == ()
+
+
+def test_a_json_object_is_never_read_as_an_empty_listing(repos, monkeypatch):
+    """A listing that answers with an object is a non-answer, and must say so.
+
+    `gh` exits zero and prints an error envelope -- `{"message": "Bad credentials"}` --
+    often enough that this is not a hypothetical. Iterating a dict yields its KEYS, so
+    a caller handed one enumerates field names, matches no branch and no release, and
+    reports a clean survey with no problem recorded: "could not look" wearing the face
+    of "nothing there", which is the one collapse this module exists to prevent.
+    """
+    _work, cfg = repos
+
+    real_run = subprocess.run
+
+    def object_answering_gh(cmd, **kw):
+        if cmd and cmd[0] == "gh":
+
+            class R:
+                returncode = 0
+                stdout = '{"message": "Bad credentials", "status": "401"}'
+
+            return R()
+        return real_run(cmd, **kw)
+
+    monkeypatch.setattr(tidy.subprocess, "run", object_answering_gh)
+    report = tidy.survey(cfg)
+
+    assert report.draft_releases == ()
+    # Both listings are unsurveyable, and both say so rather than reading as clean.
+    assert len(report.problems) == 2
+    assert all("object where a listing was expected" in problem for problem in report.problems)
+    assert any("merged branches were not judged" in problem for problem in report.problems)
+    assert any("draft releases were not judged" in problem for problem in report.problems)
+
+
+def test_tidy_config_loads_from_toml(tmp_path: Path):
+    (tmp_path / ".vibey-gh.toml").write_text(
+        '[tidy]\nenabled = false\nkeep_branches = ["lts"]\ntrust_forge_deletions = false\n',
+        encoding="utf-8",
+    )
+    cfg = load_config(tmp_path)
+    assert cfg.tidy.enabled is False
+    assert cfg.tidy.keep_branches == ("lts",)
+    assert cfg.tidy.trust_forge_deletions is False
+    assert load_config.__module__  # keep the import honest
+
+
+def test_tidy_cli_reports_applies_and_confirms_clean(repos, monkeypatch, capsys):
+    from vibey_gh.cli import main
+
+    work, _cfg = repos
+    monkeypatch.chdir(work)
+    assert main(["tidy"]) == 1
+    out = capsys.readouterr().out
+    assert "technical clutter present" in out
+    assert "yours, untouched" in out
+    assert main(["tidy", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert "deleted origin/merged-work" in out
+    # drafts and orphan tags still stand: the human's call, so the survey is not
+    # clean — but everything machine-deletable is gone.
+    assert main(["tidy"]) == 1
+    out = capsys.readouterr().out
+    assert "draft releases" in out and "orphan tags" in out
+
+
+def test_tidy_cli_ci_mode_and_problem_path(repos, tmp_path, monkeypatch, capsys):
+    from vibey_gh.cli import main
+
+    work, _cfg = repos
+    monkeypatch.chdir(work)
+    assert main(["tidy", "--ci"]) == 1
+    assert "merged remote branches" in capsys.readouterr().out
+    solo = tmp_path / "solo"
+    subprocess.run(["git", "init", "-q", solo], check=True)
+    monkeypatch.chdir(solo)
+    assert main(["tidy"]) == 1
+    assert "refusing to judge" in capsys.readouterr().err
+
+
+def test_tidy_cli_clean_repo_says_so(tmp_path, monkeypatch, capsys):
+    from vibey_gh.cli import main
+
+    origin = tmp_path / "o.git"
+    subprocess.run(["git", "init", "-q", "--bare", origin], check=True)
+    work = tmp_path / "w"
+    subprocess.run(["git", "clone", "-q", str(origin), str(work)], check=True)
+    _sh(work, "config", "user.email", "t@example.com")
+    _sh(work, "config", "user.name", "t")
+    (work / "a.txt").write_text("a")
+    _sh(work, "add", "-A")
+    _sh(work, "commit", "-qm", "base")
+    _sh(work, "branch", "-M", "develop")
+    _sh(work, "push", "-qu", "origin", "develop")
+    _sh(work, "push", "-q", "origin", "develop:main")
+
+    def no_gh(cmd, **kw):
+        if cmd and cmd[0] == "gh":
+
+            class R:
+                returncode = 0
+                stdout = "[]"
+
+            return R()
+        return (
+            subprocess.run.__wrapped__(cmd, **kw)
+            if hasattr(subprocess.run, "__wrapped__")
+            else _REAL(cmd, **kw)
+        )
+
+    global _REAL
+    _REAL = tidy.subprocess.run
+    monkeypatch.setattr(tidy.subprocess, "run", no_gh)
+    monkeypatch.chdir(work)
+    assert main(["tidy"]) == 0
+    assert "clean — no technical clutter" in capsys.readouterr().out
+
+
+@pytest.fixture()
+def checkable(repos, monkeypatch):
+    """The `repos` work tree, wired so everything else `vibey-gh check` judges already
+    passes — so the exit code and the output are the clean-repo survey's alone."""
+    work, _cfg = repos
+    (work / ".vibey-gh.toml").write_text(
+        '[fingerprint]\nsources = ["src/*.py"]\n[documentation]\nenabled = false\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(work)
+    from vibey_gh.cli import main
+
+    assert main(["install"]) == 0
+    return work
+
+
+def test_check_ci_reports_the_cloud_clutter_and_advises_by_default(checkable, capsys):
+    """Sub-doctrine 9.a has the cloud classes surveyed by `check --ci`. Reporting only:
+    an adopter's first green run must not go red over branches already there."""
+    from vibey_gh.cli import main
+
+    assert main(["check", "--ci"]) == 0
+    err = capsys.readouterr().err
+    assert "clutter: merged remote branches, never deleted: merged-work" in err
+    assert "clutter: draft releases: v9.9.9-draft" in err
+    assert "clutter: orphan tags: orphaned-tag" in err
+    assert "advisory" in err
+    # reporting only, always: nothing the survey named was removed
+    assert "merged-work" in _sh(checkable, "branch", "-r", "--format=%(refname:short)")
+    assert "orphaned-tag" in _sh(checkable, "tag", "--list")
+
+
+def test_check_ci_fails_on_clutter_once_the_adopter_asks_for_it(checkable, capsys):
+    from vibey_gh.cli import main
+
+    config = checkable / ".vibey-gh.toml"
+    config.write_text(config.read_text() + "[tidy]\nfail_check = true\n", encoding="utf-8")
+    assert main(["check", "--ci"]) == 1
+    err = capsys.readouterr().err
+    assert "clutter: merged remote branches" in err
+    assert "advisory" not in err
+    assert main(["check", "--ci", "--quiet"]) == 1
+    assert capsys.readouterr().err == ""
+    # still reporting only
+    assert "merged-work" in _sh(checkable, "branch", "-r", "--format=%(refname:short)")
+
+
+def test_check_ci_says_nothing_when_the_survey_is_disabled(checkable, capsys):
+    from vibey_gh.cli import main
+
+    config = checkable / ".vibey-gh.toml"
+    config.write_text(config.read_text() + "[tidy]\nenabled = false\n", encoding="utf-8")
+    assert main(["check", "--ci"]) == 0
+    assert "clutter" not in capsys.readouterr().err
+
+
+def test_check_without_ci_never_pays_for_the_survey(checkable, monkeypatch, capsys):
+    """A hook runs `check` on every commit; a fetch and two `gh` calls are not its price."""
+    from vibey_gh.cli import main
+
+    def boom(*a, **k):  # pragma: no cover - called means the guard is gone
+        raise AssertionError("the local hook must not survey the forge")
+
+    monkeypatch.setattr(tidy, "survey", boom)
+    assert main(["check"]) == 0
+    assert "clutter" not in capsys.readouterr().err
+
+
+def test_check_ci_reports_a_survey_that_could_not_judge(checkable, capsys):
+    """No kept branch on origin is a notice, never a verdict: the survey found no
+    clutter because it could not look, which is not the same as clean."""
+    from vibey_gh.cli import main
+
+    config = checkable / ".vibey-gh.toml"
+    config.write_text(
+        config.read_text() + '[tidy]\nfail_check = true\n[branches]\nintegration = "nope"\n'
+        'release = "also-nope"\n',
+        encoding="utf-8",
+    )
+    assert main(["install"]) == 0  # the renamed branches re-render the workflows
+    capsys.readouterr()
+    assert main(["check", "--ci"]) == 0
+    err = capsys.readouterr().err
+    assert "clutter: not surveyed — no kept branch resolves on origin" in err
+    assert "merged remote branches" not in err
+
+
+def test_survey_survives_crafted_git_output(repos, monkeypatch):
+    """Defensive guards for output shapes real git rarely emits: blank tag lines
+    and worktree stanzas with no path line."""
+    _work, cfg = repos
+    real = tidy._git
+
+    def crafted(root, *args):
+        if args[:2] == ("tag", "--list"):
+            return "\n  \n" + real(root, *args)
+        if args[:2] == ("worktree", "list"):
+            return "prunable ghost\n\n" + real(root, *args)
+        return real(root, *args)
+
+    monkeypatch.setattr(tidy, "_git", crafted)
+    report = tidy.survey(cfg)
+    assert report.orphan_tags == ("orphaned-tag",)
+    assert all(p for p in report.prunable_worktrees)
+
+
+def _without_gh(monkeypatch):
+    """Every environment that has no GitHub CLI: a container image, a self-hosted or
+    non-GitHub runner, a developer box that never installed it."""
+    outer = subprocess.run
+
+    def router(cmd, **kw):
+        if cmd and cmd[0] == "gh":
+            raise FileNotFoundError(2, "No such file or directory: 'gh'")
+        return outer(cmd, **kw)
+
+    monkeypatch.setattr(tidy.subprocess, "run", router)
+
+
+def test_a_missing_gh_is_a_notice_never_a_crash_and_never_a_clean_bill(repos, monkeypatch):
+    """`gh` absent is "could not look", which is not "nothing there". The forge classes
+    drop out of the verdict and say why; the git-only classes still stand."""
+    _work, cfg = repos
+    _without_gh(monkeypatch)
+    report = tidy.survey(cfg)
+    assert any("the GitHub CLI (`gh`) is not installed" in p for p in report.problems)
+    assert any("merged branches were not judged" in p for p in report.problems)
+    assert any("draft releases were not judged" in p for p in report.problems)
+    # no open-pull-request list means no merged verdict, remote or local
+    assert report.remote_merged == ()
+    assert report.local_merged == ()
+    assert report.draft_releases == ()
+    # git alone still answers for these two
+    assert report.local_gone == ("gone-work",)
+    assert report.orphan_tags == ("orphaned-tag",)
+
+
+def test_an_unauthenticated_gh_names_the_failure_instead_of_reporting_clean(repos, monkeypatch):
+    """The other half of the same defect: `gh` present but refused. A non-zero exit is
+    reported with the forge's own last line, not swallowed into an empty listing."""
+    _work, cfg = repos
+    outer = subprocess.run
+
+    def unauthenticated(cmd, **kw):
+        if cmd and cmd[0] == "gh":
+
+            class R:
+                returncode = 4
+                stdout = ""
+                stderr = "gh: To use GitHub CLI in a GitHub Actions workflow, set GH_TOKEN\n"
+
+            return R()
+        return outer(cmd, **kw)
+
+    monkeypatch.setattr(tidy.subprocess, "run", unauthenticated)
+    report = tidy.survey(cfg)
+    assert any("`gh pr list` failed: gh: To use GitHub CLI" in p for p in report.problems)
+    assert any("`gh release list` failed:" in p for p in report.problems)
+    assert report.remote_merged == ()
+    assert report.draft_releases == ()
+
+
+def test_check_ci_reports_a_missing_gh_and_still_exits_zero(checkable, monkeypatch, capsys):
+    """A survey that could not look must never be a verdict — not even under
+    `[tidy] fail_check = true`, which is what turns clutter into a red build."""
+    from vibey_gh.cli import main
+
+    config = checkable / ".vibey-gh.toml"
+    config.write_text(config.read_text() + "[tidy]\nfail_check = true\n", encoding="utf-8")
+    # Orphan tags are judged from git alone and are real clutter; drop the fixture's
+    # one so the only classes left are the forge's, which nothing could look at.
+    _sh(checkable, "tag", "-d", "orphaned-tag")
+    _without_gh(monkeypatch)
+    assert main(["check", "--ci"]) == 0
+    err = capsys.readouterr().err
+    assert "clutter: not surveyed — the GitHub CLI (`gh`) is not installed" in err
+    assert "clutter: merged remote branches" not in err
+    assert "clutter: draft releases" not in err
+
+
+def test_check_ci_never_fetches_or_prunes_the_clone(checkable, monkeypatch, capsys):
+    """`check` verifies; it does not write. Someone's stale `origin/*` landmarks are
+    theirs, and a read-only command acquires no network dependency."""
+    from vibey_gh.cli import main
+
+    seen: list[tuple[str, ...]] = []
+    real_git = tidy._git
+
+    def recording(root, *args):
+        seen.append(args)
+        return real_git(root, *args)
+
+    monkeypatch.setattr(tidy, "_git", recording)
+    assert main(["check", "--ci"]) == 0
+    assert seen, "the survey ran"
+    assert not any(args and args[0] == "fetch" for args in seen)
+    assert "clutter: merged remote branches, never deleted: merged-work" in capsys.readouterr().err
+
+
+def test_quiet_check_skips_a_survey_that_cannot_move_the_exit_code(checkable, monkeypatch, capsys):
+    """`--quiet` prints nothing, and with the default advisory verdict clutter cannot
+    fail the build — so the two forge round trips buy nothing and are not made."""
+    from vibey_gh.cli import main
+
+    def boom(*a, **k):  # pragma: no cover - called means the guard is gone
+        raise AssertionError("a quiet advisory check must not survey the forge")
+
+    monkeypatch.setattr(tidy, "survey", boom)
+    assert main(["check", "--ci", "--quiet"]) == 0
+    assert capsys.readouterr().err == ""

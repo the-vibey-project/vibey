@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Engine rotation: eligibility filtering and nginx's Smooth Weighted Round
 Robin over the eligible set (ADR-0005)."""
 
@@ -6,7 +7,13 @@ from dataclasses import dataclass, replace
 
 from vibey.domain.circuit import Circuit, CircuitState
 from vibey.domain.effort import Effort
-from vibey.domain.engine import EngineDescriptor, EngineId, JobRequirement
+from vibey.domain.engine import (
+    TIER_PREFERENCE,
+    EngineDescriptor,
+    EngineId,
+    EngineTier,
+    JobRequirement,
+)
 from vibey.domain.errors import NoEligibleEngine
 
 
@@ -30,19 +37,25 @@ class Candidate:
     fidelity_factor: float
     cost_factor: float
     affinity_factor: float
+    tier: EngineTier = EngineTier.PAID
 
     @property
     def effective_weight(self) -> int:
-        return max(
-            0,
-            round(
-                self.base_weight
-                * self.health_factor
-                * self.fidelity_factor
-                * self.cost_factor
-                * self.affinity_factor
-            ),
+        raw = (
+            self.base_weight
+            * self.health_factor
+            * self.fidelity_factor
+            * self.cost_factor
+            * self.affinity_factor
         )
+        if raw <= 0:
+            return 0
+        # A positive weight must never round down to zero: a half-open
+        # probe on a base_weight-1 engine is 1 * 0.25 = 0.25, and round()
+        # made it 0 -- so the probe could never fire and the engine stayed
+        # open forever (caught by the unattended validation run, where
+        # forced rotation then had no candidate left at all).
+        return max(1, round(raw))
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +84,30 @@ def eligible(
             continue
         result.append(runtime)
     return tuple(result)
+
+
+def preferred_tier(candidates: Sequence[Candidate]) -> tuple[Candidate, ...]:
+    """The candidates of the most-preferred tier that can win a round (ADR-0038).
+
+    Sub-doctrine 8.a: the sovereign path is the preference, not the fallback. So
+    tiers are tried in `TIER_PREFERENCE` order, and SWRR runs *within* the first
+    one holding a candidate with a positive effective weight -- a local engine is
+    chosen whenever one can be, and a paid engine only when none can. Weight is
+    the test, not mere presence, so a tier whose every member has decayed to
+    zero cannot strand a job that a healthy paid engine could take.
+
+    When no tier qualifies, every candidate is returned unchanged and `select`
+    raises its own NoEligibleEngine, which is the truthful answer.
+
+    Module-level, like `eligible` and `select` beside it: a pure function of its
+    argument, with no collaborators and no state. Converging this module onto
+    classes is its own change (ADR-0016's existing-tree clause).
+    """
+    for tier in TIER_PREFERENCE:
+        in_tier = tuple(c for c in candidates if c.tier is tier)
+        if any(c.effective_weight > 0 for c in in_tier):
+            return in_tier
+    return tuple(candidates)
 
 
 def health_factor(circuit: Circuit) -> float:

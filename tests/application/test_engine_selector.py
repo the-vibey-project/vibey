@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Tests for application/engine_selector.py — the first production caller
 of domain/rotation.select()."""
 
@@ -9,6 +10,7 @@ import pytest
 from vibey.application.dto import EngineHealthRecord, RotationCursor
 from vibey.application.engine_health_service import EngineHealthService
 from vibey.application.engine_selector import EngineSelector
+from vibey.application.interfaces.engines import EngineSelectorInterface
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId, JobRequirement
 from vibey.domain.errors import NoEligibleEngine
@@ -320,3 +322,302 @@ async def test_select_engine_skips_auth_expired_engines() -> None:
 
     eid, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.STANDARD))
     assert eid == EngineId.CODEXLOOP
+
+
+async def test_an_expired_open_circuit_half_opens_and_probes() -> None:
+    """The probe deadline must actually fire at selection: without it an
+    opened circuit could only be closed by a success that could never
+    happen, because open circuits are never selected -- one capacity
+    rejection removed an engine from the project permanently, live."""
+    from dataclasses import replace as _replace
+    from datetime import UTC, datetime, timedelta
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    past = datetime.now(UTC) - timedelta(minutes=30)
+    stuck_open = _replace(
+        _healthy_record(project_id, EngineId.CLAUDELOOP),
+        circuit="open",
+        resets_at=past,
+    )
+    await repo.upsert(stuck_open)
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+async def test_an_open_circuit_before_its_deadline_stays_excluded() -> None:
+    from dataclasses import replace as _replace
+    from datetime import UTC, datetime, timedelta
+
+    import pytest as _pytest
+
+    from vibey.domain.errors import NoEligibleEngine
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    future = datetime.now(UTC) + timedelta(minutes=30)
+    for resets_at in (future, None):
+        stuck_open = _replace(
+            _healthy_record(project_id, EngineId.CLAUDELOOP),
+            circuit="open",
+            resets_at=resets_at,
+        )
+        await repo.upsert(stuck_open)
+        selector = EngineSelector(
+            health_service=EngineHealthService(repo),
+            cursor_repository=FakeRotationCursorRepository(),
+            descriptors=BY_ENGINE_ID,
+        )
+        with _pytest.raises(NoEligibleEngine):
+            await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+
+async def test_a_credit_exhausted_circuit_half_opens_once_its_probe_time_passes() -> None:
+    """CreditsExhausted carries no resets_at -- it never will, a credits
+    balance has no clock -- so its backoff lands in probe_next_at alone.
+    Reading only resets_at left the engine excluded for the rest of the
+    project until a human edited engine_health by hand."""
+    from dataclasses import replace as _replace
+    from datetime import UTC, datetime, timedelta
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    out_of_credits = _replace(
+        _healthy_record(project_id, EngineId.CLAUDELOOP),
+        circuit="open",
+        capacity_state="CreditsExhausted",
+        resets_at=None,
+        probe_next_at=datetime.now(UTC) - timedelta(minutes=1),
+        probe_attempt=1,
+        consecutive_fail=1,
+    )
+    await repo.upsert(out_of_credits)
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+async def test_a_credit_exhausted_circuit_before_its_probe_time_stays_excluded() -> None:
+    from dataclasses import replace as _replace
+    from datetime import UTC, datetime, timedelta
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    out_of_credits = _replace(
+        _healthy_record(project_id, EngineId.CLAUDELOOP),
+        circuit="open",
+        capacity_state="CreditsExhausted",
+        resets_at=None,
+        probe_next_at=datetime.now(UTC) + timedelta(minutes=5),
+    )
+    await repo.upsert(out_of_credits)
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    with pytest.raises(NoEligibleEngine):
+        await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+
+async def test_the_earliest_of_the_two_probe_times_decides() -> None:
+    """A window deadline far in the future must not hold back a backoff
+    probe that is already due, and vice versa."""
+    from dataclasses import replace as _replace
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime.now(UTC)
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _replace(
+            _healthy_record(project_id, EngineId.CLAUDELOOP),
+            circuit="open",
+            resets_at=now + timedelta(hours=1),
+            probe_next_at=now - timedelta(minutes=1),
+        )
+    )
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+async def test_an_authentication_opened_circuit_has_no_probe_time_and_stays_excluded() -> None:
+    """Waiting cannot fix a credential, so AuthenticationFailed schedules
+    neither time and the engine stays out -- visibly -- until a human
+    re-authenticates and a preflight proves it."""
+    from dataclasses import replace as _replace
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(
+        _replace(
+            _healthy_record(project_id, EngineId.CLAUDELOOP),
+            circuit="open",
+            capacity_state="AuthenticationFailed",
+            resets_at=None,
+            probe_next_at=None,
+        )
+    )
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    with pytest.raises(NoEligibleEngine):
+        await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+
+async def test_a_recorded_credit_exhaustion_is_probed_again_without_a_hand_edit() -> None:
+    """End to end over the real service: record the rejection, let the
+    scheduled probe time arrive, and the engine comes back by itself."""
+    from dataclasses import replace as _replace
+    from datetime import UTC, datetime, timedelta
+
+    from vibey.domain.capacity import CreditsExhausted
+
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
+    service = EngineHealthService(repo)
+    selector = EngineSelector(
+        health_service=service,
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    rejected = await service.record_capacity_rejection(
+        project_id, EngineId.CLAUDELOOP, CreditsExhausted()
+    )
+    assert rejected.resets_at is None
+    assert rejected.probe_next_at is not None
+    with pytest.raises(NoEligibleEngine):
+        await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    # The clock reaches the scheduled probe. Nothing else changes.
+    await repo.upsert(_replace(rejected, probe_next_at=datetime.now(UTC) - timedelta(seconds=1)))
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+def test_the_selector_satisfies_its_declared_seam() -> None:
+    """ADR-0016: `interfaces/engines.py::EngineSelectorInterface` is the contract.
+
+    An interface nothing checks is a comment. This is the check.
+    """
+    selector = EngineSelector(
+        health_service=EngineHealthService(FakeEngineHealthRepository()),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+    assert isinstance(selector, EngineSelectorInterface)
+
+
+# ── tiers: sovereign before paid (sub-doctrine 8.a, ADR-0038) ────────────────
+
+
+async def test_a_healthy_local_engine_is_preferred_over_every_paid_one() -> None:
+    selector, project_id = await _setup(
+        engines=[EngineId.CLAUDELOOP, EngineId.CODEXLOOP, EngineId.QWENLOOP]
+    )
+
+    for _ in range(6):
+        engine_id, selection = await selector.select_engine(
+            project_id, JobRequirement(effort=Effort.STANDARD)
+        )
+        assert engine_id is EngineId.QWENLOOP
+        # SWRR ran over the local tier alone: no paid engine was a candidate.
+        assert {c.engine_id for c in selection.candidates} == {EngineId.QWENLOOP}
+
+
+async def test_local_engines_share_the_work_by_swrr_within_their_tier() -> None:
+    selector, project_id = await _setup(
+        engines=[EngineId.CLAUDELOOP, EngineId.QWENLOOP, EngineId.CLAUDELOOP_LOCAL]
+    )
+
+    picked = [
+        (await selector.select_engine(project_id, JobRequirement(effort=Effort.STANDARD)))[0]
+        for _ in range(4)
+    ]
+
+    assert set(picked) == {EngineId.QWENLOOP, EngineId.CLAUDELOOP_LOCAL}
+
+
+async def test_paid_engines_are_the_fallback_when_no_local_engine_is_eligible() -> None:
+    selector, project_id = await _setup(engines=[EngineId.CLAUDELOOP, EngineId.CODEXLOOP])
+    mixed_selector, local_project = await _setup(engines=[EngineId.CLAUDELOOP, EngineId.QWENLOOP])
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+    assert engine_id in {EngineId.CLAUDELOOP, EngineId.CODEXLOOP}
+
+    # The local engine excluded (a wind-down away from it, or a verify of its work).
+    engine_id, _ = await mixed_selector.select_engine(
+        local_project,
+        JobRequirement(effort=Effort.LOW, excluded=frozenset({EngineId.QWENLOOP})),
+    )
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+async def test_an_open_local_circuit_hands_the_job_to_a_paid_engine() -> None:
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.CLAUDELOOP))
+    await repo.upsert(
+        _healthy_record(
+            project_id,
+            EngineId.CLAUDELOOP_LOCAL,
+            circuit="open",
+            capacity_state="AuthenticationFailed",
+        )
+    )
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.CLAUDELOOP
+
+
+async def test_a_local_tier_decayed_to_zero_weight_does_not_strand_the_job() -> None:
+    """Preference is decided by who can win a round, not by who is present: a local
+    engine whose failure average has reached 1.0 carries no weight, and a healthy paid
+    engine takes the job instead of `select` refusing the whole round."""
+    repo = FakeEngineHealthRepository()
+    project_id = uuid4()
+    await repo.upsert(_healthy_record(project_id, EngineId.AGYLOOP))
+    await repo.upsert(_healthy_record(project_id, EngineId.QWENLOOP, ewma_failure=1.0))
+    selector = EngineSelector(
+        health_service=EngineHealthService(repo),
+        cursor_repository=FakeRotationCursorRepository(),
+        descriptors=BY_ENGINE_ID,
+    )
+
+    engine_id, _ = await selector.select_engine(project_id, JobRequirement(effort=Effort.LOW))
+
+    assert engine_id is EngineId.AGYLOOP

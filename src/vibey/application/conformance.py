@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """`vibey doctor --conformance`: the 9 checks from
 rotation-and-engines.md §8.2, run against whatever EngineAdapter is handed
 in -- ScriptedEngine in CI, a real adapter locally. A failing check sets
@@ -5,6 +6,7 @@ conformance_ok = false and makes the engine ineligible for rotation
 (degraded, not broken); it never crashes the caller."""
 
 import asyncio
+import json
 import tempfile
 from collections.abc import Sequence
 from pathlib import Path
@@ -34,6 +36,7 @@ async def run_conformance(
     capacity_fixtures: Sequence[tuple[str, dict[str, object], type[CapacityState]]] = (),
     trivial_worktree: str | None = None,
     run_dir_poll_seconds: float = 30.0,
+    verdict_poll_seconds: float = 10.0,
 ) -> ConformanceReport:
     descriptor: EngineDescriptor = adapter.descriptor
     checks: list[ConformanceCheckResult] = []
@@ -101,11 +104,23 @@ async def run_conformance(
             ConformanceCheckResult("flags", ok=False, detail="adapter exposes no help text")
         )
     else:
+        # Only flag NAMES are checkable against --help. Values are not: an
+        # option declared `--model <str>` accepts anything and enumerates
+        # nothing, so requiring its values to appear in help text failed
+        # cursorloop for model names that were never going to be listed
+        # (while passing others only by the accident of their values being
+        # words that appear elsewhere in the text). A wrong value is caught
+        # by the scripted run below; a wrong flag name is caught here.
         claimed_flags = {
-            flag for invocation in descriptor.effort_projection.values() for flag in invocation.argv
+            token
+            for invocation in descriptor.effort_projection.values()
+            for token in invocation.argv
+            if token.startswith("-")
         }
         for flags in descriptor.isolation_flags.values():
-            claimed_flags.update(flags)
+            claimed_flags.update(f for f in flags if f.startswith("-"))
+        if descriptor.plan_flag is not None:
+            claimed_flags.add(descriptor.plan_flag)
         missing = sorted(f for f in claimed_flags if f not in help_text)
         checks.append(
             ConformanceCheckResult(
@@ -119,12 +134,19 @@ async def run_conformance(
     # done_marker, control_plane, and structured_verdict.
     # Real engines need a concrete, trivially-completable prompt with a clear
     # deliverable; "conformance check" is too vague and causes timeouts.
+    # Checkbox syntax matters, not just style: codexloop's own WorkPlan
+    # parser (domain/plan.py) requires at least one "- [ ]" item and raises
+    # immediately otherwise -- confirmed directly, and confirmed to leave
+    # meta.json's status field unset, which without a separate fix would
+    # make LoopProcessAdapter.tail() poll forever waiting for a terminal
+    # status that never arrives. Checkbox syntax is still valid, readable
+    # plain-text prompt content for the other three engines.
     handle = None
     try:
         spec = RunSpec(
             run_id=uuid4(),
             worktree_path=Path(trivial_worktree),
-            prompt="Create a file at test.txt containing the text OK, then finish.",
+            prompt="- [ ] Create a file at test.txt containing the text OK, then finish.",
             effort=Effort.TRIVIAL,
             isolation=IsolationLevel.WORKTREE,
         )
@@ -213,18 +235,57 @@ async def run_conformance(
         )
 
     # 7. done_marker
+    # The tail can drain in a race with the engine's final verdict write
+    # (observed live: a real claudeloop run false-failed structured_verdict
+    # once, marking the engine ineligible until a manual re-run). When the
+    # descriptor claims a structured verdict and none arrived, re-tail for
+    # a bounded window before judging -- tail() re-reads events.jsonl from
+    # the start, so this is idempotent and adds no latency when the
+    # verdict is already there.
     done_marker_found = False
     events = [e async for e in adapter.tail(handle)]
+    if Capability.STRUCTURED_VERDICT in descriptor.capabilities:
+        deadline = asyncio.get_running_loop().time() + verdict_poll_seconds
+        while (
+            not any(e.kind == "VerdictRendered" for e in events)
+            and asyncio.get_running_loop().time() < deadline
+        ):
+            await asyncio.sleep(0.5)
+            events = [e async for e in adapter.tail(handle)]
     for event in events:
         if str(event.payload.get("done_marker", "")) == descriptor.done_marker:
             done_marker_found = True
+    # Second, independent path to the same fact. A verdict event is the
+    # richer signal, but it is not the only honest evidence a run
+    # finished: meta.json's terminal status is what tail() itself trusts
+    # to stop reading. An engine that records "finished" there without
+    # publishing a verdict event is complete, not non-conformant -- and
+    # requiring the event alone once marked a fully working engine
+    # ineligible for rotation. Only "finished" counts: "failed" and
+    # "stopped" are terminal but are not completion.
+    evidence = "verdict event"
+    if not done_marker_found:
+        meta_path = handle.run_dir / "meta.json"
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text())
+            except json.JSONDecodeError:
+                meta = {}
+            if meta.get("status") == "finished":
+                done_marker_found = True
+                evidence = "meta.json status=finished"
     checks.append(
         ConformanceCheckResult(
             "done_marker",
             ok=done_marker_found,
-            detail=""
+            detail=f"via {evidence}"
+            if done_marker_found and evidence != "verdict event"
+            else ""
             if done_marker_found
-            else f"expected {descriptor.done_marker!r} in a verdict event",
+            else (
+                f"expected {descriptor.done_marker!r} in a verdict event, "
+                "and meta.json carries no terminal 'finished' status"
+            ),
         )
     )
 

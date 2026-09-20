@@ -1,8 +1,10 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The append-only event ledger, per phase, plus the handoff brief producer."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
@@ -12,11 +14,20 @@ from vibey.application.design import (
 from vibey.application.dto import (
     EngineEvent,
 )
+from vibey.application.interfaces.ledger_publication_interface import (
+    LedgerShardInterface,
+    LedgerSitePlanInterface,
+)
 from vibey.domain.engine import EngineId
 from vibey.domain.handoff import (
     GateMode,
     HandoffBrief,
+    HandoffEnvelope,
     Violation,
+)
+from vibey.domain.interfaces.ledger_query_interface import (
+    LedgerQueryInterface,
+    LedgerSearchResultInterface,
 )
 from vibey.domain.ledger import EventKind, LedgerEvent
 
@@ -42,8 +53,38 @@ class BuildLedger(Protocol):
         job_id: UUID,
         engine_id: EngineId | None,
         correlation_id: UUID,
+        causation_id: UUID | None = None,
         event: EngineEvent,
-    ) -> None: ...
+    ) -> None:
+        """Append one engine event.
+
+        ``correlation_id`` is the delivery's, derived from the project, and is
+        the same for every event of the delivery. ``causation_id`` is what
+        *caused* this event -- the engine run id for a tailed run -- and is
+        what keeps individual runs distinguishable now that ``correlation_id``
+        no longer varies. Events vibey writes on its own account (a finding it
+        raised, a context packet it compiled) have no causing run and leave it
+        ``None``.
+        """
+        ...
+
+
+@runtime_checkable
+class SpendMeteringLedgerInterface(BuildLedger, Protocol):
+    """A ``BuildLedger`` that also meters the spend recorded through it.
+
+    ``application/engine_selection.py::SpendMeteringLedger`` implements it: it
+    forwards every event to the ledger it wraps, unchanged, and sums what
+    ``domain/phase_timing.py::LedgerSpendRule`` says each one spent. One is
+    built per BUILD job, so ``dollars`` is that job's engine session spend --
+    what ``RotationRecordingHandler`` charges to the selected engine's health
+    record once the job settles.
+    """
+
+    @property
+    def dollars(self) -> float:
+        """The dollars recorded through this ledger so far."""
+        ...
 
 
 @runtime_checkable
@@ -77,3 +118,60 @@ class PhaseLedger(Protocol):
         kind: EventKind,
         payload: Mapping[str, object],
     ) -> None: ...
+
+
+@runtime_checkable
+class LedgerReader(Protocol):
+    """Read access to the durable project ledger -- the wind-down
+    orchestrator's source for the events the no-loss gate verifies."""
+
+    async def all_for_project(self, project_id: UUID) -> tuple[LedgerEvent, ...]: ...
+
+
+@runtime_checkable
+class LedgerSearch(Protocol):
+    """Searches one project's ledger (sub-doctrine 7.a, the searchable ledger).
+
+    Every criterion is applied by the store, limit included -- a search never
+    loads the whole project ledger to filter it afterwards, which is what
+    `LedgerReader.all_for_project` is for and what a search must not become.
+    """
+
+    async def search(
+        self, project_id: UUID, query: LedgerQueryInterface
+    ) -> LedgerSearchResultInterface:
+        """The most recent `query.limit` matches, oldest first, and whether
+        older matches were left out."""
+        ...
+
+
+@runtime_checkable
+class LedgerShardStore(Protocol):
+    """Keeps a published shard: the file a repository commits (sub-doctrine 7.a's
+    "the shard the repository holds"). Read back by a site build that has no
+    database, so reading checks everything it can about the file's shape."""
+
+    def write(self, shard: LedgerShardInterface, path: Path) -> None:
+        """Write the shard to `path`, replacing whatever was there."""
+        ...
+
+    def read(self, path: Path) -> LedgerShardInterface:
+        """The shard at `path`. Raises `InvalidLedgerShard` for a file that is not one."""
+        ...
+
+
+@runtime_checkable
+class LedgerSiteWriter(Protocol):
+    """Writes a planned static site to a directory."""
+
+    def write(self, plan: LedgerSitePlanInterface, directory: Path) -> None:
+        """Write every planned document under `directory`, and remove stale ones
+        from the subdirectories the plan owns."""
+        ...
+
+
+@runtime_checkable
+class HandoffStore(Protocol):
+    """Persists verified handoff envelopes (data-model.md §3.7)."""
+
+    async def record(self, envelope: HandoffEnvelope) -> UUID: ...

@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 name: CI
 
 on:
@@ -5,6 +6,13 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  # A merge queue asks these same checks about the MERGED group, not about any one
+  # branch, and it only ever sees checks that a `merge_group` event starts. Without this
+  # line every queued pull request waits for `gates` to report on a run that was never
+  # triggered, times out after `check_response_timeout_minutes`, and is ejected -- a
+  # queue that rejects everything, for a reason nothing in the pull request explains
+  # (ADR-0036).
+  merge_group:
 
 jobs:
   uv-lock:
@@ -12,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - name: Set up Python
@@ -42,7 +50,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
@@ -61,17 +69,20 @@ jobs:
       - name: Gate 3 - mypy --strict
         run: uv run mypy --strict src/vibey
 
+      - name: Run test suite with coverage
+        run: uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
+
       - name: Gate 4a - pytest domain layer (100% coverage)
-        run: uv run pytest -q -p no:cacheprovider --cov=vibey.domain --cov-branch --cov-report=term-missing --cov-fail-under=100
+        run: uv run coverage report --include='src/vibey/domain/*' --fail-under=100
 
       - name: Gate 4b - pytest application layer (100% coverage)
-        run: uv run pytest -q -p no:cacheprovider --cov=vibey.application --cov-branch --cov-report=term-missing --cov-fail-under=100
+        run: uv run coverage report --include='src/vibey/application/*' --fail-under=100
 
       - name: Gate 4c - pytest infrastructure layer (100% coverage)
-        run: uv run pytest -q -p no:cacheprovider --cov=vibey.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100
+        run: uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100
 
       - name: Gate 4d - pytest CLI layer (100% coverage)
-        run: uv run pytest -q -p no:cacheprovider --cov=vibey.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+        run: uv run coverage report --include='src/vibey/cli/*' --fail-under=100
 
       - name: Gate 5 - lint-imports (onion contract)
         run: uv run lint-imports
@@ -81,3 +92,782 @@ jobs:
 
       - name: Gate 7 - pip-audit
         run: uv run pip-audit
+
+  # The definition of done says "No-loss property suite green over 10,000 adversarial
+  # examples" (docs/plans/implementation-plan.md); `gates` runs the same tests at
+  # Hypothesis' default 100. This job runs only the `noloss`-marked suite, at the `noloss`
+  # profile registered in tests/conftest.py, and prints Hypothesis' statistics so every run
+  # shows the examples it actually generated rather than asserting them. Its check name is
+  # a required check on both branches (`[rulesets.*] required_checks` in .vibey-gh.toml), so
+  # renaming it here means renaming it there. Postgres because tests/conftest.py clones the
+  # test template at session start, for every session, whatever it selects.
+  noloss:
+    name: No-loss property suite (10,000 examples)
+    needs: [uv-lock]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: vibey
+          POSTGRES_PASSWORD: vibey
+          POSTGRES_DB: vibey_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      VIBEY_TEST_DATABASE_URL: postgresql://vibey:vibey@localhost:5432/vibey_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: No-loss property suite at 10,000 examples per property
+        run: uv run pytest -m noloss --hypothesis-profile=noloss --hypothesis-show-statistics -p no:cacheprovider
+
+  tools:
+    # A row runs on ubuntu unless it names another `os`; only a row that does gets the
+    # suffix, so every ubuntu row keeps the check name it already had.
+    name: ${{ matrix.package }} on ${{ matrix.python }}${{ matrix.os && format(' ({0})', matrix.os) || '' }}
+    needs: [uv-lock]
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Plain pip and setup-python, NOT `uv sync --package`. The workspace lock
+          # resolves at requires-python >=3.12 -- the intersection of every member -- so a
+          # uv environment cannot exercise the 3.10 and 3.11 floors these tenants declare.
+          # A floor nothing runs on is a claim, not a contract.
+          #
+          # ADR-0037 retired the per-tenant distributions; the tenants themselves stay
+          # exactly as ADR-0021 and ADR-0022 left them, each with its own pyproject,
+          # suite and Python floor. So these rows are now the ONLY thing that runs a
+          # tenant on its own floor -- `vibey` publishes at >=3.12 and would never
+          # exercise 3.10 or 3.11 again.
+          #
+          # And the other half of ADR-0037: no family package exists on any index any
+          # more, so a plain-pip row that names one in its dependencies cannot install at
+          # all. Every family package a tenant needs is installed from the tree first,
+          # below -- the same resolution the workspace gives it, not a substitution --
+          # and the step after the install proves nothing came from an index.
+          #
+          # Each command is the repository's own, ported verbatim. Absorbing a package
+          # must not quietly lower what it was already held to: vibey-gh carries a 100%
+          # BRANCH floor over 984 tests and vibey-bootstrap a 100% LINE floor over 1057,
+          # and both are enforced by their own pyproject addopts, not by anything here.
+          #
+          # `static` is the other half of what a tenant arrived with: its own mypy,
+          # lint-imports and bandit, from its own directory against its own configuration.
+          # The root gates never reach this code -- their mypy, bandit and .importlinter are
+          # scoped to src/vibey -- and the tenants' nested workflows, the only place these
+          # ever ran, never fired in this repository (#263). A tenant's `static` runs once,
+          # on its floor row: every tenant pins `[tool.mypy] python_version`, so another
+          # interpreter repeats the same verdict. codexloop is the exception, because its
+          # own CI ran these on every cell, macOS included, and a `sys.platform` branch
+          # type-checks differently per OS. vibey-gh's static gates stay in `tools-lint`;
+          # vibey-skills declares none, being stdlib-only with no type or import config.
+          - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.11",
+             install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
+          - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.12",
+             install: 'pip install -e ".[dev]"', test: 'python -m pytest -q',
+             network_test: 'python -m pytest -q -m network --no-cov'}
+          - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.13",
+             install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
+          - {package: vibey-skills, dir: src/vibey_tools/skills, python: "3.10",
+             install: 'pip install -e .',
+             test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'}
+          - package: vibey-skills
+            dir: src/vibey_tools/skills
+            python: "3.12"
+            install: 'pip install -e .'
+            test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
+            # Its own `docs` job, verbatim: --strict is what makes 700-odd generated pages
+            # trustworthy, and the counts prove every plugin and skill produced one.
+            docs: |
+              pip install -e ".[docs]"
+              mkdocs build --strict
+              plugins=$(python3 -c "import json;print(len(json.load(open('.claude-plugin/marketplace.json'))['plugins']))")
+              skills=$(find plugins -name SKILL.md | wc -l | tr -d ' ')
+              built_plugins=$(find site/reference -mindepth 2 -maxdepth 2 -name index.html | wc -l | tr -d ' ')
+              built_skills=$(find site/reference -mindepth 3 -maxdepth 3 -name index.html | wc -l | tr -d ' ')
+              echo "plugins $plugins -> $built_plugins ; skills $skills -> $built_skills"
+              test "$plugins" = "$built_plugins"
+              test "$skills" = "$built_skills"
+          # vibey-bootstrap's nested CI never ran a static gate at all. Its own pre-commit
+          # hook did, and these are that hook's commands, verbatim: its configured
+          # (non-strict) mypy, and bandit at medium severity and up. `dev` joins the floor
+          # row's install because that is where the hook's tools are declared. The hook's
+          # black and isort are not ported: root `ruff format --check .` already owns this
+          # tree's formatting, and holding one file to two formatters is the trap vibey-gh
+          # already lives with.
+          - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.11",
+             install: 'pip install -e ../gh && pip install -e ".[test,all,dev]"',
+             static: 'python -m mypy vibey_bootstrap/ && python -m bandit -r vibey_bootstrap/ -ll -q',
+             test: 'pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term'}
+          - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.12",
+             install: 'pip install -e ../gh && pip install -e ".[test,all]"',
+             test: 'pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term'}
+          #
+          # The five session runners (ADR-0021 absorbed them; ADR-0022 says they keep every
+          # gate they arrived with). Their floors are NOT in their addopts the way vibey-gh's
+          # and vibey-bootstrap's are: each of them deliberately leaves --cov= and
+          # --cov-fail-under out of pytest's addopts, because pytest-cov UNIONS every --cov=
+          # it sees and one baked in there would silently widen the explicitly-scoped
+          # per-layer runs back out to the whole package. Their four 100% floors lived in
+          # each runner's own nested .github/workflows/ci.yml, which never fired in this
+          # repository (ADR-0022) and was removed with the rest of the tenants' inert
+          # automation under #189 (`git show 4e9adf18:src/vibey_runners/<r>/.github/workflows/ci.yml`)
+          # -- so for these packages the command below IS the floor, ported from that
+          # workflow rather than re-derived. Those files also ran each runner's own mypy,
+          # lint-imports and bandit, which are NOT ported: the root gates' mypy, bandit and
+          # .importlinter scope is src/vibey, so that half is still an open ADR-0022 gap.
+          # qwenloop is the exception: its floor is a single whole-package
+          # --cov-fail-under=100 in its addopts, so `pytest -q` carries it, exactly as its
+          # own CI relied on.
+          #
+          # claudeloop and codexloop import vibey_runners.common, so `../common` is
+          # installed from the tree before their own install: plain pip knows nothing
+          # about `[tool.uv.sources] workspace = true` and would otherwise go to an index
+          # for a distribution that no longer exists. vibey-bootstrap gets `../gh` the
+          # same way, for the same reason -- vibey_bootstrap.gh re-exports vibey_gh and
+          # its suite asserts the two are the same objects. An already-installed local
+          # package satisfies the requirement, so pip never reaches the index.
+          #
+          # Interpreters are each runner's own matrix. claudeloop publishes a 3.10 floor and
+          # is the only member of this tree that does; per ADR-0022 a floor nothing runs on
+          # is a claim, so all four of its interpreters run.
+          #
+          # vibey-runners-common ships no suite, so it has no `test` and the suite step
+          # skips it (tests/meta/test_tools_matrix_covers_every_package.py counts only rows
+          # that do carry one). Its row exists for `static`: it declares a strict mypy and
+          # two import contracts, and until this row nothing had ever run either.
+          - package: vibey-runners-common
+            dir: src/vibey_runners/common
+            python: "3.10"
+            install: 'pip install -e ".[dev]"'
+            static: 'mypy --strict src/vibey_runners/common && lint-imports'
+          # claudeloop's own CI ran these on 3.12; they run here on its 3.10 floor. The
+          # frontmatter check was its `skills` job: Claude Code loads a malformed SKILL.md
+          # silently, so nothing else would notice.
+          - package: claudeloop
+            dir: src/vibey_runners/claude
+            python: "3.10"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: >-
+              mypy --strict src/claudeloop &&
+              lint-imports &&
+              bandit -q -r src/claudeloop &&
+              python scripts/check_skill_frontmatter.py
+            test: >-
+              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+          - package: claudeloop
+            dir: src/vibey_runners/claude
+            python: "3.11"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+          - package: claudeloop
+            dir: src/vibey_runners/claude
+            python: "3.12"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+          - package: claudeloop
+            dir: src/vibey_runners/claude
+            python: "3.13"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+          # codexloop, cursorloop and agyloop each replaced four instrumented runs with one,
+          # then filtered the single data file per layer -- `coverage report --include` keeps
+          # each floor's verdict independent, so this is their command, not a cheaper one.
+          # codexloop's own matrix was {ubuntu, macos} x {3.12, 3.13}, with every gate in every
+          # cell, so all four cells are here. The macOS pair was dropped at the absorption and
+          # restored under #263.
+          - package: codexloop
+            dir: src/vibey_runners/codex
+            python: "3.12"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: 'mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop'
+            docs: "pip install 'properdocs==1.6.7' 'properdocs-theme-mkdocs==1.6.7' && properdocs build --strict"
+            test: >-
+              pytest -q --cov=codexloop --cov-branch --cov-report= &&
+              coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/application/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/cli/*' --fail-under=100
+          - package: codexloop
+            dir: src/vibey_runners/codex
+            python: "3.13"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: 'mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop'
+            test: >-
+              pytest -q --cov=codexloop --cov-branch --cov-report= &&
+              coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/application/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/cli/*' --fail-under=100
+          - package: codexloop
+            dir: src/vibey_runners/codex
+            python: "3.12"
+            os: macos-latest
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: 'mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop'
+            test: >-
+              pytest -q --cov=codexloop --cov-branch --cov-report= &&
+              coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/application/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/cli/*' --fail-under=100
+          - package: codexloop
+            dir: src/vibey_runners/codex
+            python: "3.13"
+            os: macos-latest
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: 'mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop'
+            test: >-
+              pytest -q --cov=codexloop --cov-branch --cov-report= &&
+              coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/application/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/cli/*' --fail-under=100
+          - package: cursorloop
+            dir: src/vibey_runners/cursor
+            python: "3.12"
+            install: 'pip install -e ".[dev]"'
+            static: 'mypy --strict src/cursorloop && lint-imports && bandit -q -r src/cursorloop'
+            test: >-
+              pytest tests --cov=cursorloop --cov-branch --cov-report= &&
+              coverage report --include='src/cursorloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/application/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/cli/*' --fail-under=100
+          - package: cursorloop
+            dir: src/vibey_runners/cursor
+            python: "3.13"
+            install: 'pip install -e ".[dev]"'
+            test: >-
+              pytest tests --cov=cursorloop --cov-branch --cov-report= &&
+              coverage report --include='src/cursorloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/application/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/cli/*' --fail-under=100
+          # agyloop's suite ends with its deterministic system harness -- scripted agent over
+          # real FS/git/CLI adapters, no account and no network. Its own CI ran it on every
+          # interpreter in the matrix, and `-m system` on the command line overrides the
+          # `not system` in addopts, which is how that deselection is meant to be undone.
+          # The grep in `static` was agyloop's own, in the same job as its lint-imports: a
+          # second net under the "No Anthropic" contract that needs no import graph.
+          - package: agyloop
+            dir: src/vibey_runners/agy
+            python: "3.12"
+            install: 'pip install -e ".[dev]"'
+            static: >-
+              mypy --strict src/agyloop &&
+              lint-imports &&
+              bandit -q -r src/agyloop &&
+              ! grep -R -E '(^|[[:space:]])(from|import)[[:space:]]+(anthropic|claude_agent_sdk)' src
+            docs: "pip install 'properdocs==1.6.7' 'properdocs-theme-mkdocs==1.6.7' && properdocs build --strict"
+            test: >-
+              pytest tests --cov=agyloop --cov-branch --cov-report= &&
+              coverage report --include='src/agyloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/application/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/cli/*' --fail-under=100 &&
+              pytest -m system
+          - package: agyloop
+            dir: src/vibey_runners/agy
+            python: "3.13"
+            install: 'pip install -e ".[dev]"'
+            test: >-
+              pytest tests --cov=agyloop --cov-branch --cov-report= &&
+              coverage report --include='src/agyloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/application/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/cli/*' --fail-under=100 &&
+              pytest -m system
+          # qwenloop is the standby runner (ADR-0015) and the only one whose floor is already
+          # in its addopts: --cov=qwenloop --cov-branch --cov-fail-under=100, whole package,
+          # so a bare `pytest -q` is the entire gate. Its own CI drove that through `uv run`;
+          # pip and setup-python are what let 3.14 -- which it publishes and the workspace
+          # lock cannot reach -- actually run.
+          # qwenloop's own CI reached 3.14 through astral-sh/setup-uv instead; setup-python@v5
+          # is used here for the same reason every other row uses it, and its manifest has
+          # carried 3.14 on ubuntu since the 3.14.0 release in October 2025. pytest, pytest-cov
+          # and pytest-asyncio all publish py3-none-any wheels, so there is no wheel gap either.
+          - package: qwenloop
+            dir: src/vibey_runners/qwen
+            python: "3.12"
+            install: 'pip install -e ".[dev]"'
+            static: 'mypy --strict src/qwenloop && lint-imports && bandit -q -r src/qwenloop'
+            test: 'python -m pytest -q'
+          - package: qwenloop
+            dir: src/vibey_runners/qwen
+            python: "3.13"
+            install: 'pip install -e ".[dev]"'
+            test: 'python -m pytest -q'
+          - package: qwenloop
+            dir: src/vibey_runners/qwen
+            python: "3.14"
+            install: 'pip install -e ".[dev]"'
+            test: 'python -m pytest -q'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # vibey-gh's suite drives real git history.
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # Only the network step below drives a real `uv`, in the one test that verifies a
+      # version bump also re-locks: `test_a_real_uv_lock_rewrites_the_pinned_version`. That
+      # test is marked `network`, so the offline step needs no binary -- measured, not
+      # assumed: with `uv` off PATH entirely the suite is 1019 passed, 4 skipped, 100%
+      # branch. So the install is scoped to the row that actually asks for it, instead of
+      # being paid by all seven.
+      - uses: astral-sh/setup-uv@v3
+        if: matrix.network_test
+      - name: Install
+        working-directory: ${{ matrix.dir }}
+        run: ${{ matrix.install }}
+      # The contract the rows above are shaped around, asserted instead of assumed.
+      # ADR-0037 leaves one published distribution, so a family package that arrived
+      # from an index is not this tree's code: a stale wheel, a squatted name, or a
+      # resurrection nobody voted for. pip records where every distribution came from
+      # in direct_url.json -- present with a file:// url for an install from a path,
+      # absent for one resolved from an index -- which is the difference, exactly.
+      #
+      # The names are read from the tenants' own pyprojects rather than listed here: a
+      # hard-coded list is the same defect one layer up (ADR-0018), and the tenant added
+      # next month would be the one nobody remembered to add.
+      - name: Every family package came from this tree, not from an index
+        run: |
+          python - <<'PY'
+          import json
+          import re
+          import sys
+          from importlib.metadata import PackageNotFoundError, distribution
+          from pathlib import Path
+
+          root = Path.cwd().resolve()
+
+
+          def declared_name(pyproject):
+              if not pyproject.is_file():
+                  return None
+              for table in re.split(r"^\[", pyproject.read_text(encoding="utf-8"), flags=re.M):
+                  if table.startswith("project]"):
+                      found = re.search(r'^name\s*=\s*"([^"]+)"', table, re.M)
+                      return found.group(1) if found else None
+              return None
+
+
+          manifests = [root / "pyproject.toml", *sorted(root.glob("src/vibey_*/*/pyproject.toml"))]
+          family = {name for name in map(declared_name, manifests) if name}
+          # A check that cannot fail is worse than no check: if the layout moves and the
+          # glob stops matching, this step would pass forever while proving nothing.
+          if len(family) < 2:
+              raise SystemExit(f"::error::read {sorted(family)} from {len(manifests)} manifests")
+          print(f"{len(family)} family distributions declared in this tree")
+
+          strays = []
+          for name in sorted(family):
+              try:
+                  dist = distribution(name)
+              except PackageNotFoundError:
+                  continue
+              recorded = dist.read_text("direct_url.json") or ""
+              url = json.loads(recorded).get("url", "") if recorded else ""
+              where = Path(url[len("file://") :]).resolve() if url.startswith("file://") else None
+              if where is None or not (where == root or root in where.parents):
+                  strays.append(f"{name} {dist.version} <- {url or 'an index'}")
+              else:
+                  print(f"{name} {dist.version} <- {where}")
+          if strays:
+              print("::error::family packages not installed from this tree:")
+              print(*strays, sep="\n")
+              sys.exit(1)
+          PY
+      # A row's own mypy, lint-imports and bandit, run before its suite because they fail
+      # in seconds. Keyed like `network_test`, so a row without `static` skips the step.
+      # tests/meta/test_tools_matrix_covers_every_package.py derives from each tenant's
+      # own pyproject which of these it configures, and fails if no row runs one.
+      - name: Its own static gates
+        if: matrix.static
+        working-directory: ${{ matrix.dir }}
+        run: ${{ matrix.static }}
+      # VIBEY_GH_NETWORK_TESTS is unset here, so every `network` test is skipped and the
+      # package's own --cov-fail-under=100 is enforced on what remains. That makes this
+      # step the gate on a property the package would otherwise only assert: its 100%
+      # branch floor is reachable with no index, no remote and no socket. Put a branch
+      # behind a network-only test again and this fails, which is the whole point.
+      #
+      # Conditional only so that a static-only row (vibey-runners-common, which ships no
+      # suite) can exist. A tenant that has a suite and no row carrying `test` fails the
+      # membership test in tests/meta, so the condition cannot quietly drop one.
+      - name: Its own suite, unchanged
+        if: matrix.test
+        working-directory: ${{ matrix.dir }}
+        run: ${{ matrix.test }}
+      # A tenant's own strict docs build, for the three whose CI had one: agyloop and
+      # codexloop (properdocs, pinned as they pinned it) and vibey-skills (mkdocs). It runs
+      # after the suite and installs its own toolchain, so the suite's environment is the
+      # row's `install` and nothing else. One row per tenant, on ubuntu 3.12, as theirs did.
+      - name: Its own docs build
+        if: matrix.docs
+        working-directory: ${{ matrix.dir }}
+        run: ${{ matrix.docs }}
+      # And the other half: the tests that DO leave the machine. These observe the world
+      # rather than this repository -- that PyPI still has no yank API, that a real `uv
+      # lock` still rewrites the pin -- so a failure here is news about someone else's
+      # service, and nothing a pull request author can fix. `continue-on-error` keeps that
+      # news visible without letting a PyPI outage or a rate-limit block an unrelated
+      # merge; the floor above is the gate, and this is the report.
+      #
+      # Declared as a row's own command, like `install` and `test`, so any tenant can opt
+      # in by adding the key -- and scoped to one row, because this posts unauthenticated
+      # to a third party's upload endpoint and running it on all three Python rows tripled
+      # that for no extra signal.
+      #
+      # Coverage is off because this selection is partial by construction; asking a subset
+      # to meet the floor would only teach us to lower it.
+      - name: The tests that leave the machine
+        if: matrix.network_test
+        continue-on-error: true
+        working-directory: ${{ matrix.dir }}
+        env:
+          VIBEY_GH_NETWORK_TESTS: "1"
+        run: ${{ matrix.network_test }}
+
+  tools-lint:
+    name: Absorbed tools - their own linters
+    needs: [uv-lock]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: vibey-gh - black, isort, mypy
+        working-directory: src/vibey_tools/gh
+        run: |
+          python -m pip install --quiet -e ".[dev]"
+          python -m black --check vibey_gh test
+          isort --check-only vibey_gh test
+          python -m mypy vibey_gh
+      # Both deployed copies, not one. This repository CONTAINS vibey-gh and also
+      # ADOPTS it, so there are two rendered sets: gh's own, and the repository root's.
+      # Only gh's was checked, which left root drift able to ship silently -- and the
+      # root's rendered pin now moves with every release (`[install] pin_version` pins
+      # the fallback to this repository's own `[project] version`), so the one copy CI
+      # never looked at is the one most likely to lag. Everything-as-code, ADR-0018.
+      - name: vibey-gh - it installs its own managed automation without drift
+        working-directory: src/vibey_tools/gh
+        run: |
+          python - <<'PY'
+          from vibey_gh.config import load_config
+          from vibey_gh.install import installed
+          ok, problems = installed(load_config(), local=False)
+          raise SystemExit("managed automation drift: " + "; ".join(problems) if not ok else 0)
+          PY
+      - name: The repository root - its own rendered automation has no drift
+        run: |
+          python - <<'PY'
+          from vibey_gh.config import load_config
+          from vibey_gh.install import installed
+          ok, problems = installed(load_config(), local=False)
+          raise SystemExit("root automation drift: " + "; ".join(problems) if not ok else 0)
+          PY
+
+  image:
+    name: Container image (amd64 + arm64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # arm64 is built under emulation. Slower than a native runner, but
+      # the alternative is discovering on a customer's Graviton node that
+      # the image was never built for it.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build amd64
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: vibey:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Every claim the Dockerfile makes in prose is asserted here, one
+      # `Image contract - ...` step each. Prose does not survive a refactor:
+      # collapse the two stages or drop the USER line and this job fails
+      # instead of shipping. The docs name these steps rather than count
+      # them, so adding one cannot leave a stale number behind.
+      - name: Image contract - entrypoint runs
+        run: |
+          out=$(docker run --rm vibey:ci --version)
+          echo "$out"
+          case "$out" in
+            "vibey "*) ;;
+            *) echo "::error::unexpected --version output: $out"; exit 1 ;;
+          esac
+
+      - name: Image contract - runs as non-root uid 10001
+        run: |
+          uid=$(docker run --rm --entrypoint id vibey:ci -u)
+          echo "uid=$uid"
+          test "$uid" = "10001"
+
+      # apt-get is deliberately absent from this list: it installs git in
+      # the runtime stage and needs root to do anything, while the chart
+      # runs the pod non-root with allowPrivilegeEscalation false. pip is
+      # the one that mattered -- uid 10001 owns a writable $HOME, so
+      # `pip install --user` would have worked until it was removed.
+      # node and npm are listed because codex ships in the image: its npm
+      # package would have brought both, and the static binary exists so
+      # that neither does.
+      - name: Image contract - no compiler, no uv, no pip, no node/npm
+        run: |
+          docker run --rm --entrypoint sh vibey:ci -c '
+            status=0
+            for tool in uv pip pip3 gcc cc node npm npx; do
+              if command -v "$tool" >/dev/null 2>&1; then
+                echo "$tool present in runtime layer"; status=1
+              fi
+            done
+            exit $status
+          '
+
+      - name: Image contract - migrations ship in the image
+        run: |
+          count=$(docker run --rm --entrypoint sh vibey:ci -c 'ls /app/migrations/*.sql | wc -l')
+          echo "migrations=$count"
+          test "$count" -gt 0
+
+      # codexloop drives the codex CLI, so the image carries upstream's static
+      # musl build (see the Dockerfile's build stage). The version is read from
+      # the Dockerfile's own pin rather than repeated here, so a bump changes
+      # one line and this check follows it.
+      - name: Image contract - codex runs and is the pinned build
+        run: |
+          want=$(sed -n 's/^ARG CODEX_VERSION=//p' deploy/docker/Dockerfile)
+          test -n "$want"
+          out=$(docker run --rm --entrypoint codex vibey:ci --version)
+          echo "$out (pinned: $want)"
+          case "$out" in
+            *"$want"*) ;;
+            *) echo "::error::codex --version printed '$out'; the Dockerfile pins $want"; exit 1 ;;
+          esac
+
+      # One distribution, eleven console scripts (ADR-0037). That is the new product
+      # contract, and it is the one the Dockerfile's COPY list can break silently: a
+      # package root that never reaches the build context does not fail the build, it
+      # just is not there. tests/meta/test_shipped_trees_are_reachable.py catches the
+      # omission in the manifest; this catches it in the artifact.
+      - name: Image contract - every console script is on PATH
+        run: |
+          docker run --rm --entrypoint sh vibey:ci -c '
+            status=0
+            for tool in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap \
+                        azbootstrap claudeloop codexloop cursorloop agyloop qwenloop; do
+              if command -v "$tool" >/dev/null 2>&1; then
+                echo "ok      $tool"
+              else
+                echo "MISSING $tool"; status=1
+              fi
+            done
+            exit $status
+          '
+
+      # Built last: under emulation this is the slow half, and there is no
+      # point paying for it when the amd64 contracts already failed.
+      - name: Build arm64
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          platforms: linux/arm64
+          push: false
+          tags: vibey:ci-arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Render-only, so it needs neither a cluster nor the image: it lints the chart
+  # and compares its render under every profile in deploy/helm/golden/render.sh
+  # with the committed goldens. cluster-smoke installs only the defaults; this
+  # is what looks at everything else (the in-cluster Ollama, the worker wiring
+  # it adds, the KEDA query's project scoping) before any of it meets a cluster.
+  chart:
+    name: Helm chart lint and golden render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned, unlike cluster-smoke's: a golden is a byte comparison, and a
+      # different helm may format the same manifest differently. Bump the pin
+      # and regenerate the goldens together.
+      - uses: azure/setup-helm@v5
+        with:
+          version: v4.2.4
+
+      - name: Chart - lint and render every profile against its golden
+        run: deploy/helm/golden/render.sh
+
+  cluster-smoke:
+    name: Helm install on minikube
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: medyagh/setup-minikube@latest
+
+      - uses: azure/setup-helm@v5
+
+      - name: Build the image into minikube's daemon
+        # BuildKit's default docker-container driver pulls a separate
+        # moby/buildkit image and then inspects it -- that inspect step
+        # 404s against minikube's containerd-backed docker-env shim
+        # (medyagh/setup-minikube's own docs flag this as experimental).
+        # The classic builder needs no such image, so it isn't affected.
+        env:
+          DOCKER_BUILDKIT: "0"
+        run: |
+          eval $(minikube docker-env)
+          docker build -f deploy/docker/Dockerfile -t vibey:dev .
+
+      - name: helm install
+        run: |
+          helm install vibey deploy/helm/vibey \
+            -n vibey --create-namespace --wait --timeout 8m
+
+      # A fresh install into an empty namespace has no project. The worker
+      # must park and poll, not exit -- exiting is a restart loop that ends
+      # only when a human shows up, and the crash counter makes a healthy
+      # deployment look broken.
+      - name: Contract - a projectless worker parks instead of crash-looping
+        run: |
+          kubectl wait --for=condition=available \
+            deployment/vibey-vibey-worker -n vibey --timeout=5m
+          for _ in $(seq 1 20); do
+            kubectl logs -n vibey deployment/vibey-vibey-worker > /tmp/log 2>&1 || true
+            grep -q "no project yet; polling" /tmp/log && break
+            sleep 5
+          done
+          cat /tmp/log
+          grep -q "no project yet; polling" /tmp/log
+          restarts=$(kubectl get pods -n vibey -l app.kubernetes.io/component=worker \
+            -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}')
+          echo "restarts=$restarts"
+          test "$restarts" = "0"
+
+      - name: Contract - the worker picks up a project created in-cluster
+        run: |
+          kubectl exec -n vibey deploy/vibey-vibey-worker -- \
+            vibey new demo --repo /work/demo --max-cycles 1
+          for _ in $(seq 1 24); do
+            kubectl logs -n vibey deployment/vibey-vibey-worker > /tmp/log 2>&1 || true
+            grep -q "worker started: project=demo" /tmp/log && break
+            sleep 5
+          done
+          cat /tmp/log
+          grep -q "worker started: project=demo" /tmp/log
+
+      # KEDA's operator runs in its own namespace and dials Postgres
+      # itself, so it is the only thing here that exercises the DSN from
+      # outside the release namespace. An unqualified DSN passes every
+      # other check in this file and fails this one -- which is exactly
+      # how it once shipped unnoticed.
+      - name: Contract - the ScaledObject reconciles against real Postgres
+        run: |
+          helm repo add kedacore https://kedacore.github.io/charts
+          helm install keda kedacore/keda -n keda --create-namespace --wait --timeout 5m
+          helm upgrade vibey deploy/helm/vibey -n vibey \
+            --set keda.enabled=true --wait --timeout 5m
+          ready=""
+          for _ in $(seq 1 24); do
+            ready=$(kubectl get scaledobject vibey-vibey-worker -n vibey \
+              -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+            [ "$ready" = "True" ] && break
+            sleep 5
+          done
+          kubectl get scaledobject -n vibey
+          test "$ready" = "True"
+
+      # terminationGracePeriodSeconds is 7200. Without the SIGTERM drain a
+      # scaled-in pod sits there for all of it, still holding connections
+      # and still claiming jobs, while kubectl reports it gone. 60s is a
+      # generous ceiling for an idle worker that genuinely drains.
+      - name: Contract - a worker drains promptly on SIGTERM
+        run: |
+          helm upgrade vibey deploy/helm/vibey -n vibey \
+            --set keda.enabled=false --wait --timeout 5m
+          pod=$(kubectl get pods -n vibey -l app.kubernetes.io/component=worker \
+            -o custom-columns=NAME:.metadata.name,DEL:.metadata.deletionTimestamp --no-headers \
+            | awk '$2 == "<none>" {print $1}' | head -n 1)
+          # How old is it? A pod deleted moments after its container started is testing
+          # the startup race (SIGTERM discarded while PID 1 still had SIG_DFL), not the
+          # steady-state drain. Both must pass; only one of them is obvious from a log.
+          started=$(kubectl get pod "$pod" -n vibey \
+            -o jsonpath='{.status.containerStatuses[0].state.running.startedAt}' || true)
+          echo "deleting $pod (container started at ${started:-unknown})"
+          # By the time a failing test reaches the diagnostics step below,
+          # the Deployment has already replaced this pod -- `kubectl logs
+          # deployment/...` would then show the REPLACEMENT's fresh startup
+          # log, not this pod's. Name it explicitly so diagnostics can still
+          # find it once it's no longer the Deployment's current pod.
+          echo "SIGTERM_TEST_POD=$pod" >> "$GITHUB_ENV"
+          start=$(date +%s)
+          kubectl delete pod "$pod" -n vibey --wait=true --timeout=5m
+          elapsed=$(( $(date +%s) - start ))
+          echo "terminated in ${elapsed}s (grace period allows 7200s)"
+          test "$elapsed" -lt 60
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          kubectl get all -n vibey || true
+          kubectl describe pods -n vibey || true
+          if [ -n "${SIGTERM_TEST_POD:-}" ]; then
+            echo "--- logs: the specific pod the SIGTERM test deleted ($SIGTERM_TEST_POD) ---"
+            # --timestamps, because the question this log has to answer is *when* the
+            # drain flag was observed relative to the delete -- and without them every
+            # line carries the collection time instead.
+            kubectl logs -n vibey "pod/$SIGTERM_TEST_POD" --timestamps --tail=300 || true
+            echo "--- describe: same pod, for phase/conditions/events ---"
+            kubectl describe "pod/$SIGTERM_TEST_POD" -n vibey || true
+          fi
+          kubectl logs -n vibey deployment/vibey-vibey-worker --tail=100 || true
+          kubectl logs -n keda deployment/keda-operator --tail=50 || true

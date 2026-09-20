@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Reading a project and moving it between phases."""
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ class ProjectStore(Protocol):
     async def get(self, project_id: UUID) -> ProjectRecord | None: ...
 
     async def transition(
-        self, project_id: UUID, *, expected: Phase, to: Phase
+        self, project_id: UUID, *, expected: Phase, to: Phase, guard: str | None = None
     ) -> ProjectRecord: ...
 
 
@@ -31,4 +32,5 @@ class ProjectTransitioner(Protocol):
         expected: Phase,
         to: Phase,
         cycle: int | None = None,
+        guard: str | None = None,
     ) -> Any: ...

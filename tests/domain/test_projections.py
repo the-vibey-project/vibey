@@ -1,6 +1,8 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from datetime import UTC, datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 
+from vibey.domain.correlation import DeliveryCorrelation
 from vibey.domain.engine import EngineId
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event
 from vibey.domain.phase import Phase
@@ -17,6 +19,9 @@ PROJECT_ID = uuid4()
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
 
 
+CORRELATION_ID = DeliveryCorrelation().for_project(PROJECT_ID).value
+
+
 def _event(
     seq: int,
     kind: EventKind,
@@ -24,7 +29,7 @@ def _event(
     *,
     phase: Phase = Phase.BUILD,
     engine_id: EngineId | None = None,
-    correlation_id: object | None = None,
+    causation_id: UUID | None = None,
 ) -> LedgerEvent:
     return LedgerEvent(
         event_id=uuid4(),
@@ -35,8 +40,8 @@ def _event(
         kind=kind,
         engine_id=engine_id,
         job_id=None,
-        causation_id=None,
-        correlation_id=correlation_id or uuid4(),
+        causation_id=causation_id,
+        correlation_id=CORRELATION_ID,
         provenance=Provenance.AGENT,
         produced_at=NOW,
         payload=payload,
@@ -166,20 +171,20 @@ def test_build_cost_report_ignores_malformed_numeric_fields() -> None:
     assert report[0].dollars == 0.0
 
 
-def test_build_work_ledger_uses_latest_verdict_per_correlation_id() -> None:
-    cid = uuid4()
+def test_build_work_ledger_uses_latest_verdict_per_causation_id() -> None:
+    run_id = uuid4()
     events = [
         _event(
             1,
             EventKind.VERDICT_RENDERED,
             {"complete": False, "remaining_work": ["a"]},
-            correlation_id=cid,
+            causation_id=run_id,
         ),
         _event(
             2,
             EventKind.VERDICT_RENDERED,
             {"complete": True, "remaining_work": []},
-            correlation_id=cid,
+            causation_id=run_id,
         ),
     ]
 
@@ -191,30 +196,47 @@ def test_build_work_ledger_uses_latest_verdict_per_correlation_id() -> None:
     assert ledger[0].last_seq == 2
 
 
-def test_build_work_ledger_tracks_multiple_correlation_ids_independently() -> None:
-    cid1, cid2 = uuid4(), uuid4()
+def test_build_work_ledger_tracks_multiple_causation_ids_independently() -> None:
+    """Acceptance criterion 3: engine runs stay distinguishable. Every event
+    here shares the delivery's correlation id -- keying the projection on that
+    would collapse both runs into one row."""
+    run1, run2 = uuid4(), uuid4()
     events = [
         _event(
             1,
             EventKind.VERDICT_RENDERED,
             {"complete": True, "remaining_work": []},
-            correlation_id=cid1,
+            causation_id=run1,
         ),
         _event(
             2,
             EventKind.VERDICT_RENDERED,
             {"complete": False, "remaining_work": ["x"]},
-            correlation_id=cid2,
+            causation_id=run2,
         ),
     ]
 
+    assert {e.correlation_id for e in events} == {CORRELATION_ID}
+
     ledger = build_work_ledger(events)
 
-    assert {e.correlation_id for e in ledger} == {str(cid1), str(cid2)}
+    assert {e.causation_id for e in ledger} == {str(run1), str(run2)}
 
 
 def test_build_work_ledger_ignores_non_verdict_events() -> None:
     events = [_event(1, EventKind.TURN_COMPLETED, {"cost_usd": 1.0})]
+    assert build_work_ledger(events) == ()
+
+
+def test_build_work_ledger_ignores_verdicts_with_no_causing_run() -> None:
+    """A verdict vibey wrote on its own account has no run behind it, and
+    bucketing several of them under the string "None" would merge unrelated
+    threads into one entry."""
+    events = [
+        _event(1, EventKind.VERDICT_RENDERED, {"complete": False, "remaining_work": ["a"]}),
+        _event(2, EventKind.VERDICT_RENDERED, {"complete": True, "remaining_work": []}),
+    ]
+
     assert build_work_ledger(events) == ()
 
 

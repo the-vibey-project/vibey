@@ -1,13 +1,15 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
 from tests.application.fakes import FakeJobRepository, make_job
 from vibey.application.build_implement_handler import BuildImplementHandler
 from vibey.application.dto import EngineEvent
+from vibey.application.interfaces import SkillsContextResult
 from vibey.application.worker import Defer, Failure, Park, Success
 from vibey.domain.job import FailureClass
 from vibey.domain.provision import ProvisionSpec
@@ -44,9 +46,15 @@ class FakeProvisioner:
 class FakeLedger:
     def __init__(self) -> None:
         self.recorded: list[EngineEvent] = []
+        self.correlation_ids: list[UUID] = []
+        self.causation_ids: list[UUID | None] = []
 
-    async def record(self, *, project_id, cycle, job_id, engine_id, correlation_id, event):  # type: ignore[no-untyped-def]
+    async def record(  # type: ignore[no-untyped-def]
+        self, *, project_id, cycle, job_id, engine_id, correlation_id, event, causation_id=None
+    ):
         self.recorded.append(event)
+        self.correlation_ids.append(correlation_id)
+        self.causation_ids.append(causation_id)
 
 
 def _job(**overrides: object):  # type: ignore[no-untyped-def]
@@ -93,12 +101,41 @@ async def test_successful_run_provisions_and_records_events_and_succeeds(tmp_pat
     assert worktrees.created == ["item-1"]
     assert provisioner.calls == [tmp_path / "item-1"]
     assert any(event.kind == "VerdictRendered" for event in ledger.recorded)
+    # A plain implement (not a repair) resolves nothing.
+    assert not any(event.kind == "FindingResolved" for event in ledger.recorded)
 
     enqueued = await jobs.claim(job.project_id, owner="t", lease=timedelta(seconds=5))
     assert enqueued is not None
     assert enqueued.kind == "build.verify"
     assert enqueued.work_item_id == "item-1"
     assert enqueued.requirement["implementer_engine_id"] == "claudeloop"
+
+
+async def test_completed_repair_resolves_its_finding_so_reverify_can_count_rounds(
+    tmp_path: Path,
+) -> None:
+    """A repair that lands but leaves gates failing must not livelock: the
+    completed repair session closes its finding as a repair ticket, so the
+    follow-up verify raises the next round instead of deferring forever
+    behind "repair in flight" (the greeter4 live-validation finding)."""
+    engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    ledger = FakeLedger()
+    handler, _, _ = _handler(tmp_path, engine=engine, ledger=ledger)
+
+    job = _job(
+        payload={
+            "title": "fix the gates",
+            "repair_finding_id": "f_verify_item-1_deadbeef",
+            "repair_detail": "pytest exited 1",
+        }
+    )
+    outcome = await handler.handle(job)
+
+    assert isinstance(outcome, Success)
+    resolved = [event for event in ledger.recorded if event.kind == "FindingResolved"]
+    assert len(resolved) == 1
+    assert resolved[0].payload["finding_id"] == "f_verify_item-1_deadbeef"
+    assert "awaiting re-verification" in str(resolved[0].payload["resolution"])
 
 
 async def test_rejects_wrong_kind_and_missing_work_item_id() -> None:
@@ -337,3 +374,450 @@ async def test_run_without_a_completion_verdict_fails_as_work(tmp_path: Path) ->
     outcome = await handler.handle(_job())
 
     assert outcome == Failure(FailureClass.WORK, "engine run did not report completion")
+
+
+@pytest.mark.parametrize(
+    ("exit_code", "failure_class"),
+    [
+        (137, FailureClass.ENGINE),  # SIGKILL, as a shell reports it
+        (-9, FailureClass.ENGINE),  # SIGKILL, as asyncio reports it
+        (124, FailureClass.ENGINE),  # timeout(1)
+        (1, FailureClass.WORK),  # an ordinary non-zero exit is not the engine's fault
+        (0, FailureClass.WORK),  # a clean exit without a verdict is the work's
+    ],
+)
+async def test_an_incomplete_run_is_attributed_by_the_engine_from_its_exit_code(
+    tmp_path: Path, exit_code: int, failure_class: FailureClass
+) -> None:
+    """#209: both BUILD handlers hard-coded WORK, so no ENGINE failure could
+    ever be produced in production and a dying runner never counted toward
+    opening its circuit. The adapter's `attribute` now decides."""
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP,
+        base_dir=tmp_path / "engine",
+        script=[{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}],
+        exit_code_script=[exit_code],
+    )
+    handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
+
+    outcome = await handler.handle(_job())
+
+    assert outcome == Failure(
+        failure_class, f"engine run did not report completion (exit code {exit_code})"
+    )
+
+
+# ── wind-down (exit code 75) ─────────────────────────────────────────────────
+
+
+class _RecordingWindDown:
+    """Stands in for WindDownOrchestrator: records the call and returns a
+    sentinel Success so the test can prove delegation, not re-test the
+    orchestrator's own pipeline."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    async def execute(self, *, job, worktree_path, engine_id, effort, stop):  # type: ignore[no-untyped-def]
+        self.calls.append(
+            {
+                "job_id": job.id,
+                "worktree_path": worktree_path,
+                "engine_id": engine_id,
+                "effort": effort,
+                "stop": stop,
+            }
+        )
+        return Success({"wind_down": True})
+
+
+def _wind_down_script() -> list[dict[str, object]]:
+    now = datetime(2026, 1, 1, tzinfo=UTC).isoformat()
+    return [{"kind": "SessionSeeded", "at": now, "payload": {"seed_digest": "d1"}}]
+
+
+async def test_exit_75_with_an_orchestrator_stops_and_delegates(tmp_path: Path) -> None:
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP,
+        base_dir=tmp_path / "engine",
+        script=_wind_down_script(),
+        exit_code_script=[75],
+        stop_remaining=("resume from the snapshot",),
+    )
+    wind_down = _RecordingWindDown()
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        wind_down=wind_down,  # type: ignore[arg-type]
+    )
+
+    outcome = await handler.handle(_job())
+
+    assert outcome == Success({"wind_down": True})
+    (call,) = wind_down.calls
+    assert call["engine_id"] == CLAUDELOOP.engine_id
+    assert call["worktree_path"] == tmp_path / "item-1"
+    stop = call["stop"]
+    assert stop.remaining_work == ("resume from the snapshot",)
+
+
+async def test_exit_75_without_an_orchestrator_keeps_the_old_failure_path(
+    tmp_path: Path,
+) -> None:
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP,
+        base_dir=tmp_path / "engine",
+        script=_wind_down_script(),
+        exit_code_script=[75],
+    )
+    handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
+
+    outcome = await handler.handle(_job())
+
+    # Still WORK: without an orchestrator, 75 is an ordinary non-zero exit.
+    assert outcome == Failure(
+        FailureClass.WORK, "engine run did not report completion (exit code 75)"
+    )
+
+
+async def test_normal_exit_with_an_orchestrator_never_winds_down(tmp_path: Path) -> None:
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP,
+        base_dir=tmp_path / "engine",
+        exit_code_script=[0],
+    )
+    wind_down = _RecordingWindDown()
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        wind_down=wind_down,  # type: ignore[arg-type]
+    )
+
+    outcome = await handler.handle(_job(payload={"title": "t"}))
+
+    assert isinstance(outcome, Success)
+    assert wind_down.calls == []
+
+
+async def test_seed_prompt_in_the_payload_reaches_the_engine_verbatim(tmp_path: Path) -> None:
+    engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
+    seed = "Objective: resume the relay.\nNext action: close [q-77]."
+
+    outcome = await handler.handle(_job(payload={"title": "ignored", "seed_prompt": seed}))
+
+    assert isinstance(outcome, Success)
+    # ScriptedEngine ignores the prompt, so prove it through the renderer.
+    from vibey.application.build_implement_handler import _render_prompt
+
+    assert _render_prompt("item-1", {"seed_prompt": seed}) == seed
+    assert "Implement work item" in _render_prompt("item-1", {"seed_prompt": ""})
+
+
+class _FakeSkillsContext:
+    def __init__(self, *, mode: str, status: str = "ok") -> None:
+        self.mode = mode
+        self.status = status
+        self.calls = 0
+
+    async def compile(self, *, job: object, worktree_path: Path) -> SkillsContextResult:
+        del job, worktree_path
+        self.calls += 1
+        return SkillsContextResult(
+            mode=self.mode,
+            status=self.status,
+            markdown="# Vibey Skills Context Packet\n\nRetrieved guidance.\n",
+            provenance={
+                "mode": self.mode,
+                "status": self.status,
+                "skills_release": "2.17.0",
+                "query_sha256": "query",
+            },
+        )
+
+
+class _PromptCapturingEngine(ScriptedEngine):
+    prompt = ""
+
+    async def start(self, spec):  # type: ignore[no-untyped-def]
+        self.prompt = spec.prompt
+        return await super().start(spec)
+
+
+@pytest.mark.parametrize(("mode", "contains_context"), (("shadow", False), ("inject", True)))
+async def test_skills_context_shadow_and_inject_modes(
+    tmp_path: Path, mode: str, contains_context: bool
+) -> None:
+    engine = _PromptCapturingEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    ledger = FakeLedger()
+    context = _FakeSkillsContext(mode=mode)
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=ledger,
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        skills_context=context,
+    )
+
+    outcome = await handler.handle(_job(payload={"title": "do the thing"}))
+
+    assert isinstance(outcome, Success)
+    assert ("Retrieved guidance." in engine.prompt) is contains_context
+    artifacts = [event for event in ledger.recorded if event.kind == "ArtifactProduced"]
+    assert len(artifacts) == 1
+    assert artifacts[0].payload["mode"] == mode
+    assert artifacts[0].payload["skills_release"] == "2.17.0"
+
+
+async def test_skills_context_never_mutates_a_wind_down_seed(tmp_path: Path) -> None:
+    engine = _PromptCapturingEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    context = _FakeSkillsContext(mode="inject")
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        skills_context=context,
+    )
+    seed = "Objective: resume without losing [q-77]."
+
+    outcome = await handler.handle(_job(payload={"seed_prompt": seed}))
+
+    assert isinstance(outcome, Success)
+    assert engine.prompt == seed
+    assert context.calls == 0
+
+
+def test_render_prompt_frames_a_repair_without_weakening_checks() -> None:
+    from vibey.application.build_implement_handler import _render_prompt
+
+    prompt = _render_prompt(
+        "item-1",
+        {
+            "title": "the thing",
+            "repair_detail": "gate failed: pytest: FAILED test_x",
+            "verification": {"commands": ["pytest -q"]},
+        },
+    )
+    assert "verification is FAILING" in prompt
+    assert "FAILED test_x" in prompt
+    assert "without weakening the checks" in prompt
+    assert "- pytest -q" in prompt
+
+    plain = _render_prompt("item-1", {"title": "the thing", "repair_detail": 123})
+    assert "FAILING" not in plain
+
+
+def test_every_regular_prompt_carries_the_house_rules() -> None:
+    """Each rule traces to a live failure: root-level test stubs, pip
+    installs into foreign envs, committed generated files. Seed prompts
+    (wind-down briefs) stay verbatim and are exempt."""
+    from vibey.application.build_implement_handler import _render_prompt
+
+    regular = _render_prompt("item-1", {"title": "t"})
+    repair = _render_prompt("item-1", {"title": "t", "repair_detail": "gate failed"})
+    for prompt in (regular, repair):
+        assert "House rules:" in prompt
+        assert "tests/" in prompt
+        assert "clean checkout" in prompt
+        assert "Never commit generated files" in prompt
+
+    seeded = _render_prompt("item-1", {"seed_prompt": "resume from the brief"})
+    assert "House rules:" not in seeded
+
+
+# ── the escalation ladder grant ──────────────────────────────────────────────
+
+
+async def test_an_answered_gate_extends_the_exhausted_ladder_at_top_effort(
+    tmp_path: Path,
+) -> None:
+    """escalation_exhausted was the last dead-end park: answering
+    un-parked the job, attempts were still past the ladder, and it parked
+    again forever."""
+    from tests.application.fakes import FakeHumanGateRepository
+    from vibey.application.worker import Park
+    from vibey.domain.effort import Effort as _Effort
+
+    gates = FakeHumanGateRepository()
+    captured: dict[str, object] = {}
+
+    class _SpyEngine(ScriptedEngine):
+        async def start(self, spec):  # type: ignore[no-untyped-def]
+            captured["effort"] = spec.effort
+            return await super().start(spec)
+
+    engine = _SpyEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        human_gates=gates,  # type: ignore[arg-type]
+    )
+    job = _job(attempts=8, payload={"title": "t"})
+
+    parked = await handler.handle(job)
+    assert isinstance(parked, Park)
+    assert parked.request.kind == "escalation_exhausted"
+    assert '"max_attempts"' in parked.request.prompt
+
+    gate = await gates.raise_gate(job.project_id, job.id, parked.request)
+    await gates.answer(gate.gate_id, answer={"max_attempts": 10}, answered_by="operator")
+    granted = await handler.handle(job)
+    assert isinstance(granted, Success)
+    assert captured["effort"] is _Effort.HIGH
+
+    # Past the granted bound it parks again.
+    beyond = _job(attempts=11, payload={"title": "t"})
+    gate2 = await gates.raise_gate(beyond.project_id, beyond.id, parked.request)
+    await gates.answer(gate2.gate_id, answer={"max_attempts": 10}, answered_by="operator")
+    reparked = await handler.handle(beyond)
+    assert isinstance(reparked, Park)
+
+
+async def test_exhausted_ladder_without_gates_parks_as_before(tmp_path: Path) -> None:
+    from vibey.application.worker import Park
+
+    engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
+
+    outcome = await handler.handle(_job(attempts=9))
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "escalation_exhausted"
+
+
+# ── the cycle budget brake ───────────────────────────────────────────────────
+
+
+class _FixedBudgetSource:
+    def __init__(self, budget) -> None:  # type: ignore[no-untyped-def]
+        self._budget = budget
+
+    async def current(self, project_id, cycle):  # type: ignore[no-untyped-def]
+        return self._budget
+
+
+async def test_an_exhausted_cycle_budget_parks_before_any_session(tmp_path: Path) -> None:
+    """The runaway brake the repair storms proved missing: no session
+    starts once the cycle's recorded spend crosses its cap."""
+    from vibey.application.worker import Park
+    from vibey.domain.budget import BudgetLedger
+
+    budget = BudgetLedger(turns_spent=40, dollars_spent=12.5, max_turns=None, max_dollars=10.0)
+    engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        budget_source=_FixedBudgetSource(budget),  # type: ignore[arg-type]
+    )
+
+    outcome = await handler.handle(_job(payload={"title": "t"}))
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "budget_exhausted"
+    assert "$12.50" in outcome.request.prompt
+    assert '"max_dollars"' in outcome.request.prompt
+
+
+async def test_a_budget_grant_raises_the_cap_and_the_session_runs(tmp_path: Path) -> None:
+    from tests.application.fakes import FakeHumanGateRepository
+    from vibey.application.worker import Park
+    from vibey.domain.budget import BudgetLedger
+
+    budget = BudgetLedger(turns_spent=40, dollars_spent=12.5, max_turns=None, max_dollars=10.0)
+    gates = FakeHumanGateRepository()
+    engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path / "engine")
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=FakeJobRepository(),
+        clock=FixedClock(),
+        budget_source=_FixedBudgetSource(budget),  # type: ignore[arg-type]
+        human_gates=gates,  # type: ignore[arg-type]
+    )
+    job = _job(payload={"title": "t"})
+
+    parked = await handler.handle(job)
+    assert isinstance(parked, Park)
+
+    gate = await gates.raise_gate(job.project_id, job.id, parked.request)
+    await gates.answer(gate.gate_id, answer={"max_dollars": 30}, answered_by="operator")
+    granted = await handler.handle(job)
+    assert isinstance(granted, Success)
+
+    # A grant below the spend still parks (turns grant path too).
+    await gates.answer(gate.gate_id, answer={"max_dollars": 11, "max_turns": 30}, answered_by="op")
+    still_parked = await handler.handle(job)
+    assert isinstance(still_parked, Park)
+
+
+# ── exit 78: a backend the runner declared misconfigured (ADR-0038) ──────────
+
+
+async def test_exit_78_parks_for_a_human_instead_of_failing_into_a_retry(tmp_path: Path) -> None:
+    """claudeloop exits 78 (EX_CONFIG) for `BackendMisconfigured`: an unreachable
+    local server, a model not pulled, a context too small. A WORK failure would retry
+    the same fault until the ladder ran out; a park asks the one party who can fix it."""
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL
+
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP_LOCAL,
+        base_dir=tmp_path / "engine",
+        script=_wind_down_script(),
+        exit_code_script=[78],
+    )
+    jobs = FakeJobRepository()
+    handler = BuildImplementHandler(
+        worktrees=FakeWorktrees(tmp_path),
+        provisioner=FakeProvisioner(),
+        engine=engine,
+        ledger=FakeLedger(),
+        jobs=jobs,
+        clock=FixedClock(),
+    )
+
+    outcome = await handler.handle(_job())
+
+    assert isinstance(outcome, Park)
+    assert outcome.request.kind == "engine_misconfigured"
+    assert "claudeloop-local" in outcome.request.prompt
+    assert "'item-1'" in outcome.request.prompt
+    assert "`claudeloop doctor --profile local`" in outcome.request.prompt
+    # Nothing downstream was enqueued: the item never ran.
+    assert await jobs.claim(_job().project_id, owner="t", lease=timedelta(seconds=5)) is None
+
+
+async def test_a_completed_run_is_complete_whatever_its_exit_code(tmp_path: Path) -> None:
+    """The park is for a run its backend could not serve; a run that reported
+    completion was served, and it proceeds to verify."""
+    engine = ScriptedEngine(
+        descriptor=CLAUDELOOP, base_dir=tmp_path / "engine", exit_code_script=[78]
+    )
+    handler, _, _ = _handler(tmp_path, engine=engine, ledger=FakeLedger())
+
+    outcome = await handler.handle(_job(payload={"title": "t"}))
+
+    assert isinstance(outcome, Success)

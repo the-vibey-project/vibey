@@ -1,5 +1,7 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -10,7 +12,17 @@ from vibey.domain.capacity import (
     CreditsExhausted,
     WindowExhausted,
 )
-from vibey.domain.circuit import BackoffProbe, DeadlineProbe, schedule_probe
+from vibey.domain.circuit import (
+    ENGINE_FAILURE_POLICY,
+    ENGINE_FAILURE_PROBE_BASE,
+    ENGINE_FAILURE_PROBE_CAP,
+    ENGINE_FAILURE_THRESHOLD,
+    BackoffProbe,
+    DeadlineProbe,
+    EngineFailurePolicy,
+    schedule_probe,
+)
+from vibey.domain.interfaces import EngineFailurePolicyInterface
 
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -92,3 +104,75 @@ def test_credits_never_produce_a_deadline(
 )
 def test_schedule_probe_never_raises(capacity: CapacityState, now: datetime, attempt: int) -> None:
     schedule_probe(capacity, now=now, attempt=attempt)
+
+
+# -- EngineFailurePolicy: when ENGINE-class failures open a circuit ---------------
+
+
+def test_the_default_policy_opens_after_three_as_failure_class_engine_promises() -> None:
+    assert ENGINE_FAILURE_THRESHOLD == 3
+    assert ENGINE_FAILURE_POLICY.threshold == ENGINE_FAILURE_THRESHOLD
+    assert ENGINE_FAILURE_POLICY.probe_base == ENGINE_FAILURE_PROBE_BASE == timedelta(minutes=5)
+    assert ENGINE_FAILURE_POLICY.probe_cap == ENGINE_FAILURE_PROBE_CAP == timedelta(minutes=30)
+    assert isinstance(ENGINE_FAILURE_POLICY, EngineFailurePolicyInterface)
+
+
+@pytest.mark.parametrize(("failures", "trips"), [(0, False), (1, False), (2, False), (3, True)])
+def test_the_policy_trips_at_the_threshold_and_not_before(failures: int, trips: bool) -> None:
+    assert EngineFailurePolicy().trips(failures) is trips
+
+
+def test_a_tripped_circuit_is_probed_after_the_base_delay_doubling_to_the_cap() -> None:
+    policy = EngineFailurePolicy()
+
+    delays = [
+        policy.probe_at(now=NOW, consecutive_failures=failures) - NOW for failures in range(3, 9)
+    ]
+
+    assert delays == [
+        timedelta(minutes=5),
+        timedelta(minutes=10),
+        timedelta(minutes=20),
+        timedelta(minutes=30),
+        timedelta(minutes=30),
+        timedelta(minutes=30),
+    ]
+
+
+def test_a_probe_asked_for_below_the_threshold_is_the_base_delay_not_a_shorter_one() -> None:
+    assert EngineFailurePolicy().probe_at(now=NOW, consecutive_failures=1) == NOW + timedelta(
+        minutes=5
+    )
+
+
+def test_every_number_in_the_policy_is_configurable() -> None:
+    policy = EngineFailurePolicy(
+        threshold=1, probe_base=timedelta(seconds=10), probe_cap=timedelta(seconds=15)
+    )
+
+    assert policy.trips(1)
+    assert policy.probe_at(now=NOW, consecutive_failures=1) == NOW + timedelta(seconds=10)
+    assert policy.probe_at(now=NOW, consecutive_failures=4) == NOW + timedelta(seconds=15)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"threshold": 0}, "at least 1"),
+        ({"threshold": True}, "at least 1"),
+        ({"probe_base": timedelta(0)}, "positive"),
+        ({"probe_base": timedelta(minutes=10), "probe_cap": timedelta(minutes=5)}, "below"),
+    ],
+)
+def test_a_policy_that_could_never_reopen_sensibly_is_refused(
+    kwargs: dict[str, object], match: str
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        EngineFailurePolicy(**kwargs)  # type: ignore[arg-type]
+
+
+@given(st.integers(min_value=0, max_value=10_000))
+def test_a_probe_is_always_in_the_future_and_never_past_the_cap(failures: int) -> None:
+    delay = EngineFailurePolicy().probe_at(now=NOW, consecutive_failures=failures) - NOW
+
+    assert ENGINE_FAILURE_PROBE_BASE <= delay <= ENGINE_FAILURE_PROBE_CAP

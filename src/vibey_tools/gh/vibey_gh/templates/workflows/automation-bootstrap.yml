@@ -1,0 +1,118 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+name: Automation bootstrap
+
+# Privileged workflows are loaded from the trusted base branch. A PR that repairs a
+# broken privileged gate therefore cannot prove its own repair. This explicit, admin-only
+# recovery path verifies the exact head and every independent deterministic gate before
+# performing the narrowly authorized squash merge.
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "Automation-repair PR number"
+        required: true
+        type: string
+      head_sha:
+        description: "Exact reviewed head SHA"
+        required: true
+        type: string
+      authorize:
+        description: "I authorize the automation bootstrap admin merge"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  checks: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: automation-bootstrap-${{ github.repository }}-${{ inputs.pr }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    name: Verify and bootstrap automation repair
+    if: inputs.authorize == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify exact head, administrator, scope, and independent gates
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ inputs.pr }}
+          EXPECTED_SHA: ${{ inputs.head_sha }}
+          INTEGRATION_BRANCH: __VIBEY_GH_INTEGRATION_BRANCH__
+          RELEASE_BRANCH: __VIBEY_GH_RELEASE_BRANCH__
+          # The independent gates, as a JSON list: `[rulesets.integration] required_checks`,
+          # the check-run names GitHub already enforces on the branch this merges into,
+          # less `[pr_automation] ignored_checks` and EXCLUDED_CHECKS below. Rendered, not
+          # written here, so the path waits on checks this repository actually produces.
+          REQUIRED_CHECKS: __VIBEY_GH_BOOTSTRAP_REQUIRED_CHECKS__
+          # PR automation's own merge gate (broken, or this path would not be needed) and
+          # this workflow's own: never waited on, never required.
+          EXCLUDED_CHECKS: __VIBEY_GH_BOOTSTRAP_EXCLUDED_CHECKS__
+          # Workflow, template, and automation-core paths as a POSIX ERE, anchored at
+          # `[install] self_source`: `gh pr diff` reports repository-root paths.
+          CHANGED_FILE_SCOPE: __VIBEY_GH_BOOTSTRAP_SCOPE__
+        run: |
+          set -euo pipefail
+          permission=$(gh api "repos/${REPO}/collaborators/${GITHUB_ACTOR}/permission" --jq .permission)
+          test "$permission" = admin
+
+          pr=$(gh pr view "$PR" --repo "$REPO" \
+            --json state,isDraft,headRefOid,headRefName,baseRefName,isCrossRepository)
+          test "$(jq -r .state <<<"$pr")" = OPEN
+          test "$(jq -r .isDraft <<<"$pr")" = false
+          test "$(jq -r .headRefOid <<<"$pr")" = "$EXPECTED_SHA"
+          test "$(jq -r .baseRefName <<<"$pr")" = "$INTEGRATION_BRANCH"
+
+          gh pr diff "$PR" --repo "$REPO" --name-only > changed-files.txt
+          test -s changed-files.txt
+          if grep -Ev -- "$CHANGED_FILE_SCOPE" changed-files.txt; then
+            echo "::error::changed files are not confined to automation-core paths" >&2
+            exit 1
+          fi
+
+          checks=$(gh api "repos/${REPO}/commits/${EXPECTED_SHA}/check-runs?per_page=100")
+          # Fail closed on every axis: at least one gate declared, at least one check run
+          # reported, every reported run green, and every declared gate among them.
+          if ! jq -e --argjson required "$REQUIRED_CHECKS" --argjson excluded "$EXCLUDED_CHECKS" '
+            [.check_runs[] | select(.name as $name | all($excluded[]; . != $name))] as $checks |
+            ($required | length > 0) and
+            ($checks | length > 0) and
+            ($checks | all(
+              .status == "completed" and
+              (.conclusion == "success" or .conclusion == "neutral" or .conclusion == "skipped")
+            )) and
+            (($required - [$checks[].name]) | length == 0)
+          ' <<<"$checks" >/dev/null; then
+            absent=$(jq -r --argjson required "$REQUIRED_CHECKS" \
+              '$required - [.check_runs[].name] | join(", ")' <<<"$checks")
+            echo "::error::the exact head's independent gates are not all present and green (required: ${REQUIRED_CHECKS}; absent: ${absent:-none})" >&2
+            exit 1
+          fi
+          gates=$(jq -r 'join(", ")' <<<"$REQUIRED_CHECKS")
+
+          gh pr merge "$PR" --repo "$REPO" --squash --admin \
+            --match-head-commit "$EXPECTED_SHA"
+
+          head=$(jq -r .headRefName <<<"$pr")
+          fork=$(jq -r .isCrossRepository <<<"$pr")
+          if [ "$fork" = false ] && [ -n "$head" ] && \
+             [ "$head" != "$INTEGRATION_BRANCH" ] && [ "$head" != "$RELEASE_BRANCH" ] && \
+             [ "$head" != develop ] && [ "$head" != main ]; then
+            gh api "repos/${REPO}/git/refs/heads/${head}" --method DELETE || true
+          fi
+
+          {
+            echo '### Automation bootstrap completed'
+            echo
+            echo "- PR: #${PR}"
+            echo "- Exact head: \`${EXPECTED_SHA}\`"
+            echo "- Independent gates present and green on the exact head: ${gates}"
+            echo '- Every other check run on the exact head: green'
+            echo '- Merge: explicitly authorized admin squash merge'
+            echo '- Permanent branches: never deletion targets'
+          } >> "$GITHUB_STEP_SUMMARY"

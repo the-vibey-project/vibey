@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Redaction on write, ported in spirit from the *loop family: secrets must
 never reach the ledger column, because the ledger is replicated into every
 receiving worktree's .vibey/handoff/ledger.jsonl and read by whichever
@@ -7,6 +8,9 @@ before a payload is persisted."""
 
 import re
 from collections.abc import Mapping
+from typing import Final
+
+from vibey.domain.interfaces.publication_policy_interface import CredentialRedactorInterface
 
 REDACTED = "[REDACTED]"
 
@@ -60,4 +64,27 @@ def contains_secret(payload: Mapping[str, object]) -> bool:
     return redact_payload(payload) != dict(payload)
 
 
-__all__ = ["REDACTED", "contains_secret", "redact_payload"]
+class CredentialRedactor:
+    """`redact_payload` as an object, for the publication policy's last pass.
+
+    The seam is declared where it is consumed, as the domain's
+    `CredentialRedactorInterface` (domain/publication_policy.py), so the policy
+    stays pure and the credential patterns stay here, in one place.
+    """
+
+    def redact(self, payload: Mapping[str, object]) -> Mapping[str, object]:
+        return redact_payload(payload)
+
+
+CREDENTIAL_REDACTOR: Final[CredentialRedactorInterface] = CredentialRedactor()
+"""The redactor `vibey ledger export` gives the publication policy. Annotated with
+the interface so `mypy --strict` checks the class against its declared seam."""
+
+
+__all__ = [
+    "CREDENTIAL_REDACTOR",
+    "REDACTED",
+    "CredentialRedactor",
+    "contains_secret",
+    "redact_payload",
+]

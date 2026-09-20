@@ -1,81 +1,212 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Event type translation: loop event_type vocabulary → vibey EventKind.
 
 Real loop events.jsonl files use dotted event_type strings ("chatter.assistant",
 "sdk.message", "RateLimitEvent") rather than vibey's EventKind vocabulary.
 This module maps the observed real event types to EventKind, engine by engine.
 
-Event shapes discovered by running each loop in scripted mode (CLAUDELOOP_ALLOW_TEST_AGENT=1)
-and inspecting the resulting events.jsonl files.
+CLAUDELOOP and AGYLOOP's mappings are built from real events.jsonl captured
+by real, authenticated, live runs (see docs/plans/fleet/
+e1-loop-event-map-vibey.md and the conformance investigation it closed
+out) -- an earlier version of this file claimed the same for every engine
+while actually containing fabricated event_type strings for all four
+(session.user_turn, function.call, thread.message.user, agent.savepoint,
+...: none of these are real).
+
+CODEXLOOP and CURSORLOOP previously carried that same unverified guesswork.
+It was replaced (2026-08-18) with vocabulary read directly from each
+engine's own source -- real string literals their own code already
+recognizes or emits, not fabrications. At the time, neither engine wrote
+anything into events.jsonl in this environment at all (both sinks were
+fully implemented but not wired into the real run path -- see
+docs/plans/fleet/c4-wire-events-sink-{codexloop,cursorloop}.md); both gaps
+were fixed and landed the same day (codexloop#30, cursorloop#27). Current
+verification status per engine:
+
+- CODEXLOOP: `infrastructure/events.py::JsonlRunEventSink` is now
+  constructed in `bootstrap.py` and wired into `CodexExecGateway`, which
+  emits the vocabulary below (sourced from
+  `infrastructure/agent/events.py::JsonlParser`, the exact type strings it
+  parses from the wrapped `codex exec --json` subprocess's own stdout) to
+  the sink after every turn. Verified end to end with a real subprocess
+  smoke test -- a fake `codex` binary on PATH (codexloop's own
+  `tests/shim/fake_codex.py` harness) driving the real, unmodified
+  `CodexExecGateway.send_turn` code path -- confirming events.jsonl is
+  genuinely populated with this vocabulary. Not yet observed against a
+  live, authenticated `codex` CLI session, since `codex` isn't installed
+  in this environment.
+- CURSORLOOP: the sink is now wired into the scripted/test-agent path too
+  (previously live-SDK-only), confirmed by a real scripted `cursorloop
+  run` populating events.jsonl. That confirms the forwarding mechanism,
+  not the vocabulary itself: the actual event types
+  (`tool_call`/`status`/`usage`) still come only from
+  `infrastructure/agent/translate.py::TeeStream`'s
+  `_on_tool_call`/`_on_status`/`_on_usage`, which only executes in the
+  live Cursor Agent SDK path -- those three string literals are hardcoded
+  verbatim in that source (reading them is equivalent to observing them),
+  but still unconfirmed against a real live SDK session, since no
+  CURSOR_API_KEY is available here. Cursorloop also has no wrapper-level
+  session/turn/verdict boundary event in events.jsonl at all, unlike the
+  other three engines -- only in-turn SDK message types.
+
+One turn, one TURN_COMPLETED. The budget brake (LedgerBudgetSource) counts
+every TURN_COMPLETED in a cycle as a turn against ``max_cycle_turns``, so
+each engine maps only the runner's own turn boundary to it -- one event per
+real turn -- and nothing else. Text that rides alongside a turn
+(claudeloop/agyloop ``chatter.*`` echoes, qwenloop's streamed
+``text_delta`` fragments) maps to TRANSCRIPT_RECORDED: kept in the ledger
+for replay, never counted. Before #266 ``chatter.assistant`` also mapped to
+TURN_COMPLETED, so under claudeloop's default ``log_chatter=summary`` a
+cycle hit its turn cap after half the configured turns, and every qwenloop
+token delta counted as a turn. TURN_REQUESTED follows the same rule
+(``turn.starting`` only, not ``chatter.prompt``).
 """
 
 from vibey.domain.engine import EngineId
 from vibey.domain.ledger import EventKind
 
 # Mapping from real loop event_type strings to vibey's EventKind vocabulary.
-# Built from actual events.jsonl inspection, not documentation.
 # Unmapped types are logged and skipped gracefully rather than crashing.
 
 LOOP_EVENT_MAP: dict[EngineId, dict[str, EventKind]] = {
     EngineId.CLAUDELOOP: {
-        # Chatter events (conversational turns)
-        "chatter.user": EventKind.TURN_REQUESTED,
-        "chatter.assistant": EventKind.TURN_COMPLETED,
-        # SDK events (tool use)
-        "sdk.tool_use": EventKind.TOOL_INVOKED,
-        "sdk.text_created": EventKind.TURN_COMPLETED,
-        # Capacity events
-        "capacity.rate_limit": EventKind.CAPACITY_REJECTED,
-        "capacity.credits_exhausted": EventKind.CAPACITY_REJECTED,
-        "capacity.auth_failed": EventKind.CAPACITY_REJECTED,
-        # Session lifecycle
-        "session.started": EventKind.SESSION_SEEDED,
-        "session.savepoint": EventKind.SAVEPOINT_CREATED,
-        # File operations
-        "file.edit": EventKind.FILE_EDITED,
-        "file.write": EventKind.FILE_EDITED,
-        # Structured outputs (when using output_format=json)
-        "verdict.rendered": EventKind.VERDICT_RENDERED,
-        "question.asked": EventKind.QUESTION_ASKED,
-        "decision.recorded": EventKind.DECISION_RECORDED,
-        "assumption.stated": EventKind.ASSUMPTION_STATED,
-        "finding.raised": EventKind.FINDING_RAISED,
-        "artifact.produced": EventKind.ARTIFACT_PRODUCED,
+        # Claudeloop events (captured from a real events.jsonl, same
+        # conformance run that fixed agyloop's mapping -- claudeloop shares
+        # the identical event/payload vocabulary, down to word-for-word
+        # matching docstrings on _project_capacity in both runner.py files).
+        "run.started": EventKind.SESSION_SEEDED,
+        "preflight": EventKind.SESSION_SEEDED,
+        # turn.starting and turn.completed are the runner's own turn
+        # boundaries, emitted exactly once per turn whatever log_chatter is
+        # set to. chatter.prompt and chatter.assistant echo the same turn's
+        # text -- under the default log_chatter=summary, both fire every
+        # turn -- so they are transcript, never a second turn.
+        "turn.starting": EventKind.TURN_REQUESTED,
+        "chatter.prompt": EventKind.TRANSCRIPT_RECORDED,
+        "chatter.assistant": EventKind.TRANSCRIPT_RECORDED,
+        "turn.completed": EventKind.TURN_COMPLETED,
+        # chatter.delta (streamed fragments, log_chatter=full only) stays
+        # unmapped: chatter.assistant already carries the assembled text,
+        # and mapping every delta would append one ledger row per fragment.
+        "chatter.tool": EventKind.TOOL_INVOKED,
+        "savepoint": EventKind.SAVEPOINT_CREATED,
+        # capacity.forecast is proactive headroom telemetry emitted only
+        # while capacity IS available (see runner.py::_project_capacity's
+        # own docstring) -- never an actual rejection. See the identical
+        # reasoning on EngineId.AGYLOOP's own capacity.forecast below.
+        "capacity.forecast": EventKind.BUDGET_SPENT,
+        "finished": EventKind.VERDICT_RENDERED,
     },
     EngineId.CODEXLOOP: {
-        # Codex uses similar but not identical event names
-        "thread.message.user": EventKind.TURN_REQUESTED,
-        "thread.message.assistant": EventKind.TURN_COMPLETED,
-        "tool.call": EventKind.TOOL_INVOKED,
-        "rate_limit.hit": EventKind.CAPACITY_REJECTED,
-        "credits.exhausted": EventKind.CAPACITY_REJECTED,
+        # Real `codex exec --json` vocabulary, sourced directly from
+        # codexloop's own infrastructure/agent/events.py::JsonlParser --
+        # the exact type strings it parses from the wrapped codex CLI's
+        # own event stream. See the module docstring: now wired end to end
+        # and verified with a real subprocess smoke test (fake codex
+        # binary, real CodexExecGateway code path), though not yet against
+        # a live, authenticated codex CLI session.
         "thread.started": EventKind.SESSION_SEEDED,
-        "file.modified": EventKind.FILE_EDITED,
-        # Codex-specific structured output events
-        "output.verdict": EventKind.VERDICT_RENDERED,
-        "output.question": EventKind.QUESTION_ASKED,
-        "output.decision": EventKind.DECISION_RECORDED,
+        "turn.started": EventKind.TURN_REQUESTED,
+        "turn.completed": EventKind.TURN_COMPLETED,
+        # turn.failed is still a turn boundary -- success/failure lives in
+        # the payload (its ``error`` object), mirroring how VERDICT_RENDERED
+        # enrichment elsewhere checks payload fields rather than encoding it
+        # into the kind. It is not a double count: codex ends every turn
+        # with exactly one of turn.completed or turn.failed, never both. It
+        # counts toward the turn cap on purpose -- a failed turn is still a
+        # turn attempt the vendor served, and a run failing turn after turn
+        # is exactly the runaway the cap exists to stop.
+        "turn.failed": EventKind.TURN_COMPLETED,
+        # "item" is codex's generic envelope for a discrete unit of agent
+        # work -- command execution, patch application, MCP tool calls,
+        # reasoning, AND plain agent messages all arrive as item.started/
+        # item.completed with the real distinction only in a payload
+        # ``type`` field this string-keyed map can't see. Approximated as
+        # TOOL_INVOKED, the closest existing EventKind, same coarseness
+        # claudeloop/agyloop already accept for their own tool events.
+        "item.started": EventKind.TOOL_INVOKED,
+        "item.completed": EventKind.TOOL_INVOKED,
+        # rate_limits.updated is proactive plan/window telemetry folded
+        # into TurnSignals for classification -- it is not itself a
+        # rejection (see domain/classify.py: rejection comes from
+        # error_code/error_type/http_status, never straight from this
+        # event), so it gets the same BUDGET_SPENT treatment as
+        # claudeloop/agyloop's capacity.forecast.
+        "rate_limits.updated": EventKind.BUDGET_SPENT,
+        # codexloop's own wrapper-level terminal verdict (codexloop#35),
+        # the one event in its stream that is not raw codex vocabulary. It
+        # carries success/complete/reason and, on success only, the done
+        # marker -- previously nothing published the marker at all, so a
+        # finished codexloop run was indistinguishable from an abandoned
+        # one to any reader of events.jsonl.
+        "run.verdict": EventKind.VERDICT_RENDERED,
+        # "error" and "event_msg" deliberately left unmapped: both are
+        # generic wrapper types whose real meaning depends on payload
+        # contents this string-keyed map can't see (event_msg mostly
+        # carries unrelated telemetry and only rarely means rate-limit
+        # data; "error" spans everything from a transient tool hiccup to
+        # a fatal auth failure). translate_event_type() already treats an
+        # unmapped type as "log and skip" -- the honest choice here.
     },
     EngineId.CURSORLOOP: {
-        # Cursor/Composer events
-        "agent.message.user": EventKind.TURN_REQUESTED,
-        "agent.message.assistant": EventKind.TURN_COMPLETED,
-        "composer.tool_use": EventKind.TOOL_INVOKED,
-        "agent.started": EventKind.SESSION_SEEDED,
-        "agent.savepoint": EventKind.SAVEPOINT_CREATED,
-        "file.change": EventKind.FILE_EDITED,
-        "capacity.limited": EventKind.CAPACITY_REJECTED,
+        # Real Cursor Agent SDK vocabulary, hardcoded verbatim in
+        # cursorloop's own infrastructure/agent/translate.py::TeeStream
+        # (_on_tool_call/_on_status/_on_usage). See the module docstring:
+        # the sink is wired for both scripted and live runs now, but this
+        # specific vocabulary only ever flows from TeeStream, which only
+        # runs in the live SDK path -- still unobserved live here (no
+        # CURSOR_API_KEY). Cursorloop's events.jsonl never carries a
+        # session/turn/verdict boundary marker at all, only these in-turn
+        # types.
+        "tool_call": EventKind.TOOL_INVOKED,
+        "usage": EventKind.BUDGET_SPENT,
+        # "status" deliberately left unmapped: it's a free-text SDK
+        # status message (whatever text the Cursor Agent SDK sends), not
+        # a fixed vocabulary -- no single EventKind fits every value it
+        # can carry.
     },
     EngineId.AGYLOOP: {
-        # Gemini/Agy events
-        "session.user_turn": EventKind.TURN_REQUESTED,
-        "session.model_turn": EventKind.TURN_COMPLETED,
-        "function.call": EventKind.TOOL_INVOKED,
-        "session.init": EventKind.SESSION_SEEDED,
-        "quota.exceeded": EventKind.CAPACITY_REJECTED,
-        "resource.exhausted": EventKind.CAPACITY_REJECTED,
-        "file.updated": EventKind.FILE_EDITED,
+        # Agyloop events (captured from real agyloop 0.1.0 events.jsonl)
+        "run.started": EventKind.SESSION_SEEDED,
+        "preflight": EventKind.SESSION_SEEDED,
+        # Same turn-boundary rule as claudeloop: agyloop's runner emits
+        # turn.starting/turn.completed once per turn and echoes the turn's
+        # text as chatter.prompt/chatter.assistant alongside them.
+        "turn.starting": EventKind.TURN_REQUESTED,
+        "chatter.prompt": EventKind.TRANSCRIPT_RECORDED,
+        "chatter.assistant": EventKind.TRANSCRIPT_RECORDED,
+        "turn.completed": EventKind.TURN_COMPLETED,
+        "sdk.event": EventKind.TOOL_INVOKED,
+        "savepoint": EventKind.SAVEPOINT_CREATED,
+        "savepoint.created": EventKind.SAVEPOINT_CREATED,
+        "savepoint.skipped": EventKind.SAVEPOINT_CREATED,
+        # capacity.forecast is emitted only while capacity IS available (see
+        # runner.py::_project_capacity's own docstring: "only while the
+        # vendor says we are not already blocked" -- it's proactive headroom
+        # telemetry, never a rejection). Mapping it to CAPACITY_REJECTED
+        # would make every normal, successful run look capacity-constrained.
+        # BUDGET_SPENT matches its actual payload (headroom,
+        # turns_until_exhaustion, seconds_until_reset).
+        "capacity.forecast": EventKind.BUDGET_SPENT,
+        "finished": EventKind.VERDICT_RENDERED,
+    },
+    EngineId.QWENLOOP: {
+        "run.started": EventKind.SESSION_SEEDED,
+        # text_delta is one streamed fragment of the model's answer -- many
+        # per turn -- so it is transcript. turn.completed is qwenloop's own
+        # per-turn boundary (application/runner.py appends one after each
+        # model call's stream ends), the only qwenloop event that counts.
+        "text_delta": EventKind.TRANSCRIPT_RECORDED,
+        "turn.completed": EventKind.TURN_COMPLETED,
+        "tool_result": EventKind.TOOL_INVOKED,
+        "completed": EventKind.VERDICT_RENDERED,
+        "failed": EventKind.VERDICT_RENDERED,
     },
 }
+# claudeloop-local is the claudeloop binary on a local backend profile: the same
+# runner writes the same events.jsonl, so it reads through the same map -- one
+# entry, not a copy that could drift from it (ADR-0038).
+LOOP_EVENT_MAP[EngineId.CLAUDELOOP_LOCAL] = LOOP_EVENT_MAP[EngineId.CLAUDELOOP]
 
 
 def translate_event_type(engine_id: EngineId, event_type: str) -> EventKind | None:

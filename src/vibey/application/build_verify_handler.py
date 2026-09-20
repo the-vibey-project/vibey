@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Durable ``build.verify`` handler (M6 task 6.5): the project's own gates,
 acceptance-criterion coverage, and a diff review by an engine that must
 differ from the implementer -- deliberately a separate job from a different
@@ -12,7 +13,17 @@ Verification is not "the model says it's fine." In order:
    name which criteria it checks. An item with no criteria_checked never
    silently passes.
 3. Only then, a diff review by a rotated engine at LOW effort, judged by
-   the same VerdictRendered.complete convention build.implement uses.
+   the same VerdictRendered.complete convention build.implement uses --
+   and, like build.implement, a CapacityRejected from the reviewer outranks
+   any completion claim in the same run: it is a capacity Defer, never a
+   WORK failure, so the attempt is refunded and the reviewer's circuit
+   opens rather than the same exhausted engine being handed the job again.
+
+The rotation in step 3 is the default, not an absolute: a configured pool
+with nobody else to review lets the implementer review its own diff, and
+the waiver is written to the ledger as a decision (see
+``VerifyIndependencePolicy``). See ``selection_inputs_for_job`` for why the
+rule lives there and is merely consulted here.
 
 On success, enqueues build.integrate (task 6.8), keyed to this verify job's
 own id so a repair verify job (a fresh row, not a retry of this one) always
@@ -22,21 +33,129 @@ idempotency key.
 
 import shlex
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
+from datetime import timedelta
 from uuid import uuid4
 
 from vibey.application.build_engine_run import BuildLedger, run_and_record
-from vibey.application.dto import EnqueueRequest, JobRecord, RunSpec
+from vibey.application.dto import EngineEvent, EnqueueRequest, HumanGateRequest, JobRecord, RunSpec
+from vibey.application.engine_selection import selection_inputs_for_job
 from vibey.application.interfaces import (
     GateResult,
     GateRunner,
+    LedgerReader,
     VerifyWorktrees,
 )
-from vibey.application.ports import EngineAdapter, JobRepository
-from vibey.application.worker import Failure, Outcome, Success
+from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
+from vibey.application.worker import Defer, Failure, Outcome, Park, Success
+from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.effort import Effort
-from vibey.domain.engine import IsolationLevel
+from vibey.domain.engine import EngineId, IsolationLevel
+from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.job import FailureClass, idempotency_key
+from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
+from vibey.domain.review import Severity
+
+
+def gate_output_tail(result: GateResult, *, limit: int = 1500) -> str:
+    """Both streams, tail-capped. pytest and most runners print the actual
+    failure to stdout while stderr carries only warnings -- caught live
+    when a failing gate's last_error showed nothing but a deprecation
+    warning and the real assertion failure was silently discarded."""
+    parts: list[str] = []
+    stderr = result.stderr.strip()
+    stdout = result.stdout.strip()
+    if stderr:
+        parts.append(stderr[-limit:])
+    if stdout:
+        parts.append(f"[stdout] {stdout[-limit:]}")
+    return "\n".join(parts) or "(no output)"
+
+
+def granted_limit(answer: Mapping[str, object], key: str) -> int | None:
+    """A human's limit-grant from an answered exhausted gate:
+    ``--raw '{"<key>": 6}'`` or the positional-pair form ``<key>=6``.
+    Without this contract an exhausted park was a dead end -- answering
+    un-parked the job, the bound re-tripped, and it parked again forever
+    unless the human fixed the underlying state by hand."""
+    sources: list[Mapping[str, object]] = [answer]
+    nested = answer.get("answers")
+    if isinstance(nested, Mapping):
+        sources.append(nested)
+    for source in sources:
+        raw = source.get(key)
+        if isinstance(raw, bool):
+            continue
+        if isinstance(raw, int):
+            return raw
+        if isinstance(raw, str) and raw.isdigit():
+            return int(raw)
+    return None
+
+
+def granted_max_rounds(answer: Mapping[str, object]) -> int | None:
+    """The exhausted-repair gates' grant key (see granted_limit)."""
+    return granted_limit(answer, "max_rounds")
+
+
+def granted_amount(answer: Mapping[str, object], key: str) -> float | None:
+    """Like granted_limit, for fractional grants (budget dollars)."""
+    sources: list[Mapping[str, object]] = [answer]
+    nested = answer.get("answers")
+    if isinstance(nested, Mapping):
+        sources.append(nested)
+    for source in sources:
+        raw = source.get(key)
+        if isinstance(raw, bool):
+            continue
+        if isinstance(raw, int | float):
+            return float(raw)
+        if isinstance(raw, str):
+            try:
+                return float(raw)
+            except ValueError:
+                continue
+    return None
+
+
+@dataclass(frozen=True, slots=True)
+class VerifyRepairPolicy:
+    """What turns a deterministic gate failure into a repair loop instead
+    of a burned escalation ladder. Caught live: build.verify retries
+    re-ran the same failing command with nothing in between able to
+    change the code, so seven attempts burned to a terminal failure in
+    minutes while the fix needed one engine session on the item branch."""
+
+    ledger_reader: LedgerReader
+    clock: Clock
+    max_rounds: int = 3
+    backoff: timedelta = timedelta(minutes=10)
+    gates: HumanGateRepository | None = None
+    """When present, an answered exhausted-gate for this job can raise
+    the round bound (see granted_max_rounds)."""
+
+
+@dataclass(frozen=True, slots=True)
+class VerifyIndependencePolicy:
+    """What lets a one-engine pool verify its own work, on the record.
+
+    No interface beside this class (ADR-0016): it declares no behaviour to
+    implement -- it is a frozen value the composition root hands the handler,
+    like its sibling ``VerifyRepairPolicy`` above. The behavioural seam it
+    rides on is ``EngineProvider`` in ``application/interfaces/engines.py``,
+    which is where ``pool`` is declared.
+
+    ``pool`` is the worker's dispatchable engines (``SelectingEngineProvider.pool``)
+    and ``clock`` timestamps the ledger decision. They travel together
+    because neither is any use alone: the waiver is only ever granted when
+    it can also be *written down*, so a non-independent diff review can
+    never be a silent one. Without this policy the handler keeps the strict
+    rule, which is the right default for any pool it does not know about.
+    """
+
+    pool: frozenset[EngineId]
+    clock: Clock
 
 
 class BuildVerifyHandler:
@@ -48,12 +167,25 @@ class BuildVerifyHandler:
         reviewer: EngineAdapter,
         ledger: BuildLedger,
         jobs: JobRepository,
+        clock: Clock,
+        capacity_backoff: timedelta = timedelta(minutes=5),
+        repair: VerifyRepairPolicy | None = None,
+        correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
+        independence: VerifyIndependencePolicy | None = None,
     ) -> None:
+        self._correlation = correlation
         self._worktrees = worktrees
         self._gates = gates
         self._reviewer = reviewer
         self._ledger = ledger
         self._jobs = jobs
+        # Required, not borrowed from `repair`/`independence`: both policies
+        # are optional, and a capacity rejection must defer whether or not
+        # either is wired (build.implement takes its clock the same way).
+        self._clock = clock
+        self._capacity_backoff = capacity_backoff
+        self._repair = repair
+        self._independence = independence
 
     async def handle(self, job: JobRecord) -> Outcome:
         if job.kind != "build.verify":
@@ -62,8 +194,28 @@ class BuildVerifyHandler:
             return Failure(FailureClass.VIBEY, "build.verify job is missing work_item_id")
 
         implementer = job.requirement.get("implementer_engine_id")
+        independent = True
+        waiver: VerifyIndependencePolicy | None = None
         if implementer is not None and implementer == self._reviewer.descriptor.engine_id.value:
-            return Failure(FailureClass.VIBEY, "verifier must differ from the implementer")
+            # Selection has already decided whether independence could be
+            # honored at all; ask it rather than re-deriving the rule here.
+            # Two copies of it disagreeing is the actual defect: on a
+            # one-engine pool selection produced an empty eligible set and
+            # deferred forever while this check hard-failed, so BUILD
+            # stalled with no park and nothing in the ledger.
+            policy = self._independence
+            if (
+                policy is None
+                or not selection_inputs_for_job(job, pool=policy.pool).independence_waived
+            ):
+                return Failure(FailureClass.VIBEY, "verifier must differ from the implementer")
+            independent = False
+            # The ledger entry waits for the success path below. Written
+            # here it would assert "this item was verified by its own
+            # implementer" before a single gate had run -- and the ledger is
+            # append-only, so a failing gate or a rejected diff review would
+            # leave a false statement that nothing can ever delete.
+            waiver = policy
 
         worktree = self._worktrees.path_for(job.work_item_id)
         verification = job.payload.get("verification", {})
@@ -72,9 +224,10 @@ class BuildVerifyHandler:
         for command in commands:
             result = await self._gates.run(tuple(shlex.split(str(command))), cwd=worktree)
             if result.returncode != 0:
-                return Failure(
-                    FailureClass.WORK, f"gate failed: {command}: {result.stderr.strip()}"
-                )
+                detail = f"gate failed: {command}: {gate_output_tail(result)}"
+                if self._repair is None:
+                    return Failure(FailureClass.WORK, detail)
+                return await self._repair_or_park(job, job.work_item_id, detail, self._repair)
 
         criteria_checked = (
             verification.get("criteria_checked", ()) if isinstance(verification, Mapping) else ()
@@ -97,10 +250,52 @@ class BuildVerifyHandler:
                 isolation=IsolationLevel.WORKTREE,
             )
         )
-        run_outcome = await run_and_record(self._reviewer, self._ledger, job=job, handle=handle)
+        run_outcome = await run_and_record(
+            self._reviewer, self._ledger, job=job, handle=handle, correlation=self._correlation
+        )
 
+        if run_outcome.capacity_rejected:
+            # A capacity rejection always outranks a completion claim
+            # (CLAUDE.md non-negotiable), and it is checked before anything
+            # the success path writes: the reviewer never finished, so no
+            # repair finding is resolved and no independence waiver lands
+            # in the append-only ledger. A Defer refunds the attempt (a WORK
+            # failure nacks and burns it), and `capacity=True` is what makes
+            # RotationRecordingHandler open the reviewer's circuit so the
+            # retry rotates -- as a WORK failure the whole retry ladder was
+            # spent on the very engine that had just said it was out.
+            engine_id = self._reviewer.descriptor.engine_id.value
+            return Defer(
+                retry_at=self._clock.now() + self._capacity_backoff,
+                detail=f"engine {engine_id} reported capacity rejection during the diff review",
+                capacity=True,
+            )
         if not run_outcome.complete:
-            return Failure(FailureClass.WORK, "diff review did not approve this work item")
+            # A reviewer whose backend could not serve the review never judged the
+            # diff: park for the fix rather than record a rejection (exit 78).
+            misconfigured = run_outcome.misconfiguration_gate(
+                self._reviewer.descriptor, job.work_item_id
+            )
+            if misconfigured is not None:
+                return Park(misconfigured)
+            if run_outcome.exit_code is None:
+                return Failure(FailureClass.WORK, "diff review did not approve this work item")
+            return Failure(
+                self._reviewer.attribute(run_outcome.exit_code, run_outcome.diagnostic_tail),
+                f"diff review did not approve this work item (exit code {run_outcome.exit_code})",
+            )
+
+        if self._repair is not None:
+            # A passing verify closes its own earlier repair findings, or
+            # they stay open in the ledger and poison review.triage into a
+            # needless loop-back long after the code was fixed.
+            await self._resolve_open_findings(job, job.work_item_id, self._repair)
+
+        if waiver is not None:
+            # Only here is the claim true: every gate passed and the diff
+            # review approved. Once per *successful* verify rather than once
+            # per attempt -- an attempt that fails writes nothing at all.
+            await self._record_independence_waiver(job, job.work_item_id, waiver)
 
         await self._jobs.enqueue(
             EnqueueRequest(
@@ -116,7 +311,177 @@ class BuildVerifyHandler:
                 depends_on=(job.id,),
             )
         )
-        return Success({"work_item_id": job.work_item_id, "gates_run": len(commands)})
+        return Success(
+            {
+                "work_item_id": job.work_item_id,
+                "gates_run": len(commands),
+                # Always present, both ways round: a reader of the job
+                # result never has to know the waiver exists to notice
+                # that a review was not independent.
+                "independent_review": independent,
+            }
+        )
+
+    async def _record_independence_waiver(
+        self, job: JobRecord, item_id: str, policy: VerifyIndependencePolicy
+    ) -> None:
+        """Put the weakened independence in the ledger as a decision.
+
+        A decision, not a finding: nothing is wrong with the work, a rule
+        was consciously relaxed, and decisions are what the handoff brief
+        and ``vibey ledger`` carry forward to whoever reads this project
+        next. The id is derived from the work item rather than minted, so a
+        replayed verify job restates the same decision instead of growing a
+        new one per attempt.
+
+        Called only from the success path. The entry says the item *was*
+        verified, and the ledger is append-only: writing it before the gates
+        ran would make a failing verify leave behind an uncorrectable lie.
+        """
+        engine = self._reviewer.descriptor.engine_id.value
+        await self._ledger.record(
+            project_id=job.project_id,
+            cycle=job.cycle,
+            job_id=job.id,
+            engine_id=self._reviewer.descriptor.engine_id,
+            correlation_id=self._correlation.for_project(job.project_id).value,
+            event=EngineEvent(
+                kind=EventKind.DECISION_RECORDED.value,
+                at=policy.clock.now(),
+                payload={
+                    "decision_id": f"d_verify_independence_{item_id}",
+                    "title": (
+                        f"work item {item_id!r} was verified by its own implementer ({engine})"
+                    ),
+                    "choice": f"{engine} reviewed the diff it wrote; the review was NOT independent",
+                    "rationale": (
+                        "the configured engine pool has no other engine able to "
+                        "review this item, so the phase-protocols 2.3 independence "
+                        "rule was waived rather than stalling BUILD forever"
+                    ),
+                    "alternatives": [
+                        "park for a human",
+                        "configure a second engine and re-verify",
+                    ],
+                    "independent_review": False,
+                    "work_item_id": item_id,
+                    "pool": sorted(engine_id.value for engine_id in policy.pool),
+                },
+            ),
+        )
+
+    async def _verify_findings(
+        self, job: JobRecord, item_id: str, repair: VerifyRepairPolicy
+    ) -> tuple[list[str], list[str]]:
+        """(all f_verify finding ids for this item+cycle, the open subset)."""
+        prefix = f"f_verify_{item_id}_"
+        raised: list[str] = []
+        resolved: set[str] = set()
+        for event in await repair.ledger_reader.all_for_project(job.project_id):
+            if not event.interpretable or event.cycle != job.cycle:
+                continue
+            finding_id = str(event.payload.get("finding_id", ""))
+            if not finding_id.startswith(prefix):
+                continue
+            if event.kind is EventKind.FINDING_RAISED:
+                raised.append(finding_id)
+            elif event.kind is EventKind.FINDING_RESOLVED:
+                resolved.add(finding_id)
+        return raised, [finding_id for finding_id in raised if finding_id not in resolved]
+
+    async def _repair_or_park(
+        self, job: JobRecord, item_id: str, detail: str, repair: VerifyRepairPolicy
+    ) -> Outcome:
+        raised, open_findings = await self._verify_findings(job, item_id, repair)
+        retry_at = repair.clock.now() + repair.backoff
+
+        if open_findings:
+            # A repair for this item is already in flight; raising another
+            # would double-spend an engine session on the same failure.
+            return Defer(
+                retry_at=retry_at,
+                detail=f"verify gates failing for {item_id!r}; repair in flight",
+            )
+        allowed = repair.max_rounds
+        if repair.gates is not None:
+            gate = await repair.gates.latest_for_job(job.id)
+            if gate is not None and gate.answer is not None:
+                granted = granted_max_rounds(gate.answer)
+                if granted is not None and granted > allowed:
+                    allowed = granted
+        if len(raised) >= allowed:
+            return Park(
+                HumanGateRequest(
+                    kind="verify_repair_exhausted",
+                    prompt=(
+                        f"work item {item_id!r} failed verification after "
+                        f"{len(raised)} repair rounds; latest: {detail[:500]}. "
+                        "Grant more repair rounds by answering "
+                        f"--raw '{{\"max_rounds\": {len(raised) + 3}}}', or fix the "
+                        "branch by hand and answer anything to retry."
+                    ),
+                )
+            )
+
+        finding_id = f"f_verify_{item_id}_{uuid4().hex[:8]}"
+        await self._ledger.record(
+            project_id=job.project_id,
+            cycle=job.cycle,
+            job_id=job.id,
+            engine_id=None,
+            correlation_id=self._correlation.for_project(job.project_id).value,
+            event=EngineEvent(
+                kind=EventKind.FINDING_RAISED.value,
+                at=repair.clock.now(),
+                payload={
+                    "finding_id": finding_id,
+                    "severity": Severity.HIGH.value,
+                    "text": detail,
+                },
+            ),
+        )
+        await self._jobs.enqueue(
+            EnqueueRequest(
+                project_id=job.project_id,
+                cycle=job.cycle,
+                phase=Phase.BUILD,
+                kind="build.implement",
+                idempotency_key=idempotency_key(
+                    job.project_id, job.cycle, "build.implement", f"verify-repair-{finding_id}"
+                ),
+                work_item_id=item_id,
+                payload={
+                    **job.payload,
+                    "repair_finding_id": finding_id,
+                    "repair_detail": detail[:2000],
+                },
+            )
+        )
+        return Defer(
+            retry_at=retry_at,
+            detail=f"verify gates failed for {item_id!r}; repair {finding_id} enqueued",
+        )
+
+    async def _resolve_open_findings(
+        self, job: JobRecord, item_id: str, repair: VerifyRepairPolicy
+    ) -> None:
+        _, open_findings = await self._verify_findings(job, item_id, repair)
+        for finding_id in open_findings:
+            await self._ledger.record(
+                project_id=job.project_id,
+                cycle=job.cycle,
+                job_id=job.id,
+                engine_id=None,
+                correlation_id=self._correlation.for_project(job.project_id).value,
+                event=EngineEvent(
+                    kind=EventKind.FINDING_RESOLVED.value,
+                    at=repair.clock.now(),
+                    payload={
+                        "finding_id": finding_id,
+                        "resolution": "verification now passes for this work item",
+                    },
+                ),
+            )
 
 
 def _render_review_prompt(item_id: str, criteria_checked: Iterable[object], diff: str) -> str:

@@ -1,0 +1,165 @@
+{{- if .Values.ollama.enabled }}
+{{- $fullName := include "vibey.fullname" . }}
+{{- /*
+An in-cluster Ollama server: the sovereign path (sub-doctrine 8.a, ADR-0015,
+ADR-0027) without a workstation in the loop. vibey's own sovereign providers
+and qwenloop's OpenAI-compatible backend both talk to it; worker.yaml wires
+the endpoint into the worker when this is enabled.
+*/}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-ollama
+  labels:
+    {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.ollama.storage.storageClass }}
+  storageClassName: {{ .Values.ollama.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      # Weights are gigabytes and are the slow part. They live on a volume
+      # so a restarted pod serves at once instead of downloading again.
+      storage: {{ .Values.ollama.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-ollama
+  labels:
+    {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.ollama.service.port }}
+      targetPort: http
+      name: http
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: ollama
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-ollama
+  labels:
+    {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+spec:
+  # One server per release. The weights volume is ReadWriteOnce, so a
+  # second replica could not mount it on another node, and a rolling update
+  # would deadlock with the new pod waiting on the old pod's volume --
+  # hence Recreate.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: ollama
+  template:
+    metadata:
+      labels:
+        {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: ollama
+    spec:
+      {{- with .Values.ollama.runtimeClassName }}
+      runtimeClassName: {{ . }}
+      {{- end }}
+      # Not the chart-wide podSecurityContext. The ollama image runs as root
+      # by default and writes its key pair and weights under $HOME/.ollama;
+      # these values run it as a non-root uid instead, with HOME and the
+      # model store both pointed at the volume below so that uid can write
+      # them. Kept separate so a cluster that needs the image's own root
+      # default can restore it here without loosening the worker.
+      securityContext: {{- toYaml .Values.ollama.podSecurityContext | nindent 8 }}
+      containers:
+        - name: ollama
+          image: {{ include "vibey.ollamaImage" . | quote }}
+          imagePullPolicy: {{ .Values.ollama.image.pullPolicy }}
+          ports:
+            # The image binds 0.0.0.0:11434 (its OLLAMA_HOST); the Service
+            # port is what clients use and is configured separately.
+            - containerPort: 11434
+              name: http
+          env:
+            - name: HOME
+              value: /ollama
+            - name: OLLAMA_MODELS
+              value: /ollama/models
+            {{- with .Values.ollama.contextLength }}
+            # qwenloop runs a 32K context. Ollama's own default window is a
+            # fraction of that and truncates longer prompts without saying so.
+            - name: OLLAMA_CONTEXT_LENGTH
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.ollama.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /ollama
+          # /api/version answers without touching a model, so neither probe
+          # loads gigabytes of weights or waits behind a running generation.
+          readinessProbe:
+            httpGet:
+              path: /api/version
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/version
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 6
+          securityContext: {{- toYaml .Values.ollama.securityContext | nindent 12 }}
+          {{- $resources := deepCopy .Values.ollama.resources }}
+          {{- if .Values.ollama.gpu.enabled }}
+          {{- $limits := $resources.limits | default dict }}
+          {{- $_ := set $limits .Values.ollama.gpu.resourceName .Values.ollama.gpu.count }}
+          {{- $_ := set $resources "limits" $limits }}
+          {{- end }}
+          resources: {{- toYaml $resources | nindent 12 }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-ollama
+      {{- with .Values.ollama.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ollama.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ollama.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- if .Values.ollama.pull.enabled }}
+{{- $pullTemplate := include "vibey.ollamaPullTemplate" . }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # Named after its own pod template (see vibey.ollamaPullTemplate), and
+  # truncated so the hash always survives inside the 63-character limit.
+  name: {{ printf "%s-ollama-pull" $fullName | trunc 52 | trimSuffix "-" }}-{{ $pullTemplate | sha256sum | trunc 10 }}
+  labels:
+    {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama-pull
+spec:
+  backoffLimit: {{ .Values.ollama.pull.backoffLimit }}
+  {{- with .Values.ollama.pull.activeDeadlineSeconds }}
+  activeDeadlineSeconds: {{ . }}
+  {{- end }}
+  {{- with .Values.ollama.pull.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
+  template: {{- $pullTemplate | nindent 4 }}
+{{- end }}
+{{- end }}

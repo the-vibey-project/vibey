@@ -1,14 +1,20 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from datetime import UTC, datetime
 from uuid import uuid4
 
+import pytest
 from hypothesis import given
-from hypothesis import strategies as st
 
+from tests.domain.test_noloss_reference import REFERENCE, Scenario, scenarios
 from vibey.domain.briefing import build_deterministic_brief
 from vibey.domain.handoff import BudgetSnapshot, LedgerRef, QuestionRef
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, digest_event, digest_range
 from vibey.domain.noloss import verify
 from vibey.domain.phase import Phase
+
+# Part of the no-loss property suite: protected (`[merge_train] protected_paths`,
+# .github/CODEOWNERS), and run alone at 10,000 examples by CI's no-loss lane.
+pytestmark = pytest.mark.noloss
 
 PROJECT_ID = uuid4()
 NOW = datetime(2026, 1, 1, tzinfo=UTC)
@@ -92,6 +98,40 @@ def test_superseded_decision_is_not_carried_but_current_one_is() -> None:
     assert ids == {"d2"}
 
 
+def test_a_decision_recorded_after_the_supersede_naming_it_is_carried() -> None:
+    """Found by the widened no-loss strategy (#213): the floor used to consult the
+    decision log's `superseded_by`, which ignores order, and dropped a decision the gate
+    still counted open -- so the lossless floor failed its own gate."""
+    events = [
+        _event(
+            1,
+            EventKind.DECISION_RECORDED,
+            {"decision_id": "early", "title": "t", "choice": "a", "supersedes": "late"},
+        ),
+        _event(
+            2, EventKind.DECISION_RECORDED, {"decision_id": "late", "title": "t", "choice": "b"}
+        ),
+    ]
+    brief = build_deterministic_brief(events)
+    assert {d.decision_id for d in brief.decisions} == {"early", "late"}
+    assert verify(ledger=events, brief=brief, ref=_ref_for(events), budget=ZERO_BUDGET).ok
+
+
+def test_a_reinstated_decision_is_carried_with_its_latest_wording() -> None:
+    events = [
+        _event(1, EventKind.DECISION_RECORDED, {"decision_id": "d1", "title": "v1", "choice": "a"}),
+        _event(
+            2,
+            EventKind.DECISION_RECORDED,
+            {"decision_id": "d2", "title": "", "choice": "b", "supersedes": "d1"},
+        ),
+        _event(3, EventKind.DECISION_RECORDED, {"decision_id": "d1", "title": "v2", "choice": "a"}),
+    ]
+    brief = build_deterministic_brief(events)
+    assert {(d.decision_id, d.restatement) for d in brief.decisions} == {("d1", "v2"), ("d2", "b")}
+    assert verify(ledger=events, brief=brief, ref=_ref_for(events), budget=ZERO_BUDGET).ok
+
+
 def test_remaining_work_from_latest_verdict_is_carried() -> None:
     events = [
         _event(1, EventKind.VERDICT_RENDERED, {"complete": False, "remaining_work": ["stale"]}),
@@ -153,106 +193,39 @@ def test_finding_with_unknown_ambiguity_falls_back_to_clear() -> None:
 
 
 # --- The property that matters: the floor is provably lossless --------------
+#
+# Graded by the reference model in tests/domain/test_noloss_reference.py, over its
+# adversarial ledgers: arbitrary ids, every kind interleaved, closing events and
+# supersedes, several verdicts, and a presentation order unrelated to seq.
 
 
-def _closable_events_strategy() -> st.SearchStrategy[list[LedgerEvent]]:
-    def build(
-        n_open_q: int,
-        n_answered_q: int,
-        n_open_d: int,
-        n_open_a: int,
-        n_open_f: int,
-        n_resolved_f: int,
-    ) -> list[LedgerEvent]:
-        events: list[LedgerEvent] = []
-        seq = 1
-        for i in range(n_open_q):
-            events.append(
-                _event(
-                    seq,
-                    EventKind.QUESTION_ASKED,
-                    {"question_id": f"q{i}", "text": f"q{i}?", "blocking": False},
-                )
-            )
-            seq += 1
-        for i in range(n_answered_q):
-            qid = f"aq{i}"
-            events.append(
-                _event(
-                    seq,
-                    EventKind.QUESTION_ASKED,
-                    {"question_id": qid, "text": "x", "blocking": False},
-                )
-            )
-            seq += 1
-            events.append(
-                _event(seq, EventKind.ANSWER_GIVEN, {"question_id": qid, "text": "answered"})
-            )
-            seq += 1
-        for i in range(n_open_d):
-            events.append(
-                _event(
-                    seq,
-                    EventKind.DECISION_RECORDED,
-                    {"decision_id": f"d{i}", "title": f"t{i}", "choice": "c"},
-                )
-            )
-            seq += 1
-        for i in range(n_open_a):
-            events.append(
-                _event(
-                    seq,
-                    EventKind.ASSUMPTION_STATED,
-                    {"assumption_id": f"a{i}", "text": f"assume {i}", "confidence": "high"},
-                )
-            )
-            seq += 1
-        for i in range(n_open_f):
-            events.append(
-                _event(
-                    seq,
-                    EventKind.FINDING_RAISED,
-                    {"finding_id": f"f{i}", "severity": "low", "text": "x"},
-                )
-            )
-            seq += 1
-        for i in range(n_resolved_f):
-            fid = f"rf{i}"
-            events.append(
-                _event(
-                    seq,
-                    EventKind.FINDING_RAISED,
-                    {"finding_id": fid, "severity": "low", "text": "x"},
-                )
-            )
-            seq += 1
-            events.append(
-                _event(seq, EventKind.FINDING_RESOLVED, {"finding_id": fid, "resolution": "fixed"})
-            )
-            seq += 1
-        events.append(
-            _event(
-                seq,
-                EventKind.VERDICT_RENDERED,
-                {"complete": False, "remaining_work": ["keep going"]},
-            )
-        )
-        return events
+@given(scenario=scenarios())
+def test_deterministic_brief_always_passes_the_gate(scenario: Scenario) -> None:
+    brief = build_deterministic_brief(
+        scenario.presented, spec_constraints=scenario.spec_constraints
+    )
+    result = verify(
+        ledger=scenario.presented,
+        brief=brief,
+        ref=scenario.ref,
+        budget=ZERO_BUDGET,
+        spec_constraints=scenario.spec_constraints,
+    )
+    assert result.ok, result.violations
 
-    small_int = st.integers(0, 3)
-    return st.builds(
-        build,
-        n_open_q=small_int,
-        n_answered_q=small_int,
-        n_open_d=small_int,
-        n_open_a=small_int,
-        n_open_f=small_int,
-        n_resolved_f=small_int,
+
+@given(scenario=scenarios())
+def test_deterministic_brief_carries_exactly_what_is_owed(scenario: Scenario) -> None:
+    """Lossless, and not padded: the floor carries every open item and no closed one, so a
+    receiving engine is never told to resume work the ledger already settled."""
+    expected = REFERENCE.expected(scenario)
+    brief = build_deterministic_brief(
+        scenario.presented, spec_constraints=scenario.spec_constraints
     )
 
-
-@given(events=_closable_events_strategy())
-def test_deterministic_brief_always_passes_the_gate(events: list[LedgerEvent]) -> None:
-    brief = build_deterministic_brief(events)
-    result = verify(ledger=events, brief=brief, ref=_ref_for(events), budget=ZERO_BUDGET)
-    assert result.ok, result.violations
+    assert {q.question_id for q in brief.open_questions} == expected.questions
+    assert {d.decision_id for d in brief.decisions} == expected.decisions
+    assert {a.assumption_id for a in brief.assumptions} == expected.assumptions
+    assert {f.finding_id for f in brief.open_findings} == expected.findings
+    assert {a.artifact_id for a in brief.artifacts} == expected.artifacts
+    assert set(r.text for r in brief.remaining) == set(expected.remaining)

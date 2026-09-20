@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import asyncio
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -5,7 +6,13 @@ from uuid import UUID, uuid4
 import asyncpg
 import pytest
 
-from vibey.domain.ledger import EventKind, Provenance, digest_event
+from vibey.domain.ledger import (
+    EventKind,
+    Provenance,
+    UnrecognizedEventKind,
+    digest_event,
+    digest_range,
+)
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
@@ -211,3 +218,78 @@ async def test_concurrent_appends_are_gapless_and_have_no_duplicates(
 
     seqs = sorted(e.seq for e in results)
     assert seqs == list(range(1, 101))
+
+
+# -- a kind a newer vibey wrote (vibey#275) ----------------------------------
+
+
+async def _append_as_a_newer_vibey(
+    pool: asyncpg.Pool, project_id: UUID, kind: str, payload: dict[str, object]
+) -> int:
+    """What a newer vibey's appender does, through the same SQL function -- the
+    one way a row this vibey has no `EventKind` for can reach the table."""
+    import json
+
+    async with pool.acquire() as conn:
+        seq = await conn.fetchval(
+            "SELECT append_event($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12)",
+            project_id,
+            1,
+            Phase.BUILD.value,
+            kind,
+            "claudeloop",
+            None,
+            None,
+            project_id,
+            Provenance.AGENT.value,
+            NOW,
+            json.dumps(payload),
+            digest_event(payload),
+        )
+    assert isinstance(seq, int)
+    return seq
+
+
+async def test_a_row_of_a_kind_this_vibey_does_not_know_reads_back_intact(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    """The rolling-upgrade crash: `EventKind("FutureKindX")` used to raise, so
+    one newer row made the whole project ledger unreadable to this worker."""
+    repo = PostgresLedgerRepository(migrated_pool)
+    before = await repo.append(_draft(project_id))
+    payload = {"transcript_ref": "runs/1/t.jsonl", "tokens": 1234}
+    seq = await _append_as_a_newer_vibey(migrated_pool, project_id, "FutureKindX", payload)
+    after = await repo.append(_draft(project_id, kind=EventKind.SESSION_SEEDED))
+
+    events = await repo.all_for_project(project_id)
+
+    assert [e.seq for e in events] == [before.seq, seq, after.seq]
+    stranger = events[1]
+    assert stranger.kind == UnrecognizedEventKind("FutureKindX")
+    assert stranger.payload == payload
+    assert stranger.digest == digest_event(payload)
+    assert stranger.phase is Phase.BUILD
+    assert stranger.engine_id is not None
+    assert stranger.engine_id.value == "claudeloop"
+    assert stranger.correlation_id == project_id
+    assert stranger.produced_at == NOW
+    # A window over it reads it too, and folds to the digest of the full read.
+    window = await repo.range(project_id, from_seq=1, to_seq=3)
+    assert window == events
+    assert digest_range(window) == digest_range(events)
+    assert await repo.latest_seq(project_id) == 3
+
+
+async def test_to_drafts_refuses_to_re_append_a_kind_this_vibey_does_not_know(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    """Writers stay strict: vibey reads a newer kind but never writes one."""
+    from vibey.infrastructure.db.ledger_repository import to_drafts
+
+    repo = PostgresLedgerRepository(migrated_pool)
+    await _append_as_a_newer_vibey(migrated_pool, project_id, "FutureKindX", {})
+
+    events = await repo.all_for_project(project_id)
+
+    with pytest.raises(ValueError, match="'FutureKindX', which this vibey does not know"):
+        to_drafts(events)

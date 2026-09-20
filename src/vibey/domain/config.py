@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Parsing and validation of the vibey.toml schema.
 
 Pure: this module accepts already-loaded TOML text or a dict and returns
@@ -13,7 +14,13 @@ from vibey.domain.errors import VibeyError
 
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
-KNOWN_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop")
+DEFAULT_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop")
+# Local engines, each behind its own `[features]` switch (ADR-0015, ADR-0038). The
+# feature key is the engine id with the hyphen a TOML bare key cannot carry.
+LOCAL_ENGINE_FEATURES = {"qwenloop": "qwenloop", "claudeloop-local": "claudeloop_local"}
+KNOWN_ENGINES = (*DEFAULT_ENGINES, *LOCAL_ENGINE_FEATURES)
+DEFAULT_CLAUDELOOP_LOCAL_PROFILE = "local"
+DEFAULT_LOCAL_CONTEXT_WINDOW = 32_768
 
 
 class ConfigError(VibeyError):
@@ -48,9 +55,51 @@ class BudgetConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ClaudeloopLocalConfig:
+    """`[engines.claudeloop_local]`: which claudeloop backend profile the
+    claudeloop-local engine runs, and what vibey may claim about it (ADR-0038).
+
+    - ``profile`` names a `[profiles.NAME]` table in claudeloop's own config; the
+      profile, not vibey, carries the local server's ``base_url`` and the model tiers.
+    - ``context_window`` is the descriptor's context window; keep it equal to the
+      profile's own ``context_window`` and the server's ``OLLAMA_CONTEXT_LENGTH``.
+    - ``structured_verdict`` claims the capability. Off by default: a local model
+      earns it only when ``vibey doctor --conformance`` proves it for the model the
+      profile configures, and a claim conformance cannot prove makes the engine
+      ineligible rather than trusted.
+    """
+
+    profile: str = DEFAULT_CLAUDELOOP_LOCAL_PROFILE
+    context_window: int = DEFAULT_LOCAL_CONTEXT_WINDOW
+    structured_verdict: bool = False
+
+    @classmethod
+    def from_table(cls, table: dict[str, Any], path: str) -> "ClaudeloopLocalConfig":
+        """Validate one already-parsed table; `path` names it in any error."""
+        profile = _optional(
+            table, "profile", f"{path}.profile", str, DEFAULT_CLAUDELOOP_LOCAL_PROFILE
+        )
+        if not profile.strip():
+            raise ConfigError(f"{path}.profile", "must name a claudeloop backend profile")
+        context_window = _optional(
+            table, "context_window", f"{path}.context_window", int, DEFAULT_LOCAL_CONTEXT_WINDOW
+        )
+        if isinstance(context_window, bool) or context_window <= 0:
+            raise ConfigError(f"{path}.context_window", "must be a positive integer")
+        return cls(
+            profile=profile.strip(),
+            context_window=context_window,
+            structured_verdict=_optional(
+                table, "structured_verdict", f"{path}.structured_verdict", bool, False
+            ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class EnginesConfig:
-    enabled: tuple[str, ...] = KNOWN_ENGINES
+    enabled: tuple[str, ...] = DEFAULT_ENGINES
     weights: dict[str, int] = field(default_factory=dict)
+    claudeloop_local: ClaudeloopLocalConfig = field(default_factory=ClaudeloopLocalConfig)
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +129,27 @@ class DeployConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class FeaturesConfig:
+    qwenloop: bool = False
+    claudeloop_local: bool = False
+
+    def enables(self, engine: str) -> bool:
+        """Whether the switch for a local engine id is on; paid engines need none."""
+        key = LOCAL_ENGINE_FEATURES.get(engine)
+        return key is None or bool(getattr(self, key))
+
+
+@dataclass(frozen=True, slots=True)
+class QwenloopConfig:
+    backend: str = "auto"
+    portable_profile: str = "qwen2.5-coder-14b-q5-k-m"
+    nvidia_profile: str = "qwen2.5-coder-14b-bf16"
+    idle_timeout_seconds: int = 900
+    startup_timeout_seconds: int = 180
+    context_window: int = 32_768
+
+
+@dataclass(frozen=True, slots=True)
 class VibeyConfig:
     project: ProjectConfig
     isolation: IsolationConfig = field(default_factory=IsolationConfig)
@@ -88,6 +158,8 @@ class VibeyConfig:
     phases: PhasesConfig = field(default_factory=PhasesConfig)
     provision: ProvisionConfig = field(default_factory=ProvisionConfig)
     deploy: DeployConfig = field(default_factory=DeployConfig)
+    features: FeaturesConfig = field(default_factory=FeaturesConfig)
+    qwenloop: QwenloopConfig = field(default_factory=QwenloopConfig)
 
 
 def parse_toml_string(text: str) -> dict[str, Any]:
@@ -150,7 +222,7 @@ def _parse_budget(data: dict[str, Any]) -> BudgetConfig:
 
 def _parse_engines(data: dict[str, Any]) -> EnginesConfig:
     table = _optional(data, "engines", "engines", dict, {})
-    enabled = tuple(_optional(table, "enabled", "engines.enabled", list, list(KNOWN_ENGINES)))
+    enabled = tuple(_optional(table, "enabled", "engines.enabled", list, list(DEFAULT_ENGINES)))
     for engine in enabled:
         if engine not in KNOWN_ENGINES:
             raise ConfigError("engines.enabled", f"unknown engine {engine!r}")
@@ -158,7 +230,12 @@ def _parse_engines(data: dict[str, Any]) -> EnginesConfig:
     for engine in weights:
         if engine not in KNOWN_ENGINES:
             raise ConfigError("engines.weights", f"unknown engine {engine!r}")
-    return EnginesConfig(enabled=enabled, weights=dict(weights))
+    local = _optional(table, "claudeloop_local", "engines.claudeloop_local", dict, {})
+    return EnginesConfig(
+        enabled=enabled,
+        weights=dict(weights),
+        claudeloop_local=ClaudeloopLocalConfig.from_table(local, "engines.claudeloop_local"),
+    )
 
 
 def _parse_phase(table: dict[str, Any], path: str, default_effort: str) -> PhaseConfig:
@@ -198,19 +275,92 @@ def _parse_deploy(data: dict[str, Any]) -> DeployConfig:
     )
 
 
+def _parse_features(data: dict[str, Any]) -> FeaturesConfig:
+    table = _optional(data, "features", "features", dict, {})
+    return FeaturesConfig(
+        qwenloop=_optional(table, "qwenloop", "features.qwenloop", bool, False),
+        claudeloop_local=_optional(
+            table, "claudeloop_local", "features.claudeloop_local", bool, False
+        ),
+    )
+
+
+def _parse_qwenloop(data: dict[str, Any]) -> QwenloopConfig:
+    table = _optional(data, "qwenloop", "qwenloop", dict, {})
+    backend = _optional(table, "backend", "qwenloop.backend", str, "auto")
+    if backend not in {"auto", "llama.cpp", "vllm"}:
+        raise ConfigError("qwenloop.backend", "must be one of ('auto', 'llama.cpp', 'vllm')")
+    result = QwenloopConfig(
+        backend=backend,
+        portable_profile=_optional(
+            table, "portable_profile", "qwenloop.portable_profile", str, "qwen2.5-coder-14b-q5-k-m"
+        ),
+        nvidia_profile=_optional(
+            table, "nvidia_profile", "qwenloop.nvidia_profile", str, "qwen2.5-coder-14b-bf16"
+        ),
+        idle_timeout_seconds=_optional(
+            table, "idle_timeout_seconds", "qwenloop.idle_timeout_seconds", int, 900
+        ),
+        startup_timeout_seconds=_optional(
+            table, "startup_timeout_seconds", "qwenloop.startup_timeout_seconds", int, 180
+        ),
+        context_window=_optional(table, "context_window", "qwenloop.context_window", int, 32_768),
+    )
+    if result.idle_timeout_seconds < 0:
+        raise ConfigError("qwenloop.idle_timeout_seconds", "must be non-negative")
+    if result.startup_timeout_seconds <= 0 or result.context_window <= 0:
+        raise ConfigError("qwenloop", "startup_timeout_seconds and context_window must be positive")
+    return result
+
+
 def parse_config(data: dict[str, Any]) -> VibeyConfig:
     """Validate an already-parsed TOML dict and build a VibeyConfig.
 
     Raises ConfigError on the first violation found.
     """
+    features = _parse_features(data)
+    engines = _parse_engines(data)
+    phase_engines = (
+        *(
+            _optional(
+                _optional(data, "phases", "phases", dict, {}), "design", "phases.design", dict, {}
+            ).get("engines")
+            or []
+        ),
+        *(
+            _optional(
+                _optional(data, "phases", "phases", dict, {}), "build", "phases.build", dict, {}
+            ).get("engines")
+            or []
+        ),
+        *(
+            _optional(
+                _optional(data, "phases", "phases", dict, {}), "review", "phases.review", dict, {}
+            ).get("engines")
+            or []
+        ),
+    )
+    for engine, key in LOCAL_ENGINE_FEATURES.items():
+        if not features.enables(engine) and (engine in engines.enabled or engine in phase_engines):
+            raise ConfigError(f"features.{key}", f"must be true before {engine} can be requested")
+    if "enabled" not in _optional(data, "engines", "engines", dict, {}):
+        # An omitted pool is the default pool plus every local engine switched on.
+        switched_on = tuple(e for e in LOCAL_ENGINE_FEATURES if features.enables(e))
+        engines = EnginesConfig(
+            enabled=(*engines.enabled, *switched_on),
+            weights=engines.weights,
+            claudeloop_local=engines.claudeloop_local,
+        )
     return VibeyConfig(
         project=_parse_project(data),
         isolation=_parse_isolation(data),
         budget=_parse_budget(data),
-        engines=_parse_engines(data),
+        engines=engines,
         phases=_parse_phases(data),
         provision=_parse_provision(data),
         deploy=_parse_deploy(data),
+        features=features,
+        qwenloop=_parse_qwenloop(data),
     )
 
 

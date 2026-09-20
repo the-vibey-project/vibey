@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -7,7 +8,7 @@ import pytest
 from vibey.application.dto import EngineHealthRecord
 from vibey.domain.circuit import CircuitState
 from vibey.domain.job import JobState
-from vibey.domain.ledger import EventKind, LedgerEvent, Provenance
+from vibey.domain.ledger import EventKind, LedgerEvent, Provenance, UnrecognizedEventKind
 from vibey.domain.phase import Phase
 from vibey.tui.dashboard import (
     DashboardState,
@@ -369,3 +370,60 @@ async def test_build_replay_states_and_replay_app() -> None:
         app.action_prev_step()
         await pilot.pause()
         assert "Step 1/2" in str(panel.render())
+
+
+def test_the_dashboard_shows_and_steps_past_a_kind_this_vibey_does_not_know() -> None:
+    """vibey#275: a newer vibey's event appears in the tail under its own kind
+    and moves none of the decisions the dashboard derives from known kinds."""
+    from vibey.application.dto import ProjectRecord
+    from vibey.tui.dashboard import build_replay_states
+
+    project_id = uuid4()
+    project = ProjectRecord(
+        project_id=project_id,
+        name="replay-newer-kind",
+        repo_path=Path("/tmp/repo"),
+        phase=Phase.BUILD,
+        cycle=1,
+        max_cycles=5,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        config={},
+    )
+    opted_in = LedgerEvent(
+        seq=1,
+        event_id=uuid4(),
+        project_id=project_id,
+        cycle=1,
+        phase=Phase.DESIGN,
+        kind=EventKind.VISUAL_DESIGN_OPTED_IN,
+        engine_id=None,
+        job_id=None,
+        causation_id=None,
+        correlation_id=project_id,
+        provenance=Provenance.TRUSTED,
+        produced_at=datetime(2026, 9, 18, 12, 0, tzinfo=UTC),
+        payload={},
+        digest="d1",
+    )
+    newer = LedgerEvent(
+        seq=2,
+        event_id=uuid4(),
+        project_id=project_id,
+        cycle=1,
+        phase=Phase.DESIGN,
+        kind=UnrecognizedEventKind("VisualDesignRevoked"),
+        engine_id=None,
+        job_id=None,
+        causation_id=None,
+        correlation_id=project_id,
+        provenance=Provenance.TRUSTED,
+        produced_at=datetime(2026, 9, 18, 12, 1, tzinfo=UTC),
+        payload={},
+        digest="d2",
+    )
+
+    assert "VisualDesignRevoked" in format_event_row(newer)
+    states = build_replay_states(project, [opted_in, newer])
+    assert states[-1].visual_decision == "OPTED_IN"
+    assert states[-1].ledger_tail[-1] is newer

@@ -1,3 +1,4 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import pytest
 
 from vibey.domain.effort import Effort
@@ -91,3 +92,23 @@ def test_job_requirement_excluded_carries_the_must_differ_constraint() -> None:
     requirement = JobRequirement(effort=Effort.HIGH, excluded=frozenset({EngineId.CLAUDELOOP}))
 
     assert EngineId.CLAUDELOOP in requirement.excluded
+
+
+def test_local_engines_are_preferred_before_paid_ones() -> None:
+    """Sub-doctrine 8.a, as data: the sovereign tier is tried first (ADR-0038)."""
+    from vibey.domain.engine import TIER_PREFERENCE, EngineTier
+
+    assert TIER_PREFERENCE == (EngineTier.LOCAL, EngineTier.PAID)
+
+
+def test_claudeloop_local_is_its_own_engine_id_not_a_flag() -> None:
+    from vibey.domain.engine import EngineId
+
+    assert EngineId("claudeloop-local") is EngineId.CLAUDELOOP_LOCAL
+
+
+def test_a_misconfigured_backend_exits_ex_config() -> None:
+    from vibey.domain.engine import EXIT_CODE_BACKEND_MISCONFIGURED, EXIT_CODE_WIND_DOWN
+
+    assert EXIT_CODE_BACKEND_MISCONFIGURED == 78
+    assert EXIT_CODE_BACKEND_MISCONFIGURED != EXIT_CODE_WIND_DOWN

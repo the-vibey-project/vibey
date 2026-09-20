@@ -1,0 +1,412 @@
+# Runbook: production-fitness reconciliation — is the delivered code actually production-grade?
+
+> **Status (2026-09-15):** not started — no meter registry, evaluator,
+> baseline artifact, or `Fitness` condition. `vibey doctor --cluster` (PR #74,
+> which also added dimensions to this runbook) is 05's in-cluster preflight,
+> not this loop. Waits on 17's reconcile machinery. The attribution line below
+> is corrected to the header `vibey-gh` already enforces.
+
+## Goal
+
+A second kopf control loop, sibling to
+[17](17-plan-drift-reconciliation.md), that continuously audits **what
+the jobs produced** against its declared production budgets: latency,
+memory, database behavior, cloud cost, artifact weight, dependency
+health. Where 17 asks *"did the bots build what was planned?"*, this asks
+*"is what they built fit to run in production?"* Both are real failures
+and neither implies the other — code can match its plan exactly and still
+allocate unboundedly, N+1 every request, and cost three times what it
+should.
+
+Runs in every package of this repository (vibey and the five runners,
+uv workspace members per ADR-0021) on the same reconcile machinery as 17, and vibey
+dogfoods it on itself, since vibey is built by vibey.
+
+## Why this one is not blocked on a Phase 0
+
+17 cannot start until constraints carry machine-checkable predicates,
+because they are prose today. **This loop does not have that problem**,
+and the reason is already in the codebase:
+
+```python
+class NonFunctionalRequirement:
+    """Planguage. 'fast' is not an NFR; a scale and a meter are."""
+
+    nfr_id: str
+    attribute: str
+    scale: str
+    meter: str
+    must: str
+    wish: str | None
+    fit_criterion: str
+```
+
+Planguage already forces every NFR to name a **scale** (the unit), a
+**meter** (how it is measured), a **must** (the threshold that fails),
+and a **wish** (the target). That is a machine-checkable contract by
+construction — the design decision that makes this workstream
+tractable is one that was made long before it.
+
+What is missing is smaller and concrete: a **meter registry** mapping
+meter names to executable probes. A meter reading "measured by hand
+during review" cannot be automated, and NFRs carrying one are `advisory`
+— reported, never actioned. Building the registry is work item 1, not a
+blocking research phase.
+
+## The rule that keeps this from becoming a nuisance
+
+**Act only on a breach or a regression. Never on "could be better."**
+
+An always-on optimizer always finds something. Unbounded, it generates
+infinite work, churns correct code, and trains everyone to ignore it.
+So the loop acts in exactly two situations:
+
+1. an NFR's `must` is breached, or
+2. a measurement regressed against the project's recorded baseline
+   beyond a stated tolerance.
+
+Absolute-quality opinions — "this could use a better algorithm", "this
+dependency is heavier than necessary" — are **recorded and never
+actioned**. They are input to a human deciding to raise work, not work
+the loop raises itself. A `wish` is a target to report progress against,
+never a trigger.
+
+The second rule: **the loop never applies an optimization.** A finding
+becomes a repair ticket that goes through the normal BUILD → REVIEW path
+with the full gate suite behind it. An optimizer that edits code directly
+is an unreviewed second author, and performance work is exactly the kind
+that silently trades correctness for speed.
+
+### Two cadences, and why a weekly PR does not break the rule above
+
+The reconcile timer runs continuously and acts only on breaches. A
+**second, weekly job** deep-scans the codebase for improvements and opens
+a PR with them.
+
+That is not a contradiction of "never applies an optimization", and the
+distinction is load-bearing: a PR is a *proposal*. It is reviewable,
+rejectable, and gated -- the change does not exist in any branch anyone
+runs until someone merges it. What the rule forbids is the loop editing
+code in place, silently, with no review surface. Opening a PR is the
+opposite of that.
+
+Two guardrails keep the weekly job from becoming noise, which is the
+failure mode for every "improve the codebase" bot ever built:
+
+- **One PR per week per repo, scoped.** Not one per finding. A weekly
+  flood of single-line PRs is how this gets muted.
+- **If the scan finds nothing worth proposing, it opens nothing.** A job
+  that must produce a PR will invent one.
+
+## Fitness dimensions
+
+| Dimension | Measured from | Typical finding |
+|---|---|---|
+| Latency / throughput | benchmark suite, NFR meters | a `must` breached; a regression past tolerance |
+| Memory | peak RSS, allocation profiles | unbounded cache or buffer; growth across a run |
+| Database | `pg_stat_statements`, `EXPLAIN` | N+1, sequential scan on a hot path, missing index, pool mis-sizing |
+| Cloud cost / right-sizing | metrics-server vs declared requests | pods requesting 4x observed usage; over-provisioned PVCs; idle replicas |
+| Artifact weight | image size, layer count, dep tree | image growth, a heavy transitive dependency, slow cold start |
+| Concurrency | lock waits, serialization points | a global lock on a hot path |
+| Dependency health | lockfile, upstream releases | abandoned or duplicated transitive deps (weight, not CVEs — `pip-audit` owns security) |
+| Delivery economics | ledger `cost_usd` per work item | spend per unit of delivered work drifting up |
+| Documentation comprehensiveness | docstring coverage, strict docs build, reference checker | an undocumented public symbol; a doc naming a flag or file that no longer exists; build warnings |
+| Debug logging & traceability | AST scan, log sampling, ledger-to-log round trip | an exception swallowed without a log; a line missing its correlation ids; a failed job whose causal chain cannot be reconstructed |
+| Surface parity | capability registry vs each surface's introspection | a capability reachable from the CLI but absent from the API, MCP, SDK, or emitting no webhook event |
+| Gate integrity | declared floors and scan configs vs baseline; suppression census | a coverage floor lowered; a new unjustified `# pragma: no cover`, `noqa`, `nosec`, or `type: ignore`; a path excluded from a scan |
+| Shared-library currency | workspace pins of in-tree `vibey-skills` / `vibey-bootstrap`; session manifests | a package pinned to a range that excludes the in-tree release; an AI request issued without the current skills loaded |
+| Library-extraction candidates | cross-package duplication scan | logic duplicated in 3+ packages that belongs in a shared library instead |
+| Attribution | file header scan | produced code missing the vibey provenance line |
+
+### Making the two soft-sounding dimensions checkable
+
+"Comprehensive documentation" and "good logging" are exactly the kind of
+phrases this runbook's meter discipline exists to reject. Both split
+cleanly into a meterable part and an advisory part, and only the first
+half is ever actioned.
+
+**Documentation.** Meterable: docstring coverage on the public API; a
+docs build that is clean under `--strict`; and — the highest-value of the
+three — a **stale-reference count**. Every file path, CLI flag, command,
+env var, and symbol named in the docs either still exists or it does not,
+and that is a scan, not an opinion. Documentation rots silently, and a
+guide naming a removed flag is worse than no guide: it actively misleads
+someone who trusts it. Advisory, never actioned: whether the prose is
+clear, well-organized, or pitched at the right reader.
+
+**Debug logging and traceability.** Meterable in three ways:
+
+1. **AST scan** — zero exception handlers that swallow without logging.
+   A bare `except: pass` is a hole in the record, and it is mechanically
+   detectable.
+2. **Sampling** — every line emitted inside a job carries its correlation
+   ids. vibey already has the mechanism: structlog is configured with
+   `merge_contextvars`, so the question is not whether ids *can* be
+   attached but whether every entry path actually binds them.
+3. **The round-trip, which is the real bar.** Given nothing but a failed
+   job's id, an automated probe must reconstruct the complete causal
+   chain — job to session to engine events to verdict — from logs and
+   ledger alone, without re-running anything. If it cannot, the logging is
+   insufficient no matter how many lines were emitted. Traceability is a
+   property of the record, not a count of log statements.
+
+Note this dimension is bounded on **both** sides. Too little logging
+costs an unreconstructable incident; too much costs money, I/O, and
+signal-to-noise in production. A `must` that only sets a floor will be
+satisfied by a service that logs every loop iteration at INFO, so the
+floor and the ceiling are both stated.
+
+Advisory, never actioned: whether an individual message is well-worded.
+
+### Shared-library currency, extraction, and attribution
+
+Three related `must`s, all of which decay silently rather than break.
+
+**Currency.** Every workspace member resolves `vibey-skills` and, where
+it applies, `vibey-bootstrap` from this repository (vibey declares
+`vibey-skills>=2.18,<3`, sourced from `src/vibey_tools/skills` via
+`tool.uv.sources`); and every AI request a run issues does so with the
+current skills loaded (`infrastructure/skills_context.py`, ADR-0031), not
+whatever was vendored months ago. The check is a pin-range diff against
+the in-tree version plus a per-session manifest recording which skills version was actually
+in play. A run that cannot name its skills version is itself a finding --
+"probably current" is not a measurement. Produced code that makes its own
+AI requests inherits the same rule: it references the skills library
+rather than reinventing prompts inline.
+
+**Extraction.** The loop also watches for logic that has appeared in
+three or more packages and belongs in a shared library instead. This runs
+at the repository level, not per package, and it is the one dimension whose finding
+is a *proposal* rather than a defect -- see the cadence note below.
+
+**Attribution.** Code this system produces carries a provenance line:
+
+```
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+```
+
+That is the exact header on line 1 of every Python file in `src/vibey`
+(229 characters, 233 UTF-8 bytes, compared byte for byte, which is why
+`pyproject.toml` exempts it from E501). `vibey-gh` already enforces it — the pre-push hook
+plus the `Provenance` workflow (`.github/workflows/provenance.yml`) over
+the `[fingerprint]` sources in `.vibey-gh.toml` — so the attribution scan
+reuses that check rather than defining a second string.
+
+This is a `must`, checked by a header scan, and it is a disclosure
+mechanism before it is a signature. Anyone reading, reviewing, or
+receiving a contribution should be able to tell it was machine-authored
+without reconstructing its history -- which matters most for work that
+leaves this account entirely (see the explorer runbook). The scan skips
+file types where a comment is not valid or not wanted, and that skip list
+is explicit rather than inferred.
+
+### Gate integrity: the produced code holds the same bar, and the bar does not move
+
+Everything the jobs produce must be **100% branch covered, fully linted,
+and clean under the standard security scans** — the same 7-gate bar vibey
+holds itself to, applied to the code it writes. That much CI already
+enforces at merge time.
+
+What CI cannot tell you is whether the gates still mean what they meant
+last month. The failure mode here is not a red build; it is a green one:
+
+- a coverage floor lowered from 100 to 95 "temporarily";
+- a `# pragma: no cover` on the branch nobody wanted to test;
+- a `# noqa` or `# nosec` added to silence a finding rather than fix it;
+- a `# type: ignore` hiding a real signature mismatch;
+- a directory quietly excluded from the scan's include path.
+
+Every one of those leaves CI green while the bar quietly moves, and an
+autonomous builder under deadline pressure has exactly the same incentive
+to reach for them that a tired human does. **So the loop watches the
+gates themselves, not only their outcome.** Two `must`s:
+
+1. The gates pass — coverage at 100% per layer, lint clean, security
+   scans clean.
+2. The gate *configuration* has not eroded against the recorded baseline,
+   and the suppression census has not grown without justification.
+
+Suppressions are not banned — a genuine false positive deserves one. They
+are **counted, diffed, and required to carry a reason**, the same
+exemption discipline surface parity uses. A suppression with a written
+justification is engineering; an anonymous one is the bar moving in the
+dark.
+
+This is also the dimension most worth running against vibey itself, since
+vibey is built by vibey: the four 100% floors, `import-linter`'s onion
+contracts, `bandit`, and `pip-audit` are exactly the configuration a
+future cycle could erode while every check stayed green.
+
+### Surface parity: every capability reachable from every programmatic surface
+
+A capability that exists only behind the CLI is invisible to automation,
+and automation is the entire premise of this system. The moment someone
+adds a feature and wires only the surface they happened to be working in,
+the family of surfaces has silently forked. This dimension exists to make
+that a build failure rather than a discovery six months later.
+
+The `must`: **for every capability, all five surfaces are present.**
+
+- **API, CLI, MCP, SDK** are *invocation* surfaces — can the thing be
+  done? Parity here means the operation is exposed on each.
+- **Webhooks** are the *notification* surface — can the thing be observed
+  happening? Parity here means every significant state change the
+  capability produces is published as an event. Requiring a webhook to
+  "invoke" a capability would be a category error, so the check is
+  directional and stated as such.
+
+Runbook 12 makes this tractable rather than aspirational: the API is the
+root artifact and everything else is generated or derived from its
+OpenAPI schema. `vibey-gh` already carries such a parity test for its own
+capabilities (`vibey_gh/surfaces.py`, `test/test_surfaces.py`, over
+`mcp`/`api`/`cli`/`sdk`/`webhook`); the conductor has no API or MCP server
+yet, so 12 brings the same contract to it. This dimension generalizes that
+test to all five surfaces and, crucially, makes it **continuous** — 12 builds the
+surfaces once, this keeps them complete as capabilities land afterward.
+The capability registry is the application layer, which the API already
+mirrors 1:1.
+
+**Exemptions are explicit and recorded.** Not every capability belongs on
+every surface — an interactive TTY flow has no honest MCP form. A
+capability may declare `surface_exempt` with a reason, and the reason is
+reviewed like any other. Without that escape hatch the check becomes a
+nuisance, and a nuisance check gets muted.
+
+**GUIs are explicitly out of scope for this loop.** A graphical surface
+is a product decision with design cost, audience assumptions, and a
+maintenance burden that only the people planning the work can weigh. If a
+project wants a GUI it belongs in that project's plan, where it is
+designed deliberately. It is never something a reconciler raises as a
+missing surface — the five programmatic surfaces are the baseline that
+makes a capability automatable, and that is a different question from
+whether a human should have a screen for it.
+
+**Right-sizing is the most k8s-native of these** and the natural first
+deliverable: comparing a Deployment's declared `resources.requests`
+against observed usage is something the operator can do with data the
+cluster already produces, and the finding is directly actionable — it is
+a values change, not a code change. vibey's own chart is the first
+subject; its worker requests `250m` CPU and `512Mi` today, chosen by
+judgement rather than by measurement.
+
+## Design
+
+1. **Pure evaluator in `domain/`.** Given NFRs, a baseline, and a
+   measurement set, return findings. No I/O, stdlib only, property-tested
+   — identical to 17's detector and subject to the same import-linter
+   contract.
+2. **Meter registry in `infrastructure/`.** Named probes, each returning
+   a value on the NFR's declared scale. An NFR whose meter has no
+   registered probe is `advisory` and says so out loud, rather than
+   silently passing.
+3. **Cheap timer, budgeted probes.** The kopf timer reads cached
+   measurements and evaluates. Anything expensive — a profile, a load
+   test, a full benchmark suite — is a **budgeted job the loop enqueues**,
+   never work the timer performs inline. A fitness loop that itself burns
+   CPU every 30 seconds has failed on its own terms.
+4. **Baselines are recorded, append-only.** A baseline is a ledger
+   artifact per project, so "regression" has a definition and a history.
+   Re-baselining is an explicit, recorded act — never an automatic
+   overwrite, or the loop will happily ratchet toward slower over time.
+5. **Statistical honesty.** Measurements on shared runners are noisy.
+   A regression requires N samples and a stated confidence, not one bad
+   reading. This is the difference between a useful gate and a flaky one.
+6. **Same action ladder as 17**, with the ceiling in `spec.fitnessPolicy`:
+   record → raise a repair ticket → fail the phase gate → escalate →
+   halt. Ships at `record` everywhere.
+
+### Relationship to the neighbours
+
+- **17** shares the reconcile machinery, the condition vocabulary, and
+  the action ladder. Build 17 first; this is the second loop on the same
+  rails, not a parallel invention.
+- **13** is the other side of the coin and must not be duplicated: 13
+  optimizes *vibey's own* dev loop and engine spend (suite duration, CI
+  caching, effort right-sizing, cost-aware rotation). This runbook
+  optimizes *the code vibey's jobs produce*. Where they meet — delivery
+  economics from ledger `cost_usd` — 13 owns the measurement and this
+  loop consumes it.
+- **05** supplies the operator, CRD, and condition plumbing.
+
+## Work items
+
+1. Meter registry + probes for the meters real specs already use.
+2. Pure fitness evaluator in `vibey/domain/`, property-tested.
+3. Baseline artifact: recording, reading, explicit re-baselining.
+4. Measurement collectors: benchmark, memory, `pg_stat_statements`,
+   metrics-server, image size, docstring coverage, stale-reference scan,
+   swallowed-exception AST scan, correlation-id sampling.
+5. Capability registry + per-surface introspection for the parity check
+   (generalizes `vibey-gh`'s surface parity test to every package).
+6. Gate-integrity baseline: record declared floors, scan includes, and the
+   suppression census; diff each cycle and require justifications.
+7. Currency probes for vibey-skills / vibey-bootstrap + a per-session
+   skills-version manifest.
+8. Attribution header scan with an explicit skip list.
+9. Cross-package extraction scan (repository level).
+10. The weekly improvement-PR job, one scoped PR per package, silent when
+    there is nothing worth proposing.
+11. kopf timer + `Fitness` condition + Events, at `record` only.
+12. Right-sizing recommendations for the chart's own resource requests.
+13. Ladder rungs behind `fitnessPolicy`, promoted one dimension at a time.
+14. The same loop in the five runners, at their own altitude.
+15. `docs/guides/production-fitness.md`, plus a section in each runner's
+    docs.
+
+## Verification
+
+- **The quiet test, and the most important one:** a codebase already
+  within budget produces **zero** findings across a full greeter run. A
+  loop that chirps on healthy code will be muted, and then it protects
+  nothing.
+- A seeded regression — an NFR's `must` deliberately breached — is caught
+  within one reconcile interval and produces a repair ticket that flows
+  through BUILD → REVIEW and closes.
+- A seeded N+1 on a hot path is caught from `pg_stat_statements` rather
+  than from someone reading the diff.
+- A doc referencing a deliberately removed CLI flag is caught by the
+  stale-reference scan, not by the next person to follow the guide.
+- A deliberately swallowed exception is caught by the AST scan.
+- A capability added to the application layer and wired only into the CLI
+  is reported as a parity gap against API, MCP, SDK and webhook, and a
+  `surface_exempt` reason suppresses it without editing the checker.
+- No GUI-related finding is ever produced, under any policy setting.
+- A coverage floor lowered from 100 to 95 in a config file is reported as
+  a gate-integrity breach even though every CI check still passes.
+- A newly added, unjustified `# nosec` is reported; the same suppression
+  with a written reason is not.
+- A package pinned to a range that excludes the in-tree vibey-skills release is reported, and a
+  run whose session manifest names no skills version is reported too.
+- Produced code missing the provenance line is reported; a file type on
+  the explicit skip list is not.
+- A week with nothing worth proposing produces no PR at all.
+- The round-trip probe reconstructs the full causal chain of a real failed
+  job from logs and ledger alone, and fails when correlation ids are
+  unbound on one entry path.
+- Right-sizing: a recommendation for the vibey worker's own requests,
+  derived from measured usage over a real run, replacing the current
+  judgement-based `250m` / `512Mi`.
+- Noise floor measured and recorded before any dimension is promoted past
+  `record`.
+
+## Needs from operator
+
+- 05's operator and 17's reconcile machinery landed first.
+- metrics-server (or Prometheus) in-cluster for the right-sizing arm.
+- `pg_stat_statements` enabled on the target database.
+- A decision on the production `fitnessPolicy` ceiling.
+
+## Risks
+
+- **Optimization churn.** The single biggest risk, and the breach-or-
+  regression rule is the whole mitigation. Resist every request to make
+  the loop act on absolute quality.
+- **Correctness traded for speed.** Every finding goes through the normal
+  review path with the full gate suite; the loop never edits code.
+- **Measurement noise.** Addressed by sampling and confidence, and by
+  measuring the noise floor before promoting a dimension.
+- **Ratcheting baselines.** Automatic re-baselining would let the system
+  drift steadily slower while reporting green. Re-baselining stays
+  explicit and recorded.
+- **Premature micro-optimization.** A `wish` is a reporting target, never
+  a trigger. If a dimension has no `must`, the loop cannot act on it.
