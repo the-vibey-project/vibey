@@ -13,11 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      # The full supported range. The 3.11 floor is tomllib; the coverage gate is 100%,
+      # The full supported range. The 3.12 floor is the unified workspace floor; the coverage gate is 100%,
       # and a branch that only one version can reach is a branch the others cannot test —
       # which is exactly how a version-dependent gap hides.
       matrix:
-        python: ["3.11", "3.12", "3.13"]
+        python: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

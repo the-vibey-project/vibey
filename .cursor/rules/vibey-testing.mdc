@@ -34,6 +34,11 @@ excluded and everything runs under pytest-xdist.
 and repoints `VIBEY_TEST_DATABASE_URL` at the clone. The role in the DSN must be
 able to connect to the `postgres` database and run `CREATE DATABASE`.
 
+For a local server, `vibey install --postgres` installs/starts PostgreSQL 18
+through Homebrew, apt, or dnf. The runtime floor is PostgreSQL 14; CI's
+`postgres-compatibility` matrix runs the database suite on every current major
+14 through 18.
+
 The template is migrated from the running checkout and then reused, so two
 checkouts whose `migrations/` differ -- parallel worktrees, one adding a migration
 -- must not share it: set `VIBEY_TEST_TEMPLATE_DB` to a name of the checkout's own
@@ -47,7 +52,8 @@ uv run pytest tests/domain -o addopts="" -m "not paid"    # serial, for a debugg
 
 Overriding `addopts` also drops the paid-test exclusion; keep `-m "not paid"`.
 CI uses `postgresql://vibey:vibey@localhost:5432/vibey_test` on a `postgres:17`
-service container.
+service for the main gates, and the `postgres-compatibility` matrix exercises
+PostgreSQL 14, 15, 16, 17, and 18.
 
 ## Test tree
 

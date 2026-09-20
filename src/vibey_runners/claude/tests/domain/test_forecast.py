@@ -4,7 +4,7 @@ means something different per vendor is worse than none at all."""
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from hypothesis import given, settings
@@ -28,7 +28,7 @@ def available_at(used: float) -> Available:
     return Available(utilization=used)
 
 
-NOW = datetime(2026, 8, 15, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 15, 12, 0, tzinfo=UTC)
 ON = WindDownPolicy(enabled=True)
 
 

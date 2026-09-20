@@ -615,7 +615,7 @@ Two semantic notes:
 | Primary dependency | `google-antigravity` |
 | Optional dependency | `agy` CLI on `PATH` (only for `--gateway cli`) |
 | Forbidden dependencies | `anthropic`, `claude-agent-sdk` — enforced by contract + grep test |
-| Python | 3.11+ (`zoneinfo` in stdlib, PEP 604 unions, `Self`) |
+| Python | 3.12+ (`zoneinfo` in stdlib, PEP 604 unions, `Self`) |
 
 **Run-state durability.** `conversation_id` becomes non-`None` only after the
 first successful turn (F6), which leaves a crash window. Mitigation:

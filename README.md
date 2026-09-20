@@ -65,10 +65,11 @@ in one vendor's chat session.
 
 ## Install
 
-Requires **Python 3.12+** and **PostgreSQL**. Windows is not a supported
-target. Every database-backed command reads the connection string from
-`VIBEY_PG_URL`; vibey never guesses a database and exits with
-`VIBEY_PG_URL is not set` when it is missing.
+Requires **Python 3.12+** and **PostgreSQL 14+**. Windows is not a supported
+target. Vibey supports every currently supported PostgreSQL major (14–18),
+and CI runs the database suite against each one. Every database-backed command
+reads the connection string from `VIBEY_PG_URL`; vibey never guesses a
+database and exits with `VIBEY_PG_URL is not set` when it is missing.
 
 One install is the whole family: `vibey`, all five `*loop` engines, and the
 tools (`vibey-gh`, `vibey-skills`, `vibey-bootstrap`) ship in the one `vibey`
@@ -78,13 +79,17 @@ needs separately is its own vendor CLI and credentials — which is what
 
 ```bash
 uv tool install vibey          # or: pipx install vibey / pip install vibey
+vibey install --postgres       # install/start local PostgreSQL 18 when needed
 export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey
 vibey doctor                   # pre-flight: engines installed, versions, auth
 ```
 
-`vibey doctor` alone checks only the engines. `--record` also writes the result
-to the database for a project, and `--cluster` runs the in-cluster preflight
-(DSN, workspace, secrets, database, migrations) instead.
+`vibey install --postgres` uses Homebrew, apt, or dnf to install and start the
+current stable PostgreSQL major. `vibey doctor` reports local PostgreSQL
+readiness as well as engine health; `vibey doctor --install-postgres` performs
+the same explicit installation before checking. `--record` also writes engine
+results to the database for a project, and `--cluster` runs the in-cluster
+preflight (DSN, workspace, secrets, database, migrations) instead.
 
 `qwenloop` installs with everything else; what is opt-in is the *feature*, not
 the install. Two local engines have a switch each: `VIBEY_FEATURE_QWENLOOP=1`

@@ -138,6 +138,60 @@ jobs:
       - name: No-loss property suite at 10,000 examples per property
         run: uv run pytest -m noloss --hypothesis-profile=noloss --hypothesis-show-statistics -p no:cacheprovider
 
+  postgres-compatibility:
+    name: PostgreSQL ${{ matrix.postgres }} compatibility
+    needs: [uv-lock]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # PostgreSQL 14 is the SQL/runtime floor. The upstream-supported stable
+        # majors are exercised explicitly; a future major is accepted by the
+        # runtime version check once it becomes stable and is added here.
+        postgres: [14, 15, 16, 17, 18]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: vibey
+          POSTGRES_PASSWORD: vibey
+          POSTGRES_DB: vibey_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      VIBEY_TEST_DATABASE_URL: postgresql://vibey:vibey@localhost:5432/vibey_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Assert PostgreSQL support floor
+        run: |
+          supported=$(psql "$VIBEY_TEST_DATABASE_URL" -Atqc \
+            "SELECT current_setting('server_version_num')::integer >= 140000")
+          test "$supported" = t
+
+      - name: Run PostgreSQL compatibility suite
+        run: >-
+          uv run pytest -q -p no:cacheprovider
+          tests/infrastructure/db
+          tests/infrastructure/test_cluster_preflight.py
+          tests/cli/test_main_integration.py
+
   tools:
     # A row runs on ubuntu unless it names another `os`; only a row that does gets the
     # suffix, so every ubuntu row keeps the check name it already had.
@@ -149,15 +203,13 @@ jobs:
       matrix:
         include:
           # Plain pip and setup-python, NOT `uv sync --package`. The workspace lock
-          # resolves at requires-python >=3.12 -- the intersection of every member -- so a
-          # uv environment cannot exercise the 3.10 and 3.11 floors these tenants declare.
-          # A floor nothing runs on is a claim, not a contract.
+          # resolves at requires-python >=3.12 -- the common floor of every library --
+          # and the tenant rows below exercise that common range through Python 3.14.
           #
           # ADR-0037 retired the per-tenant distributions; the tenants themselves stay
           # exactly as ADR-0021 and ADR-0022 left them, each with its own pyproject,
           # suite and Python floor. So these rows are now the ONLY thing that runs a
-          # tenant on its own floor -- `vibey` publishes at >=3.12 and would never
-          # exercise 3.10 or 3.11 again.
+          # tenant on its own floor -- every library publishes at >=3.12.
           #
           # And the other half of ADR-0037: no family package exists on any index any
           # more, so a plain-pip row that names one in its dependencies cannot install at
@@ -179,19 +231,16 @@ jobs:
           # interpreter repeats the same verdict. codexloop is the exception, because its
           # own CI ran these on every cell, macOS included, and a `sys.platform` branch
           # type-checks differently per OS. vibey-gh's full formatting/import checks stay in
-          # `tools-lint`, while its mypy gate also runs on the declared 3.11 floor below.
+          # `tools-lint`, while its mypy gate also runs on the declared 3.12 floor below.
           # vibey-skills declares no static gates, being stdlib-only with no type or import config.
-          - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.11",
-             install: 'pip install -e ".[dev]"',
-             static: 'python -m mypy vibey_gh', test: 'python -m pytest -q'}
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.12",
-             install: 'pip install -e ".[dev]"', test: 'python -m pytest -q',
+             install: 'pip install -e ".[dev]"',
+             static: 'python -m mypy vibey_gh', test: 'python -m pytest -q',
              network_test: 'python -m pytest -q -m network --no-cov'}
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.13",
              install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
-          - {package: vibey-skills, dir: src/vibey_tools/skills, python: "3.10",
-             install: 'pip install -e .',
-             test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'}
+          - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.14",
+             install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
           - package: vibey-skills
             dir: src/vibey_tools/skills
             python: "3.12"
@@ -209,6 +258,16 @@ jobs:
               echo "plugins $plugins -> $built_plugins ; skills $skills -> $built_skills"
               test "$plugins" = "$built_plugins"
               test "$skills" = "$built_skills"
+          - package: vibey-skills
+            dir: src/vibey_tools/skills
+            python: "3.13"
+            install: 'pip install -e .'
+            test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
+          - package: vibey-skills
+            dir: src/vibey_tools/skills
+            python: "3.14"
+            install: 'pip install -e .'
+            test: 'python3 tools/validate_manifests.py && python3 tools/check_links.py && PYTHONPATH=src python3 -m unittest discover -s tests'
           # vibey-bootstrap's nested CI never ran a static gate at all. Its own pre-commit
           # hook did, and these are that hook's commands, verbatim: its configured
           # (non-strict) mypy, and bandit at medium severity and up. `dev` joins the floor
@@ -216,11 +275,14 @@ jobs:
           # black and isort are not ported: root `ruff format --check .` already owns this
           # tree's formatting, and holding one file to two formatters is the trap vibey-gh
           # already lives with.
-          - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.11",
+          - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.12",
              install: 'pip install -e ../gh && pip install -e ".[test,all,dev]"',
              static: 'python -m mypy vibey_bootstrap/ && python -m bandit -r vibey_bootstrap/ -ll -q',
              test: 'pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term'}
-          - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.12",
+          - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.13",
+             install: 'pip install -e ../gh && pip install -e ".[test,all]"',
+             test: 'pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term'}
+          - {package: vibey-bootstrap, dir: src/vibey_tools/bootstrap, python: "3.14",
              install: 'pip install -e ../gh && pip install -e ".[test,all]"',
              test: 'pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term'}
           #
@@ -249,9 +311,8 @@ jobs:
           # its suite asserts the two are the same objects. An already-installed local
           # package satisfies the requirement, so pip never reaches the index.
           #
-          # Interpreters are each runner's own matrix. claudeloop publishes a 3.10 floor and
-          # is the only member of this tree that does; per ADR-0022 a floor nothing runs on
-          # is a claim, so all four of its interpreters run.
+          # Every absorbed library now shares the >=3.12 floor, so each tenant below runs
+          # on the common supported range: Python 3.12, 3.13, and 3.14.
           #
           # vibey-runners-common ships no suite, so it has no `test` and the suite step
           # skips it (tests/meta/test_tools_matrix_covers_every_package.py counts only rows
@@ -259,39 +320,31 @@ jobs:
           # two import contracts, and until this row nothing had ever run either.
           - package: vibey-runners-common
             dir: src/vibey_runners/common
-            python: "3.10"
+            python: "3.12"
             install: 'pip install -e ".[dev]"'
             static: 'mypy --strict src/vibey_runners/common && lint-imports'
-          # claudeloop's own CI ran these on 3.12; they run here on its 3.10 floor. The
+          - package: vibey-runners-common
+            dir: src/vibey_runners/common
+            python: "3.13"
+            install: 'pip install -e ".[dev]"'
+            static: 'mypy --strict src/vibey_runners/common && lint-imports'
+          - package: vibey-runners-common
+            dir: src/vibey_runners/common
+            python: "3.14"
+            install: 'pip install -e ".[dev]"'
+            static: 'mypy --strict src/vibey_runners/common && lint-imports'
+          # claudeloop's own CI ran these on 3.12; that is now the common library floor. The
           # frontmatter check was its `skills` job: Claude Code loads a malformed SKILL.md
           # silently, so nothing else would notice.
           - package: claudeloop
             dir: src/vibey_runners/claude
-            python: "3.10"
+            python: "3.12"
             install: 'pip install -e ../common && pip install -e ".[dev]"'
             static: >-
               mypy --strict src/claudeloop &&
               lint-imports &&
               bandit -q -r src/claudeloop &&
               python scripts/check_skill_frontmatter.py
-            test: >-
-              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
-              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
-              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
-              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
-          - package: claudeloop
-            dir: src/vibey_runners/claude
-            python: "3.11"
-            install: 'pip install -e ../common && pip install -e ".[dev]"'
-            test: >-
-              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
-              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
-              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
-              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
-          - package: claudeloop
-            dir: src/vibey_runners/claude
-            python: "3.12"
-            install: 'pip install -e ../common && pip install -e ".[dev]"'
             test: >-
               pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
               pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
@@ -306,12 +359,21 @@ jobs:
               pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
               pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
               pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
+          - package: claudeloop
+            dir: src/vibey_runners/claude
+            python: "3.14"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/application --cov=claudeloop.application --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/infrastructure -n auto --maxprocesses=8 --cov=claudeloop.infrastructure --cov-branch --cov-report=term-missing --cov-fail-under=100 &&
+              pytest tests/cli -n auto --maxprocesses=8 --cov=claudeloop.cli --cov-branch --cov-report=term-missing --cov-fail-under=100
           # codexloop, cursorloop and agyloop each replaced four instrumented runs with one,
           # then filtered the single data file per layer -- `coverage report --include` keeps
           # each floor's verdict independent, so this is their command, not a cheaper one.
           # codexloop's own matrix was {ubuntu, macos} x {3.12, 3.13}, with every gate in every
           # cell, so all four cells are here. The macOS pair was dropped at the absorption and
-          # restored under #263.
+          # restored under #263; Python 3.14 is now included on both operating systems.
           - package: codexloop
             dir: src/vibey_runners/codex
             python: "3.12"
@@ -337,6 +399,16 @@ jobs:
               coverage report --include='src/codexloop/cli/*' --fail-under=100
           - package: codexloop
             dir: src/vibey_runners/codex
+            python: "3.14"
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            test: >-
+              pytest -q --cov=codexloop --cov-branch --cov-report= &&
+              coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/application/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/cli/*' --fail-under=100
+          - package: codexloop
+            dir: src/vibey_runners/codex
             python: "3.12"
             os: macos-latest
             install: 'pip install -e ../common && pip install -e ".[dev]"'
@@ -350,6 +422,18 @@ jobs:
           - package: codexloop
             dir: src/vibey_runners/codex
             python: "3.13"
+            os: macos-latest
+            install: 'pip install -e ../common && pip install -e ".[dev]"'
+            static: 'mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop'
+            test: >-
+              pytest -q --cov=codexloop --cov-branch --cov-report= &&
+              coverage report --include='src/codexloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/application/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/codexloop/cli/*' --fail-under=100
+          - package: codexloop
+            dir: src/vibey_runners/codex
+            python: "3.14"
             os: macos-latest
             install: 'pip install -e ../common && pip install -e ".[dev]"'
             static: 'mypy --strict src/codexloop && lint-imports && bandit -q -r src/codexloop'
@@ -373,6 +457,16 @@ jobs:
           - package: cursorloop
             dir: src/vibey_runners/cursor
             python: "3.13"
+            install: 'pip install -e ".[dev]"'
+            test: >-
+              pytest tests --cov=cursorloop --cov-branch --cov-report= &&
+              coverage report --include='src/cursorloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/application/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/cursorloop/cli/*' --fail-under=100
+          - package: cursorloop
+            dir: src/vibey_runners/cursor
+            python: "3.14"
             install: 'pip install -e ".[dev]"'
             test: >-
               pytest tests --cov=cursorloop --cov-branch --cov-report= &&
@@ -406,6 +500,17 @@ jobs:
           - package: agyloop
             dir: src/vibey_runners/agy
             python: "3.13"
+            install: 'pip install -e ".[dev]"'
+            test: >-
+              pytest tests --cov=agyloop --cov-branch --cov-report= &&
+              coverage report --include='src/agyloop/domain/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/application/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/infrastructure/*' --fail-under=100 &&
+              coverage report --include='src/agyloop/cli/*' --fail-under=100 &&
+              pytest -m system
+          - package: agyloop
+            dir: src/vibey_runners/agy
+            python: "3.14"
             install: 'pip install -e ".[dev]"'
             test: >-
               pytest tests --cov=agyloop --cov-branch --cov-report= &&

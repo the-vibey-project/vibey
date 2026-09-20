@@ -17,17 +17,16 @@ import logging
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from vibey_bootstrap.counters import bump_counter
 from vibey_bootstrap.exceptions import is_unrecoverable
 
-T = TypeVar("T")
 _logger = logging.getLogger(__name__)
 
 
 @dataclass
-class SoftFailResult(Generic[T]):
+class SoftFailResult[T]:
     value: T
     degraded: bool
     reason: str | None = None
@@ -52,7 +51,7 @@ def _fire_alert(severity: str, operation: str, exc: BaseException) -> None:
         pass
 
 
-def soft_fail_with(
+def soft_fail_with[T](
     fn: Callable[..., T],
     *args: Any,
     fallback: T,

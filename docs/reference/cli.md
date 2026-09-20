@@ -2,14 +2,14 @@
 
 Every `vibey` command and subcommand, written by hand against
 [`src/vibey/cli/main.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/cli/main.py)
-and checked against it as of 2026-09-15. Nothing generates this page. If it
+and checked against it as of 2026-09-20. Nothing generates this page. If it
 and the code disagree, the code wins. `vibey <command> --help` prints the
 code's own help text, which is shorter than this page and in places less
 complete (for example, `vibey work --help` does not list `qwenloop`).
 
 Top-level commands, in `vibey --help` order: `new`, `answer`, `work`,
-`watch`, `recover`, `status`, `engines`, `cost`, `doctor`, `operator`,
-`worker`, and the command groups `design`, `visual`, `deploy`, `ledger`.
+`watch`, `recover`, `status`, `engines`, `cost`, `install`, `doctor`,
+`operator`, `worker`, and the command groups `design`, `visual`, `deploy`, `ledger`.
 Bare `vibey`, and each bare command group, prints help.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
@@ -43,8 +43,8 @@ with payloads.
 | Code | Meaning |
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
-| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`. |
+| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 
@@ -68,6 +68,19 @@ Known gaps in unknown-project handling:
 - `status <unknown-id>` raises `ValueError: unknown project ...` as a traceback.
 - `engines <unknown-id>` prints `no engines recorded for project` and exits 0.
 - `ledger show <unknown-id>` prints nothing and exits 0.
+
+## `vibey install`
+
+Install local dependencies that vibey can manage explicitly.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--postgres` | off | Install and start the current stable PostgreSQL major using Homebrew, apt, or dnf. |
+
+The installer targets PostgreSQL 18 today. The application floor is
+PostgreSQL 14, and the same SQL/runtime contract is tested against 14, 15, 16,
+17, and 18 in CI. Installation does not invent or persist a database DSN:
+set `VIBEY_PG_URL` to a database you own after the server is ready.
 
 ### Next-step hints
 
@@ -281,8 +294,8 @@ three reserve the command surface. Deployments themselves run through
 
 ## `vibey doctor`
 
-Check engine installs and auth; optionally run the conformance suite, or run
-the in-cluster preflight instead.
+Check local PostgreSQL readiness, engine installs and auth; optionally install
+PostgreSQL, run the conformance suite, or run the in-cluster preflight instead.
 
 | Option | Default | What it does |
 |---|---|---|
@@ -293,6 +306,7 @@ the in-cluster preflight instead.
 | `--cluster` | off | Run the in-cluster preflight instead of the engine checks — see [Kubernetes guide](../guides/kubernetes.md). |
 | `--engines LIST` | unset | With `--cluster`: the worker's own `--engines` allow-list (chart value `worker.engines`). `engine-auth` requires exactly these. Parsed as the worker parses it; empty means unset. |
 | `--provider NAME` | `scripted` | With `--cluster`: the worker's own `--provider` (`scripted`, `claudeloop`, or `qwenloop`; chart value `worker.provider`). `claudeloop` adds claudeloop to what `engine-auth` requires. |
+| `--install-postgres` | off | Install and start local PostgreSQL when it is missing or stopped. This is explicit; the default doctor never changes the host. It cannot be combined with `--cluster`. |
 
 With `--engine` unset, doctor checks the four paid engines (`claudeloop`,
 `codexloop`, `cursorloop`, `agyloop`) whether or not they are installed —
@@ -305,6 +319,12 @@ Each engine line shows install state, version, and auth. Auth is the exit
 status of `<binary> doctor`; if that command cannot run, doctor falls back
 to the engine's API-key variable (see
 [Environment variables](#environment-variables)).
+
+The final `postgresql` line shows `READY`, `NOT READY`, `UNSUPPORTED`, or
+`NOT INSTALLED`. `READY` means a local PostgreSQL server at port 5432 accepts
+connections and is at least version 14. `--install-postgres` exits 1 if the
+package manager or service start fails, or if verification still does not reach
+that state.
 
 With `--conformance`, the command exits 1 if any engine fails a check. The
 worker does not select an engine for engine-driven jobs until a
@@ -382,7 +402,7 @@ Variables read by code under `src/vibey`:
 
 | Variable | Read by | Effect |
 |---|---|---|
-| `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor --record`; `doctor --cluster` | PostgreSQL DSN. There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). |
+| `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor --record`; `doctor --cluster` | PostgreSQL 14+ DSN. There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). `vibey install --postgres` installs the server but does not set this variable for the parent shell. |
 | `VIBEY_EVIDENCE_DIR` | `work --provider qwenloop`, `worker --provider qwenloop` | Directory of reading material for the qwenloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
 | `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop; any other set value disables it. When set it overrides config. When unset, `doctor` falls back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config. |
 | `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |

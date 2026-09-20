@@ -16,7 +16,7 @@ import subprocess  # nosec B404 - fixed argv, never shell=True
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 from uuid import UUID, uuid4
 
 import typer
@@ -75,6 +75,7 @@ from vibey.infrastructure.engines.qwenloop_design import QwenloopDesignProvider
 from vibey.infrastructure.engines.scripted_design import ScriptedDesignProvider
 from vibey.infrastructure.engines.scripted_visual import ScriptedVisualProvider
 from vibey.infrastructure.logging import configure_logging
+from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, PostgresLocalService, PostgresStatus
 
 app = typer.Typer(name="vibey", no_args_is_help=True)
 design_app = typer.Typer(name="design", invoke_without_command=True)
@@ -263,6 +264,20 @@ def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
     own reading of the working directory -- nothing else reads config from there.
     """
     return LocalEngineSettings.from_toml((root or Path.cwd()) / "vibey.toml", environ=os.environ)
+
+
+def _postgres_status_line(status: PostgresStatus) -> str:
+    """Render the local database check in the same compact style as engine doctor."""
+    if not status.installed:
+        state = "NOT INSTALLED"
+    elif not status.supported:
+        state = "UNSUPPORTED"
+    elif not status.running:
+        state = "NOT READY"
+    else:
+        state = "READY"
+    version = f"v{status.version}" if status.version is not None else "v?"
+    return f"postgresql      {state:<14} {version:<8} {status.detail}"
 
 
 def _parse_question_answers(items: tuple[str, ...]) -> dict[str, object]:
@@ -1120,6 +1135,36 @@ def deploy_rollback(
     asyncio.run(run_rollback())
 
 
+@app.command("install")
+def install(
+    postgres: Annotated[
+        bool,
+        typer.Option(
+            "--postgres",
+            help=(
+                f"Install and start local PostgreSQL {POSTGRES_MIN_MAJOR}+ "
+                "using the host package manager"
+            ),
+        ),
+    ] = False,
+) -> None:
+    """Install local dependencies that vibey can manage explicitly."""
+    if not postgres:
+        typer.echo("choose an install target with `vibey install --postgres`")
+        raise typer.Exit(EXIT_USAGE)
+
+    service = PostgresLocalService()
+    result = service.install()
+    typer.echo(_postgres_status_line(result.status))
+    typer.echo(result.detail)
+    if not result.ok:
+        raise typer.Exit(1)
+    typer.echo(
+        "Set VIBEY_PG_URL to a database you own, for example "
+        "postgresql://$USER@localhost:5432/vibey"
+    )
+
+
 @app.command("doctor")
 def doctor(
     conformance: Annotated[
@@ -1162,17 +1207,37 @@ def doctor(
             help="With --cluster: the worker's --provider (chart worker.provider)",
         ),
     ] = None,
+    install_postgres: Annotated[
+        bool,
+        typer.Option(
+            "--install-postgres",
+            help="Install and start local PostgreSQL when it is missing or stopped",
+        ),
+    ] = False,
 ) -> None:
-    """Check engine health, auth status, and optionally run conformance."""
+    """Check local PostgreSQL, engine health, auth status, and conformance."""
     from vibey.application.conformance import run_conformance
     from vibey.infrastructure.engines.classify import CREDITS_FIXTURES
     from vibey.infrastructure.engines.descriptors import DEFAULT_DESCRIPTORS
     from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment
 
+    if cluster and install_postgres:
+        typer.echo("--install-postgres applies only to the local doctor")
+        raise typer.Exit(EXIT_USAGE)
+
+    if cluster:
+        postgres_status = None
+    else:
+        postgres_service = PostgresLocalService()
+        postgres_status = (
+            postgres_service.install().status if install_postgres else postgres_service.status()
+        )
+
     async def run_doctor() -> None:
         import tempfile
         from uuid import uuid4
 
+        local_postgres_status = cast(PostgresStatus, postgres_status)
         # The worker runs every local engine that is switched on; without this the
         # health check was the one place that could not see them, so the engine the
         # operator is actually depending on stayed invisible unless they knew to ask
@@ -1256,6 +1321,10 @@ def doctor(
                     )
                 typer.echo(f"  recorded preflight for {desc.engine_id.value}")
 
+        typer.echo(_postgres_status_line(local_postgres_status))
+        if install_postgres and not local_postgres_status.ready:
+            typer.echo(f"  detail: {local_postgres_status.detail}")
+            raise typer.Exit(1)
         if conformance and not all_ok:
             raise typer.Exit(1)
 

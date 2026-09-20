@@ -1,5 +1,11 @@
 # claudeloop — Phase C: autonomy guardrails
 
+> **Python-floor note (2026-09-20):** This plan preserves the original
+> claudeloop repository's historical CI observations. In the absorbed workspace,
+> claudeloop now requires Python 3.12+ like every other library, and the active
+> root matrix runs 3.12, 3.13, and 3.14. The py3.10-only failure described below
+> is therefore no longer a supported-interpreter target.
+
 You are working unattended in a disposable git worktree of `claudeloop`
 (`~/git/claudeloop`), on branch `chore/c-guardrails`. Pass `--cwd`
 explicitly wherever it exists (currently only `run` and `sessions`

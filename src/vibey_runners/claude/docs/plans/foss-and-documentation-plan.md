@@ -55,7 +55,7 @@ Four workflows. Note that **`publish-to-pypi.yml` is a load-bearing filename** �
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | push/PR to `main`/`develop` | Matrix 3.10–3.13: ruff, `mypy --strict`, pytest+coverage, import-linter, bandit, pip-audit |
+| `ci.yml` | push/PR to `main`/`develop` | Matrix 3.12–3.14: ruff, `mypy --strict`, pytest+coverage, import-linter, bandit, pip-audit |
 | `release-please.yml` | push to `main` | Maintain the release PR; on merge, tag and create the GitHub Release |
 | `publish-to-pypi.yml` | `release: published` | Build, then publish to PyPI via Trusted Publishing |
 | `docs.yml` | push to `main` | Build MkDocs and deploy to GitHub Pages |
@@ -191,6 +191,6 @@ Contents: one-paragraph project identity; the layer map with the import rule in 
 - **Typing ships** — confirm `py.typed` is present inside the built wheel (`unzip -l dist/*.whl`); without it the `mypy --strict` investment is invisible downstream.
 - **Docs build** — `mkdocs build --strict` must pass with zero warnings, which catches every broken internal link.
 - **Skills load** — run `claude --debug` in the repo and confirm all eight skills are discovered with non-empty descriptions and no parse errors; confirm the CI frontmatter check fails when a `description` is deliberately removed.
-- **CI** — open a throwaway PR into `develop` and confirm the matrix runs green across 3.10–3.13.
+- **CI** — open a throwaway PR into `develop` and confirm the matrix runs green across 3.12–3.14.
 - **Release dry run** — publish `0.1.0` to **TestPyPI** first via `workflow_dispatch`, install it from TestPyPI in a clean venv, and only then run the real PyPI publish. This validates the OIDC wiring before it matters.
 - **Release loop** — merge a `feat:` commit to `main`, confirm release-please opens a release PR with the right bump and changelog entry, merge it, and confirm the GitHub Release fires `publish-to-pypi.yml` and the artifact lands on PyPI with attestations.

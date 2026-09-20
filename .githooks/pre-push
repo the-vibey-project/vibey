@@ -63,8 +63,8 @@ vibey_gh() {
   # current directory -- the top of the working tree -- first on sys.path, so a checked-out
   # branch carrying a `vibey_gh/` package of its own would be imported and executed by
   # this hook in place of the real one. The self-hosted branch still runs its source: it
-  # names that source on PYTHONPATH, which PYTHONSAFEPATH leaves alone. Python 3.11+
-  # honours the variable and older interpreters ignore it; vibey-gh requires 3.11.
+  # names that source on PYTHONPATH, which PYTHONSAFEPATH leaves alone. Python 3.12+
+  # honours the variable and older interpreters ignore it; vibey-gh requires 3.12.
   if [ -n "$_VIBEY_GH_SELF" ] && PYTHONSAFEPATH=1 \
       PYTHONPATH="$_VIBEY_GH_SELF${PYTHONPATH:+:$PYTHONPATH}" \
       python3 -c "import vibey_gh.cli" >/dev/null 2>&1; then

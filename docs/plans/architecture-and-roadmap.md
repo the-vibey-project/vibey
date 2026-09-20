@@ -235,9 +235,10 @@ processes**, plus an optional Kubernetes operator.
   jobs, bounded to `min(parallelism, engines × 2, cpu_count)`. `vibey work
   <project-id>` processes one ready DESIGN job in the foreground and exits.
 - Every process reads its DSN from `VIBEY_PG_URL` and refuses to start without it
-  (`DatabaseNotConfigured`); there is no default database. Postgres is brought by
-  the operator: a local instance, a container, or the Helm chart's in-cluster
-  `postgres:17-alpine`.
+  (`DatabaseNotConfigured`); there is no default database. `vibey install --postgres`
+  can install and start a local PostgreSQL 14+ server through Homebrew, apt, or dnf.
+  Postgres may also be brought by the operator as a container or through the Helm
+  chart's in-cluster `postgres:17-alpine`.
 - Workers are stateless. Killing one loses nothing; its lease expires and the job
   is re-leased. In a container, `tini` is PID 1 and a SIGTERM latch armed before
   the first import turns a stop into a drain
@@ -466,12 +467,14 @@ indices for the ledger, and advisory locks for phase transitions. It is also
 already the storage substrate in the sibling `apg-*` projects, so the operational
 knowledge is not new.
 
-*Corrected 2026-09-15.* The planned `vibey up` with Compose and `pg_ctl`
-fallbacks was not built. The DSN is read from `VIBEY_PG_URL` and nothing else; a
-missing value is a hard error (`DatabaseNotConfigured`), never a guessed
-localhost database — an earlier silent fallback once wrote 78 test projects into a
-production database. Bring your own Postgres (local, a container, or the Helm
-chart's in-cluster `postgres:17-alpine`).
+*Corrected 2026-09-20.* The planned `vibey up` supervisor with Compose and
+`pg_ctl` fallbacks was not built. The DSN is still read from `VIBEY_PG_URL` and
+nothing else; a missing value is a hard error (`DatabaseNotConfigured`), never a
+guessed localhost database — an earlier silent fallback once wrote 78 test
+projects into a production database. `vibey install --postgres` now installs
+and starts a native local PostgreSQL service when Homebrew, apt, or dnf is
+available. Bring the database with that command, a container, or the Helm
+chart's `postgres:17-alpine`, then set the explicit DSN.
 
 See [ADR-0002](../architecture/decisions/0002-postgres-not-sqlite.md).
 

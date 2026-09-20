@@ -8,7 +8,7 @@ This repository contains the **vibey-bootstrap** library (formerly **azure-boots
 
 **Package Name**: `vibey-bootstrap`
 **Version**: 4.0.0
-**Language**: Python 3.11+
+**Language**: Python 3.12+
 **Distribution**: inside the `vibey` PyPI distribution — no separate `vibey-bootstrap`
 project (vibey ADR-0037)
 
@@ -795,7 +795,7 @@ graph LR
 
 ### Workflow Stages
 
-1. **Build & Test** (every push/PR): Install Python 3.11, run pytest with 85% coverage, build wheel + sdist
+1. **Build & Test** (every push/PR): Install Python 3.12, run pytest with 85% coverage, build wheel + sdist
 2. **Publish** (main/tags only): Upload package to PyPI via Trusted Publisher or API token
 3. **Publish Dev** (develop only): Upload the timestamped `.devN` build to
    **TestPyPI** via Trusted Publisher — keeps pre-releases out of the public

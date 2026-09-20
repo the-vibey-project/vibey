@@ -53,7 +53,7 @@ config_repo = initialize_application()     # runs all four phases
 db_host = os.getenv("DATABASE_HOST")       # App Config + Key Vault values are in os.environ
 ```
 
-Requires Python 3.11+. Falls back to plain environment variables when App
+Requires Python 3.12+. Falls back to plain environment variables when App
 Configuration is not configured, so the same code runs locally and in Azure.
 
 ## Worked example: production-grade logging in four lines

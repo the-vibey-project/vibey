@@ -103,6 +103,7 @@ _SCRIPTED_ENGINE_PARAMS = [_param(e) for e in sorted(_SCRIPTED_ENGINES, key=lamb
 
 
 @pytest.mark.live
+@pytest.mark.xdist_group("real-engine-binaries")
 @pytest.mark.parametrize("engine_id", _SCRIPTED_ENGINE_PARAMS)
 async def test_real_binary_scripted_conformance(
     engine_id: EngineId,

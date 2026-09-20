@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import io
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from claudeloop.infrastructure.progress import ConsoleProgressReporter
 
@@ -35,7 +35,7 @@ def test_turn_sent_with_different_attempts(monkeypatch) -> None:
 def test_waiting_shows_reason_and_time(monkeypatch) -> None:
     """waiting prints reason and until timestamp."""
     reporter = ConsoleProgressReporter()
-    until = datetime(2026, 8, 15, 12, 30, 0, tzinfo=timezone.utc)
+    until = datetime(2026, 8, 15, 12, 30, 0, tzinfo=UTC)
     captured = io.StringIO()
     monkeypatch.setattr(sys, "stdout", captured)
     reporter.waiting(reason="rate_limit", until=until)
@@ -80,7 +80,7 @@ def test_output_is_flushed(monkeypatch) -> None:
 
     captured.truncate(0)
     captured.seek(0)
-    until = datetime.now(timezone.utc)
+    until = datetime.now(UTC)
     reporter.waiting(reason="test", until=until)
     assert len(captured.getvalue()) > 0
 

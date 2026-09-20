@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import secrets
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +19,7 @@ class ChatMeta:
     unread: bool = False
     project: str | None = None
     share_token: str | None = None
-    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -33,7 +33,7 @@ class ChatMeta:
             unread=bool(data.get("unread", False)),
             project=data.get("project"),
             share_token=data.get("share_token"),
-            updated_at=str(data.get("updated_at") or datetime.now(timezone.utc).isoformat()),
+            updated_at=str(data.get("updated_at") or datetime.now(UTC).isoformat()),
         )
 
 
@@ -53,7 +53,7 @@ class ChatMetaStore:
         return ChatMeta(session_id=session_id)
 
     def save(self, meta: ChatMeta) -> None:
-        meta.updated_at = datetime.now(timezone.utc).isoformat()
+        meta.updated_at = datetime.now(UTC).isoformat()
         self._path(meta.session_id).write_text(
             json.dumps(meta.to_dict(), indent=2) + "\n", encoding="utf-8"
         )
@@ -110,7 +110,7 @@ class ChatMetaStore:
                 "Local share bundle only — Claude.ai share APIs are not wired. "
                 "Distribute this redacted export path yourself."
             ),
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         bundle.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         return {"share_token": token, "bundle_path": str(bundle)}

@@ -7,9 +7,7 @@ PII/credential masking is consistent everywhere (see SECURITY.md)."""
 from __future__ import annotations
 
 import re
-from typing import Any, TypeVar
-
-T = TypeVar("T")
+from typing import Any
 
 REDACTED_VALUE = "***REDACTED***"
 
@@ -47,7 +45,7 @@ def redact_string(value: str) -> str:
     return redacted
 
 
-def redact(value: T) -> T:
+def redact[T](value: T) -> T:
     """Recursively redact secret keys and credential-shaped substrings."""
     if isinstance(value, dict):
         out: dict[Any, Any] = {}

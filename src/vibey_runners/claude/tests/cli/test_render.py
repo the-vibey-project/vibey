@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from claudeloop.application.usecases.doctor import DoctorCheck
 from claudeloop.cli.render import render_doctor_checks, render_session_list, render_session_warning
@@ -65,7 +65,7 @@ def test_render_session_list_single_session() -> None:
     ref = SessionRef(
         session_id="sess-abc",
         cwd="/path/to/project",
-        last_modified=datetime(2026, 8, 15, 10, 30, 0, tzinfo=timezone.utc),
+        last_modified=datetime(2026, 8, 15, 10, 30, 0, tzinfo=UTC),
         git_branch=None,
         first_prompt_preview=None,
     )
@@ -80,7 +80,7 @@ def test_render_session_list_with_git_branch() -> None:
     ref = SessionRef(
         session_id="sess-xyz",
         cwd="/repo",
-        last_modified=datetime(2026, 8, 15, 12, 0, 0, tzinfo=timezone.utc),
+        last_modified=datetime(2026, 8, 15, 12, 0, 0, tzinfo=UTC),
         git_branch="feature/test",
         first_prompt_preview=None,
     )
@@ -93,7 +93,7 @@ def test_render_session_list_without_git_branch() -> None:
     ref = SessionRef(
         session_id="sess-123",
         cwd="/repo",
-        last_modified=datetime(2026, 8, 15, 12, 0, 0, tzinfo=timezone.utc),
+        last_modified=datetime(2026, 8, 15, 12, 0, 0, tzinfo=UTC),
         git_branch=None,
         first_prompt_preview=None,
     )
@@ -121,14 +121,14 @@ def test_render_session_list_multiple_sessions() -> None:
         SessionRef(
             session_id="sess-1",
             cwd="/path1",
-            last_modified=datetime(2026, 8, 15, 10, 0, 0, tzinfo=timezone.utc),
+            last_modified=datetime(2026, 8, 15, 10, 0, 0, tzinfo=UTC),
             git_branch="main",
             first_prompt_preview=None,
         ),
         SessionRef(
             session_id="sess-2",
             cwd="/path2",
-            last_modified=datetime(2026, 8, 15, 11, 0, 0, tzinfo=timezone.utc),
+            last_modified=datetime(2026, 8, 15, 11, 0, 0, tzinfo=UTC),
             git_branch=None,
             first_prompt_preview=None,
         ),
@@ -145,7 +145,7 @@ def test_render_session_warning_contains_all_key_elements() -> None:
     ref = SessionRef(
         session_id="sess-warned",
         cwd="/project",
-        last_modified=datetime(2026, 8, 15, 14, 30, 0, tzinfo=timezone.utc),
+        last_modified=datetime(2026, 8, 15, 14, 30, 0, tzinfo=UTC),
         git_branch="develop",
         first_prompt_preview="Implement feature X",
     )
@@ -166,7 +166,7 @@ def test_render_session_warning_has_banner_lines() -> None:
     ref = SessionRef(
         session_id="sess-test",
         cwd="/test",
-        last_modified=datetime.now(timezone.utc),
+        last_modified=datetime.now(UTC),
         git_branch=None,
         first_prompt_preview=None,
     )
@@ -182,7 +182,7 @@ def test_render_session_warning_without_git_branch() -> None:
     ref = SessionRef(
         session_id="sess-no-git",
         cwd="/nogit",
-        last_modified=datetime.now(timezone.utc),
+        last_modified=datetime.now(UTC),
         git_branch=None,
         first_prompt_preview=None,
     )
@@ -195,7 +195,7 @@ def test_render_session_warning_with_git_branch() -> None:
     ref = SessionRef(
         session_id="sess-git",
         cwd="/git",
-        last_modified=datetime.now(timezone.utc),
+        last_modified=datetime.now(UTC),
         git_branch="feature/new",
         first_prompt_preview=None,
     )
@@ -208,7 +208,7 @@ def test_render_session_warning_without_prompt_preview() -> None:
     ref = SessionRef(
         session_id="sess-no-prompt",
         cwd="/np",
-        last_modified=datetime.now(timezone.utc),
+        last_modified=datetime.now(UTC),
         git_branch=None,
         first_prompt_preview=None,
     )
@@ -221,7 +221,7 @@ def test_render_session_warning_with_prompt_preview() -> None:
     ref = SessionRef(
         session_id="sess-prompt",
         cwd="/p",
-        last_modified=datetime.now(timezone.utc),
+        last_modified=datetime.now(UTC),
         git_branch=None,
         first_prompt_preview="Fix bug in auth",
     )

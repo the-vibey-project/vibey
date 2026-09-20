@@ -13,7 +13,7 @@ as UTC.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 def parse_wind_down_at(spec: str, *, now: datetime) -> datetime:
@@ -57,8 +57,8 @@ def parse_wind_down_at(spec: str, *, now: datetime) -> datetime:
 def _as_utc(value: datetime) -> datetime:
     """Normalize to timezone-aware UTC (naive values are assumed UTC)."""
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 def _parse_duration(spec: str) -> timedelta:

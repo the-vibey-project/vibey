@@ -96,6 +96,7 @@ from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
 from vibey.infrastructure.notify import NotificationService
 from vibey.infrastructure.otel import TelemetryMetrics, TelemetryTracer
+from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, parse_postgres_server_version
 from vibey.infrastructure.preflight_feasibility import VibeyGhFeasibilityAdapter
 from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
 from vibey.infrastructure.review_artifact_writer import FileReviewArtifactWriter
@@ -608,6 +609,17 @@ class DatabaseNotConfigured(VibeyError):
         )
 
 
+class UnsupportedPostgresVersion(VibeyError):
+    """The configured database is below vibey's PostgreSQL compatibility floor."""
+
+    def __init__(self, value: object) -> None:
+        self.value = value
+        super().__init__(
+            f"PostgreSQL server version {value!r} is not supported; "
+            f"vibey requires PostgreSQL {POSTGRES_MIN_MAJOR}+"
+        )
+
+
 def database_url() -> str:
     """The DSN, or an error -- never a guess.
 
@@ -649,6 +661,10 @@ async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
         raise RuntimeError("asyncpg did not create a pool")
     try:
         async with pool.acquire() as conn:
+            server_version_num = await conn.fetchval("SHOW server_version_num")
+            server_version = parse_postgres_server_version(server_version_num)
+            if server_version is None or not server_version.supported:
+                raise UnsupportedPostgresVersion(server_version_num)
             await migrator.apply(conn, discover_migrations(migrations_dir()))
 
         telemetry_tracer = TelemetryTracer()

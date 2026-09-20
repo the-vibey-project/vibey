@@ -23,8 +23,8 @@ governance, and an `vibey-bootstrap` scaffold CLI — all opt-in behind pip extr
 > from a Next.js app. (For TS, see the `vibey-bootstrap-typescript` skill: HTTP client
 > integration with a Python backend, and porting the patterns to TypeScript.)
 
-**Compatibility:** the source supports Python **≥ 3.11**; the distribution that ships it
-requires **≥ 3.12**. Distribution: `pip install vibey` (PyPI, MIT) — there is no separate
+**Compatibility:** the source and the distribution that ships it support Python **≥ 3.12**.
+Distribution: `pip install vibey` (PyPI, MIT) — there is no separate
 `vibey-bootstrap` project (vibey ADR-0037). v4.0.0 is **additive** — every v1/v2 import path, symbol, signature, and
 default is unchanged; opt into new extras and env flags. See `MIGRATING-TO-V3.md`.
 

@@ -36,7 +36,7 @@ Every project-specific decision lives here so the logic beside it can stay gener
     token_env = "GITLAB_TOKEN"  # name of the environment variable, never the secret itself
 
 Absent keys fall back to the defaults below, so a repository that agrees with them needs
-no file at all. `tomllib` is stdlib from 3.11, which this package already requires.
+    no file at all. `tomllib` is stdlib from 3.11, and this package requires Python 3.12+.
 """
 
 from __future__ import annotations

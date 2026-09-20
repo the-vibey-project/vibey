@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import subprocess  # nosec B404 — argv lists are fixed git subcommands, never shell=True
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from claudeloop.domain.savepoint import SavePointRef, UnwindResult
@@ -81,7 +81,7 @@ class GitSavePointStore:
             ref=ref,
             sha=sha,
             label=label,
-            at=datetime.now(timezone.utc),
+            at=datetime.now(UTC),
             plan_item=None,
             committed=has_staged,
         )
@@ -121,7 +121,7 @@ class GitSavePointStore:
         target = self._resolve_target(points, to)
         backup_ref: str | None = None
         if backup:
-            stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
             backup_ref = f"refs/claudeloop/backup/{run_id}/{stamp}"
             head = self._run(["git", "rev-parse", "HEAD"]).stdout.strip()
             self._run(["git", "update-ref", backup_ref, head])

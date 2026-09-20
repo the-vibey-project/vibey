@@ -9,7 +9,8 @@
 > `budget_ledger`) exist in the schema but no repository reads or writes them yet
 > (see §3).
 
-> PostgreSQL 17. All timestamps `timestamptz`. All ids `uuid` except `event.seq`
+> PostgreSQL 14+. CI exercises majors 14–18; the chart default is PostgreSQL 17.
+> All timestamps `timestamptz`. All ids `uuid` except `event.seq`
 > (gapless bigint per project) and human-facing item ids (short prefixed strings).
 > Migrations are forward-only and applied automatically by `build_app()`
 > (`src/vibey/bootstrap.py`) every time a CLI command or worker opens the

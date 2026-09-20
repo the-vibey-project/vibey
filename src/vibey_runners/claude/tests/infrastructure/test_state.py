@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from pathlib import Path
 
 from claudeloop.infrastructure.state import FileRunStateStore
@@ -46,10 +47,10 @@ def test_multiple_runs(tmp_path: Path) -> None:
 
 
 def test_save_with_non_serializable_uses_default_str(tmp_path: Path) -> None:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     store = FileRunStateStore(tmp_path / "state")
-    store.save("run-1", {"ts": datetime.now(timezone.utc)})
+    store.save("run-1", {"ts": datetime.now(UTC)})
     loaded = store.load("run-1")
     assert loaded is not None
     assert isinstance(loaded["ts"], str)

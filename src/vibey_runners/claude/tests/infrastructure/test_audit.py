@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from claudeloop.infrastructure.audit import JsonlAuditLog
@@ -84,9 +84,9 @@ def test_audit_log_includes_timestamp(tmp_path: Path) -> None:
     """Every audit entry includes a UTC ISO timestamp."""
     audit_path = tmp_path / "audit.jsonl"
     log = JsonlAuditLog(audit_path)
-    before = datetime.now(timezone.utc)
+    before = datetime.now(UTC)
     log.record("test", {})
-    after = datetime.now(timezone.utc)
+    after = datetime.now(UTC)
 
     entry = json.loads(audit_path.read_text(encoding="utf-8"))
     assert "timestamp" in entry
@@ -124,7 +124,7 @@ def test_audit_log_handles_non_json_serializable_values(tmp_path: Path) -> None:
     """Non-JSON-serializable values are converted using default=str."""
     audit_path = tmp_path / "audit.jsonl"
     log = JsonlAuditLog(audit_path)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     log.record("test", {"time": now, "path": Path("/tmp/test")})
 
     entry = json.loads(audit_path.read_text(encoding="utf-8"))

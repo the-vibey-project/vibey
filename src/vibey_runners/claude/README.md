@@ -33,7 +33,7 @@ each specific change was made.
 
 ## Install
 
-Requires **Python 3.10+**, **macOS or Linux**, and the
+Requires **Python 3.12+**, **macOS or Linux**, and the
 [Claude Code CLI](https://code.claude.com) installed and authenticated.
 Windows is not a supported target.
 

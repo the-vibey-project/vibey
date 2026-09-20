@@ -23,9 +23,9 @@ taken away from the next adopter):
 
 2. The floor actually runs. A package's requires-python floor is the oldest
    interpreter it promises to work on. If no row runs that interpreter, the promise
-   is untested -- exactly ADR-0022's "a floor nothing runs on is a claim". claudeloop
-   publishes 3.10 and is the only member of this tree that does; this is the assertion
-   that keeps its 3.10 row from being quietly dropped to match everything else.
+   is untested -- exactly ADR-0022's "a floor nothing runs on is a claim". Every absorbed
+   library now publishes the common 3.12 floor; this is the assertion that keeps a
+   tenant's 3.12 row from being quietly dropped.
 
 3. The static gates actually run (#263). The rows above ran every runner's suite and
    none of its mypy, lint-imports or bandit. Those lived only in each tenant's nested
@@ -58,6 +58,7 @@ WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 TENANT_ROOTS = ("src/vibey_runners", "src/vibey_tools")
 SUITE_DIRS = ("tests", "test")
 FLOOR = re.compile(r">=\s*(\d+\.\d+)")
+SUPPORTED_PYTHON = ("3.12", "3.13", "3.14")
 
 
 def _matrix_rows() -> list[dict[str, Any]]:
@@ -92,6 +93,16 @@ def _requires_python_floor(package: Path) -> str:
     return match.group(1)
 
 
+def _supported_python(package: Path) -> set[str]:
+    floor = _requires_python_floor(package)
+    floor_key = tuple(int(part) for part in floor.split("."))
+    return {
+        version
+        for version in SUPPORTED_PYTHON
+        if tuple(int(part) for part in version.split(".")) >= floor_key
+    }
+
+
 def test_every_gateable_package_has_a_tools_row() -> None:
     # A row counts only if it runs a suite: the suite step is conditional on `test`, so
     # that a static-only row can exist, and a suite-less row must not satisfy this.
@@ -104,13 +115,16 @@ def test_every_gateable_package_has_a_tools_row() -> None:
 
 
 @pytest.mark.parametrize("package", _gateable_packages(), ids=_relative)
-def test_every_package_floor_is_actually_run(package: Path) -> None:
-    floor = _requires_python_floor(package)
+def test_every_package_compatibility_range_is_actually_run(package: Path) -> None:
     where = _relative(package)
-    interpreters = {str(row["python"]) for row in _matrix_rows() if str(row["dir"]) == where}
-    assert floor in interpreters, (
-        f"{where} publishes a {floor} floor but the `tools` matrix runs it only on "
-        f"{sorted(interpreters)}. ADR-0022: a floor nothing runs on is a claim, not a contract."
+    interpreters = {
+        str(row["python"]) for row in _matrix_rows() if str(row["dir"]) == where and row.get("test")
+    }
+    expected = _supported_python(package)
+    assert interpreters == expected, (
+        f"{where} promises {sorted(expected)} but the `tools` matrix runs its suite on "
+        f"{sorted(interpreters)}. Keep every supported interpreter covered and exclude "
+        "only versions below the tenant's declared floor."
     )
 
 
@@ -192,4 +206,20 @@ def test_static_gates_run_on_the_floor(package: Path) -> None:
     assert floor in interpreters, (
         f"{where} runs its static gates only on {interpreters}, not on its {floor} floor. "
         "The floor is where its declared dependencies resolve at their oldest."
+    )
+
+
+@pytest.mark.parametrize("package", _tenants(), ids=_relative)
+def test_every_tenant_compatibility_range_has_a_check(package: Path) -> None:
+    where = _relative(package)
+    checked_rows = [
+        row
+        for row in _matrix_rows()
+        if str(row["dir"]) == where and (row.get("test") or row.get("static"))
+    ]
+    interpreters = {str(row["python"]) for row in checked_rows}
+    expected = _supported_python(package)
+    assert interpreters == expected, (
+        f"{where} promises {sorted(expected)} but CI checks {sorted(interpreters)}. "
+        "A static-only tenant must still be checked across its supported Python range."
     )

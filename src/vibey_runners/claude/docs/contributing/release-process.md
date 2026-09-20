@@ -84,7 +84,7 @@ pipeline against **TestPyPI**:
 
 Every gate in [development.md](development.md#running-the-quality-gates-locally)
 runs in `ci.yml` on every push and PR to `main`/`develop`, across Python
-3.10–3.13. `publish-to-pypi.yml` does not re-run the test suite — it trusts
+3.12–3.14. `publish-to-pypi.yml` does not re-run the test suite — it trusts
 that nothing reaches `main` (protected, CI-gated) without already having
 passed it, and its own `build` job runs `twine check --strict` on the built
 artifacts as its only quality gate, keeping the publish job itself minimal

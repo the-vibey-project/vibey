@@ -17,12 +17,8 @@ import os
 import signal
 import sys
 from collections.abc import Awaitable, Callable
-from typing import ParamSpec, TypeVar
 
 import anyio
-
-P = ParamSpec("P")
-R = TypeVar("R")
 
 
 def _sigterm_as_sigint(signum: int, frame: object) -> None:
@@ -30,7 +26,7 @@ def _sigterm_as_sigint(signum: int, frame: object) -> None:
     os.kill(os.getpid(), signal.SIGINT)
 
 
-def async_command(func: Callable[P, Awaitable[R]]) -> Callable[P, R]:
+def async_command[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, R]:
     """Wrap an async Typer command body so Typer (sync) can call it directly."""
 
     @functools.wraps(func)

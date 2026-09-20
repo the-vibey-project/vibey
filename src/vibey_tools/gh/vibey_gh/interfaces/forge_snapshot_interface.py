@@ -21,10 +21,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol, TypeAlias, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 # One artifact as the forge returned it: its native id, and its native JSON, verbatim.
-Observation: TypeAlias = tuple[str, Mapping[str, Any]]
+type Observation = tuple[str, Mapping[str, Any]]
 
 
 @dataclass(frozen=True)

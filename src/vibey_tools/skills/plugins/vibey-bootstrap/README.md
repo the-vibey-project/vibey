@@ -3,7 +3,7 @@
 Formerly the `azure-bootstrap` plugin — the library was renamed **vibey-bootstrap** in 4.0.0 (import `vibey_bootstrap`, CLI `vibey-bootstrap`).
 
 Usage reference for the **Azure Bootstrap Library** (`vibey-bootstrap`, v4.0.0) — a pure
-Python package (PyPI, MIT, Python ≥ 3.11) that solves the logging↔configuration circular
+Python package (PyPI, MIT, Python ≥ 3.12) that solves the logging↔configuration circular
 dependency at Azure Functions / container app startup, then layers on a framework-agnostic
 cross-cutting layer (structured logging, correlation, tracing, counters, tiered alerts,
 ingress hardening, Service Bus plumbing, webhook auth, AI usage tracking, health probes,

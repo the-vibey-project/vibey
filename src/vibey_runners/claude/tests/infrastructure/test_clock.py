@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -14,13 +14,13 @@ def test_system_clock_returns_utc_datetime() -> None:
     clock = SystemClock()
     now = clock.now()
     assert isinstance(now, datetime)
-    assert now.tzinfo == timezone.utc
+    assert now.tzinfo == UTC
 
 
 def test_system_clock_is_recent() -> None:
     clock = SystemClock()
     now = clock.now()
-    delta = abs((datetime.now(timezone.utc) - now).total_seconds())
+    delta = abs((datetime.now(UTC) - now).total_seconds())
     assert delta < 2
 
 
