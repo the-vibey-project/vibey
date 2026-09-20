@@ -16,7 +16,7 @@ import json
 import os
 import tempfile
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -35,7 +35,7 @@ class FileStateBus:
     def publish(self, event_type: str, payload: Mapping[str, object]) -> None:
         record = redact(
             {
-                "ts": datetime.now(timezone.utc).isoformat(),
+                "ts": datetime.now(UTC).isoformat(),
                 "run_id": self._run_id,
                 "event_type": event_type,
                 **payload,

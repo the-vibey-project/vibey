@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
@@ -33,7 +33,7 @@ class RecordingBus:
 def _builder(tmp_path: Path) -> tuple[RunSnapshotBuilder, RunDirectory, RecordingBus]:
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     builder = RunSnapshotBuilder(run_dir, state_bus=bus, home=tmp_path / "home", clock=clock)
     return builder, run_dir, bus
 
@@ -170,7 +170,7 @@ def test_read_latest_digest_corrupt_json(tmp_path: Path) -> None:
     """Corrupt JSON in latest.json returns None for digest."""
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     snapshots = run_dir.snapshots_root
     snapshots.mkdir(parents=True, exist_ok=True)
     (snapshots / "latest.json").write_text("not valid json{", encoding="utf-8")
@@ -184,7 +184,7 @@ def test_read_latest_digest_non_dict(tmp_path: Path) -> None:
     """latest.json containing a list (not dict) returns None digest."""
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     snapshots = run_dir.snapshots_root
     snapshots.mkdir(parents=True, exist_ok=True)
     (snapshots / "latest.json").write_text("[1,2,3]", encoding="utf-8")
@@ -208,7 +208,7 @@ def test_copy_transcript_oserror(tmp_path: Path) -> None:
 
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     builder = RunSnapshotBuilder(run_dir, state_bus=bus, home=home, clock=clock)
 
     with patch("shutil.copy2", side_effect=OSError("disk full")):
@@ -225,7 +225,7 @@ def test_bundle_copies_attachments_and_memories(tmp_path: Path) -> None:
     """Bundle copies attachments, memories, artifacts directories."""
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     builder = RunSnapshotBuilder(run_dir, state_bus=bus, home=tmp_path / "home", clock=clock)
 
     # Create attachments dir with a file
@@ -257,7 +257,7 @@ def test_bundle_with_dest_exists(tmp_path: Path) -> None:
     """Bundle replaces existing destination dirs (lines 297-298, 304-305)."""
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     builder = RunSnapshotBuilder(run_dir, state_bus=bus, home=tmp_path / "home", clock=clock)
 
     attachments = run_dir.resources_root / "attachments"
@@ -290,7 +290,7 @@ def test_bundle_copies_transcript_via_copied_path(tmp_path: Path) -> None:
 
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     builder = RunSnapshotBuilder(run_dir, state_bus=bus, home=home, clock=clock)
 
     ref = builder.emit(
@@ -308,7 +308,7 @@ def test_bundle_copies_transcript_via_src_path(tmp_path: Path) -> None:
     """Bundle copies transcript from src_path when transcript_copied is absent (line 316-319)."""
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     builder = RunSnapshotBuilder(run_dir, state_bus=bus, home=tmp_path / "home", clock=clock)
 
     # Create a transcript file at an external path
@@ -339,7 +339,7 @@ def test_bundle_oserror_returns_none(tmp_path: Path) -> None:
     """OSError during bundle creation returns None (line 320-321)."""
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     builder = RunSnapshotBuilder(run_dir, state_bus=bus, home=tmp_path / "home", clock=clock)
 
     with patch.object(builder, "_write_bundle", side_effect=OSError("perm")):
@@ -423,7 +423,7 @@ def test_read_latest_digest_valid_dict(tmp_path: Path) -> None:
     """_read_latest_digest returns digest when latest.json is a valid dict (line 172)."""
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     snapshots = run_dir.snapshots_root
     snapshots.mkdir(parents=True, exist_ok=True)
     (snapshots / "latest.json").write_text('{"key": "val"}', encoding="utf-8")
@@ -436,7 +436,7 @@ def test_bundle_rmtree_existing_dirs(tmp_path: Path) -> None:
     """Two bundles at the same timestamp force rmtree on existing dirs (lines 298, 305)."""
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     builder = RunSnapshotBuilder(run_dir, state_bus=bus, home=tmp_path / "home", clock=clock)
 
     att = run_dir.resources_root / "attachments"
@@ -459,7 +459,7 @@ def test_bundle_no_attachments_dir(tmp_path: Path) -> None:
     """Bundle with no attachments dir skips copytree (branch 295->293)."""
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     builder = RunSnapshotBuilder(run_dir, state_bus=bus, home=tmp_path / "home", clock=clock)
 
     # _build_payload creates the resources dir via store.ensure(),
@@ -488,7 +488,7 @@ def test_bundle_copied_file_missing(tmp_path: Path) -> None:
     """Bundle with transcript_copied pointing to missing file (branch 312->322)."""
     run_dir = RunDirectory.create(runs_root_for(tmp_path), cwd=tmp_path)
     bus = RecordingBus()
-    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=timezone.utc))
+    clock = FakeClock(start=datetime(2026, 8, 12, 16, 0, tzinfo=UTC))
     builder = RunSnapshotBuilder(run_dir, state_bus=bus, home=tmp_path / "home", clock=clock)
 
     original_build = builder._build_payload

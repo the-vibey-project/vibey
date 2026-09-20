@@ -11,6 +11,7 @@ from tests.application.fakes import make_job
 from vibey.application.build_engine_run import run_and_record
 from vibey.application.dto import EngineEvent, RunHandle
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP
+from vibey.infrastructure.otel import TelemetryTracer
 
 
 class _NoExitCodeEngine:
@@ -60,6 +61,13 @@ class _EventDiagnosticEngine(_NoExitCodeEngine):
 
     def release_diagnostics(self, handle: RunHandle) -> None:
         self.released = True
+
+
+class _TurnEngine(_NoExitCodeEngine):
+    async def tail(self, handle: RunHandle) -> AsyncIterator[EngineEvent]:
+        del handle
+        yield EngineEvent(kind="TurnCompleted", at=datetime.now(UTC), payload={})
+        yield EngineEvent(kind="TurnCompleted", at=datetime.now(UTC), payload={})
 
 
 def _handle() -> RunHandle:
@@ -114,3 +122,21 @@ async def test_event_and_optional_diagnostics_are_retained_and_released() -> Non
     assert outcome.exit_code is None
     assert outcome.diagnostic_tail == "FAILED in the work item"
     assert engine.released
+
+
+async def test_turn_events_create_child_telemetry_spans() -> None:
+    tracer = TelemetryTracer()
+    job = replace(make_job(uuid4()), kind="build.implement")
+
+    await run_and_record(
+        _TurnEngine(),
+        _RecordingLedger(),
+        job=job,
+        handle=_handle(),
+        tracer=tracer,
+    )
+
+    spans = tracer.get_finished_spans()
+    assert [span.name for span in spans] == ["turn", "turn"]
+    assert [span.attributes["turn_number"] for span in spans] == [0, 1]
+    assert all(span.attributes["engine_id"] == "claudeloop" for span in spans)

@@ -33,8 +33,8 @@ vibey-skills install --all
 uvx --from vibey vibey-skills install --all
 ```
 
-Requires Python 3.12 or newer, which is `vibey`'s floor. (This package's own source still
-supports 3.10+, and CI still tests it there, but 3.12 is the only floor that ships.)
+Requires Python 3.12 or newer, which is the common floor for `vibey` and every bundled
+library. CI tests the supported range through Python 3.14.
 
 !!! note "Upgrading from vibe-engineering-skills or from the vibey-skills package"
     The package was renamed to `vibey-skills` in 2.0.0 and folded into `vibey` in

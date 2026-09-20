@@ -65,10 +65,11 @@ in one vendor's chat session.
 
 ## Install
 
-Requires **Python 3.12+** and **PostgreSQL**. Windows is not a supported
-target. Every database-backed command reads the connection string from
-`VIBEY_PG_URL`; vibey never guesses a database and exits with
-`VIBEY_PG_URL is not set` when it is missing.
+Requires **Python 3.12+** and **PostgreSQL 14+**. Windows is not a supported
+target. Vibey supports every currently supported PostgreSQL major (14–18),
+and CI runs the database suite against each one. Every database-backed command
+reads the connection string from `VIBEY_PG_URL`; vibey never guesses a
+database and exits with `VIBEY_PG_URL is not set` when it is missing.
 
 One install is the whole family: `vibey`, all five `*loop` engines, and the
 tools (`vibey-gh`, `vibey-skills`, `vibey-bootstrap`) ship in the one `vibey`
@@ -78,13 +79,17 @@ needs separately is its own vendor CLI and credentials — which is what
 
 ```bash
 uv tool install vibey          # or: pipx install vibey / pip install vibey
+vibey install --postgres       # install/start local PostgreSQL 18 when needed
 export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey
 vibey doctor                   # pre-flight: engines installed, versions, auth
 ```
 
-`vibey doctor` alone checks only the engines. `--record` also writes the result
-to the database for a project, and `--cluster` runs the in-cluster preflight
-(DSN, workspace, secrets, database, migrations) instead.
+`vibey install --postgres` uses Homebrew, apt, or dnf to install and start the
+current stable PostgreSQL major. `vibey doctor` reports local PostgreSQL
+readiness as well as engine health; `vibey doctor --install-postgres` performs
+the same explicit installation before checking. `--record` also writes engine
+results to the database for a project, and `--cluster` runs the in-cluster
+preflight (DSN, workspace, secrets, database, migrations) instead.
 
 `qwenloop` installs with everything else; what is opt-in is the *feature*, not
 the install. Two local engines have a switch each: `VIBEY_FEATURE_QWENLOOP=1`
@@ -181,20 +186,19 @@ Every command's flags and defaults are in the
 
 `vibey.toml`'s schema — `[project]`, `[isolation]`, `[budget]`, `[engines]`,
 `[phases.design/build/review]`, `[provision]`, `[deploy]`, `[features]`,
-`[qwenloop]` — is fully implemented and unit-tested in
+`[qwenloop]`, `[notifications]`, and `[telemetry]` — is fully implemented and unit-tested in
 `domain/config.py`/`infrastructure/config_loader.py`, with defaults and an
 example file in the [configuration reference](docs/reference/configuration.md).
-**Only the local-engine keys are read at runtime today:** `[features] qwenloop`,
+The local-engine keys are read at runtime today: `[features] qwenloop`,
 `[features] claudeloop_local` and `[engines.claudeloop_local]`. `vibey doctor`
 reads them from `./vibey.toml` in the current directory, and the worker reads the
 same keys from the project's stored config (which no CLI flag sets yet);
 `VIBEY_FEATURE_QWENLOOP`, `VIBEY_FEATURE_CLAUDELOOP_LOCAL` and
-`VIBEY_CLAUDELOOP_LOCAL_PROFILE` override them. No other table is read by
-`cli/`, `bootstrap.py`, the worker, or the operator —
-`infrastructure/config_loader.py` is exercised only by its tests — so setting
-any other key has no effect. Treat the rest the same as
-`infrastructure/notify/` and `infrastructure/otel.py` below:
-implemented-and-tested, not yet an active runtime path.
+`VIBEY_CLAUDELOOP_LOCAL_PROFILE` override them. `[notifications]` and
+`[telemetry]` are copied from the repository's `vibey.toml` into the stored
+project config by `vibey new`; the worker and lifecycle repository then use
+those settings. Telemetry is an in-process recorder for now, so it is available
+to the running app but has no external exporter yet.
 
 What does configure a project today is a handful of `vibey new` CLI flags
 (`--max-cycles`, `--max-cycle-dollars`, `--max-cycle-turns`,
@@ -206,10 +210,11 @@ that project's stored config at creation time — see the
 
 `infrastructure/notify/` implements a `NotificationService` that dispatches
 desktop alerts and HMAC-SHA256-signed webhooks (`X-Vibey-Signature`, see
-[SECURITY.md](SECURITY.md#6-webhook-payload-integrity--implemented-and-unit-tested-not-yet-an-active-runtime-path)), and it is covered
-by tests. It is **not yet wired into `bootstrap.py`, the worker, or the
-CLI** — no flag or `vibey.toml` key constructs it today. Treat it as
-implemented-and-tested, not yet an active runtime path.
+[SECURITY.md](SECURITY.md#6-webhook-payload-integrity--implemented-unit-tested-and-active-when-configured)), and it is covered
+by tests. `build_app()` constructs it; workers notify on newly raised gates,
+and project transitions notify on phase changes and completion. Enable it in
+the repository TOML with `[notifications] enabled = true`; `vibey new` stores
+that table with the project.
 
 ## Telemetry
 
@@ -217,10 +222,10 @@ implemented-and-tested, not yet an active runtime path.
 jobs, turns, and handoffs) and `TelemetryMetrics` (engine-selection,
 queue-latency, phase-duration, handoff-failure, and cost-spend counters),
 plus `calculate_rotation_fairness()` for measuring rotation fairness against
-declared engine weights. It is covered by unit tests. Like `notify/`, it is
-**not constructed by `bootstrap.py`** and has no CLI flag or `vibey.toml`
-key wiring it into a running worker — treat it as implemented-and-tested,
-not yet an active runtime path.
+declared engine weights. It is covered by unit tests and constructed by
+`build_app()`. The worker records queue latency, phase duration, and job spans;
+BUILD records engine turns, selections, handoffs, and cost spend. Set
+`[telemetry] enabled = false` to disable those runtime calls for a project.
 
 ## The shape of it
 

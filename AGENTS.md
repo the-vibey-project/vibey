@@ -95,11 +95,10 @@ uv workspace (`[tool.uv.workspace] members = ["src/vibey_runners/*",
   and the governance canon under `docs/`); `src/vibey_tools/skills` —
   vibey-skills; `src/vibey_tools/bootstrap` — vibey-bootstrap.
 
-Each tenant keeps its own `pyproject.toml`, version, Python floor (3.10+ for
-claudeloop, vibey-runners-common and vibey-skills; 3.11+ for vibey-gh and
-vibey-bootstrap; 3.12+ for the other runners and vibey), test suite and gates
-(ADR-0022). The old sibling GitHub repositories are gone, and so are the old
-PyPI names: the whole tree ships as the single `vibey` distribution (ADR-0037).
+Each tenant keeps its own `pyproject.toml`, version, Python floor (3.12+ for
+every library), test suite and gates (ADR-0022). The old sibling GitHub
+repositories are gone, and so are the old PyPI names: the whole tree ships as
+the single `vibey` distribution (ADR-0037).
 
 ## The six-phase model
 
@@ -119,7 +118,8 @@ explicit opt-in; declining deployment records a successful local completion.
 
 ## The queue and engines
 
-- **Queue backend:** PostgreSQL 17, never SQLite. `FOR UPDATE SKIP LOCKED` is
+- **Queue backend:** PostgreSQL 14+, never SQLite. CI exercises every currently
+  supported major (14–18), while the Helm chart defaults to PostgreSQL 17. `FOR UPDATE SKIP LOCKED` is
   the reason; see ADR-0002.
 - **Engines:** `claudeloop`, `codexloop`, `cursorloop`, and `agyloop` are the
   default paid-engine pool (tier PAID). Two default-off local engines (tier LOCAL)
@@ -147,7 +147,8 @@ explicit opt-in; declining deployment records a successful local completion.
 # CI job `uv-lock` (runs first)
 uv lock --check
 
-# CI job `gates`: the 7-gate sweep over src/vibey (Postgres 17 service)
+# CI job `gates`: the 7-gate sweep over src/vibey (Postgres 17 service); the
+# `postgres-compatibility` matrix runs the database suite on PostgreSQL 14–18
 uv sync --extra dev
 uv run ruff check .
 uv run ruff format --check .

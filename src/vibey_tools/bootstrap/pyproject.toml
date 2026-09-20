@@ -30,12 +30,13 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Systems Administration",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 dependencies = [
     # `vibey-gh` used to be declared here -- the GitHub automation that once lived in
@@ -274,7 +275,7 @@ addopts = [
 
 [tool.black]
 line-length = 100
-target-version = ["py311"]
+target-version = ["py312"]
 include = '\.pyi?$'
 exclude = '''
 /(
@@ -298,7 +299,7 @@ skip_glob = [".venv/*", "build/*", "dist/*"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 # Without `include`, ruff discovers Markdown and formats the Python fences inside it --
 # measured: CLAUDE.md, README.md, CONTRIBUTING.md, docs/USAGE.md and examples/README.md
 # all change. That matters now in a way it did not before: this package is becoming a uv
@@ -354,7 +355,7 @@ ignore = [
 ]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

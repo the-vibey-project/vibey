@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from claude_agent_sdk import (
@@ -338,7 +338,7 @@ def _to_datetime(unix_timestamp: int | None) -> datetime | None:
     if unix_timestamp is None:
         return None
     seconds = unix_timestamp / 1000 if unix_timestamp >= 10_000_000_000 else unix_timestamp
-    return datetime.fromtimestamp(seconds, tz=timezone.utc)
+    return datetime.fromtimestamp(seconds, tz=UTC)
 
 
 COMPLETION_OUTPUT_SCHEMA: dict[str, object] = {

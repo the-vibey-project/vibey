@@ -33,7 +33,7 @@ This library is used across 17+ production Azure Functions applications. Changes
 
 ### Prerequisites
 
-- Python 3.11 or higher
+- Python 3.12 or higher
 - Git
 - GitHub account
 - Familiarity with Azure Functions, App Configuration, and Key Vault
@@ -504,7 +504,7 @@ python -m pip_audit
 python -m pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term-missing
 ```
 
-CI runs only the last of these, in the root `ci.yml` `tools` job on Python 3.11 and 3.12,
+CI runs only the last of these, in the root `ci.yml` `tools` job on Python 3.12–3.14,
 held to the package's own 100% line floor (`[tool.coverage.report] fail_under` in its
 `pyproject.toml`). The others are not in CI.
 

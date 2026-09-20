@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -16,7 +16,7 @@ from claudeloop.domain.waiting import (
     next_progress_wait_instant,
 )
 
-NOW = datetime(2026, 8, 13, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 13, tzinfo=UTC)
 
 
 def test_wait_only_heuristic() -> None:

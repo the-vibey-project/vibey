@@ -326,7 +326,7 @@ published package so a fix reaches every repository that uses it, not just this 
 
 ### Requirements
 
-Python 3.11+ (for `vibey-gh` itself; this package supports 3.10+), Git, and the GitHub CLI
+Python 3.12+ (for `vibey-gh` and this package), Git, and the GitHub CLI
 (`gh`). A repository-level `ANTHROPIC_API_KEY` secret and an `AUTOMERGE_TOKEN` with the
 admin role are already configured, along with GitHub Pages deploying from Actions.
 
@@ -374,8 +374,8 @@ before the package was absorbed and that file was removed.
 This package has no workflows of its own. GitHub runs only the repository root's
 [`.github/workflows/`](https://github.com/the-vibey-project/vibey/tree/develop/.github/workflows),
 and this package's gates are rows of the root `ci.yml` `tools` job:
-`tools/validate_manifests.py`, `tools/check_links.py` and the unittest suite, on Python 3.10
-and 3.12.
+`tools/validate_manifests.py`, `tools/check_links.py` and the unittest suite, on Python 3.12
+through 3.14.
 
 The standalone repository carried sixteen — four hand-authored (`CI`, `Release`,
 `Release artifacts`, `Currency research`) and twelve rendered by `vibey-gh install`

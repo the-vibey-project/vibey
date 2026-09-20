@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import shutil
 from dataclasses import dataclass, field
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -286,15 +287,15 @@ class RunResourceStore:
 
     def start_research(self, query: str) -> Path:
         self.ensure()
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        research_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        research_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         path = self.research_dir / f"{research_id}.jsonl"
         record = {
             "id": research_id,
             "query": query,
             "status": "started",
-            "at": datetime.now(timezone.utc).isoformat(),
+            "at": datetime.now(UTC).isoformat(),
         }
         path.write_text(json.dumps(record) + "\n", encoding="utf-8")
         self.set_flag(deep_research=True)

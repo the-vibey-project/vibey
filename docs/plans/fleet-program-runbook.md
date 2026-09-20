@@ -94,7 +94,7 @@ All five on `develop`, in sync with origin, CI green.
 | `run --run-id` | n/a | ✅ | ✅ | ✅ | ✅ |
 | coverage: domain/app/infra/cli | 100/100/**96**/**77** | 100/100/**63**/**43** | **99/97/75/81** | 100/100/100/100 | 100/100/100/100 |
 | CI coverage floor | domain 100, project 90 | domain+app 100; **rest `--cov-fail-under=0`** | **none** | 4× 100 | 4× 100 |
-| OS × Python in CI | ubuntu × 3.12 | ubuntu × 3.10–3.13 | ubuntu × 3.12–3.13 | ubuntu × 3.12–3.13 | **ubuntu+macos** × 3.12–3.13 |
+| OS × Python in CI | ubuntu × 3.12 | ubuntu × 3.12–3.14 | ubuntu × 3.12–3.14 | ubuntu × 3.12–3.14 | **ubuntu+macos** × 3.12–3.14 |
 
 vibey has no `domain/loop.py`, `domain/control.py` or `application/runner.py` — it is the
 orchestrator, not a runner. The wind-down half is architecturally n/a there.

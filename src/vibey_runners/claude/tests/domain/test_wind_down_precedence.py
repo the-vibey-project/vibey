@@ -9,7 +9,7 @@ into a handoff.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -31,7 +31,7 @@ from claudeloop.domain.loop import (
     decide_after_turn,
 )
 
-NOW = datetime(2026, 8, 15, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 15, 12, 0, tzinfo=UTC)
 
 
 def _wind_down() -> WindDown:

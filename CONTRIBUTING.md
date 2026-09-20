@@ -160,17 +160,17 @@ the `vibey` distribution rather than under its own PyPI name (ADR-0037).
 
 The root gates above cover `src/vibey` only. A tenant keeps every gate it was
 already held to (ADR-0022), run from its own directory with its own command,
-on its own Python floor and newer — exactly as ci.yml's `tools` and
-`tools-lint` jobs do. Nothing in that matrix may reach an index for a family
+across the common supported Python range 3.12–3.14 — exactly as ci.yml's
+`tools` and `tools-lint` jobs do. Nothing in that matrix may reach an index for a family
 package: a tenant that needs a sibling installs it from the tree first.
 
 | Tenant | Checks |
 |---|---|
-| `src/vibey_tools/gh` | `pip install -e ".[dev]"`, `python -m pytest -q` (100% branch floor), `black --check vibey_gh test`, `isort --check-only vibey_gh test`, `mypy vibey_gh`, and the managed-automation drift check; Python 3.11–3.13 |
-| `src/vibey_tools/skills` | `python3 tools/validate_manifests.py`, `python3 tools/check_links.py`, `PYTHONPATH=src python3 -m unittest discover -s tests`; Python 3.10 and 3.12. On the 3.12 row, also its own strict docs build: `pip install -e ".[docs]"`, `mkdocs build --strict`, and a check that every plugin and skill produced a page |
-| `src/vibey_tools/bootstrap` | `pip install -e ../gh` (it imports `vibey_gh`), `pip install -e ".[test,all]"`, `pytest test/ -m "not integration" --cov=vibey_bootstrap` (100% line floor); Python 3.11–3.12. On the 3.11 floor row, also `.[dev]` and its own pre-commit hook's `python -m mypy vibey_bootstrap/` and `python -m bandit -r vibey_bootstrap/ -ll -q` |
-| `src/vibey_runners/common` | `pip install -e ".[dev]"`, `mypy --strict src/vibey_runners/common`, `lint-imports`; Python 3.10. It ships no suite |
-| `src/vibey_runners/*` | the suite with the four per-layer 100% branch floors (qwenloop: one whole-package floor, in its addopts) on each runner's own interpreters. On the floor row, also its own `mypy --strict src/<pkg>`, `lint-imports` and `bandit -q -r src/<pkg>`, plus agyloop's vendor-import grep and claudeloop's skill-frontmatter check. codexloop runs every gate on ubuntu and macOS, 3.12 and 3.13, as its own CI did. agyloop and codexloop also run `properdocs build --strict` (properdocs 1.6.7) on ubuntu 3.12 |
+| `src/vibey_tools/gh` | `pip install -e ".[dev]"`, `python -m pytest -q` (100% branch floor), `black --check vibey_gh test`, `isort --check-only vibey_gh test`, `mypy vibey_gh`, and the managed-automation drift check; Python 3.12–3.14 |
+| `src/vibey_tools/skills` | `python3 tools/validate_manifests.py`, `python3 tools/check_links.py`, `PYTHONPATH=src python3 -m unittest discover -s tests`; Python 3.12–3.14. On the 3.12 row, also its own strict docs build: `pip install -e ".[docs]"`, `mkdocs build --strict`, and a check that every plugin and skill produced a page |
+| `src/vibey_tools/bootstrap` | `pip install -e ../gh` (it imports `vibey_gh`), `pip install -e ".[test,all]"`, `pytest test/ -m "not integration" --cov=vibey_bootstrap` (100% line floor); Python 3.12–3.14. On the 3.12 floor row, also `.[dev]` and its own pre-commit hook's `python -m mypy vibey_bootstrap/` and `python -m bandit -r vibey_bootstrap/ -ll -q` |
+| `src/vibey_runners/common` | `pip install -e ".[dev]"`, `mypy --strict src/vibey_runners/common`, `lint-imports`; Python 3.12–3.14. It ships no suite |
+| `src/vibey_runners/*` | the suite with the four per-layer 100% branch floors (qwenloop: one whole-package floor, in its addopts) on Python 3.12, 3.13, and 3.14. On the 3.12 row, also its own `mypy --strict src/<pkg>`, `lint-imports` and `bandit -q -r src/<pkg>`, plus agyloop's vendor-import grep and claudeloop's skill-frontmatter check. codexloop runs every gate on ubuntu and macOS, and agyloop and codexloop also run `properdocs build --strict` (properdocs 1.6.7) on ubuntu 3.12 |
 
 A tenant carries no `.github/`, `.githooks/` or `.vibey-gh.toml` of its own.
 GitHub reads only the root's workflows and templates, git runs only the root's

@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -32,7 +32,7 @@ from tests.application.fakes import (
     window_exhausted_signals,
 )
 
-NOW = datetime(2026, 8, 12, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 12, 12, 0, tzinfo=UTC)
 
 
 def _make(

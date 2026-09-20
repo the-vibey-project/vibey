@@ -227,12 +227,11 @@ insists the package exists.
 `>=3.12`, so the 3.10 floor `claudeloop`, `vibey-runners-common` and
 `vibey-skills` used to publish, and the 3.11 floor `vibey-gh` and
 `vibey-bootstrap` used to publish, cease to exist as shipped artifacts. The
-tenants keep those floors and CI keeps running them (ADR-0022), which means CI
-now exercises floors nothing ships. ADR-0022's own line — *a floor nothing runs
-on is a claim* — cuts the other way here, and this is recorded rather than
-quietly dropped: the floors are kept because a tenant that is importable at 3.10
-is a tenant that can be extracted again, and because lowering `vibey`'s own
-floor to 3.10 would be a much larger decision than this one.
+tenants originally kept those floors and CI kept running them (ADR-0022). The
+workspace has since adopted one common floor: every member now declares
+`>=3.12`, and the tools matrix runs each suite on Python 3.12, 3.13, and 3.14.
+That follow-up removes the unsupported lower-interpreter claims instead of
+carrying dead compatibility promises in the single distribution.
 
 **The wheel is roughly 15 MB.** About 12 MB of that is the skills `plugins/`
 tree, which the `vibey-skills` wheel already carried; the rest is ~4.7 MB of

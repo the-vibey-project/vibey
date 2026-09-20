@@ -46,6 +46,7 @@ from vibey.infrastructure.interfaces.cluster_preflight_interface import (
     EngineAuthCheckInterface,
 )
 from vibey.infrastructure.interfaces.logging_interface import CorrelationLogContextInterface
+from vibey.infrastructure.interfaces.postgres_interface import PostgresLocalServiceInterface
 
 if TYPE_CHECKING:  # concrete result types live beside their adapter
     from vibey.infrastructure.engines.claudeloop_process import (
@@ -85,6 +86,7 @@ __all__ = [
     "PostgresJobRepositoryInterface",
     "PostgresLedgerRepositoryInterface",
     "PostgresLedgerSearchRepositoryInterface",
+    "PostgresLocalServiceInterface",
     "PostgresMigratorInterface",
     "PostgresProjectRepositoryInterface",
     "PostgresReviewLedgerInterface",

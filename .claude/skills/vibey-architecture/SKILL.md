@@ -119,15 +119,15 @@ directory in this repository instead.
 
 | Directory | Package | Python floor | Own checks |
 |---|---|---|---|
-| `src/vibey_runners/claude` | `claudeloop` | 3.10 | pytest, ruff, mypy, import-linter |
+| `src/vibey_runners/claude` | `claudeloop` | 3.12 | pytest, ruff, mypy, import-linter |
 | `src/vibey_runners/codex` | `codexloop` | 3.12 | pytest, ruff, mypy, import-linter |
 | `src/vibey_runners/cursor` | `cursorloop` | 3.12 | pytest, ruff, mypy, import-linter |
 | `src/vibey_runners/agy` | `agyloop` | 3.12 | pytest, ruff, mypy, import-linter |
 | `src/vibey_runners/qwen` | `qwenloop` | 3.12 | pytest, ruff, mypy, import-linter |
-| `src/vibey_runners/common` | `vibey-runners-common` | 3.10 | ruff, mypy, import-linter (no test directory yet) |
-| `src/vibey_tools/gh` | `vibey-gh` | 3.11 | pytest (100% branch), black, isort, mypy, bandit |
-| `src/vibey_tools/skills` | `vibey-skills` | 3.10 | manifest/link validators, unittest |
-| `src/vibey_tools/bootstrap` | `vibey-bootstrap` | 3.11 | pytest (100% line), black, isort, mypy, bandit |
+| `src/vibey_runners/common` | `vibey-runners-common` | 3.12 | ruff, mypy, import-linter (no test directory yet) |
+| `src/vibey_tools/gh` | `vibey-gh` | 3.12 | pytest (100% branch), black, isort, mypy, bandit |
+| `src/vibey_tools/skills` | `vibey-skills` | 3.12 | manifest/link validators, unittest |
+| `src/vibey_tools/bootstrap` | `vibey-bootstrap` | 3.12 | pytest (100% line), black, isort, mypy, bandit |
 
 Rules for working inside a tenant:
 

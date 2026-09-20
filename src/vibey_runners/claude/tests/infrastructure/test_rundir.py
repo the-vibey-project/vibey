@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+from datetime import UTC
 from pathlib import Path
 
 import pytest
@@ -216,7 +217,7 @@ class TestHelpers:
         assert marker_path.name == "handoff.json"
 
     def test_write_handoff_marker(self, tmp_path: Path) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from claudeloop.domain.handoff_marker import HandoffMarker
 
@@ -225,7 +226,7 @@ class TestHelpers:
         marker = HandoffMarker(
             run_id=rd.read_meta().run_id,
             reason="rate_limit_window",
-            produced_at=datetime.now(timezone.utc),
+            produced_at=datetime.now(UTC),
         )
         written = rd.write_handoff_marker(marker)
         assert written == rd.handoff_marker_path

@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Python 3.10 or newer (CI tests 3.10–3.13 on Ubuntu).
+- Python 3.12 or newer (CI tests 3.12–3.14 on Ubuntu).
 - **macOS or Linux only.** Windows is not a supported target: this project
   is developed and CI-tested on Unix, classifiers declare MacOS and POSIX
   Linux only, and optional TTS falls back to `say` / `espeak`. POSIX paths
@@ -31,8 +31,7 @@ pip install vibey
 ```
 
 works too, inside whatever virtual environment you're already using. Note that
-the distribution requires **Python 3.12 or newer**, even though this package's
-own source supports 3.10+ and CI still tests it there.
+the distribution and every bundled library require **Python 3.12 or newer**.
 
 ## From source (for development)
 

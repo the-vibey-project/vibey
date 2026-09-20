@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -143,7 +144,7 @@ class TestResumeSuccess:
     def test_resume_auto_resolve_success(self, tmp_path: Path) -> None:
         """No --session-id and a resolvable session: prints the "most
         recent session" warning banner, then resumes it (lines 113-114)."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from claudeloop.domain.session import SessionRef
 
@@ -159,7 +160,7 @@ class TestResumeSuccess:
         ref = SessionRef(
             session_id="resolved-session",
             cwd=str(tmp_path),
-            last_modified=datetime.now(timezone.utc),
+            last_modified=datetime.now(UTC),
         )
 
         with (

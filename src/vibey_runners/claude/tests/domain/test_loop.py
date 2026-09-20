@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from claudeloop.domain.budget import Budget, BudgetLedger
 from claudeloop.domain.capacity import (
@@ -23,7 +23,7 @@ from claudeloop.domain.loop import (
 )
 from claudeloop.domain.waiting import WaitPolicyConfig
 
-NOW = datetime(2026, 8, 9, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 9, 12, 0, tzinfo=UTC)
 _DEFAULT_BUDGET = Budget()
 
 

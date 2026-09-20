@@ -12,11 +12,17 @@ claiming jobs, plus an append-only event ledger with payload queries.
 
 ## Decision
 
-**PostgreSQL 17.** Vibey connects to the database named by `VIBEY_PG_URL` and
+**PostgreSQL 14+.** Vibey connects to the database named by `VIBEY_PG_URL` and
 refuses to start without it (`bootstrap.py::database_url()` raises
 `DatabaseNotConfigured`); there is deliberately no silent local default. Schema
 migrations live in `migrations/` and are resolved relative to the package, so a
 source checkout and the container image use the same files.
+
+The SQL/runtime floor is PostgreSQL 14: the application uses no feature newer
+than that, and `build_app()` rejects a configured server below the floor. CI
+exercises every currently supported stable major, PostgreSQL 14 through 18;
+the local installer selects the current stable major (18) and the Helm chart
+continues to default to 17.
 
 A three-step resolver — an explicit `--pg-url`, then a Docker/Podman Compose
 service, then a local `pg_ctl` cluster under `.vibey/pgdata` — is designed but not
@@ -61,14 +67,13 @@ operational knowledge already exists.
 **Bad.** A "local tool" now needs a database. This is real friction and the main
 cost of this decision.
 
-**Mitigation (partial).** Today the operator supplies `VIBEY_PG_URL`; a missing
-value fails immediately with the exact `export` line to run rather than guessing.
-On Kubernetes the Helm chart runs an in-cluster `postgres:17-alpine` by default
+**Mitigation.** The operator can run `vibey install --postgres` (or
+`vibey doctor --install-postgres`) to install and start a local PostgreSQL 14+
+server through Homebrew, apt, or dnf. The operator still supplies
+`VIBEY_PG_URL`; a missing value fails immediately with the exact `export` line
+to run rather than guessing. On Kubernetes the Helm chart runs an in-cluster `postgres:17-alpine` by default
 (`postgres.enabled` in `deploy/helm/vibey/values.yaml`) or points at a managed
 instance through an existing secret; see [ADR-0025](0025-kubernetes-operator-crd-keda.md).
-The planned `vibey up` command, with the three fallbacks above and matching
-`vibey doctor` diagnostics, is what would make a laptop install zero-config; it is
-not implemented.
 
 ## Alternatives rejected
 

@@ -4,11 +4,13 @@ ledger" logic used by both build.implement and build.verify -- they differ
 in what they ask an engine to do and what a completing verdict means, not
 in how a run is driven or persisted."""
 
+import contextlib
 from dataclasses import dataclass
 
 from vibey.application.dto import HumanGateRequest, JobRecord, RunHandle
 from vibey.application.interfaces import (
     BuildLedger,
+    TelemetryTracer,
 )
 from vibey.application.ports import EngineAdapter
 from vibey.domain.correlation import DELIVERY_CORRELATION
@@ -67,6 +69,7 @@ async def run_and_record(
     job: JobRecord,
     handle: RunHandle,
     correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
+    tracer: TelemetryTracer | None = None,
 ) -> RunOutcome:
     # One id for the whole delivery, derived from the project; the run's own
     # identity moves to causation_id, which is already on LedgerEvent and was
@@ -77,16 +80,31 @@ async def run_and_record(
     complete = False
     capacity_rejected = False
     diagnostics: list[str] = []
+    turn_number = 0
     async for event in engine.tail(handle):
-        await ledger.record(
-            project_id=job.project_id,
-            cycle=job.cycle,
-            job_id=job.id,
-            engine_id=engine.descriptor.engine_id,
-            correlation_id=correlation_id,
-            causation_id=handle.run_id,
-            event=event,
+        turn_span = (
+            tracer.trace_turn(
+                engine_id=engine.descriptor.engine_id,
+                turn_number=turn_number,
+                event_kind=event.kind,
+            )
+            if tracer is not None and event.kind == EventKind.TURN_COMPLETED.value
+            else contextlib.nullcontext()
         )
+        with turn_span as span:
+            await ledger.record(
+                project_id=job.project_id,
+                cycle=job.cycle,
+                job_id=job.id,
+                engine_id=engine.descriptor.engine_id,
+                correlation_id=correlation_id,
+                causation_id=handle.run_id,
+                event=event,
+            )
+            if span is not None:
+                span.set_attribute("event_kind", event.kind)
+        if event.kind == EventKind.TURN_COMPLETED.value:
+            turn_number += 1
         if event.kind == EventKind.VERDICT_RENDERED.value and bool(event.payload.get("complete")):
             complete = True
         if event.kind == EventKind.CAPACITY_REJECTED.value:

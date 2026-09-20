@@ -8,7 +8,7 @@ import os
 import re
 import uuid
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -113,9 +113,7 @@ class RunDirectory:
         it is still going.
         """
         if run_id is None:
-            run_id = (
-                datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
-            )
+            run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
         else:
             run_id = validate_run_id(run_id)
         directory = cls(runs_root / run_id)
@@ -129,7 +127,7 @@ class RunDirectory:
             run_id=run_id,
             pid=os.getpid(),
             cwd=str(cwd.resolve()),
-            started_at=datetime.now(timezone.utc).isoformat(),
+            started_at=datetime.now(UTC).isoformat(),
             plan_path=str(plan_path.resolve()) if plan_path else None,
         )
         directory.write_meta(meta)

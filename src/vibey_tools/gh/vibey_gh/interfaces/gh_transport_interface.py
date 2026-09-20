@@ -17,10 +17,10 @@ from __future__ import annotations
 import subprocess
 from collections.abc import Sequence
 from os import PathLike
-from typing import Any, Protocol, TypeAlias, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 # A working directory as the callers already hold one: `GhConfig.root` is a `Path`.
-WorkingDirectory: TypeAlias = str | PathLike[str]
+type WorkingDirectory = str | PathLike[str]
 
 
 @runtime_checkable

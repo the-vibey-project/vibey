@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -159,7 +159,7 @@ class RunSnapshotBuilder:
             if not isinstance(now, datetime):
                 raise TypeError(f"clock.now() must return datetime, got {type(now)!r}")
             return now
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     def _read_latest_digest(self) -> str | None:
         path = self._snapshots / "latest.json"

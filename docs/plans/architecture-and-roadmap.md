@@ -12,7 +12,7 @@
 > **Not built:** the media-provider port, adapters and generation jobs of §14 (only
 > `visual.inventory` / `visual.plan` and `vibey visual accept|waive` exist); the
 > `container` and `vm` isolation levels and the egress allow-list of §11; the
-> OpenTelemetry exporter and notification wiring of §13; `vibey up` / `vibey serve`
+> OpenTelemetry exporter of §13; `vibey up` / `vibey serve`
 > and a supervisor process (§4). Live Azure mutation exists but is off unless a
 > worker is started with `--azure az` (§15).
 > **Since this was written:** the runners and the `vibey-gh`, `vibey-skills` and
@@ -235,9 +235,10 @@ processes**, plus an optional Kubernetes operator.
   jobs, bounded to `min(parallelism, engines × 2, cpu_count)`. `vibey work
   <project-id>` processes one ready DESIGN job in the foreground and exits.
 - Every process reads its DSN from `VIBEY_PG_URL` and refuses to start without it
-  (`DatabaseNotConfigured`); there is no default database. Postgres is brought by
-  the operator: a local instance, a container, or the Helm chart's in-cluster
-  `postgres:17-alpine`.
+  (`DatabaseNotConfigured`); there is no default database. `vibey install --postgres`
+  can install and start a local PostgreSQL 14+ server through Homebrew, apt, or dnf.
+  Postgres may also be brought by the operator as a container or through the Helm
+  chart's in-cluster `postgres:17-alpine`.
 - Workers are stateless. Killing one loses nothing; its lease expires and the job
   is re-leased. In a container, `tini` is PID 1 and a SIGTERM latch armed before
   the first import turns a stop into a drain
@@ -466,12 +467,14 @@ indices for the ledger, and advisory locks for phase transitions. It is also
 already the storage substrate in the sibling `apg-*` projects, so the operational
 knowledge is not new.
 
-*Corrected 2026-09-15.* The planned `vibey up` with Compose and `pg_ctl`
-fallbacks was not built. The DSN is read from `VIBEY_PG_URL` and nothing else; a
-missing value is a hard error (`DatabaseNotConfigured`), never a guessed
-localhost database — an earlier silent fallback once wrote 78 test projects into a
-production database. Bring your own Postgres (local, a container, or the Helm
-chart's in-cluster `postgres:17-alpine`).
+*Corrected 2026-09-20.* The planned `vibey up` supervisor with Compose and
+`pg_ctl` fallbacks was not built. The DSN is still read from `VIBEY_PG_URL` and
+nothing else; a missing value is a hard error (`DatabaseNotConfigured`), never a
+guessed localhost database — an earlier silent fallback once wrote 78 test
+projects into a production database. `vibey install --postgres` now installs
+and starts a native local PostgreSQL service when Homebrew, apt, or dnf is
+available. Bring the database with that command, a container, or the Helm
+chart's `postgres:17-alpine`, then set the explicit DSN.
 
 See [ADR-0002](../architecture/decisions/0002-postgres-not-sqlite.md).
 
@@ -945,23 +948,26 @@ mutation until a human accepts each corresponding opt-in.
 
 - **Structured logs** — `structlog`, dual transport (human console + JSON lines),
   matching the `*loop` convention.
-- **Traces** *(dormant)* — `infrastructure/otel.py` records spans and counters
-  in-process, but no exporter is configured and nothing in `bootstrap.py` or the
-  CLI instantiates it; wiring it is open work. The design: OpenTelemetry spans,
+- **Traces** — `infrastructure/otel.py` records spans and counters in-process;
+  `bootstrap.py` constructs it and `WorkerLoop`, BUILD, and handoff orchestration
+  emit runtime spans. No external exporter is configured yet. The design:
+  OpenTelemetry spans,
   one per job, child spans per engine turn, per
   tool invocation, per handoff. `phase`, `cycle`, `engine_id`, `job_kind`, and
   `effort` are span attributes so any of them can slice a latency or cost query.
-- **Metrics** *(dormant, same module)* — job queue depth by state, lease expiry rate, handoff gate failure
-  rate by rule, per-engine selection counts (to prove rotation fairness in
-  production, not just in unit tests), media-provider selection counts by
+- **Metrics** *(same module)* — the active recorder covers queue latency, phase
+  duration, handoff gate failure rate by rule, per-engine selection counts (to
+  prove rotation fairness in production, not just in unit tests), and cost spend;
+  job queue depth by state, lease expiry rate, and media-provider selection counts by
   modality, media generation latency/failure/retention, tokens and dollars by
   phase/engine/provider/cycle.
 - **Cost** — every `TurnCompleted` carries `cost_usd`; `domain/budget.py` maintains
   the ledger. `vibey cost` reports by phase, cycle, engine, and work item.
   The `azure-bootstrap` AI usage tracker's sliding-window/soft-cap model is the
   reference for the caps implementation.
-- **Notifications** *(dormant)* — `infrastructure/notify/` implements desktop
-  alerts and signed webhooks; nothing wires it yet.
+- **Notifications** — `infrastructure/notify/` implements desktop alerts and
+  signed webhooks; `bootstrap.py` wires it to gate raises and project phase
+  transitions when `[notifications] enabled = true` is copied by `vibey new`.
 - **The TUI** (`vibey watch`, `tui/dashboard.py`) shows: current phase and cycle,
   the visual-design and deployment decisions, per-engine circuit state, queue
   depth by job state, active worktrees, and a tail of the ledger. There is no
@@ -1303,7 +1309,7 @@ Detail, with test-first task breakdowns, in
 | **M5** | Phase ① DESIGN + optional visual-design interstitial | A real interview can either enter BUILD directly or produce a confirmed screen/media plan before BUILD | partial: DESIGN, inventory/plan, accept/waive; media generation not built (§14) |
 | **M6** | Phase ② BUILD end to end | Parallel worktrees, integration, escalation ladder, budget caps | done |
 | **M7** | Phase ③ REVIEW + loop-backs + deployment choice | Full delivery loop plus explicit local-complete versus deployment-opt-in routing | done |
-| **M8** | TUI, cost reporting, OTel, notifications | `vibey watch` usable for an overnight run | partial: `vibey watch` and `vibey cost` done; OTel and notifications written but not wired |
+| **M8** | TUI, cost reporting, OTel, notifications | `vibey watch` usable for an overnight run | done for runtime recording; external telemetry export remains open |
 | **M9** | Isolation levels (container), security hardening, threat-model review | Container mode passes egress allow-list test | partial: container runtime written but not wired; no egress allow-list or `vm` |
 | **M10** | Optional Phases ④–⑥: Azure deployment stage set | An explicit opt-in can deploy durably in ⑤ and reach a verified demo or actionable human gate in ⑥; an opt-out finishes locally without cloud work | done; in-memory Azure client unless `--azure az` |
 

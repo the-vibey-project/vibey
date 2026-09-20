@@ -119,6 +119,44 @@ def test_minimal_config_applies_defaults() -> None:
     assert config.deploy.enabled is False
     assert config.features.qwenloop is False
     assert config.qwenloop.backend == "auto"
+    assert config.notifications.enabled is False
+    assert config.notifications.desktop is True
+    assert config.notifications.webhooks == ()
+    assert config.telemetry.enabled is True
+    assert config.telemetry.export_path is None
+
+
+def test_notifications_and_telemetry_parse_from_toml() -> None:
+    config = load_config_from_string(
+        '[project]\nname = "observable"\n\n'
+        "[notifications]\nenabled = true\ndesktop = false\n\n"
+        '[[notifications.webhooks]]\nurl = " https://example.test/hook "\nsecret = "s3cret"\n\n'
+        '[telemetry]\nenabled = false\nexport_path = ".vibey/telemetry.json"\n'
+    )
+
+    assert config.notifications.enabled is True
+    assert config.notifications.desktop is False
+    assert config.notifications.webhooks[0].url == "https://example.test/hook"
+    assert config.notifications.webhooks[0].secret == "s3cret"
+    assert config.telemetry.enabled is False
+    assert config.telemetry.export_path == ".vibey/telemetry.json"
+
+
+@pytest.mark.parametrize(
+    "fragment, match",
+    [
+        ('[notifications]\nwebhooks = "bad"', "notifications.webhooks"),
+        ("[notifications]\nwebhooks = [1]", "must be a table"),
+        ('[[notifications.webhooks]]\nurl = " "', "must not be empty"),
+        ('[[notifications.webhooks]]\nurl = "https://x"\nsecret = 7', "must be a str"),
+        ('[notifications]\nenabled = "yes"', "notifications.enabled"),
+        ('[telemetry]\nenabled = "yes"', "telemetry.enabled"),
+        ("[telemetry]\nexport_path = 7", "telemetry.export_path"),
+    ],
+)
+def test_invalid_notification_or_telemetry_config_is_rejected(fragment: str, match: str) -> None:
+    with pytest.raises(ConfigError, match=match):
+        load_config_from_string(f'[project]\nname = "x"\n\n{fragment}\n')
 
 
 def test_qwenloop_feature_auto_includes_standby() -> None:

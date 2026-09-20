@@ -105,7 +105,7 @@ off the interpreter's import path. Without it, a branch containing a `vibey_gh/`
 would have that package imported and run by the hook in place of the installed tool. A
 repository that self-hosts the tooling still runs its declared `[install] self_source`,
 because that path reaches the interpreter through `PYTHONPATH`, which the variable leaves
-alone. Python 3.11 and newer honour it, and vibey-gh already requires 3.11. Older
+alone. Python 3.12 and newer honour it, and vibey-gh requires 3.12. Older
 interpreters ignore it.
 
 The automation-bootstrap workflow is a second guarded exception: a manually dispatched,

@@ -76,6 +76,43 @@ async def test_a_bad_migration_lock_wait_fails_the_start_before_touching_the_dat
             pass
 
 
+async def test_build_app_rejects_a_postgres_server_below_the_support_floor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Connection:
+        async def fetchval(self, _query: str) -> str:
+            return "130023"
+
+    class Acquire:
+        async def __aenter__(self) -> Connection:
+            return Connection()
+
+        async def __aexit__(self, *_args: object) -> None:
+            pass
+
+    class Pool:
+        closed = False
+
+        def acquire(self) -> Acquire:
+            return Acquire()
+
+        async def close(self) -> None:
+            self.closed = True
+
+    pool = Pool()
+
+    async def create_pool(*_args: object, **_kwargs: object) -> Pool:
+        return pool
+
+    monkeypatch.setattr(bootstrap.asyncpg, "create_pool", create_pool)
+
+    with pytest.raises(bootstrap.UnsupportedPostgresVersion):
+        async with bootstrap.build_app(url="postgresql://old/db"):
+            pass
+
+    assert pool.closed is True
+
+
 def test_every_composed_worker_is_given_the_structured_logger() -> None:
     """Structural, not textual. Counting `return WorkerLoop(` against
     `logger=StructlogAppLogger(` balances two unrelated totals: drop the keyword from one

@@ -7,14 +7,14 @@ All deadlines must be timezone-aware UTC so they compare against SystemClock.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
 from claudeloop.cli.time_parse import parse_wind_down_at
 from claudeloop.infrastructure.clock import SystemClock
 
-UTC = timezone.utc
+UTC = UTC
 
 
 def _utc(*args: int) -> datetime:

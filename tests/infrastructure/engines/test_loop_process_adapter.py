@@ -282,7 +282,9 @@ def test_help_text_fetches_and_caches_real_output(tmp_path: Path) -> None:
     import os
 
     bin_dir = _make_fake_binary(
-        tmp_path, "fakecli_help1", 'echo "usage: fakecli_help1 run [OPTIONS] --my-flag <str>"'
+        tmp_path,
+        "fakecli_help1",
+        'printf "\\033[1musage: fakecli_help1 run [OPTIONS] --my-flag <str>\\033[0m\\n"',
     )
     old_path = os.environ.get("PATH", "")
     os.environ["PATH"] = f"{bin_dir}:{old_path}"
@@ -307,6 +309,7 @@ def test_help_text_fetches_and_caches_real_output(tmp_path: Path) -> None:
         help_text = adapter.help_text
 
         assert help_text is not None
+        assert "\x1b" not in help_text
         assert "--my-flag" in help_text
     finally:
         os.environ["PATH"] = old_path
@@ -380,6 +383,49 @@ def test_help_text_returns_none_on_subprocess_error(tmp_path: Path) -> None:
             assert adapter.help_text is None
     finally:
         os.environ["PATH"] = old_path
+
+
+def test_help_text_uses_the_isolated_engine_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+    import subprocess
+    from unittest.mock import patch
+
+    bin_dir = _make_fake_binary(tmp_path, "fakecli_help_env", 'echo "usage: fakecli_help_env"')
+    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ.get('PATH', '')}")
+    monkeypatch.setenv("VIRTUAL_ENV", "/orchestrator/.venv")
+    monkeypatch.setenv("PYTHONPATH", "/orchestrator/src")
+    desc = CLAUDELOOP.__class__(
+        engine_id=EngineId.CLAUDELOOP,
+        binary="fakecli_help_env",
+        min_version="0.1.0",
+        state_dir=".test",
+        done_marker="TEST_DONE",
+        auth_env=("TEST_KEY",),
+        capabilities=frozenset(),
+        effort_projection=CLAUDELOOP.effort_projection,
+        session_verb="sessions",
+        isolation_flags=CLAUDELOOP.isolation_flags,
+        cost_per_mtok_in=1.0,
+        cost_per_mtok_out=5.0,
+        context_window=100_000,
+    )
+    adapter = LoopProcessAdapter(descriptor=desc, env_overlay={"ENGINE_BACKEND": "test"})
+
+    completed = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout="usage: fakecli_help_env", stderr=""
+    )
+    with patch("subprocess.run", return_value=completed) as run:
+        assert adapter.help_text == "usage: fakecli_help_env"
+
+    help_env = run.call_args.kwargs["env"]
+    assert "VIRTUAL_ENV" not in help_env
+    assert "PYTHONPATH" not in help_env
+    assert help_env["ENGINE_BACKEND"] == "test"
+    assert help_env["COLUMNS"] == "250"
+    assert help_env["LINES"] == "50"
+    assert help_env["NO_COLOR"] == "1"
 
 
 async def test_tail_yields_translated_events(tmp_path: Path) -> None:
@@ -1509,6 +1555,7 @@ async def test_start_spawns_the_engine_with_an_isolated_env(
     captured: dict[str, object] = {}
 
     async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured["argv"] = argv
         captured.update(kwargs)
         process = AsyncMock()
         process.pid = 4242
@@ -1516,6 +1563,7 @@ async def test_start_spawns_the_engine_with_an_isolated_env(
         return process
 
     monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(module.shutil, "which", lambda _: "/orchestrator/.venv/bin/claudeloop")
     monkeypatch.setenv("VIRTUAL_ENV", "/orchestrator/.venv")
 
     adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
@@ -1533,6 +1581,45 @@ async def test_start_spawns_the_engine_with_an_isolated_env(
     assert isinstance(env, dict)
     assert "VIRTUAL_ENV" not in env
     assert "/orchestrator/.venv" not in env.get("PATH", "")
+    assert captured["argv"][0] == "/orchestrator/.venv/bin/claudeloop"
+
+
+async def test_start_keeps_the_binary_name_when_it_is_not_on_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from unittest.mock import AsyncMock
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+    from vibey.infrastructure.engines import loop_process_adapter as module
+
+    captured: dict[str, object] = {}
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured["argv"] = argv
+        captured.update(kwargs)
+        process = AsyncMock()
+        process.pid = 4244
+        process.returncode = None
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(module.shutil, "which", lambda _: None)
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    handle = await adapter.start(
+        RunSpec(
+            run_id=uuid4(),
+            worktree_path=tmp_path,
+            prompt="do the thing",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+    )
+    _active_processes.pop(handle.run_id, None)
+
+    assert captured["argv"][0] == CLAUDELOOP.binary
 
 
 async def test_tail_reads_codexloop_flat_events_keyed_by_type(tmp_path: Path) -> None:

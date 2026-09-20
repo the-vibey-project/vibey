@@ -79,15 +79,15 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
 - Subprocess execution strips sensitive git and shell environment variables (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, etc.) using `CleanGitEnvSubprocessExecutor`.
 - All ledger and telemetry records run through redaction masks (`redact.py`) to prevent leakage of credentials, tokens, or private keys.
 
-### 6. Webhook Payload Integrity — implemented and unit-tested, not yet an active runtime path
+### 6. Webhook Payload Integrity — implemented, unit-tested, and active when configured
 - `infrastructure/notify/` implements a `NotificationService` whose webhook
   dispatch signs payloads with HMAC-SHA256 signatures
   (`X-Vibey-Signature: sha256=...`) and validates them against URL scheme
-  restrictions, and it is covered by tests. It is **not yet wired into
-  `bootstrap.py`, the worker, or the CLI** — no flag or `vibey.toml` key
-  constructs it today, so no webhook notifications are dispatched at all.
-  Treat it as implemented-and-tested, not yet an active runtime path (see
-  the README's [Notifications](README.md#notifications) section).
+  restrictions, and it is covered by tests. `build_app()` constructs the
+  service, and `vibey new` copies `[notifications]` from the repository's
+  `vibey.toml` into the project record. Delivery remains opt-in: configure
+  `[notifications] enabled = true` before relying on desktop or webhook alerts.
+  See the README's [Notifications](README.md#notifications) section.
 
 ---
 

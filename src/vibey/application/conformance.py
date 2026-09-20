@@ -62,14 +62,30 @@ async def run_conformance(
             stderr=asyncio.subprocess.DEVNULL,
         )
         await init.wait()
+        # The real loop runners create git savepoints during even the trivial
+        # scripted run.  A fresh CI checkout often has no global Git identity;
+        # the identity used for this scratch repository must therefore persist
+        # beyond the initial commit rather than being supplied only as
+        # one-command `git -c` overrides.
+        for key, value in (
+            ("user.email", "vibey-conformance@localhost"),
+            ("user.name", "vibey conformance"),
+        ):
+            config = await asyncio.create_subprocess_exec(
+                "git",
+                "-C",
+                str(worktree_path),
+                "config",
+                key,
+                value,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await config.wait()
         commit = await asyncio.create_subprocess_exec(
             "git",
             "-C",
             str(worktree_path),
-            "-c",
-            "user.email=vibey-conformance@localhost",
-            "-c",
-            "user.name=vibey conformance",
             "commit",
             "--allow-empty",
             "-q",

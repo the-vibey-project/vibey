@@ -17,9 +17,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from os import PathLike
-from typing import Any, Protocol, TypeAlias, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
-WorkingDirectory: TypeAlias = str | PathLike[str]
+type WorkingDirectory = str | PathLike[str]
 
 
 @runtime_checkable

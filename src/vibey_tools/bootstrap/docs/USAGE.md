@@ -46,8 +46,8 @@ a v2.1 logging-transport layer (console / App Insights / Sumo Logic).
 >    (structured JSON logging, correlation via `AsyncLocalStorage`, masking, counters,
 >    token bucket, **HMAC action tokens that interoperate byte-for-byte** with Python).
 
-**Compatibility:** the source supports Python **≥ 3.11**; the distribution that ships it
-requires **≥ 3.12**. Distribution: `pip install vibey` (PyPI, MIT) — there is no separate
+**Compatibility:** the source and distribution support Python **≥ 3.12**. Distribution:
+`pip install vibey` (PyPI, MIT) — there is no separate
 `vibey-bootstrap` project (vibey ADR-0037). Every v1 public symbol is preserved byte-identical across v2.
 
 ### Table of contents

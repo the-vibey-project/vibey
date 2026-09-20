@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -37,7 +37,7 @@ from tests.live.system.conftest import SystemHarness, build_system_harness
 
 pytestmark = pytest.mark.system
 
-NOW = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 12, 15, 0, tzinfo=UTC)
 
 
 class _StopEnqueueingSleeper:

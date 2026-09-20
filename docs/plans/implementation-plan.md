@@ -5,14 +5,12 @@
 > is struck through, and each table carries a **Status** column added on
 > 2026-09-15 (**done**, **partial**, or **not started**, with evidence). Summary:
 >
-> - **Done:** M0, M3, M6, M7; M1, M2 and M4 except 1.7 (property example count
+> - **Done:** M0, M3, M6, M7, M8; M1, M2 and M4 except 1.7 (property example count
 >   below plan), 2.3 (`vibey up`, dropped) and 4.6 (`vibey ledger rebuild`, never
 >   built); M10 tasks 10.1–10.7 and 10.9–10.11, exercised offline by
 >   `tests/system/test_delivery_stage_set.py`.
 > - **Partial:** M5 (media-provider tasks 5.9–5.10 exist only as pure `domain/media.py`;
->   5.11–5.12 are not built), M8 (8.3
->   OpenTelemetry and 8.4 notifications exist as tested modules that nothing in
->   `bootstrap.py` or `cli/main.py` imports), M9 (9.1–9.4 are implemented and
+>   5.11–5.12 are not built), M9 (9.1–9.4 are implemented and
 >   unit-tested but are not active runtime paths — see `SECURITY.md`; 9.5 has no
 >   recorded playbook review), M10
 >   (10.8 rollback, 10.12 CLI, and the real-Azure half of 10.13).
@@ -100,7 +98,7 @@ stdlib. **Nothing in the repo can do I/O yet.**
 |---|---|---|---|---|
 | 2.1 | Migration runner + `schema_migration` checksum guard | applying an edited migration fails | — | **done** — `infrastructure/db/migrator.py` |
 | 2.2 | Migrations ~~001–008~~ `0001`–`0011`: every table in [data-model.md](data-model.md) | apply to fresh + apply over seeded fixture | — | **done** — eleven migrations in the root `migrations/` (`0009_event_produced_at`, `0010_visual_design_phase`, `0011_deployment_stage_set_phases` added later), resolved by `bootstrap.migrations_dir()` |
-| 2.3 | `vibey up` — Postgres resolution (BYO → Compose → `pg_ctl`) | integration on a clean machine | `vibey up && vibey doctor` green with no prior Postgres | **not started** — dropped. There is no `vibey up` and no Compose/`pg_ctl` resolution; Postgres is bring-your-own via `VIBEY_PG_URL` ([configuration reference](../reference/configuration.md)), and `vibey doctor` reports reachability |
+| 2.3 | Local PostgreSQL install and doctor check | installer unit tests plus a live service check | `vibey install --postgres` installs/starts PostgreSQL and `vibey doctor` reports readiness | **done** — `infrastructure/postgres.py` supports Homebrew, apt, and dnf; `vibey doctor --install-postgres` is the explicit repair path; PostgreSQL 14–18 run the compatibility suite |
 | 2.4 | `application/ports.py` — every Protocol | — | — | **done** — `application/ports.py`, `application/interfaces/` |
 | 2.5 | `JobRepository`: enqueue (idempotent), claim (`SKIP LOCKED`), heartbeat, ack, nack, reap | **testcontainers Postgres, never mocked** | — | **done** — `infrastructure/db/`; tests run against a real Postgres (`VIBEY_TEST_DATABASE_URL`, `integration` marker), not testcontainers |
 | 2.6 | `application/worker.py` — lease→execute→ack loop with `Park` | fake-port unit tests at 100% | — | **done** — `application/worker.py` |
@@ -230,8 +228,8 @@ work end to end.
 |---|---|---|---|
 | 8.1 | Textual TUI: phase, cycle, circuits, queue depth, worktrees, ledger tail | usable for an overnight run | **done** — `tui/dashboard.py`; `vibey watch` |
 | 8.2 | `vibey status --json`, `vibey engines`, `vibey cost`, `vibey ledger show` | — | **done** — `vibey status`, `vibey engines`, `vibey cost`, `vibey ledger show` |
-| 8.3 | OpenTelemetry spans + the metric set from architecture §13 | rotation fairness is *measurable in production* | **partial** — `infrastructure/otel.py` exists with tests, but nothing in `bootstrap.py` or `cli/main.py` imports it; no spans or metrics are emitted at runtime, so fairness is not yet measurable in production |
-| 8.4 | Notifications: desktop + webhook, on gate raised / phase change / budget | — | **partial** — `infrastructure/notify/` (desktop, webhook, events, service) exists with tests but is not wired into the composition root; no notification fires at runtime |
+| 8.3 | OpenTelemetry spans + the metric set from architecture §13 | rotation fairness is *measurable in production* | **done** — `bootstrap.build_app` constructs the in-process tracer/metrics recorder; workers record job, queue, phase, selection, turn, handoff, and spend telemetry. External export remains future work. |
+| 8.4 | Notifications: desktop + webhook, on gate raised / phase change / budget | — | **done** — `build_app` wires `NotificationService`; `vibey new` copies `[notifications]` from `vibey.toml`, and workers/project transitions dispatch configured events. |
 | 8.5 | `vibey watch --replay` over a finished run | — | **done** — `vibey watch --replay` |
 
 ---

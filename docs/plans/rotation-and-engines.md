@@ -773,11 +773,12 @@ DESIGN included, is the ledger's: `vibey cost` prints it. Until issue #209 the
 column was fed only by `record_selection`'s `cost_usd` argument, which its one
 caller never passed, so it read `$0.00` everywhere.
 
-**Planned exports (not implemented).** `infrastructure/otel.py` holds an
-in-memory `TelemetryMetrics` recorder (selections, queue latency, phase
-duration, handoff-gate failures, cost) and a `calculate_rotation_fairness`
-helper (Jain's index over selections divided by weights), but no production
-code calls them and nothing exports a metric. The design calls for:
+**Runtime recording; planned exports.** `bootstrap.py` constructs the
+in-memory `TelemetryMetrics` recorder and the worker/rotation/handoff paths
+record selections, queue latency, phase duration, handoff-gate failures, and
+cost. `calculate_rotation_fairness` remains the Jain's-index helper over
+selections divided by weights. No external exporter is configured yet. The
+design calls for:
 
 - `vibey_engine_selected_total{engine,phase,cycle}` — the empirical distribution;
   divide by weights and it should approach uniform.

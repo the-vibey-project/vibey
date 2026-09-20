@@ -136,7 +136,7 @@ suggested adoption order below cross-references the relevant examples.
 - `telemetry_manager` singleton identity.
 - All 16 non-version exports in v1's `__all__`.
 - The CI/CD workflow at `.github/workflows/ci-cd.yml`.
-- The package's Python requirement (`>=3.11`).
+- The package's Python requirement (`>=3.12` in the unified `vibey` distribution).
 
 ## Suggested adoption order (Parts 2 + 3)
 

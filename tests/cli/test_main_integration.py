@@ -351,6 +351,32 @@ def test_new_project_stores_cycle_budget_caps_in_config(tmp_path: Path) -> None:
     assert config["skills_context"] == {"mode": "shadow", "budget": 4000}
 
 
+def test_new_project_stores_runtime_observability_tables(tmp_path: Path) -> None:
+    (tmp_path / "vibey.toml").write_text(
+        "[notifications]\nenabled = true\ndesktop = false\n\n"
+        '[[notifications.webhooks]]\nurl = "https://example.test/hook"\nsecret = "secret"\n\n'
+        "[telemetry]\nenabled = false\n"
+    )
+
+    result = runner.invoke(app, ["new", "observable-proj", "--repo", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+
+    async def load():  # type: ignore[no-untyped-def]
+        async with build_app() as resources:
+            project = await resources.projects.get_latest()
+            assert project is not None
+            return project.config
+
+    config = asyncio.run(load())
+    assert config["notifications"] == {
+        "enabled": True,
+        "desktop": False,
+        "webhooks": [{"url": "https://example.test/hook", "secret": "secret"}],
+    }
+    assert config["telemetry"] == {"enabled": False}
+
+
 def test_new_project_rejects_unknown_skills_context_mode(tmp_path: Path) -> None:
     result = runner.invoke(
         app,
