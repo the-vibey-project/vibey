@@ -4,7 +4,12 @@
 import json
 from pathlib import Path
 
-from qwenloop.application.interfaces import InferenceServer, RunStore, ToolExecutor
+from qwenloop.application.interfaces import (
+    DesktopNotifierInterface,
+    InferenceServer,
+    RunStore,
+    ToolExecutor,
+)
 from qwenloop.domain.model import (
     DONE_MARKER,
     ChatMessage,
@@ -59,10 +64,25 @@ def _trim_transcript(transcript: list[ChatMessage], context_window: int) -> list
 
 
 class AutonomousRunner:
-    def __init__(self, server: InferenceServer, store: RunStore, tools: ToolExecutor) -> None:
+    def __init__(
+        self,
+        server: InferenceServer,
+        store: RunStore,
+        tools: ToolExecutor,
+        notifier: DesktopNotifierInterface | None = None,
+    ) -> None:
         self._server = server
         self._store = store
         self._tools = tools
+        self._notifier = notifier
+
+    async def _notify(self, title: str, message: str) -> None:
+        if self._notifier is None:
+            return
+        try:
+            await self._notifier.notify(title, message)
+        except Exception:  # noqa: BLE001 - notification delivery is never run semantics
+            return
 
     async def run(
         self,
@@ -97,10 +117,12 @@ class AutonomousRunner:
                 "cwd": str(cwd),
             },
         )
+        await self._notify("Qwen run started", f"Run {run_id} started.")
         for turn in range(1, max_turns + 1):
             controls = self._store.read_control(run_id)
             if any(item.get("type") in {"stop", "wind_down"} for item in controls):
                 state.status = RunStatus.WINDING_DOWN
+                await self._notify("Qwen run winding down", f"Run {run_id} is winding down.")
                 self._store.write_snapshot(run_id, _snapshot(state))
                 return state
             state.turns = turn
@@ -160,6 +182,10 @@ class AutonomousRunner:
                     "tool_called": tool_called,
                 },
             )
+            await self._notify(
+                f"Qwen turn {turn} complete",
+                f"Run {run_id} completed model turn {turn}.",
+            )
             answer = "".join(text_parts)
             saw_verdict = saw_verdict or "```qwenloop-verdict" in answer
             if tool_calls:
@@ -174,6 +200,7 @@ class AutonomousRunner:
                 state.transcript.append(ChatMessage("assistant", answer))
             if DONE_MARKER in answer and saw_verdict and any_tool_called:
                 state.status = RunStatus.COMPLETED
+                await self._notify("Qwen run completed", f"Run {run_id} completed successfully.")
                 self._store.append_event(run_id, {"type": "completed", "turn": turn})
                 self._store.write_snapshot(run_id, _snapshot(state))
                 return state
@@ -187,6 +214,7 @@ class AutonomousRunner:
         self._store.append_event(
             run_id, {"type": "failed", "reason": "turn limit or empty response"}
         )
+        await self._notify("Qwen run failed", f"Run {run_id} failed after {state.turns} turns.")
         self._store.write_snapshot(run_id, _snapshot(state))
         return state
 

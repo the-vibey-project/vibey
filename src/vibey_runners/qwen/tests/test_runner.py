@@ -123,6 +123,18 @@ class ScriptedServer:
             yield chunk
 
 
+class RecordingNotifier:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.fail = fail
+        self.calls: list[tuple[str, str]] = []
+
+    async def notify(self, title: str, message: str) -> bool:
+        self.calls.append((title, message))
+        if self.fail:
+            raise RuntimeError("desktop notification unavailable")
+        return True
+
+
 @pytest.mark.asyncio
 async def test_runner_inserts_continue_prompt_after_assistant_only_turn(tmp_path: Path) -> None:
     server = ScriptedServer(
@@ -150,6 +162,59 @@ async def test_runner_inserts_continue_prompt_after_assistant_only_turn(tmp_path
     assert [message.role for message in server.seen[1][-2:]] == ["assistant", "user"]
     # a tool-only turn already ends on "tool", so no continuation prompt is needed or added
     assert server.seen[2][-1].role == "tool"
+
+
+@pytest.mark.asyncio
+async def test_runner_notifies_lifecycle_events(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}})],
+            [ChatChunk(text="```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE")],
+        ]
+    )
+    notifier = RecordingNotifier()
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(
+        server,
+        FileRunStore(tmp_path),
+        SandboxTools(tmp_path),
+        notifier=notifier,
+    ).run(
+        run_id="notifications",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=2,
+    )
+    assert result.status is RunStatus.COMPLETED
+    assert [title for title, _message in notifier.calls] == [
+        "Qwen run started",
+        "Qwen turn 1 complete",
+        "Qwen turn 2 complete",
+        "Qwen run completed",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_runner_ignores_notification_failures(tmp_path: Path) -> None:
+    notifier = RecordingNotifier(fail=True)
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(
+        FakeServer(),
+        FileRunStore(tmp_path),
+        SandboxTools(tmp_path),
+        notifier=notifier,
+    ).run(
+        run_id="notification-failure",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=2,
+    )
+    assert result.status is RunStatus.COMPLETED
+    assert len(notifier.calls) == 3
 
 
 @pytest.mark.asyncio

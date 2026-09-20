@@ -13,11 +13,13 @@ from qwenloop.application.interfaces.backend_selection_interface import (
     BackendSelectorInterface,
 )
 from qwenloop.application.interfaces.class_contracts import AutonomousRunnerInterface
+from qwenloop.application.interfaces.desktop_notifier_interface import DesktopNotifierInterface
 from qwenloop.domain.model import ChatChunk, ChatMessage, ModelProfile, ServerInfo
 
 __all__ = [
     "AutonomousRunnerInterface",
     "BackendSelectorInterface",
+    "DesktopNotifierInterface",
     "InferenceServer",
     "RunStore",
     "ToolExecutor",
