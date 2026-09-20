@@ -117,9 +117,9 @@ claims where it differs from the section default.
 pip install cursor-sdk
 ```
 
-- Requires **Python 3.10 or later**. cursorloop will require **3.12+** anyway
-  (see roadmap, packaging matrix), which is comfortably inside the supported
-  range.
+- The SDK requires **Python 3.10 or later**; cursorloop's common library floor is
+  **3.12+** (see roadmap, packaging matrix), which is comfortably inside the SDK's
+  supported range.
 - The wheel ships a bridge binary installed on `PATH` as `cursor-sdk-bridge`.
   `cursor-sdk-bridge --help` is a legitimate `doctor` preflight check: it proves
   the native bridge shipped with the installed wheel and is executable. This is

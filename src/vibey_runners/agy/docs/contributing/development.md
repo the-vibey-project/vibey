@@ -33,7 +33,7 @@ feature/*    ← your work — branch from develop, never from main
 
 1. `git checkout -b feature/short-description develop`
 2. Conventional Commits — the `commit-msg` hook rejects anything else.
-3. PR into `develop`. CI (`ci.yml`) runs Python 3.12–3.13.
+3. PR into `develop`. CI (`ci.yml`) runs Python 3.12–3.14.
 4. Squash-merge into `develop` with a conventional title.
 5. `develop` → `main` is a **merge commit**, not a squash.
 6. After the first public `v0.1.0`, release-please maintains a standing

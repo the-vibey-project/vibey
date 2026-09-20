@@ -2,7 +2,7 @@
 
 ## Development
 
-Use Python 3.11 or newer. Create a topic branch from `develop`; never work directly on
+Use Python 3.12 or newer. Create a topic branch from `develop`; never work directly on
 `main`. Install the development environment with `python -m pip install -e ".[dev]"` and
 enable the managed hooks with `vibey-gh install`.
 

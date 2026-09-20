@@ -6,7 +6,7 @@ ever calls time.sleep() for real. See docs/contributing/testing.md."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from claudeloop.application.dto import TurnOutcome
@@ -262,7 +262,7 @@ class FakeSavePointStore:
             ref=f"refs/claudeloop/{run_id}/{n}",
             sha=sha,
             label=label,
-            at=datetime(2026, 8, 12, tzinfo=timezone.utc),
+            at=datetime(2026, 8, 12, tzinfo=UTC),
             committed=committed,
         )
         self.points.append(point)

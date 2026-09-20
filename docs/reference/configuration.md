@@ -1,23 +1,22 @@
 # Configuration reference: `vibey.toml`
 
-**Mostly not an active runtime input.** The schema below is fully implemented
+The schema below is fully implemented
 and unit-tested in
 [`src/vibey/domain/config.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/domain/config.py)
 (`VibeyConfig`, `parse_config`, `parse_toml_string`) and
 [`src/vibey/infrastructure/config_loader.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/infrastructure/config_loader.py)
-(`load_config_from_path`), but `load_config_from_path` has no caller outside
-its own unit test, so the full schema is never loaded at runtime — not by
-`cli/`, `bootstrap.py`, the worker, or the Kubernetes operator. Treat this page
-as a designed-and-tested schema, the same "implemented and tested, not yet an
-active runtime path" status the README gives `infrastructure/notify/` and
-`infrastructure/otel.py`.
+(`load_config_from_path`). `vibey new` reads the `[notifications]` and
+`[telemetry]` tables from the repository's `vibey.toml` and stores them in the
+project record; the worker and lifecycle repository consume those stored
+tables. The other schema tables remain documented inputs for future wiring.
 
 ## What is read at runtime today
 
 | Input | Read by | What it controls |
 |---|---|---|
-| `./vibey.toml`, key `[features].qwenloop` only | `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`) | Whether `qwenloop` is added to the health sweep. The file is read from the current directory with `parse_toml_string`, never validated by `parse_config`; a missing or malformed file counts as `qwenloop = false`. Every other table on this page is ignored. |
-| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker` and every job handler | Cycle cap, per-cycle spend and turn caps, skills-context policy, and (in principle) `features.qwenloop` — see below. |
+| `./vibey.toml`, key `[features].qwenloop` | `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`) | Whether `qwenloop` is added to the health sweep. The file is read from the current directory with `parse_toml_string`; a missing or malformed file counts as `qwenloop = false`. |
+| `./vibey.toml`, `[notifications]` and `[telemetry]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels and the telemetry switch into the stored project config. |
+| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, notification delivery, telemetry, and (in principle) `features.qwenloop` — see below. |
 | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the qwenloop switch, the sovereign DESIGN provider's evidence directory. |
 
 The project record is written once, at creation, by one of two paths:
@@ -26,15 +25,17 @@ The project record is written once, at creation, by one of two paths:
   in the `project.max_cycles` column; `--max-cycle-dollars`,
   `--max-cycle-turns`, `--skills-context-mode` and `--skills-context-budget`
   are stored in the `config` JSON as `max_cycle_dollars`, `max_cycle_turns`
-  and `skills_context` (the last only when the mode is not `off`).
+  and `skills_context` (the last only when the mode is not `off`). When the repo
+  contains `vibey.toml`, its `[notifications]` and `[telemetry]` tables are
+  copied into that same JSON record.
 - **The Kubernetes operator** ([ADR-0025](../architecture/decisions/0025-kubernetes-operator-crd-keda.md)):
   a `VibeyProject` spec's `maxCycles` sets the column (default `10`);
   `repo`, `maxCycleDollars`, `maxCycleTurns` and `skillsContext` are stored in
   the `config` JSON. `spec.engines` is stored as a flat `engines` list that
   nothing reads back yet.
 
-Neither path passes through `parse_config`, and neither writes or reads a
-`vibey.toml`. No command updates these values on an existing project.
+Neither path passes through `parse_config`. No command updates these values on
+an existing project.
 
 Neither path writes a `features` key either, so the worker's check of the
 stored `features.qwenloop` is always false for projects created today:
@@ -177,6 +178,41 @@ parallelism = 4
 | `target` | string | `"azure"` | Deployment target. Azure is the only implemented target today; other strings are accepted by `parse_config`. |
 | `iac` | string | `"bicep"` | Infrastructure-as-code format used by the deploy adapters; other strings are accepted by `parse_config`. |
 
+## `[notifications]`
+
+Notifications are opt-in because desktop alerts and outbound webhooks are
+side effects. `vibey new` copies this table into the project's stored config;
+`build_app()` constructs one service and applies the project policy when a
+worker raises a gate or a project changes phase.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `enabled` | boolean | `false` | Enables delivery for this project. |
+| `desktop` | boolean | `true` | Sends desktop alerts when enabled. |
+| `webhooks` | array of tables | `[]` | Each table requires `url` and may include a `secret`; URLs must be `http://` or `https://` at publish time. Secrets sign the JSON payload with `X-Vibey-Signature: sha256=...`. |
+
+```toml
+[notifications]
+enabled = true
+desktop = true
+
+[[notifications.webhooks]]
+url = "https://ops.example/vibey"
+secret = "replace-me"
+```
+
+## `[telemetry]`
+
+`build_app()` constructs the in-process tracer and metrics recorder. Workers
+record job spans, queue latency, phase duration, engine selections, engine
+turns, handoff-gate failures, and cost spend. The recorder is available to
+the running application but has no external exporter yet.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `enabled` | boolean | `true` | Set `false` to disable runtime tracing and metrics for this project. |
+| `export_path` | string or unset | unset | Reserved for a future file/exporter integration; it is validated and stored. |
+
 ## `[features]`
 
 | Field | Type | Default | Notes |
@@ -263,8 +299,8 @@ silently running nothing.
 ## Full example
 
 This is a valid file exercising most of the schema that `parse_config`
-validates — not a file any command reads from disk (apart from `vibey doctor`
-honouring its `[features].qwenloop`; see the top of this page).
+validates. `vibey new` also copies its `[notifications]` and `[telemetry]`
+tables into the project's stored config (see the top of this page).
 
 ```toml
 [project]
@@ -298,6 +334,17 @@ effort = "high"
 enabled = true
 target = "azure"
 iac = "bicep"
+
+[notifications]
+enabled = true
+desktop = false
+
+[[notifications.webhooks]]
+url = "https://ops.example/vibey"
+secret = "replace-me"
+
+[telemetry]
+enabled = true
 
 [features]
 qwenloop = true

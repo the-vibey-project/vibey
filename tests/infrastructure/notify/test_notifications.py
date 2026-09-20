@@ -170,3 +170,119 @@ async def test_notification_service_skips_empty_url_webhook() -> None:
     results = await service.dispatch(event)
     assert results["webhooks"] == []
     assert len(dispatched_webhooks) == 0
+
+
+@pytest.mark.asyncio
+async def test_notification_service_uses_project_config_for_webhooks() -> None:
+    delivered: list[tuple[str, NotificationEvent]] = []
+
+    class FakeDesktopNotifier:
+        async def notify(self, event: NotificationEvent) -> bool:
+            delivered.append(("desktop", event))
+            return True
+
+    class FakeWebhookPublisher:
+        async def publish(
+            self, event: NotificationEvent, url: str, secret: str | None = None
+        ) -> bool:
+            delivered.append((f"{url}:{secret}", event))
+            return True
+
+    service = NotificationService(
+        desktop_notifier=FakeDesktopNotifier(),  # type: ignore[arg-type]
+        webhook_publisher=FakeWebhookPublisher(),  # type: ignore[arg-type]
+    )
+    project_id = uuid4()
+
+    result = await service.notify(
+        project_id=project_id,
+        kind="human_gate_raised",
+        title="Human Gate Raised",
+        message="answer the gate",
+        payload={"gate_id": "g-1"},
+        config={
+            "notifications": {
+                "enabled": True,
+                "desktop": False,
+                "webhooks": [{"url": " https://example.test/hook ", "secret": "s"}],
+            }
+        },
+    )
+
+    assert result == {"desktop": False, "webhooks": [True]}
+    assert [(key, event.kind) for key, event in delivered] == [
+        ("https://example.test/hook:s", NotificationKind.HUMAN_GATE_RAISED)
+    ]
+    assert delivered[0][1].project_id == project_id
+
+
+@pytest.mark.asyncio
+async def test_notification_service_is_opt_in_and_contains_delivery_failures() -> None:
+    service = NotificationService(
+        desktop_notifier=DesktopNotifier(executor=lambda command: True, platform_override="linux")
+    )
+
+    disabled = await service.notify(
+        project_id=uuid4(),
+        kind="run_completed",
+        title="Done",
+        message="done",
+        config={},
+    )
+    invalid_kind = await service.notify(
+        project_id=uuid4(),
+        kind="not-a-kind",
+        title="Bad",
+        message="bad",
+        config={"notifications": {"enabled": True}},
+    )
+
+    assert disabled == {"enabled": False, "desktop": False, "webhooks": []}
+    assert invalid_kind["enabled"] is True
+    assert invalid_kind["error"] == "ValueError"
+
+
+@pytest.mark.asyncio
+async def test_notification_service_ignores_non_sequence_webhook_config() -> None:
+    service = NotificationService(
+        desktop_notifier=DesktopNotifier(executor=lambda command: True, platform_override="linux")
+    )
+
+    result = await service.notify(
+        project_id=uuid4(),
+        kind="run_completed",
+        title="Done",
+        message="done",
+        config={
+            "notifications": {
+                "enabled": True,
+                "desktop": False,
+                "webhooks": {"url": "https://example.test/hook"},
+            }
+        },
+    )
+
+    assert result == {"enabled": False, "desktop": False, "webhooks": []}
+
+
+@pytest.mark.asyncio
+async def test_notification_service_ignores_malformed_webhook_entries() -> None:
+    service = NotificationService(
+        desktop_notifier=DesktopNotifier(executor=lambda command: True, platform_override="linux")
+    )
+
+    result = await service.notify(
+        project_id=uuid4(),
+        kind="run_completed",
+        title="Done",
+        message="done",
+        config={
+            "notifications": {
+                "enabled": True,
+                "desktop": False,
+                "webhooks": [None, {"url": ""}, {"url": 17}],
+            }
+        },
+    )
+
+    assert result == {"enabled": False, "desktop": False, "webhooks": []}

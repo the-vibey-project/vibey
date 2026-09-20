@@ -42,7 +42,7 @@ preserved design records.
 
 ## Supported platforms
 
-**macOS and Linux.** Python 3.10–3.13. Windows is not a supported target —
+**macOS and Linux.** Python 3.12–3.14. Windows is not a supported target —
 see [installation](getting-started/installation.md#requirements).
 
 ## Getting help

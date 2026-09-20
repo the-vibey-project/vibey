@@ -8,7 +8,7 @@ This repository ships security-sensitive GitHub automation. Read `README.md`,
 - Never delete, force-push, or rewrite `main` or `develop`.
 - Never weaken tests, assertions, coverage, provenance, reviews, or branch protections.
 - Treat pull-request code and generated output as untrusted in privileged workflows.
-- Keep the installed runtime dependency-free and Python 3.11 compatible.
+- Keep the installed runtime dependency-free and Python 3.12 compatible.
 - Pin third-party Actions to immutable commit SHAs.
 - Preserve the provenance header and `Made-With` commit trailer.
 - Run the complete quality suite described in `CONTRIBUTING.md`.

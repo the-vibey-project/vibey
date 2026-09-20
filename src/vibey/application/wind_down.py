@@ -25,13 +25,19 @@ capacity event, not a failure, and must not burn the escalation ladder.
 """
 
 from collections.abc import Callable, Sequence
+from contextlib import nullcontext, suppress
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from vibey.application.brief_producer import DeterministicBriefProducer
 from vibey.application.dto import EnqueueRequest, HumanGateRequest, JobRecord, StopSummary
 from vibey.application.handoff_orchestration import produce_and_verify_handoff
-from vibey.application.interfaces import HandoffStore, LedgerReader
+from vibey.application.interfaces import (
+    HandoffStore,
+    LedgerReader,
+    TelemetryMetrics,
+    TelemetryTracer,
+)
 from vibey.application.ports import Clock, JobRepository
 from vibey.application.rotation_handoff import RotationHandoffService, TooManyWindDowns
 from vibey.application.seed_prompt import render_seed_prompt
@@ -85,6 +91,8 @@ class WindDownOrchestrator:
         write_ledger: LedgerWriter,
         objective: str = "See the accepted spec in .vibey/context/spec.md.",
         spec_constraints: Sequence[str] = (),
+        tracer: TelemetryTracer | None = None,
+        metrics: TelemetryMetrics | None = None,
     ) -> None:
         self._ledger = ledger
         self._handoff_service = handoff_service
@@ -94,6 +102,8 @@ class WindDownOrchestrator:
         self._write_ledger = write_ledger
         self._objective = objective
         self._spec_constraints = tuple(spec_constraints)
+        self._tracer = tracer
+        self._metrics = metrics
 
     async def execute(
         self,
@@ -127,38 +137,56 @@ class WindDownOrchestrator:
             spec_constraints=self._spec_constraints,
             extra_remaining=stop.remaining_work,
         )
-        outcome = await produce_and_verify_handoff(
-            producer=producer,
-            ledger=events,
-            ref=ref,
-            budget=budget,
-            spec_constraints=self._spec_constraints,
+        handoff_context = (
+            self._tracer.trace_handoff(from_engine=engine_id)
+            if self._tracer is not None
+            else nullcontext()
         )
-        if not outcome.result.ok:
-            violations = "; ".join(v.detail for v in outcome.result.violations) or "unknown"
-            return Park(
-                HumanGateRequest(
-                    kind="handoff_gate_failed",
-                    prompt=(
-                        f"work item {work_item_id!r} wound down on {engine_id.value} but the "
-                        f"no-loss gate failed even in full-transcript mode: {violations}. "
-                        "How should the handoff proceed?"
-                    ),
+        with handoff_context as span:
+            outcome = await produce_and_verify_handoff(
+                producer=producer,
+                ledger=events,
+                ref=ref,
+                budget=budget,
+                spec_constraints=self._spec_constraints,
+            )
+            if not outcome.result.ok:
+                for violation in outcome.result.violations:
+                    self._record_handoff_failure(job.project_id, violation.rule.value)
+                if span is not None:
+                    span.set_attribute("gate_ok", False)
+                violations = "; ".join(v.detail for v in outcome.result.violations) or "unknown"
+                return Park(
+                    HumanGateRequest(
+                        kind="handoff_gate_failed",
+                        prompt=(
+                            f"work item {work_item_id!r} wound down on {engine_id.value} but the "
+                            f"no-loss gate failed even in full-transcript mode: {violations}. "
+                            "How should the handoff proceed?"
+                        ),
+                    )
                 )
-            )
 
-        try:
-            decision = await self._handoff_service.handle_wind_down(
-                project_id=job.project_id,
-                work_item_id=work_item_id,
-                current_engine=engine_id,
-                requirement=JobRequirement(effort=effort),
-                wind_down_count=wind_down_count,
-                ledger_snapshot={"remaining_work": [item.text for item in outcome.brief.remaining]},
-                brief=outcome.brief,
-            )
-        except TooManyWindDowns as exc:
-            return Park(HumanGateRequest(kind="too_many_wind_downs", prompt=str(exc)))
+            try:
+                decision = await self._handoff_service.handle_wind_down(
+                    project_id=job.project_id,
+                    work_item_id=work_item_id,
+                    current_engine=engine_id,
+                    requirement=JobRequirement(effort=effort),
+                    wind_down_count=wind_down_count,
+                    ledger_snapshot={
+                        "remaining_work": [item.text for item in outcome.brief.remaining]
+                    },
+                    brief=outcome.brief,
+                )
+            except TooManyWindDowns as exc:
+                if span is not None:
+                    span.set_attribute("gate_ok", True)
+                    span.set_attribute("handoff_outcome", "too_many_wind_downs")
+                return Park(HumanGateRequest(kind="too_many_wind_downs", prompt=str(exc)))
+            if span is not None:
+                span.set_attribute("gate_ok", True)
+                span.set_attribute("to_engine", decision.next_engine.value)
 
         envelope = HandoffEnvelope(
             schema_version=1,
@@ -216,3 +244,9 @@ class WindDownOrchestrator:
                 "next_engine": decision.next_engine.value,
             }
         )
+
+    def _record_handoff_failure(self, project_id: UUID, rule_id: str) -> None:
+        if self._metrics is None:
+            return
+        with suppress(Exception):
+            self._metrics.record_handoff_gate_failure(project_id, rule_id)

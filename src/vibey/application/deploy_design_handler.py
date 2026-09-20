@@ -106,8 +106,8 @@ class DeployInterviewHandler:
                 default_answer="accept_defaults",
             )
 
-            await self._gates.raise_gate(job.project_id, job.id, request)
-            return Park(request)
+            raised_gate = await self._gates.raise_gate(job.project_id, job.id, request)
+            return Park(request, gate=raised_gate)
 
         if gate.answer is None:
             return Park(

@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import asyncio
 from datetime import timedelta
 from uuid import uuid4
 
@@ -116,6 +117,33 @@ def test_trace_handoff_and_error_span() -> None:
 
     tracer.clear()
     assert len(tracer.get_finished_spans()) == 0
+
+
+async def test_overlapping_tasks_keep_their_span_parent_chains() -> None:
+    tracer = TelemetryTracer()
+    both_started = asyncio.Event()
+    started = 0
+
+    async def trace_job(name: str) -> tuple[str, str]:
+        nonlocal started
+        with tracer.start_span(name) as parent:
+            started += 1
+            if started == 2:
+                both_started.set()
+            await both_started.wait()
+            with tracer.start_span(f"{name}.child") as child:
+                await asyncio.sleep(0)
+                return parent.span_id, child.parent_id or ""
+
+    results = await asyncio.gather(trace_job("one"), trace_job("two"))
+
+    assert all(parent_id == child_parent_id for parent_id, child_parent_id in results)
+    assert {span.name for span in tracer.get_finished_spans()} == {
+        "one",
+        "one.child",
+        "two",
+        "two.child",
+    }
 
 
 def test_span_duration_on_open_span() -> None:

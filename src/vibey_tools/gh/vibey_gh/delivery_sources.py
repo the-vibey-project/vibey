@@ -15,7 +15,7 @@ import subprocess  # nosec B404 - fixed argv, never shell=True
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final, TypeAlias
+from typing import Any, Final
 
 from vibey_gh.delivery_estimate import (
     CommitObservation,
@@ -31,7 +31,7 @@ from vibey_gh.interfaces.gh_transport_interface import GhTransportInterface
 
 __all__ = ["DeliverySourceReader", "DeliverySourceSnapshot"]
 
-GitRunner: TypeAlias = Callable[[Sequence[str], Path], subprocess.CompletedProcess[str]]
+type GitRunner = Callable[[Sequence[str], Path], subprocess.CompletedProcess[str]]
 
 # ``gh issue list`` returns issue-only rows; pull requests are queried separately below.
 # The parser still accepts a pullRequest-shaped row from alternate forge transports.

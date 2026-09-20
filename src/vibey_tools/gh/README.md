@@ -94,7 +94,7 @@ and every transition between them to be reproducible and policy checked.
 
 ## Requirements
 
-- Python 3.11 or newer, Git, and the GitHub CLI (`gh`).
+- Python 3.12 or newer, Git, and the GitHub CLI (`gh`).
 - A GitHub repository with Actions enabled and Pages configured for Actions deployments.
 - `ANTHROPIC_API_KEY` for AI review, repair, conflict resolution, and documentation upkeep.
 - `AUTOMERGE_TOKEN` when the default Actions token cannot merge or manage repository settings.
@@ -1089,7 +1089,7 @@ the workflow URL, exact SHA, and redacted failing-step output when asking for he
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and
-[AGENTS.md](AGENTS.md). Changes must preserve the dependency-free runtime, Python 3.11,
+[AGENTS.md](AGENTS.md). Changes must preserve the dependency-free runtime, Python 3.12,
 100% line and branch coverage, immutable action pins, provenance, and permanent-branch
 non-deletion guarantee. Report vulnerabilities through [SECURITY.md](SECURITY.md), not a
 public issue.

@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -12,7 +12,7 @@ from claudeloop.domain.capacity import (
 )
 from claudeloop.domain.classify import TurnSignals, backend_misconfiguration, classify
 
-NOW = datetime(2026, 8, 9, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 9, tzinfo=UTC)
 
 
 def test_no_signals_is_available():

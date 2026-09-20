@@ -7,7 +7,7 @@ name = "vibey-skills"
 dynamic = ["version"]
 description = "Agent Skills for vibe engineering — 710 evidence-grounded practitioner references as a Claude Code plugin marketplace"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 
 # PEP 639: an SPDX expression plus license-files. The classifier
 # "License :: OSI Approved :: MIT License" is deliberately omitted — pairing a legacy
@@ -50,10 +50,9 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Documentation",
   "Topic :: Software Development :: Documentation",
   "Topic :: Software Development :: Libraries :: Python Modules",
@@ -97,14 +96,14 @@ vibe-skills = "vibey_skills.cli:deprecated_alias_main"
 # This package has never been linted. It gets a table of its own not for tidiness but
 # because of where it is going: inside the vibey monorepo, a file with no nearer
 # configuration resolves against the ROOT pyproject, whose `target-version = "py312"` would
-# have `UP` rewrite this package into syntax its own `requires-python = ">=3.10"` forbids.
+# otherwise be implicit rather than recorded for this tenant.
 #
 # `include` is the other half, and it is not decoration. Without it ruff discovers Markdown
 # and format-checks the Python fences inside all 710 SKILL.md -- files that are the product,
 # verified byte-for-byte against the documents they were split from.
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py312"
 include = ["src/**/*.py", "tools/*.py", "tests/*.py", "docs/*.py"]
 
 [tool.ruff.lint]

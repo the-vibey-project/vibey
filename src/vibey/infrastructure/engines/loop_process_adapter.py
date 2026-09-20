@@ -14,6 +14,7 @@ descriptors, not four separate classes.
 import asyncio
 import json
 import os
+import re
 import shutil
 import subprocess  # nosec B404 - fixed argv, never shell=True
 from collections.abc import AsyncIterator, Mapping
@@ -59,10 +60,13 @@ logger = structlog.get_logger(__name__)
 _active_processes: dict[object, asyncio.subprocess.Process] = {}
 _diagnostic_files: dict[object, tuple[TextIO, TextIO]] = {}
 
-# `<binary> run --help` output, keyed by binary name. Fetched once per
-# process lifetime; --help is static for a given install, so there's
-# nothing to invalidate.
+# `<binary> run --help` output, keyed by the resolved executable path. Fetched
+# once per process lifetime; --help is static for a given install, so there's
+# nothing to invalidate. Resolving once and invoking that exact path matters
+# when a bundled entrypoint and a separately installed engine share a name on
+# PATH: the help contract must describe the binary that start() will launch.
 _help_text_cache: dict[str, str] = {}
+_ANSI_ESCAPE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
 def _render_plan(descriptor: EngineDescriptor, prompt: str) -> str:
@@ -215,10 +219,11 @@ class LoopProcessAdapter:
         do real auth/network work and stay async.
         """
         binary = self.descriptor.binary
-        if binary in _help_text_cache:
-            return _help_text_cache[binary]
-        if shutil.which(binary) is None:
+        binary_path = shutil.which(binary)
+        if binary_path is None:
             return None
+        if binary_path in _help_text_cache:
+            return _help_text_cache[binary_path]
         try:
             # A wide COLUMNS keeps Rich-based CLIs (typer/click) from
             # truncating flag names/descriptions when stdout isn't a real
@@ -226,9 +231,16 @@ class LoopProcessAdapter:
             # flags like --append-system-prompt get cut to
             # "--append-system-pro…", which would make a real, present flag
             # look missing to a substring check.
-            env = dict(os.environ, COLUMNS="250")
+            # Probe the same environment that start() gives the engine. In
+            # particular, an inherited VIRTUAL_ENV/PYTHONPATH can make an
+            # editable install resolve a different CLI than the absolute
+            # entrypoint we launch, so the help contract can disagree with
+            # the process that will actually run.
+            env = isolate_python_env(os.environ, venv_prefixes=self.python_env.venv_prefixes())
+            env.update(self.env_overlay)
+            env.update({"COLUMNS": "250", "LINES": "50", "NO_COLOR": "1"})
             result = subprocess.run(  # nosec B603 - fixed argv, never shell=True
-                [binary, "run", "--help"],
+                [binary_path, "run", "--help"],
                 capture_output=True,
                 text=True,
                 timeout=10.0,
@@ -243,8 +255,9 @@ class LoopProcessAdapter:
                 error=str(e),
             )
             return None
-        _help_text_cache[binary] = text
-        return text
+        normalized = _ANSI_ESCAPE.sub("", text)
+        _help_text_cache[binary_path] = normalized
+        return normalized
 
     async def preflight(self) -> PreflightResult:
         """Check if binary exists and auth is OK (via `doctor`)."""
@@ -328,6 +341,16 @@ class LoopProcessAdapter:
 
         # Build argv using existing argv.py
         argv = build_argv(self.descriptor, spec)
+        # The absorbed runner entrypoints are shipped in vibey's own venv. The
+        # child must not inherit that venv on PATH (it could install into and
+        # mutate the orchestrator environment), so resolve the executable
+        # before applying the isolation below. An absolute path keeps the
+        # bundled entrypoint runnable without reintroducing the venv into the
+        # child's PATH; separately installed engines continue to work the same
+        # way.
+        binary_path = shutil.which(argv[0])
+        if binary_path is not None:
+            argv = (binary_path, *argv[1:])
 
         # Spawn the process. Output goes to bounded-lifetime files rather than pipes:
         # pipes can deadlock a long-running engine when nobody drains them, while

@@ -13,15 +13,10 @@ against the rest of the config before anything runs."""
 from __future__ import annotations
 
 import os
-import sys
+import tomllib
 from dataclasses import dataclass, fields, replace
 from pathlib import Path
 from typing import Any
-
-if sys.version_info >= (3, 11):  # pragma: no cover - exactly one branch runs per interpreter
-    import tomllib
-else:  # pragma: no cover - exactly one branch runs per interpreter
-    import tomli as tomllib
 
 from claudeloop.domain.backend import BackendProfile
 from claudeloop.domain.interfaces import BackendProfileInterface

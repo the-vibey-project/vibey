@@ -16,18 +16,16 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Generic, TypeVar
 
 from vibey_bootstrap.counters import bump_counter
 from vibey_bootstrap.tracing.decorators import traced
 
-R = TypeVar("R")
 _logger = logging.getLogger(__name__)
 _MAX_SLEEP_SLICE_SECONDS = 5.0
 
 
 @dataclass
-class RenewableResource(Generic[R]):
+class RenewableResource[R]:
     id: str
     handle: R
     expires_at: float | None = None
@@ -56,7 +54,7 @@ def _fire_critical_alert(operation: str, exc: BaseException, dedup_suffix: str) 
 
 
 @traced(operation="subscription.ensure_resource", alert_on_error="error")
-def ensure_resource(
+def ensure_resource[R](
     *,
     operation: str,
     list_fn: Callable[[], list[RenewableResource[R]]],
@@ -88,7 +86,7 @@ def ensure_resource(
     return created
 
 
-def renewal_loop(
+def renewal_loop[R](
     resource: RenewableResource[R],
     *,
     stop_event: threading.Event,

@@ -26,6 +26,7 @@ Three pieces:
 
 import math
 from collections.abc import Mapping
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import timedelta
 from uuid import UUID
@@ -39,6 +40,7 @@ from vibey.application.interfaces import (
     EngineAdapter,
     JobHandler,
     SpendMeteringLedgerInterface,
+    TelemetryMetrics,
 )
 from vibey.application.ports import JobRepository
 from vibey.application.worker import CapacityDeferred, Defer, Failure, Outcome, Success
@@ -172,6 +174,7 @@ class SelectingEngineProvider:
         allow_list: frozenset[EngineId] | None = None,
         backoff: timedelta = timedelta(minutes=5),
         local_engines: tuple[EngineId, ...] = (),
+        metrics: TelemetryMetrics | None = None,
     ) -> None:
         self._selector = selector
         self._health = health
@@ -180,6 +183,7 @@ class SelectingEngineProvider:
         self._clock = clock
         self._owner = owner
         self._backoff = backoff
+        self._metrics = metrics
         self._pool = frozenset(adapters) if allow_list is None else frozenset(adapters) & allow_list
         # Local engines have no cron that records their health, so each selection
         # refreshes theirs first -- only for those this worker can dispatch to.
@@ -232,6 +236,9 @@ class SelectingEngineProvider:
                 f"selected engine {engine_id.value} has no configured adapter",
             )
         await self._health.record_selection(job.project_id, engine_id)
+        if self._metrics is not None:
+            with suppress(Exception):
+                self._metrics.record_engine_selection(job.project_id, engine_id)
         await self._jobs.assign_engine(job.id, owner=self._owner, engine_id=engine_id)
         return adapter
 
@@ -255,9 +262,11 @@ class SpendMeteringLedger:
         inner: BuildLedger,
         *,
         spend_rule: LedgerSpendRuleInterface = LEDGER_SPEND_RULE,
+        metrics: TelemetryMetrics | None = None,
     ) -> None:
         self._inner = inner
         self._spend_rule = spend_rule
+        self._metrics = metrics
         self._dollars = 0.0
 
     @property
@@ -287,6 +296,15 @@ class SpendMeteringLedger:
         spend = self._spend_rule.spend_of_payload(event.kind, event.payload)
         if spend is not None:
             self._dollars += spend.dollars
+            if self._metrics is not None:
+                with suppress(Exception):
+                    self._metrics.record_cost_spend(
+                        project_id,
+                        cycle,
+                        Phase.BUILD,
+                        engine_id or "unknown",
+                        spend.dollars,
+                    )
 
 
 class RotationRecordingHandler:

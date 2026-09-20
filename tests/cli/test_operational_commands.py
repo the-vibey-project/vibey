@@ -20,6 +20,7 @@ from vibey.domain.ledger import EventKind, Provenance
 from vibey.domain.phase import Phase
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
+from vibey.infrastructure.postgres import PostgresStatus
 
 pytestmark = pytest.mark.integration
 # Typer force-enables rich ANSI styling whenever GITHUB_ACTIONS is set
@@ -856,6 +857,128 @@ def test_doctor_basic_lists_all_engines() -> None:
     res = runner.invoke(app, ["doctor"])
     assert res.exit_code == 0, res.output
     assert "claudeloop" in res.output
+    assert "postgresql" in res.output
+
+
+def test_install_requires_an_explicit_postgres_target() -> None:
+    res = runner.invoke(app, ["install"])
+
+    assert res.exit_code == 2
+    assert "install --postgres" in res.output
+
+
+def test_install_postgres_reports_success() -> None:
+    from unittest.mock import patch
+
+    from vibey.infrastructure.postgres import PostgresInstallResult, PostgresVersion
+
+    status = PostgresStatus(
+        installed=True,
+        running=True,
+        supported=True,
+        version=PostgresVersion(18, 4),
+        detail="PostgreSQL 18.4 is accepting local connections",
+    )
+    result = PostgresInstallResult(
+        ok=True, changed=True, detail="installed", status=status, commands=()
+    )
+    with patch("vibey.cli.main.PostgresLocalService") as service_cls:
+        service_cls.return_value.install.return_value = result
+        res = runner.invoke(app, ["install", "--postgres"])
+
+    assert res.exit_code == 0, res.output
+    service_cls.return_value.install.assert_called_once_with()
+    assert "READY" in res.output
+    assert "VIBEY_PG_URL" in res.output
+
+
+def test_install_postgres_reports_failure() -> None:
+    from unittest.mock import patch
+
+    from vibey.infrastructure.postgres import PostgresInstallResult
+
+    status = PostgresStatus(False, False, False, None, "no package manager")
+    result = PostgresInstallResult(
+        ok=False, changed=False, detail="no package manager", status=status, commands=()
+    )
+    with patch("vibey.cli.main.PostgresLocalService") as service_cls:
+        service_cls.return_value.install.return_value = result
+        res = runner.invoke(app, ["install", "--postgres"])
+
+    assert res.exit_code == 1
+    assert "no package manager" in res.output
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        (PostgresStatus(True, False, False, None, "unsupported"), "UNSUPPORTED"),
+        (PostgresStatus(True, False, True, None, "stopped"), "NOT READY"),
+    ],
+)
+def test_postgres_status_line_reports_unready_states(status: PostgresStatus, expected: str) -> None:
+    from vibey.cli.main import _postgres_status_line
+
+    assert expected in _postgres_status_line(status)
+
+
+def test_doctor_can_install_postgres_explicitly() -> None:
+    from unittest.mock import AsyncMock, patch
+
+    from vibey.application.dto import PreflightResult
+    from vibey.infrastructure.postgres import PostgresInstallResult, PostgresVersion
+
+    status = PostgresStatus(
+        installed=True,
+        running=True,
+        supported=True,
+        version=PostgresVersion(18, 4),
+        detail="PostgreSQL 18.4 is accepting local connections",
+    )
+    result = PostgresInstallResult(True, True, "installed", status, ())
+    with (
+        patch("vibey.cli.main.PostgresLocalService") as service_cls,
+        patch(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            new=AsyncMock(return_value=PreflightResult(installed=True, version="1", auth_ok=True)),
+        ),
+    ):
+        service_cls.return_value.install.return_value = result
+        res = runner.invoke(app, ["doctor", "--install-postgres", "--engine", "claudeloop"])
+
+    assert res.exit_code == 0, res.output
+    service_cls.return_value.install.assert_called_once_with()
+    assert "postgresql" in res.output
+    assert "READY" in res.output
+
+
+def test_doctor_install_postgres_failure_exits_one() -> None:
+    from unittest.mock import AsyncMock, patch
+
+    from vibey.application.dto import PreflightResult
+    from vibey.infrastructure.postgres import PostgresInstallResult
+
+    status = PostgresStatus(False, False, False, None, "could not install")
+    result = PostgresInstallResult(False, True, "could not install", status, ())
+    with (
+        patch("vibey.cli.main.PostgresLocalService") as service_cls,
+        patch(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            new=AsyncMock(return_value=PreflightResult(installed=True, version="1", auth_ok=True)),
+        ),
+    ):
+        service_cls.return_value.install.return_value = result
+        res = runner.invoke(app, ["doctor", "--install-postgres", "--engine", "claudeloop"])
+
+    assert res.exit_code == 1
+    assert "could not install" in res.output
+
+
+def test_cluster_doctor_rejects_local_postgres_install_flag() -> None:
+    res = runner.invoke(app, ["doctor", "--cluster", "--install-postgres"])
+
+    assert res.exit_code == 2
+    assert "local doctor" in res.output
 
 
 def test_doctor_lists_the_sovereign_engine_when_it_is_switched_on(

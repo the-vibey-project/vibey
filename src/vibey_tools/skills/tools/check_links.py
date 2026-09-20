@@ -134,8 +134,9 @@ class LinkChecker(LinkCheckerInterface):
     def read_branch_refs(repository: Path) -> tuple[str, ...]:
         """The integration and release branches from `[branches]` in `.vibey-gh.toml`.
 
-        Read line by line rather than with tomllib: tomllib arrived in 3.11, and this
-        script runs on the tenant's 3.10 floor with no dependencies at all. `[branches]`
+        Read line by line rather than with tomllib: this validator deliberately has no
+        dependencies, even though the tenant's unified runtime floor includes tomllib.
+        `[branches]`
         is a flat table of string keys, which is all this needs to read.
         """
         branches = dict(BRANCH_DEFAULTS)

@@ -160,7 +160,7 @@ repository's build, test, and publish steps differ; they must exist under those 
 names because other release workflows key off a `workflow_run` named `Release` (and
 `release-repair.yml` also watches `CI`). `CI` runs on push and pull request against
 `develop` and `main` with the default read-only token. Its `test` job runs pytest across
-Python 3.11–3.13; `lint` runs Black, isort, Ruff, and mypy, then dogfoods the managed
+Python 3.12–3.14; `lint` runs Black, isort, Ruff, and mypy, then dogfoods the managed
 automation by asserting `vibey_gh.install.installed()` reports no drift between the
 repository's rendered workflows and its configuration; `build` builds the wheel and sdist,
 checks them with `twine check`, and asserts every managed template and release theme asset

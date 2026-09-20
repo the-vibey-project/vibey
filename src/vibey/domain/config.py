@@ -129,6 +129,36 @@ class DeployConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class NotificationWebhookConfig:
+    """One signed outbound notification destination."""
+
+    url: str
+    secret: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class NotificationsConfig:
+    """Operator notifications for a project.
+
+    Notifications stay opt-in because desktop alerts and outbound webhooks are
+    side effects.  Once enabled, desktop delivery defaults on and webhook
+    destinations are explicit.
+    """
+
+    enabled: bool = False
+    desktop: bool = True
+    webhooks: tuple[NotificationWebhookConfig, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class TelemetryConfig:
+    """Whether in-process spans and production rotation metrics are recorded."""
+
+    enabled: bool = True
+    export_path: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class FeaturesConfig:
     qwenloop: bool = False
     claudeloop_local: bool = False
@@ -158,6 +188,8 @@ class VibeyConfig:
     phases: PhasesConfig = field(default_factory=PhasesConfig)
     provision: ProvisionConfig = field(default_factory=ProvisionConfig)
     deploy: DeployConfig = field(default_factory=DeployConfig)
+    notifications: NotificationsConfig = field(default_factory=NotificationsConfig)
+    telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
     qwenloop: QwenloopConfig = field(default_factory=QwenloopConfig)
 
@@ -275,6 +307,39 @@ def _parse_deploy(data: dict[str, Any]) -> DeployConfig:
     )
 
 
+def _parse_notifications(data: dict[str, Any]) -> NotificationsConfig:
+    table = _optional(data, "notifications", "notifications", dict, {})
+    raw_webhooks = _optional(table, "webhooks", "notifications.webhooks", list, [])
+    webhooks: list[NotificationWebhookConfig] = []
+    for index, raw_webhook in enumerate(raw_webhooks):
+        path = f"notifications.webhooks[{index}]"
+        if not isinstance(raw_webhook, dict):
+            raise ConfigError(path, "must be a table")
+        url = _require(raw_webhook, "url", f"{path}.url", str).strip()
+        if not url:
+            raise ConfigError(f"{path}.url", "must not be empty")
+        secret = raw_webhook.get("secret")
+        if secret is not None and not isinstance(secret, str):
+            raise ConfigError(f"{path}.secret", "must be a str or omitted")
+        webhooks.append(NotificationWebhookConfig(url=url, secret=secret))
+    return NotificationsConfig(
+        enabled=_optional(table, "enabled", "notifications.enabled", bool, False),
+        desktop=_optional(table, "desktop", "notifications.desktop", bool, True),
+        webhooks=tuple(webhooks),
+    )
+
+
+def _parse_telemetry(data: dict[str, Any]) -> TelemetryConfig:
+    table = _optional(data, "telemetry", "telemetry", dict, {})
+    export_path = table.get("export_path")
+    if export_path is not None and not isinstance(export_path, str):
+        raise ConfigError("telemetry.export_path", "must be a str or omitted")
+    return TelemetryConfig(
+        enabled=_optional(table, "enabled", "telemetry.enabled", bool, True),
+        export_path=export_path,
+    )
+
+
 def _parse_features(data: dict[str, Any]) -> FeaturesConfig:
     table = _optional(data, "features", "features", dict, {})
     return FeaturesConfig(
@@ -359,6 +424,8 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         phases=_parse_phases(data),
         provision=_parse_provision(data),
         deploy=_parse_deploy(data),
+        notifications=_parse_notifications(data),
+        telemetry=_parse_telemetry(data),
         features=features,
         qwenloop=_parse_qwenloop(data),
     )

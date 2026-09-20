@@ -139,7 +139,7 @@ push went ahead but none of that stage's gates ran. Run them by hand before you 
 | Job | What it checks |
 |---|---|
 | `uv-lock` | `uv lock --check`. `gates`, `tools` and `tools-lint` depend on it. The lock carries vibey's own version, so a version bump without `uv lock` fails here first. |
-| `gates` | The seven gates above, against a `postgres:17` service. |
+| `gates` | The seven gates above, against a `postgres:17` service. `postgres-compatibility` additionally runs the database suite on PostgreSQL 14, 15, 16, 17, and 18. |
 | `tools` | Each absorbed tenant's own suite on its own Python floors, plus, on its floor row, its own static gates from the row's `static` key: its mypy, `lint-imports` and bandit. agyloop, codexloop and vibey-skills also run their own strict docs builds (the `docs` key) (ADR-0022). |
 | `tools-lint` | vibey-gh's own linters and its managed-automation drift check. |
 | `image` | Builds `deploy/docker/Dockerfile` for amd64 and arm64 and asserts each `Image contract - …` step: the entrypoint runs, it runs as non-root uid 10001, it has no compiler/uv/pip, migrations ship in the image, and every console script is on PATH. |
@@ -156,15 +156,15 @@ PRs to `merge-train.yml` (see the `vibey-releasing` skill).
 The tenants under `src/vibey_runners/` and `src/vibey_tools/` keep the gates they
 arrived with (ADR-0021, ADR-0022). The root `mypy`, `bandit` and coverage gates
 cover `src/vibey` only. Run a tenant's checks from its own directory, with plain
-pip and a Python at its floor — the workspace lock resolves at 3.12, so a uv
-environment cannot exercise the 3.10 and 3.11 floors. Plain pip knows nothing
+pip and a Python at its floor — every tenant now shares the 3.12 floor, so the
+matrix exercises the common 3.12–3.14 range. Plain pip knows nothing
 about `[tool.uv.sources] workspace = true`, so a tenant that needs a sibling
 installs that sibling **from the tree first** -- no family package may be
 requested from an index, because none of them is published any more (ADR-0037).
 These are the `tools` and `tools-lint` commands, verbatim:
 
 ```bash
-# vibey-gh (CI: Python 3.11, 3.12, 3.13; 100% branch floor in its own addopts)
+# vibey-gh (CI: Python 3.12, 3.13, 3.14; 100% branch floor in its own addopts)
 cd src/vibey_tools/gh
 pip install -e ".[dev]"
 python -m pytest -q
@@ -172,18 +172,18 @@ python -m black --check vibey_gh test
 isort --check-only vibey_gh test
 python -m mypy vibey_gh
 
-# vibey-skills (CI: Python 3.10, 3.12)
+# vibey-skills (CI: Python 3.12, 3.13, 3.14)
 cd src/vibey_tools/skills
 pip install -e .
 python3 tools/validate_manifests.py && python3 tools/check_links.py \
   && PYTHONPATH=src python3 -m unittest discover -s tests
 
-# vibey-bootstrap (CI: Python 3.11, 3.12). It imports vibey_gh, so install that first.
+# vibey-bootstrap (CI: Python 3.12, 3.13, 3.14). It imports vibey_gh, so install that first.
 cd src/vibey_tools/bootstrap
 pip install -e ../gh && pip install -e ".[test,all]"
 pytest test/ -m "not integration" --cov=vibey_bootstrap --cov-report=term
 
-# claudeloop (CI: Python 3.10, 3.11, 3.12, 3.13 -- the only 3.10 floor in the tree)
+# claudeloop (CI: Python 3.12, 3.13, 3.14 -- the common library floor)
 cd src/vibey_runners/claude
 pip install -e ../common && pip install -e ".[dev]"
 pytest tests/domain --cov=claudeloop.domain --cov-branch --cov-report=term-missing --cov-fail-under=100

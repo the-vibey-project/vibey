@@ -76,8 +76,8 @@ class DeployReviewDemoHandler:
                 options=("approve", "request_changes"),
                 default_answer="approve",
             )
-            await self._gates.raise_gate(job.project_id, job.id, request)
-            return Park(request)
+            raised_gate = await self._gates.raise_gate(job.project_id, job.id, request)
+            return Park(request, gate=raised_gate)
 
         if gate.answer is None:
             return Park(
@@ -158,8 +158,8 @@ class DeployReviewTriageHandler:
                 options=("LOOP_DEPLOY_DESIGN", "RETRY_DEPLOY_EXECUTE", "ABORT_DEPLOYMENT"),
                 default_answer="LOOP_DEPLOY_DESIGN",
             )
-            await self._gates.raise_gate(job.project_id, job.id, request)
-            return Park(request)
+            raised_gate = await self._gates.raise_gate(job.project_id, job.id, request)
+            return Park(request, gate=raised_gate)
 
         if gate.answer is None:
             return Park(

@@ -7,7 +7,7 @@ name = "claudeloop"
 version = "0.8.0"
 description = "Onion-architected, autonomous Claude Code session runner and full Anthropic SDK CLI — never blocks on a human, distinguishes rate limits from exhausted credits, and resumes safely across usage windows."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Adam Matthew Steinberger", email = "adam@matthewsteinberger.com" }]
@@ -30,10 +30,9 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -51,7 +50,6 @@ dependencies = [
     # Bumping this pin and regenerating the baseline is now one reviewed change.
     "anthropic==1.2.0",
     "textual>=1.0",
-    "tomli>=2.0; python_version < '3.11'",
     # No `vibey-runners-common` here any more. The shared tree is not published to an
     # index and will not be again (ADR-0037) -- it ships inside the same `vibey` wheel
     # this package ships in -- so naming it here would ask PyPI for a 404. Installed
@@ -105,7 +103,7 @@ packages = ["src/claudeloop"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py312"
 # legacy/ is a frozen historical reference (see its own module docstring and
 # .gitattributes' linguist-vendored marker) — it is deliberately not held to
 # the live lint config, since "unmodified in behavior" is the whole point.
@@ -129,7 +127,7 @@ ignore = ["E501"]
 extend-immutable-calls = ["typer.Option", "typer.Argument"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 strict = true
 packages = ["claudeloop"]
 mypy_path = "src"

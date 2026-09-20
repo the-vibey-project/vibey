@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -46,7 +46,7 @@ from tests.application.fakes import (
     available_signals,
 )
 
-NOW = datetime(2026, 8, 9, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 9, 12, 0, tzinfo=UTC)
 
 
 async def test_null_ports_when_optionals_omitted() -> None:

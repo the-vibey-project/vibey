@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -37,7 +37,7 @@ from tests.application.fakes import (
     window_exhausted_signals,
 )
 
-NOW = datetime(2026, 8, 9, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 9, 12, 0, tzinfo=UTC)
 _DEFAULT_BUDGET = Budget()
 _DEFAULT_WAIT_POLICY = WaitPolicyConfig()
 

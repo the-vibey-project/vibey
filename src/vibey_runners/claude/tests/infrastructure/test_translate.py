@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from __future__ import annotations
 
-from datetime import timezone
+from datetime import UTC
 
 from claudeloop.domain.capacity import WindowExhausted
 from claudeloop.domain.waiting import next_probe_instant
@@ -22,14 +22,14 @@ def test_to_datetime_seconds_form_10_digits_is_utc_aware() -> None:
     result = _to_datetime(1786328953)
     assert result is not None
     assert 2020 <= result.year <= 2030
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
 
 
 def test_to_datetime_milliseconds_form_13_digits() -> None:
     result = _to_datetime(1786328953799)
     assert result is not None
     assert 2020 <= result.year <= 2030
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
 
 
 def test_to_datetime_resets_at_comparable_to_system_clock() -> None:

@@ -12,16 +12,15 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from vibey_bootstrap.counters import bump_counter
 
-T = TypeVar("T")
 _logger = logging.getLogger(__name__)
 
 
 @dataclass
-class PhaseResult(Generic[T]):
+class PhaseResult[T]:
     name: str
     ok: bool
     value: T | None
@@ -48,7 +47,7 @@ def _fire_alert(severity: str, namespace: str, name: str, exc: BaseException) ->
         pass
 
 
-def run_phase(
+def run_phase[T](
     name: str,
     fn: Callable[..., T],
     *args: Any,

@@ -11,6 +11,7 @@ from uuid import UUID
 
 from vibey.application.dto import (
     EnqueueRequest,
+    HumanGateRecord,
     HumanGateRequest,
     JobRecord,
 )
@@ -33,6 +34,7 @@ class Failure:
 @dataclass(frozen=True, slots=True)
 class Park:
     request: HumanGateRequest
+    gate: HumanGateRecord | None = None
 
 
 @dataclass(frozen=True, slots=True)

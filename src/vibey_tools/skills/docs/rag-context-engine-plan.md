@@ -405,7 +405,7 @@ Proceed only if the trial demonstrates:
 
 ## Acceptance criteria
 
-1. A clean checkout with Python 3.10+ can build an index offline using only declared base
+1. A clean checkout with Python 3.12+ can build an index offline using only declared base
    dependencies.
 2. Every authoritative `SKILL.md` appears exactly once in the corpus manifest; duplicate skill
    names, broken frontmatter, and source escapes fail closed.

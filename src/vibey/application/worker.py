@@ -11,8 +11,9 @@ to type; it never becomes a ``failed`` row nobody was told about."""
 
 import asyncio
 import contextlib
-from collections.abc import Callable
-from datetime import datetime, timedelta
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID
 
 from vibey.application.dto import HumanGateRecord, HumanGateRequest, JobRecord
@@ -21,13 +22,18 @@ from vibey.application.interfaces import (
     Failure,
     JobHandler,
     Logger,
+    NotificationSink,
     Outcome,
     Park,
     Success,
+    TelemetryMetrics,
+    TelemetrySpan,
+    TelemetryTracer,
 )
 from vibey.application.observability import StandardLibraryLogger
 from vibey.application.ports import HumanGateRepository, JobRepository
 from vibey.domain.job import FailureClass
+from vibey.domain.phase import Phase
 
 # The grant key every attempt bound in the tree reads and writes. It is the
 # same key build.implement's `escalation_exhausted` gate advertises, on
@@ -56,6 +62,11 @@ class WorkerLoop:
         lease_for_kind: Callable[[str], timedelta] | None = None,
         attempts_grant_step: int = 3,
         logger: Logger | None = None,
+        notifications: NotificationSink | None = None,
+        notification_config: Mapping[str, object] | None = None,
+        tracer: TelemetryTracer | None = None,
+        metrics: TelemetryMetrics | None = None,
+        telemetry_enabled: bool = True,
     ) -> None:
         self._jobs = jobs
         self._gates = gates
@@ -68,6 +79,10 @@ class WorkerLoop:
         # literal (ADR-0018); the default matches the one build.implement's
         # `escalation_exhausted` prompt has always printed.
         self._attempts_grant_step = attempts_grant_step
+        self._notifications = notifications
+        self._notification_config = notification_config
+        self._tracer = tracer if telemetry_enabled else None
+        self._metrics = metrics if telemetry_enabled else None
         self._log: Logger = (
             logger if logger is not None else StandardLibraryLogger(__name__, owner=owner)
         )
@@ -78,6 +93,9 @@ class WorkerLoop:
         job = await self._jobs.claim(project_id, owner=self._owner, lease=self._lease)
         if job is None:
             return False
+
+        claimed_at = datetime.now(UTC)
+        self._record_queue_latency(job, claimed_at)
 
         # Lease duration is per-kind (a build.implement run takes hours; a
         # triage takes minutes). The kind isn't known until after the claim,
@@ -92,18 +110,24 @@ class WorkerLoop:
             if resolved != self._lease and await self._beat(job, lease=resolved):
                 lease = resolved
 
-        heartbeat_task = asyncio.ensure_future(self._heartbeat_forever(job, lease=lease))
-        try:
+        started_at = datetime.now(UTC)
+        with self._job_span(job) as span:
+            heartbeat_task = asyncio.ensure_future(self._heartbeat_forever(job, lease=lease))
             try:
-                outcome: Outcome = await self._handler.handle(job)
-            except CapacityDeferred as exc:
-                outcome = Defer(exc.retry_at, exc.detail, capacity=True)
-            except Exception as exc:  # noqa: BLE001 - any handler bug becomes a VIBEY-class nack
-                outcome = Failure(FailureClass.VIBEY, str(exc))
-        finally:
-            heartbeat_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await heartbeat_task
+                try:
+                    outcome = await self._handler.handle(job)
+                except CapacityDeferred as exc:
+                    outcome = Defer(exc.retry_at, exc.detail, capacity=True)
+                except Exception as exc:  # noqa: BLE001 - any handler bug becomes a VIBEY-class nack
+                    outcome = Failure(FailureClass.VIBEY, str(exc))
+            finally:
+                heartbeat_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await heartbeat_task
+            if span is not None:
+                span.set_attribute("outcome", type(outcome).__name__)
+
+        self._record_phase_duration(job, started_at)
 
         await self._settle(job, outcome)
         return True
@@ -115,7 +139,7 @@ class WorkerLoop:
         elif isinstance(outcome, Failure):
             await self._settle_failure(job, outcome)
         elif isinstance(outcome, Park):
-            await self._raise_and_park(job, outcome.request)
+            await self._raise_and_park(job, outcome.request, created_gate=outcome.gate)
         elif isinstance(outcome, Defer):
             # A defer used to leave no trace outside `job.last_error`: the
             # queue showed 0 failed, 0 parked and a job quietly sliding its
@@ -217,21 +241,94 @@ class WorkerLoop:
 
         return granted_limit(gate.answer, ATTEMPTS_GRANT_KEY)
 
-    async def _raise_and_park(self, job: JobRecord, request: HumanGateRequest) -> None:
+    async def _raise_and_park(
+        self,
+        job: JobRecord,
+        request: HumanGateRequest,
+        *,
+        created_gate: HumanGateRecord | None = None,
+    ) -> None:
         # The gate is raised before the lease is released, so there is
         # never a window where the job looks claimable again before the
         # human_gate row exists to explain why it is parked.
         #
-        # Some handlers (review.collect, the deploy gates) raise their
-        # gate themselves before returning Park; raising here again
-        # would leave a duplicate unanswered gate that latest_for_job
-        # returns forever, re-parking the job no matter what the human
-        # answered. Only raise when this job has no open gate already.
-        existing = await self._gates.latest_for_job(job.id)
-        if existing is None or existing.answer is not None:
-            await self._gates.raise_gate(job.project_id, job.id, request)
+        # Some handlers raise their gate themselves before returning Park. They
+        # return that record in the outcome so this seam can notify the newly
+        # created gate exactly once; an already-open gate from an earlier run is
+        # deliberately not notified again.
+        gate = created_gate
+        if gate is None:
+            existing = await self._gates.latest_for_job(job.id)
+            if existing is None or existing.answer is not None:
+                gate = await self._gates.raise_gate(job.project_id, job.id, request)
+        if gate is not None:
+            await self._notify_gate(job, gate.gate_id, request)
         parked = await self._jobs.park(job.id, owner=self._owner)
         self._landed(parked, event="job.park_rejected", job=job)
+
+    async def _notify_gate(self, job: JobRecord, gate_id: UUID, request: HumanGateRequest) -> None:
+        if self._notifications is None:
+            return
+        kind = "budget_exceeded" if request.kind == "budget_exhausted" else "human_gate_raised"
+        title = "Budget Exceeded" if kind == "budget_exceeded" else "Human Gate Raised"
+        try:
+            await self._notifications.notify(
+                project_id=job.project_id,
+                kind=kind,
+                title=title,
+                message=request.prompt,
+                payload={
+                    "gate_id": str(gate_id),
+                    "gate_kind": request.kind,
+                    "job_id": str(job.id),
+                },
+                config=self._notification_config,
+            )
+        except Exception as exc:  # noqa: BLE001 - notification failure cannot lose a gate
+            self._log.warning(
+                "notification.failed",
+                **self._job_fields(job),
+                notification_kind=kind,
+                error=repr(exc),
+            )
+
+    def _record_queue_latency(self, job: JobRecord, claimed_at: datetime) -> None:
+        if self._metrics is None:
+            return
+        phase = job.phase if isinstance(job.phase, Phase) else job.phase.value
+        with contextlib.suppress(Exception):
+            self._metrics.record_queue_latency(
+                job.project_id,
+                phase,
+                job.kind,
+                max((claimed_at - job.created_at).total_seconds(), 0.0),
+            )
+
+    def _record_phase_duration(self, job: JobRecord, started_at: datetime) -> None:
+        if self._metrics is None:
+            return
+        phase = job.phase if isinstance(job.phase, Phase) else job.phase.value
+        with contextlib.suppress(Exception):
+            self._metrics.record_phase_duration(
+                job.project_id,
+                job.cycle,
+                phase,
+                max((datetime.now(UTC) - started_at).total_seconds(), 0.0),
+            )
+
+    def _job_span(self, job: JobRecord) -> contextlib.AbstractContextManager[TelemetrySpan | None]:
+        if self._tracer is None:
+            return contextlib.nullcontext(None)
+        phase = job.phase if isinstance(job.phase, Phase) else job.phase.value
+        return cast(
+            contextlib.AbstractContextManager[TelemetrySpan | None],
+            self._tracer.trace_job(
+                project_id=job.project_id,
+                cycle=job.cycle,
+                phase=phase,
+                job_kind=job.kind,
+            ),
+        )
 
     async def _heartbeat_forever(self, job: JobRecord, *, lease: timedelta) -> None:
         """Keeps the lease alive while the handler runs.

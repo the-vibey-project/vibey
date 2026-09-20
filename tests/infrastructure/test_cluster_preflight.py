@@ -260,6 +260,75 @@ async def test_database_check_reports_an_unreachable_host() -> None:
     assert "cannot connect" in check.detail
 
 
+async def test_database_check_reports_an_unsupported_server(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class OldServer:
+        async def fetchval(self, _query: str) -> str:
+            return "130023"
+
+        async def close(self) -> None:
+            pass
+
+    async def connect(_dsn: str) -> OldServer:
+        return OldServer()
+
+    monkeypatch.setattr("vibey.infrastructure.cluster_preflight.asyncpg.connect", connect)
+
+    check, conn = await check_database("postgresql://old/db")
+
+    assert not check.ok
+    assert conn is not None
+    assert "below" in check.detail
+
+
+async def test_database_check_reports_an_unreadable_server_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class UnreadableServer:
+        async def fetchval(self, _query: str) -> str:
+            return "unknown"
+
+        async def close(self) -> None:
+            pass
+
+    async def connect(_dsn: str) -> UnreadableServer:
+        return UnreadableServer()
+
+    monkeypatch.setattr("vibey.infrastructure.cluster_preflight.asyncpg.connect", connect)
+
+    check, conn = await check_database("postgresql://unknown/db")
+
+    assert not check.ok
+    assert conn is not None
+    assert "unreadable" in check.detail
+
+
+async def test_database_check_closes_when_version_query_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class BrokenServer:
+        async def fetchval(self, _query: str) -> str:
+            raise asyncpg.PostgresError("version query failed")
+
+        async def close(self) -> None:
+            self.closed = True
+
+    broken = BrokenServer()
+
+    async def connect(_dsn: str) -> BrokenServer:
+        return broken
+
+    monkeypatch.setattr("vibey.infrastructure.cluster_preflight.asyncpg.connect", connect)
+
+    check, conn = await check_database("postgresql://broken/db")
+
+    assert not check.ok
+    assert conn is None
+    assert "version check failed" in check.detail
+    assert broken.closed is True
+
+
 async def test_migrations_report_applied_versions_after_bootstrap() -> None:
     # Explicit url: build_app() otherwise reads VIBEY_PG_URL, which this
     # module does not set, and the fallback silently targets a database

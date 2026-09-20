@@ -1,5 +1,10 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from vibey.domain.interfaces.circuit_interface import EngineFailurePolicyInterface
+from vibey.domain.interfaces.config_interface import (
+    NotificationsConfigInterface,
+    NotificationWebhookConfigInterface,
+    TelemetryConfigInterface,
+)
 from vibey.domain.interfaces.correlation_interface import (
     CorrelationIdInterface,
     DeliveryCorrelationInterface,
@@ -115,6 +120,8 @@ __all__ = [
     "LedgerSearchResultInterface",
     "LedgerSpendRuleInterface",
     "LedgerTierManagerInterface",
+    "NotificationWebhookConfigInterface",
+    "NotificationsConfigInterface",
     "PhaseSpendInterface",
     "PhaseTimelineInterface",
     "PhaseTimingProjectionInterface",
@@ -129,6 +136,7 @@ __all__ = [
     "SovereignResearchUnavailableInterface",
     "StoredValueParserInterface",
     "StringValueInterface",
+    "TelemetryConfigInterface",
     "TrimCountsInterface",
     "TierConfigInterface",
     "UnattributedSpendInterface",

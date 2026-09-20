@@ -44,6 +44,7 @@ from vibey.application.interfaces import (
     GateResult,
     GateRunner,
     LedgerReader,
+    TelemetryTracer,
     VerifyWorktrees,
 )
 from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
@@ -172,6 +173,7 @@ class BuildVerifyHandler:
         repair: VerifyRepairPolicy | None = None,
         correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
         independence: VerifyIndependencePolicy | None = None,
+        tracer: TelemetryTracer | None = None,
     ) -> None:
         self._correlation = correlation
         self._worktrees = worktrees
@@ -186,6 +188,7 @@ class BuildVerifyHandler:
         self._capacity_backoff = capacity_backoff
         self._repair = repair
         self._independence = independence
+        self._tracer = tracer
 
     async def handle(self, job: JobRecord) -> Outcome:
         if job.kind != "build.verify":
@@ -251,7 +254,12 @@ class BuildVerifyHandler:
             )
         )
         run_outcome = await run_and_record(
-            self._reviewer, self._ledger, job=job, handle=handle, correlation=self._correlation
+            self._reviewer,
+            self._ledger,
+            job=job,
+            handle=handle,
+            correlation=self._correlation,
+            tracer=self._tracer,
         )
 
         if run_outcome.capacity_rejected:

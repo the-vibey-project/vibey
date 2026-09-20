@@ -25,6 +25,7 @@ from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCR
 from vibey.infrastructure.interfaces.cluster_preflight_interface import (
     EngineAuthCheckInterface,
 )
+from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, parse_postgres_server_version
 
 
 @dataclass(frozen=True, slots=True)
@@ -244,7 +245,26 @@ async def check_database(dsn: str) -> tuple[ClusterCheck, asyncpg.Connection | N
         conn: asyncpg.Connection = await asyncpg.connect(dsn)
     except (OSError, asyncpg.PostgresError) as exc:
         return ClusterCheck("database", False, f"cannot connect: {exc}"), None
-    return ClusterCheck("database", True, "connected"), conn
+    try:
+        server_version_num = await conn.fetchval("SHOW server_version_num")
+    except asyncpg.PostgresError as exc:
+        await conn.close()
+        return ClusterCheck("database", False, f"version check failed: {exc}"), None
+    version = parse_postgres_server_version(server_version_num)
+    if version is None:
+        return ClusterCheck(
+            "database", False, "server returned an unreadable PostgreSQL version"
+        ), conn
+    if not version.supported:
+        return (
+            ClusterCheck(
+                "database",
+                False,
+                f"PostgreSQL {version} is below vibey's {POSTGRES_MIN_MAJOR}+ support floor",
+            ),
+            conn,
+        )
+    return ClusterCheck("database", True, f"PostgreSQL {version}; connected"), conn
 
 
 async def check_migrations(conn: asyncpg.Connection, migrations_dir: Path) -> ClusterCheck:

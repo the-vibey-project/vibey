@@ -17,7 +17,7 @@ commit-msg]`, so this one command wires up *both* the lint/format hooks
 (`pre-commit` stage) and the Conventional Commits enforcement (`commit-msg`
 stage). You do not need `--hook-type commit-msg`.
 
-Requires Python 3.10+ on macOS or Linux. The GitHub default branch is
+Requires Python 3.12+ on macOS or Linux. The GitHub default branch is
 **`develop`** — branch from it and open PRs into it. `main` is releasable
 history for release-please. See the repo-root `CONTRIBUTING.md` for the
 Code of Conduct and inbound=outbound MIT contribution license.

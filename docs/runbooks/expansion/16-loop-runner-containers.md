@@ -35,7 +35,7 @@ Each of the four session runners — `claudeloop`, `codexloop`,
 
 | Package | Path | Version | Python | Console script | Vendor binary |
 |---|---|---|---|---|---|
-| `claudeloop` | `src/vibey_runners/claude` | 0.8.0 | >=3.10 | `claudeloop` | `claude` |
+| `claudeloop` | `src/vibey_runners/claude` | 0.8.0 | >=3.12 | `claudeloop` | `claude` |
 | `codexloop` | `src/vibey_runners/codex` | 0.4.0 | >=3.12 | `codexloop` | `codex` |
 | `cursorloop` | `src/vibey_runners/cursor` | 0.7.0 | >=3.12 | `cursorloop` | `cursor-sdk-bridge` |
 | `agyloop` | `src/vibey_runners/agy` | 0.5.0 | >=3.12 | `agyloop` | `agy` |

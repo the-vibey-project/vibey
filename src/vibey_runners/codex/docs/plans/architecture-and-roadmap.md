@@ -701,7 +701,7 @@ Three semantic notes:
 | Runtime requirement | `codex` binary on `PATH`, at or above the pinned minimum version |
 | Python dependency | `openai` — the **only** vendor SDK, confined to `infrastructure/` (R11) |
 | Forbidden dependencies | `anthropic`, `claude-agent-sdk`, and `codex-sdk` on PyPI (that name is an unrelated project — R9) |
-| Python | 3.11+ |
+| Python | 3.12+ |
 
 **The two credential paths must never be crossed** (R7). An OAuth access token
 from the ChatGPT login flow is *not* a valid API key — an OpenAI maintainer says

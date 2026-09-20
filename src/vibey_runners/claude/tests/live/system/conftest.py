@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import subprocess  # nosec B404 - fixed-argument git init only
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -30,7 +30,7 @@ from claudeloop.infrastructure.state import FileRunStateStore
 from claudeloop.infrastructure.state_bus import FileStateBus
 from tests.application.fakes import FakeClock, FakeLogger, FakeSleeper, ScriptedTurn
 
-NOW = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 12, 15, 0, tzinfo=UTC)
 
 
 @pytest.fixture

@@ -30,7 +30,7 @@ pip install -e ".[dev,docs]"
 pre-commit install
 ```
 
-Requires Python 3.10+ on **macOS or Linux**. Windows is not a supported
+Requires Python 3.12+ on **macOS or Linux**. Windows is not a supported
 target — CI and classifiers are Unix-only; see
 [`docs/getting-started/installation.md`](docs/getting-started/installation.md).
 The GitHub default branch is **`develop`** (the integration branch you PR
