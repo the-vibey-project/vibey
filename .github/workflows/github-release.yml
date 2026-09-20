@@ -126,7 +126,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey==1.5.0"
+            python -m pip install --quiet "vibey==2.0.0"
           fi
       - name: Create immutable tag and GitHub Release
         working-directory: target
