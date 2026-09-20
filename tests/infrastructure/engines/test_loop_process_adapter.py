@@ -282,7 +282,9 @@ def test_help_text_fetches_and_caches_real_output(tmp_path: Path) -> None:
     import os
 
     bin_dir = _make_fake_binary(
-        tmp_path, "fakecli_help1", 'echo "usage: fakecli_help1 run [OPTIONS] --my-flag <str>"'
+        tmp_path,
+        "fakecli_help1",
+        'printf "\\033[1musage: fakecli_help1 run [OPTIONS] --my-flag <str>\\033[0m\\n"',
     )
     old_path = os.environ.get("PATH", "")
     os.environ["PATH"] = f"{bin_dir}:{old_path}"
@@ -307,6 +309,7 @@ def test_help_text_fetches_and_caches_real_output(tmp_path: Path) -> None:
         help_text = adapter.help_text
 
         assert help_text is not None
+        assert "\x1b" not in help_text
         assert "--my-flag" in help_text
     finally:
         os.environ["PATH"] = old_path

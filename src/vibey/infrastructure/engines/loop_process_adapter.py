@@ -14,6 +14,7 @@ descriptors, not four separate classes.
 import asyncio
 import json
 import os
+import re
 import shutil
 import subprocess  # nosec B404 - fixed argv, never shell=True
 from collections.abc import AsyncIterator, Mapping
@@ -65,6 +66,7 @@ _diagnostic_files: dict[object, tuple[TextIO, TextIO]] = {}
 # when a bundled entrypoint and a separately installed engine share a name on
 # PATH: the help contract must describe the binary that start() will launch.
 _help_text_cache: dict[str, str] = {}
+_ANSI_ESCAPE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
 def _render_plan(descriptor: EngineDescriptor, prompt: str) -> str:
@@ -253,8 +255,9 @@ class LoopProcessAdapter:
                 error=str(e),
             )
             return None
-        _help_text_cache[binary_path] = text
-        return text
+        normalized = _ANSI_ESCAPE.sub("", text)
+        _help_text_cache[binary_path] = normalized
+        return normalized
 
     async def preflight(self) -> PreflightResult:
         """Check if binary exists and auth is OK (via `doctor`)."""
