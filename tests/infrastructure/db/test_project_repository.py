@@ -100,6 +100,34 @@ async def test_a_cycle_bumping_transition_records_the_new_cycle_and_no_guard(
     assert [event.seq for event in events] == [1, 2]
 
 
+async def test_phase_transitions_notify_the_configured_project_sink(
+    migrated_pool: asyncpg.Pool, tmp_path: Path
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    class _Notifications:
+        async def notify(self, **kwargs: object) -> dict[str, object]:
+            calls.append(kwargs)
+            return {"enabled": True}
+
+    config = {
+        "notifications": {
+            "enabled": True,
+            "desktop": False,
+            "webhooks": [{"url": "https://example.test/hook"}],
+        }
+    }
+    repo = PostgresProjectRepository(migrated_pool, notifications=_Notifications())
+    created = await repo.create("notified", tmp_path, max_cycles=1, config=config)
+
+    await repo.transition(created.project_id, expected=Phase.INTAKE, to=Phase.DESIGN)
+    await repo.transition(created.project_id, expected=Phase.DESIGN, to=Phase.DONE)
+
+    assert [call["kind"] for call in calls] == ["phase_transitioned", "run_completed"]
+    assert calls[0]["config"] == config
+    assert calls[1]["payload"] == {"from": "design", "to": "done", "cycle": 1}
+
+
 async def test_a_rejected_transition_writes_no_event(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:

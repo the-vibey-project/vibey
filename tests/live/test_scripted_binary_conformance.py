@@ -73,6 +73,13 @@ _SCRIPTED_ENGINES: dict[EngineId, tuple[str, str]] = {
     EngineId.CURSORLOOP: ("CURSORLOOP_ALLOW_TEST_AGENT", "CURSORLOOP_TEST_AGENT_SCRIPT"),
 }
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_FIXTURE_ROOTS = {
+    EngineId.CLAUDELOOP: _REPO_ROOT / "src" / "vibey_runners" / "claude",
+    EngineId.CODEXLOOP: _REPO_ROOT / "src" / "vibey_runners" / "codex",
+    EngineId.CURSORLOOP: _REPO_ROOT / "src" / "vibey_runners" / "cursor",
+}
+
 _KNOWN_BROKEN_UPSTREAM: dict[EngineId, str] = {
     EngineId.CURSORLOOP: (
         "ScriptedAgentGateway raises on an unexpected second send_turn "
@@ -83,16 +90,7 @@ _KNOWN_BROKEN_UPSTREAM: dict[EngineId, str] = {
 
 
 def _done_script_for(engine_id: EngineId) -> Path:
-    return (
-        Path.home()
-        / "git"
-        / engine_id.value
-        / "tests"
-        / "live"
-        / "fixtures"
-        / "agent_scripts"
-        / "done.json"
-    )
+    return _FIXTURE_ROOTS[engine_id] / "tests" / "live" / "fixtures" / "agent_scripts" / "done.json"
 
 
 def _param(engine_id: EngineId) -> object:
@@ -138,9 +136,7 @@ def test_agyloop_has_no_scripted_agent_yet() -> None:
     """Documents the real gap rather than silently omitting agyloop above:
     fails loudly the day agyloop grows a scripted agent, as a prompt to add
     it to _SCRIPTED_ENGINES and this file's coverage."""
-    agyloop_src = Path.home() / "git" / "agyloop" / "src" / "agyloop"
-    if not agyloop_src.is_dir():
-        pytest.skip(f"agyloop checkout not found at {agyloop_src}")
+    agyloop_src = _REPO_ROOT / "src" / "vibey_runners" / "agy" / "src" / "agyloop"
 
     hits = list(agyloop_src.rglob("scripted.py"))
     assert not hits, f"agyloop now has {hits} -- add it to _SCRIPTED_ENGINES above"

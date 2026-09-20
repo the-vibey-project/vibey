@@ -183,7 +183,10 @@ def test_static_gates_run_on_the_floor(package: Path) -> None:
     where = _relative(package)
     static_rows = [row for row in _matrix_rows() if str(row["dir"]) == where and row.get("static")]
     if not static_rows:
-        pytest.skip(f"{where} has no `static` row")
+        assert not _configured_static_gates(package), (
+            f"{where} declares static gates but has no `static` row and no floor check."
+        )
+        return
     floor = _requires_python_floor(package)
     interpreters = sorted({str(row["python"]) for row in static_rows})
     assert floor in interpreters, (

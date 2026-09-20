@@ -30,6 +30,7 @@ from vibey.domain.engine import EngineId
 from vibey.domain.job import FailureClass
 from vibey.domain.phase_timing import PhaseSpend
 from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID
+from vibey.infrastructure.otel import TelemetryMetrics
 
 NOW = datetime(2026, 8, 19, tzinfo=UTC)
 
@@ -221,6 +222,7 @@ async def _provider(
     *,
     adapters: dict[EngineId, _Adapter] | None = None,
     allow_list: frozenset[EngineId] | None = None,
+    metrics: TelemetryMetrics | None = None,
 ) -> tuple[SelectingEngineProvider, EngineHealthService, FakeJobRepository, object]:
     repo = FakeEngineHealthRepository()
     project_id = uuid4()
@@ -243,6 +245,7 @@ async def _provider(
         clock=FixedClock(),
         owner="w1",
         allow_list=allow_list,
+        metrics=metrics,
     )
     return provider, health, jobs, project_id
 
@@ -262,6 +265,19 @@ async def test_select_for_records_selection_and_assigns_the_engine() -> None:
     assert record.selected_count == 1
     stored = jobs._jobs[job.id]
     assert stored.assigned_engine == "claudeloop"
+
+
+async def test_select_for_records_telemetry_when_metrics_are_configured() -> None:
+    metrics = TelemetryMetrics()
+    provider, _, jobs, project_id = await _provider([EngineId.CLAUDELOOP], metrics=metrics)
+    job = replace(make_job(project_id, attempts=1), project_id=project_id, lease_owner="w1")
+    from vibey.domain.job import JobState
+
+    jobs._jobs[job.id] = replace(job, state=JobState.LEASED)
+
+    await provider.select_for(jobs._jobs[job.id])
+
+    assert metrics.export_metrics(project_id)["engine_selections"] == {"claudeloop": 1}
 
 
 async def test_no_eligible_engine_becomes_capacity_deferred() -> None:
@@ -865,6 +881,23 @@ async def test_the_meter_sums_spend_by_the_one_ledger_spend_rule() -> None:
 
     assert meter.dollars == pytest.approx(0.75)
     assert isinstance(meter, SpendMeteringLedgerInterface)
+
+
+async def test_the_meter_records_cost_spend_telemetry() -> None:
+    project_id = uuid4()
+    metrics = TelemetryMetrics()
+    meter = SpendMeteringLedger(_RecordingLedger(), metrics=metrics)
+
+    await meter.record(
+        project_id=project_id,
+        cycle=2,
+        job_id=uuid4(),
+        engine_id=EngineId.CLAUDELOOP,
+        correlation_id=uuid4(),
+        event=_engine_event("BudgetSpent", dollars=0.5, turns=1),
+    )
+
+    assert metrics.export_metrics(project_id)["cost_spend"] == {"claudeloop": 0.5}
 
 
 async def test_the_meter_never_counts_an_event_the_ledger_refused() -> None:

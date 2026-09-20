@@ -21,6 +21,7 @@ from vibey.application.worker import (
     WorkerLoop,
 )
 from vibey.domain.job import FailureClass, JobState
+from vibey.infrastructure.otel import TelemetryMetrics, TelemetryTracer
 
 PROJECT_ID = uuid4()
 
@@ -45,6 +46,15 @@ class _SlowHandler:
     async def handle(self, job: JobRecord) -> Outcome:
         await asyncio.sleep(self._delay)
         return self._outcome
+
+
+class _RecordingNotifications:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    async def notify(self, **kwargs: object) -> dict[str, object]:
+        self.calls.append(kwargs)
+        return {"enabled": True}
 
 
 def test_the_worker_loop_satisfies_its_declared_seam() -> None:
@@ -307,6 +317,93 @@ async def test_park_outcome_raises_the_gate_before_parking_the_job() -> None:
     record = await jobs.get(job.id)
     assert record is not None
     assert record.state is JobState.AWAITING_HUMAN
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected_notification"),
+    [
+        ("approval", "human_gate_raised"),
+        ("budget_exhausted", "budget_exceeded"),
+    ],
+)
+async def test_new_gates_are_sent_to_the_configured_notification_sink(
+    kind: str, expected_notification: str
+) -> None:
+    job = make_job(PROJECT_ID)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    notifications = _RecordingNotifications()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Park(HumanGateRequest(kind=kind, prompt="answer me"))),
+        owner="w1",
+        notifications=notifications,  # type: ignore[arg-type]
+        notification_config={"notifications": {"enabled": True}},
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert len(notifications.calls) == 1
+    assert notifications.calls[0]["kind"] == expected_notification
+    assert notifications.calls[0]["config"] == {"notifications": {"enabled": True}}
+    assert notifications.calls[0]["payload"] == {
+        "gate_id": str(gates.raised[0].gate_id),
+        "gate_kind": kind,
+        "job_id": str(job.id),
+    }
+
+
+async def test_notification_sink_failure_is_logged_without_losing_the_gate() -> None:
+    class _FailingNotifications:
+        async def notify(self, **kwargs: object) -> dict[str, object]:
+            raise RuntimeError("desktop unavailable")
+
+    job = make_job(PROJECT_ID)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Park(HumanGateRequest(kind="approval", prompt="answer me"))),
+        owner="w1",
+        logger=logger,
+        notifications=_FailingNotifications(),  # type: ignore[arg-type]
+        notification_config={"notifications": {"enabled": True}},
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert len(gates.raised) == 1
+    assert [(level, event) for level, event, _ in logger.lines] == [
+        ("warning", "notification.failed")
+    ]
+    assert logger.lines[0][2]["notification_kind"] == "human_gate_raised"
+    assert logger.lines[0][2]["error"] == "RuntimeError('desktop unavailable')"
+
+
+async def test_worker_records_queue_phase_and_job_telemetry() -> None:
+    job = make_job(PROJECT_ID)
+    jobs = FakeJobRepository([job])
+    tracer = TelemetryTracer()
+    metrics = TelemetryMetrics()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=FakeHumanGateRepository(),
+        handler=_FixedHandler(Success()),
+        owner="w1",
+        tracer=tracer,
+        metrics=metrics,
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    exported = metrics.export_metrics(PROJECT_ID)
+    assert list(exported["queue_latencies"]) == ["build.implement"]
+    assert list(exported["phase_durations"]) == ["build"]
+    assert [span.name for span in tracer.get_finished_spans()] == ["job:build.implement"]
+    assert tracer.get_finished_spans()[0].attributes["outcome"] == "Success"
 
 
 async def test_worker_heartbeats_during_a_long_running_handler() -> None:

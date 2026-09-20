@@ -178,10 +178,12 @@ jobs:
           # on its floor row: every tenant pins `[tool.mypy] python_version`, so another
           # interpreter repeats the same verdict. codexloop is the exception, because its
           # own CI ran these on every cell, macOS included, and a `sys.platform` branch
-          # type-checks differently per OS. vibey-gh's static gates stay in `tools-lint`;
-          # vibey-skills declares none, being stdlib-only with no type or import config.
+          # type-checks differently per OS. vibey-gh's full formatting/import checks stay in
+          # `tools-lint`, while its mypy gate also runs on the declared 3.11 floor below.
+          # vibey-skills declares no static gates, being stdlib-only with no type or import config.
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.11",
-             install: 'pip install -e ".[dev]"', test: 'python -m pytest -q'}
+             install: 'pip install -e ".[dev]"',
+             static: 'python -m mypy vibey_gh', test: 'python -m pytest -q'}
           - {package: vibey-gh, dir: src/vibey_tools/gh, python: "3.12",
              install: 'pip install -e ".[dev]"', test: 'python -m pytest -q',
              network_test: 'python -m pytest -q -m network --no-cov'}

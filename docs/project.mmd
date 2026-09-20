@@ -13,7 +13,7 @@ flowchart TB
     subgraph Interfaces["Public interfaces — cli/, tui/ are the outermost onion ring"]
         CLI["cli/main.py<br/>vibey new · answer · work · design · visual ·<br/>watch · recover · status · engines · cost ·<br/>ledger · deploy · doctor · operator · worker<br/>(+ cli/early_signals.py SIGTERM latch, ADR-0026)"]
         TUI["tui/dashboard.py<br/>live dashboard + ledger replay"]
-        TomlCfg["vibey.toml<br/>domain/config.py schema + infrastructure/config_loader.py<br/>schema IMPLEMENTED + TESTED; only [features] qwenloop is read today<br/>(vibey doctor, via a raw TOML read — VIBEY_FEATURE_QWENLOOP overrides)<br/>(see docs/reference/configuration.md)"]
+        TomlCfg["vibey.toml<br/>domain/config.py schema + infrastructure/config_loader.py<br/>[features] local engines read by doctor/worker; [notifications] + [telemetry]<br/>copied into project config by vibey new<br/>(see docs/reference/configuration.md)"]
         K8sCRD["VibeyProject CRD (vibey.dev/v1alpha1)<br/>reconciled by infrastructure/operator/<br/>(pip install 'vibey[operator]')"]
         SkillsFlags["vibey new<br/>--skills-context-mode off / shadow / inject<br/>--skills-context-budget N<br/>recorded into project config at creation,<br/>not a vibey.toml table (ADR-0031)"]
     end
@@ -21,7 +21,7 @@ flowchart TB
     User --> CLI
     User --> TUI
     CLI --> TUI
-    TomlCfg -. "dormant schema: load_config_from_path has<br/>no caller outside its own test" .-> CLI
+    TomlCfg -. "runtime tables copied at project creation" .-> CLI
     TomlCfg -. "[features] qwenloop only" .-> CLI
 
     subgraph Bootstrap["bootstrap.py — the sole composition root"]
@@ -61,12 +61,12 @@ flowchart TB
         IEngineInternals["engines/ internals — argv.py · classify.py · tailer.py ·<br/>loop_events.py · plan_writer.py · design_json.py (shared decoders) · ollama_chat.py · descriptors.py"]
         IGit["git/worktree_manager.py · integration_branch.py · clean_env.py"]
         IAzure["azure/az_cli.py · iac.py · arm.py · adapter.py"]
-        INotify["notify/service.py · notify/webhook.py<br/>HMAC-SHA256 signed webhooks (+ desktop.py · events.py)<br/>IMPLEMENTED + TESTED, NOT constructed by bootstrap.py"]
+        INotify["notify/service.py · notify/webhook.py<br/>HMAC-SHA256 signed webhooks (+ desktop.py · events.py)<br/>constructed by bootstrap; gate/phase/completion events"]
         IProvision["provision/agent_surface.py<br/>writes the generated block into CLAUDE.md · AGENTS.md ·<br/>CURSOR.md · GEMINI.md · QWEN.md in each worktree (ADR-0011)"]
         IRedact["ledger/redact.py — credential/token/secret redaction<br/>ledger/full_ledger_writer.py<br/>ledger/static_export.py — published shard + static JSON site (7.a)"]
         ILogging["logging.py — structlog Logger adapter (observability port)"]
         ISkillsContext["skills_context.py<br/>VibeySkillsContextCompiler (ADR-0031)<br/>runs python -m vibey_skills.cli"]
-        IOtel["otel.py<br/>TelemetryTracer + TelemetryMetrics<br/>+ calculate_rotation_fairness()<br/>IMPLEMENTED + TESTED, NOT constructed by bootstrap.py"]
+        IOtel["otel.py<br/>TelemetryTracer + TelemetryMetrics<br/>+ calculate_rotation_fairness()<br/>constructed by bootstrap; in-process runtime recorder"]
         IBuildGates["build/gate_runner.py · automated_review_runner.py<br/>subprocess runners: BUILD's gate commands (+ git diff)<br/>and Phase 3's automated ruff/bandit review"]
         IContainer["container/config.py · runtime.py<br/>OciContainerExecutor — hardened OCI runtime wrapper<br/>(dormant, not constructed by bootstrap.py)"]
         IDeployState["deploy/state_repository.py<br/>file-backed deploy spec/consent state, per project"]
@@ -92,8 +92,8 @@ flowchart TB
     AHandoff --> DLedger
     AEngineSel --> DRotation
     IEngines --> DCapacity
-    INotify -. "dormant: no CLI flag or vibey.toml key<br/>constructs it yet" .-> AppResources
-    IOtel -. "dormant: implemented + tested,<br/>not constructed by bootstrap.py" .-> AppResources
+    INotify -. "[notifications] copied by vibey new" .-> AppResources
+    IOtel -. "[telemetry] copied by vibey new" .-> AppResources
     SkillsFlags -->|project config| AppResources
     AppResources --> ISkillsContext
     ISkillsContext -->|"mode not off: packet recorded to the ledger on every BUILD job<br/>that carries no handoff seed_prompt; inject mode also appends it to the prompt"| ABuild

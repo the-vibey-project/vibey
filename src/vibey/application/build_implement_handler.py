@@ -37,6 +37,7 @@ from vibey.application.interfaces import (
     BuildProvisioner,
     BuildWorktrees,
     SkillsContextCompiler,
+    TelemetryTracer,
 )
 from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
 from vibey.application.wind_down import WindDownOrchestrator
@@ -76,6 +77,7 @@ class BuildImplementHandler:
         human_gates: HumanGateRepository | None = None,
         skills_context: SkillsContextCompiler | None = None,
         correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
+        tracer: TelemetryTracer | None = None,
     ) -> None:
         self._correlation = correlation
         self._worktrees = worktrees
@@ -90,6 +92,7 @@ class BuildImplementHandler:
         self._wind_down = wind_down
         self._human_gates = human_gates
         self._skills_context = skills_context
+        self._tracer = tracer
 
     async def handle(self, job: JobRecord) -> Outcome:
         if job.kind != "build.implement":
@@ -227,7 +230,12 @@ class BuildImplementHandler:
             )
         )
         run_outcome = await run_and_record(
-            self._engine, self._ledger, job=job, handle=handle, correlation=self._correlation
+            self._engine,
+            self._ledger,
+            job=job,
+            handle=handle,
+            correlation=self._correlation,
+            tracer=self._tracer,
         )
 
         if run_outcome.capacity_rejected:

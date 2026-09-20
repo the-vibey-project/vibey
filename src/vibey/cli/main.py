@@ -56,6 +56,7 @@ from vibey.domain.spec import (
     NonFunctionalRequirement,
 )
 from vibey.domain.verbosity import resolve_log_plan
+from vibey.infrastructure.config_loader import load_runtime_config_from_path
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.engines.claudeloop_design import ClaudeLoopDesignProvider
 from vibey.infrastructure.engines.claudeloop_process import (
@@ -213,6 +214,7 @@ def new_project(
                 "must be off, shadow, or inject", param_hint="--skills-context-mode"
             )
         config: dict[str, object] = {"project": {"name": name, "repo": str(repo)}}
+        config.update(load_runtime_config_from_path(repo.resolve() / "vibey.toml"))
         if max_cycle_dollars is not None:
             config["max_cycle_dollars"] = max_cycle_dollars
         if max_cycle_turns is not None:
@@ -395,7 +397,12 @@ async def _work_once(
                 raise WrongPhase(
                     "no live VisualInventoryProducer is implemented yet; use --provider scripted"
                 )
-            worker = build_visual_worker(resources=resources, provider=visual_provider, owner=owner)
+            worker = build_visual_worker(
+                resources=resources,
+                provider=visual_provider,
+                owner=owner,
+                project=project,
+            )
             return await worker.run_once(project_id)
 
         provider = _resolve_provider(provider_opt, project.config)

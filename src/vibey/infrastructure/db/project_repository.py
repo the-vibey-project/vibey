@@ -3,6 +3,7 @@
 
 import json
 from collections.abc import Mapping
+from contextlib import suppress
 from pathlib import Path
 from typing import Final
 from uuid import UUID
@@ -10,6 +11,7 @@ from uuid import UUID
 import asyncpg
 
 from vibey.application.dto import ProjectRecord
+from vibey.application.interfaces import NotificationSink
 from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
@@ -141,11 +143,13 @@ class PostgresProjectRepository:
         appender: EventAppenderInterface = DEFAULT_EVENT_APPENDER,
         drafts: PhaseTransitionedDraftBuilderInterface = DEFAULT_TRANSITION_DRAFTS,
         rows: ProjectRowMapperInterface = PROJECT_ROWS,
+        notifications: NotificationSink | None = None,
     ) -> None:
         self._pool = pool
         self._events = appender
         self._drafts = drafts
         self._rows = rows
+        self._notifications = notifications
 
     async def create(
         self,
@@ -238,4 +242,26 @@ class PostgresProjectRepository:
                 )
             settled = self._rows.to_record(row)
             await self._events.append(conn, self._drafts.build(settled, expected, guard))
-            return settled
+
+        if self._notifications is not None:
+            kind = "run_completed" if to is Phase.DONE else "phase_transitioned"
+            title = "Run Completed" if to is Phase.DONE else "Phase Transitioned"
+            message = (
+                f"Project entered {to.value}"
+                if to is not Phase.DONE
+                else f"Project completed in cycle {settled.cycle}"
+            )
+            with suppress(Exception):
+                await self._notifications.notify(
+                    project_id=settled.project_id,
+                    kind=kind,
+                    title=title,
+                    message=message,
+                    payload={
+                        "from": expected.value,
+                        "to": to.value,
+                        "cycle": settled.cycle,
+                    },
+                    config=settled.config,
+                )
+        return settled

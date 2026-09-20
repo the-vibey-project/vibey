@@ -103,6 +103,10 @@ from vibey.application.interfaces.ledger_publication_interface import (
 )
 from vibey.application.interfaces.observability import (
     Logger,
+    NotificationSink,
+    TelemetryMetrics,
+    TelemetrySpan,
+    TelemetryTracer,
 )
 from vibey.application.interfaces.preflight_interface import (
     ConductorPreflightInterface,
@@ -144,6 +148,10 @@ from vibey.application.interfaces.worker_interface import (
 
 __all__ = [
     "Logger",
+    "NotificationSink",
+    "TelemetryMetrics",
+    "TelemetrySpan",
+    "TelemetryTracer",
     "AutomatedFinding",
     "AutomatedReviewRunner",
     "AzureClientPort",

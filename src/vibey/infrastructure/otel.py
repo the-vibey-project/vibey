@@ -88,7 +88,7 @@ class TelemetryTracer:
         *,
         project_id: UUID,
         cycle: int,
-        phase: Phase,
+        phase: Phase | str,
         job_kind: str,
         engine_id: EngineId | str | None = None,
         effort: Effort | str | None = None,
@@ -97,7 +97,7 @@ class TelemetryTracer:
         attrs: dict[str, object] = {
             "project_id": str(project_id),
             "cycle": cycle,
-            "phase": phase.value,
+            "phase": phase.value if isinstance(phase, Phase) else str(phase),
             "job_kind": job_kind,
         }
         if engine_id is not None:

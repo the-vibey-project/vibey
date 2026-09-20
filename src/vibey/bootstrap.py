@@ -94,6 +94,8 @@ from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
+from vibey.infrastructure.notify import NotificationService
+from vibey.infrastructure.otel import TelemetryMetrics, TelemetryTracer
 from vibey.infrastructure.preflight_feasibility import VibeyGhFeasibilityAdapter
 from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
 from vibey.infrastructure.review_artifact_writer import FileReviewArtifactWriter
@@ -123,6 +125,9 @@ class AppResources:
     engine_adapters: Mapping[EngineId, EngineAdapter]
     handoffs: PostgresHandoffRepository
     clock: Clock
+    notifications: NotificationService
+    telemetry_tracer: TelemetryTracer
+    telemetry_metrics: TelemetryMetrics
     integration_lock: PostgresAdvisoryLock | None = None
 
 
@@ -173,11 +178,20 @@ def build_design_worker(
         handler=dispatcher,
         owner=owner,
         logger=StructlogAppLogger(owner=owner),
+        notifications=getattr(resources, "notifications", None),
+        notification_config=project.config,
+        tracer=getattr(resources, "telemetry_tracer", None),
+        metrics=getattr(resources, "telemetry_metrics", None),
+        telemetry_enabled=_telemetry_enabled(project.config),
     )
 
 
 def build_visual_worker(
-    *, resources: AppResources, provider: VisualInventoryProducer, owner: str
+    *,
+    resources: AppResources,
+    provider: VisualInventoryProducer,
+    owner: str,
+    project: ProjectRecord | None = None,
 ) -> WorkerLoop:
     dispatcher = JobDispatcher(
         {
@@ -196,6 +210,11 @@ def build_visual_worker(
         handler=dispatcher,
         owner=owner,
         logger=StructlogAppLogger(owner=owner),
+        notifications=getattr(resources, "notifications", None),
+        notification_config=project.config if project is not None else None,
+        tracer=getattr(resources, "telemetry_tracer", None),
+        metrics=getattr(resources, "telemetry_metrics", None),
+        telemetry_enabled=_telemetry_enabled(project.config if project is not None else {}),
     )
 
 
@@ -273,6 +292,12 @@ def qwenloop_enabled(config: Mapping[str, object]) -> bool:
     return LocalEngineSettings(environ=os.environ, config=config).enabled(EngineId.QWENLOOP)
 
 
+def _telemetry_enabled(config: Mapping[str, object]) -> bool:
+    """Resolve the project-level telemetry switch without importing infra config."""
+    raw = config.get("telemetry")
+    return not isinstance(raw, Mapping) or raw.get("enabled", True) is True
+
+
 def build_full_worker(
     *,
     resources: AppResources,
@@ -305,6 +330,10 @@ def build_full_worker(
         adapters.setdefault(engine_id, local_adapter)
     azure = azure_client if azure_client is not None else InMemoryAzureClientAdapter()
     clock = resources.clock
+    notifications = getattr(resources, "notifications", None)
+    telemetry_enabled = _telemetry_enabled(project.config)
+    tracer = getattr(resources, "telemetry_tracer", None) if telemetry_enabled else None
+    metrics = getattr(resources, "telemetry_metrics", None) if telemetry_enabled else None
     repo_root = Path(project.repo_path)
     deploy_state = FileDeploymentStateRepository(repo_root)
     deploy_design_ledger = PostgresReviewLedger(resources.ledger, phase=Phase.DEPLOY_DESIGN)
@@ -318,6 +347,7 @@ def build_full_worker(
         owner=owner,
         allow_list=allow_list,
         local_engines=local.enabled_engines,
+        metrics=metrics,
     )
     # The runaway brake: caps come from the project's own config
     # (max_cycle_dollars / max_cycle_turns, set at `vibey new`). Without
@@ -341,6 +371,8 @@ def build_full_worker(
         jobs=resources.jobs,
         clock=clock,
         write_ledger=write_full_ledger,
+        tracer=tracer,
+        metrics=metrics,
     )
     skills_context = compiler_from_config(project.config, repo_path=repo_root)
     # One runner for every gate command -- build.verify's gates and diff,
@@ -366,7 +398,7 @@ def build_full_worker(
     # every event unchanged.
     async def _implement(job: JobRecord) -> JobHandler:
         adapter = await engine_provider.select_for(job)
-        meter = SpendMeteringLedger(resources.build_ledger)
+        meter = SpendMeteringLedger(resources.build_ledger, metrics=metrics)
         handler = BuildImplementHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
             provisioner=AgentSurfaceProvisioner(),
@@ -378,12 +410,13 @@ def build_full_worker(
             human_gates=resources.gates,
             budget_source=budget_source,
             skills_context=skills_context,
+            tracer=tracer,
         )
         return _recording(handler, adapter, meter)
 
     async def _verify(job: JobRecord) -> JobHandler:
         adapter = await engine_provider.select_for(job)
-        meter = SpendMeteringLedger(resources.build_ledger)
+        meter = SpendMeteringLedger(resources.build_ledger, metrics=metrics)
         handler = BuildVerifyHandler(
             worktrees=GitWorktreeManager(repo_root, cycle=job.cycle),
             gates=gate_runner,
@@ -395,6 +428,7 @@ def build_full_worker(
                 ledger_reader=resources.ledger, clock=clock, gates=resources.gates
             ),
             independence=_independence_policy(project.config, engine_provider.pool, clock),
+            tracer=tracer,
         )
         return _recording(handler, adapter, meter)
 
@@ -556,6 +590,11 @@ def build_full_worker(
         owner=owner,
         lease_for_kind=lease_for_kind,
         logger=StructlogAppLogger(owner=owner),
+        notifications=notifications,
+        notification_config=project.config,
+        tracer=tracer,
+        metrics=metrics,
+        telemetry_enabled=telemetry_enabled,
     )
 
 
@@ -612,7 +651,13 @@ async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
         async with pool.acquire() as conn:
             await migrator.apply(conn, discover_migrations(migrations_dir()))
 
-        projects = PostgresProjectRepository(pool)
+        telemetry_tracer = TelemetryTracer()
+        telemetry_metrics = TelemetryMetrics()
+        notifications = NotificationService()
+        projects = PostgresProjectRepository(
+            pool,
+            notifications=notifications,
+        )
         ledger = PostgresLedgerRepository(pool)
 
         # Build rotation infrastructure (Phase E1)
@@ -655,6 +700,9 @@ async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
             engine_adapters=engine_adapters,
             handoffs=PostgresHandoffRepository(pool),
             clock=SystemClock(),
+            notifications=notifications,
+            telemetry_tracer=telemetry_tracer,
+            telemetry_metrics=telemetry_metrics,
             integration_lock=PostgresAdvisoryLock(pool),
         )
     finally:
