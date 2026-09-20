@@ -27,6 +27,16 @@ from platformdirs import user_cache_path
 from qwenloop.domain.model import Backend, ChatChunk, ChatMessage, ModelProfile, ServerInfo
 
 
+def _message_payload(message: ChatMessage) -> dict[str, object]:
+    """Serialize tool-call context so the next model turn can continue correctly."""
+    payload: dict[str, object] = {"role": message.role, "content": message.content}
+    if message.tool_calls:
+        payload["tool_calls"] = list(message.tool_calls)
+    if message.tool_call_id is not None:
+        payload["tool_call_id"] = message.tool_call_id
+    return payload
+
+
 class OpenAIServer:
     binary: str
     backend: Backend
@@ -108,7 +118,7 @@ class OpenAIServer:
         payload = json.dumps(
             {
                 "model": info.model or info.profile,
-                "messages": [{"role": item.role, "content": item.content} for item in messages],
+                "messages": [_message_payload(item) for item in messages],
                 "tools": _CODING_TOOLS,
                 "tool_choice": "auto",
                 "stream": False,
@@ -141,7 +151,10 @@ class OpenAIServer:
                     arguments = json.loads(arguments)
                 except json.JSONDecodeError:
                     arguments = {}
-            yield ChatChunk(tool_call={"name": function.get("name", ""), "arguments": arguments})
+            tool_call = {"name": function.get("name", ""), "arguments": arguments}
+            if call.get("id"):
+                tool_call["id"] = str(call["id"])
+            yield ChatChunk(tool_call=tool_call)
         usage = data.get("usage", {})
         yield ChatChunk(
             text=content,

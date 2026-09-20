@@ -77,6 +77,8 @@ class BackendChoice:
 class ChatMessage:
     role: str
     content: str
+    tool_calls: tuple[dict[str, Any], ...] = ()
+    tool_call_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

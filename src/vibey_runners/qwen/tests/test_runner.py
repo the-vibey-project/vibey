@@ -153,6 +153,52 @@ async def test_runner_inserts_continue_prompt_after_assistant_only_turn(tmp_path
 
 
 @pytest.mark.asyncio
+async def test_runner_preserves_assistant_tool_call_context(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}})],
+            [ChatChunk(text="```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE")],
+        ]
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+        run_id="tool-context",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=2,
+    )
+    assert result.status is RunStatus.COMPLETED
+    assistant, tool = server.seen[1][-2:]
+    assert assistant.role == "assistant"
+    assert assistant.tool_calls[0]["function"]["name"] == "read_file"
+    assert tool.role == "tool"
+    assert tool.tool_call_id == assistant.tool_calls[0]["id"]
+
+
+@pytest.mark.asyncio
+async def test_runner_accepts_completion_evidence_split_across_turns(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}})],
+            [ChatChunk(text="```qwenloop-verdict\npass\n```")],
+            [ChatChunk(text="QWENLOOP_TASK_FULLY_COMPLETE")],
+        ]
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+        run_id="split-completion",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=3,
+    )
+    assert result.status is RunStatus.COMPLETED
+
+
+@pytest.mark.asyncio
 async def test_runner_emits_one_turn_completed_per_model_call(tmp_path: Path) -> None:
     server = ScriptedServer(
         [
