@@ -139,7 +139,7 @@ class WorkerLoop:
         elif isinstance(outcome, Failure):
             await self._settle_failure(job, outcome)
         elif isinstance(outcome, Park):
-            await self._raise_and_park(job, outcome.request)
+            await self._raise_and_park(job, outcome.request, created_gate=outcome.gate)
         elif isinstance(outcome, Defer):
             # A defer used to leave no trace outside `job.last_error`: the
             # queue showed 0 failed, 0 parked and a job quietly sliding its
@@ -241,19 +241,27 @@ class WorkerLoop:
 
         return granted_limit(gate.answer, ATTEMPTS_GRANT_KEY)
 
-    async def _raise_and_park(self, job: JobRecord, request: HumanGateRequest) -> None:
+    async def _raise_and_park(
+        self,
+        job: JobRecord,
+        request: HumanGateRequest,
+        *,
+        created_gate: HumanGateRecord | None = None,
+    ) -> None:
         # The gate is raised before the lease is released, so there is
         # never a window where the job looks claimable again before the
         # human_gate row exists to explain why it is parked.
         #
-        # Some handlers (review.collect, the deploy gates) raise their
-        # gate themselves before returning Park; raising here again
-        # would leave a duplicate unanswered gate that latest_for_job
-        # returns forever, re-parking the job no matter what the human
-        # answered. Only raise when this job has no open gate already.
-        existing = await self._gates.latest_for_job(job.id)
-        if existing is None or existing.answer is not None:
-            gate = await self._gates.raise_gate(job.project_id, job.id, request)
+        # Some handlers raise their gate themselves before returning Park. They
+        # return that record in the outcome so this seam can notify the newly
+        # created gate exactly once; an already-open gate from an earlier run is
+        # deliberately not notified again.
+        gate = created_gate
+        if gate is None:
+            existing = await self._gates.latest_for_job(job.id)
+            if existing is None or existing.answer is not None:
+                gate = await self._gates.raise_gate(job.project_id, job.id, request)
+        if gate is not None:
             await self._notify_gate(job, gate.gate_id, request)
         parked = await self._jobs.park(job.id, owner=self._owner)
         self._landed(parked, event="job.park_rejected", job=job)

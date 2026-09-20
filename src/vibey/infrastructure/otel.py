@@ -4,6 +4,7 @@
 from collections import defaultdict
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -50,7 +51,13 @@ class Span:
 class TelemetryTracer:
     def __init__(self) -> None:
         self._spans: list[Span] = []
-        self._active_stack: list[Span] = []
+        # One tracer is shared by every worker task.  The active parent chain
+        # belongs to the current asyncio context, not to the process: a global
+        # list lets overlapping jobs adopt one another's spans and pop the
+        # wrong parent when they finish out of order.
+        self._active_stack: ContextVar[tuple[Span, ...]] = ContextVar(
+            "telemetry_active_stack", default=()
+        )
 
     @contextmanager
     def start_span(
@@ -60,16 +67,15 @@ class TelemetryTracer:
         parent_id: str | None = None,
         attributes: dict[str, object] | None = None,
     ) -> Iterator[Span]:
-        current_parent = parent_id or (
-            self._active_stack[-1].span_id if self._active_stack else None
-        )
+        stack = self._active_stack.get()
+        current_parent = parent_id or (stack[-1].span_id if stack else None)
         span = Span(
             span_id=uuid4().hex[:16],
             name=name,
             parent_id=current_parent,
             attributes=dict(attributes or {}),
         )
-        self._active_stack.append(span)
+        token = self._active_stack.set((*stack, span))
         try:
             yield span
             span.finish("OK")
@@ -79,7 +85,7 @@ class TelemetryTracer:
             span.set_attribute("error.message", str(exc))
             raise
         finally:
-            self._active_stack.pop()
+            self._active_stack.reset(token)
             self._spans.append(span)
 
     @contextmanager
@@ -158,7 +164,7 @@ class TelemetryTracer:
 
     def clear(self) -> None:
         self._spans.clear()
-        self._active_stack.clear()
+        self._active_stack.set(())
 
 
 class TelemetryMetrics:

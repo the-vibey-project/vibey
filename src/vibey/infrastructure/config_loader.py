@@ -40,4 +40,11 @@ def load_runtime_config_from_path(path: Path) -> dict[str, object]:
     if not path.is_file():
         return {}
     data = parse_toml_string(path.read_text())
-    return {key: value for key in RUNTIME_CONFIG_KEYS if isinstance((value := data.get(key)), dict)}
+    runtime = {key: data[key] for key in RUNTIME_CONFIG_KEYS if key in data}
+    if runtime:
+        # Validate the same tables with the domain parser before copying them
+        # into the project's stored JSON.  A synthetic project name lets this
+        # narrow loader validate only the runtime tables; the CLI supplies the
+        # real project record separately.
+        parse_config({"project": {"name": "runtime-config"}, **runtime})
+    return runtime

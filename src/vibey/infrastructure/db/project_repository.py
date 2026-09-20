@@ -2,8 +2,8 @@
 """Postgres persistence for project lifecycle and guarded phase updates."""
 
 import json
+import logging
 from collections.abc import Mapping
-from contextlib import suppress
 from pathlib import Path
 from typing import Final
 from uuid import UUID
@@ -24,6 +24,8 @@ from vibey.infrastructure.db.interfaces import (
 )
 from vibey.infrastructure.db.ledger_repository import DEFAULT_EVENT_APPENDER
 from vibey.infrastructure.engines.tailer import LedgerEventDraft
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectRowMapper:
@@ -151,6 +153,23 @@ class PostgresProjectRepository:
         self._rows = rows
         self._notifications = notifications
 
+    @staticmethod
+    def _notification_failed(result: Mapping[str, object], config: Mapping[str, object]) -> bool:
+        if result.get("enabled") is not True:
+            return False
+        if result.get("error"):
+            return True
+        raw_config = config.get("notifications")
+        desktop_enabled = (
+            isinstance(raw_config, Mapping)
+            and raw_config.get("enabled") is True
+            and raw_config.get("desktop", True) is True
+        )
+        if desktop_enabled and result.get("desktop") is False:
+            return True
+        webhooks = result.get("webhooks")
+        return isinstance(webhooks, list) and any(delivery is False for delivery in webhooks)
+
     async def create(
         self,
         name: str,
@@ -251,8 +270,8 @@ class PostgresProjectRepository:
                 if to is not Phase.DONE
                 else f"Project completed in cycle {settled.cycle}"
             )
-            with suppress(Exception):
-                await self._notifications.notify(
+            try:
+                result = await self._notifications.notify(
                     project_id=settled.project_id,
                     kind=kind,
                     title=title,
@@ -263,5 +282,17 @@ class PostgresProjectRepository:
                         "cycle": settled.cycle,
                     },
                     config=settled.config,
+                )
+                if self._notification_failed(result, settled.config):
+                    logger.warning(
+                        "notification delivery failed for project %s: %s",
+                        settled.project_id,
+                        result,
+                    )
+            except Exception as exc:  # noqa: BLE001 - delivery cannot undo a committed transition
+                logger.warning(
+                    "notification delivery raised for project %s: %s",
+                    settled.project_id,
+                    exc,
                 )
         return settled

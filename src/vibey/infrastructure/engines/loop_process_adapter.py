@@ -328,6 +328,16 @@ class LoopProcessAdapter:
 
         # Build argv using existing argv.py
         argv = build_argv(self.descriptor, spec)
+        # The absorbed runner entrypoints are shipped in vibey's own venv. The
+        # child must not inherit that venv on PATH (it could install into and
+        # mutate the orchestrator environment), so resolve the executable
+        # before applying the isolation below. An absolute path keeps the
+        # bundled entrypoint runnable without reintroducing the venv into the
+        # child's PATH; separately installed engines continue to work the same
+        # way.
+        binary_path = shutil.which(argv[0])
+        if binary_path is not None:
+            argv = (binary_path, *argv[1:])
 
         # Spawn the process. Output goes to bounded-lifetime files rather than pipes:
         # pipes can deadlock a long-running engine when nobody drains them, while

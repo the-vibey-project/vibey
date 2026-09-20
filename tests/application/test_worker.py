@@ -508,22 +508,32 @@ async def test_park_does_not_duplicate_a_handler_raised_gate() -> None:
     """Handlers like review.collect raise their gate themselves before
     returning Park; _settle raising again would leave a duplicate unanswered
     gate that latest_for_job returns forever, re-parking the job no matter
-    what the human answered."""
+    what the human answered. The created record also carries the one
+    notification opportunity back to the worker."""
     job = make_job(PROJECT_ID)
     jobs = FakeJobRepository([job])
     gates = FakeHumanGateRepository()
+    notifications = _RecordingNotifications()
 
     class _SelfRaisingHandler:
         async def handle(self, handled: JobRecord) -> Outcome:
             request = HumanGateRequest(kind="approval", prompt="ok?", options=("yes",))
-            await gates.raise_gate(handled.project_id, handled.id, request)
-            return Park(request)
+            raised = await gates.raise_gate(handled.project_id, handled.id, request)
+            return Park(request, gate=raised)
 
-    loop = WorkerLoop(jobs=jobs, gates=gates, handler=_SelfRaisingHandler(), owner="w1")
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_SelfRaisingHandler(),
+        owner="w1",
+        notifications=notifications,  # type: ignore[arg-type]
+        notification_config={"notifications": {"enabled": True}},
+    )
 
     await loop.run_once(PROJECT_ID)
 
     assert len(gates.raised) == 1
+    assert len(notifications.calls) == 1
 
 
 async def test_park_raises_a_fresh_gate_when_the_last_one_is_answered() -> None:

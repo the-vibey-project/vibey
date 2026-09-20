@@ -197,7 +197,7 @@ that project's stored config at creation time — see the
 
 `infrastructure/notify/` implements a `NotificationService` that dispatches
 desktop alerts and HMAC-SHA256-signed webhooks (`X-Vibey-Signature`, see
-[SECURITY.md](https://github.com/the-vibey-project/vibey/blob/main/SECURITY.md#6-webhook-payload-integrity)),
+[SECURITY.md](https://github.com/the-vibey-project/vibey/blob/main/SECURITY.md#6-webhook-payload-integrity--implemented-unit-tested-and-active-when-configured)),
 and it is covered by tests. `build_app()` constructs it; workers notify on
 newly raised gates, and project transitions notify on phase changes and
 completion. Enable it in the repository TOML with

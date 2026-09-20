@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import logging
 from pathlib import Path
 from uuid import UUID
 
@@ -126,6 +127,47 @@ async def test_phase_transitions_notify_the_configured_project_sink(
     assert [call["kind"] for call in calls] == ["phase_transitioned", "run_completed"]
     assert calls[0]["config"] == config
     assert calls[1]["payload"] == {"from": "design", "to": "done", "cycle": 1}
+
+
+async def test_failed_phase_notification_is_logged_without_rolling_back(
+    migrated_pool: asyncpg.Pool, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    class _Notifications:
+        async def notify(self, **kwargs: object) -> dict[str, object]:
+            return {"enabled": True, "desktop": False, "webhooks": [False]}
+
+    config = {"notifications": {"enabled": True}}
+    repo = PostgresProjectRepository(migrated_pool, notifications=_Notifications())
+    created = await repo.create("logged", tmp_path, max_cycles=1, config=config)
+
+    with caplog.at_level(logging.WARNING, logger="vibey.infrastructure.db.project_repository"):
+        settled = await repo.transition(created.project_id, expected=Phase.INTAKE, to=Phase.DESIGN)
+
+    assert settled.phase is Phase.DESIGN
+    assert "notification delivery failed" in caplog.text
+
+
+def test_notification_failure_recognizes_reported_errors() -> None:
+    assert PostgresProjectRepository._notification_failed(
+        {"enabled": True, "error": "webhook unavailable"}, {}
+    )
+
+
+async def test_notification_exception_is_logged_without_rolling_back(
+    migrated_pool: asyncpg.Pool, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    class _Notifications:
+        async def notify(self, **kwargs: object) -> dict[str, object]:
+            raise RuntimeError("notification service is down")
+
+    repo = PostgresProjectRepository(migrated_pool, notifications=_Notifications())
+    created = await repo.create("raised", tmp_path, max_cycles=1, config={})
+
+    with caplog.at_level(logging.WARNING, logger="vibey.infrastructure.db.project_repository"):
+        settled = await repo.transition(created.project_id, expected=Phase.INTAKE, to=Phase.DESIGN)
+
+    assert settled.phase is Phase.DESIGN
+    assert "notification delivery raised" in caplog.text
 
 
 async def test_a_rejected_transition_writes_no_event(

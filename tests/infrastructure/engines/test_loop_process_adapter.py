@@ -1509,6 +1509,7 @@ async def test_start_spawns_the_engine_with_an_isolated_env(
     captured: dict[str, object] = {}
 
     async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured["argv"] = argv
         captured.update(kwargs)
         process = AsyncMock()
         process.pid = 4242
@@ -1516,6 +1517,7 @@ async def test_start_spawns_the_engine_with_an_isolated_env(
         return process
 
     monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(module.shutil, "which", lambda _: "/orchestrator/.venv/bin/claudeloop")
     monkeypatch.setenv("VIRTUAL_ENV", "/orchestrator/.venv")
 
     adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
@@ -1533,6 +1535,45 @@ async def test_start_spawns_the_engine_with_an_isolated_env(
     assert isinstance(env, dict)
     assert "VIRTUAL_ENV" not in env
     assert "/orchestrator/.venv" not in env.get("PATH", "")
+    assert captured["argv"][0] == "/orchestrator/.venv/bin/claudeloop"
+
+
+async def test_start_keeps_the_binary_name_when_it_is_not_on_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from unittest.mock import AsyncMock
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+    from vibey.infrastructure.engines import loop_process_adapter as module
+
+    captured: dict[str, object] = {}
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured["argv"] = argv
+        captured.update(kwargs)
+        process = AsyncMock()
+        process.pid = 4244
+        process.returncode = None
+        return process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(module.shutil, "which", lambda _: None)
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    handle = await adapter.start(
+        RunSpec(
+            run_id=uuid4(),
+            worktree_path=tmp_path,
+            prompt="do the thing",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+    )
+    _active_processes.pop(handle.run_id, None)
+
+    assert captured["argv"][0] == CLAUDELOOP.binary
 
 
 async def test_tail_reads_codexloop_flat_events_keyed_by_type(tmp_path: Path) -> None:
