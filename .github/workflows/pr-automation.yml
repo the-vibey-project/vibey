@@ -152,7 +152,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey==1.5.0"
+            python -m pip install --quiet "vibey==2.0.0"
           fi
 
       # Doctrine 8.a prefers the sovereign path, but a sovereign job scheduled against a
@@ -344,7 +344,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey==1.5.0"
+            python -m pip install --quiet "vibey==2.0.0"
           fi
       # The diff arrives through the API and reaches the model as text. Repository code is
       # never checked out here and never executed: the model has no shell, no tools, and no
@@ -691,7 +691,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey==1.5.0"
+            python -m pip install --quiet "vibey==2.0.0"
           fi
       - name: Persist review state
         id: result
@@ -867,7 +867,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey==1.5.0"
+            python -m pip install --quiet "vibey==2.0.0"
           fi
           vibey-gh pr-automation ensure-labels
           gh pr edit "$PR" --add-label vibey-gh:repairing
@@ -1084,7 +1084,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey==1.5.0"
+            python -m pip install --quiet "vibey==2.0.0"
           fi
           head_sha=$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq .headRefOid)
           payload=$(jq -c --arg head_sha "$head_sha" '. + {head_sha:$head_sha}' <<<"$STRUCTURED")
@@ -1319,7 +1319,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet "vibey==1.5.0"
+            python -m pip install --quiet "vibey==2.0.0"
           fi
           new_sha=$(git -C target rev-parse HEAD)
           payload=$(jq -c --arg head_sha "$new_sha" \
