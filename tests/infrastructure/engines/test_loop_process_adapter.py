@@ -382,6 +382,49 @@ def test_help_text_returns_none_on_subprocess_error(tmp_path: Path) -> None:
         os.environ["PATH"] = old_path
 
 
+def test_help_text_uses_the_isolated_engine_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+    import subprocess
+    from unittest.mock import patch
+
+    bin_dir = _make_fake_binary(tmp_path, "fakecli_help_env", 'echo "usage: fakecli_help_env"')
+    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ.get('PATH', '')}")
+    monkeypatch.setenv("VIRTUAL_ENV", "/orchestrator/.venv")
+    monkeypatch.setenv("PYTHONPATH", "/orchestrator/src")
+    desc = CLAUDELOOP.__class__(
+        engine_id=EngineId.CLAUDELOOP,
+        binary="fakecli_help_env",
+        min_version="0.1.0",
+        state_dir=".test",
+        done_marker="TEST_DONE",
+        auth_env=("TEST_KEY",),
+        capabilities=frozenset(),
+        effort_projection=CLAUDELOOP.effort_projection,
+        session_verb="sessions",
+        isolation_flags=CLAUDELOOP.isolation_flags,
+        cost_per_mtok_in=1.0,
+        cost_per_mtok_out=5.0,
+        context_window=100_000,
+    )
+    adapter = LoopProcessAdapter(descriptor=desc, env_overlay={"ENGINE_BACKEND": "test"})
+
+    completed = subprocess.CompletedProcess(
+        args=[], returncode=0, stdout="usage: fakecli_help_env", stderr=""
+    )
+    with patch("subprocess.run", return_value=completed) as run:
+        assert adapter.help_text == "usage: fakecli_help_env"
+
+    help_env = run.call_args.kwargs["env"]
+    assert "VIRTUAL_ENV" not in help_env
+    assert "PYTHONPATH" not in help_env
+    assert help_env["ENGINE_BACKEND"] == "test"
+    assert help_env["COLUMNS"] == "250"
+    assert help_env["LINES"] == "50"
+    assert help_env["NO_COLOR"] == "1"
+
+
 async def test_tail_yields_translated_events(tmp_path: Path) -> None:
     adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
     run_dir = tmp_path / "test-run"

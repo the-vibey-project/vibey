@@ -229,7 +229,14 @@ class LoopProcessAdapter:
             # flags like --append-system-prompt get cut to
             # "--append-system-pro…", which would make a real, present flag
             # look missing to a substring check.
-            env = dict(os.environ, COLUMNS="250")
+            # Probe the same environment that start() gives the engine. In
+            # particular, an inherited VIRTUAL_ENV/PYTHONPATH can make an
+            # editable install resolve a different CLI than the absolute
+            # entrypoint we launch, so the help contract can disagree with
+            # the process that will actually run.
+            env = isolate_python_env(os.environ, venv_prefixes=self.python_env.venv_prefixes())
+            env.update(self.env_overlay)
+            env.update({"COLUMNS": "250", "LINES": "50", "NO_COLOR": "1"})
             result = subprocess.run(  # nosec B603 - fixed argv, never shell=True
                 [binary_path, "run", "--help"],
                 capture_output=True,
