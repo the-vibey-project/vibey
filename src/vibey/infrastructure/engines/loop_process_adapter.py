@@ -59,9 +59,11 @@ logger = structlog.get_logger(__name__)
 _active_processes: dict[object, asyncio.subprocess.Process] = {}
 _diagnostic_files: dict[object, tuple[TextIO, TextIO]] = {}
 
-# `<binary> run --help` output, keyed by binary name. Fetched once per
-# process lifetime; --help is static for a given install, so there's
-# nothing to invalidate.
+# `<binary> run --help` output, keyed by the resolved executable path. Fetched
+# once per process lifetime; --help is static for a given install, so there's
+# nothing to invalidate. Resolving once and invoking that exact path matters
+# when a bundled entrypoint and a separately installed engine share a name on
+# PATH: the help contract must describe the binary that start() will launch.
 _help_text_cache: dict[str, str] = {}
 
 
@@ -215,10 +217,11 @@ class LoopProcessAdapter:
         do real auth/network work and stay async.
         """
         binary = self.descriptor.binary
-        if binary in _help_text_cache:
-            return _help_text_cache[binary]
-        if shutil.which(binary) is None:
+        binary_path = shutil.which(binary)
+        if binary_path is None:
             return None
+        if binary_path in _help_text_cache:
+            return _help_text_cache[binary_path]
         try:
             # A wide COLUMNS keeps Rich-based CLIs (typer/click) from
             # truncating flag names/descriptions when stdout isn't a real
@@ -228,7 +231,7 @@ class LoopProcessAdapter:
             # look missing to a substring check.
             env = dict(os.environ, COLUMNS="250")
             result = subprocess.run(  # nosec B603 - fixed argv, never shell=True
-                [binary, "run", "--help"],
+                [binary_path, "run", "--help"],
                 capture_output=True,
                 text=True,
                 timeout=10.0,
@@ -243,7 +246,7 @@ class LoopProcessAdapter:
                 error=str(e),
             )
             return None
-        _help_text_cache[binary] = text
+        _help_text_cache[binary_path] = text
         return text
 
     async def preflight(self) -> PreflightResult:
