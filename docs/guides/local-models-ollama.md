@@ -49,6 +49,15 @@ export VIBEY_OLLAMA_URL=http://127.0.0.1:11434
 export VIBEY_OLLAMA_MODEL=your-model:tag     # or --ollama-model on work/worker
 ```
 
+For the Qwen storm profile used while developing this repository, see the
+copyable [qwenloop-local.toml](../examples/qwenloop-local.toml) and
+[qwenloop-storm.env.example](../examples/qwenloop-storm.env.example) examples.
+They use `qwen2.5-coder:14b`, a 32K context window, a 40-turn local budget,
+Ollama's OpenAI-compatible endpoint, and the single-model cache settings used
+for local agent work. Qwen lifecycle desktop notifications stay enabled and
+use macOS's `Ping` sound; `--desktop-notifications` is explicit in the example
+commands even though it is the default.
+
 - The DESIGN and DECOMPOSE providers talk to `<VIBEY_OLLAMA_URL>/api/chat`.
 - qwenloop's process gets `QWENLOOP_BASE_URL=<VIBEY_OLLAMA_URL>/v1` and
   `QWENLOOP_MODEL=<the model>`, so it attaches to this server instead of starting its
