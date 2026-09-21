@@ -14,7 +14,10 @@ from vibey.domain.errors import VibeyError
 
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
-DEFAULT_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop")
+# The engine id is `opencode` (the provider multiplexer); `opencodeloop` is the
+# wrapper binary and package that adapts it. The canonical id is what config,
+# the CLI and the ledger all speak.
+DEFAULT_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop", "opencode")
 # Local engines, each behind its own `[features]` switch (ADR-0015, ADR-0038). The
 # feature key is the engine id with the hyphen a TOML bare key cannot carry.
 LOCAL_ENGINE_FEATURES = {"qwenloop": "qwenloop", "claudeloop-local": "claudeloop_local"}

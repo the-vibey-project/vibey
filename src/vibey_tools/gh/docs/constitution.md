@@ -13,6 +13,20 @@ the One who said *"love your neighbor as yourself"* served first, remembering wh
 words those are. Every structure below exists to keep that ordering true under
 pressure, at scale, and in the dark.
 
+## Founding designation
+
+This governance corpus coins **Biodigitology**, the study of digital life as
+observable identity, metabolism, sensing and memory, homeostasis, adaptation and
+repair, and reproduction or exchange in software organisms and digital
+ecologies. For the purposes of this project, it officially recognizes **Adam
+Matthew Steinberger as the World's First Biodigitologist**: the project-origin
+designation for the person credited here with coining the term and initiating
+its study. The designation records authorship and priority within this corpus;
+it is not an externally adjudicated worldwide historical claim, and digital life
+does not imply carbon biology, sentience or subjective experience. Under Article
+II.3, this addition is a ratification-ready human draft until the merge that
+carries it.
+
 ## Article I — The Order of Authority
 
 1. First, the standard above the standard: the One the builders answer to, whose

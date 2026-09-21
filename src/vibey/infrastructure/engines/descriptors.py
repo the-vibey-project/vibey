@@ -239,6 +239,53 @@ AGYLOOP = EngineDescriptor(
     base_weight=1,
 )
 
+OPENCODE = EngineDescriptor(
+    engine_id=EngineId.OPENCODE,
+    binary="opencodeloop",
+    min_version="0.1.0",
+    state_dir=".opencodeloop",
+    done_marker="OPENCODELOOP_TASK_FULLY_COMPLETE",
+    # OpenCode is a provider multiplexer: authentication belongs to the
+    # installed OpenCode CLI and must not be guessed from a provider-specific
+    # environment variable here. `opencodeloop doctor` checks the CLI contract.
+    auth_env=(),
+    capabilities=frozenset({Capability.STRUCTURED_VERDICT, Capability.SNAPSHOT}),
+    # The OpenCode CLI accepts provider-specific model settings rather than a
+    # portable effort flag. Empty argv is therefore intentional; the achieved
+    # level is the adapter's conservative STANDARD ceiling until a provider
+    # exposes a verified effort control.
+    effort_projection={
+        Effort.TRIVIAL: EngineInvocation(
+            (), achieved=Effort.STANDARD, notes="OpenCode has no portable effort flag"
+        ),
+        Effort.LOW: EngineInvocation(
+            (), achieved=Effort.STANDARD, notes="OpenCode has no portable effort flag"
+        ),
+        Effort.STANDARD: EngineInvocation((), achieved=Effort.STANDARD),
+        Effort.HIGH: EngineInvocation(
+            (), achieved=Effort.STANDARD, notes="OpenCode has no portable effort flag"
+        ),
+        Effort.MAX: EngineInvocation(
+            (), achieved=Effort.STANDARD, notes="OpenCode has no portable effort flag"
+        ),
+    },
+    session_verb="sessions",
+    resume_run_id_flag="--run-id",
+    isolation_flags={
+        IsolationLevel.WORKTREE: (),
+        IsolationLevel.CONTAINER: (),
+        IsolationLevel.VM: (),
+    },
+    # OpenCode itself does not publish a stable price table: the selected
+    # provider may be local or remote. The wrapper preserves provider usage in
+    # raw events; fixed descriptor pricing is deliberately zero until a
+    # provider-specific meter is configured rather than inventing a price.
+    cost_per_mtok_in=0.0,
+    cost_per_mtok_out=0.0,
+    context_window=32_768,
+    base_weight=1,
+)
+
 QWENLOOP = EngineDescriptor(
     engine_id=EngineId.QWENLOOP,
     binary="qwenloop",
@@ -358,6 +405,7 @@ DEFAULT_DESCRIPTORS: tuple[EngineDescriptor, ...] = (
     CODEXLOOP,
     CURSORLOOP,
     AGYLOOP,
+    OPENCODE,
 )
 # The local engines, each opt-in behind its own feature switch (ADR-0015, ADR-0038).
 LOCAL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (QWENLOOP, CLAUDELOOP_LOCAL)

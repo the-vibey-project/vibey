@@ -28,6 +28,7 @@ class EngineId(StrEnum):
     CODEXLOOP = "codexloop"
     CURSORLOOP = "cursorloop"
     AGYLOOP = "agyloop"
+    OPENCODE = "opencode"
     QWENLOOP = "qwenloop"
     # The same claudeloop binary, driven through a named backend profile that
     # points Claude Code at a local model (Ollama) instead of Anthropic. A
@@ -131,6 +132,11 @@ class EngineDescriptor:
     # positional to a binary that wants a flag fails at argument parsing,
     # before the session ever starts.
     plan_flag: str | None = None
+    # Optional flag that lets an adapter keep the orchestration run id when
+    # resuming a provider session. Most runners derive their state path from
+    # the session id; OpenCode keeps provider session and Vibey run ids
+    # separate, so its wrapper accepts this explicit value.
+    resume_run_id_flag: str | None = None
     # Which side of TIER_PREFERENCE the engine sits on. PAID unless the
     # engine runs on the operator's own hardware.
     tier: EngineTier = EngineTier.PAID

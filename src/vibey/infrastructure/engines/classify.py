@@ -6,11 +6,12 @@ The four runners emit the *loop family's shared CapacityState shape in
 spirit (domain/capacity.py's docstring: "inherited from the *loop family,
 unchanged in spirit"), but each vendor's own error payload -- what actually
 comes back from the provider before the runner normalizes it -- has a
-different shape. No real captured vendor payloads were available while
-building this (no live accounts, no docker to run the real binaries), so
-the per-engine parsers below encode a plausible, clearly-documented shape
-per vendor; they are the seam a real captured-payload fixture would replace
-without touching anything above classify_capacity's call site.
+different shape. Most per-engine parsers below still encode a plausible,
+clearly-documented shape per vendor rather than a captured payload, because
+no live accounts were available for them; they are the seam a real
+captured-payload fixture would replace without touching anything above
+classify_capacity's call site. OpenCode follows the official session error
+schema (`ProviderAuthError` and `APIError`; see `_classify_opencode`).
 
 What is load-bearing and *is* tested exhaustively here: credits and window
 exhaustion are never confused, regardless of which engine's payload shape
@@ -162,11 +163,62 @@ def _classify_qwenloop(raw: Mapping[str, object]) -> CapacityState:
     return Available()
 
 
+# OpenCode reports the provider's own error class under `error.name`; the
+# adapter passes the whole error event through, so classification reads the
+# official `ProviderAuthError` and `APIError` shapes directly. Only names and
+# statuses that mean a capacity state are mapped -- anything unrecognized stays
+# Available rather than being guessed.
+_OPENCODE_CAPACITY_BY_ERROR_NAME = {
+    "providerautherror": "auth_failed",
+}
+
+
+def _classify_opencode(raw: Mapping[str, object]) -> CapacityState:
+    """Read OpenCode's own provider error event, or an explicit wrapper state.
+
+    The shape follows the official OpenCode session schema:
+    ``{"type": "error", "error": {"name": "ProviderAuthError", "data": {...}}}``.
+    The adapter may pre-classify an event as `capacity_state` (with
+    `resets_at`/`detail`); an explicit wrapper state wins because it is already
+    normalized, and only otherwise is the provider error name interpreted.
+    """
+    state = raw.get("capacity_state")
+    detail = str(raw.get("detail", ""))
+    resets_at = raw.get("resets_at")
+    error = raw.get("error")
+    if isinstance(error, Mapping):
+        if state is None:
+            state = _OPENCODE_CAPACITY_BY_ERROR_NAME.get(str(error.get("name", "")).lower())
+        data = error.get("data")
+        if isinstance(data, Mapping):
+            # An explicit wrapper `detail` (the runner's own message) is the
+            # authority; the provider's message fills in only when it is absent.
+            detail = detail or str(data.get("message", ""))
+            if resets_at is None:
+                resets_at = data.get("resets_at") or data.get("resetsAt")
+            if state is None and str(error.get("name", "")) == "APIError":
+                status_code = data.get("statusCode")
+                if status_code == 429:
+                    state = "window_exhausted"
+                elif status_code == 402:
+                    state = "credits_exhausted"
+                elif status_code in {401, 403}:
+                    state = "auth_failed"
+    if state == "credits_exhausted":
+        return CreditsExhausted(can_purchase=bool(raw.get("can_purchase", True)))
+    if state == "window_exhausted":
+        return WindowExhausted(resets_at=_parse_dt(resets_at), rate_limit_type="provider")
+    if state in {"auth_failed", "backend_misconfigured"}:
+        return AuthenticationFailed(detail=detail)
+    return Available()
+
+
 _CLASSIFIERS = {
     EngineId.CLAUDELOOP: _classify_claudeloop,
     EngineId.CODEXLOOP: _classify_codexloop,
     EngineId.CURSORLOOP: _classify_cursorloop,
     EngineId.AGYLOOP: _classify_agyloop,
+    EngineId.OPENCODE: _classify_opencode,
     EngineId.QWENLOOP: _classify_qwenloop,
     EngineId.CLAUDELOOP_LOCAL: _classify_claudeloop,
 }
@@ -188,6 +240,13 @@ CREDITS_FIXTURES: dict[EngineId, dict[str, object]] = {
         "grpc_status": "RESOURCE_EXHAUSTED",
         "quota_metric": "billing.generate_content",
         "billing_exhausted": True,
+    },
+    EngineId.OPENCODE: {
+        "type": "error",
+        "error": {
+            "name": "APIError",
+            "data": {"statusCode": 402, "message": "quota exceeded"},
+        },
     },
     EngineId.QWENLOOP: {"local_state": "credits_exhausted"},
     # The class-name shape claudeloop really writes; claudeloop-local's runtime
@@ -212,6 +271,13 @@ WINDOW_FIXTURES: dict[EngineId, dict[str, object]] = {
         "quota_metric": "generate_content_free_tier_requests",
         "retry_after": "30s",
     },
+    EngineId.OPENCODE: {
+        "type": "error",
+        "error": {
+            "name": "APIError",
+            "data": {"statusCode": 429, "message": "rate limit exceeded"},
+        },
+    },
     EngineId.QWENLOOP: {"local_state": "busy", "retry_at": "2026-01-01T00:05:00+00:00"},
     # A local server answering 503 (busy loading a model): claudeloop waits on it.
     EngineId.CLAUDELOOP_LOCAL: {
@@ -228,6 +294,16 @@ AUTH_FIXTURES: dict[EngineId, dict[str, object]] = {
     EngineId.CODEXLOOP: {"error": {"code": "invalid_api_key", "message": "bad key"}},
     EngineId.CURSORLOOP: {"status": 401, "type": "unauthorized", "message": "bad token"},
     EngineId.AGYLOOP: {"grpc_status": "UNAUTHENTICATED", "detail": "adc not found"},
+    EngineId.OPENCODE: {
+        "type": "error",
+        "error": {
+            "name": "ProviderAuthError",
+            "data": {
+                "providerID": "google",
+                "message": "Google Generative AI API key is missing",
+            },
+        },
+    },
     EngineId.QWENLOOP: {"local_state": "configuration_error", "detail": "model missing"},
     EngineId.CLAUDELOOP_LOCAL: {"capacity": "BackendMisconfigured"},
 }
@@ -237,6 +313,7 @@ AVAILABLE_FIXTURES: dict[EngineId, dict[str, object]] = {
     EngineId.CODEXLOOP: {},
     EngineId.CURSORLOOP: {"status": 200},
     EngineId.AGYLOOP: {"grpc_status": "OK"},
+    EngineId.OPENCODE: {},
     EngineId.QWENLOOP: {"local_state": "available"},
     EngineId.CLAUDELOOP_LOCAL: {"capacity": "Available"},
 }

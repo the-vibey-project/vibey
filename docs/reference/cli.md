@@ -300,7 +300,7 @@ PostgreSQL, run the conformance suite, or run the in-cluster preflight instead.
 | Option | Default | What it does |
 |---|---|---|
 | `--conformance` | off | Run the 9-check conformance suite against each checked engine that is installed. |
-| `--engine ENGINE` | unset | Check one engine: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, or `qwenloop`. An unknown name prints `Unknown engine: <name>` and exits 1. |
+| `--engine ENGINE` | unset | Check one engine: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `opencode`, or `qwenloop`. An unknown name prints `Unknown engine: <name>` and exits 1. |
 | `--record` | off | Persist preflight (and conformance, with `--conformance`) results to `engine_health`. Exits 1 if no project exists. |
 | `--project ID` | latest | Project to record health for, with `--record`. |
 | `--cluster` | off | Run the in-cluster preflight instead of the engine checks — see [Kubernetes guide](../guides/kubernetes.md). |
@@ -308,8 +308,8 @@ PostgreSQL, run the conformance suite, or run the in-cluster preflight instead.
 | `--provider NAME` | `scripted` | With `--cluster`: the worker's own `--provider` (`scripted`, `claudeloop`, or `qwenloop`; chart value `worker.provider`). `claudeloop` adds claudeloop to what `engine-auth` requires. |
 | `--install-postgres` | off | Install and start local PostgreSQL when it is missing or stopped. This is explicit; the default doctor never changes the host. It cannot be combined with `--cluster`. |
 
-With `--engine` unset, doctor checks the four paid engines (`claudeloop`,
-`codexloop`, `cursorloop`, `agyloop`) whether or not they are installed —
+With `--engine` unset, doctor checks the five paid engines (`claudeloop`,
+`codexloop`, `cursorloop`, `agyloop`, `opencode`) whether or not they are installed —
 missing ones print `NOT INSTALLED` — and adds `qwenloop` when
 `VIBEY_FEATURE_QWENLOOP` is truthy or, if that variable is unset,
 `./vibey.toml` in the current directory has `[features] qwenloop = true`.
@@ -364,7 +364,7 @@ every phase for one project.
 
 | Option | Default | What it does |
 |---|---|---|
-| `--engines LIST` | the four paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). A list that matches none of the worker's engines — `--engines qwenloop` with the feature off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)` and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. |
+| `--engines LIST` | the five paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `opencode`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). A list that matches none of the worker's engines — `--engines qwenloop` with the feature off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)` and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. |
 | `--parallelism N` / `-j N` | `1` | Concurrent job loops, 1–16. The effective count is clamped to twice the number of allowed engines and to the CPU count, and is never below 1. |
 | `--once` | off | Process one job and exit (`processed one job` or `no ready job`), instead of running forever. |
 | `--provider {scripted,claudeloop,qwenloop}` | `scripted` | DESIGN and decomposition providers. `scripted` is fully offline. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `qwenloop` uses the sovereign local DESIGN provider (reads `$VIBEY_EVIDENCE_DIR`) with scripted decomposition. Any other value exits 2. |
