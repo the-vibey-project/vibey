@@ -508,6 +508,60 @@ def test_storm_retries_a_failed_item_until_it_converges(
     assert "qwenstorm complete: 1/1 repos completed (1/1 items completed)" in result.stdout
 
 
+def test_storm_reports_failed_turns_for_the_current_item(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / "a" / ".git").mkdir(parents=True)
+    outcomes = iter(
+        [
+            (RunStatus.COMPLETED, 4),
+            (RunStatus.FAILED, 2),
+            (RunStatus.FAILED, 3),
+        ]
+    )
+
+    class Server:
+        def inspect(self, _profile):  # type: ignore[no-untyped-def]
+            return ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "x", False, True)
+
+        async def health(self, _info):  # type: ignore[no-untyped-def]
+            return True
+
+    class FakeRunner:
+        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+            pass
+
+        async def run(self, **kwargs):  # type: ignore[no-untyped-def]
+            status, turns = next(outcomes)
+            return RunState(str(kwargs["run_id"]), status=status, turns=turns)
+
+    monkeypatch.setattr("qwenloop.cli.app.LlamaCppServer", Server)
+    monkeypatch.setattr("qwenloop.cli.app.AutonomousRunner", FakeRunner)
+    monkeypatch.setattr(
+        "qwenloop.cli.app.list_open_issues",
+        lambda _owner, _repo: [RepoItem(1, "first", ""), RepoItem(2, "second", "")],
+    )
+    monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: [])
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--storm",
+            "--repos-root",
+            str(tmp_path),
+            "--repo",
+            "a",
+            "--max-attempts",
+            "2",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "a issue#2\tfailed\t5" in result.stdout
+    assert "a issue#2\tfailed\t9" not in result.stdout
+    assert "a\tfailed\t9" in result.stdout
+
+
 def test_storm_reports_a_successful_empty_backlog_without_starting_a_run(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
