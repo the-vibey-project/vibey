@@ -47,7 +47,10 @@ def _pinned_connection_class(
             source_address=source_address,
         )
 
-    class _PinnedConnection(base):  # type: ignore[misc]
+    # mypy: base is a type parameter here, but the dynamic subclass confuses
+    # the checker.  The cast makes the intent explicit and quiets the
+    # "Variable base is not valid as a type" error.
+    class _PinnedConnection(base):  # type: ignore[misc,valid-type]
         def __init__(self, *args: object, **kwargs: object) -> None:
             super().__init__(*args, **kwargs)
             self._create_connection = _create
