@@ -761,7 +761,8 @@ the silence is the whole danger.
 | `ci` | `CI` |
 | `release` | `Release` |
 | `provenance` | `Provenance` |
-| `pr_automation` | `PR automation` (suite; `[workflow_names] pr_evaluate` and `pr_review` name the two files separately) |
+| `pr_evaluate` | `PR evaluate` |
+| `pr_review` | `PR review` |
 | `merge_train` | `Merge train` |
 | `promote` | `Promote` |
 | `release_surfaces` | `Release surfaces` |

@@ -379,7 +379,7 @@ through 3.14.
 
 The standalone repository carried sixteen — four hand-authored (`CI`, `Release`,
 `Release artifacts`, `Currency research`) and twelve rendered by `vibey-gh install`
-(`provenance.yml`, `codeql.yml`, `pr-evaluate.yml`, `pr-review.yml`, `merge-train.yml`,
+(`provenance.yml`, `codeql.yml`, `pr-automation.yml`, `merge-train.yml`,
 `promote-to-main.yml`, `branch-intake.yml`, `automation-bootstrap.yml`,
 `github-release.yml`, `repository-profile.yml`, `conventional-commits.yml`,
 `release-repair.yml`, `release-surfaces.yml`) — plus its own `.vibey-gh.toml` and git hooks.

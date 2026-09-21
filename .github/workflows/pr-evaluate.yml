@@ -80,17 +80,28 @@ jobs:
           # current head. A gate red with real review findings is NOT parked --
           # repair owns that path, and re-probing an unchanged head every cycle
           # would burn the bounded repair budget on nothing new.
+          # The newest run PER GATE decides, never the aggregate: the scan gate and
+          # the review gate post on different timelines, so an older failed title
+          # must not shadow a newer success -- nor a missing review gate hide behind
+          # the scan gate that is already there (a parked head has BOTH gates).
           gh pr list --repo "$REPO" --state open --json number,headRefOid \
             --jq '.[] | [.number,.headRefOid] | @tsv' |
           while IFS=$'\t' read -r number sha; do
             gates=$(gh api "repos/${REPO}/commits/${sha}/check-runs" \
-              --jq '[.check_runs[] | select(.name=="PR evaluate / gate" or .name=="PR review / gate")] | map((.conclusion // "none") + "|" + (.output.title // ""))' \
-              2>/dev/null || echo "[]")
-            case "$gates" in
-              "[]")
+              --jq '[.check_runs[] | select(.name=="PR evaluate / gate" or .name=="PR review / gate")] | group_by(.name) | map(.[-1] | ((.conclusion // "none") + "|" + (.output.title // ""))) | unique | join("\n")' \
+              2>/dev/null || echo "")
+            lines=$(printf "%s" "$gates" | grep -c . || true)
+            case "$lines" in
+              0)
                 echo "re-probing #${number}: no gate on the current head" ;;
-              *"review incomplete"*|*"blocked"*)
-                echo "re-probing #${number}: ${gates}" ;;
+              1)
+                echo "re-probing #${number}: one gate missing on the current head: ${gates}" ;;
+              2)
+                if printf "%s\n" "$gates" | grep -Eq '^none|review incomplete|blocked'; then
+                  echo "re-probing #${number}: ${gates}"
+                else
+                  continue
+                fi ;;
               *)
                 continue ;;
             esac
@@ -352,6 +363,9 @@ jobs:
           title="PR evaluate: ${STATE}"
           summary="${REASON}."
           if [ -n "$SCAN_FAILED_CHECKS" ] && [ "$SCAN_FAILED_CHECKS" != null ] && [ "$SCAN_FAILED_CHECKS" != "[]" ]; then
+            # The split's point: a red gate NAMES its own task, so the failing checks
+            # belong in the title, not just the summary a collapsing UI hides.
+            title="${title} — failing: ${SCAN_FAILED_CHECKS}"
             summary="${summary} Failing checks: ${SCAN_FAILED_CHECKS}."
           fi
           if [ "$STATE" = ready ] || [ "$STATE" = review ] ||

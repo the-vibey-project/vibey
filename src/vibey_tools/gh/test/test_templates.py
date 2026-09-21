@@ -690,8 +690,32 @@ def test_recovery_reprobes_parked_prs_on_a_schedule_without_burning_budget():
     flat = " ".join(text.split())
     assert "review incomplete" in flat and "no gate on the current head" in flat
     assert "burn the bounded repair budget on nothing new" in flat
+    # The newest run PER GATE decides (the scan gate and the review gate post on
+    # different timelines): group the history by name and read only each gate's last
+    # run, so a missing review gate — with the scan gate already present — still parks
+    # the head instead of hiding behind the aggregate.
+    assert "group_by(.name)" in text and "map(.[-1]" in text
+    assert "one gate missing on the current head" in flat
     # findings-red gates fall through to `continue`, never a dispatch
     assert flat.count("gh workflow run pr-evaluate.yml") >= 1
+
+
+def test_a_red_scan_gate_names_the_failing_checks_in_its_title():
+    """The split's reason for existing: a red gate names its task. The scan gate must
+    put the failing check names in the `PR evaluate / gate` title, not only in the
+    summary a collapsing checks UI hides, and a green gate must keep its plain
+    'scans passed' title (the limit orders the assignments)."""
+    text = (WORKFLOWS / "pr-evaluate.yml").read_text(encoding="utf-8")
+    assert 'title="${title} — failing: ${SCAN_FAILED_CHECKS}"' in text
+    assert 'summary="${summary} Failing checks: ${SCAN_FAILED_CHECKS}."' in text
+    assert 'title="PR evaluate: scans passed"' in text
+    # The failing checks are read only for the failing branch: the success assignments
+    # below keep their clean titles.
+    assert (
+        text.index("conclusion=failure")
+        < text.index("${title} — failing:")
+        < text.index('title="PR evaluate: scans passed"')
+    )
 
 
 def test_rendered_pr_automation_carries_exactly_one_schedule_key(tmp_path):
