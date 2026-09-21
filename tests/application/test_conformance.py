@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -55,6 +56,47 @@ async def test_explicit_trivial_worktree_is_used(tmp_path: Path) -> None:
     )
 
     assert report.ok, [c for c in report.checks if not c.ok]
+
+
+async def test_existing_trivial_worktree_refreshes_local_git_identity(tmp_path: Path) -> None:
+    engine = ScriptedEngine(descriptor=CLAUDELOOP, base_dir=tmp_path)
+    existing_worktree = tmp_path / "existing-conformance"
+    existing_worktree.mkdir()
+    subprocess.run(("git", "init", "-q", str(existing_worktree)), check=True)
+    subprocess.run(
+        ("git", "-C", str(existing_worktree), "config", "user.name", "stale name"),
+        check=True,
+    )
+    subprocess.run(
+        ("git", "-C", str(existing_worktree), "config", "user.email", "stale@example.test"),
+        check=True,
+    )
+
+    report = await run_conformance(
+        engine,
+        capacity_fixtures=_fixtures_for(CLAUDELOOP.engine_id),
+        trivial_worktree=str(existing_worktree),
+    )
+
+    assert report.ok, [c for c in report.checks if not c.ok]
+    assert (
+        subprocess.run(
+            ("git", "-C", str(existing_worktree), "config", "--local", "user.name"),
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        == "vibey conformance"
+    )
+    assert (
+        subprocess.run(
+            ("git", "-C", str(existing_worktree), "config", "--local", "user.email"),
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        == "vibey-conformance@localhost"
+    )
 
 
 async def test_not_installed_fails_binary_check_without_crashing(tmp_path: Path) -> None:

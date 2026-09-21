@@ -16,3 +16,16 @@ def test_delivery_estimate_publish_is_limited_to_trusted_events() -> None:
     assert "github.event_name == 'workflow_dispatch'" in condition
     assert "github.event_name == 'issues'" not in condition
     assert "github.event_name == 'pull_request'" not in condition
+
+
+def test_delivery_estimate_publishes_through_a_pull_request() -> None:
+    root = Path(__file__).resolve().parents[4]
+    workflow = yaml.safe_load(
+        (root / ".github/workflows/delivery-estimate.yml").read_text(encoding="utf-8")
+    )
+    publish = workflow["jobs"]["publish"]
+    assert publish["permissions"]["pull-requests"] == "write"
+    script = "\n".join(step.get("run", "") for step in publish["steps"])
+    assert "git push origin HEAD:develop" not in script
+    assert "--base develop" in script
+    assert "gh pr create" in script

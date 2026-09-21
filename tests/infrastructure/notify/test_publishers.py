@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import socket
 from typing import Any
 from uuid import UUID
 
@@ -13,7 +14,7 @@ import pytest
 
 from vibey.infrastructure.notify.desktop import DesktopNotifier
 from vibey.infrastructure.notify.events import NotificationEvent, NotificationKind
-from vibey.infrastructure.notify.webhook import WebhookPublisher
+from vibey.infrastructure.notify.webhook import WebhookPublisher, _NoRedirectHandler
 
 PROJECT_ID = UUID("11111111-2222-3333-4444-555555555555")
 
@@ -24,6 +25,13 @@ def _event() -> NotificationEvent:
         project_id=PROJECT_ID,
         title="Gate raised",
         message='needs a "decision"',
+    )
+
+
+def _allow_public_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "vibey.infrastructure.notify.webhook.socket.getaddrinfo",
+        lambda *args, **kwargs: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))],
     )
 
 
@@ -66,6 +74,52 @@ def test_the_real_poster_refuses_non_http_schemes(url: str) -> None:
     assert publisher._sync_post(url, b"{}", {}, 1.0) is False
 
 
+def test_redirect_handler_does_not_follow_a_new_destination() -> None:
+    assert (
+        _NoRedirectHandler().redirect_request(
+            None, None, 302, "redirect", {}, "https://other.example/hook"
+        )
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://user:pass@example.test/hook",
+        "http://example.test:bad/hook",
+        "http://localhost/hook",
+        "http://service.internal/hook",
+    ],
+)
+def test_the_real_poster_refuses_unsafe_url_shapes(url: str) -> None:
+    publisher = WebhookPublisher()
+    assert publisher._sync_post(url, b"{}", {}, 1.0) is False
+
+
+def test_the_real_poster_refuses_dns_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "vibey.infrastructure.notify.webhook.socket.getaddrinfo",
+        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("DNS unavailable")),
+    )
+    assert WebhookPublisher()._sync_post("https://example.test/hook", b"{}", {}, 1.0) is False
+
+
+def test_the_real_poster_refuses_empty_dns_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "vibey.infrastructure.notify.webhook.socket.getaddrinfo", lambda *args, **kwargs: []
+    )
+    assert WebhookPublisher()._sync_post("https://example.test/hook", b"{}", {}, 1.0) is False
+
+
+def test_the_real_poster_refuses_malformed_dns_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "vibey.infrastructure.notify.webhook.socket.getaddrinfo",
+        lambda *args, **kwargs: [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ())],
+    )
+    assert WebhookPublisher()._sync_post("https://example.test/hook", b"{}", {}, 1.0) is False
+
+
 def test_the_real_poster_reports_failure_rather_than_raising(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -74,7 +128,8 @@ def test_the_real_poster_reports_failure_rather_than_raising(
     def explode(*args: object, **kwargs: object) -> None:
         raise OSError("network is down")
 
-    monkeypatch.setattr("vibey.infrastructure.notify.webhook.request.urlopen", explode)
+    _allow_public_dns(monkeypatch)
+    monkeypatch.setattr("vibey.infrastructure.notify.webhook.request.build_opener", explode)
     publisher = WebhookPublisher()
     assert publisher._sync_post("https://example.test/hook", b"{}", {}, 1.0) is False
 
@@ -95,11 +150,22 @@ def test_only_success_statuses_count_as_delivered(
         def __exit__(self, *args: object) -> None:
             return None
 
+    class _Opener:
+        def open(self, *args: object, **kwargs: object) -> _Response:
+            return _Response()
+
+    _allow_public_dns(monkeypatch)
     monkeypatch.setattr(
-        "vibey.infrastructure.notify.webhook.request.urlopen", lambda *a, **k: _Response()
+        "vibey.infrastructure.notify.webhook.request.build_opener", lambda *args: _Opener()
     )
     publisher = WebhookPublisher()
     assert publisher._sync_post("https://example.test/hook", b"{}", {}, 1.0) is delivered
+
+
+@pytest.mark.parametrize("url", ["http://127.0.0.1/hook", "http://169.254.169.254/latest"])
+def test_the_real_poster_refuses_private_destinations(url: str) -> None:
+    publisher = WebhookPublisher()
+    assert publisher._sync_post(url, b"{}", {}, 1.0) is False
 
 
 def test_publish_without_an_injected_poster_uses_the_real_one(

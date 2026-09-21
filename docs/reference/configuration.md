@@ -189,7 +189,7 @@ worker raises a gate or a project changes phase.
 |---|---|---|---|
 | `enabled` | boolean | `false` | Enables delivery for this project. |
 | `desktop` | boolean | `true` | Sends desktop alerts when enabled. |
-| `webhooks` | array of tables | `[]` | Each table requires `url` and may include a `secret`; URLs must be `http://` or `https://` at publish time. Secrets sign the JSON payload with `X-Vibey-Signature: sha256=...`. |
+| `webhooks` | array of tables | `[]` | Each table requires `url` and may include a `secret`; URLs must be public `http://` or `https://` destinations at publish time (loopback, private, link-local, reserved, local-name, credential-bearing, and redirecting endpoints are rejected). Secrets sign the JSON payload with `X-Vibey-Signature: sha256=...`. |
 
 ```toml
 [notifications]

@@ -70,7 +70,7 @@ jobs:
     permissions:
       contents: write
       issues: read
-      pull-requests: read
+      pull-requests: write
     steps:
       - name: Check out the integration branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -97,8 +97,15 @@ jobs:
       - name: Publish the changed estimate ledger and report
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ESTIMATE_BRANCH: automation/delivery-estimate
         run: |
           set -euo pipefail
+          if git ls-remote --exit-code --heads origin "$ESTIMATE_BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$ESTIMATE_BRANCH"
+          fi
+          git fetch origin develop
+          git switch --force-create "$ESTIMATE_BRANCH" origin/develop
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .vibey/delivery-estimates.jsonl docs/estimate.md
@@ -107,4 +114,15 @@ jobs:
             exit 0
           fi
           git commit -m "chore(estimate): refresh delivery forecast [skip ci]"
-          git push origin HEAD:develop
+          git push --force-with-lease="refs/heads/$ESTIMATE_BRANCH" origin "HEAD:$ESTIMATE_BRANCH"
+          pr_number="$(gh pr list --repo "$GH_REPO" --head "$ESTIMATE_BRANCH" --base develop --state open --json number --jq '.[0].number')"
+          if [ -n "$pr_number" ]; then
+            echo "updated the existing delivery-estimate pull request"
+          else
+            gh pr create \
+              --repo "$GH_REPO" \
+              --base develop \
+              --head "$ESTIMATE_BRANCH" \
+              --title "chore(estimate): refresh delivery forecast" \
+              --body "Automated refresh of the append-only delivery estimate ledger and report. Merge through the repository's normal train after the generated diff passes its checks."
+          fi

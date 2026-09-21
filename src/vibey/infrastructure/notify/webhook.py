@@ -4,12 +4,22 @@
 import asyncio
 import hashlib
 import hmac
+import ipaddress
 import json
+import socket
 from collections.abc import Callable
 from contextlib import suppress
 from urllib import request
+from urllib.parse import urlsplit
 
 from vibey.infrastructure.notify.events import NotificationEvent
+
+
+class _NoRedirectHandler(request.HTTPRedirectHandler):
+    """Keep a webhook delivery on the address the operator configured."""
+
+    def redirect_request(self, *_args: object, **_kwargs: object) -> None:
+        return None
 
 
 class WebhookPublisher:
@@ -53,10 +63,59 @@ class WebhookPublisher:
         headers: dict[str, str],
         timeout_seconds: float,
     ) -> bool:
-        if not (url.startswith("http://") or url.startswith("https://")):
+        if not self._is_public_http_url(url):
             return False
         with suppress(Exception):
             req = request.Request(url, data=payload_bytes, headers=headers, method="POST")
-            with request.urlopen(req, timeout=timeout_seconds) as response:  # nosec B310
+            opener = request.build_opener(_NoRedirectHandler())
+            with opener.open(req, timeout=timeout_seconds) as response:  # nosec B310
                 return int(response.status) in {200, 201, 202, 204}
         return False
+
+    @staticmethod
+    def _is_public_http_url(url: str) -> bool:
+        """Reject local, private, and redirectable webhook destinations.
+
+        Webhook URLs are copied from repository configuration, so a project
+        author must not be able to turn an opt-in notification into a request
+        to loopback, cloud metadata, or another private network.  DNS is
+        resolved immediately before the request and every returned address
+        must be globally routable.  Redirects are disabled by the opener
+        above, so a public endpoint cannot bounce the request into a private
+        one after validation.
+        """
+        try:
+            parsed = urlsplit(url)
+            if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
+                return False
+            if parsed.username is not None or parsed.password is not None:
+                return False
+            port = parsed.port
+        except ValueError:
+            return False
+
+        hostname = parsed.hostname.rstrip(".").lower()
+        if hostname in {"localhost", "localhost.localdomain"} or hostname.endswith(
+            (".localhost", ".local", ".internal", ".home.arpa")
+        ):
+            return False
+
+        try:
+            addresses = socket.getaddrinfo(
+                hostname,
+                port or (443 if parsed.scheme.lower() == "https" else 80),
+                type=socket.SOCK_STREAM,
+            )
+        except OSError:
+            return False
+        if not addresses:
+            return False
+
+        for address in addresses:
+            try:
+                ip = ipaddress.ip_address(address[4][0])
+            except (IndexError, ValueError):
+                return False
+            if not ip.is_global:
+                return False
+        return True

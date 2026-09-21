@@ -14,6 +14,27 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 No changes yet.
 
+## [2.0.0] (2026-09-21)
+
+### Added
+
+* **qwenloop:** local Qwen storm execution now preserves tool context, emits explicit
+  completion and verdict markers, and supports audible desktop notifications.
+* **governance:** Convergence-Driven Development (CDD), evidence-bounded status, and
+  the software-organism model are documented in the research paper, guides, doctrine
+  corpus, and architecture decisions.
+* **paper:** the tracked Qwen storm record and reproducible evidence extractor now
+  keep the paper's operational claims tied to repository data.
+
+### Fixed
+
+* **qwenloop:** unknown verdict-tool failures no longer terminate a run without a
+  structured terminal record.
+* **conformance:** existing scratch repositories receive the local Git identity
+  required for savepoint commits on every run.
+* **notifications:** outbound webhooks reject private destinations and redirects, and
+  failed configured deliveries are reported to the worker instead of being swallowed.
+
 ## [1.5.0] (2026-09-19)
 
 ### BREAKING CHANGES
