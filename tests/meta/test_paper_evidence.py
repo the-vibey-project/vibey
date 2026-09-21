@@ -22,18 +22,18 @@ def test_paper_evidence_reports_qwen_storm_record() -> None:
     evidence = json.loads(result.stdout)
     qwen = evidence["qwen_storm"]
 
-    assert qwen["runs"] == 11
+    assert qwen["runs"] == 12
     assert qwen["active_storm_processes"] == 1
     assert qwen["completed_runs"] == 3
     assert qwen["completion_marker_runs"] == 3
     assert qwen["verdict_runs"] == 5
-    assert qwen["turns"] == 66
-    assert qwen["tool_calls"] == 64
-    assert qwen["input_tokens"] == 295544
-    assert qwen["output_tokens"] == 57853
+    assert qwen["turns"] == 83
+    assert qwen["tool_calls"] == 65
+    assert qwen["input_tokens"] == 448941
+    assert qwen["output_tokens"] == 67090
     assert qwen["file_write_calls"] == 33
     assert qwen["bytes_written"] == 25356
-    assert qwen["empty_runs"] == 3
-    assert qwen["incomplete_runs"] == 8
+    assert qwen["empty_runs"] == 4
+    assert qwen["incomplete_runs"] == 9
     assert qwen["requested_settings"]["context_length"] == 32768
     assert qwen["observed_server"]["context_length"] == 40960
