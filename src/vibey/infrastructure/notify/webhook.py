@@ -1,25 +1,105 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Webhook publisher with HMAC-SHA256 signing."""
+"""Webhook publisher with HMAC-SHA256 signing and IP-pinned delivery.
+
+DNS is resolved and validated once, then the TCP connection is pinned to the
+validated IP so a DNS rebinding between validation and connection cannot
+steer the request to a private address.  The ``Host`` header and TLS SNI
+keep the original hostname because the connection class inherits from
+``http.client.HTTPConnection``; only the socket target is pinned.
+"""
 
 import asyncio
 import hashlib
 import hmac
+import http.client
 import ipaddress
 import json
 import socket
 from collections.abc import Callable
-from contextlib import suppress
-from urllib import request
 from urllib.parse import urlsplit
 
 from vibey.infrastructure.notify.events import NotificationEvent
 
+_DEFAULT_HTTPS_PORT = 443
+_DEFAULT_HTTP_PORT = 80
 
-class _NoRedirectHandler(request.HTTPRedirectHandler):
-    """Keep a webhook delivery on the address the operator configured."""
 
-    def redirect_request(self, *_args: object, **_kwargs: object) -> None:
+def _pinned_connection_class(
+    base: type[http.client.HTTPConnection], ip: str
+) -> type[http.client.HTTPConnection]:
+    """Build a subclass whose socket always connects to ``ip``, not the hostname.
+
+    ``base.__init__`` still stores the original hostname in ``self.host``,
+    which becomes the TLS SNI / ``Host`` header; the DNS bypass lives in
+    ``_create_connection``.
+    """
+
+    def _create(
+        address: tuple[str, int],
+        timeout: float | None,
+        socket_options: object = None,
+        source_address: tuple[str, int] | None = None,
+    ) -> socket.socket:
+        _ = address[0]
+        return socket.create_connection(
+            (ip, address[1]),
+            timeout=timeout,
+            source_address=source_address,
+        )
+
+    # mypy: base is a type parameter here, but the dynamic subclass confuses
+    # the checker.  The cast makes the intent explicit and quiets the
+    # "Variable base is not valid as a type" error.
+    class _PinnedConnection(base):  # type: ignore[misc,valid-type]
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self._create_connection = _create
+
+    return _PinnedConnection
+
+
+def _resolve_safe_target(url: str) -> tuple[str, int, str] | None:
+    """Validate and resolve the URL to a globally routable IP, or None.
+
+    Every address returned by the name resolver must be public; a single
+    private or malformed entry rejects the URL.  The connection uses the
+    first validated address directly, closing the TOCTOU gap between
+    validation and connection.
+    """
+    try:
+        parsed = urlsplit(url)
+        if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
+            return None
+        if parsed.username is not None or parsed.password is not None:
+            return None
+        port = parsed.port
+    except ValueError:
         return None
+
+    hostname = parsed.hostname.rstrip(".").lower()
+    if hostname in {"localhost", "localhost.localdomain"} or hostname.endswith(
+        (".localhost", ".local", ".internal", ".home.arpa")
+    ):
+        return None
+
+    is_https = parsed.scheme.lower() == "https"
+    port = port or (_DEFAULT_HTTPS_PORT if is_https else _DEFAULT_HTTP_PORT)
+
+    try:
+        addresses = socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
+    except OSError:
+        return None
+    if not addresses:
+        return None
+
+    for entry in addresses:
+        try:
+            ip = ipaddress.ip_address(entry[4][0])
+        except (IndexError, ValueError):
+            return None
+        if not ip.is_global:
+            return None
+    return hostname, port, str(ipaddress.ip_address(addresses[0][4][0]))
 
 
 class WebhookPublisher:
@@ -63,59 +143,31 @@ class WebhookPublisher:
         headers: dict[str, str],
         timeout_seconds: float,
     ) -> bool:
-        if not self._is_public_http_url(url):
+        target = _resolve_safe_target(url)
+        if target is None:
             return False
-        with suppress(Exception):
-            req = request.Request(url, data=payload_bytes, headers=headers, method="POST")
-            opener = request.build_opener(_NoRedirectHandler())
-            with opener.open(req, timeout=timeout_seconds) as response:  # nosec B310
-                return int(response.status) in {200, 201, 202, 204}
-        return False
+        host, port, resolved_ip = target
 
-    @staticmethod
-    def _is_public_http_url(url: str) -> bool:
-        """Reject local, private, and redirectable webhook destinations.
+        parsed = urlsplit(url)
+        path = parsed.path or "/"
+        if parsed.query:
+            path = f"{path}?{parsed.query}"
 
-        Webhook URLs are copied from repository configuration, so a project
-        author must not be able to turn an opt-in notification into a request
-        to loopback, cloud metadata, or another private network.  DNS is
-        resolved immediately before the request and every returned address
-        must be globally routable.  Redirects are disabled by the opener
-        above, so a public endpoint cannot bounce the request into a private
-        one after validation.
-        """
+        base = (
+            http.client.HTTPSConnection
+            if parsed.scheme.lower() == "https"
+            else http.client.HTTPConnection
+        )
+        conn: http.client.HTTPConnection | None = None
         try:
-            parsed = urlsplit(url)
-            if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
-                return False
-            if parsed.username is not None or parsed.password is not None:
-                return False
-            port = parsed.port
-        except ValueError:
+            conn = _pinned_connection_class(base, resolved_ip)(host, port, timeout=timeout_seconds)
+            request_headers = dict(headers)
+            request_headers.setdefault("Host", host)
+            conn.request("POST", path, body=payload_bytes, headers=request_headers)
+            response = conn.getresponse()
+            return response.status in {200, 201, 202, 204}
+        except Exception:
             return False
-
-        hostname = parsed.hostname.rstrip(".").lower()
-        if hostname in {"localhost", "localhost.localdomain"} or hostname.endswith(
-            (".localhost", ".local", ".internal", ".home.arpa")
-        ):
-            return False
-
-        try:
-            addresses = socket.getaddrinfo(
-                hostname,
-                port or (443 if parsed.scheme.lower() == "https" else 80),
-                type=socket.SOCK_STREAM,
-            )
-        except OSError:
-            return False
-        if not addresses:
-            return False
-
-        for address in addresses:
-            try:
-                ip = ipaddress.ip_address(address[4][0])
-            except (IndexError, ValueError):
-                return False
-            if not ip.is_global:
-                return False
-        return True
+        finally:
+            if conn is not None:
+                conn.close()

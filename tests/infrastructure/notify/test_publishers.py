@@ -14,7 +14,7 @@ import pytest
 
 from vibey.infrastructure.notify.desktop import DesktopNotifier
 from vibey.infrastructure.notify.events import NotificationEvent, NotificationKind
-from vibey.infrastructure.notify.webhook import WebhookPublisher, _NoRedirectHandler
+from vibey.infrastructure.notify.webhook import WebhookPublisher
 
 PROJECT_ID = UUID("11111111-2222-3333-4444-555555555555")
 
@@ -74,13 +74,40 @@ def test_the_real_poster_refuses_non_http_schemes(url: str) -> None:
     assert publisher._sync_post(url, b"{}", {}, 1.0) is False
 
 
-def test_redirect_handler_does_not_follow_a_new_destination() -> None:
-    assert (
-        _NoRedirectHandler().redirect_request(
-            None, None, 302, "redirect", {}, "https://other.example/hook"
-        )
-        is None
+def test_a_redirect_status_is_not_counted_as_delivered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """http.client does not follow redirects by default — a 3xx response is not
+    in the accepted 2xx set, so a redirect is simply not delivered."""
+
+    class FakeResponse:
+        status = 301
+
+        def read(self, *args):  # type: ignore[no-untyped-def]
+            return b""
+
+    class FakeConnection:
+        def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+            self._response = FakeResponse()
+
+        def request(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+            return None
+
+        def getresponse(self) -> FakeResponse:
+            return self._response
+
+        def close(self) -> None:
+            return None
+
+    _allow_public_dns(monkeypatch)
+    monkeypatch.setattr(
+        "vibey.infrastructure.notify.webhook._pinned_connection_class",
+        lambda base, ip: lambda *a, **kw: FakeConnection(),
     )
+    from vibey.infrastructure.notify.webhook import WebhookPublisher
+
+    publisher = WebhookPublisher()
+    assert publisher._sync_post("https://example.test/hook", b"{}", {}, 1.0) is False
 
 
 @pytest.mark.parametrize(
@@ -125,11 +152,11 @@ def test_the_real_poster_reports_failure_rather_than_raising(
 ) -> None:
     """A notification that cannot be delivered must not take the run with it."""
 
-    def explode(*args: object, **kwargs: object) -> None:
-        raise OSError("network is down")
-
     _allow_public_dns(monkeypatch)
-    monkeypatch.setattr("vibey.infrastructure.notify.webhook.request.build_opener", explode)
+    monkeypatch.setattr(
+        "vibey.infrastructure.notify.webhook._pinned_connection_class",
+        lambda base, ip: lambda *a, **kw: (_ for _ in ()).throw(OSError("network is down")),
+    )
     publisher = WebhookPublisher()
     assert publisher._sync_post("https://example.test/hook", b"{}", {}, 1.0) is False
 
@@ -144,22 +171,97 @@ def test_only_success_statuses_count_as_delivered(
         def __init__(self) -> None:
             self.status = status
 
-        def __enter__(self) -> _Response:
-            return self
+        def read(self) -> bytes:
+            return b""
 
-        def __exit__(self, *args: object) -> None:
+    class _Connection:
+        _response_cls = _Response
+
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            pass
+
+        def request(self, *args: object, **kwargs: object) -> None:
             return None
 
-    class _Opener:
-        def open(self, *args: object, **kwargs: object) -> _Response:
-            return _Response()
+        def getresponse(self) -> _Response:
+            return self._response_cls()  # type: ignore[attr-defined]
+
+        def close(self) -> None:
+            return None
 
     _allow_public_dns(monkeypatch)
     monkeypatch.setattr(
-        "vibey.infrastructure.notify.webhook.request.build_opener", lambda *args: _Opener()
+        "vibey.infrastructure.notify.webhook._pinned_connection_class",
+        lambda base, ip: _Connection,
     )
     publisher = WebhookPublisher()
     assert publisher._sync_post("https://example.test/hook", b"{}", {}, 1.0) is delivered
+
+
+def test_dns_rebinding_cannot_reconnect_to_a_different_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The IP validated during ``_resolve_safe_target`` is the same IP handed to
+    ``socket.create_connection``.  A DNS record that resolves differently a second
+    time cannot steer the connection to a private address, because the connection
+    target is the IP from the first resolution, not the hostname."""
+    import socket as _socket
+
+    calls: list[tuple[str, int]] = []
+
+    def spy_create_connection(addr, timeout=None, socket_options=None, source_address=None):
+        calls.append(addr)
+        raise OSError("connection refused")
+
+    monkeypatch.setattr(_socket, "create_connection", spy_create_connection)
+    monkeypatch.setattr(
+        "vibey.infrastructure.notify.webhook.socket.getaddrinfo",
+        lambda *a, **kw: [(_socket.AF_INET, _socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))],
+    )
+
+    publisher = WebhookPublisher()
+    result = publisher._sync_post("http://example.test/hook", b"{}", {}, 1.0)
+
+    assert result is False
+    assert calls == [("93.184.216.34", 80)], f"connection went to {calls}, not the validated IP"
+
+
+def test_a_url_with_query_string_is_delivered_to_the_pinned_ip(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A webhook URL that already carries a query string preserves it — the
+    path reconstruction in _sync_post must not drop it."""
+    _allow_public_dns(monkeypatch)
+
+    recorded: list[str] = []
+
+    class FakeResponse:
+        status = 200
+
+        def read(self) -> bytes:
+            return b""
+
+    class FakeConnection:
+        def __init__(self, host: str, port: int, timeout: float = 10.0) -> None:
+            pass
+
+        def request(self, method: str, path: str, *args: object, **kwargs: object) -> None:
+            recorded.append(path)
+
+        def getresponse(self) -> FakeResponse:
+            return FakeResponse()
+
+        def close(self) -> None:
+            pass
+
+    monkeypatch.setattr(
+        "vibey.infrastructure.notify.webhook._pinned_connection_class",
+        lambda base, ip: FakeConnection,
+    )
+    publisher = WebhookPublisher()
+    result = publisher._sync_post("https://example.test/hook?token=secret", b"{}", {}, 1.0)
+    assert result is True
+    assert recorded == ["/hook?token=secret"]
 
 
 @pytest.mark.parametrize("url", ["http://127.0.0.1/hook", "http://169.254.169.254/latest"])
