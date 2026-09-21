@@ -113,7 +113,8 @@ jobs:
             echo "delivery estimate is unchanged"
             exit 0
           fi
-          git commit -m "chore(estimate): refresh delivery forecast [skip ci]"
+          git commit -m "chore(estimate): refresh delivery forecast [skip ci]" \
+            -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
           git push --force-with-lease="refs/heads/$ESTIMATE_BRANCH" origin "HEAD:$ESTIMATE_BRANCH"
           pr_number="$(gh pr list --repo "$GH_REPO" --head "$ESTIMATE_BRANCH" --base develop --state open --json number --jq '.[0].number')"
           if [ -n "$pr_number" ]; then
