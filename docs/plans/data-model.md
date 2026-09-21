@@ -16,6 +16,14 @@
 > (`src/vibey/bootstrap.py`) every time a CLI command or worker opens the
 > database through it; there is no `vibey migrate` command (§7).
 
+The live schema also has a Pydantic-backed SQLAlchemy projection in
+`src/vibey/infrastructure/db/orm_models.py`. It uses SQLModel so every one of
+the fourteen migrated relations in §3 and §7 has a typed Python ORM object;
+`PostgresOrm` provides async sessions. Migrations remain authoritative and the
+projection deliberately does not call `metadata.create_all()`. The existing
+asyncpg repositories continue to own operations whose correctness depends on
+PostgreSQL-specific locking, append-only rules, or transactional `NOTIFY`.
+
 ---
 
 ## 1. Why PostgreSQL

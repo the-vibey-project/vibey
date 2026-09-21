@@ -20,6 +20,12 @@ dependencies = [
     # the conductor
     "typer>=0.15",
     "asyncpg>=0.30",
+    # SQLModel gives the PostgreSQL schema a typed SQLAlchemy ORM projection while
+    # keeping every mapped object a Pydantic model (raw asyncpg repositories retain
+    # the queue and ledger transaction semantics).
+    "sqlmodel>=0.0.24",
+    "sqlalchemy[asyncio]>=2.0",
+    "pydantic>=2.11",
     "structlog>=24.4",
     "tomli-w>=1.1",
     # the runners' shared TUI layer; floor raised from 0.86 because every *loop needs 1.0
