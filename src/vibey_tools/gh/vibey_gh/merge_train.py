@@ -35,6 +35,11 @@ _PROTECTED_PATHS = ProtectedPathsGuard()
 # The phrase the owner-notification comment is recognised by. Matching on our own text is
 # what keeps the mention to once per pull request; see hold_for_review().
 _NOTIFIED_MARKER = "awaiting your review"
+# Both gates the split PR automation renders must be green before the train may merge: the
+# scan gate from pr-evaluate.yml and the review gate from pr-review.yml. `PR automation /
+# gate` is the pre-split spelling; a head that has it in its rollup is checked by name
+# during the exact-head gate read, but only the two current gates count as passed.
+GATES = ("PR evaluate / gate", "PR review / gate")
 
 
 @dataclass
@@ -128,7 +133,7 @@ def judge(pr: dict, cfg: GhConfig) -> Verdict:
     # conflicts`, `Mirror fork for safe repair`, `Repair failed scans or review findings`,
     # and the rest. Excluding only `gate` meant this counted its own leftovers as failures
     # and skipped a pull request the gate had already certified: "skipped — 7 check(s)
-    # failing" beside a green `PR automation / gate`, with nothing actually wrong.
+    # failing" beside a green `PR evaluate / gate` + `PR review / gate`, with nothing actually wrong.
     ignored = set(cfg.pr_automation.ignored_checks) | OWN_CHECKS
     policy_rollup = [check for check in rollup if check.get("name") not in ignored]
     review = pr.get("reviewDecision") or ""
@@ -173,18 +178,21 @@ def judge(pr: dict, cfg: GhConfig) -> Verdict:
         trusted = {normalise_actor(a) for a in cfg.trusted_authors}
         if cfg.owner:
             trusted.add(normalise_actor(cfg.owner))
-        automation_passed = any(
-            c.get("name") == "PR automation / gate"
-            and c.get("status") == "COMPLETED"
-            and c.get("conclusion") == "SUCCESS"
-            for c in rollup
+        automation_passed = all(
+            any(
+                c.get("name") == gate
+                and c.get("status") == "COMPLETED"
+                and c.get("conclusion") == "SUCCESS"
+                for c in rollup
+            )
+            for gate in GATES
         )
         untrusted = normalise_actor(author) not in trusted or EXTERNAL_REPAIR_LABEL in labels
         if cfg.pr_automation.enabled and not automation_passed:
             reason = (
                 "automated outside-author review has not passed"
                 if untrusted
-                else "PR automation gate has not passed"
+                else "PR automation gates have not passed"
             )
         elif untrusted and not cfg.pr_automation.enabled and review != "APPROVED":
             owner = cfg.owner or "the code owner"
@@ -282,12 +290,13 @@ def _include_changed_paths(pr: dict) -> None:
 def _include_exact_head_gate(pr: dict) -> None:
     """GitHub may omit a freshly API-created check from a PR rollup for a few seconds.
 
-    The check is already durable on the exact commit. Reading that authoritative endpoint
-    closes the event-to-merge race without relaxing any gate: only a completed successful
-    check with the exact required name is copied into the rollup.
+    The checks are already durable on the exact commit. Reading that authoritative endpoint
+    closes the event-to-merge race without relaxing any gate: only completed successful
+    checks with the exact required names are copied into the rollup.
     """
     rollup = pr.setdefault("statusCheckRollup", [])
-    if any(item.get("name") == "PR automation / gate" for item in rollup):
+    present = {item.get("name") for item in rollup}
+    if all(gate in present for gate in GATES):
         return
     sha = str(pr.get("headRefOid") or "")
     if not sha:
@@ -295,13 +304,13 @@ def _include_exact_head_gate(pr: dict) -> None:
     repository = _gh_json("repo", "view", "--json", "nameWithOwner")["nameWithOwner"]
     response = _gh_json("api", f"repos/{repository}/commits/{sha}/check-runs")
     for item in response.get("check_runs", []):
+        name = item.get("name")
         if (
-            item.get("name") == "PR automation / gate"
+            name in GATES
             and item.get("status") == "completed"
             and item.get("conclusion") == "success"
         ):
-            rollup.append({"name": item["name"], "status": "COMPLETED", "conclusion": "SUCCESS"})
-            return
+            rollup.append({"name": name, "status": "COMPLETED", "conclusion": "SUCCESS"})
 
 
 def open_pull_requests(cfg: GhConfig, number: int | None = None) -> list[dict]:

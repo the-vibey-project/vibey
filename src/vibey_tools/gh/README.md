@@ -138,8 +138,8 @@ tagging, GitHub Release creation, and repository-profile reconciliation.
 7. Configure GitHub Pages to deploy from **GitHub Actions**.
 8. Configure `testpypi` and `pypi` trusted-publishing environments if this is a Python
    package. `develop` is the preview channel; `main` is production.
-9. Configure the branch ruleset. Require your ordinary scans plus
-   `PR automation / gate`; do not use a rule that automatically deletes `develop` after a
+9. Configure the branch ruleset. Require your ordinary scans plus both
+   `PR evaluate / gate` and `PR review / gate`; do not use a rule that automatically deletes `develop` after a
    promotion merge.
 10. Run `vibey-gh check --ci`, inspect `git diff`, commit the generated assets, and push.
 11. Confirm the first branch creates one draft PR and that the exact-head gate—not an older
@@ -232,7 +232,7 @@ On a healthy installation you should observe, in order:
 - ordinary CI, provenance, security, API-drift, and documentation scans;
 - an exact-head semantic documentation verdict—even for a trusted author;
 - an outside-author code review when applicable;
-- a successful `PR automation / gate` attached to the current SHA;
+- a successful `PR evaluate / gate` (scans) and `PR review / gate` (exact-head review) attached to the current SHA;
 - a squash merge into `develop`;
 - a TestPyPI development release and Preview documentation update;
 - a `develop → main` promotion PR;
@@ -428,11 +428,11 @@ vibey-gh merge-train --dry-run
 vibey-gh merge-train --method squash
 ```
 
-The normal path is event-driven: the PR-automation gate dispatches
+The normal path is event-driven: the PR-review gate dispatches
 `vibey-gh merge-train --pr NUMBER` as soon as the exact current head is green. The weekly
 and manual modes remain recovery backstops. A ready PR is open, current with its target,
-conflict-free, green, free of requested changes, and carries a successful exact-head
-`PR automation / gate` when an outside-author review is required.
+conflict-free, green, free of requested changes, and carries successful exact-head
+`PR evaluate / gate` and `PR review / gate` checks when an outside-author review is required.
 
 Outside authors receive a fresh structured Claude review after scans pass. Findings feed
 the same bounded repair loop as failed scans. Forks are never mutated with privileged
@@ -453,9 +453,12 @@ conflict resolution directly; fork drafts still wait, since their conflict path 
 contributor's pull request. Pending, failing, stale,
 conflicting, closed, and fork draft heads are no-ops; they are never promoted prematurely.
 
-`pr-automation.yml` reacts to configured scan-workflow completions, re-reads the entire
-current-head check rollup, and publishes an explicit check run on that exact SHA. It waits
-for pending scans, separates cancelled infrastructure from actionable failures, and allows
+The split PR automation has two files and two gates. `pr-evaluate.yml` reacts to
+configured scan-workflow completions, re-reads the entire current-head check rollup, and
+publishes the `PR evaluate / gate` scan gate on that exact SHA; when scans settle it
+dispatches `pr-review.yml`, which runs the structured exact-head review and publishes the
+`PR review / gate` gate that dispatches the merge train. The pair wait
+for pending scans, separate cancelled infrastructure from actionable failures, and allow
 at most three repair commits per contributor lineage. Because every author's exact head
 is reviewed, the same budget bounds the review-to-repair cycle too: once it is spent the
 next evaluation blocks instead of dispatching another review. A new contributor commit
@@ -489,7 +492,7 @@ all, a `review-fallback` job sends the diff to a local Ollama model on a self-ho
 runner carrying the `[pr_automation.fallback] runner_label` label (default
 `vibey-local`; never for a fork PR unless `trusted_only = false`) and
 runs `vibey-gh local-review`. A clean local verdict passes the gate under the honestly
-weaker title `PR automation: gate (local fallback)`; the local model never overrides an
+weaker title `PR review: gate (local fallback)`; the local model never overrides an
 actual finding, and it holds no repository credentials at all. See
 [`[pr_automation.fallback]`](docs/configuration.md) for every field and
 [Threat model](docs/threat-model.md) for what that self-hosted runner is and is not trusted
@@ -617,7 +620,7 @@ left alone and says so.
 [pr_automation]
 enabled = true
 scan_workflows = ["CI", "Provenance", "CodeQL", "Docs", "Conventional Commits"]
-ignored_checks = ["PR automation / gate", "gate", "Merge train / merge"]
+ignored_checks = ["PR evaluate / gate", "PR review / gate", "PR automation / gate", "gate", "Merge train / merge"]
 max_repair_attempts = 3
 model = "claude-sonnet-5"
 review_untrusted_authors = true
@@ -671,7 +674,8 @@ enabled = true
 # workflow reports as "Lint", "Build", "Test (3.12)" and never as "CI". Requiring a
 # workflow name waits forever and blocks the branch outright — see the note below.
 required_checks = [
-  "Provenance", "Analyze Python", "Documentation contract", "PR automation / gate",
+  "Provenance", "Analyze Python", "Documentation contract", "PR evaluate / gate",
+  "PR review / gate",
 ]
 strict_required_checks = true          # branch must be up to date before merging
 required_approvals = 0                 # PR automation gates instead
@@ -987,7 +991,7 @@ The automation distinguishes failures by what can safely resolve them:
 | Issue too ambiguous, out of scope, or blocked on an operator decision | Return `needs_human`, change nothing, mark `vibey-gh:solve-blocked` | Answer the question in the issue, or refine and edit it to start a new lineage |
 | Solution attempt returns no result at all (turn-budget exhaustion or an infrastructure failure) | Comment once naming the cause; mark `vibey-gh:solve-blocked` | Split the issue into smaller requests, or raise `[issue_automation].max_turns` |
 | Configured unsuccessful solution attempts for one issue lineage | Mark `vibey-gh:solve-exhausted`; comment once with the reason | Edit the issue to restate the request, or take it manually |
-| Exact-head review returns no verdict (exhausted API credits, missing key, model unavailable) | If `[pr_automation.fallback].enabled` and the PR is same-repository (or `trusted_only = false`), a local Ollama model on a self-hosted runner reviews the diff; a clean local verdict publishes a passing `PR automation: gate (local fallback)` gate naming the weaker reviewer. Otherwise, publish a failing `PR automation: review incomplete` gate naming the operator cause; never silently infer a verdict from the primary path alone | Correct the operator condition and rerun the review, or treat a local-fallback pass as the degraded signal it is |
+| Exact-head review returns no verdict (exhausted API credits, missing key, model unavailable) | If `[pr_automation.fallback].enabled` and the PR is same-repository (or `trusted_only = false`), a local Ollama model on a self-hosted runner reviews the diff; a clean local verdict publishes a passing `PR review: gate (local fallback)` gate naming the weaker reviewer. Otherwise, publish a failing `PR review: review incomplete` gate naming the operator cause; never silently infer a verdict from the primary path alone | Correct the operator condition and rerun the review, or treat a local-fallback pass as the degraded signal it is |
 | Stale workflow completion | Ignore it; it cannot create a successful current-head gate | None |
 | Failed trusted post-merge release workflow | Open a repair branch and ordinary PR; never patch a permanent branch directly | Correct operator-only infrastructure failures |
 
@@ -1036,7 +1040,8 @@ second pull request; the stored content fingerprint makes the retry a no-op.
 
 ### Audit an automation decision
 
-Start with the PR’s `PR automation / gate`, then follow the linked workflow run. The job
+Start with the PR’s `PR evaluate / gate` and `PR review / gate` checks — the two gates say
+which task failed before you open any log — then follow the linked workflow run. The job
 summary contains the evaluated SHA, aggregate scans, trust classification, repair attempt,
 semantic review result, and merge decision. Review artifacts are retained for 90 days.
 State comments use machine-readable markers and are updated idempotently rather than
@@ -1072,7 +1077,7 @@ control on public repositories — see [Security architecture](docs/security.md)
 
 - Empty Anthropic key: define `ANTHROPIC_API_KEY` as a repository secret, not only an
   environment secret, and confirm the privileged workflow can read it.
-- Review-blocked promotion: verify the exact-head `PR automation / gate`; admin fallback
+- Review-blocked promotion: verify the exact-head `PR evaluate / gate` and `PR review / gate`; admin fallback
   is permitted only after all independent policy checks pass.
 - Pages 404: select **GitHub Actions** as the Pages source and rerun Release surfaces.
 - Repository profile failure: give `AUTOMERGE_TOKEN` the administration and security

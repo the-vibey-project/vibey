@@ -433,7 +433,7 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     # every plugin-loading job makes at `automation/`, as an absolute path, which is the
     # form the action passes to Claude Code as a local marketplace.
     #
-    # Applied to EVERY template, not just pr-automation.yml. It was scoped to that one file
+    # Applied to EVERY template, not just pr-evaluate.yml. It was scoped to that one file
     # while the other four hard-coded `github.com/the-vibey-project/vibey-skills.git`, a
     # repository that no longer exists -- so their rendered jobs failed loading plugins
     # before they could answer. Scoping the substitution to one file is also how a
@@ -447,7 +447,7 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace("__VIBEY_GH_PLUGIN_MARKETPLACES__", indent.join(marketplaces))
     wanted = wanted.replace("__VIBEY_GH_PLUGINS__", indent.join(cfg.pr_automation.plugins))
     wanted = AutomationBootstrapGate().render(wanted, cfg)
-    if source.name != "pr-automation.yml":
+    if source.name != "pr-evaluate.yml":
         return _strip_trailing_space(wanted)
     workflows = json.dumps(list(cfg.pr_automation.scan_workflows))
     schedule = (

@@ -39,11 +39,18 @@ REQUIRED_CHECKS_PLACEHOLDER = "__VIBEY_GH_BOOTSTRAP_REQUIRED_CHECKS__"
 EXCLUDED_CHECKS_PLACEHOLDER = "__VIBEY_GH_BOOTSTRAP_EXCLUDED_CHECKS__"
 SCOPE_PLACEHOLDER = "__VIBEY_GH_BOOTSTRAP_SCOPE__"
 
-# PR automation's own merge gate -- broken, or this path would not be needed -- and this
-# workflow's own. Never waited on and never required, whatever the configuration says: a
-# required name the bootstrap also ignores could never be satisfied. Fixed by the managed
-# templates' own job names rather than configured, as `pr_automation.OWN_CHECKS` is.
-EXCLUDED_CHECKS = ("gate", "PR automation / gate", "Automation bootstrap / gate")
+# PR automation's own merge gates -- the split scan and review gates, plus the pre-split
+# spelling -- broken, or this path would not be needed -- and this workflow's own. Never
+# waited on and never required, whatever the configuration says: a required name the
+# bootstrap also ignores could never be satisfied. Fixed by the managed templates' own job
+# names rather than configured, as `pr_automation.OWN_CHECKS` is.
+EXCLUDED_CHECKS = (
+    "gate",
+    "PR automation / gate",
+    "PR evaluate / gate",
+    "PR review / gate",
+    "Automation bootstrap / gate",
+)
 
 # The paths a repair may touch, as ERE fragments. The deployed workflows are always at the
 # repository root; the rest are relative to wherever vibey-gh itself lives. This module is

@@ -231,19 +231,26 @@ request beyond roughly 300 changed files, then runs `vibey-gh local-review` agai
 Ollama-compatible endpoint (`qwen2.5-coder:14b` by default) with the diff as the only input:
 no shell, no tools, and no network beyond the local inference port reach the model. See
 [Configuration](configuration.md#pr_automationfallback) for the full field reference and
-[Security](security.md) for the trust boundary this runner introduces. `gate` publishes the
-final `PR automation / gate` check run for the exact head and, on success, dispatches
-`merge-train.yml`. When the primary review returned no verdict and the fallback ran and
-found nothing blocking, the gate still succeeds but titles the check run
-`PR automation: gate (local fallback)` so the weaker signal is never mistaken for the
-primary review's; when neither produced a usable verdict, it titles the check run
-`PR automation: review incomplete` for an operator to resolve.
+[Security](security.md) for the trust boundary this runner introduces.
+
+`pr-evaluate.yml` owns `<evaluate>` and the scan `gate`. Its gate publishes the
+`PR evaluate / gate` check run for the exact head — green when the scans it named all
+settled, red titled with the scan state and the failing checks when any did not — and, on
+success, dispatches `pr-review.yml` against the same exact head. `pr-review.yml` then runs
+the structured review (sovereign lane and, when configured, the local fallback) and its
+`gate` publishes `PR review / gate`, the check the merge train and the ruleset actually
+block on; on success it dispatches `merge-train.yml`. When the primary review returned no
+verdict and the fallback ran and found nothing blocking, the review gate still succeeds but
+titles the check run `PR review: gate (local fallback)` so the weaker signal is never
+mistaken for the primary review's; when neither produced a usable verdict, it titles the
+check run `PR review: review incomplete` for an operator to resolve. A red scan gate names
+its failing checks directly, so a failure pinpoints its task without digging through logs.
 
 Every `[pr_automation].scan_workflows` entry names a `workflow_run` this aggregation
 waits on, so each one must be a workflow that runs on `pull_request` or
 `pull_request_target`. A workflow that only triggers on `push` can never complete for a
 pull request: `state` never leaves `pending`, `gate` — which requires `state !=
-'pending'` — never runs, and the `PR automation / gate` check-run is never published. Made
+'pending'` — never runs, and the `PR evaluate / gate` scan gate is never published. Made
 a required check on the branch ruleset, that is a silent, total, and permanent lockout.
 `vibey-gh check` fails on any named workflow that exists but cannot fire for a pull
 request; a name absent from `.github/workflows/` is not an error, since it may live
@@ -251,7 +258,7 @@ elsewhere or under another name.
 
 ## Merge train
 
-`Merge train` runs on completion of `PR automation`, a weekly Monday recovery schedule,
+`Merge train` runs on completion of `PR review`, a weekly Monday recovery schedule,
 and manual dispatch (optionally scoped to one PR, optionally `dry_run`). With `actions:
 read`, `contents: write`, and `pull-requests: write`, it resolves the gated PR and runs
 `vibey-gh merge-train`, which squash-merges every currently ready PR into `develop`.
@@ -280,7 +287,7 @@ The `heal` job (schedule only; `actions: write`, `contents: read`, `pull-request
 runs `vibey-gh pr-automation self-heal` to refill the repair budget of every pull request
 labeled `vibey-gh:repair-exhausted`, up to `branch_sync.max_self_heals` refills per lineage,
 so a transient outage does not permanently strand a PR that a human has not yet noticed.
-Each healed pull request then has `pr-automation.yml` re-dispatched against its exact head
+Each healed pull request then has `pr-evaluate.yml` re-dispatched against its exact head
 SHA, returning it to ordinary review and repair with no exemption.
 
 ## Promote

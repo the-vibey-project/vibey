@@ -873,7 +873,7 @@ def test_the_trust_gate_marks_the_verdict_as_held():
 def test_merge_train_trust_without_an_owner():
     cfg = GhConfig(root=Path.cwd(), owner="", trusted_authors=("trusted",))
     verdict = merge_train.judge({"number": 7, "title": "t", "author": {"login": "trusted"}}, cfg)
-    assert "PR automation gate" in verdict.reason
+    assert "PR automation gates have not passed" in verdict.reason
 
 
 def test_event_driven_merge_guards_and_single_pr_lookup(monkeypatch):
@@ -881,7 +881,7 @@ def test_event_driven_merge_guards_and_single_pr_lookup(monkeypatch):
     trusted_without_gate = merge_train.judge(
         {"number": 1, "title": "t", "author": {"login": "owner"}}, cfg
     )
-    assert "PR automation gate" in trusted_without_gate.reason
+    assert "PR automation gates have not passed" in trusted_without_gate.reason
     unreviewed = merge_train.judge(
         {"number": 1, "title": "t", "author": {"login": "outsider"}}, cfg
     )
@@ -902,7 +902,8 @@ def test_event_driven_merge_guards_and_single_pr_lookup(monkeypatch):
             "title": "t",
             "author": {"login": "outsider"},
             "statusCheckRollup": [
-                {"name": "PR automation / gate", "status": "COMPLETED", "conclusion": "SUCCESS"}
+                {"name": "PR evaluate / gate", "status": "COMPLETED", "conclusion": "SUCCESS"},
+                {"name": "PR review / gate", "status": "COMPLETED", "conclusion": "SUCCESS"},
             ],
         },
         cfg,
@@ -1000,10 +1001,15 @@ def test_the_train_holds_an_unbumped_promotion(repo, monkeypatch):
         "labels": [],
         "statusCheckRollup": [
             {
-                "name": "PR automation / gate",
+                "name": "PR evaluate / gate",
                 "status": "COMPLETED",
                 "conclusion": "SUCCESS",
-            }
+            },
+            {
+                "name": "PR review / gate",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+            },
         ],
         "baseRefName": cfg.release_branch,
         "headRefName": cfg.integration_branch,

@@ -507,12 +507,17 @@ def test_merge_train_ignores_internal_draft_gate_after_public_gate_passes(tmp_pa
         statusCheckRollup=[
             {"name": "gate", "status": "COMPLETED", "conclusion": "FAILURE"},
             {
-                "name": "PR automation / gate",
+                "name": "PR evaluate / gate",
                 "status": "COMPLETED",
                 "conclusion": "FAILURE",
             },
             {
-                "name": "PR automation / gate",
+                "name": "PR evaluate / gate",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+            },
+            {
+                "name": "PR review / gate",
                 "status": "COMPLETED",
                 "conclusion": "SUCCESS",
             },
@@ -533,7 +538,16 @@ def test_pull_request_recovers_fresh_exact_head_gate(monkeypatch):
             return {"nameWithOwner": "owner/repo"}
         return {
             "check_runs": [
-                {"name": "PR automation / gate", "status": "completed", "conclusion": "success"}
+                {
+                    "name": "PR evaluate / gate",
+                    "status": "completed",
+                    "conclusion": "success",
+                },
+                {
+                    "name": "PR review / gate",
+                    "status": "completed",
+                    "conclusion": "success",
+                },
             ]
         }
 
@@ -541,6 +555,25 @@ def test_pull_request_recovers_fresh_exact_head_gate(monkeypatch):
     pr = merge_train.pull_request(1)
     assert pr["statusCheckRollup"][-1]["conclusion"] == "SUCCESS"
     assert any(args[0] == "api" for args in calls)
+
+
+def test_exact_head_gate_lookup_returns_early_when_both_gates_are_already_present(monkeypatch):
+    called = []
+    monkeypatch.setattr(
+        merge_train,
+        "_gh_json",
+        lambda *args: called.append(args) or {"check_runs": []},
+    )
+    both = {
+        "statusCheckRollup": [
+            {"name": "PR evaluate / gate", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"name": "PR review / gate", "status": "COMPLETED", "conclusion": "SUCCESS"},
+        ],
+        "headRefOid": "x",
+    }
+    merge_train._include_exact_head_gate(both)
+    assert called == [], "both gates present: no exact-head read should be needed"
+    assert len(both["statusCheckRollup"]) == 2
 
 
 def test_exact_head_gate_lookup_skips_existing_missing_sha_and_nonpassing(monkeypatch):
@@ -553,12 +586,12 @@ def test_exact_head_gate_lookup_skips_existing_missing_sha_and_nonpassing(monkey
             if args[0] == "repo"
             else {
                 "check_runs": [
-                    {"name": "PR automation / gate", "status": "completed", "conclusion": "failure"}
+                    {"name": "PR evaluate / gate", "status": "completed", "conclusion": "failure"}
                 ]
             }
         ),
     )
-    existing = {"statusCheckRollup": [{"name": "PR automation / gate"}], "headRefOid": "x"}
+    existing = {"statusCheckRollup": [{"name": "PR evaluate / gate"}], "headRefOid": "x"}
     merge_train._include_exact_head_gate(existing)
     merge_train._include_exact_head_gate({"statusCheckRollup": []})
     failing = {"statusCheckRollup": [], "headRefOid": "x"}
@@ -694,20 +727,26 @@ def test_the_train_ignores_pr_automations_own_superseded_jobs():
         )
     ]
     gate = {
-        "name": "PR automation / gate",
+        "name": "PR review / gate",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+    }
+    scan_gate = {
+        "name": "PR evaluate / gate",
         "status": "COMPLETED",
         "conclusion": "SUCCESS",
     }
     real = {"name": "CI", "status": "COMPLETED", "conclusion": "SUCCESS"}
 
-    verdict = merge_train.judge(_pr(statusCheckRollup=[*leftovers, gate, real]), cfg)
+    verdict = merge_train.judge(_pr(statusCheckRollup=[*leftovers, scan_gate, gate, real]), cfg)
     assert verdict.ready, verdict.reason
 
 
-def test_the_train_still_requires_the_gate_it_excludes_from_the_policy_set():
-    """Excluding `PR automation / gate` from the failure count must not stop it being
-    REQUIRED: the readiness check reads the unfiltered rollup for exactly that reason. A
-    change that loses this distinction would merge pull requests the gate never certified.
+def test_the_train_still_requires_the_gates_it_excludes_from_the_policy_set():
+    """Excluding `PR evaluate / gate` and `PR review / gate` from the failure count must
+    not stop them being REQUIRED: the readiness check reads the unfiltered rollup for
+    exactly that reason. A change that loses this distinction would merge pull requests
+    the gates never certified.
     """
     from vibey_gh import merge_train
     from vibey_gh.config import GhConfig
@@ -717,7 +756,7 @@ def test_the_train_still_requires_the_gate_it_excludes_from_the_policy_set():
 
     verdict = merge_train.judge(_pr(statusCheckRollup=[real]), cfg)
     assert not verdict.ready
-    assert "gate has not passed" in (verdict.reason or "")
+    assert "gates have not passed" in (verdict.reason or "")
 
 
 def test_a_superseded_header_is_replaced_not_stacked(repo):

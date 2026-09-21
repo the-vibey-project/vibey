@@ -5,6 +5,19 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- Split `pr-automation.yml` into `pr-evaluate.yml` (PR evaluate) and `pr-review.yml`
+  (PR review) with two required check runs instead of one, so a red gate names its task:
+  `PR evaluate / gate` certifies every configured scan settled on the exact head (red scan
+  gate titles carry the failing checks), and `PR review / gate` certifies the structured
+  exact-head review returned a verdict. `pr-evaluate.yml` answers to `pull_request_target`
+  and `workflow_run`, publishes the scan gate (suppressed for `conflict`, resolved in
+  pr-review), and dispatches `pr-review.yml` for `ready`/`review`/`repair`/`conflict`;
+  `pr-review.yml` answers only to `workflow_dispatch`, carries review/repair/mirror-fork/
+  resolve-conflict/escalate verbatim, publishes the review gate, and dispatches the merge
+  train. `[workflow_names] pr_automation` becomes `pr_evaluate`/`pr_review`;
+  `merge-train`'s gates become both new names; `automation-bootstrap` and the default
+  ignored/ruleset check lists gain both. The legacy `PR automation / gate` name is kept in
+  the ignored lists so old check runs on existing heads are never counted as scans.
 - Test that the rendered `commit-msg` and `pre-push` hooks reach their `<hook>.local`
   sibling when git runs them from a linked worktree, where `.git` is a file rather than
   a directory. The test drives a real `git commit` and `git push` against a bare remote,

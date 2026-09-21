@@ -166,7 +166,7 @@ merge. The diff still reaches a model as text; the local model has no shell, no 
 no network beyond the loopback inference port, matching the no-execution rule the primary
 review follows. Because a small local model's judgments are unreliable even though Ollama's
 schema-constrained decoding guarantees the response shape, the fallback's verdict omits the
-documentation-contract fields and the gate names the result `PR automation: gate (local
+documentation-contract fields and the gate names the result `PR review: gate (local
 fallback)`, so a degraded signal can never silently stand in for the primary review's.
 
 The AI action's Git-discovery requirement is isolated from source and persisted credentials.
