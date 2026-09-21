@@ -11,7 +11,7 @@ to type; it never becomes a ``failed`` row nobody was told about."""
 
 import asyncio
 import contextlib
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from typing import cast
 from uuid import UUID
@@ -86,6 +86,39 @@ class WorkerLoop:
         self._log: Logger = (
             logger if logger is not None else StandardLibraryLogger(__name__, owner=owner)
         )
+
+    @staticmethod
+    def _notification_failure(
+        result: Mapping[str, object], config: Mapping[str, object]
+    ) -> str | None:
+        """Return a diagnostic when an enabled channel did not deliver."""
+        if result.get("error"):
+            return str(result["error"])
+
+        raw_config = config.get("notifications")
+        if not isinstance(raw_config, Mapping) or raw_config.get("enabled") is not True:
+            return None
+        if result.get("enabled") is False:
+            return "notification service reported disabled"
+        if raw_config.get("desktop", True) is True and result.get("desktop") is not True:
+            return "desktop delivery returned false"
+
+        raw_webhooks = raw_config.get("webhooks", ())
+        configured_webhooks = (
+            [item for item in raw_webhooks if isinstance(item, Mapping) and item.get("url")]
+            if isinstance(raw_webhooks, Sequence) and not isinstance(raw_webhooks, str | bytes)
+            else []
+        )
+        if not configured_webhooks:
+            return None
+        deliveries = result.get("webhooks")
+        if not isinstance(deliveries, Sequence) or isinstance(deliveries, str | bytes):
+            return "webhook delivery results were missing"
+        if len(deliveries) != len(configured_webhooks):
+            return "webhook delivery results did not match configured destinations"
+        if any(delivery is not True for delivery in deliveries):
+            return "webhook delivery returned false"
+        return None
 
     async def run_once(self, project_id: UUID) -> bool:
         """Claims and executes at most one job. Returns False if there was
@@ -272,7 +305,7 @@ class WorkerLoop:
         kind = "budget_exceeded" if request.kind == "budget_exhausted" else "human_gate_raised"
         title = "Budget Exceeded" if kind == "budget_exceeded" else "Human Gate Raised"
         try:
-            await self._notifications.notify(
+            result = await self._notifications.notify(
                 project_id=job.project_id,
                 kind=kind,
                 title=title,
@@ -284,6 +317,15 @@ class WorkerLoop:
                 },
                 config=self._notification_config,
             )
+            failure = self._notification_failure(result, self._notification_config or {})
+            if failure is not None:
+                self._log.warning(
+                    "notification.failed",
+                    **self._job_fields(job),
+                    notification_kind=kind,
+                    error=failure,
+                    result=dict(result),
+                )
         except Exception as exc:  # noqa: BLE001 - notification failure cannot lose a gate
             self._log.warning(
                 "notification.failed",

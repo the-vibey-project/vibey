@@ -52,7 +52,8 @@ async def run_conformance(
     # entirely, so it's a harmless no-op in faked mode.
     worktree_path = Path(trivial_worktree)
     worktree_path.mkdir(parents=True, exist_ok=True)
-    if not (worktree_path / ".git").exists():
+    fresh_worktree = not (worktree_path / ".git").exists()
+    if fresh_worktree:
         init = await asyncio.create_subprocess_exec(
             "git",
             "init",
@@ -62,26 +63,27 @@ async def run_conformance(
             stderr=asyncio.subprocess.DEVNULL,
         )
         await init.wait()
-        # The real loop runners create git savepoints during even the trivial
-        # scripted run.  A fresh CI checkout often has no global Git identity;
-        # the identity used for this scratch repository must therefore persist
-        # beyond the initial commit rather than being supplied only as
-        # one-command `git -c` overrides.
-        for key, value in (
-            ("user.email", "vibey-conformance@localhost"),
-            ("user.name", "vibey conformance"),
-        ):
-            config = await asyncio.create_subprocess_exec(
-                "git",
-                "-C",
-                str(worktree_path),
-                "config",
-                key,
-                value,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await config.wait()
+    # The real loop runners create git savepoints during even the trivial
+    # scripted run.  A fresh CI checkout often has no global Git identity, and
+    # an existing scratch repo may have been created by an older vibey version
+    # whose one-command identity override did not persist. Configure the local
+    # identity on every run so either kind of worktree is savepoint-safe.
+    for key, value in (
+        ("user.email", "vibey-conformance@localhost"),
+        ("user.name", "vibey conformance"),
+    ):
+        config = await asyncio.create_subprocess_exec(
+            "git",
+            "-C",
+            str(worktree_path),
+            "config",
+            key,
+            value,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await config.wait()
+    if fresh_worktree:
         commit = await asyncio.create_subprocess_exec(
             "git",
             "-C",

@@ -54,7 +54,7 @@ class _RecordingNotifications:
 
     async def notify(self, **kwargs: object) -> dict[str, object]:
         self.calls.append(kwargs)
-        return {"enabled": True}
+        return {"enabled": True, "desktop": True, "webhooks": []}
 
 
 def test_the_worker_loop_satisfies_its_declared_seam() -> None:
@@ -67,6 +67,55 @@ def test_the_worker_loop_satisfies_its_declared_seam() -> None:
     )
 
     assert isinstance(loop, WorkerLoopInterface)
+
+
+def test_notification_failure_classifies_returned_channel_results() -> None:
+    enabled = {"notifications": {"enabled": True}}
+    with_webhook = {
+        "notifications": {
+            "enabled": True,
+            "desktop": False,
+            "webhooks": [{"url": "https://example.test/hook"}],
+        }
+    }
+
+    assert WorkerLoop._notification_failure({"error": "boom"}, {}) == "boom"
+    assert WorkerLoop._notification_failure({}, {}) is None
+    assert WorkerLoop._notification_failure({"enabled": False}, enabled) == (
+        "notification service reported disabled"
+    )
+    assert WorkerLoop._notification_failure({"enabled": True}, enabled) == (
+        "desktop delivery returned false"
+    )
+    assert (
+        WorkerLoop._notification_failure(
+            {"enabled": True, "desktop": True, "webhooks": []}, enabled
+        )
+        is None
+    )
+    assert (
+        WorkerLoop._notification_failure(
+            {"enabled": True, "desktop": True},
+            {"notifications": {"enabled": True, "desktop": True, "webhooks": {}}},
+        )
+        is None
+    )
+    assert (
+        WorkerLoop._notification_failure({"enabled": True, "webhooks": "bad"}, with_webhook)
+        == "webhook delivery results were missing"
+    )
+    assert (
+        WorkerLoop._notification_failure({"enabled": True, "webhooks": []}, with_webhook)
+        == "webhook delivery results did not match configured destinations"
+    )
+    assert (
+        WorkerLoop._notification_failure({"enabled": True, "webhooks": [False]}, with_webhook)
+        == "webhook delivery returned false"
+    )
+    assert (
+        WorkerLoop._notification_failure({"enabled": True, "webhooks": [True]}, with_webhook)
+        is None
+    )
 
 
 async def test_run_once_returns_false_when_nothing_claimable() -> None:
@@ -381,6 +430,34 @@ async def test_notification_sink_failure_is_logged_without_losing_the_gate() -> 
     ]
     assert logger.lines[0][2]["notification_kind"] == "human_gate_raised"
     assert logger.lines[0][2]["error"] == "RuntimeError('desktop unavailable')"
+
+
+async def test_notification_sink_false_delivery_is_logged_without_losing_the_gate() -> None:
+    class _FailedNotifications:
+        async def notify(self, **kwargs: object) -> dict[str, object]:
+            return {"enabled": True, "desktop": False, "webhooks": []}
+
+    job = make_job(PROJECT_ID)
+    jobs = FakeJobRepository([job])
+    gates = FakeHumanGateRepository()
+    logger = _RecordingLogger()
+    loop = WorkerLoop(
+        jobs=jobs,
+        gates=gates,
+        handler=_FixedHandler(Park(HumanGateRequest(kind="approval", prompt="answer me"))),
+        owner="w1",
+        logger=logger,
+        notifications=_FailedNotifications(),  # type: ignore[arg-type]
+        notification_config={"notifications": {"enabled": True}},
+    )
+
+    await loop.run_once(PROJECT_ID)
+
+    assert len(gates.raised) == 1
+    assert [(level, event) for level, event, _ in logger.lines] == [
+        ("warning", "notification.failed")
+    ]
+    assert logger.lines[0][2]["error"] == "desktop delivery returned false"
 
 
 async def test_worker_records_queue_phase_and_job_telemetry() -> None:

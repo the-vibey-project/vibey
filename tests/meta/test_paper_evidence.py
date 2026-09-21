@@ -17,10 +17,11 @@ def test_paper_evidence_reports_qwen_storm_record() -> None:
     result = subprocess.run(
         [sys.executable, "scripts/paper_evidence.py", "--repo", str(REPO), "--json"],
         cwd=REPO,
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
     )
+    assert result.returncode == 0, result.stderr
     evidence = json.loads(result.stdout)
     qwen = evidence["qwen_storm"]
 
