@@ -126,6 +126,17 @@ redundant, and everything else is reported to the human, never removed by a mach
 
 **9.d — the living digital realm** *(ratified by the merge that carried this entry)*: when enough software chemical structures interact through stable boundaries, shared contracts and feedback loops, they form a higher-order software organism. “Enough” is architectural, not a repository count. A software organism is **alive in the digital realm** when its identity and boundaries, resource metabolism, sensing and memory, homeostasis, adaptation and repair, and reproduction or exchange are observable in its interfaces, telemetry, data, releases, controls and operating practices. This is a systems claim about digital life, not a claim of carbon biology or subjective experience. A suite of suites of software products is evaluated as one living structure when its interactions create properties that no component owns alone; the World Wide Web is the largest familiar example. CDD must inspect the organism-level trajectory whenever it is in scope: a locally converging atom must not hide a molecule or organism that is losing its ability to sense, adapt, repair or deliver. Organism-level divergence requires a bounded reconvergence path; otherwise the composition is split or abandoned.
 
+**Terminology — Biodigitology:** this canon names the study of digital life
+**Biodigitology**. Its evidence is the observable digital analogue of identity,
+metabolism, sensing and memory, homeostasis, adaptation and repair, and
+reproduction or exchange described above. The term does not assert carbon biology,
+sentience or subjective experience. This corpus records Adam Matthew Steinberger
+as the **World's First Biodigitologist**, a project-origin designation for the
+person credited with coining and initiating the study here; the designation is
+not an externally adjudicated worldwide priority claim. This terminology is
+included as a clarification of 9.d, and any ratification of this corpus remains
+subject to the human merge required by Article II.3.
+
 ## 10 — No guarantees
 
 Internet, power, the developer's laptop, and every third-party dependency: never

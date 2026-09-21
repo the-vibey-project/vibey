@@ -1,4 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+from datetime import UTC, datetime
+
 import pytest
 
 from vibey.domain.capacity import (
@@ -157,6 +159,117 @@ def test_parse_duration_from_now_returns_none_for_non_matching_pattern() -> None
 
     assert _parse_duration_from_now("30m") is None
     assert _parse_duration_from_now("abc") is None
+
+
+def test_opencode_reads_the_official_provider_error_shape() -> None:
+    """Official schema: `{"type":"error","error":{"name":"ProviderAuthError",...}}`.
+
+    The wrapper's provider error name alone must classify; the payload's
+    message supplies the detail.
+    """
+    state = classify_capacity(
+        EngineId.OPENCODE,
+        {
+            "type": "error",
+            "error": {
+                "name": "ProviderAuthError",
+                "data": {"providerID": "google", "message": "API key is missing"},
+            },
+        },
+    )
+    assert isinstance(state, AuthenticationFailed)
+    assert state.detail == "API key is missing"
+
+
+@pytest.mark.parametrize(
+    ("status_code", "expected"),
+    [
+        (429, WindowExhausted),
+        (402, CreditsExhausted),
+        (401, AuthenticationFailed),
+    ],
+)
+def test_opencode_reads_official_api_error_statuses(status_code: int, expected: type) -> None:
+    state = classify_capacity(
+        EngineId.OPENCODE,
+        {
+            "error": {
+                "name": "APIError",
+                "data": {"statusCode": status_code, "message": "provider response"},
+            }
+        },
+    )
+    assert isinstance(state, expected)
+
+
+def test_opencode_unknown_api_error_status_stays_available() -> None:
+    state = classify_capacity(
+        EngineId.OPENCODE,
+        {"error": {"name": "APIError", "data": {"statusCode": 500}}},
+    )
+    assert isinstance(state, Available)
+
+
+def test_opencode_explicit_wrapper_state_wins_over_the_provider_error() -> None:
+    state = classify_capacity(
+        EngineId.OPENCODE,
+        {
+            "capacity_state": "auth_failed",
+            "detail": "wrapper already classified this",
+            "resets_at": "2026-01-01T00:05:00+00:00",
+            "error": {
+                "name": "APIError",
+                "data": {"statusCode": 429, "message": "rate limited"},
+            },
+        },
+    )
+    assert isinstance(state, AuthenticationFailed)
+    assert state.detail == "wrapper already classified this"
+
+
+def test_opencode_falls_back_to_the_wrapper_detail_when_data_carries_no_message() -> None:
+    state = classify_capacity(
+        EngineId.OPENCODE,
+        {
+            "detail": "wrapper detail",
+            "error": {"name": "ProviderAuthError", "data": {}},
+        },
+    )
+    assert isinstance(state, AuthenticationFailed)
+    assert state.detail == "wrapper detail"
+
+
+def test_opencode_ignores_unreadable_error_data_without_wrapper_state() -> None:
+    state = classify_capacity(
+        EngineId.OPENCODE,
+        {
+            "resets_at": "2026-01-01T00:05:00+00:00",
+            "error": {"name": "APIError", "data": "not-a-mapping"},
+        },
+    )
+    assert isinstance(state, Available)
+
+
+def test_opencode_reads_a_camel_case_resets_at_inside_the_error_data() -> None:
+    state = classify_capacity(
+        EngineId.OPENCODE,
+        {
+            "error": {
+                "name": "APIError",
+                "data": {"statusCode": 429, "resetsAt": "2026-01-01T00:05:00+00:00"},
+            },
+        },
+    )
+    assert isinstance(state, WindowExhausted)
+    assert state.resets_at == datetime(2026, 1, 1, 0, 5, tzinfo=UTC)
+
+
+def test_opencode_unknown_provider_error_name_stays_available() -> None:
+    state = classify_capacity(
+        EngineId.OPENCODE,
+        {"error": {"name": "SomethingElse", "data": {"message": "boom"}}},
+    )
+    assert isinstance(state, Available)
 
 
 # ── claudeloop's real capacity shape, and its backend misconfiguration ───────

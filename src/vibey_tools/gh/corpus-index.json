@@ -66,29 +66,29 @@
   {
    "anchor": "9 — The vibe",
    "document": "docs/doctrines.md",
-   "sha256": "7449f39ad2d794f7ae00524173bbb59751945678a1902ba7a0436de80cefd19f",
+   "sha256": "378d77001355614b73f9dd01d0c1f50e6e440d7a90539f13adafdc9ae150c3ef",
    "start_line": 109,
-   "text_lines": 20
+   "text_lines": 31
   },
   {
    "anchor": "10 — No guarantees",
    "document": "docs/doctrines.md",
    "sha256": "456132570a9025e8e7ace52ef1e5fabd14ce1b258003782e03f1d055c0c5cdd8",
-   "start_line": 129,
+   "start_line": 140,
    "text_lines": 55
   },
   {
    "anchor": "11 — The living roadmap",
    "document": "docs/doctrines.md",
    "sha256": "2b7af17bfc318721c526df138ff45715828a18d9f4892ca8a80d194c4328548d",
-   "start_line": 184,
+   "start_line": 195,
    "text_lines": 7
   },
   {
    "anchor": "12 — Humans first",
    "document": "docs/doctrines.md",
    "sha256": "6b7acfa9713992d7fc5fc4710b84c4c0a30cce6cb59440b648283bf967d4a067",
-   "start_line": 191,
+   "start_line": 202,
    "text_lines": 35
   },
   {
@@ -106,38 +106,45 @@
    "text_lines": 8
   },
   {
+   "anchor": "Founding designation",
+   "document": "docs/constitution.md",
+   "sha256": "f5b63ae39c445adfca6b6fb217dad723aa3a46c519d54d10f5dbbb0487761e2a",
+   "start_line": 16,
+   "text_lines": 14
+  },
+  {
    "anchor": "Article I — The Order of Authority",
    "document": "docs/constitution.md",
    "sha256": "c190cc2a78fae926147677200f7790edee02fb7f8b9faeb5a50e852394fa8d86",
-   "start_line": 16,
+   "start_line": 30,
    "text_lines": 37
   },
   {
    "anchor": "Article II — Human Governance",
    "document": "docs/constitution.md",
    "sha256": "25d4b49548c4e6f30e185696f7144e3bd2be7a3b9aa786e3da79b57f9d0a5afb",
-   "start_line": 53,
+   "start_line": 67,
    "text_lines": 18
   },
   {
    "anchor": "Article III — Non-Human Governance",
    "document": "docs/constitution.md",
    "sha256": "2650d8fb80096190c373e36a270b6c279482cf13819a55dffbe38b84e8029fd5",
-   "start_line": 71,
+   "start_line": 85,
    "text_lines": 19
   },
   {
    "anchor": "Article IV — Amendment (the Ratchet)",
    "document": "docs/constitution.md",
    "sha256": "40b8d2d56e75742649903c0df09927556f80ff11a9f57dc5968022d3e57ac5d1",
-   "start_line": 90,
+   "start_line": 104,
    "text_lines": 28
   },
   {
    "anchor": "Article V — Enforcement",
    "document": "docs/constitution.md",
    "sha256": "5c00f4ffa84d7c9c55cbdc9e6456dac01297973e8bb82741d6677d6d6827cbd6",
-   "start_line": 118,
+   "start_line": 132,
    "text_lines": 22
   },
   {
@@ -225,7 +232,7 @@
    "text_lines": 4
   }
  ],
- "corpus_sha256": "e2325111cee5a91e6e035dcc02b5758ae920193e6032a03d16e104c29665819f",
+ "corpus_sha256": "b2bb7639fef880ba587b462a06ff09b5406beae07f5c35075e5834953e351355",
  "documents": [
   "docs/doctrines.md",
   "docs/constitution.md",
