@@ -496,6 +496,40 @@ def test_the_chain_exposes_an_edited_a_removed_and_a_reordered_line(fake_gh, sna
             verify(path)
 
 
+@pytest.mark.parametrize("tamper", ("canonical", "record", "payload", "previous"))
+def test_the_store_refuses_a_tampered_chain_before_reading_the_forge(fake_gh, snap, tamper):
+    world = World.seeded()
+    world.labels.append({**world.labels[0], "id": 103, "name": "third"})
+    fake_gh.script(world.answers())
+    snapshot(snap).capture(classes=["label"])
+    path = snap / "label.jsonl"
+    records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+    if tamper == "canonical":
+        raw_lines = path.read_bytes().splitlines(keepends=True)
+        raw_lines[1] = raw_lines[1].removesuffix(b"\n") + b" \n"
+        path.write_bytes(b"".join(raw_lines))
+    else:
+        record = records[1]
+        if tamper == "record":
+            record["sha256"] = "0" * 64
+        elif tamper == "payload":
+            record["payload"]["name"] = "forged"
+            record.pop("sha256")
+            record["sha256"] = digest(record)
+        else:
+            record["prev"] = "0" * 64
+            record.pop("sha256")
+            record["sha256"] = digest(record)
+        records[1] = record
+        path.write_bytes(b"".join(canonical_bytes(item) + b"\n" for item in records))
+
+    fake_gh.forget()
+    with pytest.raises(SnapshotStoreError, match=r"label\.jsonl line 2"):
+        JsonlSnapshotStore(snap, forge="github", repository=REPO).chain("label")
+    assert fake_gh.calls() == []
+
+
 def test_the_canonical_form_is_the_ledgers_and_stable():
     record = {"b": [1, {"z": None, "a": "é✨"}], "a": True}
     assert canonical_bytes(record) == b'{"a":true,"b":[1,{"a":"\\u00e9\\u2728","z":null}]}'
