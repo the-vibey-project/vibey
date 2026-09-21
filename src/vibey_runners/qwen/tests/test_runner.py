@@ -7,6 +7,8 @@ import pytest
 
 from qwenloop.application.runner import (
     AutonomousRunner,
+    _render_native_verdict,
+    _system_prompt,
     _trim_transcript,
     _truncate_tool_result,
 )
@@ -242,6 +244,90 @@ async def test_runner_preserves_assistant_tool_call_context(tmp_path: Path) -> N
     assert tool.tool_call_id == assistant.tool_calls[0]["id"]
 
 
+def test_system_prompt_marks_verdict_as_text_not_a_tool(tmp_path: Path) -> None:
+    prompt = _system_prompt(tmp_path)
+    assert "There is no qwenloop-verdict tool" in prompt
+    assert "plain text in your final assistant response" in prompt
+
+
+def test_native_verdict_serializes_non_string_arguments() -> None:
+    rendered = _render_native_verdict({"complete": True})
+    assert rendered == '```qwenloop-verdict\n{"complete": true}\n```'
+
+
+@pytest.mark.asyncio
+async def test_runner_normalizes_native_verdict_tool_call(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [
+                ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}}),
+                ChatChunk(tool_call={"name": "qwenloop-verdict", "arguments": {"verdict": "pass"}}),
+                ChatChunk(text="QWENLOOP_TASK_FULLY_COMPLETE"),
+            ]
+        ]
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+        run_id="native-verdict",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=1,
+    )
+    assert result.status is RunStatus.COMPLETED
+    events = [
+        json.loads(line)
+        for line in (tmp_path / ".qwenloop" / "runs" / "native-verdict" / "events.jsonl")
+        .read_text()
+        .splitlines()
+    ]
+    assert not any(event.get("name") == "qwenloop-verdict" for event in events)
+    assert any("```qwenloop-verdict" in event.get("text", "") for event in events)
+
+
+@pytest.mark.asyncio
+async def test_storm_cannot_complete_after_read_only_inspection(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [
+                ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}}),
+                ChatChunk(text="```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE"),
+            ]
+        ]
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+        run_id="storm-read-only",
+        plan="# qwenstorm plan\nwork it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=1,
+    )
+    assert result.status is RunStatus.FAILED
+
+
+@pytest.mark.asyncio
+async def test_storm_can_complete_after_repo_action(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [ChatChunk(tool_call={"name": "shell", "arguments": {"argv": ["true"]}})],
+            [ChatChunk(text="```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE")],
+        ]
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+        run_id="storm-progress",
+        plan="# qwenstorm plan\nwork it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=2,
+    )
+    assert result.status is RunStatus.COMPLETED
+
+
 @pytest.mark.asyncio
 async def test_runner_accepts_completion_evidence_split_across_turns(tmp_path: Path) -> None:
     server = ScriptedServer(
@@ -327,6 +413,22 @@ async def test_runner_rejects_completion_verdict_with_no_tool_call(tmp_path: Pat
     )
     # a verdict claimed without ever calling a tool is not trusted as real completion
     assert result.status is not RunStatus.COMPLETED
+
+
+@pytest.mark.asyncio
+async def test_runner_bounds_repeated_marker_only_claims(tmp_path: Path) -> None:
+    server = ScriptedServer([[ChatChunk(text="QWENLOOP_TASK_FULLY_COMPLETE")] for _ in range(3)])
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+        run_id="marker-loop",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=40,
+    )
+    assert result.status is RunStatus.FAILED
+    assert result.turns == 3
 
 
 @pytest.mark.asyncio

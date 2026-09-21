@@ -20,7 +20,7 @@ from qwenloop import __version__
 from qwenloop.application.backend_selection import BackendSelector, Hardware
 from qwenloop.application.interfaces import InferenceServer
 from qwenloop.application.runner import AutonomousRunner
-from qwenloop.application.storm import build_plan
+from qwenloop.application.storm import build_item_plans
 from qwenloop.domain.config import QwenConfig
 from qwenloop.domain.model import (
     EXIT_CODE_WIND_DOWN,
@@ -288,44 +288,70 @@ def _run_storm(
     config: QwenConfig,
     desktop_notifications: bool,
 ) -> None:
-    """Sweep every target repo's backlog through qwenloop, continuing past a failed repo."""
+    """Sweep each target repo one backlog item per bounded qwenloop run."""
     targets = repos or _discover_storm_repos(owner, repos_root)
     server, profile = _server_for(config)
 
     attempted = 0
     completed = 0
+    attempted_items = 0
+    completed_items = 0
     for name in targets:
         repo_dir = repos_root / name
         if not (repo_dir / ".git").is_dir():
             typer.echo(f"skip {name}: not cloned at {repo_dir}")
             continue
-        plan_text = build_plan(
+        plans = build_item_plans(
             repo=name,
             issues=list_open_issues(owner, name),
             pull_requests=list_open_pull_requests(owner, name),
             author=author,
         )
         attempted += 1
-        try:
-            state = asyncio.run(
-                _run_plan(
-                    server,
-                    profile,
-                    repo_dir,
-                    str(uuid.uuid4()),
-                    plan_text,
-                    config.max_turns,
-                    startup_timeout_seconds=config.startup_timeout_seconds,
-                    desktop_notifications=desktop_notifications,
-                )
-            )
-        except (OSError, RuntimeError) as exc:
-            typer.echo(f"{name}\tunavailable\t{exc}")
-            continue
-        if state.status is RunStatus.COMPLETED:
+        if not plans:
             completed += 1
-        typer.echo(f"{name}\t{state.status.value}\t{state.turns}")
-    typer.echo(f"qwenstorm complete: {completed}/{attempted} repos completed")
+            typer.echo(f"{name}\tno-open-items\t0")
+            continue
+        repo_success = True
+        repo_failure: str | None = None
+        repo_turns = 0
+        for label, plan_text in plans:
+            attempted_items += 1
+            try:
+                state = asyncio.run(
+                    _run_plan(
+                        server,
+                        profile,
+                        repo_dir,
+                        str(uuid.uuid4()),
+                        plan_text,
+                        config.max_turns,
+                        startup_timeout_seconds=config.startup_timeout_seconds,
+                        desktop_notifications=desktop_notifications,
+                    )
+                )
+            except (OSError, RuntimeError) as exc:
+                repo_success = False
+                repo_failure = str(exc)
+                typer.echo(f"{name} {label}\tunavailable\t{exc}")
+                break
+            repo_turns += state.turns
+            if state.status is RunStatus.COMPLETED:
+                completed_items += 1
+            else:
+                repo_success = False
+            typer.echo(f"{name} {label}\t{state.status.value}\t{state.turns}")
+        if repo_failure is not None:
+            typer.echo(f"{name}\tunavailable\t{repo_failure}")
+        elif repo_success:
+            completed += 1
+            typer.echo(f"{name}\tcompleted\t{repo_turns}")
+        else:
+            typer.echo(f"{name}\tfailed\t{repo_turns}")
+    typer.echo(
+        f"qwenstorm complete: {completed}/{attempted} repos completed "
+        f"({completed_items}/{attempted_items} items completed)"
+    )
 
 
 @model_app.command("list")
