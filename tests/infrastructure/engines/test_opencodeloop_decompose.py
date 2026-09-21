@@ -8,8 +8,15 @@ import pytest
 
 from vibey.domain.effort import Effort
 from vibey.domain.spec import AcceptanceCriterion, DesignSpec
+from vibey.infrastructure.engines.interfaces.opencodeloop_decompose_interface import (
+    OpenCodeLoopWorkPlanProducerInterface,
+)
 from vibey.infrastructure.engines.opencodeloop_decompose import OpenCodeLoopWorkPlanProducer
 from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopResult
+
+
+def test_interface_compatibility() -> None:
+    assert issubclass(OpenCodeLoopWorkPlanProducerInterface, object)
 
 
 class FakeProcess:

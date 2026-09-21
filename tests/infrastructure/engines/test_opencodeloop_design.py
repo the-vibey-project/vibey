@@ -5,8 +5,15 @@ from pathlib import Path
 import pytest
 
 from vibey.application.design import DesignStage
+from vibey.infrastructure.engines.interfaces.opencodeloop_design_interface import (
+    OpenCodeLoopDesignProviderInterface,
+)
 from vibey.infrastructure.engines.opencodeloop_design import OpenCodeLoopDesignProvider
 from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopResult
+
+
+def test_interface_compatibility() -> None:
+    assert issubclass(OpenCodeLoopDesignProviderInterface, object)
 
 
 class FakeProcess:
