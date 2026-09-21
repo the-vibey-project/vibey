@@ -380,6 +380,28 @@ def test_storm_sweep_reports_per_repo_status_and_tally(
     assert "qwenstorm complete: 1/2 repos completed" in result.stdout
 
 
+def test_storm_reports_a_successful_empty_backlog_without_starting_a_run(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / "a" / ".git").mkdir(parents=True)
+
+    class Server:
+        def inspect(self, _profile):  # type: ignore[no-untyped-def]
+            return ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "x", False, True)
+
+        async def health(self, _info):  # type: ignore[no-untyped-def]
+            return True
+
+    monkeypatch.setattr("qwenloop.cli.app.LlamaCppServer", Server)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_issues", lambda _owner, _repo: [])
+    monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: [])
+
+    result = runner.invoke(app, ["run", "--storm", "--repos-root", str(tmp_path), "--repo", "a"])
+    assert result.exit_code == 0
+    assert "a\tno-open-items\t0" in result.stdout
+    assert "qwenstorm complete: 1/1 repos completed (0/0 items completed)" in result.stdout
+
+
 def test_storm_skips_repo_not_cloned_locally(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
