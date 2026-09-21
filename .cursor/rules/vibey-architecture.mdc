@@ -165,6 +165,22 @@ explicit root at the two call sites that noticed — it was that a directory
 carrying its own `.vibey-gh.toml` stops the walk. Same work, aimed at the general
 shape. See ADR-0018.
 
+## Convergence-Driven Development is the delivery loop
+
+Every change uses Specification-Driven Development (SDD) for intent and
+acceptance criteria, Test-Driven Development (TDD) for executable checks, and
+Convergence-Driven Development (CDD) above them to ground, implement, test,
+review and repair against the actual tracked repository. At every iteration,
+classify the trajectory as converging, neutral or diverging against the
+remaining criteria and failing checks. A divergence is allowed only when it is
+small, bounded and has a concrete path to reconvergence; large or pathless
+divergence is abandoned. Never treat activity, a marker or a generated file as
+completion evidence. See sub-doctrine 9.c and ADR-0039.
+Project atoms can compose chemical structures, and a suite of suites can be
+alive in the digital realm as a software organism when identity, feedback,
+adaptation, repair and exchange are evidenced; inspect that higher-order
+trajectory whenever the change participates in it.
+
 ## A standing rule goes in the canon
 
 This project has law, not just decision records: the constitutional cluster in

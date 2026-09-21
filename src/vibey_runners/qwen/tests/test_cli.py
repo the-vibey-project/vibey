@@ -2,6 +2,7 @@
 import asyncio
 import io
 import json
+import subprocess
 import urllib.error
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from typer.testing import CliRunner
 
 from qwenloop import __version__
 from qwenloop.cli.app import app
-from qwenloop.domain.model import Backend, RunState, RunStatus, ServerInfo
+from qwenloop.domain.model import Backend, RepoItem, RunState, RunStatus, ServerInfo
 from qwenloop.infrastructure.inference import OpenAICompatServer
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE
 
@@ -372,12 +373,139 @@ def test_storm_sweep_reports_per_repo_status_and_tally(
     monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: None)
 
     result = runner.invoke(
-        app, ["run", "--storm", "--owner", "acme", "--repos-root", str(tmp_path)]
+        app,
+        [
+            "run",
+            "--storm",
+            "--owner",
+            "acme",
+            "--repos-root",
+            str(tmp_path),
+            "--max-attempts",
+            "1",
+        ],
     )
     assert result.exit_code == 0
     assert "a\tcompleted\t3" in result.stdout
     assert "b\tfailed\t3" in result.stdout
     assert "qwenstorm complete: 1/2 repos completed" in result.stdout
+
+
+def test_tracked_repository_context_names_the_real_stack(monkeypatch: pytest.MonkeyPatch) -> None:
+    import qwenloop.cli.app as module
+
+    class Result:
+        returncode = 0
+        stdout = "pyproject.toml\0src/app.py\0tests/test_app.py\0"
+        stderr = ""
+
+    monkeypatch.setattr(module.subprocess, "run", lambda *_args, **_kwargs: Result())
+    context = module._tracked_repository_context(Path("/repo"))
+    assert "pyproject.toml" in context
+    assert "no tracked Go manifest" in context
+    assert "Python is part" in context
+
+
+def test_tracked_repository_context_preserves_a_tracked_go_stack(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import qwenloop.cli.app as module
+
+    class Result:
+        returncode = 0
+        stdout = "go.mod\0internal/main.go\0"
+        stderr = ""
+
+    monkeypatch.setattr(module.subprocess, "run", lambda *_args, **_kwargs: Result())
+    context = module._tracked_repository_context(Path("/repo"))
+    assert "go.mod" in context
+    assert "no tracked Go manifest" not in context
+    assert "Python is part" not in context
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        subprocess.CompletedProcess([], 1, "", "not a repository"),
+        subprocess.CompletedProcess([], 0, "", ""),
+    ],
+)
+def test_tracked_repository_context_handles_missing_facts(
+    monkeypatch: pytest.MonkeyPatch, result: subprocess.CompletedProcess[str]
+) -> None:
+    import qwenloop.cli.app as module
+
+    monkeypatch.setattr(module.subprocess, "run", lambda *_args, **_kwargs: result)
+    context = module._tracked_repository_context(Path("/repo"))
+    assert "inspect the repository" in context or "no tracked files" in context
+
+
+def test_tracked_repository_context_handles_probe_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    import qwenloop.cli.app as module
+
+    def fail(*_args, **_kwargs):
+        raise OSError("git missing")
+
+    monkeypatch.setattr(module.subprocess, "run", fail)
+    assert "probe unavailable" in module._tracked_repository_context(Path("/repo"))
+
+
+def test_tracked_repository_context_handles_missing_git(monkeypatch: pytest.MonkeyPatch) -> None:
+    import qwenloop.cli.app as module
+
+    monkeypatch.setattr(module.shutil, "which", lambda _name: None)
+    assert "git is not installed" in module._tracked_repository_context(Path("/repo"))
+
+
+def test_storm_retries_a_failed_item_until_it_converges(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / "a" / ".git").mkdir(parents=True)
+    calls = 0
+
+    class Server:
+        def inspect(self, _profile):  # type: ignore[no-untyped-def]
+            return ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "x", False, True)
+
+        async def health(self, _info):  # type: ignore[no-untyped-def]
+            return True
+
+    class FakeRunner:
+        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+            pass
+
+        async def run(self, **kwargs):  # type: ignore[no-untyped-def]
+            nonlocal calls
+            calls += 1
+            status = RunStatus.FAILED if calls == 1 else RunStatus.COMPLETED
+            return RunState(str(kwargs["run_id"]), status=status, turns=2)
+
+    monkeypatch.setattr("qwenloop.cli.app.LlamaCppServer", Server)
+    monkeypatch.setattr("qwenloop.cli.app.AutonomousRunner", FakeRunner)
+    monkeypatch.setattr(
+        "qwenloop.cli.app.list_open_issues",
+        lambda _owner, _repo: [RepoItem(1, "fix", "")],
+    )
+    monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: [])
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--storm",
+            "--repos-root",
+            str(tmp_path),
+            "--repo",
+            "a",
+            "--max-attempts",
+            "2",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert calls == 2
+    assert "a issue#1\tattempt 1/2\tfailed\t2" in result.stdout
+    assert "a issue#1\tcompleted\t2 (attempt 2/2)" in result.stdout
+    assert "qwenstorm complete: 1/1 repos completed (1/1 items completed)" in result.stdout
 
 
 def test_storm_reports_a_successful_empty_backlog_without_starting_a_run(

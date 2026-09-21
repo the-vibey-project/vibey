@@ -1,6 +1,6 @@
 {
   "record": "qwenloop local storm pilot",
-  "observed_at": "2026-09-20T23:49:56-04:00",
+  "observed_at": "2026-09-21T00:19:23-04:00",
   "timezone": "America/New_York",
   "active_storm_processes_at_cutoff": 1,
   "source": "ignored .qwenloop/runs event logs captured from the local storm worktree",
@@ -203,7 +203,23 @@
     {
       "run_id": "ac31e404-ea5f-4128-8a25-8474e6476f49",
       "started_at": "2026-09-20T23:49:13-04:00",
-      "last_event_at": "2026-09-20T23:49:13-04:00",
+      "last_event_at": "2026-09-21T00:18:57-04:00",
+      "event_lines": 45,
+      "turns": 22,
+      "tool_calls": 20,
+      "input_tokens": 101635,
+      "output_tokens": 16519,
+      "file_write_calls": 9,
+      "bytes_written": 6717,
+      "verdict_emitted": true,
+      "completion_marker_emitted": true,
+      "terminal_event": "completed",
+      "disposition": "completed"
+    },
+    {
+      "run_id": "d86aee22-ddbe-4e74-be92-72a2411ff709",
+      "started_at": "2026-09-21T00:18:57-04:00",
+      "last_event_at": "2026-09-21T00:18:57-04:00",
       "event_lines": 0,
       "turns": 0,
       "tool_calls": 0,

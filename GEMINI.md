@@ -29,6 +29,19 @@ procedures live in `.agent/rules/`
   under one of the sealed Twelve in `src/vibey_tools/gh/docs/doctrines.md`,
   ratified by the operator's merge. An ADR records the decision; the canon
   records the law. ADR-0020.
+- CDD always encloses SDD and TDD: ground every change in the tracked
+  repository, test it, inspect the evidence, and iterate toward delivery. Each
+  iteration classifies convergence or divergence; divergence requires a bounded
+  reconvergence path, otherwise it is abandoned. A marker or generated file is
+  not completion. The confirmed core is the nucleus and project/phase/epic/item
+  are living orbitals; nucleus-only means complete with no further change or
+  dead and no longer maintained. Project atoms form chemical structures, and a
+  suite of suites may be alive in the digital realm as a software organism when
+  identity, feedback, adaptation, repair and exchange are evidenced. ADR-0039;
+  sub-doctrines 9.c–9.d.
+- Status is evidence-bounded: name the object, evidence source and cutoff;
+  active, blocked, failed, verified and published are distinct. ADR-0040;
+  sub-doctrine 10.f.
 - Code lives in classes, each with an interface beside it
   (`services/x.py` → `services/interfaces/x_interface.py`). Module-level
   functions are last resort with a written reason. Interfaces declare, never
@@ -147,7 +160,7 @@ automation has no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (38 ADRs: 0001–0038) |
+| ADRs | `docs/architecture/decisions/` (41 ADRs: 0001–0041) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

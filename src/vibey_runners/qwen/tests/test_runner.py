@@ -7,6 +7,7 @@ import pytest
 
 from qwenloop.application.runner import (
     AutonomousRunner,
+    _has_cdd_evidence,
     _render_native_verdict,
     _system_prompt,
     _trim_transcript,
@@ -250,6 +251,21 @@ def test_system_prompt_marks_verdict_as_text_not_a_tool(tmp_path: Path) -> None:
     assert "plain text in your final assistant response" in prompt
 
 
+def test_cdd_evidence_requires_all_delivery_fields() -> None:
+    assert not _has_cdd_evidence([ChatMessage("assistant", "criteria: done; tests: pass")])
+    assert _has_cdd_evidence(
+        [
+            ChatMessage(
+                "assistant",
+                "criteria: done; tests: pass; repository: Python; "
+                "levels: project/phase/epic/item; trajectory: converging; "
+                "composition: atom-only; "
+                "delivery: commit-ready",
+            )
+        ]
+    )
+
+
 def test_native_verdict_serializes_non_string_arguments() -> None:
     rendered = _render_native_verdict({"complete": True})
     assert rendered == '```qwenloop-verdict\n{"complete": true}\n```'
@@ -324,6 +340,38 @@ async def test_storm_can_complete_after_repo_action(tmp_path: Path) -> None:
         profile=PORTABLE,
         server_info=info,
         max_turns=2,
+    )
+    assert result.status is RunStatus.COMPLETED
+
+
+@pytest.mark.asyncio
+async def test_storm_reopens_a_marker_without_cdd_evidence(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [ChatChunk(tool_call={"name": "shell", "arguments": {"argv": ["true"]}})],
+            [ChatChunk(text="```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE")],
+            [
+                ChatChunk(
+                    text=(
+                        "```qwenloop-verdict\n"
+                        "criteria: done; tests: pass; repository: Python; "
+                        "levels: project/phase/epic/item; trajectory: converging; "
+                        "composition: atom-only; "
+                        "delivery: commit-ready\n```\n"
+                        "QWENLOOP_TASK_FULLY_COMPLETE"
+                    )
+                )
+            ],
+        ]
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+        run_id="cdd-evidence",
+        plan="# qwenstorm plan\n## Convergence-Driven Development (CDD)",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=3,
     )
     assert result.status is RunStatus.COMPLETED
 
