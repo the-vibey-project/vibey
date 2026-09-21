@@ -15,9 +15,11 @@ class DesktopNotifier:
         *,
         executor: Callable[[list[str]], bool] | None = None,
         platform_override: str | None = None,
+        sound_name: str = "Ping",
     ) -> None:
         self._executor = executor
         self._platform = platform_override or sys.platform
+        self._sound_name = sound_name
 
     async def notify(self, event: NotificationEvent) -> bool:
         cmd = self._build_command(event)
@@ -40,9 +42,13 @@ class DesktopNotifier:
     def _build_command(self, event: NotificationEvent) -> list[str]:
         safe_msg = event.message.replace('"', '\\"')
         safe_title = f"vibey: {event.title}".replace('"', '\\"')
+        safe_sound = self._sound_name.replace('"', '\\"')
 
         if self._platform == "darwin":
-            script = f'display notification "{safe_msg}" with title "{safe_title}"'
+            script = (
+                f'display notification "{safe_msg}" with title "{safe_title}" '
+                f'sound name "{safe_sound}"'
+            )
             return ["osascript", "-e", script]
         elif self._platform.startswith("linux"):
             return ["notify-send", safe_title, safe_msg]

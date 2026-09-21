@@ -432,21 +432,30 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
         loaded = _Chain()
         path = self.path(forge_class)
         if path.is_file():
+            previous: str | None = None
             with path.open("rb") as handle:
                 for number, line in enumerate(handle, start=1):
-                    record = self._parse(path, number, line, forge_class)
+                    record = self._parse(path, number, line, forge_class, previous)
                     loaded.records += 1
                     loaded.head = record["sha256"]
+                    previous = loaded.head
                     loaded.latest[(record["native_class"], record["native_id"])] = record[
                         "payload_sha256"
                     ]
         self._chains[forge_class] = loaded
         return loaded
 
-    def _parse(self, path: Path, number: int, line: bytes, forge_class: str) -> dict[str, Any]:
+    def _parse(
+        self,
+        path: Path,
+        number: int,
+        line: bytes,
+        forge_class: str,
+        previous: str | None,
+    ) -> dict[str, Any]:
         try:
             record = json.loads(line)
-        except ValueError:
+        except (UnicodeError, ValueError):
             record = None
         expected = {
             "schema": RECORD_SCHEMA,
@@ -459,12 +468,31 @@ class JsonlSnapshotStore(SnapshotStoreInterface):
             or any(record.get(key) != value for key, value in expected.items())
             or not all(
                 isinstance(record.get(key), str)
-                for key in ("native_class", "native_id", "payload_sha256", "sha256")
+                for key in (
+                    "native_class",
+                    "native_id",
+                    "captured_at",
+                    "payload_sha256",
+                    "sha256",
+                )
             )
+            or not (record.get("prev") is None or isinstance(record.get("prev"), str))
+            or "payload" not in record
         ):
             raise SnapshotStoreError(
                 f"{path} line {number} is not a {RECORD_SCHEMA} {forge_class} record"
             )
+        if canonical_bytes(record) != line.removesuffix(b"\n"):
+            raise SnapshotStoreError(f"{path} line {number} is not in canonical form")
+
+        sealed = record["sha256"]
+        body = {key: value for key, value in record.items() if key != "sha256"}
+        if digest(body) != sealed:
+            raise SnapshotStoreError(f"{path} line {number} has an invalid sha256")
+        if digest(record["payload"]) != record["payload_sha256"]:
+            raise SnapshotStoreError(f"{path} line {number} has an invalid payload_sha256")
+        if record["prev"] != previous:
+            raise SnapshotStoreError(f"{path} line {number} does not link to the preceding record")
         return record
 
 

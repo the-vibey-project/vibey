@@ -31,6 +31,7 @@ from qwenloop.domain.model import (
     RunStatus,
     ServerInfo,
 )
+from qwenloop.infrastructure.desktop_notifications import DesktopNotifier
 from qwenloop.infrastructure.github import (
     list_open_issues,
     list_open_pull_requests,
@@ -127,6 +128,11 @@ def run(
     author: str = typer.Option(
         _DEFAULT_STORM_AUTHOR, "--author", help="Author name --storm passes to vibey-gh paper/book."
     ),
+    desktop_notifications: bool = typer.Option(
+        True,
+        "--desktop-notifications/--no-desktop-notifications",
+        help="Send lifecycle desktop alerts; macOS alerts use the Ping sound.",
+    ),
 ) -> None:
     del preset, effort
     if storm:
@@ -139,12 +145,13 @@ def run(
             repos=list(repo),
             author=author,
             config=config,
+            desktop_notifications=desktop_notifications,
         )
         return
     if plan is None:
         raise typer.BadParameter("PLAN is required unless --storm is set")
     config = _load_config(backend=backend, max_turns=max_turns, base_url=base_url, model=model)
-    _run_single(plan, run_id, cwd, config)
+    _run_single(plan, run_id, cwd, config, desktop_notifications=desktop_notifications)
 
 
 def _load_config(**overrides: object) -> QwenConfig:
@@ -201,7 +208,14 @@ def _public(info: ServerInfo) -> dict[str, object]:
     return data
 
 
-def _run_single(plan: Path, run_id: str, cwd: Path, config: QwenConfig) -> None:
+def _run_single(
+    plan: Path,
+    run_id: str,
+    cwd: Path,
+    config: QwenConfig,
+    *,
+    desktop_notifications: bool,
+) -> None:
     actual_id = run_id or str(uuid.uuid4())
     server, profile = _server_for(config)
     try:
@@ -214,6 +228,7 @@ def _run_single(plan: Path, run_id: str, cwd: Path, config: QwenConfig) -> None:
                 plan.read_text(encoding="utf-8"),
                 config.max_turns,
                 startup_timeout_seconds=config.startup_timeout_seconds,
+                desktop_notifications=desktop_notifications,
             )
         )
     except (OSError, RuntimeError) as exc:
@@ -234,6 +249,7 @@ async def _run_plan(
     max_turns: int,
     *,
     startup_timeout_seconds: int,
+    desktop_notifications: bool = True,
 ) -> RunState:
     """Start (or, for an attached endpoint, check) the server if it is not healthy, then
     drive one AutonomousRunner run to a verdict."""
@@ -241,7 +257,12 @@ async def _run_plan(
     if info is None or not await server.health(info):
         info = await server.start(profile)
         info = await _wait_until_ready(server, info, timeout_seconds=startup_timeout_seconds)
-    runner = AutonomousRunner(server, FileRunStore(cwd), SandboxTools(cwd))
+    runner = AutonomousRunner(
+        server,
+        FileRunStore(cwd),
+        SandboxTools(cwd),
+        DesktopNotifier(enabled=desktop_notifications),
+    )
     return await runner.run(
         run_id=run_id,
         plan=plan_text,
@@ -265,6 +286,7 @@ def _run_storm(
     repos: list[str],
     author: str,
     config: QwenConfig,
+    desktop_notifications: bool,
 ) -> None:
     """Sweep every target repo's backlog through qwenloop, continuing past a failed repo."""
     targets = repos or _discover_storm_repos(owner, repos_root)
@@ -294,6 +316,7 @@ def _run_storm(
                     plan_text,
                     config.max_turns,
                     startup_timeout_seconds=config.startup_timeout_seconds,
+                    desktop_notifications=desktop_notifications,
                 )
             )
         except (OSError, RuntimeError) as exc:

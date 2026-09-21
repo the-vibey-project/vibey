@@ -32,7 +32,13 @@ async def test_openai_health_and_chat(monkeypatch: pytest.MonkeyPatch, tmp_path:
                 "message": {
                     "content": "done",
                     "tool_calls": [
-                        {"function": {"name": "read_file", "arguments": '{"path":"x"}'}}
+                        {
+                            "id": "call-2",
+                            "function": {
+                                "name": "read_file",
+                                "arguments": '{"path":"x"}',
+                            },
+                        }
                     ],
                 }
             }
@@ -46,6 +52,20 @@ async def test_openai_health_and_chat(monkeypatch: pytest.MonkeyPatch, tmp_path:
             return UrlResponse(b"{}")
         body = json.loads(request.data)
         assert body["tool_choice"] == "auto"
+        assert body["messages"][-2:] == [
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "call-1",
+                        "type": "function",
+                        "function": {"name": "read_file", "arguments": '{"path":"x"}'},
+                    }
+                ],
+            },
+            {"role": "tool", "content": "ok", "tool_call_id": "call-1"},
+        ]
         assert {tool["function"]["name"] for tool in body["tools"]} == {
             "read_file",
             "write_file",
@@ -57,8 +77,35 @@ async def test_openai_health_and_chat(monkeypatch: pytest.MonkeyPatch, tmp_path:
     server = LlamaCppServer(tmp_path)
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://local/v1", True, True, 1, "t")
     assert await server.health(info)
-    chunks = [chunk async for chunk in server.chat_stream(info, [ChatMessage("user", "x")])]
-    assert chunks[0].tool_call == {"name": "read_file", "arguments": {"path": "x"}}
+    chunks = [
+        chunk
+        async for chunk in server.chat_stream(
+            info,
+            [
+                ChatMessage("user", "x"),
+                ChatMessage(
+                    "assistant",
+                    "",
+                    tool_calls=(
+                        {
+                            "id": "call-1",
+                            "type": "function",
+                            "function": {
+                                "name": "read_file",
+                                "arguments": '{"path":"x"}',
+                            },
+                        },
+                    ),
+                ),
+                ChatMessage("tool", "ok", tool_call_id="call-1"),
+            ],
+        )
+    ]
+    assert chunks[0].tool_call == {
+        "id": "call-2",
+        "name": "read_file",
+        "arguments": {"path": "x"},
+    }
     assert chunks[1].text == "done"
 
 

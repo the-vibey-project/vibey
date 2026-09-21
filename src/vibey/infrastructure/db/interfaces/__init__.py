@@ -14,6 +14,7 @@ from vibey.infrastructure.db.interfaces.ledger_search_repository_interface impor
     SearchStatementInterface,
 )
 from vibey.infrastructure.db.interfaces.migrator_interface import MigratorInterface
+from vibey.infrastructure.db.interfaces.orm_interface import PostgresOrmInterface
 from vibey.infrastructure.db.interfaces.project_repository_interface import (
     PhaseTransitionedDraftBuilderInterface,
     ProjectRowMapperInterface,
@@ -29,6 +30,7 @@ __all__ = [
     "JobRowMapperInterface",
     "LedgerSearchCompilerInterface",
     "MigratorInterface",
+    "PostgresOrmInterface",
     "PhaseTransitionedDraftBuilderInterface",
     "ProjectRowMapperInterface",
     "RotationCursorRowMapperInterface",

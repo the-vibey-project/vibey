@@ -1,0 +1,25 @@
+# Safe local Qwen example used by the Vibey storm setup.
+#
+# Copy this file to ~/.config/qwenloop/config.toml, or point QWENLOOP_CONFIG at
+# it. Keep credentials in QWENLOOP_API_KEY; never put a token in this file.
+# This attaches qwenloop to a locally running Ollama OpenAI-compatible endpoint.
+
+backend = "openai-compat"
+base_url = "http://127.0.0.1:11434/v1"
+model = "qwen2.5-coder:14b"
+
+# Full local context and a generous turn budget for storm work.
+context_window = 32768
+max_turns = 40
+idle_timeout_seconds = 900
+startup_timeout_seconds = 180
+endpoint_timeout_seconds = 5
+
+# Lifecycle desktop notifications are enabled by default by qwenloop. On macOS
+# they use the Ping sound; keep the explicit flag in storm commands for clarity:
+#
+#   qwenloop run --storm --desktop-notifications
+#
+# A short repair can override the checked-in budget without changing this file:
+#
+#   qwenloop run PLAN.md --desktop-notifications --max-turns 10
