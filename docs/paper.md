@@ -312,9 +312,9 @@ not a physical claim or a substitute for evidence.
   \node[font=\scriptsize\bfseries,text=vibeyteal] at (3.35,1.78) {phase / milestone};
   \node[font=\scriptsize\bfseries,text=vibeygreen] at (-2.65,1.30) {feature set / epic};
   \node[font=\scriptsize\bfseries,text=vibeygold] at (2.05,0.78) {feature / unit / story};
-  \filldraw[draw=vibeyink,fill=vibeyink] (0,0) circle (0.72);
+  \filldraw[draw=vibeyink,fill=vibeyink] (0,0) circle (0.86);
   \node[align=center,text=white,font=\scriptsize\bfseries] at (0,0)
-    {NUCLEUS\\confirmed working\\core software};
+    {CORE\\software};
   \draw[vibeyarrow] (3.4,-2.05) arc[start angle=-32,end angle=32,x radius=3.4,y radius=2.05];
   \node[align=center,font=\scriptsize,text=vibeyink] at (4.8,-1.15)
     {CDD pulls every\\scope toward\\lower unresolved work};
@@ -354,8 +354,8 @@ distance, evidence and next reconvergence move at every level.
     {DIVERGENCE?\\bound it or scrap it};
   \draw[vibeydashed,-{Latex[length=2mm]}] (check.south) -- (diverge.north);
   \draw[vibeyarrow] (diverge.west) |- (map.south);
-  \node[font=\scriptsize\bfseries,text=vibeyred] at (2.95,-1.35)
-    {never infer convergence from activity};
+  \node[font=\tiny\bfseries,text=vibeyred,align=center] at (4.55,-1.35)
+    {evidence\\beats activity};
 \end{tikzpicture}
 \caption{The CDD control loop. Discovery is allowed to be temporarily neutral or
 slightly divergent only when its bound and reconvergence step are explicit; an
@@ -381,8 +381,8 @@ evidence remains an atom with active orbitals and must continue the loop.
   \draw[draw=vibeyblue!70,thick] (0,0) ellipse (2.25 and 1.55);
   \draw[draw=vibeyteal!75,thick] (0,0) ellipse (1.65 and 1.12);
   \draw[draw=vibeygreen!80,thick] (0,0) ellipse (1.05 and 0.72);
-  \filldraw[draw=vibeyink,fill=vibeyink] (0,0) circle (0.47);
-  \node[align=center,text=white,font=\tiny\bfseries] at (0,0) {nucleus\\working core};
+  \filldraw[draw=vibeyink,fill=vibeyink] (0,0) circle (0.52);
+  \node[align=center,text=white,font=\tiny\bfseries] at (0,0) {core\\software};
   \node[font=\tiny,text=vibeyblue,align=center] at (0,1.37) {vision\\orbital};
   \node[font=\tiny,text=vibeyteal,align=center] at (1.58,0.85) {milestone\\orbital};
   \node[font=\tiny,text=vibeygreen,align=center] at (-1.45,-0.78) {epic /\\story orbital};
@@ -762,8 +762,9 @@ every handoff has a well-defined ledger range $\rho$.
   \foreach \n in {qwen,claude,codex,cursor,agy}
     {\draw[vibeyarrow] (\n) -- (selector);}
   \draw[vibeyarrow] (selector) -- (work);
-  \draw[vibeydashed,-{Latex[length=2mm]}] (work.east) -- (agy.west)
-    node[midway,below,font=\tiny] {capacity rejection / handoff};
+  \draw[vibeydashed,-{Latex[length=2mm]}] (work.east) -- (agy.west);
+  \node[font=\tiny,align=center,text=vibeygray] at (2.65,-2.45)
+    {capacity rejection\\handoff at boundary};
   \node[font=\tiny,align=center,text=vibeygray] at (-2.7,-1.05)
     {weights combine\\health, fidelity, cost, affinity};
   \node[font=\tiny,align=center,text=vibeyred] at (2.7,-1.05)
@@ -834,8 +835,9 @@ and $\mathsf{ready}$ and $\mathsf{blocked}$ absorb.
     $(c,h_2)$};
   \node[vibeywarn,minimum width=2.1cm] (decision) at (3.5,-1.2)
     {decision on $h_3$\\must re-review};
-  \draw[vibeydashed,-{Latex[length=2mm]}] (claimold) -- (decision)
-    node[midway,below,font=\tiny] {stale claim rejected};
+  \draw[vibeydashed,-{Latex[length=2mm]}] (claimold) -- (decision);
+  \node[font=\tiny,align=center,text=vibeygray] at (1.65,-1.88)
+    {stale claim rejected};
   \node[font=\scriptsize\bfseries,text=vibeyred] at (-3.1,-1.2)
     {exact-head boundary};
   \draw[vibeyarrow] (h3.south) -- (decision.north);
@@ -1093,24 +1095,27 @@ used by `scripts/paper_evidence.py`.
 ```latex
 \begin{figure}[t]
 \centering
-\begin{tikzpicture}[x=0.72cm,y=0.72cm]
-  \draw[vibeyarrow] (0,0) -- (6.2,0);
-  \draw[vibeyarrow] (0,0) -- (0,13.2);
-  \fill[vibeygreen] (0,0) rectangle (4,4);
-  \fill[vibeygold] (0,4) rectangle (2,6);
-  \fill[vibeyred] (0,6) rectangle (2,8);
-  \fill[vibeygray] (0,8) rectangle (1,12);
-  \node[font=\tiny,text=white,align=center] at (2,2) {4\\complete};
-  \node[font=\tiny,text=white,align=center] at (1,5) {2\\verdict only};
-  \node[font=\tiny,text=white,align=center] at (1,7) {2\\no verdict};
-  \node[font=\tiny,text=white,align=center] at (0.5,10) {4\\no events};
-  \node[font=\tiny,rotate=90,anchor=south] at (-0.45,6) {runs at cutoff};
-  \node[font=\tiny,align=center] at (2.8,-0.82)
-    {13 run directories};
-  \node[vibeywarn,minimum width=2.35cm,anchor=west] at (6.5,3.4)
+\begin{tikzpicture}[x=0.55cm,y=1cm]
+  \node[font=\scriptsize\bfseries,anchor=west,text=vibeyink] at (0,1.55)
+    {13 run directories at the evidence cutoff};
+  \draw[draw=vibeyink,line width=.65pt,rounded corners=2pt]
+    (0,0) rectangle (13,0.72);
+  \fill[vibeygreen] (0,0) rectangle (4,0.72);
+  \fill[vibeygold] (4,0) rectangle (6,0.72);
+  \fill[vibeyred] (6,0) rectangle (8,0.72);
+  \fill[vibeygray] (8,0) rectangle (9,0.72);
+  \fill[vibeygray!35] (9,0) rectangle (13,0.72);
+  \foreach \x in {4,6,8,9}
+    {\draw[white,line width=.65pt] (\x,0) -- (\x,0.72);}
+  \node[font=\tiny,text=white,align=center] at (2,0.36) {4\\complete};
+  \node[font=\tiny,text=white,align=center] at (5,0.36) {2\\verdict only};
+  \node[font=\tiny,text=white,align=center] at (7,0.36) {2\\no verdict};
+  \node[font=\tiny,text=white,align=center] at (8.5,0.36) {1\\tool error};
+  \node[font=\tiny,text=vibeyink,align=center] at (11,0.36) {4\\no events};
+  \node[vibeywarn,minimum width=2.3cm,anchor=west] at (8.4,2.25)
     {+1 active\\storm process};
-  \draw[vibeydashed,-{Latex[length=2mm]}] (4,2) -- (6.35,3.5);
-  \node[font=\tiny,align=left,anchor=north west] at (6.5,2.7)
+  \draw[vibeydashed,-{Latex[length=2mm]}] (8.9,2.05) -- (8.9,0.8);
+  \node[font=\tiny,align=left,anchor=north west] at (0,-0.38)
     {verdicts: 6\\completion markers: 4\\accepted rate: 4/13};
 \end{tikzpicture}
 \caption{Cutoff-bounded Qwen storm dispositions. A verdict-only run remains
@@ -1241,8 +1246,6 @@ couplings; it is a postulate, not a law.
   \node[vibeysoft,minimum width=1.55cm] (agency) at (-2.65,1.15) {AGENCY\\permitted};
   \foreach \n in {network,hardware,software,agent,information,agency}
     {\draw[vibeyarrow] (\n) -- (operation);}
-  \node[font=\tiny,align=center,text=vibeygray] at (0,0.67)
-    {available + stable + reliable\\for every material};
   \node[font=\tiny,align=center,text=vibeyred] at (0,-3.05)
     {couplings between materials are where coordination shortfalls appear};
 \end{tikzpicture}

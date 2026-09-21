@@ -224,7 +224,7 @@ def render_paper(markdown: str, author: str, journal: bool = False, keywords: st
         r"\definecolor{vibeyred}{HTML}{B24C4C}",
         r"\definecolor{vibeywash}{HTML}{EEF5FA}",
         r"\definecolor{vibeygray}{HTML}{64748B}",
-        r"\tikzset{vibeybox/.style={draw=vibeyink,fill=vibeywash,rounded corners=2pt,align=center,inner sep=3pt,font=\scriptsize},vibeysoft/.style={draw=vibeyblue,fill=vibeyblue!10,rounded corners=2pt,align=center,inner sep=3pt,font=\scriptsize},vibeycore/.style={draw=vibeyink,fill=vibeyink, text=white,rounded corners=2pt,align=center,inner sep=4pt,font=\scriptsize\bfseries},vibeywarn/.style={draw=vibeyred,fill=vibeyred!10,rounded corners=2pt,align=center,inner sep=3pt,font=\scriptsize},vibeyarrow/.style={-{Latex[length=2mm]},thick,draw=vibeyink},vibeydashed/.style={densely dashed,draw=vibeygray,thick}}",
+        r"\tikzset{every node/.append style={font=\sffamily},vibeybox/.style={draw=vibeyblue!70,fill=vibeywash,rounded corners=3pt,align=center,inner sep=4pt,font=\sffamily\scriptsize},vibeysoft/.style={draw=vibeyblue!80,fill=vibeyblue!8,rounded corners=3pt,align=center,inner sep=4pt,font=\sffamily\scriptsize},vibeycore/.style={draw=vibeyink,fill=vibeyink,text=white,rounded corners=3pt,align=center,inner sep=4pt,font=\sffamily\scriptsize\bfseries},vibeywarn/.style={draw=vibeyred!85,fill=vibeyred!8,rounded corners=3pt,align=center,inner sep=4pt,font=\sffamily\scriptsize},vibeyarrow/.style={-{Latex[length=1.8mm,width=1.4mm]},line width=.65pt,draw=vibeyink},vibeydashed/.style={densely dashed,draw=vibeygray,line width=.55pt}}",
         r"\usepackage{url}",
         r"\newtheorem{theorem}{Theorem}",
         r"\newtheorem{invariant}{Invariant}",
