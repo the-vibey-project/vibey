@@ -54,7 +54,7 @@ class DesktopNotifier:
             )
             return ["osascript", "-e", script]
         if self._platform.startswith("linux"):
-            return ["notify-send", safe_title, safe_message]
+            return ["notify-send", f"vibey: {title}", message]
         return []
 
     @staticmethod
