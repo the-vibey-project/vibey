@@ -2,6 +2,7 @@
 """Bounded autonomous coding loop."""
 
 import json
+import re
 from pathlib import Path
 
 from qwenloop.application.interfaces import (
@@ -50,6 +51,10 @@ _CDD_EVIDENCE_LABELS = (
     "composition:",
     "delivery:",
 )
+_VERDICT_FENCE = re.compile(
+    rf"```{re.escape(_VERDICT_TOOL_NAME)}[^\n]*\n(?P<body>.*?)```",
+    flags=re.IGNORECASE | re.DOTALL,
+)
 
 
 def _estimate_tokens(text: str) -> int:
@@ -83,11 +88,14 @@ def _has_cdd_evidence(transcript: list[ChatMessage]) -> bool:
     values. The values still have to describe the actual repository and the tools the
     run used; this check prevents a bare marker from being mistaken for a CDD report.
     """
-    assistant_text = "\n".join(
-        message.content for message in transcript if message.role == "assistant"
-    )
-    lowered = assistant_text.lower()
-    return all(label in lowered for label in _CDD_EVIDENCE_LABELS)
+    for message in transcript:
+        if message.role != "assistant":
+            continue
+        for match in _VERDICT_FENCE.finditer(message.content):
+            lowered = match.group("body").lower()
+            if all(label in lowered for label in _CDD_EVIDENCE_LABELS):
+                return True
+    return False
 
 
 def _trim_transcript(transcript: list[ChatMessage], context_window: int) -> list[ChatMessage]:

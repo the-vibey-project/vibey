@@ -250,6 +250,7 @@ class GitHistory(GitHistoryInterface):
         busiest = max(hours, key=lambda hour: (hour[1], -hour[0]))
         tags = self._release_tags(int(self._git("log", "-1", "--format=%ct", rev)))
         counts = list(per_day.values())
+        count_sd = statistics.stdev(counts) if len(counts) > 1 else 0.0
         subjects = self._git("log", "--format=%s", rev).splitlines()
         return {
             "head": self._git("rev-parse", rev).strip(),
@@ -266,8 +267,8 @@ class GitHistory(GitHistoryInterface):
                 "median": statistics.median(counts),
                 "max": max(counts),
                 "mean": statistics.fmean(counts),
-                "sd": statistics.stdev(counts),
-                "cv": statistics.stdev(counts) / statistics.fmean(counts),
+                "sd": count_sd,
+                "cv": count_sd / statistics.fmean(counts),
             },
             "longest_inactive_gap": {
                 "days": gap,
@@ -298,11 +299,14 @@ class QwenStormRecord(QwenStormRecordInterface):
         self._record: dict[str, Any] = loaded
 
     @staticmethod
-    def _int(run: dict[str, Any], key: str) -> int:
-        value = run.get(key)
-        if not isinstance(value, int) or value < 0:
-            raise ValueError(f"qwen storm run field {key!r} must be a non-negative integer")
+    def _non_negative_int(value: object, field: str) -> int:
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{field} must be a non-negative integer")
         return value
+
+    @classmethod
+    def _int(cls, run: dict[str, Any], key: str) -> int:
+        return cls._non_negative_int(run.get(key), f"qwen storm run field {key!r}")
 
     def summary(self) -> dict[str, Any]:
         raw_runs = self._record.get("runs")
@@ -312,11 +316,15 @@ class QwenStormRecord(QwenStormRecordInterface):
         dispositions = [str(run.get("disposition", "")) for run in runs]
         observed_server = self._record.get("observed_server", {})
         model = observed_server.get("model", "") if isinstance(observed_server, dict) else ""
+        active_processes = self._non_negative_int(
+            self._record.get("active_storm_processes_at_cutoff", 0),
+            f"{self._path}: field 'active_storm_processes_at_cutoff'",
+        )
         return {
             "record": str(self._path),
             "observed_at": str(self._record.get("observed_at", "")),
             "timezone": str(self._record.get("timezone", "")),
-            "active_storm_processes": self._record.get("active_storm_processes_at_cutoff", 0),
+            "active_storm_processes": active_processes,
             "model": str(model),
             "requested_settings": self._record.get("requested_settings", {}),
             "observed_server": observed_server,
@@ -338,7 +346,7 @@ class QwenStormRecord(QwenStormRecordInterface):
 
 
 class PaperEvidence(PaperEvidenceInterface):
-    """Both sources, composed, and rendered as the report the paper cites."""
+    """The tracked sources, composed and rendered as the report the paper cites."""
 
     def __init__(
         self,
