@@ -81,3 +81,27 @@ def test_section_titles_carry_no_colon() -> None:
 def test_the_paper_is_not_one_of_several() -> None:
     text = PAPER.read_text(encoding="utf-8").lower()
     assert "companion paper" not in text, "#155: docs/paper.md is the one paper"
+
+
+def test_the_paper_carries_the_reproducible_visual_atlas() -> None:
+    text = PAPER.read_text(encoding="utf-8")
+    expected_labels = (
+        "fig:cdd-orbits",
+        "fig:cdd-loop",
+        "fig:digital-atom",
+        "fig:software-molecule",
+        "fig:digital-hierarchy",
+        "fig:web-ecology",
+        "fig:six-phase-machine",
+        "fig:ledger-handoff",
+        "fig:engine-pool",
+        "fig:exact-head",
+        "fig:qwen-cdd",
+        "fig:stress-rate",
+        "fig:qwen-disposition",
+        "fig:completion-band",
+        "fig:six-materials",
+        "fig:record-effect",
+    )
+    assert text.count(r"\begin{figure") >= len(expected_labels)
+    assert all(rf"\label{{{label}}}" in text for label in expected_labels)

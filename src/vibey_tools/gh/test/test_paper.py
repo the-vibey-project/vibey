@@ -52,6 +52,8 @@ def test_the_document_is_ieeetran_shaped():
     tex = paper.render_paper(MD, author="A. Person", keywords="k1; k2")
     assert tex.startswith(r"\documentclass[conference]{IEEEtran}")
     assert r"\usepackage{amsmath,amssymb,amsthm}" in tex
+    assert r"\usepackage{tikz}" in tex
+    assert r"\usetikzlibrary{arrows.meta,backgrounds,calc,fit,positioning,shapes.geometric}" in tex
     assert r"\title{A Sound System}" in tex
     assert r"\IEEEauthorblockN{A. Person}" in tex
     assert r"\begin{abstract}" in tex
