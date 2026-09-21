@@ -140,11 +140,11 @@ Unlike `[budget]` above, this key **is** read at runtime, by
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `enabled` | array of strings | `["claudeloop", "codexloop", "cursorloop", "agyloop"]` | Must be a subset of the known engines below. If omitted while `features.qwenloop = true`, `qwenloop` is appended to the default automatically; an explicit list is never extended. |
+| `enabled` | array of strings | `["claudeloop", "codexloop", "cursorloop", "agyloop", "opencodeloop"]` | Must be a subset of the known engines below. If omitted while `features.qwenloop = true`, `qwenloop` is appended to the default automatically; an explicit list is never extended. |
 | `weights` | table of string→int | `{}` | Per-engine weight for smooth weighted round robin ([ADR-0005](../architecture/decisions/0005-smooth-weighted-round-robin.md)). Keys must be known engines; values are not validated. |
 
-Known engine ids: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, and
-`qwenloop` (valid in `enabled` and `[phases.*].engines` only once
+Known engine ids: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`,
+`opencodeloop`, and `qwenloop` (valid in `enabled` and `[phases.*].engines` only once
 `features.qwenloop = true`).
 
 ## `[phases.design]`, `[phases.build]`, `[phases.review]`
@@ -290,7 +290,7 @@ vibey's own `bandit -q -r src/vibey` is enforced for real as gate 6 of
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `security_commands` | array of arrays of non-empty strings | `[]` (no security check runs) | Security checks. There is deliberately no default: any baked-in command names both a tool and a layout, and `bandit -q -r <path that does not exist>` exits 0 — a wrong default reports a passing security check that examined zero files. Configure this to get one. |
-| `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop", "--exclude", ".cursorloop", "--exclude", ".agyloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
+| `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop", "--exclude", ".cursorloop", "--exclude", ".agyloop", "--exclude", ".opencodeloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
 
 A malformed `review` object (not an object, a command list that is not a list
 of non-empty string arrays) raises when the worker is built, rather than

@@ -1,5 +1,5 @@
 %%{init: {"flowchart": {"htmlLabels": true}} }%%
-%% Vibey — comprehensive architecture map. Status as of 2026-09-15.
+%% Vibey — comprehensive architecture map. Status as of 2026-09-21.
 %% Layers: source modules & onion boundaries, public interfaces, the six-phase
 %% workflow, the ledger/handoff data flow, the isolation/security boundary, the
 %% uv-workspace monorepo tenants, the governance canon, and the CI/release/docs
@@ -56,7 +56,7 @@ flowchart TB
     subgraph Infrastructure["infrastructure/ — adapters, all I/O"]
         IDb[("PostgreSQL<br/>queue (FOR UPDATE SKIP LOCKED) + ledger + repositories")]
         IDbMods["db/ — 15 modules: job · ledger · project · handoff · human_gate ·<br/>engine_health · rotation_cursor repositories · build/design/review ledgers ·<br/>design_spec · visual_inventory repositories · notifier.py (LISTEN/NOTIFY) ·<br/>migrator.py · advisory_lock.py (integration lock, ADR-0029)"]
-        IEngines["engines/ — LoopProcessAdapter × 4 (paid tier)<br/>claudeloop · codexloop · cursorloop · agyloop<br/>+ local tier, preferred first (ADR-0038): qwenloop · claudeloop-local<br/>(features.* / VIBEY_FEATURE_* via LocalEngineSettings) — added when on"]
+        IEngines["engines/ — LoopProcessAdapter × 5 (paid tier)<br/>claudeloop · codexloop · cursorloop · agyloop · opencodeloop<br/>+ local tier, preferred first (ADR-0038): qwenloop · claudeloop-local<br/>(features.* / VIBEY_FEATURE_* via LocalEngineSettings) — added when on"]
         IDesignProviders["engines/ DESIGN + decompose providers<br/>QwenloopDesignProvider · QwenloopWorkPlanProducer (sovereign, the preference — ADR-0027;<br/>one OllamaChatClient calling the local Ollama chat API directly, not the qwenloop binary) ·<br/>ClaudeLoopDesignProvider · ClaudeLoop decompose ·<br/>Scripted Design / Decompose / Visual providers<br/>selected by vibey work / worker --provider scripted, claudeloop, qwenloop"]
         IEngineInternals["engines/ internals — argv.py · classify.py · tailer.py ·<br/>loop_events.py · plan_writer.py · design_json.py (shared decoders) · ollama_chat.py · descriptors.py"]
         IGit["git/worktree_manager.py · integration_branch.py · clean_env.py"]
@@ -173,7 +173,7 @@ flowchart TB
     IAzure -.->|"opt-in, mutates real resources<br/>only with --azure az"| PDeployExecute
 
     subgraph Monorepo["uv workspace monorepo — pyproject.toml [tool.uv.workspace] (ADR-0021, ADR-0022)"]
-        Runners["src/vibey_runners/<br/>claude: claudeloop 0.8.0 · codex: codexloop 0.4.0 ·<br/>cursor: cursorloop 0.7.0 · agy: agyloop 0.5.0 ·<br/>qwen: qwenloop 0.2.0 · common: vibey-runners-common 0.1.0<br/>(the *loop session runners; versioned in-tree, published only<br/>inside the vibey distribution — ADR-0037)"]
+        Runners["src/vibey_runners/<br/>claude: claudeloop 0.8.0 · codex: codexloop 0.4.0 ·<br/>cursor: cursorloop 0.7.0 · agy: agyloop 0.5.0 ·<br/>opencode: opencodeloop 0.1.0 · qwen: qwenloop 0.2.0 ·<br/>common: vibey-runners-common 0.1.0<br/>(the *loop session runners; versioned in-tree, published only<br/>inside the vibey distribution — ADR-0037)"]
         ToolGh["src/vibey_tools/gh — vibey-gh 1.73.0<br/>provenance · PR automation · merge train · promote ·<br/>release · realign · github-release · release surfaces ·<br/>book · paper · corpus-index · forge-snapshot (ADR-0028)"]
         ToolSkills["src/vibey_tools/skills — vibey-skills<br/>Agent Skills marketplace + context compiler CLI"]
         ToolBootstrap["src/vibey_tools/bootstrap — vibey-bootstrap 4.2.3<br/>Azure App Configuration · Key Vault · App Insights bootstrap library"]
@@ -186,7 +186,7 @@ flowchart TB
 
     subgraph Governance["Governance canon — src/vibey_tools/gh/docs/ (ADR-0020)"]
         Canon["doctrines.md (the sealed Twelve + sub-doctrines, e.g. 8.a sovereign-first) ·<br/>constitution.md · commandments.md · bill-of-rights.md ·<br/>sd-01-counterparties-trust-verification.md (carried verbatim in CLAUDE.md)"]
-        CorpusIdx["src/vibey_tools/gh/corpus-index.json<br/>32 chunks + corpus_sha256<br/>checked by vibey-gh corpus-index --check"]
+        CorpusIdx["src/vibey_tools/gh/corpus-index.json<br/>33 chunks + corpus_sha256<br/>checked by vibey-gh corpus-index --check"]
         Canon --> CorpusIdx
     end
     ToolGh --> CorpusIdx
@@ -222,7 +222,7 @@ flowchart TB
     CIWF -->|tools matrix| ToolGh
     CIWF -->|tools matrix| ToolSkills
     CIWF -->|tools matrix| ToolBootstrap
-    CIWF -->|"tools matrix: the five runner suites and every runner's static gates"| Runners
+    CIWF -->|"tools matrix: the six runner suites and every runner's static gates"| Runners
     CIWF -->|image + cluster-smoke| DockerImg
     Provenance -->|vibey-gh check --ci| ToolGh
     ReleaseSurfaces -->|"vibey-gh book · paper"| ToolGh

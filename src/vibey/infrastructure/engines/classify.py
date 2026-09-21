@@ -162,11 +162,26 @@ def _classify_qwenloop(raw: Mapping[str, object]) -> CapacityState:
     return Available()
 
 
+def _classify_opencode(raw: Mapping[str, object]) -> CapacityState:
+    """Read only explicit wrapper/provider capacity states; never infer them."""
+    state = raw.get("capacity_state")
+    if state == "credits_exhausted":
+        return CreditsExhausted(can_purchase=bool(raw.get("can_purchase", True)))
+    if state == "window_exhausted":
+        return WindowExhausted(
+            resets_at=_parse_dt(raw.get("resets_at")), rate_limit_type="provider"
+        )
+    if state in {"auth_failed", "backend_misconfigured"}:
+        return AuthenticationFailed(detail=str(raw.get("detail", "")))
+    return Available()
+
+
 _CLASSIFIERS = {
     EngineId.CLAUDELOOP: _classify_claudeloop,
     EngineId.CODEXLOOP: _classify_codexloop,
     EngineId.CURSORLOOP: _classify_cursorloop,
     EngineId.AGYLOOP: _classify_agyloop,
+    EngineId.OPENCODE: _classify_opencode,
     EngineId.QWENLOOP: _classify_qwenloop,
     EngineId.CLAUDELOOP_LOCAL: _classify_claudeloop,
 }
@@ -189,6 +204,7 @@ CREDITS_FIXTURES: dict[EngineId, dict[str, object]] = {
         "quota_metric": "billing.generate_content",
         "billing_exhausted": True,
     },
+    EngineId.OPENCODE: {"capacity_state": "credits_exhausted", "can_purchase": True},
     EngineId.QWENLOOP: {"local_state": "credits_exhausted"},
     # The class-name shape claudeloop really writes; claudeloop-local's runtime
     # never emits it, like qwenloop's, but the shared conformance check does.
@@ -212,6 +228,10 @@ WINDOW_FIXTURES: dict[EngineId, dict[str, object]] = {
         "quota_metric": "generate_content_free_tier_requests",
         "retry_after": "30s",
     },
+    EngineId.OPENCODE: {
+        "capacity_state": "window_exhausted",
+        "resets_at": "2026-01-01T00:05:00+00:00",
+    },
     EngineId.QWENLOOP: {"local_state": "busy", "retry_at": "2026-01-01T00:05:00+00:00"},
     # A local server answering 503 (busy loading a model): claudeloop waits on it.
     EngineId.CLAUDELOOP_LOCAL: {
@@ -228,6 +248,7 @@ AUTH_FIXTURES: dict[EngineId, dict[str, object]] = {
     EngineId.CODEXLOOP: {"error": {"code": "invalid_api_key", "message": "bad key"}},
     EngineId.CURSORLOOP: {"status": 401, "type": "unauthorized", "message": "bad token"},
     EngineId.AGYLOOP: {"grpc_status": "UNAUTHENTICATED", "detail": "adc not found"},
+    EngineId.OPENCODE: {"capacity_state": "auth_failed", "detail": "provider unavailable"},
     EngineId.QWENLOOP: {"local_state": "configuration_error", "detail": "model missing"},
     EngineId.CLAUDELOOP_LOCAL: {"capacity": "BackendMisconfigured"},
 }
@@ -237,6 +258,7 @@ AVAILABLE_FIXTURES: dict[EngineId, dict[str, object]] = {
     EngineId.CODEXLOOP: {},
     EngineId.CURSORLOOP: {"status": 200},
     EngineId.AGYLOOP: {"grpc_status": "OK"},
+    EngineId.OPENCODE: {},
     EngineId.QWENLOOP: {"local_state": "available"},
     EngineId.CLAUDELOOP_LOCAL: {"capacity": "Available"},
 }

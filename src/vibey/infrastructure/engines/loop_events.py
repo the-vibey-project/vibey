@@ -190,6 +190,15 @@ LOOP_EVENT_MAP: dict[EngineId, dict[str, EventKind]] = {
         "capacity.forecast": EventKind.BUDGET_SPENT,
         "finished": EventKind.VERDICT_RENDERED,
     },
+    EngineId.OPENCODE: {
+        "run.started": EventKind.SESSION_SEEDED,
+        "turn.starting": EventKind.TURN_REQUESTED,
+        "text_delta": EventKind.TRANSCRIPT_RECORDED,
+        "tool_result": EventKind.TOOL_INVOKED,
+        "turn.completed": EventKind.TURN_COMPLETED,
+        "finished": EventKind.VERDICT_RENDERED,
+        "failed": EventKind.VERDICT_RENDERED,
+    },
     EngineId.QWENLOOP: {
         "run.started": EventKind.SESSION_SEEDED,
         # text_delta is one streamed fragment of the model's answer -- many

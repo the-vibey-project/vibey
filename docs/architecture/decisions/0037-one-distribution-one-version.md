@@ -70,7 +70,7 @@ Both halves of that objection are answered below rather than dodged.
 ## Decision
 
 **The repository publishes one distribution, `vibey`, and it carries the whole
-family.** `pip install vibey` delivers the conductor, all five `*loop` engines,
+family.** `pip install vibey` delivers the conductor, all six `*loop` engines,
 `vibey-gh`, `vibey-skills`, `vibey-bootstrap` and `vibey-runners-common`, with
 every console script on `PATH`. Concretely:
 
