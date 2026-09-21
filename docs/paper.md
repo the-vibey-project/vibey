@@ -33,7 +33,9 @@ documentation is published as a book:
 [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) and
 [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html). Every
 empirical figure in the section on production rate is recomputed from tracked sources
-by `scripts/paper_evidence.py`.
+by `scripts/paper_evidence.py`. The conceptual visual atlas is authored as
+deterministic TikZ in this source, so the PDF, its labels and its operational diagrams
+are reviewable and reproducible rather than screenshots detached from the model.
 
 ## Introduction
 
@@ -119,6 +121,43 @@ failure parks the item on a *human* gate; a fourth, *forced* mode is reserved fo
 explicit operator override. A handoff that fails the gate is therefore a retry, an
 escalation, or a human decision, never a silent partial.
 
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[vibeybox,minimum width=2.2cm] (intent) at (-5.1,0.8)
+    {specification\\or finding};
+  \node[vibeycore,minimum width=2.2cm] (ledger) at (-2.25,0.8)
+    {append-only\\ledger};
+  \node[vibeysoft,minimum width=2.2cm] (queue) at (0.6,0.8)
+    {queue + lease\\SKIP LOCKED};
+  \node[vibeysoft,minimum width=2.2cm] (engine) at (3.45,0.8)
+    {engine\\turns};
+  \node[vibeybox,minimum width=2.2cm] (brief) at (-0.8,-1.15)
+    {handoff brief\\digest + open sets};
+  \node[vibeywarn,minimum width=2.2cm] (gate) at (2.05,-1.15)
+    {no-loss gate\\R1--R10};
+  \node[vibeycore,minimum width=2.2cm] (successor) at (4.85,-1.15)
+    {successor\\or human gate};
+  \draw[vibeyarrow] (intent) -- (ledger);
+  \draw[vibeyarrow] (ledger) -- (queue);
+  \draw[vibeyarrow] (queue) -- (engine);
+  \draw[vibeyarrow] (engine.south) -- (brief.north);
+  \draw[vibeyarrow] (brief) -- (gate);
+  \draw[vibeyarrow] (gate) -- (successor);
+  \draw[vibeydashed,-{Latex[length=2mm]}] (gate.north) -- ++(0,0.9) -| (ledger.south);
+  \node[font=\tiny,align=center,text=vibeygray] at (-3.65,-0.05)
+    {record before\\effect};
+  \node[font=\tiny,align=center,text=vibeyred] at (3.45,-2.0)
+    {failure = retry, escalation, or park\\never silent loss};
+\end{tikzpicture}
+\caption{The append-before-act path. Durable intent enters the ledger before the
+queue, engine, handoff or delivery effect; the no-loss gate checks completeness and
+the digest before a successor may act.}
+\label{fig:ledger-handoff}
+\end{figure*}
+```
+
 ## Queue semantics
 
 Work items form a relation $Q$ in PostgreSQL. Workers claim with
@@ -180,6 +219,41 @@ same terms, exiting only when the visual plan is accepted or explicitly waived. 
 deployment triple $\langle D_d, D_e, D_r \rangle$ is entered only on an explicit
 opt-in recorded in the ledger; declining records a successful local completion.
 
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[vibeybox,minimum width=1.65cm] (design) at (-5.2,0) {DESIGN\\human gate};
+  \node[vibeybox,minimum width=1.65cm] (visual) at (-3.1,0) {VISUAL\\DESIGN\\optional};
+  \node[vibeysoft,minimum width=1.65cm] (build) at (-0.9,0) {BUILD\\unattended};
+  \node[vibeybox,minimum width=1.65cm] (review) at (1.3,0) {REVIEW\\human gate};
+  \node[vibeybox,minimum width=1.65cm] (deployd) at (3.45,0) {DEPLOY\\DESIGN};
+  \node[vibeysoft,minimum width=1.65cm] (deployx) at (5.6,0) {DEPLOY\\EXECUTE};
+  \node[vibeycore,minimum width=1.65cm] (done) at (3.45,-1.45) {DEPLOY\\REVIEW / DONE};
+  \draw[vibeyarrow] (design) -- (visual);
+  \draw[vibeyarrow] (visual) -- (build);
+  \draw[vibeyarrow] (build) -- (review);
+  \draw[vibeyarrow] (review) -- (deployd);
+  \draw[vibeyarrow] (deployd) -- (deployx);
+  \draw[vibeyarrow] (deployx) -- (done);
+  \draw[vibeyarrow] (review.south) -- ++(0,-0.65) -| (done.west);
+  \node[font=\tiny,align=center,text=vibeygray] at (-4.15,-1.15)
+    {acceptance\\criteria};
+  \node[font=\tiny,align=center,text=vibeygray] at (0.2,-1.15)
+    {leases +\\ledger};
+  \node[font=\tiny,align=center,text=vibeygray] at (2.25,0.85)
+    {consent\\required};
+  \node[vibeywarn,minimum width=2.2cm] at (-0.9,-1.45)
+    {open findings\\loop back};
+  \draw[vibeydashed,-{Latex[length=2mm]}] (review.south) -- (build.south);
+\end{tikzpicture}
+\caption{The six-phase delivery machine. DESIGN, REVIEW, DEPLOY-DESIGN and
+DEPLOY-REVIEW are human-gated; BUILD and DEPLOY-EXECUTE remain unattended, and
+open findings route back rather than disappearing into a transcript.}
+\label{fig:six-phase-machine}
+\end{figure*}
+```
+
 ## Convergence-Driven Development
 
 Specification-Driven Development (SDD) states intent, constraints and acceptance
@@ -226,6 +300,70 @@ scopes; missing parent context is `unknown`, never invented. “Lower energy” 
 the operational metaphor for a lower unresolved-work distance at every scope,
 not a physical claim or a substitute for evidence.
 
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \draw[draw=vibeyblue!70,thick] (0,0) ellipse (6.15 and 2.65);
+  \draw[draw=vibeyteal!75,thick] (0,0) ellipse (5.05 and 2.15);
+  \draw[draw=vibeygreen!80,thick] (0,0) ellipse (3.85 and 1.62);
+  \draw[draw=vibeygold!85,thick] (0,0) ellipse (2.65 and 1.08);
+  \node[font=\scriptsize\bfseries,text=vibeyblue] at (-4.35,2.15) {project vision};
+  \node[font=\scriptsize\bfseries,text=vibeyteal] at (3.35,1.78) {phase / milestone};
+  \node[font=\scriptsize\bfseries,text=vibeygreen] at (-2.65,1.30) {feature set / epic};
+  \node[font=\scriptsize\bfseries,text=vibeygold] at (2.05,0.78) {feature / unit / story};
+  \filldraw[draw=vibeyink,fill=vibeyink] (0,0) circle (0.86);
+  \node[align=center,text=white,font=\scriptsize\bfseries] at (0,0)
+    {CORE\\software};
+  \draw[vibeyarrow] (3.4,-2.05) arc[start angle=-32,end angle=32,x radius=3.4,y radius=2.05];
+  \node[align=center,font=\scriptsize,text=vibeyink] at (4.8,-1.15)
+    {CDD pulls every\\scope toward\\lower unresolved work};
+\end{tikzpicture}
+\caption{Convergence-Driven Development as nested digital orbitals. The nucleus is
+the confirmed working core; the four orbitals are active scopes whose direction is
+measured independently and whose energy is the unresolved-work distance.}
+\label{fig:cdd-orbits}
+\end{figure*}
+```
+
+The orbit metaphor is a control surface, not decoration: each scope can move in a
+different direction, and an apparently healthy inner orbit cannot conceal a
+diverging outer one. The smallest useful report therefore names the current
+distance, evidence and next reconvergence move at every level.
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[vibeybox,minimum width=2.25cm] (ground) at (-4.8,0.65)
+    {ground in\\actual repository};
+  \node[vibeybox,minimum width=2.25cm] (map) at (-1.6,0.65)
+    {map criteria\\to code and tests};
+  \node[vibeybox,minimum width=2.25cm] (build) at (1.6,0.65)
+    {implement\\smallest slice};
+  \node[vibeybox,minimum width=2.25cm] (check) at (4.8,0.65)
+    {run gates,\\inspect diff};
+  \draw[vibeyarrow] (ground) -- (map);
+  \draw[vibeyarrow] (map) -- (build);
+  \draw[vibeyarrow] (build) -- (check);
+  \draw[vibeyarrow] (check.south) -- ++(0,-0.55) -| (ground.south);
+  \node[vibeycore,minimum width=2.25cm] (deliver) at (1.6,-1.35)
+    {commit, review,\\publish evidence};
+  \draw[vibeyarrow] (check.south) -- (deliver.north);
+  \node[vibeywarn,minimum width=2.8cm] (diverge) at (-2.0,-1.35)
+    {DIVERGENCE?\\bound it or scrap it};
+  \draw[vibeydashed,-{Latex[length=2mm]}] (check.south) -- (diverge.north);
+  \draw[vibeyarrow] (diverge.west) |- (map.south);
+  \node[font=\tiny\bfseries,text=vibeyred,align=center] at (4.55,-1.35)
+    {evidence\\beats activity};
+\end{tikzpicture}
+\caption{The CDD control loop. Discovery is allowed to be temporarily neutral or
+slightly divergent only when its bound and reconvergence step are explicit; an
+unbounded divergence is discarded and the work returns to the last sound state.}
+\label{fig:cdd-loop}
+\end{figure*}
+```
+
 The atom is the paper's compact model for these layers. The **nucleus** is the
 core software confirmed to work at high quality and to do what it is supposed
 to do. The four CDD scopes are its **electron orbitals**: living layers of work
@@ -236,6 +374,31 @@ project is complete and needs no further change, or it is dead and no longer
 maintained over the long term. A maintained project with outstanding scope or
 evidence remains an atom with active orbitals and must continue the loop.
 
+```latex
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \draw[draw=vibeyblue!70,thick] (0,0) ellipse (2.25 and 1.55);
+  \draw[draw=vibeyteal!75,thick] (0,0) ellipse (1.65 and 1.12);
+  \draw[draw=vibeygreen!80,thick] (0,0) ellipse (1.05 and 0.72);
+  \filldraw[draw=vibeyink,fill=vibeyink] (0,0) circle (0.52);
+  \node[align=center,text=white,font=\tiny\bfseries] at (0,0) {core\\software};
+  \node[font=\tiny,text=vibeyblue,align=center] at (0,1.37) {vision\\orbital};
+  \node[font=\tiny,text=vibeyteal,align=center] at (1.58,0.85) {milestone\\orbital};
+  \node[font=\tiny,text=vibeygreen,align=center] at (-1.45,-0.78) {epic /\\story orbital};
+  \node[vibeybox,anchor=west,minimum width=2.0cm] at (2.35,0.72)
+    {digital labels:};
+  \node[align=left,font=\tiny,anchor=north west] at (2.48,0.36)
+    {confirmed core\\open criteria\\tests and gates\\delivery evidence};
+  \draw[vibeyarrow] (2.2,0.15) -- (0.50,0.12);
+\end{tikzpicture}
+\caption{A project atom in the digital realm. The nucleus is the high-quality,
+confirmed core; active orbitals are the maintained scopes still seeking evidence,
+integration and delivery.}
+\label{fig:digital-atom}
+\end{figure}
+```
+
 Multiple projects can combine their atoms into a software chemical structure:
 a product, platform or portfolio. As in a chemical, the structure has unique
 properties emerging from interactions among its project atoms—not just the sum
@@ -244,6 +407,35 @@ boundaries, release timing and operational contracts can lower or raise the
 molecule's unresolved-work energy. CDD therefore tests molecule-level
 convergence as well as each atom; an interaction that creates divergence needs
 a bounded reconvergence path or the composition is abandoned.
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \draw[vibeydashed] (-5.7,-2.05) rectangle (5.7,2.05);
+  \node[font=\scriptsize\bfseries,text=vibeyink] at (-4.6,1.72) {software molecule};
+  \node[vibeysoft,circle,minimum size=1.25cm] (a) at (-3.55,0.35) {project\\A};
+  \node[vibeysoft,circle,minimum size=1.25cm] (b) at (0,0.95) {project\\B};
+  \node[vibeysoft,circle,minimum size=1.25cm] (c) at (3.55,0.35) {project\\C};
+  \draw[vibeyarrow] (a) -- (b) node[midway,above,sloped,font=\tiny] {API contract};
+  \draw[vibeyarrow] (b) -- (c) node[midway,above,sloped,font=\tiny] {release timing};
+  \draw[vibeyarrow] (a) -- (c) node[midway,below,sloped,font=\tiny] {security boundary};
+  \node[vibeycore,minimum width=3.7cm] (emerge) at (0,-1.15)
+    {emergent properties\\not present in one atom};
+  \draw[vibeyarrow] (a.south) -- (emerge.west);
+  \draw[vibeyarrow] (b.south) -- (emerge.north);
+  \draw[vibeyarrow] (c.south) -- (emerge.east);
+  \node[vibeywarn,minimum width=2.5cm] at (-3.5,-1.28)
+    {data ownership\\can diverge};
+  \node[vibeybox,minimum width=2.6cm] at (3.55,-1.28)
+    {composition check\\must reconverge};
+\end{tikzpicture}
+\caption{A software molecule is a connected composition of project atoms. Bonds
+represent interaction contracts; the molecule has properties such as composability,
+security and release coherence that are not the sum of the atoms.}
+\label{fig:software-molecule}
+\end{figure*}
+```
 
 When enough software chemicals interact in the right ways, they form a
 higher-order biological structure: a software organism. “Enough” is
@@ -278,8 +470,43 @@ and deliver. Local convergence that raises organism-level divergence is not
 completion. The hierarchy is:
 
 ```text
-feature / unit / story → project atom → product molecule →
-software organism (a suite of suites) → digital ecology such as the Web.
+feature / unit / story → project atom
+→ product molecule → software organism
+→ digital ecology such as the Web.
+```
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[vibeybox,minimum width=2.25cm] (story) at (-5.2,0)
+    {feature / unit / story\\one acceptance slice};
+  \node[vibeysoft,minimum width=2.25cm] (atom) at (-2.6,0)
+    {project atom\\nucleus + orbitals};
+  \node[vibeysoft,minimum width=2.25cm] (molecule) at (0,0)
+    {product molecule\\interacting atoms};
+  \node[vibeysoft,minimum width=2.25cm] (organism) at (2.6,0)
+    {software organism\\suite of suites};
+  \node[vibeycore,minimum width=2.25cm] (ecology) at (5.2,0)
+    {digital ecology\\Web-scale field};
+  \draw[vibeyarrow] (story) -- (atom);
+  \draw[vibeyarrow] (atom) -- (molecule);
+  \draw[vibeyarrow] (molecule) -- (organism);
+  \draw[vibeyarrow] (organism) -- (ecology);
+  \node[font=\tiny,align=center,text=vibeygray] at (-3.9,-0.92)
+    {code + test +\\delivery evidence};
+  \node[font=\tiny,align=center,text=vibeygray] at (-1.3,-0.92)
+    {contracts +\\shared state};
+  \node[font=\tiny,align=center,text=vibeygray] at (1.3,-0.92)
+    {feedback +\\repair + memory};
+  \node[font=\tiny,align=center,text=vibeygray] at (3.9,-0.92)
+    {protocols +\\participants};
+\end{tikzpicture}
+\caption{The proposed digital hierarchy. Each level preserves the lower level but
+adds interaction contracts and a new convergence question; a local success cannot
+prove convergence of its containing structure.}
+\label{fig:digital-hierarchy}
+\end{figure*}
 ```
 
 The World Wide Web is the largest familiar example. More precisely, it is a
@@ -296,6 +523,34 @@ reproduces capabilities through links and packages, and reorganizes through
 its participants. It is not sentient, and no one repository can prove its
 health; organism-level evidence must be assembled from the interaction
 contracts and operating signals of the structures within it.
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[vibeycore,minimum width=2.7cm] (web) at (0,0)
+    {WORLD WIDE WEB\\digital ecology};
+  \node[vibeysoft,minimum width=1.65cm] (browser) at (-4.0,1.55) {browsers};
+  \node[vibeysoft,minimum width=1.65cm] (dns) at (-1.55,2.05) {DNS};
+  \node[vibeysoft,minimum width=1.65cm] (tls) at (1.55,2.05) {TLS +\\certificates};
+  \node[vibeysoft,minimum width=1.65cm] (server) at (4.0,1.55) {servers};
+  \node[vibeysoft,minimum width=1.65cm] (cdn) at (-4.0,-1.55) {CDNs};
+  \node[vibeysoft,minimum width=1.65cm] (search) at (-1.55,-2.05) {search};
+  \node[vibeysoft,minimum width=1.65cm] (app) at (1.55,-2.05) {applications};
+  \node[vibeysoft,minimum width=1.65cm] (people) at (4.0,-1.55) {people +\\operators};
+  \foreach \n in {browser,dns,tls,server,cdn,search,app,people}
+    {\draw[vibeyarrow] (\n) -- (web);}
+  \draw[vibeydashed,<->] (browser) -- (server) node[midway,above,font=\tiny] {HTTP};
+  \draw[vibeydashed,<->] (people) -- (app) node[midway,below,font=\tiny] {signals};
+  \node[font=\tiny,align=center,text=vibeygray] at (0,-0.58)
+    {shared protocols\\memory, metabolism, repair, adaptation};
+\end{tikzpicture}
+\caption{The Web as a digital ecology. Its organism properties are distributed
+across projects, protocols, operators and users; the arrows are interaction contracts
+through which the ecology senses, exchanges resources, repairs and changes.}
+\label{fig:web-ecology}
+\end{figure*}
+```
 
 CDD follows these levels upward. It verifies the item, the atom's orbitals, the
 molecule's interactions and, when applicable, the organism's ability to remain
@@ -330,6 +585,39 @@ and refuses to advance past an unresolved item. The cutoff-bounded pilot below
 is an illustration of why those guardrails matter: partial verdicts, a failed
 forty-turn run, a live process and generated Go artifacts were all observable,
 but none was evidence of a finished Python feature.
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[vibeybox,minimum width=2.0cm] (context) at (-5.1,0.7)
+    {derive\\tracked context};
+  \node[vibeybox,minimum width=2.0cm] (edit) at (-2.55,0.7)
+    {edit actual\\Python repo};
+  \node[vibeybox,minimum width=2.0cm] (tests) at (0,0.7)
+    {run tests\\and gates};
+  \node[vibeybox,minimum width=2.0cm] (diff) at (2.55,0.7)
+    {inspect diff\\and artifacts};
+  \node[vibeycore,minimum width=2.0cm] (deliver) at (5.1,0.7)
+    {commit + PR\\delivery evidence};
+  \draw[vibeyarrow] (context) -- (edit);
+  \draw[vibeyarrow] (edit) -- (tests);
+  \draw[vibeyarrow] (tests) -- (diff);
+  \draw[vibeyarrow] (diff) -- (deliver);
+  \node[vibeywarn,minimum width=2.5cm] (backlog) at (0,-1.25)
+    {failed / unfinished\\return to backlog};
+  \draw[vibeydashed,-{Latex[length=2mm]}] (tests.south) -- (backlog.north);
+  \draw[vibeydashed,-{Latex[length=2mm]}] (diff.south) -- (backlog.north);
+  \draw[vibeyarrow] (backlog.west) |- (context.south);
+  \node[font=\tiny,align=center,text=vibeygray] at (2.55,-1.25)
+    {marker alone is not\\completion evidence};
+\end{tikzpicture}
+\caption{Per-item convergence in a Qwen storm. Each item independently traverses
+repository grounding, implementation, tests, diff inspection and delivery; a partial
+verdict or generated artifact routes back instead of advancing the backlog.}
+\label{fig:qwen-cdd}
+\end{figure*}
+```
 
 ## The engine family
 
@@ -459,6 +747,36 @@ capacity rejection, which excludes the rejecting engine, a graceful wind-down, a
 effort escalation, an engine crash, or a phase transition) and never inside a turn, so
 every handoff has a well-defined ledger range $\rho$.
 
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[vibeycore,minimum width=2.5cm] (selector) at (0,0)
+    {EngineSelector\\SWRR policy};
+  \node[vibeysoft,minimum width=1.65cm] (qwen) at (-4.5,1.55) {qwenloop\\LOCAL};
+  \node[vibeysoft,minimum width=1.65cm] (claude) at (-1.5,2.05) {claudeloop\\PAID};
+  \node[vibeysoft,minimum width=1.65cm] (codex) at (1.5,2.05) {codexloop\\PAID};
+  \node[vibeysoft,minimum width=1.65cm] (cursor) at (4.5,1.55) {cursorloop\\PAID};
+  \node[vibeysoft,minimum width=1.65cm] (agy) at (4.5,-1.55) {agyloop\\PAID};
+  \node[vibeybox,minimum width=1.65cm] (work) at (0,-2.0) {work item\\boundary};
+  \foreach \n in {qwen,claude,codex,cursor,agy}
+    {\draw[vibeyarrow] (\n) -- (selector);}
+  \draw[vibeyarrow] (selector) -- (work);
+  \draw[vibeydashed,-{Latex[length=2mm]}] (work.east) -- (agy.west);
+  \node[font=\tiny,align=center,text=vibeygray] at (2.65,-2.45)
+    {capacity rejection\\handoff at boundary};
+  \node[font=\tiny,align=center,text=vibeygray] at (-2.7,-1.05)
+    {weights combine\\health, fidelity, cost, affinity};
+  \node[font=\tiny,align=center,text=vibeyred] at (2.7,-1.05)
+    {rotation only\\at a safe boundary};
+\end{tikzpicture}
+\caption{Engine selection and handoff. Local Qwen is preferred when eligible;
+smooth weighted round robin distributes boundary-level work, while capacity failure
+routes the same ledger-backed item to another engine without rotating mid-turn.}
+\label{fig:engine-pool}
+\end{figure*}
+```
+
 ## Exact-head evaluation and the release calculus
 
 The orchestrator's output is a pull request, and what happens to it is governed by
@@ -499,6 +817,36 @@ leaves $(a, k)$ unchanged, so the lexicographic measure
 $\mu = (k_{\max} - k,\; A - a)$ strictly decreases across every non-terminal loop,
 and $\mathsf{ready}$ and $\mathsf{blocked}$ absorb.
 \end{proof}
+```
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[vibeybox,minimum width=1.55cm] (h0) at (-4.2,0.6) {$h_0$\\reviewed};
+  \node[vibeybox,minimum width=1.55cm] (h1) at (-1.4,0.6) {$h_1$\\repair};
+  \node[vibeybox,minimum width=1.55cm] (h2) at (1.4,0.6) {$h_2$\\repair};
+  \node[vibeycore,minimum width=1.55cm] (h3) at (4.2,0.6) {$h_3$\\current head};
+  \draw[vibeyarrow] (h0) -- (h1) node[midway,above,font=\tiny] {push};
+  \draw[vibeyarrow] (h1) -- (h2) node[midway,above,font=\tiny] {push};
+  \draw[vibeyarrow] (h2) -- (h3) node[midway,above,font=\tiny] {push};
+  \node[vibeysoft,minimum width=2.1cm] (claimold) at (-0.2,-1.2)
+    {claim\\
+    $(c,h_2)$};
+  \node[vibeywarn,minimum width=2.1cm] (decision) at (3.5,-1.2)
+    {decision on $h_3$\\must re-review};
+  \draw[vibeydashed,-{Latex[length=2mm]}] (claimold) -- (decision);
+  \node[font=\tiny,align=center,text=vibeygray] at (1.65,-1.88)
+    {stale claim rejected};
+  \node[font=\scriptsize\bfseries,text=vibeyred] at (-3.1,-1.2)
+    {exact-head boundary};
+  \draw[vibeyarrow] (h3.south) -- (decision.north);
+\end{tikzpicture}
+\caption{Exact-head evaluation treats every claim as $(c,h_i)$ rather than as a
+property of a pull request in the abstract. A repair advances the head and invalidates
+the old claim; the current head must be reviewed again before merge or release.}
+\label{fig:exact-head}
+\end{figure*}
 ```
 
 **A production violation.** With the budget guard evaluated *before* the freshness
@@ -583,6 +931,32 @@ The ledger, the outbox and the audit chain are one principle at three scales: th
 record of intent exists before its effect, and every later state is derived from the
 record.
 
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[vibeycore,minimum width=2.2cm] (record) at (-4.9,0) {record intent\\first};
+  \node[vibeysoft,minimum width=2.2cm] (ledger) at (-1.65,1.05) {delivery ledger\\state projection};
+  \node[vibeysoft,minimum width=2.2cm] (outbox) at (-1.65,-1.05) {transactional outbox\\at-least-once};
+  \node[vibeysoft,minimum width=2.2cm] (audit) at (1.65,1.05) {audit hash chain\\tamper evidence};
+  \node[vibeysoft,minimum width=2.2cm] (bootstrap) at (1.65,-1.05) {bootstrap\\fail-closed};
+  \node[vibeybox,minimum width=2.2cm] (effect) at (4.9,0) {effect\\derived state};
+  \draw[vibeyarrow] (record) -- (ledger);
+  \draw[vibeyarrow] (record) -- (outbox);
+  \draw[vibeyarrow] (ledger) -- (audit);
+  \draw[vibeyarrow] (outbox) -- (bootstrap);
+  \draw[vibeyarrow] (audit) -- (effect);
+  \draw[vibeyarrow] (bootstrap) -- (effect);
+  \node[font=\scriptsize\bfseries,text=vibeyred] at (0,-2.05)
+    {append before act; missing evidence stops the effect};
+\end{tikzpicture}
+\caption{Append-before-act at three implementation scales. The delivery ledger,
+transactional outbox, audit chain and bootstrap layer all make intent durable before
+an external or derived effect is allowed to proceed.}
+\label{fig:record-effect}
+\end{figure*}
+```
+
 ## Production rate and governance
 
 The components above make engines substitutable and human decisions explicit. This
@@ -605,6 +979,60 @@ on one machine with 24 GB of memory and 10 cores, for $N$ from 1 to 128, with a 
 deadline per generation. Each generation was a real unit of work, an issue triaged or
 a pull-request diff reviewed, drawn from a pool of seven artifacts of 2 to 22 KB.
 Throughput is successful generations per minute of rung wall clock.
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=0.47cm,y=0.85cm]
+  \begin{scope}
+    \draw[vibeyarrow] (0,0) -- (13.4,0);
+    \draw[vibeyarrow] (0,0) -- (0,4.1);
+    \draw[vibeydashed] (0,0.99) -- (13.2,0.99);
+    \draw[vibeydashed] (0,2.00) -- (13.2,2.00);
+    \draw[vibeyblue,very thick] plot coordinates
+      {(0,0.36) (1,0.99) (2,0.99) (3,1.17) (4,1.72) (5,1.27)
+       (6,1.54) (7,1.37) (8,1.40) (9,2.00) (10,1.60) (11,2.66)
+       (12,3.52) (13,1.53)};
+    \foreach \x/\n in {0/1,1/2,2/3,3/4,4/6,5/8,6/12,7/16,8/24,9/32,10/48,11/64,12/96,13/128}
+      {\filldraw[fill=vibeyblue,draw=white] (\x,0) circle (0.08);
+       \node[font=\tiny,rotate=60,anchor=north] at (\x,-0.08) {\n};}
+    \node[font=\scriptsize\bfseries,anchor=south west] at (0,4.05)
+      {successful throughput (generations / min)};
+    \node[font=\tiny,anchor=west] at (13.0,0.99) {stable floor};
+    \node[font=\tiny,anchor=west] at (13.0,2.00) {stable ceiling};
+  \end{scope}
+  \begin{scope}[xshift=7.7cm]
+    \draw[vibeyarrow] (0,0) -- (13.4,0);
+    \draw[vibeyarrow] (0,0) -- (0,1.15);
+    \fill[vibeygreen] (0,0) rectangle (0.55,1.00);
+    \fill[vibeygreen] (1,0) rectangle (1.55,1.00);
+    \fill[vibeygreen] (2,0) rectangle (2.55,1.00);
+    \fill[vibeygreen] (3,0) rectangle (3.55,1.00);
+    \fill[vibeygreen] (4,0) rectangle (4.55,1.00);
+    \fill[vibeygreen] (5,0) rectangle (5.55,1.00);
+    \fill[vibeygreen] (6,0) rectangle (6.55,1.00);
+    \fill[vibeygreen] (7,0) rectangle (7.55,1.00);
+    \fill[vibeygold] (8,0) rectangle (8.55,0.875);
+    \fill[vibeygold] (9,0) rectangle (9.55,0.938);
+    \fill[vibeyred] (10,0) rectangle (10.55,0.500);
+    \fill[vibeyred] (11,0) rectangle (11.55,0.625);
+    \fill[vibeyred] (12,0) rectangle (12.55,0.552);
+    \fill[vibeyred] (13,0) rectangle (13.55,0.180);
+    \foreach \x/\n in {0/1,1/2,2/3,3/4,4/6,5/8,6/12,7/16,8/24,9/32,10/48,11/64,12/96,13/128}
+      {\node[font=\tiny,rotate=60,anchor=north] at (\x,-0.08) {\n};}
+    \node[font=\scriptsize\bfseries,anchor=south west] at (0,1.1)
+      {success fraction by offered concurrency};
+    \node[font=\tiny,align=left,anchor=north west] at (0,-0.72)
+      {green = 100\%\\gold = 87.5--93.8\%\\red = overloaded};
+  \end{scope}
+\end{tikzpicture}
+\caption{The sovereignty stress record in two views. Throughput rises into a broad
+stable band from offered concurrency $N=2$ through $N=32$, while the success fraction
+collapses beyond the substrate's sustainable region. The points and bars reproduce the
+paper's rung table; the second panel makes the throughput/success trade-off visible.}
+\label{fig:stress-rate}
+\end{figure*}
+```
 
 | $N$ | Succeeded | p50 (s) | Per minute |
 |---:|---:|---:|---:|
@@ -663,6 +1091,39 @@ tokens, while the local server reported 40,960 at the cutoff. The paper therefor
 no claim about a controlled context-window effect from this pilot. The raw logs remain
 local operational artifacts; the compact tracked extraction is the reproducible source
 used by `scripts/paper_evidence.py`.
+
+```latex
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[x=0.55cm,y=1cm]
+  \node[font=\scriptsize\bfseries,anchor=west,text=vibeyink] at (0,1.55)
+    {13 run directories at the evidence cutoff};
+  \draw[draw=vibeyink,line width=.65pt,rounded corners=2pt]
+    (0,0) rectangle (13,0.72);
+  \fill[vibeygreen] (0,0) rectangle (4,0.72);
+  \fill[vibeygold] (4,0) rectangle (6,0.72);
+  \fill[vibeyred] (6,0) rectangle (8,0.72);
+  \fill[vibeygray] (8,0) rectangle (9,0.72);
+  \fill[vibeygray!35] (9,0) rectangle (13,0.72);
+  \foreach \x in {4,6,8,9}
+    {\draw[white,line width=.65pt] (\x,0) -- (\x,0.72);}
+  \node[font=\tiny,text=white,align=center] at (2,0.36) {4\\complete};
+  \node[font=\tiny,text=white,align=center] at (5,0.36) {2\\verdict only};
+  \node[font=\tiny,text=white,align=center] at (7,0.36) {2\\no verdict};
+  \node[font=\tiny,text=white,align=center] at (8.5,0.36) {1\\tool error};
+  \node[font=\tiny,text=vibeyink,align=center] at (11,0.36) {4\\no events};
+  \node[vibeywarn,minimum width=2.3cm,anchor=west] at (8.4,2.25)
+    {+1 active\\storm process};
+  \draw[vibeydashed,-{Latex[length=2mm]}] (8.9,2.05) -- (8.9,0.8);
+  \node[font=\tiny,align=left,anchor=north west] at (0,-0.38)
+    {verdicts: 6\\completion markers: 4\\accepted rate: 4/13};
+\end{tikzpicture}
+\caption{Cutoff-bounded Qwen storm dispositions. A verdict-only run remains
+incomplete, and an active process is independent of the resolved or empty
+directories; counting all visible artifacts as completed would overstate delivery.}
+\label{fig:qwen-disposition}
+\end{figure}
+```
 
 ### The measured regularity
 
@@ -771,6 +1232,30 @@ $-\nabla_d T$ ranks which shortfall to repair first. The postulate is falsified 
 exhibiting a real dilemma that does not decompose into these coordinates and their
 couplings; it is a postulate, not a law.
 
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[vibeycore,minimum width=2.25cm] (operation) at (0,0)
+    {operation\\feasible?};
+  \node[vibeysoft,minimum width=1.55cm] (network) at (0,2.2) {NETWORK\\reachable};
+  \node[vibeysoft,minimum width=1.55cm] (hardware) at (2.65,1.15) {HARDWARE\\capacity};
+  \node[vibeysoft,minimum width=1.55cm] (software) at (2.65,-1.15) {SOFTWARE\\installed};
+  \node[vibeysoft,minimum width=1.55cm] (agent) at (0,-2.2) {AGENT\\present};
+  \node[vibeysoft,minimum width=1.55cm] (information) at (-2.65,-1.15) {INFORMATION\\fresh};
+  \node[vibeysoft,minimum width=1.55cm] (agency) at (-2.65,1.15) {AGENCY\\permitted};
+  \foreach \n in {network,hardware,software,agent,information,agency}
+    {\draw[vibeyarrow] (\n) -- (operation);}
+  \node[font=\tiny,align=center,text=vibeyred] at (0,-3.05)
+    {couplings between materials are where coordination shortfalls appear};
+\end{tikzpicture}
+\caption{The six-material feasibility model. Network, hardware, software, agent,
+information and agency each contribute availability, stability and reliability;
+coordination is a coupling among them rather than a seventh material.}
+\label{fig:six-materials}
+\end{figure*}
+```
+
 The regularity holds its substrate fixed. Relaxing each modulator moves the band, and
 each maps to a coordinate of $d$:
 
@@ -796,6 +1281,37 @@ would give 278. The interval is wide because the band is, and replication would 
 it. Because the held-out check exceeded the ceiling, the firm half of the prediction
 is the upper end: with every coordinate at its target, the work should take no longer
 than $W / r_{\min}$.
+
+```latex
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[x=0.05cm,y=1cm]
+  \draw[vibeyarrow] (0,0) -- (310,0);
+  \draw[vibeyarrow] (0,0) -- (0,1.8);
+  \draw[vibeyblue,very thick] (50,0.65) -- (101,0.65);
+  \filldraw[fill=vibeyblue,draw=vibeyblue] (50,0.65) circle (0.07);
+  \filldraw[fill=vibeyblue,draw=vibeyblue] (101,0.65) circle (0.07);
+  \node[font=\scriptsize,anchor=south] at (75.5,0.78)
+    {stable-band prediction for $W=100$};
+  \node[font=\tiny,anchor=north] at (50,0.45) {50 min};
+  \node[font=\tiny,anchor=north] at (101,0.45) {101 min};
+  \draw[vibeyred,very thick] (278,1.05) -- (278,1.45);
+  \node[font=\tiny,text=vibeyred,anchor=south] at (278,1.5)
+    {serial substrate: 278 min};
+  \draw[vibeydashed] (0,0.28) -- (310,0.28);
+  \node[font=\tiny,anchor=north west] at (0,0.18)
+    {zero-shortfall time $T_0$; shortfalls dilate it};
+  \foreach \x in {0,50,100,150,200,250,300}
+    {\draw[vibeyink] (\x,0) -- (\x,-0.08);}
+  \node[font=\scriptsize\bfseries,anchor=west] at (312,0) {minutes};
+\end{tikzpicture}
+\caption{The completion-time prediction. At the measured stable-band rates, 100
+units require roughly 50--101 minutes on the fixed substrate; the serial rung alone
+would require about 278 minutes. The higher scale is a dilation from shortfalls,
+not a second definition of completion.}
+\label{fig:completion-band}
+\end{figure*}
+```
 
 Governance has a price in time, and the price can be lowered without lowering the bar.
 The workstream that parallelised the orchestrator's test suite measured the four

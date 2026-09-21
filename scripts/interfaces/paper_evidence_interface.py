@@ -53,7 +53,7 @@ class PaperEvidenceInterface(Protocol):
     """Composes the tracked sources into the report the paper cites."""
 
     def collect(self) -> dict[str, Any]:
-        """Both summaries, keyed by source, plus the revision they were read at."""
+        """Tracked summaries, keyed by source, plus the revision they were read at."""
         ...
 
     def render(self, evidence: dict[str, Any]) -> str:
