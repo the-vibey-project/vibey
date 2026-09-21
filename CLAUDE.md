@@ -51,6 +51,23 @@ lives in `docs/architecture/decisions/`.
   exceptions. The test: it binds future decisions, it survives a rewrite, and it
   is about conduct rather than mechanism. An ADR records the decision; the canon
   records the law. Both get written. ADR-0020.
+- **Convergence-Driven Development (CDD) is the enclosing development loop.**
+  Every change uses Specification-Driven Development (SDD) for intent and
+  acceptance criteria, Test-Driven Development (TDD) for executable checks, and
+  CDD to repeatedly ground, implement, test, review and repair against the
+  actual tracked repository until delivery evidence converges. Every iteration
+  classifies its trajectory as converging, neutral or diverging; any divergence
+  needs a bounded path to reconvergence, and unbounded divergence is abandoned.
+  A verdict, marker, generated file or activity is never completion evidence by
+  itself. The confirmed high-quality core is the nucleus; project, phase, epic
+  and item are living orbitals, and nucleus-only is terminal: complete with no
+  further change or dead and no longer maintained. Multiple project atoms may
+  form chemical structures, and a suite of suites may be alive in the digital
+  realm as a software organism when its identity, feedback, adaptation, repair
+  and exchange are evidenced. ADR-0039; sub-doctrines 9.c–9.d.
+- **Status is evidence-bounded.** Claims name their object, source and cutoff;
+  active, blocked, failed, verified and published are not interchangeable, and
+  missing or contradictory evidence stays unknown. ADR-0040; sub-doctrine 10.f.
 - **Code lives in classes, and every class has an interface beside it.** A
   module-level function is the method of last resort, and its reason is written
   at the definition. `src/<pkg>/services/github_service.py` implies
@@ -199,7 +216,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (38 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (41 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

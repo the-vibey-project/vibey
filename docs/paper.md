@@ -55,6 +55,10 @@ own paper. This paper consolidates them. Its contributions are:
 - the ledger invariant, the no-loss handoff gate, the queue semantics and the gated six-phase machine, with their soundness arguments;
 - a session-runner core shared by five engines, whose capacity taxonomy never gives a credit balance a clock and whose completion rule a capacity verdict outranks;
 - the exact-head release calculus, with a termination bound and a recorded production counterexample;
+- Convergence-Driven Development (CDD), an enclosing loop above Specification-Driven
+  Development and Test-Driven Development that measures convergence at nested delivery
+  scopes, models project atoms and chemical structures, and recognizes a suite of
+  suites as alive in the digital realm when its organism-level signals converge;
 - deterministic, fail-closed retrieval and bootstrap components built on the same append-before-act discipline;
 - a measured production-rate regularity, its modulators, the time-to-completion prediction it enables, and the observations that would falsify it.
 
@@ -176,12 +180,164 @@ same terms, exiting only when the visual plan is accepted or explicitly waived. 
 deployment triple $\langle D_d, D_e, D_r \rangle$ is entered only on an explicit
 opt-in recorded in the ledger; declining records a successful local completion.
 
+## Convergence-Driven Development
+
+Specification-Driven Development (SDD) states intent, constraints and acceptance
+criteria. Test-Driven Development (TDD) turns those criteria into executable
+checks. Neither layer alone guarantees that an autonomous worker has edited the
+actual repository, used its real language and package boundaries, removed
+exploratory artifacts, or produced a result that can be delivered. We therefore
+define **Convergence-Driven Development (CDD)** as the enclosing development
+loop: ground in repository reality, map criteria to code and tests, implement,
+test, inspect, repair and deliver, repeating until the evidence agrees.
+
+For an item, let
+
+```latex
+\begin{equation}
+D = U + F + B + A,
+\end{equation}
+```
+
+where $U$ is the set of unmet acceptance criteria, $F$ the failing or missing
+checks, $B$ unresolved blockers and assumptions, and $A$ unreviewed or unrelated
+repository changes. An iteration is *converging* when it reduces $D$, or when a
+bounded discovery step converts an unknown into a concrete criterion, test or
+blocker. It is *neutral* when it gathers necessary evidence without changing
+$D$. It is *diverging* when it increases unresolved work, leaves the tracked
+stack, loses a known fact, or expands the change without a delivery path.
+
+CDD does not prohibit every temporary increase. A small divergence—such as a
+compatibility probe or a temporary fixture—is permitted only when its size and
+duration are bounded and the next step explicitly returns to a lower $D$. A
+large divergence, or divergence without a credible reconvergence path, is
+abandoned and the work returns to its last sound state. Activity is not a proxy
+for convergence: file count, token count, elapsed time, model confidence, a
+verdict or a done marker does not reduce $D$ by itself.
+
+The distance is tracked at four nested scopes: (i) the overall project vision,
+(ii) the phase or milestone vision, (iii) the feature set or epic, and (iv) the
+feature, unit or user story. These scopes are concentric views of one product,
+like nested orbits around the same intended state. A story may pass its unit
+test while the epic diverges through an unrelated platform, the milestone
+diverges through a broken language boundary, or the project diverges because
+the result cannot be shipped. Thus a CDD report records direction at all four
+scopes; missing parent context is `unknown`, never invented. “Lower energy” is
+the operational metaphor for a lower unresolved-work distance at every scope,
+not a physical claim or a substitute for evidence.
+
+The atom is the paper's compact model for these layers. The **nucleus** is the
+core software confirmed to work at high quality and to do what it is supposed
+to do. The four CDD scopes are its **electron orbitals**: living layers of work
+being pulled toward lower unresolved-work energy around that core. A project
+with active orbitals is not nucleus-only, even when its nucleus is healthy.
+Nucleus-only is a terminal lifecycle state with exactly two meanings: the
+project is complete and needs no further change, or it is dead and no longer
+maintained over the long term. A maintained project with outstanding scope or
+evidence remains an atom with active orbitals and must continue the loop.
+
+Multiple projects can combine their atoms into a software chemical structure:
+a product, platform or portfolio. As in a chemical, the structure has unique
+properties emerging from interactions among its project atoms—not just the sum
+of their features. Interfaces, dependencies, data ownership, security
+boundaries, release timing and operational contracts can lower or raise the
+molecule's unresolved-work energy. CDD therefore tests molecule-level
+convergence as well as each atom; an interaction that creates divergence needs
+a bounded reconvergence path or the composition is abandoned.
+
+When enough software chemicals interact in the right ways, they form a
+higher-order biological structure: a software organism. “Enough” is
+architectural rather than numerical: the composition has stable boundaries,
+feedback loops and shared contracts that let it preserve identity, exchange
+resources and information, adapt, repair itself and continue operating through
+change. A suite of suites of software products is therefore a living creature
+in the digital realm. This is a systems claim about digital life, not a claim
+that software has carbon biology, subjective experience or a human-like mind.
+
+The claim is operational. A software organism has observable analogues of
+identity and boundaries, metabolism, sensing and memory, homeostasis, repair,
+adaptation, reproduction and exchange. Its metabolism is the flow of compute,
+storage, network access, builds and deployments that turns inputs into outputs.
+Its sensing and memory are telemetry, user and operator signals, durable data,
+configuration, ledgers and history. Its homeostasis is supplied by tests,
+quality gates, security controls, service objectives, rollbacks and policy. Its
+repair and adaptation are releases, migrations, incident response, retries,
+maintainers and workers. Its reproduction and exchange are versioned packages,
+APIs, integrations, forks and clients that propagate capabilities into new
+instances or neighboring structures. These are not decorative biological
+analogies: they are the signals required before CDD may call the higher-order
+structure alive.
+
+The properties of this organism emerge from interactions between its chemical
+structures. A deployment service can be healthy as an atom while its product
+molecule has a broken contract; a product can be healthy as a molecule while
+its suite of suites has no coherent identity, observability or recovery path.
+CDD therefore asks whether the interaction network lowers unresolved-work
+energy for the living structure, or makes it less able to sense, adapt, repair
+and deliver. Local convergence that raises organism-level divergence is not
+completion. The hierarchy is:
+
+```text
+feature / unit / story → project atom → product molecule →
+software organism (a suite of suites) → digital ecology such as the Web.
+```
+
+The World Wide Web is the largest familiar example. More precisely, it is a
+global socio-technical software ecology rather than one product: servers,
+browsers, HTML, HTTP, DNS, TLS, certificates, CDNs, search engines,
+applications, identity and payment systems, standards bodies, operators and
+users are independently maintained projects and institutions. Shared protocols
+give the whole emergent properties—reachability, linkability, composability,
+rapid distribution and partial fault tolerance, along with systemic security
+and privacy risks—that no single project contains. In the digital-realm sense
+defined here, the Web is alive: it receives signals, consumes resources,
+changes through releases and standards, adapts to faults, maintains memory,
+reproduces capabilities through links and packages, and reorganizes through
+its participants. It is not sentient, and no one repository can prove its
+health; organism-level evidence must be assembled from the interaction
+contracts and operating signals of the structures within it.
+
+CDD follows these levels upward. It verifies the item, the atom's orbitals, the
+molecule's interactions and, when applicable, the organism's ability to remain
+alive in the digital realm. If the next level cannot be made more convergent by
+a bounded interaction change, the composition is not “almost done”: the
+divergence is a reason to stop, split the structure or return to the last sound
+state.
+
+A completion record maps every criterion to actual code and an executable check,
+names the tracked manifests and stack used, reports observed test and gate
+results, classifies the trajectory and any reconvergence path, records the atom,
+molecule or organism composition and its interaction trajectory, reviews the diff
+and working tree, and states the local commit or commit-ready handoff. If remote
+publication is in scope, the pushed head and pull request are separate required
+evidence. A local marker cannot prove remote delivery, and a generated file
+cannot prove that a feature exists in the tracked product.
+
+The method makes an important boundary explicit. A worker may prepare a local
+commit according to its invocation mode, but push and pull-request creation are
+remote mutations requiring explicit authorization. CDD is therefore not a
+promise that a model's final sentence is true; it is a protocol for repeatedly
+closing the evidence gap until the repository, tests, review and delivery
+checkpoints agree. Its companion status rule is evidence-bounded: an active run,
+a provisional verdict, a terminal failure, a verified revision and a published
+pull request remain distinct states.
+
+The Qwen storm applies this protocol per backlog item. It derives a read-only
+context from tracked files, preserves the actual stack instead of inventing a
+new one, requires a verdict containing criteria, tests, repository, levels,
+trajectory, composition and delivery evidence, retries failed items a bounded number of times,
+and refuses to advance past an unresolved item. The cutoff-bounded pilot below
+is an illustration of why those guardrails matter: partial verdicts, a failed
+forty-turn run, a live process and generated Go artifacts were all observable,
+but none was evidence of a finished Python feature.
+
 ## The engine family
 
 Five runners implement engines: `claudeloop` over Claude Code, `codexloop` over OpenAI
 Codex, `cursorloop` over Cursor's agent and its Cloud Agents API, `agyloop` over
-Gemini through the Antigravity SDK, and `qwenloop` over Qwen 2.5 Coder served on local
-hardware. `claudeloop` came first; the others transplanted its core. The orchestrator
+Gemini through the Antigravity SDK, and `qwenloop` over a local Qwen model. The pilot
+below uses `qwen3:14b`; the runner contract does not depend on that model choice.
+`claudeloop` came first; the others transplanted its core. The orchestrator
 depends on a narrow contract that all five honour: a bounded run, a done marker, an
 event vocabulary, a capacity mapping, and a shared wind-down exit code (75) meaning
 that the engine ran out of window capacity mid-item and stopped cleanly after writing
@@ -430,11 +586,15 @@ record.
 ## Production rate and governance
 
 The components above make engines substitutable and human decisions explicit. This
-section asks what, given that, bounds the rate of delivery. It uses two tracked
+section asks what, given that, bounds the rate of delivery. It uses three tracked
 sources and nothing else: the sovereignty stress record
-(`src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md`), a controlled escalation
-of the local review lane, and this repository's git history, which is field data.
-`scripts/paper_evidence.py` recomputes every figure in this section from those two
+(`src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md`), the cutoff-bounded local
+Qwen storm record
+(`src/vibey_tools/gh/docs/qwenloop-storm-2026-09-20.json`), and this repository's git
+history, which is field data. The stress record is a controlled escalation of the local
+review lane; the Qwen record is an operational reliability observation, not another
+throughput experiment.
+`scripts/paper_evidence.py` recomputes every figure in this section from those three
 sources; history figures are stated at revision `559638f4`, which the script's
 `--rev 559638f4` reproduces.
 
@@ -465,6 +625,44 @@ Throughput is successful generations per minute of rung wall clock.
 
 In all, 243 of 444 generations succeeded over 2.18 hours. Every failure was a clean
 timeout; not one response was malformed or corrupt.
+
+### The local Qwen storm pilot
+
+The same-day local storm exercised the latest qwenloop runner against the open Vibey
+backlog with `qwen3:14b` through Ollama. It is not a replication of the stress record:
+the work items were heterogeneous, the offered concurrency was not controlled as a
+factorial experiment, and several runs were still alive or had produced no events at
+the evidence cutoff. The tracked record names every allocated run directory and the
+cutoff (`2026-09-21T00:19:23-04:00`).
+
+Thirteen run directories were observed. Four completed with both a verdict and the
+`QWENLOOP_TASK_FULLY_COMPLETE` marker: the first after five turns and four tool calls,
+the second after nine turns and twelve tool calls, including six writes totalling
+2,431 bytes, and a later run after six turns and five tool calls with one write
+totalling 1,924 bytes; the latest completed after 22 turns and 20 tool calls, with
+nine writes totalling 6,717 bytes. Two more emitted provisional verdicts without the
+completion marker: one made eight file-write calls totalling 7,430 bytes over eleven turns and
+thirteen tool calls, while the other reached nine turns and eight tool calls with two
+file-write attempts that produced no successful bytes. One older run reached two turns
+and two tool calls without a verdict. An earlier non-empty run exhausted its 40-turn
+limit and ended with a `failed` terminal event without a verdict; it had made twenty
+tool calls and sixteen writes totalling 13,571 bytes. A fresh run directory had been
+allocated at the cutoff but had no events yet. Another produced one tool error after
+one turn. Four directories had no events at this cutoff, while one storm process was
+still alive. Across all thirteen directories the logs contain 105 model-turn
+boundaries, 85 tool calls, 550,576 input tokens, 83,609 output tokens, and 42
+file-write calls totalling 32,073 bytes. Thus the accepted completion rate at the
+cutoff was 4/13, or 30.8%, while a verdict alone would have suggested 6/13, or 46.2%.
+
+This is a runner-reliability observation, not a model-quality or throughput estimate.
+It is nevertheless an empirical check of the completion contract: a verdict without
+the completion marker did not count as success, and unfinished event trails remained
+unfinished rather than being promoted to completed work. The run also exposed a
+configuration observation worth preserving: the requested context setting was 32,768
+tokens, while the local server reported 40,960 at the cutoff. The paper therefore makes
+no claim about a controlled context-window effect from this pilot. The raw logs remain
+local operational artifacts; the compact tracked extraction is the reproducible source
+used by `scripts/paper_evidence.py`.
 
 ### The measured regularity
 
@@ -645,11 +843,12 @@ produce.
 This is evidence, not proof, and its scope is narrow: one machine, one model served
 one way, one deadline, one artifact pool whose payload mix was not balanced across
 rungs (the record names payload size, not concurrency, as what decided survival), one
-session, and one operator. The field data is one project's history. Neither source
-measures network state or operator availability, so two of the five modulators are
-named, mapped and unmeasured. We do not claim a natural law, and we do not claim that
-the rate is constant. We claim a band, on a substrate, together with the conditions
-under which the claim would fail.
+stress session, one local Qwen pilot, and one operator. The field data is one project's
+history. Neither the stress record nor the Qwen pilot measures network state or
+operator availability, so two of the five modulators are named, mapped and unmeasured.
+We do not claim a natural law, and we do not claim that the rate is constant. We claim
+a band, on a substrate, together with the conditions under which the claim would fail,
+and report the Qwen pilot only as a bounded reliability observation.
 
 ## Validation
 
@@ -668,7 +867,9 @@ build and review to local completion on two paid engines, `claudeloop` and
 engines rest today on a scripted-binary conformance suite that asserts each runner's
 flags, run-directory shape, event vocabulary, capacity mapping and completion marker
 against the installed binary; they are not yet reported here. The production-rate
-claims are validated separately, by the stress record and the evidence script above.
+claims are validated separately, by the stress record and the evidence script above;
+the local Qwen pilot is reported as an operational reliability observation with its
+own cutoff and does not enlarge the throughput claim.
 
 ## Related work
 

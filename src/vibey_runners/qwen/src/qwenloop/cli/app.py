@@ -109,6 +109,13 @@ def run(
     max_turns: int | None = typer.Option(
         None, "--max-turns", help="Turn limit. Unset: config `max_turns`, else 40."
     ),
+    max_attempts: int = typer.Option(
+        3,
+        "--max-attempts",
+        min=1,
+        max=10,
+        help="CDD repair iterations per storm item before reporting a blocker.",
+    ),
     base_url: BaseUrlOption = None,
     model: ModelOption = None,
     storm: bool = typer.Option(
@@ -146,6 +153,7 @@ def run(
             author=author,
             config=config,
             desktop_notifications=desktop_notifications,
+            max_attempts=max_attempts,
         )
         return
     if plan is None:
@@ -279,6 +287,57 @@ def _discover_storm_repos(owner: str, repos_root: Path) -> list[str]:
     return [name for name in names if (repos_root / name / ".git").is_dir()]
 
 
+def _tracked_repository_context(repo_dir: Path) -> str:
+    """Describe the actual tracked stack before a storm asks a model to edit it.
+
+    Storm planning needs repository facts, not assumptions from an issue title. This
+    helper is deliberately a fixed-argv, read-only `git ls-files` probe so the model
+    sees manifests and source roots without receiving network access or a second
+    implementation of repository discovery.
+    """
+    git_path = shutil.which("git")
+    if git_path is None:
+        return "- tracked-file probe unavailable: git is not installed; inspect the repository before editing."
+    try:
+        result = subprocess.run(  # nosec B603 - fixed git argv, read-only probe
+            [git_path, "ls-files", "-z"],
+            cwd=repo_dir,
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return f"- tracked-file probe unavailable: {exc}; inspect the repository before editing."
+    if result.returncode != 0:
+        detail = result.stderr.strip() or "git ls-files failed"
+        return f"- tracked-file probe failed: {detail}; inspect the repository before editing."
+    files = [path for path in result.stdout.split("\0") if path]
+    if not files:
+        return "- no tracked files were reported; do not invent a platform or source tree."
+    manifests = [
+        path
+        for path in files
+        if Path(path).name in {"pyproject.toml", "uv.lock", "package.json", "go.mod", "Cargo.toml"}
+    ]
+    roots = sorted({path.split("/", 1)[0] for path in files if "/" in path})
+    suffixes = sorted({Path(path).suffix for path in files if Path(path).suffix})
+    context = [
+        f"- tracked manifests: {', '.join(manifests) or '(none)'}",
+        f"- tracked top-level roots: {', '.join(roots) or '(root files only)'}",
+        f"- tracked file types: {', '.join(suffixes) or '(none)'}",
+    ]
+    if not any(path == "go.mod" or path.endswith(".go") for path in files):
+        context.append(
+            "- no tracked Go manifest or Go source exists; do not invent a Go platform tree"
+        )
+    if any(path == "pyproject.toml" or path.endswith(".py") for path in files):
+        context.append(
+            "- Python is part of the tracked implementation; preserve its existing package and test layout"
+        )
+    return "\n".join(context)
+
+
 def _run_storm(
     *,
     owner: str,
@@ -287,6 +346,7 @@ def _run_storm(
     author: str,
     config: QwenConfig,
     desktop_notifications: bool,
+    max_attempts: int,
 ) -> None:
     """Sweep each target repo one backlog item per bounded qwenloop run."""
     targets = repos or _discover_storm_repos(owner, repos_root)
@@ -306,6 +366,7 @@ def _run_storm(
             issues=list_open_issues(owner, name),
             pull_requests=list_open_pull_requests(owner, name),
             author=author,
+            repository_context=_tracked_repository_context(repo_dir),
         )
         attempted += 1
         if not plans:
@@ -317,30 +378,54 @@ def _run_storm(
         repo_turns = 0
         for label, plan_text in plans:
             attempted_items += 1
-            try:
-                state = asyncio.run(
-                    _run_plan(
-                        server,
-                        profile,
-                        repo_dir,
-                        str(uuid.uuid4()),
-                        plan_text,
-                        config.max_turns,
-                        startup_timeout_seconds=config.startup_timeout_seconds,
-                        desktop_notifications=desktop_notifications,
+            item_completed = False
+            for attempt in range(1, max_attempts + 1):
+                attempt_plan = plan_text
+                if attempt > 1:
+                    attempt_plan += (
+                        "\n## CDD repair iteration\n"
+                        f"This is repair attempt {attempt} of {max_attempts} for the same item. "
+                        "Inspect the current worktree and the prior evidence, preserve sound "
+                        "changes, diagnose the failed criterion, and redirect any divergence "
+                        "towards convergence. Do not abandon this item for another backlog item.\n"
                     )
+                try:
+                    state = asyncio.run(
+                        _run_plan(
+                            server,
+                            profile,
+                            repo_dir,
+                            str(uuid.uuid4()),
+                            attempt_plan,
+                            config.max_turns,
+                            startup_timeout_seconds=config.startup_timeout_seconds,
+                            desktop_notifications=desktop_notifications,
+                        )
+                    )
+                except (OSError, RuntimeError) as exc:
+                    repo_success = False
+                    repo_failure = str(exc)
+                    typer.echo(f"{name} {label}\tunavailable\t{exc}")
+                    break
+                repo_turns += state.turns
+                if state.status is RunStatus.COMPLETED:
+                    completed_items += 1
+                    item_completed = True
+                    typer.echo(
+                        f"{name} {label}\tcompleted\t{state.turns} "
+                        f"(attempt {attempt}/{max_attempts})"
+                    )
+                    break
+                typer.echo(
+                    f"{name} {label}\tattempt {attempt}/{max_attempts}\t"
+                    f"{state.status.value}\t{state.turns}"
                 )
-            except (OSError, RuntimeError) as exc:
-                repo_success = False
-                repo_failure = str(exc)
-                typer.echo(f"{name} {label}\tunavailable\t{exc}")
+            if repo_failure is not None:
                 break
-            repo_turns += state.turns
-            if state.status is RunStatus.COMPLETED:
-                completed_items += 1
-            else:
+            if not item_completed:
                 repo_success = False
-            typer.echo(f"{name} {label}\t{state.status.value}\t{state.turns}")
+                typer.echo(f"{name} {label}\tfailed\t{repo_turns}")
+                break
         if repo_failure is not None:
             typer.echo(f"{name}\tunavailable\t{repo_failure}")
         elif repo_success:

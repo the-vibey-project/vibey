@@ -11,6 +11,62 @@ from qwenloop.domain.model import RepoItem
 StormPlan = tuple[str, str]
 
 
+_CDD_PROTOCOL = """## Convergence-Driven Development (CDD)
+CDD is the delivery loop above Specification-Driven Development (SDD) and
+Test-Driven Development (TDD). SDD supplies the intent and acceptance criteria;
+TDD supplies executable checks; CDD repeatedly reconciles the actual repository
+with both until the feature is genuinely deliverable.
+
+For this item, follow this order: ground yourself in the tracked repository
+layout and its existing tests; map every acceptance criterion to actual code,
+tests, and evidence; implement in the repository's real language and package
+boundaries; run the focused tests and relevant gates; inspect the diff and
+working tree for unrelated artifacts; then repair any failed criterion. Never
+invent a new language, manifest, source tree, or platform merely because the
+issue text uses a different term. The tracked repository is the authority on
+where the feature belongs.
+
+At every iteration, explicitly classify the trajectory as CONVERGING, NEUTRAL,
+or DIVERGING against the remaining acceptance criteria and failing checks at all
+four nested scopes: overall project vision, phase or milestone vision, feature
+set or epic, and feature, unit, or user story. A locally converging item must
+not conceal divergence at a wider scope. Treat these scopes as concentric
+orbits: seek a lower unresolved-work state at every level. A small divergence
+is allowed only when its bounded next step has an explicit path back to a more
+convergent state. A large divergence, or any divergence without a credible
+reconvergence path, must be abandoned and the work returned to the last sound
+state. Never infer convergence from activity, file count, token use, or a
+completion marker.
+
+If this repository participates in a multi-project product or platform, also
+inspect the software chemical structure around it. Interfaces, dependencies,
+data ownership, security, release timing, and operational contracts can create
+unique molecule-level properties; a locally converging atom must not hide a
+diverging composition. Any interaction divergence needs a bounded
+reconvergence path.
+
+When enough interacting chemicals form a suite of suites, inspect it as a
+software organism and state whether it is alive in the digital realm: identity,
+resource metabolism, sensing and memory, homeostasis, adaptation and repair,
+and reproduction or exchange must be grounded in observable contracts and
+operating signals. This is a systems claim, not a claim of carbon biology or
+subjective experience. The World Wide Web is the largest familiar example of
+this higher-order structure. A locally converging project cannot conceal an
+organism-level loss of coherence, feedback, repair or delivery.
+
+The final plain-text qwenloop-verdict must contain these fields: criteria,
+tests, repository, levels, trajectory, composition, and delivery. Composition
+must say whether this item is an atom, part of a multi-project chemical
+structure, or part of a higher-order software organism, and describe the
+interaction trajectory (or explicitly say not applicable). Delivery must state whether
+the change is verified and commit-ready; remote push and pull-request publication
+remain an explicit operator-authorized step unless the caller selected a
+publish mode. Do not claim completion while any criterion is unverified or
+blocked, and do not move to another backlog item until this one has converged
+or has been reported as a concrete blocker.
+"""
+
+
 def _indent_body(body: str) -> str:
     return body.replace("\n", "\n  ")
 
@@ -44,10 +100,15 @@ def build_plan(
     issues: list[RepoItem] | None,
     pull_requests: list[RepoItem] | None,
     author: str,
+    repository_context: str = "",
 ) -> str:
     """Build the qwenloop plan text for one repo's storm-mode run."""
     issues_block = _render_items(issues, "(none, or issues disabled)")
     prs_block = _render_items(pull_requests, "(none)")
+    context = (
+        repository_context.strip()
+        or "Repository grounding was unavailable; inspect git-tracked files first."
+    )
     return (
         f"# qwenstorm plan for {repo}\n\n"
         "## 1. Clear the backlog\n"
@@ -64,6 +125,8 @@ def build_plan(
         "what was implemented, verified, blocked, or still open. The first action must\n"
         "inspect repository source or tests with a coding tool, not emit a completion\n"
         "marker. The qwenloop-verdict label is a plain-text final fence, never a tool.\n\n"
+        f"{_CDD_PROTOCOL}\n"
+        f"### Repository grounding\n{context}\n\n"
         "### Open issues\n"
         f"{issues_block}"
         "\n### Open PRs\n"
@@ -82,6 +145,7 @@ def build_item_plans(
     issues: list[RepoItem] | None,
     pull_requests: list[RepoItem] | None,
     author: str,
+    repository_context: str = "",
 ) -> list[StormPlan]:
     """Split one live backlog into bounded plans, one issue or PR per model run.
 
@@ -94,7 +158,13 @@ def build_item_plans(
         return [
             (
                 "backlog",
-                build_plan(repo=repo, issues=issues, pull_requests=pull_requests, author=author),
+                build_plan(
+                    repo=repo,
+                    issues=issues,
+                    pull_requests=pull_requests,
+                    author=author,
+                    repository_context=repository_context,
+                ),
             )
         ]
     plans: list[StormPlan] = []
@@ -102,14 +172,26 @@ def build_item_plans(
         plans.append(
             (
                 f"issue#{item.number}",
-                build_plan(repo=repo, issues=[item], pull_requests=[], author=author),
+                build_plan(
+                    repo=repo,
+                    issues=[item],
+                    pull_requests=[],
+                    author=author,
+                    repository_context=repository_context,
+                ),
             )
         )
     for item in sorted(pull_requests, key=lambda candidate: candidate.number):
         plans.append(
             (
                 f"pr#{item.number}",
-                build_plan(repo=repo, issues=[], pull_requests=[item], author=author),
+                build_plan(
+                    repo=repo,
+                    issues=[],
+                    pull_requests=[item],
+                    author=author,
+                    repository_context=repository_context,
+                ),
             )
         )
     return plans

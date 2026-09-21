@@ -1,10 +1,10 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Recompute the empirical numbers in docs/paper.md from tracked sources (#155, #192).
 
-Two sources, both inside this repository, and nothing else: the rung table of the
-sovereignty stress record and this checkout's git history. Nothing is estimated,
-fetched or remembered, so anyone holding the checkout can reproduce every figure the
-paper's production-rate section states:
+Three sources, all inside this repository, and nothing else: the rung table of the
+sovereignty stress record, a compact extraction of the local Qwen storm run logs, and
+this checkout's git history. Nothing is estimated, fetched or remembered, so anyone
+holding the checkout can reproduce every figure the paper states:
 
     python scripts/paper_evidence.py          # the report
     python scripts/paper_evidence.py --json   # the same numbers, machine-readable
@@ -32,11 +32,13 @@ from zoneinfo import ZoneInfo
 from interfaces.paper_evidence_interface import (
     GitHistoryInterface,
     PaperEvidenceInterface,
+    QwenStormRecordInterface,
     StressRecordInterface,
     StressRung,
 )
 
 DEFAULT_STRESS_RECORD = "src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md"
+DEFAULT_QWEN_STORM_RECORD = "src/vibey_tools/gh/docs/qwenloop-storm-2026-09-20.json"
 DEFAULT_TIMEZONE = "America/New_York"
 DEFAULT_REGION = (2, 32)
 DEFAULT_FIT_MAX = 16
@@ -285,19 +287,81 @@ class GitHistory(GitHistoryInterface):
         }
 
 
+class QwenStormRecord(QwenStormRecordInterface):
+    """Summarise a tracked, cutoff-bounded extraction of qwenloop event logs."""
+
+    def __init__(self, path: Path) -> None:
+        self._path = path
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(loaded, dict):
+            raise ValueError(f"{path}: top-level record must be an object")
+        self._record: dict[str, Any] = loaded
+
+    @staticmethod
+    def _int(run: dict[str, Any], key: str) -> int:
+        value = run.get(key)
+        if not isinstance(value, int) or value < 0:
+            raise ValueError(f"qwen storm run field {key!r} must be a non-negative integer")
+        return value
+
+    def summary(self) -> dict[str, Any]:
+        raw_runs = self._record.get("runs")
+        if not isinstance(raw_runs, list) or not all(isinstance(run, dict) for run in raw_runs):
+            raise ValueError(f"{self._path}: runs must be a list of objects")
+        runs = [run for run in raw_runs if isinstance(run, dict)]
+        dispositions = [str(run.get("disposition", "")) for run in runs]
+        observed_server = self._record.get("observed_server", {})
+        model = observed_server.get("model", "") if isinstance(observed_server, dict) else ""
+        return {
+            "record": str(self._path),
+            "observed_at": str(self._record.get("observed_at", "")),
+            "timezone": str(self._record.get("timezone", "")),
+            "active_storm_processes": self._record.get("active_storm_processes_at_cutoff", 0),
+            "model": str(model),
+            "requested_settings": self._record.get("requested_settings", {}),
+            "observed_server": observed_server,
+            "runs": len(runs),
+            "completed_runs": sum(run.get("disposition") == "completed" for run in runs),
+            "verdict_runs": sum(bool(run.get("verdict_emitted")) for run in runs),
+            "completion_marker_runs": sum(
+                bool(run.get("completion_marker_emitted")) for run in runs
+            ),
+            "turns": sum(self._int(run, "turns") for run in runs),
+            "tool_calls": sum(self._int(run, "tool_calls") for run in runs),
+            "input_tokens": sum(self._int(run, "input_tokens") for run in runs),
+            "output_tokens": sum(self._int(run, "output_tokens") for run in runs),
+            "file_write_calls": sum(self._int(run, "file_write_calls") for run in runs),
+            "bytes_written": sum(self._int(run, "bytes_written") for run in runs),
+            "empty_runs": dispositions.count("no_events_at_cutoff"),
+            "incomplete_runs": sum(run.get("disposition") != "completed" for run in runs),
+        }
+
+
 class PaperEvidence(PaperEvidenceInterface):
     """Both sources, composed, and rendered as the report the paper cites."""
 
-    def __init__(self, stress: StressRecordInterface, history: GitHistoryInterface) -> None:
+    def __init__(
+        self,
+        stress: StressRecordInterface,
+        history: GitHistoryInterface,
+        qwen_storm: QwenStormRecordInterface | None = None,
+    ) -> None:
         self._stress = stress
         self._history = history
+        self._qwen_storm = qwen_storm
 
     def collect(self) -> dict[str, Any]:
         history = self._history.summary()
-        return {"revision": history["head"], "stress": self._stress.summary(), "history": history}
+        return {
+            "revision": history["head"],
+            "stress": self._stress.summary(),
+            "history": history,
+            "qwen_storm": self._qwen_storm.summary() if self._qwen_storm else None,
+        }
 
     def render(self, evidence: dict[str, Any]) -> str:
         s, h = evidence["stress"], evidence["history"]
+        q = evidence["qwen_storm"]
         region, check, t0 = s["region"], s["held_out_check"], s["t0_minutes"]
         low, high = region["concurrency"]
         perfect, gap, tags = (
@@ -310,32 +374,53 @@ class PaperEvidence(PaperEvidenceInterface):
             f"N={item['concurrency']} {item['throughput']:.2f} ({item['verdict']})"
             for item in check["held_out"]
         )
-        return "\n".join(
+        lines = [
+            f"paper evidence at {evidence['revision']}",
+            "",
+            f"stress record: {s['record']}",
+            f"  {s['rungs']} rungs: {s['succeeded']}/{s['attempted']} succeeded "
+            f"({s['success_rate']:.1%}); the record's own totals line: {s['declared_totals']}",
+            f"  every generation succeeded through N={perfect['concurrency']} "
+            f"({perfect['generations']} generations)",
+            f"  serial baseline N=1: {s['serial_throughput_per_minute']:.2f}/min",
+            f"  region N={low}..{high}, {region['rungs']} rungs: "
+            f"{region['succeeded']}/{region['attempted']} succeeded "
+            f"({region['succeeded'] / region['attempted']:.1%}); rung success "
+            f"{region['rung_success_min']:.1%}..{region['rung_success_max']:.1%}",
+            f"  region throughput/min: {region['throughput_min']:.2f}.."
+            f"{region['throughput_max']:.2f}, mean {region['throughput_mean']:.2f}, "
+            f"sample sd {region['throughput_sd']:.2f} (cv {region['throughput_cv']:.0%}), "
+            f"log-log slope on N {region['log_log_slope']:.2f}",
+            f"  band fitted through N={check['fitted_through']}: "
+            f"{check['band'][0]:.2f}..{check['band'][1]:.2f}; held out: {held}",
+            f"  T0 for {t0['work_units']:g} units in the region: "
+            f"{t0['lower']:.0f}..{t0['upper']:.0f} min (serial rate alone: {t0['serial']:.0f} min)",
+            f"  peak {s['peak']['throughput']:.2f}/min at N={s['peak']['concurrency']} "
+            f"({s['peak']['success']:.1%} success); last rung N={s['last']['concurrency']} "
+            f"{s['last']['throughput']:.2f}/min at {s['last']['success']:.1%}",
+            f"  cumulative attempted by rung: {s['cumulative_attempted']}",
+        ]
+        if q is not None:
+            requested = q["requested_settings"]
+            observed = q["observed_server"]
+            lines.extend(
+                [
+                    "",
+                    f"qwenloop storm record: {q['record']}",
+                    f"  observed at {q['observed_at']} ({q['timezone']}), model {q['model']}",
+                    f"  runs {q['completed_runs']}/{q['runs']} completed; "
+                    f"{q['completion_marker_runs']} emitted the completion marker; "
+                    f"{q['verdict_runs']} emitted a verdict; {q['empty_runs']} had no events; "
+                    f"{q['active_storm_processes']} processes were alive at cutoff",
+                    f"  turns {q['turns']}, tool calls {q['tool_calls']}, "
+                    f"tokens in/out {q['input_tokens']}/{q['output_tokens']}",
+                    f"  writes {q['file_write_calls']} calls / {q['bytes_written']} bytes; "
+                    f"requested context {requested.get('context_length')}, "
+                    f"observed context {observed.get('context_length')}",
+                ]
+            )
+        lines.extend(
             [
-                f"paper evidence at {evidence['revision']}",
-                "",
-                f"stress record: {s['record']}",
-                f"  {s['rungs']} rungs: {s['succeeded']}/{s['attempted']} succeeded "
-                f"({s['success_rate']:.1%}); the record's own totals line: {s['declared_totals']}",
-                f"  every generation succeeded through N={perfect['concurrency']} "
-                f"({perfect['generations']} generations)",
-                f"  serial baseline N=1: {s['serial_throughput_per_minute']:.2f}/min",
-                f"  region N={low}..{high}, {region['rungs']} rungs: "
-                f"{region['succeeded']}/{region['attempted']} succeeded "
-                f"({region['succeeded'] / region['attempted']:.1%}); rung success "
-                f"{region['rung_success_min']:.1%}..{region['rung_success_max']:.1%}",
-                f"  region throughput/min: {region['throughput_min']:.2f}.."
-                f"{region['throughput_max']:.2f}, mean {region['throughput_mean']:.2f}, "
-                f"sample sd {region['throughput_sd']:.2f} (cv {region['throughput_cv']:.0%}), "
-                f"log-log slope on N {region['log_log_slope']:.2f}",
-                f"  band fitted through N={check['fitted_through']}: "
-                f"{check['band'][0]:.2f}..{check['band'][1]:.2f}; held out: {held}",
-                f"  T0 for {t0['work_units']:g} units in the region: "
-                f"{t0['lower']:.0f}..{t0['upper']:.0f} min (serial rate alone: {t0['serial']:.0f} min)",
-                f"  peak {s['peak']['throughput']:.2f}/min at N={s['peak']['concurrency']} "
-                f"({s['peak']['success']:.1%} success); last rung N={s['last']['concurrency']} "
-                f"{s['last']['throughput']:.2f}/min at {s['last']['success']:.1%}",
-                f"  cumulative attempted by rung: {s['cumulative_attempted']}",
                 "",
                 f"git history ({h['timezone']}):",
                 f"  commits reachable from the revision: {h['commits']} "
@@ -353,6 +438,7 @@ class PaperEvidence(PaperEvidenceInterface):
                 f"last {tags['last']}",
             ]
         )
+        return "\n".join(lines)
 
 
 # A bare function because it is this script's `__main__` entry point (ADR-0016): it only
@@ -362,6 +448,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repo", type=Path, default=Path("."))
     parser.add_argument("--rev", default=DEFAULT_REVISION, help="the revision to read history at")
     parser.add_argument("--stress", default=DEFAULT_STRESS_RECORD, help="relative to --repo")
+    parser.add_argument(
+        "--qwen-storm",
+        default=DEFAULT_QWEN_STORM_RECORD,
+        help="relative path to the tracked local Qwen storm record",
+    )
+    parser.add_argument(
+        "--no-qwen-storm",
+        action="store_true",
+        help="omit the local Qwen storm record",
+    )
     parser.add_argument("--timezone", default=DEFAULT_TIMEZONE)
     parser.add_argument("--region-min", type=int, default=DEFAULT_REGION[0])
     parser.add_argument("--region-max", type=int, default=DEFAULT_REGION[1])
@@ -382,7 +478,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     since = date.fromisoformat(args.since) if args.since else None
     history = GitHistory(args.repo, args.timezone, args.release_tag_glob, since, args.rev)
-    evidence = PaperEvidence(stress, history)
+    qwen_storm = None if args.no_qwen_storm else QwenStormRecord(args.repo / args.qwen_storm)
+    evidence = PaperEvidence(stress, history, qwen_storm)
     collected = evidence.collect()
     print(json.dumps(collected, indent=2, default=str) if args.json else evidence.render(collected))
     return 0

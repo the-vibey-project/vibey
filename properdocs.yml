@@ -44,6 +44,7 @@ nav:
       - Kubernetes: guides/kubernetes.md
       - Greeter live demo: guides/greeter-live-demo.md
       - Local models on Ollama: guides/local-models-ollama.md
+      - Convergence-Driven Development: guides/convergence-driven-development.md
       - What gets published: guides/ledger-publication.md
       - Continuous delivery estimate: guides/delivery-estimate.md
   - Current estimate: estimate.md
@@ -90,4 +91,7 @@ nav:
           - "0036 — The merge queue is declared, not clicked": architecture/decisions/0036-the-merge-queue-is-declared-not-clicked.md
           - "0037 — One distribution, one version — the whole family ships inside vibey": architecture/decisions/0037-one-distribution-one-version.md
           - "0038 — Local engines are preferred first (8.a) — claudeloop-local, tiered selection, and sovereign DESIGN/DECOMPOSE by default when enabled": architecture/decisions/0038-local-engines-are-preferred-first.md
+          - "0039 — Convergence-Driven Development (CDD) encloses specification and test-driven development": architecture/decisions/0039-convergence-driven-development.md
+          - "0040 — Evidence-bounded status for runs, features and research claims": architecture/decisions/0040-evidence-bounded-status.md
+          - "0041 — Software organisms are alive in the digital realm": architecture/decisions/0041-software-organisms-alive-in-the-digital-realm.md
   - Research paper: paper.md

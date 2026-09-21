@@ -10,6 +10,11 @@ def test_build_plan_reports_unavailable_backlog_sections() -> None:
     assert "### Open PRs\n(none)\n" in plan
     assert "## Completion" in plan
     assert "Never emit the completion marker after inspection\nalone." in plan
+    assert "## Convergence-Driven Development (CDD)" in plan
+    assert "CONVERGING, NEUTRAL,\nor DIVERGING" in plan
+    assert "overall project vision" in plan
+    assert "alive in the digital realm" in plan
+    assert "World Wide Web" in plan
 
 
 def test_build_plan_renders_empty_backlog_as_blank() -> None:
@@ -18,6 +23,11 @@ def test_build_plan_renders_empty_backlog_as_blank() -> None:
     assert "Work every open issue and PR below locally" in plan
     assert "never push, create a pull request, mutate GitHub" in plan
     assert "plain-text final fence, never a tool" in plan
+    assert "The tracked repository is the authority" in plan
+    assert "levels, trajectory, composition, and delivery" in plan
+    assert "software chemical structure" in plan
+    assert "molecule-level properties" in plan
+    assert "composition" in plan
 
 
 def test_build_plan_renders_items_with_indented_multiline_bodies() -> None:
@@ -53,3 +63,15 @@ def test_build_item_plans_splits_sorted_issues_and_pull_requests() -> None:
 
 def test_build_item_plans_returns_no_plans_for_empty_successful_fetch() -> None:
     assert build_item_plans(repo="widgets", issues=[], pull_requests=[], author="Author") == []
+
+
+def test_build_plan_includes_tracked_repository_context() -> None:
+    plan = build_plan(
+        repo="widgets",
+        issues=[],
+        pull_requests=[],
+        author="Author",
+        repository_context="- tracked manifests: pyproject.toml\n- no tracked Go manifest",
+    )
+    assert "- tracked manifests: pyproject.toml" in plan
+    assert "- no tracked Go manifest" in plan
