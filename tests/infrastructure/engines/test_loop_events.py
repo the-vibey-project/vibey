@@ -366,6 +366,7 @@ _EXPECTED_MAPS: dict[EngineId, dict[str, EventKind]] = {
         "text_delta": EventKind.TRANSCRIPT_RECORDED,
         "tool_result": EventKind.TOOL_INVOKED,
         "turn.completed": EventKind.TURN_COMPLETED,
+        "capacity.rejected": EventKind.CAPACITY_REJECTED,
         "finished": EventKind.VERDICT_RENDERED,
         "failed": EventKind.VERDICT_RENDERED,
     },

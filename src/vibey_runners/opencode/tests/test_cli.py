@@ -62,6 +62,27 @@ def test_cli_run_and_resume_propagate_status(tmp_path, monkeypatch) -> None:  # 
     assert CliRunner().invoke(cli.app, ["resume", "s-2"]).exit_code == 1
 
 
+def test_cli_reports_an_invalid_run_id_without_a_traceback(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    plan = tmp_path / "plan.md"
+    plan.write_text("prompt", encoding="utf-8")
+
+    class _Rejecting:
+        def doctor(self) -> tuple[bool, str]:
+            return True, "ready"
+
+        def run(self, **kwargs):  # type: ignore[no-untyped-def]
+            raise ValueError("invalid run id '../escape': nope")
+
+    monkeypatch.setattr(cli, "_runner", lambda: _Rejecting())
+    runner = CliRunner()
+    escaped = runner.invoke(cli.app, ["run", str(plan), "--run-id", "../escape"])
+    assert escaped.exit_code == 2
+    assert "invalid run id" in escaped.stderr
+    resumed = runner.invoke(cli.app, ["resume", "../escape"])
+    assert resumed.exit_code == 2
+    assert "invalid run id" in resumed.stderr
+
+
 def test_main_delegates_to_typer_app(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     called: list[bool] = []
     monkeypatch.setattr(cli, "app", lambda: called.append(True))

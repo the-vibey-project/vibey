@@ -140,11 +140,11 @@ Unlike `[budget]` above, this key **is** read at runtime, by
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `enabled` | array of strings | `["claudeloop", "codexloop", "cursorloop", "agyloop", "opencodeloop"]` | Must be a subset of the known engines below. If omitted while `features.qwenloop = true`, `qwenloop` is appended to the default automatically; an explicit list is never extended. |
+| `enabled` | array of strings | `["claudeloop", "codexloop", "cursorloop", "agyloop", "opencode"]` | Must be a subset of the known engines below. If omitted while `features.qwenloop = true`, `qwenloop` is appended to the default automatically; an explicit list is never extended. |
 | `weights` | table of string→int | `{}` | Per-engine weight for smooth weighted round robin ([ADR-0005](../architecture/decisions/0005-smooth-weighted-round-robin.md)). Keys must be known engines; values are not validated. |
 
 Known engine ids: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`,
-`opencodeloop`, and `qwenloop` (valid in `enabled` and `[phases.*].engines` only once
+`opencode`, and `qwenloop` (valid in `enabled` and `[phases.*].engines` only once
 `features.qwenloop = true`).
 
 ## `[phases.design]`, `[phases.build]`, `[phases.review]`

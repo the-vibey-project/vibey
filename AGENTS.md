@@ -140,7 +140,7 @@ explicit opt-in; declining deployment records a successful local completion.
   supported major (14–18), while the Helm chart defaults to PostgreSQL 17. `FOR UPDATE SKIP LOCKED` is
   the reason; see ADR-0002.
 - **Engines:** `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, and
-  `opencodeloop` are the
+  `opencode` (the `opencodeloop` adapter) are the
   default paid-engine pool (tier PAID). Two default-off local engines (tier LOCAL)
   join them behind their own switches: `qwenloop` (`VIBEY_FEATURE_QWENLOOP` or
   `[features] qwenloop`) and `claudeloop-local` — the claudeloop binary on a local

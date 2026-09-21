@@ -1,6 +1,8 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 from pathlib import Path
 
+import pytest
+
 from opencodeloop.application.runner import OpencodeRunner
 from opencodeloop.domain.model import RunResult, RunStatus
 
@@ -44,6 +46,12 @@ def test_runner_delegates_doctor_and_persists_success() -> None:
     result = runner.run(prompt="prompt", run_id="run-1", cwd=Path("/work"))
     assert result.succeeded
     assert [call[0] for call in store.calls] == ["begin", "event", "event", "finish"]
+    assert store.calls[0][1] == Path("/work/.opencodeloop/runs/run-1")
+    # The run boundary is seeded exactly once, by the application.
+    assert store.calls[1][1] == {
+        "event_type": "run.started",
+        "run_id": "run-1",
+    }
 
 
 def test_runner_persists_process_error_as_failed_result() -> None:
@@ -53,3 +61,19 @@ def test_runner_persists_process_error_as_failed_result() -> None:
     assert result.status is RunStatus.FAILED
     assert result.detail == "missing"
     assert store.calls[-1][0] == "finish"
+
+
+def test_runner_refuses_a_run_id_that_is_not_one_safe_path_segment() -> None:
+    store = _Store()
+    runner = OpencodeRunner(_Process(), store)
+    for bad in ("../escape", "a/b", ".hidden", ""):
+        with pytest.raises(ValueError, match="invalid run id"):
+            runner.run(prompt="prompt", run_id=bad, cwd=Path("/work"))
+    assert store.calls == []
+
+
+def test_runner_uses_the_trimmed_run_id() -> None:
+    store = _Store()
+    runner = OpencodeRunner(_Process(), store)
+    runner.run(prompt="prompt", run_id="  run-3 ", cwd=Path("/work"))
+    assert store.calls[0][1] == Path("/work/.opencodeloop/runs/run-3")

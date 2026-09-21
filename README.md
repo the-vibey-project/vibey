@@ -58,7 +58,7 @@ in one vendor's chat session.
 | Runs on | macOS / Linux, local. No cloud control plane required. |
 | Language | Python 3.12+ |
 | Queue | PostgreSQL (`FOR UPDATE SKIP LOCKED`) |
-| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex), [`cursorloop`](src/vibey_runners/cursor), [`agyloop`](src/vibey_runners/agy), [`opencodeloop`](src/vibey_runners/opencode) — an adapter for the official OpenCode CLI — plus the opt-in [`qwenloop`](src/vibey_runners/qwen) — a local engine and the sovereign DESIGN provider — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038). All six runners ship inside the `vibey` distribution (ADR-0037). |
+| Engines | [`claudeloop`](src/vibey_runners/claude), [`codexloop`](src/vibey_runners/codex), [`cursorloop`](src/vibey_runners/cursor), [`agyloop`](src/vibey_runners/agy), [`opencode`](src/vibey_runners/opencode) — the `opencodeloop` adapter for the official OpenCode CLI — plus the opt-in [`qwenloop`](src/vibey_runners/qwen) — a local engine and the sovereign DESIGN provider — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038). All six runners ship inside the `vibey` distribution (ADR-0037). |
 | State dir | `.vibey/` |
 | Env prefix | `VIBEY_` |
 | Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |
