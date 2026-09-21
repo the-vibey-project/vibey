@@ -44,6 +44,42 @@ The stable run contract is `.qwenloop/runs/<run-id>/`, exit code `75` for a
 graceful wind-down, the `QWENLOOP_TASK_FULLY_COMPLETE` marker, and a
 `qwenloop-verdict` result fence.
 
+## Storms use Convergence-Driven Development
+
+Storm mode applies **Convergence-Driven Development (CDD)** above
+Specification-Driven Development (SDD) and Test-Driven Development (TDD).
+Each open issue or pull request receives its own bounded run. Before editing,
+the plan grounds the model in `git ls-files`, the tracked manifests, the actual
+language and package layout, and the relevant tests. The model must map the
+item's criteria to code, executable checks and evidence; run the checks; inspect
+the diff and working tree; and report `criteria`, `tests`, `repository`,
+`levels`, `trajectory`, `composition`, and `delivery` in its final verdict.
+`levels` covers
+the overall project vision, phase/milestone, feature set/epic, and
+feature/unit/user story; an item cannot hide divergence in a wider scope.
+If the repository is one atom in a multi-project product or platform, report
+the molecule-level interaction trajectory as well.
+`composition` identifies atom, molecule and organism-level interactions, or
+explicitly records that a higher-order composition is not applicable.
+
+Every iteration classifies itself as converging, neutral or diverging against
+the remaining work. A small divergence is allowed only when it has a bounded
+path to reconvergence; a large or pathless divergence is abandoned. A failed
+item gets bounded repair attempts before the storm reports a blocker, and the
+storm never advances to another item while the current one is unresolved.
+Configure the repair bound with `--max-attempts` (default `3`):
+
+```bash
+qwenloop run --storm --max-attempts 3 --desktop-notifications
+```
+
+The local runner prepares verified, commit-ready work. It does not push or
+create pull requests from inside a model run; remote publication is a separate
+explicitly authorized checkpoint. A marker, verdict, generated file or large
+amount of activity is not completion evidence by itself. See the repository's
+[CDD guide](../../../docs/guides/convergence-driven-development.md), governance
+canon (sub-doctrine 9.c), and ADR-0039.
+
 ## Inference profiles
 
 | Profile | Backend | Intended hardware | Model installation |

@@ -296,6 +296,7 @@ things those runners deliberately do not do:
 | [The book](https://the-vibey-project.github.io/vibey/main/book.pdf) · [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) · [print HTML](https://the-vibey-project.github.io/vibey/main/book-print.html) | Every page of the documentation site, in reading order, as one downloadable book |
 | [CLI reference](docs/reference/cli.md) | Every command, subcommand, flag, and default |
 | [Configuration reference](docs/reference/configuration.md) | The full `vibey.toml` schema, with defaults and an example file |
+| [Convergence-Driven Development](docs/guides/convergence-driven-development.md) | The CDD loop above SDD and TDD, convergence/divergence checks at four scopes, the atom model, and delivery evidence |
 | [Kubernetes guide](docs/guides/kubernetes.md) | Container, Helm chart, KEDA autoscaling, and its own troubleshooting section |
 | [Greeter live-demo runbook](docs/guides/greeter-live-demo.md) | A full paid run, end to end, with the zero-touch contracts |
 | [What gets published](docs/guides/ledger-publication.md) | What `vibey ledger export` publishes of a ledger, what it withholds, and how it counts both |
@@ -308,7 +309,7 @@ things those runners deliberately do not do:
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](docs/architecture/decisions/) | Why each hard call was made (38 ADRs) |
+| [Decision records](docs/architecture/decisions/) | Why each hard call was made (41 ADRs) |
 
 ## Status
 

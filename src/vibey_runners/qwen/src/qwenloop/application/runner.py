@@ -37,6 +37,18 @@ _INVALID_COMPLETION_PROMPT = (
     "and tests are complete, write a plain-text ```qwenloop-verdict block followed by "
     "QWENLOOP_TASK_FULLY_COMPLETE. For a storm run, read-only inspection is not progress: "
     "use write_file or shell before claiming completion."
+    " A CDD storm verdict must also include criteria, tests, repository, levels, trajectory, "
+    "composition, and delivery evidence; classify the trajectory as converging, neutral, or "
+    "bounded divergence with a reconvergence path."
+)
+_CDD_EVIDENCE_LABELS = (
+    "criteria:",
+    "tests:",
+    "repository:",
+    "levels:",
+    "trajectory:",
+    "composition:",
+    "delivery:",
 )
 
 
@@ -62,6 +74,20 @@ def _render_native_verdict(arguments: dict[str, object]) -> str:
     if not isinstance(body, str):
         body = json.dumps(arguments, sort_keys=True)
     return f"```{_VERDICT_TOOL_NAME}\n{body}\n```"
+
+
+def _has_cdd_evidence(transcript: list[ChatMessage]) -> bool:
+    """Require a storm verdict to report its convergence evidence fields.
+
+    The labels are a deterministic protocol check, not a substitute for reviewing the
+    values. The values still have to describe the actual repository and the tools the
+    run used; this check prevents a bare marker from being mistaken for a CDD report.
+    """
+    assistant_text = "\n".join(
+        message.content for message in transcript if message.role == "assistant"
+    )
+    lowered = assistant_text.lower()
+    return all(label in lowered for label in _CDD_EVIDENCE_LABELS)
 
 
 def _trim_transcript(transcript: list[ChatMessage], context_window: int) -> list[ChatMessage]:
@@ -125,6 +151,7 @@ class AutonomousRunner:
         saw_verdict = False
         invalid_completion_claims = 0
         storm_requires_progress = plan.lstrip().startswith("# qwenstorm plan")
+        storm_requires_cdd_evidence = "## Convergence-Driven Development (CDD)" in plan
         state.transcript.extend(
             [
                 ChatMessage("system", _system_prompt(cwd)),
@@ -240,6 +267,7 @@ class AutonomousRunner:
                 and saw_verdict
                 and any_tool_called
                 and (not storm_requires_progress or progress_tool_called)
+                and (not storm_requires_cdd_evidence or _has_cdd_evidence(state.transcript))
             ):
                 state.status = RunStatus.COMPLETED
                 await self._notify("Qwen run completed", f"Run {run_id} completed successfully.")
