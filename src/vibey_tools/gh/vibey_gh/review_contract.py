@@ -17,7 +17,7 @@ each one is grounded in lines the diff actually contains.
 
 That split used to live implicitly in three places — `local_review.REVIEW_SCHEMA` (what
 the local model is asked), `local_review.UNEVALUATED_FIELDS` (what it is not asked), and
-a hand-written `--json-schema` literal in `templates/workflows/pr-automation.yml` (what the
+a hand-written `--json-schema` literal in `templates/workflows/pr-review.yml` (what the
 paid path is asked). Three copies of one meaning drift, and one of them was already misread:
 `audience_order` is in `UNEVALUATED_FIELDS` and yet the fallback writes `true` for it. Both
 are true at once, and the reconciliation is the whole point of this module — the `true` is

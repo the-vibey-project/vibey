@@ -23,7 +23,7 @@ trusted_authors = ["adammatthewsteinberger", "claude[bot]", "github-actions[bot]
 [pr_automation]
 enabled = true
 scan_workflows = ["CI", "Provenance", "CodeQL", "Docs", "Conventional Commits", "API drift (Cloud Agents OpenAPI)"]
-ignored_checks = ["PR automation / gate", "gate", "Merge train / merge"]
+ignored_checks = ["PR evaluate / gate", "PR review / gate", "PR automation / gate", "gate", "Merge train / merge"]
 max_repair_attempts = 3
 model = "claude-sonnet-5"
 review_untrusted_authors = true
@@ -198,7 +198,8 @@ required_checks = [
   "CodeQL",
   "Documentation contract",
   "MCP, API, CLI, SDK, and webhook parity",
-  "PR automation / gate",
+  "PR evaluate / gate",
+  "PR review / gate",
 ]
 bypass_actors = ["RepositoryRole:5"]
 

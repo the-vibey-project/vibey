@@ -61,14 +61,28 @@ def test_a_single_job_ci_waits_on_that_job_alone():
 
 
 def test_routed_around_and_ignored_checks_are_never_required_and_order_is_kept():
-    required = ("zeta", "gate", "PR automation / gate", "Automation bootstrap / gate", "Flaky")
+    required = (
+        "zeta",
+        "gate",
+        "PR automation / gate",
+        "PR evaluate / gate",
+        "PR review / gate",
+        "Automation bootstrap / gate",
+        "Flaky",
+    )
     cfg = _config(required=required + ("alpha",), ignored=("Flaky",))
     assert GATE.required_checks(cfg) == ("zeta", "alpha")
 
 
 def test_the_excluded_checks_are_the_gates_this_path_routes_around():
     assert GATE.excluded_checks() == EXCLUDED_CHECKS
-    assert set(EXCLUDED_CHECKS) == {"gate", "PR automation / gate", "Automation bootstrap / gate"}
+    assert set(EXCLUDED_CHECKS) == {
+        "gate",
+        "PR automation / gate",
+        "PR evaluate / gate",
+        "PR review / gate",
+        "Automation bootstrap / gate",
+    }
 
 
 def test_the_standalone_scope_is_the_historical_pattern_plus_this_module():

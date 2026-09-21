@@ -244,7 +244,7 @@ def _recording(monkeypatch, *, code: int = 0, out: str = "") -> list[list[str]]:
 
     def view(*_args):
         # What `gh pr view` answers: GitHub's count, never the listing the train adds.
-        pr = ready_pr(statusCheckRollup=[{"name": "PR automation / gate"}], changedFiles=2)
+        pr = ready_pr(statusCheckRollup=[{"name": "PR review / gate"}], changedFiles=2)
         del pr[CHANGED_PATHS_KEY], pr[LISTED_FILES_KEY]
         return pr
 

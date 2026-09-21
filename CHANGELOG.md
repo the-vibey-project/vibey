@@ -12,7 +12,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
-No changes yet.
+### Added
+
+* **vibey_gh:** `vibey-gh`'s PR automation is split into two workflows — `PR evaluate`
+  (`pr-evaluate.yml`, publishes `PR evaluate / gate`) and `PR review` (`pr-review.yml`,
+  publishes `PR review / gate`) — so a red gate names its failing task instead of hiding
+  behind one ambiguous `PR automation / gate` check. The scan gate lists the failing
+  checks in its title; the review gate certifies the exact-head review verdict; the merge
+  train requires both.
 
 ## [2.0.0] (2026-09-21)
 

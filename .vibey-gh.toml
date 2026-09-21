@@ -96,7 +96,7 @@ pin_version = true
 # author's own. It refuses to rewrite a branch that already carries merge commits and
 # fails loudly there rather than guessing, which is the right trade: an automated rewrite
 # of somebody's merge is not a tidy-up.
-workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "pr-automation.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml"]
+workflows = ["merge-train.yml", "promote-to-main.yml", "provenance.yml", "release-surfaces.yml", "pr-evaluate.yml", "pr-review.yml", "automation-bootstrap.yml", "github-release.yml", "conventional-commits.yml"]
 
 # Declared here rather than clicked, per ADR-0018. `vibey-gh` has reconciled both of these
 # from configuration since 1.x and vibey-skills has used them for months; this repository,
@@ -178,7 +178,7 @@ plugins = [
 # This repository's real PR-triggered workflows. The default set names "Docs", which
 # nothing here answers to -- a gate waiting on a scan that can never complete never posts.
 # "Conventional Commits" is here because it is now a gating check, and this list renders
-# into `pr-automation.yml`'s `workflow_run` trigger. A gating workflow absent from it
+# into `pr-evaluate.yml`'s `workflow_run` trigger. A gating workflow absent from it
 # completes and announces nothing, so the last scan fires the final evaluation, this one
 # settles after it, and no run ever looks again -- the pull request then sits blocked with
 # every check green and nothing to rerun. That deadlock has happened here before; the two

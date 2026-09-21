@@ -196,7 +196,7 @@ flowchart TB
         PR(["pull request or push → develop / main"]) --> CIWF["CI (ci.yml)<br/>uv-lock · gates: ruff · format · mypy --strict · pytest+cov ·<br/>4× per-layer 100% branch gates · lint-imports · bandit · pip-audit ·<br/>PostgreSQL compatibility 14–18 · tools matrix, every tenant suite on<br/>Python 3.12/3.13/3.14 plus its static gates and strict docs builds ·<br/>reports, not required in .vibey-gh.toml · tools-lint ·<br/>image: amd64 + arm64, one Image contract step per Dockerfile claim, not pushed ·<br/>cluster-smoke: helm on minikube, KEDA + SIGTERM drain"]
         AnyPush(["git push: any branch · every PR"]) --> Provenance["Provenance workflow (provenance.yml)<br/>vibey-gh check --ci on every push and PR"]
         PR --> Provenance
-        CIWF --> PRAuto["PR automation (pr-automation.yml)<br/>vibey-gh pr-automation evaluate · review · repair · mirror-fork"]
+        CIWF --> PRAuto["PR evaluate (pr-evaluate.yml) / PR review (pr-review.yml)<br/>vibey-gh pr-automation evaluate · review · repair · mirror-fork"]
         Provenance --> PRAuto
         PRAuto --> MergeTrain["Merge train (merge-train.yml)<br/>vibey-gh merge-train: squash into develop,<br/>rebase into main"]
         MergeTrain --> Promote["Promote (promote-to-main.yml)<br/>vibey-gh promote: develop → main PR"]

@@ -1,11 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 name: Merge train
 
-# A successful PR-automation gate is the primary trigger. Weekly and manual runs remain
-# recovery backstops and evaluate every currently ready PR.
+# A successful PR-review gate is the primary trigger -- the review workflow is the last of
+# the split pair to run, so its gate publishing success is when the head is ready. Weekly
+# and manual runs remain recovery backstops and evaluate every currently ready PR.
 on:
   workflow_run:
-    workflows: ["PR automation"]
+    workflows: ["PR review"]
     types: [completed]
   schedule:
     - cron: "17 7 * * 1"
@@ -33,16 +34,17 @@ concurrency:
 jobs:
   merge:
     name: merge
-    # Deliberately NOT gated on the triggering run's conclusion. "PR automation" concludes
+    # Deliberately NOT gated on the triggering run's conclusion. "PR review" concludes
     # `failure` whenever its exact-head review job fails -- which is exactly the case the
     # local review fallback exists to cover: the fallback job then succeeds, publishes a
-    # green `PR automation / gate`, and the run as a whole still ends `failure` because one
+    # green `PR review / gate`, and the run as a whole still ends `failure` because one
     # job in it did. Filtering on that conclusion skipped the merge train on every such PR
     # and silently defeated the fallback at the last step.
     #
     # Nothing is relaxed by dropping it. The conclusion was never the authority: the
     # decision is made below by `vibey-gh merge-train`, which re-reads each PR and requires
-    # a completed, successful `PR automation / gate` on the head before merging anything.
+    # a completed, successful `PR evaluate / gate` AND `PR review / gate` on the head
+    # before merging anything.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
