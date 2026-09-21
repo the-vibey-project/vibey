@@ -478,21 +478,24 @@ backlog with `qwen3:14b` through Ollama. It is not a replication of the stress r
 the work items were heterogeneous, the offered concurrency was not controlled as a
 factorial experiment, and several runs were still alive or had produced no events at
 the evidence cutoff. The tracked record names every allocated run directory and the
-cutoff (`2026-09-20T22:46:00-04:00`).
+cutoff (`2026-09-20T23:33:19-04:00`).
 
-Nine run directories were observed. Two completed with both a verdict and the
+Eleven run directories were observed. Three completed with both a verdict and the
 `QWENLOOP_TASK_FULLY_COMPLETE` marker: the first after five turns and four tool calls,
-and the second after nine turns and twelve tool calls, including six writes totalling
-2,431 bytes. Two more emitted provisional verdicts without the completion marker: one
-made eight file-write calls totalling 7,430 bytes over eleven turns and thirteen tool
-calls, while the other reached nine turns and eight tool calls with two file-write
-attempts that produced no successful bytes. Another reached two turns and two tool
-calls without a verdict; another produced one tool error after one turn. Three
-directories had no events at the cutoff, while one storm process was still alive.
-Across all nine directories the logs contain 37 model-turn boundaries, 40 tool calls,
-201,693 input tokens, 30,834 output tokens, and sixteen file-write calls totalling
-9,861 bytes. Thus the accepted completion rate at the cutoff was 2/9, or 22.2%,
-while a verdict alone would have suggested 4/9, or 44.4%.
+the second after nine turns and twelve tool calls, including six writes totalling
+2,431 bytes, and a later run after six turns and five tool calls with one write
+totalling 1,924 bytes. Two more emitted provisional verdicts without the completion
+marker: one made eight file-write calls totalling 7,430 bytes over eleven turns and
+thirteen tool calls, while the other reached nine turns and eight tool calls with two
+file-write attempts that produced no successful bytes. One older run reached two turns
+and two tool calls without a verdict; a newer run was still active at the cutoff after
+23 turns and 19 tool calls, had made sixteen writes totalling 13,571 bytes, and emitted
+no verdict. Another produced one tool error after one turn. Three directories had no
+events at this cutoff, while one storm process was still alive. Across all
+eleven directories the logs contain 66 model-turn boundaries, 64 tool calls, 295,544
+input tokens, 57,853 output tokens, and 33 file-write calls totalling 25,356 bytes.
+Thus the accepted completion rate at the cutoff was 3/11, or 27.3%, while a verdict
+alone would have suggested 5/11, or 45.5%.
 
 This is a runner-reliability observation, not a model-quality or throughput estimate.
 It is nevertheless an empirical check of the completion contract: a verdict without

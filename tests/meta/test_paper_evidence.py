@@ -22,18 +22,18 @@ def test_paper_evidence_reports_qwen_storm_record() -> None:
     evidence = json.loads(result.stdout)
     qwen = evidence["qwen_storm"]
 
-    assert qwen["runs"] == 9
+    assert qwen["runs"] == 11
     assert qwen["active_storm_processes"] == 1
-    assert qwen["completed_runs"] == 2
-    assert qwen["completion_marker_runs"] == 2
-    assert qwen["verdict_runs"] == 4
-    assert qwen["turns"] == 37
-    assert qwen["tool_calls"] == 40
-    assert qwen["input_tokens"] == 201693
-    assert qwen["output_tokens"] == 30834
-    assert qwen["file_write_calls"] == 16
-    assert qwen["bytes_written"] == 9861
+    assert qwen["completed_runs"] == 3
+    assert qwen["completion_marker_runs"] == 3
+    assert qwen["verdict_runs"] == 5
+    assert qwen["turns"] == 66
+    assert qwen["tool_calls"] == 64
+    assert qwen["input_tokens"] == 295544
+    assert qwen["output_tokens"] == 57853
+    assert qwen["file_write_calls"] == 33
+    assert qwen["bytes_written"] == 25356
     assert qwen["empty_runs"] == 3
-    assert qwen["incomplete_runs"] == 7
+    assert qwen["incomplete_runs"] == 8
     assert qwen["requested_settings"]["context_length"] == 32768
     assert qwen["observed_server"]["context_length"] == 40960
