@@ -1,8 +1,9 @@
 # CLAUDE.md
 
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
-Built on PostgreSQL and five `*loop` autonomous session runners (claudeloop,
-codexloop, cursorloop, agyloop, and the opt-in local qwenloop), which live in this
+Built on PostgreSQL and six `*loop` autonomous session runners (claudeloop,
+codexloop, cursorloop, agyloop, opencode's `opencodeloop`, and the opt-in local
+qwenloop), which live in this
 repository under `src/vibey_runners/`. It orchestrates design → build → review with
 an optional visual-design interstitial, plus an opt-in Azure deployment stage
 set. One distribution — `pip install vibey` delivers the whole family,
@@ -106,8 +107,8 @@ under 100%. `tui/` is outside the floor, a recorded exemption. ADR-0023.
 uv workspace (`[tool.uv.workspace] members = ["src/vibey_runners/*",
 "src/vibey_tools/*"]`, ADR-0021) whose other members are absorbed with history:
 
-- `src/vibey_runners/{claude,codex,cursor,agy,qwen}` — claudeloop, codexloop,
-  cursorloop, agyloop, qwenloop; `src/vibey_runners/common` — vibey-runners-common.
+- `src/vibey_runners/{claude,codex,cursor,agy,opencode,qwen}` — claudeloop, codexloop,
+  cursorloop, agyloop, opencodeloop, qwenloop; `src/vibey_runners/common` — vibey-runners-common.
 - `src/vibey_tools/gh` — vibey-gh (provenance, merge train, promotion, release,
   and the governance canon under `docs/`); `src/vibey_tools/skills` —
   vibey-skills; `src/vibey_tools/bootstrap` — vibey-bootstrap.
@@ -138,8 +139,9 @@ explicit opt-in; declining deployment records a successful local completion.
 
 - **Queue backend:** PostgreSQL 17, never SQLite. `FOR UPDATE SKIP LOCKED` is
   the reason; see ADR-0002.
-- **Engines:** `claudeloop`, `codexloop`, `cursorloop`, and `agyloop` are the
-  default paid-engine pool (tier PAID). Two default-off local engines (tier LOCAL)
+- **Engines:** `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, and `opencode`
+  (the `opencodeloop` adapter) are the default paid-engine pool (tier PAID).
+  Two default-off local engines (tier LOCAL)
   join them behind their own switches: `qwenloop` (`VIBEY_FEATURE_QWENLOOP` or
   `[features] qwenloop`) and `claudeloop-local` — the claudeloop binary on a local
   backend profile (`VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features]

@@ -15,6 +15,7 @@ import pytest
 from vibey.bootstrap import build_app, migrations_dir
 from vibey.domain.engine import EngineId
 from vibey.infrastructure.cluster_preflight import (
+    ENGINE_API_KEY_ENVS,
     ClusterCheck,
     ClusterPreflight,
     EngineAuthCheck,
@@ -105,7 +106,7 @@ def test_workspace_unwritable_reports_the_reason(tmp_path: Path) -> None:
 
 
 def test_the_default_chart_install_passes_although_every_engine_ships() -> None:
-    """The regression this check had after ADR-0037: the one wheel puts all four
+    """The regression this check had after ADR-0037: the one wheel puts all five
     paid engines on PATH, so a default install (`--provider scripted`, no
     `worker.engines`, no keys) -- the install CI deploys -- reported FAIL for
     engines the worker was never asked to use."""
@@ -113,7 +114,7 @@ def test_the_default_chart_install_passes_although_every_engine_ships() -> None:
     assert check.ok, check.detail
     assert "nothing required" in check.detail
     assert "--provider scripted" in check.detail
-    assert "4 engine binaries on PATH, none with an API key" in check.detail
+    assert "5 engine binaries on PATH, none with an API key" in check.detail
     # The one fact a bare PASS would hide: nothing engine-driven can run.
     assert "no engine-driven (BUILD) job can run" in check.detail
 
@@ -136,6 +137,16 @@ def test_without_an_allow_list_every_key_present_names_no_gap() -> None:
     check = EngineAuthCheck(which=_every_binary).check(_EVERY_KEY)
     assert check.ok
     assert "API key present: agyloop, claudeloop, codexloop, cursorloop" in check.detail
+    assert "without one: opencode" in check.detail
+
+
+def test_without_an_allow_list_can_report_every_engine_keyed() -> None:
+    """The port remains generic when a deployment supplies an OpenCode config secret."""
+    api_key_envs = {**ENGINE_API_KEY_ENVS, EngineId.OPENCODE: ("OPENCODE_CONFIG",)}
+    check = EngineAuthCheck(which=_every_binary, api_key_envs=api_key_envs).check(
+        {**_EVERY_KEY, "OPENCODE_CONFIG": "mounted"}
+    )
+    assert check.ok
     assert "without one" not in check.detail
 
 

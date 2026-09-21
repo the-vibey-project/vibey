@@ -112,6 +112,7 @@ def test_minimal_config_applies_defaults() -> None:
         "codexloop",
         "cursorloop",
         "agyloop",
+        "opencode",
     )
     assert config.phases.design.effort == "high"
     assert config.phases.build.effort == "low"

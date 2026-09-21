@@ -4,14 +4,14 @@
 > starving an engine, without pretending they are interchangeable, and without
 > conflating "out of tokens for five minutes" with "out of money until you pay."
 
-> **Status as of 2026-09-15.** This plan predates the implementation. It has
+> **Status as of 2026-09-21.** This plan predates the implementation. It has
 > been checked against the code in `src/vibey/` (v0.6.0) and the runners in
 > `src/vibey_runners/` (the runner family now lives in this repository as a
 > uv workspace, ADR-0021). Where the code does not yet do what the plan
 > designed, the text says so and marks the design *not implemented* instead
 > of deleting it. The main differences from the original plan:
 >
-> - There are **six** engine ids over five runners. `qwenloop` and
+> - There are **seven** engine ids over six runners. `qwenloop` and
 >   `claudeloop-local` (the claudeloop binary on a local backend profile) are
 >   opt-in local engines, **preferred first** (ADR-0015, ADR-0038); qwenloop's
 >   model is also the sovereign DESIGN/DECOMPOSE provider (ADR-0027).
@@ -27,26 +27,26 @@
 
 ## 1. The verified divergence
 
-The five runners look like siblings: the same `run` / `resume` / `doctor` /
+The six runners look like siblings: the same `run` / `resume` / `doctor` /
 `stop` / `prompt` verbs, a similar run-directory layout, and the same
 capacity ADT. They are *not* interchangeable at the flag level. This table
 comes from reading their sources under `src/vibey_runners/`, not their docs:
 
-| Concern | `claudeloop` | `codexloop` | `cursorloop` | `agyloop` | `qwenloop` |
-|---|---|---|---|---|---|
-| Effort vocabulary | `Literal["low","medium","high","xhigh","max"]` | `StrEnum{LOW,MEDIUM,HIGH}`, no `run` flag | **none** (a model-id ladder) | `Literal["low","medium","high","xhigh","max"]` | none (a `--max-turns` budget; `--preset`/`--effort` are accepted and ignored) |
-| Preset tiers | `low/medium/high` → model aliases | none | `_PRESET_LADDER` of model ids | `low/medium/high` → model aliases | none |
-| Model ladder | sonnet → opus → fable | codex models | `composer-fast → composer → grok-4.5 → grok → grok-xhigh` | flash-lite → flash → pro | local qwen2.5-coder profiles (`[qwenloop] portable_profile` / `nvidia_profile`) |
-| Router models | — | — | `router-cost / router-balanced / router-intelligence` | — | — |
-| Top-level `effort` cmd | ✅ | ✅ | ❌ | ❌ | stub (prints a message) |
-| Top-level `preset` cmd | ✅ | ❌ | ❌ | ✅ | stub |
-| `savepoints` / `unwind` | ✅ | ✅ | ✅ | ✅ ¹ | stubs |
-| Session listing verb | `sessions` | `threads` | `agents` | `sessions` | `sessions` (stub) |
-| Sandbox / permission | `permission-mode` | `sandbox` + `approval` | `hooks` | `--safe` / `--yolo` | none (local process) |
-| Structured verdict | ✅ (`finished` event) | ✅ (`run.verdict` event) | ❌ ² | ✅ (`finished` event) | `completed` / `failed` events |
-| State dir | `.claudeloop/` | `.codexloop/` | `.cursorloop/` | `.agyloop/` | `.qwenloop/` |
-| Done marker | `CLAUDELOOP_TASK_FULLY_COMPLETE` | `CODEXLOOP_…` | `CURSORLOOP_…` | `AGYLOOP_…` | `QWENLOOP_TASK_FULLY_COMPLETE` |
-| Auth | `ANTHROPIC_*` | `OPENAI_API_KEY` / `CODEX_API_KEY` / login | `CURSOR_API_KEY` | `GOOGLE_API_KEY` / `GEMINI_API_KEY` / ADC | none (local llama.cpp or vLLM server) |
+| Concern | `claudeloop` | `codexloop` | `cursorloop` | `agyloop` | `opencodeloop` | `qwenloop` |
+|---|---|---|---|---|---|---|
+| Effort vocabulary | `Literal["low","medium","high","xhigh","max"]` | `StrEnum{LOW,MEDIUM,HIGH}`, no `run` flag | **none** (a model-id ladder) | `Literal["low","medium","high","xhigh","max"]` | **none** (provider/model configuration; no portable effort flag) | none (a `--max-turns` budget; `--preset`/`--effort` are accepted and ignored) |
+| Preset tiers | `low/medium/high` → model aliases | none | `_PRESET_LADDER` of model ids | `low/medium/high` → model aliases | provider/model configuration | none |
+| Model ladder | sonnet → opus → fable | codex models | `composer-fast → composer → grok-4.5 → grok → grok-xhigh` | flash-lite → flash → pro | selected inside OpenCode | local qwen2.5-coder profiles (`[qwenloop] portable_profile` / `nvidia_profile`) |
+| Router models | — | — | `router-cost / router-balanced / router-intelligence` | — | — | — |
+| Top-level `effort` cmd | ✅ | ✅ | ❌ | ❌ | ❌ | stub (prints a message) |
+| Top-level `preset` cmd | ✅ | ❌ | ❌ | ✅ | ❌ | stub |
+| `savepoints` / `unwind` | ✅ | ✅ | ✅ | ✅ ¹ | none claimed | stubs |
+| Session listing verb | `sessions` | `threads` | `agents` | `sessions` | `run --session` | `sessions` (stub) |
+| Sandbox / permission | `permission-mode` | `sandbox` + `approval` | `hooks` | `--safe` / `--yolo` | `--auto` (unattended approvals) | none (local process) |
+| Structured verdict | ✅ (`finished` event) | ✅ (`run.verdict` event) | ❌ ² | ✅ (`finished` event) | ✅ (`step_finish` + wrapper `finished`) | `completed` / `failed` events |
+| State dir | `.claudeloop/` | `.codexloop/` | `.cursorloop/` | `.agyloop/` | `.opencodeloop/` | `.qwenloop/` |
+| Done marker | `CLAUDELOOP_TASK_FULLY_COMPLETE` | `CODEXLOOP_…` | `CURSORLOOP_…` | `AGYLOOP_…` | `OPENCODELOOP_TASK_FULLY_COMPLETE` | `QWENLOOP_TASK_FULLY_COMPLETE` |
+| Auth | `ANTHROPIC_*` | `OPENAI_API_KEY` / `CODEX_API_KEY` / login | `CURSOR_API_KEY` | `GOOGLE_API_KEY` / `GEMINI_API_KEY` / ADC | OpenCode-owned provider credentials | none (local llama.cpp or vLLM server) |
 
 ¹ `agyloop` registers both `unwind` and a `savepoints` group, but vibey's
 `AGYLOOP` descriptor does not claim `Capability.SAVEPOINTS`. A job that
@@ -56,9 +56,13 @@ requires savepoints is never routed to agyloop until the descriptor changes.
 `usage`, `status`), with no session, turn, or verdict boundary event. Its
 descriptor does not claim `STRUCTURED_VERDICT`.
 
+³ `opencodeloop` maps the official OpenCode JSON event names and adds its own
+terminal wrapper event; fake conformance is covered in this tree, while the
+external OpenCode CLI remains an explicit live-preflight dependency.
+
 vibey's descriptors list only the primary auth variable for each engine
 (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `CURSOR_API_KEY`, `GOOGLE_API_KEY`,
-and none for qwenloop). The runners' own `doctor` commands also accept the
+and none for opencodeloop or qwenloop). The runners' own `doctor` commands also accept the
 alternatives shown above. vibey passes empty `isolation_flags` for every
 engine except `agyloop`, whose container and VM levels map to `--safe`. The
 other isolation flags the original plan assumed do not exist on the runners'
@@ -130,13 +134,14 @@ missing, it falls back to the highest projection at or below it.
 live in `domain/engine.py`.
 
 All descriptors live in one module, `infrastructure/engines/descriptors.py`.
-`DEFAULT_DESCRIPTORS` holds the four paid engines, `LOCAL_DESCRIPTORS` the two
-local ones (`QWENLOOP`, `CLAUDELOOP_LOCAL`), `ALL_DESCRIPTORS` all six, and
+`DEFAULT_DESCRIPTORS` holds the five paid engines, `LOCAL_DESCRIPTORS` the two
+local ones (`QWENLOOP`, `CLAUDELOOP_LOCAL`), `ALL_DESCRIPTORS` all seven, and
 `BY_ENGINE_ID` indexes them. Descriptors are **data, not code
 paths**. A new engine needs a new `EngineId`, a descriptor, a capacity
 classifier, an event-type map entry (§8.3), and an adapter configuration.
-`domain/rotation.py` does not change. The fifth and sixth engines, `qwenloop`
-and `claudeloop-local`, landed this way; their `tier = LOCAL` is what the
+`domain/rotation.py` does not change. The fifth, sixth and seventh engine ids,
+`opencodeloop`, `qwenloop` and `claudeloop-local`, landed this way; the latter
+two have `tier = LOCAL`, which is what the
 selector's tier preference reads (§5.5).
 
 ---
@@ -644,7 +649,7 @@ async iterator.
 
 ### 8.1 What the adapter actually reads
 
-The files vibey depends on are common to all five runners; the rest vary:
+The files vibey depends on are common to all six runners; the rest vary:
 
 ```
 .<engine>loop/runs/<run_id>/
@@ -695,7 +700,7 @@ per engine:
 When the result is recorded, a failing check sets `conformance_ok = false`,
 which makes the engine ineligible (§5.4): degraded, not broken.
 `vibey doctor` prints exactly which claim failed, so a descriptor can be
-corrected when a runner changes. By default the suite checks the four paid
+corrected when a runner changes. By default the suite checks the five paid
 engines, plus qwenloop when its feature flag is on. `--engine` checks one
 engine.
 
@@ -719,6 +724,7 @@ skipped, so a new runner event cannot crash vibey.
 | `codexloop` | `thread.started` → `SESSION_SEEDED`; `turn.started` → `TURN_REQUESTED`; `turn.completed`, `turn.failed` → `TURN_COMPLETED`; `item.started`, `item.completed` → `TOOL_INVOKED`; `rate_limits.updated` → `BUDGET_SPENT`; `run.verdict` → `VERDICT_RENDERED` |
 | `cursorloop` | `tool_call` → `TOOL_INVOKED`; `usage` → `BUDGET_SPENT` (no session, turn, or verdict boundary events) |
 | `agyloop` | as claudeloop, except `sdk.event` (not `chatter.tool`) → `TOOL_INVOKED`, and `savepoint`, `savepoint.created`, `savepoint.skipped` → `SAVEPOINT_CREATED` |
+| `opencodeloop` | `run.started` → `SESSION_SEEDED`; `step_start` → `TURN_REQUESTED`; `text`, `reasoning` → `TRANSCRIPT_RECORDED`; `tool_use` → `TOOL_INVOKED`; `step_finish` → `TURN_COMPLETED`; wrapper `finished`, `failed` → `VERDICT_RENDERED` |
 | `qwenloop` | `run.started` → `SESSION_SEEDED`; `turn.completed` → `TURN_COMPLETED`; `text_delta` → `TRANSCRIPT_RECORDED`; `tool_result` → `TOOL_INVOKED`; `completed`, `failed` → `VERDICT_RENDERED` |
 
 `capacity.forecast` and `rate_limits.updated` are headroom telemetry, emitted

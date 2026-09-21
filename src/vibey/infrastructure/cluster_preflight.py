@@ -115,7 +115,7 @@ def check_workspace_writable(workspace: Path) -> ClusterCheck:
 class EngineAuthCheck:
     """Judges engine credentials against the engines the worker will actually use.
 
-    Since ADR-0037 every runner ships in the image, so ``which`` finds all four
+    Since ADR-0037 every runner ships in the image, so ``which`` finds all five
     paid engines in every pod, including a default chart install that runs
     ``--provider scripted`` with no keys at all. Presence on ``PATH`` therefore
     says nothing about intent, and judging every binary it finds made that

@@ -1807,7 +1807,7 @@ def test_worker_warns_about_engines_without_conformance(tmp_path: Path) -> None:
             assert all(not r.conformance_ok for r in records)
             return len(records)
 
-    assert asyncio.run(check()) == 4
+    assert asyncio.run(check()) == 5
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")

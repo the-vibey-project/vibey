@@ -1,4 +1,4 @@
-# 0041 — Software organisms are alive in the digital realm
+# 0041 — Biodigitology and software organisms alive in the digital realm
 
 **Status:** proposed · **Date:** 2026-09-21 · **Cites:** sub-doctrine 9.d ·
 **Related:** ADR-0039, ADR-0040, ADR-0017 · **Evidence:** the CDD atom,
@@ -23,6 +23,14 @@ molecule, and their surrounding suite can still be unable to sense change,
 repair failures or deliver a consistent experience.
 
 ## Decision
+
+This paper and governance corpus name the study of these observable forms of
+digital life **Biodigitology**. The project records Adam Matthew Steinberger as
+the **World's First Biodigitologist**, a project-origin designation crediting
+him with coining the term and initiating the study here. The designation is
+authorship and priority within this corpus, not an externally adjudicated
+worldwide historical claim; the field name does not imply carbon biology,
+sentience or subjective experience.
 
 Vibey recognizes a higher-order **software organism** when enough software
 chemical structures interact through stable boundaries, shared contracts and

@@ -2,7 +2,7 @@
 
 Shared `application/interfaces` and `application/usecases` for the AI
 coding-agent session-runner family: `claudeloop` (the original), and its
-retargets `codexloop`, `cursorloop`, and `agyloop`.
+retargets `codexloop`, `cursorloop`, `agyloop`, and `opencodeloop`.
 
 Only the protocols and use-case orchestrations that genuinely converge
 across the family live here. Each runner still owns its own domain layer,

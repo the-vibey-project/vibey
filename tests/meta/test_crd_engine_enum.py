@@ -1,10 +1,8 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The `VibeyProject` CRD accepts exactly the engine ids vibey has.
 
-The chart's `spec.engines` enum was written when there were four engines and stayed
-there: `qwenloop` joined the tree and the CRD never learned it, so a cluster could not
-name the one engine sub-doctrine 8.a prefers. A hand-kept list beside an enum in code
-drifts; this is the check that it has not.
+The chart's `spec.engines` enum is a deployment-facing copy of the engine vocabulary.
+A hand-kept list beside an enum in code drifts; this is the check that it has not.
 """
 
 from __future__ import annotations

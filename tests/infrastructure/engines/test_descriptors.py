@@ -18,9 +18,11 @@ ALL_EFFORTS = list(Effort)
 # flag (confirmed against real --help output, see descriptors.py's own
 # header comment) and so always produce non-empty argv. codexloop has no
 # CLI-level effort control at all -- see test_codexloop_has_no_cli_level_
-# effort_control below for its own, deliberately different invariant.
+# effort_control below for its own, deliberately different invariant. OpenCode
+# is also deliberately empty because its provider-specific model controls are
+# not a portable effort contract.
 DESCRIPTORS_WITH_REAL_EFFORT_FLAGS = [
-    d for d in ALL_DESCRIPTORS if d.engine_id != EngineId.CODEXLOOP
+    d for d in ALL_DESCRIPTORS if d.engine_id not in {EngineId.CODEXLOOP, EngineId.OPENCODE}
 ]
 
 
@@ -70,6 +72,14 @@ def test_codexloop_has_no_cli_level_effort_control() -> None:
     assert CODEXLOOP.saturates_at(Effort.STANDARD) is False
     assert CODEXLOOP.saturates_at(Effort.HIGH) is True
     assert CODEXLOOP.saturates_at(Effort.MAX) is True
+
+
+def test_opencode_has_no_portable_cli_effort_control() -> None:
+    from vibey.infrastructure.engines.descriptors import OPENCODE
+
+    assert [OPENCODE.invoke(e).argv for e in ALL_EFFORTS] == [()] * len(ALL_EFFORTS)
+    assert all(OPENCODE.invoke(e).achieved is Effort.STANDARD for e in ALL_EFFORTS)
+    assert OPENCODE.saturates_at(Effort.HIGH)
 
 
 def test_agyloop_uses_real_five_level_effort_flag() -> None:

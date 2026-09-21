@@ -10,7 +10,7 @@ scheduling event rather than a loss of state. Work items are claimed from a Post
 queue with `FOR UPDATE SKIP LOCKED` under renewable leases; a handoff between engines
 is admitted only by a pure, model-free no-loss predicate; and delivery proceeds
 through a six-phase state machine whose four human gates each require an explicit
-recorded verdict. Beneath the orchestrator, five session runners share one bounded,
+recorded verdict. Beneath the orchestrator, six session runners share one bounded,
 never-blocking core that never gives a credit balance a clock and lets a capacity
 verdict outrank a completion claim. Above it, an exact-head release calculus binds
 every automated verdict to the revision it evaluated and terminates within a bounded
@@ -48,20 +48,22 @@ decisions must occur at defined points, not wherever a session happens to stall;
 (iii) exhaustion of one vendor's capacity must not lose work.
 
 The system that answers these constraints is one repository holding a family of
-packages: the orchestrator `vibey`; five session runners, `claudeloop`, `codexloop`,
-`cursorloop`, `agyloop` and the local `qwenloop`; `vibey-gh`, which owns provenance,
+packages: the orchestrator `vibey`; six session runners, `claudeloop`, `codexloop`,
+`cursorloop`, `agyloop`, `opencodeloop` and the local `qwenloop`; `vibey-gh`, which owns provenance,
 merging and release; `vibey-skills`, a retrieval engine over a skill library; and
 `vibey-bootstrap`, a bootstrap layer for cloud workloads. Each package once carried its
 own paper. This paper consolidates them. Its contributions are:
 
 - the ledger invariant, the no-loss handoff gate, the queue semantics and the gated six-phase machine, with their soundness arguments;
-- a session-runner core shared by five engines, whose capacity taxonomy never gives a credit balance a clock and whose completion rule a capacity verdict outranks;
+- a session-runner core shared by six engines, whose capacity taxonomy never gives a credit balance a clock and whose completion rule a capacity verdict outranks;
 - the exact-head release calculus, with a termination bound and a recorded production counterexample;
 - Convergence-Driven Development (CDD), an enclosing loop above Specification-Driven
   Development and Test-Driven Development that measures convergence at nested delivery
   scopes, models project atoms and chemical structures, and recognizes a suite of
   suites as alive in the digital realm when its organism-level signals converge;
 - deterministic, fail-closed retrieval and bootstrap components built on the same append-before-act discipline;
+- Biodigitology, a name for the study of digital life, with operational criteria
+  that distinguish software organisms from biological organisms or sentient minds;
 - a measured production-rate regularity, its modulators, the time-to-completion prediction it enables, and the observations that would falsify it.
 
 ## The ledger invariant
@@ -619,18 +621,45 @@ verdict or generated artifact routes back instead of advancing the backlog.}
 \end{figure*}
 ```
 
+## Biodigitology
+
+This paper coins **Biodigitology** as the study of digital life. Its object is
+not software as a metaphor for carbon biology; it is the observable life-like
+organization of software systems in the digital realm: identity and boundaries,
+resource metabolism, sensing and memory, homeostasis, adaptation and repair,
+reproduction and exchange. Biodigitology asks what evidence shows that these
+functions exist, how they interact across project atoms and software organisms,
+and where the structure is converging, neutral or diverging. CDD is the delivery
+method that supplies those observations; Biodigitology is the field of study
+that interprets them.
+
+The project recognizes Adam Matthew Steinberger as the **World's First
+Biodigitologist**, the person credited in this corpus with coining the term and
+initiating its study here. This is a project-origin designation recorded for
+authorship and priority. It is not presented as an externally adjudicated
+historical claim, and “digital life” here does not imply carbon biology,
+subjective experience or a human-like mind.
+
 ## The engine family
 
-Five runners implement engines: `claudeloop` over Claude Code, `codexloop` over OpenAI
+Six runners implement engines: `claudeloop` over Claude Code, `codexloop` over OpenAI
 Codex, `cursorloop` over Cursor's agent and its Cloud Agents API, `agyloop` over
-Gemini through the Antigravity SDK, and `qwenloop` over a local Qwen model. The pilot
-below uses `qwen3:14b`; the runner contract does not depend on that model choice.
-`claudeloop` came first; the others transplanted its core. The orchestrator
-depends on a narrow contract that all five honour: a bounded run, a done marker, an
+Gemini through the Antigravity SDK, `opencodeloop` over the official OpenCode CLI,
+and `qwenloop` over a local Qwen model. The pilot below uses `qwen3:14b`; the runner
+contract does not depend on that model choice. `claudeloop` came first; the others
+transplanted its core. The orchestrator depends on a narrow contract that all six
+honour: a bounded run, a done marker, an
 event vocabulary, a capacity mapping, and a shared wind-down exit code (75) meaning
 that the engine ran out of window capacity mid-item and stopped cleanly after writing
 its state. Capabilities beyond the contract (savepoints, unwind, mid-run prompts and
 others) differ by runner and are declared per engine.
+
+The OpenCode adapter is intentionally provider-neutral: it records the raw JSON
+events emitted by `opencode run --format json` and does not invent a model,
+authentication variable or price for the provider selected inside OpenCode. The
+adapter's unit, static and fake-conformance evidence is present in this tree;
+live OpenCode execution remains an explicit preflight item until the external
+CLI is installed.
 
 ### Bounded runs that never block
 
@@ -1168,7 +1197,7 @@ records do not show as a commodity is governance, meaning the authority to decid
 fund, accept and ratify, and correct judgment about what was produced.
 
 The first half rests on three observations. Substitutability is a property of the
-design: five engines implement one contract, the scheduler chooses among them by
+design: six engines implement one contract, the scheduler chooses among them by
 policy, and the live runbook forces a rotation between two of them in the middle of a
 project. Price is explicit: every engine descriptor carries per-token cost rates, and
 budgets are sums of reported cost. The rate is the regularity above.

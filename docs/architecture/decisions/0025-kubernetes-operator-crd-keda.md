@@ -5,7 +5,7 @@
 > Status note (2026-09-18): the decision stands in full. One sentence of
 > *Consequences* no longer holds — "Engines do not ship in the image".
 > Since [ADR-0037](0037-one-distribution-one-version.md) the one `vibey`
-> wheel carries every runner and the image puts all five on `PATH`. The
+> wheel carries every runner and the image puts all six on `PATH`. The
 > chart's default is still `--provider scripted`; what keeps a real engine
 > out of a default install now is credentials and each runner's headless
 > verification (runbook 16, Phase 0), not the image.

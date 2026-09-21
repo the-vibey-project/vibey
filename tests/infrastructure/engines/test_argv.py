@@ -39,10 +39,10 @@ def test_argv_matches_golden_file(descriptor, effort) -> None:  # type: ignore[n
 
 
 def test_one_golden_file_per_engine_and_effort_exists() -> None:
-    """Six engines times five efforts: a descriptor added without its goldens, or a
+    """Every descriptor has one golden per effort: a descriptor added without its goldens, or a
     golden left behind by a removed one, both fail here."""
     files = sorted(GOLDEN_DIR.glob("*.txt"))
-    assert len(files) == len(ALL_DESCRIPTORS) * len(ALL_EFFORTS) == 30
+    assert len(files) == len(ALL_DESCRIPTORS) * len(ALL_EFFORTS)
 
 
 def test_claudeloop_local_passes_its_profile_and_a_preset_never_effort() -> None:
@@ -102,6 +102,27 @@ def test_resume_verb_used_when_session_id_present(descriptor) -> None:  # type: 
     argv = build_argv(descriptor, spec)
     assert argv[1] == "resume"
     assert argv[2] == "sess-abc123"
+
+
+def test_opencode_resume_keeps_the_vibey_run_id() -> None:
+    from vibey.infrastructure.engines.descriptors import OPENCODE
+
+    spec = RunSpec(
+        run_id=RUN_ID,
+        worktree_path=Path(WORKTREE),
+        prompt="continue",
+        effort=Effort.STANDARD,
+        isolation=IsolationLevel.WORKTREE,
+        session_id="sess-abc123",
+    )
+    argv = build_argv(OPENCODE, spec)
+    assert argv[:5] == (
+        "opencodeloop",
+        "resume",
+        "sess-abc123",
+        "--run-id",
+        str(RUN_ID),
+    )
 
 
 @pytest.mark.parametrize("descriptor", ALL_DESCRIPTORS, ids=lambda d: d.engine_id.value)
