@@ -157,6 +157,12 @@ class LoopProcessAdapter:
             ),
         )
 
+    def _engine_environment(self) -> dict[str, str]:
+        """Return the environment shared by probes and the engine process."""
+        environment = isolate_python_env(os.environ, venv_prefixes=self.python_env.venv_prefixes())
+        environment.update(self.env_overlay)
+        return environment
+
     async def _spawn(
         self,
         *argv: str,
@@ -236,8 +242,7 @@ class LoopProcessAdapter:
             # editable install resolve a different CLI than the absolute
             # entrypoint we launch, so the help contract can disagree with
             # the process that will actually run.
-            env = isolate_python_env(os.environ, venv_prefixes=self.python_env.venv_prefixes())
-            env.update(self.env_overlay)
+            env = self._engine_environment()
             env.update({"COLUMNS": "250", "LINES": "50", "NO_COLOR": "1"})
             result = subprocess.run(  # nosec B603 - fixed argv, never shell=True
                 [binary_path, "run", "--help"],
@@ -273,10 +278,11 @@ class LoopProcessAdapter:
         # Try to get version
         try:
             proc = await self._spawn(
-                self.descriptor.binary,
+                binary_path,
                 "--version",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env=self._engine_environment(),
                 start_new_session=True,
             )
             stdout, stderr = await self._communicate(proc, timeout=10.0)
@@ -295,11 +301,12 @@ class LoopProcessAdapter:
         detail = ""
         try:
             proc = await self._spawn(
-                self.descriptor.binary,
+                binary_path,
                 "doctor",
                 *self.descriptor.doctor_args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env=self._engine_environment(),
                 start_new_session=True,
             )
             stdout, stderr = await self._communicate(proc, timeout=self.doctor_timeout)
@@ -312,10 +319,9 @@ class LoopProcessAdapter:
                 engine=self.descriptor.engine_id.value,
                 error=str(e),
             )
-            # No doctor command or it failed - check env vars as fallback
-            import os
-
-            auth_ok = any(os.getenv(var) for var in self.descriptor.auth_env)
+            # No doctor command or it failed - check the same environment the
+            # probe received as a fallback.
+            auth_ok = any(self._engine_environment().get(var) for var in self.descriptor.auth_env)
             if not auth_ok:
                 detail = f"No {self.descriptor.auth_env} found in environment"
 

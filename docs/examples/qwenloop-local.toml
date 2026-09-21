@@ -6,7 +6,8 @@
 
 backend = "openai-compat"
 base_url = "http://127.0.0.1:11434/v1"
-model = "qwen2.5-coder:14b"
+# qwen3 emits native tool calls reliably on Ollama's OpenAI-compatible endpoint.
+model = "qwen3:14b"
 
 # Full local context and a generous turn budget for storm work.
 context_window = 32768

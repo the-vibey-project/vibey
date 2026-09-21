@@ -1748,6 +1748,53 @@ async def test_preflight_without_an_overlay_inherits_the_environment_unchanged(
     assert record.read_text().strip() == "doctor|unset"
 
 
+async def test_preflight_uses_the_resolved_binary_and_isolated_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Preflight must probe the same executable and environment as a real run."""
+    import os
+
+    record = tmp_path / "preflight.record"
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        "isolatedloop",
+        f'if [ "$1" = "--version" ]; then '
+        f'printf "isolatedloop %s %s 1.0.0\\n" "${{VIRTUAL_ENV:-unset}}" "${{ENGINE_BACKEND:-unset}}" > "{record}"; '
+        f'printf "isolatedloop 1.0.0\\n"; '
+        f'elif [ "$1" = "doctor" ]; then '
+        f'printf "doctor|%s|%s\\n" "${{VIRTUAL_ENV:-unset}}" "${{ENGINE_BACKEND:-unset}}" >> "{record}"; exit 1; fi',
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("VIRTUAL_ENV", "/orchestrator/.venv")
+    monkeypatch.setenv("ENGINE_BACKEND", "inherited")
+
+    result = await LoopProcessAdapter(
+        descriptor=CLAUDELOOP.__class__(
+            engine_id=EngineId.CLAUDELOOP,
+            binary="isolatedloop",
+            min_version="0.1.0",
+            state_dir=".test",
+            done_marker="TEST_DONE",
+            auth_env=("TEST_KEY",),
+            capabilities=frozenset(),
+            effort_projection=CLAUDELOOP.effort_projection,
+            session_verb="sessions",
+            isolation_flags=CLAUDELOOP.isolation_flags,
+            cost_per_mtok_in=1.0,
+            cost_per_mtok_out=5.0,
+            context_window=100_000,
+        ),
+        env_overlay={"ENGINE_BACKEND": "overlay"},
+    ).preflight()
+
+    assert result.version == "1.0.0"
+    assert result.auth_ok is False
+    assert record.read_text().splitlines() == [
+        "isolatedloop unset overlay 1.0.0",
+        "doctor|unset|overlay",
+    ]
+
+
 def test_claudeloop_local_classifies_through_claudeloops_own_vocabulary() -> None:
     from vibey.domain.capacity import AuthenticationFailed
     from vibey.infrastructure.engines.descriptors import CLAUDELOOP_LOCAL

@@ -52,7 +52,7 @@ export VIBEY_OLLAMA_MODEL=your-model:tag     # or --ollama-model on work/worker
 For the Qwen storm profile used while developing this repository, see the
 copyable [qwenloop-local.toml](../examples/qwenloop-local.toml) and
 [qwenloop-storm.env.example](../examples/qwenloop-storm.env.example) examples.
-They use `qwen2.5-coder:14b`, a 32K context window, a 40-turn local budget,
+The checked-in storm profile uses `qwen3:14b`, a 32K context window, a 40-turn local budget,
 Ollama's OpenAI-compatible endpoint, and the single-model cache settings used
 for local agent work. Qwen lifecycle desktop notifications stay enabled and
 use macOS's `Ping` sound; `--desktop-notifications` is explicit in the example
@@ -188,17 +188,12 @@ A local model is not the paid one it displaces, and the defaults say so:
 - **Effort tops out at STANDARD.** claudeloop-local's HIGH and MAX run the profile's
   top tier and report `achieved=STANDARD`, so rotation sees a local model for what it
   is.
-- **`qwen2.5-coder:14b` fails real tool calls.** Through Ollama's Anthropic endpoint
-  it writes its tool calls as text instead of making them; on one run it then typed
-  the done marker and claudeloop reported a completion for work that was never done.
-  That is why a local profile completes only on a structured verdict and why
-  `claudeloop doctor --profile` checks `backend-tools`. Do not use it for
-  claudeloop-local.
-- **Which model does qualify is being measured.** A comparison of `gpt-oss:20b` and
-  `qwen3:14b` is in progress; its results will be recorded in the "What to expect"
-  section of claudeloop's
-  [local backend guide](https://github.com/the-vibey-project/vibey/blob/develop/src/vibey_runners/claude/docs/guides/local-backend.md#what-to-expect).
-  Until then, let `backend-tools` decide.
+- **Use the endpoint-specific tool smoke before a storm.** `qwen2.5-coder:14b` can
+  write tool calls as text or misclassify the `qwenloop-verdict` fence when served
+  locally. On this machine, `qwen3:14b` produced a native `read_file` call through
+  Ollama's OpenAI-compatible endpoint, so it is the checked-in storm example. This is
+  a compatibility observation, not a guarantee for every serving template; keep the
+  runner's tool smoke and bounded completion guard enabled.
 - **Research needs you.** A local model has no web access; DESIGN's research stage
   parks a `research_evidence` gate asking for `<topic>.md` in `VIBEY_EVIDENCE_DIR`
   rather than inventing a source
