@@ -98,7 +98,7 @@ class WorkerLoop:
         raw_config = config.get("notifications")
         if not isinstance(raw_config, Mapping) or raw_config.get("enabled") is not True:
             return None
-        if result.get("enabled") is not True:
+        if result.get("enabled") is False:
             return "notification service reported disabled"
         if raw_config.get("desktop", True) is True and result.get("desktop") is not True:
             return "desktop delivery returned false"
