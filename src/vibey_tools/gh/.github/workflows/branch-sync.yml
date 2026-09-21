@@ -133,7 +133,7 @@ jobs:
           jq -r '.[] | select(.healed == true) | "\(.pr)\t\(.head_sha)"' <<<"$result" |
           while IFS=$'\t' read -r number sha; do
             [ -n "$number" ] || continue
-            gh workflow run pr-automation.yml --repo "$REPO" \
+            gh workflow run pr-evaluate.yml --repo "$REPO" \
               --ref "${{ github.event.repository.default_branch }}" \
               -f "pr=${number}" -f "head_sha=${sha}"
           done

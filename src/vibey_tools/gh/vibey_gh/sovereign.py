@@ -10,7 +10,7 @@ because it has already cost this project a production outage in another costume.
 `review-sovereign` runs on a self-hosted runner. Disabled, the job *skips*, and a
 skipped job counts as completed. Enabled with no runner online, it **queues** — not
 failed, not cancelled, simply pending. The job that publishes the required
-`PR automation / gate` check needs it and is guarded by `always()`, which waits for
+`PR evaluate / gate` and `PR review / gate` checks need it and the review gate is guarded by `always()`, which waits for
 needs to *complete*. So switching the sovereign lane on by default, with no probe,
 blocks every pull request permanently and silently, with no red check to point at.
 

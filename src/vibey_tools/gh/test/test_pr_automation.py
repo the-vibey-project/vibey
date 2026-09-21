@@ -105,9 +105,11 @@ allow_private_full_output = true
 
 
 def test_rendered_workflow_uses_config_and_is_valid_yaml_shape(tmp_path):
-    source = Path(pa.__file__).parent / "templates/workflows/pr-automation.yml"
+    split = Path(pa.__file__).parent / "templates/workflows"
+    evaluate_source = split / "pr-evaluate.yml"
+    review_source = split / "pr-review.yml"
     rendered = render_workflow(
-        source,
+        evaluate_source,
         cfg(
             tmp_path,
             scan_workflows=("CI: strict", "Docs"),
@@ -121,19 +123,36 @@ def test_rendered_workflow_uses_config_and_is_valid_yaml_shape(tmp_path):
         ),
     )
     assert 'workflows: ["CI: strict", "Docs"]' in rendered
-    assert "--model chosen-model" in rendered
     assert "schedule backstop disabled" in rendered
-    assert "track_progress: ${{ false &&" in rendered
-    assert "github.event_name == 'pull_request'" in rendered
-    assert (
-        "github.event_name == 'workflow_dispatch'"
-        not in rendered.split("track_progress:", 1)[1].splitlines()[0]
-    )
-    assert "&& true }}" in rendered
-    assert "execution_file != '' && false" in rendered
+    assert "track_progress: ${{ false &&" not in rendered
     assert "__VIBEY_GH_" not in rendered
 
-    intake = source.with_name("branch-intake.yml")
+    review = render_workflow(
+        review_source,
+        cfg(
+            tmp_path,
+            scan_workflows=("CI: strict", "Docs"),
+            model="chosen-model",
+            retain_schedule_backstop=False,
+            observability=PrAutomationObservabilityConfig(
+                sanitized_progress=False,
+                archive_execution_file=False,
+                allow_private_full_output=True,
+            ),
+        ),
+    )
+    assert "--model chosen-model" in review
+    assert "track_progress: ${{ false &&" in review
+    assert "github.event_name == 'pull_request'" in review
+    assert (
+        "github.event_name == 'workflow_dispatch'"
+        not in review.split("track_progress:", 1)[1].splitlines()[0]
+    )
+    assert "&& true }}" in review
+    assert "execution_file != '' && false" in review
+    assert "__VIBEY_GH_" not in review
+
+    intake = evaluate_source.with_name("branch-intake.yml")
     rendered_intake = render_workflow(intake, cfg(tmp_path))
     assert "- develop" in rendered_intake
     assert "- main" in rendered_intake
@@ -766,7 +785,7 @@ def test_the_evaluation_never_waits_on_the_job_computing_it(tmp_path: Path):
     rollup = [
         check(name="CI"),
         check(name="Evaluate current head", status="IN_PROGRESS", conclusion=None),
-        check(name="PR automation / gate", status="IN_PROGRESS", conclusion=None),
+        check(name="PR review / gate", status="IN_PROGRESS", conclusion=None),
     ]
     decision = pa.evaluate(pr(statusCheckRollup=rollup), cfg(tmp_path), expected_sha="abc")
     # The point is not which state it reaches but that it stops waiting on itself: the
@@ -776,14 +795,19 @@ def test_the_evaluation_never_waits_on_the_job_computing_it(tmp_path: Path):
 
 
 def test_every_job_this_workflow_publishes_is_excluded_from_its_own_rollup():
-    """Pinned against the template, so a job added later cannot start gating itself."""
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
-    published = {
-        line.split("name:", 1)[1].strip()
-        for line in text.splitlines()
-        if line.startswith("    name:")
-    }
-    assert published, "no job names parsed out of pr-automation.yml"
+    """Pinned against the templates, so a job added later cannot start gating itself.
+
+    The split renders two workflows; both count, and a canonical job name is enough —
+    OWN_CHECKS covers each job under the evaluate and review workflow prefixes too."""
+    published = set()
+    for name in ("pr-evaluate.yml", "pr-review.yml"):
+        text = (WORKFLOWS / name).read_text(encoding="utf-8")
+        published |= {
+            line.split("name:", 1)[1].strip()
+            for line in text.splitlines()
+            if line.startswith("    name:")
+        }
+    assert published, "no job names parsed out of the split templates"
     missing = sorted(job for job in published if job not in pa.OWN_CHECKS)
     assert not missing, f"these publish a check but are not excluded from the rollup: {missing}"
 
@@ -799,7 +823,7 @@ def test_a_gating_check_belongs_to_a_workflow_that_can_re_trigger_evaluation(tmp
     from vibey_gh.config import DEFAULT_SCAN_WORKFLOWS
 
     assert "Conventional Commits" in DEFAULT_SCAN_WORKFLOWS
-    rendered = render_workflow(WORKFLOWS / "pr-automation.yml", cfg(tmp_path))
+    rendered = render_workflow(WORKFLOWS / "pr-evaluate.yml", cfg(tmp_path))
     triggers = next(line for line in rendered.splitlines() if line.strip().startswith("workflows:"))
     for workflow in DEFAULT_SCAN_WORKFLOWS:
         assert workflow in triggers, f"{workflow} gates but cannot re-trigger evaluation"

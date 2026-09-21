@@ -579,10 +579,11 @@ with open(os.environ["SIM_GH_LOG"], "a", encoding="utf-8") as handle:
 
 
 class _Workflow:
-    """The rendered pr-automation.yml, driven one scenario at a time."""
+    """The rendered pr-review.yml, driven one scenario at a time ("pr-evaluate.yml" is the
+    scan gate and is not part of this workflow's decision surface)."""
 
     def __init__(self, tmp_path: Path) -> None:
-        self.text = render_workflow(WORKFLOWS / "pr-automation.yml", GhConfig(root=tmp_path))
+        self.text = render_workflow(WORKFLOWS / "pr-review.yml", GhConfig(root=tmp_path))
         self.jobs = yaml.safe_load(self.text)["jobs"]
         self.tmp = tmp_path
         bin_dir = tmp_path / "bin"
@@ -801,14 +802,17 @@ def _golden(state, review_passed, review_result, local_passed="", local_findings
     )
 
 
-# The one sanctioned difference from the golden: the job the local verdict comes from was
-# renamed when it started going first. Anything else that differs is a behaviour change.
-_RENAMED = {"'Local review fallback'": "'Sovereign diff review'"}
+# The two sanctioned differences from the golden: the job the local verdict comes from was
+# renamed when it started going first, and the gate's own check was renamed from
+# `PR automation / gate` to `PR review / gate` when the workflow split. Anything else that
+# differs is a behaviour change.
+_RENAMED = {"'Local review fallback'": "'Sovereign diff review'", "PR automation:": "PR review:"}
 
 
 def _assert_gate_is_golden(gate: dict, golden: dict) -> None:
     expected = dict(golden)
     for old, new in _RENAMED.items():
+        expected["title"] = expected["title"].replace(old, new)
         expected["summary"] = expected["summary"].replace(old, new)
         expected["stdout"] = expected["stdout"].replace(old, new)
     for key in ("exit", "conclusion", "title", "summary", "merge_train", "stdout"):
@@ -883,9 +887,7 @@ def test_fresh_heartbeat_and_credits_the_sovereign_lane_carries_the_diff_half(wo
     assert run.jobs["repair"]["result"] == "skipped"
     assert run.gate["conclusion"] == "success"
     assert run.gate["merge_train"] is True
-    assert run.gate["title"] == (
-        "PR automation: gate (diff: sovereign lane, documentation: paid lane)"
-    )
+    assert run.gate["title"] == ("PR review: gate (diff: sovereign lane, documentation: paid lane)")
     for fact in (
         "diff-groundable half (pass, summary, findings) was carried by the SOVEREIGN lane",
         "local model (qwen2.5-coder:14b)",
@@ -904,7 +906,7 @@ def test_fresh_heartbeat_and_credits_the_sovereign_lane_carries_the_diff_half(wo
         pytest.param(
             _local(**{"pass": False}, findings=[FINDING]),
             _paid_wider(),
-            "PR automation: sovereign lane found a blocking defect in the diff",
+            "PR review: sovereign lane found a blocking defect in the diff",
             "skipped",
             "reported a BLOCKING finding",
             id="a local finding",
@@ -912,7 +914,7 @@ def test_fresh_heartbeat_and_credits_the_sovereign_lane_carries_the_diff_half(wo
         pytest.param(
             _local(**{"pass": False}),
             _paid_wider(),
-            "PR automation: sovereign lane could not complete the diff review",
+            "PR review: sovereign lane could not complete the diff review",
             "skipped",
             "declined WITHOUT reporting any finding",
             id="a local decline",
@@ -920,7 +922,7 @@ def test_fresh_heartbeat_and_credits_the_sovereign_lane_carries_the_diff_half(wo
         pytest.param(
             _local(),
             _paid_wider(wider_findings=[FINDING]),
-            "PR automation: review findings (documentation half, paid lane)",
+            "PR review: review findings (documentation half, paid lane)",
             "success",
             "returned actionable findings; bounded repair addresses them",
             id="a paid documentation finding",
@@ -928,7 +930,7 @@ def test_fresh_heartbeat_and_credits_the_sovereign_lane_carries_the_diff_half(wo
         pytest.param(
             _local(**{"pass": False}, findings=[FINDING]),
             _paid_wider(links_valid=False),
-            "PR automation: review findings (both halves)",
+            "PR review: review findings (both halves)",
             "success",
             "reported a BLOCKING finding",
             id="both halves",
@@ -1090,7 +1092,7 @@ def test_a_repository_that_opts_out_never_offers_the_lane(tmp_path):
         root=tmp_path,
         pr_automation=PrAutomationConfig(fallback=PrAutomationFallbackConfig(enabled=False)),
     )
-    jobs = yaml.safe_load(render_workflow(WORKFLOWS / "pr-automation.yml", cfg))["jobs"]
+    jobs = yaml.safe_load(render_workflow(WORKFLOWS / "pr-review.yml", cfg))["jobs"]
 
     assert jobs["review-sovereign"]["if"].startswith("false &&")
     assert jobs["evaluate"]["steps"][-1]["env"]["ENABLED"] is False

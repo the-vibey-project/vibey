@@ -206,7 +206,8 @@ def test_rulesets_are_enabled_and_defaulted_without_any_configuration(tmp_path):
     assert cfg.rulesets.enabled is True
     assert cfg.rulesets.integration.required_approvals == 0
     assert cfg.rulesets.release.required_approvals == 1
-    assert "PR automation / gate" in cfg.rulesets.integration.required_checks
+    assert "PR evaluate / gate" in cfg.rulesets.integration.required_checks
+    assert "PR review / gate" in cfg.rulesets.integration.required_checks
     assert cfg.rulesets.release.required_checks == (
         "Provenance",
         "Analyze Python",

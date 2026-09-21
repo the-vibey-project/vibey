@@ -50,13 +50,13 @@ something else in production:
 
 ## Recovering from a review with no verdict
 
-`PR automation: review incomplete` means the primary exact-head review returned no verdict
+`PR review: review incomplete` (behind a green `PR evaluate / gate` scan gate) means the primary exact-head review returned no verdict
 at all — check API credit balance, the `ANTHROPIC_API_KEY` secret, and model availability,
 then rerun the review; this is never a defect in the pull request. If
 `[pr_automation.fallback].enabled` is set and a self-hosted runner carrying the
 `[pr_automation.fallback] runner_label` label (default `vibey-local`) is registered, the
 same no-verdict condition instead dispatches a local Ollama model against
-the diff; a clean local verdict passes the gate as `PR automation: gate (local fallback)`
+the diff; a clean local verdict passes the gate as `PR review: gate (local fallback)`
 rather than blocking it. That title always names the weaker reviewer — treat it as a
 signal to still fix the primary path's root cause, not as a fully reviewed pass.
 
@@ -99,7 +99,7 @@ To preview what `Branch sync` would rebase, close, update, or leave without muta
 anything, dispatch it manually with `dry_run = true`; the decisions are printed to the run
 summary. The nightly schedule run of its `heal` job refills the repair budget of every pull
 request labeled `vibey-gh:repair-exhausted`, up to `branch_sync.max_self_heals` times per
-lineage, and re-dispatches `PR automation` against each healed PR's exact head SHA. Once
+lineage, and re-dispatches `pr-evaluate.yml` against each healed PR's exact head SHA. Once
 that budget is spent for a lineage, the label stays and only a human — typically by pushing
 a new commit or editing the PR — starts a fresh lineage. See [Workflows](workflows.md) and
 `[branch_sync]` in [Configuration](configuration.md).

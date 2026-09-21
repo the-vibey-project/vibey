@@ -179,8 +179,8 @@ will emit confident booleans it has no basis for. So it assesses only what it ca
 a diff — `pass`, `summary`, `findings` — and reports the documentation-contract fields as
 unevaluated. Its summary names the role it ran in (`[SOVEREIGN LANE — model]` or
 `[LOCAL FALLBACK — model]`), and the gate titles a split verdict
-`PR automation: gate (diff: sovereign lane, documentation: paid lane)` and a fallback one
-`PR automation: gate (local fallback)`, so a narrower verdict is never mistaken for a full
+`PR review: gate (diff: sovereign lane, documentation: paid lane)` and a fallback one
+`PR review: gate (local fallback)`, so a narrower verdict is never mistaken for a full
 one.
 
 `trusted_only` carries the safety argument. GitHub says self-hosted runners should "almost
@@ -646,7 +646,7 @@ names are not configured here — `[rulesets.integration]` always targets
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `required_checks` | string list / integration: `["Provenance", "Analyze Python", "Documentation contract", "PR automation / gate"]`; release: the same without the gate | Required status-check contexts — **check-run names, not workflow names** (see below). Empty omits the check requirement entirely. The integration list, less `[pr_automation] ignored_checks` and the gates it routes around, is also what `automation-bootstrap.yml` waits on (see below); empty there means the bootstrap refuses every merge. |
+| `required_checks` | string list / integration: `["Provenance", "Analyze Python", "Documentation contract", "PR evaluate / gate", "PR review / gate"]`; release: the same without the gates | Required status-check contexts — **check-run names, not workflow names** (see below). Empty omits the check requirement entirely. The integration list, less `[pr_automation] ignored_checks` and the gates it routes around, is also what `automation-bootstrap.yml` waits on (see below); empty there means the bootstrap refuses every merge. |
 | `strict_required_checks` | boolean / `true` | Require the branch to be up to date with its base before merging. |
 | `required_approvals` | integer / integration: `0`, release: `1` (0–6) | Required approving reviews. Integration defaults to `0` because PR automation gates it instead. |
 | `dismiss_stale_reviews` | boolean / `true` | Dismiss stale reviews when new commits are pushed. |
@@ -719,7 +719,8 @@ gh api "repos/OWNER/REPO/commits/$(git rev-parse HEAD)/check-runs" \
 code past PR automation — waits on these names too, so it never names a check this
 repository does not produce. `vibey-gh install` renders `[rulesets.integration]
 required_checks` into the deployed workflow, less `[pr_automation] ignored_checks` and the
-gates the bootstrap exists to route around (`gate`, `PR automation / gate`,
+gates the bootstrap exists to route around (`gate`, `PR evaluate / gate`,
+`PR review / gate`,
 `Automation bootstrap / gate`). With the defaults that is `Provenance`, `Analyze Python`,
 and `Documentation contract`; a repository whose CI reports one job named `gates` and
 requires only that waits on `gates` alone. Change the list, then re-run `vibey-gh install`
@@ -760,7 +761,8 @@ the silence is the whole danger.
 | `ci` | `CI` |
 | `release` | `Release` |
 | `provenance` | `Provenance` |
-| `pr_automation` | `PR automation` |
+| `pr_evaluate` | `PR evaluate` |
+| `pr_review` | `PR review` |
 | `merge_train` | `Merge train` |
 | `promote` | `Promote` |
 | `release_surfaces` | `Release surfaces` |

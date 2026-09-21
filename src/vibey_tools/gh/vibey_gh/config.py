@@ -101,7 +101,7 @@ DEFAULT_SOURCES = ("tools/*.py", "src/**/*.py", ".github/workflows/*.yml")
 # an adopter's workflow at all — it is this project's own five-surface self-test, so every
 # adopter had to notice it and take it back out.
 # This list is two things at once, and the second is easy to miss: it names the workflows
-# whose completion re-triggers evaluation, *and* it is rendered into `pr-automation.yml`'s
+# whose completion re-triggers evaluation, *and* it is rendered into `pr-evaluate.yml`'s
 # `workflow_run` trigger. So a workflow whose check gates a merge but is absent here can
 # never announce that it finished — the rollup counts it as pending, the last scan to
 # complete triggers the final evaluation, and if this one finishes after that, nothing
@@ -119,7 +119,18 @@ DEFAULT_SCAN_WORKFLOWS = (
 # Git's built-in `union` driver keeps both sides instead of reporting a conflict, which is
 # exactly right for an append-only log and wrong for anything with structure.
 DEFAULT_UNION_MERGE_PATHS = ("CHANGELOG.md",)
-DEFAULT_IGNORED_CHECKS = ("PR automation / gate", "gate", "Merge train / merge")
+DEFAULT_IGNORED_CHECKS = (
+    # The two gates the split PR automation renders: the scan gate (`pr-evaluate.yml`)
+    # and the review gate (`pr-review.yml`). `PR automation / gate` is kept for the
+    # check runs a pre-split workflow left on today's heads: ignoring them costs
+    # nothing, and a green run of an automation that no longer exists must never be
+    # counted as a scan that repaired itself.
+    "PR evaluate / gate",
+    "PR review / gate",
+    "PR automation / gate",
+    "gate",
+    "Merge train / merge",
+)
 # A required status check names a *check run* — for Actions, a job's `name:` — not the
 # workflow that contains it. `DEFAULT_SCAN_WORKFLOWS` above names workflows and must never
 # be reused here, however tempting the overlap looks: "CI" and "Docs" are workflows whose
@@ -136,7 +147,10 @@ DEFAULT_RULESET_CHECKS = (
     "Analyze Python",
     "Documentation contract",
 )
-DEFAULT_INTEGRATION_RULESET_CHECKS = DEFAULT_RULESET_CHECKS + ("PR automation / gate",)
+DEFAULT_INTEGRATION_RULESET_CHECKS = DEFAULT_RULESET_CHECKS + (
+    "PR evaluate / gate",
+    "PR review / gate",
+)
 DEFAULT_RELEASE_RULESET_CHECKS = DEFAULT_RULESET_CHECKS
 # The repository admin role. A required check can always stop reporting — an outage, an
 # exhausted budget, a renamed job, a workflow the repository chose not to install — and
@@ -231,7 +245,8 @@ class WorkflowNamesConfig:
     release: str = "Release"
     # vibey-gh's own templates.
     provenance: str = "Provenance"
-    pr_automation: str = "PR automation"
+    pr_evaluate: str = "PR evaluate"
+    pr_review: str = "PR review"
     merge_train: str = "Merge train"
     promote: str = "Promote"
     release_surfaces: str = "Release surfaces"

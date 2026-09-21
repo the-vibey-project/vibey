@@ -52,7 +52,7 @@ jobs:
           REQUIRED_CHECKS: "[\"Lint\", \"Build\", \"Test (3.11)\", \"Test (3.12)\", \"Test (3.13)\", \"Provenance\", \"CodeQL\", \"Documentation contract\", \"MCP, API, CLI, SDK, and webhook parity\"]"
           # PR automation's own merge gate (broken, or this path would not be needed) and
           # this workflow's own: never waited on, never required.
-          EXCLUDED_CHECKS: "[\"gate\", \"PR automation / gate\", \"Automation bootstrap / gate\"]"
+          EXCLUDED_CHECKS: "[\"gate\", \"PR automation / gate\", \"PR evaluate / gate\", \"PR review / gate\", \"Automation bootstrap / gate\"]"
           # Workflow, template, and automation-core paths as a POSIX ERE, anchored at
           # `[install] self_source`: `gh pr diff` reports repository-root paths.
           CHANGED_FILE_SCOPE: "^(\\.github/workflows/|vibey_gh/templates/workflows/|vibey_gh/(automation_bootstrap|cli|install|merge_train|pr_automation)\\.py$|test/)"

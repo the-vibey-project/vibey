@@ -4,7 +4,7 @@
 > (`src/vibey_tools/gh`) for this one repository: `merge_train.py` (mechanical
 > readiness + trusted-author rule, `.github/workflows/merge-train.yml`),
 > `pr_automation.py` (event-driven review and repair,
-> `.github/workflows/pr-automation.yml`), `local_review.py` (local-model review
+> `.github/workflows/pr-evaluate.yml` + `pr-review.yml`), `local_review.py` (local-model review
 > fallback), and `issue_automation.py`, configured by `.vibey-gh.toml
 > [merge_train]`. Open: multi-account scope, the stop-list detector, deploy
 > grant with rollback, kill switch, hold-rate metric. Not a separate

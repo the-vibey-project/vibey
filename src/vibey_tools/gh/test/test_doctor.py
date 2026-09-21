@@ -76,12 +76,13 @@ def test_nested_fallback_keys_are_checked(tmp_path):
 
 
 def test_enabled_gate_without_the_workflow_is_the_stuck_train(tmp_path):
-    """pr_automation.enabled defaults true; without pr-automation.yml the merge train
-    refuses every pull request — green, mergeable, stuck forever."""
+    """pr_automation.enabled defaults true; without pr-evaluate.yml/pr-review.yml the merge
+    train refuses every pull request — green, mergeable, stuck forever."""
     _repo(tmp_path)
     findings = doctor.diagnose(root=tmp_path)
     assert any("merge train will refuse every pull request" in f.message for f in findings)
-    (tmp_path / ".github" / "workflows" / "pr-automation.yml").write_text("name: PR automation\n")
+    (tmp_path / ".github" / "workflows" / "pr-evaluate.yml").write_text("name: PR evaluate\n")
+    (tmp_path / ".github" / "workflows" / "pr-review.yml").write_text("name: PR review\n")
     assert not any("merge train" in f.message for f in doctor.diagnose(root=tmp_path))
 
 
@@ -93,7 +94,7 @@ def test_the_starter_config_declines_the_gate_and_gets_a_note_not_an_error(
     _repo(tmp_path, '[install]\nworkflows = ["provenance.yml"]\n')
     findings = doctor.diagnose(root=tmp_path)
     assert [f.severity for f in findings] == ["info"]
-    assert "takes neither pr-automation.yml nor merge-train.yml" in findings[0].message
+    assert "takes neither pr-evaluate.yml/pr-review.yml nor merge-train.yml" in findings[0].message
     monkeypatch.chdir(tmp_path)
     assert main(["doctor"]) == 0
     out = capsys.readouterr().out
@@ -106,8 +107,8 @@ def test_the_starter_config_declines_the_gate_and_gets_a_note_not_an_error(
 @pytest.mark.parametrize(
     "workflows",
     [
-        '["provenance.yml", "merge-train.yml"]',  # the train is installed, the gate is not
-        '["provenance.yml", "pr-automation.yml"]',  # the gate is managed, but not on disk
+        '["provenance.yml", "merge-train.yml"]',  # the train is installed, the gates are not
+        '["provenance.yml", "pr-evaluate.yml", "pr-review.yml"]',  # the gates are managed, but not on disk
     ],
 )
 def test_the_stuck_train_stays_an_error_wherever_it_can_happen(tmp_path, workflows):

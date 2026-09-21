@@ -7,7 +7,7 @@ the depth. Read it top to bottom once; after that it's a lookup table.
 |---|---|---|
 | **provenance / fingerprint** | A signature line stamped into files and commits proving what tooling produced them, checked on every push. | [Security](../security.md) |
 | **trailer** | The `Made-With:` line the commit hook appends to every commit message — provenance for changes in files that can't carry a header. | [Security](../security.md) |
-| **the gate** | A required status check called `PR automation / gate`. A pull request cannot merge until the automation certifies its exact latest commit. | [Workflows](../workflows.md) |
+| **the gates** | Two required status checks: `PR evaluate / gate` (all configured scans settled on the exact head) and `PR review / gate` (the structured exact-head review returned a verdict). A pull request cannot merge until both certify its exact latest commit, and each names which task failed. | [Workflows](../workflows.md) |
 | **exact-head** | Every decision is tied to the precise commit it evaluated — a result computed for an older commit can never approve a newer one. | [Architecture](../architecture.md) |
 | **merge train** | The scheduled process that merges every pull request that is green, conflict-free, and reviewed — one at a time, so merges never race. | [Workflows](../workflows.md) |
 | **repair** | When review or scans find a problem, the automation attempts one bounded fix on a guarded branch and re-reviews — it never retries forever. | [Workflows](../workflows.md) |

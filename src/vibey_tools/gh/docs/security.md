@@ -127,14 +127,14 @@ primary Claude review returned no verdict at all. GitHub's own guidance is that
 self-hosted runners should almost never serve a public repository, because any contributor
 can open a pull request against one; `trusted_only` (default on) removes that risk by
 excluding fork pull requests from the fallback entirely, leaving them to fail closed to
-`PR automation: review incomplete` like any other unresolved review. The `review-fallback`
+`PR review: review incomplete` like any other unresolved review. The `review-fallback`
 job holds only `contents: read` — no secret and no token capable of mutating the
 repository — and the diff reaches a locally served Ollama-compatible model as text; the
 model has no shell, no tools, and no network beyond the local inference port. Ollama's
 `format` parameter constrains decoding to the response schema, so the output shape is
 guaranteed, but a small local model's judgments are not: the fallback verdict omits the
 documentation-contract fields the primary review certifies, and the gate names the result
-`PR automation: gate (local fallback)` so it is never mistaken for a full review. See
+`PR review: gate (local fallback)` so it is never mistaken for a full review. See
 [Configuration](configuration.md#pr_automationfallback) for the field reference.
 
 Webhook receivers must use a strong `VIBEY_GH_WEBHOOK_SECRET`, verify HMAC over the exact

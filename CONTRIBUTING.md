@@ -78,8 +78,8 @@ feature/*    ← your work
 2. Commit using [Conventional Commits](#conventional-commits).
 3. Open a PR **into `develop`**, never `main`.
 4. You do not press Merge. Once the PR has one approval, a green `gates`
-   check (ci.yml) and a successful `PR automation / gate` check
-   (pr-automation.yml), the merge train (`vibey-gh merge-train`,
+   check (ci.yml) and successful `PR evaluate / gate` and `PR review / gate`
+   checks (pr-evaluate.yml + pr-review.yml), the merge train (`vibey-gh merge-train`,
    merge-train.yml) squash-merges it. A draft PR is never merged by the
    train. To see why a PR is not moving:
    `gh workflow run merge-train.yml -f pr=<N> -f dry_run=true`.

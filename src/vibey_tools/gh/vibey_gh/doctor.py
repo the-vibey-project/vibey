@@ -8,10 +8,11 @@ repository before it was understood:
 
 - a configuration key in the wrong section is silently ignored, so the feature it
   configures silently stays at defaults while every render looks green;
-- `pr_automation.enabled` defaults true, so a repository without pr-automation.yml has a
+- `pr_automation.enabled` defaults true, so a repository without pr-evaluate.yml and
+  pr-review.yml has a
   merge train that refuses every pull request with "gate has not passed" — green,
-  mergeable, and stuck forever (an error only where the gate or the merge train is
-  installed: a repository whose `[install] workflows` declines both gets a note instead);
+  mergeable, and stuck forever (an error only where the gates or the merge train is
+  installed: a repository whose `[install] workflows` declines them both gets a note instead);
 - ruff configured to select E cannot coexist with the 230-character provenance header,
   so CI fails on every stamped file;
 - two workflows both deploying GitHub Pages silently contend for the same site;
@@ -155,18 +156,22 @@ def _check_gate_installed(cfg: GhConfig) -> list[Finding]:
     """
     if not cfg.pr_automation.enabled:
         return []
-    if (cfg.root / ".github" / "workflows" / "pr-automation.yml").is_file():
+    split = ("pr-evaluate.yml", "pr-review.yml")
+    if all((cfg.root / ".github" / "workflows" / name).is_file() for name in split):
         return []
     # `managed_workflows` is `[install] workflows`; None (the key absent) means all of them.
+    # Declining the gates AND the merge train is the note-worthy starter default; taking the
+    # train but not the gates is the stuck train, an error.
     declined = cfg.managed_workflows is not None and not (
-        {"pr-automation.yml", "merge-train.yml"} & set(cfg.managed_workflows)
+        (set(split) | {"merge-train.yml"}) & set(cfg.managed_workflows)
     )
     if declined:
         return [
             Finding(
                 "info",
                 "pr_automation.enabled is true (the default) but [install] workflows takes "
-                "neither pr-automation.yml nor merge-train.yml, so nothing here runs the "
+                "neither pr-evaluate.yml/pr-review.yml nor merge-train.yml, so nothing here "
+                "runs the "
                 "gate. Harmless unless you run `vibey-gh merge-train` by hand — it would "
                 "wait on a gate that never reports. Set [pr_automation] enabled = false to "
                 "say so explicitly.",
@@ -175,9 +180,10 @@ def _check_gate_installed(cfg: GhConfig) -> list[Finding]:
     return [
         Finding(
             "error",
-            "pr_automation.enabled is true but .github/workflows/pr-automation.yml is not "
-            "installed — the merge train will refuse every pull request with 'PR automation "
-            'gate has not passed\'. Add "pr-automation.yml" to [install] workflows and run '
+            "pr_automation.enabled is true but neither .github/workflows/pr-evaluate.yml nor "
+            ".github/workflows/pr-review.yml is installed — the merge train will refuse "
+            "every pull request with 'PR automation gates have not passed'. Add "
+            '"pr-evaluate.yml" and "pr-review.yml" to [install] workflows and run '
             "`vibey-gh install`, or set [pr_automation] enabled = false.",
         )
     ]

@@ -54,8 +54,15 @@ OWN_JOBS = (
     "Local review fallback",
     "gate",
 )
+# The workflows that render `OWN_JOBS` and the one that predates the split. GitHub prefixes
+# a check run with the workflow that emitted it when it came from `workflow_run`, so the
+# jobs render under `PR evaluate / …` and `PR review / …`. `PR automation` is kept so a
+# check run a pre-split run left on a head is still recognised as our own rather than
+# counted as (say) a failing scan.
+GATE_WORKFLOWS = ("PR evaluate", "PR review", "PR automation")
 OWN_CHECKS = frozenset(
-    [name for job in OWN_JOBS for name in (job, f"PR automation / {job}")] + ["Merge train / merge"]
+    [name for job in OWN_JOBS for name in (job, *(f"{wf} / {job}" for wf in GATE_WORKFLOWS))]
+    + ["Merge train / merge"]
 )
 PULL_REQUEST_TRIGGERS = ("pull_request", "pull_request_target")
 _STATE_RE = github_state.marker_pattern(STATE_MARKER)

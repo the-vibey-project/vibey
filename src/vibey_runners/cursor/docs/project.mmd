@@ -45,7 +45,7 @@ flowchart TD
         Develop --> Surfaces[release-surfaces.yml]
         Main --> Surfaces
         Surfaces -->|/develop/ and /main/ channels| Pages[GitHub Pages docs site]
-        Provenance[Provenance check] --> Gate[PR automation gate]
+        Provenance[Provenance check] --> Gate[PR evaluate + PR review gates]
         MergeTrain[Merge train] -->|green, conflict-free, reviewed heads only| Develop
     end
 

@@ -531,7 +531,7 @@ def test_documentation_workflow_authors_guarded_refresh_prs():
 
 
 def test_pr_gate_requires_exact_head_semantic_documentation_review_for_every_author():
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert "Exact-head code and documentation review" in text
     assert "needs.evaluate.outputs.state == 'ready'" in text
     assert "repository-wide semantic documentation audit" in text
@@ -565,7 +565,7 @@ def test_the_five_surface_self_test_is_this_project_s_own_and_ships_to_nobody():
 
 
 def test_security_and_api_drift_workflows_are_real_managed_gates():
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     codeql = (WORKFLOWS / "codeql.yml").read_text(encoding="utf-8")
     assert "name: CodeQL" in codeql
     assert "github/codeql-action/init@6d786de4d6f3531a740e445b53a42b622bbbace8" in codeql
@@ -604,7 +604,7 @@ def test_security_and_api_drift_workflows_are_real_managed_gates():
     assert "Read that file before" in text
     # The schema is rendered from the review contract at install time, so the quoted field
     # names are looked for where they actually appear; the jq that aggregates them is not.
-    rendered = render_workflow(WORKFLOWS / "pr-automation.yml", GhConfig(root=Path(".")))
+    rendered = render_workflow(WORKFLOWS / "pr-review.yml", GhConfig(root=Path(".")))
     for field in (
         "complete",
         "accurate",
@@ -644,7 +644,7 @@ def test_a_workflow_scope_rejection_is_named_not_buried():
     only trace was one line in a log nobody reads while the PR silently stopped
     advancing (#172). The template must warn before the doomed push and, on the
     rejection, say the operator-actionable sentence in the error and the job summary."""
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert "this repair edits .github/workflows/**" in text
     assert "Workflows (read-write) permission" in text
     assert "the repair itself succeeded" in text
@@ -660,7 +660,7 @@ def test_bot_initiated_chains_may_invoke_the_ai_steps():
     gates bot actors behind an explicit allowlist. Every AI call site must name the
     platform's own actor, and ONLY that actor: "*" would extend the trust to
     arbitrary third-party bots."""
-    for name in ("pr-automation.yml", "issue-automation.yml", "conversation.yml"):
+    for name in ("pr-review.yml", "issue-automation.yml", "conversation.yml"):
         text = (WORKFLOWS / name).read_text(encoding="utf-8")
         uses = text.count("anthropics/claude-code-action@")
         allowed = text.count('allowed_bots: "github-actions,github-actions[bot]"')
@@ -676,7 +676,7 @@ def test_recovery_reprobes_parked_prs_on_a_schedule_without_burning_budget():
     that path, and re-probing an unchanged head every cycle would burn the bounded
     repair budget on nothing new. The observed alternative was tonight's: five pull
     requests parked for hours with a human re-dispatching by hand."""
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-evaluate.yml").read_text(encoding="utf-8")
     # The cadence is injected by install.py at the __VIBEY_GH_SCHEDULE__ placeholder —
     # never hardcoded in the template. A literal block alongside the placeholder gives
     # a rendered repository TWO `schedule:` keys under `on:`, which fails Actions'
@@ -690,8 +690,32 @@ def test_recovery_reprobes_parked_prs_on_a_schedule_without_burning_budget():
     flat = " ".join(text.split())
     assert "review incomplete" in flat and "no gate on the current head" in flat
     assert "burn the bounded repair budget on nothing new" in flat
+    # The newest run PER GATE decides (the scan gate and the review gate post on
+    # different timelines): group the history by name and read only each gate's last
+    # run, so a missing review gate — with the scan gate already present — still parks
+    # the head instead of hiding behind the aggregate.
+    assert "group_by(.name)" in text and "map(.[-1]" in text
+    assert "one gate missing on the current head" in flat
     # findings-red gates fall through to `continue`, never a dispatch
-    assert flat.count("gh workflow run pr-automation.yml") >= 1
+    assert flat.count("gh workflow run pr-evaluate.yml") >= 1
+
+
+def test_a_red_scan_gate_names_the_failing_checks_in_its_title():
+    """The split's reason for existing: a red gate names its task. The scan gate must
+    put the failing check names in the `PR evaluate / gate` title, not only in the
+    summary a collapsing checks UI hides, and a green gate must keep its plain
+    'scans passed' title (the limit orders the assignments)."""
+    text = (WORKFLOWS / "pr-evaluate.yml").read_text(encoding="utf-8")
+    assert 'title="${title} — failing: ${SCAN_FAILED_CHECKS}"' in text
+    assert 'summary="${summary} Failing checks: ${SCAN_FAILED_CHECKS}."' in text
+    assert 'title="PR evaluate: scans passed"' in text
+    # The failing checks are read only for the failing branch: the success assignments
+    # below keep their clean titles.
+    assert (
+        text.index("conclusion=failure")
+        < text.index("${title} — failing:")
+        < text.index('title="PR evaluate: scans passed"')
+    )
 
 
 def test_rendered_pr_automation_carries_exactly_one_schedule_key(tmp_path):
@@ -699,7 +723,7 @@ def test_rendered_pr_automation_carries_exactly_one_schedule_key(tmp_path):
     auto-heal cadence. Render with it off: none at all. Two keys is not a style
     problem — Actions refuses to parse the file and the workflow disappears from
     the repository, taking the required gate with it."""
-    on = render_workflow(WORKFLOWS / "pr-automation.yml", GhConfig(root=tmp_path))
+    on = render_workflow(WORKFLOWS / "pr-evaluate.yml", GhConfig(root=tmp_path))
     assert on.count("\n  schedule:") == 1
     assert 'cron: "37 */2 * * *"' in on
     assert "47 */6" not in on
@@ -707,7 +731,7 @@ def test_rendered_pr_automation_carries_exactly_one_schedule_key(tmp_path):
     cfg = dataclasses.replace(
         base, pr_automation=dataclasses.replace(base.pr_automation, retain_schedule_backstop=False)
     )
-    off = render_workflow(WORKFLOWS / "pr-automation.yml", cfg)
+    off = render_workflow(WORKFLOWS / "pr-evaluate.yml", cfg)
     assert "\n  schedule:" not in off
     assert "schedule backstop disabled by .vibey-gh.toml" in off
 
@@ -715,7 +739,7 @@ def test_rendered_pr_automation_carries_exactly_one_schedule_key(tmp_path):
 def test_review_prompt_enforces_the_government_channel():
     """Sub-doctrine 2.a: everything assigned to industry or executives is also
     created for governments — the review judges channel parity on every head."""
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     flat = " ".join(text.split())
     assert "Enforce the government channel (sub-doctrine 2.a)" in flat
     assert "a government edition stands beside it" in flat
@@ -800,7 +824,7 @@ def test_only_the_tooling_repository_self_hosts_the_install():
 def test_review_prompt_enforces_the_clean_repo():
     """Sub-doctrine 9.a: technical clutter blocks; human messiness is expressly
     welcome and never a finding."""
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     flat = " ".join(text.split())
     assert "Enforce the clean repo (sub-doctrine 9.a)" in flat
     assert "Human messiness is expressly welcome and never a finding" in flat
@@ -809,7 +833,7 @@ def test_review_prompt_enforces_the_clean_repo():
 def test_review_prompt_enforces_the_social_signals_oath():
     """Sub-doctrine 4.a: rendered social proof is attested human speech or it blocks —
     machine-manufactured testimony is false witness."""
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     flat = " ".join(text.split())
     assert "Enforce the social-signals oath (sub-doctrine 4.a)" in flat
     assert "machine-authored, synthetic, unattributed, or unverifiable is FALSE WITNESS" in flat
@@ -821,7 +845,7 @@ def test_review_prompt_enforces_unwind_immunity_with_the_minyan_of_ten():
     approvals are worthless toward the quorum. The review is the enforcement
     surface, so the prompt must state the rule, the quorum, and the not-an-unwind
     carve-out."""
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     flat = " ".join(text.split())
     assert "Enforce unwind immunity (Article IV.5-6)" in flat
     assert "no fewer than TEN named humans — a minyan" in flat
@@ -833,7 +857,7 @@ def test_review_prompt_judges_the_living_roadmap():
     """#211: the exact-head review owns roadmap LIVENESS — presence is the
     deterministic contract's job. The prompt must demand an existing roadmap that
     matches the repository's real trajectory, and must reserve 'done' for humans."""
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     flat = " ".join(text.split())
     assert "Verify the living roadmap under complete" in flat
     assert "docs/roadmap.md or ROADMAP.md" in flat
@@ -851,7 +875,7 @@ def test_readability_gate_judges_the_opening_and_the_audience_order():
     aggregation folds into `.pass`, so a reviewer cannot skip a judgment and still pass
     the gate. Phrases are asserted against wrap-normalized text: the prompt is prose and
     its line breaks are not part of the contract."""
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     flat = " ".join(text.split())
     for phrase in (
         "as if you had never seen this repository",
@@ -1072,7 +1096,7 @@ def test_review_plugins_are_configured_never_hard_coded(tmp_path):
     from vibey_gh.config import GhConfig, PrAutomationConfig
     from vibey_gh.install import render_workflow
 
-    source = WORKFLOWS / "pr-automation.yml"
+    source = WORKFLOWS / "pr-review.yml"
     default = render_workflow(source, GhConfig(root=tmp_path))
     assert "vibey-skills.git" not in default
     assert "__VIBEY_GH_PLUGIN" not in default
@@ -1413,7 +1437,13 @@ def test_automation_bootstrap_renders_its_gates_from_the_integration_ruleset(tmp
     rendered = json.loads(defaults["REQUIRED_CHECKS"])
     assert rendered == ["Provenance", "Analyze Python", "Documentation contract"]
     excluded = json.loads(defaults["EXCLUDED_CHECKS"])
-    assert excluded == ["gate", "PR automation / gate", "Automation bootstrap / gate"]
+    assert excluded == [
+        "gate",
+        "PR automation / gate",
+        "PR evaluate / gate",
+        "PR review / gate",
+        "Automation bootstrap / gate",
+    ]
 
     monorepo = _bootstrap_env(_bootstrap_config(tmp_path, required=("gates",)))
     assert json.loads(monorepo["REQUIRED_CHECKS"]) == ["gates"]
@@ -1422,7 +1452,15 @@ def test_automation_bootstrap_renders_its_gates_from_the_integration_ruleset(tmp
     # required name the step also filters out could never be satisfied.
     routed = _bootstrap_config(
         tmp_path,
-        required=("gate", "PR automation / gate", "Automation bootstrap / gate", "Flaky", "gates"),
+        required=(
+            "gate",
+            "PR automation / gate",
+            "PR evaluate / gate",
+            "PR review / gate",
+            "Automation bootstrap / gate",
+            "Flaky",
+            "gates",
+        ),
         ignored=("Flaky",),
     )
     assert json.loads(_bootstrap_env(routed)["REQUIRED_CHECKS"]) == ["gates"]
@@ -1562,6 +1600,8 @@ def test_automation_bootstrap_merges_once_the_configured_gates_are_green(tmp_pat
             # The gates this path routes around: red, and not waited on.
             ("gate", "failure"),
             ("PR automation / gate", "failure"),
+            ("PR evaluate / gate", "failure"),
+            ("PR review / gate", "failure"),
         ),
     )
     assert run.returncode == 0, run.stderr
@@ -1681,7 +1721,7 @@ def test_automation_bootstrap_refuses_a_dispatcher_who_is_not_an_administrator(t
 
 
 def test_pr_review_requires_verified_repository_paths():
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
 
     assert "Inspect target/ with Read, Glob, and Grep only" in text
     assert "verify its path exists under target/ with Read or Glob" in text
@@ -2255,7 +2295,7 @@ AI_TEMPLATES = (
     "conversation.yml",
     "documentation.yml",
     "issue-automation.yml",
-    "pr-automation.yml",
+    "pr-review.yml",
     "release-repair.yml",
 )
 
@@ -2563,7 +2603,7 @@ def test_pr_automation_never_assumes_the_adopting_repos_own_package_is_vibey_gh(
     commits template: a repo with `dependencies = []` does not yield the vibey-gh CLI
     from `pip install ./automation`.
     """
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert "pip install --quiet ./automation" not in text
     checks = re.findall(r'self="automation/__VIBEY_GH_SELF_SOURCE__"', text)
     assert len(checks) == 5  # review, repair, resolve-conflict, escalate, review-fallback
@@ -2817,7 +2857,7 @@ def test_every_managed_third_party_action_is_immutably_pinned():
 
 
 def test_privileged_agent_cannot_mutate_git_or_execute_pr_code():
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert "Bash(git:" not in text
     assert "Never execute package\n" in text
     assert "python -m pip install --quiet ./target" not in text
@@ -2836,7 +2876,7 @@ def test_privileged_agent_cannot_mutate_git_or_execute_pr_code():
 
 
 def test_ai_state_persistence_uses_the_native_github_token():
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert "steps.claude.outputs.github_token" not in text
     assert text.count("GH_TOKEN: ${{ github.token }}") >= 6
 
@@ -2845,14 +2885,14 @@ def test_a_review_that_returned_no_verdict_is_not_reported_as_a_source_defect():
     """A failing gate whose summary says everything passed sends people hunting a bug
     that is not there. An unfinished review is an operator failure and must read as one.
     """
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert "REVIEW_RESULT: ${{ needs.review.result }}" in text
     # Each review outcome gets its own honest title; only `true` may pass the gate.
     assert 'case "$REVIEW_PASSED" in' in text
     assert "conclusion=success" in text
-    assert 'title="PR automation: review findings"' in text
+    assert 'title="PR review: review findings"' in text
     assert "returned actionable findings" in text
-    assert 'title="PR automation: review incomplete"' in text
+    assert 'title="PR review: review incomplete"' in text
     assert "infrastructure or operator failure rather than a defect" in text
     assert "API credit balance, credentials, or model availability" in text
     assert '-f "output[title]=${title}"' in text
@@ -2861,7 +2901,7 @@ def test_a_review_that_returned_no_verdict_is_not_reported_as_a_source_defect():
 
 
 def test_cancelled_or_pending_evaluations_cannot_publish_a_gate():
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-evaluate.yml").read_text(encoding="utf-8")
     assert "pull_request_target:" in text
     assert "types: [opened, reopened, synchronize, ready_for_review]" in text
     assert "github.event.pull_request.number" in text
@@ -2982,7 +3022,7 @@ def test_a_solution_attempt_that_produced_nothing_still_says_so_on_the_issue():
 
 def test_the_repair_job_normalizes_formatting_it_cannot_ask_the_agent_to_run():
     """The agent has no shell, so formatting is the one failure it cannot fix itself."""
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert "Normalize formatting deterministically" in text
     assert "working-directory: target" in text
     assert "ruff check --fix ." in text
@@ -3008,9 +3048,9 @@ def test_every_shipped_hook_is_valid_shell(name):
 def test_the_merge_train_does_not_filter_on_the_triggering_runs_conclusion():
     """Observed in production: every PR held green and unmerged while credits were out.
 
-    "PR automation" concludes `failure` whenever its exact-head review job fails — which
+    "PR review" concludes `failure` whenever its exact-head review job fails — which
     is precisely the case the local review fallback exists to cover. The fallback then
-    succeeds, publishes a green `PR automation / gate`, and the run as a whole still ends
+    succeeds, publishes a green `PR review / gate`, and the run as a whole still ends
     `failure` because one job in it did. Filtering the merge train on that conclusion
     skipped it on every such pull request and defeated the fallback at the last step.
 
@@ -3144,7 +3184,7 @@ def test_the_fallback_reconstructs_a_diff_the_api_refuses(tmp_path):
     caps what reaches the model."""
     from vibey_gh.install import render_workflow
 
-    text = render_workflow(WORKFLOWS / "pr-automation.yml", GhConfig(root=tmp_path))
+    text = render_workflow(WORKFLOWS / "pr-review.yml", GhConfig(root=tmp_path))
     section = text.split("Fetch the exact-head diff")[1].split("Review with the local model")[0]
     assert "gh pr diff" in section
     assert "reconstructing locally" in section
@@ -3216,7 +3256,7 @@ def test_the_gate_tells_a_local_decline_apart_from_no_verdict_at_all():
     is the argument for pointing the reader AT it: a lead they can check in a minute
     beats a claim that nothing was found.
     """
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert '[ "$SOVEREIGN_PASSED" = true ]' in text
     assert '[ -n "$SOVEREIGN_PASSED" ]' in text
     assert "local fallback found a blocking defect" in text
@@ -3228,7 +3268,7 @@ def test_the_gate_tells_a_local_decline_apart_from_no_verdict_at_all():
     assert "a lead, not a ruling" in decline
     # The genuine no-verdict branch keeps the infrastructure wording, and now says
     # explicitly that the local lane produced nothing either.
-    incomplete = text.split('title="PR automation: review incomplete"')[1][:600]
+    incomplete = text.split('title="PR review: review incomplete"')[1][:600]
     assert "no local fallback verdict was produced either" in incomplete
 
 
@@ -3245,7 +3285,7 @@ def test_a_decline_with_nothing_to_point_at_is_not_called_a_defect():
     exist — the same class of misdirection as the bug this branch's predecessor fixed, one
     step further in.
     """
-    text = (WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8")
+    text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     jobs = yaml.safe_load(text)["jobs"]
     # Asserted on the sovereign job ITSELF (the fallback's successor, #133). A substring
     # search for the output line matched the paid review job's identical declaration
@@ -3261,7 +3301,7 @@ def test_a_decline_with_nothing_to_point_at_is_not_called_a_defect():
     assert '[ "${SOVEREIGN_FINDINGS:-0}" -gt 0 ]' in text
     assert "local fallback could not complete the review" in text
 
-    cannot = text.split('title="PR automation: local fallback could not complete the review"')[1]
+    cannot = text.split('title="PR review: local fallback could not complete the review"')[1]
     cannot = cannot.split("else")[0]
     assert "WITHOUT reporting any finding" in cannot
     assert "not a defect claim about the change" in cannot
@@ -3274,7 +3314,7 @@ def test_both_review_lanes_write_every_output_they_declare():
     either review job declares is traced to the step it names, and that step must write it.
     Both lanes count their findings the same way, which is how the gate that names the lane
     behind each half has the same fact from each."""
-    jobs = yaml.safe_load((WORKFLOWS / "pr-automation.yml").read_text(encoding="utf-8"))["jobs"]
+    jobs = yaml.safe_load((WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8"))["jobs"]
     declared_by_lane = {
         "review": {"passed", "findings", "structured", "half", "carried", "halves", "repairable"},
         "review-sovereign": {"passed", "findings", "verdict", "model"},
