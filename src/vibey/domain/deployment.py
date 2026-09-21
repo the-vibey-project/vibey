@@ -18,13 +18,18 @@ class AzureTargetScope:
     resource_group: str
     environment: str
     region: str
+    provider: str = "openstack"
     tags: Mapping[str, str] = field(default_factory=dict)
 
     def digest(self) -> str:
         raw = (
-            f"{self.tenant_id}:{self.subscription_id}:{self.resource_group}:{self.environment}"
+            f"{self.provider}:{self.tenant_id}:{self.subscription_id}:{self.resource_group}:{self.environment}"
         ).encode()
         return hashlib.sha256(raw).hexdigest()
+
+
+TargetScope = AzureTargetScope
+CloudTargetScope = TargetScope
 
 
 @dataclass(slots=True, frozen=True)

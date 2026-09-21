@@ -106,6 +106,61 @@ about cost. Every paid platform is a counterparty who can raise a price, change
 terms, or be pressured into refusing service, which is precisely what 10.a names
 and what 10.b already settled for money. 8.a settles it for everything else.
 
+**8.b — sovereign self-hosted defaults, paid declared-only** *(ratified by the
+merge that carried this entry)*: every operational surface of vibey defaults to
+the freest, most sovereign, self-hosted, free option — and never, ever, to a paid
+platform. This is specific and enumerated, because a preference without a
+concrete default is a platitude:
+
+- **Engines** default to the sovereign pair that runs on the operator's own
+  hardware and needs no subscription: **Qwen** (via `qwenloop`) and **OpenCode**
+  (via `opencodeloop`), always on, never needing declaration, for every phase.
+  The paid loop engines — `claudeloop`, `codexloop`, `cursorloop`, `agyloop` —
+  are declared-only.
+- **Cloud** defaults to **self-hosted OpenStack**, never to a hosted provider.
+  Azure, AWS and GCP are declared-only.
+- **Forge** defaults to **self-hosted Forgejo**, never to a hosted platform.
+  GitHub and GitLab are declared-only.
+- **Ticketing** defaults to **self-hosted, free Plane**, never to a paid or
+  hosted tracker. OpenProject is a sibling sovereign option (FOSS and
+  self-hostable); Jira, Linear and Asana are declared-only.
+- **Documentation** defaults to **self-hosted, free BookStack** — alongside
+  this codebase's own living docs, which are the first documentation surface —
+  never to a hosted or paid wiki. Confluence, Notion and GitBook are
+  declared-only.
+- **Secrets** default to **self-hosted, free Bitwarden**, never to a hosted or
+  paid vault. LastPass, 1Password and Proton (Pass) are declared-only.
+- **Files** default to **self-hosted, free Nextcloud**, never to a hosted or
+  paid drive. Google Drive and Apple iCloud are declared-only.
+- **Email** defaults to **self-hosted, free Forward Email**, never to a hosted
+  or paid provider. Proton Mail, Gmail and Apple Mail are declared-only.
+- **SMS** defaults to **self-hosted, free Fossify Messages**, never to a hosted
+  or paid app. Google Messages and Apple iMessage are declared-only.
+- **Messaging** defaults to **Matrix** (a FOSS, self-hostable homeserver with
+  the Element client) — never a hosted or paid chat. Signal, Discord, Slack,
+  Zoom, WhatsApp, Telegram, Facebook Messenger, Instagram and TikTok are
+  declared-only.
+
+Every surface speaks **one vibey-owned protocol**, the same protocol everywhere —
+engines (`domain/engine.py`, ADR-0005), cloud (`CloudClientPort`), forge
+(`ForgeAdapterInterface`), ticketing (`IssueTrackerPort`), documentation
+(`DocsPort`) — and the protocol is realized by adapters: one per platform, each
+translating the protocol into that platform's native dialect and back. Nothing in vibey's core ever couples to a
+platform's native dialect; the protocol is vibey's, everywhere. The sovereign,
+self-hosted, free implementation is the default adapter of every surface, always
+on, never needing declaration. A sovereign default is never turned off and never
+demoted to a fallback, no matter what a coincidental configuration, environment
+default or migration path says elsewhere in the file.
+
+Reaching for a paid counterparty is the move that must be declared aloud — a human
+writes the declaration into the repository, in the merge that carries it — and it
+then **relays through the sovereign host rather than replacing it**: the sovereign
+host stays the source of truth, and the declared paid platform speaks through a
+relay adapter on the same protocol, feeding the sovereign host rather than
+substituting for it. "Self-hosted" and "free" are both load-bearing: a free tier
+that still runs on someone else's machine is a counterparty (10.a), not a
+sovereign default, and is at best a declared relay.
+
 ## 9 — The vibe
 
 Never a drag. Full steam ahead: baffling momentum with green code.

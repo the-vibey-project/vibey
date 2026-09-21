@@ -75,7 +75,14 @@ def test_architecture_doc_example_parses_every_field() -> None:
     assert config.budget.max_dollars_total == 250.0
     assert config.budget.max_turns_per_item == 60
 
-    assert config.engines.enabled == ("claudeloop", "codexloop", "cursorloop", "agyloop")
+    assert config.engines.enabled == (
+        "claudeloop",
+        "codexloop",
+        "cursorloop",
+        "agyloop",
+        "qwenloop",
+        "opencode",
+    )
     assert config.engines.weights == {
         "claudeloop": 3,
         "codexloop": 2,
@@ -108,17 +115,14 @@ def test_minimal_config_applies_defaults() -> None:
     assert config.project.max_cycles == 10
     assert config.isolation.level == "worktree"
     assert config.engines.enabled == (
-        "claudeloop",
-        "codexloop",
-        "cursorloop",
-        "agyloop",
+        "qwenloop",
         "opencode",
     )
     assert config.phases.design.effort == "high"
     assert config.phases.build.effort == "low"
     assert config.phases.review.effort == "high"
     assert config.deploy.enabled is False
-    assert config.features.qwenloop is False
+    assert config.features.qwenloop is True
     assert config.qwenloop.backend == "auto"
     assert config.notifications.enabled is False
     assert config.notifications.desktop is True
@@ -165,13 +169,13 @@ def test_qwenloop_feature_auto_includes_standby() -> None:
         '[project]\nname = "x"\n\n[features]\nqwenloop = true\n\n'
         '[qwenloop]\nbackend = "llama.cpp"\n'
     )
-    assert config.engines.enabled[-1] == "qwenloop"
+    assert "qwenloop" in config.engines.enabled
     assert config.qwenloop.backend == "llama.cpp"
 
 
-def test_qwenloop_request_requires_feature() -> None:
-    with pytest.raises(ConfigError, match="must be true"):
-        load_config_from_string('[project]\nname = "x"\n\n[engines]\nenabled = ["qwenloop"]\n')
+def test_qwenloop_request_is_always_allowed() -> None:
+    config = load_config_from_string('[project]\nname = "x"\n\n[engines]\nenabled = ["qwenloop"]\n')
+    assert "qwenloop" in config.engines.enabled
 
 
 def test_invalid_qwenloop_config_is_rejected() -> None:
@@ -274,7 +278,7 @@ def test_claudeloop_local_feature_joins_the_default_pool_with_its_profile() -> N
     assert config.engines.claudeloop_local.structured_verdict is True
     assert config.features.enables("claudeloop-local")
     assert config.features.enables("claudeloop")  # a paid engine needs no switch
-    assert not config.features.enables("qwenloop")
+    assert config.features.enables("qwenloop")
 
 
 def test_both_local_features_join_the_pool_in_order() -> None:
@@ -282,7 +286,7 @@ def test_both_local_features_join_the_pool_in_order() -> None:
         '[project]\nname = "x"\n\n[features]\nqwenloop = true\nclaudeloop_local = true\n'
     )
 
-    assert config.engines.enabled[-2:] == ("qwenloop", "claudeloop-local")
+    assert config.engines.enabled[-2:] == ("opencode", "claudeloop-local")
 
 
 def test_claudeloop_local_request_requires_its_feature() -> None:
@@ -302,7 +306,7 @@ def test_an_explicit_pool_is_kept_as_written() -> None:
         '[engines]\nenabled = ["claudeloop-local"]\n'
     )
 
-    assert config.engines.enabled == ("claudeloop-local",)
+    assert config.engines.enabled == ("claudeloop-local", "qwenloop", "opencode")
 
 
 @pytest.mark.parametrize(

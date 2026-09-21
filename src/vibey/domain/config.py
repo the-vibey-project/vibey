@@ -17,11 +17,20 @@ VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
 # The engine id is `opencode` (the provider multiplexer); `opencodeloop` is the
 # wrapper binary and package that adapts it. The canonical id is what config,
 # the CLI and the ledger all speak.
-DEFAULT_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop", "opencode")
+# The sovereign default pair (always on, never need declaration)
+DEFAULT_ENGINES = ("qwenloop", "opencode")
 # Local engines, each behind its own `[features]` switch (ADR-0015, ADR-0038). The
 # feature key is the engine id with the hyphen a TOML bare key cannot carry.
 LOCAL_ENGINE_FEATURES = {"qwenloop": "qwenloop", "claudeloop-local": "claudeloop_local"}
-KNOWN_ENGINES = (*DEFAULT_ENGINES, *LOCAL_ENGINE_FEATURES)
+KNOWN_ENGINES = (
+    "claudeloop",
+    "codexloop",
+    "cursorloop",
+    "agyloop",
+    "opencode",
+    "qwenloop",
+    "claudeloop-local",
+)
 DEFAULT_CLAUDELOOP_LOCAL_PROFILE = "local"
 DEFAULT_LOCAL_CONTEXT_WINDOW = 32_768
 
@@ -127,7 +136,7 @@ class ProvisionConfig:
 @dataclass(frozen=True, slots=True)
 class DeployConfig:
     enabled: bool = False
-    target: str = "azure"
+    target: str = "openstack"
     iac: str = "bicep"
 
 
@@ -163,11 +172,13 @@ class TelemetryConfig:
 
 @dataclass(frozen=True, slots=True)
 class FeaturesConfig:
-    qwenloop: bool = False
+    qwenloop: bool = True
     claudeloop_local: bool = False
 
     def enables(self, engine: str) -> bool:
         """Whether the switch for a local engine id is on; paid engines need none."""
+        if engine == "qwenloop":
+            return True
         key = LOCAL_ENGINE_FEATURES.get(engine)
         return key is None or bool(getattr(self, key))
 
@@ -258,6 +269,10 @@ def _parse_budget(data: dict[str, Any]) -> BudgetConfig:
 def _parse_engines(data: dict[str, Any]) -> EnginesConfig:
     table = _optional(data, "engines", "engines", dict, {})
     enabled = tuple(_optional(table, "enabled", "engines.enabled", list, list(DEFAULT_ENGINES)))
+    # The sovereign pair are always-on defaults (cannot be turned off)
+    for sovereign in ("qwenloop", "opencode"):
+        if sovereign not in enabled:
+            enabled = (*enabled, sovereign)
     for engine in enabled:
         if engine not in KNOWN_ENGINES:
             raise ConfigError("engines.enabled", f"unknown engine {engine!r}")
@@ -305,7 +320,7 @@ def _parse_deploy(data: dict[str, Any]) -> DeployConfig:
     table = _optional(data, "deploy", "deploy", dict, {})
     return DeployConfig(
         enabled=_optional(table, "enabled", "deploy.enabled", bool, False),
-        target=_optional(table, "target", "deploy.target", str, "azure"),
+        target=_optional(table, "target", "deploy.target", str, "openstack"),
         iac=_optional(table, "iac", "deploy.iac", str, "bicep"),
     )
 
@@ -346,7 +361,7 @@ def _parse_telemetry(data: dict[str, Any]) -> TelemetryConfig:
 def _parse_features(data: dict[str, Any]) -> FeaturesConfig:
     table = _optional(data, "features", "features", dict, {})
     return FeaturesConfig(
-        qwenloop=_optional(table, "qwenloop", "features.qwenloop", bool, False),
+        qwenloop=_optional(table, "qwenloop", "features.qwenloop", bool, True),
         claudeloop_local=_optional(
             table, "claudeloop_local", "features.claudeloop_local", bool, False
         ),
@@ -414,8 +429,12 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
     if "enabled" not in _optional(data, "engines", "engines", dict, {}):
         # An omitted pool is the default pool plus every local engine switched on.
         switched_on = tuple(e for e in LOCAL_ENGINE_FEATURES if features.enables(e))
+        unique_enabled: list[str] = []
+        for e in (*engines.enabled, *switched_on):
+            if e not in unique_enabled:
+                unique_enabled.append(e)
         engines = EnginesConfig(
-            enabled=(*engines.enabled, *switched_on),
+            enabled=tuple(unique_enabled),
             weights=engines.weights,
             claudeloop_local=engines.claudeloop_local,
         )

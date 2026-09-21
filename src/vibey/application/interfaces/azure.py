@@ -42,8 +42,8 @@ class AzureResourceStatus:
 
 
 @runtime_checkable
-class AzureClientPort(Protocol):
-    """Application port for Azure interactions with strict mutation authorization."""
+class CloudClientPort(Protocol):
+    """Application port for cloud interactions with strict mutation authorization."""
 
     async def discover_environment(self, scope: AzureTargetScope) -> AzureDiscoveryResult:
         """Read-only discovery of subscription, resource group, and existing infrastructure."""
@@ -66,6 +66,9 @@ class AzureClientPort(Protocol):
     ) -> None:
         """Deletes specified resource. Requires explicit mutation consent."""
         ...
+
+
+AzureClientPort = CloudClientPort
 
 
 @runtime_checkable

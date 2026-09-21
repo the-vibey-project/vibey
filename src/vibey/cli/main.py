@@ -363,29 +363,24 @@ _OLLAMA_MODEL_HELP = (
     "Local model for --provider qwenloop; ignored by the other providers. Default: "
     f"${OLLAMA_MODEL_ENV}, else {DEFAULT_OLLAMA_MODEL}. The server is ${OLLAMA_URL_ENV}."
 )
-_PROVIDERS = ("scripted", "claudeloop", "qwenloop")
+_PROVIDERS = ("scripted", "claudeloop", "qwenloop", "opencode")
 # The same for --provider: its default is the one decision both commands must share.
 _PROVIDER_HELP = (
-    "DESIGN/DECOMPOSE provider: scripted, claudeloop, or qwenloop (the sovereign one, on "
-    "Ollama). Default: qwenloop when any local engine is switched on "
-    "(VIBEY_FEATURE_QWENLOOP / VIBEY_FEATURE_CLAUDELOOP_LOCAL, else [features] in the "
-    "project's config), otherwise scripted. An explicit value always wins."
+    "DESIGN/DECOMPOSE provider: scripted, claudeloop, qwenloop, or opencode (the "
+    "sovereign default multiplexer). Default: opencode."
 )
 
 
 def _resolve_provider(explicit: str | None, config: Mapping[str, object]) -> str:
     """The provider to run: the operator's explicit choice, else the sovereign default.
 
-    Sub-doctrine 8.a, slice B5 of #115 (ADR-0038): an operator who has switched a local
-    engine on has said the sovereign path is how this project runs, so DESIGN and
-    DECOMPOSE default to the local providers too instead of the scripted fake. Paid
-    (`claudeloop`) is never a default; it is always a stated choice. Module-level, like
-    the typer commands that share it, so `work` and `worker` cannot disagree.
+    Sub-doctrine 8.a: sovereign path is preferred, so DESIGN and DECOMPOSE default to
+    the opencode provider first. Paid (`claudeloop`) is never a default; it is always a
+    stated choice.
     """
     if explicit is not None:
         return explicit
-    local = LocalEngineSettings(environ=os.environ, config=config)
-    return "qwenloop" if local.any_enabled else "scripted"
+    return "opencode"
 
 
 async def _work_once(
@@ -425,7 +420,7 @@ async def _work_once(
         if provider == "scripted":
             design_provider = ScriptedDesignProvider()
         elif provider == "claudeloop":
-            process = ClaudeLoopProcess(
+            claude_process = ClaudeLoopProcess(
                 executor=AsyncSubprocessExecutor(),
                 max_turns=max_turns,
                 max_dollars=max_dollars,
@@ -434,7 +429,7 @@ async def _work_once(
                 ),
             )
             design_provider = ClaudeLoopDesignProvider(
-                process=process,
+                process=claude_process,
                 worktree_path=project.repo_path,
             )
         elif provider == "qwenloop":
@@ -448,8 +443,26 @@ async def _work_once(
             design_provider = QwenloopDesignProvider.from_environment(
                 os.environ, chat=OllamaChatClient.from_environment(os.environ, model=ollama_model)
             )
+        elif provider == "opencode":
+            from vibey.infrastructure.engines.opencodeloop_design import OpenCodeLoopDesignProvider
+            from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopProcess
+
+            opencode_process = OpenCodeLoopProcess(
+                executor=AsyncSubprocessExecutor(),
+                max_turns=max_turns,
+                max_dollars=max_dollars,
+                spend_recorder=_build_spend_recorder(
+                    resources.ledger, project.project_id, project.cycle, project.phase
+                ),
+            )
+            design_provider = OpenCodeLoopDesignProvider(
+                process=opencode_process,
+                worktree_path=project.repo_path,
+            )
         else:
-            raise UnknownProvider("provider must be 'scripted', 'claudeloop', or 'qwenloop'")
+            raise UnknownProvider(
+                "provider must be 'scripted', 'claudeloop', 'qwenloop', or 'opencode'"
+            )
         worker = build_design_worker(
             resources=resources,
             project=project,
@@ -1559,7 +1572,7 @@ def worker(
             design_provider: DesignProvider
             decomposer: WorkPlanProducer
             if provider == "claudeloop":
-                process = ClaudeLoopProcess(
+                claude_process = ClaudeLoopProcess(
                     executor=AsyncSubprocessExecutor(),
                     max_turns=max_turns,
                     max_dollars=max_dollars,
@@ -1568,11 +1581,11 @@ def worker(
                     ),
                 )
                 design_provider = ClaudeLoopDesignProvider(
-                    process=process,
+                    process=claude_process,
                     worktree_path=project.repo_path,
                 )
                 decomposer = ClaudeLoopWorkPlanProducer(
-                    process=process,
+                    process=claude_process,
                     worktree_path=project.repo_path,
                 )
             elif provider == "qwenloop":
@@ -1589,6 +1602,31 @@ def worker(
                 chat = OllamaChatClient.from_environment(os.environ, model=ollama_model)
                 design_provider = QwenloopDesignProvider.from_environment(os.environ, chat=chat)
                 decomposer = QwenloopWorkPlanProducer(chat=chat)
+            elif provider == "opencode":
+                from vibey.infrastructure.engines.opencodeloop_decompose import (
+                    OpenCodeLoopWorkPlanProducer,
+                )
+                from vibey.infrastructure.engines.opencodeloop_design import (
+                    OpenCodeLoopDesignProvider,
+                )
+                from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopProcess
+
+                opencode_process = OpenCodeLoopProcess(
+                    executor=AsyncSubprocessExecutor(),
+                    max_turns=max_turns,
+                    max_dollars=max_dollars,
+                    spend_recorder=_build_spend_recorder(
+                        resources.ledger, project.project_id, project.cycle, project.phase
+                    ),
+                )
+                design_provider = OpenCodeLoopDesignProvider(
+                    process=opencode_process,
+                    worktree_path=project.repo_path,
+                )
+                decomposer = OpenCodeLoopWorkPlanProducer(
+                    process=opencode_process,
+                    worktree_path=project.repo_path,
+                )
             else:
                 design_provider = ScriptedDesignProvider()
                 decomposer = ScriptedWorkPlanProducer()
