@@ -379,6 +379,7 @@ def _run_storm(
         for label, plan_text in plans:
             attempted_items += 1
             item_completed = False
+            item_turns = 0
             for attempt in range(1, max_attempts + 1):
                 attempt_plan = plan_text
                 if attempt > 1:
@@ -408,6 +409,7 @@ def _run_storm(
                     typer.echo(f"{name} {label}\tunavailable\t{exc}")
                     break
                 repo_turns += state.turns
+                item_turns += state.turns
                 if state.status is RunStatus.COMPLETED:
                     completed_items += 1
                     item_completed = True
@@ -424,7 +426,7 @@ def _run_storm(
                 break
             if not item_completed:
                 repo_success = False
-                typer.echo(f"{name} {label}\tfailed\t{repo_turns}")
+                typer.echo(f"{name} {label}\tfailed\t{item_turns}")
                 break
         if repo_failure is not None:
             typer.echo(f"{name}\tunavailable\t{repo_failure}")

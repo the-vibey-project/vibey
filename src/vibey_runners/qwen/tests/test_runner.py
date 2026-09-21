@@ -251,16 +251,21 @@ def test_system_prompt_marks_verdict_as_text_not_a_tool(tmp_path: Path) -> None:
     assert "plain text in your final assistant response" in prompt
 
 
-def test_cdd_evidence_requires_all_delivery_fields() -> None:
-    assert not _has_cdd_evidence([ChatMessage("assistant", "criteria: done; tests: pass")])
+def test_cdd_evidence_requires_all_delivery_fields_inside_one_verdict() -> None:
+    fields = (
+        "criteria: done; tests: pass; repository: Python; "
+        "levels: project/phase/epic/item; trajectory: converging; "
+        "composition: atom-only; delivery: commit-ready"
+    )
+    assert not _has_cdd_evidence([ChatMessage("assistant", fields)])
+    assert not _has_cdd_evidence(
+        [ChatMessage("assistant", f"{fields}\n```qwenloop-verdict\npass\n```")]
+    )
     assert _has_cdd_evidence(
         [
             ChatMessage(
                 "assistant",
-                "criteria: done; tests: pass; repository: Python; "
-                "levels: project/phase/epic/item; trajectory: converging; "
-                "composition: atom-only; "
-                "delivery: commit-ready",
+                f"```qwenloop-verdict\n{fields}\n```",
             )
         ]
     )
