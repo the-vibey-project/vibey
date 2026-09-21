@@ -180,8 +180,9 @@ opt-in recorded in the ledger; declining records a successful local completion.
 
 Five runners implement engines: `claudeloop` over Claude Code, `codexloop` over OpenAI
 Codex, `cursorloop` over Cursor's agent and its Cloud Agents API, `agyloop` over
-Gemini through the Antigravity SDK, and `qwenloop` over Qwen 2.5 Coder served on local
-hardware. `claudeloop` came first; the others transplanted its core. The orchestrator
+Gemini through the Antigravity SDK, and `qwenloop` over a local Qwen model. The pilot
+below uses `qwen3:14b`; the runner contract does not depend on that model choice.
+`claudeloop` came first; the others transplanted its core. The orchestrator
 depends on a narrow contract that all five honour: a bounded run, a done marker, an
 event vocabulary, a capacity mapping, and a shared wind-down exit code (75) meaning
 that the engine ran out of window capacity mid-item and stopped cleanly after writing
@@ -430,11 +431,15 @@ record.
 ## Production rate and governance
 
 The components above make engines substitutable and human decisions explicit. This
-section asks what, given that, bounds the rate of delivery. It uses two tracked
+section asks what, given that, bounds the rate of delivery. It uses three tracked
 sources and nothing else: the sovereignty stress record
-(`src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md`), a controlled escalation
-of the local review lane, and this repository's git history, which is field data.
-`scripts/paper_evidence.py` recomputes every figure in this section from those two
+(`src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md`), the cutoff-bounded local
+Qwen storm record
+(`src/vibey_tools/gh/docs/qwenloop-storm-2026-09-20.json`), and this repository's git
+history, which is field data. The stress record is a controlled escalation of the local
+review lane; the Qwen record is an operational reliability observation, not another
+throughput experiment.
+`scripts/paper_evidence.py` recomputes every figure in this section from those three
 sources; history figures are stated at revision `559638f4`, which the script's
 `--rev 559638f4` reproduces.
 
@@ -465,6 +470,40 @@ Throughput is successful generations per minute of rung wall clock.
 
 In all, 243 of 444 generations succeeded over 2.18 hours. Every failure was a clean
 timeout; not one response was malformed or corrupt.
+
+### The local Qwen storm pilot
+
+The same-day local storm exercised the latest qwenloop runner against the open Vibey
+backlog with `qwen3:14b` through Ollama. It is not a replication of the stress record:
+the work items were heterogeneous, the offered concurrency was not controlled as a
+factorial experiment, and several runs were still alive or had produced no events at
+the evidence cutoff. The tracked record names every allocated run directory and the
+cutoff (`2026-09-20T22:28:45-04:00`).
+
+Eight run directories were observed. One completed with both a verdict and the
+`QWENLOOP_TASK_FULLY_COMPLETE` marker after five turns and four tool calls. A second
+emitted a provisional verdict and made eight file-write calls totalling 7,430 bytes
+over eleven turns and thirteen tool calls, but never emitted the completion marker. A
+third reached eight turns and seven tool calls, emitted a provisional verdict, and
+made one file-write attempt that returned an error; it also never emitted the
+completion marker. A fourth progressed through four turns and eight tool calls,
+including four writes totalling 1,681 bytes, but emitted no verdict. A fifth produced
+one tool call that returned a file-not-found error and no further event. Three
+directories had no events at the cutoff, while two storm processes were still alive.
+Across all eight directories the logs contain 29 model-turn boundaries, 33 tool calls,
+175,595 input tokens, 23,692 output tokens, and thirteen file-write calls totalling
+9,111 bytes. Thus the accepted completion rate at the cutoff was 1/8, or 12.5%,
+while a verdict alone would have suggested 3/8, or 37.5%.
+
+This is a runner-reliability observation, not a model-quality or throughput estimate.
+It is nevertheless an empirical check of the completion contract: a verdict without
+the completion marker did not count as success, and unfinished event trails remained
+unfinished rather than being promoted to completed work. The run also exposed a
+configuration observation worth preserving: the requested context setting was 32,768
+tokens, while the local server reported 40,960 at the cutoff. The paper therefore makes
+no claim about a controlled context-window effect from this pilot. The raw logs remain
+local operational artifacts; the compact tracked extraction is the reproducible source
+used by `scripts/paper_evidence.py`.
 
 ### The measured regularity
 
@@ -645,11 +684,12 @@ produce.
 This is evidence, not proof, and its scope is narrow: one machine, one model served
 one way, one deadline, one artifact pool whose payload mix was not balanced across
 rungs (the record names payload size, not concurrency, as what decided survival), one
-session, and one operator. The field data is one project's history. Neither source
-measures network state or operator availability, so two of the five modulators are
-named, mapped and unmeasured. We do not claim a natural law, and we do not claim that
-the rate is constant. We claim a band, on a substrate, together with the conditions
-under which the claim would fail.
+stress session, one local Qwen pilot, and one operator. The field data is one project's
+history. Neither the stress record nor the Qwen pilot measures network state or
+operator availability, so two of the five modulators are named, mapped and unmeasured.
+We do not claim a natural law, and we do not claim that the rate is constant. We claim
+a band, on a substrate, together with the conditions under which the claim would fail,
+and report the Qwen pilot only as a bounded reliability observation.
 
 ## Validation
 
@@ -668,7 +708,9 @@ build and review to local completion on two paid engines, `claudeloop` and
 engines rest today on a scripted-binary conformance suite that asserts each runner's
 flags, run-directory shape, event vocabulary, capacity mapping and completion marker
 against the installed binary; they are not yet reported here. The production-rate
-claims are validated separately, by the stress record and the evidence script above.
+claims are validated separately, by the stress record and the evidence script above;
+the local Qwen pilot is reported as an operational reliability observation with its
+own cutoff and does not enlarge the throughput claim.
 
 ## Related work
 

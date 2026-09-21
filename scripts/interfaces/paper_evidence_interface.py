@@ -41,8 +41,16 @@ class GitHistoryInterface(Protocol):
         ...
 
 
+class QwenStormRecordInterface(Protocol):
+    """Reads a tracked extraction of one local qwenloop storm observation."""
+
+    def summary(self) -> dict[str, Any]:
+        """Return the run counts, token totals and completion outcomes."""
+        ...
+
+
 class PaperEvidenceInterface(Protocol):
-    """Composes both sources into the report the paper's numbers are traced to."""
+    """Composes the tracked sources into the report the paper cites."""
 
     def collect(self) -> dict[str, Any]:
         """Both summaries, keyed by source, plus the revision they were read at."""
