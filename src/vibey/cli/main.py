@@ -366,21 +366,25 @@ _OLLAMA_MODEL_HELP = (
 _PROVIDERS = ("scripted", "claudeloop", "qwenloop", "opencode")
 # The same for --provider: its default is the one decision both commands must share.
 _PROVIDER_HELP = (
-    "DESIGN/DECOMPOSE provider: scripted, claudeloop, qwenloop, or opencode (the "
-    "sovereign default multiplexer). Default: opencode."
+    "DESIGN/DECOMPOSE provider: scripted, claudeloop, qwenloop (the sovereign one, on "
+    "Ollama), or opencode. Default: qwenloop when any local engine is switched on, "
+    "otherwise scripted. An explicit value always wins."
 )
 
 
 def _resolve_provider(explicit: str | None, config: Mapping[str, object]) -> str:
     """The provider to run: the operator's explicit choice, else the sovereign default.
 
-    Sub-doctrine 8.a: sovereign path is preferred, so DESIGN and DECOMPOSE default to
-    the opencode provider first. Paid (`claudeloop`) is never a default; it is always a
-    stated choice.
+    Sub-doctrine 8.a, slice B5 of #115 (ADR-0038): an operator who has switched a local
+    engine on has said the sovereign path is how this project runs, so DESIGN and
+    DECOMPOSE default to the local providers too instead of the scripted fake. Paid
+    (`claudeloop`) is never a default; it is always a stated choice. Module-level, like
+    the typer commands that share it, so `work` and `worker` cannot disagree.
     """
     if explicit is not None:
         return explicit
-    return "opencode"
+    local = LocalEngineSettings(environ=os.environ, config=config)
+    return "qwenloop" if local.any_enabled else "scripted"
 
 
 async def _work_once(

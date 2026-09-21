@@ -122,7 +122,7 @@ def test_minimal_config_applies_defaults() -> None:
     assert config.phases.build.effort == "low"
     assert config.phases.review.effort == "high"
     assert config.deploy.enabled is False
-    assert config.features.qwenloop is True
+    assert config.features.qwenloop is False
     assert config.qwenloop.backend == "auto"
     assert config.notifications.enabled is False
     assert config.notifications.desktop is True
@@ -278,7 +278,7 @@ def test_claudeloop_local_feature_joins_the_default_pool_with_its_profile() -> N
     assert config.engines.claudeloop_local.structured_verdict is True
     assert config.features.enables("claudeloop-local")
     assert config.features.enables("claudeloop")  # a paid engine needs no switch
-    assert config.features.enables("qwenloop")
+    assert not config.features.enables("qwenloop")
 
 
 def test_both_local_features_join_the_pool_in_order() -> None:

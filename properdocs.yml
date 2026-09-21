@@ -94,4 +94,5 @@ nav:
           - "0039 — Convergence-Driven Development (CDD) encloses specification and test-driven development": architecture/decisions/0039-convergence-driven-development.md
           - "0040 — Evidence-bounded status for runs, features and research claims": architecture/decisions/0040-evidence-bounded-status.md
           - "0041 — Software organisms are alive in the digital realm": architecture/decisions/0041-software-organisms-alive-in-the-digital-realm.md
+          - "0042 — Sovereign self-hosted defaults on every surface; paid platforms are declared-only relays": architecture/decisions/0042-sovereign-self-hosted-defaults-and-declared-paid-relays.md
   - Research paper: paper.md

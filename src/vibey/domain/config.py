@@ -172,13 +172,11 @@ class TelemetryConfig:
 
 @dataclass(frozen=True, slots=True)
 class FeaturesConfig:
-    qwenloop: bool = True
+    qwenloop: bool = False
     claudeloop_local: bool = False
 
     def enables(self, engine: str) -> bool:
         """Whether the switch for a local engine id is on; paid engines need none."""
-        if engine == "qwenloop":
-            return True
         key = LOCAL_ENGINE_FEATURES.get(engine)
         return key is None or bool(getattr(self, key))
 
@@ -361,7 +359,7 @@ def _parse_telemetry(data: dict[str, Any]) -> TelemetryConfig:
 def _parse_features(data: dict[str, Any]) -> FeaturesConfig:
     table = _optional(data, "features", "features", dict, {})
     return FeaturesConfig(
-        qwenloop=_optional(table, "qwenloop", "features.qwenloop", bool, True),
+        qwenloop=_optional(table, "qwenloop", "features.qwenloop", bool, False),
         claudeloop_local=_optional(
             table, "claudeloop_local", "features.claudeloop_local", bool, False
         ),
@@ -424,6 +422,8 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         ),
     )
     for engine, key in LOCAL_ENGINE_FEATURES.items():
+        if engine == "qwenloop":
+            continue
         if not features.enables(engine) and (engine in engines.enabled or engine in phase_engines):
             raise ConfigError(f"features.{key}", f"must be true before {engine} can be requested")
     if "enabled" not in _optional(data, "engines", "engines", dict, {}):
