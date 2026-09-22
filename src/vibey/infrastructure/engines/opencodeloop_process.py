@@ -121,7 +121,12 @@ def _capacity_deferred(worktree_path: Path, run_id: str) -> CapacityDeferred | N
         if record.get("event_type") == "capacity.rejected":
             state = record.get("capacity_state", "window_exhausted")
             retry_at = datetime.now(UTC) + timedelta(seconds=60)
-            return CapacityDeferred(retry_at, f"opencodeloop capacity exhausted: {state}")
+            capacity = CapacityDeferred(
+                retry_at,
+                f"opencodeloop capacity exhausted: {state}",
+                capacity_state=state if isinstance(state, str) else None,
+            )
+            return capacity
     return None
 
 

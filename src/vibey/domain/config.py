@@ -191,6 +191,86 @@ class QwenloopConfig:
     context_window: int = 32_768
 
 
+# The operational surfaces of ADR-0042. Each table is optional: an omitted
+# table (or an omitted key) leaves the surface on its in-memory default, so a
+# project runs with no external service configured at all. A real endpoint is
+# how an operator declares a self-hosted sovereign service (or a paid relay).
+
+
+@dataclass(frozen=True, slots=True)
+class TrackerConfig:
+    """`[tracker]`: the Issue Tracker surface (sovereign default: Plane)."""
+
+    url: str | None = None
+    token: str | None = None
+    project_key: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DocsConfig:
+    """`[docs]`: the Documentation surface (sovereign default: BookStack)."""
+
+    url: str | None = None
+    token_id: str | None = None
+    token_secret: str | None = None
+    book_id: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SecretsConfig:
+    """`[secrets]`: the Secrets surface (sovereign default: Bitwarden)."""
+
+    url: str | None = None
+    token: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class FilesConfig:
+    """`[files]`: the File storage surface (sovereign default: Nextcloud)."""
+
+    url: str | None = None
+    user: str | None = None
+    password: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EmailConfig:
+    """`[email]`: the Email surface (sovereign default: Forward Email)."""
+
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    username: str | None = None
+    password: str | None = None
+    from_email: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SmsConfig:
+    """`[sms]`: the SMS surface (sovereign default: Fossify Messages)."""
+
+    url: str | None = None
+    token: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class MessagingConfig:
+    """`[messaging]`: the Messaging surface (sovereign default: Matrix)."""
+
+    url: str | None = None
+    token: str | None = None
+    room_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ConfigStoreConfig:
+    """`[config_store]`: application configuration storage (default: Infisical)."""
+
+    url: str | None = None
+    token: str | None = None
+    project_id: str | None = None
+    environment: str = "dev"
+
+
 @dataclass(frozen=True, slots=True)
 class VibeyConfig:
     project: ProjectConfig
@@ -204,6 +284,14 @@ class VibeyConfig:
     telemetry: TelemetryConfig = field(default_factory=TelemetryConfig)
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
     qwenloop: QwenloopConfig = field(default_factory=QwenloopConfig)
+    tracker: TrackerConfig = field(default_factory=TrackerConfig)
+    docs: DocsConfig = field(default_factory=DocsConfig)
+    secrets: SecretsConfig = field(default_factory=SecretsConfig)
+    files: FilesConfig = field(default_factory=FilesConfig)
+    email: EmailConfig = field(default_factory=EmailConfig)
+    sms: SmsConfig = field(default_factory=SmsConfig)
+    messaging: MessagingConfig = field(default_factory=MessagingConfig)
+    config_store: ConfigStoreConfig = field(default_factory=ConfigStoreConfig)
 
 
 def parse_toml_string(text: str) -> dict[str, Any]:
@@ -394,6 +482,86 @@ def _parse_qwenloop(data: dict[str, Any]) -> QwenloopConfig:
     return result
 
 
+def _parse_tracker(data: dict[str, Any]) -> TrackerConfig:
+    table = _optional(data, "tracker", "tracker", dict, {})
+    return TrackerConfig(
+        url=_optional(table, "url", "tracker.url", str, None),
+        token=_optional(table, "token", "tracker.token", str, None),
+        project_key=_optional(table, "project_key", "tracker.project_key", str, None),
+    )
+
+
+def _parse_docs(data: dict[str, Any]) -> DocsConfig:
+    table = _optional(data, "docs", "docs", dict, {})
+    book_id = table.get("book_id")
+    if book_id is not None and (isinstance(book_id, bool) or not isinstance(book_id, int)):
+        raise ConfigError("docs.book_id", "must be an integer or omitted")
+    return DocsConfig(
+        url=_optional(table, "url", "docs.url", str, None),
+        token_id=_optional(table, "token_id", "docs.token_id", str, None),
+        token_secret=_optional(table, "token_secret", "docs.token_secret", str, None),
+        book_id=book_id,
+    )
+
+
+def _parse_secrets(data: dict[str, Any]) -> SecretsConfig:
+    table = _optional(data, "secrets", "secrets", dict, {})
+    return SecretsConfig(
+        url=_optional(table, "url", "secrets.url", str, None),
+        token=_optional(table, "token", "secrets.token", str, None),
+    )
+
+
+def _parse_files(data: dict[str, Any]) -> FilesConfig:
+    table = _optional(data, "files", "files", dict, {})
+    return FilesConfig(
+        url=_optional(table, "url", "files.url", str, None),
+        user=_optional(table, "user", "files.user", str, None),
+        password=_optional(table, "password", "files.password", str, None),
+    )
+
+
+def _parse_email(data: dict[str, Any]) -> EmailConfig:
+    table = _optional(data, "email", "email", dict, {})
+    smtp_port = table.get("smtp_port")
+    if smtp_port is not None and (isinstance(smtp_port, bool) or not isinstance(smtp_port, int)):
+        raise ConfigError("email.smtp_port", "must be an integer or omitted")
+    return EmailConfig(
+        smtp_host=_optional(table, "smtp_host", "email.smtp_host", str, None),
+        smtp_port=smtp_port,
+        username=_optional(table, "username", "email.username", str, None),
+        password=_optional(table, "password", "email.password", str, None),
+        from_email=_optional(table, "from_email", "email.from_email", str, None),
+    )
+
+
+def _parse_sms(data: dict[str, Any]) -> SmsConfig:
+    table = _optional(data, "sms", "sms", dict, {})
+    return SmsConfig(
+        url=_optional(table, "url", "sms.url", str, None),
+        token=_optional(table, "token", "sms.token", str, None),
+    )
+
+
+def _parse_messaging(data: dict[str, Any]) -> MessagingConfig:
+    table = _optional(data, "messaging", "messaging", dict, {})
+    return MessagingConfig(
+        url=_optional(table, "url", "messaging.url", str, None),
+        token=_optional(table, "token", "messaging.token", str, None),
+        room_id=_optional(table, "room_id", "messaging.room_id", str, None),
+    )
+
+
+def _parse_config_store(data: dict[str, Any]) -> ConfigStoreConfig:
+    table = _optional(data, "config_store", "config_store", dict, {})
+    return ConfigStoreConfig(
+        url=_optional(table, "url", "config_store.url", str, None),
+        token=_optional(table, "token", "config_store.token", str, None),
+        project_id=_optional(table, "project_id", "config_store.project_id", str, None),
+        environment=_optional(table, "environment", "config_store.environment", str, "dev"),
+    )
+
+
 def parse_config(data: dict[str, Any]) -> VibeyConfig:
     """Validate an already-parsed TOML dict and build a VibeyConfig.
 
@@ -450,6 +618,14 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         telemetry=_parse_telemetry(data),
         features=features,
         qwenloop=_parse_qwenloop(data),
+        tracker=_parse_tracker(data),
+        docs=_parse_docs(data),
+        secrets=_parse_secrets(data),
+        files=_parse_files(data),
+        email=_parse_email(data),
+        sms=_parse_sms(data),
+        messaging=_parse_messaging(data),
+        config_store=_parse_config_store(data),
     )
 
 

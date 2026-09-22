@@ -46,9 +46,17 @@ from vibey.application.interfaces import (
     AzureClientPort,
     Clock,
     ConductorPreflightInterface,
+    ConfigStorePort,
     DesignProvider,
+    DocsPort,
+    EmailPort,
     EngineAdapter,
+    FilesPort,
+    IssueTrackerPort,
     JobHandler,
+    MessagingPort,
+    SecretsPort,
+    SmsPort,
     VisualInventoryProducer,
     WorkPlanProducer,
 )
@@ -62,6 +70,7 @@ from vibey.application.rotation_handoff import RotationHandoffService
 from vibey.application.visual_handler import VisualInventoryHandler, VisualPlanHandler
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import WorkerLoop
+from vibey.domain.config import VibeyConfig
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import VibeyError
 from vibey.domain.phase import Phase
@@ -84,23 +93,37 @@ from vibey.infrastructure.db.review_ledger import PostgresReviewLedger
 from vibey.infrastructure.db.rotation_cursor_repository import PostgresRotationCursorRepository
 from vibey.infrastructure.db.visual_inventory_repository import FileVisualInventoryRepository
 from vibey.infrastructure.deploy.state_repository import FileDeploymentStateRepository
+from vibey.infrastructure.docs.bookstack import BookStackDocsAdapter
+from vibey.infrastructure.docs.in_memory import InMemoryDocs
+from vibey.infrastructure.email.forward_email import ForwardEmailAdapter
+from vibey.infrastructure.email.in_memory import InMemoryEmail
 from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCRIPTORS
 from vibey.infrastructure.engines.local_engines import (
     LocalEndpointEnvironment,
     LocalEngineSettings,
 )
 from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
+from vibey.infrastructure.files.in_memory import InMemoryFiles
+from vibey.infrastructure.files.nextcloud import NextcloudFilesAdapter
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
 from vibey.infrastructure.logging import StructlogAppLogger
+from vibey.infrastructure.messaging.in_memory import InMemoryMessaging
+from vibey.infrastructure.messaging.matrix import MatrixMessagingAdapter
 from vibey.infrastructure.notify import NotificationService
 from vibey.infrastructure.otel import TelemetryMetrics, TelemetryTracer
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, parse_postgres_server_version
 from vibey.infrastructure.preflight_feasibility import VibeyGhFeasibilityAdapter
 from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
 from vibey.infrastructure.review_artifact_writer import FileReviewArtifactWriter
+from vibey.infrastructure.secrets.bitwarden import BitwardenSecretsAdapter
+from vibey.infrastructure.secrets.in_memory import InMemorySecrets
 from vibey.infrastructure.skills_context import compiler_from_config
+from vibey.infrastructure.sms.fossify import FossifySmsAdapter
+from vibey.infrastructure.sms.in_memory import InMemorySms
+from vibey.infrastructure.tracker.in_memory import InMemoryTracker
+from vibey.infrastructure.tracker.plane import PlaneTrackerAdapter
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +152,14 @@ class AppResources:
     notifications: NotificationService
     telemetry_tracer: TelemetryTracer
     telemetry_metrics: TelemetryMetrics
+    tracker: IssueTrackerPort
+    docs: DocsPort
+    secrets: SecretsPort
+    files: FilesPort
+    email: EmailPort
+    sms: SmsPort
+    messaging: MessagingPort
+    config_store: ConfigStorePort
     integration_lock: PostgresAdvisoryLock | None = None
 
 
@@ -652,7 +683,9 @@ def migrations_dir() -> Path:
 
 
 @asynccontextmanager
-async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
+async def build_app(
+    *, url: str | None = None, config: VibeyConfig | None = None
+) -> AsyncIterator[AppResources]:
     # Read before the pool opens, so a bad VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS
     # fails the start before anything touches the database.
     migrator: MigratorInterface = PostgresMigrator.from_environ(os.environ)
@@ -696,6 +729,114 @@ async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
             desc.engine_id: LoopProcessAdapter(descriptor=desc) for desc in DEFAULT_DESCRIPTORS
         }
 
+        resolved_config = config
+        if resolved_config is None:
+            try:
+                from vibey.infrastructure.config_loader import load_config_from_path
+
+                vibey_toml = Path("vibey.toml")
+                if vibey_toml.is_file():
+                    resolved_config = load_config_from_path(vibey_toml)
+            except Exception:  # nosec B110 - a malformed optional vibey.toml must not block startup
+                pass
+
+        if (
+            resolved_config
+            and resolved_config.tracker.url
+            and resolved_config.tracker.token
+            and resolved_config.tracker.project_key
+        ):
+            tracker_port: IssueTrackerPort = PlaneTrackerAdapter(
+                url=resolved_config.tracker.url,
+                token=resolved_config.tracker.token,
+                project_key=resolved_config.tracker.project_key,
+            )
+        else:
+            tracker_port = InMemoryTracker()
+
+        if (
+            resolved_config
+            and resolved_config.docs.url
+            and resolved_config.docs.token_id
+            and resolved_config.docs.token_secret
+        ):
+            docs_port: DocsPort = BookStackDocsAdapter(
+                url=resolved_config.docs.url,
+                token_id=resolved_config.docs.token_id,
+                token_secret=resolved_config.docs.token_secret,
+                book_id=resolved_config.docs.book_id or 1,
+            )
+        else:
+            docs_port = InMemoryDocs()
+
+        if resolved_config and resolved_config.secrets.url and resolved_config.secrets.token:
+            secrets_port: SecretsPort = BitwardenSecretsAdapter(
+                url=resolved_config.secrets.url,
+                token=resolved_config.secrets.token,
+            )
+        else:
+            secrets_port = InMemorySecrets()
+
+        if (
+            resolved_config
+            and resolved_config.files.url
+            and resolved_config.files.user
+            and resolved_config.files.password
+        ):
+            files_port: FilesPort = NextcloudFilesAdapter(
+                url=resolved_config.files.url,
+                user=resolved_config.files.user,
+                password=resolved_config.files.password,
+            )
+        else:
+            files_port = InMemoryFiles()
+
+        if resolved_config and resolved_config.email.smtp_host and resolved_config.email.smtp_port:
+            email_port: EmailPort = ForwardEmailAdapter(
+                smtp_host=resolved_config.email.smtp_host,
+                smtp_port=resolved_config.email.smtp_port,
+                username=resolved_config.email.username,
+                password=resolved_config.email.password,
+                from_email=resolved_config.email.from_email,
+            )
+        else:
+            email_port = InMemoryEmail()
+
+        if resolved_config and resolved_config.sms.url:
+            sms_port: SmsPort = FossifySmsAdapter(
+                url=resolved_config.sms.url,
+                token=resolved_config.sms.token,
+            )
+        else:
+            sms_port = InMemorySms()
+
+        if resolved_config and resolved_config.messaging.url and resolved_config.messaging.token:
+            messaging_port: MessagingPort = MatrixMessagingAdapter(
+                url=resolved_config.messaging.url,
+                token=resolved_config.messaging.token,
+            )
+        else:
+            messaging_port = InMemoryMessaging()
+
+        if (
+            resolved_config
+            and resolved_config.config_store.url
+            and resolved_config.config_store.token
+            and resolved_config.config_store.project_id
+        ):
+            from vibey.infrastructure.config_store.infisical import InfisicalConfigStoreAdapter
+
+            config_store_port: ConfigStorePort = InfisicalConfigStoreAdapter(
+                url=resolved_config.config_store.url,
+                token=resolved_config.config_store.token,
+                project_id=resolved_config.config_store.project_id,
+                environment=resolved_config.config_store.environment,
+            )
+        else:
+            from vibey.infrastructure.config_store.in_memory import InMemoryConfigStore
+
+            config_store_port = InMemoryConfigStore()
+
         yield AppResources(
             projects=projects,
             jobs=PostgresJobRepository(pool),
@@ -719,6 +860,14 @@ async def build_app(*, url: str | None = None) -> AsyncIterator[AppResources]:
             notifications=notifications,
             telemetry_tracer=telemetry_tracer,
             telemetry_metrics=telemetry_metrics,
+            tracker=tracker_port,
+            docs=docs_port,
+            secrets=secrets_port,
+            files=files_port,
+            email=email_port,
+            sms=sms_port,
+            messaging=messaging_port,
+            config_store=config_store_port,
             integration_lock=PostgresAdvisoryLock(pool),
         )
     finally:

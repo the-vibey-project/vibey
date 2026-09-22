@@ -61,6 +61,7 @@ from vibey.application.interfaces.class_contracts import (
     VerifyIndependencePolicyInterface,
     VibeySkillsContextCompilerInterface,
 )
+from vibey.application.interfaces.config_store import ConfigStorePort
 from vibey.application.interfaces.design import (
     DesignProvider,
     DesignQuestionProvider,
@@ -164,13 +165,6 @@ __all__ = [
     "AutomatedReviewRunner",
     "AzureClientPort",
     "CloudClientPort",
-    "IssueTrackerPort",
-    "DocsPort",
-    "SecretsPort",
-    "FilesPort",
-    "EmailPort",
-    "SmsPort",
-    "MessagingPort",
     "DeploymentConsentStore",
     "DeploymentSpecStore",
     "AzureDiscoveryResult",
@@ -263,4 +257,12 @@ __all__ = [
     "DeployReviewTriageHandlerInterface",
     "DeploySynthesizeHandlerInterface",
     "EnqueueRequestInterface",
+    "IssueTrackerPort",
+    "DocsPort",
+    "SecretsPort",
+    "FilesPort",
+    "EmailPort",
+    "SmsPort",
+    "MessagingPort",
+    "ConfigStorePort",
 ]

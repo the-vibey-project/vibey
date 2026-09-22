@@ -774,7 +774,11 @@ async def test_a_capacity_rejected_diff_review_opens_the_reviewers_circuit(
     assert outcome.capacity is True
     record = await health.get_or_create(project_id, EngineId.CODEXLOOP)
     assert record.circuit == "open"
-    assert record.resets_at == NOW + timedelta(minutes=5)
+    assert record.capacity_state == "CreditsExhausted"
+    # CreditsExhausted deliberately carries no resets_at (ADR-0040): the
+    # type system forbids inventing a deadline; the probe is exponential.
+    assert record.resets_at is None
+    assert record.probe_next_at is not None
 
 
 async def test_the_selecting_provider_satisfies_the_engine_provider_protocol() -> None:
