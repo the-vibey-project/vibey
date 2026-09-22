@@ -7,12 +7,13 @@ import urllib.error
 from pathlib import Path
 
 import pytest
+from fakes import FakeOllamaProbe
 from typer.testing import CliRunner
 
 from qwenloop import __version__
 from qwenloop.cli.app import app
 from qwenloop.domain.model import Backend, RepoItem, RunState, RunStatus, ServerInfo
-from qwenloop.infrastructure.inference import OpenAICompatServer
+from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE
 
 runner = CliRunner()
@@ -909,3 +910,52 @@ def test_server_for_applies_the_idle_timeout_to_requests(idle: int, expected: fl
     config = QwenConfig(base_url="http://127.0.0.1:11434/v1", idle_timeout_seconds=idle)
     server, _ = _server_for(config)
     assert server.request_timeout_seconds == expected  # type: ignore[attr-defined]
+
+
+def test_with_nothing_configured_a_running_ollama_is_attached(
+    no_local_ollama: FakeOllamaProbe,
+) -> None:
+    """#388: an unconfigured qwenloop attaches to a running local Ollama, serving this
+    era's default model, instead of starting a llama.cpp server of its own."""
+    from qwenloop.cli.app import _server_for
+    from qwenloop.domain.config import QwenConfig
+
+    no_local_ollama.answer = True
+    server, profile = _server_for(QwenConfig())
+    assert isinstance(server, OpenAICompatServer)
+    assert server.base_url == "http://127.0.0.1:11434/v1"  # type: ignore[attr-defined]
+    assert profile.name == "gpt-oss:20b"
+    assert no_local_ollama.asked == 1
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"backend": "llama.cpp"},
+        {"base_url": "http://gpu-box:8000/v1"},
+    ],
+)
+def test_a_configured_backend_or_endpoint_never_pays_the_probe(
+    no_local_ollama: FakeOllamaProbe, config: dict[str, str]
+) -> None:
+    from qwenloop.cli.app import _select
+    from qwenloop.domain.config import QwenConfig
+    from qwenloop.domain.model import Backend
+
+    no_local_ollama.answer = True
+    loaded = QwenConfig(
+        backend=Backend(config.get("backend", "auto")), base_url=config.get("base_url", "")
+    )
+    _select(loaded)
+    assert no_local_ollama.asked == 0
+
+
+def test_without_a_running_ollama_the_portable_backend_is_unchanged(
+    no_local_ollama: FakeOllamaProbe,
+) -> None:
+    from qwenloop.cli.app import _server_for
+    from qwenloop.domain.config import QwenConfig
+
+    server, _ = _server_for(QwenConfig())
+    assert isinstance(server, LlamaCppServer)
+    assert no_local_ollama.asked == 1

@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import pytest
+from fakes import FakeOllamaProbe
 
 
 @pytest.fixture(autouse=True)
@@ -19,3 +20,13 @@ def isolated_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     for variable in ("QWENLOOP_BASE_URL", "QWENLOOP_MODEL", "QWENLOOP_API_KEY"):
         monkeypatch.delenv(variable, raising=False)
     return config
+
+
+@pytest.fixture(autouse=True)
+def no_local_ollama(monkeypatch: pytest.MonkeyPatch) -> FakeOllamaProbe:
+    """No test reaches a real Ollama: the CLI's probe answers "not running" unless a test
+    says otherwise (#388). A developer's own running Ollama would otherwise change which
+    backend every CLI test selects."""
+    probe = FakeOllamaProbe(available=False)
+    monkeypatch.setattr("qwenloop.cli.app._ollama_probe", probe)
+    return probe

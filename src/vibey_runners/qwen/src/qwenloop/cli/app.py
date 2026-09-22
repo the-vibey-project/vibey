@@ -18,7 +18,7 @@ from platformdirs import user_cache_path
 
 from qwenloop import __version__
 from qwenloop.application.backend_selection import BackendSelector, Hardware
-from qwenloop.application.interfaces import InferenceServer
+from qwenloop.application.interfaces import InferenceServer, OllamaProbeInterface
 from qwenloop.application.runner import AutonomousRunner
 from qwenloop.application.storm import build_item_plans
 from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, QwenConfig
@@ -40,6 +40,7 @@ from qwenloop.infrastructure.github import (
 )
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer, VllmServer
 from qwenloop.infrastructure.model_cache import ModelCache
+from qwenloop.infrastructure.ollama_probe import OllamaProbe
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE, PROFILES
 from qwenloop.infrastructure.run_store import FileRunStore
 from qwenloop.infrastructure.settings import SettingsLoader
@@ -175,13 +176,28 @@ def _load_config(**overrides: object) -> QwenConfig:
         raise typer.BadParameter(f"qwenloop configuration: {exc}") from exc
 
 
+#: The one probe `_select` asks whether a local Ollama is running (#388). The tests replace
+#: it with an in-memory fake (tests/conftest.py), so no test ever reaches a real Ollama.
+_ollama_probe: OllamaProbeInterface = OllamaProbe()
+
+
 def _select(config: QwenConfig) -> BackendChoice:
-    """The backend `config` resolves to on this machine (see `BackendSelector`)."""
+    """The backend `config` resolves to on this machine (see `BackendSelector`).
+
+    Only an unconfigured AUTO asks whether a local Ollama is running: an explicit backend
+    or a configured endpoint already decides, and never pays the probe's round trip.
+    """
+    ollama_available = (
+        config.backend is Backend.AUTO
+        and not config.endpoint_configured
+        and _ollama_probe.available()
+    )
     return BackendSelector().select(
         config.backend,
         Hardware(platform.system(), _nvidia_vram()),
         vllm_installed=shutil.which("vllm") is not None,
         endpoint_configured=config.endpoint_configured,
+        ollama_available=ollama_available,
     )
 
 
