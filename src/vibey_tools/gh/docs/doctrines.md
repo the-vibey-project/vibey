@@ -113,11 +113,12 @@ the freest, most sovereign, self-hosted, free option — and never, ever, to a p
 platform. This is specific and enumerated, because a preference without a
 concrete default is a platitude:
 
-- **Engines** default to the sovereign pair that runs on the operator's own
-  hardware and needs no subscription: **Qwen** (via `qwenloop`) and **OpenCode**
-  (via `opencodeloop`), always on, never needing declaration, for every phase.
-  The paid loop engines — `claudeloop`, `codexloop`, `cursorloop`, `agyloop` —
-  are declared-only.
+- **Engines** default to **`sovereignloop`** (8.c), which drives the models and
+  tools that run on the operator's own hardware and need no subscription — this
+  era's default model (8.d), and OpenCode when its provider is local — always on,
+  never needing declaration, for every phase. **`paidloop`** and its adapters —
+  `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, and OpenCode on a paid
+  provider — are declared-only.
 - **Cloud** defaults to **self-hosted OpenStack**, never to a hosted provider.
   Azure, AWS and GCP are declared-only.
 - **Forge** defaults to **self-hosted Forgejo**, never to a hosted platform.
@@ -171,8 +172,11 @@ that still runs on someone else's machine is a counterparty (10.a), not a
 sovereign default, and is at best a declared relay.
 
 **8.c — every loop runs once, fed by a queue** *(ratified by the merge that
-carried this entry)*: every loop — `qwenloop`, `opencodeloop`, `claudeloop`,
-`codexloop`, `cursorloop`, `agyloop`, and any loop the family adds — runs as
+carried this entry; its two loops and two layers set by the merge that carried
+them)*: the family runs **exactly two loops**. **`sovereignloop`** — what `qwenloop`
+becomes — drives the models and tools that run on the operator's own hardware;
+**`paidloop`** drives every paid engine, with `claudeloop`, `codexloop`,
+`cursorloop` and `agyloop` as its adapters. Each loop runs as
 **a single instance per deployment** (one machine, or one cluster), and that
 instance takes its work from **a queue** on the bus surface (8.b). Nothing starts
 a second instance of a loop to go faster, and nothing spawns a loop directly:
@@ -184,6 +188,16 @@ running on the operator's own hardware, one run at a time — and no more.
 Everything else waits in the queue, where waiting is ordered, visible and safe.
 Throughput is raised by giving the one instance more capacity, never by starting
 another.
+
+**Rotation has two layers, and both run on the bus.** The outer layer chooses the
+loop: `sovereignloop` by default, always (8.a), and `paidloop` only when the
+sovereign loop cannot carry the work or where a human has declared a paid relay
+(8.b). The inner layer is each loop's own weighted round robin across the adapters
+and models it holds, mindful that a machine keeps one model resident. At both
+layers the work travels as messages on queues with **dead-letter queues** and
+**idempotency** — the outer layer from vibey to a loop, the inner from a loop to
+its adapters — so a message delivered twice is answered once, and one that cannot
+be handled is parked with its evidence, never retried forever and never dropped.
 
 This is a rule about performance, learned by measurement rather than assumed. A
 model loaded once and fed in order does more work than copies of it contending
@@ -243,7 +257,8 @@ the instance's capacity; a second run beside it is contention.
 Two properties make the queue safe to lean on. **Idempotency:** a run is identified
 by what it tests — the tree, the selection of tests and the environment — so the
 same run asked for twice is answered once, and a repeat request receives the
-recorded result instead of a second execution. **Dead letters:** a run that crashes
+recorded result, while that result is still valid, instead of a second execution;
+a request may always ask for a fresh run. **Dead letters:** a run that crashes
 the harness, exceeds its bound or cannot be executed is moved to a dead-letter queue
 with its evidence, where a human or a repair lane can see it — it is never retried
 forever and never silently dropped.
@@ -253,6 +268,28 @@ This is a performance rule, and like 8.c it was learned by measurement. On
 storm lane on the same machine, failed a timing-sensitive test that passed alone;
 two coverage runs in one directory have also been seen to consume each other's
 data. One run at a time turns those collisions into waiting.
+
+**8.f — every sovereign surface runs in one lane, driven by the bus** *(ratified by
+the merge that carried this entry)*: every sovereign surface of 8.b — the tracker,
+documentation, secrets, files, email, SMS, messaging, configuration, the cache,
+blob storage and security events — is reached through **a single lane per
+deployment**: one consumer instance that takes that surface's operations from **its
+own queue** on the bus and is the only thing that talks to the surface. The cache is
+no exception. Callers put an operation on the surface's queue and, where they need
+an answer, wait for its reply; nothing opens a second path to a surface beside its
+lane. The bus itself, RabbitMQ, is the one surface that cannot be driven by itself:
+it carries the others.
+
+Each lane keeps the two properties of 8.e. **Idempotency:** an operation delivered
+twice takes effect once — a message is sent once, a secret is written once.
+**Dead letters:** an operation the surface refuses or cannot complete is parked on a
+dead-letter queue with its evidence, never retried forever and never dropped.
+
+This is a performance rule, like 8.c and 8.e: a surface fed through one lane is used
+in order instead of by contending callers, and its queue is the visible record of
+what the surface is being asked to do. Its cost is recorded rather than hidden
+(10.f): a call that waits for a reply pays the bus's round trip, and the cache's
+share of that cost is measured and published with the design that carries this rule.
 
 ## 9 — The vibe
 
