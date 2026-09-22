@@ -11,6 +11,13 @@ sources = [
   ".github/workflows/*.yml",
 ]
 
+# This repository lives on GitHub. Since vibey-gh ADR 0002 the forge default is the sovereign
+# `forgejo`, and `github` is declared-only -- so the kind is written here rather than
+# inherited. An empty host keeps the `gh` client's own github.com: no `gh` call's argv or
+# environment changes.
+[platform]
+kind = "github"
+
 # One distribution ships every tenant now (ADR-0037), so `content_paths` is the list of
 # prefixes whose content reaches an installed user -- which is every `packages` root and
 # every `force-include` source in the root pyproject's `[tool.hatch.build.targets.wheel]`.
