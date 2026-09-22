@@ -26,6 +26,7 @@ metadata:
     app.kubernetes.io/component: docs
 type: Opaque
 stringData:
+  app-key: "base64:dmliZXktYm9va3N0YWNrLWluc2VjdXJlLWRldi1rZXk="
   db-password: bookstackpassword
   db-root-password: mariadbrootpassword
 
@@ -63,6 +64,7 @@ metadata:
 type: Opaque
 stringData:
   secret-key: plane-insecure-secret-key-change-in-prod
+  amqp-url: "amqp://vibey:rabbitmqpassword@vibey-vibey-rabbitmq:5672//"
   database-url: "postgres://vibey:vibey@vibey-vibey-postgres:5432/plane?sslmode=disable"
   redis-url: "redis://vibey-vibey-redis:6379/1"
 
@@ -1569,6 +1571,13 @@ spec:
         - name: bookstack
           image: linuxserver/bookstack:latest@sha256:189c796273469115cf810e53f450e15b93184018e4728cd65fcaef8aa93584bc
           env:
+            # Without it the image's init prints "The application key is
+            # missing, halting init!" and never starts nginx on :80.
+            - name: APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-bookstack-secret
+                  key: app-key
             - name: DB_HOST
               value: "vibey-vibey-bookstack-mariadb:3306"
             - name: DB_DATABASE
@@ -1886,6 +1895,33 @@ spec:
         helm.sh/chart: vibey-0.3.0
         app.kubernetes.io/component: plane-api
     spec:
+      initContainers:
+        # The API entrypoint's register_instance enqueues a Celery task on
+        # every start, under `set -e`: an unreachable broker is exit 1, not a
+        # retry. Waiting here keeps the failure mode "pod pending" rather than
+        # "CrashLoopBackOff with a stack trace", and keeps kubelet backoff from
+        # pushing the first Ready past the Deployment's progress deadline.
+        - name: wait-for-broker
+          image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
+          command:
+            - python
+            - -c
+            - |
+              import os, socket, time, urllib.parse
+              url = urllib.parse.urlparse(os.environ["AMQP_URL"])
+              while True:
+                  try:
+                      socket.create_connection((url.hostname, url.port or 5672), timeout=2).close()
+                      break
+                  except OSError:
+                      print("waiting for broker...", flush=True)
+                      time.sleep(2)
+          env:
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: amqp-url
       containers:
         - name: plane-api
           image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
@@ -1908,6 +1944,11 @@ spec:
                 secretKeyRef:
                   name: vibey-vibey-plane-secret
                   key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: amqp-url
             - name: WEB_URL
               value: "http://vibey-vibey-plane-web:80"
           ports:
@@ -1981,6 +2022,11 @@ spec:
                 secretKeyRef:
                   name: vibey-vibey-plane-secret
                   key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: amqp-url
           resources:
             limits:
               memory: 1Gi
@@ -2038,6 +2084,11 @@ spec:
                 secretKeyRef:
                   name: vibey-vibey-plane-secret
                   key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: amqp-url
           resources:
             limits:
               memory: 1Gi
@@ -2971,11 +3022,15 @@ spec:
             - -c
             - |
               if [ ! -f /data/homeserver.yaml ]; then
+                # --open-private-ports: the generated listener otherwise binds
+                # only ::1/127.0.0.1, which the kubelet's probes (and the
+                # Service) cannot reach -- the pod runs but is never Ready.
                 python -m synapse.app.homeserver \
                   --server-name cluster.local \
                   --report-stats no \
                   --config-path /data/homeserver.yaml \
                   --data-dir /data \
+                  --open-private-ports \
                   --generate-config
                 sed -i 's|filename: /homeserver.log|filename: /data/homeserver.log|' /data/*.log.config 2>/dev/null || true
                 sed -i 's/handlers: \[buffer\]/handlers: [console]/' /data/*.log.config 2>/dev/null || true
@@ -3579,6 +3634,11 @@ spec:
                 secretKeyRef:
                   name: vibey-vibey-plane-secret
                   key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: amqp-url
           resources:
             requests:
               cpu: 50m

@@ -8,6 +8,7 @@ metadata:
     app.kubernetes.io/component: docs
 type: Opaque
 stringData:
+  app-key: {{ .Values.surfaces.bookstack.appKey | quote }}
   db-password: {{ .Values.surfaces.bookstack.mariadb.password }}
   db-root-password: {{ .Values.surfaces.bookstack.mariadb.rootPassword }}
 ---
@@ -168,6 +169,13 @@ spec:
         - name: bookstack
           image: {{ include "vibey.image" .Values.surfaces.bookstack.image }}
           env:
+            # Without it the image's init prints "The application key is
+            # missing, halting init!" and never starts nginx on :80.
+            - name: APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-bookstack-secret
+                  key: app-key
             - name: DB_HOST
               value: "{{ $fullName }}-bookstack-mariadb:3306"
             - name: DB_DATABASE

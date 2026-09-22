@@ -72,11 +72,15 @@ spec:
             - -c
             - |
               if [ ! -f /data/homeserver.yaml ]; then
+                # --open-private-ports: the generated listener otherwise binds
+                # only ::1/127.0.0.1, which the kubelet's probes (and the
+                # Service) cannot reach -- the pod runs but is never Ready.
                 python -m synapse.app.homeserver \
                   --server-name {{ .Values.surfaces.synapse.serverName }} \
                   --report-stats {{ .Values.surfaces.synapse.reportStats }} \
                   --config-path /data/homeserver.yaml \
                   --data-dir /data \
+                  --open-private-ports \
                   --generate-config
                 sed -i 's|filename: /homeserver.log|filename: /data/homeserver.log|' /data/*.log.config 2>/dev/null || true
                 sed -i 's/handlers: \[buffer\]/handlers: [console]/' /data/*.log.config 2>/dev/null || true

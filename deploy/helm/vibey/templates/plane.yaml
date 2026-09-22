@@ -1,5 +1,12 @@
 {{- if and .Values.surfaces.enabled .Values.surfaces.plane.enabled }}
 {{- $fullName := include "vibey.fullname" . }}
+{{- $amqpUrl := .Values.surfaces.plane.amqpUrl }}
+{{- if not $amqpUrl }}
+{{- if not .Values.surfaces.rabbitmq.enabled }}
+{{- fail "surfaces.plane needs a Celery broker: enable surfaces.rabbitmq or set surfaces.plane.amqpUrl" }}
+{{- end }}
+{{- $amqpUrl = printf "amqp://%s:%s@%s-rabbitmq:5672//" .Values.surfaces.rabbitmq.username .Values.surfaces.rabbitmq.password $fullName }}
+{{- end }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -9,6 +16,7 @@ metadata:
 type: Opaque
 stringData:
   secret-key: {{ .Values.surfaces.plane.secretKey }}
+  amqp-url: {{ $amqpUrl | quote }}
   database-url: "postgres://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ $fullName }}-postgres:5432/plane?sslmode=disable"
   redis-url: "redis://{{ $fullName }}-redis:6379/1"
 ---
@@ -66,6 +74,33 @@ spec:
       labels: {{- include "vibey.labels" . | nindent 8 }}
         app.kubernetes.io/component: plane-api
     spec:
+      initContainers:
+        # The API entrypoint's register_instance enqueues a Celery task on
+        # every start, under `set -e`: an unreachable broker is exit 1, not a
+        # retry. Waiting here keeps the failure mode "pod pending" rather than
+        # "CrashLoopBackOff with a stack trace", and keeps kubelet backoff from
+        # pushing the first Ready past the Deployment's progress deadline.
+        - name: wait-for-broker
+          image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          command:
+            - python
+            - -c
+            - |
+              import os, socket, time, urllib.parse
+              url = urllib.parse.urlparse(os.environ["AMQP_URL"])
+              while True:
+                  try:
+                      socket.create_connection((url.hostname, url.port or 5672), timeout=2).close()
+                      break
+                  except OSError:
+                      print("waiting for broker...", flush=True)
+                      time.sleep(2)
+          env:
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: amqp-url
       containers:
         - name: plane-api
           image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
@@ -88,6 +123,11 @@ spec:
                 secretKeyRef:
                   name: {{ $fullName }}-plane-secret
                   key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: amqp-url
             - name: WEB_URL
               value: "http://{{ $fullName }}-plane-web:80"
           ports:
@@ -144,6 +184,11 @@ spec:
                 secretKeyRef:
                   name: {{ $fullName }}-plane-secret
                   key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: amqp-url
           resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
 ---
 apiVersion: apps/v1
@@ -184,6 +229,11 @@ spec:
                 secretKeyRef:
                   name: {{ $fullName }}-plane-secret
                   key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: amqp-url
           resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
 ---
 apiVersion: apps/v1
@@ -261,6 +311,11 @@ spec:
                 secretKeyRef:
                   name: {{ $fullName }}-plane-secret
                   key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: amqp-url
           resources:
             requests:
               cpu: 50m

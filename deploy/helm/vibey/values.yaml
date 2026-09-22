@@ -242,6 +242,10 @@ surfaces:
     workspaceSlug: "vibey"
     projectId: "00000000-0000-0000-0000-000000000000"
     secretKey: "plane-insecure-secret-key-change-in-prod"
+    # Celery broker for the API, worker and beat. Empty means the in-cluster
+    # RabbitMQ (surfaces.rabbitmq); set it to use an external broker. The API
+    # enqueues a task on every start, so Plane cannot run without one.
+    amqpUrl: ""
     storage:
       size: 5Gi
       storageClass: ""
@@ -255,6 +259,11 @@ surfaces:
   # 2. Docs: BookStack + MariaDB
   bookstack:
     enabled: true
+    # Laravel APP_KEY: "base64:" + 32 random bytes. BookStack halts init
+    # without one. Dev-only default (it decodes to its own warning); override
+    # it for any real install -- generate one with
+    # `docker run --rm --entrypoint /bin/bash lscr.io/linuxserver/bookstack appkey`.
+    appKey: "base64:dmliZXktYm9va3N0YWNrLWluc2VjdXJlLWRldi1rZXk="
     image:
       repository: linuxserver/bookstack
       tag: latest
