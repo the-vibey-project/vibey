@@ -129,8 +129,11 @@ The commit body carries the footer `BREAKING CHANGE: the three commands' output 
 Commit as `feat(cli)!: vibey deploy plan, cancel and rollback queue real work`. Do not push.
 
 ## Lane card
-- **Depends on:** `gap-deploy-cli-1`, `fakes-cli-ledger-deploy`. (`gap-deploy-target-status` edits the
-  same deploy section and test module; it runs after this lane, so this one waits on no AWS work.)
+- **Depends on:** `gap-deploy-cli-1`, `fakes-cli-ledger-deploy`.
+  Note: the lane that edits the same deploy section and test module runs *after* this one and
+  declares that dependency from its own side, so this lane waits on no AWS work. Its slug is
+  deliberately not written on the line above: a slug named there is read as a dependency, and
+  naming it would close a cycle.
 - **Files touched:** see *Where to change*.
 - **Must keep passing unchanged:** every other test in `tests/cli/`.
 

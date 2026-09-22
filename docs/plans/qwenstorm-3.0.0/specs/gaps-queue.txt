@@ -1,0 +1,151 @@
+gap-agent-tree-parity -
+gap-aws-secrets -
+gap-canon-owed-drafts-2 - gap-canon-owed-drafts
+gap-canon-owed-drafts - gap-canon-rulings-amendment
+gap-canon-rulings-amendment -
+gap-cdd-build-trajectory -
+gap-cdd-distance -
+gap-chain-dispatch -
+gap-ci-arch-gates -
+gap-ci-installer-smoke -
+gap-ci-macos-gates -
+gap-ci-os-required-checks -
+gap-ci-tenants-arch-macos-1 -
+gap-ci-tenants-arch-macos-2 -
+gap-deploy-cancel - gap-deploy-execute-control,gap-deploy-plan-2
+gap-deploy-cli-1 - gap-deploy-rollback-2,gap-deploy-rollback-1,gap-deploy-cancel
+gap-deploy-cli-2 - gap-deploy-cli-1,fakes-cli-ledger-deploy
+gap-deploy-execute-control - gap-deploy-plan-2,gap-deploy-plan-3,gap-deploy-plan-4,gap-deploy-rollback-1,fakes-deploy
+gap-deploy-plan-1 - fakes-deploy
+gap-deploy-plan-2 - gap-deploy-plan-1,fakes-deploy-review
+gap-deploy-plan-3 - gap-deploy-plan-1,openstack-client-p2
+gap-deploy-plan-4 - gap-deploy-plan-1,openstack-client-p1,fakes-process-executor
+gap-deploy-rollback-1 -
+gap-deploy-rollback-2 - gap-deploy-cancel,gap-deploy-rollback-1,gap-deploy-execute-control
+gap-deploy-target-paid - gap-paid-defaults,openstack-client-p1,gap-spike-aws-iac
+gap-deploy-target-status - gap-deploy-target-paid,gap-deploy-cli-2
+gap-design-via-sovereignloop-1 - fakes-registry
+gap-design-via-sovereignloop-2 - gap-design-via-sovereignloop-1
+gap-design-via-sovereignloop-3 - fakes-registry
+gap-design-via-sovereignloop-4 - gap-design-via-sovereignloop-1,gap-design-via-sovereignloop-3
+gap-docs-adr-land -
+gap-docs-adr-records-1 -
+gap-docs-adr-records-2 -
+gap-docs-adr-records-3 -
+gap-docs-adr-status-1 -
+gap-docs-adr-status-2 -
+gap-docs-agent-briefs -
+gap-docs-changelog -
+gap-docs-skill-trees-1 -
+gap-docs-skill-trees-2 -
+gap-docs-skill-trees-3 -
+gap-docs-skill-trees-4 -
+gap-gh-doctor-actions-forgejo -
+gap-gh-forgejo-ruleset-profile-1 -
+gap-gh-forgejo-ruleset-profile-2 -
+gap-gh-gate-pagination -
+gap-gh-platform-paid - forge-0g
+gap-gh-release-channels-1 -
+gap-gh-review-transport - default-model-p3
+gap-gh-review-via-sovereignloop-1 - gap-gh-review-transport,loops-cli-loop-submit
+gap-gh-review-via-sovereignloop-2 - gap-gh-review-via-sovereignloop-1,rmq-r01-queue-config
+gap-heartbeat-registered -
+gap-image-arch -
+gap-install-ollama-gpu-1 -
+gap-install-ollama-gpu-2 -
+gap-install-ollama-gpu-3 -
+gap-lane-capacity-1 -
+gap-lane-capacity-2 -
+gap-ledger-job-events-1 - orm-test-harness
+gap-ledger-job-events-2 - gap-ledger-job-events-1,orm-job-settle,orm-ledger,fakes-queue-gates,fakes-ledger
+gap-ledger-job-events-3 - gap-ledger-job-events-2
+gap-ledger-job-events-4 - gap-ledger-job-events-2,rmq-r09-reap-bound
+gap-ledger-job-events-5 - gap-ledger-job-events-2,orm-human-gate
+gap-ledger-job-events-6 - gap-ledger-job-events-2,rmq-r10-dispatch-records-enqueue
+gap-ledger-job-events-7 - gap-ledger-job-events-6,split-358-1-fenced-claim,split-358-3-sweep-and-park
+gap-ledger-job-events-8 - gap-ledger-job-events-3,gap-ledger-job-events-4,gap-ledger-job-events-7
+gap-ledger-provider-turns-1 - fakes-engines
+gap-ledger-provider-turns-2 - gap-ledger-provider-turns-1,fakes-ledger,fakes-projects
+gap-ledger-provider-turns-3 - gap-ledger-provider-turns-2,split-324-2-visual-cli
+gap-ledger-redact-pii-1 -
+gap-ledger-redact-pii-2 -
+gap-ledger-redaction-recorded -
+gap-ledger-search-all-projects-1 - orm-ledger-search,fakes-ledger-publication
+gap-ledger-search-all-projects-2 - gap-ledger-search-all-projects-1,fakes-cli-ledger-deploy,orm-app-resources
+gap-ledger-selection-events-1 - fakes-ledger,fakes-engines
+gap-ledger-selection-events-2 - orm-engine-health,orm-ledger,fakes-engines,fakes-ledger,fakes-projects
+gap-measure-cli - gap-measure-log-ingest,gap-measure-test-runs,gap-status-vocabulary
+gap-measure-config - gap-measure-domain
+gap-measure-domain -
+gap-measure-engine-runs-1 - gap-measure-port,fakes-ledger,fakes-observability
+gap-measure-engine-runs-2 - gap-measure-engine-runs-1,gap-measure-ledger-sink
+gap-measure-fleet-ledger - gap-measure-port,orm-project
+gap-measure-gh-1 -
+gap-measure-gh-2 - gap-measure-gh-1
+gap-measure-ledger-sink - gap-measure-port,gap-measure-config,gap-measure-fleet-ledger
+gap-measure-log-ingest - gap-measure-log-sink,gap-measure-gh-2
+gap-measure-log-sink - gap-measure-port,gap-measure-gh-1,gap-measure-ledger-sink
+gap-measure-meta - gap-measure-otel-sink,gap-measure-engine-runs-2,gap-measure-queue-sampler
+gap-measure-models-1 - gap-measure-ledger-sink,fakes-observability
+gap-measure-models-2 - gap-measure-ticker,gap-measure-models-1
+gap-measure-otel-sink - gap-measure-ledger-sink
+gap-measure-port - gap-measure-domain,fakes-registry
+gap-measure-queue-sampler-rmq - gap-measure-queue-sampler,loops-amqp-queue-depth,rmq-r12-queue-topology
+gap-measure-queue-sampler - gap-measure-ticker,orm-tables,orm-test-harness,orm-app-resources
+gap-measure-surfaces-1 - gap-measure-port,gap-measure-ledger-sink
+gap-measure-surfaces-2 - gap-measure-surfaces-1,gap-measure-queue-sampler
+gap-measure-test-runs - gap-measure-log-sink,harness-T04-test-run-records
+gap-measure-ticker - gap-measure-port,gap-measure-config,gap-measure-ledger-sink
+gap-meta-interface-ratchet -
+gap-models-bench-1 -
+gap-models-bench-2 -
+gap-ops-canon-rulings -
+gap-ops-release-3-0-0-gate -
+gap-ops-review-lane -
+gap-ops-runner-assets-import -
+gap-ops-yank-392 -
+gap-paid-defaults-agree - gap-paid-defaults,gap-gh-platform-paid
+gap-paid-defaults -
+gap-paid-ide-default-1 - gap-paid-defaults,loops-vscode-paid-config
+gap-paid-ide-default-2 - gap-paid-ide-default-1,loops-vscode-paid-config
+gap-pkg-channels - gap-gh-release-channels-1
+gap-pkg-migrations-in-wheel -
+gap-release-image-arch - gap-image-arch,gap-release-image-publish
+gap-release-image-publish - gap-pkg-channels
+gap-release-image-sovereign - gap-release-image-publish
+gap-release-single-file-1 -
+gap-release-single-file-2 - gap-ops-canon-rulings,gap-release-single-file-1,gap-pkg-migrations-in-wheel,gap-pkg-channels
+gap-release-yank-workflow-1 -
+gap-release-yank-workflow-2 -
+gap-residency-tuning-1 -
+gap-residency-tuning-2 -
+gap-rotation-derived-weights-1 -
+gap-rotation-derived-weights-2 -
+gap-rotation-derived-weights-3 -
+gap-rotation-derived-weights-4 -
+gap-runners-declared-1 -
+gap-runners-declared-2 -
+gap-runners-declared-3 -
+gap-sd01-carriage - gap-agent-tree-parity
+gap-spike-aws-iac -
+gap-spike-clearance - gap-status-vocabulary
+gap-spike-relay -
+gap-spike-storm-command -
+gap-spike-surface-consumers -
+gap-status-cli-evidence - gap-status-evidence-dashboard,fakes-cli-operational-1
+gap-status-evidence-dashboard - gap-status-vocabulary,fakes-tui-system
+gap-status-vocabulary -
+gap-storm-1-editing-rules - qwenloop-edit-tool
+gap-storm-2-gutted-file-guard - fakes-tenant-qwen-1
+gap-storm-3-gutted-file-wiring - gap-storm-2-gutted-file-guard,fakes-tenant-qwen-2
+gap-surface-notify-config -
+gap-surface-notify-messaging - gap-surface-notify-config,fakes-sockets
+gap-surface-notify-wiring - gap-surface-notify-messaging,surfaces-env,fakes-bootstrap-seam
+gap-surface-timeouts-1 -
+gap-surface-timeouts-2 - gap-surface-timeouts-1,fakes-sovereign-http
+gap-surface-timeouts-3 - gap-surface-timeouts-1,fakes-sovereign-http
+gap-surface-timeouts-4 - gap-surface-timeouts-1,fakes-sovereign-http
+gap-surface-timeouts-5 - gap-surface-timeouts-1,fakes-sovereign-smtp
+gap-surface-timeouts-6 - gap-surface-timeouts-2,gap-surface-timeouts-3,gap-surface-timeouts-4
+gap-vscode-agent-router - loops-vscode-spike,gap-sd01-carriage
+gap-vscode-agent-tree - gap-agent-tree-parity,gap-sd01-carriage,loops-vscode-spike
