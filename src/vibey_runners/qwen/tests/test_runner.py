@@ -14,7 +14,14 @@ from qwenloop.application.runner import (
     _trim_transcript,
     _truncate_tool_result,
 )
-from qwenloop.domain.model import Backend, ChatChunk, ChatMessage, RunStatus, ServerInfo
+from qwenloop.domain.model import (
+    Backend,
+    ChatChunk,
+    ChatMessage,
+    RunStatus,
+    ServerInfo,
+    ToolCallParseError,
+)
 from qwenloop.infrastructure.profiles import PORTABLE
 from qwenloop.infrastructure.run_store import FileRunStore
 from qwenloop.infrastructure.tools import SandboxTools
@@ -864,3 +871,98 @@ async def test_meta_records_the_server_settings_the_run_used(
     )
     meta = json.loads((tmp_path / ".qwenloop" / "runs" / "meta" / "meta.json").read_text())
     assert meta["server_settings"] == expected
+
+
+class UnparseableThenScriptedServer(ScriptedServer):
+    """Refuses the first `failures` calls as an unparseable tool call, then plays its turns."""
+
+    def __init__(self, failures: int, turns: list[list[ChatChunk]]) -> None:
+        super().__init__(turns)
+        self.failures = failures
+        # what each refused call was sent; `seen` keeps only the calls that answered,
+        # because ScriptedServer picks its turn by counting them
+        self.refused: list[list[ChatMessage]] = []
+
+    async def chat_stream(
+        self, info: ServerInfo, messages: Sequence[ChatMessage]
+    ) -> AsyncIterator[ChatChunk]:
+        if self.failures:
+            self.failures -= 1
+            self.refused.append(list(messages))
+            raise ToolCallParseError("HTTP 500: error parsing tool call: raw='prose'")
+        async for chunk in super().chat_stream(info, messages):
+            yield chunk
+
+
+_DONE = "```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE"
+
+
+@pytest.mark.asyncio
+async def test_an_unparseable_tool_call_is_retried_with_a_correction(tmp_path: Path) -> None:
+    server = UnparseableThenScriptedServer(
+        2,
+        [
+            [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}})],
+            [ChatChunk(text=_DONE)],
+        ],
+    )
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="retry", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=3
+    )
+    assert result.status is RunStatus.COMPLETED
+    events = [
+        json.loads(line)
+        for line in (tmp_path / ".qwenloop" / "runs" / "retry" / "events.jsonl")
+        .read_text()
+        .splitlines()
+    ]
+    retried = [event for event in events if event["type"] == "turn.retried"]
+    assert [(event["turn"], event["retry"]) for event in retried] == [(1, 1), (1, 2)]
+    assert retried[0]["reason"] == "tool_call_parse_error"
+    assert "error parsing tool call" in retried[0]["detail"]
+    # each retry asks for a valid tool call before calling the model again
+    assert server.refused[0][-1].content == "do it"
+    assert server.refused[1][-1].content.startswith("Your last reply was not a valid tool call")
+    assert [message.content[:9] for message in server.seen[0][-2:]] == ["Your last"] * 2
+    # the retries belong to turn 1: it still closes once, with its tool call
+    turns = [event for event in events if event["type"] == "turn.completed"]
+    assert [(event["turn"], event["tool_called"]) for event in turns] == [(1, True), (2, False)]
+
+
+@pytest.mark.asyncio
+async def test_a_fourth_unparseable_tool_call_fails_the_run_as_before(tmp_path: Path) -> None:
+    server = UnparseableThenScriptedServer(4, [[ChatChunk(text=_DONE)]])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    runner = AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    )
+    with pytest.raises(RuntimeError, match="error parsing tool call"):
+        await runner.run(
+            run_id="bound",
+            plan="do it",
+            cwd=tmp_path,
+            profile=PORTABLE,
+            server_info=info,
+            max_turns=3,
+        )
+    events = (tmp_path / ".qwenloop" / "runs" / "bound" / "events.jsonl").read_text().splitlines()
+    assert sum('"turn.retried"' in line for line in events) == 3
+
+
+@pytest.mark.asyncio
+async def test_a_model_call_that_yields_nothing_is_not_retried(tmp_path: Path) -> None:
+    server = ScriptedServer([[], [ChatChunk(text=_DONE)]])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="empty", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=3
+    )
+    # an empty reply is not a parse failure: it is not retried, and fails the run as before
+    assert result.status is RunStatus.FAILED
+    assert len(server.seen) == 1
+    events = (tmp_path / ".qwenloop" / "runs" / "empty" / "events.jsonl").read_text()
+    assert '"turn.retried"' not in events

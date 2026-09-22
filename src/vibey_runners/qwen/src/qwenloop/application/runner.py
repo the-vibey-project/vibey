@@ -3,6 +3,7 @@
 
 import json
 import re
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -15,11 +16,13 @@ from qwenloop.application.interfaces import (
 )
 from qwenloop.domain.model import (
     DONE_MARKER,
+    ChatChunk,
     ChatMessage,
     ModelProfile,
     RunState,
     RunStatus,
     ServerInfo,
+    ToolCallParseError,
 )
 
 _CHARS_PER_TOKEN = 4
@@ -27,6 +30,12 @@ _RESPONSE_TOKEN_RESERVE = 2048
 _MAX_TOOL_RESULT_CHARS = 8_000
 _VERDICT_TOOL_NAME = "qwenloop-verdict"
 _MAX_INVALID_COMPLETION_CLAIMS = 3
+#: Consecutive unparseable tool calls one turn may retry before the run fails (#386).
+_MAX_TOOL_CALL_PARSE_RETRIES = 3
+_TOOL_CALL_RETRY_PROMPT = (
+    "Your last reply was not a valid tool call. Call exactly one of the tools read_file, "
+    "write_file, edit_file or shell, with JSON arguments, and no other text."
+)
 _CONTINUE_PROMPT = (
     "Continue the plan and call one of the available coding tools to make progress. "
     "The only callable tools are read_file, write_file, edit_file, and shell. There is no "
@@ -143,6 +152,40 @@ class AutonomousRunner:
         # (sub-doctrine 8.g). Every turn is measured against this clock (#382).
         self._clock = clock
 
+    async def _chat(
+        self, run_id: str, turn: int, server_info: ServerInfo, state: RunState
+    ) -> AsyncIterator[ChatChunk]:
+        """One model call for this turn, retried when the server cannot parse the model's
+        tool call (#386). The server answers before it yields anything, so a retry never
+        repeats a chunk or a tool call; each one is recorded as `turn.retried`."""
+        retries = 0
+        while True:
+            stream = self._server.chat_stream(server_info, state.transcript)
+            try:
+                first = await anext(stream)
+            except StopAsyncIteration:
+                return
+            except ToolCallParseError as exc:
+                retries += 1
+                if retries > _MAX_TOOL_CALL_PARSE_RETRIES:
+                    raise
+                self._store.append_event(
+                    run_id,
+                    {
+                        "type": "turn.retried",
+                        "turn": turn,
+                        "retry": retries,
+                        "reason": "tool_call_parse_error",
+                        "detail": exc.detail,
+                    },
+                )
+                state.transcript.append(ChatMessage("user", _TOOL_CALL_RETRY_PROMPT))
+                continue
+            yield first
+            async for chunk in stream:
+                yield chunk
+            return
+
     @staticmethod
     def _timestamp(moment: datetime) -> str:
         """UTC ISO-8601 to the millisecond, the form every timed event carries."""
@@ -223,7 +266,7 @@ class AutonomousRunner:
             # are tuned by different settings, so one duration would hide which one moved.
             answered: float | None = None
             server_timings: dict[str, float] | None = None
-            async for chunk in self._server.chat_stream(server_info, state.transcript):
+            async for chunk in self._chat(run_id, turn, server_info, state):
                 if answered is None:
                     answered = self._clock.monotonic()
                 if chunk.timings is not None:

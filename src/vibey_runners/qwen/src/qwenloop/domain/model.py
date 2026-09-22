@@ -107,6 +107,20 @@ class ChatChunk:
     timings: Mapping[str, float] | None = None
 
 
+class ToolCallParseError(RuntimeError):
+    """The model server could not parse the model's reply as a tool call (#386).
+
+    Ollama answers HTTP 500 "error parsing tool call" when a model writes prose where a
+    tool call was due. That fails one turn, not the run: the runner asks for a valid tool
+    call and retries. It stays a RuntimeError, so a caller that does not retry sees
+    exactly the error it saw before.
+    """
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
+
+
 @dataclass(slots=True)
 class RunState:
     run_id: str

@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from qwenloop.domain.model import Backend, ChatMessage, ServerInfo
+from qwenloop.domain.interfaces.class_contracts import ToolCallParseErrorInterface
+from qwenloop.domain.model import Backend, ChatMessage, ServerInfo, ToolCallParseError
 from qwenloop.infrastructure.inference import (
     LlamaCppServer,
     OpenAICompatServer,
@@ -766,3 +767,45 @@ async def test_managed_server_logs_to_a_file_and_records_redacted_settings(
     assert inspected is not None
     assert inspected.argv == info.argv
     assert inspected.log_path == info.log_path
+
+
+def _server_error(body: dict[str, object], code: int = 500):  # type: ignore[no-untyped-def]
+    payload = json.dumps(body).encode()
+
+    def urlopen(request, timeout):  # type: ignore[no-untyped-def]
+        del timeout
+        raise urllib.error.HTTPError(request.full_url, code, "error", {}, io.BytesIO(payload))
+
+    return urlopen
+
+
+@pytest.mark.asyncio
+async def test_an_unparseable_tool_call_is_its_own_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    raw = "error parsing tool call: raw='The search tool does not exist', err=invalid character"
+    monkeypatch.setattr("urllib.request.urlopen", _server_error({"error": {"message": raw}}))
+    info = ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:11434/v1", False, True)
+    with pytest.raises(ToolCallParseError) as caught:
+        async for _ in LlamaCppServer().chat_stream(info, [ChatMessage("user", "x")]):
+            pass
+    assert caught.value.detail == f"HTTP 500: {raw}"
+    # still a RuntimeError, so a caller that does not retry is unchanged
+    assert isinstance(caught.value, RuntimeError)
+    assert isinstance(caught.value, ToolCallParseErrorInterface)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("code", "message"),
+    [(500, "model runner has unexpectedly stopped"), (400, "error parsing tool call: raw='x'")],
+)
+async def test_other_server_errors_are_not_retryable(
+    monkeypatch: pytest.MonkeyPatch, code: int, message: str
+) -> None:
+    monkeypatch.setattr(
+        "urllib.request.urlopen", _server_error({"error": {"message": message}}, code)
+    )
+    info = ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:11434/v1", False, True)
+    with pytest.raises(RuntimeError, match=message) as caught:
+        async for _ in LlamaCppServer().chat_stream(info, [ChatMessage("user", "x")]):
+            pass
+    assert not isinstance(caught.value, ToolCallParseError)

@@ -24,7 +24,17 @@ from urllib.parse import urlsplit
 
 from platformdirs import user_cache_path
 
-from qwenloop.domain.model import Backend, ChatChunk, ChatMessage, ModelProfile, ServerInfo
+from qwenloop.domain.model import (
+    Backend,
+    ChatChunk,
+    ChatMessage,
+    ModelProfile,
+    ServerInfo,
+    ToolCallParseError,
+)
+
+#: How Ollama words a model reply it could not parse as a tool call (#386).
+_TOOL_CALL_PARSE_FAILURE = re.compile(r"error parsing tool call", re.IGNORECASE)
 
 #: The llama-server `timings` keys a run records per turn (#382).
 _SERVER_TIMING_KEYS = (
@@ -157,7 +167,12 @@ class OpenAIServer:
                 urllib.request.urlopen, request, timeout=self.request_timeout_seconds
             )
         except urllib.error.HTTPError as exc:
-            raise RuntimeError(_http_error_detail(exc)) from exc
+            detail = _http_error_detail(exc)
+            # A reply the server could not parse as a tool call is one bad turn, which the
+            # runner retries (#386); every other HTTP error ends the run as before.
+            if exc.code == 500 and _TOOL_CALL_PARSE_FAILURE.search(detail):
+                raise ToolCallParseError(detail) from exc
+            raise RuntimeError(detail) from exc
         data = json.loads(response.read())
         message = data["choices"][0]["message"]
         calls = message.get("tool_calls", [])
