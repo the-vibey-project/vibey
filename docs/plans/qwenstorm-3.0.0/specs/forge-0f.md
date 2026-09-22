@@ -61,7 +61,20 @@ ADR 0001; sub-doctrine 8.b.
 Update the `create_release` assertions in `test/test_forge_adapters.py`.
 
 ## Checks the lane must run (all must pass)
-Same block as Part 0a, focused on `test/test_forge_releases.py test/test_forge_adapters.py`.
+Part 0a's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -c "import vibey_gh" || python -m pip install -e ".[dev]"
+python -m pytest -q --no-cov test/test_forge_releases.py test/test_forge_adapters.py
+python -m pytest -q                                   # whole suite, 100% line+branch
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat   # only the files this part owns
+```
 
 ## Out of scope
 `github_release.py`, `install.py` (Parts 3 and 4). Do not edit CHANGELOG.md, docs/, ADRs,

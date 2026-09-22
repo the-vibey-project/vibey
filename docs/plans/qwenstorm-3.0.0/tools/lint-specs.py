@@ -65,6 +65,12 @@ ALLOWED = {
     ),  # a fixture value: the test feeds this exact literal in and asserts it comes back out
     ("roadmap-85-jira-tracker-adapter.md", '"Jira API error 500 …"'),  # prefix; format at :44
     ("roadmap-85-jira-tracker-adapter.md", '"Jira unreachable …"'),  # prefix; format at :44
+    # Reviewed 2026-09-22 (third pass, when queue.txt's own filed lanes first reached the
+    # linter): each names a message prefix, not a message the lane must reproduce whole.
+    ("forge-4.md", '"gh not found; skipping …"'),
+    ("forge-6.md", '"`gh api graphql` failed: …"'),
+    ("rmq-r05-async-outbox.md", 'f"… {self._table} …"'),  # an interpolation sketch, not a message
+    ("forge-3.md", '"GitHub merged …"'),  # quotes the wording this lane replaces
 }
 # "as above" pointing at text earlier in the SAME spec is fine (reviewed 2026-09-22).
 ALLOWED_POINTERS = {

@@ -81,7 +81,20 @@ ADR 0001 (a verb per question, with its first caller); sub-doctrine 8.b.
 - `test_a_change_request_knows_whether_it_comes_from_a_fork`.
 
 ## Checks the lane must run (all must pass)
-Same block as Part 0a, focused on `test/test_forge_change_request_lists.py test/test_platform.py`.
+Part 0a's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -c "import vibey_gh" || python -m pip install -e ".[dev]"
+python -m pytest -q --no-cov test/test_forge_change_request_lists.py test/test_platform.py
+python -m pytest -q                                   # whole suite, 100% line+branch
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat   # only the files this part owns
+```
 
 ## Out of scope
 Consumers (Wave 2); writes (0d). Do not edit CHANGELOG.md, docs/, ADRs, CLAUDE.md,

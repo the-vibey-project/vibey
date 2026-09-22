@@ -68,8 +68,19 @@ flatten.py:
   (1011-1013) to the new tuples. Add `test_a_repository_the_forge_cannot_name_is_reported`.
 
 ## Checks the lane must run (all must pass)
-The Part 1 block with the focused run
-`python -m pytest -q --no-cov test/test_rulesets.py test/test_flatten.py test/test_gh_cli.py`.
+Part 1's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -m pytest -q --no-cov test/test_rulesets.py test/test_flatten.py test/test_gh_cli.py
+python -m pytest -q
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat
+```
 
 ## Out of scope
 `reconcile.py` (Part 3; flatten only imports it), `cli.py` (its rulesets/flatten tests

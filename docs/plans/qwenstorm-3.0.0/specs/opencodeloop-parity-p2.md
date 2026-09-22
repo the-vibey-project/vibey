@@ -158,9 +158,24 @@ vibey, `tests/infrastructure/engines/test_opencodeloop_process.py`
 - Extend the argv assertion so it ends with `"--max-turns", "1", "--max-dollars", "0.25"`.
 
 ## Checks the lane must run (all must pass)
-Run the same commands as in Part 1, and add
-`tests/infrastructure/engines/test_loop_process_adapter.py` to the focused `uv run pytest` line. Also run
-`uv run coverage report --include='src/vibey/infrastructure/engines/opencodeloop_process.py' --fail-under=100`.
+Part 1's block, inlined here so this issue is self-contained, with
+`tests/infrastructure/engines/test_loop_process_adapter.py` added to the focused run:
+```bash
+# tenant (fresh venv, exactly as the CI tools row does it; never the worktree .venv/bin shebangs)
+cd src/vibey_runners/opencode
+python3.12 -m venv "$TMPDIR/oc" && "$TMPDIR/oc/bin/python" -m pip install -q -e ../common -e ".[dev]"
+"$TMPDIR/oc/bin/python" -m mypy --strict src/opencodeloop
+"$TMPDIR/oc/bin/lint-imports"
+"$TMPDIR/oc/bin/python" -m bandit -q -r src/opencodeloop
+"$TMPDIR/oc/bin/python" -m pytest -q          # 100% branch floor is in addopts
+cd -
+# repository root
+uv run ruff check . && uv run ruff format --check .
+uv run mypy --strict src/vibey
+uv run lint-imports
+uv run pytest -q -p no:cacheprovider tests/infrastructure/engines/test_opencodeloop_process.py tests/infrastructure/engines/test_opencodeloop_design.py tests/infrastructure/engines/test_loop_process_adapter.py --cov=vibey --cov-branch --cov-report=
+uv run coverage report --include='src/vibey/infrastructure/engines/opencodeloop_process.py' --fail-under=100
+```
 
 ## Out of scope
 - The OPENCODE descriptor's `tier` (LOCAL, although OpenCode can bill a paid provider), its `cost_per_mtok_*` values,

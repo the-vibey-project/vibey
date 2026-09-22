@@ -144,8 +144,20 @@ today. The existing `get_check_results` returns bare dicts, ignores whether a ch
 - `test_the_facts_feed_the_unchanged_merge_judge`.
 
 ## Checks the lane must run (all must pass)
-Same block as Part 0a, with the focused run
-`python -m pytest -q --no-cov test/test_forge_change_request_reads.py test/test_forge_adapters.py`.
+Part 0a's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -c "import vibey_gh" || python -m pip install -e ".[dev]"
+python -m pytest -q --no-cov test/test_forge_change_request_reads.py test/test_forge_adapters.py
+python -m pytest -q                                   # whole suite, 100% line+branch
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat   # only the files this part owns
+```
 
 ## Out of scope
 Listings, writes, issues (later Wave-1 parts); every consuming module (Wave 2). Do not edit

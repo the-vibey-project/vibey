@@ -74,7 +74,20 @@ cannot express must come back as a problem, never be dropped. ADR 0001; sub-doct
 - `test_gitlab_branch_rules_are_not_supported`.
 
 ## Checks the lane must run (all must pass)
-Same block as Part 0a, focused on `test/test_forge_branch_rules.py test/test_rulesets.py`.
+Part 0a's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -c "import vibey_gh" || python -m pip install -e ".[dev]"
+python -m pytest -q --no-cov test/test_forge_branch_rules.py test/test_rulesets.py
+python -m pytest -q                                   # whole suite, 100% line+branch
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat   # only the files this part owns
+```
 
 ## Out of scope
 `rulesets.py` (Part 6). Do not edit CHANGELOG.md, docs/, ADRs, CLAUDE.md, AGENTS.md,

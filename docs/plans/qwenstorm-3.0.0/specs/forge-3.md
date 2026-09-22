@@ -73,8 +73,19 @@ github_release.py:
   --title v1.0.0 --generate-notes`.
 
 ## Checks the lane must run (all must pass)
-The Part 1 block with the focused run
-`python -m pytest -q --no-cov test/test_reconcile.py test/test_github_release.py test/test_flatten.py test/test_gh_cli.py`.
+Part 1's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -m pytest -q --no-cov test/test_reconcile.py test/test_github_release.py test/test_flatten.py test/test_gh_cli.py
+python -m pytest -q
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat
+```
 
 ## Out of scope
 `realign.py`, `flatten.py` (imports reconcile; Part 6), `cli.py`, adapter files. Do not
