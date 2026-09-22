@@ -1,0 +1,73 @@
+# --- mine: rulings, ledger redaction, CDD, bench, rotation, residency, capacity
+gap-ops-canon-rulings -
+gap-ledger-redact-pii-1 -
+gap-ledger-redact-pii-2 - gap-ledger-redact-pii-1
+gap-ledger-redaction-recorded - gap-ledger-redact-pii-2
+gap-cdd-distance -
+gap-cdd-build-trajectory - gap-cdd-distance,fakes-build
+gap-models-bench-1 - fakes-tenant-qwen-2
+gap-models-bench-2 - gap-models-bench-1,split-383-1-model-catalogue
+gap-rotation-derived-weights-1 -
+gap-rotation-derived-weights-2 - gap-rotation-derived-weights-1,engines-pool
+gap-rotation-derived-weights-3 - gap-rotation-derived-weights-2,gap-measure-engine-runs-1,fakes-ledger,fakes-engines
+gap-rotation-derived-weights-4 - gap-rotation-derived-weights-3
+gap-residency-tuning-1 -
+gap-residency-tuning-2 - gap-residency-tuning-1,loops-residency,gap-measure-models-1
+gap-lane-capacity-1 -
+gap-lane-capacity-2 - gap-lane-capacity-1,surfaces-lane-host,gap-measure-surfaces-1,gap-surface-timeouts-1
+# --- mine: release & CI operations
+gap-chain-dispatch -
+gap-ops-review-lane -
+gap-ops-runner-assets-import -
+gap-runners-declared-1 -
+gap-runners-declared-2 - gap-runners-declared-1
+gap-runners-declared-3 - gap-runners-declared-2
+gap-heartbeat-registered -
+gap-gh-gate-pagination - forge-0b,forge-1
+gap-gh-doctor-actions-forgejo -
+gap-gh-forgejo-ruleset-profile-1 - gap-ops-canon-rulings,forge-0g,split-344-1-rulesets
+gap-gh-forgejo-ruleset-profile-2 - gap-gh-forgejo-ruleset-profile-1
+gap-release-yank-workflow-1 -
+gap-release-yank-workflow-2 - gap-release-yank-workflow-1
+gap-ops-yank-392 -
+# --- mine: CI on Arch Linux and macOS, GPU Ollama
+gap-ci-arch-gates - fakes-ci-no-services
+gap-ci-macos-gates - fakes-ci-no-services,gap-ci-arch-gates
+gap-ci-tenants-arch-macos-1 -
+gap-ci-tenants-arch-macos-2 - gap-ci-tenants-arch-macos-1
+gap-ci-os-required-checks - gap-ci-arch-gates,gap-ci-macos-gates
+gap-ci-installer-smoke - installer-doctor,gap-ci-macos-gates
+gap-image-arch - gap-ops-canon-rulings
+gap-install-ollama-gpu-1 -
+gap-install-ollama-gpu-2 - gap-install-ollama-gpu-1,fakes-registry
+gap-install-ollama-gpu-3 - gap-install-ollama-gpu-2,installer-composition,install-ollama
+# --- relay, surface consumers, timeouts (writer report)
+gap-surface-timeouts-1 -
+gap-surface-timeouts-2 - gap-surface-timeouts-1,fakes-sovereign-http
+gap-surface-timeouts-3 - gap-surface-timeouts-1,fakes-sovereign-http
+gap-surface-timeouts-4 - gap-surface-timeouts-1,fakes-sovereign-http
+gap-surface-timeouts-5 - gap-surface-timeouts-1,fakes-sovereign-smtp
+gap-surface-timeouts-6 - gap-surface-timeouts-2,gap-surface-timeouts-3,gap-surface-timeouts-4,gap-surface-timeouts-5,surfaces-env,fakes-bootstrap-seam
+gap-surface-notify-config -
+gap-surface-notify-messaging - gap-surface-notify-config,fakes-sockets
+gap-surface-notify-wiring - gap-surface-notify-messaging,surfaces-env,fakes-bootstrap-seam
+gap-spike-surface-consumers -
+gap-spike-relay -
+# --- loops follow-ups, storm, VS Code (writer report)
+gap-design-via-sovereignloop-1 - fakes-registry
+gap-design-via-sovereignloop-2 - gap-design-via-sovereignloop-1
+gap-design-via-sovereignloop-3 - fakes-registry
+gap-design-via-sovereignloop-4 - gap-design-via-sovereignloop-1,gap-design-via-sovereignloop-3,fakes-ledger,orm-ledger
+gap-gh-review-transport - default-model-p3,fakes-tenant-gh-3
+gap-gh-review-via-sovereignloop-1 - gap-gh-review-transport,loops-submit-cli
+gap-gh-review-via-sovereignloop-2 - gap-gh-review-via-sovereignloop-1,rmq-r01-queue-config
+gap-spike-storm-command -
+gap-storm-1-editing-rules -
+gap-storm-2-gutted-file-guard - fakes-tenant-qwen-1
+gap-storm-3-gutted-file-wiring - gap-storm-2-gutted-file-guard,fakes-tenant-qwen-2,gap-storm-1-editing-rules
+gap-paid-ide-default-1 - gap-paid-defaults,loops-vscode-paid
+gap-paid-ide-default-2 - gap-paid-ide-default-1,loops-vscode-paid
+gap-vscode-agent-tree - gap-agent-tree-parity,gap-sd01-carriage,loops-vscode-verification
+gap-vscode-agent-router - loops-vscode-verification,gap-sd01-carriage
+# --- the 3.0.0 gate (mine; last)
+gap-ops-release-3-0-0-gate - rmq-r34-defaults-flip,surfaces-default-flip,harness-T28-route-flip,loops-rename,gap-chain-dispatch,gap-ops-review-lane,gap-release-yank-workflow-2,gap-ops-yank-392,gap-docs-changelog,gap-docs-agent-briefs,gap-docs-cli-reference,gap-docs-config-reference,gap-docs-adr-land,gap-ops-canon-rulings,gap-canon-rulings-amendment,gap-ci-arch-gates,gap-ci-macos-gates

@@ -1,0 +1,88 @@
+393	2026-09-22	qwenstorm	fix(gh): a staged bump is raised when the range later owes a higher level
+391	2026-09-22	qwenstorm	feat(install): vibey install sets up local Ollama and this era's default model
+389	2026-09-22	qwenstorm	feat(gh)!: vibey-gh's local reviewer and fit default to gpt-oss:20b
+388	2026-09-22	qwenstorm	feat(qwenloop)!: with nothing configured, qwenloop attaches to a running local Ollama
+387	2026-09-22	qwenstorm	feat(models)!: GPT-OSS 20B on Ollama is the default local model
+386	2026-09-22	qwenstorm	fix(qwenloop): retry a turn when the server cannot parse the model's tool call
+383	2026-09-22	qwenstorm	feat(models): support Qwen3.8-27B, Qwen3.6-27B, Qwen3.6-35B-A3B and GPT-OSS 20B on both Ol
+382	2026-09-22	qwenstorm	feat(qwenloop): record per-turn timing, the server's own timings, and the settings a run u
+381	2026-09-22	qwenstorm	feat(queue)!: RabbitMQ dispatch and loop services are the defaults
+380	2026-09-22	qwenstorm	feat(cli): vibey install --rabbitmq, and doctor checks the broker and every loop service
+379	2026-09-22	qwenstorm	ci: a RabbitMQ service in the gates and three cluster contracts for the broker
+378	2026-09-22	qwenstorm	feat(chart): KEDA scales on the project's RabbitMQ queue
+377	2026-09-22	qwenstorm	feat(chart): one Deployment per loop service
+376	2026-09-22	qwenstorm	feat(chart): the RabbitMQ broker is core infrastructure
+375	2026-09-22	qwenstorm	feat(engines): the composition root selects subprocess or service invocation
+374	2026-09-22	qwenstorm	feat(cli): vibey loop-service runs one engine's service, and vibey loop submit publishes a
+373	2026-09-22	qwenstorm	feat(loop-service): DESIGN and DECOMPOSE runs go through the loop service too
+372	2026-09-22	qwenstorm	feat(engines): LoopServiceAdapter publishes a run instead of spawning one
+371	2026-09-22	qwenstorm	feat(loop-service): the caller's client submits runs and receives their replies
+370	2026-09-22	qwenstorm	feat(loop-service): control messages, preflight probes and dead-letter replies
+369	2026-09-22	qwenstorm	feat(loop-service): the service host consumes run requests, dedupes, supersedes, replies a
+368	2026-09-22	qwenstorm	feat(loop-service): run one request as a local engine subprocess and persist its result
+367	2026-09-22	qwenstorm	refactor(engines): extract the run-directory tailer, the inbox writer and the process laun
+366	2026-09-22	qwenstorm	feat(domain): the loop-service wire protocol
+365	2026-09-22	qwenstorm	test(queue): one contract suite and a chaos twin prove both queue backends
+364	2026-09-22	qwenstorm	feat(queue): the composition root selects the queue backend
+363	2026-09-22	qwenstorm	feat(queue): RabbitMqJobRepository, the RabbitMQ backend of the job queue
+362	2026-09-22	qwenstorm	feat(gates): answering a gate re-dispatches its job
+361	2026-09-22	qwenstorm	feat(queue): buffer a project's deliveries, hold them as leases, and wake the worker
+360	2026-09-22	qwenstorm	feat(queue): the outbox relay publishes each dispatch to the right exchange
+359	2026-09-22	qwenstorm	feat(queue): declare the RabbitMQ topology for jobs
+358	2026-09-22	qwenstorm	feat(db): the fenced dispatch claim, redispatching settles, the lost-dispatch sweep and th
+357	2026-09-22	qwenstorm	feat(db): enqueue and dependency release record their dispatches
+356	2026-09-22	qwenstorm	fix(queue): reaping bounds a job that keeps killing its worker
+355	2026-09-22	qwenstorm	feat(db): migration 0014 adds dispatch generations and the job outbox
+354	2026-09-22	qwenstorm	feat(domain): decide what a dispatch that could not be claimed means
+353	2026-09-22	qwenstorm	feat(domain): the job-dispatch envelope, queue names and wait-tier plan
+352	2026-09-22	qwenstorm	feat(bootstrap): an async outbox the asyncpg world can share
+351	2026-09-22	qwenstorm	feat(bootstrap): vibey_bootstrap.amqp, the family's RabbitMQ client
+350	2026-09-22	qwenstorm	build(deps): aio-pika is the family's AMQP client
+349	2026-09-22	qwenstorm	refactor(worker): the composition root builds the job-ready wakeup
+348	2026-09-22	qwenstorm	feat(config): declare the queue backend, the AMQP endpoint and the engine invocation mode
+346	2026-09-22	qwenstorm	feat(qwenloop): an edit_file tool, and write_file refuses to gut an existing file
+345	2026-09-22	qwenstorm	fix(qwenloop): a model request waits idle_timeout_seconds, not a hard-coded 300 s
+344	2026-09-22	qwenstorm	feat(gh): rulesets and flatten reach the forge only through the adapter
+343	2026-09-22	qwenstorm	feat(gh): issue automation and conversations reach the forge only through the adapter
+342	2026-09-22	qwenstorm	feat(gh): PR automation, the durable state comment and install notices reach the forge onl
+341	2026-09-22	qwenstorm	feat(gh): branch reconciliation and release publication reach the forge only through the a
+340	2026-09-22	qwenstorm	feat(gh): promotion reaches the forge only through the adapter
+339	2026-09-22	qwenstorm	feat(gh): the merge train reaches the forge only through the adapter
+338	2026-09-22	qwenstorm	feat(gh): the forge adapter reads and writes branch rules, refusing what a forge cannot ex
+337	2026-09-22	qwenstorm	feat(gh): the forge adapter lists repository secrets and cuts tags and releases
+336	2026-09-22	qwenstorm	feat(gh): the forge adapter reads and writes issues, comments and review threads
+335	2026-09-22	qwenstorm	feat(gh): the forge adapter writes to change requests — create, edit, merge, ready, close,
+334	2026-09-22	qwenstorm	feat(gh): the forge adapter lists open change requests and waits for their checks
+333	2026-09-22	qwenstorm	feat(gh): the forge adapter reads a change request's facts, text, comments, files and chec
+332	2026-09-22	qwenstorm	feat(gh): forge-adapter foundation — scope rule, paged reads, NotSupported, repository_nam
+331	2026-09-22	qwenstorm	feat(openstack)!: a real OpenStack CLI client, selected by [deploy].target and vibey worke
+330	2026-09-22	qwenstorm	feat(deploy)!: the deployment scope's provider follows [deploy].target
+327	2026-09-22	qwenstorm	feat(deploy)!: the forge surface runs Forgejo; surfaces.gitea is now surfaces.forgejo
+326	2026-09-22	qwenstorm	feat(deploy)!: run the kopf operator by default, scoped to the release namespace
+324	2026-09-22	qwenstorm	feat(visual): sovereign QwenloopVisualProvider runs VISUAL_DESIGN on the local model
+323	2026-09-22	qwenstorm	fix(surfaces): apply the surface environment overlay when no vibey.toml exists
+322	2026-09-22	qwenstorm	feat(cli)!: DESIGN and DECOMPOSE default to the sovereign qwenloop provider
+321	2026-09-22	qwenstorm	feat(engines)!: each project's engine pool follows ratified sub-doctrine 8.b
+301	2026-09-22	bug	Paper revision: formalize, broaden, and adversarially validate ledger-mediated orchestrati
+298	2026-09-19	enhancement	bitbucket
+297	2026-09-19	enhancement	openclaw
+290	2026-09-19	enhancement	vscode plugin
+226	2026-09-19	enhancement	wikipedia / grokipedia
+165	2026-09-19	enhancement	vibeyos
+155	2026-09-19	enhancement	consolidate book and paper
+148	2026-09-19	enhancement	allow spending
+145	2026-09-19	enhancement	fully github capture
+143	2026-09-19	enhancement	human user interfaces
+139	2026-09-19	enhancement	Moltbook integration: publish and *interact* on the Moltbook reddit clone (or spin out vib
+138	2026-09-19	enhancement	Platform abstraction: one global standard, adapters for every major git platform — GitLab 
+136	2026-09-19	enhancement	The forge-state ledger: every forge artifact captured losslessly — the whole system recons
+134	2026-09-19	enhancement	The autonomous billing and feasibility engine: cost, duration, distance-from-peak, and whe
+133	2026-09-19	enhancement	8.a: make the sovereign lane primary for the half of review it can fully carry
+121	2026-09-19	enhancement	wrap *loop repos into a single vibey-loops repo that wraps all the others into a minikube 
+114	2026-09-19	enhancement	Ledger storage tiers: aggressive optimized PostgreSQL sharding, three lossless retention m
+90	2026-09-19	enhancement	Marketplace: a hybrid human/bot community platform — web and mobile — where the work happe
+89	2026-09-19	enhancement	Platform identity and operations: users, SSO, account storage, payments; config boards, da
+88	2026-09-19	enhancement	Delivery economics: milestone scoping, time/cost-to-launch prediction, margin forecasting,
+87	2026-09-19	enhancement	Work discovery and ideation: a bot that finds FOSS and paid work, researches, and proposes
+86	2026-09-19	enhancement	Monetization: usage-based billing for commercial work — FOSS free forever, at full capabil
+85	2026-09-21	enhancement	Ecosystem expansion: vibey-jira, vibey-social, vibey-career, vibey-opencode, vibey-{aws,az

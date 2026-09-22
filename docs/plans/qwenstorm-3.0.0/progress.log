@@ -1,0 +1,34 @@
+2026-09-22T12:03:11Z start engines-provider #322
+2026-09-22T13:13:05Z end   engines-provider #322 stopped by reviewer (destructive rewrites)
+2026-09-22T13:13:34Z waiting for review: engines-provider
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/qwenloop-edit-tool @ 4e57f56b on storm/qwenloop-edit-tool
+2026-09-22T13:48:39Z start qwenloop-edit-tool #346 on integration@4e57f56b
+2026-09-22T13:48:51Z end   qwenloop-edit-tool #346 exit=0 
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/qwenloop-edit-tool @ 4e57f56b on storm/qwenloop-edit-tool
+2026-09-22T13:49:24Z start qwenloop-edit-tool #346 on integration@4e57f56b
+2026-09-22T13:53:02Z end   qwenloop-edit-tool #346 exit=0 issue#346	completed
+2026-09-22T13:53:02Z waiting for review: qwenloop-edit-tool
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/qwenloop-request-timeout @ 610f3cfa on storm/qwenloop-request-timeout
+2026-09-22T13:56:05Z start qwenloop-request-timeout #345 on integration@610f3cfa
+2026-09-22T14:08:56Z end   qwenloop-request-timeout #345 exit=0 issue#345	completed
+2026-09-22T14:08:57Z waiting for review: qwenloop-request-timeout
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/qwenloop-run-telemetry @ 391673c2 on storm/qwenloop-run-telemetry
+2026-09-22T14:16:00Z start qwenloop-run-telemetry #382 on integration@391673c2
+2026-09-22T14:25:12Z end   qwenloop-run-telemetry #382 exit=0 issue#382	failed
+2026-09-22T14:25:12Z waiting for review: qwenloop-run-telemetry
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/qwenloop-toolcall-retry @ c91561f4 on storm/qwenloop-toolcall-retry
+2026-09-22T14:44:16Z start qwenloop-toolcall-retry #386 on integration@c91561f4
+2026-09-22T14:52:12Z end   qwenloop-toolcall-retry #386 exit=0 issue#386	failed
+2026-09-22T14:52:12Z waiting for review: qwenloop-toolcall-retry
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/default-model-p1 @ cce648ef on storm/default-model-p1
+2026-09-22T14:58:15Z start default-model-p1 #387 on integration@cce648ef
+2026-09-22T15:01:52Z end   default-model-p1 #387 exit=0 issue#387	completed
+2026-09-22T15:01:52Z waiting for review: default-model-p1
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/default-model-p2 @ 739536ea on storm/default-model-p2
+2026-09-22T15:13:55Z start default-model-p2 #388 on integration@739536ea
+2026-09-22T15:20:55Z end   default-model-p2 #388 exit=0 issue#388	completed
+2026-09-22T15:20:55Z waiting for review: default-model-p2
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/default-model-p3 @ e219f9a2 on storm/default-model-p3
+2026-09-22T15:23:58Z start default-model-p3 #389 on integration@e219f9a2
+2026-09-22T15:27:33Z end   default-model-p3 #389 exit=0 issue#389	failed
+2026-09-22T15:27:33Z waiting for review: default-model-p3
