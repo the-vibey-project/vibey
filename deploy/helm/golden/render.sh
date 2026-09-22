@@ -89,5 +89,8 @@ profile keda-latest --show-only templates/keda-scaledobject.yaml -- \
   --set keda.enabled=true
 profile keda-project --show-only templates/keda-scaledobject.yaml -- \
   --set keda.enabled=true --set worker.project="$PROJECT"
+# All sovereign surfaces disabled: proves the chart still installs without
+# them and matches the non-surfaces baseline.
+profile surfaces-off -- --set surfaces.enabled=false
 
 exit "$failed"

@@ -9,7 +9,64 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
+
+---
+# Source: vibey/templates/docs.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-bookstack-secret
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: docs
+type: Opaque
+stringData:
+  app-key: "base64:dmliZXktYm9va3N0YWNrLWluc2VjdXJlLWRldi1rZXk="
+  db-password: bookstackpassword
+  db-root-password: mariadbrootpassword
+
+---
+# Source: vibey/templates/kannel.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-kannel
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: kannel
+type: Opaque
+stringData:
+  username: kannel
+  password: kannelpassword
+
+---
+# Source: vibey/templates/plane.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-plane-secret
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: plane
+type: Opaque
+stringData:
+  secret-key: plane-insecure-secret-key-change-in-prod
+  amqp-url: "amqp://vibey:rabbitmqpassword@vibey-vibey-rabbitmq:5672//"
+  database-url: "postgres://vibey:vibey@vibey-vibey-postgres:5432/plane?sslmode=disable"
+  redis-url: "redis://vibey-vibey-redis:6379/1"
 
 ---
 # Source: vibey/templates/postgres.yaml
@@ -22,7 +79,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
 type: Opaque
 stringData:
   # The queue is PostgreSQL and only PostgreSQL (ADR-0002: FOR UPDATE SKIP
@@ -38,6 +95,468 @@ stringData:
   password: "vibey"
 
 ---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-rabbitmq
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: rabbitmq
+type: Opaque
+stringData:
+  username: vibey
+  password: rabbitmqpassword
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-openbao
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: openbao
+type: Opaque
+stringData:
+  root-token: root
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-nextcloud
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: nextcloud
+type: Opaque
+stringData:
+  username: admin
+  password: adminpassword
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-postfix
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: postfix
+type: Opaque
+stringData:
+  username: vibey
+  password: postfixpassword
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-infisical
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: infisical
+type: Opaque
+stringData:
+  encryption-key: 0123456789abcdef0123456789abcdef
+  auth-secret: infisical-auth-secret-key-32chars
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-garage
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: garage
+type: Opaque
+stringData:
+  access-key: GK000000000000000000000000
+  secret-key: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-gitea
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: gitea
+type: Opaque
+stringData:
+  username: gitea_admin
+  password: gitea_password
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-keycloak
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: keycloak
+type: Opaque
+stringData:
+  admin-user: admin
+  admin-password: keycloakpassword
+
+---
+# Source: vibey/templates/synapse.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-synapse
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: synapse
+type: Opaque
+stringData:
+  access-token: synapse-admin-access-token
+  registration-shared-secret: synapse-registration-shared-secret
+
+---
+# Source: vibey/templates/kannel.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-kannel-config
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: kannel
+data:
+  kannel.conf: |
+    group = core
+    admin-port = 13000
+    admin-password = adminsecret
+    status-password = adminsecret
+    admin-allow-ip = "*.*.*.*"
+    log-file = "/tmp/kannel.log"
+    log-level = 1
+    smsbox-port = 13001
+
+    group = smsc
+    smsc = fake
+    smsc-id = fake1
+    port = 10000
+
+    group = smsbox
+    bearerbox-host = 127.0.0.1
+    bearerbox-port = 13001
+    sendsms-port = 13013
+    log-file = "/tmp/smsbox.log"
+    log-level = 1
+
+    group = sendsms-user
+    username = kannel
+    password = kannelpassword
+
+---
+# Source: vibey/templates/monitoring.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-prometheus-config
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: prometheus
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+---
+# Source: vibey/templates/monitoring.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-grafana-datasources
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: grafana
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://vibey-vibey-prometheus:9090
+        isDefault: true
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://vibey-vibey-loki:3100
+
+---
+# Source: vibey/templates/postgres.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-postgres-init
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+data:
+  01-init-additional-databases.sh: |
+    #!/bin/sh
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+        SELECT 'CREATE DATABASE plane' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'plane')\gexec
+        GRANT ALL PRIVILEGES ON DATABASE plane TO $POSTGRES_USER;
+    EOSQL
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+        SELECT 'CREATE DATABASE infisical' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'infisical')\gexec
+        GRANT ALL PRIVILEGES ON DATABASE infisical TO $POSTGRES_USER;
+    EOSQL
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-garage-config
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: garage
+data:
+  garage.toml: |
+    metadata_dir = "/var/lib/garage/meta"
+    data_dir = "/var/lib/garage/data"
+    db_engine = "sqlite"
+    replication_factor = 1
+
+    rpc_bind_addr = "0.0.0.0:3901"
+    rpc_public_addr = "127.0.0.1:3901"
+    rpc_secret = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+    [s3_api]
+    s3_region = "us-east-1"
+    api_bind_addr = "0.0.0.0:3900"
+    root_domain = ".s3.garage"
+
+    [admin]
+    api_bind_addr = "0.0.0.0:3903"
+    admin_token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-loki-config
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: loki
+data:
+  local-config.yaml: |
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-wazuh-indexer-config
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-indexer
+data:
+  opensearch.yml: |
+    network.host: "0.0.0.0"
+    discovery.type: single-node
+    plugins.security.disabled: true
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-wazuh-dashboard-config
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-dashboard
+data:
+  opensearch_dashboards.yml: |
+    server.host: "0.0.0.0"
+    server.port: 5601
+    opensearch.hosts: ["http://vibey-vibey-wazuh-indexer:9200"]
+    opensearch.ssl.verificationMode: none
+
+---
+# Source: vibey/templates/docs.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-bookstack-mariadb-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: bookstack-mariadb
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Source: vibey/templates/docs.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-bookstack-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: bookstack
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Source: vibey/templates/monitoring.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-prometheus-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: prometheus
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Source: vibey/templates/monitoring.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-grafana-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: grafana
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+
+---
 # Source: vibey/templates/ollama.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -48,7 +567,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
     app.kubernetes.io/component: ollama
 spec:
   accessModes: ["ReadWriteOnce"]
@@ -57,6 +576,253 @@ spec:
       # Weights are gigabytes and are the slow part. They live on a volume
       # so a restarted pod serves at once instead of downloading again.
       storage: 30Gi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-redis-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: redis
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-rabbitmq-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: rabbitmq
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-nextcloud-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: nextcloud
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-postfix-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: postfix
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-garage-meta
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: garage
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-garage-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: garage
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-gitea-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: gitea
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-registry-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: registry
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-loki-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: loki
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-uptime-kuma-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: uptime-kuma
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# Source: vibey/templates/synapse.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-synapse-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: synapse
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-wazuh-indexer-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-indexer
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-wazuh-manager-data
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-manager
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
 
 ---
 # Source: vibey/templates/worker.yaml
@@ -69,12 +835,141 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
 spec:
   accessModes: ["ReadWriteOnce"]
   resources:
     requests:
       storage: 5Gi
+
+---
+# Source: vibey/templates/docs.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-bookstack-mariadb
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: bookstack-mariadb
+spec:
+  type: ClusterIP
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: bookstack-mariadb
+
+---
+# Source: vibey/templates/docs.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-bookstack
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: bookstack
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: bookstack
+
+---
+# Source: vibey/templates/kannel.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-kannel
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: kannel
+spec:
+  type: ClusterIP
+  ports:
+    - name: sendsms
+      port: 13013
+      targetPort: 13013
+      protocol: TCP
+    - name: admin
+      port: 13000
+      targetPort: 13000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: kannel
+
+---
+# Source: vibey/templates/monitoring.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-prometheus
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: prometheus
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: prometheus
+
+---
+# Source: vibey/templates/monitoring.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-grafana
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: grafana
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: grafana
 
 ---
 # Source: vibey/templates/ollama.yaml
@@ -87,7 +982,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
     app.kubernetes.io/component: ollama
 spec:
   type: ClusterIP
@@ -101,6 +996,56 @@ spec:
     app.kubernetes.io/component: ollama
 
 ---
+# Source: vibey/templates/plane.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-plane-api
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: plane-api
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: plane-api
+
+---
+# Source: vibey/templates/plane.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-plane-web
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: plane-web
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: plane-web
+
+---
 # Source: vibey/templates/postgres.yaml
 apiVersion: v1
 kind: Service
@@ -111,7 +1056,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
 spec:
   clusterIP: None
   ports:
@@ -124,6 +1069,848 @@ spec:
     app.kubernetes.io/component: postgres
 
 ---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-redis
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: redis
+spec:
+  type: ClusterIP
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: redis
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-rabbitmq
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: rabbitmq
+spec:
+  type: ClusterIP
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+      protocol: TCP
+    - name: management
+      port: 15672
+      targetPort: 15672
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: rabbitmq
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-openbao
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: openbao
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8200
+      targetPort: 8200
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: openbao
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-nextcloud
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: nextcloud
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: nextcloud
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-postfix
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: postfix
+spec:
+  type: ClusterIP
+  ports:
+    - name: submission
+      port: 587
+      targetPort: 587
+      protocol: TCP
+    - name: smtp
+      port: 25
+      targetPort: 25
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: postfix
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-infisical
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: infisical
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: infisical
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-garage
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: garage
+spec:
+  type: ClusterIP
+  ports:
+    - name: s3
+      port: 3900
+      targetPort: 3900
+      protocol: TCP
+    - name: rpc
+      port: 3901
+      targetPort: 3901
+      protocol: TCP
+    - name: admin
+      port: 3903
+      targetPort: 3903
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: garage
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-gitea
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: gitea
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+    - name: ssh
+      port: 22
+      targetPort: 2222
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: gitea
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-registry
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: registry
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: registry
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-keycloak
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: keycloak
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: keycloak
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-loki
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: loki
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3100
+      targetPort: 3100
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: loki
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-uptime-kuma
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: uptime-kuma
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3001
+      targetPort: 3001
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: uptime-kuma
+
+---
+# Source: vibey/templates/synapse.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-synapse
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: synapse
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8008
+      targetPort: 8008
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: synapse
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-wazuh-indexer
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-indexer
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: wazuh-indexer
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-wazuh-manager
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-manager
+spec:
+  type: ClusterIP
+  ports:
+    - name: events
+      port: 1514
+      targetPort: 1514
+      protocol: TCP
+    - name: registration
+      port: 1515
+      targetPort: 1515
+      protocol: TCP
+    - name: api
+      port: 55000
+      targetPort: 55000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: wazuh-manager
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-wazuh-dashboard
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-dashboard
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 5601
+      targetPort: 5601
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: wazuh-dashboard
+
+---
+# Source: vibey/templates/docs.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-bookstack-mariadb
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: bookstack-mariadb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: bookstack-mariadb
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: bookstack-mariadb
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: mariadb
+          image: linuxserver/mariadb:latest@sha256:75ffa39d652653e73848328a667d169a20a1e084fd51a66c4be3eb754a2492c9
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-bookstack-secret
+                  key: db-root-password
+            - name: MYSQL_DATABASE
+              value: bookstack
+            - name: MYSQL_USER
+              value: bookstack
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-bookstack-secret
+                  key: db-password
+          ports:
+            - containerPort: 3306
+          readinessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 10
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: vibey-vibey-bookstack-mariadb-data
+
+---
+# Source: vibey/templates/docs.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-bookstack
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: bookstack
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: bookstack
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: bookstack
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: bookstack
+          image: linuxserver/bookstack:latest@sha256:189c796273469115cf810e53f450e15b93184018e4728cd65fcaef8aa93584bc
+          env:
+            # Without it the image's init prints "The application key is
+            # missing, halting init!" and never starts nginx on :80.
+            - name: APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-bookstack-secret
+                  key: app-key
+            - name: DB_HOST
+              value: "vibey-vibey-bookstack-mariadb:3306"
+            - name: DB_DATABASE
+              value: bookstack
+            - name: DB_USERNAME
+              value: bookstack
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-bookstack-secret
+                  key: db-password
+            - name: APP_URL
+              value: "http://vibey-vibey-bookstack:80"
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 20
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 20
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: vibey-vibey-bookstack-data
+
+---
+# Source: vibey/templates/kannel.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-kannel
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: kannel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: kannel
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: kannel
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: bearerbox
+          image: cyrenity/kannel:1.4.5-alpine@sha256:d1cbb3fc4f2f2bdd424721d2d3dad16f4dc1bbe204ade9bb39bb7d4ea667225d
+          command:
+            - sh
+            - -c
+            - "sleep infinity | exec bearerbox /etc/kannel/kannel.conf"
+          stdin: true
+          tty: true
+          ports:
+            - containerPort: 13000
+            - containerPort: 13001
+          readinessProbe:
+            tcpSocket:
+              port: 13000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 13000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 10
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/kannel/kannel.conf
+              subPath: kannel.conf
+        - name: smsbox
+          image: cyrenity/kannel:1.4.5-alpine@sha256:d1cbb3fc4f2f2bdd424721d2d3dad16f4dc1bbe204ade9bb39bb7d4ea667225d
+          command:
+            - sh
+            - -c
+            - "until nc -z 127.0.0.1 13001; do sleep 1; done; sleep infinity | exec smsbox /etc/kannel/kannel.conf"
+          stdin: true
+          tty: true
+          ports:
+            - containerPort: 13013
+          readinessProbe:
+            tcpSocket:
+              port: 13013
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 13013
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 10
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/kannel/kannel.conf
+              subPath: kannel.conf
+      volumes:
+        - name: config
+          configMap:
+            name: vibey-vibey-kannel-config
+
+---
+# Source: vibey/templates/monitoring.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-prometheus
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: prometheus
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: prometheus
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:latest@sha256:5ce7540c3c00ef4ab0c9d2c995c6a5b9c421f44b4a115d97a2c7af3b1c21cbb0
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+          ports:
+            - containerPort: 9090
+          readinessProbe:
+            tcpSocket:
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9090
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+            - name: data
+              mountPath: /prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: vibey-vibey-prometheus-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-prometheus-data
+
+---
+# Source: vibey/templates/monitoring.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-grafana
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: grafana
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: grafana
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:latest@sha256:ac461fb352abc50da10a51c7d02462e9c05488f11f53f14b3ad79a8145f638a0
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: "admin"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: "grafanapassword"
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources/datasources.yaml
+              subPath: datasources.yaml
+            - name: data
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: datasources
+          configMap:
+            name: vibey-vibey-grafana-datasources
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-grafana-data
+
+---
 # Source: vibey/templates/ollama.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -134,7 +1921,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
     app.kubernetes.io/component: ollama
 spec:
   # One server per release. The weights volume is ReadWriteOnce, so a
@@ -156,7 +1943,7 @@ spec:
         app.kubernetes.io/instance: vibey
         app.kubernetes.io/version: "0.1.2"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: vibey-0.2.0
+        helm.sh/chart: vibey-0.3.0
         app.kubernetes.io/component: ollama
     spec:
       # Not the chart-wide podSecurityContext. The ollama image runs as root
@@ -224,6 +2011,1414 @@ spec:
             claimName: vibey-vibey-ollama
 
 ---
+# Source: vibey/templates/plane.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-plane-api
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: plane-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: plane-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: plane-api
+    spec:
+      initContainers:
+        # The API entrypoint's register_instance enqueues a Celery task on
+        # every start, under `set -e`: an unreachable broker is exit 1, not a
+        # retry. Waiting here keeps the failure mode "pod pending" rather than
+        # "CrashLoopBackOff with a stack trace", and keeps kubelet backoff from
+        # pushing the first Ready past the Deployment's progress deadline.
+        - name: wait-for-broker
+          image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
+          command:
+            - python
+            - -c
+            - |
+              import os, socket, time, urllib.parse
+              url = urllib.parse.urlparse(os.environ["AMQP_URL"])
+              while True:
+                  try:
+                      socket.create_connection((url.hostname, url.port or 5672), timeout=2).close()
+                      break
+                  except OSError:
+                      print("waiting for broker...", flush=True)
+                      time.sleep(2)
+          env:
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: amqp-url
+      containers:
+        - name: plane-api
+          image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
+          command: ["./bin/docker-entrypoint-api.sh"]
+          env:
+            - name: GUNICORN_WORKERS
+              value: "1"
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: amqp-url
+            - name: WEB_URL
+              value: "http://vibey-vibey-plane-web:80"
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 10
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+---
+# Source: vibey/templates/plane.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-plane-worker
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: plane-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: plane-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: plane-worker
+    spec:
+      containers:
+        - name: plane-worker
+          image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
+          command: ["./bin/docker-entrypoint-worker.sh"]
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: amqp-url
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+---
+# Source: vibey/templates/plane.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-plane-beat
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: plane-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: plane-beat
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: plane-beat
+    spec:
+      containers:
+        - name: plane-beat
+          image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
+          command: ["./bin/docker-entrypoint-beat.sh"]
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: amqp-url
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+---
+# Source: vibey/templates/plane.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-plane-web
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: plane-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: plane-web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: plane-web
+    spec:
+      containers:
+        - name: plane-web
+          image: makeplane/plane-frontend:latest@sha256:30734d16d457d2e2f942debeba0bb4721ff70388f970257cfd7f11e02082aaa5
+          command: ["node", "web/server.js"]
+          env:
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: "http://vibey-vibey-plane-api:8000"
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 10
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-redis
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:8-alpine@sha256:ba6e394f6acc2a695ef1b6944f161b9ca813711739be68319fa0db3470673f1d
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-redis-data
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-rabbitmq
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: rabbitmq
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: rabbitmq
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:4-management-alpine@sha256:b839b492a91788a1d9406ef3ec0e1d8a8448032c48148a54a9e0c68ed66cde9b
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-rabbitmq
+                  key: username
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-rabbitmq
+                  key: password
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
+          readinessProbe:
+            tcpSocket:
+              port: 5672
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5672
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-rabbitmq-data
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-openbao
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: openbao
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: openbao
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: openbao
+    spec:
+      containers:
+        - name: openbao
+          image: openbao/openbao:latest@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641
+          args:
+            - server
+            - -dev
+            - -dev-listen-address=0.0.0.0:8200
+            - -dev-root-token-id=root
+          ports:
+            - containerPort: 8200
+          readinessProbe:
+            tcpSocket:
+              port: 8200
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8200
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-nextcloud
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: nextcloud
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: nextcloud
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: nextcloud
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: nextcloud
+          image: nextcloud:latest@sha256:1468bb3c8bdcfb2d301cc885daa36ead108c0589984991320c5fb66754fbfba6
+          env:
+            - name: NEXTCLOUD_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-nextcloud
+                  key: username
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-nextcloud
+                  key: password
+            - name: SQLITE_DATABASE
+              value: nextcloud
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/www/html
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-nextcloud-data
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-postfix
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: postfix
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: postfix
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: postfix
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: postfix
+          image: boky/postfix:latest@sha256:aafc772384232497bed875e1eb66b4d3e54ba1ebc86e2e185a6dc1dbc48182ef
+          env:
+            - name: ALLOWED_NETWORKS
+              value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8"
+            - name: USE_TLS
+              value: "no"
+            - name: POSTFIX_MYDOMAIN
+              value: "cluster.local"
+            - name: ALLOWED_SENDER_DOMAINS
+              value: "cluster.local"
+          ports:
+            - containerPort: 587
+            - containerPort: 25
+          readinessProbe:
+            tcpSocket:
+              port: 587
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 587
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 10
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/spool/postfix
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-postfix-data
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-infisical
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: infisical
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: infisical
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: infisical
+    spec:
+      containers:
+        - name: infisical
+          image: infisical/infisical:latest@sha256:3365445909bebd6fa36b5ddba3262da47384652f893585a7b39a8d5ba2681827
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DB_CONNECTION_URI
+              value: "postgres://vibey:vibey@vibey-vibey-postgres:5432/infisical?sslmode=disable"
+            - name: REDIS_URL
+              value: "redis://vibey-vibey-redis:6379/2"
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-infisical
+                  key: encryption-key
+            - name: AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-infisical
+                  key: auth-secret
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-garage
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: garage
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: garage
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: garage
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: garage
+          image: dxflrs/garage:58c21846ae80f27ecce9dd0af2ed964e964e9db0@sha256:c483e2d04c21224456358aeb0a9cbf6859b0d2fafe24d6214c5b80658a840579
+          args: ["/garage", "server"]
+          ports:
+            - containerPort: 3900
+            - containerPort: 3901
+            - containerPort: 3903
+          readinessProbe:
+            tcpSocket:
+              port: 3900
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3900
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/garage.toml
+              subPath: garage.toml
+            - name: meta
+              mountPath: /var/lib/garage/meta
+            - name: data
+              mountPath: /var/lib/garage/data
+      volumes:
+        - name: config
+          configMap:
+            name: vibey-vibey-garage-config
+        - name: meta
+          persistentVolumeClaim:
+            claimName: vibey-vibey-garage-meta
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-garage-data
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-gitea
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: gitea
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: gitea
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: gitea
+    spec:
+      containers:
+        - name: gitea
+          image: gitea/gitea:latest@sha256:87a67ee09d3ae0d1df5fda5dcda3e2a1f9236a45b0a59025d6e00e46adc43bef
+          env:
+            - name: USER_UID
+              value: "1000"
+            - name: USER_GID
+              value: "1000"
+            - name: GITEA__security__INSTALL_LOCK
+              value: "true"
+            - name: GITEA__database__DB_TYPE
+              value: "sqlite3"
+            - name: GITEA__server__HTTP_PORT
+              value: "3000"
+          ports:
+            - containerPort: 3000
+            - containerPort: 2222
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 25
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-gitea-data
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-registry
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: registry
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: registry
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: registry
+    spec:
+      containers:
+        - name: registry
+          image: registry:latest@sha256:325b4b29b041e82803abeb703e201655e4e23ab83264ec1a7c9ddb0a5b14a6e0
+          env:
+            - name: REGISTRY_HTTP_ADDR
+              value: "0.0.0.0:5000"
+            - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+              value: "/var/lib/registry"
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            tcpSocket:
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/registry
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-registry-data
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-keycloak
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: keycloak
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: keycloak/keycloak:latest@sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c
+          args:
+            - start-dev
+            - --http-port=8080
+          env:
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-keycloak
+                  key: admin-user
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-keycloak
+                  key: admin-password
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 512Mi
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-loki
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: loki
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: loki
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: loki
+    spec:
+      containers:
+        - name: loki
+          image: grafana/loki:latest@sha256:1107dd5274e0ada47e42472b7a7e71f3b2a2fe878878108f3e2f9e51528f0193
+          args:
+            - -config.file=/etc/loki/local-config.yaml
+          ports:
+            - containerPort: 3100
+          readinessProbe:
+            tcpSocket:
+              port: 3100
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3100
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki/local-config.yaml
+              subPath: local-config.yaml
+            - name: data
+              mountPath: /loki
+      volumes:
+        - name: config
+          configMap:
+            name: vibey-vibey-loki-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-loki-data
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-uptime-kuma
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: uptime-kuma
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: uptime-kuma
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: uptime-kuma
+    spec:
+      containers:
+        - name: uptime-kuma
+          image: louislam/uptime-kuma:latest@sha256:70233f4acb5163fd2a59a49909cf01e44415cecff13dba69e3a86647a2919f83
+          ports:
+            - containerPort: 3001
+          readinessProbe:
+            tcpSocket:
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3001
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-uptime-kuma-data
+
+---
+# Source: vibey/templates/synapse.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-synapse
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: synapse
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: synapse
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: synapse
+    spec:
+      initContainers:
+        - name: init-synapse
+          image: matrixdotorg/synapse:latest@sha256:7155ddc4835e5b8afa4e1598d92aa16ff1d03109f7d1cff61d493237d1210b1d
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /data/homeserver.yaml ]; then
+                # --open-private-ports: the generated listener otherwise binds
+                # only ::1/127.0.0.1, which the kubelet's probes (and the
+                # Service) cannot reach -- the pod runs but is never Ready.
+                python -m synapse.app.homeserver \
+                  --server-name cluster.local \
+                  --report-stats no \
+                  --config-path /data/homeserver.yaml \
+                  --data-dir /data \
+                  --open-private-ports \
+                  --generate-config
+                sed -i 's|filename: /homeserver.log|filename: /data/homeserver.log|' /data/*.log.config 2>/dev/null || true
+                sed -i 's/handlers: \[buffer\]/handlers: [console]/' /data/*.log.config 2>/dev/null || true
+                echo "registration_shared_secret: \"synapse-registration-shared-secret\"" >> /data/homeserver.yaml
+                echo "enable_registration: true" >> /data/homeserver.yaml
+                echo "enable_registration_without_verification: true" >> /data/homeserver.yaml
+                chmod -R 777 /data
+              fi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: synapse
+          image: matrixdotorg/synapse:latest@sha256:7155ddc4835e5b8afa4e1598d92aa16ff1d03109f7d1cff61d493237d1210b1d
+          ports:
+            - containerPort: 8008
+          readinessProbe:
+            tcpSocket:
+              port: 8008
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8008
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 10
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-synapse-data
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-wazuh-indexer
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-indexer
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: wazuh-indexer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: wazuh-indexer
+    spec:
+      containers:
+        - name: wazuh-indexer
+          image: wazuh/wazuh-indexer:4.14.2@sha256:da4ec16be8dde44c14313db24d534479694533cdd0a36a527a9f3e5779d70db3
+          env:
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms256m -Xmx512m"
+            - name: DISABLE_SECURITY_PLUGIN
+              value: "true"
+          ports:
+            - containerPort: 9200
+          readinessProbe:
+            tcpSocket:
+              port: 9200
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9200
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/wazuh-indexer/opensearch.yml
+              subPath: opensearch.yml
+            - name: data
+              mountPath: /var/lib/wazuh-indexer
+      volumes:
+        - name: config
+          configMap:
+            name: vibey-vibey-wazuh-indexer-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-wazuh-indexer-data
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-wazuh-manager
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-manager
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: wazuh-manager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: wazuh-manager
+    spec:
+      containers:
+        - name: wazuh-manager
+          image: wazuh/wazuh-manager:4.14.2@sha256:c5b9d21e82c26494ec48505fdc033cdd79eb76cf5b230de736c7dcbe42f1b01a
+          ports:
+            - containerPort: 1514
+            - containerPort: 1515
+            - containerPort: 55000
+          readinessProbe:
+            tcpSocket:
+              port: 55000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 55000
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/ossec/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vibey-vibey-wazuh-manager-data
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-wazuh-dashboard
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: wazuh-dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: wazuh-dashboard
+    spec:
+      containers:
+        - name: wazuh-dashboard
+          image: wazuh/wazuh-dashboard:4.14.2@sha256:8e4fed8ed79cf6d7903e0c2538d4c422b79cc8537798420a23518dcc79156821
+          env:
+            - name: INDEXER_URL
+              value: "http://vibey-vibey-wazuh-indexer:9200"
+          ports:
+            - containerPort: 5601
+          readinessProbe:
+            tcpSocket:
+              port: 5601
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5601
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 10
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+              subPath: opensearch_dashboards.yml
+      volumes:
+        - name: config
+          configMap:
+            name: vibey-vibey-wazuh-dashboard-config
+
+---
 # Source: vibey/templates/worker.yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -234,7 +3429,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
     app.kubernetes.io/component: worker
 spec:
   replicas: 1
@@ -250,7 +3445,7 @@ spec:
         app.kubernetes.io/instance: vibey
         app.kubernetes.io/version: "0.1.2"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: vibey-0.2.0
+        helm.sh/chart: vibey-0.3.0
         app.kubernetes.io/component: worker
     spec:
       serviceAccountName: vibey-vibey
@@ -320,6 +3515,136 @@ spec:
             # project's [features] table never makes it into the record.
             - name: VIBEY_FEATURE_QWENLOOP
               value: "1"
+            - name: VIBEY_TRACKER_URL
+              value: "http://vibey-vibey-plane-api.vibey.svc.cluster.local:8000"
+            - name: VIBEY_TRACKER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-token
+                  key: token
+                  optional: true
+            - name: VIBEY_TRACKER_WORKSPACE_SLUG
+              value: "vibey"
+            - name: VIBEY_TRACKER_PROJECT_ID
+              value: "00000000-0000-0000-0000-000000000000"
+            - name: VIBEY_DOCS_URL
+              value: "http://vibey-vibey-bookstack.vibey.svc.cluster.local:80"
+            - name: VIBEY_DOCS_TOKEN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-bookstack-token
+                  key: token-id
+                  optional: true
+            - name: VIBEY_DOCS_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-bookstack-token
+                  key: token-secret
+                  optional: true
+            - name: VIBEY_DOCS_BOOK_ID
+              value: "1"
+            - name: VIBEY_SECRETS_URL
+              value: "http://vibey-vibey-openbao.vibey.svc.cluster.local:8200"
+            - name: VIBEY_SECRETS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-openbao
+                  key: root-token
+            - name: VIBEY_FILES_URL
+              value: "http://vibey-vibey-nextcloud.vibey.svc.cluster.local:80"
+            - name: VIBEY_FILES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-nextcloud
+                  key: username
+            - name: VIBEY_FILES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-nextcloud
+                  key: password
+            - name: VIBEY_EMAIL_SMTP_HOST
+              value: "vibey-vibey-postfix.vibey.svc.cluster.local"
+            - name: VIBEY_EMAIL_SMTP_PORT
+              value: "587"
+            - name: VIBEY_EMAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-postfix
+                  key: username
+            - name: VIBEY_EMAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-postfix
+                  key: password
+            - name: VIBEY_EMAIL_FROM
+              value: "vibey@cluster.local"
+            - name: VIBEY_SMS_URL
+              value: "http://vibey-vibey-kannel.vibey.svc.cluster.local:13013/cgi-bin/sendsms"
+            - name: VIBEY_SMS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-kannel
+                  key: username
+            - name: VIBEY_SMS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-kannel
+                  key: password
+            - name: VIBEY_SMS_SENDER
+              value: "vibey"
+            - name: VIBEY_MESSAGING_URL
+              value: "http://vibey-vibey-synapse.vibey.svc.cluster.local:8008"
+            - name: VIBEY_MESSAGING_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-synapse
+                  key: access-token
+            - name: VIBEY_MESSAGING_ROOM_ID
+              value: "!general:cluster.local"
+            - name: VIBEY_CONFIG_STORE_URL
+              value: "http://vibey-vibey-infisical.vibey.svc.cluster.local:8080"
+            - name: VIBEY_CONFIG_STORE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-infisical-token
+                  key: machine-token
+                  optional: true
+            - name: VIBEY_CONFIG_STORE_PROJECT_ID
+              value: "vibey"
+            - name: VIBEY_CONFIG_STORE_ENVIRONMENT
+              value: "dev"
+            - name: VIBEY_CACHE_URL
+              value: "redis://vibey-vibey-redis.vibey.svc.cluster.local:6379/0"
+            - name: VIBEY_BUS_URL
+              value: "http://vibey-vibey-rabbitmq.vibey.svc.cluster.local:15672"
+            - name: VIBEY_BUS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-rabbitmq
+                  key: username
+            - name: VIBEY_BUS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-rabbitmq
+                  key: password
+            - name: VIBEY_BLOB_URL
+              value: "http://vibey-vibey-garage.vibey.svc.cluster.local:3900"
+            - name: VIBEY_BLOB_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-garage
+                  key: access-key
+            - name: VIBEY_BLOB_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-garage
+                  key: secret-key
+            - name: VIBEY_BLOB_REGION
+              value: "us-east-1"
+            - name: VIBEY_SIEM_URL
+              value: "http://vibey-vibey-wazuh-indexer.vibey.svc.cluster.local:9200"
+            - name: VIBEY_SIEM_INDEX
+              value: "vibey-audit"
           volumeMounts:
             - name: worktrees
               mountPath: /work
@@ -352,7 +3677,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
 spec:
   serviceName: vibey-vibey-postgres
   replicas: 1
@@ -368,7 +3693,7 @@ spec:
         app.kubernetes.io/instance: vibey
         app.kubernetes.io/version: "0.1.2"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: vibey-0.2.0
+        helm.sh/chart: vibey-0.3.0
         app.kubernetes.io/component: postgres
     spec:
       containers:
@@ -394,6 +3719,8 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "vibey", "-d", "vibey"]
@@ -408,6 +3735,10 @@ spec:
             requests:
               cpu: 100m
               memory: 256Mi
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: vibey-vibey-postgres-init
   volumeClaimTemplates:
     - metadata:
         name: data
@@ -430,7 +3761,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
     app.kubernetes.io/component: ollama-pull
 spec:
   backoffLimit: 6
@@ -489,3 +3820,392 @@ spec:
             requests:
               cpu: 50m
               memory: 64Mi
+
+---
+# Source: vibey/templates/plane.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vibey-vibey-plane-migrator-ad19a0dc
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: plane-migrator
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: plane-migrator
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrator
+          image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
+          command: ["./bin/docker-entrypoint-migrator.sh"]
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-secret
+                  key: amqp-url
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+
+---
+# Source: vibey/templates/docs.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-docs
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: docs
+spec:
+  surface: docs
+  components:
+    - deployment: vibey-vibey-bookstack
+    - deployment: vibey-vibey-bookstack-mariadb
+
+---
+# Source: vibey/templates/kannel.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-sms
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: sms
+spec:
+  surface: sms
+  components:
+    - deployment: vibey-vibey-kannel
+
+---
+# Source: vibey/templates/monitoring.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-monitoring
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: monitoring
+spec:
+  surface: monitoring
+  components:
+    - deployment: vibey-vibey-prometheus
+    - deployment: vibey-vibey-grafana
+
+---
+# Source: vibey/templates/plane.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-tracker
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: tracker
+spec:
+  surface: tracker
+  components:
+    - deployment: vibey-vibey-plane-api
+    - deployment: vibey-vibey-plane-worker
+    - deployment: vibey-vibey-plane-beat
+    - deployment: vibey-vibey-plane-web
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-cache
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: cache
+spec:
+  surface: cache
+  components:
+    - deployment: vibey-vibey-redis
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-bus
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: bus
+spec:
+  surface: bus
+  components:
+    - deployment: vibey-vibey-rabbitmq
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-secrets
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: secrets
+spec:
+  surface: secrets
+  components:
+    - deployment: vibey-vibey-openbao
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-files
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: files
+spec:
+  surface: files
+  components:
+    - deployment: vibey-vibey-nextcloud
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-email
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: email
+spec:
+  surface: email
+  components:
+    - deployment: vibey-vibey-postfix
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-configstore
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: configstore
+spec:
+  surface: configstore
+  components:
+    - deployment: vibey-vibey-infisical
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-blob
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: blob
+spec:
+  surface: blob
+  components:
+    - deployment: vibey-vibey-garage
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-forge
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: forge
+spec:
+  surface: forge
+  components:
+    - deployment: vibey-vibey-gitea
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-registry
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: registry
+spec:
+  surface: registry
+  components:
+    - deployment: vibey-vibey-registry
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-identity
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: identity
+spec:
+  surface: identity
+  components:
+    - deployment: vibey-vibey-keycloak
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-logs
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: logs
+spec:
+  surface: logs
+  components:
+    - deployment: vibey-vibey-loki
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-status
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: status
+spec:
+  surface: status
+  components:
+    - deployment: vibey-vibey-uptime-kuma
+
+---
+# Source: vibey/templates/synapse.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-messaging
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: messaging
+spec:
+  surface: messaging
+  components:
+    - deployment: vibey-vibey-synapse
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: vibey-vibey-siem
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: siem
+spec:
+  surface: siem
+  components:
+    - deployment: vibey-vibey-wazuh-manager
+    - deployment: vibey-vibey-wazuh-indexer
+    - deployment: vibey-vibey-wazuh-dashboard

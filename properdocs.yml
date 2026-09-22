@@ -47,6 +47,7 @@ nav:
       - Convergence-Driven Development: guides/convergence-driven-development.md
       - What gets published: guides/ledger-publication.md
       - Continuous delivery estimate: guides/delivery-estimate.md
+      - Self-hosted sovereign surfaces: guides/self-hosted-surfaces.md
   - Current estimate: estimate.md
   - Reference:
       - CLI: reference/cli.md
@@ -95,4 +96,5 @@ nav:
           - "0040 — Evidence-bounded status for runs, features and research claims": architecture/decisions/0040-evidence-bounded-status.md
           - "0041 — Software organisms are alive in the digital realm": architecture/decisions/0041-software-organisms-alive-in-the-digital-realm.md
           - "0042 — Sovereign self-hosted defaults on every surface; paid platforms are declared-only relays": architecture/decisions/0042-sovereign-self-hosted-defaults-and-declared-paid-relays.md
+          - "0043 — Sovereign operational surfaces deploy into the Kubernetes cluster with reconciled health": architecture/decisions/0043-sovereign-surfaces-install.md
   - Research paper: paper.md

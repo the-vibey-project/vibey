@@ -1,0 +1,289 @@
+---
+# Source: vibey/templates/worker.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vibey-vibey
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+
+---
+# Source: vibey/templates/postgres.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vibey-vibey-dsn
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+type: Opaque
+stringData:
+  # The queue is PostgreSQL and only PostgreSQL (ADR-0002: FOR UPDATE SKIP
+  # LOCKED is the reason). Assembled once here so no template concatenates
+  # its own copy.
+  #
+  # Fully qualified deliberately. A bare Service name resolves only from
+  # inside this namespace, and the DSN has a second reader that is not in
+  # it: KEDA's operator lives in its own namespace and dials Postgres
+  # itself to evaluate the scaler query. A short name works for the worker
+  # and fails for the autoscaler.
+  dsn: postgresql://vibey:vibey@vibey-vibey-postgres.vibey.svc.cluster.local:5432/vibey
+  password: "vibey"
+
+---
+# Source: vibey/templates/postgres.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-postgres-init
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+data:
+  01-init-additional-databases.sh: |
+    #!/bin/sh
+    set -e
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+        SELECT 'CREATE DATABASE plane' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'plane')\gexec
+        GRANT ALL PRIVILEGES ON DATABASE plane TO $POSTGRES_USER;
+    EOSQL
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+        SELECT 'CREATE DATABASE infisical' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'infisical')\gexec
+        GRANT ALL PRIVILEGES ON DATABASE infisical TO $POSTGRES_USER;
+    EOSQL
+
+---
+# Source: vibey/templates/worker.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vibey-vibey-worktrees
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# Source: vibey/templates/postgres.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibey-vibey-postgres
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+spec:
+  clusterIP: None
+  ports:
+    - port: 5432
+      targetPort: postgres
+      name: postgres
+  selector:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/component: postgres
+
+---
+# Source: vibey/templates/worker.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibey-vibey-worker
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: worker
+    spec:
+      serviceAccountName: vibey-vibey
+      # Long enough for an engine session to finish its current turn.
+      # Cutting a session mid-turn is not merely wasteful: the work is
+      # already paid for, and the ledger would carry a turn with no
+      # verdict.
+      terminationGracePeriodSeconds: 7200
+      securityContext:
+        fsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+      initContainers:
+        # The worker applies migrations itself at startup, but it cannot
+        # do that against a database that is not accepting connections
+        # yet. Waiting here keeps the failure mode "pod pending" rather
+        # than "CrashLoopBackOff with a stack trace".
+        - name: wait-for-postgres
+          image: postgres:17-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h vibey-vibey-postgres -U vibey -d vibey; do
+                echo "waiting for postgres..."
+                sleep 2
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+      containers:
+        - name: worker
+          image: "vibey:dev"
+          imagePullPolicy: Never
+          args:
+            - worker
+            - --provider
+            - "scripted"
+            - -j
+            - "2"
+            # A worker that exits when no project exists restart-loops
+            # until a human creates one, and the crash counter makes a
+            # healthy deployment look broken.
+            - --wait-for-project
+            - "15"
+          env:
+            - name: VIBEY_PG_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-dsn
+                  key: dsn
+          volumeMounts:
+            - name: worktrees
+              mountPath: /work
+          workingDir: /work
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+      volumes:
+        - name: worktrees
+          persistentVolumeClaim:
+            claimName: vibey-vibey-worktrees
+
+---
+# Source: vibey/templates/postgres.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vibey-vibey-postgres
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+spec:
+  serviceName: vibey-vibey-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vibey
+      app.kubernetes.io/instance: vibey
+      app.kubernetes.io/component: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vibey
+        app.kubernetes.io/instance: vibey
+        app.kubernetes.io/version: "0.1.2"
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vibey-0.3.0
+        app.kubernetes.io/component: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: vibey
+            - name: POSTGRES_USER
+              value: vibey
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-dsn
+                  key: password
+            # The default mount point is the volume root; initdb refuses a
+            # non-empty directory, and a PVC arrives with lost+found.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "vibey", "-d", "vibey"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "vibey", "-d", "vibey"]
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: vibey-vibey-postgres-init
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 8Gi

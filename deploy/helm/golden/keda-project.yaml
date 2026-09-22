@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
 spec:
   scaleTargetRef:
     name: vibey-vibey-worker
@@ -58,4 +58,5 @@ spec:
             )
         targetQueryValue: "1"
         connectionFromEnv: VIBEY_PG_URL
+
 

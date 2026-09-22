@@ -44,7 +44,12 @@ from vibey.application.interfaces import (
 )
 from vibey.application.ports import JobRepository
 from vibey.application.worker import CapacityDeferred, Defer, Failure, Outcome, Success
-from vibey.domain.capacity import WindowExhausted
+from vibey.domain.capacity import (
+    AuthenticationFailed,
+    CapacityState,
+    CreditsExhausted,
+    WindowExhausted,
+)
 from vibey.domain.effort import (
     BUILD_LADDER_EXHAUSTED,
     PHASE_BASE_EFFORT,
@@ -307,6 +312,24 @@ class SpendMeteringLedger:
                     )
 
 
+def _capacity_state_from_defer(defer: Defer) -> CapacityState:
+    """Map a capacity Defer's real state name onto a domain CapacityState.
+
+    `None` (the runner did not carry a state) keeps the historical
+    `WindowExhausted(resets_at=retry_at)` fallback — safe because the
+    retry_at is still a real deadline. An explicit auth/forbidden state
+    must never become WindowExhausted: waiting cannot fix a credential,
+    and a timed probe would hand the same Forbidden loop back to the
+    same engine after the window.
+    """
+    state = (defer.capacity_state or "").strip().lower().replace("_", "")
+    if state in {"authfailed", "authenticationfailed", "forbidden", "403"}:
+        return AuthenticationFailed(detail=defer.detail)
+    if state in {"creditsexhausted", "402"}:
+        return CreditsExhausted()
+    return WindowExhausted(resets_at=defer.retry_at)
+
+
 class RotationRecordingHandler:
     """Feeds the selected engine's outcome back into its health record.
 
@@ -350,10 +373,19 @@ class RotationRecordingHandler:
             # verify-repair waits are also Defers, and recording them as
             # rejections opened both engines' circuits and stalled the
             # project on "No engines meet requirements".
+            #
+            # The real capacity_state (when the runner carried it through)
+            # wins over the WindowExhausted fallback: an auth_failed /
+            # AuthenticationFailed rejection must open the circuit with
+            # neither resets_at nor probe_next_at, so the next selection
+            # rotates to a different engine instead of re-queuing the same
+            # Forbidden loop. credits_exhausted maps to CreditsExhausted
+            # (no resets_at — a credits balance has no clock); anything
+            # else falls back to the pre-existing WindowExhausted(resets_at).
             await self._health.record_capacity_rejection(
                 self._project_id,
                 self._engine_id,
-                WindowExhausted(resets_at=outcome.retry_at),
+                _capacity_state_from_defer(outcome),
             )
         elif isinstance(outcome, Failure) and outcome.failure_class is FailureClass.ENGINE:
             await self._health.record_failure(self._project_id, self._engine_id)

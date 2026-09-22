@@ -115,6 +115,162 @@ spec:
               value: "1"
             {{- end }}
             {{- end }}
+            {{- if and .Values.surfaces .Values.surfaces.enabled }}
+            {{- if .Values.surfaces.plane.enabled }}
+            - name: VIBEY_TRACKER_URL
+              value: {{ include "vibey.surfaceURL" (dict "root" . "name" "plane-api" "port" 8000) | quote }}
+            - name: VIBEY_TRACKER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-token
+                  key: token
+                  optional: true
+            - name: VIBEY_TRACKER_WORKSPACE_SLUG
+              value: {{ .Values.surfaces.plane.workspaceSlug | quote }}
+            - name: VIBEY_TRACKER_PROJECT_ID
+              value: {{ .Values.surfaces.plane.projectId | quote }}
+            {{- end }}
+            {{- if .Values.surfaces.bookstack.enabled }}
+            - name: VIBEY_DOCS_URL
+              value: {{ include "vibey.surfaceURL" (dict "root" . "name" "bookstack" "port" 80) | quote }}
+            - name: VIBEY_DOCS_TOKEN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-bookstack-token
+                  key: token-id
+                  optional: true
+            - name: VIBEY_DOCS_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-bookstack-token
+                  key: token-secret
+                  optional: true
+            - name: VIBEY_DOCS_BOOK_ID
+              value: {{ .Values.surfaces.bookstack.bookId | quote }}
+            {{- end }}
+            {{- if .Values.surfaces.openbao.enabled }}
+            - name: VIBEY_SECRETS_URL
+              value: {{ include "vibey.surfaceURL" (dict "root" . "name" "openbao" "port" 8200) | quote }}
+            - name: VIBEY_SECRETS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-openbao
+                  key: root-token
+            {{- end }}
+            {{- if .Values.surfaces.nextcloud.enabled }}
+            - name: VIBEY_FILES_URL
+              value: {{ include "vibey.surfaceURL" (dict "root" . "name" "nextcloud" "port" 80) | quote }}
+            - name: VIBEY_FILES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-nextcloud
+                  key: username
+            - name: VIBEY_FILES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-nextcloud
+                  key: password
+            {{- end }}
+            {{- if .Values.surfaces.postfix.enabled }}
+            - name: VIBEY_EMAIL_SMTP_HOST
+              value: {{ printf "%s-postfix.%s.svc.%s" $fullName .Release.Namespace .Values.clusterDomain | quote }}
+            - name: VIBEY_EMAIL_SMTP_PORT
+              value: "587"
+            - name: VIBEY_EMAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-postfix
+                  key: username
+            - name: VIBEY_EMAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-postfix
+                  key: password
+            - name: VIBEY_EMAIL_FROM
+              value: {{ printf "vibey@%s" .Values.surfaces.postfix.domain | quote }}
+            {{- end }}
+            {{- if .Values.surfaces.kannel.enabled }}
+            - name: VIBEY_SMS_URL
+              value: {{ printf "%s/cgi-bin/sendsms" (include "vibey.surfaceURL" (dict "root" . "name" "kannel" "port" 13013)) | quote }}
+            - name: VIBEY_SMS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-kannel
+                  key: username
+            - name: VIBEY_SMS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-kannel
+                  key: password
+            - name: VIBEY_SMS_SENDER
+              value: {{ .Values.surfaces.kannel.sender | quote }}
+            {{- end }}
+            {{- if .Values.surfaces.synapse.enabled }}
+            - name: VIBEY_MESSAGING_URL
+              value: {{ include "vibey.surfaceURL" (dict "root" . "name" "synapse" "port" 8008) | quote }}
+            - name: VIBEY_MESSAGING_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-synapse
+                  key: access-token
+            - name: VIBEY_MESSAGING_ROOM_ID
+              value: {{ .Values.surfaces.synapse.roomId | quote }}
+            {{- end }}
+            {{- if .Values.surfaces.infisical.enabled }}
+            - name: VIBEY_CONFIG_STORE_URL
+              value: {{ include "vibey.surfaceURL" (dict "root" . "name" "infisical" "port" 8080) | quote }}
+            - name: VIBEY_CONFIG_STORE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-infisical-token
+                  key: machine-token
+                  optional: true
+            - name: VIBEY_CONFIG_STORE_PROJECT_ID
+              value: {{ .Values.surfaces.infisical.projectId | quote }}
+            - name: VIBEY_CONFIG_STORE_ENVIRONMENT
+              value: {{ .Values.surfaces.infisical.environment | quote }}
+            {{- end }}
+            {{- if .Values.surfaces.redis.enabled }}
+            - name: VIBEY_CACHE_URL
+              value: {{ printf "redis://%s-redis.%s.svc.%s:6379/0" $fullName .Release.Namespace .Values.clusterDomain | quote }}
+            {{- end }}
+            {{- if .Values.surfaces.rabbitmq.enabled }}
+            - name: VIBEY_BUS_URL
+              value: {{ include "vibey.surfaceURL" (dict "root" . "name" "rabbitmq" "port" 15672) | quote }}
+            - name: VIBEY_BUS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-rabbitmq
+                  key: username
+            - name: VIBEY_BUS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-rabbitmq
+                  key: password
+            {{- end }}
+            {{- if .Values.surfaces.garage.enabled }}
+            - name: VIBEY_BLOB_URL
+              value: {{ include "vibey.surfaceURL" (dict "root" . "name" "garage" "port" 3900) | quote }}
+            - name: VIBEY_BLOB_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-garage
+                  key: access-key
+            - name: VIBEY_BLOB_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-garage
+                  key: secret-key
+            - name: VIBEY_BLOB_REGION
+              value: {{ .Values.surfaces.garage.region | quote }}
+            {{- end }}
+            {{- if .Values.surfaces.wazuh.enabled }}
+            - name: VIBEY_SIEM_URL
+              value: {{ include "vibey.surfaceURL" (dict "root" . "name" "wazuh-indexer" "port" 9200) | quote }}
+            - name: VIBEY_SIEM_INDEX
+              value: "vibey-audit"
+            {{- end }}
+            {{- end }}
             {{- with .Values.worker.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

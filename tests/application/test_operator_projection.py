@@ -15,10 +15,13 @@ import pytest
 from vibey.application.dto import HumanGateRecord, ProjectRecord
 from vibey.application.operator_projection import (
     MAX_MESSAGE,
+    SurfaceComponent,
     plan_answers,
     project_conditions,
     project_status,
     reason_for_kind,
+    surface_conditions,
+    surface_status,
 )
 from vibey.domain.phase import Phase
 
@@ -175,3 +178,57 @@ def test_uuid_keys_are_matched_case_and_format_insensitively() -> None:
     hyphenless = gate.gate_id.hex.upper()
     plan = plan_answers({hyphenless: {"choice": "y"}}, [gate])
     assert plan.apply == ((UUID(hyphenless), {"choice": "y"}),)
+
+
+def test_surface_with_no_components_is_unknown_never_ready() -> None:
+    """An empty watch proves nothing: Unknown, not Ready."""
+    (condition,) = surface_conditions([])
+    assert (condition.type, condition.status, condition.reason) == (
+        "Ready",
+        "Unknown",
+        "NoComponents",
+    )
+
+
+def test_surface_with_all_components_serving_is_ready() -> None:
+    (condition,) = surface_conditions(
+        [
+            SurfaceComponent(deployment="a", available=1, desired=1),
+            SurfaceComponent(deployment="b", available=2, desired=2),
+        ]
+    )
+    assert (condition.type, condition.status, condition.reason) == (
+        "Ready",
+        "True",
+        "Available",
+    )
+
+
+def test_surface_names_each_down_component() -> None:
+    (condition,) = surface_conditions(
+        [
+            SurfaceComponent(deployment="a", available=1, desired=1),
+            SurfaceComponent(deployment="b", available=0, desired=1),
+            SurfaceComponent(deployment="c", available=0, desired=None),
+        ]
+    )
+    assert condition.status == "False"
+    assert condition.reason == "Degraded"
+    assert "b" in condition.message and "c" in condition.message
+    assert "a" not in condition.message
+
+
+def test_surface_status_carries_components_and_conditions() -> None:
+    status = surface_status(
+        "tracker", [SurfaceComponent(deployment="plane-api", available=1, desired=1)]
+    )
+    assert status["surface"] == "tracker"
+    assert status["components"] == [{"deployment": "plane-api", "available": 1, "desired": 1}]
+    assert status["conditions"] == [
+        {
+            "type": "Ready",
+            "status": "True",
+            "reason": "Available",
+            "message": "1 component(s) serving",
+        }
+    ]

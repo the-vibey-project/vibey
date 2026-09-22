@@ -1,0 +1,339 @@
+{{- if and .Values.surfaces.enabled .Values.surfaces.plane.enabled }}
+{{- $fullName := include "vibey.fullname" . }}
+{{- $amqpUrl := .Values.surfaces.plane.amqpUrl }}
+{{- if not $amqpUrl }}
+{{- if not .Values.surfaces.rabbitmq.enabled }}
+{{- fail "surfaces.plane needs a Celery broker: enable surfaces.rabbitmq or set surfaces.plane.amqpUrl" }}
+{{- end }}
+{{- $amqpUrl = printf "amqp://%s:%s@%s-rabbitmq:5672//" .Values.surfaces.rabbitmq.username .Values.surfaces.rabbitmq.password $fullName }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-plane-secret
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane
+type: Opaque
+stringData:
+  secret-key: {{ .Values.surfaces.plane.secretKey }}
+  amqp-url: {{ $amqpUrl | quote }}
+  database-url: "postgres://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ $fullName }}-postgres:5432/plane?sslmode=disable"
+  redis-url: "redis://{{ $fullName }}-redis:6379/1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-plane-api
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-api
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: plane-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-plane-web
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-web
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: plane-web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-plane-api
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: plane-api
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: plane-api
+    spec:
+      initContainers:
+        # The API entrypoint's register_instance enqueues a Celery task on
+        # every start, under `set -e`: an unreachable broker is exit 1, not a
+        # retry. Waiting here keeps the failure mode "pod pending" rather than
+        # "CrashLoopBackOff with a stack trace", and keeps kubelet backoff from
+        # pushing the first Ready past the Deployment's progress deadline.
+        - name: wait-for-broker
+          image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          command:
+            - python
+            - -c
+            - |
+              import os, socket, time, urllib.parse
+              url = urllib.parse.urlparse(os.environ["AMQP_URL"])
+              while True:
+                  try:
+                      socket.create_connection((url.hostname, url.port or 5672), timeout=2).close()
+                      break
+                  except OSError:
+                      print("waiting for broker...", flush=True)
+                      time.sleep(2)
+          env:
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: amqp-url
+      containers:
+        - name: plane-api
+          image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          command: ["./bin/docker-entrypoint-api.sh"]
+          env:
+            - name: GUNICORN_WORKERS
+              value: "1"
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: amqp-url
+            - name: WEB_URL
+              value: "http://{{ $fullName }}-plane-web:80"
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 10
+          resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-plane-worker
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: plane-worker
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: plane-worker
+    spec:
+      containers:
+        - name: plane-worker
+          image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          command: ["./bin/docker-entrypoint-worker.sh"]
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: amqp-url
+          resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-plane-beat
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: plane-beat
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: plane-beat
+    spec:
+      containers:
+        - name: plane-beat
+          image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          command: ["./bin/docker-entrypoint-beat.sh"]
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: amqp-url
+          resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-plane-web
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: plane-web
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: plane-web
+    spec:
+      containers:
+        - name: plane-web
+          image: {{ include "vibey.image" .Values.surfaces.plane.frontend.image }}
+          command: ["node", "web/server.js"]
+          env:
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: "http://{{ $fullName }}-plane-api:8000"
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 10
+          resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $fullName }}-plane-migrator-{{ include "vibey.image" .Values.surfaces.plane.backend.image | sha256sum | trunc 8 }}
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-migrator
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: plane-migrator
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrator
+          image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          command: ["./bin/docker-entrypoint-migrator.sh"]
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: redis-url
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: amqp-url
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-tracker
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tracker
+spec:
+  surface: tracker
+  components:
+    - deployment: {{ $fullName }}-plane-api
+    - deployment: {{ $fullName }}-plane-worker
+    - deployment: {{ $fullName }}-plane-beat
+    - deployment: {{ $fullName }}-plane-web
+{{- end }}

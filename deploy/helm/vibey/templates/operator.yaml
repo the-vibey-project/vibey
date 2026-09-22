@@ -30,8 +30,11 @@ rules:
   # operator reconciles projects, it does not remove them, and a controller
   # that cannot delete cannot delete the wrong thing.
   - apiGroups: [vibey.dev]
-    resources: [vibeyprojects, vibeyprojects/status]
+    resources: [vibeyprojects, vibeyprojects/status, vibeysurfaces, vibeysurfaces/status]
     verbs: [list, watch, get, patch, update]
+  - apiGroups: [apps]
+    resources: [deployments, deployments/status]
+    verbs: [get, list, watch]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

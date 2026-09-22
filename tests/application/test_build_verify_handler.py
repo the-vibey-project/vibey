@@ -741,6 +741,7 @@ async def test_a_capacity_rejected_review_defers_as_capacity_not_a_work_failure(
         retry_at=FixedClock().now() + timedelta(minutes=5),
         detail="engine codexloop reported capacity rejection during the diff review",
         capacity=True,
+        capacity_state="CreditsExhausted",
     )
     # The rejection itself is still on the record; only the approval is not.
     assert any(event.kind == "CapacityRejected" for event in ledger.recorded)

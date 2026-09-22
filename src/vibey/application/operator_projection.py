@@ -174,3 +174,68 @@ def plan_answers(
         apply.append((gate_id, payload))
 
     return AnswerPlan(apply=tuple(apply), ignored=tuple(ignored))
+
+
+@dataclass(frozen=True, slots=True)
+class SurfaceComponent:
+    """One Deployment behind a surface: observed replicas, desired or None."""
+
+    deployment: str
+    available: int
+    desired: int | None
+
+
+def surface_conditions(components: Sequence[SurfaceComponent]) -> tuple[Condition, ...]:
+    """A surface is Ready when every listed Deployment has a pod serving.
+
+    No components is Unknown, never Ready: an empty watch proves nothing.
+    A component whose desired count was never observed still counts by its
+    availability -- the operator watches Deployments, not ReplicaSets, so a
+    missing desired figure is a gap in observation, not evidence of outage.
+    """
+    if not components:
+        return (
+            Condition(
+                type=CONDITION_READY,
+                status="Unknown",
+                reason="NoComponents",
+                message="the surface lists no deployments to watch",
+            ),
+        )
+    down = sorted(c.deployment for c in components if c.available < 1)
+    if down:
+        return (
+            Condition(
+                type=CONDITION_READY,
+                status=FALSE,
+                reason="Degraded",
+                message=f"no serving pods for: {', '.join(down)}",
+            ),
+        )
+    return (
+        Condition(
+            type=CONDITION_READY,
+            status=TRUE,
+            reason="Available",
+            message=f"{len(components)} component(s) serving",
+        ),
+    )
+
+
+def surface_status(surface: str, components: Sequence[SurfaceComponent]) -> dict[str, object]:
+    """The status patch for one VibeySurface CR."""
+    return {
+        "surface": surface,
+        "components": [
+            {
+                "deployment": c.deployment,
+                "available": c.available,
+                "desired": c.desired,
+            }
+            for c in components
+        ],
+        "conditions": [
+            {"type": c.type, "status": c.status, "reason": c.reason, "message": c.message}
+            for c in surface_conditions(components)
+        ],
+    }

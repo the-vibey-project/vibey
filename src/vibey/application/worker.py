@@ -44,10 +44,17 @@ EXHAUSTED_GATE_KIND = "attempts_exhausted"
 
 
 class CapacityDeferred(Exception):
-    def __init__(self, retry_at: datetime, detail: str) -> None:
+    def __init__(
+        self,
+        retry_at: datetime,
+        detail: str,
+        *,
+        capacity_state: str | None = None,
+    ) -> None:
         super().__init__(detail)
         self.retry_at = retry_at
         self.detail = detail
+        self.capacity_state = capacity_state
 
 
 class WorkerLoop:
@@ -150,7 +157,12 @@ class WorkerLoop:
                 try:
                     outcome = await self._handler.handle(job)
                 except CapacityDeferred as exc:
-                    outcome = Defer(exc.retry_at, exc.detail, capacity=True)
+                    outcome = Defer(
+                        exc.retry_at,
+                        exc.detail,
+                        capacity=True,
+                        capacity_state=exc.capacity_state,
+                    )
                 except Exception as exc:  # noqa: BLE001 - any handler bug becomes a VIBEY-class nack
                     outcome = Failure(FailureClass.VIBEY, str(exc))
             finally:

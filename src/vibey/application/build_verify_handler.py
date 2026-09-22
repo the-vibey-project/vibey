@@ -277,6 +277,7 @@ class BuildVerifyHandler:
                 retry_at=self._clock.now() + self._capacity_backoff,
                 detail=f"engine {engine_id} reported capacity rejection during the diff review",
                 capacity=True,
+                capacity_state=run_outcome.capacity_state,
             )
         if not run_outcome.complete:
             # A reviewer whose backend could not serve the review never judged the

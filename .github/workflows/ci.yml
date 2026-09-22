@@ -871,11 +871,14 @@ jobs:
   cluster-smoke:
     name: Helm install on minikube
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
       - uses: medyagh/setup-minikube@latest
+        with:
+          cpus: 4
+          memory: 10240m
 
       - uses: azure/setup-helm@v5
 
@@ -894,7 +897,41 @@ jobs:
       - name: helm install
         run: |
           helm install vibey deploy/helm/vibey \
-            -n vibey --create-namespace --wait --timeout 8m
+            -n vibey --create-namespace --wait --timeout 20m
+
+      # Every sovereign operational surface deployed by the chart must become
+      # Available. A degraded or crash-looping surface is a broken install.
+      - name: Contract - all sovereign surface deployments become Available
+        run: |
+          for dep in \
+            vibey-vibey-plane-api \
+            vibey-vibey-plane-worker \
+            vibey-vibey-plane-beat \
+            vibey-vibey-plane-web \
+            vibey-vibey-bookstack-mariadb \
+            vibey-vibey-bookstack \
+            vibey-vibey-openbao \
+            vibey-vibey-nextcloud \
+            vibey-vibey-postfix \
+            vibey-vibey-kannel \
+            vibey-vibey-synapse \
+            vibey-vibey-infisical \
+            vibey-vibey-redis \
+            vibey-vibey-rabbitmq \
+            vibey-vibey-garage \
+            vibey-vibey-wazuh-indexer \
+            vibey-vibey-wazuh-manager \
+            vibey-vibey-wazuh-dashboard \
+            vibey-vibey-gitea \
+            vibey-vibey-registry \
+            vibey-vibey-keycloak \
+            vibey-vibey-loki \
+            vibey-vibey-uptime-kuma \
+            vibey-vibey-prometheus \
+            vibey-vibey-grafana; do
+            echo "asserting deployment/$dep is available..."
+            kubectl wait --for=condition=available "deployment/$dep" -n vibey --timeout=5m
+          done
 
       # A fresh install into an empty namespace has no project. The worker
       # must park and poll, not exit -- exiting is a restart loop that ends
