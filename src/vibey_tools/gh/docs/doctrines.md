@@ -79,6 +79,17 @@ gated truth.
 
 **7.b — governance in plain sight** *(ratified by the merge that carried this entry)*: the governance of this project — the Constitution, the Twelve Doctrines and every sub-doctrine, the Ten Commandments, the Bill of Rights, every standing subdoctrine, and the decision records that argue them — is as easy to find and as visible as possible to every human reader, on every human-readable surface of the entire codebase, forever, no matter what, no exceptions. Every README, landing page, documentation page, book, paper, package listing, release, and contributor, support or agent guide carries a direct path to it, near the top rather than buried, so the law is never more than one link from wherever a person is reading; a surface that cannot carry a link names where the law lives. It is published in every form the documentation takes, at stable addresses, in plain words, and never behind an account, a paywall, a search or a machine-only format. When the law moves or grows, every surface follows in the same change. Law nobody can find binds nobody fairly.
 
+**7.c — the thorough ledger** *(ratified by the merge that carried this entry)*: the
+ledger always holds as much of what happened as can be recorded — as complete, as
+detailed, as thorough and as current as is possible, always and forever: every job,
+run, turn, tool call, decision, capacity signal, cost, measurement (8.g) and outcome,
+with its time, its actor and its evidence, written as it happens rather than
+reconstructed after. What the ledger does not hold is a gap to be closed, not a
+saving. Its one boundary is the floor (Article I, and SD-01 §1): secrets, credentials
+and people's private details are redacted where they would appear, and the redaction
+is itself recorded — never a silent omission. The ledger stays append-only:
+completeness grows by new events, never by rewriting old ones.
+
 ## 8 — Local authority
 
 When paid credits run out, local is the source of truth: green local work reaches
@@ -108,16 +119,20 @@ and what 10.b already settled for money. 8.a settles it for everything else.
 
 **8.b — sovereign self-hosted defaults, paid declared-only** *(ratified by the
 merge that carried this entry; its list clarified and extended by the merge that
-carried 8.c)*: every operational surface of vibey defaults to
+carried 8.c; its paid defaults set, and OpenCode repealed in favour of VS Code, by
+the merge that carried them)*: every operational surface of vibey defaults to
 the freest, most sovereign, self-hosted, free option — and never, ever, to a paid
 platform. This is specific and enumerated, because a preference without a
 concrete default is a platitude:
 
-- **Engines** default to the sovereign pair that runs on the operator's own
-  hardware and needs no subscription: **Qwen** (via `qwenloop`) and **OpenCode**
-  (via `opencodeloop`), always on, never needing declaration, for every phase.
-  The paid loop engines — `claudeloop`, `codexloop`, `cursorloop`, `agyloop` —
-  are declared-only.
+- **Engines** default to **`sovereignloop`** (8.c), which drives the models and
+  tools that run on the operator's own hardware and need no subscription — this
+  era's default model (8.d), and **VS Code** when its provider is local — always
+  on, never needing declaration, for every phase. **`paidloop`** and its adapters — `claudeloop`,
+  `codexloop`, `cursorloop`, `agyloop`, and VS Code on a paid provider — are
+  declared-only. OpenCode is repealed as an engine of either loop; VS Code takes
+  its place in both, and the runner that drove OpenCode is retired once the VS Code
+  adapter carries its work.
 - **Cloud** defaults to **self-hosted OpenStack**, never to a hosted provider.
   Azure, AWS and GCP are declared-only.
 - **Forge** defaults to **self-hosted Forgejo**, never to a hosted platform.
@@ -170,10 +185,21 @@ substituting for it. "Self-hosted" and "free" are both load-bearing: a free tier
 that still runs on someone else's machine is a counterparty (10.a), not a
 sovereign default, and is at best a declared relay.
 
+**Paid defaults.** Where a human declares a paid counterparty without naming which,
+the default is fixed — always, no exceptions: **Claude** is `paidloop`'s default
+model, through `claudeloop`, and paidloop turns to its other adapters only when
+Claude cannot carry the work; **VS Code** is the default IDE for paid loops; **AWS**
+is the default paid cloud; **GitHub** is the default paid forge. A default among paid
+options never makes paid a default over sovereign (8.a): it only settles which paid
+option a declaration reaches.
+
 **8.c — every loop runs once, fed by a queue** *(ratified by the merge that
-carried this entry)*: every loop — `qwenloop`, `opencodeloop`, `claudeloop`,
-`codexloop`, `cursorloop`, `agyloop`, and any loop the family adds — runs as
-**a single instance per deployment** (one machine, or one cluster), and that
+carried this entry; its two loops and two layers, and its one instance per model,
+set by the merge that carried them)*: the family runs **exactly two loops**. **`sovereignloop`** — what `qwenloop`
+becomes — drives the models and tools that run on the operator's own hardware;
+**`paidloop`** drives every paid engine, with `claudeloop`, `codexloop`,
+`cursorloop` and `agyloop` as its adapters. Each loop runs as
+**a single instance per model**, and that
 instance takes its work from **a queue** on the bus surface (8.b). Nothing starts
 a second instance of a loop to go faster, and nothing spawns a loop directly:
 vibey's workers, storms and the command line put work on the loop's queue, and
@@ -184,6 +210,16 @@ running on the operator's own hardware, one run at a time — and no more.
 Everything else waits in the queue, where waiting is ordered, visible and safe.
 Throughput is raised by giving the one instance more capacity, never by starting
 another.
+
+**Rotation has two layers, and both run on the bus.** The outer layer chooses the
+loop: `sovereignloop` by default, always (8.a), and `paidloop` only when the
+sovereign loop cannot carry the work or where a human has declared a paid relay
+(8.b). The inner layer is each loop's own weighted round robin across the adapters
+and models it holds, mindful that a machine keeps one model resident. At both
+layers the work travels as messages on queues with **dead-letter queues** and
+**idempotency** — the outer layer from vibey to a loop, the inner from a loop to
+its adapters — so a message delivered twice is answered once, and one that cannot
+be handled is parked with its evidence, never retried forever and never dropped.
 
 This is a rule about performance, learned by measurement rather than assumed. A
 model loaded once and fed in order does more work than copies of it contending
@@ -243,7 +279,8 @@ the instance's capacity; a second run beside it is contention.
 Two properties make the queue safe to lean on. **Idempotency:** a run is identified
 by what it tests — the tree, the selection of tests and the environment — so the
 same run asked for twice is answered once, and a repeat request receives the
-recorded result instead of a second execution. **Dead letters:** a run that crashes
+recorded result, while that result is still valid, instead of a second execution;
+a request may always ask for a fresh run. **Dead letters:** a run that crashes
 the harness, exceeds its bound or cannot be executed is moved to a dead-letter queue
 with its evidence, where a human or a repair lane can see it — it is never retried
 forever and never silently dropped.
@@ -253,6 +290,47 @@ This is a performance rule, and like 8.c it was learned by measurement. On
 storm lane on the same machine, failed a timing-sensitive test that passed alone;
 two coverage runs in one directory have also been seen to consume each other's
 data. One run at a time turns those collisions into waiting.
+
+**8.f — every sovereign surface runs in one lane, driven by the bus** *(ratified by
+the merge that carried this entry)*: every sovereign surface of 8.b — the tracker,
+documentation, secrets, files, email, SMS, messaging, configuration, the cache,
+blob storage and security events — is reached through **a single lane per
+deployment**: one consumer instance that takes that surface's operations from **its
+own queue** on the bus and is the only thing that talks to the surface. The cache is
+no exception. Callers put an operation on the surface's queue and, where they need
+an answer, wait for its reply; nothing opens a second path to a surface beside its
+lane. The bus itself, RabbitMQ, is the one surface that cannot be driven by itself:
+it carries the others.
+
+Each lane keeps the two properties of 8.e. **Idempotency:** an operation delivered
+twice takes effect once — a message is sent once, a secret is written once.
+**Dead letters:** an operation the surface refuses or cannot complete is parked on a
+dead-letter queue with its evidence, never retried forever and never dropped.
+
+This is a performance rule, like 8.c and 8.e: a surface fed through one lane is used
+in order instead of by contending callers, and its queue is the visible record of
+what the surface is being asked to do. Its cost is recorded rather than hidden
+(10.f): a call that waits for a reply pays the bus's round trip, and the cache's
+share of that cost is measured and published with the design that carries this rule.
+
+**8.g — always measured** *(ratified by the merge that carried this entry)*: vibey
+measures its own performance at all times, with no exceptions ever. Every loop,
+lane, queue, surface, test run and model records its latency, throughput, queue
+depth and waiting time, resource use and outcome as it works, continuously and in
+real time — and those measurements are what the system optimizes itself by:
+rotation weights, model residency, lane capacity and defaults are chosen from live
+evidence, never from assumption. Nothing runs unmeasured; a component that cannot
+report its measurements is incomplete. Measurements join the ledger (7.c) and are
+published with the decisions they drive (10.f).
+
+**8.h — the default operating systems** *(ratified by the merge that carried this
+entry)*: **Arch Linux** is always the default sovereign operating system vibey
+supports, and **macOS** is always the default paid operating system. Following 8.a,
+the sovereign one comes first: every feature works on Arch Linux, the installer
+serves it, and every change is proven on it. macOS, the default paid operating
+system, is supported alongside it with the same standing, so a change that works on
+one but not the other is not done. Other operating systems are supported where they
+can be, never at the expense of these two.
 
 ## 9 — The vibe
 
