@@ -332,6 +332,24 @@ system, is supported alongside it with the same standing, so a change that works
 one but not the other is not done. Other operating systems are supported where they
 can be, never at the expense of these two.
 
+**8.i — the Sabbath** *(ratified by the merge that carried this entry)*: from
+sundown Friday to sundown Saturday, nothing in this family writes, merges, tests,
+or ships code — no exceptions, ever. This binds every loop, every storm, every
+pipeline, and every agent, human-directed or autonomous, that carries this canon:
+the merge train does not run, `promote-to-main` does not fire, a scheduled
+workflow that would land inside the window is held rather than silently skipped,
+and an interactive session asked to write code for this repository in that window
+declines and says why. Commandment IV asked that systems be built so a human need
+never be conscripted into an unattended answer at 3 a.m.; this doctrine keeps the
+same day for the machines themselves. Every job already on a queue waits exactly
+where 8.c and 8.e put it — idempotent under replay, its lease simply never claimed
+(10.f: paused, not failed, not silently dropped) — and resumes at the next
+sundown precisely where it stood, because nothing built under this canon was ever
+designed to lose work by resting (7.c: the ledger is append-only; a pause is
+recorded, not erased). Only the floor stands above this (Article I; SD-01 §1) —
+and the floor is life and law, never a deadline. A release that "must" ship
+inside the window ships after it instead.
+
 ## 9 — The vibe
 
 Never a drag. Full steam ahead: baffling momentum with green code.
