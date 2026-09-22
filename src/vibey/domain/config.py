@@ -199,11 +199,17 @@ class QwenloopConfig:
 
 @dataclass(frozen=True, slots=True)
 class TrackerConfig:
-    """`[tracker]`: the Issue Tracker surface (sovereign default: Plane)."""
+    """`[tracker]`: the Issue Tracker surface (sovereign default: Plane).
+
+    Plane's work-item routes are workspace-scoped
+    (`/api/v1/workspaces/{workspace_slug}/projects/{project_id}/work-items/`),
+    so both identifiers are required to address a project.
+    """
 
     url: str | None = None
     token: str | None = None
-    project_key: str | None = None
+    workspace_slug: str | None = None
+    project_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -487,7 +493,8 @@ def _parse_tracker(data: dict[str, Any]) -> TrackerConfig:
     return TrackerConfig(
         url=_optional(table, "url", "tracker.url", str, None),
         token=_optional(table, "token", "tracker.token", str, None),
-        project_key=_optional(table, "project_key", "tracker.project_key", str, None),
+        workspace_slug=_optional(table, "workspace_slug", "tracker.workspace_slug", str, None),
+        project_id=_optional(table, "project_id", "tracker.project_id", str, None),
     )
 
 

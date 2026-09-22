@@ -247,6 +247,82 @@ them into `VibeyConfig`, but nothing passes them to the runner.
 | `startup_timeout_seconds` | integer | `180` | Must be positive. |
 | `context_window` | integer | `32768` | Must be positive. |
 
+## Operational surfaces (sovereign defaults, declared-only paid relays)
+
+Each table is optional: an omitted table (or an omitted key) leaves the
+surface on its in-memory default, so a project runs with no external service
+configured at all. A real endpoint declares a self-hosted sovereign service
+(or a paid relay). `parse_config` validates all eight into `VibeyConfig`;
+`bootstrap.build_app` wires the concrete adapter only when every required key
+for that surface is present, otherwise the in-memory default.
+
+## `[tracker]` (sovereign default: Plane)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | Base URL of the Plane instance, e.g. `https://plane.example.com`. |
+| `token` | string | unset | API token (`X-API-Key`, or Bearer for OAuth). |
+| `workspace_slug` | string | unset | Workspace slug from the Plane URL, e.g. `my-team`. Required with `project_id`: Plane's work-item routes are workspace-scoped (`/api/v1/workspaces/{workspace_slug}/projects/{project_id}/work-items/`). |
+| `project_id` | string | unset | Plane project UUID. Required with `workspace_slug`. |
+
+## `[docs]` (sovereign default: BookStack)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | Base URL of the BookStack instance. |
+| `token_id` | string | unset | API token ID (`Token <id>:<secret>` auth). |
+| `token_secret` | string | unset | API token secret. |
+| `book_id` | integer | unset | Book pages are created under. Must be an integer, never a boolean. |
+
+## `[secrets]` (sovereign default: Bitwarden)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | Base URL of the Bitwarden Secrets Manager instance. |
+| `token` | string | unset | API access token. |
+
+## `[files]` (sovereign default: Nextcloud)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | Base URL of the Nextcloud instance (WebDAV). |
+| `user` | string | unset | WebDAV username. |
+| `password` | string | unset | WebDAV password or app token. |
+
+## `[email]` (sovereign default: Forward Email)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `smtp_host` | string | unset | SMTP relay host. |
+| `smtp_port` | integer | unset | `587` for STARTTLS submission, `465` for implicit TLS (`SMTP_SSL`). Must be an integer, never a boolean. |
+| `username` | string | unset | SMTP username (also the default sender). |
+| `password` | string | unset | SMTP password. Login and STARTTLS are skipped without it. |
+| `from_email` | string | unset | Sender address; defaults to `username`, then `vibey@localhost`. |
+
+## `[sms]` (sovereign default: Fossify Messages)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | SMS gateway endpoint posting JSON. |
+| `token` | string | unset | Bearer token; the `Authorization` header is omitted without it. |
+
+## `[messaging]` (sovereign default: Matrix)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | Base URL of the Matrix homeserver. |
+| `token` | string | unset | Access token (Bearer). |
+| `room_id` | string | unset | Default room, e.g. `!room:example.org`. |
+
+## `[config_store]` (sovereign default: Infisical)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | Base URL of the Infisical instance. |
+| `token` | string | unset | API access token (Bearer). |
+| `project_id` | string | unset | Infisical project ID. |
+| `environment` | string | `"dev"` | Environment slug secrets are read from and written to. |
+
 ## Skills context (project config record — not a `vibey.toml` table) { #skills_context }
 
 `VibeyConfig` has no `skills_context` field; a `[skills_context]` table in

@@ -744,12 +744,14 @@ async def build_app(
             resolved_config
             and resolved_config.tracker.url
             and resolved_config.tracker.token
-            and resolved_config.tracker.project_key
+            and resolved_config.tracker.workspace_slug
+            and resolved_config.tracker.project_id
         ):
             tracker_port: IssueTrackerPort = PlaneTrackerAdapter(
                 url=resolved_config.tracker.url,
                 token=resolved_config.tracker.token,
-                project_key=resolved_config.tracker.project_key,
+                workspace_slug=resolved_config.tracker.workspace_slug,
+                project_id=resolved_config.tracker.project_id,
             )
         else:
             tracker_port = InMemoryTracker()

@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from vibey.application.interfaces.files import FilesPort
@@ -22,7 +23,13 @@ class NextcloudFilesAdapter(FilesPort):
         self._opener = opener if opener is not None else urllib.request.urlopen
 
     def _dav_url(self, remote_path: str) -> str:
-        return f"{self._url}/remote.php/dav/files/{self._user}/{remote_path.lstrip('/')}"
+        # Quote each segment so spaces, `#` and other reserved characters
+        # survive as data; `/` separators are preserved by quoting per part.
+        encoded = "/".join(
+            urllib.parse.quote(part, safe="") for part in remote_path.lstrip("/").split("/")
+        )
+        user = urllib.parse.quote(self._user, safe="")
+        return f"{self._url}/remote.php/dav/files/{user}/{encoded}"
 
     def _headers(self) -> dict[str, str]:
         credentials = base64.b64encode(f"{self._user}:{self._password}".encode()).decode()

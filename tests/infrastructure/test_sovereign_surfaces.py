@@ -4,6 +4,7 @@ adapters, config parsing, and build_app wiring."""
 
 from __future__ import annotations
 
+import json
 import urllib.error
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -23,19 +24,51 @@ from vibey.bootstrap import build_app
 from vibey.domain.config import ConfigError, parse_config
 from vibey.infrastructure.config_store.in_memory import InMemoryConfigStore
 from vibey.infrastructure.config_store.infisical import InfisicalConfigStoreAdapter
+from vibey.infrastructure.config_store.interfaces.in_memory_interface import (
+    InMemoryConfigStoreInterface,
+)
+from vibey.infrastructure.config_store.interfaces.infisical_interface import (
+    InfisicalConfigStoreAdapterInterface,
+)
 from vibey.infrastructure.docs.bookstack import BookStackDocsAdapter
 from vibey.infrastructure.docs.in_memory import InMemoryDocs
+from vibey.infrastructure.docs.interfaces.bookstack_interface import (
+    BookStackDocsAdapterInterface,
+)
+from vibey.infrastructure.docs.interfaces.in_memory_interface import InMemoryDocsInterface
 from vibey.infrastructure.email.forward_email import ForwardEmailAdapter
 from vibey.infrastructure.email.in_memory import InMemoryEmail
+from vibey.infrastructure.email.interfaces.forward_email_interface import (
+    ForwardEmailAdapterInterface,
+)
+from vibey.infrastructure.email.interfaces.in_memory_interface import InMemoryEmailInterface
 from vibey.infrastructure.files.in_memory import InMemoryFiles
+from vibey.infrastructure.files.interfaces.in_memory_interface import InMemoryFilesInterface
+from vibey.infrastructure.files.interfaces.nextcloud_interface import (
+    NextcloudFilesAdapterInterface,
+)
 from vibey.infrastructure.files.nextcloud import NextcloudFilesAdapter
 from vibey.infrastructure.messaging.in_memory import InMemoryMessaging
+from vibey.infrastructure.messaging.interfaces.in_memory_interface import (
+    InMemoryMessagingInterface,
+)
+from vibey.infrastructure.messaging.interfaces.matrix_interface import (
+    MatrixMessagingAdapterInterface,
+)
 from vibey.infrastructure.messaging.matrix import MatrixMessagingAdapter
 from vibey.infrastructure.secrets.bitwarden import BitwardenSecretsAdapter
 from vibey.infrastructure.secrets.in_memory import InMemorySecrets
+from vibey.infrastructure.secrets.interfaces.bitwarden_interface import (
+    BitwardenSecretsAdapterInterface,
+)
+from vibey.infrastructure.secrets.interfaces.in_memory_interface import InMemorySecretsInterface
 from vibey.infrastructure.sms.fossify import FossifySmsAdapter
 from vibey.infrastructure.sms.in_memory import InMemorySms
+from vibey.infrastructure.sms.interfaces.fossify_interface import FossifySmsAdapterInterface
+from vibey.infrastructure.sms.interfaces.in_memory_interface import InMemorySmsInterface
 from vibey.infrastructure.tracker.in_memory import InMemoryTracker
+from vibey.infrastructure.tracker.interfaces.in_memory_interface import InMemoryTrackerInterface
+from vibey.infrastructure.tracker.interfaces.plane_interface import PlaneTrackerAdapterInterface
 from vibey.infrastructure.tracker.plane import PlaneTrackerAdapter
 
 # ----------------------------------------------------
@@ -46,6 +79,7 @@ from vibey.infrastructure.tracker.plane import PlaneTrackerAdapter
 @pytest.mark.asyncio
 async def test_in_memory_docs_satisfies_port() -> None:
     docs: DocsPort = InMemoryDocs()
+    assert isinstance(docs, InMemoryDocsInterface)
     page_id = await docs.create_page("Title", "<p>hello</p>")
     assert page_id == "1"
     concrete = docs  # type: ignore[assignment]
@@ -62,6 +96,7 @@ async def test_in_memory_docs_satisfies_port() -> None:
 @pytest.mark.asyncio
 async def test_in_memory_secrets_satisfies_port() -> None:
     secrets: SecretsPort = InMemorySecrets()
+    assert isinstance(secrets, InMemorySecretsInterface)
     with pytest.raises(KeyError):
         await secrets.get_secret("absent")
     await secrets.set_secret("api_key", "s3cret")
@@ -71,6 +106,7 @@ async def test_in_memory_secrets_satisfies_port() -> None:
 @pytest.mark.asyncio
 async def test_in_memory_files_satisfies_port() -> None:
     files: FilesPort = InMemoryFiles()
+    assert isinstance(files, InMemoryFilesInterface)
     locator = await files.upload_file("reports/a.bin", b"payload")
     assert locator == "memory://reports/a.bin"
     assert await files.download_file("reports/a.bin") == b"payload"
@@ -81,6 +117,7 @@ async def test_in_memory_files_satisfies_port() -> None:
 @pytest.mark.asyncio
 async def test_in_memory_email_satisfies_port() -> None:
     email: EmailPort = InMemoryEmail()
+    assert isinstance(email, InMemoryEmailInterface)
     await email.send_email("ops@example.com", "Deploy", "done")
     assert email.sent == [  # type: ignore[attr-defined]
         {"to": "ops@example.com", "subject": "Deploy", "body": "done"}
@@ -90,6 +127,7 @@ async def test_in_memory_email_satisfies_port() -> None:
 @pytest.mark.asyncio
 async def test_in_memory_sms_satisfies_port() -> None:
     sms: SmsPort = InMemorySms()
+    assert isinstance(sms, InMemorySmsInterface)
     await sms.send_sms("+15551234567", "build green")
     assert sms.sent_sms == [  # type: ignore[attr-defined]
         {"phone_number": "+15551234567", "message": "build green"}
@@ -99,6 +137,7 @@ async def test_in_memory_sms_satisfies_port() -> None:
 @pytest.mark.asyncio
 async def test_in_memory_messaging_satisfies_port() -> None:
     messaging: MessagingPort = InMemoryMessaging()
+    assert isinstance(messaging, InMemoryMessagingInterface)
     await messaging.send_message("!room:example.com", "ship it")
     assert messaging.sent == [  # type: ignore[attr-defined]
         {"channel_id": "!room:example.com", "message": "ship it"}
@@ -108,6 +147,7 @@ async def test_in_memory_messaging_satisfies_port() -> None:
 @pytest.mark.asyncio
 async def test_in_memory_tracker_satisfies_port() -> None:
     tracker: IssueTrackerPort = InMemoryTracker()
+    assert isinstance(tracker, InMemoryTrackerInterface)
     ticket_id = await tracker.create_ticket("Broken build", "CI is red")
     assert ticket_id == "TICKET-1"
     assert await tracker.get_ticket_status(ticket_id) == "open"
@@ -118,6 +158,7 @@ async def test_in_memory_tracker_satisfies_port() -> None:
 @pytest.mark.asyncio
 async def test_in_memory_config_store_satisfies_port() -> None:
     store: ConfigStorePort = InMemoryConfigStore()
+    assert isinstance(store, InMemoryConfigStoreInterface)
     with pytest.raises(KeyError):
         await store.get_config("missing")
     await store.create_config("deploy_target", "openstack")
@@ -146,11 +187,15 @@ async def test_bookstack_adapter_roundtrip() -> None:
     adapter = BookStackDocsAdapter(
         url="http://bookstack", token_id="tid", token_secret="tsec", book_id=7, opener=opener
     )
+    assert isinstance(adapter, BookStackDocsAdapterInterface)
     page_id = await adapter.create_page("Runbook", "<h1>hi</h1>")
     assert page_id == "42"
     sent = opener.call_args[0][0]
     assert sent.get_method() == "POST"
     assert sent.get_header("Authorization") == "Token tid:tsec"
+    # BookStack's page API takes `name` + `html`, not `title`/`content`.
+    body = json.loads(sent.data.decode("utf-8"))
+    assert body == {"book_id": 7, "name": "Runbook", "html": "<h1>hi</h1>"}
 
     update_opener = MagicMock(return_value=_mock_response())
     adapter2 = BookStackDocsAdapter(
@@ -160,6 +205,8 @@ async def test_bookstack_adapter_roundtrip() -> None:
     sent = update_opener.call_args[0][0]
     assert sent.get_method() == "PUT"
     assert sent.get_header("Authorization") == "Token tid:tsec"
+    assert sent.full_url == "http://bookstack/api/pages/42"
+    assert json.loads(sent.data.decode("utf-8")) == {"html": "<h1>next</h1>"}
 
 
 @pytest.mark.asyncio
@@ -179,6 +226,7 @@ async def test_bitwarden_adapter_roundtrip() -> None:
         token="tok",
         opener=MagicMock(return_value=_mock_response(b'{"value": "p"}')),
     )
+    assert isinstance(adapter, BitwardenSecretsAdapterInterface)
     assert await adapter.get_secret("db") == "p"
 
     missing = urllib.error.HTTPError("http://x", 404, "nope", {}, None)
@@ -207,6 +255,7 @@ async def test_nextcloud_adapter_roundtrip() -> None:
     adapter = NextcloudFilesAdapter(
         url="http://cloud", user="u", password="p", opener=upload_opener
     )
+    assert isinstance(adapter, NextcloudFilesAdapterInterface)
     locator = await adapter.upload_file("docs/a.txt", b"hi")
     assert locator.startswith("http://cloud/remote.php/dav/files/u/")
 
@@ -246,6 +295,7 @@ async def test_forward_email_adapter_sends_via_smtp() -> None:
         password="pw",
         from_email="vibey@example.com",
     )
+    assert isinstance(adapter, ForwardEmailAdapterInterface)
     mock_smtp = MagicMock()
     mock_smtp.__enter__.return_value = mock_smtp
     with patch("smtplib.SMTP", return_value=mock_smtp):
@@ -266,6 +316,7 @@ async def test_forward_email_adapter_sends_via_smtp() -> None:
 @pytest.mark.asyncio
 async def test_fossify_sms_adapter_posts_json() -> None:
     adapter = FossifySmsAdapter(url="http://sms.local/api", token="tok")
+    assert isinstance(adapter, FossifySmsAdapterInterface)
     with patch("urllib.request.urlopen", return_value=_mock_response()) as opener:
         await adapter.send_sms("+10000000000", "ping")
         sent = opener.call_args[0][0]
@@ -283,6 +334,7 @@ async def test_fossify_sms_adapter_posts_json() -> None:
 async def test_matrix_adapter_sends_room_message() -> None:
     opener = MagicMock(return_value=_mock_response())
     adapter = MatrixMessagingAdapter(url="http://matrix", token="tok", opener=opener)
+    assert isinstance(adapter, MatrixMessagingAdapterInterface)
     await adapter.send_message("!room:example.org", "hello")
     sent = opener.call_args[0][0]
     assert sent.get_method() == "PUT"
@@ -294,33 +346,63 @@ async def test_matrix_adapter_sends_room_message() -> None:
 async def test_plane_adapter_create_and_status() -> None:
     create_opener = MagicMock(return_value=_mock_response(b'{"id": "iss-1"}'))
     adapter = PlaneTrackerAdapter(
-        url="http://plane", token="tok", project_key="PROJ", opener=create_opener
+        url="http://plane",
+        token="tok",
+        workspace_slug="my-team",
+        project_id="pid",
+        opener=create_opener,
     )
+    assert isinstance(adapter, PlaneTrackerAdapterInterface)
     ticket_id = await adapter.create_ticket("Bug", "steps")
     assert ticket_id == "iss-1"
+    sent = create_opener.call_args[0][0]
+    assert sent.get_method() == "POST"
+    # Workspace-scoped work-item route, `name` field (per Plane API reference).
+    assert sent.full_url == "http://plane/api/v1/workspaces/my-team/projects/pid/work-items/"
+    assert json.loads(sent.data.decode("utf-8")) == {"name": "Bug", "description": "steps"}
 
     status_opener = MagicMock(return_value=_mock_response(b'{"state": {"name": "In Progress"}}'))
     adapter2 = PlaneTrackerAdapter(
-        url="http://plane", token="tok", project_key="PROJ", opener=status_opener
+        url="http://plane",
+        token="tok",
+        workspace_slug="my-team",
+        project_id="pid",
+        opener=status_opener,
     )
     assert await adapter2.get_ticket_status("iss-1") == "In Progress"
+    assert (
+        status_opener.call_args[0][0].full_url
+        == "http://plane/api/v1/workspaces/my-team/projects/pid/work-items/iss-1/"
+    )
 
     missing = urllib.error.HTTPError("http://x", 404, "nope", {}, None)
     adapter_404 = PlaneTrackerAdapter(
-        url="http://plane", token="tok", project_key="PROJ", opener=_raising_opener(missing)
+        url="http://plane",
+        token="tok",
+        workspace_slug="my-team",
+        project_id="pid",
+        opener=_raising_opener(missing),
     )
     with pytest.raises(KeyError):
         await adapter_404.get_ticket_status("gone")
 
     err = urllib.error.HTTPError("http://x", 500, "boom", {}, None)
     adapter_500 = PlaneTrackerAdapter(
-        url="http://plane", token="tok", project_key="PROJ", opener=_raising_opener(err)
+        url="http://plane",
+        token="tok",
+        workspace_slug="my-team",
+        project_id="pid",
+        opener=_raising_opener(err),
     )
     with pytest.raises(RuntimeError):
         await adapter_500.get_ticket_status("boom")
 
     adapter_500_create = PlaneTrackerAdapter(
-        url="http://plane", token="tok", project_key="PROJ", opener=_raising_opener(err)
+        url="http://plane",
+        token="tok",
+        workspace_slug="my-team",
+        project_id="pid",
+        opener=_raising_opener(err),
     )
     with pytest.raises(RuntimeError):
         await adapter_500_create.create_ticket("t", "d")
@@ -330,13 +412,21 @@ async def test_plane_adapter_create_and_status() -> None:
 async def test_plane_adapter_alternate_state_shapes() -> None:
     name_opener = MagicMock(return_value=_mock_response(b'{"name": "Done"}'))
     adapter = PlaneTrackerAdapter(
-        url="http://plane", token="tok", project_key="PROJ", opener=name_opener
+        url="http://plane",
+        token="tok",
+        workspace_slug="my-team",
+        project_id="pid",
+        opener=name_opener,
     )
     assert await adapter.get_ticket_status("iss-2") == "Done"
 
     empty_opener = MagicMock(return_value=_mock_response(b"{}"))
     adapter2 = PlaneTrackerAdapter(
-        url="http://plane", token="tok", project_key="PROJ", opener=empty_opener
+        url="http://plane",
+        token="tok",
+        workspace_slug="my-team",
+        project_id="pid",
+        opener=empty_opener,
     )
     assert await adapter2.get_ticket_status("iss-3") == "unknown"
 
@@ -352,7 +442,12 @@ def test_parse_all_surface_tables() -> None:
     cfg = parse_config(
         {
             **_MINIMAL,
-            "tracker": {"url": "http://plane", "token": "t", "project_key": "PROJ"},
+            "tracker": {
+                "url": "http://plane",
+                "token": "t",
+                "workspace_slug": "my-team",
+                "project_id": "pid",
+            },
             "docs": {
                 "url": "http://bookstack",
                 "token_id": "tid",
@@ -378,7 +473,8 @@ def test_parse_all_surface_tables() -> None:
             },
         }
     )
-    assert cfg.tracker.project_key == "PROJ"
+    assert cfg.tracker.workspace_slug == "my-team"
+    assert cfg.tracker.project_id == "pid"
     assert cfg.docs.book_id == 9
     assert cfg.secrets.url == "http://vault"
     assert cfg.files.user == "u"
@@ -480,7 +576,9 @@ async def test_build_app_wires_concrete_adapters_from_config() -> None:
 
     cfg = VibeyConfig(
         project=ProjectConfig(name="demo"),
-        tracker=TrackerConfig(url="http://plane", token="t", project_key="PROJ"),
+        tracker=TrackerConfig(
+            url="http://plane", token="t", workspace_slug="my-team", project_id="pid"
+        ),
         docs=DocsConfig(url="http://bs", token_id="i", token_secret="s", book_id=3),
         secrets=SecretsConfig(url="http://bw", token="t"),
         files=FilesConfig(url="http://nc", user="u", password="p"),
@@ -525,6 +623,7 @@ async def test_infisical_adapter_roundtrip() -> None:
         opener=get_opener,
     )
     assert await adapter.get_config("api_key") == "prod-value"
+    assert isinstance(adapter, InfisicalConfigStoreAdapterInterface)
     sent = get_opener.call_args[0][0]
     assert sent.get_method() == "GET"
     assert sent.get_header("Authorization") == "Bearer tok"
@@ -546,8 +645,6 @@ async def test_infisical_adapter_create_config() -> None:
     sent = create_opener.call_args[0][0]
     assert sent.get_method() == "POST"
     assert sent.get_header("Authorization") == "Bearer tok"
-    import json
-
     body = json.loads(sent.data.decode())
     assert body["secretValue"] == "new_value"
     assert body["projectId"] == "pid"
@@ -650,3 +747,55 @@ async def test_infisical_adapter_create_error_read_exception() -> None:
     )
     with pytest.raises(RuntimeError):
         await adapter.create_config("key", "val")
+
+
+@pytest.mark.asyncio
+async def test_forward_email_adapter_uses_implicit_tls_on_port_465() -> None:
+    """Port 465 is implicit TLS: the adapter must open SMTP_SSL, never plaintext SMTP."""
+    adapter = ForwardEmailAdapter(smtp_host="smtp", smtp_port=465, username="u", password="p")
+    mock_ssl = MagicMock()
+    mock_ssl.__enter__.return_value = mock_ssl
+    with (
+        patch("smtplib.SMTP_SSL", return_value=mock_ssl) as ssl_cls,
+        patch("smtplib.SMTP") as smtp_cls,
+    ):
+        await adapter.send_email("to@example.com", "s", "b")
+    ssl_cls.assert_called_once_with("smtp", 465)
+    smtp_cls.assert_not_called()
+    mock_ssl.login.assert_called_once_with("u", "p")
+    mock_ssl.send_message.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_nextcloud_adapter_percent_encodes_remote_paths() -> None:
+    """Spaces and reserved characters in a remote path must not break the DAV URL."""
+    opener = MagicMock(return_value=_mock_response())
+    adapter = NextcloudFilesAdapter(url="http://cloud", user="u", password="p", opener=opener)
+    locator = await adapter.upload_file("docs/my report #1.txt", b"hi")
+    assert locator == "http://cloud/remote.php/dav/files/u/docs/my%20report%20%231.txt"
+    assert "%20" in opener.call_args[0][0].full_url
+    assert " " not in opener.call_args[0][0].full_url
+
+
+@pytest.mark.asyncio
+async def test_matrix_adapter_uses_a_unique_transaction_id_per_send() -> None:
+    """A repeated message must not reuse a transaction ID (Matrix would drop it)."""
+    opener = MagicMock(return_value=_mock_response())
+    adapter = MatrixMessagingAdapter(url="http://matrix", token="tok", opener=opener)
+    await adapter.send_message("!room:example.org", "same message")
+    await adapter.send_message("!room:example.org", "same message")
+    first = opener.call_args_list[0][0][0].full_url
+    second = opener.call_args_list[1][0][0].full_url
+    assert first != second
+
+
+@pytest.mark.asyncio
+async def test_forward_email_adapter_465_without_password_skips_login() -> None:
+    """Implicit TLS without credentials sends anonymously (no login attempt)."""
+    adapter = ForwardEmailAdapter(smtp_host="smtp", smtp_port=465)
+    mock_ssl = MagicMock()
+    mock_ssl.__enter__.return_value = mock_ssl
+    with patch("smtplib.SMTP_SSL", return_value=mock_ssl):
+        await adapter.send_email("to@example.com", "s", "b")
+    mock_ssl.login.assert_not_called()
+    mock_ssl.send_message.assert_called_once()

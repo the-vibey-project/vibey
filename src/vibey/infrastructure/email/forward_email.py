@@ -38,6 +38,15 @@ class ForwardEmailAdapter(EmailPort):
         await asyncio.to_thread(self._send_sync, message)
 
     def _send_sync(self, message: EmailMessage) -> None:
+        # Port 465 is implicit TLS: opening plain SMTP there fails the
+        # handshake (or greets in plaintext). STARTTLS is only for submission
+        # ports such as 587.
+        if self._smtp_port == 465:
+            with smtplib.SMTP_SSL(self._smtp_host, self._smtp_port) as server:
+                if self._password:
+                    server.login(self._username or "", self._password)
+                server.send_message(message)
+            return
         with smtplib.SMTP(self._smtp_host, self._smtp_port) as server:
             server.ehlo()
             if self._password:

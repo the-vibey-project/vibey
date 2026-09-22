@@ -41,7 +41,9 @@ class BookStackDocsAdapter(DocsPort):
         return await asyncio.to_thread(self._create_sync, title, content)
 
     def _create_sync(self, title: str, content: str) -> str:
-        payload = json.dumps({"title": title, "content": content, "book_id": self._book_id}).encode(
+        # BookStack's page API names the fields `name` and `html`/`markdown`
+        # (verified against the API docs): `title`/`content` would 422.
+        payload = json.dumps({"book_id": self._book_id, "name": title, "html": content}).encode(
             "utf-8"
         )
         req = urllib.request.Request(  # nosec B310 - https-only endpoints are config
@@ -58,10 +60,9 @@ class BookStackDocsAdapter(DocsPort):
         await asyncio.to_thread(self._update_sync, page_id, content)
 
     def _update_sync(self, page_id: str, content: str) -> None:
-        existing_title = f"page {page_id}"
-        payload = json.dumps(
-            {"title": existing_title, "content": content, "book_id": self._book_id}
-        ).encode("utf-8")
+        # Update takes the same field names; `html` alone is a valid partial
+        # update, and this seam never invents a title it was not given.
+        payload = json.dumps({"html": content}).encode("utf-8")
         req = urllib.request.Request(  # nosec B310 - https-only endpoints are config
             f"{self._url}/api/pages/{page_id}",
             data=payload,

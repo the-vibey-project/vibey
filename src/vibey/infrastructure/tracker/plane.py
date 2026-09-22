@@ -20,12 +20,14 @@ class PlaneTrackerAdapter(IssueTrackerPort):
         *,
         url: str,
         token: str,
-        project_key: str,
+        workspace_slug: str,
+        project_id: str,
         opener: object | None = None,
     ) -> None:
         self._url = url.rstrip("/")
         self._token = token
-        self._project_key = project_key
+        self._workspace_slug = workspace_slug
+        self._project_id = project_id
         self._opener = opener if opener is not None else urllib.request.urlopen
 
     def _headers(self) -> dict[str, str]:
@@ -35,13 +37,22 @@ class PlaneTrackerAdapter(IssueTrackerPort):
             "Accept": "application/json",
         }
 
+    def _work_items_url(self) -> str:
+        # Plane's work-item routes are workspace-scoped (verified against the
+        # API reference): /api/v1/workspaces/{workspace_slug}/projects/
+        # {project_id}/work-items/. The field is `name`, per the same docs.
+        return (
+            f"{self._url}/api/v1/workspaces/{self._workspace_slug}"
+            f"/projects/{self._project_id}/work-items/"
+        )
+
     async def create_ticket(self, title: str, description: str) -> str:
         return await asyncio.to_thread(self._create_sync, title, description)
 
     def _create_sync(self, title: str, description: str) -> str:
         payload = json.dumps({"name": title, "description": description}).encode("utf-8")
         req = urllib.request.Request(  # nosec B310 - https-only endpoints are config
-            f"{self._url}/api/v1/projects/{self._project_key}/issues/",
+            self._work_items_url(),
             data=payload,
             headers=self._headers(),
             method="POST",
@@ -58,7 +69,7 @@ class PlaneTrackerAdapter(IssueTrackerPort):
 
     def _status_sync(self, ticket_id: str) -> str:
         req = urllib.request.Request(  # nosec B310 - https-only endpoints are config
-            f"{self._url}/api/v1/issues/{ticket_id}/",
+            f"{self._work_items_url()}{ticket_id}/",
             headers=self._headers(),
             method="GET",
         )
