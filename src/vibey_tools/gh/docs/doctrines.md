@@ -90,6 +90,26 @@ and people's private details are redacted where they would appear, and the redac
 is itself recorded — never a silent omission. The ledger stays append-only:
 completeness grows by new events, never by rewriting old ones.
 
+**7.d — the findable word** *(ratified by the merge that carried this entry)*: every
+word of copy this project publishes is fully optimized to be found — by the search
+engines and by the AI readers that now do most of the finding; SEO and LEO both — at
+all times, on every surface, no exceptions. Every README, landing page, documentation
+page, reference, guide, book, paper, package listing, release note, changelog entry,
+repository description and topic list, every title, heading, link text, image alt
+text and social card is written and structured so that what it describes can be found
+by someone who does not yet know its name: real titles and descriptions rather than
+placeholders, headings that say what the section holds, terms spelled the way a
+stranger would search for them, every claim quotable in isolation so a retrieval
+system can carry it away whole, and the machine-readable layer — keywords,
+classifiers, topics, canonical links, structured data, sitemaps, llms.txt — declared
+in the repository and reconciled from it (12.c), never set by hand, never left to
+drift. The ordering this doctrine fixes stands over all of it: the human reader
+first, the AI reader second, business needs absolutely last — so nothing is
+keyword-stuffed, padded, or retitled into vagueness for rank, and copy that would
+have to read worse to rank better stays as it is and ranks on its merits.
+Optimization means the same truth made findable, never different words made hollow.
+Work nobody can find is indistinguishable from work nobody did.
+
 ## 8 — Local authority
 
 When paid credits run out, local is the source of truth: green local work reaches
