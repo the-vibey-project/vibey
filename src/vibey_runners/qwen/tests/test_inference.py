@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import asyncio
 import io
 import json
 import urllib.error
@@ -6,7 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from qwenloop.domain.model import Backend, ChatMessage, ServerInfo
+from qwenloop.domain.interfaces.class_contracts import ToolCallParseErrorInterface
+from qwenloop.domain.model import Backend, ChatMessage, ServerInfo, ToolCallParseError
 from qwenloop.infrastructure.inference import (
     LlamaCppServer,
     OpenAICompatServer,
@@ -69,6 +71,7 @@ async def test_openai_health_and_chat(monkeypatch: pytest.MonkeyPatch, tmp_path:
         assert {tool["function"]["name"] for tool in body["tools"]} == {
             "read_file",
             "write_file",
+            "edit_file",
             "shell",
         }
         return UrlResponse(json.dumps(payload).encode())
@@ -662,3 +665,147 @@ async def test_managed_chat_falls_back_to_the_profile_name(
     _ = [chunk async for chunk in LlamaCppServer(tmp_path).chat_stream(legacy, [])]
     assert json.loads(fake.requests[0].data)["model"] == PORTABLE.name  # type: ignore[attr-defined]
     assert fake.requests[0].get_header("Authorization") == "Bearer t"  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("configured", [900, 45.0, None])
+async def test_chat_stream_waits_the_request_timeout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, configured: float | None
+) -> None:
+    """#345: the chat request waits `request_timeout_seconds`, not a fixed 300 s."""
+    seen: list[object] = []
+    reply = {"choices": [{"message": {"content": "ok"}}], "usage": {}}
+
+    def urlopen(request: object, timeout: object = None) -> io.BytesIO:
+        seen.append(timeout)
+        return io.BytesIO(json.dumps(reply).encode())
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    server = LlamaCppServer(tmp_path)
+    server.request_timeout_seconds = configured
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://local/v1", True, True, 1, "t")
+    async for _ in server.chat_stream(info, [ChatMessage("user", "hi")]):
+        pass
+    assert seen == [configured]
+
+
+def test_the_default_request_timeout_is_the_idle_timeout_default() -> None:
+    assert OpenAICompatServer("http://127.0.0.1:11434/v1", "m").request_timeout_seconds == 900
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_passes_the_servers_own_timings_through(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    timings = {
+        "prompt_n": 812,
+        "cache_n": 4096,
+        "prompt_ms": 950.5,
+        "predicted_n": 64,
+        "predicted_ms": 1200.0,
+        "predicted_per_second": 53.3,
+        "predicted_per_token_ms": 18.75,  # not one a run is tuned by: dropped
+        "draft_n": True,  # a flag, not a number: dropped
+    }
+    monkeypatch.setattr(
+        "urllib.request.urlopen", Recorder({"completions": {**CHAT_REPLY, "timings": timings}})
+    )
+    server = LlamaCppServer()
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1:9/v1", True, True)
+    chunks = [chunk async for chunk in server.chat_stream(info, [ChatMessage("user", "hi")])]
+    assert chunks[-1].timings == {
+        "prompt_n": 812.0,
+        "cache_n": 4096.0,
+        "prompt_ms": 950.5,
+        "predicted_n": 64.0,
+        "predicted_ms": 1200.0,
+        "predicted_per_second": 53.3,
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("timings", [None, "fast", {}, {"unrelated": 1}])
+async def test_chat_stream_invents_no_timings(
+    monkeypatch: pytest.MonkeyPatch, timings: object
+) -> None:
+    reply = dict(CHAT_REPLY) if timings is None else {**CHAT_REPLY, "timings": timings}
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"completions": reply}))
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1:9/v1", True, True)
+    chunks = [
+        chunk async for chunk in LlamaCppServer().chat_stream(info, [ChatMessage("user", "hi")])
+    ]
+    assert chunks[-1].timings is None
+
+
+@pytest.mark.asyncio
+async def test_managed_server_logs_to_a_file_and_records_redacted_settings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    model = tmp_path / "models" / PORTABLE.name / str(PORTABLE.filename)
+    model.parent.mkdir(parents=True)
+    model.write_bytes(b"x")
+    # A stand-in llama-server: prints one line on each stream, then exits.
+    binary = tmp_path / "fake-llama-server"
+    binary.write_text("#!/bin/sh\necho 'model loaded'\necho 'slot 0 ready' >&2\n")
+    binary.chmod(0o755)
+    monkeypatch.setattr("qwenloop.infrastructure.inference._free_port", lambda: 1234)
+    server = LlamaCppServer(tmp_path)
+    server.binary = str(binary)
+    info = await server.start(PORTABLE)
+    token = info.token
+    for _ in range(100):
+        log = Path(info.log_path)
+        if log.is_file() and "slot 0 ready" in log.read_text():
+            break
+        await asyncio.sleep(0.05)
+    assert Path(info.log_path) == tmp_path / "servers" / PORTABLE.name / "server.log"
+    assert "model loaded" in Path(info.log_path).read_text()
+    assert info.argv[0] == str(binary)
+    assert "<redacted>" in info.argv
+    assert token and token not in info.argv
+    inspected = server.inspect(PORTABLE)
+    assert inspected is not None
+    assert inspected.argv == info.argv
+    assert inspected.log_path == info.log_path
+
+
+def _server_error(body: dict[str, object], code: int = 500):  # type: ignore[no-untyped-def]
+    payload = json.dumps(body).encode()
+
+    def urlopen(request, timeout):  # type: ignore[no-untyped-def]
+        del timeout
+        raise urllib.error.HTTPError(request.full_url, code, "error", {}, io.BytesIO(payload))
+
+    return urlopen
+
+
+@pytest.mark.asyncio
+async def test_an_unparseable_tool_call_is_its_own_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    raw = "error parsing tool call: raw='The search tool does not exist', err=invalid character"
+    monkeypatch.setattr("urllib.request.urlopen", _server_error({"error": {"message": raw}}))
+    info = ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:11434/v1", False, True)
+    with pytest.raises(ToolCallParseError) as caught:
+        async for _ in LlamaCppServer().chat_stream(info, [ChatMessage("user", "x")]):
+            pass
+    assert caught.value.detail == f"HTTP 500: {raw}"
+    # still a RuntimeError, so a caller that does not retry is unchanged
+    assert isinstance(caught.value, RuntimeError)
+    assert isinstance(caught.value, ToolCallParseErrorInterface)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("code", "message"),
+    [(500, "model runner has unexpectedly stopped"), (400, "error parsing tool call: raw='x'")],
+)
+async def test_other_server_errors_are_not_retryable(
+    monkeypatch: pytest.MonkeyPatch, code: int, message: str
+) -> None:
+    monkeypatch.setattr(
+        "urllib.request.urlopen", _server_error({"error": {"message": message}}, code)
+    )
+    info = ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:11434/v1", False, True)
+    with pytest.raises(RuntimeError, match=message) as caught:
+        async for _ in LlamaCppServer().chat_stream(info, [ChatMessage("user", "x")]):
+            pass
+    assert not isinstance(caught.value, ToolCallParseError)

@@ -499,7 +499,7 @@ class PrAutomationFallbackConfig:
 
     enabled: bool = True
     runner_label: str = "vibey-local"
-    model: str = "qwen2.5-coder:14b"
+    model: str = "gpt-oss:20b"
     base_url: str = "http://127.0.0.1:11434"
     trusted_only: bool = True
     max_diff_chars: int = 60000
@@ -1751,7 +1751,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         fallback=PrAutomationFallbackConfig(
             enabled=fallback.get("enabled", True),
             runner_label=fallback.get("runner_label", "vibey-local"),
-            model=fallback.get("model", "qwen2.5-coder:14b"),
+            model=fallback.get("model", "gpt-oss:20b"),
             base_url=fallback.get("base_url", "http://127.0.0.1:11434"),
             trusted_only=fallback.get("trusted_only", True),
             max_diff_chars=fallback.get("max_diff_chars", 60000),

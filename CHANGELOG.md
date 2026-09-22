@@ -12,14 +12,42 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ## [Unreleased]
 
+### BREAKING CHANGES
+
+* **engines:** this era's default local model is `gpt-oss:20b` (sub-doctrine 8.d). vibey's
+  Ollama default, qwenloop's endpoint default and the Helm chart's `ollama.model` all name it.
+  An install that never set a model now asks Ollama for `gpt-oss:20b` instead of
+  `qwen2.5-coder:14b`: run `ollama pull gpt-oss:20b`, or set `VIBEY_OLLAMA_MODEL`,
+  `QWENLOOP_MODEL` or `ollama.model` to keep the old one. vibey reads only a reply's
+  `message.content`, never GPT-OSS's separate `thinking` channel ([#387](https://github.com/the-vibey-project/vibey/issues/387))
+* **qwenloop:** with nothing configured, qwenloop attaches to a running local Ollama instead of
+  starting its own llama.cpp server. Set `backend = "llama.cpp"` to keep the old behaviour ([#388](https://github.com/the-vibey-project/vibey/issues/388))
+* **vibey_gh:** the local review fallback and `vibey-gh fit` default to `gpt-oss:20b`; the rendered
+  review workflows name it too. `[pr_automation.fallback] model` or `--model` keeps another ([#389](https://github.com/the-vibey-project/vibey/issues/389))
+* **cli:** DESIGN and DECOMPOSE default to the sovereign `qwenloop` provider when `--provider` is
+  not given (sub-doctrine 8.a) ([#322](https://github.com/the-vibey-project/vibey/issues/322))
+
 ### Added
 
+* **qwenloop:** an `edit_file` tool that replaces exactly one match; `write_file` refuses to
+  shrink an existing file of 40 or more lines by more than half ([#346](https://github.com/the-vibey-project/vibey/issues/346))
+* **qwenloop:** every `turn.completed` event records `started_at`, `ended_at`, `duration_ms`,
+  `model_ms` and the model server's own timings; the managed server writes to `server.log`
+  instead of `/dev/null`, and `meta.json` records the settings a run used, with its API key
+  redacted (sub-doctrine 8.g) ([#382](https://github.com/the-vibey-project/vibey/issues/382))
 * **vibey_gh:** `vibey-gh`'s PR automation is split into two workflows — `PR evaluate`
   (`pr-evaluate.yml`, publishes `PR evaluate / gate`) and `PR review` (`pr-review.yml`,
   publishes `PR review / gate`) — so a red gate names its failing task instead of hiding
   behind one ambiguous `PR automation / gate` check. The scan gate lists the failing
   checks in its title; the review gate certifies the exact-head review verdict; the merge
   train requires both.
+
+### Fixed
+
+* **qwenloop:** a model request waits `idle_timeout_seconds` (default 900; 0 waits
+  indefinitely) instead of a hard-coded 300 s ([#345](https://github.com/the-vibey-project/vibey/issues/345))
+* **qwenloop:** an HTTP 500 "error parsing tool call" no longer ends a run: the turn is retried
+  up to three times with a correction, each retry recorded as `turn.retried` ([#386](https://github.com/the-vibey-project/vibey/issues/386))
 
 ## [2.0.0] (2026-09-21)
 

@@ -434,7 +434,7 @@ def test_the_journal_is_chosen_like_the_fits(repo, capsys):
             "payload_bytes": 8192,
             "elapsed_s": 42.0,
             "concurrent": 1,
-            "model": "qwen2.5-coder:14b",
+            "model": "gpt-oss:20b",
         },
     )
     main(["estimate", "--operation", "install", "--journal", str(journal), "--json"])

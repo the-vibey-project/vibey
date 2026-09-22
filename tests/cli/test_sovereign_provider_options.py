@@ -258,7 +258,7 @@ def test_an_invalid_plan_leaves_nothing_enqueued(tmp_path: Path) -> None:
         res = runner.invoke(app, ["worker", "--once", "--provider", "qwenloop"])
 
     assert res.exit_code == 0, res.output
-    assert ollama.requests[0]["model"] == "qwen2.5-coder:14b"
+    assert ollama.requests[0]["model"] == "gpt-oss:20b"
     rows = asyncio.run(
         _rows(
             "SELECT kind, state, last_error FROM job WHERE project_id = $1 ORDER BY created_at",
@@ -448,3 +448,37 @@ def test_both_commands_document_the_model_option() -> None:
         assert res.exit_code == 0
         assert "--ollama-model" in res.output
         assert "VIBEY_OLLAMA_MODEL" in res.output
+
+
+@pytest.mark.usefixtures("_sovereign_env")
+def test_work_is_sovereign_by_default_with_no_local_switch(tmp_path: Path) -> None:
+    """#322 (sub-doctrine 8.b): the sovereign pair is always on, so with no --provider and
+    no local engine switched on, `vibey work` still runs DESIGN on the sovereign provider --
+    visible as the research floor's park, which only the sovereign provider raises."""
+    project_id = asyncio.run(_seed_research(tmp_path))
+
+    res = runner.invoke(app, ["work", str(project_id)])
+
+    assert res.exit_code == 0, res.output
+    (job,) = asyncio.run(_rows("SELECT state FROM job WHERE project_id = $1", project_id))
+    assert job["state"] == "awaiting_human"
+    (gate,) = asyncio.run(_rows("SELECT kind FROM human_gate WHERE project_id = $1", project_id))
+    assert gate["kind"] == "research_evidence"
+
+
+def test_the_unknown_provider_message_names_every_provider() -> None:
+    from vibey.cli.main import _PROVIDERS, _UNKNOWN_PROVIDER
+
+    assert _UNKNOWN_PROVIDER == (
+        "provider must be 'scripted', 'claudeloop', 'qwenloop', or 'opencode'"
+    )
+    assert all(f"'{name}'" in _UNKNOWN_PROVIDER for name in _PROVIDERS)
+
+
+def test_work_names_every_provider_when_the_provider_is_unknown(tmp_path: Path) -> None:
+    project_id = asyncio.run(_seed_research(tmp_path))
+
+    res = runner.invoke(app, ["work", str(project_id), "--provider", "bogus"])
+
+    assert res.exit_code != 0
+    assert "provider must be 'scripted', 'claudeloop', 'qwenloop', or 'opencode'" in res.output

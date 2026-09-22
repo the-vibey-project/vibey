@@ -1612,7 +1612,7 @@ def main(argv: list[str] | None = None) -> int:
         "fit",
         help="the fit calculus (#263): both sides measured, the projection stated",
     )
-    ft.add_argument("--model", default="qwen2.5-coder:14b", help="the model actually wanted")
+    ft.add_argument("--model", default="gpt-oss:20b", help="the model actually wanted")
     ft.add_argument("--queue", type=int, default=0, help="jobs already ahead of this one")
     ft.add_argument("--payload-bytes", type=int, default=8192, help="size of the work")
     ft.add_argument("--deadline", type=float, default=900.0, help="the caller's deadline")

@@ -154,7 +154,7 @@ kind: Job
 metadata:
   # Named after its own pod template (see vibey.ollamaPullTemplate), and
   # truncated so the hash always survives inside the 63-character limit.
-  name: vibey-vibey-ollama-pull-615461b2fb
+  name: vibey-vibey-ollama-pull-ba8d50ea71
   labels:
     app.kubernetes.io/name: vibey
     app.kubernetes.io/instance: vibey
@@ -202,7 +202,7 @@ spec:
             - name: OLLAMA_HOST
               value: "http://vibey-vibey-ollama.vibey.svc.cluster.local:11434"
             - name: OLLAMA_PULL_MODEL
-              value: "qwen2.5-coder:14b"
+              value: "gpt-oss:20b"
             # The client never needs a home of its own; point it somewhere a
             # non-root uid can write rather than at an unwritable "/".
             - name: HOME
@@ -342,13 +342,13 @@ spec:
             - name: VIBEY_OLLAMA_URL
               value: "http://vibey-vibey-ollama.vibey.svc.cluster.local:11434"
             - name: VIBEY_OLLAMA_MODEL
-              value: "qwen2.5-coder:14b"
+              value: "gpt-oss:20b"
             # qwenloop's openai-compat backend wants the OpenAI base URL, /v1
             # included; a base URL alone is what makes `auto` select it.
             - name: QWENLOOP_BASE_URL
               value: "http://vibey-vibey-ollama.vibey.svc.cluster.local:11434/v1"
             - name: QWENLOOP_MODEL
-              value: "qwen2.5-coder:14b"
+              value: "gpt-oss:20b"
             # The one qwenloop switch that reaches a worker (ADR-0015): a
             # project's [features] table never makes it into the record.
             - name: VIBEY_FEATURE_QWENLOOP

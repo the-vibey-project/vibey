@@ -802,11 +802,17 @@ def _golden(state, review_passed, review_result, local_passed="", local_findings
     )
 
 
-# The two sanctioned differences from the golden: the job the local verdict comes from was
-# renamed when it started going first, and the gate's own check was renamed from
-# `PR automation / gate` to `PR review / gate` when the workflow split. Anything else that
-# differs is a behaviour change.
-_RENAMED = {"'Local review fallback'": "'Sovereign diff review'", "PR automation:": "PR review:"}
+# The three sanctioned differences from the golden: the job the local verdict comes from was
+# renamed when it started going first; the gate's own check was renamed from
+# `PR automation / gate` to `PR review / gate` when the workflow split; and the local model the
+# golden was captured with became configuration that moved on, to this era's default model
+# (sub-doctrine 8.d, #389) -- the model is named, never behaved on. Anything else that differs
+# is a behaviour change.
+_RENAMED = {
+    "'Local review fallback'": "'Sovereign diff review'",
+    "PR automation:": "PR review:",
+    "(qwen2.5-coder:14b)": "(gpt-oss:20b)",
+}
 
 
 def _assert_gate_is_golden(gate: dict, golden: dict) -> None:
@@ -890,7 +896,7 @@ def test_fresh_heartbeat_and_credits_the_sovereign_lane_carries_the_diff_half(wo
     assert run.gate["title"] == ("PR review: gate (diff: sovereign lane, documentation: paid lane)")
     for fact in (
         "diff-groundable half (pass, summary, findings) was carried by the SOVEREIGN lane",
-        "local model (qwen2.5-coder:14b)",
+        "local model (gpt-oss:20b)",
         (
             "requires-wider-context half (the documentation-contract judgments) was carried by "
             "the PAID lane (claude-sonnet-5)"

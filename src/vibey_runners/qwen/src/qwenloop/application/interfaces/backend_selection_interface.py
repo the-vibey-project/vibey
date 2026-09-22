@@ -17,6 +17,8 @@ class BackendSelectorInterface(Protocol):
         *,
         vllm_installed: bool,
         endpoint_configured: bool,
+        ollama_available: bool = False,
     ) -> BackendChoice:
-        """An explicit request wins, then a configured endpoint, then the hardware."""
+        """An explicit request wins, then a configured endpoint, then a running local
+        Ollama, then the hardware."""
         ...

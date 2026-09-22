@@ -13,14 +13,18 @@ from qwenloop.application.interfaces.backend_selection_interface import (
     BackendSelectorInterface,
 )
 from qwenloop.application.interfaces.class_contracts import AutonomousRunnerInterface
+from qwenloop.application.interfaces.clock_interface import ClockInterface
 from qwenloop.application.interfaces.desktop_notifier_interface import DesktopNotifierInterface
+from qwenloop.application.interfaces.ollama_probe_interface import OllamaProbeInterface
 from qwenloop.domain.model import ChatChunk, ChatMessage, ModelProfile, ServerInfo
 
 __all__ = [
     "AutonomousRunnerInterface",
     "BackendSelectorInterface",
+    "ClockInterface",
     "DesktopNotifierInterface",
     "InferenceServer",
+    "OllamaProbeInterface",
     "RunStore",
     "ToolExecutor",
 ]

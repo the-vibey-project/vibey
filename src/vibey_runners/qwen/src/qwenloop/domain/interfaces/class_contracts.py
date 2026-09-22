@@ -52,6 +52,12 @@ class QwenConfigInterface(Protocol):
 
 
 @runtime_checkable
+class ToolCallParseErrorInterface(Protocol):
+    @property
+    def detail(self) -> str: ...
+
+
+@runtime_checkable
 class ServerInfoInterface(Protocol):
     @property
     def backend(self) -> BackendInterface: ...
