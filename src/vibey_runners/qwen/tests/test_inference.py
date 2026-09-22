@@ -69,6 +69,7 @@ async def test_openai_health_and_chat(monkeypatch: pytest.MonkeyPatch, tmp_path:
         assert {tool["function"]["name"] for tool in body["tools"]} == {
             "read_file",
             "write_file",
+            "edit_file",
             "shell",
         }
         return UrlResponse(json.dumps(payload).encode())

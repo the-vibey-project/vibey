@@ -630,3 +630,85 @@ def test_run_store_handles_empty_and_invalid_control(tmp_path: Path) -> None:
     (inbox / "bad.json").write_text("bad")
     (inbox / "list.json").write_text("[]")
     assert store.read_control("x") == []
+
+
+@pytest.mark.asyncio
+async def test_edit_file_replaces_exactly_one_occurrence(tmp_path: Path) -> None:
+    (tmp_path / "a.py").write_text("x = 1\ny = 2\n")
+    tools = SandboxTools(tmp_path)
+    result = await tools.execute(
+        "edit_file", {"path": "a.py", "old_string": "y = 2", "new_string": "y = 3"}
+    )
+    assert result == {"replaced": 1, "path": "a.py"}
+    assert (tmp_path / "a.py").read_text() == "x = 1\ny = 3\n"
+
+
+@pytest.mark.asyncio
+async def test_edit_file_refuses_what_it_cannot_do_exactly(tmp_path: Path) -> None:
+    (tmp_path / "a.py").write_text("same\nsame\n")
+    (tmp_path / "blob.bin").write_bytes(b"\xff\xfe")
+    tools = SandboxTools(tmp_path)
+
+    def call(path: str, old: str) -> dict[str, object]:
+        return {"path": path, "old_string": old, "new_string": "z"}
+
+    missing = await tools.execute("edit_file", call("a.py", "absent"))
+    assert "not found" in str(missing["error"])
+    many = await tools.execute("edit_file", call("a.py", "same"))
+    assert "matches 2 times" in str(many["error"])
+    empty = await tools.execute("edit_file", call("a.py", ""))
+    assert "must not be empty" in str(empty["error"])
+    no_file = await tools.execute("edit_file", call("new.py", "x"))
+    assert "use write_file" in str(no_file["error"])
+    binary = await tools.execute("edit_file", call("blob.bin", "x"))
+    assert "cannot edit" in str(binary["error"])
+    assert (tmp_path / "a.py").read_text() == "same\nsame\n"
+    with pytest.raises(ValueError, match="escapes"):
+        await tools.execute("edit_file", call("../outside.py", "x"))
+
+
+@pytest.mark.asyncio
+async def test_edit_file_reports_a_failed_write(tmp_path: Path) -> None:
+    target = tmp_path / "ro.py"
+    target.write_text("keep\n")
+    target.chmod(0o444)
+    try:
+        result = await SandboxTools(tmp_path).execute(
+            "edit_file", {"path": "ro.py", "old_string": "keep", "new_string": "gone"}
+        )
+    finally:
+        target.chmod(0o644)
+    assert "error" in result
+    assert target.read_text() == "keep\n"
+
+
+@pytest.mark.asyncio
+async def test_write_file_refuses_to_gut_an_existing_file(tmp_path: Path) -> None:
+    big = tmp_path / "big.py"
+    big.write_text("".join(f"line {n}\n" for n in range(100)))
+    tools = SandboxTools(tmp_path)
+
+    refused = await tools.execute("write_file", {"path": "big.py", "content": "only\n"})
+    assert "would remove 99 of 100 lines" in str(refused["error"])
+    assert big.read_text().count("\n") == 100
+
+    allowed = await tools.execute(
+        "write_file", {"path": "big.py", "content": "only\n", "allow_shrink": True}
+    )
+    assert allowed == {"written": 5}
+    assert big.read_text() == "only\n"
+
+
+@pytest.mark.asyncio
+async def test_write_file_guard_leaves_ordinary_writes_alone(tmp_path: Path) -> None:
+    (tmp_path / "small.py").write_text("a\nb\n")
+    (tmp_path / "blob.bin").write_bytes(b"\xff\xfe")
+    long_text = "".join(f"line {n}\n" for n in range(60))
+    (tmp_path / "long.py").write_text(long_text)
+    tools = SandboxTools(tmp_path)
+
+    new = await tools.execute("write_file", {"path": "new.py", "content": "x\n"})
+    small = await tools.execute("write_file", {"path": "small.py", "content": "x\n"})
+    binary = await tools.execute("write_file", {"path": "blob.bin", "content": "x\n"})
+    grown = await tools.execute("write_file", {"path": "long.py", "content": long_text + "more\n"})
+    assert all("written" in result for result in (new, small, binary, grown))

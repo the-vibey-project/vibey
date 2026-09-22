@@ -456,14 +456,39 @@ _CODING_TOOLS = [
         "type": "function",
         "function": {
             "name": "write_file",
-            "description": "Write UTF-8 text to a file inside the assigned worktree.",
+            "description": (
+                "Create a file, or REPLACE an existing file's entire content, inside the "
+                "assigned worktree. To change part of an existing file, use edit_file."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "path": {"type": "string"},
                     "content": {"type": "string"},
+                    "allow_shrink": {"type": "boolean"},
                 },
                 "required": ["path", "content"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "edit_file",
+            "description": (
+                "Replace exactly one occurrence of old_string with new_string in an existing "
+                "file inside the assigned worktree. Use this for every change to an existing "
+                "file; copy old_string exactly from read_file output."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "old_string": {"type": "string"},
+                    "new_string": {"type": "string"},
+                },
+                "required": ["path", "old_string", "new_string"],
                 "additionalProperties": False,
             },
         },
