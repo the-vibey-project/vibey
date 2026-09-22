@@ -1,0 +1,350 @@
+[
+ {
+  "rid": "R01",
+  "slug": "rmq-r01-queue-config",
+  "deps": [],
+  "chars": 6457,
+  "issue": "348"
+ },
+ {
+  "rid": "R02",
+  "slug": "rmq-r02-wakeup-composition",
+  "deps": [],
+  "chars": 3760,
+  "issue": "349"
+ },
+ {
+  "rid": "R03",
+  "slug": "rmq-r03-amqp-dependency",
+  "deps": [],
+  "chars": 3042,
+  "issue": "350"
+ },
+ {
+  "rid": "R04",
+  "slug": "rmq-r04-bootstrap-amqp",
+  "deps": [
+   "R03"
+  ],
+  "chars": 7660,
+  "issue": "351"
+ },
+ {
+  "rid": "R05",
+  "slug": "rmq-r05-async-outbox",
+  "deps": [],
+  "chars": 4661,
+  "issue": "352"
+ },
+ {
+  "rid": "R06",
+  "slug": "rmq-r06-job-dispatch-envelope",
+  "deps": [],
+  "chars": 4988,
+  "issue": "353"
+ },
+ {
+  "rid": "R07",
+  "slug": "rmq-r07-dispatch-miss-policy",
+  "deps": [
+   "R06"
+  ],
+  "chars": 3585,
+  "issue": "354"
+ },
+ {
+  "rid": "R08",
+  "slug": "rmq-r08-dispatch-migration",
+  "deps": [],
+  "chars": 4051,
+  "issue": "355"
+ },
+ {
+  "rid": "R09",
+  "slug": "rmq-r09-reap-bound",
+  "deps": [],
+  "chars": 3919,
+  "issue": "356"
+ },
+ {
+  "rid": "R10",
+  "slug": "rmq-r10-dispatch-records-enqueue",
+  "deps": [
+   "R05",
+   "R06",
+   "R08"
+  ],
+  "chars": 5535,
+  "issue": "357"
+ },
+ {
+  "rid": "R11",
+  "slug": "rmq-r11-dispatch-records-settle",
+  "deps": [
+   "R07",
+   "R09",
+   "R10"
+  ],
+  "chars": 7366,
+  "issue": "358"
+ },
+ {
+  "rid": "R12",
+  "slug": "rmq-r12-queue-topology",
+  "deps": [
+   "R04",
+   "R06"
+  ],
+  "chars": 4727,
+  "issue": "359"
+ },
+ {
+  "rid": "R13",
+  "slug": "rmq-r13-dispatch-relay",
+  "deps": [
+   "R05",
+   "R08",
+   "R10",
+   "R12"
+  ],
+  "chars": 4224,
+  "issue": "360"
+ },
+ {
+  "rid": "R14",
+  "slug": "rmq-r14-project-deliveries",
+  "deps": [
+   "R12"
+  ],
+  "chars": 3867,
+  "issue": "361"
+ },
+ {
+  "rid": "R15",
+  "slug": "rmq-r15-gate-redispatch",
+  "deps": [
+   "R10"
+  ],
+  "chars": 2653,
+  "issue": "362"
+ },
+ {
+  "rid": "R16",
+  "slug": "rmq-r16-rabbitmq-job-repository",
+  "deps": [
+   "R11",
+   "R13",
+   "R14",
+   "R15"
+  ],
+  "chars": 5626,
+  "issue": "363"
+ },
+ {
+  "rid": "R17",
+  "slug": "rmq-r17-queue-backend-selection",
+  "deps": [
+   "R01",
+   "R02",
+   "R16"
+  ],
+  "chars": 5066,
+  "issue": "364"
+ },
+ {
+  "rid": "R18",
+  "slug": "rmq-r18-queue-contract-suite",
+  "deps": [
+   "R17"
+  ],
+  "chars": 3834,
+  "issue": "365"
+ },
+ {
+  "rid": "R19",
+  "slug": "rmq-r19-run-protocol",
+  "deps": [],
+  "chars": 4839,
+  "issue": "366"
+ },
+ {
+  "rid": "R20",
+  "slug": "rmq-r20-run-dir-extraction",
+  "deps": [],
+  "chars": 4691,
+  "issue": "367"
+ },
+ {
+  "rid": "R21",
+  "slug": "rmq-r21-local-run-executor",
+  "deps": [
+   "R19",
+   "R20"
+  ],
+  "chars": 4789,
+  "issue": "368"
+ },
+ {
+  "rid": "R22",
+  "slug": "rmq-r22-loop-service-host",
+  "deps": [
+   "R04",
+   "R21"
+  ],
+  "chars": 6117,
+  "issue": "369"
+ },
+ {
+  "rid": "R23",
+  "slug": "rmq-r23-loop-service-control",
+  "deps": [
+   "R22"
+  ],
+  "chars": 3474,
+  "issue": "370"
+ },
+ {
+  "rid": "R24",
+  "slug": "rmq-r24-loop-service-client",
+  "deps": [
+   "R04",
+   "R19"
+  ],
+  "chars": 3517,
+  "issue": "371"
+ },
+ {
+  "rid": "R25",
+  "slug": "rmq-r25-loop-service-adapter",
+  "deps": [
+   "R20",
+   "R24"
+  ],
+  "chars": 6208,
+  "issue": "372"
+ },
+ {
+  "rid": "R26",
+  "slug": "rmq-r26-loop-service-executor",
+  "deps": [
+   "R24",
+   "R25"
+  ],
+  "chars": 3277,
+  "issue": "373"
+ },
+ {
+  "rid": "R27",
+  "slug": "rmq-r27-loop-service-cli",
+  "deps": [
+   "R17",
+   "R23",
+   "R24",
+   "R25"
+  ],
+  "chars": 5042,
+  "issue": "374"
+ },
+ {
+  "rid": "R28",
+  "slug": "rmq-r28-invocation-selection",
+  "deps": [
+   "R01",
+   "R25",
+   "R26",
+   "R27"
+  ],
+  "chars": 3934,
+  "issue": "375"
+ },
+ {
+  "rid": "R29",
+  "slug": "rmq-r29-chart-broker-core",
+  "deps": [
+   "R01"
+  ],
+  "chars": 5235,
+  "issue": "376"
+ },
+ {
+  "rid": "R30",
+  "slug": "rmq-r30-chart-loop-services",
+  "deps": [
+   "R27",
+   "R29"
+  ],
+  "chars": 4369,
+  "issue": "377"
+ },
+ {
+  "rid": "R31",
+  "slug": "rmq-r31-chart-keda-rabbitmq",
+  "deps": [
+   "R29",
+   "R30"
+  ],
+  "chars": 3864,
+  "issue": "378"
+ },
+ {
+  "rid": "R32",
+  "slug": "rmq-r32-ci-rabbitmq",
+  "deps": [
+   "R18",
+   "R30",
+   "R31"
+  ],
+  "chars": 3392,
+  "issue": "379"
+ },
+ {
+  "rid": "R33",
+  "slug": "rmq-r33-install-and-doctor",
+  "deps": [
+   "R28"
+  ],
+  "chars": 3764,
+  "issue": "380"
+ },
+ {
+  "rid": "R34",
+  "slug": "rmq-r34-defaults-flip",
+  "deps": [
+   "R01",
+   "R02",
+   "R03",
+   "R04",
+   "R05",
+   "R06",
+   "R07",
+   "R08",
+   "R09",
+   "R10",
+   "R11",
+   "R12",
+   "R13",
+   "R14",
+   "R15",
+   "R16",
+   "R17",
+   "R18",
+   "R19",
+   "R20",
+   "R21",
+   "R22",
+   "R23",
+   "R24",
+   "R25",
+   "R26",
+   "R27",
+   "R28",
+   "R29",
+   "R30",
+   "R31",
+   "R32",
+   "R33"
+  ],
+  "chars": 7376,
+  "issue": "381"
+ }
+]

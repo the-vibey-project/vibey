@@ -1,0 +1,8 @@
+# The storm's model (2026-09-22): GPT-OSS 20B through the local Ollama, which serves it with its
+# full 131k context. Measured 2.5x faster than Qwen2.5-Coder-14B on llama.cpp for the same session
+# (bench/results.jsonl). One loop instance per deployment (8.c): Ollama is that one instance.
+backend = "openai-compat"
+base_url = "http://127.0.0.1:11434/v1"
+model = "gpt-oss:20b"
+context_window = 131072
+max_turns = 40

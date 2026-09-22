@@ -1,0 +1,65 @@
+engines-provider 322
+qwenloop-edit-tool 346
+qwenloop-request-timeout 345 qwenloop-edit-tool
+qwenloop-run-telemetry 382 qwenloop-request-timeout
+qwenloop-toolcall-retry 386 qwenloop-run-telemetry
+default-model-p1 387 qwenloop-toolcall-retry
+default-model-p2 388 default-model-p1
+default-model-p3 389 default-model-p2
+install-ollama 391 default-model-p1,installer-host-runner,installer-orchestrator
+surfaces-env 323
+engines-pool 321 engines-provider
+visual-design-provider 324 engines-provider
+chart-operator-forgejo-p1 326
+opencodeloop-parity-p1 328
+openstack-client-p1 330 engines-pool,visual-design-provider
+chart-operator-forgejo-p2 327 chart-operator-forgejo-p1
+opencodeloop-parity-p2 329 opencodeloop-parity-p1
+openstack-client-p2 331 openstack-client-p1
+forge-0a 332
+forge-0b 333 forge-0a
+forge-0c 334 forge-0b
+forge-0d 335 forge-0c
+forge-0e 336 forge-0d
+forge-0f 337 forge-0e
+forge-0g 338 forge-0f
+forge-1 339 forge-0g
+forge-2 340 forge-0g
+forge-3 341 forge-0g
+forge-4 342 forge-0g
+forge-5 343 forge-0g
+forge-6 344 forge-0g
+rmq-r01-queue-config 348
+rmq-r02-wakeup-composition 349
+rmq-r03-amqp-dependency 350
+rmq-r05-async-outbox 352
+rmq-r06-job-dispatch-envelope 353
+rmq-r08-dispatch-migration 355
+rmq-r09-reap-bound 356
+rmq-r19-run-protocol 366
+rmq-r20-run-dir-extraction 367
+rmq-r04-bootstrap-amqp 351 rmq-r03-amqp-dependency
+rmq-r07-dispatch-miss-policy 354 rmq-r06-job-dispatch-envelope
+rmq-r10-dispatch-records-enqueue 357 rmq-r05-async-outbox,rmq-r06-job-dispatch-envelope,rmq-r08-dispatch-migration
+rmq-r21-local-run-executor 368 rmq-r19-run-protocol,rmq-r20-run-dir-extraction
+rmq-r29-chart-broker-core 376 rmq-r01-queue-config,chart-operator-forgejo-p2
+rmq-r11-dispatch-records-settle 358 rmq-r07-dispatch-miss-policy,rmq-r09-reap-bound,rmq-r10-dispatch-records-enqueue
+rmq-r12-queue-topology 359 rmq-r04-bootstrap-amqp,rmq-r06-job-dispatch-envelope
+rmq-r15-gate-redispatch 362 rmq-r10-dispatch-records-enqueue
+rmq-r22-loop-service-host 369 rmq-r04-bootstrap-amqp,rmq-r21-local-run-executor
+rmq-r24-loop-service-client 371 rmq-r04-bootstrap-amqp,rmq-r19-run-protocol
+rmq-r13-dispatch-relay 360 rmq-r05-async-outbox,rmq-r08-dispatch-migration,rmq-r10-dispatch-records-enqueue,rmq-r12-queue-topology
+rmq-r14-project-deliveries 361 rmq-r12-queue-topology
+rmq-r23-loop-service-control 370 rmq-r22-loop-service-host
+rmq-r25-loop-service-adapter 372 rmq-r20-run-dir-extraction,rmq-r24-loop-service-client
+rmq-r16-rabbitmq-job-repository 363 rmq-r11-dispatch-records-settle,rmq-r13-dispatch-relay,rmq-r14-project-deliveries,rmq-r15-gate-redispatch
+rmq-r26-loop-service-executor 373 rmq-r24-loop-service-client,rmq-r25-loop-service-adapter
+rmq-r17-queue-backend-selection 364 rmq-r01-queue-config,rmq-r02-wakeup-composition,rmq-r16-rabbitmq-job-repository
+rmq-r18-queue-contract-suite 365 rmq-r17-queue-backend-selection
+rmq-r27-loop-service-cli 374 rmq-r17-queue-backend-selection,rmq-r23-loop-service-control,rmq-r24-loop-service-client,rmq-r25-loop-service-adapter
+rmq-r28-invocation-selection 375 rmq-r01-queue-config,rmq-r25-loop-service-adapter,rmq-r26-loop-service-executor,rmq-r27-loop-service-cli
+rmq-r30-chart-loop-services 377 rmq-r27-loop-service-cli,rmq-r29-chart-broker-core
+rmq-r31-chart-keda-rabbitmq 378 rmq-r29-chart-broker-core,rmq-r30-chart-loop-services
+rmq-r33-install-and-doctor 380 rmq-r28-invocation-selection
+rmq-r32-ci-rabbitmq 379 rmq-r18-queue-contract-suite,rmq-r30-chart-loop-services,rmq-r31-chart-keda-rabbitmq
+rmq-r34-defaults-flip 381 rmq-r01-queue-config,rmq-r02-wakeup-composition,rmq-r03-amqp-dependency,rmq-r04-bootstrap-amqp,rmq-r05-async-outbox,rmq-r06-job-dispatch-envelope,rmq-r07-dispatch-miss-policy,rmq-r08-dispatch-migration,rmq-r09-reap-bound,rmq-r10-dispatch-records-enqueue,rmq-r11-dispatch-records-settle,rmq-r12-queue-topology,rmq-r13-dispatch-relay,rmq-r14-project-deliveries,rmq-r15-gate-redispatch,rmq-r16-rabbitmq-job-repository,rmq-r17-queue-backend-selection,rmq-r18-queue-contract-suite,rmq-r19-run-protocol,rmq-r20-run-dir-extraction,rmq-r21-local-run-executor,rmq-r22-loop-service-host,rmq-r23-loop-service-control,rmq-r24-loop-service-client,rmq-r25-loop-service-adapter,rmq-r26-loop-service-executor,rmq-r27-loop-service-cli,rmq-r28-invocation-selection,rmq-r29-chart-broker-core,rmq-r30-chart-loop-services,rmq-r31-chart-keda-rabbitmq,rmq-r32-ci-rabbitmq,rmq-r33-install-and-doctor

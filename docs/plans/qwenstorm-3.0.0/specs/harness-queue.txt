@@ -1,0 +1,42 @@
+harness-T01-test-run-key -
+harness-T05a-test-harness-config-keys - harness-T01-test-run-key
+harness-T05-test-harness-config - harness-T05a-test-harness-config-keys
+harness-T06-machine-lock - harness-T05-test-harness-config,fakes-registry
+harness-T07-pytest-lock-route - harness-T05-test-harness-config,harness-T06-machine-lock
+harness-T20a-qwenloop-shell-timeout-config -
+harness-T20b-qwenloop-shell-timeout-env - harness-T20a-qwenloop-shell-timeout-config
+harness-T20c-qwenloop-shell-timeout-sandbox -
+harness-T20-qwenloop-shell-timeout - harness-T20b-qwenloop-shell-timeout-env,harness-T20c-qwenloop-shell-timeout-sandbox
+harness-T02-test-reuse-policy - harness-T01-test-run-key
+harness-T03-test-harness-messages - harness-T01-test-run-key
+harness-T04-test-run-records - harness-T02-test-reuse-policy,harness-T03-test-harness-messages
+harness-T08-working-tree-digest - harness-T05-test-harness-config,fakes-registry,fakes-process-executor
+harness-T09-environment-probe - harness-T01-test-run-key,harness-T05-test-harness-config,fakes-registry,orm-database-seam
+harness-T10-file-run-store - harness-T04-test-run-records,harness-T05-test-harness-config,fakes-registry
+harness-T11-run-executor - harness-T01-test-run-key,harness-T05-test-harness-config,fakes-registry
+harness-T12-coverage-gates - harness-T03-test-harness-messages,harness-T05-test-harness-config,fakes-registry
+harness-T13-harness-instance - harness-T02-test-reuse-policy,harness-T04-test-run-records,harness-T06-machine-lock,harness-T08-working-tree-digest,harness-T10-file-run-store,harness-T11-run-executor,harness-T12-coverage-gates,fakes-observability
+harness-T14a-request-builder - harness-T02-test-reuse-policy,harness-T04-test-run-records,harness-T08-working-tree-digest,harness-T09-environment-probe,harness-T10-file-run-store,fakes-observability,fakes-registry
+harness-T14-local-client - harness-T06-machine-lock,harness-T10-file-run-store,harness-T14a-request-builder,fakes-registry
+harness-T15a-test-harness-composition - harness-T13-harness-instance,harness-T14-local-client,fakes-test-harness
+harness-T15b-test-run-command - harness-T15a-test-harness-composition
+harness-T15c-python-m-vibey - harness-T15b-test-run-command
+harness-T15-test-run-cli - harness-T15c-python-m-vibey
+harness-T16-test-inspect-cli - harness-T15-test-run-cli
+harness-T17-pytest-queue-route - harness-T07-pytest-lock-route,harness-T15-test-run-cli
+harness-T18-hooks-route - harness-T15-test-run-cli
+harness-T19-ci-route - harness-T15-test-run-cli,harness-T16-test-inspect-cli,fakes-ci-no-services
+harness-T21a-amqp-consumer-count-client - rmq-r04-bootstrap-amqp
+harness-T21-amqp-consumer-count - harness-T21a-amqp-consumer-count-client
+harness-T22-harness-topology - rmq-r04-bootstrap-amqp,harness-T05-test-harness-config,fakes-registry
+harness-T23-harness-service - rmq-r04-bootstrap-amqp,harness-T13-harness-instance,harness-T22-harness-topology,fakes-test-harness,fakes-observability
+harness-T24-harness-amqp-client - rmq-r04-bootstrap-amqp,harness-T14-local-client,harness-T21-amqp-consumer-count,harness-T22-harness-topology
+harness-T25a-harness-backend-resolver - harness-T05-test-harness-config
+harness-T25b-test-harness-composition-amqp - harness-T15-test-run-cli,harness-T23-harness-service,harness-T24-harness-amqp-client,harness-T25a-harness-backend-resolver,rmq-r01-queue-config,rmq-r17-queue-backend-selection
+harness-T25-harness-backend-selection - harness-T25b-test-harness-composition-amqp,harness-T16-test-inspect-cli
+harness-T26a-harness-routing-environment - harness-T05-test-harness-config
+harness-T26b-adapter-factory-routing-overlay - rmq-r28-invocation-selection
+harness-T26-engine-route-env - harness-T26a-harness-routing-environment,harness-T26b-adapter-factory-routing-overlay,rmq-r27-loop-service-cli,rmq-r28-invocation-selection,fakes-bootstrap-seam
+harness-T27a-chart-test-harness-deployment - rmq-r29-chart-broker-core,rmq-r30-chart-loop-services,rmq-r31-chart-keda-rabbitmq,rmq-r34-defaults-flip,harness-T25-harness-backend-selection
+harness-T27-chart-test-harness - harness-T27a-chart-test-harness-deployment,harness-T26-engine-route-env
+harness-T28-route-flip - harness-T16-test-inspect-cli,harness-T17-pytest-queue-route,harness-T18-hooks-route,harness-T19-ci-route,harness-T25-harness-backend-selection,harness-T26-engine-route-env,harness-T27-chart-test-harness,fakes-ci-no-services,fakes-harness-degrade

@@ -1,0 +1,51 @@
+split-332-1-transport-seams -
+split-332-2-adapter-paging - split-332-1-transport-seams
+split-332-3-repository-name - split-332-2-adapter-paging
+split-332-4-selector-resolve - split-332-3-repository-name
+split-333-1-facts-translators - split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve
+split-333-2-change-request-reads - split-333-1-facts-translators
+split-333-3-change-request-text - split-333-2-change-request-reads
+split-334-1-labelled-listings - split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text
+split-334-2-open-branches - split-334-1-labelled-listings
+split-334-3-wait-for-checks - split-334-2-open-branches
+split-335-1-create-edit-merge - split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks
+split-335-2-ready-close-comment - split-335-1-create-edit-merge
+split-335-3-labels - split-335-2-ready-close-comment
+split-336-1-issue-reads - split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+split-336-2-comment-writes - split-336-1-issue-reads
+split-336-3-review-comment - split-336-2-comment-writes
+split-336-4-review-threads - split-336-3-review-comment
+split-341-1-reconcile - forge-0g,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+split-341-2-release-publication - forge-0g,forge-0f,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve
+split-342-1-state-comment - forge-0g,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels,split-336-1-issue-reads,split-336-2-comment-writes,split-336-3-review-comment,split-336-4-review-threads
+split-342-2-pr-automation - split-342-1-state-comment,forge-0g,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+split-342-3-fork-mirror - split-342-2-pr-automation,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+split-342-4-install-notices - forge-0g,forge-0f,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve
+split-344-1-rulesets - forge-0g,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve
+split-344-2-flatten - forge-0g,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-336-1-issue-reads,split-336-2-comment-writes,split-336-3-review-comment,split-336-4-review-threads
+split-324-1-visual-provider - engines-provider,default-model-p1
+split-324-2-visual-cli - split-324-1-visual-provider,engines-provider
+split-330-1-deploy-target-config -
+split-330-2-scope-digest -
+split-330-3-spec-follows-target - split-330-1-deploy-target-config,split-330-2-scope-digest
+split-330-4-az-scope-guard - split-330-3-spec-follows-target
+split-331-1-heat-renderer -
+split-331-2-openstack-cli-adapter - split-331-1-heat-renderer,split-330-4-az-scope-guard
+split-331-3-az-preflight - split-330-4-az-scope-guard
+split-331-4-worker-cloud-flag - split-331-2-openstack-cli-adapter,split-331-3-az-preflight,split-330-1-deploy-target-config,split-330-3-spec-follows-target,fakes-job-wakeup
+split-331-5-openstack-installer - installer-catalogue,installer-toolchain
+split-351-1-amqp-contract -
+split-351-2-amqp-client - rmq-r03-amqp-dependency,split-351-1-amqp-contract
+split-358-1-fenced-claim - rmq-r10-dispatch-records-enqueue,rmq-r07-dispatch-miss-policy
+split-358-2-redispatching-settles - rmq-r10-dispatch-records-enqueue,rmq-r09-reap-bound,split-358-1-fenced-claim
+split-358-3-sweep-and-park - rmq-r10-dispatch-records-enqueue,rmq-r09-reap-bound,split-358-1-fenced-claim
+split-367-1-run-dir -
+split-367-2-process-launcher - split-367-1-run-dir
+split-380-1-loop-doctor - split-351-1-amqp-contract,loops-run-protocol,loops-client,loops-queue-depth,harness-T21-amqp-consumer-count
+split-380-2-doctor-cli - split-380-1-loop-doctor,rmq-r17-queue-backend-selection,installer-doctor,loops-invocation,loops-config
+split-383-1-model-catalogue - default-model-p1
+split-383-3-memory-probe -
+split-383-2-qwen-entries - split-383-1-model-catalogue
+split-383-4-ram-tier-selection - split-383-1-model-catalogue,split-383-3-memory-probe
+split-383-5-reasoning-channels - split-383-1-model-catalogue
+split-383-6-model-verify-doctor - split-383-1-model-catalogue,split-383-4-ram-tier-selection

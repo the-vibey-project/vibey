@@ -1,0 +1,16 @@
+installer-catalogue -
+installer-host-runner - installer-catalogue
+installer-service-runner - installer-host-runner
+installer-orchestrator - installer-catalogue
+installer-package-dependency - installer-service-runner,installer-orchestrator
+installer-postgres - installer-catalogue
+installer-local-service-adapter - installer-orchestrator
+install-ollama 391 default-model-p1,installer-host-runner,installer-orchestrator
+installer-container-runtime - installer-package-dependency
+installer-toolchain - installer-container-runtime
+installer-broker-cache - installer-catalogue
+installer-vscode - installer-catalogue
+installer-paid-engine-clis - installer-catalogue
+installer-composition - installer-package-dependency,installer-local-service-adapter,install-ollama,installer-postgres
+installer-cli - installer-composition,installer-toolchain,installer-broker-cache
+installer-doctor - installer-cli

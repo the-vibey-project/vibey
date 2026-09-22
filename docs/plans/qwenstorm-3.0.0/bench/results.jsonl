@@ -1,0 +1,57 @@
+{"label": "A-baseline", "turn": 1, "wall_s": 11.44, "prompt_n": 1702, "cache_n": 0, "prompt_ms": 6611, "gen_n": 55, "gen_tps": 11.2, "ctx_tokens": 1702}
+{"label": "A-baseline", "turn": 2, "wall_s": 17.22, "prompt_n": 1687, "cache_n": 1756, "prompt_ms": 8504, "gen_n": 86, "gen_tps": 9.8, "ctx_tokens": 3443}
+{"label": "A-baseline", "turn": 3, "wall_s": 18.32, "prompt_n": 1781, "cache_n": 3528, "prompt_ms": 9184, "gen_n": 86, "gen_tps": 9.3, "ctx_tokens": 5309}
+{"label": "A-baseline", "turn": 4, "wall_s": 19.09, "prompt_n": 1617, "cache_n": 5394, "prompt_ms": 10210, "gen_n": 86, "gen_tps": 9.6, "ctx_tokens": 7011}
+{"label": "A-baseline", "turn": 5, "wall_s": 22.51, "prompt_n": 1739, "cache_n": 7096, "prompt_ms": 13429, "gen_n": 86, "gen_tps": 9.4, "ctx_tokens": 8835}
+{"label": "A-baseline", "turn": 6, "wall_s": 23.45, "prompt_n": 1859, "cache_n": 8920, "prompt_ms": 14511, "gen_n": 86, "gen_tps": 9.5, "ctx_tokens": 10779}
+{"label": "A-baseline", "turn": 7, "wall_s": 26.94, "prompt_n": 1819, "cache_n": 10864, "prompt_ms": 15722, "gen_n": 86, "gen_tps": 7.6, "ctx_tokens": 12683}
+{"label": "A-baseline", "turn": 8, "wall_s": 23.22, "prompt_n": 1431, "cache_n": 12768, "prompt_ms": 13738, "gen_n": 86, "gen_tps": 9.0, "ctx_tokens": 14199}
+{"label": "A-baseline", "turn": 9, "wall_s": 25.76, "prompt_n": 1636, "cache_n": 14284, "prompt_ms": 16006, "gen_n": 86, "gen_tps": 8.8, "ctx_tokens": 15920}
+{"label": "A-baseline", "turn": 10, "wall_s": 27.07, "prompt_n": 1653, "cache_n": 16005, "prompt_ms": 16858, "gen_n": 86, "gen_tps": 8.4, "ctx_tokens": 17658}
+{"label": "A-baseline", "summary": true, "total_wall_s": 215.0, "prompt_ms_total": 124773, "prompt_tokens_processed": 16924, "mean_gen_tps": 9.3, "final_ctx_tokens": 17658}
+{"label": "D-1slot-f16-32k", "turn": 1, "wall_s": 11.41, "prompt_n": 1702, "cache_n": 0, "prompt_ms": 6604, "gen_n": 55, "gen_tps": 11.3, "ctx_tokens": 1702}
+{"label": "D-1slot-f16-32k", "turn": 2, "wall_s": 16.36, "prompt_n": 1687, "cache_n": 1756, "prompt_ms": 8169, "gen_n": 86, "gen_tps": 10.4, "ctx_tokens": 3443}
+{"label": "D-1slot-f16-32k", "turn": 3, "wall_s": 17.7, "prompt_n": 1781, "cache_n": 3528, "prompt_ms": 9394, "gen_n": 86, "gen_tps": 10.3, "ctx_tokens": 5309}
+{"label": "D-1slot-f16-32k", "turn": 4, "wall_s": 18.06, "prompt_n": 1617, "cache_n": 5394, "prompt_ms": 9648, "gen_n": 86, "gen_tps": 10.1, "ctx_tokens": 7011}
+{"label": "D-1slot-f16-32k", "turn": 5, "wall_s": 20.31, "prompt_n": 1739, "cache_n": 7096, "prompt_ms": 11531, "gen_n": 86, "gen_tps": 9.8, "ctx_tokens": 8835}
+{"label": "D-1slot-f16-32k", "turn": 6, "wall_s": 25.87, "prompt_n": 1859, "cache_n": 8920, "prompt_ms": 15154, "gen_n": 86, "gen_tps": 8.0, "ctx_tokens": 10779}
+{"label": "D-1slot-f16-32k", "turn": 7, "wall_s": 24.37, "prompt_n": 1819, "cache_n": 10864, "prompt_ms": 15081, "gen_n": 86, "gen_tps": 9.2, "ctx_tokens": 12683}
+{"label": "D-1slot-f16-32k", "turn": 8, "wall_s": 23.61, "prompt_n": 1431, "cache_n": 12768, "prompt_ms": 13256, "gen_n": 86, "gen_tps": 8.3, "ctx_tokens": 14199}
+{"label": "D-1slot-f16-32k", "turn": 9, "wall_s": 27.42, "prompt_n": 1636, "cache_n": 14284, "prompt_ms": 16023, "gen_n": 86, "gen_tps": 7.5, "ctx_tokens": 15920}
+{"label": "D-1slot-f16-32k", "turn": 10, "wall_s": 27.09, "prompt_n": 1653, "cache_n": 16005, "prompt_ms": 17029, "gen_n": 86, "gen_tps": 8.5, "ctx_tokens": 17658}
+{"label": "D-1slot-f16-32k", "summary": true, "total_wall_s": 212.2, "prompt_ms_total": 121889, "prompt_tokens_processed": 16924, "mean_gen_tps": 9.3, "final_ctx_tokens": 17658}
+{"label": "B-1slot-q8-48k", "turn": 1, "wall_s": 11.63, "prompt_n": 1702, "cache_n": 0, "prompt_ms": 6800, "gen_n": 55, "gen_tps": 11.2, "ctx_tokens": 1702}
+{"label": "B-1slot-q8-48k", "turn": 2, "wall_s": 15.81, "prompt_n": 1687, "cache_n": 1756, "prompt_ms": 7667, "gen_n": 86, "gen_tps": 10.5, "ctx_tokens": 3443}
+{"label": "B-1slot-q8-48k", "turn": 3, "wall_s": 17.54, "prompt_n": 1781, "cache_n": 3528, "prompt_ms": 8999, "gen_n": 86, "gen_tps": 10.0, "ctx_tokens": 5309}
+{"label": "B-1slot-q8-48k", "turn": 4, "wall_s": 19.0, "prompt_n": 1617, "cache_n": 5394, "prompt_ms": 9291, "gen_n": 86, "gen_tps": 8.8, "ctx_tokens": 7011}
+{"label": "B-1slot-q8-48k", "turn": 5, "wall_s": 20.66, "prompt_n": 1739, "cache_n": 7096, "prompt_ms": 11595, "gen_n": 86, "gen_tps": 9.4, "ctx_tokens": 8835}
+{"label": "B-1slot-q8-48k", "turn": 6, "wall_s": 23.4, "prompt_n": 1859, "cache_n": 8920, "prompt_ms": 14041, "gen_n": 86, "gen_tps": 9.1, "ctx_tokens": 10779}
+{"label": "B-1slot-q8-48k", "turn": 7, "wall_s": 26.1, "prompt_n": 1819, "cache_n": 10864, "prompt_ms": 15419, "gen_n": 86, "gen_tps": 8.0, "ctx_tokens": 12683}
+{"label": "B-1slot-q8-48k", "turn": 8, "wall_s": 24.77, "prompt_n": 1431, "cache_n": 12768, "prompt_ms": 13628, "gen_n": 86, "gen_tps": 7.7, "ctx_tokens": 14199}
+{"label": "B-1slot-q8-48k", "turn": 9, "wall_s": 29.29, "prompt_n": 1636, "cache_n": 14284, "prompt_ms": 16807, "gen_n": 86, "gen_tps": 6.9, "ctx_tokens": 15920}
+{"label": "B-1slot-q8-48k", "turn": 10, "wall_s": 32.29, "prompt_n": 1653, "cache_n": 16005, "prompt_ms": 18468, "gen_n": 86, "gen_tps": 6.2, "ctx_tokens": 17658}
+{"label": "B-1slot-q8-48k", "summary": true, "total_wall_s": 220.5, "prompt_ms_total": 122715, "prompt_tokens_processed": 16924, "mean_gen_tps": 8.8, "final_ctx_tokens": 17658}
+{"label": "C-1slot-q8-48k-draft", "turn": 1, "wall_s": 11.65, "prompt_n": 1702, "cache_n": 0, "prompt_ms": 6764, "gen_n": 55, "gen_tps": 11.1, "ctx_tokens": 1702}
+{"label": "C-1slot-q8-48k-draft", "turn": 2, "wall_s": 15.3, "prompt_n": 1687, "cache_n": 1756, "prompt_ms": 7409, "gen_n": 86, "gen_tps": 10.8, "ctx_tokens": 3443}
+{"label": "C-1slot-q8-48k-draft", "turn": 3, "wall_s": 17.47, "prompt_n": 1781, "cache_n": 3528, "prompt_ms": 8853, "gen_n": 86, "gen_tps": 9.9, "ctx_tokens": 5309}
+{"label": "C-1slot-q8-48k-draft", "turn": 4, "wall_s": 18.63, "prompt_n": 1617, "cache_n": 5394, "prompt_ms": 9577, "gen_n": 86, "gen_tps": 9.4, "ctx_tokens": 7011}
+{"label": "C-1slot-q8-48k-draft", "turn": 5, "wall_s": 21.39, "prompt_n": 1739, "cache_n": 7096, "prompt_ms": 11624, "gen_n": 86, "gen_tps": 8.7, "ctx_tokens": 8835}
+{"label": "C-1slot-q8-48k-draft", "turn": 6, "wall_s": 25.27, "prompt_n": 1859, "cache_n": 8920, "prompt_ms": 14658, "gen_n": 86, "gen_tps": 8.1, "ctx_tokens": 10779}
+{"label": "C-1slot-q8-48k-draft", "turn": 7, "wall_s": 26.71, "prompt_n": 1819, "cache_n": 10864, "prompt_ms": 15101, "gen_n": 86, "gen_tps": 7.4, "ctx_tokens": 12683}
+{"label": "C-1slot-q8-48k-draft", "turn": 8, "wall_s": 25.26, "prompt_n": 1431, "cache_n": 12768, "prompt_ms": 13816, "gen_n": 86, "gen_tps": 7.5, "ctx_tokens": 14199}
+{"label": "C-1slot-q8-48k-draft", "turn": 9, "wall_s": 26.03, "prompt_n": 1636, "cache_n": 14284, "prompt_ms": 15942, "gen_n": 86, "gen_tps": 8.5, "ctx_tokens": 15920}
+{"label": "C-1slot-q8-48k-draft", "turn": 10, "wall_s": 27.83, "prompt_n": 1653, "cache_n": 16005, "prompt_ms": 16985, "gen_n": 86, "gen_tps": 7.9, "ctx_tokens": 17658}
+{"label": "C-1slot-q8-48k-draft", "summary": true, "total_wall_s": 215.6, "prompt_ms_total": 120729, "prompt_tokens_processed": 16924, "mean_gen_tps": 8.9, "final_ctx_tokens": 17658}
+{"label": "E-gptoss-20b-64k", "error": "server exited during load"}
+{"label": "E-gptoss-20b-64k", "error": "bench failed"}
+{"label": "E-gptoss-20b-ollama", "turn": 1, "wall_s": 8.89, "prompt_n": null, "cache_n": null, "prompt_ms": 0, "gen_n": null, "gen_tps": 0, "ctx_tokens": 1699}
+{"label": "E-gptoss-20b-ollama", "turn": 2, "wall_s": 9.64, "prompt_n": null, "cache_n": null, "prompt_ms": 0, "gen_n": null, "gen_tps": 0, "ctx_tokens": 3382}
+{"label": "E-gptoss-20b-ollama", "turn": 3, "wall_s": 8.46, "prompt_n": null, "cache_n": null, "prompt_ms": 0, "gen_n": null, "gen_tps": 0, "ctx_tokens": 5144}
+{"label": "E-gptoss-20b-ollama", "turn": 4, "wall_s": 6.78, "prompt_n": null, "cache_n": null, "prompt_ms": 0, "gen_n": null, "gen_tps": 0, "ctx_tokens": 6819}
+{"label": "E-gptoss-20b-ollama", "turn": 5, "wall_s": 8.43, "prompt_n": null, "cache_n": null, "prompt_ms": 0, "gen_n": null, "gen_tps": 0, "ctx_tokens": 8604}
+{"label": "E-gptoss-20b-ollama", "turn": 6, "wall_s": 7.9, "prompt_n": null, "cache_n": null, "prompt_ms": 0, "gen_n": null, "gen_tps": 0, "ctx_tokens": 10466}
+{"label": "E-gptoss-20b-ollama", "turn": 7, "wall_s": 8.44, "prompt_n": null, "cache_n": null, "prompt_ms": 0, "gen_n": null, "gen_tps": 0, "ctx_tokens": 12301}
+{"label": "E-gptoss-20b-ollama", "turn": 8, "wall_s": 8.03, "prompt_n": null, "cache_n": null, "prompt_ms": 0, "gen_n": null, "gen_tps": 0, "ctx_tokens": 13719}
+{"label": "E-gptoss-20b-ollama", "turn": 9, "wall_s": 10.48, "prompt_n": null, "cache_n": null, "prompt_ms": 0, "gen_n": null, "gen_tps": 0, "ctx_tokens": 15371}
+{"label": "E-gptoss-20b-ollama", "turn": 10, "wall_s": 8.56, "prompt_n": null, "cache_n": null, "prompt_ms": 0, "gen_n": null, "gen_tps": 0, "ctx_tokens": 17122}
+{"label": "E-gptoss-20b-ollama", "summary": true, "total_wall_s": 85.6, "prompt_ms_total": 0, "prompt_tokens_processed": 0, "mean_gen_tps": 0.0, "final_ctx_tokens": 17122}

@@ -1,0 +1,8 @@
+engines-provider
+qwenloop-edit-tool
+qwenloop-request-timeout
+qwenloop-run-telemetry
+qwenloop-toolcall-retry
+default-model-p1
+default-model-p2
+default-model-p3
