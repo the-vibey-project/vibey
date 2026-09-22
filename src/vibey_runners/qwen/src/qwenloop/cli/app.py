@@ -31,6 +31,7 @@ from qwenloop.domain.model import (
     RunStatus,
     ServerInfo,
 )
+from qwenloop.infrastructure.clock import SystemClock
 from qwenloop.infrastructure.desktop_notifications import DesktopNotifier
 from qwenloop.infrastructure.github import (
     list_open_issues,
@@ -284,6 +285,7 @@ async def _run_plan(
         FileRunStore(cwd),
         SandboxTools(cwd),
         DesktopNotifier(enabled=desktop_notifications),
+        clock=SystemClock(),
     )
     return await runner.run(
         run_id=run_id,

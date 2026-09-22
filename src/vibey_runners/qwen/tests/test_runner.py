@@ -1,6 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import json
 from collections.abc import AsyncIterator, Sequence
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,22 @@ from qwenloop.domain.model import Backend, ChatChunk, ChatMessage, RunStatus, Se
 from qwenloop.infrastructure.profiles import PORTABLE
 from qwenloop.infrastructure.run_store import FileRunStore
 from qwenloop.infrastructure.tools import SandboxTools
+
+
+class FakeClock:
+    """An in-memory clock: wall time from a fixed instant, monotonic time that advances a
+    fixed step on every read, so a turn's timings are exact and assertable."""
+
+    def __init__(self, step: float = 0.25) -> None:
+        self.step = step
+        self.elapsed = 0.0
+
+    def now(self) -> datetime:
+        return datetime(2026, 9, 22, 12, 0, tzinfo=UTC) + timedelta(seconds=self.elapsed)
+
+    def monotonic(self) -> float:
+        self.elapsed += self.step
+        return self.elapsed
 
 
 class FakeServer:
@@ -157,7 +174,9 @@ async def test_runner_inserts_continue_prompt_after_assistant_only_turn(tmp_path
         ]
     )
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="nudge", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=3
     )
     assert result.status is RunStatus.COMPLETED
@@ -182,6 +201,7 @@ async def test_runner_notifies_lifecycle_events(tmp_path: Path) -> None:
         FileRunStore(tmp_path),
         SandboxTools(tmp_path),
         notifier=notifier,
+        clock=FakeClock(),
     ).run(
         run_id="notifications",
         plan="do it",
@@ -208,6 +228,7 @@ async def test_runner_ignores_notification_failures(tmp_path: Path) -> None:
         FileRunStore(tmp_path),
         SandboxTools(tmp_path),
         notifier=notifier,
+        clock=FakeClock(),
     ).run(
         run_id="notification-failure",
         plan="do it",
@@ -229,7 +250,9 @@ async def test_runner_preserves_assistant_tool_call_context(tmp_path: Path) -> N
         ]
     )
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="tool-context",
         plan="do it",
         cwd=tmp_path,
@@ -288,7 +311,9 @@ async def test_runner_normalizes_native_verdict_tool_call(tmp_path: Path) -> Non
         ]
     )
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="native-verdict",
         plan="do it",
         cwd=tmp_path,
@@ -318,7 +343,9 @@ async def test_storm_cannot_complete_after_read_only_inspection(tmp_path: Path) 
         ]
     )
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="storm-read-only",
         plan="# qwenstorm plan\nwork it",
         cwd=tmp_path,
@@ -338,7 +365,9 @@ async def test_storm_can_complete_after_repo_action(tmp_path: Path) -> None:
         ]
     )
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="storm-progress",
         plan="# qwenstorm plan\nwork it",
         cwd=tmp_path,
@@ -370,7 +399,9 @@ async def test_storm_reopens_a_marker_without_cdd_evidence(tmp_path: Path) -> No
         ]
     )
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="cdd-evidence",
         plan="# qwenstorm plan\n## Convergence-Driven Development (CDD)",
         cwd=tmp_path,
@@ -391,7 +422,9 @@ async def test_runner_accepts_completion_evidence_split_across_turns(tmp_path: P
         ]
     )
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="split-completion",
         plan="do it",
         cwd=tmp_path,
@@ -417,7 +450,9 @@ async def test_runner_emits_one_turn_completed_per_model_call(tmp_path: Path) ->
         ]
     )
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="turns", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=3
     )
     assert result.status is RunStatus.COMPLETED
@@ -433,6 +468,11 @@ async def test_runner_emits_one_turn_completed_per_model_call(tmp_path: Path) ->
             "input_tokens": 7,
             "output_tokens": 2,
             "tool_called": False,
+            # FakeClock: 250 ms per monotonic read -- start, answer, end
+            "started_at": "2026-09-22T12:00:00.000Z",
+            "ended_at": "2026-09-22T12:00:00.750Z",
+            "duration_ms": 500,
+            "model_ms": 250,
         },
         {
             "type": "turn.completed",
@@ -440,6 +480,10 @@ async def test_runner_emits_one_turn_completed_per_model_call(tmp_path: Path) ->
             "input_tokens": 3,
             "output_tokens": 4,
             "tool_called": True,
+            "started_at": "2026-09-22T12:00:00.750Z",
+            "ended_at": "2026-09-22T12:00:01.500Z",
+            "duration_ms": 500,
+            "model_ms": 250,
         },
     ]
     # each boundary closes its own turn, so the run's verdict follows the last one
@@ -456,7 +500,9 @@ async def test_runner_rejects_completion_verdict_with_no_tool_call(tmp_path: Pat
         )
     ]
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="premature",
         plan="do it",
         cwd=tmp_path,
@@ -472,7 +518,9 @@ async def test_runner_rejects_completion_verdict_with_no_tool_call(tmp_path: Pat
 async def test_runner_bounds_repeated_marker_only_claims(tmp_path: Path) -> None:
     server = ScriptedServer([[ChatChunk(text="QWENLOOP_TASK_FULLY_COMPLETE")] for _ in range(3)])
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="marker-loop",
         plan="do it",
         cwd=tmp_path,
@@ -488,7 +536,7 @@ async def test_runner_bounds_repeated_marker_only_claims(tmp_path: Path) -> None
 async def test_runner_writes_contract_artifacts(tmp_path: Path) -> None:
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
     result = await AutonomousRunner(
-        FakeServer(), FileRunStore(tmp_path), SandboxTools(tmp_path)
+        FakeServer(), FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
     ).run(run_id="abc", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=2)
     assert result.status is RunStatus.COMPLETED
     assert (tmp_path / "done.txt").read_text() == "ok"
@@ -505,9 +553,9 @@ async def test_runner_honors_wind_down(tmp_path: Path) -> None:
     inbox = tmp_path / ".qwenloop" / "runs" / "abc" / "control" / "inbox"
     (inbox / "1.json").write_text('{"type":"wind_down"}')
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(FakeServer(), store, SandboxTools(tmp_path)).run(
-        run_id="abc", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=2
-    )
+    result = await AutonomousRunner(
+        FakeServer(), store, SandboxTools(tmp_path), clock=FakeClock()
+    ).run(run_id="abc", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=2)
     assert result.status is RunStatus.WINDING_DOWN
 
 
@@ -549,7 +597,9 @@ async def test_runner_fails_on_empty_response(tmp_path: Path) -> None:
     server = FakeServer()
     server.chunks = [ChatChunk()]
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="empty", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=1
     )
     assert result.status is RunStatus.FAILED
@@ -560,7 +610,9 @@ async def test_runner_turn_limit_after_text(tmp_path: Path) -> None:
     server = FakeServer()
     server.chunks = [ChatChunk(text="still working")]
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="limit", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=1
     )
     assert result.status is RunStatus.FAILED
@@ -571,7 +623,9 @@ async def test_runner_normalizes_invalid_tool_arguments(tmp_path: Path) -> None:
     server = FakeServer()
     server.chunks = [ChatChunk(tool_call={"name": "unknown", "arguments": "bad"})]
     info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
-    result = await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path)).run(
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
         run_id="invalid",
         plan="do it",
         cwd=tmp_path,
@@ -712,3 +766,101 @@ async def test_write_file_guard_leaves_ordinary_writes_alone(tmp_path: Path) -> 
     binary = await tools.execute("write_file", {"path": "blob.bin", "content": "x\n"})
     grown = await tools.execute("write_file", {"path": "long.py", "content": long_text + "more\n"})
     assert all("written" in result for result in (new, small, binary, grown))
+
+
+@pytest.mark.asyncio
+async def test_turn_completed_carries_its_timing_and_the_servers_own(tmp_path: Path) -> None:
+    timings = {
+        "prompt_n": 812.0,
+        "cache_n": 4096.0,
+        "prompt_ms": 950.5,
+        "predicted_n": 64.0,
+        "predicted_ms": 1200.0,
+        "predicted_per_second": 53.3,
+    }
+    server = ScriptedServer(
+        [
+            [
+                ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}}),
+                ChatChunk(text="", input_tokens=5, output_tokens=2, timings=timings),
+            ],
+            [ChatChunk(text="```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE")],
+        ]
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    clock = FakeClock(step=0.25)
+    await AutonomousRunner(server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=clock).run(
+        run_id="timed", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=3
+    )
+    events = [
+        json.loads(line)
+        for line in (tmp_path / ".qwenloop" / "runs" / "timed" / "events.jsonl")
+        .read_text()
+        .splitlines()
+    ]
+    first, second = [event for event in events if event["type"] == "turn.completed"]
+    # three monotonic reads per turn (start, answer, end), each 250 ms apart
+    assert first["duration_ms"] == 500
+    assert first["model_ms"] == 250
+    assert first["started_at"] == "2026-09-22T12:00:00.000Z"
+    assert first["ended_at"] == "2026-09-22T12:00:00.750Z"
+    assert first["server_timings"] == timings
+    # a response without timings records none rather than inventing them
+    assert "server_timings" not in second
+
+
+@pytest.mark.asyncio
+async def test_a_turn_with_no_answer_at_all_is_still_timed(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [[], [ChatChunk(text="```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE")]]
+    )
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock(step=0.5)
+    ).run(
+        run_id="silent", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=2
+    )
+    events = (tmp_path / ".qwenloop" / "runs" / "silent" / "events.jsonl").read_text().splitlines()
+    first = next(json.loads(line) for line in events if '"turn.completed"' in line)
+    assert first["duration_ms"] == 500
+    assert first["model_ms"] == 500
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("info", "expected"),
+    [
+        (
+            ServerInfo(
+                Backend.LLAMA_CPP,
+                PORTABLE.name,
+                "http://127.0.0.1:9/v1",
+                True,
+                True,
+                7,
+                argv=("llama-server", "--api-key", "<redacted>"),
+                log_path="/cache/server.log",
+            ),
+            {"argv": ["llama-server", "--api-key", "<redacted>"], "log_path": "/cache/server.log"},
+        ),
+        (
+            ServerInfo(
+                Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1:11434/v1", False, True
+            ),
+            {"endpoint": "http://127.0.0.1:11434/v1"},
+        ),
+    ],
+)
+async def test_meta_records_the_server_settings_the_run_used(
+    tmp_path: Path, info: ServerInfo, expected: dict[str, object]
+) -> None:
+    server = ScriptedServer(
+        [[ChatChunk(text="```qwenloop-verdict\npass\n```\nQWENLOOP_TASK_FULLY_COMPLETE")]]
+    )
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="meta", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=1
+    )
+    meta = json.loads((tmp_path / ".qwenloop" / "runs" / "meta" / "meta.json").read_text())
+    assert meta["server_settings"] == expected

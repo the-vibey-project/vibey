@@ -26,6 +26,16 @@ from platformdirs import user_cache_path
 
 from qwenloop.domain.model import Backend, ChatChunk, ChatMessage, ModelProfile, ServerInfo
 
+#: The llama-server `timings` keys a run records per turn (#382).
+_SERVER_TIMING_KEYS = (
+    "prompt_n",
+    "cache_n",
+    "prompt_ms",
+    "predicted_n",
+    "predicted_ms",
+    "predicted_per_second",
+)
+
 
 def _message_payload(message: ChatMessage) -> dict[str, object]:
     """Serialize tool-call context so the next model turn can continue correctly."""
@@ -62,6 +72,8 @@ class OpenAIServer:
                 pid=int(data["pid"]),
                 token=str(data.get("token", "")),
                 model=str(data.get("model", "")),
+                argv=tuple(str(item) for item in data.get("argv", ())),
+                log_path=str(data.get("log_path", "")),
             )
         except (OSError, ValueError, KeyError, json.JSONDecodeError):
             return None
@@ -81,12 +93,18 @@ class OpenAIServer:
             port = _free_port()
             token = os.urandom(24).hex()
             argv = self._argv(profile, port, token)
-            process = await asyncio.create_subprocess_exec(
-                *argv,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-                start_new_session=True,
-            )
+            # The server's own load, memory and slot messages are evidence for tuning it
+            # (#382); they go to a log beside its state instead of to /dev/null. The child
+            # keeps its own descriptor, so ours closes as soon as it has started.
+            log_path = self.cache_dir / "servers" / profile.name / "server.log"
+            log_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            with log_path.open("ab") as log:
+                process = await asyncio.create_subprocess_exec(
+                    *argv,
+                    stdout=log,
+                    stderr=log,
+                    start_new_session=True,
+                )
             info = ServerInfo(
                 backend=self.backend,
                 profile=profile.name,
@@ -96,6 +114,8 @@ class OpenAIServer:
                 pid=process.pid,
                 token=token,
                 model=profile.name,
+                argv=self._redacted(argv, token),
+                log_path=str(log_path),
             )
             state = self.cache_dir / "servers" / f"{profile.name}.json"
             state.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -165,6 +185,7 @@ class OpenAIServer:
             text=content,
             input_tokens=int(usage.get("prompt_tokens", 0)),
             output_tokens=int(usage.get("completion_tokens", 0)),
+            timings=self._server_timings(data.get("timings")),
         )
 
     async def stop(self, info: ServerInfo) -> None:
@@ -191,6 +212,28 @@ class OpenAIServer:
 
     def _argv(self, profile: ModelProfile, port: int, token: str) -> tuple[str, ...]:
         raise NotImplementedError
+
+    @staticmethod
+    def _redacted(argv: Sequence[str], token: str) -> tuple[str, ...]:
+        """The argv as it may be recorded: the per-launch API key never leaves the process."""
+        return tuple("<redacted>" if token and item == token else item for item in argv)
+
+    @staticmethod
+    def _server_timings(timings: object) -> dict[str, float] | None:
+        """llama-server's own timings for one request, exactly as it reported them.
+
+        Only the keys a run is tuned by pass through, and a key the server did not send is
+        left out rather than invented. Anything that is not a mapping of numbers is no
+        timing at all.
+        """
+        if not isinstance(timings, dict):
+            return None
+        kept = {
+            key: float(timings[key])
+            for key in _SERVER_TIMING_KEYS
+            if isinstance(timings.get(key), int | float) and not isinstance(timings[key], bool)
+        }
+        return kept or None
 
     @staticmethod
     def _auth(token: str) -> dict[str, str]:

@@ -3,9 +3,11 @@
 
 import json
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 
 from qwenloop.application.interfaces import (
+    ClockInterface,
     DesktopNotifierInterface,
     InferenceServer,
     RunStore,
@@ -130,11 +132,29 @@ class AutonomousRunner:
         store: RunStore,
         tools: ToolExecutor,
         notifier: DesktopNotifierInterface | None = None,
+        *,
+        clock: ClockInterface,
     ) -> None:
         self._server = server
         self._store = store
         self._tools = tools
         self._notifier = notifier
+        # Required, not defaulted: a run that cannot be timed is not a run qwenloop starts
+        # (sub-doctrine 8.g). Every turn is measured against this clock (#382).
+        self._clock = clock
+
+    @staticmethod
+    def _timestamp(moment: datetime) -> str:
+        """UTC ISO-8601 to the millisecond, the form every timed event carries."""
+        return moment.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+    @staticmethod
+    def _server_settings(info: ServerInfo) -> dict[str, object]:
+        """What the model server was running with: the argv qwenloop started it with, or,
+        for an endpoint somebody else runs, where it is."""
+        if info.argv:
+            return {"argv": list(info.argv), "log_path": info.log_path}
+        return {"endpoint": info.endpoint}
 
     async def _notify(self, title: str, message: str) -> None:
         if self._notifier is None:
@@ -179,6 +199,7 @@ class AutonomousRunner:
                 "quantization": profile.quantization,
                 "context_window": profile.context_window,
                 "cwd": str(cwd),
+                "server_settings": self._server_settings(server_info),
             },
         )
         await self._notify("Qwen run started", f"Run {run_id} started.")
@@ -196,7 +217,17 @@ class AutonomousRunner:
             tool_results: list[ChatMessage] = []
             tool_called = False
             input_before, output_before = state.input_tokens, state.output_tokens
+            started_at = self._clock.now()
+            started = self._clock.monotonic()
+            # When the model's answer arrived, apart from the tools it then ran: the two
+            # are tuned by different settings, so one duration would hide which one moved.
+            answered: float | None = None
+            server_timings: dict[str, float] | None = None
             async for chunk in self._server.chat_stream(server_info, state.transcript):
+                if answered is None:
+                    answered = self._clock.monotonic()
+                if chunk.timings is not None:
+                    server_timings = dict(chunk.timings)
                 state.input_tokens += chunk.input_tokens
                 state.output_tokens += chunk.output_tokens
                 if chunk.text:
@@ -248,16 +279,21 @@ class AutonomousRunner:
             # One boundary per model call, once its stream has ended: the event a reader
             # counts turns from. text_delta fires once per streamed fragment, so counting
             # those overstated turns by the length of every answer (vibey's turn cap did).
-            self._store.append_event(
-                run_id,
-                {
-                    "type": "turn.completed",
-                    "turn": turn,
-                    "input_tokens": state.input_tokens - input_before,
-                    "output_tokens": state.output_tokens - output_before,
-                    "tool_called": tool_called,
-                },
-            )
+            ended = self._clock.monotonic()
+            turn_event: dict[str, object] = {
+                "type": "turn.completed",
+                "turn": turn,
+                "input_tokens": state.input_tokens - input_before,
+                "output_tokens": state.output_tokens - output_before,
+                "tool_called": tool_called,
+                "started_at": self._timestamp(started_at),
+                "ended_at": self._timestamp(self._clock.now()),
+                "duration_ms": round((ended - started) * 1000),
+                "model_ms": round(((ended if answered is None else answered) - started) * 1000),
+            }
+            if server_timings is not None:
+                turn_event["server_timings"] = server_timings
+            self._store.append_event(run_id, turn_event)
             await self._notify(
                 f"Qwen turn {turn} complete",
                 f"Run {run_id} completed model turn {turn}.",

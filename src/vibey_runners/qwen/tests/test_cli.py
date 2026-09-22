@@ -126,7 +126,7 @@ def test_run_statuses(
             return True
 
     class FakeRunner:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             pass
 
         async def run(self, **kwargs):  # type: ignore[no-untyped-def]
@@ -168,7 +168,7 @@ def test_run_waits_for_new_server(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
             return info
 
     class FakeRunner:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             pass
 
         async def run(self, **_kwargs):  # type: ignore[no-untyped-def]
@@ -359,7 +359,7 @@ def test_storm_sweep_reports_per_repo_status_and_tally(
             return True
 
     class FakeRunner:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             pass
 
         async def run(self, **kwargs):  # type: ignore[no-untyped-def]
@@ -471,7 +471,7 @@ def test_storm_retries_a_failed_item_until_it_converges(
             return True
 
     class FakeRunner:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             pass
 
         async def run(self, **kwargs):  # type: ignore[no-untyped-def]
@@ -528,7 +528,7 @@ def test_storm_reports_failed_turns_for_the_current_item(
             return True
 
     class FakeRunner:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             pass
 
         async def run(self, **kwargs):  # type: ignore[no-untyped-def]
@@ -652,7 +652,7 @@ class RecordingRunner:
 
     calls: list[dict[str, object]] = []
 
-    def __init__(self, server, *_args):  # type: ignore[no-untyped-def]
+    def __init__(self, server, *_args, **_kwargs):  # type: ignore[no-untyped-def]
         self.server = server
 
     async def run(self, **kwargs):  # type: ignore[no-untyped-def]
@@ -669,7 +669,7 @@ def recording_runner(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]
 
 def _no_managed_servers(monkeypatch: pytest.MonkeyPatch) -> None:
     class Forbidden:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             raise AssertionError("an endpoint run must never build a managed server")
 
     monkeypatch.setattr("qwenloop.cli.app.LlamaCppServer", Forbidden)
