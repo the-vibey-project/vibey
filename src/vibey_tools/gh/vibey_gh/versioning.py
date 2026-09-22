@@ -9,7 +9,9 @@ a human-maintained version is a silent-failure generator.
     content_paths changed  -> MINOR   the product changed; users receive something new
     only code_paths        -> PATCH   an internal fix
     neither                -> NONE    docs, CI, tooling: nothing an installed user gets
-    version already ahead  -> NONE    a deliberate bump is in place; never double it
+    version already ahead  -> NONE    a deliberate bump is in place; never double it,
+                                      unless the range now owes more (#393): a staged
+                                      minor followed by a break is raised to the major
 
 MAJOR escalates a decision the two lines under it already reached; it never creates one.
 A range that reaches no installed user still releases nothing, and writing
@@ -216,9 +218,14 @@ def decide(cfg: GhConfig, since: str) -> tuple[str | None, str]:
 
     working = read_version(cfg)
     if working != released:
-        return None, (
+        return _staged(
+            cfg,
+            since,
+            "HEAD",
+            released,
+            working,
             f"already at {working} while {since} is {released} — "
-            "a deliberate bump is in place, leaving it alone"
+            "a deliberate bump is in place, leaving it alone",
         )
 
     return _classify(cfg, since, "HEAD", working)
@@ -237,10 +244,43 @@ def owed_at(cfg: GhConfig, since: str, head: str) -> tuple[str | None, str]:
     if staged is None:
         return None, f"cannot read a version at {head}; refusing to guess"
     if staged != released:
-        return None, (
-            f"already at {staged} while {since} is {released} — a deliberate bump is in place"
+        return _staged(
+            cfg,
+            since,
+            head,
+            released,
+            staged,
+            f"already at {staged} while {since} is {released} — a deliberate bump is in place",
         )
     return _classify(cfg, since, head, staged)
+
+
+def _staged(
+    cfg: GhConfig, since: str, head: str, released: str, staged: str, kept: str
+) -> tuple[str | None, str]:
+    """A staged bump is kept — unless the range now owes a higher one (#393).
+
+    A deliberate bump is never doubled and never lowered. But a staged `2.1.0` followed
+    by a breaking change is not a decision this module may keep: MAJOR escalates what the
+    range already reached, so the range, derived against the RELEASED version, owes
+    `3.0.0`, and publishing `2.1.0` would ship a break under a minor number. A staged
+    version this module cannot read as `major.minor.patch` is left exactly as it was.
+
+    A module function, like `decide` and `owed_at` — its only callers — in a module that
+    ADR-0016 has not converged yet; it moves into their class when they do.
+    """
+    owed, why = _classify(cfg, since, head, released)
+    if owed is None:
+        return None, kept
+    try:
+        higher = tuple(int(p) for p in owed.split(".")[:3]) > tuple(
+            int(p) for p in staged.split(".")[:3]
+        )
+    except ValueError:
+        return None, kept
+    if higher:
+        return owed, f"staged {staged} raised to {owed}: {why}"
+    return None, kept
 
 
 def _classify(cfg: GhConfig, since: str, head: str, working: str) -> tuple[str | None, str]:

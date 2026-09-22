@@ -1244,3 +1244,89 @@ def test_a_citation_file_with_no_version_falls_through_to_the_next_file(repo):
     subprocess.run(["git", "add", "CITATION.cff", "pyproject.toml"], cwd=repo, check=True)
     subprocess.run(["git", "commit", "-m", "chore: both", "--no-verify"], cwd=repo, check=True)
     assert read_version_at(cfg, "HEAD") == "2.5.0"
+
+
+@pytest.mark.parametrize(
+    ("staged", "message", "owed"),
+    [
+        # a staged minor, then a break: the range owes the major (#393)
+        ("1.1.0", "feat!: drop the old flag", "2.0.0"),
+        # a staged major already covers the break: kept
+        ("2.0.0", "feat!: drop the old flag", None),
+        # a staged minor over a minor-only range: kept, never doubled
+        ("1.1.0", "feat: a new page", None),
+        # a staged version this module cannot read is left exactly as it was
+        ("1.1.0rc1", "feat!: drop the old flag", None),
+    ],
+)
+def test_a_staged_bump_is_raised_only_when_the_range_owes_more(repo, staged, message, owed):
+    import subprocess
+
+    from vibey_gh import versioning
+    from vibey_gh.config import load_config
+
+    def git(*a):
+        subprocess.run(["git", *a], cwd=repo, capture_output=True, check=True)
+
+    def stamp(version):
+        (repo / "src" / "__init__.py").write_text(f'__version__ = "{version}"\n')
+        (repo / "manifest.json").write_text(f'{{"metadata": {{"version": "{version}"}}}}\n')
+
+    (repo / ".vibey-gh.toml").write_text(
+        '[version]\nfiles = ["src/__init__.py", "manifest.json"]\n'
+        'code_paths = ["src/"]\ncontent_paths = ["content/"]\n',
+        encoding="utf-8",
+    )
+    (repo / "src").mkdir()
+    stamp("1.0.0")
+    git("add", "-A")
+    git("commit", "-qm", "base")
+    cfg = load_config(repo)
+    git("branch", "release-line")
+    stamp(staged)
+    git("add", "-A")
+    git("commit", "-qm", f"chore(release): {staged}")
+    (repo / "content").mkdir()
+    (repo / "content" / "page.md").write_text("new\n")
+    git("add", "-A")
+    git("commit", "-qm", message)
+
+    decided, why = versioning.decide(cfg, "release-line")
+    assert decided == owed
+    if owed is None:
+        assert "deliberate bump" in why
+    else:
+        assert why.startswith(f"staged {staged} raised to {owed}:")
+        assert "declares a break" in why
+    # the merge-time re-derivation (#254) asks the same question and gets the same answer
+    assert versioning.owed_at(cfg, "release-line", "HEAD")[0] == owed
+
+
+def test_a_staged_bump_over_a_range_that_reaches_no_user_is_kept(repo):
+    """#393's rule never manufactures a release: a range that owes nothing keeps the
+    staged bump exactly as the deliberate bump it is."""
+    import subprocess
+
+    from vibey_gh import versioning
+    from vibey_gh.config import load_config
+
+    def git(*a):
+        subprocess.run(["git", *a], cwd=repo, capture_output=True, check=True)
+
+    # The version files sit outside code_paths and content_paths, so the bump commit
+    # and the docs change after it reach no installed user.
+    (repo / ".vibey-gh.toml").write_text(
+        '[version]\nfiles = ["manifest.json"]\ncode_paths = ["src/"]\ncontent_paths = ["content/"]\n',
+        encoding="utf-8",
+    )
+    (repo / "manifest.json").write_text('{"metadata": {"version": "1.0.0"}}\n')
+    git("add", "-A")
+    git("commit", "-qm", "base")
+    cfg = load_config(repo)
+    git("branch", "release-line")
+    (repo / "manifest.json").write_text('{"metadata": {"version": "1.1.0"}}\n')
+    (repo / "docs.md").write_text("words\n")
+    git("add", "-A")
+    git("commit", "-qm", "feat!: a break in the docs only")
+    decided, why = versioning.decide(cfg, "release-line")
+    assert decided is None and "deliberate bump" in why
