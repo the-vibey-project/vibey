@@ -72,5 +72,7 @@ class OpenCodeLoopWorkPlanProducer:
         )
         items = self._decoder.items(_object(result.response).get("items"))
         self._decoder.require_unique(items)
-        self._decoder.require_valid(items, [criterion.criterion_id for criterion in spec.criteria])
+        self._decoder.require_valid(
+            items, [criterion.criterion_id for criterion in spec.criteria], strict=True
+        )
         return items

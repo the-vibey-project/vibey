@@ -53,22 +53,24 @@ class OpenCodeLoopDesignProvider:
         questions_raw = _object(raw).get("questions")
         if not isinstance(questions_raw, list) or not questions_raw:
             raise ValueError("DESIGN question output requires a non-empty questions list")
-        try:
-            questions = tuple(
+        questions = []
+        for item in questions_raw:
+            if not isinstance(item, dict):
+                raise ValueError("every DESIGN question must be an object")
+            for f in ("question_id", "text", "default"):
+                if f not in item or not isinstance(item[f], str):
+                    raise ValueError(f"DESIGN question is missing or has invalid type for {f}")
+            if "blocking" not in item or not isinstance(item["blocking"], bool):
+                raise ValueError("DESIGN question is missing or has invalid type for blocking")
+            questions.append(
                 DesignQuestion(
-                    question_id=str(item["question_id"]),
-                    text=str(item["text"]),
-                    default=str(item["default"]),
-                    blocking=bool(item["blocking"]),
+                    question_id=item["question_id"],
+                    text=item["text"],
+                    default=item["default"],
+                    blocking=item["blocking"],
                 )
-                for item in questions_raw
-                if isinstance(item, dict)
             )
-        except KeyError as exc:
-            raise ValueError(f"DESIGN question is missing {exc.args[0]}") from exc
-        if len(questions) != len(questions_raw):
-            raise ValueError("every DESIGN question must be an object")
-        return build_question_batch(stage, questions)
+        return build_question_batch(stage, tuple(questions))
 
     async def research(self, topic: str) -> ResearchResult:
         prompt = (

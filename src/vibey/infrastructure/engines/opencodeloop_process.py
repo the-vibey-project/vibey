@@ -8,10 +8,9 @@ artifact parsing can be verified without launching or paying for a model run.
 
 import asyncio
 import json
-import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from vibey.application.dto import RunSpec
@@ -20,8 +19,7 @@ from vibey.infrastructure.engines.argv import build_argv
 from vibey.infrastructure.engines.descriptors import OPENCODE
 from vibey.infrastructure.engines.plan_writer import write_plan
 from vibey.infrastructure.interfaces import CommandExecutor
-
-_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+from vibey.infrastructure.process import ProcessReaper
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,12 +35,13 @@ class AsyncSubprocessExecutor:
             *argv,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            start_new_session=True,
         )
         try:
             stdout, stderr = await process.communicate()
         except asyncio.CancelledError:
-            process.terminate()
-            await process.wait()
+            reaper = ProcessReaper(event="opencodeloop_process_not_reaped")
+            await reaper.kill_and_reap(process)
             raise
         return CommandResult(process.returncode or 0, stdout.decode(), stderr.decode())
 
@@ -82,30 +81,20 @@ class OpenCodeLoopProcess:
         if reusable is not None:
             return reusable
         write_plan(spec)
-        argv = (
-            *build_argv(OPENCODE, spec),
-            "--max-turns",
-            str(self._max_turns),
-            "--max-dollars",
-            format(self._max_dollars, "g"),
-            "--no-auto-model",
-            "--max-wait",
-            "1",
-            *(("--web-search",) if web_search else ()),
-        )
+        argv = build_argv(OPENCODE, spec)
         completed = await self._executor.execute(argv)
+        run_id = str(spec.run_id)
+        run_dir = spec.worktree_path / OPENCODE.state_dir / "runs" / run_id
         if completed.returncode != 0:
-            capacity = _capacity_deferred(spec.worktree_path, completed.stderr)
+            capacity = _capacity_deferred(spec.worktree_path, run_id)
             if capacity is not None:
                 raise capacity
-            recovered = _reported_structured_result(spec.worktree_path, completed.stderr)
+            recovered = _reported_structured_result(spec.worktree_path, run_id)
             if recovered is not None:
                 await self._record(recovered)
                 return recovered
             detail = completed.stderr.strip() or completed.stdout.strip()
             raise RuntimeError(f"opencodeloop failed with exit {completed.returncode}: {detail}")
-        run_id = _reported_run_id(completed.stderr)
-        run_dir = spec.worktree_path / OPENCODE.state_dir / "runs" / run_id
         events_path = run_dir / "events.jsonl"
         turns, dollars = _run_spend(events_path)
         result = OpenCodeLoopResult(run_id, run_dir, _last_response(events_path), turns, dollars)
@@ -120,20 +109,7 @@ class OpenCodeLoopProcess:
         await self._spend_recorder(result.turns, result.cost_usd)
 
 
-def _reported_run_id(stderr: str) -> str:
-    for line in stderr.splitlines():
-        if line.startswith("Run id:"):
-            run_id = line.partition(":")[2].strip()
-            if _RUN_ID.fullmatch(run_id):
-                return run_id
-    raise RuntimeError("opencodeloop did not report a run id")
-
-
-def _capacity_deferred(worktree_path: Path, stderr: str) -> CapacityDeferred | None:
-    try:
-        run_id = _reported_run_id(stderr)
-    except RuntimeError:
-        return None
+def _capacity_deferred(worktree_path: Path, run_id: str) -> CapacityDeferred | None:
     events_path = worktree_path / OPENCODE.state_dir / "runs" / run_id / "events.jsonl"
     if not events_path.is_file():
         return None
@@ -142,24 +118,14 @@ def _capacity_deferred(worktree_path: Path, stderr: str) -> CapacityDeferred | N
             record = json.loads(line)
         except json.JSONDecodeError:
             continue
-        payload = record.get("payload")
-        if not isinstance(payload, dict) or payload.get("type") != "RateLimitEvent":
-            continue
-        reset = payload.get("resets_at")
-        if payload.get("status") != "rejected" or not isinstance(reset, int | float):
-            continue
-        retry_at = datetime.fromtimestamp(reset, UTC)
-        limit = str(payload.get("rate_limit_type", "provider"))
-        detail = f"opencodeloop {limit} capacity exhausted until {retry_at.isoformat()}"
-        return CapacityDeferred(retry_at, detail)
+        if record.get("event_type") == "capacity.rejected":
+            state = record.get("capacity_state", "window_exhausted")
+            retry_at = datetime.now(UTC) + timedelta(seconds=60)
+            return CapacityDeferred(retry_at, f"opencodeloop capacity exhausted: {state}")
     return None
 
 
-def _reported_structured_result(worktree_path: Path, stderr: str) -> OpenCodeLoopResult | None:
-    try:
-        run_id = _reported_run_id(stderr)
-    except RuntimeError:
-        return None
+def _reported_structured_result(worktree_path: Path, run_id: str) -> OpenCodeLoopResult | None:
     run_dir = worktree_path / OPENCODE.state_dir / "runs" / run_id
     response = _last_response(run_dir / "events.jsonl")
     if not _looks_structured(response):
@@ -190,46 +156,29 @@ def _run_spend(events_path: Path) -> tuple[int, float]:
 def _last_response(events_path: Path) -> str:
     if not events_path.is_file():
         return ""
-    for line in reversed(events_path.read_text().splitlines()):
+    text_deltas = []
+    for line in events_path.read_text().splitlines():
         try:
             record = json.loads(line)
         except json.JSONDecodeError:
             continue
-        payload = record.get("payload")
-        if not isinstance(payload, dict):
-            continue
-        event_type = record.get("event_type")
-        if event_type == "chatter.assistant" and isinstance(payload.get("text"), str):
-            return str(payload["text"])
-        if (
-            event_type == "sdk.message"
-            and payload.get("type") == "ResultMessage"
-            and isinstance(payload.get("result"), str)
-        ):
-            return str(payload["result"])
-    return ""
+        if record.get("event_type") == "text_delta":
+            text = record.get("text")
+            if isinstance(text, str):
+                text_deltas.append(text)
+    return "".join(text_deltas)
 
 
 def _find_reusable_result(spec: RunSpec) -> OpenCodeLoopResult | None:
-    runs_root = spec.worktree_path / OPENCODE.state_dir / "runs"
-    plans_root = (spec.worktree_path / ".vibey" / "plans").resolve()
-    if not runs_root.is_dir():
+    run_id = str(spec.run_id)
+    run_dir = spec.worktree_path / OPENCODE.state_dir / "runs" / run_id
+    if not run_dir.is_dir():
         return None
-    for run_dir in sorted(runs_root.iterdir(), reverse=True):
-        if not run_dir.is_dir() or not _RUN_ID.fullmatch(run_dir.name):
-            continue
-        try:
-            meta = json.loads((run_dir / "meta.json").read_text())
-            plan = Path(str(meta["plan_path"])).resolve()
-            if not plan.is_relative_to(plans_root) or plan.read_text() != spec.prompt:
-                continue
-        except (FileNotFoundError, KeyError, json.JSONDecodeError, OSError):
-            continue
-        events_path = run_dir / "events.jsonl"
-        response = _last_response(events_path)
-        if _looks_structured(response):
-            turns, dollars = _run_spend(events_path)
-            return OpenCodeLoopResult(run_dir.name, run_dir, response, turns, dollars)
+    events_path = run_dir / "events.jsonl"
+    response = _last_response(events_path)
+    if _looks_structured(response):
+        turns, dollars = _run_spend(events_path)
+        return OpenCodeLoopResult(run_id, run_dir, response, turns, dollars)
     return None
 
 
