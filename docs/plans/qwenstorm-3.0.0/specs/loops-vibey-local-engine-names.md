@@ -241,8 +241,8 @@ All files are over 100 lines except `value_objects_interface.py`'s neighbours; u
   `    ".qwenloop/",\n    ".sovereignloop/",\n`.
 - Existing expectations that change (pure text; one checked script, then run the tests).
   This body carries both quote styles, so it does not fit one shell argument: write it with
-  `write_file` to `$TMPDIR/rename_expectations.py` — outside the repository, so it can never
-  reach `git diff --stat` — run `python3 $TMPDIR/rename_expectations.py` as one `shell`
+  `write_file` to `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/rename_expectations.py` — outside the repository, so it can never
+  reach `git diff --stat` — run `python3 /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/rename_expectations.py` as one `shell`
   command, then delete it.
   ```python
   from pathlib import Path

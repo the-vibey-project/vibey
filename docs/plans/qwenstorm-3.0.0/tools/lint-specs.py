@@ -27,7 +27,9 @@ SECTIONS = (
 # Lanes a human runs, never the storm: their "Checks" are a checklist, not a command block.
 # The storm runner skips these (file-suite.py's OPERATOR_PREFIXES files them with `operator`).
 OPERATOR_PREFIXES = ("gap-ops-", "gap-canon-")
-HEREDOC = re.compile(r"<<-?\s*'?(PY|EOF|EOT|SH)'?")
+# Any delimiter, not a fixed list: a `psql ... <<'SQL'` block sat in a queued spec unseen
+# because SQL was not in the list. What breaks the lane is the heredoc, not its name.
+HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_][A-Za-z0-9_]*['\"]?")
 POINTERS = re.compile(
     r"\b(as (specified |shown )?above|see the parent|same block as|the Part \d block|"
     r"see #\d+'s spec)\b",
@@ -109,14 +111,18 @@ def lint(path: Path, *, need_sections: bool = True) -> list[str]:
 
 def main() -> int:
     targets: list[tuple[Path, bool]] = []
-    for fragment in sorted(SPECS.glob("*-queue.txt")):
+    # queue.txt too, not only the fragments: a filed lane still has a spec file, the lane still
+    # reads it, and `file-suite.py rewrite` pushes it back over the issue body. Thirteen filed
+    # forge-* specs carried a heredoc apiece while this reported a clean corpus.
+    seen: set[str] = set()
+    fragments = [*sorted(SPECS.glob("*-queue.txt")), STORM / "queue.txt"]
+    for fragment in fragments:
+        if not fragment.is_file():
+            continue
         for line in fragment.read_text().splitlines():
             parts = line.split()
-            if (
-                parts
-                and not parts[0].startswith("#")
-                and (len(parts) < 2 or not parts[1].isdigit())
-            ):
+            if parts and not parts[0].startswith("#") and parts[0] not in seen:
+                seen.add(parts[0])
                 targets.append((SPECS / f"{parts[0]}.md", True))
     disposition = AUDIT / "storm-disposition.tsv"
     if disposition.is_file():

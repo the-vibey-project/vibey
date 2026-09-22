@@ -350,8 +350,13 @@ never alternate between them.
 
 `forge_github.py`, `forge_forgejo.py` and `forge_gitlab.py` grow with every Wave-1 part.
 Each adapter class is the **last statement** of its module, so add new methods by
-appending to the end of the file with a shell heredoc
-(`cat >> vibey_gh/forge_github.py <<'PY' … PY`, four-space indented), then run black once.
+appending to the end of the file. A shell heredoc cannot run here (one self-contained
+command per call), so write the new methods, four-space indented, with `write_file` to the
+concrete absolute path `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/forge_append.py`
+(`write_file` is a tool, not a shell — it performs no variable expansion, so never give it
+a `$TMPDIR` path), then append and clean up in one command:
+`cat /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/forge_append.py >> vibey_gh/forge_github.py && rm /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/forge_append.py`.
+Then run black once.
 Read only the slices you need (`sed -n '120,200p' file`). Do not rewrite a whole module.
 
 ---

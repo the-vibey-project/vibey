@@ -62,10 +62,15 @@ standard (no new raw SQL outside migrations). The deliverable is one draft ADR; 
      partitioned table, so a delete can be refused loudly, or admitted only under a condition.
    - F5. Because `seq` restarts at 1 for every project, a seq-range partition never becomes
      cold: partition `[1, W)` keeps receiving the first W events of every new project.
-   Evidence for F1–F4: if `psql` is on PATH and the test database answers, run this in the
-   lane's shell (autocommit; errors are expected and are the evidence) and quote the output:
-   ```
-   psql "${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}" <<'SQL'
+   Evidence for F1–F4: if `psql` is on PATH and the test database answers, gather it and quote
+   the output. The statements carry `$$`-quoted bodies and apostrophes, so they go in a file
+   rather than on a command line: write this with `write_file` to the absolute path
+   `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_evidence.sql` — a real
+   directory outside every lane clone, so it can never reach `git status` — then run it with
+   the single command below (autocommit; the errors are expected and are the evidence).
+   Do not hand `write_file` a path containing `$TMPDIR`: it is a tool, not a shell, and would
+   create a directory of that literal name inside the clone.
+   ```sql
    CREATE SCHEMA adr114_scratch;
    SET search_path = adr114_scratch;
    SELECT version();
@@ -86,7 +91,10 @@ standard (no new raw SQL outside migrations). The deliverable is one draft ADR; 
    DELETE FROM t WHERE seq = 5;
    RESET search_path;
    DROP SCHEMA adr114_scratch CASCADE;
-   SQL
+   ```
+   ```
+   psql "${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}" -f /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_evidence.sql
+   rm -f /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_evidence.sql
    ```
    (Expected: the `t_1` create fails naming the default partition; the concurrent detach fails;
    the plain detach and drop succeed and `rows_left` is 1; the delete fails with `refused`.)
@@ -158,7 +166,7 @@ standard (no new raw SQL outside migrations). The deliverable is one draft ADR; 
 None (a design spike). The check script below is the test.
 
 ## Checks the lane must run (all must pass)
-Write this check with `write_file` to `$TMPDIR/adr114_check.py` — outside the clone, so it can
+Write this check with `write_file` to `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_check.py` — outside the clone, so it can
 never show up in `git status` — then run it as one command and delete it:
 
 ```python
@@ -193,8 +201,8 @@ for word in ("TBD", "lorem", "TODO"):
 print("ADR draft complete")
 ```
 
-    python3 "$TMPDIR/adr114_check.py"   # prints: ADR draft complete
-    rm -f "$TMPDIR/adr114_check.py"
+    python3 "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_check.py"   # prints: ADR draft complete
+    rm -f "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_check.py"
     # The scratch schema of Required behaviour 3 must be gone:
     psql "${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}" -tAc "SELECT count(*) FROM pg_namespace WHERE nspname = 'adr114_scratch'" 2>/dev/null || true   # prints 0 (or nothing without psql)
     git status --porcelain   # must print nothing: the clone is unchanged

@@ -140,7 +140,7 @@ deliverable is one draft ADR; no code.
 None (a design spike). The check script below is the test.
 
 ## Checks the lane must run (all must pass)
-Write this script byte for byte with `write_file` to `$TMPDIR/check-adr-114-codec.py` — outside the
+Write this script byte for byte with `write_file` to `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/check-adr-114-codec.py` — outside the
 clone, so it can never appear in `git diff --stat` — then run the three commands below in order.
 
 ```python
@@ -176,8 +176,8 @@ for word in ("TBD", "lorem", "TODO"):
 print("ADR draft complete")
 ```
 
-    python3 "$TMPDIR/check-adr-114-codec.py"
-    rm -f "$TMPDIR/check-adr-114-codec.py"
+    python3 "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/check-adr-114-codec.py"
+    rm -f "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/check-adr-114-codec.py"
     git status --porcelain   # must print nothing: the clone is unchanged
 
 ## Out of scope
