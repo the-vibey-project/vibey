@@ -79,6 +79,17 @@ gated truth.
 
 **7.b — governance in plain sight** *(ratified by the merge that carried this entry)*: the governance of this project — the Constitution, the Twelve Doctrines and every sub-doctrine, the Ten Commandments, the Bill of Rights, every standing subdoctrine, and the decision records that argue them — is as easy to find and as visible as possible to every human reader, on every human-readable surface of the entire codebase, forever, no matter what, no exceptions. Every README, landing page, documentation page, book, paper, package listing, release, and contributor, support or agent guide carries a direct path to it, near the top rather than buried, so the law is never more than one link from wherever a person is reading; a surface that cannot carry a link names where the law lives. It is published in every form the documentation takes, at stable addresses, in plain words, and never behind an account, a paywall, a search or a machine-only format. When the law moves or grows, every surface follows in the same change. Law nobody can find binds nobody fairly.
 
+**7.c — the thorough ledger** *(ratified by the merge that carried this entry)*: the
+ledger always holds as much of what happened as can be recorded — as complete, as
+detailed, as thorough and as current as is possible, always and forever: every job,
+run, turn, tool call, decision, capacity signal, cost, measurement (8.g) and outcome,
+with its time, its actor and its evidence, written as it happens rather than
+reconstructed after. What the ledger does not hold is a gap to be closed, not a
+saving. Its one boundary is the floor (Article I, and SD-01 §1): secrets, credentials
+and people's private details are redacted where they would appear, and the redaction
+is itself recorded — never a silent omission. The ledger stays append-only:
+completeness grows by new events, never by rewriting old ones.
+
 ## 8 — Local authority
 
 When paid credits run out, local is the source of truth: green local work reaches
@@ -108,7 +119,7 @@ and what 10.b already settled for money. 8.a settles it for everything else.
 
 **8.b — sovereign self-hosted defaults, paid declared-only** *(ratified by the
 merge that carried this entry; its list clarified and extended by the merge that
-carried 8.c)*: every operational surface of vibey defaults to
+carried 8.c; its paid defaults set by the merge that carried them)*: every operational surface of vibey defaults to
 the freest, most sovereign, self-hosted, free option — and never, ever, to a paid
 platform. This is specific and enumerated, because a preference without a
 concrete default is a platitude:
@@ -170,6 +181,14 @@ relay adapter on the same protocol, feeding the sovereign host rather than
 substituting for it. "Self-hosted" and "free" are both load-bearing: a free tier
 that still runs on someone else's machine is a counterparty (10.a), not a
 sovereign default, and is at best a declared relay.
+
+**Paid defaults.** Where a human declares a paid counterparty without naming which,
+the default is fixed — always, no exceptions: **Claude** is `paidloop`'s default
+model, through `claudeloop`, and paidloop turns to its other adapters only when
+Claude cannot carry the work; **VS Code** is the default IDE for paid loops; **AWS**
+is the default paid cloud; **GitHub** is the default paid forge. A default among paid
+options never makes paid a default over sovereign (8.a): it only settles which paid
+option a declaration reaches.
 
 **8.c — every loop runs once, fed by a queue** *(ratified by the merge that
 carried this entry; its two loops and two layers set by the merge that carried
@@ -290,6 +309,25 @@ in order instead of by contending callers, and its queue is the visible record o
 what the surface is being asked to do. Its cost is recorded rather than hidden
 (10.f): a call that waits for a reply pays the bus's round trip, and the cache's
 share of that cost is measured and published with the design that carries this rule.
+
+**8.g — always measured** *(ratified by the merge that carried this entry)*: vibey
+measures its own performance at all times, with no exceptions ever. Every loop,
+lane, queue, surface, test run and model records its latency, throughput, queue
+depth and waiting time, resource use and outcome as it works, continuously and in
+real time — and those measurements are what the system optimizes itself by:
+rotation weights, model residency, lane capacity and defaults are chosen from live
+evidence, never from assumption. Nothing runs unmeasured; a component that cannot
+report its measurements is incomplete. Measurements join the ledger (7.c) and are
+published with the decisions they drive (10.f).
+
+**8.h — the default operating systems** *(ratified by the merge that carried this
+entry)*: **Arch Linux** is always the default sovereign operating system vibey
+supports, and **macOS** is always the default paid operating system. Following 8.a,
+the sovereign one comes first: every feature works on Arch Linux, the installer
+serves it, and every change is proven on it. macOS, the default paid operating
+system, is supported alongside it with the same standing, so a change that works on
+one but not the other is not done. Other operating systems are supported where they
+can be, never at the expense of these two.
 
 ## 9 — The vibe
 
