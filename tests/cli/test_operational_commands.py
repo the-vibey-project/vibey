@@ -1426,7 +1426,7 @@ def test_worker_invalid_engine() -> None:
 def test_worker_invalid_provider() -> None:
     res = runner.invoke(app, ["worker", "--provider", "nonexistent"])
     assert res.exit_code == 2
-    assert "provider must be" in res.output
+    assert "provider must be 'scripted', 'claudeloop', 'qwenloop', or 'opencode'" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1637,7 +1637,7 @@ def test_an_explicit_provider_still_wins_over_the_sovereign_default(
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_with_no_local_engine_the_default_provider_is_still_scripted(
+def test_with_no_local_engine_the_default_provider_is_qwenloop(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("VIBEY_FEATURE_QWENLOOP", raising=False)
@@ -1653,8 +1653,9 @@ def test_with_no_local_engine_the_default_provider_is_still_scripted(
     with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
         mock_notifier_cls.return_value = AsyncMock()
         res = runner.invoke(app, ["worker", "--once"])
+    # #322 (sub-doctrine 8.b): the sovereign pair is always on, so no switch is needed.
     assert res.exit_code == 0, res.output
-    assert "provider=scripted" in res.output
+    assert "provider=qwenloop" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")

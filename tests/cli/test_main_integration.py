@@ -69,7 +69,7 @@ def test_full_design_flow_through_the_real_cli(tmp_path: Path) -> None:
     interview_job_id = UUID(job_line.removeprefix("design job "))
 
     for number in range(1, 8):
-        worked = runner.invoke(app, ["work", str(project_id)])
+        worked = runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
         assert worked.exit_code == 0, worked.output
         assert "processed one job" in worked.output
 
@@ -80,10 +80,10 @@ def test_full_design_flow_through_the_real_cli(tmp_path: Path) -> None:
 
     # Interview finalizes and enqueues research/synthesize/spec (5 more jobs).
     for _ in range(6):
-        worked = runner.invoke(app, ["work", str(project_id)])
+        worked = runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
         assert worked.exit_code == 0, worked.output
 
-    idle = runner.invoke(app, ["work", str(project_id)])
+    idle = runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
     assert idle.exit_code == 0, idle.output
     assert "no ready job" in idle.output
 
@@ -129,14 +129,14 @@ def test_design_accept_visual_opts_into_visual_design(tmp_path: Path) -> None:
     interview_job_id = UUID(job_line.removeprefix("design job "))
 
     for number in range(1, 8):
-        worked = runner.invoke(app, ["work", str(project_id)])
+        worked = runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
         assert worked.exit_code == 0, worked.output
         gate_id = asyncio.run(_latest_gate_id(interview_job_id))
         answered = runner.invoke(app, ["answer", str(gate_id), f"q-{number}=answer-{number}"])
         assert answered.exit_code == 0, answered.output
 
     for _ in range(6):
-        worked = runner.invoke(app, ["work", str(project_id)])
+        worked = runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
         assert worked.exit_code == 0, worked.output
 
     accepted = runner.invoke(app, ["design", "accept", str(project_id), "--visual"])
@@ -152,14 +152,14 @@ def test_full_visual_design_flow_through_the_real_cli(tmp_path: Path) -> None:
     interview_job_id = UUID(job_line.removeprefix("design job "))
 
     for number in range(1, 8):
-        worked = runner.invoke(app, ["work", str(project_id)])
+        worked = runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
         assert worked.exit_code == 0, worked.output
         gate_id = asyncio.run(_latest_gate_id(interview_job_id))
         answered = runner.invoke(app, ["answer", str(gate_id), f"q-{number}=answer-{number}"])
         assert answered.exit_code == 0, answered.output
 
     for _ in range(6):
-        worked = runner.invoke(app, ["work", str(project_id)])
+        worked = runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
         assert worked.exit_code == 0, worked.output
 
     accepted = runner.invoke(app, ["design", "accept", str(project_id), "--visual"])
@@ -168,11 +168,11 @@ def test_full_visual_design_flow_through_the_real_cli(tmp_path: Path) -> None:
 
     # visual.inventory, then visual.plan
     for _ in range(2):
-        worked = runner.invoke(app, ["work", str(project_id)])
+        worked = runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
         assert worked.exit_code == 0, worked.output
         assert "processed one job" in worked.output
 
-    idle = runner.invoke(app, ["work", str(project_id)])
+    idle = runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
     assert idle.exit_code == 0, idle.output
     assert "no ready job" in idle.output
     assert (tmp_path / ".vibey/context/visual/screen-inventory.md").exists()
@@ -190,14 +190,14 @@ def test_visual_waive_also_reaches_build(tmp_path: Path) -> None:
     interview_job_id = UUID(job_line.removeprefix("design job "))
 
     for number in range(1, 8):
-        runner.invoke(app, ["work", str(project_id)])
+        runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
         gate_id = asyncio.run(_latest_gate_id(interview_job_id))
         runner.invoke(app, ["answer", str(gate_id), f"q-{number}=answer-{number}"])
     for _ in range(6):
-        runner.invoke(app, ["work", str(project_id)])
+        runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
     runner.invoke(app, ["design", "accept", str(project_id), "--visual"])
     for _ in range(2):
-        runner.invoke(app, ["work", str(project_id)])
+        runner.invoke(app, ["work", str(project_id), "--provider", "scripted"])
 
     settled = runner.invoke(app, ["visual", "waive", str(project_id)])
     assert settled.exit_code == 0, settled.output

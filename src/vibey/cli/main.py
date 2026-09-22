@@ -13,7 +13,6 @@ import json
 import os
 import signal
 import subprocess  # nosec B404 - fixed argv, never shell=True
-from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, cast
@@ -364,27 +363,30 @@ _OLLAMA_MODEL_HELP = (
     f"${OLLAMA_MODEL_ENV}, else {DEFAULT_OLLAMA_MODEL}. The server is ${OLLAMA_URL_ENV}."
 )
 _PROVIDERS = ("scripted", "claudeloop", "qwenloop", "opencode")
+# Built from _PROVIDERS so the message both commands print cannot fall behind the list.
+_UNKNOWN_PROVIDER = (
+    "provider must be "
+    + ", ".join(f"'{name}'" for name in _PROVIDERS[:-1])
+    + f", or '{_PROVIDERS[-1]}'"
+)
 # The same for --provider: its default is the one decision both commands must share.
 _PROVIDER_HELP = (
     "DESIGN/DECOMPOSE provider: scripted, claudeloop, qwenloop (the sovereign one, on "
-    "Ollama), or opencode. Default: qwenloop when any local engine is switched on, "
-    "otherwise scripted. An explicit value always wins."
+    "Ollama), or opencode. Default: qwenloop -- the sovereign pair is always on "
+    "(sub-doctrine 8.b). An explicit value always wins."
 )
 
 
-def _resolve_provider(explicit: str | None, config: Mapping[str, object]) -> str:
+def _resolve_provider(explicit: str | None) -> str:
     """The provider to run: the operator's explicit choice, else the sovereign default.
 
-    Sub-doctrine 8.a, slice B5 of #115 (ADR-0038): an operator who has switched a local
-    engine on has said the sovereign path is how this project runs, so DESIGN and
-    DECOMPOSE default to the local providers too instead of the scripted fake. Paid
-    (`claudeloop`) is never a default; it is always a stated choice. Module-level, like
-    the typer commands that share it, so `work` and `worker` cannot disagree.
+    Sub-doctrine 8.b keeps the sovereign pair always on, never needing declaration, so
+    with no `--provider` DESIGN and DECOMPOSE run on qwenloop (#322). Before, they fell
+    back to the scripted fake unless a local engine was switched on. Paid (`claudeloop`)
+    and `opencode` are always a stated choice. Module-level, like the typer commands that
+    share it, so `work` and `worker` cannot disagree.
     """
-    if explicit is not None:
-        return explicit
-    local = LocalEngineSettings(environ=os.environ, config=config)
-    return "qwenloop" if local.any_enabled else "scripted"
+    return explicit if explicit is not None else "qwenloop"
 
 
 async def _work_once(
@@ -419,7 +421,7 @@ async def _work_once(
             )
             return await worker.run_once(project_id)
 
-        provider = _resolve_provider(provider_opt, project.config)
+        provider = _resolve_provider(provider_opt)
         design_provider: DesignProvider
         if provider == "scripted":
             design_provider = ScriptedDesignProvider()
@@ -464,9 +466,7 @@ async def _work_once(
                 worktree_path=project.repo_path,
             )
         else:
-            raise UnknownProvider(
-                "provider must be 'scripted', 'claudeloop', 'qwenloop', or 'opencode'"
-            )
+            raise UnknownProvider(_UNKNOWN_PROVIDER)
         worker = build_design_worker(
             resources=resources,
             project=project,
@@ -1476,7 +1476,7 @@ def worker(
             typer.echo(f"Invalid engine: {exc}")
             raise typer.Exit(2) from exc
     if provider_opt is not None and provider_opt not in _PROVIDERS:
-        typer.echo("provider must be 'scripted', 'claudeloop', or 'qwenloop'")
+        typer.echo(_UNKNOWN_PROVIDER)
         raise typer.Exit(2)
     if azure not in ("memory", "az"):
         typer.echo("--azure must be 'memory' or 'az'")
@@ -1569,10 +1569,8 @@ def worker(
                 )
                 raise typer.Exit(1)
 
-            # Sovereign by default once a local engine is on (8.a, #115 B5); an explicit
-            # --provider still wins. Resolved here, after the project, because the
-            # project's own config is one of the two places the switch can live.
-            provider = _resolve_provider(provider_opt, project.config)
+            # Sovereign by default (8.b, #322); an explicit --provider still wins.
+            provider = _resolve_provider(provider_opt)
             design_provider: DesignProvider
             decomposer: WorkPlanProducer
             if provider == "claudeloop":
