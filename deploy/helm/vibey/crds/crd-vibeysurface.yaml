@@ -1,14 +1,10 @@
-{{- if or .Values.operator.enabled (and .Values.surfaces .Values.surfaces.enabled) }}
-{{- if .Values.operator.installCRD }}
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: vibeysurfaces.vibey.dev
-  labels: {{- include "vibey.labels" . | nindent 4 }}
+  labels:
+    app.kubernetes.io/name: vibey
   annotations:
-    # Keep the CRD when the release goes: custom resources outlive the
-    # operator that reconciles them, and deleting the definition deletes
-    # every VibeySurface with it.
     "helm.sh/resource-policy": keep
 spec:
   group: vibey.dev
@@ -89,5 +85,3 @@ spec:
                         type: string
                       message:
                         type: string
-{{- end }}
-{{- end }}
