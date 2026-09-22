@@ -625,7 +625,7 @@ def test_storm_continues_past_unavailable_repo(
 
 # --- openai-compat endpoint mode (Ollama first) -------------------------------------------
 
-OLLAMA_MODELS = b'{"object": "list", "data": [{"id": "qwen2.5-coder:14b"}]}'
+OLLAMA_MODELS = b'{"object": "list", "data": [{"id": "gpt-oss:20b"}, {"id": "qwen2.5-coder:14b"}]}'
 
 
 class FakeHttp:
@@ -695,7 +695,7 @@ def test_run_attaches_to_the_endpoint_named_by_flag(
     assert isinstance(info, ServerInfo)
     assert (info.backend, info.model, info.owned) == (
         Backend.OPENAI_COMPAT,
-        "qwen2.5-coder:14b",
+        "gpt-oss:20b",
         False,
     )
     assert http.urls == ["http://127.0.0.1:11434/v1/models"]
@@ -760,8 +760,8 @@ def test_run_fails_loudly_when_the_endpoint_lacks_the_model(
         app, ["run", str(plan), "--cwd", str(tmp_path), "--base-url", "http://h:1/v1"]
     )
     assert result.exit_code == 1
-    assert "qwenloop unavailable: model 'qwen2.5-coder:14b' is not served" in result.stderr
-    assert "ollama pull qwen2.5-coder:14b" in result.stderr
+    assert "qwenloop unavailable: model 'gpt-oss:20b' is not served" in result.stderr
+    assert "ollama pull gpt-oss:20b" in result.stderr
 
 
 def test_bad_configuration_exits_2_naming_it(
@@ -804,7 +804,7 @@ def test_doctor_passes_when_the_endpoint_serves_the_model(monkeypatch: pytest.Mo
     assert result.exit_code == 0, result.output
     assert "backend: openai-compat (an OpenAI-compatible endpoint is configured)" in result.stdout
     assert "endpoint: http://127.0.0.1:11434/v1" in result.stdout
-    assert "model: qwen2.5-coder:14b ok" in result.stdout
+    assert "model: gpt-oss:20b ok" in result.stdout
 
 
 def test_doctor_fails_loudly_when_the_endpoint_is_down(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -815,7 +815,7 @@ def test_doctor_fails_loudly_when_the_endpoint_is_down(monkeypatch: pytest.Monke
     result = runner.invoke(app, ["doctor", "--backend", "openai-compat"])
     assert result.exit_code == 1
     assert "endpoint: http://127.0.0.1:11434/v1" in result.stdout
-    assert "model: qwen2.5-coder:14b unavailable" in result.stdout
+    assert "model: gpt-oss:20b unavailable" in result.stdout
     assert "qwenloop doctor: openai-compat endpoint" in result.stderr
     assert "is unreachable (Connection refused)" in result.stderr
 

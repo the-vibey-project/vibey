@@ -258,7 +258,7 @@ def test_an_invalid_plan_leaves_nothing_enqueued(tmp_path: Path) -> None:
         res = runner.invoke(app, ["worker", "--once", "--provider", "qwenloop"])
 
     assert res.exit_code == 0, res.output
-    assert ollama.requests[0]["model"] == "qwen2.5-coder:14b"
+    assert ollama.requests[0]["model"] == "gpt-oss:20b"
     rows = asyncio.run(
         _rows(
             "SELECT kind, state, last_error FROM job WHERE project_id = $1 ORDER BY created_at",

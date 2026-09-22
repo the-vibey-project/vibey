@@ -21,7 +21,7 @@ from qwenloop.application.backend_selection import BackendSelector, Hardware
 from qwenloop.application.interfaces import InferenceServer
 from qwenloop.application.runner import AutonomousRunner
 from qwenloop.application.storm import build_item_plans
-from qwenloop.domain.config import QwenConfig
+from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, QwenConfig
 from qwenloop.domain.model import (
     EXIT_CODE_WIND_DOWN,
     Backend,
@@ -73,7 +73,7 @@ ModelOption = Annotated[
     typer.Option(
         "--model",
         help="Model name the endpoint serves. Unset: $QWENLOOP_MODEL, else config `model`, "
-        "else qwen2.5-coder:14b.",
+        f"else {DEFAULT_ENDPOINT_MODEL}.",
     ),
 ]
 

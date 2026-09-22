@@ -11,8 +11,9 @@ from qwenloop.domain.model import Backend
 #: Where `--backend openai-compat` attaches when no `base_url` is configured: Ollama's
 #: own default listen address, with the `/v1` prefix its OpenAI-compatible API lives under.
 DEFAULT_ENDPOINT_BASE_URL = "http://127.0.0.1:11434/v1"
-#: The same Qwen 2.5 Coder 14B the pinned profiles run, under the name Ollama gives it.
-DEFAULT_ENDPOINT_MODEL = "qwen2.5-coder:14b"
+#: This era's default free model (sub-doctrine 8.d): GPT-OSS 20B, under the name Ollama
+#: gives it. The pinned llama.cpp profiles are a separate choice and keep their own model.
+DEFAULT_ENDPOINT_MODEL = "gpt-oss:20b"
 
 
 @dataclass(frozen=True, slots=True)
