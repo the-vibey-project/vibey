@@ -194,12 +194,12 @@ options never makes paid a default over sovereign (8.a): it only settles which p
 option a declaration reaches.
 
 **8.c — every loop runs once, fed by a queue** *(ratified by the merge that
-carried this entry; its two loops and two layers set by the merge that carried
-them)*: the family runs **exactly two loops**. **`sovereignloop`** — what `qwenloop`
+carried this entry; its two loops and two layers, and its one instance per model,
+set by the merge that carried them)*: the family runs **exactly two loops**. **`sovereignloop`** — what `qwenloop`
 becomes — drives the models and tools that run on the operator's own hardware;
 **`paidloop`** drives every paid engine, with `claudeloop`, `codexloop`,
 `cursorloop` and `agyloop` as its adapters. Each loop runs as
-**a single instance per deployment** (one machine, or one cluster), and that
+**a single instance per model**, and that
 instance takes its work from **a queue** on the bus surface (8.b). Nothing starts
 a second instance of a loop to go faster, and nothing spawns a loop directly:
 vibey's workers, storms and the command line put work on the loop's queue, and

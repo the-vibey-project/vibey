@@ -59,7 +59,7 @@
   {
    "anchor": "8 — Local authority",
    "document": "docs/doctrines.md",
-   "sha256": "36bdc11a0056303f89a2fe2fc4492c637056d3b249abca4551cad39bf89ac9af",
+   "sha256": "e982d0d076441ada4601737952e64e114dc3c9cb6720a1d6a24cc37444240fe2",
    "start_line": 93,
    "text_lines": 242
   },
@@ -232,7 +232,7 @@
    "text_lines": 4
   }
  ],
- "corpus_sha256": "dfb5e3ed1d6e77744a437f5c00aba0f8f8ac693df1ac50a36166c6a9875e3cbb",
+ "corpus_sha256": "fa4957274b8ec69254158d0a60a032b10703b288cb32edb98d1b3b85dac15029",
  "documents": [
   "docs/doctrines.md",
   "docs/constitution.md",
