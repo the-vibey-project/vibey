@@ -219,6 +219,28 @@ stays supported until nothing depends on it. Which models are the gold standard 
 a judgment, and it is recorded rather than asserted (10.f): the catalogue names, for
 each choice, the evidence behind it and the date it was made.
 
+**8.e — the test harness runs once, fed by a queue** *(ratified by the merge that
+carried this entry)*: the test harness is held to 8.c. It runs as **a single
+instance per deployment** — one test run at a time on one machine — and takes its
+work from **a queue** on the bus surface. Nothing starts a second test run beside a
+running one: a commit hook, a storm lane, a reviewer and the command line all put
+their run on the queue and wait for its result. Parallelism inside the one run is
+the instance's capacity; a second run beside it is contention.
+
+Two properties make the queue safe to lean on. **Idempotency:** a run is identified
+by what it tests — the tree, the selection of tests and the environment — so the
+same run asked for twice is answered once, and a repeat request receives the
+recorded result instead of a second execution. **Dead letters:** a run that crashes
+the harness, exceeds its bound or cannot be executed is moved to a dead-letter queue
+with its evidence, where a human or a repair lane can see it — it is never retried
+forever and never silently dropped.
+
+This is a performance rule, and like 8.c it was learned by measurement. On
+2026-09-22 a full test run started by a push hook, while a local model served a
+storm lane on the same machine, failed a timing-sensitive test that passed alone;
+two coverage runs in one directory have also been seen to consume each other's
+data. One run at a time turns those collisions into waiting.
+
 ## 9 — The vibe
 
 Never a drag. Full steam ahead: baffling momentum with green code.
