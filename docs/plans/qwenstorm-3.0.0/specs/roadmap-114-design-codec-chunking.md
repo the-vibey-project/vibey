@@ -140,38 +140,44 @@ deliverable is one draft ADR; no code.
 None (a design spike). The check script below is the test.
 
 ## Checks the lane must run (all must pass)
-    python3 - <<'PY'
-    import re
-    from pathlib import Path
-    p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-114-codec-chunking.md")
-    assert p.is_file(), "the ADR draft was not written"
-    text = p.read_text(encoding="utf-8")
-    flat = " ".join(text.split())
-    assert text.startswith("# The ledger segment codec, chunk size, content address and hash walk"), "wrong title line"
-    required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context",
-                "## Options considered", "## Decision", "## Benchmark method", "## Consequences",
-                "## Lanes this unblocks", "## Open decisions for the operator", "## Verification owed",
-                "pyproject.toml:10", "src/vibey/infrastructure/ledger/compression.py:21",
-                "src/vibey/domain/ledger.py:217", "src/vibey/domain/ledger_chain.py:20",
-                "src/vibey/infrastructure/ledger/full_ledger_writer.py:35",
-                "doctrines.md:385", "doctrines.md:417", "doctrines.md:316", "ADR-0017",
-                "C1", "C2", "C3", "C4", "C5", "zlib", "lzma", "zstd", "lz4",
-                "write amplification", "restore latency"]
-    missing = [h for h in required if h not in text]
-    assert not missing, f"missing: {missing}"
-    quotes = [
-        "to encrypt only what 7.c already redacts (secrets, private details) while the rest stays publicly searchable",
-        "Set by measurement (8.g) on this repository's ledgers, or fixed by you?",
-        "the blob surface (Garage, 8.b), the forge (per the comment), or both?",
-    ]
-    unquoted = [q for q in quotes if q not in flat]
-    assert not unquoted, f"open questions not quoted verbatim: {unquoted}"
-    anchors = set(re.findall(r"[\w./-]+\.(?:py|sql|toml|md|lock):\d+", text))
-    assert len(anchors) >= 12, f"only {len(anchors)} distinct path:line anchors"
-    for word in ("TBD", "lorem", "TODO"):
-        assert word not in text, f"placeholder {word!r} left in the draft"
-    print("ADR draft complete")
-    PY
+Write this script byte for byte with `write_file` to `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/check-adr-114-codec.py` — outside the
+clone, so it can never appear in `git diff --stat` — then run the three commands below in order.
+
+```python
+import re
+from pathlib import Path
+p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-114-codec-chunking.md")
+assert p.is_file(), "the ADR draft was not written"
+text = p.read_text(encoding="utf-8")
+flat = " ".join(text.split())
+assert text.startswith("# The ledger segment codec, chunk size, content address and hash walk"), "wrong title line"
+required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context",
+            "## Options considered", "## Decision", "## Benchmark method", "## Consequences",
+            "## Lanes this unblocks", "## Open decisions for the operator", "## Verification owed",
+            "pyproject.toml:10", "src/vibey/infrastructure/ledger/compression.py:21",
+            "src/vibey/domain/ledger.py:217", "src/vibey/domain/ledger_chain.py:20",
+            "src/vibey/infrastructure/ledger/full_ledger_writer.py:35",
+            "doctrines.md:385", "doctrines.md:417", "doctrines.md:316", "ADR-0017",
+            "C1", "C2", "C3", "C4", "C5", "zlib", "lzma", "zstd", "lz4",
+            "write amplification", "restore latency"]
+missing = [h for h in required if h not in text]
+assert not missing, f"missing: {missing}"
+quotes = [
+    "to encrypt only what 7.c already redacts (secrets, private details) while the rest stays publicly searchable",
+    "Set by measurement (8.g) on this repository's ledgers, or fixed by you?",
+    "the blob surface (Garage, 8.b), the forge (per the comment), or both?",
+]
+unquoted = [q for q in quotes if q not in flat]
+assert not unquoted, f"open questions not quoted verbatim: {unquoted}"
+anchors = set(re.findall(r"[\w./-]+\.(?:py|sql|toml|md|lock):\d+", text))
+assert len(anchors) >= 12, f"only {len(anchors)} distinct path:line anchors"
+for word in ("TBD", "lorem", "TODO"):
+    assert word not in text, f"placeholder {word!r} left in the draft"
+print("ADR draft complete")
+```
+
+    python3 "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/check-adr-114-codec.py"
+    rm -f "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/check-adr-114-codec.py"
     git status --porcelain   # must print nothing: the clone is unchanged
 
 ## Out of scope

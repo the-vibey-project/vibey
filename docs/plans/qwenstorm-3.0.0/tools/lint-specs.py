@@ -13,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 
-STORM = Path(__file__).resolve().parent
+STORM = Path(__file__).resolve().parent.parent
 SPECS = STORM / "specs"
 AUDIT = STORM / "issue-audit"
 
@@ -24,7 +24,12 @@ SECTIONS = (
     "## Acceptance criteria",
     "## Checks the lane must run",
 )
-HEREDOC = re.compile(r"<<-?\s*'?(PY|EOF|EOT|SH)'?")
+# Lanes a human runs, never the storm: their "Checks" are a checklist, not a command block.
+# The storm runner skips these (file-suite.py's OPERATOR_PREFIXES files them with `operator`).
+OPERATOR_PREFIXES = ("gap-ops-", "gap-canon-")
+# Any delimiter, not a fixed list: a `psql ... <<'SQL'` block sat in a queued spec unseen
+# because SQL was not in the list. What breaks the lane is the heredoc, not its name.
+HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_][A-Za-z0-9_]*['\"]?")
 POINTERS = re.compile(
     r"\b(as (specified |shown )?above|see the parent|same block as|the Part \d block|"
     r"see #\d+'s spec)\b",
@@ -46,6 +51,26 @@ ALLOWED = {
     ("340.md", '"gitlab does not support …"'),  # names a message prefix
     ("loops-retire-opencode-refusals.md", '"provider must be one of …"'),  # quotes today's message
     ("surfaces-failure-policy.md", '"Kannel rejected the message: …"'),  # names a message prefix
+    # Reviewed 2026-09-22 (second pass, when the gap and roadmap fragments first reached the
+    # linter): each of these quotes text that already exists, or names a prefix whose exact
+    # format the same spec states elsewhere.
+    (
+        "gap-measure-domain.md",
+        '"An exception type, so it has no interface beside it …"',
+    ),  # quotes today's comment at publication_policy.py:167-172
+    ("gap-measure-gh-1.md", '"has format …"'),  # one of an enumerated list of message prefixes
+    (
+        "roadmap-134-cost-integral-p3.md",
+        '"1 of 3 local turn(s) …"',
+    ),  # a fixture value: the test feeds this exact literal in and asserts it comes back out
+    ("roadmap-85-jira-tracker-adapter.md", '"Jira API error 500 …"'),  # prefix; format at :44
+    ("roadmap-85-jira-tracker-adapter.md", '"Jira unreachable …"'),  # prefix; format at :44
+    # Reviewed 2026-09-22 (third pass, when queue.txt's own filed lanes first reached the
+    # linter): each names a message prefix, not a message the lane must reproduce whole.
+    ("forge-4.md", '"gh not found; skipping …"'),
+    ("forge-6.md", '"`gh api graphql` failed: …"'),
+    ("rmq-r05-async-outbox.md", 'f"… {self._table} …"'),  # an interpolation sketch, not a message
+    ("forge-3.md", '"GitHub merged …"'),  # quotes the wording this lane replaces
 }
 # "as above" pointing at text earlier in the SAME spec is fine (reviewed 2026-09-22).
 ALLOWED_POINTERS = {
@@ -61,10 +86,17 @@ def lint(path: Path, *, need_sections: bool = True) -> list[str]:
         wanted = (
             SECTIONS if path.parent == SPECS else SECTIONS[1:]
         )  # an existing issue keeps its title
+        # A spike's deliverable is an ADR, not code: it states the questions the ADR must
+        # decide and the child lanes it must name, in place of behaviour to implement.
+        spike = "## Deliverable" in text and "## Questions the ADR must decide" in text
+        if spike:
+            wanted = tuple(s for s in wanted if s != "## Required behaviour")
         problems += [f"missing section {s!r}" for s in wanted if s not in text]
         checks = text.split("## Checks the lane must run", 1)
         if (
             len(checks) == 2
+            and not spike  # a spike writes a document and commits nothing: "None in code"
+            and not path.name.startswith(OPERATOR_PREFIXES)
             and "```" not in checks[1].split("\n## ", 1)[0]
             and not re.search(r"^ {4}\S", checks[1].split("\n## ", 1)[0], re.M)
         ):
@@ -85,14 +117,18 @@ def lint(path: Path, *, need_sections: bool = True) -> list[str]:
 
 def main() -> int:
     targets: list[tuple[Path, bool]] = []
-    for fragment in sorted(SPECS.glob("*-queue.txt")):
+    # queue.txt too, not only the fragments: a filed lane still has a spec file, the lane still
+    # reads it, and `file-suite.py rewrite` pushes it back over the issue body. Thirteen filed
+    # forge-* specs carried a heredoc apiece while this reported a clean corpus.
+    seen: set[str] = set()
+    fragments = [*sorted(SPECS.glob("*-queue.txt")), STORM / "queue.txt"]
+    for fragment in fragments:
+        if not fragment.is_file():
+            continue
         for line in fragment.read_text().splitlines():
             parts = line.split()
-            if (
-                parts
-                and not parts[0].startswith("#")
-                and (len(parts) < 2 or not parts[1].isdigit())
-            ):
+            if parts and not parts[0].startswith("#") and parts[0] not in seen:
+                seen.add(parts[0])
                 targets.append((SPECS / f"{parts[0]}.md", True))
     disposition = AUDIT / "storm-disposition.tsv"
     if disposition.is_file():

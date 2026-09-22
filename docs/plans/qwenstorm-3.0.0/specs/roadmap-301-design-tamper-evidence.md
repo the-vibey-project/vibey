@@ -64,25 +64,10 @@ runner skips `roadmap-*-design-*`.**
 None (a design spike). The check script below is the test.
 
 ## Checks the lane must run (all must pass)
-    python3 - <<'PY'
-    import re
-    from pathlib import Path
-    p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-301-tamper-evidence.md")
-    assert p.is_file(), "the ADR draft was not written"
-    text = p.read_text(encoding="utf-8")
-    assert text.startswith("# Anchoring the ledger chain's head"), "wrong title line"
-    required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context", "## Threat model",
-                "## Options considered", "## Decision", "## Consequences",
-                "## Interaction with storage tiers", "## Lanes this unblocks",
-                "## Open decisions for the operator", "## Verification owed", "ledger_chain.py:19"]
-    missing = [h for h in required if h not in text]
-    assert not missing, f"missing: {missing}"
-    anchors = re.findall(r"[\w./-]+\.(?:py|sql|md|toml):\d+", text)
-    assert len(anchors) >= 10, f"only {len(anchors)} path:line anchors"
-    for word in ("TBD", "lorem"):
-        assert word not in text, f"placeholder {word!r} left in the draft"
-    print("ADR draft complete")
-    PY
+One `shell` command each. The title's apostrophe is written `\x27` so the whole script stays
+inside one single-quoted argument, which also keeps the `##` headings and the regex inert.
+
+    python3 -c 'import re; from pathlib import Path; p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-301-tamper-evidence.md"); assert p.is_file(), "the ADR draft was not written"; text = p.read_text(encoding="utf-8"); assert text.startswith("# Anchoring the ledger chain\x27s head"), "wrong title line"; required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context", "## Threat model", "## Options considered", "## Decision", "## Consequences", "## Interaction with storage tiers", "## Lanes this unblocks", "## Open decisions for the operator", "## Verification owed", "ledger_chain.py:19"]; missing = [h for h in required if h not in text]; assert not missing, f"missing: {missing}"; anchors = re.findall(r"[\w./-]+\.(?:py|sql|md|toml):\d+", text); assert len(anchors) >= 10, f"only {len(anchors)} path:line anchors"; placeholders = [w for w in ("TBD", "lorem") if w in text]; assert not placeholders, f"placeholder {placeholders} left in the draft"; print("ADR draft complete")'
     git status --porcelain   # must print nothing: the clone is unchanged
 
 ## Out of scope

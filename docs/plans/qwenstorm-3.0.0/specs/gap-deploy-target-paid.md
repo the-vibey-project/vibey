@@ -129,7 +129,11 @@ One coverage run at a time.
 Commit as `feat(config): [deploy] target = "paid" resolves to aws, 8.b's default paid cloud`. Do not push.
 
 ## Lane card
-- **Depends on:** `gap-paid-defaults`, `openstack-client-p1`, `gap-aws-target`.
+- **Depends on:** `gap-paid-defaults`, `openstack-client-p1`, `gap-spike-aws-iac`.
+  The `[deploy.aws]` keys this lane resolves to are written by `gap-aws-target`, which is
+  child 3 of `gap-spike-aws-iac` and has no spec of its own until that spike runs and
+  answers its open questions; depending on the spike is the resolvable form of the same
+  ordering.
 - **Files touched:** see *Where to change*.
 - **Must keep passing unchanged:** `tests/domain/test_config.py`, `tests/domain/test_deploy_target_config.py`,
   `tests/domain/test_domain_purity.py`.

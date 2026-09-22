@@ -59,8 +59,19 @@ conversation.py:
 - `test/test_gh_cli.py`: the two edits above, nothing else.
 
 ## Checks the lane must run (all must pass)
-The Part 1 block with the focused run
-`python -m pytest -q --no-cov test/test_issue_automation.py test/test_conversation.py test/test_gh_cli.py`.
+Part 1's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -m pytest -q --no-cov test/test_issue_automation.py test/test_conversation.py test/test_gh_cli.py
+python -m pytest -q
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat
+```
 
 ## Out of scope
 `github_state.py` (Part 4), `cli.py`, adapter files, any other test in `test/test_gh_cli.py`.
@@ -289,8 +300,10 @@ never alternate between them.
 
 `forge_github.py`, `forge_forgejo.py` and `forge_gitlab.py` grow with every Wave-1 part.
 Each adapter class is the **last statement** of its module, so add new methods by
-appending to the end of the file with a shell heredoc
-(`cat >> vibey_gh/forge_github.py <<'PY' … PY`, four-space indented), then run black once.
+appending to the end of the file: `write_file` the new methods (four-space indented) to
+`/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py`, then in one command run
+`cat /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py >> vibey_gh/forge_github.py && rm /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py`,
+then run black once.
 Read only the slices you need (`sed -n '120,200p' file`). Do not rewrite a whole module.
 
 ---

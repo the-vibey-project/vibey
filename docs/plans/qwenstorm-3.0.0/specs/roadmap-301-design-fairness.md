@@ -65,27 +65,7 @@ runner skips `roadmap-*-design-*`.**
 None (a design spike). The check script below is the test.
 
 ## Checks the lane must run (all must pass)
-    python3 - <<'PY'
-    import re
-    from pathlib import Path
-    p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-301-fairness.md")
-    assert p.is_file(), "the ADR draft was not written"
-    text = p.read_text(encoding="utf-8")
-    assert text.startswith("# Starvation, aging and fairness of the claim order"), "wrong title line"
-    required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context",
-                "## Model: PostgreSQL claim", "## Model: RabbitMQ dispatch",
-                "## Starvation analysis", "## Options considered", "## Decision",
-                "## Consequences", "## Lanes this unblocks", "## Open decisions for the operator",
-                "## Verification owed", "Paper cutoff versus substrate churn",
-                "job_repository.py:198", "0003_job.sql:32"]
-    missing = [h for h in required if h not in text]
-    assert not missing, f"missing: {missing}"
-    anchors = re.findall(r"[\w./-]+\.(?:py|sql|md|toml):\d+", text)
-    assert len(anchors) >= 10, f"only {len(anchors)} path:line anchors"
-    for word in ("TBD", "lorem"):
-        assert word not in text, f"placeholder {word!r} left in the draft"
-    print("ADR draft complete")
-    PY
+    python3 -c 'import re; from pathlib import Path; p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-301-fairness.md"); assert p.is_file(), "the ADR draft was not written"; text = p.read_text(encoding="utf-8"); assert text.startswith("# Starvation, aging and fairness of the claim order"), "wrong title line"; required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context", "## Model: PostgreSQL claim", "## Model: RabbitMQ dispatch", "## Starvation analysis", "## Options considered", "## Decision", "## Consequences", "## Lanes this unblocks", "## Open decisions for the operator", "## Verification owed", "Paper cutoff versus substrate churn", "job_repository.py:198", "0003_job.sql:32"]; missing = [h for h in required if h not in text]; assert not missing, f"missing: {missing}"; anchors = re.findall(r"[\w./-]+\.(?:py|sql|md|toml):\d+", text); assert len(anchors) >= 10, f"only {len(anchors)} path:line anchors"; placeholders = [w for w in ("TBD", "lorem") if w in text]; assert not placeholders, f"placeholders left in the draft: {placeholders}"; print("ADR draft complete")'
     git status --porcelain   # must print nothing: the clone is unchanged
 
 ## Out of scope

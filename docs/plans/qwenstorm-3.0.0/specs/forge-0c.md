@@ -81,7 +81,20 @@ ADR 0001 (a verb per question, with its first caller); sub-doctrine 8.b.
 - `test_a_change_request_knows_whether_it_comes_from_a_fork`.
 
 ## Checks the lane must run (all must pass)
-Same block as Part 0a, focused on `test/test_forge_change_request_lists.py test/test_platform.py`.
+Part 0a's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -c "import vibey_gh" || python -m pip install -e ".[dev]"
+python -m pytest -q --no-cov test/test_forge_change_request_lists.py test/test_platform.py
+python -m pytest -q                                   # whole suite, 100% line+branch
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat   # only the files this part owns
+```
 
 ## Out of scope
 Consumers (Wave 2); writes (0d). Do not edit CHANGELOG.md, docs/, ADRs, CLAUDE.md,
@@ -308,9 +321,14 @@ never alternate between them.
 ### C9 — Working in the big files
 
 `forge_github.py`, `forge_forgejo.py` and `forge_gitlab.py` grow with every Wave-1 part.
-Each adapter class is the **last statement** of its module, so add new methods by
-appending to the end of the file with a shell heredoc
-(`cat >> vibey_gh/forge_github.py <<'PY' … PY`, four-space indented), then run black once.
+Each adapter class is the **last statement** of its module, so add new methods by appending
+them to the end of the file: write the new methods (four-space indented) with the
+`write_file` tool to the concrete absolute path
+`/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py` — that directory exists and
+is outside every lane clone, so the clone's `git status` stays clean — then append and clean
+up in one command,
+`cat /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py >> vibey_gh/forge_github.py && rm /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py`,
+then run black once.
 Read only the slices you need (`sed -n '120,200p' file`). Do not rewrite a whole module.
 
 ---

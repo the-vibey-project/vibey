@@ -37,18 +37,7 @@ byte-identical manifests: the contract-tested digest, never a rebuild.
          - name: Read the sovereign registry declaration
            id: sovereign
            run: |
-             python - <<'PY' >> "$GITHUB_OUTPUT"
-             import pathlib
-             import tomllib
-
-             data = tomllib.loads(pathlib.Path("packaging/channels.toml").read_text(encoding="utf-8"))
-             entry = next((c for c in data.get("channel", []) if c.get("name") == "oci-image-sovereign"), {})
-             options = entry.get("options", {})
-             enabled = bool(entry.get("enabled")) and bool(options.get("registry"))
-             print("enabled=" + ("true" if enabled else "false"))
-             print("registry=" + str(options.get("registry", "")))
-             print("user=" + str(options.get("registry_user", "")))
-             PY
+             python -c 'import pathlib; import tomllib; data = tomllib.loads(pathlib.Path("packaging/channels.toml").read_text(encoding="utf-8")); entry = next((c for c in data.get("channel", []) if c.get("name") == "oci-image-sovereign"), {}); options = entry.get("options", {}); enabled = bool(entry.get("enabled")) and bool(options.get("registry")); print("enabled=" + ("true" if enabled else "false")); print("registry=" + str(options.get("registry", ""))); print("user=" + str(options.get("registry_user", "")))' >> "$GITHUB_OUTPUT"
          - name: Mirror the tested digest to the sovereign registry
            env:
              ENABLED: ${{ steps.sovereign.outputs.enabled }}

@@ -104,7 +104,20 @@ verb every forge can answer. ADR 0001; sub-doctrine 8.b.
 - `test_gitlab_conversation_verbs_route_and_refuse_subject_facts`.
 
 ## Checks the lane must run (all must pass)
-Same block as Part 0a, focused on `test/test_forge_conversation_verbs.py`.
+Part 0a's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -c "import vibey_gh" || python -m pip install -e ".[dev]"
+python -m pytest -q --no-cov test/test_forge_conversation_verbs.py
+python -m pytest -q                                   # whole suite, 100% line+branch
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat   # only the files this part owns
+```
 
 ## Out of scope
 The consuming modules (Parts 4, 5, 6). Do not edit CHANGELOG.md, docs/, ADRs, CLAUDE.md,
@@ -331,9 +344,13 @@ never alternate between them.
 ### C9 — Working in the big files
 
 `forge_github.py`, `forge_forgejo.py` and `forge_gitlab.py` grow with every Wave-1 part.
-Each adapter class is the **last statement** of its module, so add new methods by
-appending to the end of the file with a shell heredoc
-(`cat >> vibey_gh/forge_github.py <<'PY' … PY`, four-space indented), then run black once.
+Each adapter class is the **last statement** of its module, so add new methods by appending
+to the end of the file: write the four-space-indented method text with `write_file` to the
+concrete path `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append_forge.py`
+(`write_file` is a tool, not a shell — it expands no variables, and that path is outside the
+clone), then append it in one command:
+`cat /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append_forge.py >> vibey_gh/forge_github.py && rm /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append_forge.py`.
+Then run black once.
 Read only the slices you need (`sed -n '120,200p' file`). Do not rewrite a whole module.
 
 ---
