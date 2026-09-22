@@ -115,12 +115,16 @@ source_modules =
     vibey.infrastructure.engines.interfaces
     vibey.infrastructure.ledger.interfaces
     vibey.infrastructure.process.interfaces
+    vibey.infrastructure.blob.interfaces
+    vibey.infrastructure.bus.interfaces
+    vibey.infrastructure.cache.interfaces
     vibey.infrastructure.config_store.interfaces
     vibey.infrastructure.docs.interfaces
     vibey.infrastructure.email.interfaces
     vibey.infrastructure.files.interfaces
     vibey.infrastructure.messaging.interfaces
     vibey.infrastructure.secrets.interfaces
+    vibey.infrastructure.siem.interfaces
     vibey.infrastructure.sms.interfaces
     vibey.infrastructure.tracker.interfaces
 forbidden_modules =

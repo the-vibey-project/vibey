@@ -20,6 +20,7 @@ from vibey.application.interfaces.azure import (
     DeploymentConsentStore,
     DeploymentSpecStore,
 )
+from vibey.application.interfaces.blob import BlobPort
 from vibey.application.interfaces.budget_source_interface import (
     LedgerBudgetSourceInterface,
 )
@@ -37,6 +38,8 @@ from vibey.application.interfaces.build import (
     VerifyWorktrees,
     WorkPlanProducer,
 )
+from vibey.application.interfaces.bus import BusPort
+from vibey.application.interfaces.cache import CachePort
 from vibey.application.interfaces.class_contracts import (
     BuildDecomposeHandlerInterface,
     BuildImplementHandlerInterface,
@@ -142,6 +145,7 @@ from vibey.application.interfaces.review import (
     ReviewArtifactWriter,
 )
 from vibey.application.interfaces.secrets import SecretsPort
+from vibey.application.interfaces.siem import SiemPort
 from vibey.application.interfaces.sms import SmsPort
 from vibey.application.interfaces.system import (
     Clock,
@@ -265,4 +269,8 @@ __all__ = [
     "SmsPort",
     "MessagingPort",
     "ConfigStorePort",
+    "CachePort",
+    "BusPort",
+    "BlobPort",
+    "SiemPort",
 ]

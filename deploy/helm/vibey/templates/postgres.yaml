@@ -1,5 +1,23 @@
 {{- if .Values.postgres.enabled }}
 {{- $fullName := include "vibey.fullname" . }}
+{{- if .Values.postgres.additionalDatabases }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullName }}-postgres-init
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+data:
+  01-init-additional-databases.sh: |
+    #!/bin/sh
+    set -e
+    {{- range .Values.postgres.additionalDatabases }}
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+        SELECT 'CREATE DATABASE {{ . }}' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{{ . }}')\gexec
+        GRANT ALL PRIVILEGES ON DATABASE {{ . }} TO $POSTGRES_USER;
+    EOSQL
+    {{- end }}
+---
+{{- end }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -77,6 +95,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            {{- if .Values.postgres.additionalDatabases }}
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+            {{- end }}
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "{{ .Values.postgres.user }}", "-d", "{{ .Values.postgres.database }}"]
@@ -88,6 +110,12 @@ spec:
             initialDelaySeconds: 20
             periodSeconds: 20
           resources: {{- toYaml .Values.postgres.resources | nindent 12 }}
+      {{- if .Values.postgres.additionalDatabases }}
+      volumes:
+        - name: init-scripts
+          configMap:
+            name: {{ $fullName }}-postgres-init
+      {{- end }}
   volumeClaimTemplates:
     - metadata:
         name: data

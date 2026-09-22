@@ -1,0 +1,26 @@
+{{- if .Values.backup.enabled }}
+{{- $fullName := include "vibey.fullname" . }}
+apiVersion: velero.io/v1
+kind: BackupStorageLocation
+metadata:
+  name: {{ $fullName }}-garage
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+spec:
+  provider: aws
+  objectStorage:
+    bucket: vibey-backups
+  config:
+    region: "us-east-1"
+    s3ForcePathStyle: "true"
+    s3Url: "http://{{ $fullName }}-garage:3900"
+---
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: {{ $fullName }}-daily
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  template:
+    storageLocation: {{ $fullName }}-garage
+{{- end }}

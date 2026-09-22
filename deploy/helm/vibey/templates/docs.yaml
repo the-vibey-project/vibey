@@ -1,0 +1,214 @@
+{{- if and .Values.surfaces.enabled .Values.surfaces.bookstack.enabled }}
+{{- $fullName := include "vibey.fullname" . }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-bookstack-secret
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: docs
+type: Opaque
+stringData:
+  db-password: {{ .Values.surfaces.bookstack.mariadb.password }}
+  db-root-password: {{ .Values.surfaces.bookstack.mariadb.rootPassword }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-bookstack-mariadb-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bookstack-mariadb
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.bookstack.mariadb.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.bookstack.mariadb.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.bookstack.mariadb.storage.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-bookstack-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bookstack
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.bookstack.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.bookstack.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.bookstack.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-bookstack-mariadb
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bookstack-mariadb
+spec:
+  type: ClusterIP
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: bookstack-mariadb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-bookstack
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bookstack
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: bookstack
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-bookstack-mariadb
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bookstack-mariadb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: bookstack-mariadb
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: bookstack-mariadb
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: mariadb
+          image: {{ include "vibey.image" .Values.surfaces.bookstack.mariadb.image }}
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-bookstack-secret
+                  key: db-root-password
+            - name: MYSQL_DATABASE
+              value: {{ .Values.surfaces.bookstack.mariadb.database }}
+            - name: MYSQL_USER
+              value: {{ .Values.surfaces.bookstack.mariadb.user }}
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-bookstack-secret
+                  key: db-password
+          ports:
+            - containerPort: 3306
+          readinessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.bookstack.mariadb.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-bookstack-mariadb-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-bookstack
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bookstack
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: bookstack
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: bookstack
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: bookstack
+          image: {{ include "vibey.image" .Values.surfaces.bookstack.image }}
+          env:
+            - name: DB_HOST
+              value: "{{ $fullName }}-bookstack-mariadb:3306"
+            - name: DB_DATABASE
+              value: {{ .Values.surfaces.bookstack.mariadb.database }}
+            - name: DB_USERNAME
+              value: {{ .Values.surfaces.bookstack.mariadb.user }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-bookstack-secret
+                  key: db-password
+            - name: APP_URL
+              value: {{ default (printf "http://%s-bookstack:80" $fullName) .Values.surfaces.bookstack.appUrl | quote }}
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.bookstack.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-bookstack-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-docs
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: docs
+spec:
+  surface: docs
+  components:
+    - deployment: {{ $fullName }}-bookstack
+    - deployment: {{ $fullName }}-bookstack-mariadb
+{{- end }}

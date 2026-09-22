@@ -50,6 +50,56 @@ stored `features.qwenloop` is always false for projects created today:
 | `VIBEY_FEATURE_QWENLOOP` | `vibey worker` (`bootstrap.qwenloop_enabled`), `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`), and `load_config_from_path` | Overrides `features.qwenloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other value disables. When set it wins over both the stored project record and `./vibey.toml`. Only `load_config_from_path` rejects a non-boolean value. For the worker, enabling it adds a qwenloop adapter and makes qwenloop the standby engine for BUILD rotation. |
 | `VIBEY_EVIDENCE_DIR` | `vibey work --provider qwenloop`, `vibey worker --provider qwenloop` | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source, and the phase stops there. |
 
+### Operational surface environment variable overlay
+
+Every operational surface setting can be configured or overridden via environment variables.
+An environment variable always takes precedence over the corresponding key in `vibey.toml`.
+An empty or whitespace-only value counts as unset.
+
+| Variable | Target Table & Key | Description |
+|---|---|---|
+| `VIBEY_TRACKER_URL` | `[tracker].url` | Plane API endpoint URL |
+| `VIBEY_TRACKER_TOKEN` | `[tracker].token` | Plane user or API token |
+| `VIBEY_TRACKER_WORKSPACE_SLUG` | `[tracker].workspace_slug` | Plane workspace slug |
+| `VIBEY_TRACKER_PROJECT_ID` | `[tracker].project_id` | Plane project UUID |
+| `VIBEY_DOCS_URL` | `[docs].url` | BookStack base URL |
+| `VIBEY_DOCS_TOKEN_ID` | `[docs].token_id` | BookStack API token ID |
+| `VIBEY_DOCS_TOKEN_SECRET` | `[docs].token_secret` | BookStack API token secret |
+| `VIBEY_DOCS_BOOK_ID` | `[docs].book_id` | BookStack book integer ID |
+| `VIBEY_SECRETS_URL` | `[secrets].url` | OpenBao server URL |
+| `VIBEY_SECRETS_TOKEN` | `[secrets].token` | OpenBao access token |
+| `VIBEY_FILES_URL` | `[files].url` | Nextcloud WebDAV URL |
+| `VIBEY_FILES_USER` | `[files].user` | Nextcloud WebDAV username |
+| `VIBEY_FILES_PASSWORD` | `[files].password` | Nextcloud WebDAV password |
+| `VIBEY_EMAIL_SMTP_HOST` | `[email].smtp_host` | Postfix/SMTP host |
+| `VIBEY_EMAIL_SMTP_PORT` | `[email].smtp_port` | SMTP port (e.g. 587 or 465) |
+| `VIBEY_EMAIL_USERNAME` | `[email].username` | SMTP username |
+| `VIBEY_EMAIL_PASSWORD` | `[email].password` | SMTP password |
+| `VIBEY_EMAIL_FROM` | `[email].from_email` | Sender address |
+| `VIBEY_SMS_URL` | `[sms].url` | Kannel sendsms gateway URL |
+| `VIBEY_SMS_USERNAME` | `[sms].username` | Kannel sendsms username |
+| `VIBEY_SMS_PASSWORD` | `[sms].password` | Kannel sendsms password |
+| `VIBEY_SMS_SENDER` | `[sms].sender` | SMS sender ID/number |
+| `VIBEY_MESSAGING_URL` | `[messaging].url` | Matrix Synapse URL |
+| `VIBEY_MESSAGING_TOKEN` | `[messaging].token` | Matrix access token |
+| `VIBEY_MESSAGING_ROOM_ID` | `[messaging].room_id` | Matrix target room ID |
+| `VIBEY_CONFIG_STORE_URL` | `[config_store].url` | Infisical URL |
+| `VIBEY_CONFIG_STORE_TOKEN` | `[config_store].token` | Infisical token |
+| `VIBEY_CONFIG_STORE_PROJECT_ID` | `[config_store].project_id` | Infisical project UUID |
+| `VIBEY_CONFIG_STORE_ENVIRONMENT` | `[config_store].environment` | Infisical environment slug |
+| `VIBEY_CACHE_URL` | `[cache].url` | Redis URL (`redis://...`) |
+| `VIBEY_BUS_URL` | `[bus].url` | RabbitMQ Management URL |
+| `VIBEY_BUS_USERNAME` | `[bus].username` | RabbitMQ username |
+| `VIBEY_BUS_PASSWORD` | `[bus].password` | RabbitMQ password |
+| `VIBEY_BLOB_URL` | `[blob].url` | Garage S3 URL |
+| `VIBEY_BLOB_ACCESS_KEY` | `[blob].access_key` | Garage S3 access key |
+| `VIBEY_BLOB_SECRET_KEY` | `[blob].secret_key` | Garage S3 secret key |
+| `VIBEY_BLOB_REGION` | `[blob].region` | Garage S3 region |
+| `VIBEY_SIEM_URL` | `[siem].url` | Wazuh indexer endpoint |
+| `VIBEY_SIEM_USERNAME` | `[siem].username` | Wazuh indexer username |
+| `VIBEY_SIEM_PASSWORD` | `[siem].password` | Wazuh indexer password |
+| `VIBEY_SIEM_INDEX` | `[siem].index` | Wazuh index name |
+
 ## Schema semantics
 
 `domain/config.py` is a pure, stdlib-only module with no filesystem access
@@ -274,12 +324,12 @@ for that surface is present, otherwise the in-memory default.
 | `token_secret` | string | unset | API token secret. |
 | `book_id` | integer | unset | Book pages are created under. Must be an integer, never a boolean. |
 
-## `[secrets]` (sovereign default: Bitwarden)
+## `[secrets]` (sovereign default: OpenBao)
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `url` | string | unset | Base URL of the Bitwarden Secrets Manager instance. |
-| `token` | string | unset | API access token. |
+| `url` | string | unset | Base URL of the OpenBao instance, e.g. `http://localhost:8200`. |
+| `token` | string | unset | OpenBao root or service token (`X-Vault-Token`). |
 
 ## `[files]` (sovereign default: Nextcloud)
 
@@ -299,12 +349,14 @@ for that surface is present, otherwise the in-memory default.
 | `password` | string | unset | SMTP password. Login and STARTTLS are skipped without it. |
 | `from_email` | string | unset | Sender address; defaults to `username`, then `vibey@localhost`. |
 
-## `[sms]` (sovereign default: Fossify Messages)
+## `[sms]` (gateway: Kannel; handsets: Fossify Messages)
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `url` | string | unset | SMS gateway endpoint posting JSON. |
-| `token` | string | unset | Bearer token; the `Authorization` header is omitted without it. |
+| `url` | string | unset | Base URL of the Kannel smsbox instance (`/cgi-bin/sendsms`). |
+| `username` | string | unset | Kannel sendsms username. |
+| `password` | string | unset | Kannel sendsms password. |
+| `sender` | string | unset | Sender phone number or alphanumeric origin. |
 
 ## `[messaging]` (sovereign default: Matrix)
 
@@ -319,9 +371,41 @@ for that surface is present, otherwise the in-memory default.
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `url` | string | unset | Base URL of the Infisical instance. |
-| `token` | string | unset | API access token (Bearer). |
+| `token` | string | unset | API access token (Bearer) or machine identity token. |
 | `project_id` | string | unset | Infisical project ID. |
 | `environment` | string | `"dev"` | Environment slug secrets are read from and written to. |
+
+## `[cache]` (sovereign default: Redis)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | Redis connection URL, e.g. `redis://localhost:6379/0`. |
+
+## `[bus]` (sovereign default: RabbitMQ)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | Base URL of the RabbitMQ Management API, e.g. `http://localhost:15672`. |
+| `username` | string | unset | RabbitMQ management username. |
+| `password` | string | unset | RabbitMQ management password. |
+
+## `[blob]` (sovereign default: Garage, S3 API)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | Garage S3 endpoint URL, e.g. `http://localhost:3900`. |
+| `access_key` | string | unset | S3 API access key ID. |
+| `secret_key` | string | unset | S3 API secret access key. |
+| `region` | string | `"us-east-1"` | S3 signing region (must match server configuration). |
+
+## `[siem]` (sovereign default: Wazuh Indexer)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `url` | string | unset | Wazuh indexer REST endpoint, e.g. `http://localhost:9200`. |
+| `username` | string | unset | Indexer username for Basic auth (omitted when security is disabled). |
+| `password` | string | unset | Indexer password. |
+| `index` | string | `"vibey-audit"` | Target audit index name. |
 
 ## Skills context (project config record — not a `vibey.toml` table) { #skills_context }
 

@@ -1,0 +1,279 @@
+{{- if and .Values.surfaces.enabled .Values.surfaces.plane.enabled }}
+{{- $fullName := include "vibey.fullname" . }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-plane-secret
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane
+type: Opaque
+stringData:
+  secret-key: {{ .Values.surfaces.plane.secretKey }}
+  database-url: "postgres://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ $fullName }}-postgres:5432/plane?sslmode=disable"
+  redis-url: "redis://{{ $fullName }}-redis:6379/1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-plane-api
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-api
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: plane-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-plane-web
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-web
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: plane-web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-plane-api
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: plane-api
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: plane-api
+    spec:
+      containers:
+        - name: plane-api
+          image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: redis-url
+            - name: WEB_URL
+              value: "http://{{ $fullName }}-plane-web:80"
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-plane-worker
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: plane-worker
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: plane-worker
+    spec:
+      containers:
+        - name: plane-worker
+          image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          command: ["./bin/worker"]
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: redis-url
+          resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-plane-beat
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: plane-beat
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: plane-beat
+    spec:
+      containers:
+        - name: plane-beat
+          image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          command: ["./bin/beat"]
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: redis-url
+          resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-plane-web
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: plane-web
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: plane-web
+    spec:
+      containers:
+        - name: plane-web
+          image: {{ include "vibey.image" .Values.surfaces.plane.frontend.image }}
+          env:
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: "http://{{ $fullName }}-plane-api:8000"
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $fullName }}-plane-migrator-{{ include "vibey.image" .Values.surfaces.plane.backend.image | sha256sum | trunc 8 }}
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: plane-migrator
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: plane-migrator
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrator
+          image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          command:
+            - sh
+            - -c
+            - "python manage.py migrate --noinput || ./bin/takeoff || true"
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: secret-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-plane-secret
+                  key: redis-url
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-tracker
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tracker
+spec:
+  surface: tracker
+  components:
+    - deployment: {{ $fullName }}-plane-api
+    - deployment: {{ $fullName }}-plane-worker
+    - deployment: {{ $fullName }}-plane-beat
+    - deployment: {{ $fullName }}-plane-web
+{{- end }}

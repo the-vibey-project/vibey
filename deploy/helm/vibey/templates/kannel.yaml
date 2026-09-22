@@ -1,0 +1,158 @@
+{{- if and .Values.surfaces.enabled .Values.surfaces.kannel.enabled }}
+{{- $fullName := include "vibey.fullname" . }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-kannel
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kannel
+type: Opaque
+stringData:
+  username: {{ .Values.surfaces.kannel.username }}
+  password: {{ .Values.surfaces.kannel.password }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullName }}-kannel-config
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kannel
+data:
+  kannel.conf: |
+    group = core
+    admin-port = 13000
+    admin-password = {{ .Values.surfaces.kannel.adminPassword }}
+    status-password = {{ .Values.surfaces.kannel.adminPassword }}
+    admin-allow-ip = "*.*.*.*"
+    log-file = "/tmp/kannel.log"
+    log-level = 1
+    box-port = 13001
+    box-allow-ip = "*.*.*.*"
+
+    group = smsc
+    smsc = fake
+    smsc-id = fake1
+    port = 10000
+
+    group = smsbox
+    bearerbox-host = 127.0.0.1
+    bearerbox-port = 13001
+    sendsms-port = 13013
+    log-file = "/tmp/smsbox.log"
+    log-level = 1
+
+    group = sendsms-user
+    username = {{ .Values.surfaces.kannel.username }}
+    password = {{ .Values.surfaces.kannel.password }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-kannel
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kannel
+spec:
+  type: ClusterIP
+  ports:
+    - name: sendsms
+      port: 13013
+      targetPort: 13013
+      protocol: TCP
+    - name: admin
+      port: 13000
+      targetPort: 13000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: kannel
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-kannel
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kannel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: kannel
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: kannel
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: bearerbox
+          image: {{ include "vibey.image" .Values.surfaces.kannel.image }}
+          command:
+            - sh
+            - -c
+            - "sleep infinity | exec bearerbox /etc/kannel/kannel.conf"
+          stdin: true
+          tty: true
+          ports:
+            - containerPort: 13000
+            - containerPort: 13001
+          readinessProbe:
+            tcpSocket:
+              port: 13000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 13000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.kannel.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/kannel/kannel.conf
+              subPath: kannel.conf
+        - name: smsbox
+          image: {{ include "vibey.image" .Values.surfaces.kannel.image }}
+          command:
+            - sh
+            - -c
+            - "until nc -z 127.0.0.1 13001; do sleep 1; done; sleep infinity | exec smsbox /etc/kannel/kannel.conf"
+          stdin: true
+          tty: true
+          ports:
+            - containerPort: 13013
+          readinessProbe:
+            tcpSocket:
+              port: 13013
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 13013
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.kannel.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/kannel/kannel.conf
+              subPath: kannel.conf
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $fullName }}-kannel-config
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-sms
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sms
+spec:
+  surface: sms
+  components:
+    - deployment: {{ $fullName }}-kannel
+{{- end }}

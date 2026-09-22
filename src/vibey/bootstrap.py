@@ -44,6 +44,9 @@ from vibey.application.engine_selection import (
 from vibey.application.engine_selector import EngineSelector
 from vibey.application.interfaces import (
     AzureClientPort,
+    BlobPort,
+    BusPort,
+    CachePort,
     Clock,
     ConductorPreflightInterface,
     ConfigStorePort,
@@ -56,6 +59,7 @@ from vibey.application.interfaces import (
     JobHandler,
     MessagingPort,
     SecretsPort,
+    SiemPort,
     SmsPort,
     VisualInventoryProducer,
     WorkPlanProducer,
@@ -117,11 +121,11 @@ from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, parse_postgres_ser
 from vibey.infrastructure.preflight_feasibility import VibeyGhFeasibilityAdapter
 from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
 from vibey.infrastructure.review_artifact_writer import FileReviewArtifactWriter
-from vibey.infrastructure.secrets.bitwarden import BitwardenSecretsAdapter
 from vibey.infrastructure.secrets.in_memory import InMemorySecrets
+from vibey.infrastructure.secrets.openbao import OpenBaoSecretsAdapter
 from vibey.infrastructure.skills_context import compiler_from_config
-from vibey.infrastructure.sms.fossify import FossifySmsAdapter
 from vibey.infrastructure.sms.in_memory import InMemorySms
+from vibey.infrastructure.sms.kannel import KannelSmsAdapter
 from vibey.infrastructure.tracker.in_memory import InMemoryTracker
 from vibey.infrastructure.tracker.plane import PlaneTrackerAdapter
 
@@ -160,6 +164,10 @@ class AppResources:
     sms: SmsPort
     messaging: MessagingPort
     config_store: ConfigStorePort
+    cache: CachePort
+    bus: BusPort
+    blob: BlobPort
+    siem: SiemPort
     integration_lock: PostgresAdvisoryLock | None = None
 
 
@@ -772,7 +780,7 @@ async def build_app(
             docs_port = InMemoryDocs()
 
         if resolved_config and resolved_config.secrets.url and resolved_config.secrets.token:
-            secrets_port: SecretsPort = BitwardenSecretsAdapter(
+            secrets_port: SecretsPort = OpenBaoSecretsAdapter(
                 url=resolved_config.secrets.url,
                 token=resolved_config.secrets.token,
             )
@@ -804,10 +812,17 @@ async def build_app(
         else:
             email_port = InMemoryEmail()
 
-        if resolved_config and resolved_config.sms.url:
-            sms_port: SmsPort = FossifySmsAdapter(
+        if (
+            resolved_config
+            and resolved_config.sms.url
+            and resolved_config.sms.username
+            and resolved_config.sms.password
+        ):
+            sms_port: SmsPort = KannelSmsAdapter(
                 url=resolved_config.sms.url,
-                token=resolved_config.sms.token,
+                username=resolved_config.sms.username,
+                password=resolved_config.sms.password,
+                sender=resolved_config.sms.sender or "vibey",
             )
         else:
             sms_port = InMemorySms()
@@ -838,6 +853,65 @@ async def build_app(
             from vibey.infrastructure.config_store.in_memory import InMemoryConfigStore
 
             config_store_port = InMemoryConfigStore()
+
+        if resolved_config and resolved_config.cache.url:
+            from vibey.infrastructure.cache.redis import RedisCacheAdapter
+
+            cache_port: CachePort = RedisCacheAdapter(url=resolved_config.cache.url)
+        else:
+            from vibey.infrastructure.cache.in_memory import InMemoryCache
+
+            cache_port = InMemoryCache()
+
+        if (
+            resolved_config
+            and resolved_config.bus.url
+            and resolved_config.bus.username
+            and resolved_config.bus.password
+        ):
+            from vibey.infrastructure.bus.rabbitmq import RabbitMqBusAdapter
+
+            bus_port: BusPort = RabbitMqBusAdapter(
+                url=resolved_config.bus.url,
+                username=resolved_config.bus.username,
+                password=resolved_config.bus.password,
+            )
+        else:
+            from vibey.infrastructure.bus.in_memory import InMemoryBus
+
+            bus_port = InMemoryBus()
+
+        if (
+            resolved_config
+            and resolved_config.blob.url
+            and resolved_config.blob.access_key
+            and resolved_config.blob.secret_key
+        ):
+            from vibey.infrastructure.blob.garage import GarageBlobAdapter
+
+            blob_port: BlobPort = GarageBlobAdapter(
+                url=resolved_config.blob.url,
+                access_key=resolved_config.blob.access_key,
+                secret_key=resolved_config.blob.secret_key,
+                region=resolved_config.blob.region,
+            )
+        else:
+            from vibey.infrastructure.blob.in_memory import InMemoryBlob
+
+            blob_port = InMemoryBlob()
+
+        if resolved_config and resolved_config.siem.url:
+            from vibey.infrastructure.siem.wazuh import WazuhSiemAdapter
+
+            siem_port: SiemPort = WazuhSiemAdapter(
+                url=resolved_config.siem.url,
+                username=resolved_config.siem.username,
+                password=resolved_config.siem.password,
+            )
+        else:
+            from vibey.infrastructure.siem.in_memory import InMemorySiem
+
+            siem_port = InMemorySiem()
 
         yield AppResources(
             projects=projects,
@@ -870,6 +944,10 @@ async def build_app(
             sms=sms_port,
             messaging=messaging_port,
             config_store=config_store_port,
+            cache=cache_port,
+            bus=bus_port,
+            blob=blob_port,
+            siem=siem_port,
             integration_lock=PostgresAdvisoryLock(pool),
         )
     finally:

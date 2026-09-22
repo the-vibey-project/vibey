@@ -224,7 +224,7 @@ class DocsConfig:
 
 @dataclass(frozen=True, slots=True)
 class SecretsConfig:
-    """`[secrets]`: the Secrets surface (sovereign default: Bitwarden)."""
+    """`[secrets]`: the Secrets surface (sovereign default: OpenBao)."""
 
     url: str | None = None
     token: str | None = None
@@ -252,10 +252,12 @@ class EmailConfig:
 
 @dataclass(frozen=True, slots=True)
 class SmsConfig:
-    """`[sms]`: the SMS surface (sovereign default: Fossify Messages)."""
+    """`[sms]`: the SMS surface (gateway: Kannel; handsets: Fossify Messages)."""
 
     url: str | None = None
-    token: str | None = None
+    username: str | None = None
+    password: str | None = None
+    sender: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -275,6 +277,42 @@ class ConfigStoreConfig:
     token: str | None = None
     project_id: str | None = None
     environment: str = "dev"
+
+
+@dataclass(frozen=True, slots=True)
+class CacheConfig:
+    """`[cache]`: the Cache surface (sovereign default: Redis)."""
+
+    url: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class BusConfig:
+    """`[bus]`: the service-bus surface (sovereign default: RabbitMQ)."""
+
+    url: str | None = None
+    username: str | None = None
+    password: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class BlobConfig:
+    """`[blob]`: the Blob storage surface (sovereign default: Garage, S3 API)."""
+
+    url: str | None = None
+    access_key: str | None = None
+    secret_key: str | None = None
+    region: str = "us-east-1"
+
+
+@dataclass(frozen=True, slots=True)
+class SiemConfig:
+    """`[siem]`: the SIEM surface (sovereign default: Wazuh indexer)."""
+
+    url: str | None = None
+    username: str | None = None
+    password: str | None = None
+    index: str = "vibey-audit"
 
 
 @dataclass(frozen=True, slots=True)
@@ -298,6 +336,10 @@ class VibeyConfig:
     sms: SmsConfig = field(default_factory=SmsConfig)
     messaging: MessagingConfig = field(default_factory=MessagingConfig)
     config_store: ConfigStoreConfig = field(default_factory=ConfigStoreConfig)
+    cache: CacheConfig = field(default_factory=CacheConfig)
+    bus: BusConfig = field(default_factory=BusConfig)
+    blob: BlobConfig = field(default_factory=BlobConfig)
+    siem: SiemConfig = field(default_factory=SiemConfig)
 
 
 def parse_toml_string(text: str) -> dict[str, Any]:
@@ -546,7 +588,9 @@ def _parse_sms(data: dict[str, Any]) -> SmsConfig:
     table = _optional(data, "sms", "sms", dict, {})
     return SmsConfig(
         url=_optional(table, "url", "sms.url", str, None),
-        token=_optional(table, "token", "sms.token", str, None),
+        username=_optional(table, "username", "sms.username", str, None),
+        password=_optional(table, "password", "sms.password", str, None),
+        sender=_optional(table, "sender", "sms.sender", str, None),
     )
 
 
@@ -566,6 +610,42 @@ def _parse_config_store(data: dict[str, Any]) -> ConfigStoreConfig:
         token=_optional(table, "token", "config_store.token", str, None),
         project_id=_optional(table, "project_id", "config_store.project_id", str, None),
         environment=_optional(table, "environment", "config_store.environment", str, "dev"),
+    )
+
+
+def _parse_cache(data: dict[str, Any]) -> CacheConfig:
+    table = _optional(data, "cache", "cache", dict, {})
+    return CacheConfig(
+        url=_optional(table, "url", "cache.url", str, None),
+    )
+
+
+def _parse_bus(data: dict[str, Any]) -> BusConfig:
+    table = _optional(data, "bus", "bus", dict, {})
+    return BusConfig(
+        url=_optional(table, "url", "bus.url", str, None),
+        username=_optional(table, "username", "bus.username", str, None),
+        password=_optional(table, "password", "bus.password", str, None),
+    )
+
+
+def _parse_blob(data: dict[str, Any]) -> BlobConfig:
+    table = _optional(data, "blob", "blob", dict, {})
+    return BlobConfig(
+        url=_optional(table, "url", "blob.url", str, None),
+        access_key=_optional(table, "access_key", "blob.access_key", str, None),
+        secret_key=_optional(table, "secret_key", "blob.secret_key", str, None),
+        region=_optional(table, "region", "blob.region", str, "us-east-1"),
+    )
+
+
+def _parse_siem(data: dict[str, Any]) -> SiemConfig:
+    table = _optional(data, "siem", "siem", dict, {})
+    return SiemConfig(
+        url=_optional(table, "url", "siem.url", str, None),
+        username=_optional(table, "username", "siem.username", str, None),
+        password=_optional(table, "password", "siem.password", str, None),
+        index=_optional(table, "index", "siem.index", str, "vibey-audit"),
     )
 
 
@@ -633,6 +713,10 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         sms=_parse_sms(data),
         messaging=_parse_messaging(data),
         config_store=_parse_config_store(data),
+        cache=_parse_cache(data),
+        bus=_parse_bus(data),
+        blob=_parse_blob(data),
+        siem=_parse_siem(data),
     )
 
 
