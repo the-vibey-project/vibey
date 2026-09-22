@@ -1,6 +1,6 @@
 # 0002 — PostgreSQL, not SQLite, for the queue and ledger
 
-**Status:** accepted · **Date:** 2026-08-14
+**Status:** accepted; its queue-dispatch decision superseded by ADR-0044 (PostgreSQL stays the record store and ledger) · **Date:** 2026-08-14
 
 **Owes:** nothing — mechanism (ADR-0020)
 
