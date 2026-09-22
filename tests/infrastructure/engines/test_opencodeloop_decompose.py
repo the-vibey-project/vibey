@@ -70,7 +70,7 @@ def _valid_items() -> str:
                     "acceptance_ids": ["AC-1"],
                     "depends_on": ["ws"],
                     "est_effort": "low",
-                    "verification": {"commands": [], "criteria_checked": ["AC-1"]},
+                    "verification": {"commands": ["pytest"], "criteria_checked": ["AC-1"]},
                 },
             ]
         }
@@ -170,7 +170,7 @@ async def test_decompose_normalizes_model_ids_to_the_worktree_shape(tmp_path: Pa
                     "acceptance_ids": ["AC-1"],
                     "depends_on": [],
                     "est_effort": "standard",
-                    "verification": {"commands": [], "criteria_checked": ["AC-1"]},
+                    "verification": {"commands": ["pytest"], "criteria_checked": ["AC-1"]},
                 },
                 {
                     "item_id": "WI_01: CLI parsing",
@@ -178,7 +178,7 @@ async def test_decompose_normalizes_model_ids_to_the_worktree_shape(tmp_path: Pa
                     "acceptance_ids": ["AC-1"],
                     "depends_on": ["WS"],
                     "est_effort": "low",
-                    "verification": {"commands": [], "criteria_checked": ["AC-1"]},
+                    "verification": {"commands": ["pytest"], "criteria_checked": ["AC-1"]},
                 },
             ]
         }

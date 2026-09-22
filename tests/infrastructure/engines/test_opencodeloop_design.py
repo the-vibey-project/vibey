@@ -134,6 +134,15 @@ async def test_batch_rejects_non_dict_question_items(tmp_path: Path) -> None:
         await provider.batch(DesignStage.CONTEXT_FREE, ())
 
 
+async def test_batch_rejects_questions_with_invalid_blocking_type(tmp_path: Path) -> None:
+    response = (
+        '{"questions":[{"question_id":"q-1","text":"What?","default":"","blocking":"false"}]}'
+    )
+    provider = OpenCodeLoopDesignProvider(process=FakeProcess([response]), worktree_path=tmp_path)
+    with pytest.raises(ValueError, match="blocking"):
+        await provider.batch(DesignStage.CONTEXT_FREE, ())
+
+
 async def test_research_rejects_missing_fields(tmp_path: Path) -> None:
     response = '{"title":"Art","source":"https://example.test"}'
     provider = OpenCodeLoopDesignProvider(process=FakeProcess([response]), worktree_path=tmp_path)
