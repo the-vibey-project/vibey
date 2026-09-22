@@ -127,9 +127,8 @@ concrete default is a platitude:
 
 - **Engines** default to **`sovereignloop`** (8.c), which drives the models and
   tools that run on the operator's own hardware and need no subscription — this
-  era's default model (8.d), and **VS Code** in its open-source build (Code - OSS,
-  as VSCodium ships it) when its model is local — always on, never needing
-  declaration, for every phase. **`paidloop`** and its adapters — `claudeloop`,
+  era's default model (8.d), and **VS Code** when its provider is local — always
+  on, never needing declaration, for every phase. **`paidloop`** and its adapters — `claudeloop`,
   `codexloop`, `cursorloop`, `agyloop`, and VS Code on a paid provider — are
   declared-only. OpenCode is repealed as an engine of either loop; VS Code takes
   its place in both, and the runner that drove OpenCode is retired once the VS Code
