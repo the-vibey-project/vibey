@@ -898,3 +898,14 @@ def test_server_start_honours_vllm_and_the_configured_timeout_and_window(
     assert seen["timeout"] == 11
     assert seen["profile"].name == NVIDIA_BF16.name  # type: ignore[attr-defined]
     assert seen["profile"].context_window == 16384  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(("idle", "expected"), [(0, None), (120, 120.0), (900, 900.0)])
+def test_server_for_applies_the_idle_timeout_to_requests(idle: int, expected: float | None) -> None:
+    """#345: `idle_timeout_seconds` reaches the model request; 0 waits indefinitely."""
+    from qwenloop.cli.app import _server_for
+    from qwenloop.domain.config import QwenConfig
+
+    config = QwenConfig(base_url="http://127.0.0.1:11434/v1", idle_timeout_seconds=idle)
+    server, _ = _server_for(config)
+    assert server.request_timeout_seconds == expected  # type: ignore[attr-defined]

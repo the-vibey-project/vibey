@@ -663,3 +663,29 @@ async def test_managed_chat_falls_back_to_the_profile_name(
     _ = [chunk async for chunk in LlamaCppServer(tmp_path).chat_stream(legacy, [])]
     assert json.loads(fake.requests[0].data)["model"] == PORTABLE.name  # type: ignore[attr-defined]
     assert fake.requests[0].get_header("Authorization") == "Bearer t"  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("configured", [900, 45.0, None])
+async def test_chat_stream_waits_the_request_timeout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, configured: float | None
+) -> None:
+    """#345: the chat request waits `request_timeout_seconds`, not a fixed 300 s."""
+    seen: list[object] = []
+    reply = {"choices": [{"message": {"content": "ok"}}], "usage": {}}
+
+    def urlopen(request: object, timeout: object = None) -> io.BytesIO:
+        seen.append(timeout)
+        return io.BytesIO(json.dumps(reply).encode())
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    server = LlamaCppServer(tmp_path)
+    server.request_timeout_seconds = configured
+    info = ServerInfo(Backend.LLAMA_CPP, PORTABLE.name, "http://local/v1", True, True, 1, "t")
+    async for _ in server.chat_stream(info, [ChatMessage("user", "hi")]):
+        pass
+    assert seen == [configured]
+
+
+def test_the_default_request_timeout_is_the_idle_timeout_default() -> None:
+    assert OpenAICompatServer("http://127.0.0.1:11434/v1", "m").request_timeout_seconds == 900

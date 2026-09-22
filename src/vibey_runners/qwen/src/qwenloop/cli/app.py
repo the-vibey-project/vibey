@@ -195,16 +195,30 @@ def _attach(config: QwenConfig) -> OpenAICompatServer:
     )
 
 
+def _request_timeout(config: QwenConfig) -> float | None:
+    """`idle_timeout_seconds` as a request timeout: 0 means wait indefinitely (#345).
+
+    Module-level for the reason every helper here is: the typer commands share it.
+    """
+    return None if config.idle_timeout_seconds == 0 else float(config.idle_timeout_seconds)
+
+
 def _server_for(config: QwenConfig) -> tuple[InferenceServer, ModelProfile]:
     """The server and profile a run uses. The composition step `run`, `--storm`, and
     `server start` share, so an endpoint reaches all three through one abstraction."""
     selected = _select(config).backend
+    timeout = _request_timeout(config)
     if selected is Backend.OPENAI_COMPAT:
         attached = _attach(config)
+        attached.request_timeout_seconds = timeout
         return attached, attached.profile
     if selected is Backend.VLLM:
-        return VllmServer(), replace(NVIDIA_BF16, context_window=config.context_window)
-    return LlamaCppServer(), replace(PORTABLE, context_window=config.context_window)
+        vllm = VllmServer()
+        vllm.request_timeout_seconds = timeout
+        return vllm, replace(NVIDIA_BF16, context_window=config.context_window)
+    llama = LlamaCppServer()
+    llama.request_timeout_seconds = timeout
+    return llama, replace(PORTABLE, context_window=config.context_window)
 
 
 def _public(info: ServerInfo) -> dict[str, object]:

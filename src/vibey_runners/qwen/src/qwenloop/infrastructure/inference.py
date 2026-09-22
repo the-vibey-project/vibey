@@ -40,6 +40,9 @@ def _message_payload(message: ChatMessage) -> dict[str, object]:
 class OpenAIServer:
     binary: str
     backend: Backend
+    #: How long one model request may take, in seconds; None waits indefinitely. The
+    #: CLI sets it from `idle_timeout_seconds` (#345); 900 matches that key's default.
+    request_timeout_seconds: float | None = 900
 
     def __init__(self, cache_dir: Path | None = None) -> None:
         self.cache_dir = cache_dir or user_cache_path("qwenloop")
@@ -130,7 +133,9 @@ class OpenAIServer:
             headers={"Content-Type": "application/json", **self._auth(info.token)},
         )
         try:
-            response = await asyncio.to_thread(urllib.request.urlopen, request, timeout=300)
+            response = await asyncio.to_thread(
+                urllib.request.urlopen, request, timeout=self.request_timeout_seconds
+            )
         except urllib.error.HTTPError as exc:
             raise RuntimeError(_http_error_detail(exc)) from exc
         data = json.loads(response.read())
