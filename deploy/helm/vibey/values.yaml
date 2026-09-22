@@ -109,7 +109,7 @@ ollama:
   # its weights, pulls `model` onto that volume with a Job, and points the
   # worker at it: VIBEY_OLLAMA_URL/VIBEY_OLLAMA_MODEL for vibey's own
   # sovereign providers, QWENLOOP_BASE_URL/QWENLOOP_MODEL for qwenloop's
-  # OpenAI-compatible backend. Off by default: a 14B model wants a node with
+  # OpenAI-compatible backend. Off by default: a 20B model wants a node with
   # the memory (and ideally the GPU) to hold it, and a default install
   # should not assume one.
   enabled: false
@@ -121,21 +121,24 @@ ollama:
     tag: "0.34.2"
     digest: "sha256:da6e0dc5651df159e45686fd663c4dbe1624a52c44d7280eeac1551d8f865532"
     pullPolicy: IfNotPresent
-  # The model the pull Job fetches and the worker is told to use. The
-  # default is the one vibey and qwenloop already default to, so a stock
-  # worker and a stock qwenloop agree without further configuration.
-  model: qwen2.5-coder:14b
+  # The model the pull Job fetches and the worker is told to use: this era's
+  # default free model (sub-doctrine 8.d), GPT-OSS 20B -- the one vibey and
+  # qwenloop already default to, so a stock worker and a stock qwenloop agree
+  # without further configuration.
+  model: gpt-oss:20b
   # OLLAMA_CONTEXT_LENGTH. qwenloop runs a 32K context and Ollama's default
   # window is far smaller; empty leaves Ollama's own default in place.
   contextLength: 32768
   service:
     port: 11434
   storage:
-    # qwen2.5-coder:14b is ~9 GB; this leaves room for a second model.
+    # gpt-oss:20b is 13.8 GB on disk (MXFP4); this leaves room for a second model.
     size: 30Gi
     storageClass: ""
-  # CPU inference of a 14B model at a 32K context: weights plus KV cache.
-  # Lower these only together with a smaller model or context.
+  # gpt-oss:20b at a 32K context: its weights plus KV cache. Measured 13.1 GB
+  # resident on 2026-09-22 (Ollama, even at its full 131K window: its
+  # sliding-window layers keep the cache small). Lower these only together
+  # with a smaller model or context.
   resources:
     requests:
       cpu: "2"

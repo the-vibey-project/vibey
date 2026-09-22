@@ -18,10 +18,10 @@ from platformdirs import user_cache_path
 
 from qwenloop import __version__
 from qwenloop.application.backend_selection import BackendSelector, Hardware
-from qwenloop.application.interfaces import InferenceServer
+from qwenloop.application.interfaces import InferenceServer, OllamaProbeInterface
 from qwenloop.application.runner import AutonomousRunner
 from qwenloop.application.storm import build_item_plans
-from qwenloop.domain.config import QwenConfig
+from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, QwenConfig
 from qwenloop.domain.model import (
     EXIT_CODE_WIND_DOWN,
     Backend,
@@ -31,6 +31,7 @@ from qwenloop.domain.model import (
     RunStatus,
     ServerInfo,
 )
+from qwenloop.infrastructure.clock import SystemClock
 from qwenloop.infrastructure.desktop_notifications import DesktopNotifier
 from qwenloop.infrastructure.github import (
     list_open_issues,
@@ -39,6 +40,7 @@ from qwenloop.infrastructure.github import (
 )
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer, VllmServer
 from qwenloop.infrastructure.model_cache import ModelCache
+from qwenloop.infrastructure.ollama_probe import OllamaProbe
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE, PROFILES
 from qwenloop.infrastructure.run_store import FileRunStore
 from qwenloop.infrastructure.settings import SettingsLoader
@@ -72,7 +74,7 @@ ModelOption = Annotated[
     typer.Option(
         "--model",
         help="Model name the endpoint serves. Unset: $QWENLOOP_MODEL, else config `model`, "
-        "else qwen2.5-coder:14b.",
+        f"else {DEFAULT_ENDPOINT_MODEL}.",
     ),
 ]
 
@@ -174,13 +176,28 @@ def _load_config(**overrides: object) -> QwenConfig:
         raise typer.BadParameter(f"qwenloop configuration: {exc}") from exc
 
 
+#: The one probe `_select` asks whether a local Ollama is running (#388). The tests replace
+#: it with an in-memory fake (tests/conftest.py), so no test ever reaches a real Ollama.
+_ollama_probe: OllamaProbeInterface = OllamaProbe()
+
+
 def _select(config: QwenConfig) -> BackendChoice:
-    """The backend `config` resolves to on this machine (see `BackendSelector`)."""
+    """The backend `config` resolves to on this machine (see `BackendSelector`).
+
+    Only an unconfigured AUTO asks whether a local Ollama is running: an explicit backend
+    or a configured endpoint already decides, and never pays the probe's round trip.
+    """
+    ollama_available = (
+        config.backend is Backend.AUTO
+        and not config.endpoint_configured
+        and _ollama_probe.available()
+    )
     return BackendSelector().select(
         config.backend,
         Hardware(platform.system(), _nvidia_vram()),
         vllm_installed=shutil.which("vllm") is not None,
         endpoint_configured=config.endpoint_configured,
+        ollama_available=ollama_available,
     )
 
 
@@ -195,16 +212,30 @@ def _attach(config: QwenConfig) -> OpenAICompatServer:
     )
 
 
+def _request_timeout(config: QwenConfig) -> float | None:
+    """`idle_timeout_seconds` as a request timeout: 0 means wait indefinitely (#345).
+
+    Module-level for the reason every helper here is: the typer commands share it.
+    """
+    return None if config.idle_timeout_seconds == 0 else float(config.idle_timeout_seconds)
+
+
 def _server_for(config: QwenConfig) -> tuple[InferenceServer, ModelProfile]:
     """The server and profile a run uses. The composition step `run`, `--storm`, and
     `server start` share, so an endpoint reaches all three through one abstraction."""
     selected = _select(config).backend
+    timeout = _request_timeout(config)
     if selected is Backend.OPENAI_COMPAT:
         attached = _attach(config)
+        attached.request_timeout_seconds = timeout
         return attached, attached.profile
     if selected is Backend.VLLM:
-        return VllmServer(), replace(NVIDIA_BF16, context_window=config.context_window)
-    return LlamaCppServer(), replace(PORTABLE, context_window=config.context_window)
+        vllm = VllmServer()
+        vllm.request_timeout_seconds = timeout
+        return vllm, replace(NVIDIA_BF16, context_window=config.context_window)
+    llama = LlamaCppServer()
+    llama.request_timeout_seconds = timeout
+    return llama, replace(PORTABLE, context_window=config.context_window)
 
 
 def _public(info: ServerInfo) -> dict[str, object]:
@@ -270,6 +301,7 @@ async def _run_plan(
         FileRunStore(cwd),
         SandboxTools(cwd),
         DesktopNotifier(enabled=desktop_notifications),
+        clock=SystemClock(),
     )
     return await runner.run(
         run_id=run_id,

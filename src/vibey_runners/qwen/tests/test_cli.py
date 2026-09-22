@@ -7,12 +7,13 @@ import urllib.error
 from pathlib import Path
 
 import pytest
+from fakes import FakeOllamaProbe
 from typer.testing import CliRunner
 
 from qwenloop import __version__
 from qwenloop.cli.app import app
 from qwenloop.domain.model import Backend, RepoItem, RunState, RunStatus, ServerInfo
-from qwenloop.infrastructure.inference import OpenAICompatServer
+from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE
 
 runner = CliRunner()
@@ -126,7 +127,7 @@ def test_run_statuses(
             return True
 
     class FakeRunner:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             pass
 
         async def run(self, **kwargs):  # type: ignore[no-untyped-def]
@@ -168,7 +169,7 @@ def test_run_waits_for_new_server(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
             return info
 
     class FakeRunner:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             pass
 
         async def run(self, **_kwargs):  # type: ignore[no-untyped-def]
@@ -359,7 +360,7 @@ def test_storm_sweep_reports_per_repo_status_and_tally(
             return True
 
     class FakeRunner:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             pass
 
         async def run(self, **kwargs):  # type: ignore[no-untyped-def]
@@ -471,7 +472,7 @@ def test_storm_retries_a_failed_item_until_it_converges(
             return True
 
     class FakeRunner:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             pass
 
         async def run(self, **kwargs):  # type: ignore[no-untyped-def]
@@ -528,7 +529,7 @@ def test_storm_reports_failed_turns_for_the_current_item(
             return True
 
     class FakeRunner:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             pass
 
         async def run(self, **kwargs):  # type: ignore[no-untyped-def]
@@ -625,7 +626,7 @@ def test_storm_continues_past_unavailable_repo(
 
 # --- openai-compat endpoint mode (Ollama first) -------------------------------------------
 
-OLLAMA_MODELS = b'{"object": "list", "data": [{"id": "qwen2.5-coder:14b"}]}'
+OLLAMA_MODELS = b'{"object": "list", "data": [{"id": "gpt-oss:20b"}, {"id": "qwen2.5-coder:14b"}]}'
 
 
 class FakeHttp:
@@ -652,7 +653,7 @@ class RecordingRunner:
 
     calls: list[dict[str, object]] = []
 
-    def __init__(self, server, *_args):  # type: ignore[no-untyped-def]
+    def __init__(self, server, *_args, **_kwargs):  # type: ignore[no-untyped-def]
         self.server = server
 
     async def run(self, **kwargs):  # type: ignore[no-untyped-def]
@@ -669,7 +670,7 @@ def recording_runner(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]
 
 def _no_managed_servers(monkeypatch: pytest.MonkeyPatch) -> None:
     class Forbidden:
-        def __init__(self, *_args):  # type: ignore[no-untyped-def]
+        def __init__(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
             raise AssertionError("an endpoint run must never build a managed server")
 
     monkeypatch.setattr("qwenloop.cli.app.LlamaCppServer", Forbidden)
@@ -695,7 +696,7 @@ def test_run_attaches_to_the_endpoint_named_by_flag(
     assert isinstance(info, ServerInfo)
     assert (info.backend, info.model, info.owned) == (
         Backend.OPENAI_COMPAT,
-        "qwen2.5-coder:14b",
+        "gpt-oss:20b",
         False,
     )
     assert http.urls == ["http://127.0.0.1:11434/v1/models"]
@@ -760,8 +761,8 @@ def test_run_fails_loudly_when_the_endpoint_lacks_the_model(
         app, ["run", str(plan), "--cwd", str(tmp_path), "--base-url", "http://h:1/v1"]
     )
     assert result.exit_code == 1
-    assert "qwenloop unavailable: model 'qwen2.5-coder:14b' is not served" in result.stderr
-    assert "ollama pull qwen2.5-coder:14b" in result.stderr
+    assert "qwenloop unavailable: model 'gpt-oss:20b' is not served" in result.stderr
+    assert "ollama pull gpt-oss:20b" in result.stderr
 
 
 def test_bad_configuration_exits_2_naming_it(
@@ -804,7 +805,7 @@ def test_doctor_passes_when_the_endpoint_serves_the_model(monkeypatch: pytest.Mo
     assert result.exit_code == 0, result.output
     assert "backend: openai-compat (an OpenAI-compatible endpoint is configured)" in result.stdout
     assert "endpoint: http://127.0.0.1:11434/v1" in result.stdout
-    assert "model: qwen2.5-coder:14b ok" in result.stdout
+    assert "model: gpt-oss:20b ok" in result.stdout
 
 
 def test_doctor_fails_loudly_when_the_endpoint_is_down(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -815,7 +816,7 @@ def test_doctor_fails_loudly_when_the_endpoint_is_down(monkeypatch: pytest.Monke
     result = runner.invoke(app, ["doctor", "--backend", "openai-compat"])
     assert result.exit_code == 1
     assert "endpoint: http://127.0.0.1:11434/v1" in result.stdout
-    assert "model: qwen2.5-coder:14b unavailable" in result.stdout
+    assert "model: gpt-oss:20b unavailable" in result.stdout
     assert "qwenloop doctor: openai-compat endpoint" in result.stderr
     assert "is unreachable (Connection refused)" in result.stderr
 
@@ -898,3 +899,63 @@ def test_server_start_honours_vllm_and_the_configured_timeout_and_window(
     assert seen["timeout"] == 11
     assert seen["profile"].name == NVIDIA_BF16.name  # type: ignore[attr-defined]
     assert seen["profile"].context_window == 16384  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(("idle", "expected"), [(0, None), (120, 120.0), (900, 900.0)])
+def test_server_for_applies_the_idle_timeout_to_requests(idle: int, expected: float | None) -> None:
+    """#345: `idle_timeout_seconds` reaches the model request; 0 waits indefinitely."""
+    from qwenloop.cli.app import _server_for
+    from qwenloop.domain.config import QwenConfig
+
+    config = QwenConfig(base_url="http://127.0.0.1:11434/v1", idle_timeout_seconds=idle)
+    server, _ = _server_for(config)
+    assert server.request_timeout_seconds == expected  # type: ignore[attr-defined]
+
+
+def test_with_nothing_configured_a_running_ollama_is_attached(
+    no_local_ollama: FakeOllamaProbe,
+) -> None:
+    """#388: an unconfigured qwenloop attaches to a running local Ollama, serving this
+    era's default model, instead of starting a llama.cpp server of its own."""
+    from qwenloop.cli.app import _server_for
+    from qwenloop.domain.config import QwenConfig
+
+    no_local_ollama.answer = True
+    server, profile = _server_for(QwenConfig())
+    assert isinstance(server, OpenAICompatServer)
+    assert server.base_url == "http://127.0.0.1:11434/v1"  # type: ignore[attr-defined]
+    assert profile.name == "gpt-oss:20b"
+    assert no_local_ollama.asked == 1
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        {"backend": "llama.cpp"},
+        {"base_url": "http://gpu-box:8000/v1"},
+    ],
+)
+def test_a_configured_backend_or_endpoint_never_pays_the_probe(
+    no_local_ollama: FakeOllamaProbe, config: dict[str, str]
+) -> None:
+    from qwenloop.cli.app import _select
+    from qwenloop.domain.config import QwenConfig
+    from qwenloop.domain.model import Backend
+
+    no_local_ollama.answer = True
+    loaded = QwenConfig(
+        backend=Backend(config.get("backend", "auto")), base_url=config.get("base_url", "")
+    )
+    _select(loaded)
+    assert no_local_ollama.asked == 0
+
+
+def test_without_a_running_ollama_the_portable_backend_is_unchanged(
+    no_local_ollama: FakeOllamaProbe,
+) -> None:
+    from qwenloop.cli.app import _server_for
+    from qwenloop.domain.config import QwenConfig
+
+    server, _ = _server_for(QwenConfig())
+    assert isinstance(server, LlamaCppServer)
+    assert no_local_ollama.asked == 1

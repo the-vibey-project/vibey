@@ -27,12 +27,18 @@ class BackendSelector:
         *,
         vllm_installed: bool,
         endpoint_configured: bool,
+        ollama_available: bool = False,
     ) -> BackendChoice:
         if requested is not Backend.AUTO:
             return BackendChoice(requested, "explicit configuration")
         if endpoint_configured:
             return BackendChoice(
                 Backend.OPENAI_COMPAT, "an OpenAI-compatible endpoint is configured"
+            )
+        if ollama_available:
+            # Nothing configured, and a local Ollama is running: it is the default (#388).
+            return BackendChoice(
+                Backend.OPENAI_COMPAT, "a local Ollama is running: the default backend"
             )
         if (
             hardware.system == "Linux"

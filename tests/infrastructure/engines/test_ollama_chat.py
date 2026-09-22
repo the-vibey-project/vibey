@@ -58,7 +58,7 @@ def test_the_defaults_are_todays_endpoint_and_model() -> None:
     """Configurable, and nothing about an unconfigured install changes (ADR-0018)."""
     client = OllamaChatClient()
     assert client.base_url == DEFAULT_OLLAMA_URL == "http://127.0.0.1:11434"
-    assert client.model == DEFAULT_OLLAMA_MODEL == "qwen2.5-coder:14b"
+    assert client.model == DEFAULT_OLLAMA_MODEL == "gpt-oss:20b"
     assert DEFAULT_OLLAMA_TIMEOUT == 900
     assert isinstance(client, OllamaChatClientInterface)
     assert isinstance(UrllibOllamaTransport(), OllamaTransportInterface)
@@ -218,3 +218,43 @@ async def test_the_transport_refuses_a_non_http_url_before_opening_anything() ->
     with pytest.raises(ValueError, match="refusing a non-HTTP model endpoint"):
         await UrllibOllamaTransport(opener=opener).post_json("file:///etc/passwd", {}, timeout=1)
     assert opened == []
+
+
+# A real reply from gpt-oss:20b, recorded from a local Ollama on 2026-09-22 (POST
+# /api/chat, stream false, the one user message below). GPT-OSS answers on two channels:
+# `thinking` carries its reasoning and `content` the answer, and only `content` is read.
+GPT_OSS_20B_REPLY: dict[str, object] = {
+    "model": "gpt-oss:20b",
+    "created_at": "2026-09-22T15:07:14.136724Z",
+    "message": {
+        "role": "assistant",
+        "content": '{"ok": true}',
+        "thinking": 'User says: "Reply with {"ok": true} and nothing else". So just '
+        "output that JSON exactly. No additional explanation.",
+    },
+    "done": True,
+    "done_reason": "stop",
+    "total_duration": 1850002459,
+    "load_duration": 39364084,
+    "prompt_eval_count": 77,
+    "prompt_eval_cached_count": 72,
+    "prompt_eval_duration": 116239000,
+    "eval_count": 41,
+    "eval_duration": 1616024000,
+}
+
+
+@pytest.mark.asyncio
+async def test_a_gpt_oss_reply_is_read_from_its_content_never_its_thinking() -> None:
+    message = GPT_OSS_20B_REPLY["message"]
+    assert isinstance(message, dict) and message["thinking"]  # a real reasoning channel
+    client = OllamaChatClient(transport=FakeTransport(GPT_OSS_20B_REPLY))
+    assert await client.ask("system", "user", {"type": "object"}) == {"ok": True}
+
+
+@pytest.mark.asyncio
+async def test_thinking_alone_is_no_answer() -> None:
+    reply: dict[str, object] = {"message": {"role": "assistant", "thinking": '{"ok": true}'}}
+    client = OllamaChatClient(transport=FakeTransport(reply))
+    with pytest.raises(ValueError, match="no message content"):
+        await client.ask("system", "user", {"type": "object"})

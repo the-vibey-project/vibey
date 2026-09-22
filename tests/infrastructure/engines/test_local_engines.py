@@ -201,7 +201,7 @@ def test_vibey_ollama_url_becomes_qwenloops_openai_compat_endpoint() -> None:
 
     assert endpoint.overlay_for(EngineId.QWENLOOP) == {
         "QWENLOOP_BASE_URL": "http://10.0.0.5:11434/v1",
-        "QWENLOOP_MODEL": "qwen2.5-coder:14b",
+        "QWENLOOP_MODEL": "gpt-oss:20b",
     }
 
 
@@ -222,7 +222,7 @@ def test_what_the_operator_set_for_qwenloop_directly_is_kept() -> None:
     }
 
     assert LocalEndpointEnvironment(environ).overlay_for(EngineId.QWENLOOP) == {
-        "QWENLOOP_MODEL": "qwen2.5-coder:14b"
+        "QWENLOOP_MODEL": "gpt-oss:20b"
     }
 
 

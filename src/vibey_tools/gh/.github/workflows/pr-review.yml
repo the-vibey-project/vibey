@@ -342,7 +342,7 @@ jobs:
           # the gate stays red for a human -- never resolve to a default pass.
           if ! vibey-gh local-review \
                 --diff "${RUNNER_TEMP}/pr.diff" \
-                --model 'qwen2.5-coder:14b' \
+                --model 'gpt-oss:20b' \
                 --base-url "${VIBEY_OLLAMA_URL:-http://127.0.0.1:11434}" \
                 --max-chars 60000 \
                 --timeout 1800 \
@@ -360,7 +360,7 @@ jobs:
             # found something" from "I could not see enough to say".
             echo "findings=$(jq -r '(.findings // []) | length' "${RUNNER_TEMP}/verdict.json")"
             echo "verdict=$(jq -c . "${RUNNER_TEMP}/verdict.json")"
-            echo "model=qwen2.5-coder:14b"
+            echo "model=gpt-oss:20b"
           } >> "$GITHUB_OUTPUT"
       - name: Archive the sovereign verdict
         if: always()
@@ -1396,7 +1396,7 @@ jobs:
           PAID_MODEL: claude-sonnet-5
           SOVEREIGN_PASSED: ${{ needs.review-sovereign.outputs.passed }}
           SOVEREIGN_FINDINGS: ${{ needs.review-sovereign.outputs.findings }}
-          SOVEREIGN_MODEL: qwen2.5-coder:14b
+          SOVEREIGN_MODEL: gpt-oss:20b
         run: |
           set -euo pipefail
           conclusion=failure

@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import pytest
 
-from qwenloop.application.backend_selection import BackendSelector, Hardware
+from qwenloop.application.backend_selection import BackendChoice, BackendSelector, Hardware
 from qwenloop.application.interfaces import BackendSelectorInterface
 from qwenloop.domain.config import (
     DEFAULT_ENDPOINT_BASE_URL,
@@ -47,7 +47,7 @@ def test_endpoint_is_unconfigured_by_default_and_falls_back_to_ollama() -> None:
     config = parser.parse({})
     assert not config.endpoint_configured
     assert config.endpoint_url == DEFAULT_ENDPOINT_BASE_URL == "http://127.0.0.1:11434/v1"
-    assert config.model == DEFAULT_ENDPOINT_MODEL == "qwen2.5-coder:14b"
+    assert config.model == DEFAULT_ENDPOINT_MODEL == "gpt-oss:20b"
 
 
 def test_endpoint_settings_are_parsed_and_normalised() -> None:
@@ -147,3 +147,45 @@ def test_capacity_outranks_completion() -> None:
     assert terminal_status(CapacityKind.LOCAL_BUSY, True) is RunStatus.FAILED
     assert terminal_status(CapacityKind.AVAILABLE, True) is RunStatus.COMPLETED
     assert terminal_status(CapacityKind.AVAILABLE, False) is RunStatus.RUNNING
+
+
+def test_a_running_local_ollama_is_the_default_backend_when_nothing_is_configured() -> None:
+    linux_gpu = Hardware("Linux", nvidia_vram_bytes=80 * 1024**3)
+    chosen = selector.select(
+        Backend.AUTO,
+        linux_gpu,
+        vllm_installed=True,
+        endpoint_configured=False,
+        ollama_available=True,
+    )
+    assert chosen == BackendChoice(
+        Backend.OPENAI_COMPAT, "a local Ollama is running: the default backend"
+    )
+    # an explicit backend and a configured endpoint still decide first
+    assert (
+        selector.select(
+            Backend.LLAMA_CPP,
+            linux_gpu,
+            vllm_installed=True,
+            endpoint_configured=False,
+            ollama_available=True,
+        ).reason
+        == "explicit configuration"
+    )
+    assert (
+        selector.select(
+            Backend.AUTO,
+            linux_gpu,
+            vllm_installed=True,
+            endpoint_configured=True,
+            ollama_available=True,
+        ).reason
+        == "an OpenAI-compatible endpoint is configured"
+    )
+    # without a running Ollama nothing changes
+    assert (
+        selector.select(
+            Backend.AUTO, linux_gpu, vllm_installed=True, endpoint_configured=False
+        ).backend
+        is Backend.VLLM
+    )

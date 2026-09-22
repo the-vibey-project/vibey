@@ -1,6 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Pure model, capacity, and run state."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
@@ -59,6 +60,11 @@ class ServerInfo:
     # because an attached endpoint names its models its own way (Ollama: `qwen2.5-coder:14b`).
     # Empty means "send the profile name", which is what a managed server serves.
     model: str = ""
+    # What a managed server was started with, its API key already redacted, and where its
+    # own output goes -- so a run records the settings it measured (#382). Both stay empty
+    # for an attached endpoint, which qwenloop never starts.
+    argv: tuple[str, ...] = ()
+    log_path: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,6 +102,23 @@ class ChatChunk:
     tool_call: dict[str, Any] | None = None
     input_tokens: int = 0
     output_tokens: int = 0
+    # llama-server's own per-request timings (prompt_n, cache_n, prompt_ms, predicted_n,
+    # predicted_ms, predicted_per_second); None when the server sent none.
+    timings: Mapping[str, float] | None = None
+
+
+class ToolCallParseError(RuntimeError):
+    """The model server could not parse the model's reply as a tool call (#386).
+
+    Ollama answers HTTP 500 "error parsing tool call" when a model writes prose where a
+    tool call was due. That fails one turn, not the run: the runner asks for a valid tool
+    call and retries. It stays a RuntimeError, so a caller that does not retry sees
+    exactly the error it saw before.
+    """
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
 
 
 @dataclass(slots=True)

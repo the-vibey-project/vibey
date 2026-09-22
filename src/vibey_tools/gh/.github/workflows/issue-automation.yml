@@ -608,7 +608,7 @@ jobs:
           # failure standing for a human, never a fabricated analysis.
           if ! vibey-gh local-triage \
                 --issue "${RUNNER_TEMP}/issue.md" \
-                --model 'qwen2.5-coder:14b' \
+                --model 'gpt-oss:20b' \
                 --base-url "${VIBEY_OLLAMA_URL:-http://127.0.0.1:11434}" \
                 --max-chars 60000 \
                 --timeout 1800 \
