@@ -43,8 +43,8 @@ questions ([ADR 0001](adr/0001-forge-neutral-nouns.md), #138).
 
 | Field | Type / default | Meaning |
 |---|---|---|
-| `kind` | string / `"github"` | The forge. The standard names `github`, `gitlab` and `forgejo`, but only `github` has an adapter today; `gitlab` and `forgejo` are refused when the configuration loads, with "the … adapter is not implemented yet", because the commands that have not moved onto the adapter still speak to GitHub directly and would drive the wrong forge without saying so. Any other value is refused as unknown. |
-| `host` | string / `"github.com"` | The forge's host, as a bare host name with an optional port (`ghe.example.com`, `git.internal:8443`); a scheme, path or whitespace is refused. `github.com` is the host `gh` assumes on its own, so it changes nothing, and a `GH_HOST` already in the environment still applies. Any other host is handed to `gh` as `GH_HOST`, for a GitHub Enterprise Server. |
+| `kind` | string / `"forgejo"` | The forge. The standard names `github`, `gitlab` and `forgejo`, and every named forge has an adapter today. The sovereign, self-hosted default is `forgejo` (ADR 0002); `github` and `gitlab` are declared-only — an adopter writes the kind explicitly to leave the default. Any unadapted value is refused as unknown. |
+| `host` | string / `""` | The forge's host, as a bare host name with an optional port (`forgejo.local`, `ghe.example.com`, `git.internal:8443`); a scheme, path or whitespace is refused. Empty, the selected adapter's own default applies: `forgejo.local` for Forgejo, `github.com` for GitHub (which `gh` assumes on its own, so a `GH_HOST` already in the environment still applies), `gitlab.com` for GitLab. Any non-empty host is handed to the selected adapter's transport. |
 
 Apart from that refusal, which every command makes, only the reads that have moved onto the
 adapter use this table today: the open pull request heads and the releases that the

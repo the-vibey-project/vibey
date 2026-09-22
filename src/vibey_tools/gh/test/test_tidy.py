@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from vibey_gh import tidy
-from vibey_gh.config import GhConfig, TidyConfig, load_config
+from vibey_gh.config import GhConfig, PlatformConfig, TidyConfig, load_config
 
 
 def _sh(cwd: Path, *args: str) -> str:
@@ -99,7 +99,8 @@ def repos(tmp_path: Path, fake_gh):
             },
         }
     )
-    cfg = GhConfig(root=work)
+    (work / ".vibey-gh.toml").write_text('[platform]\nkind = "github"\n', encoding="utf-8")
+    cfg = GhConfig(root=work, platform=PlatformConfig(kind="github"))
     return work, cfg
 
 
@@ -150,7 +151,11 @@ def test_apply_deletes_both_proof_classes_and_nothing_human(repos):
 
 def test_forge_deletion_proof_can_be_declined(repos):
     work, cfg = repos
-    cfg = GhConfig(root=work, tidy=TidyConfig(trust_forge_deletions=False))
+    cfg = GhConfig(
+        root=work,
+        tidy=TidyConfig(trust_forge_deletions=False),
+        platform=PlatformConfig(kind="github"),
+    )
     report = tidy.survey(cfg)
     tidy.apply(cfg, report)
     names = _sh(work, "branch", "--format=%(refname:short)")
@@ -343,6 +348,7 @@ def test_tidy_cli_clean_repo_says_so(tmp_path, monkeypatch, capsys):
     global _REAL
     _REAL = tidy.subprocess.run
     monkeypatch.setattr(tidy.subprocess, "run", no_gh)
+    (work / ".vibey-gh.toml").write_text('[platform]\nkind = "github"\n', encoding="utf-8")
     monkeypatch.chdir(work)
     assert main(["tidy"]) == 0
     assert "clean — no technical clutter" in capsys.readouterr().out
@@ -354,7 +360,7 @@ def checkable(repos, monkeypatch):
     passes — so the exit code and the output are the clean-repo survey's alone."""
     work, _cfg = repos
     (work / ".vibey-gh.toml").write_text(
-        '[fingerprint]\nsources = ["src/*.py"]\n[documentation]\nenabled = false\n',
+        '[platform]\nkind = "github"\n[fingerprint]\nsources = ["src/*.py"]\n[documentation]\nenabled = false\n',
         encoding="utf-8",
     )
     monkeypatch.chdir(work)

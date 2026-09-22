@@ -44,6 +44,7 @@ class ForgeKind(StrEnum):
     GITHUB = "github"
     GITLAB = "gitlab"
     FORGEJO = "forgejo"
+    BITBUCKET = "bitbucket"
 
 
 @dataclass(frozen=True)

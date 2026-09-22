@@ -1678,6 +1678,26 @@ def test_worker_provider_claudeloop_constructs_live_providers(tmp_path: Path) ->
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
+def test_worker_provider_opencode_constructs_live_providers(tmp_path: Path) -> None:
+    """--provider opencode builds the live design provider without any
+    subprocess spawn at construction time."""
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create("opencode-prov-proj", tmp_path, max_cycles=1, config={})
+
+    asyncio.run(seed())
+    from unittest.mock import AsyncMock, patch
+
+    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
+        mock_notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once", "--provider", "opencode"])
+    assert res.exit_code == 0, res.output
+    assert "provider=opencode" in res.output
+    assert "no ready job" in res.output
+
+
+@pytest.mark.usefixtures("_fast_engine_preflight")
 def test_worker_provider_qwenloop_constructs_live_providers(tmp_path: Path) -> None:
     """--provider qwenloop (8.a's sovereign path) builds the live design provider
     without any network call at construction time, with no evidence dir configured."""

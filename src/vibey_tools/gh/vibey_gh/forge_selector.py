@@ -67,21 +67,23 @@ class ForgeSelector(ForgeSelectorInterface):
     @staticmethod
     def _github(cfg: GhConfig) -> ForgeAdapterInterface:
         host = cfg.platform.host
-        transport = GhTransport(host=None if host == GH_DEFAULT_HOST else host)
+        transport = GhTransport(host=None if not host or host == GH_DEFAULT_HOST else host)
         return GitHubForge(root=cfg.root, repository=_repository(cfg), transport=transport)
 
     @staticmethod
     def _gitlab(cfg: GhConfig) -> ForgeAdapterInterface:
+        host = cfg.platform.host or GitLabTransport().host
         transport = GitLabTransport(
-            host=cfg.platform.host,
+            host=host,
             token=os.environ.get(cfg.platform.token_env, "") if cfg.platform.token_env else "",
         )
         return GitLabForge(root=cfg.root, repository=_repository(cfg), transport=transport)
 
     @staticmethod
     def _forgejo(cfg: GhConfig) -> ForgeAdapterInterface:
+        host = cfg.platform.host or ForgejoTransport().host
         transport = ForgejoTransport(
-            host=cfg.platform.host,
+            host=host,
             token=os.environ.get(cfg.platform.token_env, "") if cfg.platform.token_env else "",
         )
         return ForgejoForge(root=cfg.root, repository=_repository(cfg), transport=transport)

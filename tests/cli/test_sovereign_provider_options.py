@@ -366,6 +366,13 @@ def test_an_explicit_provider_beats_the_sovereign_default_on_work(
     assert job["state"] == "succeeded"
 
 
+def test_an_explicit_opencode_provider_on_work(tmp_path: Path) -> None:
+    project_id = asyncio.run(_seed_research(tmp_path))
+    res = runner.invoke(app, ["work", str(project_id), "--provider", "opencode"])
+    assert res.exit_code == 0
+    assert "processed one job" in res.output
+
+
 @pytest.mark.usefixtures("_sovereign_env")
 def test_the_visual_phase_keeps_the_scripted_default_when_local_engines_are_on(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch

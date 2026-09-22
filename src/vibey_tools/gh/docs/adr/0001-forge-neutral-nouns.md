@@ -63,10 +63,12 @@ Four rules come with them:
   declares nothing else yet.
 
 `[platform] kind` chooses the adapter, through `vibey_gh.forge_selector`, which is the one
-place a platform is named by kind. `github` is the only kind with an adapter. `gitlab` and
-`forgejo` are named by the standard and refused at load with "the … adapter is not
-implemented yet", because every command that has not moved onto the adapter still speaks
-to GitHub directly, and accepting the key would have them drive the wrong forge quietly.
+place a platform is named by kind. Every kind the standard names has an adapter today —
+`github`, `gitlab` and `forgejo` each have one, and the default is the sovereign forgejo
+(ADR 0002). The selector reflects the adapters that exist and refuses any kind that has
+none, because every command that has not moved onto the adapter still speaks directly to
+its own forge, and accepting a key for a forge with no adapter would have it drive the
+wrong platform quietly.
 
 ## Security impact
 

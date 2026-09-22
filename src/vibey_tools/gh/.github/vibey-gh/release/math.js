@@ -23,6 +23,15 @@
     proof: "Proof",
   };
 
+  const MATH_ENVIRONMENTS = [
+    "equation", "equation*",
+    "align", "align*",
+    "gather", "gather*",
+    "multline", "multline*",
+    "eqnarray", "eqnarray*",
+    "alignat", "alignat*"
+  ];
+
   const escapeHtml = (text) =>
     text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -54,19 +63,29 @@
       pre.append(inner);
       return pre;
     }
-    const env = source.match(/^\\begin\{(\w+)\}(?:\[([^\]]*)\])?([\s\S]*?)\\end\{\1\}$/);
-    if (!env || !(env[1] in ENVIRONMENTS)) {
+    const env = source.match(/^\\begin\{([\w*]+)\}(?:\[([^\]]*)\])?([\s\S]*?)\\end\{\1\}$/);
+    if (!env) {
       return null;
     }
-    const [, name, title, body] = env;
-    counters[name] = (counters[name] || 0) + 1;
-    const block = document.createElement("div");
-    block.className = `latex-env latex-${name}`;
-    const label = name === "proof" ? ENVIRONMENTS[name] : `${ENVIRONMENTS[name]} ${counters[name]}`;
-    const heading = `<strong>${label}${title ? ` (${inlineMath(title)})` : ""}.</strong> `;
-    const paragraphs = body.trim().split(/\n\s*\n/).map((p) => inlineMath(p.replace(/\s+/g, " ")));
-    block.innerHTML = `<p>${heading}${paragraphs.join("</p><p>")}</p>`;
-    return block;
+    const name = env[1];
+    if (name in ENVIRONMENTS) {
+      const [, , title, body] = env;
+      counters[name] = (counters[name] || 0) + 1;
+      const block = document.createElement("div");
+      block.className = `latex-env latex-${name}`;
+      const label = name === "proof" ? ENVIRONMENTS[name] : `${ENVIRONMENTS[name]} ${counters[name]}`;
+      const heading = `<strong>${label}${title ? ` (${inlineMath(title)})` : ""}.</strong> `;
+      const paragraphs = body.trim().split(/\n\s*\n/).map((p) => inlineMath(p.replace(/\s+/g, " ")));
+      block.innerHTML = `<p>${heading}${paragraphs.join("</p><p>")}</p>`;
+      return block;
+    }
+    if (MATH_ENVIRONMENTS.includes(name)) {
+      const block = document.createElement("div");
+      block.className = "arithmatex";
+      block.innerHTML = `\\[ ${source} \\]`;
+      return block;
+    }
+    return null;
   };
 
   const convertLatexFences = () => {

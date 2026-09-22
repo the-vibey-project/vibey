@@ -30,8 +30,8 @@ Every project-specific decision lives here so the logic beside it can stay gener
     required_label = "vibey-gh:solve"   # what opts an outside author's issue in
 
     [platform]
-    kind = "github"         # which forge the repository lives on; github is the one adapter
-    host = "github.com"     # that forge's host, for GitHub Enterprise Server and its like
+    kind = "forgejo"        # the sovereign, self-hosted default forge; github/gitlab declared-only
+    host = ""               # that forge's host; empty means the adapter's own default, forgejo.local
     repository = "owner/name"  # optional namespace; otherwise read origin's URL
     token_env = "GITLAB_TOKEN"  # name of the environment variable, never the secret itself
 
@@ -256,11 +256,11 @@ class WorkflowNamesConfig:
 
 
 # The forges `[platform] kind` accepts today: the ones with an adapter. `ForgeKind` names
-# more, because the standard is written for every forge (#138), but a kind with no adapter
-# is refused here, at load, rather than accepted and then quietly driven as GitHub by every
-# module that has not moved onto the adapter yet. `ForgeSelector.kinds` must equal this,
-# and a test holds them together.
-ADAPTED_PLATFORM_KINDS = tuple(kind.value for kind in ForgeKind)
+# more (such as `bitbucket`, #138), because the standard is written for every forge, but a
+# kind with no adapter is refused here, at load, rather than accepted and then quietly
+# driven as forgejo by every module that has not moved onto the adapter yet.
+# `ForgeSelector.kinds` must equal this, and a test holds them together.
+ADAPTED_PLATFORM_KINDS = ("github", "gitlab", "forgejo")
 
 # A bare host name, optionally with a port: what `gh` takes as `GH_HOST`. No scheme, path,
 # user or whitespace, so the value cannot smuggle anything else into the client's reading.
@@ -272,17 +272,21 @@ class PlatformConfig:
     """Which forge this repository lives on, and where (#138).
 
     `kind` selects the forge adapter, which is the only code allowed to know what platform
-    it is speaking to. `host` is that forge's host: `github.com`, the default, is the host
-    `gh` assumes on its own and changes nothing; any other host (a GitHub Enterprise Server)
-    is handed to `gh` as `GH_HOST`, so every call the adapter makes goes there.
+    it is speaking to. The sovereign, self-hosted default is `forgejo` (ADR 0002); `github`
+    and `gitlab` are declared-only — an adopter writes the kind explicitly. `host` is that
+    forge's host. With `forgejo` it defaults to the adapter's own `forgejo.local` (a bare
+    self-hosted instance); with `github` the `gh` client's own `github.com` is assumed when
+    `host` is empty, so the default changes neither the argv nor the environment of any
+    `gh` call. Any other host is handed to the transport it belongs to, so every call the
+    adapter makes goes there.
 
     Only the calls that have moved onto the adapter read this — today the clean-repo
     survey's two forge reads. Every other command still runs `gh` the way it always has,
     which is exactly why a kind without an adapter is refused rather than half-honoured.
     """
 
-    kind: str = ForgeKind.GITHUB.value
-    host: str = "github.com"
+    kind: str = ForgeKind.FORGEJO.value
+    host: str = ""
     repository: str = ""
     token_env: str = ""
 
@@ -294,10 +298,10 @@ class PlatformConfig:
             self.kind not in ADAPTED_PLATFORM_KINDS
         ):  # pragma: no cover - enum and adapters move together
             raise ValueError(self.not_adapted(self.kind))
-        if not isinstance(self.host, str) or not _HOST_RE.fullmatch(self.host):
+        if not isinstance(self.host, str) or not (self.host == "" or _HOST_RE.fullmatch(self.host)):
             raise ValueError(
-                "platform.host must be a bare host name, optionally with a port "
-                f"(no scheme or path): {self.host!r}"
+                "platform.host must be empty (the adapter's own default) or a bare host name,"
+                f" optionally with a port (no scheme or path): {self.host!r}"
             )
         if self.repository and (
             self.repository.startswith("/")

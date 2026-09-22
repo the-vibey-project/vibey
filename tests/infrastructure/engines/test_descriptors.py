@@ -170,4 +170,4 @@ def test_the_local_descriptors_are_exactly_the_local_tier() -> None:
     from vibey.infrastructure.engines.descriptors import DEFAULT_DESCRIPTORS, LOCAL_DESCRIPTORS
 
     assert {d.tier for d in LOCAL_DESCRIPTORS} == {EngineTier.LOCAL}
-    assert {d.tier for d in DEFAULT_DESCRIPTORS} == {EngineTier.PAID}
+    assert {d.tier for d in DEFAULT_DESCRIPTORS} == {EngineTier.PAID, EngineTier.LOCAL}

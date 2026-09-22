@@ -21,7 +21,7 @@ from typing import Any
 import pytest
 
 from vibey_gh import tidy
-from vibey_gh.config import GhConfig, TidyConfig
+from vibey_gh.config import GhConfig, PlatformConfig, TidyConfig
 from vibey_gh.forge import ForgeRelease
 from vibey_gh.forge_github import GH_DEFAULT_HOST, GitHubForge
 from vibey_gh.gh_transport import GhTransport
@@ -235,6 +235,11 @@ def _git(cwd: Path, *args: str) -> None:
     subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=True)
 
 
+def _github_config(root: Path, **kwargs) -> GhConfig:
+    """A config bound to GitHub, the declared-only kind these tests drive."""
+    return GhConfig(root=root, platform=PlatformConfig(kind="github"), **kwargs)
+
+
 @pytest.fixture
 def clone(tmp_path: Path) -> Path:
     """A clone whose survey the forge's answers visibly change: two branches whose work has
@@ -374,7 +379,7 @@ def test_the_survey_asks_gh_the_same_questions_and_reports_the_same(
 ):
     heads, listed, expected = SCENARIOS[scenario]
     witness.fake.script({key(PR_HEADS): heads, key(RELEASES): listed})
-    cfg = GhConfig(root=clone)
+    cfg = _github_config(clone)
     seen = witness.compare(
         lambda: Before.survey(cfg, local=local, refresh=refresh),
         lambda: tidy.survey(cfg, local=local, refresh=refresh),
@@ -402,7 +407,7 @@ def test_the_survey_says_the_same_thing_when_there_is_no_gh_at_all(witness, clon
         return outer(cmd, **kw)
 
     monkeypatch.setattr(subprocess, "run", without_gh)
-    cfg = GhConfig(root=clone)
+    cfg = _github_config(clone)
     seen = witness.compare(lambda: Before.survey(cfg), lambda: tidy.survey(cfg))
     assert seen["invocations"] == [] and seen["calls"] == []
     assert seen["outcome"].problems == (
@@ -416,7 +421,7 @@ def test_the_survey_refuses_to_judge_before_it_asks_the_forge_anything(witness, 
     and after, so the adapter is not even chosen."""
     solo = tmp_path / "solo"
     subprocess.run(["git", "init", "-q", str(solo)], check=True)
-    cfg = GhConfig(root=solo)
+    cfg = _github_config(solo)
     seen = witness.compare(lambda: Before.survey(cfg), lambda: tidy.survey(cfg))
     assert seen["invocations"] == []
     assert seen["outcome"].problems == ("no kept branch resolves on origin; refusing to judge",)
@@ -424,7 +429,7 @@ def test_the_survey_refuses_to_judge_before_it_asks_the_forge_anything(witness, 
 
 def test_the_survey_keeps_an_extra_kept_branch_the_same_way(witness, clone):
     witness.fake.script({key(PR_HEADS): {"out": "[]"}, key(RELEASES): {"out": "[]"}})
-    cfg = GhConfig(root=clone, tidy=TidyConfig(keep_branches=("merged-work",)))
+    cfg = _github_config(clone, tidy=TidyConfig(keep_branches=("merged-work",)))
     seen = witness.compare(lambda: Before.survey(cfg), lambda: tidy.survey(cfg))
     assert seen["outcome"].remote_merged == ("open-head",)
 
