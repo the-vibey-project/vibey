@@ -36,8 +36,10 @@ reach forges other than GitHub. `vibey_gh.forge` defines the forge-neutral nouns
 ratification. `vibey_gh/interfaces/forge_adapter_interface.py` declares the verbs, and every
 verb answers `(value, problem)`, so "could not look" never reads as "nothing there".
 `vibey_gh.forge_github.GitHubForge` implements them on the `gh` transport, and
-`vibey_gh.forge_selector` is the one place that reads `[platform] kind` to choose it. GitHub
-is the only adapter; `gitlab` and `forgejo` are refused at load until theirs exist. The
+`vibey_gh.forge_selector` is the one place that reads `[platform] kind` to choose it. The
+sovereign, self-hosted `forgejo` is the default, and GitHub and GitLab are declared-only;
+the standard also names `bitbucket`, which is refused at load until its adapter exists
+(ADR 0002). The
 clean-repo survey (`vibey_gh.tidy`) is the first consumer: its open-pull-request heads and
 its releases now come through the adapter, with the same `gh` argv and working directory as
 before, so it never names a platform.

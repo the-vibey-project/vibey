@@ -87,6 +87,21 @@ lives in `docs/architecture/decisions/`.
   `vibey-gh promote` as a **rebase** merge, keeping history linear
   (`.vibey-gh.toml [branches]`). A push to `develop` publishes `vibey-dev` to
   TestPyPI; a push to `main` publishes `vibey` to PyPI. ADR-0028.
+- **Sovereign self-hosted free is the only default on every surface; paid is
+  declared-only.** Each operational surface has one vibey-owned protocol and a
+  sovereign default adapter that is always on: engines `qwenloop`+`opencode`,
+  cloud self-hosted OpenStack, forge self-hosted Forgejo, ticketing self-hosted
+  free Plane, documentation self-hosted free BookStack, secrets self-hosted
+  free Bitwarden, files self-hosted free Nextcloud, email self-hosted free
+  Forward Email, SMS self-hosted free Fossify Messages, and messaging
+  self-hosted Matrix with the Element client. Paid platforms (engines
+  claudeloop/codexloop/cursorloop/agyloop; cloud azure/aws/gcp; forge
+  github/gitlab/bitbucket; tickets jira/linear/asana (+ sibling sovereign
+  openproject); docs confluence/notion/gitbook; secrets lastpass/1password/
+  proton; files gdrive/icloud; email proton/gmail/apple; sms google-messages/
+  imessage; messaging signal/discord/slack/zoom/whatsapp/telegram/messenger/
+  facebook/instagram/tiktok) are declared-only relays through the sovereign
+  host and are never a default — sub-doctrine 8.b, ADR-0042.
 
 ## Layer map
 
@@ -219,7 +234,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (41 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (42 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

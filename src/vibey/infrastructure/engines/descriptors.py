@@ -284,6 +284,7 @@ OPENCODE = EngineDescriptor(
     cost_per_mtok_out=0.0,
     context_window=32_768,
     base_weight=1,
+    tier=EngineTier.LOCAL,
 )
 
 QWENLOOP = EngineDescriptor(

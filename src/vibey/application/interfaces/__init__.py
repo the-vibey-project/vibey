@@ -16,6 +16,7 @@ from vibey.application.interfaces.azure import (
     AzureDiscoveryResult,
     AzureExecutionResult,
     AzureResourceStatus,
+    CloudClientPort,
     DeploymentConsentStore,
     DeploymentSpecStore,
 )
@@ -68,6 +69,8 @@ from vibey.application.interfaces.design import (
     ResearchProvider,
     SpecSynthesizer,
 )
+from vibey.application.interfaces.docs import DocsPort
+from vibey.application.interfaces.email import EmailPort
 from vibey.application.interfaces.engines import (
     EngineAdapter,
     EngineHealthRepository,
@@ -76,6 +79,7 @@ from vibey.application.interfaces.engines import (
     EngineSelectorInterface,
     RotationCursorRepository,
 )
+from vibey.application.interfaces.files import FilesPort
 from vibey.application.interfaces.gates import (
     HumanGateRepository,
 )
@@ -101,6 +105,7 @@ from vibey.application.interfaces.ledger_publication_interface import (
     ShardHeaderInterface,
     ShardHoldingInterface,
 )
+from vibey.application.interfaces.messaging import MessagingPort
 from vibey.application.interfaces.observability import (
     Logger,
     NotificationSink,
@@ -135,9 +140,12 @@ from vibey.application.interfaces.review import (
     AutomatedReviewRunner,
     ReviewArtifactWriter,
 )
+from vibey.application.interfaces.secrets import SecretsPort
+from vibey.application.interfaces.sms import SmsPort
 from vibey.application.interfaces.system import (
     Clock,
 )
+from vibey.application.interfaces.tracker import IssueTrackerPort
 from vibey.application.interfaces.visual import (
     VisualInventoryProducer,
     VisualInventoryRepository,
@@ -155,6 +163,14 @@ __all__ = [
     "AutomatedFinding",
     "AutomatedReviewRunner",
     "AzureClientPort",
+    "CloudClientPort",
+    "IssueTrackerPort",
+    "DocsPort",
+    "SecretsPort",
+    "FilesPort",
+    "EmailPort",
+    "SmsPort",
+    "MessagingPort",
     "DeploymentConsentStore",
     "DeploymentSpecStore",
     "AzureDiscoveryResult",

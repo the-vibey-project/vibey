@@ -26,8 +26,10 @@ from vibey_gh.forge import (
     ForgeRepository,
     ProtectedRef,
 )
+from vibey_gh.forge_forgejo import ForgejoForge
 from vibey_gh.forge_github import GitHubForge
 from vibey_gh.forge_selector import ForgeSelector
+from vibey_gh.forgejo_transport import ForgejoTransport
 from vibey_gh.gh_transport import GhTransport
 from vibey_gh.interfaces.forge_adapter_interface import ForgeAdapterInterface
 from vibey_gh.interfaces.forge_selector_interface import ForgeSelectorInterface
@@ -41,9 +43,10 @@ def _config(root: Path, text: str) -> GhConfig:
 # ----------------------------------------------------------------------- the nouns
 
 
-def test_the_standard_names_three_forges():
-    assert [kind.value for kind in ForgeKind] == ["github", "gitlab", "forgejo"]
+def test_the_standard_names_four_forges():
+    assert [kind.value for kind in ForgeKind] == ["github", "gitlab", "forgejo", "bitbucket"]
     assert ForgeKind("gitlab") is ForgeKind.GITLAB
+    assert ForgeKind("bitbucket") is ForgeKind.BITBUCKET
 
 
 def test_a_repository_is_named_by_its_whole_namespace():
@@ -82,14 +85,27 @@ def test_every_noun_is_a_value_that_cannot_be_changed_in_place(noun):
 # --------------------------------------------------------------------- `[platform]`
 
 
-def test_the_default_platform_is_github_on_github_com(tmp_path):
+def test_the_default_platform_is_the_sovereign_forgejo_on_its_own_host(tmp_path):
     cfg = load_config(tmp_path)
-    assert cfg.platform == PlatformConfig(kind="github", host="github.com")
+    assert cfg.platform == PlatformConfig(kind="forgejo", host="")
 
 
 def test_the_platform_table_is_read(tmp_path):
-    cfg = _config(tmp_path, '[platform]\nkind = "github"\nhost = "ghe.example.com:8443"\n')
+    cfg = _config(
+        tmp_path,
+        '[platform]\nkind = "github"\nhost = "ghe.example.com:8443"\n',
+    )
     assert cfg.platform == PlatformConfig(kind="github", host="ghe.example.com:8443")
+
+
+def test_paid_forges_are_declared_only(tmp_path):
+    cfg = _config(
+        tmp_path,
+        '[platform]\nkind = "github"\nrepository = "group/tool"\ntoken_env = "FORGE_TOKEN"\n',
+    )
+    assert cfg.platform.kind == "github"
+    assert cfg.platform.repository == "group/tool"
+    assert cfg.platform.token_env == "FORGE_TOKEN"
 
 
 @pytest.mark.parametrize("kind", ["gitlab", "forgejo"])
@@ -117,19 +133,38 @@ def test_platform_rejects_unusable_repository_and_secret_configuration(field, va
         PlatformConfig(**{field: value})
 
 
-@pytest.mark.parametrize("kind", ["bitbucket", "GitHub", "", 3])
+@pytest.mark.parametrize("kind", ["GitHub", "", 3])
 def test_a_forge_the_standard_does_not_name_is_refused(kind):
-    with pytest.raises(ValueError, match="platform.kind must be one of github, gitlab, forgejo"):
+    with pytest.raises(
+        ValueError, match="platform.kind must be one of github, gitlab, forgejo, bitbucket"
+    ):
         PlatformConfig(kind=kind)  # type: ignore[arg-type]
+
+
+def test_a_named_forge_without_an_adapter_is_refused_at_load():
+    with pytest.raises(ValueError, match="bitbucket adapter is not implemented yet"):
+        PlatformConfig(kind="bitbucket")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
     "host",
-    ["", "https://ghe.example.com", "ghe.example.com/api", "ghe example", " ghe", "-ghe", 443],
+    [
+        "https://ghe.example.com",
+        "ghe.example.com/api",
+        "ghe example",
+        " ghe",
+        "-ghe",
+        443,
+    ],
 )
 def test_a_host_is_a_bare_host_name(host):
-    with pytest.raises(ValueError, match="platform.host must be a bare host name"):
+    with pytest.raises(ValueError, match="platform.host must be empty"):
         PlatformConfig(host=host)  # type: ignore[arg-type]
+
+
+def test_an_empty_host_is_the_adapters_own_default():
+    assert PlatformConfig().host == ""
+    assert PlatformConfig().kind == "forgejo"
 
 
 def test_doctor_knows_every_platform_key_and_names_a_stray(tmp_path):
@@ -154,14 +189,27 @@ def test_the_selector_is_the_declared_seam_and_adapts_exactly_what_config_accept
     assert selector.kinds == {ForgeKind(kind) for kind in ADAPTED_PLATFORM_KINDS}
 
 
-def test_github_on_github_com_leaves_gh_to_find_its_own_host(tmp_path):
+def test_the_default_sovereign_selection_is_the_self_hosted_forgejo(tmp_path):
     forge = ForgeSelector().select(GhConfig(root=tmp_path))
+    assert isinstance(forge, ForgeAdapterInterface)
+    assert forge == ForgejoForge(
+        root=tmp_path,
+        transport=ForgejoTransport(host="forgejo.local", token=""),
+    )
+
+
+def test_github_on_github_com_leaves_gh_to_find_its_own_host(tmp_path):
+    cfg = _config(tmp_path, '[platform]\nkind = "github"\n')
+    forge = ForgeSelector().select(cfg)
     assert isinstance(forge, ForgeAdapterInterface)
     assert forge == GitHubForge(root=tmp_path, transport=GhTransport(host=None))
 
 
 def test_any_other_host_pins_gh_to_it(tmp_path):
-    cfg = _config(tmp_path, '[platform]\nhost = "ghe.example.com"\n')
+    cfg = _config(
+        tmp_path,
+        '[platform]\nkind = "github"\nhost = "ghe.example.com"\n',
+    )
     forge = ForgeSelector().select(cfg)
     assert forge == GitHubForge(root=tmp_path, transport=GhTransport(host="ghe.example.com"))
 
@@ -169,7 +217,7 @@ def test_any_other_host_pins_gh_to_it(tmp_path):
 def test_a_kind_the_selector_cannot_build_is_refused_with_the_same_sentence(tmp_path):
     with pytest.raises(ValueError) as refused:
         ForgeSelector(adapters={}).select(GhConfig(root=tmp_path))
-    assert str(refused.value) == PlatformConfig.not_adapted("github")
+    assert str(refused.value) == PlatformConfig.not_adapted("forgejo")
 
 
 def test_the_selector_builds_whatever_adapter_is_registered_for_the_kind(tmp_path):
@@ -179,7 +227,7 @@ def test_the_selector_builds_whatever_adapter_is_registered_for_the_kind(tmp_pat
         built.append(cfg)
         return GitHubForge(root="elsewhere")
 
-    cfg = GhConfig(root=tmp_path)
+    cfg = _config(tmp_path, '[platform]\nkind = "github"\ntoken_env = "FORGE_TOKEN"\n')
     forge = ForgeSelector(adapters={ForgeKind.GITHUB: factory}).select(cfg)
     assert forge == GitHubForge(root="elsewhere") and built == [cfg]
 
