@@ -38,7 +38,9 @@ report BLOCKED.** The lane is then closed by the ruling and not implemented.
 ## Where to change
 - New `deploy/docker/Dockerfile.arch`.
 - `.github/workflows/ci.yml`, the `image` job only (edit_file).
-- The meta-test as above.
+- The image meta-test named in *Required behaviour* item 3: the existing one if
+  `grep -rln "Image contract" tests/meta` finds it, otherwise a new
+  `tests/meta/test_image_arch.py`.
 
 ## Acceptance criteria
 - [ ] The meta-test passes, and fails when an Arch contract step is removed.

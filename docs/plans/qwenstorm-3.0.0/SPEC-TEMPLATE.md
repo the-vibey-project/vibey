@@ -32,6 +32,12 @@ Exact commands. For src/vibey:
   uv run pytest -q -p no:cacheprovider <focused tests>
   (100% branch coverage per layer: domain/, application/, infrastructure/, cli/)
 For tenants: the tenant's own suite and static gates (see CLAUDE.md "Commands worth memorizing").
+Each command runs as one line on its own: no heredoc (`<<'PY'`), no backslash continuation, no
+multi-line inline script. A check needing more than one statement becomes a single
+`python3 -c '...'` line (semicolons and generator expressions in place of loops); single-quote
+the whole argument and double-quote every string literal inside it, since these commands run
+through a real shell and a bare backtick or `$` inside a double-quoted outer string is not
+literal there.
 
 ## Out of scope
 What NOT to touch (other lanes own it). Do not edit CHANGELOG.md, docs/, ADRs, CLAUDE.md,

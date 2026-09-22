@@ -74,7 +74,20 @@ cannot express must come back as a problem, never be dropped. ADR 0001; sub-doct
 - `test_gitlab_branch_rules_are_not_supported`.
 
 ## Checks the lane must run (all must pass)
-Same block as Part 0a, focused on `test/test_forge_branch_rules.py test/test_rulesets.py`.
+Part 0a's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -c "import vibey_gh" || python -m pip install -e ".[dev]"
+python -m pytest -q --no-cov test/test_forge_branch_rules.py test/test_rulesets.py
+python -m pytest -q                                   # whole suite, 100% line+branch
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat   # only the files this part owns
+```
 
 ## Out of scope
 `rulesets.py` (Part 6). Do not edit CHANGELOG.md, docs/, ADRs, CLAUDE.md, AGENTS.md,
@@ -302,8 +315,12 @@ never alternate between them.
 
 `forge_github.py`, `forge_forgejo.py` and `forge_gitlab.py` grow with every Wave-1 part.
 Each adapter class is the **last statement** of its module, so add new methods by
-appending to the end of the file with a shell heredoc
-(`cat >> vibey_gh/forge_github.py <<'PY' … PY`, four-space indented), then run black once.
+appending to the end of the file. Write the four-space-indented block with `write_file` to
+the concrete path `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py` (that
+directory exists and is outside every lane clone; `write_file` expands no variables, so it
+needs a literal path), then append and clean up in one command:
+`cat /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py >> vibey_gh/forge_github.py && rm /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py`.
+Then run black once.
 Read only the slices you need (`sed -n '120,200p' file`). Do not rewrite a whole module.
 
 ---

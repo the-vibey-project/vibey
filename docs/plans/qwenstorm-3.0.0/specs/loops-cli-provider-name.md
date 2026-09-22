@@ -105,17 +105,10 @@ Lane `loops-engine-id-sovereignloop` (L06) made `EngineId("qwenloop")` resolve t
   unknown-provider message): `tests/cli/test_sovereign_provider_options.py` `:472-474` (the
   `_UNKNOWN_PROVIDER == (...)` literal) and `:484`, and `tests/cli/test_operational_commands.py`
   `:1429`. Use one checked script:
+  one checked replacement, as a single `shell` command (the message text carries apostrophes,
+  so the argument is double-quoted and its inner double quotes are escaped):
   ```
-  python3 - <<'PY'
-  from pathlib import Path
-  old = "'scripted', 'claudeloop', 'qwenloop', or 'opencode'"
-  new = "'scripted', 'claudeloop', 'sovereignloop', or 'opencode'"
-  for name, count in (("tests/cli/test_sovereign_provider_options.py", 2), ("tests/cli/test_operational_commands.py", 1)):
-      p = Path(name)
-      s = p.read_text(encoding="utf-8")
-      assert s.count(old) == count, (name, s.count(old))
-      p.write_text(s.replace(old, new), encoding="utf-8")
-  PY
+  python3 -c "from pathlib import Path; old = \"'scripted', 'claudeloop', 'qwenloop', or 'opencode'\"; new = old.replace(\"qwenloop\", \"sovereignloop\"); pairs = ((\"tests/cli/test_sovereign_provider_options.py\", 2), (\"tests/cli/test_operational_commands.py\", 1)); texts = {n: Path(n).read_text(encoding=\"utf-8\") for n, _ in pairs}; assert all(texts[n].count(old) == c for n, c in pairs), {n: texts[n].count(old) for n, _ in pairs}; [Path(n).write_text(texts[n].replace(old, new), encoding=\"utf-8\") for n, _ in pairs]; print(\"ok\")"
   ```
   The tests that run `--provider qwenloop` stay unedited: they now prove the legacy spelling.
 - **Stop rule.** Any other failing test (for example one that asserts the exact output of a

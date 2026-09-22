@@ -1,0 +1,10 @@
+# Lanes write throwaway scripts here: several specs name this directory by absolute path,
+# because `write_file` is a tool and expands no variables, and a lane's own clone must stay
+# clean for its `git status --porcelain` acceptance check. This directory resolves inside the
+# planning worktree, so without this a lane's scratch file would sit here as untracked and
+# could be swept into a commit. Ignore everything; the planning notes below stay tracked.
+*
+!.gitignore
+!loops-design.md
+!queue_lines.txt
+!split-brief.md

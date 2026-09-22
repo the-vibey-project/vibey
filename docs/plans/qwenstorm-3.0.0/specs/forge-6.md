@@ -68,8 +68,19 @@ flatten.py:
   (1011-1013) to the new tuples. Add `test_a_repository_the_forge_cannot_name_is_reported`.
 
 ## Checks the lane must run (all must pass)
-The Part 1 block with the focused run
-`python -m pytest -q --no-cov test/test_rulesets.py test/test_flatten.py test/test_gh_cli.py`.
+Part 1's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -m pytest -q --no-cov test/test_rulesets.py test/test_flatten.py test/test_gh_cli.py
+python -m pytest -q
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat
+```
 
 ## Out of scope
 `reconcile.py` (Part 3; flatten only imports it), `cli.py` (its rulesets/flatten tests
@@ -298,8 +309,14 @@ never alternate between them.
 
 `forge_github.py`, `forge_forgejo.py` and `forge_gitlab.py` grow with every Wave-1 part.
 Each adapter class is the **last statement** of its module, so add new methods by
-appending to the end of the file with a shell heredoc
-(`cat >> vibey_gh/forge_github.py <<'PY' … PY`, four-space indented), then run black once.
+appending to the end of the file. A shell heredoc spans several lines and cannot survive
+one self-contained command per call, so `write_file` the new methods (four-space indented)
+to the concrete absolute path
+`/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py` (`write_file` is a tool,
+not a shell: it expands no variables, and that directory exists outside every lane clone),
+then in one command run
+`cat /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py >> vibey_gh/forge_github.py && rm /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py`,
+then run black once.
 Read only the slices you need (`sed -n '120,200p' file`). Do not rewrite a whole module.
 
 ---

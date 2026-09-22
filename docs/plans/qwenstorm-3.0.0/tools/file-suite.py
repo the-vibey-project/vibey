@@ -21,7 +21,7 @@ import sys
 import time
 from pathlib import Path
 
-STORM = Path(__file__).resolve().parent
+STORM = Path(__file__).resolve().parent.parent
 SPECS = STORM / "specs"
 AUDIT = STORM / "issue-audit"
 MAP = AUDIT / "issue-map.tsv"
@@ -53,6 +53,7 @@ WAVES = {
     "roadmap": "the roadmap epics, broken into lanes",
     "core": "the sovereign defaults, true at runtime",
     "release": "release and CI operations for 3.0.0",
+    "seo": "SEO and LLM-engine discoverability for the repo and its docs",
 }
 
 # Waves of the lanes filed before this suite (queue.txt), by issue number.
@@ -124,6 +125,14 @@ SPLIT_WAVE = {
     range(324, 332): "deploy",
     range(383, 392): "models",
 }
+
+# Lanes the sovereign loop never runs: operator checklists (funding a key, registering a
+# runner) and canon drafting, which is the operator's alone to ratify. They are still filed
+# as issues (labelled `operator`) and still counted as valid dependencies, but they never
+# appear as a runnable entry in queue.txt — a lane depending on one keeps that dependency
+# and simply waits, exactly as storm-queue.sh already waits on anything not yet in
+# integrated.txt, until a human does the operator lane and appends its slug there by hand.
+OPERATOR_PREFIXES = ("gap-ops-", "gap-canon-")
 
 
 def wave_of(slug: str) -> str:
@@ -246,6 +255,19 @@ def ensure_labels() -> None:
             "tracks a set of lane issues",
         )
         time.sleep(PACE)
+    if "operator" not in have:
+        gh(
+            "label",
+            "create",
+            "operator",
+            "-R",
+            REPO,
+            "--color",
+            "b60205",
+            "--description",
+            "for a human, not the sovereign loop: a checklist item or a canon ratification",
+        )
+        time.sleep(PACE)
     for wave in WAVES:
         if f"wave:{wave}" not in have:
             gh(
@@ -276,6 +298,8 @@ def file_lanes(dry: bool) -> None:
     for slug, _ in todo:
         spec = SPECS / f"{slug}.md"
         labels = f"qwenstorm,wave:{wave_of(slug)}"
+        if slug.startswith(OPERATOR_PREFIXES):
+            labels += ",operator"
         if dry:
             print(f"  new  {slug:48} [{labels}] {title_of(spec)[:70]}")
             continue
@@ -456,9 +480,21 @@ def build_queue(dry: bool) -> None:
         deps = parts[2].split(",") if len(parts) > 2 else []
         existing[parts[0]] = overrides.get(parts[0], [ALIASES.get(d, d) for d in deps if d])
     lanes = {**existing, **dict(queue_lines())}
-    known = set(lanes) | {
-        line.strip() for line in (STORM / "integrated.txt").read_text().splitlines()
-    }
+    operator = {s for s in lanes if s.startswith(OPERATOR_PREFIXES)}
+    for slug in operator:
+        del lanes[slug]
+    waiting = sorted(s for s, deps in lanes.items() if set(deps) & operator)
+    if waiting:
+        print(
+            f"{len(waiting)} lane(s) wait on an operator lane (filed, never auto-run): "
+            + ", ".join(waiting[:8])
+            + (" …" if len(waiting) > 8 else "")
+        )
+    known = (
+        set(lanes)
+        | operator
+        | {line.strip() for line in (STORM / "integrated.txt").read_text().splitlines()}
+    )
     known |= SATISFIED
     # a dependency on an epic parent means: all of its lanes
     parents = {

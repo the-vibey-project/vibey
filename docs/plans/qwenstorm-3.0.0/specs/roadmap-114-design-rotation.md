@@ -62,10 +62,15 @@ standard (no new raw SQL outside migrations). The deliverable is one draft ADR; 
      partitioned table, so a delete can be refused loudly, or admitted only under a condition.
    - F5. Because `seq` restarts at 1 for every project, a seq-range partition never becomes
      cold: partition `[1, W)` keeps receiving the first W events of every new project.
-   Evidence for F1–F4: if `psql` is on PATH and the test database answers, run this in the
-   lane's shell (autocommit; errors are expected and are the evidence) and quote the output:
-   ```
-   psql "${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}" <<'SQL'
+   Evidence for F1–F4: if `psql` is on PATH and the test database answers, gather it and quote
+   the output. The statements carry `$$`-quoted bodies and apostrophes, so they go in a file
+   rather than on a command line: write this with `write_file` to the absolute path
+   `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_evidence.sql` — a real
+   directory outside every lane clone, so it can never reach `git status` — then run it with
+   the single command below (autocommit; the errors are expected and are the evidence).
+   Do not hand `write_file` a path containing `$TMPDIR`: it is a tool, not a shell, and would
+   create a directory of that literal name inside the clone.
+   ```sql
    CREATE SCHEMA adr114_scratch;
    SET search_path = adr114_scratch;
    SELECT version();
@@ -86,7 +91,10 @@ standard (no new raw SQL outside migrations). The deliverable is one draft ADR; 
    DELETE FROM t WHERE seq = 5;
    RESET search_path;
    DROP SCHEMA adr114_scratch CASCADE;
-   SQL
+   ```
+   ```
+   psql "${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}" -f /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_evidence.sql
+   rm -f /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_evidence.sql
    ```
    (Expected: the `t_1` create fails naming the default partition; the concurrent detach fails;
    the plain detach and drop succeed and `rows_left` is 1; the delete fails with `refused`.)
@@ -158,37 +166,43 @@ standard (no new raw SQL outside migrations). The deliverable is one draft ADR; 
 None (a design spike). The check script below is the test.
 
 ## Checks the lane must run (all must pass)
-    python3 - <<'PY'
-    import re
-    from pathlib import Path
-    p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-114-rotation.md")
-    assert p.is_file(), "the ADR draft was not written"
-    text = p.read_text(encoding="utf-8")
-    flat = " ".join(text.split())
-    assert text.startswith("# Rotating the ledger through its storage tiers without breaking append-only"), "wrong title line"
-    required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context",
-                "## Options considered", "## Decision", "## How each non-negotiable still holds",
-                "## Consequences", "## Lanes this unblocks", "## Open decisions for the operator",
-                "## Verification owed",
-                "migrations/0013_ledger_partitioning.sql:35", "migrations/0013_ledger_partitioning.sql:65",
-                "migrations/0002_event.sql:30", "src/vibey/domain/ledger_chain.py:20",
-                "src/vibey/infrastructure/ledger/tier_manager.py:68", "src/vibey/domain/noloss.py:149",
-                "doctrines.md:82", "doctrines.md:455", "ADR-0044", "F1", "F2", "F3", "F4", "F5"]
-    missing = [h for h in required if h not in text]
-    assert not missing, f"missing: {missing}"
-    quotes = [
-        "is declarative partitioning inside one PostgreSQL enough, or is multi-node sharding (several database servers) in scope?",
-        "Set by measurement (8.g) on this repository's ledgers, or fixed by you?",
-        "the blob surface (Garage, 8.b), the forge (per the comment), or both?",
-    ]
-    unquoted = [q for q in quotes if q not in flat]
-    assert not unquoted, f"open questions not quoted verbatim: {unquoted}"
-    anchors = set(re.findall(r"[\w./-]+\.(?:py|sql|toml|md|yml):\d+", text))
-    assert len(anchors) >= 15, f"only {len(anchors)} distinct path:line anchors"
-    for word in ("TBD", "lorem", "TODO"):
-        assert word not in text, f"placeholder {word!r} left in the draft"
-    print("ADR draft complete")
-    PY
+Write this check with `write_file` to `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_check.py` — outside the clone, so it can
+never show up in `git status` — then run it as one command and delete it:
+
+```python
+import re
+from pathlib import Path
+p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-114-rotation.md")
+assert p.is_file(), "the ADR draft was not written"
+text = p.read_text(encoding="utf-8")
+flat = " ".join(text.split())
+assert text.startswith("# Rotating the ledger through its storage tiers without breaking append-only"), "wrong title line"
+required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context",
+            "## Options considered", "## Decision", "## How each non-negotiable still holds",
+            "## Consequences", "## Lanes this unblocks", "## Open decisions for the operator",
+            "## Verification owed",
+            "migrations/0013_ledger_partitioning.sql:35", "migrations/0013_ledger_partitioning.sql:65",
+            "migrations/0002_event.sql:30", "src/vibey/domain/ledger_chain.py:20",
+            "src/vibey/infrastructure/ledger/tier_manager.py:68", "src/vibey/domain/noloss.py:149",
+            "doctrines.md:82", "doctrines.md:455", "ADR-0044", "F1", "F2", "F3", "F4", "F5"]
+missing = [h for h in required if h not in text]
+assert not missing, f"missing: {missing}"
+quotes = [
+    "is declarative partitioning inside one PostgreSQL enough, or is multi-node sharding (several database servers) in scope?",
+    "Set by measurement (8.g) on this repository's ledgers, or fixed by you?",
+    "the blob surface (Garage, 8.b), the forge (per the comment), or both?",
+]
+unquoted = [q for q in quotes if q not in flat]
+assert not unquoted, f"open questions not quoted verbatim: {unquoted}"
+anchors = set(re.findall(r"[\w./-]+\.(?:py|sql|toml|md|yml):\d+", text))
+assert len(anchors) >= 15, f"only {len(anchors)} distinct path:line anchors"
+for word in ("TBD", "lorem", "TODO"):
+    assert word not in text, f"placeholder {word!r} left in the draft"
+print("ADR draft complete")
+```
+
+    python3 "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_check.py"   # prints: ADR draft complete
+    rm -f "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_check.py"
     # The scratch schema of Required behaviour 3 must be gone:
     psql "${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}" -tAc "SELECT count(*) FROM pg_namespace WHERE nspname = 'adr114_scratch'" 2>/dev/null || true   # prints 0 (or nothing without psql)
     git status --porcelain   # must print nothing: the clone is unchanged

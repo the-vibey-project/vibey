@@ -59,8 +59,19 @@ In `test/test_promote.py`:
 - `test_a_refused_merge_is_retried_bypassing_rules`.
 
 ## Checks the lane must run (all must pass)
-The Part 1 block with the focused run
-`python -m pytest -q --no-cov test/test_promote.py test/test_gh_cli.py test/test_gh_transport.py`.
+Part 1's block, inlined here so this issue is self-contained:
+```bash
+cd src/vibey_tools/gh
+python -m pytest -q --no-cov test/test_promote.py test/test_gh_cli.py test/test_gh_transport.py
+python -m pytest -q
+python -m black --line-length 100 --check vibey_gh test
+isort --check-only vibey_gh test
+python -m mypy vibey_gh
+cd ../../..
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff check src/vibey_tools/gh
+UV_CACHE_DIR=$TMPDIR/uvcache uv run ruff format --check src/vibey_tools/gh
+git diff --stat
+```
 
 ## Out of scope
 `cli.py` (its promote tests replace `promote.promote` by name), `versioning.py`, adapter
@@ -288,9 +299,14 @@ never alternate between them.
 ### C9 — Working in the big files
 
 `forge_github.py`, `forge_forgejo.py` and `forge_gitlab.py` grow with every Wave-1 part.
-Each adapter class is the **last statement** of its module, so add new methods by
-appending to the end of the file with a shell heredoc
-(`cat >> vibey_gh/forge_github.py <<'PY' … PY`, four-space indented), then run black once.
+Each adapter class is the **last statement** of its module, so add new methods by appending
+them to the end of the file: write the new methods (four-space indented) with the
+`write_file` tool to the concrete absolute path
+`/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py` — that directory exists and
+is outside every lane clone, so the clone's `git status` stays clean — then append and clean
+up in one command,
+`cat /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py >> vibey_gh/forge_github.py && rm /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py`,
+then run black once.
 Read only the slices you need (`sed -n '120,200p' file`). Do not rewrite a whole module.
 
 ---
