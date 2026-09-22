@@ -197,6 +197,28 @@ It keeps the family's replay rule intact. When the single instance dies, its
 unfinished work returns to the queue for the instance that replaces it: a
 restart, never a second copy, is how a loop survives a death.
 
+**8.d — the living model standard** *(ratified by the merge that carried this
+entry)*: vibey supports **every gold-standard free model that runs on a Linux or
+macOS laptop, at every point in time** — not the best model of the day this was
+written, but whichever models are the best free models for each class of laptop,
+now and as the field moves. Support means, for each such model: its weights are
+pinned in the model catalogue (source, revision and digest); it runs on both local
+backends, Ollama and llama.cpp, through the same vibey-owned protocol (8.b); and
+vibey chooses among the supported models by the machine it finds itself on, from
+the smallest laptop to the largest.
+
+A free model is one whose weights anyone may download and run on their own
+machine, with no account, no subscription and no call home. Where two models are
+otherwise comparable, the one under the freer license wins (8.a): an OSI-approved
+license over a custom one.
+
+The standard is living, so falling behind it is a defect, not a preference. When a
+new free model becomes the gold standard for a class of laptop, the gap is closed
+promptly, in the catalogue and in the default selection, and the model it displaces
+stays supported until nothing depends on it. Which models are the gold standard is
+a judgment, and it is recorded rather than asserted (10.f): the catalogue names, for
+each choice, the evidence behind it and the date it was made.
+
 ## 9 — The vibe
 
 Never a drag. Full steam ahead: baffling momentum with green code.
