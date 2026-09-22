@@ -69,7 +69,10 @@ spec:
       containers:
         - name: plane-api
           image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
+          command: ["./bin/docker-entrypoint-api.sh"]
           env:
+            - name: GUNICORN_WORKERS
+              value: "1"
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -94,11 +97,13 @@ spec:
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 8000
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 20
+            failureThreshold: 10
           resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
 ---
 apiVersion: apps/v1
@@ -122,7 +127,7 @@ spec:
       containers:
         - name: plane-worker
           image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
-          command: ["./bin/worker"]
+          command: ["./bin/docker-entrypoint-worker.sh"]
           env:
             - name: SECRET_KEY
               valueFrom:
@@ -162,7 +167,7 @@ spec:
       containers:
         - name: plane-beat
           image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
-          command: ["./bin/beat"]
+          command: ["./bin/docker-entrypoint-beat.sh"]
           env:
             - name: SECRET_KEY
               valueFrom:
@@ -202,6 +207,7 @@ spec:
       containers:
         - name: plane-web
           image: {{ include "vibey.image" .Values.surfaces.plane.frontend.image }}
+          command: ["node", "web/server.js"]
           env:
             - name: NEXT_PUBLIC_API_BASE_URL
               value: "http://{{ $fullName }}-plane-api:8000"
@@ -212,11 +218,13 @@ spec:
               port: 3000
             initialDelaySeconds: 10
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 3000
             initialDelaySeconds: 20
             periodSeconds: 20
+            failureThreshold: 10
           resources: {{- toYaml .Values.surfaces.plane.resources | nindent 12 }}
 ---
 apiVersion: batch/v1
@@ -236,10 +244,7 @@ spec:
       containers:
         - name: migrator
           image: {{ include "vibey.image" .Values.surfaces.plane.backend.image }}
-          command:
-            - sh
-            - -c
-            - "python manage.py migrate --noinput || ./bin/takeoff || true"
+          command: ["./bin/docker-entrypoint-migrator.sh"]
           env:
             - name: SECRET_KEY
               valueFrom:
@@ -259,9 +264,9 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 64Mi
+              memory: 128Mi
             limits:
-              memory: 256Mi
+              memory: 512Mi
 ---
 apiVersion: vibey.dev/v1alpha1
 kind: VibeySurface

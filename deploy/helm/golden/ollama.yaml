@@ -275,8 +275,7 @@ data:
     admin-allow-ip = "*.*.*.*"
     log-file = "/tmp/kannel.log"
     log-level = 1
-    box-port = 13001
-    box-allow-ip = "*.*.*.*"
+    smsbox-port = 13001
 
     group = smsc
     smsc = fake
@@ -458,6 +457,26 @@ data:
     network.host: "0.0.0.0"
     discovery.type: single-node
     plugins.security.disabled: true
+
+---
+# Source: vibey/templates/wazuh.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-wazuh-dashboard-config
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: wazuh-dashboard
+data:
+  opensearch_dashboards.yml: |
+    server.host: "0.0.0.0"
+    server.port: 5601
+    opensearch.hosts: ["http://vibey-vibey-wazuh-indexer:9200"]
+    opensearch.ssl.verificationMode: none
 
 ---
 # Source: vibey/templates/docs.yaml
@@ -1535,11 +1554,13 @@ spec:
               port: 3306
             initialDelaySeconds: 15
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 3306
             initialDelaySeconds: 30
             periodSeconds: 20
+            failureThreshold: 10
           resources:
             limits:
               memory: 512Mi
@@ -1611,13 +1632,15 @@ spec:
           readinessProbe:
             tcpSocket:
               port: 80
-            initialDelaySeconds: 20
+            initialDelaySeconds: 30
             periodSeconds: 10
+            failureThreshold: 20
           livenessProbe:
             tcpSocket:
               port: 80
-            initialDelaySeconds: 40
+            initialDelaySeconds: 60
             periodSeconds: 20
+            failureThreshold: 20
           resources:
             limits:
               memory: 512Mi
@@ -1682,11 +1705,13 @@ spec:
               port: 13000
             initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 13000
             initialDelaySeconds: 15
             periodSeconds: 20
+            failureThreshold: 10
           resources:
             limits:
               memory: 256Mi
@@ -1712,11 +1737,13 @@ spec:
               port: 13013
             initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 13013
             initialDelaySeconds: 15
             periodSeconds: 20
+            failureThreshold: 10
           resources:
             limits:
               memory: 256Mi
@@ -2007,7 +2034,10 @@ spec:
       containers:
         - name: plane-api
           image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
+          command: ["./bin/docker-entrypoint-api.sh"]
           env:
+            - name: GUNICORN_WORKERS
+              value: "1"
             - name: SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -2032,11 +2062,13 @@ spec:
               port: 8000
             initialDelaySeconds: 15
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 8000
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 20
+            failureThreshold: 10
           resources:
             limits:
               memory: 1Gi
@@ -2077,7 +2109,7 @@ spec:
       containers:
         - name: plane-worker
           image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
-          command: ["./bin/worker"]
+          command: ["./bin/docker-entrypoint-worker.sh"]
           env:
             - name: SECRET_KEY
               valueFrom:
@@ -2134,7 +2166,7 @@ spec:
       containers:
         - name: plane-beat
           image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
-          command: ["./bin/beat"]
+          command: ["./bin/docker-entrypoint-beat.sh"]
           env:
             - name: SECRET_KEY
               valueFrom:
@@ -2191,6 +2223,7 @@ spec:
       containers:
         - name: plane-web
           image: makeplane/plane-frontend:latest@sha256:30734d16d457d2e2f942debeba0bb4721ff70388f970257cfd7f11e02082aaa5
+          command: ["node", "web/server.js"]
           env:
             - name: NEXT_PUBLIC_API_BASE_URL
               value: "http://vibey-vibey-plane-api:8000"
@@ -2201,11 +2234,13 @@ spec:
               port: 3000
             initialDelaySeconds: 10
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 3000
             initialDelaySeconds: 20
             periodSeconds: 20
+            failureThreshold: 10
           resources:
             limits:
               memory: 1Gi
@@ -2526,6 +2561,8 @@ spec:
               value: "no"
             - name: POSTFIX_MYDOMAIN
               value: "cluster.local"
+            - name: ALLOWED_SENDER_DOMAINS
+              value: "cluster.local"
           ports:
             - containerPort: 587
             - containerPort: 25
@@ -2534,11 +2571,13 @@ spec:
               port: 587
             initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 587
             initialDelaySeconds: 15
             periodSeconds: 20
+            failureThreshold: 10
           resources:
             limits:
               memory: 256Mi
@@ -3081,9 +3120,14 @@ spec:
                   --server-name cluster.local \
                   --report-stats no \
                   --config-path /data/homeserver.yaml \
+                  --data-dir /data \
                   --generate-config
+                sed -i 's|filename: /homeserver.log|filename: /data/homeserver.log|' /data/*.log.config 2>/dev/null || true
+                sed -i 's/handlers: \[buffer\]/handlers: [console]/' /data/*.log.config 2>/dev/null || true
                 echo "registration_shared_secret: \"synapse-registration-shared-secret\"" >> /data/homeserver.yaml
                 echo "enable_registration: true" >> /data/homeserver.yaml
+                echo "enable_registration_without_verification: true" >> /data/homeserver.yaml
+                chmod -R 777 /data
               fi
           volumeMounts:
             - name: data
@@ -3098,11 +3142,13 @@ spec:
               port: 8008
             initialDelaySeconds: 15
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 8008
             initialDelaySeconds: 30
             periodSeconds: 20
+            failureThreshold: 10
           resources:
             limits:
               memory: 1Gi
@@ -3295,17 +3341,27 @@ spec:
               port: 5601
             initialDelaySeconds: 15
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 5601
             initialDelaySeconds: 30
             periodSeconds: 20
+            failureThreshold: 10
           resources:
             limits:
               memory: 512Mi
             requests:
               cpu: 50m
               memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+              subPath: opensearch_dashboards.yml
+      volumes:
+        - name: config
+          configMap:
+            name: vibey-vibey-wazuh-dashboard-config
 
 ---
 # Source: vibey/templates/worker.yaml
@@ -3739,10 +3795,7 @@ spec:
       containers:
         - name: migrator
           image: makeplane/plane-backend:latest@sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f
-          command:
-            - sh
-            - -c
-            - "python manage.py migrate --noinput || ./bin/takeoff || true"
+          command: ["./bin/docker-entrypoint-migrator.sh"]
           env:
             - name: SECRET_KEY
               valueFrom:
@@ -3762,9 +3815,9 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 64Mi
+              memory: 128Mi
             limits:
-              memory: 256Mi
+              memory: 512Mi
 
 ---
 # Source: vibey/templates/docs.yaml

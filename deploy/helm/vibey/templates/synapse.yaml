@@ -76,9 +76,14 @@ spec:
                   --server-name {{ .Values.surfaces.synapse.serverName }} \
                   --report-stats {{ .Values.surfaces.synapse.reportStats }} \
                   --config-path /data/homeserver.yaml \
+                  --data-dir /data \
                   --generate-config
+                sed -i 's|filename: /homeserver.log|filename: /data/homeserver.log|' /data/*.log.config 2>/dev/null || true
+                sed -i 's/handlers: \[buffer\]/handlers: [console]/' /data/*.log.config 2>/dev/null || true
                 echo "registration_shared_secret: \"{{ .Values.surfaces.synapse.registrationSharedSecret }}\"" >> /data/homeserver.yaml
                 echo "enable_registration: true" >> /data/homeserver.yaml
+                echo "enable_registration_without_verification: true" >> /data/homeserver.yaml
+                chmod -R 777 /data
               fi
           volumeMounts:
             - name: data
@@ -93,11 +98,13 @@ spec:
               port: 8008
             initialDelaySeconds: 15
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 8008
             initialDelaySeconds: 30
             periodSeconds: 20
+            failureThreshold: 10
           resources: {{- toYaml .Values.surfaces.synapse.resources | nindent 12 }}
           volumeMounts:
             - name: data

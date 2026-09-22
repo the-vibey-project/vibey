@@ -507,6 +507,8 @@ spec:
               value: "no"
             - name: POSTFIX_MYDOMAIN
               value: {{ .Values.surfaces.postfix.domain | quote }}
+            - name: ALLOWED_SENDER_DOMAINS
+              value: {{ .Values.surfaces.postfix.domain | quote }}
           ports:
             - containerPort: 587
             - containerPort: 25
@@ -515,11 +517,13 @@ spec:
               port: 587
             initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 587
             initialDelaySeconds: 15
             periodSeconds: 20
+            failureThreshold: 10
           resources: {{- toYaml .Values.surfaces.postfix.resources | nindent 12 }}
           volumeMounts:
             - name: data

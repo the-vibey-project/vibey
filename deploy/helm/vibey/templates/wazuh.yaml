@@ -205,6 +205,19 @@ spec:
           persistentVolumeClaim:
             claimName: {{ $fullName }}-wazuh-manager-data
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullName }}-wazuh-dashboard-config
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-dashboard
+data:
+  opensearch_dashboards.yml: |
+    server.host: "0.0.0.0"
+    server.port: 5601
+    opensearch.hosts: ["http://{{ $fullName }}-wazuh-indexer:9200"]
+    opensearch.ssl.verificationMode: none
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -236,12 +249,22 @@ spec:
               port: 5601
             initialDelaySeconds: 15
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 5601
             initialDelaySeconds: 30
             periodSeconds: 20
+            failureThreshold: 10
           resources: {{- toYaml .Values.surfaces.wazuh.dashboard.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+              subPath: opensearch_dashboards.yml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $fullName }}-wazuh-dashboard-config
 ---
 apiVersion: vibey.dev/v1alpha1
 kind: VibeySurface

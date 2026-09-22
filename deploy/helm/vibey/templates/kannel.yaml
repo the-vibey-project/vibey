@@ -26,8 +26,7 @@ data:
     admin-allow-ip = "*.*.*.*"
     log-file = "/tmp/kannel.log"
     log-level = 1
-    box-port = 13001
-    box-allow-ip = "*.*.*.*"
+    smsbox-port = 13001
 
     group = smsc
     smsc = fake
@@ -105,11 +104,13 @@ spec:
               port: 13000
             initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 13000
             initialDelaySeconds: 15
             periodSeconds: 20
+            failureThreshold: 10
           resources: {{- toYaml .Values.surfaces.kannel.resources | nindent 12 }}
           volumeMounts:
             - name: config
@@ -130,11 +131,13 @@ spec:
               port: 13013
             initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 10
           livenessProbe:
             tcpSocket:
               port: 13013
             initialDelaySeconds: 15
             periodSeconds: 20
+            failureThreshold: 10
           resources: {{- toYaml .Values.surfaces.kannel.resources | nindent 12 }}
           volumeMounts:
             - name: config
