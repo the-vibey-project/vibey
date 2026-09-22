@@ -119,17 +119,21 @@ and what 10.b already settled for money. 8.a settles it for everything else.
 
 **8.b — sovereign self-hosted defaults, paid declared-only** *(ratified by the
 merge that carried this entry; its list clarified and extended by the merge that
-carried 8.c; its paid defaults set by the merge that carried them)*: every operational surface of vibey defaults to
+carried 8.c; its paid defaults set, and OpenCode repealed in favour of VS Code, by
+the merge that carried them)*: every operational surface of vibey defaults to
 the freest, most sovereign, self-hosted, free option — and never, ever, to a paid
 platform. This is specific and enumerated, because a preference without a
 concrete default is a platitude:
 
 - **Engines** default to **`sovereignloop`** (8.c), which drives the models and
   tools that run on the operator's own hardware and need no subscription — this
-  era's default model (8.d), and OpenCode when its provider is local — always on,
-  never needing declaration, for every phase. **`paidloop`** and its adapters —
-  `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, and OpenCode on a paid
-  provider — are declared-only.
+  era's default model (8.d), and **VS Code** in its open-source build (Code - OSS,
+  as VSCodium ships it) when its model is local — always on, never needing
+  declaration, for every phase. **`paidloop`** and its adapters — `claudeloop`,
+  `codexloop`, `cursorloop`, `agyloop`, and VS Code on a paid provider — are
+  declared-only. OpenCode is repealed as an engine of either loop; VS Code takes
+  its place in both, and the runner that drove OpenCode is retired once the VS Code
+  adapter carries its work.
 - **Cloud** defaults to **self-hosted OpenStack**, never to a hosted provider.
   Azure, AWS and GCP are declared-only.
 - **Forge** defaults to **self-hosted Forgejo**, never to a hosted platform.
