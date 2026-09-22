@@ -140,3 +140,49 @@ async def test_turn_events_create_child_telemetry_spans() -> None:
     assert [span.name for span in spans] == ["turn", "turn"]
     assert [span.attributes["turn_number"] for span in spans] == [0, 1]
     assert all(span.attributes["engine_id"] == "claudeloop" for span in spans)
+
+
+async def test_misconfiguration_gate_returns_none_for_non_78_exit() -> None:
+    """misconfiguration_gate returns None for any exit except 78."""
+    from vibey.domain.engine import EXIT_CODE_BACKEND_MISCONFIGURED
+
+    class _Exit77Engine(_NoExitCodeEngine):
+        def run_exit_code(self, handle: RunHandle) -> int | None:
+            return EXIT_CODE_BACKEND_MISCONFIGURED - 1
+
+    job = replace(make_job(uuid4()), kind="build.implement")
+    outcome = await run_and_record(
+        _Exit77Engine(),  # type: ignore[arg-type]
+        _NullLedger(),
+        job=job,
+        handle=_handle(),
+    )
+
+    assert outcome.misconfiguration_gate(CLAUDELOOP, "item") is None
+
+
+class _CapacityNoStateEngine(_NoExitCodeEngine):
+    """Engine that emits CAPACITY_REJECTED without capacity_state."""
+
+    async def tail(self, handle: RunHandle) -> AsyncIterator[EngineEvent]:
+        del handle
+        yield EngineEvent(
+            kind="CapacityRejected",
+            at=datetime.now(UTC),
+            payload={"detail": "rate limited"},
+        )
+
+
+async def test_capacity_rejected_without_state_defaults_to_none() -> None:
+    """CAPACITY_REJECTED with missing/empty capacity_state leaves capacity_state None."""
+    job = replace(make_job(uuid4()), kind="build.implement")
+
+    outcome = await run_and_record(
+        _CapacityNoStateEngine(),  # type: ignore[arg-type]
+        _RecordingLedger(),
+        job=job,
+        handle=_handle(),
+    )
+
+    assert outcome.capacity_rejected is True
+    assert outcome.capacity_state is None

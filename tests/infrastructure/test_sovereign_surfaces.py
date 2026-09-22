@@ -22,6 +22,7 @@ from vibey.application.interfaces import (
 from vibey.bootstrap import build_app
 from vibey.domain.config import ConfigError, parse_config
 from vibey.infrastructure.config_store.in_memory import InMemoryConfigStore
+from vibey.infrastructure.config_store.infisical import InfisicalConfigStoreAdapter
 from vibey.infrastructure.docs.bookstack import BookStackDocsAdapter
 from vibey.infrastructure.docs.in_memory import InMemoryDocs
 from vibey.infrastructure.email.forward_email import ForwardEmailAdapter
@@ -504,3 +505,148 @@ async def test_build_app_wires_concrete_adapters_from_config() -> None:
             assert isinstance(resources.sms, FossifySmsAdapter)
             assert isinstance(resources.messaging, MatrixMessagingAdapter)
             assert isinstance(resources.config_store, InfisicalConfigStoreAdapter)
+
+
+# ----------------------------------------------------
+# 2b. Infisical ConfigStore adapter
+# ----------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_infisical_adapter_roundtrip() -> None:
+    get_opener = MagicMock(
+        return_value=_mock_response(b'{"secret": {"secretValue": "prod-value"}}')
+    )
+    adapter = InfisicalConfigStoreAdapter(
+        url="http://infisical",
+        token="tok",
+        project_id="pid",
+        environment="prod",
+        opener=get_opener,
+    )
+    assert await adapter.get_config("api_key") == "prod-value"
+    sent = get_opener.call_args[0][0]
+    assert sent.get_method() == "GET"
+    assert sent.get_header("Authorization") == "Bearer tok"
+    assert "projectId=pid" in sent.full_url
+    assert "environment=prod" in sent.full_url
+
+
+@pytest.mark.asyncio
+async def test_infisical_adapter_create_config() -> None:
+    create_opener = MagicMock(return_value=_mock_response())
+    adapter = InfisicalConfigStoreAdapter(
+        url="http://infisical",
+        token="tok",
+        project_id="pid",
+        environment="prod",
+        opener=create_opener,
+    )
+    await adapter.create_config("new_key", "new_value")
+    sent = create_opener.call_args[0][0]
+    assert sent.get_method() == "POST"
+    assert sent.get_header("Authorization") == "Bearer tok"
+    import json
+
+    body = json.loads(sent.data.decode())
+    assert body["secretValue"] == "new_value"
+    assert body["projectId"] == "pid"
+    assert body["environment"] == "prod"
+
+
+@pytest.mark.asyncio
+async def test_infisical_adapter_missing_key_raises_keyerror() -> None:
+    missing = urllib.error.HTTPError("http://x", 404, "nope", {}, None)
+    adapter = InfisicalConfigStoreAdapter(
+        url="http://infisical", token="tok", project_id="pid", opener=_raising_opener(missing)
+    )
+    with pytest.raises(KeyError):
+        await adapter.get_config("nope")
+
+
+@pytest.mark.asyncio
+async def test_infisical_adapter_other_error_raises_runtime_error() -> None:
+    forbidden = urllib.error.HTTPError("http://x", 403, "denied", {}, None)
+    adapter = InfisicalConfigStoreAdapter(
+        url="http://infisical", token="tok", project_id="pid", opener=_raising_opener(forbidden)
+    )
+    with pytest.raises(RuntimeError):
+        await adapter.get_config("nope")
+
+    err = urllib.error.HTTPError("http://x", 500, "boom", {}, None)
+    adapter_500 = InfisicalConfigStoreAdapter(
+        url="http://infisical", token="tok", project_id="pid", opener=_raising_opener(err)
+    )
+    with pytest.raises(RuntimeError):
+        await adapter_500.get_config("boom")
+    with pytest.raises(RuntimeError):
+        await adapter_500.create_config("boom", "val")
+
+
+@pytest.mark.asyncio
+async def test_bookstack_adapter_update_error() -> None:
+    err = urllib.error.HTTPError("http://x", 500, "boom", {}, None)
+    adapter = BookStackDocsAdapter(
+        url="http://bookstack", token_id="tid", token_secret="tsec", opener=_raising_opener(err)
+    )
+    with pytest.raises(RuntimeError):
+        await adapter.update_page("42", "<h1>next</h1>")
+
+
+@pytest.mark.asyncio
+async def test_matrix_adapter_error() -> None:
+    err = urllib.error.HTTPError("http://x", 500, "boom", {}, None)
+    adapter = MatrixMessagingAdapter(url="http://matrix", token="tok", opener=_raising_opener(err))
+    with pytest.raises(RuntimeError):
+        await adapter.send_message("!room:example.org", "hello")
+
+
+@pytest.mark.asyncio
+async def test_bitwarden_adapter_set_secret_error() -> None:
+    err = urllib.error.HTTPError("http://x", 500, "boom", {}, None)
+    adapter = BitwardenSecretsAdapter(url="http://vault", token="tok", opener=_raising_opener(err))
+    with pytest.raises(RuntimeError):
+        await adapter.set_secret("db", "p")
+
+
+@pytest.mark.asyncio
+async def test_infisical_adapter_create_error() -> None:
+    err = urllib.error.HTTPError("http://x", 500, "boom", {}, None)
+    adapter = InfisicalConfigStoreAdapter(
+        url="http://infisical", token="tok", project_id="pid", opener=_raising_opener(err)
+    )
+    with pytest.raises(RuntimeError):
+        await adapter.create_config("key", "val")
+
+
+@pytest.mark.asyncio
+async def test_infisical_adapter_get_error_read_exception() -> None:
+    """Test get_config when exc.read() raises."""
+
+    # Create an HTTPError where read() fails
+    class FailingReadError(urllib.error.HTTPError):
+        def read(self):
+            raise OSError("read failed")
+
+    exc = FailingReadError("http://x", 500, "boom", {}, None)
+    adapter = InfisicalConfigStoreAdapter(
+        url="http://infisical", token="tok", project_id="pid", opener=_raising_opener(exc)
+    )
+    with pytest.raises(RuntimeError):
+        await adapter.get_config("key")
+
+
+@pytest.mark.asyncio
+async def test_infisical_adapter_create_error_read_exception() -> None:
+    """Test create_config when exc.read() raises."""
+
+    class FailingReadError(urllib.error.HTTPError):
+        def read(self):
+            raise OSError("read failed")
+
+    exc = FailingReadError("http://x", 500, "boom", {}, None)
+    adapter = InfisicalConfigStoreAdapter(
+        url="http://infisical", token="tok", project_id="pid", opener=_raising_opener(exc)
+    )
+    with pytest.raises(RuntimeError):
+        await adapter.create_config("key", "val")

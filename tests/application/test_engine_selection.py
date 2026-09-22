@@ -629,6 +629,24 @@ async def test_capacity_defer_opens_the_circuit_with_the_defer_deadline() -> Non
     assert record.resets_at == retry_at
 
 
+async def test_capacity_state_forbidden_maps_to_authentication_failed() -> None:
+    """A 403/forbidden capacity_state maps to AuthenticationFailed (no resets_at)."""
+    retry_at = NOW + timedelta(minutes=5)
+    handler, health, project_id = await _recording(
+        Defer(retry_at, "capacity", capacity=True, capacity_state="forbidden")
+    )
+
+    outcome = await handler.handle(make_job(uuid4()))
+
+    assert isinstance(outcome, Defer)
+    record = await health.get_or_create(project_id, EngineId.CLAUDELOOP)  # type: ignore[arg-type]
+    assert record.circuit == "open"
+    assert record.capacity_state == "AuthenticationFailed"
+    # AuthenticationFailed has no resets_at and no probe_next_at
+    assert record.resets_at is None
+    assert record.probe_next_at is None
+
+
 @pytest.mark.parametrize("failure_class", [FailureClass.WORK, FailureClass.VIBEY])
 async def test_work_and_vibey_failures_record_nothing(failure_class: FailureClass) -> None:
     """The code being wrong, or vibey being wrong, is never the engine's fault."""
