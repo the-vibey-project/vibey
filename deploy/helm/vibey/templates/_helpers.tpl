@@ -131,3 +131,25 @@ spec:
       securityContext: {{- toYaml .Values.ollama.securityContext | nindent 8 }}
       resources: {{- toYaml .Values.ollama.pull.resources | nindent 8 }}
 {{- end -}}
+
+{{/*
+Format a container image from a dictionary with repository, tag, and optional digest.
+*/}}
+{{- define "vibey.image" -}}
+{{- $img := . -}}
+{{- if $img.digest -}}
+{{- printf "%s:%s@%s" $img.repository (toString $img.tag) $img.digest -}}
+{{- else -}}
+{{- printf "%s:%s" $img.repository (toString $img.tag) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Format a fully qualified in-cluster Service URL for an operational surface component.
+Usage: include "vibey.surfaceURL" (dict "root" $ "name" "component-name" "port" 1234 "scheme" "http")
+*/}}
+{{- define "vibey.surfaceURL" -}}
+{{- $scheme := default "http" .scheme -}}
+{{- printf "%s://%s-%s.%s.svc.%s:%v" $scheme (include "vibey.fullname" .root) .name .root.Release.Namespace .root.Values.clusterDomain .port -}}
+{{- end -}}
+

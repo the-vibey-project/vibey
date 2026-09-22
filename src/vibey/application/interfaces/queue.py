@@ -46,6 +46,15 @@ class Defer:
     Caught live: verify-repair waits are also Defers, and recording them
     as capacity rejections opened both engines' circuits and stalled the
     whole project. Only a capacity-classed Defer may open a circuit."""
+    capacity_state: str | None = None
+    """The real capacity state name when known (`auth_failed`,
+    `credits_exhausted`, `window_exhausted`, or the domain class name).
+    `None` means the state was not carried through, in which case the
+    recorder falls back to `WindowExhausted(resets_at=retry_at)` — the
+    pre-existing behaviour. An `auth_failed` / `AuthenticationFailed`
+    state records as `AuthenticationFailed` (circuit OPEN, no probe),
+    so the next selection rotates away from this engine instead of
+    re-queuing the same Forbidden loop."""
 
 
 # What a handler is allowed to say happened. Part of the JobHandler seam's

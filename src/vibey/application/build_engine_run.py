@@ -30,6 +30,11 @@ class RunOutcome:
     or while the process is still running."""
     diagnostic_tail: str = ""
     """Bounded engine output retained for failure attribution."""
+    capacity_state: str | None = None
+    """The raw `capacity_state` from the CAPACITY_REJECTED event payload
+    when one was seen (`auth_failed`, `credits_exhausted`,
+    `window_exhausted`, or a domain class name). None when no rejection
+    occurred or the event carried no state key."""
 
     def misconfiguration_gate(
         self, descriptor: EngineDescriptor, work_item_id: str | None
@@ -79,6 +84,7 @@ async def run_and_record(
     correlation_id = correlation.for_project(job.project_id).value
     complete = False
     capacity_rejected = False
+    capacity_state: str | None = None
     diagnostics: list[str] = []
     turn_number = 0
     async for event in engine.tail(handle):
@@ -109,6 +115,9 @@ async def run_and_record(
             complete = True
         if event.kind == EventKind.CAPACITY_REJECTED.value:
             capacity_rejected = True
+            raw_state = event.payload.get("capacity_state")
+            if isinstance(raw_state, str) and raw_state.strip():
+                capacity_state = raw_state.strip()
         for key in (
             "stderr_tail",
             "stdout",
@@ -146,6 +155,7 @@ async def run_and_record(
         capacity_rejected=capacity_rejected,
         exit_code=exit_code,
         diagnostic_tail=diagnostic_tail,
+        capacity_state=capacity_state,
     )
 
 

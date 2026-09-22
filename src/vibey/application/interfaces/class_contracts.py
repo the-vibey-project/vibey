@@ -338,6 +338,9 @@ class RunOutcomeInterface(Protocol):
     def capacity_rejected(self) -> bool: ...
 
     @property
+    def capacity_state(self) -> str | None: ...
+
+    @property
     def exit_code(self) -> int | None: ...
 
     @property

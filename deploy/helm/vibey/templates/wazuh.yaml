@@ -1,0 +1,281 @@
+{{- if and .Values.surfaces.enabled .Values.surfaces.wazuh.enabled }}
+{{- $fullName := include "vibey.fullname" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullName }}-wazuh-indexer-config
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-indexer
+data:
+  opensearch.yml: |
+    network.host: "0.0.0.0"
+    discovery.type: single-node
+    plugins.security.disabled: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-wazuh-indexer-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-indexer
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.wazuh.indexer.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.wazuh.indexer.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.wazuh.indexer.storage.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-wazuh-manager-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-manager
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.wazuh.manager.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.wazuh.manager.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.wazuh.manager.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-wazuh-indexer
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-indexer
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: wazuh-indexer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-wazuh-manager
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-manager
+spec:
+  type: ClusterIP
+  ports:
+    - name: events
+      port: 1514
+      targetPort: 1514
+      protocol: TCP
+    - name: registration
+      port: 1515
+      targetPort: 1515
+      protocol: TCP
+    - name: api
+      port: 55000
+      targetPort: 55000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: wazuh-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-wazuh-dashboard
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-dashboard
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 5601
+      targetPort: 5601
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: wazuh-dashboard
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-wazuh-indexer
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-indexer
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: wazuh-indexer
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: wazuh-indexer
+    spec:
+      containers:
+        - name: wazuh-indexer
+          image: {{ include "vibey.image" .Values.surfaces.wazuh.indexer.image }}
+          env:
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms256m -Xmx512m"
+            - name: DISABLE_SECURITY_PLUGIN
+              value: "true"
+          ports:
+            - containerPort: 9200
+          readinessProbe:
+            tcpSocket:
+              port: 9200
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9200
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.wazuh.indexer.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/wazuh-indexer/opensearch.yml
+              subPath: opensearch.yml
+            - name: data
+              mountPath: /var/lib/wazuh-indexer
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $fullName }}-wazuh-indexer-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-wazuh-indexer-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-wazuh-manager
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-manager
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: wazuh-manager
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: wazuh-manager
+    spec:
+      containers:
+        - name: wazuh-manager
+          image: {{ include "vibey.image" .Values.surfaces.wazuh.manager.image }}
+          ports:
+            - containerPort: 1514
+            - containerPort: 1515
+            - containerPort: 55000
+          readinessProbe:
+            tcpSocket:
+              port: 55000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 55000
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.wazuh.manager.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/ossec/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-wazuh-manager-data
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullName }}-wazuh-dashboard-config
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-dashboard
+data:
+  opensearch_dashboards.yml: |
+    server.host: "0.0.0.0"
+    server.port: 5601
+    opensearch.hosts: ["http://{{ $fullName }}-wazuh-indexer:9200"]
+    opensearch.ssl.verificationMode: none
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-wazuh-dashboard
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: wazuh-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: wazuh-dashboard
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: wazuh-dashboard
+    spec:
+      containers:
+        - name: wazuh-dashboard
+          image: {{ include "vibey.image" .Values.surfaces.wazuh.dashboard.image }}
+          env:
+            - name: INDEXER_URL
+              value: "http://{{ $fullName }}-wazuh-indexer:9200"
+          ports:
+            - containerPort: 5601
+          readinessProbe:
+            tcpSocket:
+              port: 5601
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5601
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 10
+          resources: {{- toYaml .Values.surfaces.wazuh.dashboard.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+              subPath: opensearch_dashboards.yml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $fullName }}-wazuh-dashboard-config
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-siem
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: siem
+spec:
+  surface: siem
+  components:
+    - deployment: {{ $fullName }}-wazuh-manager
+    - deployment: {{ $fullName }}-wazuh-indexer
+    - deployment: {{ $fullName }}-wazuh-dashboard
+{{- end }}

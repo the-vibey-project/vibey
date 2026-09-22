@@ -110,7 +110,7 @@ def _classify_codexloop(raw: Mapping[str, object]) -> CapacityState:
         return CreditsExhausted(can_purchase=True)
     if code == "rate_limit_exceeded":
         return WindowExhausted(resets_at=_parse_dt(error.get("reset_at")), rate_limit_type="rpm")
-    if code in ("invalid_api_key", "unauthorized"):
+    if code in ("invalid_api_key", "unauthorized", "forbidden"):
         return AuthenticationFailed(detail=str(error.get("message", "")))
     return Available()
 
@@ -128,7 +128,7 @@ def _classify_cursorloop(raw: Mapping[str, object]) -> CapacityState:
 
             resets_at = datetime.now(UTC) + timedelta(seconds=retry_after)
         return WindowExhausted(resets_at=resets_at, rate_limit_type="requests")
-    if status == 401 or kind == "unauthorized":
+    if status in (401, 403) or kind == "unauthorized":
         return AuthenticationFailed(detail=str(raw.get("message", "")))
     return Available()
 

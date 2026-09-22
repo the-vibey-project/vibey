@@ -1,0 +1,131 @@
+{{- if and .Values.surfaces.enabled .Values.surfaces.synapse.enabled }}
+{{- $fullName := include "vibey.fullname" . }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-synapse
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: synapse
+type: Opaque
+stringData:
+  access-token: {{ .Values.surfaces.synapse.adminToken }}
+  registration-shared-secret: {{ .Values.surfaces.synapse.registrationSharedSecret }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-synapse-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: synapse
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.synapse.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.synapse.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.synapse.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-synapse
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: synapse
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8008
+      targetPort: 8008
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: synapse
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-synapse
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: synapse
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: synapse
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: synapse
+    spec:
+      initContainers:
+        - name: init-synapse
+          image: {{ include "vibey.image" .Values.surfaces.synapse.image }}
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /data/homeserver.yaml ]; then
+                # --open-private-ports: the generated listener otherwise binds
+                # only ::1/127.0.0.1, which the kubelet's probes (and the
+                # Service) cannot reach -- the pod runs but is never Ready.
+                python -m synapse.app.homeserver \
+                  --server-name {{ .Values.surfaces.synapse.serverName }} \
+                  --report-stats {{ .Values.surfaces.synapse.reportStats }} \
+                  --config-path /data/homeserver.yaml \
+                  --data-dir /data \
+                  --open-private-ports \
+                  --generate-config
+                sed -i 's|filename: /homeserver.log|filename: /data/homeserver.log|' /data/*.log.config 2>/dev/null || true
+                sed -i 's/handlers: \[buffer\]/handlers: [console]/' /data/*.log.config 2>/dev/null || true
+                echo "registration_shared_secret: \"{{ .Values.surfaces.synapse.registrationSharedSecret }}\"" >> /data/homeserver.yaml
+                echo "enable_registration: true" >> /data/homeserver.yaml
+                echo "enable_registration_without_verification: true" >> /data/homeserver.yaml
+                chmod -R 777 /data
+              fi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: synapse
+          image: {{ include "vibey.image" .Values.surfaces.synapse.image }}
+          ports:
+            - containerPort: 8008
+          readinessProbe:
+            tcpSocket:
+              port: 8008
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8008
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 10
+          resources: {{- toYaml .Values.surfaces.synapse.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-synapse-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-messaging
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: messaging
+spec:
+  surface: messaging
+  components:
+    - deployment: {{ $fullName }}-synapse
+{{- end }}

@@ -1,0 +1,1363 @@
+{{- if .Values.surfaces.enabled }}
+{{- $fullName := include "vibey.fullname" . }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 1. Redis (Cache)                                                           */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.redis.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-redis-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.redis.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.redis.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.redis.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-redis
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  type: ClusterIP
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-redis
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: redis
+    spec:
+      containers:
+        - name: redis
+          image: {{ include "vibey.image" .Values.surfaces.redis.image }}
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.redis.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-redis-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-cache
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cache
+spec:
+  surface: cache
+  components:
+    - deployment: {{ $fullName }}-redis
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 2. RabbitMQ (Bus)                                                          */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.rabbitmq.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-rabbitmq
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rabbitmq
+type: Opaque
+stringData:
+  username: {{ .Values.surfaces.rabbitmq.username }}
+  password: {{ .Values.surfaces.rabbitmq.password }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-rabbitmq-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rabbitmq
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.rabbitmq.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.rabbitmq.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.rabbitmq.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-rabbitmq
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rabbitmq
+spec:
+  type: ClusterIP
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+      protocol: TCP
+    - name: management
+      port: 15672
+      targetPort: 15672
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: rabbitmq
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-rabbitmq
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rabbitmq
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: rabbitmq
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: {{ include "vibey.image" .Values.surfaces.rabbitmq.image }}
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-rabbitmq
+                  key: username
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-rabbitmq
+                  key: password
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
+          readinessProbe:
+            tcpSocket:
+              port: 5672
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5672
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.rabbitmq.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-rabbitmq-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-bus
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bus
+spec:
+  surface: bus
+  components:
+    - deployment: {{ $fullName }}-rabbitmq
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 3. OpenBao (Secrets)                                                       */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.openbao.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-openbao
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openbao
+type: Opaque
+stringData:
+  root-token: {{ .Values.surfaces.openbao.rootToken }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-openbao
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openbao
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8200
+      targetPort: 8200
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: openbao
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-openbao
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: openbao
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: openbao
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: openbao
+    spec:
+      containers:
+        - name: openbao
+          image: {{ include "vibey.image" .Values.surfaces.openbao.image }}
+          args:
+            - server
+            - -dev
+            - -dev-listen-address=0.0.0.0:8200
+            - -dev-root-token-id={{ .Values.surfaces.openbao.rootToken }}
+          ports:
+            - containerPort: 8200
+          readinessProbe:
+            tcpSocket:
+              port: 8200
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8200
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.openbao.resources | nindent 12 }}
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-secrets
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: secrets
+spec:
+  surface: secrets
+  components:
+    - deployment: {{ $fullName }}-openbao
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 4. Nextcloud (Files)                                                       */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.nextcloud.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-nextcloud
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nextcloud
+type: Opaque
+stringData:
+  username: {{ .Values.surfaces.nextcloud.adminUser }}
+  password: {{ .Values.surfaces.nextcloud.adminPassword }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-nextcloud-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nextcloud
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.nextcloud.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.nextcloud.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.nextcloud.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-nextcloud
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nextcloud
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: nextcloud
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-nextcloud
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nextcloud
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: nextcloud
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: nextcloud
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: nextcloud
+          image: {{ include "vibey.image" .Values.surfaces.nextcloud.image }}
+          env:
+            - name: NEXTCLOUD_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-nextcloud
+                  key: username
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-nextcloud
+                  key: password
+            - name: SQLITE_DATABASE
+              value: nextcloud
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.nextcloud.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/www/html
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-nextcloud-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-files
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: files
+spec:
+  surface: files
+  components:
+    - deployment: {{ $fullName }}-nextcloud
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 5. Postfix (Email)                                                         */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.postfix.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-postfix
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postfix
+type: Opaque
+stringData:
+  username: {{ .Values.surfaces.postfix.username }}
+  password: {{ .Values.surfaces.postfix.password }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-postfix-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postfix
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.postfix.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.postfix.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.postfix.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-postfix
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postfix
+spec:
+  type: ClusterIP
+  ports:
+    - name: submission
+      port: 587
+      targetPort: 587
+      protocol: TCP
+    - name: smtp
+      port: 25
+      targetPort: 25
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: postfix
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-postfix
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postfix
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: postfix
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: postfix
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: postfix
+          image: {{ include "vibey.image" .Values.surfaces.postfix.image }}
+          env:
+            - name: ALLOWED_NETWORKS
+              value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8"
+            - name: USE_TLS
+              value: "no"
+            - name: POSTFIX_MYDOMAIN
+              value: {{ .Values.surfaces.postfix.domain | quote }}
+            - name: ALLOWED_SENDER_DOMAINS
+              value: {{ .Values.surfaces.postfix.domain | quote }}
+          ports:
+            - containerPort: 587
+            - containerPort: 25
+          readinessProbe:
+            tcpSocket:
+              port: 587
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 10
+          livenessProbe:
+            tcpSocket:
+              port: 587
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 10
+          resources: {{- toYaml .Values.surfaces.postfix.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/spool/postfix
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-postfix-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-email
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: email
+spec:
+  surface: email
+  components:
+    - deployment: {{ $fullName }}-postfix
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 6. Infisical (ConfigStore)                                                 */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.infisical.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-infisical
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: infisical
+type: Opaque
+stringData:
+  encryption-key: {{ .Values.surfaces.infisical.encryptionKey }}
+  auth-secret: {{ .Values.surfaces.infisical.authSecret }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-infisical
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: infisical
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: infisical
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-infisical
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: infisical
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: infisical
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: infisical
+    spec:
+      containers:
+        - name: infisical
+          image: {{ include "vibey.image" .Values.surfaces.infisical.image }}
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DB_CONNECTION_URI
+              value: "postgres://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ $fullName }}-postgres:5432/infisical?sslmode=disable"
+            - name: REDIS_URL
+              value: "redis://{{ $fullName }}-redis:6379/2"
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-infisical
+                  key: encryption-key
+            - name: AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-infisical
+                  key: auth-secret
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.infisical.resources | nindent 12 }}
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-configstore
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: configstore
+spec:
+  surface: configstore
+  components:
+    - deployment: {{ $fullName }}-infisical
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 7. Garage (Blob)                                                           */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.garage.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-garage
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: garage
+type: Opaque
+stringData:
+  access-key: {{ .Values.surfaces.garage.accessKey }}
+  secret-key: {{ .Values.surfaces.garage.secretKey }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullName }}-garage-config
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: garage
+data:
+  garage.toml: |
+    metadata_dir = "/var/lib/garage/meta"
+    data_dir = "/var/lib/garage/data"
+    db_engine = "sqlite"
+    replication_factor = 1
+
+    rpc_bind_addr = "0.0.0.0:3901"
+    rpc_public_addr = "127.0.0.1:3901"
+    rpc_secret = "{{ .Values.surfaces.garage.rpcSecret }}"
+
+    [s3_api]
+    s3_region = "{{ .Values.surfaces.garage.region }}"
+    api_bind_addr = "0.0.0.0:3900"
+    root_domain = ".s3.garage"
+
+    [admin]
+    api_bind_addr = "0.0.0.0:3903"
+    admin_token = "{{ .Values.surfaces.garage.rpcSecret }}"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-garage-meta
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: garage
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.garage.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.garage.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.garage.storage.metaSize }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-garage-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: garage
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.garage.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.garage.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.garage.storage.dataSize }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-garage
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: garage
+spec:
+  type: ClusterIP
+  ports:
+    - name: s3
+      port: 3900
+      targetPort: 3900
+      protocol: TCP
+    - name: rpc
+      port: 3901
+      targetPort: 3901
+      protocol: TCP
+    - name: admin
+      port: 3903
+      targetPort: 3903
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: garage
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-garage
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: garage
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: garage
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: garage
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: garage
+          image: {{ include "vibey.image" .Values.surfaces.garage.image }}
+          args: ["/garage", "server"]
+          ports:
+            - containerPort: 3900
+            - containerPort: 3901
+            - containerPort: 3903
+          readinessProbe:
+            tcpSocket:
+              port: 3900
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3900
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.garage.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/garage.toml
+              subPath: garage.toml
+            - name: meta
+              mountPath: /var/lib/garage/meta
+            - name: data
+              mountPath: /var/lib/garage/data
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $fullName }}-garage-config
+        - name: meta
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-garage-meta
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-garage-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-blob
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: blob
+spec:
+  surface: blob
+  components:
+    - deployment: {{ $fullName }}-garage
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 8. Gitea (Forge)                                                           */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.gitea.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-gitea
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gitea
+type: Opaque
+stringData:
+  username: {{ .Values.surfaces.gitea.adminUser }}
+  password: {{ .Values.surfaces.gitea.adminPassword }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-gitea-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gitea
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.gitea.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.gitea.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.gitea.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-gitea
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gitea
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+    - name: ssh
+      port: 22
+      targetPort: 2222
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: gitea
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-gitea
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gitea
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: gitea
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: gitea
+    spec:
+      containers:
+        - name: gitea
+          image: {{ include "vibey.image" .Values.surfaces.gitea.image }}
+          env:
+            - name: USER_UID
+              value: "1000"
+            - name: USER_GID
+              value: "1000"
+            - name: GITEA__security__INSTALL_LOCK
+              value: "true"
+            - name: GITEA__database__DB_TYPE
+              value: "sqlite3"
+            - name: GITEA__server__HTTP_PORT
+              value: "3000"
+          ports:
+            - containerPort: 3000
+            - containerPort: 2222
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 25
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.gitea.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-gitea-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-forge
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: forge
+spec:
+  surface: forge
+  components:
+    - deployment: {{ $fullName }}-gitea
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 9. Registry (OCI Distribution)                                            */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.registry.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-registry-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: registry
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.registry.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.registry.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.registry.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-registry
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: registry
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 5000
+      targetPort: 5000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: registry
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-registry
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: registry
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: registry
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: registry
+    spec:
+      containers:
+        - name: registry
+          image: {{ include "vibey.image" .Values.surfaces.registry.image }}
+          env:
+            - name: REGISTRY_HTTP_ADDR
+              value: "0.0.0.0:5000"
+            - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+              value: "/var/lib/registry"
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            tcpSocket:
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.registry.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/registry
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-registry-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-registry
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: registry
+spec:
+  surface: registry
+  components:
+    - deployment: {{ $fullName }}-registry
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 10. Keycloak (Identity)                                                    */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.keycloak.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $fullName }}-keycloak
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+type: Opaque
+stringData:
+  admin-user: {{ .Values.surfaces.keycloak.adminUser }}
+  admin-password: {{ .Values.surfaces.keycloak.adminPassword }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-keycloak
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: keycloak
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-keycloak
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: keycloak
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: {{ include "vibey.image" .Values.surfaces.keycloak.image }}
+          args:
+            - start-dev
+            - --http-port=8080
+          env:
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-keycloak
+                  key: admin-user
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-keycloak
+                  key: admin-password
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.keycloak.resources | nindent 12 }}
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-identity
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: identity
+spec:
+  surface: identity
+  components:
+    - deployment: {{ $fullName }}-keycloak
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 11. Loki (Logs)                                                            */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.loki.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullName }}-loki-config
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loki
+data:
+  local-config.yaml: |
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-loki-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loki
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.loki.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.loki.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.loki.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-loki
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loki
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3100
+      targetPort: 3100
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: loki
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-loki
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loki
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: loki
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: loki
+    spec:
+      containers:
+        - name: loki
+          image: {{ include "vibey.image" .Values.surfaces.loki.image }}
+          args:
+            - -config.file=/etc/loki/local-config.yaml
+          ports:
+            - containerPort: 3100
+          readinessProbe:
+            tcpSocket:
+              port: 3100
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3100
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.loki.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki/local-config.yaml
+              subPath: local-config.yaml
+            - name: data
+              mountPath: /loki
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $fullName }}-loki-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-loki-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-logs
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: logs
+spec:
+  surface: logs
+  components:
+    - deployment: {{ $fullName }}-loki
+---
+{{- end }}
+
+{{- /* -------------------------------------------------------------------------- */}}
+{{- /* 12. Uptime Kuma (Status)                                                   */}}
+{{- /* -------------------------------------------------------------------------- */}}
+{{- if .Values.surfaces.uptimeKuma.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $fullName }}-uptime-kuma-data
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: uptime-kuma
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- if .Values.surfaces.uptimeKuma.storage.storageClass }}
+  storageClassName: {{ .Values.surfaces.uptimeKuma.storage.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.surfaces.uptimeKuma.storage.size }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-uptime-kuma
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: uptime-kuma
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3001
+      targetPort: 3001
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ include "vibey.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: uptime-kuma
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullName }}-uptime-kuma
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: uptime-kuma
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "vibey.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: uptime-kuma
+  template:
+    metadata:
+      labels: {{- include "vibey.labels" . | nindent 8 }}
+        app.kubernetes.io/component: uptime-kuma
+    spec:
+      containers:
+        - name: uptime-kuma
+          image: {{ include "vibey.image" .Values.surfaces.uptimeKuma.image }}
+          ports:
+            - containerPort: 3001
+          readinessProbe:
+            tcpSocket:
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 3001
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources: {{- toYaml .Values.surfaces.uptimeKuma.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $fullName }}-uptime-kuma-data
+---
+apiVersion: vibey.dev/v1alpha1
+kind: VibeySurface
+metadata:
+  name: {{ $fullName }}-status
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: status
+spec:
+  surface: status
+  components:
+    - deployment: {{ $fullName }}-uptime-kuma
+---
+{{- end }}
+
+{{- end }}

@@ -115,3 +115,82 @@ def test_runtime_tables_are_validated_before_persistence(
 
     with pytest.raises(ConfigError, match=re.escape(path)):
         load_runtime_config_from_path(config_path)
+
+
+def test_surface_env_overlay_wires_a_cluster_without_a_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """In a cluster the chart renders endpoint URLs from its values and
+    injects tokens from Secrets: no vibey.toml has to exist at all."""
+    config_path = tmp_path / "vibey.toml"
+    config_path.write_text('[project]\nname = "from-disk"\n')
+    monkeypatch.setenv("VIBEY_TRACKER_URL", "http://plane:3000")
+    monkeypatch.setenv("VIBEY_TRACKER_TOKEN", "tok")
+    monkeypatch.setenv("VIBEY_TRACKER_WORKSPACE_SLUG", "ws")
+    monkeypatch.setenv("VIBEY_TRACKER_PROJECT_ID", "pid")
+    monkeypatch.setenv("VIBEY_CACHE_URL", "redis://cache:6379")
+    monkeypatch.setenv("VIBEY_BUS_URL", "http://bus:15672")
+    monkeypatch.setenv("VIBEY_BUS_USERNAME", "u")
+    monkeypatch.setenv("VIBEY_BUS_PASSWORD", "p")
+    monkeypatch.setenv("VIBEY_BLOB_URL", "http://blob:3900")
+    monkeypatch.setenv("VIBEY_BLOB_ACCESS_KEY", "ak")
+    monkeypatch.setenv("VIBEY_BLOB_SECRET_KEY", "sk")
+    monkeypatch.setenv("VIBEY_SIEM_URL", "http://siem:9200")
+    monkeypatch.setenv("VIBEY_DOCS_BOOK_ID", "7")
+    monkeypatch.setenv("VIBEY_EMAIL_SMTP_PORT", "587")
+    monkeypatch.setenv("VIBEY_SMS_SENDER", "alerts")
+
+    config = load_config_from_path(config_path)
+
+    assert config.tracker.url == "http://plane:3000"
+    assert config.tracker.workspace_slug == "ws"
+    assert config.cache.url == "redis://cache:6379"
+    assert config.bus.password == "p"
+    assert config.blob.secret_key == "sk"
+    assert config.blob.region == "us-east-1"
+    assert config.siem.index == "vibey-audit"
+    assert config.docs.book_id == 7
+    assert config.email.smtp_port == 587
+    assert config.sms.sender == "alerts"
+
+
+def test_surface_env_overlay_beats_the_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    config_path = tmp_path / "vibey.toml"
+    config_path.write_text('[project]\nname = "x"\n\n[tracker]\nurl = "http://file"\n')
+    monkeypatch.setenv("VIBEY_TRACKER_URL", "http://env")
+
+    assert load_config_from_path(config_path).tracker.url == "http://env"
+
+
+def test_surface_env_overlay_ignores_empty_values(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    config_path = tmp_path / "vibey.toml"
+    config_path.write_text('[project]\nname = "x"\n')
+    monkeypatch.setenv("VIBEY_TRACKER_URL", "   ")
+
+    assert load_config_from_path(config_path).tracker.url is None
+
+
+def test_surface_env_overlay_rejects_bad_integers(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    config_path = tmp_path / "vibey.toml"
+    config_path.write_text('[project]\nname = "x"\n')
+    monkeypatch.setenv("VIBEY_DOCS_BOOK_ID", "many")
+
+    with pytest.raises(ValueError, match="VIBEY_DOCS_BOOK_ID must be an integer"):
+        load_config_from_path(config_path)
+
+
+def test_surface_env_overlay_rejects_non_table_sections(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    config_path = tmp_path / "vibey.toml"
+    config_path.write_text('tracker = "nope"\n[project]\nname = "x"\n')
+    monkeypatch.setenv("VIBEY_TRACKER_URL", "http://env")
+
+    with pytest.raises(ValueError, match="tracker must be a table"):
+        load_config_from_path(config_path)

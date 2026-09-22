@@ -60,6 +60,9 @@ postgres:
     requests:
       cpu: 100m
       memory: 256Mi
+  additionalDatabases:
+    - plane
+    - infisical
 
 # Suffix for fully-qualified in-cluster DNS names. Only ever needs
 # changing on a cluster built with a non-default domain (kubeadm's
@@ -217,3 +220,429 @@ securityContext:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+surfaces:
+  # Master toggle for all 18 sovereign operational surfaces (ADR-0042, ADR-0043).
+  # Enabled by default: all operational dependencies run in-cluster on sovereign defaults.
+  enabled: true
+
+  # 1. Tracker: Plane
+  plane:
+    enabled: true
+    backend:
+      image:
+        repository: makeplane/plane-backend
+        tag: latest
+        digest: "sha256:a8b3ee5ad6a4f3d952d4537f679f5a684f6e54b0868f30db097ce8722676251f"
+    frontend:
+      image:
+        repository: makeplane/plane-frontend
+        tag: latest
+        digest: "sha256:30734d16d457d2e2f942debeba0bb4721ff70388f970257cfd7f11e02082aaa5"
+    workspaceSlug: "vibey"
+    projectId: "00000000-0000-0000-0000-000000000000"
+    secretKey: "plane-insecure-secret-key-change-in-prod"
+    # Celery broker for the API, worker and beat. Empty means the in-cluster
+    # RabbitMQ (surfaces.rabbitmq); set it to use an external broker. The API
+    # enqueues a task on every start, so Plane cannot run without one.
+    amqpUrl: ""
+    storage:
+      size: 5Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+
+  # 2. Docs: BookStack + MariaDB
+  bookstack:
+    enabled: true
+    # Laravel APP_KEY: "base64:" + 32 random bytes. BookStack halts init
+    # without one. Dev-only default (it decodes to its own warning); override
+    # it for any real install -- generate one with
+    # `docker run --rm --entrypoint /bin/bash lscr.io/linuxserver/bookstack appkey`.
+    appKey: "base64:dmliZXktYm9va3N0YWNrLWluc2VjdXJlLWRldi1rZXk="
+    image:
+      repository: linuxserver/bookstack
+      tag: latest
+      digest: "sha256:189c796273469115cf810e53f450e15b93184018e4728cd65fcaef8aa93584bc"
+    mariadb:
+      image:
+        repository: linuxserver/mariadb
+        tag: latest
+        digest: "sha256:75ffa39d652653e73848328a667d169a20a1e084fd51a66c4be3eb754a2492c9"
+      database: bookstack
+      user: bookstack
+      password: bookstackpassword
+      rootPassword: mariadbrootpassword
+      storage:
+        size: 5Gi
+        storageClass: ""
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+    appUrl: ""
+    bookId: 1
+    storage:
+      size: 5Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+  # 3. Secrets: OpenBao
+  openbao:
+    enabled: true
+    image:
+      repository: openbao/openbao
+      tag: latest
+      digest: "sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641"
+    rootToken: "root"
+    storage:
+      size: 2Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+
+  # 4. Files: Nextcloud
+  nextcloud:
+    enabled: true
+    image:
+      repository: nextcloud
+      tag: latest
+      digest: "sha256:1468bb3c8bdcfb2d301cc885daa36ead108c0589984991320c5fb66754fbfba6"
+    adminUser: admin
+    adminPassword: adminpassword
+    storage:
+      size: 10Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+
+  # 5. Email: Postfix
+  postfix:
+    enabled: true
+    image:
+      repository: boky/postfix
+      tag: latest
+      digest: "sha256:aafc772384232497bed875e1eb66b4d3e54ba1ebc86e2e185a6dc1dbc48182ef"
+    username: vibey
+    password: postfixpassword
+    domain: cluster.local
+    storage:
+      size: 2Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+
+  # 6. SMS: Kannel (AMD64 only)
+  kannel:
+    enabled: true
+    image:
+      repository: cyrenity/kannel
+      tag: 1.4.5-alpine
+      digest: "sha256:d1cbb3fc4f2f2bdd424721d2d3dad16f4dc1bbe204ade9bb39bb7d4ea667225d"
+    username: kannel
+    password: kannelpassword
+    adminPassword: adminsecret
+    sender: "vibey"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+
+  # 7. Messaging: Synapse
+  synapse:
+    enabled: true
+    image:
+      repository: matrixdotorg/synapse
+      tag: latest
+      digest: "sha256:7155ddc4835e5b8afa4e1598d92aa16ff1d03109f7d1cff61d493237d1210b1d"
+    serverName: cluster.local
+    reportStats: "no"
+    registrationSharedSecret: "synapse-registration-shared-secret"
+    adminToken: "synapse-admin-access-token"
+    roomId: "!general:cluster.local"
+    storage:
+      size: 5Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+
+  # 8. ConfigStore: Infisical
+  infisical:
+    enabled: true
+    image:
+      repository: infisical/infisical
+      tag: latest
+      digest: "sha256:3365445909bebd6fa36b5ddba3262da47384652f893585a7b39a8d5ba2681827"
+    encryptionKey: "0123456789abcdef0123456789abcdef"
+    authSecret: "infisical-auth-secret-key-32chars"
+    projectId: "vibey"
+    environment: "dev"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+
+  # 9. Cache: Redis
+  redis:
+    enabled: true
+    image:
+      repository: redis
+      tag: 8-alpine
+      digest: "sha256:ba6e394f6acc2a695ef1b6944f161b9ca813711739be68319fa0db3470673f1d"
+    storage:
+      size: 2Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+
+  # 10. Bus: RabbitMQ
+  rabbitmq:
+    enabled: true
+    image:
+      repository: rabbitmq
+      tag: 4-management-alpine
+      digest: "sha256:b839b492a91788a1d9406ef3ec0e1d8a8448032c48148a54a9e0c68ed66cde9b"
+    username: vibey
+    password: rabbitmqpassword
+    storage:
+      size: 2Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+  # 11. Blob: Garage (S3 API)
+  garage:
+    enabled: true
+    image:
+      repository: dxflrs/garage
+      tag: 58c21846ae80f27ecce9dd0af2ed964e964e9db0
+      digest: "sha256:c483e2d04c21224456358aeb0a9cbf6859b0d2fafe24d6214c5b80658a840579"
+    accessKey: "GK000000000000000000000000"
+    secretKey: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    region: "us-east-1"
+    rpcSecret: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    storage:
+      metaSize: 2Gi
+      dataSize: 10Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+  # 12. SIEM: Wazuh (AMD64 only)
+  wazuh:
+    enabled: true
+    manager:
+      image:
+        repository: wazuh/wazuh-manager
+        tag: "4.14.2"
+        digest: "sha256:c5b9d21e82c26494ec48505fdc033cdd79eb76cf5b230de736c7dcbe42f1b01a"
+      storage:
+        size: 5Gi
+        storageClass: ""
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          memory: 1Gi
+    indexer:
+      image:
+        repository: wazuh/wazuh-indexer
+        tag: "4.14.2"
+        digest: "sha256:da4ec16be8dde44c14313db24d534479694533cdd0a36a527a9f3e5779d70db3"
+      storage:
+        size: 5Gi
+        storageClass: ""
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          memory: 1Gi
+    dashboard:
+      image:
+        repository: wazuh/wazuh-dashboard
+        tag: "4.14.2"
+        digest: "sha256:8e4fed8ed79cf6d7903e0c2538d4c422b79cc8537798420a23518dcc79156821"
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+
+  # 13. Forge: Gitea
+  gitea:
+    enabled: true
+    image:
+      repository: gitea/gitea
+      tag: latest
+      digest: "sha256:87a67ee09d3ae0d1df5fda5dcda3e2a1f9236a45b0a59025d6e00e46adc43bef"
+    adminUser: gitea_admin
+    adminPassword: gitea_password
+    storage:
+      size: 10Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+
+  # 14. Registry: Distribution
+  registry:
+    enabled: true
+    image:
+      repository: registry
+      tag: latest
+      digest: "sha256:325b4b29b041e82803abeb703e201655e4e23ab83264ec1a7c9ddb0a5b14a6e0"
+    storage:
+      size: 10Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+
+  # 15. Identity: Keycloak
+  keycloak:
+    enabled: true
+    image:
+      repository: keycloak/keycloak
+      tag: latest
+      digest: "sha256:82a77884f3af238beab1e7afd63b5f530e1b5c0590bd7aa60b40a40463e29b2c"
+    adminUser: admin
+    adminPassword: keycloakpassword
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 1Gi
+
+  # 16. Logs: Loki
+  loki:
+    enabled: true
+    image:
+      repository: grafana/loki
+      tag: latest
+      digest: "sha256:1107dd5274e0ada47e42472b7a7e71f3b2a2fe878878108f3e2f9e51528f0193"
+    storage:
+      size: 5Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+  # 17. Status: Uptime Kuma
+  uptimeKuma:
+    enabled: true
+    image:
+      repository: louislam/uptime-kuma
+      tag: latest
+      digest: "sha256:70233f4acb5163fd2a59a49909cf01e44415cecff13dba69e3a86647a2919f83"
+    storage:
+      size: 2Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+
+  # 18. Monitoring: Prometheus & Grafana
+  monitoring:
+    enabled: true
+    prometheus:
+      image:
+        repository: prom/prometheus
+        tag: latest
+        digest: "sha256:5ce7540c3c00ef4ab0c9d2c995c6a5b9c421f44b4a115d97a2c7af3b1c21cbb0"
+      storage:
+        size: 5Gi
+        storageClass: ""
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+    grafana:
+      image:
+        repository: grafana/grafana
+        tag: latest
+        digest: "sha256:ac461fb352abc50da10a51c7d02462e9c05488f11f53f14b3ad79a8145f638a0"
+      adminUser: admin
+      adminPassword: grafanapassword
+      storage:
+        size: 2Gi
+        storageClass: ""
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+
+edge:
+  # Upstream integration for Ingress and cert-manager Certificate resources.
+  # Disabled by default; when enabled, manifests are rendered for UI surfaces.
+  enabled: false
+  ingressClassName: ""
+  issuer: ""
+
+backup:
+  # Upstream integration for Velero BackupStorageLocation and Schedule.
+  # Disabled by default; points to in-cluster Garage S3 when enabled.
+  enabled: false
+  schedule: "0 2 * * *"

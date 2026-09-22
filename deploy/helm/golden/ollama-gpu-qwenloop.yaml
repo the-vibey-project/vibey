@@ -9,7 +9,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
     app.kubernetes.io/component: ollama
 spec:
   accessModes: ["ReadWriteOnce"]
@@ -31,7 +31,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
     app.kubernetes.io/component: ollama
 spec:
   type: ClusterIP
@@ -56,7 +56,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
     app.kubernetes.io/component: ollama
 spec:
   # One server per release. The weights volume is ReadWriteOnce, so a
@@ -78,7 +78,7 @@ spec:
         app.kubernetes.io/instance: vibey
         app.kubernetes.io/version: "0.1.2"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: vibey-0.2.0
+        helm.sh/chart: vibey-0.3.0
         app.kubernetes.io/component: ollama
     spec:
       # Not the chart-wide podSecurityContext. The ollama image runs as root
@@ -160,7 +160,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
     app.kubernetes.io/component: ollama-pull
 spec:
   backoffLimit: 6
@@ -220,6 +220,7 @@ spec:
               cpu: 50m
               memory: 64Mi
 
+
 ---
 # Source: vibey/templates/worker.yaml
 apiVersion: v1
@@ -231,7 +232,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
 
 
 ---
@@ -245,7 +246,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
 spec:
   accessModes: ["ReadWriteOnce"]
   resources:
@@ -264,7 +265,7 @@ metadata:
     app.kubernetes.io/instance: vibey
     app.kubernetes.io/version: "0.1.2"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: vibey-0.2.0
+    helm.sh/chart: vibey-0.3.0
     app.kubernetes.io/component: worker
 spec:
   replicas: 1
@@ -280,7 +281,7 @@ spec:
         app.kubernetes.io/instance: vibey
         app.kubernetes.io/version: "0.1.2"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: vibey-0.2.0
+        helm.sh/chart: vibey-0.3.0
         app.kubernetes.io/component: worker
     spec:
       serviceAccountName: vibey-vibey
@@ -352,6 +353,136 @@ spec:
             # project's [features] table never makes it into the record.
             - name: VIBEY_FEATURE_QWENLOOP
               value: "1"
+            - name: VIBEY_TRACKER_URL
+              value: "http://vibey-vibey-plane-api.vibey.svc.cluster.local:8000"
+            - name: VIBEY_TRACKER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-plane-token
+                  key: token
+                  optional: true
+            - name: VIBEY_TRACKER_WORKSPACE_SLUG
+              value: "vibey"
+            - name: VIBEY_TRACKER_PROJECT_ID
+              value: "00000000-0000-0000-0000-000000000000"
+            - name: VIBEY_DOCS_URL
+              value: "http://vibey-vibey-bookstack.vibey.svc.cluster.local:80"
+            - name: VIBEY_DOCS_TOKEN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-bookstack-token
+                  key: token-id
+                  optional: true
+            - name: VIBEY_DOCS_TOKEN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-bookstack-token
+                  key: token-secret
+                  optional: true
+            - name: VIBEY_DOCS_BOOK_ID
+              value: "1"
+            - name: VIBEY_SECRETS_URL
+              value: "http://vibey-vibey-openbao.vibey.svc.cluster.local:8200"
+            - name: VIBEY_SECRETS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-openbao
+                  key: root-token
+            - name: VIBEY_FILES_URL
+              value: "http://vibey-vibey-nextcloud.vibey.svc.cluster.local:80"
+            - name: VIBEY_FILES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-nextcloud
+                  key: username
+            - name: VIBEY_FILES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-nextcloud
+                  key: password
+            - name: VIBEY_EMAIL_SMTP_HOST
+              value: "vibey-vibey-postfix.vibey.svc.cluster.local"
+            - name: VIBEY_EMAIL_SMTP_PORT
+              value: "587"
+            - name: VIBEY_EMAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-postfix
+                  key: username
+            - name: VIBEY_EMAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-postfix
+                  key: password
+            - name: VIBEY_EMAIL_FROM
+              value: "vibey@cluster.local"
+            - name: VIBEY_SMS_URL
+              value: "http://vibey-vibey-kannel.vibey.svc.cluster.local:13013/cgi-bin/sendsms"
+            - name: VIBEY_SMS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-kannel
+                  key: username
+            - name: VIBEY_SMS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-kannel
+                  key: password
+            - name: VIBEY_SMS_SENDER
+              value: "vibey"
+            - name: VIBEY_MESSAGING_URL
+              value: "http://vibey-vibey-synapse.vibey.svc.cluster.local:8008"
+            - name: VIBEY_MESSAGING_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-synapse
+                  key: access-token
+            - name: VIBEY_MESSAGING_ROOM_ID
+              value: "!general:cluster.local"
+            - name: VIBEY_CONFIG_STORE_URL
+              value: "http://vibey-vibey-infisical.vibey.svc.cluster.local:8080"
+            - name: VIBEY_CONFIG_STORE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-infisical-token
+                  key: machine-token
+                  optional: true
+            - name: VIBEY_CONFIG_STORE_PROJECT_ID
+              value: "vibey"
+            - name: VIBEY_CONFIG_STORE_ENVIRONMENT
+              value: "dev"
+            - name: VIBEY_CACHE_URL
+              value: "redis://vibey-vibey-redis.vibey.svc.cluster.local:6379/0"
+            - name: VIBEY_BUS_URL
+              value: "http://vibey-vibey-rabbitmq.vibey.svc.cluster.local:15672"
+            - name: VIBEY_BUS_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-rabbitmq
+                  key: username
+            - name: VIBEY_BUS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-rabbitmq
+                  key: password
+            - name: VIBEY_BLOB_URL
+              value: "http://vibey-vibey-garage.vibey.svc.cluster.local:3900"
+            - name: VIBEY_BLOB_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-garage
+                  key: access-key
+            - name: VIBEY_BLOB_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-garage
+                  key: secret-key
+            - name: VIBEY_BLOB_REGION
+              value: "us-east-1"
+            - name: VIBEY_SIEM_URL
+              value: "http://vibey-vibey-wazuh-indexer.vibey.svc.cluster.local:9200"
+            - name: VIBEY_SIEM_INDEX
+              value: "vibey-audit"
           volumeMounts:
             - name: worktrees
               mountPath: /work
