@@ -1,0 +1,26 @@
+orm-import-contracts -
+orm-bootstrap-async-engine -
+orm-tables -
+orm-database-seam - orm-bootstrap-async-engine
+orm-test-harness - orm-database-seam
+orm-app-resources - orm-database-seam
+orm-ledger-guard - orm-database-seam,orm-test-harness
+orm-ledger - orm-app-resources,orm-test-harness,orm-tables
+orm-project - orm-ledger
+orm-ledger-search - orm-ledger
+orm-engine-health - orm-app-resources,orm-test-harness,orm-tables
+orm-rotation-cursor - orm-app-resources,orm-test-harness,orm-tables
+orm-handoff - orm-app-resources,orm-test-harness,orm-tables
+orm-human-gate - orm-app-resources,orm-test-harness,orm-tables
+orm-job-statements-enqueue - orm-tables
+orm-job-statements-settle - orm-job-statements-enqueue
+orm-job-enqueue - orm-job-statements-enqueue,orm-app-resources,orm-test-harness
+orm-job-settle - orm-job-statements-settle,orm-job-enqueue
+orm-advisory-lock - orm-app-resources,orm-test-harness
+orm-notifier - orm-bootstrap-async-engine
+orm-migrator-callers - orm-app-resources,orm-test-harness
+orm-migrator - orm-migrator-callers,orm-tables
+orm-cluster-preflight - orm-migrator
+orm-cli-recover - orm-job-settle
+orm-bootstrap-engine - orm-project,orm-ledger-search,orm-engine-health,orm-rotation-cursor,orm-handoff,orm-human-gate,orm-job-settle,orm-advisory-lock,orm-migrator,orm-ledger-guard
+orm-raw-sql-guard - orm-bootstrap-engine,orm-notifier,orm-cluster-preflight,orm-cli-recover,orm-import-contracts

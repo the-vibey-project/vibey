@@ -1,0 +1,65 @@
+321	STALE	edit-body	issue-audit/updates/321.md
+322	DONE-IN-STORM	keep	integrated at 4e57f56b (storm-audit.md); it still lists opencode as a provider, which ADR-0046 L38 refuses later
+323	STALE	edit-body	issue-audit/updates/323.md
+324	TOO-BIG	parent-epic	split-324-1-visual-provider,split-324-2-visual-cli
+326	CURRENT-INFERRED	keep	no updates/326.md and the storm-audit row is still pending; the deploy/visual auditor wrote no rewrite, and #327's audited body builds on it unchanged as Part 1. Confirm before filing
+327	STALE	edit-body	issue-audit/updates/327.md
+330	TOO-BIG	parent-epic	split-330-1-deploy-target-config,split-330-2-scope-digest,split-330-3-spec-follows-target,split-330-4-az-scope-guard
+331	TOO-BIG	parent-epic	split-331-1-heat-renderer,split-331-2-openstack-cli-adapter,split-331-3-az-preflight,split-331-4-worker-cloud-flag,split-331-5-openstack-installer
+332	TOO-BIG	parent-epic	split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve
+333	TOO-BIG	parent-epic	split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text
+334	TOO-BIG	parent-epic	split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks
+335	TOO-BIG	parent-epic	split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+336	TOO-BIG	parent-epic	split-336-1-issue-reads,split-336-2-comment-writes,split-336-3-review-comment,split-336-4-review-threads
+337	THIN	edit-body	issue-audit/updates/337.md
+338	THIN	edit-body	issue-audit/updates/338.md
+339	STALE	edit-body	issue-audit/updates/339.md
+340	STALE	edit-body	issue-audit/updates/340.md
+341	TOO-BIG	parent-epic	split-341-1-reconcile,split-341-2-release-publication
+342	TOO-BIG	parent-epic	split-342-1-state-comment,split-342-2-pr-automation,split-342-3-fork-mirror,split-342-4-install-notices
+343	STALE	edit-body	issue-audit/updates/343.md
+344	TOO-BIG	parent-epic	split-344-1-rulesets,split-344-2-flatten
+345	DONE-IN-STORM	keep	integrated at c24b4f7b (storm-audit.md; integration merge 391673c2)
+346	DONE-IN-STORM	keep	integrated at 610f3cfa (storm-audit.md)
+348	STALE	edit-body	issue-audit/updates/348.md
+349	STALE	edit-body	issue-audit/updates/349.md
+350	CURRENT-INFERRED	keep	no updates/350.md and the storm-audit row is still pending; the R01-R18 auditor wrote no rewrite, and updates/351.md depends on it unchanged (R03, aio-pika locked). Confirm before filing
+351	TOO-BIG	parent-epic	split-351-1-amqp-contract,split-351-2-amqp-client
+352	STALE	edit-body	issue-audit/updates/352.md
+353	STALE	edit-body	issue-audit/updates/353.md
+354	CURRENT-INFERRED	keep	no updates/354.md and the storm-audit row is still pending; the R01-R18 auditor wrote no rewrite, and updates/358.md and 363.md depend on it unchanged (R07). Confirm before filing
+355	CURRENT-INFERRED	keep	no updates/355.md and the storm-audit row is still pending; the R01-R18 auditor wrote no rewrite, and updates/357.md, 360.md and 362.md depend on it unchanged (R08). Confirm before filing
+356	STALE	edit-body	issue-audit/updates/356.md
+357	STALE	edit-body	issue-audit/updates/357.md
+358	TOO-BIG	parent-epic	split-358-1-fenced-claim,split-358-2-redispatching-settles,split-358-3-sweep-and-park
+359	STALE	edit-body	issue-audit/updates/359.md
+360	STALE	edit-body	issue-audit/updates/360.md
+361	CURRENT-INFERRED	keep	no updates/361.md and the storm-audit row is still pending; the R01-R18 auditor wrote no rewrite, and updates/363.md depends on it unchanged (R14). Confirm before filing
+362	STALE	edit-body	issue-audit/updates/362.md
+363	STALE	edit-body	issue-audit/updates/363.md
+364	STALE	edit-body	issue-audit/updates/364.md
+365	STALE	edit-body	issue-audit/updates/365.md
+366	SUPERSEDED	close-superseded	issue-audit/updates/366.md
+367	TOO-BIG	parent-epic	split-367-1-run-dir,split-367-2-process-launcher
+368	SUPERSEDED	close-superseded	issue-audit/updates/368.md
+369	SUPERSEDED	close-superseded	issue-audit/updates/369.md
+370	SUPERSEDED	close-superseded	issue-audit/updates/370.md
+371	SUPERSEDED	close-superseded	issue-audit/updates/371.md
+372	SUPERSEDED	close-superseded	issue-audit/updates/372.md
+373	SUPERSEDED	close-superseded	issue-audit/updates/373.md
+374	SUPERSEDED	close-superseded	issue-audit/updates/374.md
+375	SUPERSEDED	close-superseded	issue-audit/updates/375.md
+376	CURRENT-INFERRED	keep	no updates/376.md and the storm-audit row is still pending; the R19-R34 auditor wrote no rewrite, and updates/377.md, 378.md and 379.md depend on it unchanged (R29). Confirm before filing
+377	STALE	edit-body	issue-audit/updates/377.md
+378	STALE	edit-body	issue-audit/updates/378.md
+379	STALE	edit-body	issue-audit/updates/379.md
+380	TOO-BIG	parent-epic	split-380-1-loop-doctor,split-380-2-doctor-cli
+381	STALE	edit-body	issue-audit/updates/381.md
+382	DONE-IN-STORM	keep	integrated at d76c2e20 (storm-audit.md; integration merge c91561f4)
+383	TOO-BIG	parent-epic	split-383-1-model-catalogue,split-383-2-qwen-entries,split-383-3-memory-probe,split-383-4-ram-tier-selection,split-383-5-reasoning-channels,split-383-6-model-verify-doctor
+386	DONE-IN-STORM	keep	integrated at cb1aa6af (storm-audit.md; integration merge 3d4540c3)
+387	DONE-IN-STORM	keep	integrated at ddf2bf05 (integration merge 739536ea)
+388	DONE-IN-STORM	keep	audit verdict STALE at 739536ea (updates/388.md); a hand-written implementation was integrated afterwards at e219f9a2 and carries the declared OllamaProbe opener seam and tests/conftest.py isolation; check the 8.c wording in batch review
+389	DONE-IN-STORM	keep	audit verdict THIN at 739536ea (updates/389.md); a hand-written implementation was integrated afterwards at 4317cff6 and re-renders the three managed workflows (root pr-review.yml, tenant pr-review.yml, issue-automation.yml)
+391	TOO-BIG	replace-body	specs/installer-ollama.md
+393	CURRENT	keep	accurate against versioning.py:212-245 (storm-audit.md); implemented on fix/staged-bump-raised (09c449ab), PR #394
