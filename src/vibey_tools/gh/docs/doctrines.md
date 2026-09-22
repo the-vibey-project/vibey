@@ -198,7 +198,8 @@ unfinished work returns to the queue for the instance that replaces it: a
 restart, never a second copy, is how a loop survives a death.
 
 **8.d — the living model standard** *(ratified by the merge that carried this
-entry)*: vibey supports **every gold-standard free model that runs on a Linux or
+entry; its designated default recorded by the merge that carried that paragraph)*:
+vibey supports **every gold-standard free model that runs on a Linux or
 macOS laptop, at every point in time** — not the best model of the day this was
 written, but whichever models are the best free models for each class of laptop,
 now and as the field moves. Support means, for each such model: its weights are
@@ -218,6 +219,18 @@ promptly, in the catalogue and in the default selection, and the model it displa
 stays supported until nothing depends on it. Which models are the gold standard is
 a judgment, and it is recorded rather than asserted (10.f): the catalogue names, for
 each choice, the evidence behind it and the date it was made.
+
+**The designated default, for this era** *(recorded 2026-09-22)*: the default free
+model is **GPT-OSS 20B**, served by **Ollama**. It was chosen by measurement on the
+class of laptop it targets, an M5 with 24 GB: one ten-turn agent session ran in 86
+seconds with a 131,072-token context in 13.1 GB, against 215 seconds at 32,768 tokens
+for the previous default, Qwen2.5-Coder-14B on llama.cpp, and a live storm lane on it
+averaged about thirteen seconds a turn. On a machine it does not fit, the catalogue's
+default for that machine's tier applies; on llama.cpp it applies once its own weights
+are pinned there. This paragraph is the one part of 8.d written to be replaced: when
+a better free model is released and measured, a ratified amendment names it here with
+its evidence and a new date. That replacement is this doctrine working as written,
+never a weakening of it (Article IV.2).
 
 **8.e — the test harness runs once, fed by a queue** *(ratified by the merge that
 carried this entry)*: the test harness is held to 8.c. It runs as **a single
