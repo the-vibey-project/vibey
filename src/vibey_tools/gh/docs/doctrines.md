@@ -107,7 +107,8 @@ terms, or be pressured into refusing service, which is precisely what 10.a names
 and what 10.b already settled for money. 8.a settles it for everything else.
 
 **8.b — sovereign self-hosted defaults, paid declared-only** *(ratified by the
-merge that carried this entry)*: every operational surface of vibey defaults to
+merge that carried this entry; its list clarified and extended by the merge that
+carried 8.c)*: every operational surface of vibey defaults to
 the freest, most sovereign, self-hosted, free option — and never, ever, to a paid
 platform. This is specific and enumerated, because a preference without a
 concrete default is a platitude:
@@ -128,18 +129,26 @@ concrete default is a platitude:
   this codebase's own living docs, which are the first documentation surface —
   never to a hosted or paid wiki. Confluence, Notion and GitBook are
   declared-only.
-- **Secrets** default to **self-hosted, free Bitwarden**, never to a hosted or
-  paid vault. LastPass, 1Password and Proton (Pass) are declared-only.
+- **Secrets** default to **self-hosted, free OpenBao**, never to a hosted or
+  paid vault. Bitwarden stays the sovereign vault for a person's own passwords
+  on their handsets and browsers, but offers no self-hostable server that holds
+  a machine's secrets. LastPass, 1Password and Proton (Pass) are declared-only.
 - **Files** default to **self-hosted, free Nextcloud**, never to a hosted or
   paid drive. Google Drive and Apple iCloud are declared-only.
-- **Email** defaults to **self-hosted, free Forward Email**, never to a hosted
+- **Email** defaults to **self-hosted, free SMTP** — Postfix in the cluster, or
+  a self-hosted Forward Email — reached through one SMTP adapter, never a hosted
   or paid provider. Proton Mail, Gmail and Apple Mail are declared-only.
-- **SMS** defaults to **self-hosted, free Fossify Messages**, never to a hosted
-  or paid app. Google Messages and Apple iMessage are declared-only.
+- **SMS** defaults to a **self-hosted, free Kannel gateway**, with **Fossify
+  Messages** on the operator's handsets, never a hosted or paid service. Google
+  Messages and Apple iMessage are declared-only.
 - **Messaging** defaults to **Matrix** (a FOSS, self-hostable homeserver with
   the Element client) — never a hosted or paid chat. Signal, Discord, Slack,
   Zoom, WhatsApp, Telegram, Facebook Messenger, Instagram and TikTok are
   declared-only.
+- **Configuration** defaults to **self-hosted Infisical**, the **cache** to
+  **Redis**, the **bus** to **RabbitMQ**, **blob storage** to **Garage** (the S3
+  protocol) and **security events** to **Wazuh**, each running in the operator's
+  own cluster. Their hosted equivalents are declared-only.
 
 Every surface speaks **one vibey-owned protocol**, the same protocol everywhere —
 engines (`domain/engine.py`, ADR-0005), cloud (`CloudClientPort`), forge
@@ -160,6 +169,33 @@ relay adapter on the same protocol, feeding the sovereign host rather than
 substituting for it. "Self-hosted" and "free" are both load-bearing: a free tier
 that still runs on someone else's machine is a counterparty (10.a), not a
 sovereign default, and is at best a declared relay.
+
+**8.c — every loop runs once, fed by a queue** *(ratified by the merge that
+carried this entry)*: every loop — `qwenloop`, `opencodeloop`, `claudeloop`,
+`codexloop`, `cursorloop`, `agyloop`, and any loop the family adds — runs as
+**a single instance per deployment** (one machine, or one cluster), and that
+instance takes its work from **a queue** on the bus surface (8.b). Nothing starts
+a second instance of a loop to go faster, and nothing spawns a loop directly:
+vibey's workers, storms and the command line put work on the loop's queue, and
+the one instance is shared by all of them.
+
+The instance takes on as much work at once as its capacity allows — for a model
+running on the operator's own hardware, one run at a time — and no more.
+Everything else waits in the queue, where waiting is ordered, visible and safe.
+Throughput is raised by giving the one instance more capacity, never by starting
+another.
+
+This is a rule about performance, learned by measurement rather than assumed. A
+model loaded once and fed in order does more work than copies of it contending
+for the same memory: on 2026-09-22, three `qwenloop` sessions sharing one local
+model server overflowed its shared context, and all three timed out; one at a
+time, they run. A queue turns contention into order, a single instance keeps one
+model resident and one set of credentials and rate limits per paid engine, and
+the queue itself becomes the visible record of what is waiting.
+
+It keeps the family's replay rule intact. When the single instance dies, its
+unfinished work returns to the queue for the instance that replaces it: a
+restart, never a second copy, is how a loop survives a death.
 
 ## 9 — The vibe
 
