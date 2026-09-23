@@ -68,7 +68,11 @@ def test_every_emphasis_closes_on_the_line_it_opens() -> None:
 
 def test_the_rendered_body_contains_no_escaped_tex() -> None:
     doc = convert(PAPER.read_text(encoding="utf-8"))
-    escaped = [line for line in doc.body if r"\textbackslash{}" in line or r"\$" in line]
+    # A figure passes through verbatim, and a TikZ line break before math (`\\$x$`)
+    # contains the two characters of an escaped dollar without being one.
+    escaped = [
+        line for line in doc.body if r"\textbackslash{}" in line or re.search(r"(?<!\\)\\\$", line)
+    ]
     assert not escaped, f"math or TeX reached the escaper: {escaped[:3]}"
 
 

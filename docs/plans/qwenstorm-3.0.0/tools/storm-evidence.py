@@ -263,7 +263,6 @@ def summarise(rows: list[dict]) -> dict:
 
 
 def block(summary: dict, gaps: list[str]) -> str:
-    span = f"{summary['first']} to {summary['last']}"
     gap_line = (
         "**Gaps in this span:** " + "; ".join(gaps)
         if gaps
@@ -278,7 +277,8 @@ def block(summary: dict, gaps: list[str]) -> str:
 | quantity | value |
 |---|---|
 | ledger records | {summary["records"]} |
-| span consumed | {span} |
+| span consumed from | {summary["first"]} |
+| span consumed to | {summary["last"]} |
 | lanes observed | {summary["lanes"]} |
 | lanes claiming completion | {summary["completed"]} |
 | lane starts / ends logged | {summary["starts"]} / {summary["ends"]} |

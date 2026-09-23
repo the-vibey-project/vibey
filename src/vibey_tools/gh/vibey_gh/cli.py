@@ -34,6 +34,7 @@ from vibey_gh.config import load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
 from vibey_gh.interfaces.marketplace_renderer_interface import MarketplaceRendererInterface
+from vibey_gh.interfaces.paper_interface import RevisionReaderInterface
 from vibey_gh.review_composition import PAID_HALVES, REVIEW_COMPOSER
 
 
@@ -952,7 +953,36 @@ def _doctor(args) -> int:
     return 0
 
 
-def _paper(args) -> int:
+def _paper_provenance(args, reader: RevisionReaderInterface | None = None):
+    """The article's provenance from the flags and, with `--provenance`, from git and the clock.
+
+    Nothing here is typed by a person: the revision and its commit time come from the
+    checkout (or the `--revision` the workflow already holds), the render time from the
+    clock, and the names, addresses and links from configuration.
+    """
+    from vibey_gh import paper
+
+    if not args.provenance:
+        return None
+    selected = reader if reader is not None else paper.RevisionReader(Path.cwd())
+    sha, committed_at, committed_unix = selected.read(args.revision or "HEAD")
+    now = datetime.now(UTC).replace(microsecond=0)
+    return paper.Provenance(
+        author=args.author,
+        email=args.email,
+        affiliation=args.affiliation,
+        author_url=args.author_url,
+        site_url=args.site,
+        repository_url=args.repository,
+        revision=sha,
+        committed_at=committed_at,
+        committed_unix=committed_unix,
+        rendered_at=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        rendered_unix=int(now.timestamp()),
+    )
+
+
+def _paper(args, reader: RevisionReaderInterface | None = None) -> int:
     from vibey_gh import paper
     from vibey_gh.docx import DocxError
 
@@ -961,6 +991,7 @@ def _paper(args) -> int:
     output_format = args.format or ("docx" if out.suffix.casefold() == ".docx" else "tex")
     try:
         markdown = source.read_text(encoding="utf-8")
+        provenance = _paper_provenance(args, reader)
         out.parent.mkdir(parents=True, exist_ok=True)
         if output_format == "docx":
             paper.write_docx(
@@ -969,6 +1000,7 @@ def _paper(args) -> int:
                 author=args.author,
                 journal=args.journal,
                 keywords=args.keywords,
+                provenance=provenance,
             )
             print(f"docx: {out}")
             return 0
@@ -977,12 +1009,65 @@ def _paper(args) -> int:
             author=args.author,
             journal=args.journal,
             keywords=args.keywords,
+            provenance=provenance,
         )
     except (paper.PaperError, DocxError, OSError) as error:
         print(f"vibey-gh paper: {error}", file=sys.stderr)
         return 1
     out.write_text(tex, encoding="utf-8")
     print(f"tex: {out}")
+    return 0
+
+
+def _paper_figures(args) -> int:
+    """Emit the paper's figures as standalone TeX, or inline their SVG renderings.
+
+    Two halves of one pipeline that a TeX engine sits between. `--emit DIR` writes one
+    standalone document per figure plus a manifest; the workflow compiles each with the
+    pinned Tectonic and converts the page to SVG. `--inline SVGDIR --output FILE` then
+    writes the paper with every rendered figure embedded, for the site and the book.
+    """
+    from vibey_gh import paper
+
+    source = Path(args.source)
+    try:
+        markdown = source.read_text(encoding="utf-8")
+        found = paper.figures(markdown)
+        if args.emit is not None:
+            target = Path(args.emit)
+            target.mkdir(parents=True, exist_ok=True)
+            manifest = []
+            for figure in found:
+                stem = figure.label.replace(":", "-")
+                (target / f"{stem}.tex").write_text(paper.figure_document(figure), encoding="utf-8")
+                manifest.append(
+                    {
+                        "label": figure.label,
+                        "file": f"{stem}.tex",
+                        "environment": figure.environment,
+                    }
+                )
+            (target / "manifest.json").write_text(
+                json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+            )
+            print(f"figures: {len(manifest)} emitted into {target}")
+            return 0
+        svg_dir = Path(args.inline)
+        rendered = {}
+        for figure in found:
+            candidate = svg_dir / f"{figure.label.replace(':', '-')}.svg"
+            if candidate.is_file():
+                rendered[figure.label] = candidate.read_text(encoding="utf-8")
+        output = Path(args.output) if args.output else source
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(paper.inline_figures(markdown, rendered), encoding="utf-8")
+        missing = [f.label for f in found if f.label not in rendered]
+        print(f"figures: {len(rendered)} of {len(found)} inlined into {output}")
+        if missing:
+            print("figures without a rendering, kept as source: " + ", ".join(missing))
+    except (paper.PaperError, OSError) as error:
+        print(f"vibey-gh paper-figures: {error}", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -1767,7 +1852,34 @@ def main(argv: list[str] | None = None) -> int:
     pp.add_argument("--author", required=True)
     pp.add_argument("--journal", action="store_true", help="journal layout instead of conference")
     pp.add_argument("--keywords", default="")
+    # What a submitted article states about itself, never typed by hand: with
+    # --provenance the revision and its commit time are read from git (or --revision),
+    # the render time from the clock, and the rest from these flags.
+    pp.add_argument(
+        "--provenance",
+        action="store_true",
+        help="state the revision, dates and authorship in the byline, first-page note and"
+        " wherever the source writes <!-- vibey:provenance -->",
+    )
+    pp.add_argument("--revision", default="", help="the revision to state (default: HEAD)")
+    pp.add_argument("--email", default="", help="the corresponding author's email address")
+    pp.add_argument("--affiliation", default="", help="the author's affiliation line")
+    pp.add_argument("--author-url", default="", help="the author's own address")
+    pp.add_argument("--site", default="", help="the published documentation site")
+    pp.add_argument("--repository", default="", help="the repository the revision belongs to")
     pp.set_defaults(func=_paper)
+    pf = sub.add_parser(
+        "paper-figures",
+        help="emit the paper's figures as standalone TeX, or inline their SVG renderings",
+    )
+    pf.add_argument("--source", default="docs/paper.md")
+    mode = pf.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--emit", help="write one standalone .tex per figure into this directory")
+    mode.add_argument("--inline", help="read <label>.svg files from this directory and inline them")
+    pf.add_argument(
+        "--output", default="", help="with --inline: where to write (default: the source)"
+    )
+    pf.set_defaults(func=_paper_figures)
     bk = sub.add_parser(
         "book",
         help="export the built docs site as an EPUB and a KDP print-ready HTML",

@@ -239,6 +239,9 @@ def test_documentation_treats_repo_root_source_as_safe(tmp_path: Path):
         {"preview_label": ""},
         {"author_name": ""},
         {"author_url": ""},
+        {"author_email": "not an address"},
+        {"author_email": "a@b.c\n"},
+        {"author_affiliation": "<b>bold</b>"},
     ],
 )
 def test_documentation_rejects_unsafe_or_empty_configuration(kwargs):
