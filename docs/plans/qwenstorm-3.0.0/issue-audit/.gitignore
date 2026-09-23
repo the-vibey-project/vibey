@@ -1,0 +1,4 @@
+# Append-only audit log, written continuously by a live filing run. Tracking it makes
+# every push race the pre-push hooks ("files were modified by this hook"). The durable
+# record is issue-map.tsv, which is tracked.
+filing-log.tsv
