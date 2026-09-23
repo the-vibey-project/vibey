@@ -62,6 +62,8 @@ Book = "https://the-vibey-project.github.io/vibey/main/book.pdf"
 Source = "https://github.com/the-vibey-project/vibey"
 Issues = "https://github.com/the-vibey-project/vibey/issues"
 Changelog = "https://github.com/the-vibey-project/vibey/blob/main/CHANGELOG.md"
+Discord = "https://discord.gg/Qvu8aYnVS"
+"Join me" = "https://vibewithadam.matthewsteinberger.com/join-me"
 
 # Twelve console scripts, one install (ADR-0037). Each is the entry point its own tenant
 # declared while it was published separately; the name and target are unchanged, only the

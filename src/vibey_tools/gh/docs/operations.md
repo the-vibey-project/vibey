@@ -48,6 +48,18 @@ something else in production:
   fallback works only if that account holds a bypass role on the ruleset; the token's
   permissions cannot add standing its owner does not have.
 
+## `DISCORD_WEBHOOK_URL` (optional)
+
+`Release surfaces` ends its documentation deploy by announcing what it published: the
+channel, the revision, and a link to each surface the deploy actually produced (the
+paper as PDF, DOCX and HTML; the book as PDF, EPUB and print HTML). It posts through a
+Discord webhook held in the repository secret `DISCORD_WEBHOOK_URL`. The secret is
+optional: with none set, the step prints `announce: no DISCORD_WEBHOOK_URL secret is
+set; nothing posted` and passes, so a missing announcement is visible in the log
+rather than silent. The webhook URL is a credential (whoever holds it can post as the
+project); it lives only in the secret, and a tree-wide check refuses any tracked file
+that carries one.
+
 ## Recovering from a review with no verdict
 
 `PR review: review incomplete` (behind a green `PR evaluate / gate` scan gate) means the primary exact-head review returned no verdict

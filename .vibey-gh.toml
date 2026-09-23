@@ -258,6 +258,10 @@ math = true
 # The named author of the published paper, the book and every page's metadata. Unset, the
 # exporters fall back to the GitHub owner and the paper's byline reads "the-vibey-project".
 author = "Adam Matthew Steinberger"
+# The paper's corresponding author, stated in its byline and first-page provenance note
+# beside the revision it was rendered from and the time it was rendered.
+author_email = "adam@matthewsteinberger.com"
+author_affiliation = "The Vibey Project"
 # The living-roadmap doctrine (Doctrine 11, src/vibey_tools/gh/docs/doctrines.md) defaults
 # require_roadmap to true.
 # The operator has twice declined roadmap drafts for this repository and owns the decision on its shape; the check stays off until they write the roadmap they want.

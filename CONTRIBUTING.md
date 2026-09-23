@@ -261,7 +261,15 @@ docs site beside the pages they mirror:
   and published as [HTML](https://the-vibey-project.github.io/vibey/main/paper/).
   Keep it to the constrained Markdown the renderer converts: a `# Title`, a
   `**Abstract.**` paragraph, `##` sections, lists, tables, ```` ```latex ````
-  fences, and a `## References` list.
+  fences, and a `## References` list. Figures are TikZ inside those fences, drawn
+  with the flat house styles `vibey_gh.paper.PREAMBLE` defines; a two-column
+  figure fits 516pt, a one-column figure 252pt, measured in the paper's own fonts
+  (TeX Gyre Termes, Heros and Cursor through `fontspec`, since IEEEtran's Times,
+  Helvetica and Courier have no definitions under XeTeX). The fifteen empirical
+  figures between `BEGIN GENERATED figure:` markers are written by
+  `scripts/paper_figures.py` from tracked records and checked for drift with
+  `--check`; every section closes with a `plainwords` box that restates it for a
+  reader outside the field.
 - **The book.** Every page in `properdocs.yml` nav order, exported by
   `vibey-gh book` as [PDF](https://the-vibey-project.github.io/vibey/main/book.pdf),
   [EPUB](https://the-vibey-project.github.io/vibey/main/book.epub) and
@@ -291,7 +299,9 @@ copies of everything are published under `/develop/`.
 
 See [SUPPORT.md](SUPPORT.md) for the right channel. Usage questions belong
 in [Discussions](https://github.com/the-vibey-project/vibey/discussions), not
-bug reports.
+bug reports. Contributors talk on the [Discord server](https://discord.gg/Qvu8aYnVS);
+if you want to build the autonomous-delivery stack with us, start at
+[join me](https://vibewithadam.matthewsteinberger.com/join-me).
 
 ## Code of Conduct
 

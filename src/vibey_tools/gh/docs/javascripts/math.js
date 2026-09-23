@@ -21,6 +21,7 @@
     proposition: "Proposition",
     corollary: "Corollary",
     proof: "Proof",
+    plainwords: "In plain words",
   };
 
   const MATH_ENVIRONMENTS = [
@@ -83,6 +84,20 @@
       const block = document.createElement("div");
       block.className = "arithmatex";
       block.innerHTML = `\\[ ${source} \\]`;
+      return block;
+    }
+    if (name === "figure" || name === "figure*") {
+      // A figure the build rendered arrives as an inline <figure> already; one that
+      // reaches the browser as TeX was not rendered, and a page of TikZ source helps
+      // nobody. Show the caption, and say where the drawing itself can be seen.
+      const captionMatch = source.match(/\\caption\{((?:[^{}]|\{[^{}]*\})*)\}/);
+      const block = document.createElement("figure");
+      block.className = "paper-figure paper-figure-unrendered";
+      counters.figure = (counters.figure || 0) + 1;
+      const caption = captionMatch ? inlineMath(captionMatch[1].replace(/\s+/g, " ")) : "";
+      block.innerHTML =
+        `<figcaption><strong>Figure ${counters.figure}.</strong> ${caption} ` +
+        `<em>(This figure is drawn in the PDF edition of the paper.)</em></figcaption>`;
       return block;
     }
     return null;

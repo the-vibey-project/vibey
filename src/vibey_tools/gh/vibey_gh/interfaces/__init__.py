@@ -114,7 +114,13 @@ from vibey_gh.interfaces.forge_snapshot_interface import (
     ChainHeadInterface,
     ForgeReadInterface,
 )
-from vibey_gh.interfaces.paper_interface import PaperDocumentInterface, PaperErrorInterface
+from vibey_gh.interfaces.paper_interface import (
+    PaperDocumentInterface,
+    PaperErrorInterface,
+    PaperFigureInterface,
+    PaperProvenanceInterface,
+    RevisionReaderInterface,
+)
 from vibey_gh.interfaces.review_composition_interface import (
     ReviewComposerInterface,
     ReviewComposerPort,
@@ -195,6 +201,8 @@ __all__ = [
     "OperationEstimateInterface",
     "PaperDocumentInterface",
     "PaperErrorInterface",
+    "PaperFigureInterface",
+    "PaperProvenanceInterface",
     "PhiConfigInterface",
     "PipelineVerdictInterface",
     "PlatformConfigInterface",
@@ -214,6 +222,7 @@ __all__ = [
     "ReviewContractInterface",
     "ReviewContractPort",
     "ReviewThreadInterface",
+    "RevisionReaderInterface",
     "RulesetConfigInterface",
     "RulesetsConfigInterface",
     "SampleInterface",

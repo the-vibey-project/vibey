@@ -380,6 +380,17 @@ proof sketch — is the research paper, *Ledger-Mediated Orchestration: Vendor-I
 | Getting help | [SUPPORT.md](https://github.com/the-vibey-project/vibey/blob/main/SUPPORT.md) |
 | Code of Conduct | [CODE_OF_CONDUCT.md](https://github.com/the-vibey-project/vibey/blob/main/CODE_OF_CONDUCT.md) |
 | Changelog | [CHANGELOG.md](https://github.com/the-vibey-project/vibey/blob/main/CHANGELOG.md) |
+| Community | [Discord](https://discord.gg/Qvu8aYnVS) · [Join me](https://vibewithadam.matthewsteinberger.com/join-me) |
+
+## Join the community
+
+vibey is free and open-source software, and it is built in the open. If you write
+software and want to build the autonomous-delivery stack with us, come and say hello
+on [Discord](https://discord.gg/Qvu8aYnVS), and read
+[how to join me](https://vibewithadam.matthewsteinberger.com/join-me). Questions,
+critiques, pull requests and wild ideas are all welcome.
+
+<iframe src="https://discord.com/widget?id=1552349678215893002&theme=dark" width="350" height="500" allowtransparency="true" frameborder="0" sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts" title="The vibey Discord server"></iframe>
 
 ## Related projects
 

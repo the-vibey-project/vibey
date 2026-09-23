@@ -1217,6 +1217,10 @@ class DocumentationConfig:
     bottom_nav: bool = True
     author_name: str = "Adam Matthew Steinberger"
     author_url: str = "https://vibewithadam.matthewsteinberger.com"
+    # The paper's corresponding-author details. Both are stated in the rendered paper's
+    # byline and provenance note when set, and omitted when empty; neither is invented.
+    author_email: str = ""
+    author_affiliation: str = ""
     # Everything below describes what a repository requires of ITS OWN documentation.
     # A project that installs vibey-gh documents its product, not this tool, so each of
     # these is empty until the repository declares it.
@@ -1371,11 +1375,20 @@ class DocumentationConfig:
             ("twitter_site", self.twitter_site),
             ("twitter_creator", self.twitter_creator),
             ("author", self.author),
+            ("author_affiliation", self.author_affiliation),
             ("theme_color", self.theme_color),
             ("locale", self.locale),
         ):
             if any(ch in value for ch in '<>"\n'):
                 raise ValueError(f"documentation.{name} must not contain HTML or quotes")
+        # The address lands in a byline and a shell command line: one mailbox, one host,
+        # nothing that could close a quote or start a second argument.
+        if self.author_email and not re.match(
+            r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$", self.author_email
+        ):
+            raise ValueError(
+                f"documentation.author_email must be empty or a plain address: {self.author_email!r}"
+            )
         for word in self.keywords:
             if any(ch in word for ch in '<>"\n,'):
                 raise ValueError("documentation.keywords entries must be plain words")
@@ -2039,6 +2052,8 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             author_url=documentation.get(
                 "author_url", "https://vibewithadam.matthewsteinberger.com"
             ),
+            author_email=documentation.get("author_email", ""),
+            author_affiliation=documentation.get("author_affiliation", ""),
             readme_sections=tuple(documentation.get("readme_sections", ())),
             automation_doc=documentation.get("automation_doc", DEFAULT_AUTOMATION_DOC),
             # The former names are still read. They described a file this no longer points

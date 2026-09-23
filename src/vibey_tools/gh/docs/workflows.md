@@ -360,6 +360,12 @@ for the same commit, and uploads `paper.pdf`, `book.epub`, `book.pdf` and
 from the Releases page after the site has been rebuilt or moved. A Release that never
 appears is a warning, not a failed documentation deploy.
 
+Once the Pages deploy has succeeded, the `docs` job announces what it published: the
+channel, the revision, and a link to each surface the deploy actually produced, posted
+through the optional repository secret `DISCORD_WEBHOOK_URL` (see
+[operations](operations.md)). With no secret set the step says so and passes, so a
+missing announcement is a line in the log rather than a silence.
+
 With `documentation.governance_source` set, the `docs` job also publishes the governance
 corpus — the Constitution, the doctrines, the commandments, the bill of rights and every
 standing subdoctrine — as a **Governance** section of the channel site, copied from its

@@ -71,6 +71,10 @@ jobs:
       VIBEY_TEST_DATABASE_URL: postgresql://vibey:vibey@localhost:5432/vibey_test
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The paper's history figures are recomputed from the full log at their pinned
+          # revision (tests/meta/test_paper_figures.py); a shallow clone cannot check them.
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
