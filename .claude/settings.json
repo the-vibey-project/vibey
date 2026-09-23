@@ -50,6 +50,7 @@
       "allowWrite": ["~/.cache/uv"]
     },
     "network": {
+      "allowLocalBinding": true,
       "allowedDomains": [
         "github.com",
         "api.github.com",
