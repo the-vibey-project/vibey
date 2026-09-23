@@ -10,7 +10,7 @@ repos:
     hooks:
       - id: test-suite
         name: parallel test suite
-        entry: uv run pytest -q -p no:cacheprovider
+        entry: uv run --extra dev pytest -q -p no:cacheprovider
         language: system
         pass_filenames: false
         # `stages: [pre-push]`, like every other local hook below. Without it pre-commit
@@ -25,35 +25,35 @@ repos:
 
       - id: mypy
         name: mypy --strict
-        entry: uv run mypy --strict src/vibey
+        entry: uv run --extra dev mypy --strict src/vibey
         language: system
         pass_filenames: false
         stages: [pre-push]
 
       - id: lint-imports
         name: import-linter onion contract
-        entry: uv run lint-imports
+        entry: uv run --extra dev lint-imports
         language: system
         pass_filenames: false
         stages: [pre-push]
 
       - id: coverage-gates
         name: per-layer 100% coverage gates
-        entry: bash -c 'uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run coverage report --include="src/vibey/domain/*" --fail-under=100 && uv run coverage report --include="src/vibey/application/*" --fail-under=100 && uv run coverage report --include="src/vibey/infrastructure/*" --fail-under=100 && uv run coverage report --include="src/vibey/cli/*" --fail-under=100'
+        entry: bash -c 'uv run --extra dev pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run --extra dev coverage report --include="src/vibey/domain/*" --fail-under=100 && uv run --extra dev coverage report --include="src/vibey/application/*" --fail-under=100 && uv run --extra dev coverage report --include="src/vibey/infrastructure/*" --fail-under=100 && uv run --extra dev coverage report --include="src/vibey/cli/*" --fail-under=100'
         language: system
         pass_filenames: false
         stages: [pre-push]
 
       - id: bandit
         name: bandit
-        entry: uv run bandit -q -r src/vibey
+        entry: uv run --extra dev bandit -q -r src/vibey
         language: system
         pass_filenames: false
         stages: [pre-push]
 
       - id: pip-audit
         name: pip-audit
-        entry: uv run pip-audit
+        entry: uv run --extra dev pip-audit
         language: system
         pass_filenames: false
         stages: [pre-push]
