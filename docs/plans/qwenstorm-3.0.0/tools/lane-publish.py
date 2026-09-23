@@ -1,12 +1,22 @@
 """Publish the lanes that have actually earned it: commit, push, open a pull request.
 
-    python3 lane-publish.py                  # report what is ready; change nothing
+    python3 lane-publish.py                  # report what is ready; write nothing
     python3 lane-publish.py --publish        # commit, push and open a PR for each ready lane
     python3 lane-publish.py --publish --only rmq-r03-amqp-dependency
     python3 lane-publish.py --watch 600      # re-check every 600s, publishing as lanes ripen
 
 Never merges. A pull request is where a human looks; this stops there, and `--publish` is
 required before anything leaves the machine.
+
+REPORT MODE WRITES NOTHING
+--------------------------
+Without `--publish` this records nothing: not a commit, not a branch, and not a lane's
+`verify.json`. It used to shell out to `lane-verify.py`, whose whole job is to write that
+file, so every "report; change nothing" pass rewrote the verdict of every unsettled lane --
+a report that edits the evidence it reports on. Report mode now asks lane-verify's own
+`verify()` for the answer in-process and keeps it; only `--publish` has lane-verify record
+it. What report mode still does is RUN each lane's checks, because that is the measurement;
+the tools those checks invoke may leave their usual caches inside the lane.
 
 WHY THE GATE IS NOT THE LANE'S OWN VERDICT
 ------------------------------------------
@@ -33,6 +43,8 @@ printed. Silence is never taken for success.
 """
 
 import argparse
+import functools
+import importlib.util
 import json
 import os
 import re
@@ -43,6 +55,7 @@ import time
 from pathlib import Path
 from typing import NamedTuple
 
+import storm_forge
 import storm_paths
 
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
@@ -74,13 +87,18 @@ SAFE = (
     "black",
     "isort",
     "lint-imports",
+    "bandit",
     "grep",
     "git",
 )
 
 
 def run(
-    argv: list[str], cwd: Path, timeout: int = 900, extra: dict[str, str] | None = None
+    argv: list[str],
+    cwd: Path,
+    timeout: int = 900,
+    extra: dict[str, str] | None = None,
+    drop: tuple[str, ...] = (),
 ) -> tuple[int, str]:
     # VIRTUAL_ENV is inherited from whatever shell started this, and `uv run` obeys it: a lane's
     # checks would then run against the environment of the checkout this script was launched
@@ -90,6 +108,10 @@ def run(
     # What the spec set with `export` or a `NAME=value` prefix. Applied last, because a
     # check that names a variable means its value, not the launching shell's.
     env.update(extra or {})
+    # And what it unset with `env -u NAME`, which removes the name from the environment
+    # the check runs in rather than setting it to an empty string.
+    for name in drop:
+        env.pop(name, None)
     try:
         done = subprocess.run(
             argv, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=env
@@ -165,6 +187,49 @@ def issue_of(slug: str) -> int | None:
 ANNOTATION = re.compile(r"\(\s*(?:run\s+)?in\s+`?[\w./-]+`?\s*\)")
 # A leading `NAME=value`, the one piece of shell syntax that needs no shell to honour.
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+# The parameter expansions an assignment's value may use: `$NAME`, `${NAME}`, and the
+# defaulted `${NAME:-fallback}` / `${NAME-fallback}`. Anything else a shell can do inside
+# `${...}` is refused by name rather than passed through as literal text.
+PARAMETER = re.compile(
+    r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?:(:?)-([^}]*))?\}|\$([A-Za-z_][A-Za-z0-9_]*)"
+)
+
+
+def expand(value: str, known: dict[str, str]) -> str | None:
+    """An assignment's value as a shell would have expanded it, or None if it cannot be.
+
+    `os.path.expandvars` used to do this, and it leaves anything it does not understand
+    exactly as written. orm-bootstrap-async-engine's spec sets
+    `VIBEY_TEST_DATABASE_URL=${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@...}`, and the
+    test would have received that text, braces and all, as its database URL: a check that
+    runs and means nothing. An unset `$NAME` is empty, as in a shell; a form this does not
+    honour leaves a `$` or a backtick behind, and the line is reported rather than run.
+    """
+
+    def one(match: re.Match[str]) -> str:
+        braced, colon, fallback, bare = match.groups()
+        current = known.get(braced or bare)
+        if fallback is not None and (current is None or (colon and current == "")):
+            return PARAMETER.sub(one, fallback)
+        return current or ""
+
+    out = PARAMETER.sub(one, value)
+    return None if "$" in out or "`" in out else out
+
+
+def tokens(command: str) -> list[str]:
+    """A command split the way a shell splits it, unquoted parentheses as tokens of their own.
+
+    `shlex.split` returns `(cd` and `pytest)` for a subshell, which cannot be told apart from
+    a quoted argument that happens to hold a parenthesis. Split with `(` and `)` as
+    punctuation, an unquoted one arrives alone while `"print(1)"` stays whole inside its
+    quotes -- so a subshell is recognised by its structure, not by guessing at the first and
+    last characters of a line.
+    """
+    lexer = shlex.shlex(command, posix=True, punctuation_chars="()")
+    lexer.whitespace_split = True
+    lexer.commenters = "#"
+    return list(lexer)
 
 
 class Check(NamedTuple):
@@ -173,6 +238,7 @@ class Check(NamedTuple):
     argv: list[str]
     cwd: Path
     env: dict[str, str]
+    unset: tuple[str, ...] = ()  # names `env -u` removes, for this command alone
 
 
 def where(lane: Path, raw: str) -> Path:
@@ -288,7 +354,13 @@ def block_of(text: str) -> str | None:
         return None
     section = text.split("## Checks the lane must run", 1)[1].split("\n## ", 1)[0]
     if "```" not in section:
-        return section  # an indented block, which has no closing marker to find
+        # An indented block, which has no closing marker to find -- but Markdown says what it
+        # is: the indented lines. An unindented line is prose, and read as a command it was
+        # worse than noise. orm-bootstrap-async-engine's block is followed by "...the
+        # tenant's own\npytest `addopts`, so a partial run needs `--no-cov`", and the second
+        # line begins with `pytest`: it ran as a check, failed, and held the lane on a command
+        # its spec never wrote, while the block's four real checks were never read at all.
+        return "\n".join(line for line in section.splitlines() if line.startswith(("    ", "\t")))
     # Everything after the opening fence begins with its info string -- "bash" -- which is
     # not a check. Stripping backticks off the raw line cannot remove it, because by then it
     # no longer looks like a fence.
@@ -303,6 +375,17 @@ def parse_checks(text: str, lane: Path) -> tuple[list[Check], list[tuple[str, st
     is told which of their check lines will never run -- by this parser, not by a second
     copy of its rules that can drift from it (10.e). A gate nobody knows is off is the
     cheapest way to ship an unverified lane, and the storm shipped several.
+
+    EVERY LINE IS EITHER RUN, CLASSIFIED, OR REPORTED
+    -------------------------------------------------
+    There is no fourth outcome. A comment and a fence are classified and passed over; every
+    other line becomes a check or lands in the dropped list with its reason, and
+    `ready()` holds a lane for any dropped line (10.f: a check that never ran is not a check
+    that passed). The silent fourth outcome is what hid 80 subshell lines in 28 specs: lines
+    beginning `(` were skipped with the comments, so `(cd src/vibey_runners/qwen && uv run
+    python -m pytest -q)` never ran, and harness-T20a and T20c were reported READY on the
+    strength of `ruff` alone. A subshell is now a chained line -- its `cd` scoped to itself,
+    which is exactly what the parentheses meant -- and a list item is reported, not skipped.
     """
     block = block_of(text)
     if block is None:
@@ -313,21 +396,36 @@ def parse_checks(text: str, lane: Path) -> tuple[list[Check], list[tuple[str, st
     exported: dict[str, str] = {}
     for raw in block.splitlines():
         line = raw.strip().strip("`")
-        if not line or line.startswith(("#", "```", "-", "(", "*")):
+        if not line or line.startswith(("#", "```")):
+            continue  # a comment or a fence: classified, and nothing to run
+        if line.startswith(("-", "*")):
+            dropped.append((line, "a list item, not a command"))
             continue
         # The directory annotation is prose for a person, not an argument for the command --
-        # `where()` has already read it. And `comments=True`: a check written as
+        # `where()` has already read it. And comments are stripped: a check written as
         # `python -m pytest -q # whole suite` otherwise hands pytest `#`, `whole` and `suite`
         # as paths, which is a large part of why tenant checks answered "no tests ran".
         command = ANNOTATION.sub("", line).strip()
         try:
-            parts = shlex.split(command, comments=True)
+            parts = tokens(command)
         except ValueError:
             # Unbalanced quotes: the line is not a command anybody could run, and guessing
             # where the quote was meant to close would be inventing the check.
             dropped.append((line, "unbalanced quotes"))
             continue
         if not parts:
+            continue
+        # `( ... )` around the whole line is a subshell: run it, with any `cd` inside it
+        # scoped to the line. A parenthesis anywhere else -- or one left unclosed -- stays in
+        # the tokens and is refused below as the shell syntax it is.
+        subshell = len(parts) > 2 and parts[0] == "(" and parts[-1] == ")"
+        if subshell:
+            parts = parts[1:-1]
+        if "(" in parts or ")" in parts:
+            # Refused for the whole line, not one segment of it: an unclosed or nested group
+            # changes what every command on the line means, so none of them is the check the
+            # author wrote.
+            dropped.append((line, "needs a shell (a parenthesis) and the lane's tool has none"))
             continue
         # SPLIT ON `&&` AFTER shlex, NEVER BEFORE
         # 555 of 643 specs -- 86% -- carried a check line joined with `&&`, and every one of
@@ -348,8 +446,11 @@ def parse_checks(text: str, lane: Path) -> tuple[list[Check], list[tuple[str, st
         # Treating a chained `cd` as persistent compounds them, so a spec visiting two tenants
         # on two lines goes looking for `gh/src/vibey_runners/qwen`; 71 specs lost every check
         # after their first tenant line that way.
-        chained = len(segments) > 1
+        chained = len(segments) > 1 or subshell
         run_from = here
+        # What `export` sets inside a subshell ends with it, as it would in a shell; on a
+        # plain line it persists for the rest of the block.
+        scope = exported
         stop = False
         for parts in segments:
             if not parts:
@@ -366,13 +467,29 @@ def parse_checks(text: str, lane: Path) -> tuple[list[Check], list[tuple[str, st
             # `FOO=bar cmd ...` and a bare `export FOO=bar` are the same syntax: leading
             # assignments. 261 `export` lines and 96 `VAR=value cmd` prefixes were dropped
             # for being "not a command", which is true of the first token and not of the line.
-            env = dict(exported)
-            while parts and ASSIGNMENT.match(parts[0]):
-                name, _, value = parts[0].partition("=")
-                env[name] = os.path.expandvars(value)
+            env = dict(scope)
+            unset: list[str] = []
+            parts, why = assigned(parts, env)
+            if why is None and parts and parts[0] == "env":
+                # `env -u NAME ... NAME=value ... cmd`: the same leading assignments, plus
+                # names to remove. fakes-harness-decouple's suite line began this way and was
+                # dropped as "'env' is not a command", so its whole-suite gate never ran.
                 parts = parts[1:]
+                while len(parts) > 1 and parts[0] in ("-u", "--unset"):
+                    unset.append(parts[1])
+                    env.pop(parts[1], None)
+                    parts = parts[2:]
+                if parts and parts[0].startswith("-"):
+                    why = f"`env {parts[0]}` is not an option this honours"
+                else:
+                    parts, why = assigned(parts, env)
+                if why is None and not parts:
+                    continue  # `env` with nothing to run changes nothing that persists
+            if why is not None:
+                dropped.append((line, why))
+                continue
             if not parts:
-                exported = env  # nothing left to run: it was an `export`, so it persists
+                scope = env  # nothing left to run: it was an `export`, so it persists
                 continue
             if parts[0] == "cd":
                 moved = inside(lane, run_from, parts[1]) if len(parts) == 2 else None
@@ -393,122 +510,137 @@ def parse_checks(text: str, lane: Path) -> tuple[list[Check], list[tuple[str, st
                 continue
             if parts[0] in SAFE:
                 where_it_runs = where(lane, raw) if ANNOTATION.search(raw) else run_from
-                found.append(Check(parts, where_it_runs, env))
+                found.append(Check(parts, where_it_runs, env, tuple(unset)))
             else:
                 dropped.append((line, f"{parts[0]!r} is not a command this runs"))
+        if not subshell:
+            exported = scope
         if stop:
             break
     return found, dropped
 
 
-def verify(slug: str) -> tuple[bool, list[str]]:
+def assigned(parts: list[str], env: dict[str, str]) -> tuple[list[str], str | None]:
+    """Consume leading `NAME=value` words into `env`: what is left, or why it cannot be run."""
+    while parts and ASSIGNMENT.match(parts[0]):
+        name, _, value = parts[0].partition("=")
+        expanded = expand(value, {**os.environ, **env})
+        if expanded is None:
+            return parts, f"`{name}=` uses a shell expansion this does not perform"
+        env[name] = expanded
+        parts = parts[1:]
+    return parts, None
+
+
+@functools.cache
+def verifier():
+    """`lane-verify.py`, imported by path because its name is not an identifier.
+
+    For its `verify()`, which answers without writing. Its `main()` is what writes
+    `verify.json`, and report mode must not; asking the same function in-process gives the
+    same verdict from the same code without the write (10.e -- one verifier, not two).
+    """
+    spec = importlib.util.spec_from_file_location(
+        "lane_verify", Path(__file__).absolute().with_name("lane-verify.py")
+    )
+    module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    return module
+
+
+def verify(slug: str, record: bool) -> tuple[bool, list[str]]:
     """lane-verify's own verdict for one lane, re-run now rather than read from a stale file.
 
     "nothing committed" is not a reason to refuse: a lane's runner never commits, so every
     lane reads that way, and committing is this script's own first act. Requiring it to be
     absent made publishing impossible -- the one lane that ever passed had been committed by
     hand first. Every other problem still holds the lane.
+
+    `record` is the acting mode's alone: lane-verify runs as itself and writes the lane's
+    `verify.json`. Without it the verdict is computed in-process and nothing is written.
     """
-    code, out = run([sys.executable, str(STORM / "tools/lane-verify.py"), slug], STORM, timeout=900)
-    report = LANES / slug / ".qwenstorm/verify.json"
-    if report.is_file():
-        problems = [
-            p
-            for p in json.loads(report.read_text()).get("problems", [])
-            if not p.startswith("nothing committed")
-        ]
-        return not problems, list(problems)
-    return code == 0, [] if code == 0 else [out.strip().splitlines()[-1] if out else "no report"]
+    if record:
+        code, out = run(
+            [sys.executable, str(STORM / "tools/lane-verify.py"), slug], STORM, timeout=900
+        )
+        report = LANES / slug / ".qwenstorm/verify.json"
+        if not report.is_file():
+            return code == 0, [] if code == 0 else [
+                out.strip().splitlines()[-1] if out else "no report"
+            ]
+        found = json.loads(report.read_text()).get("problems", [])
+    else:
+        try:
+            found = verifier().verify(LANES / slug).get("problems", [])
+        except Exception as exc:  # noqa: BLE001 -- one lane's crash must not end the sweep
+            # Run as a subprocess, a crash in lane-verify was one lane's failed verdict. In
+            # process it would take the whole report down with it, and every other lane's
+            # verdict with it. It is still a verdict, and the lane is held on it.
+            return False, [f"lane-verify could not judge it: {type(exc).__name__}: {exc}"]
+    problems = [p for p in found if not p.startswith("nothing committed")]
+    return not problems, list(problems)
 
 
-def already_published(slug: str) -> str | None:
+def already_published(slug: str, prs: list[storm_forge.PullRequest]) -> str | None:
     """Whether this lane is already out for review.
 
     Without this the sweep republishes anything it published on the previous pass: the gates
     keep passing, so `ready` keeps saying yes. Idempotence has to come from the forge, not
     from remembering -- a local note would be wrong the moment a PR is opened or closed
     anywhere else.
+
+    `prs` is the forge's whole list, read once per sweep (`storm_forge`). A pull request
+    claims this lane if it was opened from the lane's own branch, or if its body CLOSES the
+    lane's issue under any branch name: a lane published by hand will not be sitting on
+    `lane/<slug>`, and rmq-r03-amqp-dependency went out as `feat/amqp-dependency` exactly
+    this way. It asked GitHub's full-text search for that second case until 2026-09-23, and
+    search answers pull requests that merely mention the words and the number -- four lanes
+    were held "already published" on pull requests that close something else, and their
+    check blocks never ran.
     """
     branch = f"lane/{slug}"
-    code, out = run(
-        [
-            "gh",
-            "pr",
-            "list",
-            "--repo",
-            REPO,
-            "--state",
-            "all",
-            "--head",
-            branch,
-            "--json",
-            "number,state",
-        ],
-        STORM,
-        timeout=120,
-    )
-    if code == 0 and out.strip():
-        try:
-            rows = json.loads(out)
-        except json.JSONDecodeError:
-            rows = []
-        if rows:
-            return f"#{rows[0]['number']} ({rows[0]['state'].lower()})"
+    for pr in prs:
+        if pr.head == branch:
+            return f"#{pr.number} ({pr.state.lower()})"
     code, _ = run(["git", "ls-remote", "--exit-code", "--heads", "origin", branch], MAIN, 120)
     if code == 0:
         return "a branch is already pushed"
-    # And a pull request that claims the issue under any branch name: a lane published by hand
-    # will not be sitting on `lane/<slug>`, and republishing it would open a second PR for the
-    # same work. rmq-r03-amqp-dependency went out as `feat/amqp-dependency` exactly this way.
     issue = issue_of(slug)
-    if issue:
-        code, out = run(
-            [
-                "gh",
-                "pr",
-                "list",
-                "--repo",
-                REPO,
-                "--state",
-                "all",
-                "--search",
-                f"Closes #{issue} in:body",
-                "--json",
-                "number,state",
-            ],
-            STORM,
-            timeout=120,
-        )
-        if code == 0 and out.strip():
-            try:
-                rows = json.loads(out)
-            except json.JSONDecodeError:
-                rows = []
-            if rows:
-                return f"#{rows[0]['number']} already closes issue #{issue}"
+    for pr in storm_forge.closing(prs, issue):
+        return f"#{pr.number} ({pr.state.lower()}) already closes issue #{issue}"
     return None
 
 
-def ready(slug: str) -> tuple[bool, list[str]]:
+def ready(slug: str, prs: list[storm_forge.PullRequest], record: bool) -> tuple[bool, list[str]]:
     lane = LANES / slug
     result = lane / ".qwenstorm/result.json"
     if not result.is_file():
         return False, ["still running"]
-    out_already = already_published(slug)
+    out_already = already_published(slug, prs)
     if out_already:
         return False, [f"already published: {out_already}"]
-    clean, problems = verify(slug)
+    clean, problems = verify(slug, record)
     if not clean:
         return False, problems
-    ran = checks_of(lane)
-    if not ran:
+    issue = lane / ".qwenstorm/issue.md"
+    ran, dropped = (
+        parse_checks(issue.read_text(encoding="utf-8"), lane) if issue.is_file() else ([], [])
+    )
+    if not ran and not dropped:
         return False, ["its spec names no check block this script can run"]
     failures = []
     for check in ran:
         argv = resolve(lane, check.argv)
-        code, out = run(argv, check.cwd, extra=check.env)
+        code, out = run(argv, check.cwd, extra=check.env, drop=check.unset)
         if code:
             failures.append(f"check failed: {' '.join(argv)[:55]} -- {why_failed(out)[:110]}")
+    # Last, so a real failure is the first reason a person reads -- but always, because a
+    # check that never ran is not a check that passed (10.f). Before this the dropped list
+    # reached lint-specs and nobody else, and a lane whose tenant suite never ran could be
+    # published on the strength of the lines around it.
+    failures += [f"check never runs -- {why}: {line[:70]}" for line, why in dropped]
+    if not ran:
+        failures.append("its spec names no check this script can run")
     return (not failures), failures
 
 
@@ -641,16 +773,29 @@ def sweep(dry: bool, only: list[str] | None) -> int:
     )
     if only:
         slugs = [s for s in slugs if s in only]
+    if not slugs:
+        print("\n0 unsettled lane(s), 0 ready")
+        return 0
+    try:
+        prs = storm_forge.pull_requests(MAIN, REPO, storm_forge.limit(STORM))
+    except storm_forge.Unreadable as exc:
+        # Not "nothing is published": nobody could find out. Publishing on that would open a
+        # second pull request for work already out for review, so every lane is held.
+        print(f"cannot read the forge -- {exc}")
+        print(f"\n{len(slugs)} unsettled lane(s) held: which are already published is unknown")
+        return 0
     published = 0
     for slug in slugs:
-        ok, why = ready(slug)
+        ok, why = ready(slug, prs, record=not dry)
         if ok:
             print(f"READY  {slug}\n       {publish(slug, dry)}")
             published += 1
         else:
             print(f"hold   {slug}")
-            for reason in why[:3]:
+            for reason in why[:4]:
                 print(f"       - {reason}")
+            if len(why) > 4:
+                print(f"       - ...and {len(why) - 4} more")
     print(f"\n{len(slugs)} unsettled lane(s), {published} ready")
     return published
 
