@@ -35,6 +35,7 @@ printed. Silence is never taken for success.
 import argparse
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -54,7 +55,21 @@ BASE = "develop"
 # Commands a lane's check block may name that this script will run. Anything else in a check
 # block is reported and skipped rather than executed: a spec is written by a model, and a
 # publishing step is not the place to run whatever a model happened to type.
-SAFE = ("uv", "python", "python3", "pytest", "ruff", "mypy", "lint-imports", "grep", "git")
+# `black` and `isort` are here because the gh tenant is checked by both in CI's `tools-lint`
+# job, and a check this list does not name is a check that silently does not run.
+SAFE = (
+    "uv",
+    "python",
+    "python3",
+    "pytest",
+    "ruff",
+    "mypy",
+    "black",
+    "isort",
+    "lint-imports",
+    "grep",
+    "git",
+)
 
 
 def run(argv: list[str], cwd: Path, timeout: int = 900) -> tuple[int, str]:
@@ -112,13 +127,69 @@ def issue_of(slug: str) -> int | None:
     return None
 
 
-def checks_of(lane: Path) -> list[list[str]]:
+# "(run in `src/vibey_tools/gh`)" or "(in src/vibey_tools/gh)" -- prose the spec already uses
+# in its acceptance criteria, read here and removed before the command is split.
+ANNOTATION = re.compile(r"\(\s*(?:run\s+)?in\s+`?[\w./-]+`?\s*\)")
+
+
+def where(lane: Path, raw: str) -> Path:
+    """The directory a check runs in: the lane, or the tenant its spec names.
+
+    A workspace tenant's suite cannot be run from the repository root. Its coverage floor,
+    its ini options and its package layout all live in the tenant's own pyproject, so
+    `python -m pytest -q` means something different there than here -- and the paths a tenant
+    spec names (`test/test_platform.py`, `vibey_gh`) do not exist from the root at all. Those
+    checks reported "no tests ran" and held the lane, which is a check that runs, reports, and
+    means nothing.
+
+    This is the explicit form -- "(run in `src/vibey_tools/gh`)", prose the spec already uses
+    in its acceptance criteria. `inside()` reads the other form, the `cd` the block itself
+    carries. An annotation on the line is the more specific statement, so it wins.
+    """
+    found = re.search(r"\(\s*(?:run\s+)?in\s+`?([\w./-]+)`?\s*\)", raw)
+    return inside(lane, lane, found.group(1)) or lane if found else lane
+
+
+def inside(lane: Path, base: Path, target: str) -> Path | None:
+    """`base/target`, or None when that is not a real directory within the lane.
+
+    Every path a check block names is resolved through here, so a spec can move a check
+    around inside its own lane and nowhere else. `..` is allowed precisely because it is
+    checked afterwards: `cd ../../..` out of a tenant lands back on the lane root, which is
+    the whole point, while one `..` too many lands outside and is refused.
+    """
+    candidate = (base / target).resolve()
+    root = lane.resolve()
+    if candidate != root and root not in candidate.parents:
+        return None
+    return candidate if candidate.is_dir() else None
+
+
+def checks_of(lane: Path) -> list[tuple[list[str], Path]]:
     """The commands the lane's own spec says must pass.
 
     The lane's shell runs argv with no shell at all, so a check block is a list of argv lines:
-    `&&`, pipes, redirects and `cd` are literal arguments there and are literal here too. A
-    line carrying any of them is not something this script can honestly run, so it is skipped
-    and reported rather than guessed at.
+    `&&`, pipes and redirects are literal arguments there and are literal here too. A line
+    carrying any of them is not something this script can honestly run, so it is skipped and
+    reported rather than guessed at.
+
+    A SPEC IS A SCRIPT, AND A SCRIPT REMEMBERS WHERE IT IS
+    ------------------------------------------------------
+    `cd` used to be on that list, and dropping it was the same mistake in a third costume:
+    true about the line, wrong about the block. split-332-1's spec opens `cd src/vibey_tools/gh`
+    and closes `cd ../../..`, because a tenant's suite cannot run from the repository root --
+    its coverage floor, its ini options and its package layout live in the tenant's own
+    pyproject, and the paths it names (`test/test_platform.py`, `vibey_gh`) do not exist from
+    the root at all. Drop the `cd` and every following line still runs, still reports, and
+    measures the wrong tree: from the root, `import vibey_gh` resolved to a stale copy in
+    another checkout's site-packages, so two tests failed against a module that had never
+    received the lane's changes, while the same files from the tenant passed 2512 at 100%.
+
+    So `cd` is honoured -- it sets where the rest of the block runs, exactly as it would in
+    the shell the author had in mind. Every target is resolved through `inside()`, so it can
+    only move within the lane. A `cd` that cannot be honoured stops the block instead of
+    quietly relocating it: the remaining checks are not the checks the spec wrote, and a
+    check that means something other than what it says is worse than one that is off.
 
     SPLIT THE WAY A SHELL WOULD, THEN RUN WITHOUT ONE
     -------------------------------------------------
@@ -142,21 +213,39 @@ def checks_of(lane: Path) -> list[list[str]]:
     if "## Checks the lane must run" not in text:
         return []
     block = text.split("## Checks the lane must run", 1)[1].split("\n## ", 1)[0]
-    found: list[list[str]] = []
+    found: list[tuple[list[str], Path]] = []
+    here = lane
     for raw in block.splitlines():
         line = raw.strip().strip("`")
         if not line or line.startswith(("#", "```", "-", "(", "*")):
             continue
-        if any(token in line for token in ("&&", "|", ">", "<", "$(", "cd ")):
+        if any(token in ANNOTATION.sub("", line) for token in ("&&", "|", ">", "<", "$(")):
             continue
+        # The directory annotation is prose for a person, not an argument for the command --
+        # `where()` has already read it. And `comments=True`: a check written as
+        # `python -m pytest -q # whole suite` otherwise hands pytest `#`, `whole` and `suite`
+        # as paths, which is a large part of why tenant checks answered "no tests ran".
+        command = ANNOTATION.sub("", line).strip()
         try:
-            parts = shlex.split(line)
+            parts = shlex.split(command, comments=True)
         except ValueError:
             # Unbalanced quotes: the line is not a command anybody could run, and guessing
             # where the quote was meant to close would be inventing the check.
             continue
-        if parts and parts[0] in SAFE:
-            found.append(parts)
+        if not parts:
+            continue
+        if parts[0] == "cd":
+            moved = inside(lane, here, parts[1]) if len(parts) == 2 else None
+            if moved is None:
+                # `cd` with no argument means home, `cd -` means the last directory, and a
+                # path that leaves the lane or is not there means the author was describing
+                # a tree this is not. Either way the rest of the block belongs somewhere
+                # this cannot reach, so it is abandoned rather than run in the wrong place.
+                break
+            here = moved
+            continue
+        if parts[0] in SAFE:
+            found.append((parts, where(lane, raw) if ANNOTATION.search(raw) else here))
     return found
 
 
@@ -264,10 +353,10 @@ def ready(slug: str) -> tuple[bool, list[str]]:
         return False, ["its spec names no check block this script can run"]
     interpreter = lane / ".venv/bin/python"
     failures = []
-    for argv in ran:
+    for argv, cwd in ran:
         if argv[0] in {"python", "python3", "pytest"} and interpreter.is_file():
             argv = [str(interpreter), *(["-m"] if argv[0] == "pytest" else []), *argv[1:]]
-        code, out = run(argv, lane)
+        code, out = run(argv, cwd)
         if code:
             failures.append(f"check failed: {' '.join(argv)[:55]} -- {why_failed(out)[:110]}")
     return (not failures), failures
@@ -325,7 +414,15 @@ def publish(slug: str, dry: bool) -> str:
         if unresolved or picking:
             run(["git", "cherry-pick", "--abort"], tree)
             return f"cherry-pick failed: {out[:120]}"
-    run(["uv", "sync", "-q", "--extra", "dev"], tree, timeout=900)
+    # Not `run(...)` discarding the code. A fresh worktree has no venv, and this is what
+    # builds it; the pre-push hook then runs the gates inside it. When the sync failed the
+    # push failed a second later with `Could not find package 'vibey'`, pytest rejecting
+    # `--cov=vibey`, and pip-audit missing -- and this reported "push refused (the gates run
+    # on push)", which names the wrong source. The gates never judged the code: the bench
+    # they run on had not been built. A status claim names its real source (10.f).
+    code, out = run(["uv", "sync", "-q", "--extra", "dev"], tree, timeout=900)
+    if code:
+        return f"could not build the tree's venv, so the gates never ran: {out.strip()[-140:]}"
     code, out = run(["git", "push", "-u", "origin", branch], tree, timeout=1800)
     if code:
         return f"push refused (the gates run on push): {out.strip().splitlines()[-1][:140]}"
