@@ -2468,77 +2468,43 @@ The timeline of releases across each package in the family is shown in [Fig. 30]
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}[x=1cm,y=1cm]
-\draw[vibeydashed] (8.07,-2.78) -- (8.07,0.35);\node[vibeynote,anchor=north] at (8.07,-2.80) {Sep 2026};
-\node[vibeynote,anchor=north] at (0.00,-2.80) {Aug 10};
-\node[vibeynote,anchor=north] at (15.40,-2.80) {Sep 21};
+\draw[vibeydashed] (6.84,-0.30) -- (6.84,0.35);\node[vibeynote,anchor=north] at (6.84,-0.32) {Sep 2026};
+\node[vibeynote,anchor=north] at (0.00,-0.32) {Aug 16};
+\node[vibeynote,anchor=north] at (15.40,-0.32) {Sep 21};
 \draw[vibeyline,line width=.5pt] (0,0.00) -- (15.40,0.00);
 \node[font=\sffamily\tiny\bfseries,anchor=east,text=vibeyink] at (-0.15,0.00) {vibey};
-\node[vibeyanchor,fill=vibeyblue] at (2.20,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (2.22,0.06) {0.1.0};
-\node[vibeyanchor,fill=vibeyblue] at (3.67,0.00) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (3.67,-0.09) {2};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (3.69,0.06) {0.1.1--0.1.2};
-\node[vibeyanchor,fill=vibeyblue] at (5.13,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (5.15,0.06) {0.2.0};
-\node[vibeyanchor,fill=vibeyblue] at (6.97,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (6.99,0.06) {0.3.0};
-\node[vibeyanchor,fill=vibeyblue] at (7.33,0.00) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (7.33,-0.09) {2};
-\draw[vibeyline] (7.33,0.06) -- (7.33,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (7.35,0.48) {0.4.0--0.5.0};
+\node[vibeyanchor,fill=vibeyblue] at (0.00,0.00) {};
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (0.02,0.06) {0.1.0};
+\node[vibeyanchor,fill=vibeyblue] at (1.71,0.00) {};
+\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (1.71,-0.09) {2};
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (1.73,0.06) {0.1.1--0.1.2};
+\node[vibeyanchor,fill=vibeyblue] at (3.42,0.00) {};
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (3.44,0.06) {0.2.0};
+\node[vibeyanchor,fill=vibeyblue] at (5.56,0.00) {};
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (5.58,0.06) {0.3.0};
+\node[vibeyanchor,fill=vibeyblue] at (5.99,0.00) {};
+\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (5.99,-0.09) {2};
+\draw[vibeyline] (5.99,0.06) -- (5.99,0.48);
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (6.01,0.48) {0.4.0--0.5.0};
+\node[vibeyanchor,fill=vibeyblue] at (12.41,0.00) {};
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (12.43,0.06) {0.6.0};
 \node[vibeyanchor,fill=vibeyblue] at (12.83,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (12.85,0.06) {0.6.0};
-\node[vibeyanchor,fill=vibeyblue] at (13.20,0.00) {};
-\draw[vibeyline] (13.20,0.06) -- (13.20,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (13.22,0.48) {0.7.0};
-\node[vibeyanchor,fill=vibeyblue] at (13.57,0.00) {};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (13.59,0.06) {0.8.0};
-\node[vibeyanchor,fill=vibeyblue] at (14.30,0.00) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (14.30,-0.09) {4};
-\draw[vibeyline] (14.30,0.06) -- (14.30,0.48);
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (14.32,0.48) {1.0.0--1.3.0};
-\node[vibeyanchor,fill=vibeyblue] at (14.67,0.00) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (14.67,-0.09) {2};
-\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (14.69,0.06) {1.4.0--1.5.0};
+\draw[vibeyline] (12.83,0.06) -- (12.83,0.48);
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (12.85,0.48) {0.7.0};
+\node[vibeyanchor,fill=vibeyblue] at (13.26,0.00) {};
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (13.28,0.06) {0.8.0};
+\node[vibeyanchor,fill=vibeyblue] at (14.12,0.00) {};
+\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (14.12,-0.09) {4};
+\draw[vibeyline] (14.12,0.06) -- (14.12,0.48);
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (14.14,0.48) {1.0.0--1.3.0};
+\node[vibeyanchor,fill=vibeyblue] at (14.54,0.00) {};
+\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyblue,circle,inner sep=.6pt,anchor=north] at (14.54,-0.09) {2};
+\node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (14.56,0.06) {1.4.0--1.5.0};
 \node[vibeyanchor,fill=vibeyblue] at (15.40,0.00) {};
 \draw[vibeyline] (15.40,0.06) -- (15.40,0.48);
 \node[font=\sffamily\tiny,text=vibeyblue,rotate=55,anchor=south west,inner sep=1pt] at (15.42,0.48) {2.0.0};
-\draw[vibeyline,line width=.5pt] (0,-0.62) -- (15.40,-0.62);
-\node[font=\sffamily\tiny\bfseries,anchor=east,text=vibeyink] at (-0.15,-0.62) {claudeloop};
-\node[vibeyanchor,fill=vibeyteal] at (0.00,-0.62) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyteal,circle,inner sep=.6pt,anchor=north] at (0.00,-0.71) {5};
-\node[font=\sffamily\tiny,text=vibeyteal,rotate=55,anchor=south west,inner sep=1pt] at (0.02,-0.56) {0.2.0--0.4.0};
-\node[vibeyanchor,fill=vibeyteal] at (0.73,-0.62) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyteal,circle,inner sep=.6pt,anchor=north] at (0.73,-0.71) {4};
-\draw[vibeyline] (0.73,-0.56) -- (0.73,-0.14);
-\node[font=\sffamily\tiny,text=vibeyteal,rotate=55,anchor=south west,inner sep=1pt] at (0.75,-0.14) {0.5.0--0.5.3};
-\node[vibeyanchor,fill=vibeyteal] at (1.10,-0.62) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyteal,circle,inner sep=.6pt,anchor=north] at (1.10,-0.71) {2};
-\node[font=\sffamily\tiny,text=vibeyteal,rotate=55,anchor=south west,inner sep=1pt] at (1.12,-0.56) {0.5.4--0.5.5};
-\node[vibeyanchor,fill=vibeyteal] at (3.67,-0.62) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeyteal,circle,inner sep=.6pt,anchor=north] at (3.67,-0.71) {2};
-\node[font=\sffamily\tiny,text=vibeyteal,rotate=55,anchor=south west,inner sep=1pt] at (3.69,-0.56) {0.6.0--0.6.1};
-\draw[vibeyline,line width=.5pt] (0,-1.24) -- (15.40,-1.24);
-\node[font=\sffamily\tiny\bfseries,anchor=east,text=vibeyink] at (-0.15,-1.24) {agyloop};
-\node[vibeyanchor,fill=vibeyviolet] at (2.20,-1.24) {};
-\node[font=\sffamily\tiny,text=vibeyviolet,rotate=55,anchor=south west,inner sep=1pt] at (2.22,-1.18) {0.4.0};
-\node[vibeyanchor,fill=vibeyviolet] at (3.67,-1.24) {};
-\node[font=\sffamily\tiny,text=vibeyviolet,rotate=55,anchor=south west,inner sep=1pt] at (3.69,-1.18) {0.4.1};
-\draw[vibeyline,line width=.5pt] (0,-1.86) -- (15.40,-1.86);
-\node[font=\sffamily\tiny\bfseries,anchor=east,text=vibeyink] at (-0.15,-1.86) {cursorloop};
-\node[vibeyanchor,fill=vibeymint] at (3.67,-1.86) {};
-\node[font=\sffamily\tiny,text=vibeymint,rotate=55,anchor=south west,inner sep=1pt] at (3.69,-1.80) {0.6.0};
-\draw[vibeyline,line width=.5pt] (0,-2.48) -- (15.40,-2.48);
-\node[font=\sffamily\tiny\bfseries,anchor=east,text=vibeyink] at (-0.15,-2.48) {codexloop};
-\node[vibeyanchor,fill=vibeygold] at (1.10,-2.48) {};
-\node[font=\sffamily\tiny\bfseries,text=white,fill=vibeygold,circle,inner sep=.6pt,anchor=north] at (1.10,-2.57) {2};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=55,anchor=south west,inner sep=1pt] at (1.12,-2.42) {0.1.0--0.2.0};
-\node[vibeyanchor,fill=vibeygold] at (2.20,-2.48) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=55,anchor=south west,inner sep=1pt] at (2.22,-2.42) {0.3.0};
-\node[vibeyanchor,fill=vibeygold] at (3.67,-2.48) {};
-\node[font=\sffamily\tiny,text=vibeygold,rotate=55,anchor=south west,inner sep=1pt] at (3.69,-2.42) {0.3.1};
 \end{tikzpicture}
-\caption{Every release tag reachable at revision 842db09d, one lane per package: 17 for vibey, 13 for claudeloop, 4 for codexloop, 2 for agyloop, 1 for cursorloop. The 17 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v2.0.0 on 2026-09-21; since the packages were absorbed into one tree, one version number ships the whole family.}
+\caption{Every release tag reachable at revision 842db09d, 17 tags on the repository. The 17 \texttt{vibey} releases run from vibey-v0.1.0 on 2026-08-16 to vibey-v2.0.0 on 2026-09-21; since the packages were absorbed into one tree, one version number ships the whole family, and the packages' earlier tags remain in their pre-absorption repositories.}
 \label{fig:release-cadence}
 \end{figure*}
 ```
