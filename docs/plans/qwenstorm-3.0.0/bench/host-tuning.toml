@@ -68,6 +68,57 @@ max = 49118
 turns_over_32k = 71
 turns_over_64k = 0
 
+# The sweep (bench/host-sweep.py), run on this host with the storm paused. Every row reloads
+# the model and measures cost, speed and fidelity together: optimising on cost alone is how a
+# machine ends up fast and wrong.
+[[sweep]]
+config = "A"
+context = 131072
+kv_cache = "f16"
+wired_gb = 18.55
+llama_rss_gb = 14.85
+tokens_per_second = 28.0
+fidelity = "8/8"
+note = "baseline: what the storm ran all evening"
+
+[[sweep]]
+config = "B"
+context = 65536
+kv_cache = "f16"
+wired_gb = 17.25
+llama_rss_gb = 14.34
+tokens_per_second = 32.5
+fidelity = "8/8"
+note = "the measured context. -1.30 GB wired and 16% faster, with fidelity intact."
+
+[[sweep]]
+config = "C"
+context = 65536
+kv_cache = "q8_0 (requested)"
+wired_gb = 17.24
+tokens_per_second = 30.9
+fidelity = "8/8"
+result = "inconclusive"
+note = """
+Not a measurement of q8_0: the setting never reached the model. Ollama 0.34.2 did not pass
+OLLAMA_KV_CACHE_TYPE through to llama-server -- its argv carries no --cache-type-k/-v -- and
+wired came out at 17.24 against B's 17.25, which is the same number. Quantising the KV cache
+also needs flash attention on, and the server runs `--flash-attn auto`. Unresolved, not
+refuted: worth retrying on a build that passes the flag, for perhaps 0.65 GB more.
+"""
+
+# What the sweep cost to learn, recorded because the mistake is instructive. The first attempt
+# at C started a second `ollama serve` while the app's own server was still running, and Metal
+# failed with kIOGPUCommandBufferCallbackErrorOutOfMemory -- two servers bidding for one GPU's
+# memory. It read as "q8_0 breaks the model" and was nothing of the kind. It was also a
+# straightforward breach of 8.c, a single instance per model, by the very experiment measuring
+# the machine that rule exists to protect. Configure the app through `launchctl setenv`; never
+# run a second server beside it.
+[sweep.invalidated]
+cause = "two model servers running at once"
+symptom = "kIOGPUCommandBufferCallbackErrorOutOfMemory, 0 tok/s, 0/8 fidelity"
+lesson = "check the instance count before believing a memory measurement"
+
 [context.decision]
 context_window = 65536
 headroom_tokens = 16418    # 33% over the observed peak
