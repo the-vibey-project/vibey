@@ -14,6 +14,43 @@ sovereign path is the preference. Today neither lane can produce `PR review / ga
   supervisor stops after five failures and relaunches every 120 s.
 - The latest `pr-review.yml` run failed at 2026-09-22T15:06Z.
 
+### Re-diagnosed 2026-09-23T07:45Z — two of the three bullets above are wrong
+
+Read this before working the checklist.
+
+- **Sovereign lane: the URL is not the cause.** `repos/adammatthewsteinberger/vibey` still
+  **redirects** to `the-vibey-project/vibey`, and `vibey-runner.sh:68-71` already mints a
+  registration token per iteration — its own comment records that as the fix for the old
+  expiry-404. What the supervisor actually prints, every 120 s, in
+  `~/Library/Logs/vibey-runner-vibey.log`:
+
+      gh is not authenticated — run 'gh auth login' (a registration token is minted per job)
+
+  `vibey-runner.sh:72` gates on `gh auth status`. `gh` IS on the LaunchAgent's `PATH`
+  (`/opt/homebrew/bin/gh`) and the token IS valid in a login shell — but it is held in the
+  **macOS keyring** (`~/.config/gh/hosts.yml` carries no `oauth_token`), which the launchd
+  context cannot read. So B.2 and B.3 are worth doing for tidiness and will register nothing
+  by themselves. **B needs a fourth decision: where a GitHub credential may live so that a
+  LaunchAgent can read it** — a plaintext plist env var, `gh auth login --insecure-storage`,
+  or a scoped PAT file. That belongs inside the item-10 ruling, not beside it. Docker was
+  also not running at the time of this check, and the runner needs it.
+
+- **Paid lane: credit is plausible but no longer evidenced.** The execution record on
+  2026-09-23 carries `is_error: true, duration_ms: 355, num_turns: 1, total_cost_usd: 0,
+  modelUsage: {}` — the API refusing the call outright — but **no result text at all**. So
+  "Credit balance is too low" is last confirmed on 2026-09-22. Re-read the record before
+  concluding it is credit rather than a rotated or expired key.
+
+- **The action names the wrong thing twice.** It reports `--json-schema was provided but
+  Claude did not return structured_output. Result subtype: success`, printing `subtype`
+  while ignoring `is_error`. Nothing succeeded.
+
+- **No runner is registered at all.** `gh api repos/the-vibey-project/vibey/actions/runners`
+  returns an empty list and `vibey-gh sovereign` reports the heartbeat 131 minutes stale.
+  The workflow is right to refuse to schedule against that: `review-sovereign` is
+  `runs-on: [self-hosted, vibey-local-vibey]`, and a job aimed at an absent runner queues
+  forever, blocking every pull request rather than failing one.
+
 Without a gate, nothing merges. `gap-chain-dispatch` then has nothing to hand on.
 
 Implementer: the operator. Path B is a security decision, item 10 of `gap-ops-canon-rulings`.
