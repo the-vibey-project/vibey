@@ -43,6 +43,13 @@ procedures live in `.agent/rules/`
 - Status is evidence-bounded: name the object, evidence source and cutoff;
   active, blocked, failed, verified and published are distinct. ADR-0040;
   sub-doctrine 10.f.
+- Unattended authority is bounded by a gate, never by judgement: a standing grant
+  to act while the operator is away covers the work named and never an
+  irreversible act, a protected branch written directly, or a gate routed around
+  (no `--no-verify`, no `--admin`). Overnight work lands as a pull request through
+  the merge train or it does not land. Repair is not authorship; where a lane's
+  output is net-negative, revert and re-queue. Declining is a reportable outcome.
+  ADR-0046; sub-doctrine 12.d.
 - Code lives in classes, each with an interface beside it
   (`services/x.py` → `services/interfaces/x_interface.py`). Module-level
   functions are last resort with a written reason. Interfaces declare, never
@@ -162,7 +169,7 @@ automation has no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (45 ADRs: 0001–0045) |
+| ADRs | `docs/architecture/decisions/` (46 ADRs: 0001–0046) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

@@ -69,6 +69,18 @@ lives in `docs/architecture/decisions/`.
 - **Status is evidence-bounded.** Claims name their object, source and cutoff;
   active, blocked, failed, verified and published are not interchangeable, and
   missing or contradictory evidence stays unknown. ADR-0040; sub-doctrine 10.f.
+- **Unattended authority is bounded by a gate, never by judgement.** A standing
+  grant to act while the operator is away is read narrowly: it covers the work
+  named and the judgement that work actually requires — never an act that cannot
+  be undone, a protected branch written directly, or a gate routed around (no
+  `--no-verify`, no `--admin`, no means whose purpose is to make a check stop
+  applying). Work done overnight lands as a pull request through the merge train
+  or it does not land, so it arrives where a human would have looked for it
+  anyway. Repair is not authorship: adding the import the file next door already
+  uses is bookkeeping, supplying the definition it was meant to find is the work,
+  and where a lane's output is net-negative the answer is revert and re-queue.
+  Silence is not consent, and declining is a reportable outcome — the refusals
+  are the most useful part of the report. ADR-0046; sub-doctrine 12.d.
 - **Code lives in classes, and every class has an interface beside it.** A
   module-level function is the method of last resort, and its reason is written
   at the definition. `src/<pkg>/services/github_service.py` implies
@@ -218,7 +230,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (45 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (46 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |
