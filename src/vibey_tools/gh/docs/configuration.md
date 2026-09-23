@@ -91,6 +91,34 @@ the endpoint you trust.
 `${{ secrets.… }}` expression in a privileged workflow, so a name that could close that
 expression is refused at load time.
 
+## `[unattended_approval]`
+
+The operator's grant to a delegated approver (sub-doctrine 12.f, ADR-0049). This is the
+**declared** half of the grant, reviewed in a pull request like any other state (12.c). The
+**live** half is the repository variable `VIBEY_UNATTENDED_APPROVAL`, which must read exactly
+`on`; it is deliberately not a config key, because withdrawal must need no merge:
+
+```bash
+gh variable set VIBEY_UNATTENDED_APPROVAL --body off   # binds from that moment
+```
+
+Absence, `off`, empty, malformed or **unreadable** are all refusal. An approver that cannot
+read its own authorization has already lost it.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `enabled` | boolean / `false` | Whether any delegated approval may be given. Off by default: upgrading vibey-gh is not an act of granting. |
+| `branches` | string list / `[]` | Branch globs an approver may act on. Empty is refused when `enabled` — a grant naming no branch says nothing, and silence is not consent (12.d). |
+| `forbidden_paths` | string list / the corpus, this file, `.claude/settings.json`, `.github/**`, `CODEOWNERS` | Paths no delegated approval may ever touch. A change touching one is refused **whole** — an approver does not approve the safe subset of a pull request. Must contain `.vibey-gh.toml`, enforced: an approver may never approve a change to its own grant. |
+| `require_all_gates` | boolean / `true` | Every deterministic gate must already be green. A delegated approval is added to the gates and never substituted for one. |
+
+Choosing `forbidden_paths` is the whole of the design when `branches` is wide. The test for an
+entry is whether a change there could alter **what a gate measures**, **who may approve**, or
+**what an agent may do**. Two that are easy to miss: `.github/workflows/**` is *generated*, so
+forbidding only the rendered copy leaves every gate editable through its templates; and
+`pyproject.toml` carries the coverage floors and pytest's `addopts`, so a one-line edit there is
+a gate change wearing a dependency's clothes.
+
 ## `[pr_automation]`
 
 | Field | Type / default | Meaning |

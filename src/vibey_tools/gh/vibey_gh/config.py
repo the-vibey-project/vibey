@@ -534,6 +534,64 @@ class PrAutomationFallbackConfig:
             )
 
 
+DEFAULT_APPROVAL_FORBIDDEN: tuple[str, ...] = (
+    "src/vibey_tools/gh/docs/**",
+    ".vibey-gh.toml",
+    ".claude/settings.json",
+    ".github/**",
+    "CODEOWNERS",
+)
+
+
+@dataclass(frozen=True)
+class UnattendedApprovalConfig:
+    """The operator's grant to a delegated approver (sub-doctrine 12.f, ADR-0049).
+
+    12.f puts the judgement here rather than in the approver: an operator fixes what may be
+    approved and what never may, once, and the approver applies a standard it did not choose
+    and cannot alter. This dataclass is that standard as the repository declares it -- the
+    DECLARED half of the grant (12.c). The live half is the repository variable
+    `VIBEY_UNATTENDED_APPROVAL`, deliberately not here: withdrawal must need no merge.
+
+    Defaults refuse. `enabled` is False and `branches` is empty, so a repository that has
+    merely upgraded vibey-gh has granted nothing -- absence of a grant is refusal, never
+    permission, and a default that approved anything would make the upgrade itself a grant.
+    """
+
+    enabled: bool = False
+    # Branch globs a delegated approver may act on. Empty means none, which is why
+    # `enabled = true` with no branches is rejected below rather than silently doing nothing.
+    branches: tuple[str, ...] = ()
+    # Paths that no delegated approval may ever touch. A change touching one is refused
+    # WHOLE: an approver does not approve the safe subset of a pull request.
+    forbidden_paths: tuple[str, ...] = DEFAULT_APPROVAL_FORBIDDEN
+    # A delegated approval is added to the deterministic gates and never substituted for one.
+    # Configurable because an adopter may gate differently, but off is a decision to state,
+    # not a default to inherit.
+    require_all_gates: bool = True
+
+    def __post_init__(self) -> None:
+        if not self.enabled:
+            return
+        _unique_nonempty("unattended_approval.branches", self.branches)
+        _unique_nonempty("unattended_approval.forbidden_paths", self.forbidden_paths)
+        if not self.branches:
+            raise ValueError(
+                "unattended_approval.branches must not be empty when enabled -- "
+                "an approver with no branch to act on is a grant that says nothing"
+            )
+        if not self.forbidden_paths:
+            raise ValueError(
+                "unattended_approval.forbidden_paths must not be empty when enabled -- "
+                "it is the bound, and a grant with no bound is not a grant"
+            )
+        if ".vibey-gh.toml" not in self.forbidden_paths:
+            raise ValueError(
+                "unattended_approval.forbidden_paths must contain '.vibey-gh.toml' -- "
+                "12.f: an approver may never approve a change to its own grant"
+            )
+
+
 @dataclass(frozen=True)
 class PrAutomationConfig:
     enabled: bool = True
@@ -1494,6 +1552,7 @@ class GhConfig:
     protected_paths: tuple[str, ...] = ()
     ai: AiConfig = AiConfig()
     pr_automation: PrAutomationConfig = PrAutomationConfig()
+    unattended_approval: UnattendedApprovalConfig = UnattendedApprovalConfig()
     issue_automation: IssueAutomationConfig = IssueAutomationConfig()
     realign: RealignConfig = RealignConfig()
     branch_sync: BranchSyncConfig = BranchSyncConfig()
@@ -1717,6 +1776,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
     protected = tr.get("protected_paths", ())
     inst = data.get("install", {})
     auto = data.get("pr_automation", {})
+    approval = data.get("unattended_approval", {})
     observability = auto.get("observability", {})
     fallback = auto.get("fallback", {})
     issues = data.get("issue_automation", {})
@@ -1788,6 +1848,12 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             auth_secret=data.get("ai", {}).get("auth_secret", AiConfig.auth_secret),
         ),
         pr_automation=automation,
+        unattended_approval=UnattendedApprovalConfig(
+            enabled=approval.get("enabled", False),
+            branches=tuple(approval.get("branches", ())),
+            forbidden_paths=tuple(approval.get("forbidden_paths", DEFAULT_APPROVAL_FORBIDDEN)),
+            require_all_gates=approval.get("require_all_gates", True),
+        ),
         issue_automation=IssueAutomationConfig(
             enabled=issues.get("enabled", True),
             model=issues.get("model", "claude-sonnet-5"),
