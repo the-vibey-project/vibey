@@ -8,6 +8,11 @@ measured_at = "2026-09-22T01:10:00Z"
 os = "macOS (Darwin 25.6.0, Apple Silicon)"
 ram_gb = 24
 disk_free_gb = 498
+page_size_bytes = 16384    # Apple Silicon, NOT the 4096 every vm_stat example assumes
+
+# Read vm_stat against hw.pagesize, never against a remembered 4096: this machine's pages are
+# 16 KB, so a count of 4,569 free pages is 71 MB and not the 18 MB a 4 KB assumption gives.
+# A tuning lane that gets this wrong is wrong by 4x in the direction that looks reassuring.
 
 # Why there is no swap setting here, though the obvious reading of "the machine is thrashing"
 # is "give it more swap". macOS has no swap knob: no swapon, no swappiness, no swap partition,
@@ -17,21 +22,37 @@ disk_free_gb = 498
 # The lever is not needing it.
 [swap.observed_before]
 total_mb = 18432
-used_mb = 17042
-free_mb = 1390
-pages_free = 4569          # ~18 MB genuinely free on a 24 GB machine
+used_mb = 17097
+free_mb = 1335           # 93% of allocated swap in use
 swapouts = 10626300
-memory_free_percent = 10
+
+# The decisive figure, and the one a naive reading misses. Wired memory cannot be paged out
+# at all. On Apple Silicon the GPU shares system memory, so a model that `ollama ps` reports
+# as "100% GPU" has its weights AND its KV cache wired through Metal -- which is why
+# llama-server's 14.85 GB RSS undercounts what it truly costs the machine.
+[memory.observed_before]
+wired_gb = 18.85         # of 24 GB, unswappable
+active_gb = 1.07
+inactive_gb = 1.06
+free_mb = 73
+note = """
+18.85 GB wired leaves about 2.2 GB for every other process on the machine, so everything else
+is forced into swap: hence 16.7 GB swapped out and 10.6M swapouts. Adding swap would only have
+made the thrashing more comfortable; it could never return the wired memory, because wired is
+precisely the memory swap cannot touch.
+"""
 
 [cause]
 process = "llama-server"
-rss_gb = 14.93             # 62% of all RAM in one process
+rss_gb = 14.85           # understates it: Metal allocations are wired, not resident
 model = "gpt-oss:20b"
+processor = "100% GPU"
 context_window = 131072
 note = """
-The KV cache a model reserves scales with its context window, and that reservation is what
-was consuming the machine. The question is therefore not how much memory the model may have,
-but how much context a lane actually uses -- which the run ledger already records.
+The KV cache a model reserves scales with its context window, it is wired on this hardware,
+and that reservation is what consumed the machine. The question is therefore not how much
+memory the model may have, but how much context a lane actually uses -- which the run ledger
+already records, turn by turn.
 """
 
 # The experiment: 838 turns across every lane run on 2026-09-22, read from each run's
@@ -64,6 +85,12 @@ appearing in the run log. Not a hunch, and not because a lane failed for some ot
 # What a host should check before running a local engine at all. These are the thresholds this
 # machine taught us; a lane implementing this automatically should measure rather than assume.
 [thresholds]
-model_rss_fraction_of_ram = 0.62   # what it was; anything near this thrashes
+wired_fraction_of_ram_warn = 0.70   # 0.79 observed while thrashing; wired is the scarce kind
 healthy_free_memory_percent = 20
-swap_used_fraction_warn = 0.75     # 0.92 observed while thrashing
+swap_used_fraction_warn = 0.75      # 0.93 observed while thrashing
+
+# Measure wired, not resident. On unified memory a GPU-served model's cost shows up as wired
+# and is understated by RSS, so a check that watches RSS alone will call this machine healthy
+# while it swaps 16.7 GB. On a discrete-GPU Linux host the same model's weights sit in VRAM
+# and none of this applies -- which is why these thresholds are recorded per host, and why a
+# lane implementing them must measure rather than copy these numbers.
