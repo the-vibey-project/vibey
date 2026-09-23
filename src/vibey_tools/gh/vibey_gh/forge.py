@@ -33,6 +33,7 @@ __all__ = [
     "ForgeRepository",
     "ForgeReview",
     "ForgeUser",
+    "NotSupported",
     "ProtectedRef",
 ]
 
@@ -162,3 +163,16 @@ class ProtectedRef:
     protection, a GitLab or Forgejo protected branch. `ref` is the branch name."""
 
     ref: str
+
+
+@dataclass(frozen=True)
+class NotSupported:
+    """A verb this forge has no equivalent for, and why (vibey-gh ADR 0001)."""
+
+    kind: ForgeKind
+    verb: str
+    reason: str
+
+    @property
+    def problem(self) -> str:
+        return f"{self.kind.value} does not support {self.verb}: {self.reason}"

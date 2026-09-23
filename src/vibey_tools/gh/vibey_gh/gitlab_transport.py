@@ -11,8 +11,8 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
 from typing import Any
 
 from vibey_gh.interfaces.forge_transport_interface import ForgeTransportInterface, WorkingDirectory
@@ -28,6 +28,8 @@ class GitLabTransport(ForgeTransportInterface):
 
     host: str = "gitlab.com"
     token: str = ""
+    timeout: float = 30.0
+    opener: Callable[..., Any] = field(default=urllib.request.urlopen, repr=False, compare=False)
 
     @property
     def executable(self) -> str:
@@ -69,9 +71,11 @@ class GitLabTransport(ForgeTransportInterface):
             req.add_header("Content-Type", "application/json")
 
         try:
-            with urllib.request.urlopen(req) as resp:
-                data = resp.read().decode("utf-8")
-                value = json.loads(data)
+            with self.opener(req, timeout=self.timeout) as resp:
+                text = resp.read().decode("utf-8")
+                if not text.strip():
+                    return {}, ""
+                value = json.loads(text)
                 if isinstance(value, (list, dict)):
                     return value, ""
                 return [], "GitLab API returned JSON that is neither a list nor an object"
