@@ -50,6 +50,9 @@ INTEGRATION = STORM / "integration"
 # rather than .absolute() -- is the one place the real checkout is wanted.
 PLANS = Path(__file__).resolve().parent.parent
 STATE = PLANS / "RUN-STATE.md"
+# SNAPSHOT_PATHS below are repo-relative (that is how `git diff --name-only`
+# reports them); staging needs them resolved against the checkout root.
+REPO = PLANS.parent.parent.parent
 
 # The line that changes on every render whether or not anything happened. Excluded from the
 # "did it change" comparison so that a clock tick alone never triggers a commit and a push.
@@ -64,7 +67,13 @@ STAMP = re.compile(r"^Snapshot .*$", re.M)
 # the forge. A blanket --no-verify would have been the lazy version of this and is not used:
 # the narrowing is conditional, verified, and says out loud what it skipped.
 HEAVY_HOOKS = "test-suite,coverage-gates"
-SNAPSHOT_PATH = "docs/plans/qwenstorm-3.0.0/RUN-STATE.md"
+SNAPSHOT_PATHS = (
+    "docs/plans/qwenstorm-3.0.0/RUN-STATE.md",
+    "docs/plans/qwenstorm-3.0.0/evidence/ledger.jsonl",
+    "docs/plans/qwenstorm-3.0.0/evidence/watermark.json",
+    "docs/plans/qwenstorm-3.0.0/evidence/CHANGES.md",
+    "docs/paper.md",
+)
 
 
 def run(
@@ -170,7 +179,10 @@ def only_the_snapshot() -> bool:
         if code:
             continue
         changed = {line.strip() for line in out.splitlines() if line.strip()}
-        return changed == {SNAPSHOT_PATH}
+        # A subset, not an exact match: a pass may move the ledger without the paper, or the
+        # paper without the report. Anything OUTSIDE the set means real work is riding along
+        # and the full gate runs.
+        return bool(changed) and changed <= set(SNAPSHOT_PATHS)
     return False  # could not establish it, so do not skip anything
 
 
@@ -185,14 +197,44 @@ def unchanged(text: str) -> bool:
     return STAMP.sub("", old).strip() == STAMP.sub("", text).strip()
 
 
+# Branches this must never write directly. 12.d is explicit that unattended work reaches
+# develop as a pull request through the merge train or it does not reach it at all, and a
+# periodic job is unattended by definition. The runtime worktree is a checkout like any
+# other: put it on develop for an afternoon and every ten-minute pass would start pushing
+# straight at the protected branch, which is how a rule that everyone agrees with gets
+# broken by nobody in particular.
+PROTECTED = ("develop", "main")
+
+
+def current_branch() -> str:
+    code, out = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], PLANS, timeout=60)
+    return out.strip() if not code else "?"
+
+
 def publish(text: str, commit: bool, push: bool) -> list[str]:
     STATE.write_text(text)
     notes = [f"wrote {STATE.name}"]
+    branch = current_branch()
+    if push and branch in PROTECTED:
+        # Decided up front and said once. Committing locally is still useful -- the work is
+        # safe in git either way -- but the push is refused: unattended work reaches develop
+        # as a pull request through the merge train or it does not reach it at all (12.d).
+        notes.append(
+            f"REFUSED to push: this worktree is on '{branch}', a protected branch. "
+            "Put it on a branch of its own; unattended work reaches develop by pull request."
+        )
+        push = False
     if not commit:
         return notes
-    code, _ = run(["git", "add", "--", str(STATE)], PLANS, timeout=120)
+    # Every artifact the run produces, not only RUN-STATE.md: the evidence ledger, its
+    # watermark, the delta report and the paper's regenerated block are all written by this
+    # pass and would otherwise be left uncommitted on a machine whose /tmp is wiped.
+    present = [rel for rel in SNAPSHOT_PATHS if (REPO / rel).exists()]
+    if not present:
+        return notes + ["none of the snapshot artifacts exist to stage"]
+    code, out = run(["git", "add", "--", *present], REPO, timeout=120)
     if code:
-        return notes + ["could not stage it"]
+        return notes + [f"could not stage: {(out.splitlines() or ['?'])[-1][:70]}"]
     code, out = run(
         ["git", "commit", "-q", "-m", "chore(storm): snapshot the run"], PLANS, timeout=900
     )
