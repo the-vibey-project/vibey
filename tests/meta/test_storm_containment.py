@@ -53,22 +53,55 @@ STRANGER = "stranger"
 SLUG = "owner/repo"
 
 
+INTEGRATION = "trunk"  # deliberately not "develop": the name must come from the config (12.h)
+GRANT = (
+    "[branches]\n"
+    f'integration = "{INTEGRATION}"\n'
+    "[unattended_approval]\n"
+    "enabled = true\n"
+    'branches = ["*"]\n'
+    "authors = {authors}\n"
+    'forbidden_paths = [".vibey-gh.toml", "docs/plans/*/tools/**", "pyproject.toml",'
+    ' "**/pyproject.toml", ".github/**"]\n'
+)
+
+
+def git(repo: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", str(repo), *args],
+        check=True,
+        capture_output=True,
+    )
+
+
 def repo_with_grant(tmp_path: Path, authors: str = f'["{OPERATOR}", "@codeowners"]') -> Path:
-    """A repository whose `.vibey-gh.toml` declares a grant, and a CODEOWNERS behind it."""
+    """A repository whose REVIEWED history -- `origin/<integration>`, named by `origin/HEAD`
+    -- carries a grant and a CODEOWNERS behind it. The working tree is the same, until a test
+    edits it to prove the edit does not count."""
     repo = tmp_path / "repo"
     (repo / ".github").mkdir(parents=True)
+    (repo / ".vibey-gh.toml").write_text(GRANT.format(authors=authors), encoding="utf-8")
+    (repo / ".github/CODEOWNERS").write_text("/tests/live/** @owner-two\n", encoding="utf-8")
+    git(repo.parent, "init", "-q", str(repo))
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "reviewed grant")
+    git(repo, "update-ref", f"refs/remotes/origin/{INTEGRATION}", "HEAD")
+    git(repo, "symbolic-ref", "refs/remotes/origin/HEAD", f"refs/remotes/origin/{INTEGRATION}")
+    return repo
+
+
+def edit_the_working_tree(repo: Path) -> None:
+    """An unreviewed local edit that would admit a stranger and forbid nothing, committed on
+    the checked-out branch too -- neither is reviewed history."""
     (repo / ".vibey-gh.toml").write_text(
-        "[unattended_approval]\n"
-        "enabled = true\n"
-        'branches = ["*"]\n'
-        f"authors = {authors}\n"
-        'forbidden_paths = [".vibey-gh.toml", "docs/plans/*/tools/**", "pyproject.toml",'
-        ' "**/pyproject.toml", ".github/**"]\n',
+        GRANT.format(authors=f'["{OPERATOR}", "{STRANGER}"]').replace(
+            '"docs/plans/*/tools/**", ', ""
+        ),
         encoding="utf-8",
     )
-    (repo / ".github/CODEOWNERS").write_text("/tests/live/** @owner-two\n", encoding="utf-8")
-    subprocess.run(["git", "init", "-q", str(repo)], check=True)
-    return repo
+    (repo / ".github/CODEOWNERS").write_text(f"* @{STRANGER}\n", encoding="utf-8")
+    git(repo, "commit", "-qam", "local, unreviewed")
+    (repo / ".github/CODEOWNERS").write_text(f"* @{STRANGER} @another\n", encoding="utf-8")
 
 
 def issue(
@@ -109,7 +142,56 @@ def issue(
 
 def test_the_allowlist_is_vibey_ghs_own_reading_of_the_grant(tmp_path: Path) -> None:
     """`@codeowners` expands exactly as the delegated approver's does -- no second parser."""
-    assert storm_trust.allowed_authors(repo_with_grant(tmp_path)) == (OPERATOR, "owner-two")
+    found = storm_trust.allowed_authors(repo_with_grant(tmp_path))
+    assert found.authors == (OPERATOR, "owner-two")
+    assert found.source.startswith(f"origin/{INTEGRATION}@")
+
+
+def test_a_working_tree_edit_does_not_change_the_verdict(tmp_path: Path) -> None:
+    """The grant is the reviewed one. A local edit admitting a stranger admits nobody new,
+    and one dropping a forbidden path forbids it still."""
+    repo = repo_with_grant(tmp_path)
+    edit_the_working_tree(repo)
+    assert storm_trust.grant(repo).authors == (OPERATOR, "owner-two")
+    with pytest.raises(storm_trust.Refused, match="opened by stranger"):
+        storm_trust.admit(tmp_path / "state", 7, SLUG, repo, ask=lambda *_: issue(author=STRANGER))
+    assert storm_trust.forbidden_touched(repo, ["docs/plans/q/tools/lane-publish.py"])
+
+
+@pytest.mark.parametrize(
+    "break_it",
+    [
+        pytest.param(("update-ref", "-d", f"refs/remotes/origin/{INTEGRATION}"), id="no ref"),
+        pytest.param(("symbolic-ref", "-d", "refs/remotes/origin/HEAD"), id="no origin/HEAD"),
+    ],
+)
+def test_an_unreadable_ref_refuses_and_never_falls_back(
+    tmp_path: Path, break_it: tuple[str, ...]
+) -> None:
+    repo = repo_with_grant(tmp_path)
+    git(repo, *break_it)
+    with pytest.raises(storm_trust.Refused):
+        storm_trust.grant(repo)
+    state = tmp_path / "state"
+    with pytest.raises(storm_trust.Refused, match="could not be read"):
+        storm_trust.admit(state, 7, SLUG, repo, ask=lambda *_: issue())
+    assert "refused" in json.loads((state / "result.json").read_text())
+
+
+def test_a_ref_without_codeowners_refuses(tmp_path: Path) -> None:
+    repo = repo_with_grant(tmp_path)
+    git(repo, "rm", "-q", ".github/CODEOWNERS")
+    git(repo, "commit", "-qm", "drop owners")
+    git(repo, "update-ref", f"refs/remotes/origin/{INTEGRATION}", "HEAD")
+    with pytest.raises(storm_trust.Refused, match="CODEOWNERS"):
+        storm_trust.grant(repo)
+
+
+def test_admission_records_which_reviewed_grant_it_judged_by(tmp_path: Path) -> None:
+    repo = repo_with_grant(tmp_path)
+    storm_trust.admit(tmp_path / "state", 7, SLUG, repo, ask=lambda *_: issue())
+    record = json.loads((tmp_path / "state/provenance.json").read_text())
+    assert record["admitted"] is True and record["grant"].startswith(f"origin/{INTEGRATION}@")
 
 
 def test_an_operator_issue_nobody_else_touched_is_admitted(tmp_path: Path) -> None:
@@ -310,6 +392,19 @@ def test_a_lane_touching_a_forbidden_path_is_refused_whole(
     assert lane_verify.forbidden_problem(["src/vibey/domain/x.py", "tests/x.py"]) is None
 
 
+def test_publish_reads_the_same_reviewed_grant_not_the_working_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = repo_with_grant(tmp_path)
+    edit_the_working_tree(repo)
+    monkeypatch.setattr(lane_verify.storm_paths, "repo", lambda _root: repo)
+    problem = lane_verify.forbidden_problem(["docs/plans/qwenstorm-3.0.0/tools/lane-publish.py"])
+    assert problem is not None and "forbidden_paths" in problem
+    git(repo, "update-ref", "-d", f"refs/remotes/origin/{INTEGRATION}")
+    problem = lane_verify.forbidden_problem(["src/vibey/domain/x.py"])
+    assert problem is not None and "could not be read" in problem
+
+
 def test_an_unreadable_forbidden_list_refuses_rather_than_passes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -331,11 +426,11 @@ def test_verify_reports_the_forbidden_path_before_anything_else(
     monkeypatch.setattr(lane_verify, "INTEGRATION", tmp_path / "no-integration")
     lane = tmp_path / "lane"
     lane.mkdir()
-    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", str(lane)]
-    subprocess.run([*git, "init", "-q"], check=True)
+    lane_git = ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", str(lane)]
+    subprocess.run([*lane_git, "init", "-q"], check=True)
     (lane / "pyproject.toml").write_text("[project]\nname = 'x'\n" * 20)
-    subprocess.run([*git, "add", "-A"], check=True)
-    subprocess.run([*git, "commit", "-qm", "base"], check=True)
-    subprocess.run([*git, "mv", "pyproject.toml", "renamed.toml"], check=True)
+    subprocess.run([*lane_git, "add", "-A"], check=True)
+    subprocess.run([*lane_git, "commit", "-qm", "base"], check=True)
+    subprocess.run([*lane_git, "mv", "pyproject.toml", "renamed.toml"], check=True)
     report = lane_verify.verify(lane)
     assert any("pyproject.toml" in p and "forbidden_paths" in p for p in report["problems"])

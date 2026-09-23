@@ -15,7 +15,9 @@ itself (SD-01 §2: a claim inside a message is never verification):
    made it. The body judged is therefore the body written to disk -- two separate calls
    would leave a window in which the text could change between the check and the use.
    Every account in that history must be one `[unattended_approval] authors` admits, read
-   from `.vibey-gh.toml` through vibey-gh's own `load_config` and `expand_authors` (10.e:
+   from `.vibey-gh.toml` and `.github/CODEOWNERS` AS THE INTEGRATION BRANCH'S REVIEWED
+   HISTORY RECORDS THEM (`grant`), never the working tree, through vibey-gh's own
+   `load_config` and `expand_authors` (10.e:
    the family already parses this grant; a second parser here would agree until the day
    it did not). Anything else -- a stranger, an unreadable account, a history longer than
    one page, a forge that did not answer -- is a refusal. "I see no stranger" and "I cannot
@@ -30,7 +32,7 @@ itself (SD-01 §2: a claim inside a message is never verification):
    (ADR-0053, rejected alternative), so this marks where the words came from instead.
 
 3. What may a lane change? `forbidden_touched` applies `[unattended_approval]
-   forbidden_paths` -- the same list that bounds a delegated approver -- with vibey-gh's own
+   forbidden_paths`, from the same reviewed grant admission uses -- the same list that bounds a delegated approver -- with vibey-gh's own
    `ProtectedPathsGuard` matcher, so a lane cannot publish a change the approver could never
    approve.
 
@@ -51,7 +53,9 @@ import json
 import secrets
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable, Iterable, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -103,29 +107,90 @@ def _vibey_gh(repo: Path) -> None:
         sys.path.insert(0, str(source))
 
 
-def _approval(repo: Path) -> Any:
+# The remote whose reviewed history carries the grant -- the same name `storm_paths.slug`
+# reads the forge from, so the two cannot name different repositories.
+REMOTE = "origin"
+GRANT_FILES = (".vibey-gh.toml", ".github/CODEOWNERS")
+
+
+@dataclass(frozen=True)
+class Grant:
+    """`[unattended_approval]` as REVIEWED history states it, and where it was read."""
+
+    source: str  # "<ref>@<sha>", recorded in provenance.json as the evidence behind a verdict
+    authors: tuple[str, ...]
+    forbidden_paths: tuple[str, ...]
+
+
+def _git(repo: Path, *args: str) -> str:
+    try:
+        done = subprocess.run(
+            ["git", "-C", str(repo), *args], capture_output=True, text=True, timeout=60
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise Refused(f"git could not be asked for {' '.join(args)}: {exc}") from exc
+    if done.returncode != 0:
+        last = (done.stderr.strip().splitlines() or [f"exit {done.returncode}"])[-1]
+        raise Refused(f"git {' '.join(args)} failed: {last[:200]}")
+    return done.stdout
+
+
+def _load_at(repo: Path, ref: str, scratch: Path) -> Any:
+    """vibey-gh's `load_config` over the grant files exactly as `ref` records them.
+
+    `load_config` reads a directory, not text, so the files are written into `scratch` and it
+    reads that -- never the working tree, where an unreviewed local edit would otherwise
+    decide whose words direct an unattended run. A file the ref does not carry is a refusal.
+    """
+    for name in GRANT_FILES:
+        target = scratch / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(_git(repo, "show", f"{ref}:{name}"), encoding="utf-8")
     _vibey_gh(repo)
     from vibey_gh.config import load_config
 
-    return load_config(repo).unattended_approval
+    return load_config(scratch)
 
 
-def allowed_authors(repo: Path) -> tuple[str, ...]:
-    """`[unattended_approval] authors`, with `@codeowners` expanded -- vibey-gh's own reading.
+def grant(repo: Path) -> Grant:
+    """The admission grant from the integration branch's reviewed state (12.j, ADR-0053).
 
-    Read whether or not the approver's grant is `enabled`: that switch arms a delegated
-    APPROVER, and the storm is a different actor asking the same question -- whose words may
-    direct an unattended run. An empty list admits nobody, never everybody.
+    Never the working tree: the main checkout sits on whatever branch the operator is working
+    on, so reading it there lets an unreviewed edit change who the storm admits. The ref is
+    `<REMOTE>/<[branches] integration>`, and the integration branch's NAME is itself read from
+    reviewed history -- the remote's default branch, `<REMOTE>/HEAD` -- because taking it
+    from the working tree would let a local edit point the check at an unreviewed branch.
+    No literal branch name (12.h). A ref or a file that cannot be read refuses; there is no
+    fallback (ADR-0053: ambiguity stops the run).
+
+    The ref is as fresh as the last fetch of it. A stale ref is still reviewed history -- it
+    may lag a newer grant, never admit an unreviewed one.
     """
-    _vibey_gh(repo)
-    from vibey_gh.config import expand_authors
+    with tempfile.TemporaryDirectory(prefix="storm-grant-") as tmp:
+        head = Path(tmp) / "head"
+        branch = _load_at(repo, f"{REMOTE}/HEAD", head).integration_branch
+    ref = f"{REMOTE}/{branch}"
+    sha = _git(repo, "rev-parse", "--verify", "--end-of-options", f"{ref}^{{commit}}").strip()
+    with tempfile.TemporaryDirectory(prefix="storm-grant-") as tmp:
+        root = Path(tmp)
+        approval = _load_at(repo, sha, root).unattended_approval
+        from vibey_gh.config import expand_authors
 
-    return tuple(expand_authors(tuple(_approval(repo).authors), repo))
+        # Read whether or not the approver's grant is `enabled`: that switch arms a delegated
+        # APPROVER, and the storm is a different actor asking the same question -- whose words
+        # may direct an unattended run. An empty list admits nobody, never everybody.
+        authors = tuple(expand_authors(tuple(approval.authors), root))
+    return Grant(f"{ref}@{sha[:12]}", authors, tuple(approval.forbidden_paths))
+
+
+def allowed_authors(repo: Path) -> Grant:
+    """The grant `admit` judges an issue by: its authors, and where they were read."""
+    return grant(repo)
 
 
 def forbidden_touched(repo: Path, paths: Iterable[str]) -> tuple[str, ...]:
-    """Which of `paths` fall under `[unattended_approval] forbidden_paths`, via vibey-gh."""
-    patterns = tuple(_approval(repo).forbidden_paths)
+    """Which of `paths` fall under the reviewed `forbidden_paths`, matched by vibey-gh."""
+    patterns = grant(repo).forbidden_paths
     from vibey_gh.protected_paths import ProtectedPathsGuard
 
     return ProtectedPathsGuard().touched(patterns, paths)
@@ -238,7 +303,7 @@ def admit(
     repo: Path,
     *,
     ask: Callable[[str, int, Path], Any] = fetch,
-    allowed: Callable[[Path], Sequence[str]] = allowed_authors,
+    allowed: Callable[[Path], Grant | Sequence[str]] = allowed_authors,
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> str:
     """Fetch and judge one issue; write it for the lane only if it is admitted.
@@ -261,9 +326,14 @@ def admit(
         # cannot be asked are the same verdict -- provenance unestablished -- and the same
         # visible refusal, never a traceback that leaves no result behind.
         try:
-            permitted = tuple(allowed(repo))
+            given = allowed(repo)
         except (Exception, SystemExit) as exc:  # fail closed on ANY unreadable grant
             raise Refused(f"{KEY} authors could not be read: {exc}") from exc
+        if isinstance(given, Grant):
+            record["grant"] = given.source
+            permitted = given.authors
+        else:
+            permitted = tuple(given)
         issue = ask(slug, number, repo)
         refusal, accounts = judge(issue, permitted)
         record["accounts"] = list(accounts)
