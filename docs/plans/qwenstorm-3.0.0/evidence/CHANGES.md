@@ -1,12 +1,13 @@
 # Evidence delta
 
-Consumed at 2026-09-23T06:59:52Z: **4 new record(s)** (3 log line(s), 1 lane result(s)).
+Consumed at 2026-09-23T07:25:59Z: **4 new record(s)** (3 log line(s), 1 lane result(s)).
 
 ## Lanes that finished in this span
 
-- `gap-aws-secrets` — claims completed, 2 attempt line(s)
-  - `issue#493	attempt 1/3	completed	58`
-  - `issue#493	completed`
+- `gap-cdd-build-trajectory` — did not complete, 4 attempt line(s)
+  - `issue#497	attempt 1/3	failed	27`
+  - `issue#497	attempt 2/3	failed	60`
+  - `issue#497	attempt 3/3	failed	60`
 
 ## Activity
 

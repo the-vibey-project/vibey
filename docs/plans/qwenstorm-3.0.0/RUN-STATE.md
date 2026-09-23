@@ -1,17 +1,17 @@
 # QwenStorm 3.0.0 — run state
 
-Snapshot 2026-09-23T06:59:52Z, written by `tools/storm-snapshot.py`.
+Snapshot 2026-09-23T07:25:59Z, written by `tools/storm-snapshot.py`.
 
 The runner's durable record is `integrated.txt` and `abandoned.txt`: a lane in neither is
 unsettled, whatever exists under `lanes/`. `lanes/` lives in /tmp and is wiped between
 sessions, so nothing here depends on it surviving.
 
 - queue: **594 lanes** · integrated: **8** · abandoned: **2**
-- lane worktrees: **23** · finished awaiting review: **22** · unsettled: **23**
+- lane worktrees: **24** · finished awaiting review: **23** · unsettled: **24**
 - integration branch: `876fee98`
-- last line of progress.log: `2026-09-23T06:50:27Z start gap-cdd-build-trajectory #497 on integration@876fee98`
+- last line of progress.log: `2026-09-23T07:13:13Z start gap-cdd-distance #498 on integration@876fee98`
 
-Still running or never finished (1): `gap-cdd-build-trajectory`
+Still running or never finished (1): `gap-cdd-distance`
 
 
 ## How to resume
