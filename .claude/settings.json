@@ -40,6 +40,9 @@
       "Bash(psql *)"
     ]
   },
+  "env": {
+    "PRE_COMMIT_HOME": ".cache/pre-commit"
+  },
   "sandbox": {
     "network": {
       "allowedDomains": [
