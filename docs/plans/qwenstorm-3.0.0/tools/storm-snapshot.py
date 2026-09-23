@@ -142,7 +142,7 @@ Still running or never finished ({len(unfinished)}): {", ".join(f"`{s}`" for s i
 ## How to resume
 
 ```bash
-cd /private/tmp/claude-501/storm/qwenstorm-3.0.0
+cd {STORM}
 touch UNATTENDED                      # batch review; a finished lane does not block the queue
 nohup bash tools/storm-queue.sh > scratch/storm-run.log 2>&1 < /dev/null & disown
 ```
