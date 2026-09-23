@@ -1,17 +1,16 @@
 # Evidence delta
 
-Consumed at 2026-09-23T08:44:37Z: **8 new record(s)** (6 log line(s), 2 lane result(s)).
+Consumed at 2026-09-23T09:13:49Z: **8 new record(s)** (6 log line(s), 2 lane result(s)).
 
 ## Lanes that finished in this span
 
-- `gap-ci-arch-gates` — did not complete, 4 attempt line(s)
-  - `issue#500	attempt 1/3	failed	3`
-  - `issue#500	attempt 2/3	failed	25`
-  - `issue#500	attempt 3/3	failed	60`
-- `gap-ci-installer-smoke` — claims completed, 4 attempt line(s)
-  - `issue#501	attempt 1/3	failed	25`
-  - `issue#501	attempt 2/3	failed	30`
-  - `issue#501	attempt 3/3	completed	29`
+- `gap-ci-macos-gates` — did not complete, 4 attempt line(s)
+  - `issue#502	attempt 1/3	failed	7`
+  - `issue#502	attempt 2/3	failed	60`
+  - `issue#502	attempt 3/3	failed	60`
+- `gap-ci-os-required-checks` — claims completed, 2 attempt line(s)
+  - `issue#503	attempt 1/3	completed	27`
+  - `issue#503	completed`
 
 ## Activity
 
