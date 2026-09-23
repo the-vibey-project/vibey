@@ -272,3 +272,99 @@ enabled = false
 # GA4 measurement id for the published docs site, rendered into release-surfaces.yml as
 # GA_ID. Public by nature -- it ships in the page source of every site using it.
 google_analytics_id = "G-DMYG7PHCQP"
+
+# ---------------------------------------------------------------------------------------
+# The operator's grant to a delegated approver (sub-doctrine 12.f, ADR-0049).
+#
+# 12.f puts the judgement here: the operator exercises it ONCE, by fixing what may be
+# approved and what never may, and an approver applies a standard it did not choose and
+# cannot alter. This table is that standard. Changing it is changing who may approve, which
+# is why `.vibey-gh.toml` appears in its own forbidden list -- the grant may never approve a
+# change to the grant.
+#
+# This is the DECLARED half (12.c: declared in the repository, reviewed in a pull request).
+# The live half is the repository variable VIBEY_UNATTENDED_APPROVAL, which must read
+# exactly "on". Absence, "off", empty, malformed or UNREADABLE are all refusal -- an
+# approver that cannot read its own authorization has already lost it. Withdrawal needs no
+# merge and no reason:
+#
+#     gh variable set VIBEY_UNATTENDED_APPROVAL --body off
+#
+[unattended_approval]
+enabled = true
+
+# The operator chose the widest branch scope, so this list is the ONLY bound between an
+# approver and any change in the repository. Every entry below answers one question: could
+# a change here alter WHAT A GATE MEASURES, WHO MAY APPROVE, or WHAT AN AGENT MAY DO? Where
+# the answer is yes, it is forbidden, and a change touching one is refused WHOLE -- an
+# approver does not approve the safe subset of a pull request.
+branches = ["*"]
+
+# Every deterministic gate must already be green. A delegated approval is added to the
+# gates and never substituted for one (12.f).
+require_all_gates = true
+
+forbidden_paths = [
+  # The governance corpus, and the index that proves it has not been altered.
+  "src/vibey_tools/gh/docs/**",
+  "src/vibey_tools/gh/corpus-index.json",
+
+  # This grant. An approver may not widen its own mandate.
+  ".vibey-gh.toml",
+
+  # What any agent may do, anywhere in the tree.
+  ".claude/settings.json",
+  ".claude/settings.local.json",
+  "**/.claude/settings.json",
+  "**/.claude/settings.local.json",
+
+  # The approver's own definition, and every other agent definition.
+  ".claude/agents/**",
+  "**/.claude/agents/**",
+
+  # The gates as they RUN.
+  ".github/**",
+  "**/.github/**",
+
+  # The gates as they are WRITTEN. `.github/workflows/**` is generated from these templates,
+  # so forbidding only the rendered copy leaves the gate editable through its source -- the
+  # same rendering relationship that made the merge-train trigger fix non-autonomous.
+  "src/vibey_tools/gh/vibey_gh/templates/**",
+
+  # The machinery that decides what a gate means: what the train requires, what a review
+  # must answer, how this very grant is parsed, and what provenance is checked.
+  "src/vibey_tools/gh/vibey_gh/merge_train.py",
+  "src/vibey_tools/gh/vibey_gh/review_contract.py",
+  "src/vibey_tools/gh/vibey_gh/config.py",
+  "src/vibey_tools/gh/vibey_gh/fingerprints.py",
+
+  # The local gates, and the hooks that invoke them.
+  ".pre-commit-config.yaml",
+  ".githooks/**",
+  "**/.githooks/**",
+
+  # Test and coverage configuration. The per-layer 100% floors and pytest's addopts live in
+  # pyproject.toml, so a one-line edit there is a gate change wearing a dependency's clothes.
+  "pyproject.toml",
+  "**/pyproject.toml",
+  ".importlinter",
+
+  # The tests that guard the repository's own invariants -- ADR counts, agent-tree parity,
+  # the doc meta-tests. A change here changes what "green" means.
+  "tests/meta/**",
+
+  # The storm's own tooling decides whether a lane passes at all. An approved change to
+  # lane-publish.py alters every future verdict, which is a gate by another name.
+  "docs/plans/*/tools/**",
+
+  # The four agent-surface trees. They are instructions to whatever reads them next.
+  ".claude/skills/**",
+  ".agents/skills/**",
+  ".cursor/rules/**",
+  ".agent/rules/**",
+
+  # Who must review, wherever GitHub looks for it.
+  "CODEOWNERS",
+  ".github/CODEOWNERS",
+  "docs/CODEOWNERS",
+]
