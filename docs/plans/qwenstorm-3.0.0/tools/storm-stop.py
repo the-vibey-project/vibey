@@ -41,6 +41,7 @@ import argparse
 import re
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -190,93 +191,26 @@ def stop(table: list[tuple[int, str]], dry: bool) -> list[str]:
     return notes
 
 
-def snapshot(state: dict, notes: list[str]) -> str:
-    settled = "\n".join(
-        [f"integrated  {s}" for s in state["integrated"]]
-        + [f"abandoned   {s}" for s in state["abandoned"]]
-    )
-    flight = state["in_flight"]
-    flight_note = (
-        f"`{flight}` was in flight and has no `result.json`, so it is unfinished and runs "
-        "again on resume."
-        if flight
-        else "No lane was in flight."
-    )
-    unfinished = state["unfinished"]
-    return f"""# QwenStorm 3.0.0 — run state
+def publish(notes: list[str], dry: bool, push: bool) -> list[str]:
+    """Hand the snapshot to storm-snapshot.py, which is the only thing that renders one.
 
-Snapshot {state["when"]}, written by `tools/storm-stop.py` at a deliberate pause.
-
-The runner's durable record is `integrated.txt` and `abandoned.txt`: a lane in neither is
-unsettled, whatever exists under `lanes/`. `lanes/` lives in /tmp and is wiped between
-sessions, so nothing here depends on it surviving.
-
-- queue: **{state["queue"]} lanes** · integrated: **{len(state["integrated"])}** · abandoned: **{len(state["abandoned"])}**
-- lane worktrees at the pause: **{len(state["lanes"])}** · unsettled: **{len(state["unsettled"])}**
-- integration branch: `{state["integration"]}`
-
-## How it was stopped
-
-{chr(10).join("- " + n for n in notes)}
-
-{flight_note}
-
-Unfinished at the pause ({len(unfinished)}): {", ".join(f"`{s}`" for s in unfinished) or "none"}
-
-## How to resume
-
-```bash
-cd /private/tmp/claude-501/storm/qwenstorm-3.0.0
-touch UNATTENDED                      # batch review; a finished lane does not block the queue
-nohup bash tools/storm-queue.sh > scratch/storm-run.log 2>&1 < /dev/null & disown
-```
-
-macOS has no `setsid`; `nohup ... & disown` is what survives the launching shell.
-`storm-queue.sh` starts `storm-cycle.py` itself, so the outer loop needs no separate command.
-A lane with a `.qwenstorm/result.json` is treated as finished and awaiting review; delete that
-file to have it run again.
-
-Health, without needing `ps` (which the sandbox refuses):
-
-```bash
-python3 tools/storm-watch.py            # exit 0 healthy, 1 wrong, 2 cannot tell
-python3 tools/storm-watch.py --watch    # silent until something is wrong
-```
-
-## Settled
-
-```
-{settled}
-```
-"""
-
-
-def publish(text: str, dry: bool, push: bool) -> list[str]:
-    target = PLANS / "RUN-STATE.md"
+    Not a second renderer here. Two copies of "what the run state looks like" drift until the
+    one nobody runs is the one somebody reads on resume, and the stop notes are the only thing
+    this command knows that the generator does not -- so they are passed in, not duplicated.
+    """
+    argv = [sys.executable, str(Path(__file__).absolute().parent / "storm-snapshot.py")]
+    for note in notes:
+        argv += ["--note", note]
     if dry:
-        return [f"would write {target.name}, commit it, and {'push' if push else 'stop there'}"]
-    target.write_text(text)
-    notes = [f"wrote {target}"]
-    code, _ = run(["git", "add", "--", str(target)], PLANS)
-    if code:
-        return notes + ["could not stage the snapshot"]
-    code, out = run(
-        ["git", "commit", "-q", "-m", "docs(storm): snapshot the run at a pause"], PLANS
-    )
-    if code and "nothing to commit" not in out:
-        return notes + [f"commit refused: {out.splitlines()[-1][:90] if out else code}"]
-    notes.append("committed")
-    if not push:
-        return notes + ["not pushed (--no-push); the snapshot is safe in git"]
-    code, out = run(["git", "push"], PLANS, timeout=2400)
-    if code:
-        # Said plainly rather than smoothed over: the gate refusing is a normal outcome, and a
-        # snapshot reported as pushed when it was not is the one failure that matters here.
-        notes.append(f"PUSH REFUSED: {out.splitlines()[-1][:90] if out else code}")
-        notes.append("the commit is local and safe; push it once the gate is happy")
-    else:
-        notes.append("pushed")
-    return notes
+        return [f"would run storm-snapshot.py --write --commit{' --push' if push else ''}"]
+    # --force: a pause is worth recording even when the ledger has not moved since the last
+    # pass, because the fact of the pause is itself the news.
+    argv += ["--write", "--commit", "--force"]
+    if push:
+        argv.append("--push")
+    code, out = run(argv, STORM, timeout=2400)
+    lines = [line.strip() for line in out.splitlines() if line.strip()]
+    return lines or [f"storm-snapshot.py exited {code} with no output"]
 
 
 def main() -> int:
@@ -312,7 +246,7 @@ def main() -> int:
     notes = stop(table, dry=not args.stop)
     for note in notes:
         print(f"  {note}")
-    for note in publish(snapshot(state, notes), dry=not args.stop, push=not args.no_push):
+    for note in publish(notes, dry=not args.stop, push=not args.no_push):
         print(f"  {note}")
     return 0
 

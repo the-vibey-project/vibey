@@ -5,13 +5,14 @@
     python3 storm-cycle.py --run --every 600  # do a pass every 10 minutes, while a storm runs
 
 The inner loop is storm-queue.sh, which turns issues into lane worktrees. This is the outer
-one, and it is five steps, each already its own script and each gated on evidence:
+one, and it is six steps, each already its own script and each gated on evidence:
 
   resolve   lane-resolve.py  -- settle the conflicts decidable from the tree, refuse the rest
   refresh   lane-refresh.py  -- carry what merged into develop into every idle lane
   repair    lane-repair.py   -- fix only what a formatter or a delete can fix
   publish   lane-publish.py  -- for lanes that pass every gate: commit, push, open a PR
   merge     vibey-gh merge-train
+  snapshot  storm-snapshot.py -- record the run state in git, when it has changed
 
 Resolve runs before refresh and not only inside it. Refresh calls the resolver itself for a
 conflict it causes, but a lane can be sitting mid-conflict for reasons refresh never saw -- a
@@ -106,6 +107,21 @@ def cycle(dry: bool) -> None:
         say(f"merge-train: exit {code}")
         for line in tail:
             print(f"    {line}", flush=True)
+
+    # Last, so the snapshot records what this pass actually did rather than what it was about
+    # to do. Cheap on both counts: it writes nothing at all when the run state has not moved
+    # (the ledger changes when a lane settles, a handful of times an hour, not every ten
+    # minutes), and when it does push, storm-snapshot.py skips the two hooks that each run the
+    # whole suite -- having first proven the push carries nothing but one markdown file.
+    step(
+        "snapshot",
+        [
+            python,
+            str(TOOLS / "storm-snapshot.py"),
+            *([] if dry else ["--write", "--commit", "--push"]),
+        ],
+        keep=4,
+    )
     say("pass complete")
 
 
