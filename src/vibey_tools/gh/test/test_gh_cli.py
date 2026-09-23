@@ -656,7 +656,49 @@ def test_promote_passes_its_flags_through(repo, monkeypatch):
 
     monkeypatch.setattr(promote_mod, "promote", fake)
     assert main(["promote", "--dry-run", "--no-wait", "--method", "squash"]) == 0
-    assert seen == {"dry_run": True, "wait": False, "method": "squash"}
+    assert seen == {"dry_run": True, "wait": False, "method": "squash", "admin_fallback": False}
+
+
+def test_only_a_human_flag_lets_a_promotion_fall_back_to_admin(repo, monkeypatch):
+    from vibey_gh import promote as promote_mod
+
+    seen: dict = {}
+
+    def fake(cfg, **kw):
+        seen.update(kw)
+        return promote_mod.Promotion()
+
+    monkeypatch.setattr(promote_mod, "promote", fake)
+    assert main(["promote", "--wait", "--admin-fallback"]) == 0
+    assert seen["admin_fallback"] is True and seen["wait"] is True
+
+
+def test_the_promotion_admin_fallback_means_nothing_without_wait(repo, monkeypatch, capsys):
+    """Without `--wait` the promotion never merges here -- the merge train does -- so the
+    flag would silently do nothing. Refused rather than accepted and ignored."""
+    from vibey_gh import promote as promote_mod
+
+    monkeypatch.setattr(
+        promote_mod, "promote", lambda cfg, **kw: pytest.fail("must not run without --wait")
+    )
+    assert main(["promote", "--admin-fallback"]) == 2
+    assert "--admin-fallback" in capsys.readouterr().err
+
+
+def test_no_configuration_key_lets_a_promotion_fall_back_to_admin(repo, monkeypatch):
+    from vibey_gh import promote as promote_mod
+
+    config = repo / ".vibey-gh.toml"
+    config.write_text(config.read_text() + "[promote]\nadmin_fallback = true\n")
+    seen: dict = {}
+
+    def fake(cfg, **kw):
+        seen.update(kw)
+        return promote_mod.Promotion()
+
+    monkeypatch.setattr(promote_mod, "promote", fake)
+    assert main(["promote", "--wait"]) == 0
+    assert seen["admin_fallback"] is False
 
 
 def test_a_promotion_that_cannot_proceed_is_an_error(repo, monkeypatch, capsys):

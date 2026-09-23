@@ -1086,8 +1086,10 @@ control on public repositories — see [Security architecture](docs/security.md)
 
 - Empty Anthropic key: define `ANTHROPIC_API_KEY` as a repository secret, not only an
   environment secret, and confirm the privileged workflow can read it.
-- Review-blocked promotion: verify the exact-head `PR evaluate / gate` and `PR review / gate`; admin fallback
-  is permitted only after all independent policy checks pass.
+- Review-blocked promotion: verify the exact-head `PR evaluate / gate` and `PR review / gate`. A
+  promotion GitHub refuses is reported "needs a human merge" and waits; nothing unattended retries
+  it with `--admin`. A person may, after all independent policy checks pass, with
+  `vibey-gh merge-train --pr N --admin-fallback` or `vibey-gh promote --wait --admin-fallback`.
 - Pages 404: select **GitHub Actions** as the Pages source and rerun Release surfaces.
 - Repository profile failure: give `AUTOMERGE_TOKEN` the administration and security
   permissions required to reconcile the configured settings.

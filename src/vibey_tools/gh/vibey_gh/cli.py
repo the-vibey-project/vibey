@@ -444,9 +444,18 @@ def _flatten(args) -> int:
 
 
 def _promote(args) -> int:
+    if args.admin_fallback and not args.wait:
+        # Without --wait nothing merges here (the merge train does), so the flag would be
+        # accepted and silently ignored -- refused instead, so nobody believes it applied.
+        print("vibey-gh: --admin-fallback only applies with --wait", file=sys.stderr)
+        return 2
     try:
         result = promote.promote(
-            load_config(), dry_run=args.dry_run, method=args.method, wait=args.wait
+            load_config(),
+            dry_run=args.dry_run,
+            method=args.method,
+            wait=args.wait,
+            admin_fallback=args.admin_fallback,
         )
     except RuntimeError as exc:
         print(f"vibey-gh: {exc}", file=sys.stderr)
@@ -1517,6 +1526,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument(
         "--summary", metavar="FILE", help="write markdown here (default: $GITHUB_STEP_SUMMARY)"
+    )
+    # A flag and never a configuration key, as for merge-train (ADR-0053, 12.d).
+    p.add_argument(
+        "--admin-fallback",
+        action="store_true",
+        help="with --wait: retry a merge GitHub refuses with `gh pr merge --admin`, "
+        "bypassing the ruleset. Off by default; for a person at the keyboard, for this "
+        "run only. Unattended callers must never pass it",
     )
     p.set_defaults(func=_promote)
 

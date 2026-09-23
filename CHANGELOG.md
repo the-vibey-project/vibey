@@ -33,7 +33,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   now wait for a person. The train also stops retrying a refused merge with
   `gh pr merge --admin`: a refusal (for example `REVIEW_REQUIRED`) is reported "needs a human
   merge" with GitHub's reason and the pass continues. `vibey-gh merge-train --admin-fallback`
-  restores the retry for one run; no configuration key can (sub-doctrine 12.d)
+  restores the retry for one run; no configuration key can (sub-doctrine 12.d). `vibey-gh
+  promote --wait` gets the same rule, with `--admin-fallback` (only with `--wait`)
 
 ### Added
 

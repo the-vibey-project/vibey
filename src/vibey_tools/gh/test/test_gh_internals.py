@@ -808,6 +808,16 @@ def test_no_rendered_workflow_runs_the_train_with_the_admin_fallback(repo):
     assert runs_train
     assert not [line for line in runs_train if "--admin" in line]
     assert "--admin" not in rendered["merge-train.yml"]
+    # The promotion too: it opens the pull request and leaves the merge to the train, and
+    # never carries the bypass into an unattended run.
+    runs_promote = [
+        line
+        for body in rendered.values()
+        for line in body.splitlines()
+        if "vibey-gh promote" in line and not line.lstrip().startswith("#")
+    ]
+    assert runs_promote
+    assert not [line for line in runs_promote if "--admin" in line or "--wait" in line]
 
 
 # ---------------------------------------------------------------- holding for review

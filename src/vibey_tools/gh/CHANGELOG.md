@@ -18,6 +18,11 @@ This file follows Keep a Changelog and semantic versioning conventions.
   `--admin-fallback` turns the retry on for one run; it is a flag a person passes, and no
   configuration key can make it the default (sub-doctrine 12.d). No rendered workflow
   passes it.
+- **Breaking:** `promote --wait` gets the same rule. A refused promotion merge is reported
+  "#N needs a human merge: <GitHub's reason>" instead of being retried with `--admin`;
+  `promote --wait --admin-fallback` restores the retry for one run, and `--admin-fallback`
+  without `--wait` is refused (exit 2) rather than silently ignored. `promote.merge` now
+  returns `(merged, bypassed, error)`.
 - Split `pr-automation.yml` into `pr-evaluate.yml` (PR evaluate) and `pr-review.yml`
   (PR review) with two required check runs instead of one, so a red gate names its task:
   `PR evaluate / gate` certifies every configured scan settled on the exact head (red scan
