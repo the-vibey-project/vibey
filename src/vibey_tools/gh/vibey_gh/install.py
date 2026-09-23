@@ -376,6 +376,10 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace("__VIBEY_GH_DOC_TWITTER_CREATOR__", docs.twitter_creator)
     wanted = wanted.replace("__VIBEY_GH_DOC_KEYWORDS__", ",".join(docs.keywords))
     wanted = wanted.replace("__VIBEY_GH_DOC_AUTHOR__", docs.author)
+    # The paper's provenance: who to write to, where they are, where they publish.
+    wanted = wanted.replace("__VIBEY_GH_DOC_AUTHOR_EMAIL__", docs.author_email)
+    wanted = wanted.replace("__VIBEY_GH_DOC_AUTHOR_AFFILIATION__", docs.author_affiliation)
+    wanted = wanted.replace("__VIBEY_GH_DOC_AUTHOR_URL__", docs.author_url)
     wanted = wanted.replace("__VIBEY_GH_DOC_FUNDING_BITCOIN__", docs.funding_bitcoin)
     wanted = wanted.replace("__VIBEY_GH_DOC_FUNDING_MONERO__", docs.funding_monero)
     wanted = wanted.replace("__VIBEY_GH_DOC_FUNDING_ETHEREUM__", docs.funding_ethereum)

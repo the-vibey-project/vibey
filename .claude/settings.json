@@ -46,6 +46,9 @@
   },
   "sandbox": {
     "enableWeakerNetworkIsolation": true,
+    "filesystem": {
+      "allowWrite": ["~/.cache/uv"]
+    },
     "network": {
       "allowedDomains": [
         "github.com",
@@ -57,7 +60,8 @@
         "127.0.0.1"
       ],
       "allowUnixSockets": [
-        "/tmp/.s.PGSQL.5432"
+        "/tmp/.s.PGSQL.5432",
+        "/private/tmp/.s.PGSQL.5432"
       ]
     }
   }

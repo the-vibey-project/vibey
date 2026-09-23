@@ -966,7 +966,27 @@ def test_the_site_publishes_its_own_book_and_paper_when_enabled(tmp_path):
     assert '--print-to-pdf="$PWD/book-out/book.pdf"' in on
     assert "--no-pdf-header-footer" in on
     assert "book.pdf was not produced" in on
-    assert "vibey-gh paper --author" in on
+    # The paper states its own provenance, computed on the runner: the revision being
+    # published, the corresponding author from `[documentation]`, and the channel site.
+    assert 'vibey-gh paper --source "$PAPER_SOURCE" --author' in on
+    assert '--provenance --revision "$RELEASE_SHA"' in on
+    assert "--email '' --affiliation ''" in on or "--email '" in on
+    assert (
+        'PAPER_SITE="https://${GITHUB_REPOSITORY%%/*}.github.io/${GITHUB_REPOSITORY#*/}/$CHANNEL/"'
+        in on
+    )
+    # The figures are rendered for the site before it is built, from the same pinned
+    # engine, and the PDF renders from the source the figure step kept.
+    assert on.index(
+        "vibey-gh paper-figures --source docs/paper.md --emit paper-figures/tex"
+    ) < on.index("properdocs build --strict")
+    assert (
+        "vibey-gh paper-figures --source docs/paper.md --inline paper-figures/svg --output docs/paper.md"
+        in on
+    )
+    assert "cp docs/paper.md .paper-source.md" in on
+    assert "if [ -f .paper-source.md ]; then PAPER_SOURCE=.paper-source.md; fi" in on
+    assert "pymupdf==1.28.2" in on
     assert "--output paper-out/paper.docx --format docx" in on
     assert "cp paper-out/paper.pdf channel-site/paper.pdf" in on
     assert "cp paper-out/paper.docx channel-site/paper.docx" in on
@@ -974,6 +994,29 @@ def test_the_site_publishes_its_own_book_and_paper_when_enabled(tmp_path):
     assert "tectonic%400.15.0" in on
     assert "875fbbc9ab48560d7776088c608e0beee49197b57ab4a2f6c5385b2c661c842f" in on
     assert on.index("sha256sum -c") < on.index("tar -xzf /tmp/tectonic.tar.gz")
+
+
+def test_the_docs_deploy_announces_itself_only_through_a_secret(tmp_path):
+    """A community learns of a new paper or book revision from the pipeline that published
+    it, never from someone remembering to post (sub-doctrine 12.e). The webhook is a
+    repository secret: the rendered workflow names it and never carries its value, and a
+    deploy with no secret says out loud that nothing was posted rather than failing or
+    staying silent."""
+    from vibey_gh.config import GhConfig
+    from vibey_gh.install import render_workflow
+
+    on = render_workflow(WORKFLOWS / "release-surfaces.yml", GhConfig(root=tmp_path))
+    assert "- name: Announce the published surfaces" in on
+    assert "DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}" in on
+    assert "announce: no DISCORD_WEBHOOK_URL secret is set; nothing posted" in on
+    # Only after the Pages deploy has succeeded, and only what this deploy produced.
+    assert on.index("id: deploy") < on.index("- name: Announce the published surfaces")
+    assert on.index("- name: Announce the published surfaces") < on.index("\n  attach:")
+    assert '("paper.pdf", "paper, PDF")' in on
+    assert '("book.epub", "book, EPUB")' in on
+    assert "if (site / path).is_file()" in on
+    # The secret's value never appears in a rendered workflow, whatever the configuration.
+    assert "discord.com/api/" + "webhooks/" not in on
 
 
 def test_the_book_and_the_paper_are_findable_on_every_published_surface(tmp_path):
