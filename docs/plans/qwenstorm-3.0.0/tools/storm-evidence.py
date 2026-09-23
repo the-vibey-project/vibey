@@ -271,10 +271,9 @@ def block(summary: dict, gaps: list[str]) -> str:
     )
     return f"""{BEGIN}
 
-*Derived from `docs/plans/qwenstorm-3.0.0/evidence/ledger.jsonl`, an append-only record
-consumed under sub-doctrine 10.g. Regenerated automatically; do not edit inside these
-markers. This block states figures only — every claim about them is written by a person
-outside it.*
+*Derived from `docs/plans/qwenstorm-3.0.0/evidence/ledger.jsonl`, an append-only record consumed under sub-doctrine 10.g.*
+*Regenerated automatically; do not edit inside these markers.*
+*This block states figures only — every claim about them is written by a person outside it.*
 
 | quantity | value |
 |---|---|
