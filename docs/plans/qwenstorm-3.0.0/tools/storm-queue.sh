@@ -15,6 +15,18 @@
 Q=/private/tmp/claude-501/storm/qwenstorm-3.0.0
 PY=/Users/adam/git/vibey/.venv-vibey-2.0.0/bin/python
 touch "$Q/integrated.txt" "$Q/abandoned.txt"
+# The outer loop: refresh, repair, publish, merge-train, every ten minutes. Started here so it
+# is on whenever a storm is, and --detached makes it stop when this runner does -- an outer
+# loop that outlived the inner one would keep publishing lanes nobody was still producing.
+# `ps -Ao args=`, not pgrep -f: macOS pgrep has no -a, and the check must not silently answer
+# "not running" and start a second cycle beside the first.
+if ! ps -Ao args= | grep -q '[s]torm-cycle.py'; then
+  nohup python3 "$Q/tools/storm-cycle.py" --run --every 600 --detached \
+    > "$Q/scratch/storm-cycle.log" 2>&1 < /dev/null &
+  disown 2>/dev/null || true
+  echo "$(date -u +%FT%TZ) outer cycle started (10 min: refresh, repair, publish, merge-train)" \
+    | tee -a "$Q/progress.log"
+fi
 settled() { grep -qx "$1" "$Q/integrated.txt" "$Q/abandoned.txt"; }
 said=""
 say_once() { [ "$said" = "$1" ] || { echo "$(date -u +%FT%TZ) $1" | tee -a "$Q/progress.log"; said="$1"; }; }

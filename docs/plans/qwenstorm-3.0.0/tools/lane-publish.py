@@ -34,6 +34,7 @@ printed. Silence is never taken for success.
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -56,13 +57,37 @@ SAFE = ("uv", "python", "python3", "pytest", "ruff", "mypy", "lint-imports", "gr
 
 
 def run(argv: list[str], cwd: Path, timeout: int = 900) -> tuple[int, str]:
+    # VIRTUAL_ENV is inherited from whatever shell started this, and `uv run` obeys it: a lane's
+    # checks would then run against the environment of the checkout this script was launched
+    # from rather than the lane's own, and pass or fail for reasons that have nothing to do with
+    # the lane. Drop it and let uv resolve the environment from the lane it is standing in.
+    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
     try:
-        done = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        done = subprocess.run(
+            argv, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=env
+        )
     except FileNotFoundError:
         return 127, f"not found: {argv[0]}"
     except subprocess.TimeoutExpired:
         return 124, f"timed out after {timeout}s"
     return done.returncode, (done.stdout + done.stderr).strip()
+
+
+def why_failed(out: str) -> str:
+    """The line a person needs, not the last line printed.
+
+    `uv run` ends with installer chatter and warnings, so the final line of a failed check is
+    usually "Installed 4 packages in 15ms" -- true, irrelevant, and the reason a report can
+    look like nonsense. Prefer a line that names an error.
+    """
+    lines = [line for line in out.splitlines() if line.strip()]
+    for line in reversed(lines):
+        low = line.lower()
+        if any(
+            word in low for word in ("error", "failed", "broken", "not found", "e   ", "assert")
+        ):
+            return line.strip()
+    return lines[-1].strip() if lines else "no output"
 
 
 def settled() -> set[str]:
@@ -115,11 +140,21 @@ def checks_of(lane: Path) -> list[list[str]]:
 
 
 def verify(slug: str) -> tuple[bool, list[str]]:
-    """lane-verify's own verdict for one lane, re-run now rather than read from a stale file."""
+    """lane-verify's own verdict for one lane, re-run now rather than read from a stale file.
+
+    "nothing committed" is not a reason to refuse: a lane's runner never commits, so every
+    lane reads that way, and committing is this script's own first act. Requiring it to be
+    absent made publishing impossible -- the one lane that ever passed had been committed by
+    hand first. Every other problem still holds the lane.
+    """
     code, out = run([sys.executable, str(STORM / "tools/lane-verify.py"), slug], STORM, timeout=900)
     report = LANES / slug / ".qwenstorm/verify.json"
     if report.is_file():
-        problems = json.loads(report.read_text()).get("problems", [])
+        problems = [
+            p
+            for p in json.loads(report.read_text()).get("problems", [])
+            if not p.startswith("nothing committed")
+        ]
         return not problems, list(problems)
     return code == 0, [] if code == 0 else [out.strip().splitlines()[-1] if out else "no report"]
 
@@ -213,8 +248,7 @@ def ready(slug: str) -> tuple[bool, list[str]]:
             argv = [str(interpreter), *(["-m"] if argv[0] == "pytest" else []), *argv[1:]]
         code, out = run(argv, lane)
         if code:
-            tail = out.strip().splitlines()[-1] if out.strip() else f"exit {code}"
-            failures.append(f"check failed: {' '.join(ran[len(failures)])[:60]} -- {tail[:90]}")
+            failures.append(f"check failed: {' '.join(argv)[:55]} -- {why_failed(out)[:110]}")
     return (not failures), failures
 
 
@@ -249,8 +283,27 @@ def publish(slug: str, dry: bool) -> str:
     code, head = run(["git", "rev-parse", "FETCH_HEAD"], tree)
     code, out = run(["git", "cherry-pick", head.strip()], tree)
     if code:
-        run(["git", "cherry-pick", "--abort"], tree)
-        return f"cherry-pick failed: {out[:120]}"
+        # The lane's commit is being replayed onto develop as it is right now, so a conflict
+        # here is the lane's work disagreeing with what landed while it ran -- the same
+        # question lane-refresh.py asks, and it gets the same answer from the same code.
+        # lane-resolve.py aborts the cherry-pick itself when it refuses, so the state is read
+        # back from git rather than from its exit code.
+        run(
+            [
+                sys.executable,
+                str(STORM / "tools/lane-resolve.py"),
+                "--resolve",
+                "--repo",
+                str(tree),
+            ],
+            STORM,
+            timeout=1200,
+        )
+        unresolved = run(["git", "diff", "--name-only", "--diff-filter=U"], tree)[1].strip()
+        picking = run(["git", "rev-parse", "-q", "--verify", "CHERRY_PICK_HEAD"], tree)[0] == 0
+        if unresolved or picking:
+            run(["git", "cherry-pick", "--abort"], tree)
+            return f"cherry-pick failed: {out[:120]}"
     run(["uv", "sync", "-q", "--extra", "dev"], tree, timeout=900)
     code, out = run(["git", "push", "-u", "origin", branch], tree, timeout=1800)
     if code:
