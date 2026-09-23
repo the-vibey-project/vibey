@@ -48,6 +48,7 @@ from vibey_gh.config import (
     RepositoryProfileConfig,
     SocialSignalsConfig,
     TidyConfig,
+    UnattendedApprovalConfig,
     WorkflowNamesConfig,
     YankConfig,
 )
@@ -75,6 +76,7 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "merge_train": {"owner", "trusted_authors", "restack_conflicts", "protected_paths"},
     "install": {"workflows", "pin_version", "union_merge_paths", "self_source", "fallback_package"},
     "pr_automation": _fields(PrAutomationConfig) | {"observability", "fallback"},
+    "unattended_approval": _fields(UnattendedApprovalConfig),
     "issue_automation": _fields(IssueAutomationConfig),
     "documentation": _fields(DocumentationConfig),
     "marketplace": _fields(MarketplaceConfig),
