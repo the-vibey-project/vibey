@@ -5,10 +5,15 @@
 Checks: the template's sections are present; the check block is a fenced block; no shell
 heredoc (the lane's `shell` tool takes an argv list); no pointer the lane cannot follow ("as
 above", "see the parent", "same block as", a bare specs/ path is rewritten at filing and is
-fine); no failure text that ends in an ellipsis.
+fine); no failure text that ends in an ellipsis; and no check line that will never be run.
+
+That last one asks `lane-publish.py` rather than reimplementing its rules, so the answer is
+the parser's own and cannot drift from it (10.e). A gate nobody knows is off is the cheapest
+way to ship an unverified lane, and the storm shipped several before anyone looked.
 """
 
 import csv
+import importlib.util
 import re
 import sys
 from pathlib import Path
@@ -16,6 +21,20 @@ from pathlib import Path
 STORM = Path(__file__).resolve().parent.parent
 SPECS = STORM / "specs"
 AUDIT = STORM / "issue-audit"
+REPO = STORM.parents[2]  # docs/plans/qwenstorm-3.0.0 -> plans -> docs -> the repository
+
+
+def _publisher():
+    """`lane-publish.py`, imported by path because its name is not an identifier."""
+    spec = importlib.util.spec_from_file_location(
+        "lane_publish", Path(__file__).with_name("lane-publish.py")
+    )
+    module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    return module
+
+
+PUBLISH = _publisher()
 
 SECTIONS = (
     "## Title",
@@ -129,6 +148,24 @@ def lint(path: Path, *, need_sections: bool = True) -> list[str]:
             "layer -- it can never reach 100%; drop the path so the full suite runs"
             for m in NARROWED_COVERAGE.finditer(text)
         ]
+    # The sibling of the rule above: that one is a gate that cannot pass, this one is a gate
+    # that never runs. Both let a lane look checked while nothing checked it. The verdict is
+    # the publisher's own, so a line this reports is exactly a line it will skip.
+    if not spike and not path.name.startswith(OPERATOR_PREFIXES):
+        # A lane is a clone of this repository, so this repository is the tree a spec's
+        # paths are written against. Anything else and every honest `cd` reads as broken.
+        checks, dropped = PUBLISH.parse_checks(text, REPO)
+        # "cannot be honoured" is about a directory not being there, and this runs BEFORE the
+        # lane does its work -- a spec whose job is to create `src/vibey_runners/vscode` is
+        # right to `cd` into it, and wrong only from here. What is linted is syntax the runner
+        # can interpret, never whether a path exists yet.
+        problems += [
+            f"check never runs -- {why}: {line!r}"
+            for line, why in dropped
+            if not why.startswith("cannot be honoured")
+        ]
+        if PUBLISH.block_of(text) is not None and not checks and not dropped:
+            problems.append("check block contains no runnable check at all")
     return problems
 
 
