@@ -108,3 +108,52 @@ def test_the_tenant_formatters_are_runnable_checks(tmp_path: Path) -> None:
     """CI's `tools-lint` enforces both, so a parser that drops them turns a gate off."""
     lane = lane_with(tmp_path, "black --line-length 100 --check vibey_gh\nisort --check-only .")
     assert [argv[0] for argv, _ in lane_publish.checks_of(lane)] == ["black", "isort"]
+
+
+# --- why_failed: the reason a person is shown -----------------------------------------
+
+
+def test_a_filename_containing_error_is_not_a_failure() -> None:
+    """The bug this replaced: `errors.py` at 100% was reported as the reason a lane failed."""
+    out = "\n".join(
+        [
+            "FAILED test/test_forge_adapters.py::test_http_transports[GitLabTransport]",
+            "vibey_gh/errors.py            78      0     26      0   100%",
+            "Installed 4 packages in 15ms",
+        ]
+    )
+    assert lane_publish.why_failed(out).startswith("FAILED test/test_forge_adapters.py")
+
+
+def test_a_test_file_named_failed_is_not_a_failure() -> None:
+    out = "tests/test_failed_handoff.py .....  [100%]\n42 passed in 3.1s"
+    assert lane_publish.why_failed(out) == "42 passed in 3.1s"
+
+
+def test_the_named_test_outranks_the_assertion_under_it() -> None:
+    out = "\n".join(
+        [
+            "E       AssertionError: assert [] == [{'id': 1}]",
+            "FAILED test/test_forge_adapters.py::test_http_transports[ForgejoTransport]",
+        ]
+    )
+    assert lane_publish.why_failed(out).startswith("FAILED ")
+
+
+def test_a_mypy_error_is_found_by_its_shape() -> None:
+    out = "Installed 4 packages\nvibey_gh/forge.py:31: error: Missing return statement  [return]"
+    assert lane_publish.why_failed(out).endswith("[return]")
+
+
+def test_a_missed_coverage_gate_is_reported_when_nothing_else_is() -> None:
+    out = "TOTAL  9397  1  3002  1  99%\nFAIL Required test coverage of 100% not reached."
+    assert "Required test coverage" in lane_publish.why_failed(out)
+
+
+def test_with_no_recognisable_failure_the_last_line_stands_in() -> None:
+    out = "Installed 4 packages in 15ms\nAll checks passed!"
+    assert lane_publish.why_failed(out) == "All checks passed!"
+
+
+def test_no_output_says_so() -> None:
+    assert lane_publish.why_failed("   \n\n") == "no output"

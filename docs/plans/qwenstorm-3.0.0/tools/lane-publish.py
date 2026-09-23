@@ -94,15 +94,36 @@ def why_failed(out: str) -> str:
 
     `uv run` ends with installer chatter and warnings, so the final line of a failed check is
     usually "Installed 4 packages in 15ms" -- true, irrelevant, and the reason a report can
-    look like nonsense. Prefer a line that names an error.
+    look like nonsense.
+
+    MATCH THE SHAPE, NOT THE SUBSTRING
+    ----------------------------------
+    This used to scan for the words "error", "failed", "assert" and the like anywhere in a
+    lowercased line, and every one of them appears in output that is not a failure. A
+    coverage table lists `vibey_gh/errors.py ... 100%`, which contains "error"; a test file
+    named `test_failed_handoff.py` contains "failed"; and `"e   "` matches any line with an
+    `e` followed by three spaces. So a lane whose real failure was two named tests was
+    reported as failing at a line saying its coverage was complete -- true about the text,
+    and the opposite of what it meant.
+
+    Tools emit recognisable shapes instead, so the shapes are what is matched, in the order
+    a person would want them: the named test first, then the assertion under it, then the
+    type or lint error, then the gate that was missed. Only when none of those appear does
+    the last line stand in, and it says so by simply being the last line.
     """
-    lines = [line for line in out.splitlines() if line.strip()]
-    for line in reversed(lines):
-        low = line.lower()
-        if any(
-            word in low for word in ("error", "failed", "broken", "not found", "e   ", "assert")
-        ):
-            return line.strip()
+    lines = [line.rstrip() for line in out.splitlines() if line.strip()]
+    for pattern in (
+        r"^(FAILED|ERROR) \S",  # pytest's short summary: names the test
+        r"^E\s{3}\S",  # pytest's assertion detail, under the failing test
+        r"(^|\s)error:\s",  # mypy `path:line: error:`, ruff and uv `error:`
+        r"^##\[error\]",  # a GitHub Actions step
+        r"^\w*(Error|Exception):\s",  # the last line of a traceback
+        r"Required test coverage of .* not reached",
+        r"^(FAIL|Coverage failure)\b",
+    ):
+        for line in reversed(lines):
+            if re.search(pattern, line):
+                return line.strip()
     return lines[-1].strip() if lines else "no output"
 
 
