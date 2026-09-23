@@ -116,6 +116,35 @@ def read_blob(repo: Path, stage: int, path: str) -> str | None:
     return done.stdout if done.returncode == 0 else None
 
 
+def operation(repo: Path) -> str:
+    """Which operation left this repo conflicted: a merge, a cherry-pick, or a rebase.
+
+    It decides how to back out, and getting it wrong is worse than not trying. `git merge
+    --abort` during a cherry-pick fails, and a failed abort leaves the repo stuck mid-
+    sequencer with an index nothing else in the storm can read -- the lane then looks neither
+    finished nor running to every later step. Conflicts reach this script from two places
+    that are not both merges: lane-refresh.py merges develop into a lane, and lane-publish.py
+    cherry-picks a lane's commit onto fresh develop in a worktree.
+    """
+    git = repo / ".git"
+    if git.is_file():  # a worktree: .git is a file pointing at the real directory
+        text = git.read_text(errors="replace").strip()
+        if text.startswith("gitdir:"):
+            git = Path(text.split(":", 1)[1].strip())
+    if (git / "CHERRY_PICK_HEAD").exists():
+        return "cherry-pick"
+    if (git / "REBASE_HEAD").exists() or (git / "rebase-merge").exists():
+        return "rebase"
+    if (git / "MERGE_HEAD").exists():
+        return "merge"
+    return "merge"
+
+
+def back_out(repo: Path) -> None:
+    """Abandon whatever is in progress, with the command that operation actually answers to."""
+    run(["git", f"{operation(repo)}", "--abort"], repo)
+
+
 def conflicted(repo: Path) -> list[str]:
     """The paths git reports as unmerged, from the index rather than by scanning for markers."""
     code, out = run(["git", "diff", "--name-only", "--diff-filter=U"], repo)
@@ -354,28 +383,41 @@ def resolve_repo(repo: Path, label: str, dry: bool) -> str:
     if refused:
         summary = ", ".join(refused[:3]) + (f" (+{len(refused) - 3})" if len(refused) > 3 else "")
         if not dry:
-            run(["git", "merge", "--abort"], repo)
+            back_out(repo)
         return f"REFUSED, left at its old base -- needs a person: {summary}"
     if dry:
         kinds = ", ".join(f"{p} [{k}]" for p, k in plan.items())
         return f"would resolve {len(plan)}: {kinds}"
 
+    kind_of_operation = operation(repo)
     for path, kind in plan.items():
         reason = apply_resolution(repo, path, kind)
         if reason:
-            run(["git", "merge", "--abort"], repo)
+            back_out(repo)
             return f"REFUSED while resolving {path}: {reason}"
     problems = verify(repo, list(plan))
     if problems:
-        run(["git", "merge", "--abort"], repo)
+        back_out(repo)
         return f"REFUSED by its own check: {problems[0]}"
-    code, out = run(
-        ["git", "commit", "--no-verify", "-q", "-m", f"chore(storm): resolve {label} merge"],
-        repo,
-    )
+    if kind_of_operation == "cherry-pick":
+        # --continue, not a fresh commit: a cherry-pick carries the lane's own commit message
+        # onto develop, and that message is what a reviewer reads on the pull request. Writing
+        # "resolve <slug>" over it would replace the description of the work with a note about
+        # the plumbing that landed it.
+        finish = ["git", "cherry-pick", "--continue", "--no-edit"]
+    else:
+        finish = [
+            "git",
+            "commit",
+            "--no-verify",
+            "-q",
+            "-m",
+            f"chore(storm): resolve {label} merge",
+        ]
+    code, out = run(finish, repo)
     if code:
-        run(["git", "merge", "--abort"], repo)
-        return f"REFUSED: could not commit the resolution: {out[:70]}"
+        back_out(repo)
+        return f"REFUSED: could not complete the {kind_of_operation}: {out[:70]}"
     return f"resolved {len(plan)} path(s): " + ", ".join(f"{p} [{k}]" for p, k in plan.items())
 
 
@@ -397,21 +439,28 @@ def install() -> int:
     specific conflict, replayed whenever that same conflict reappears. With fourteen lanes
     all merging the same develop, the same conflict arrives fourteen times and again on every
     later pass -- so one careful resolution is worth more than any rule this file could carry.
+
+    AND NOTHING ELSE. An earlier version also wrote `<ledger> merge=union` into each clone's
+    .git/info/attributes for the APPEND files, which looked like the same idea and was not.
+    Git's union driver runs during the merge, so it would settle queue.txt before the APPEND
+    class here ever saw it -- and it concatenates without deduplicating, so two branches
+    recording the same slug in integrated.txt produce it twice. That is the coarser of two
+    mechanisms winning purely by running first, and it is the same failure this file's
+    docstring rejects for CHANGELOG. One path, which deduplicates and is checked, is better
+    than two that disagree.
     """
     for repo, label in repos():
         for key, value in (("rerere.enabled", "true"), ("rerere.autoupdate", "true")):
             run(["git", "config", key, value], repo)
         attrs = repo / ".git/info/attributes"
-        # .git/info/attributes, not a tracked .gitattributes: this is how THIS clone merges,
-        # not a change to the repository's content, and a lane must not commit a file its
-        # spec never asked for.
-        attrs.parent.mkdir(parents=True, exist_ok=True)
-        want = [f"{name} merge=union" for name in sorted(APPEND_ONLY)]
-        have = attrs.read_text().splitlines() if attrs.is_file() else []
-        missing = [line for line in want if line not in have]
-        if missing:
-            attrs.write_text("\n".join(have + missing) + "\n")
-        print(f"  {label:36} rerere on, {len(want)} union path(s)")
+        if attrs.is_file():
+            kept = [
+                line
+                for line in attrs.read_text().splitlines()
+                if not (line.endswith("merge=union") and line.split()[0] in APPEND_ONLY)
+            ]
+            attrs.write_text("\n".join(kept) + "\n" if kept else "")
+        print(f"  {label:36} rerere on")
     return 0
 
 
@@ -420,11 +469,19 @@ def main() -> int:
     parser.add_argument("--resolve", action="store_true", help="actually resolve and commit")
     parser.add_argument("--install", action="store_true", help="enable rerere and union attrs")
     parser.add_argument("--only", action="append")
+    # Not every conflicted repository is a lane. lane-publish.py cherry-picks a lane's commit
+    # onto fresh develop inside a worktree of the main checkout, and a conflict there is the
+    # same question about the same two sides -- so it gets the same answer, from the same code.
+    parser.add_argument("--repo", help="resolve in this repository instead of the lanes")
     args = parser.parse_args()
     if args.install:
         return install()
+    targets = repos()
+    if args.repo:
+        path = Path(args.repo).absolute()
+        targets = [(path, path.name)]
     found = 0
-    for repo, label in repos():
+    for repo, label in targets:
         if args.only and label not in args.only:
             continue
         outcome = resolve_repo(repo, label, dry=not args.resolve)

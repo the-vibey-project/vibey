@@ -283,8 +283,27 @@ def publish(slug: str, dry: bool) -> str:
     code, head = run(["git", "rev-parse", "FETCH_HEAD"], tree)
     code, out = run(["git", "cherry-pick", head.strip()], tree)
     if code:
-        run(["git", "cherry-pick", "--abort"], tree)
-        return f"cherry-pick failed: {out[:120]}"
+        # The lane's commit is being replayed onto develop as it is right now, so a conflict
+        # here is the lane's work disagreeing with what landed while it ran -- the same
+        # question lane-refresh.py asks, and it gets the same answer from the same code.
+        # lane-resolve.py aborts the cherry-pick itself when it refuses, so the state is read
+        # back from git rather than from its exit code.
+        run(
+            [
+                sys.executable,
+                str(STORM / "tools/lane-resolve.py"),
+                "--resolve",
+                "--repo",
+                str(tree),
+            ],
+            STORM,
+            timeout=1200,
+        )
+        unresolved = run(["git", "diff", "--name-only", "--diff-filter=U"], tree)[1].strip()
+        picking = run(["git", "rev-parse", "-q", "--verify", "CHERRY_PICK_HEAD"], tree)[0] == 0
+        if unresolved or picking:
+            run(["git", "cherry-pick", "--abort"], tree)
+            return f"cherry-pick failed: {out[:120]}"
     run(["uv", "sync", "-q", "--extra", "dev"], tree, timeout=900)
     code, out = run(["git", "push", "-u", "origin", branch], tree, timeout=1800)
     if code:
