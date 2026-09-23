@@ -11,6 +11,9 @@ one, and it is seven steps, each already its own script and each gated on eviden
   refresh   lane-refresh.py  -- carry what merged into develop into every idle lane
   repair    lane-repair.py   -- fix only what a formatter or a delete can fix
   publish   lane-publish.py  -- for lanes that pass every gate: commit, push, open a PR
+  reap      lane-reap.py     -- settle the ledger from evidence: what landed becomes
+            integrated, what the runner gave up on is abandoned, so the queue stops
+            silently skipping everything downstream of a dead lane
   merge     vibey-gh merge-train
   evidence  storm-evidence.py -- consume every datum since the last run; keep the paper's
             derived block and the delta report current (10.g)
@@ -47,11 +50,17 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+import storm_paths
+
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
 # resolve but lanes/ and integration/ exist only in the runtime root.
 STORM = Path(__file__).absolute().parent.parent
 TOOLS = STORM / "tools"
-MAIN = Path("/Users/adam/git/vibey")
+
+# Declared in storm.toml, derived from the tree when it is silent -- never a literal
+# in this file. One operator's home directory compiled into five tools is a decision
+# taken away from the next adopter, and it fails by reporting an empty tree (12.h).
+MAIN = storm_paths.repo(STORM)
 
 
 def say(message: str) -> None:
@@ -100,6 +109,12 @@ def cycle(dry: bool) -> None:
         [python, str(TOOLS / "lane-publish.py"), *([] if dry else ["--publish"])],
         keep=10,
     )
+    # AFTER publish, never before: a lane the publisher could still rescue must have had its
+    # chance this pass before anything records it as dead. The ledger writes are safe
+    # unattended (bookkeeping, per lane-reap's own docstring); the issue writes and the
+    # worktree removals are NOT passed here, because those reach outside the storm's scratch
+    # and a scheduled pass should report them for a person rather than perform them (12.d).
+    step("reap", [python, str(TOOLS / "lane-reap.py"), *([] if dry else ["--reap"])], keep=10)
 
     if dry:
         say("merge: would run the repository's own merge train")

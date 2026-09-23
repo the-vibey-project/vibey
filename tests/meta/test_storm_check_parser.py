@@ -22,11 +22,20 @@ in the same commit that deletes them.
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
 
 TOOL = Path(__file__).resolve().parents[2] / "docs/plans/qwenstorm-3.0.0/tools/lane-publish.py"
+# Running a script puts its own directory on `sys.path`; importing one BY PATH does not. So a
+# tool that imports a sibling -- `lane-publish.py` imports `storm_paths` for the repository
+# location it must no longer hard-code (12.h) -- fails here and nowhere else, which is a
+# property of this caller rather than of the tool. Reproducing what the interpreter does for
+# the tool's real invocation is the honest fix; making the tool carry a workaround for its
+# one unusual caller is not.
+if str(TOOL.parent) not in sys.path:
+    sys.path.insert(0, str(TOOL.parent))
 SPEC = importlib.util.spec_from_file_location("lane_publish", TOOL)
 assert SPEC and SPEC.loader, f"the storm's publisher is missing: {TOOL}"
 lane_publish = importlib.util.module_from_spec(SPEC)
