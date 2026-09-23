@@ -981,6 +981,22 @@ def test_cluster_doctor_rejects_local_postgres_install_flag() -> None:
     assert "local doctor" in res.output
 
 
+def listed_engines(output: str) -> set[str]:
+    """The engine names `doctor` LISTED, which is not the same as the words it printed.
+
+    `"qwenloop" in res.output` is a claim about the whole report, and the report opens with
+    the working directory. Run the suite from a checkout whose path happens to contain an
+    engine's name -- `/private/tmp/.../lane/harness-T20a-qwenloop-shell-timeout-config`, say,
+    which is exactly what a storm lane for that engine is called -- and the omission test
+    fails against a substring of a filesystem path while the engine table is perfectly
+    correct. The test was true about the output and wrong about the thing it names, and it
+    will bite every lane whose slug mentions an engine.
+
+    An engine row begins with the engine's name at column 0, so that is what is read.
+    """
+    return {line.split()[0] for line in output.splitlines() if line[:1].isalnum() and line.split()}
+
+
 def test_doctor_lists_the_sovereign_engine_when_it_is_switched_on(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -993,8 +1009,8 @@ def test_doctor_lists_the_sovereign_engine_when_it_is_switched_on(
     monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "1")
     res = runner.invoke(app, ["doctor"])
     assert res.exit_code == 0, res.output
-    assert "qwenloop" in res.output
-    assert "claudeloop" in res.output  # the paid engines are still listed
+    assert "qwenloop" in listed_engines(res.output)
+    assert "claudeloop" in listed_engines(res.output)  # the paid engines are still listed
 
 
 def test_doctor_omits_the_sovereign_engine_when_it_is_off(
@@ -1003,7 +1019,7 @@ def test_doctor_omits_the_sovereign_engine_when_it_is_off(
     monkeypatch.setenv("VIBEY_FEATURE_QWENLOOP", "0")
     res = runner.invoke(app, ["doctor"])
     assert res.exit_code == 0, res.output
-    assert "qwenloop" not in res.output
+    assert "qwenloop" not in listed_engines(res.output)
 
 
 @pytest.mark.parametrize(

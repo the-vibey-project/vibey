@@ -31,6 +31,8 @@ that must never print the same way (10.f).
 """
 
 import argparse
+import contextlib
+import fcntl
 import os
 import re
 import subprocess
@@ -80,7 +82,47 @@ def storm_running() -> bool:
     )
 
 
+TRAIN_LOCK = STORM / "scratch/merge-train.lock"
+
+
+@contextlib.contextmanager
+def only_one_train():
+    """Hold the one lock that lets a merge train run, or decline to run one.
+
+    `storm-cycle.py` already runs `vibey-gh merge-train` every ten minutes as one of its
+    seven steps, and this runs it hourly. Both start immediately, so they coincide on the
+    hour. Each train reads the whole open-pull-request list, judges it, and then merges;
+    two of them interleaved means the second is deciding from state the first has already
+    changed, and the train falls through to its `--admin` path when what it expected is no
+    longer there.
+
+    `flock` rather than a pid file, because the kernel releases it when the holder dies --
+    a scheduler killed mid-train leaves no lock behind to be cleared by hand. Non-blocking,
+    because a train that has to wait an hour for its turn is one the other scheduler has
+    already run: the useful thing is to say so and come back next hour.
+    """
+    TRAIN_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    handle = TRAIN_LOCK.open("w")
+    try:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            yield False
+            return
+        yield True
+    finally:
+        handle.close()
+
+
 def train(dry: bool) -> int:
+    with only_one_train() as mine:
+        if not mine:
+            say("another scheduler holds the train; standing down until the next hour")
+            return 0
+        return run_train(dry)
+
+
+def run_train(dry: bool) -> int:
     if dry:
         code, out = run(["uv", "run", "vibey-gh", "merge-train", "--dry-run"], MAIN)
         if code == 2 or "unrecognized arguments" in out:

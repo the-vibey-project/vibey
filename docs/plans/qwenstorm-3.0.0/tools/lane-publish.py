@@ -506,6 +506,24 @@ def ready(slug: str) -> tuple[bool, list[str]]:
     return (not failures), failures
 
 
+def provenance_trailer() -> str:
+    """The `Made-With:` trailer, from the family's own command rather than a copy here.
+
+    The commit below runs with `core.hooksPath=/dev/null`, because a lane's worktree carries
+    the repository's hooks and a publish must not pay the full suite twice before it has even
+    pushed. But the commit-msg hook is exactly what normally appends this trailer, so turning
+    the hooks off silently removed it -- and `Provenance` fails every such commit on the
+    forge, which is where it was finally noticed. Disabling a hook means taking on what the
+    hook did (10.e: the family already ships `vibey-gh trailer`; this asks it rather than
+    hard-coding the text, which would rot the moment the author line changes).
+    """
+    code, out = run(["vibey-gh", "trailer"], MAIN, timeout=120)
+    if code or not out.strip():
+        code, out = run([sys.executable, "-m", "vibey_gh", "trailer"], MAIN, timeout=120)
+    line = out.strip().splitlines()[-1] if out.strip() else ""
+    return line if line.startswith("Made-With:") else ""
+
+
 def publish(slug: str, dry: bool) -> str:
     lane = LANES / slug
     issue = issue_of(slug)
@@ -520,7 +538,16 @@ def publish(slug: str, dry: bool) -> str:
         or run(["git", "ls-files", "--others", "--exclude-standard"], lane)[1]
     ):
         run(["git", "add", "-A"], lane)
+        trailer = provenance_trailer()
+        if not trailer:
+            # NOT `if trailer:` skipping it. This script commits with the hooks disabled,
+            # so nothing downstream will add the trailer that the provenance gate requires
+            # -- treating the lookup's failure as "no trailer needed" would quietly rebuild
+            # the trailerless commit this exists to prevent, and the lane would travel all
+            # the way to a red gate to find out. Missing provenance stops the publication.
+            return "could not derive the provenance trailer, so the commit would fail the gate"
         body = f"{title}\n\nWritten by a sovereign lane (gpt-oss:20b) for issue #{issue}.\n"
+        body += f"\n{trailer}\n"
         code, out = run(["git", "-c", "core.hooksPath=/dev/null", "commit", "-q", "-m", body], lane)
         if code:
             return f"commit failed: {out[:120]}"
