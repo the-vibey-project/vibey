@@ -1,10 +1,10 @@
 {
-  "advanced_at": "2026-09-23T07:25:59Z",
+  "advanced_at": "2026-09-23T07:48:46Z",
   "gaps": [],
   "offsets": {
     "abandoned.txt": 46,
     "bench/results.jsonl": 9060,
     "integrated.txt": 159,
-    "progress.log": 11051
+    "progress.log": 11309
   }
 }
