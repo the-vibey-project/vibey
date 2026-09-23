@@ -81,6 +81,17 @@ lives in `docs/architecture/decisions/`.
   and where a lane's output is net-negative the answer is revert and re-queue.
   Silence is not consent, and declining is a reportable outcome — the refusals
   are the most useful part of the report. ADR-0046; sub-doctrine 12.d.
+- **Toil that can be fully automated is.** Anything a human would otherwise do
+  *again* — the remembering, the ordering, the repetition, the transcription,
+  the checking of a thing that could check itself — is automated, no exceptions.
+  Fully: a half-automation that still needs someone to remember the uncovered
+  step is worse than none, because it looks finished; where it cannot be made
+  whole, automate the check that says out loud when the step was missed. The
+  judgement is never automated away — if a careful person doing it twice would
+  do it identically it is toil, and if the right answer could reasonably differ
+  it stays with the human and the automation surrounds it. Automation that
+  reports success it did not observe is a liability wearing its clothes.
+  ADR-0047; sub-doctrine 12.e.
 - **Code lives in classes, and every class has an interface beside it.** A
   module-level function is the method of last resort, and its reason is written
   at the definition. `src/<pkg>/services/github_service.py` implies
@@ -230,7 +241,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (46 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (47 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |
