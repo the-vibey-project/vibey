@@ -45,6 +45,7 @@
     "PRE_COMMIT_HOME": ".cache/pre-commit"
   },
   "sandbox": {
+    "enableWeakerNetworkIsolation": true,
     "network": {
       "allowedDomains": [
         "github.com",
