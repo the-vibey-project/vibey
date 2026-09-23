@@ -35,6 +35,7 @@ printed. Silence is never taken for success.
 import argparse
 import json
 import os
+import shlex
 import subprocess
 import sys
 import time
@@ -118,6 +119,21 @@ def checks_of(lane: Path) -> list[list[str]]:
     `&&`, pipes, redirects and `cd` are literal arguments there and are literal here too. A
     line carrying any of them is not something this script can honestly run, so it is skipped
     and reported rather than guessed at.
+
+    SPLIT THE WAY A SHELL WOULD, THEN RUN WITHOUT ONE
+    -------------------------------------------------
+    `shlex.split`, never `str.split`. Specs are written the way a person types a command, so
+    the quoting is real: 378 of the 643 specs carry `--include='src/vibey/domain/*'`, quoted
+    because a shell would otherwise glob it. `str.split` keeps those apostrophes inside the
+    argument, and with no shell in the path nothing ever strips them -- coverage received a
+    literal `--include='src/vibey/domain/*'`, matched no file, and answered "No data to
+    report" on every lane that had a coverage gate.
+
+    The damage was not that the check failed. It is that the check stopped meaning anything
+    while still being counted: installer-catalogue's real answer, from the same data and the
+    same command split correctly, is 99% against a 100% floor -- a genuine failure with a
+    genuine fix, hidden behind a message about missing data. A gate that cannot pass is not a
+    gate, and one that reports the wrong reason is worse than one that is simply off.
     """
     issue = lane / ".qwenstorm/issue.md"
     if not issue.is_file():
@@ -133,7 +149,12 @@ def checks_of(lane: Path) -> list[list[str]]:
             continue
         if any(token in line for token in ("&&", "|", ">", "<", "$(", "cd ")):
             continue
-        parts = line.split()
+        try:
+            parts = shlex.split(line)
+        except ValueError:
+            # Unbalanced quotes: the line is not a command anybody could run, and guessing
+            # where the quote was meant to close would be inventing the check.
+            continue
         if parts and parts[0] in SAFE:
             found.append(parts)
     return found
