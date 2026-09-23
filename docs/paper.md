@@ -1477,14 +1477,14 @@ outside it.*
 
 | quantity | value |
 |---|---|
-| ledger records | 183 |
-| span consumed | 2026-09-23T04:40:49Z to 2026-09-23T05:20:56Z |
-| lanes observed | 15 |
+| ledger records | 186 |
+| span consumed | 2026-09-23T04:40:49Z to 2026-09-23T05:34:55Z |
+| lanes observed | 16 |
 | lanes claiming completion | 9 |
-| lane starts / ends logged | 33 / 27 |
+| lane starts / ends logged | 34 / 28 |
 | lanes integrated / abandoned | 8 / 2 |
-| recorded attempts | 37 |
-| total turns across attempts | 1373 |
+| recorded attempts | 40 |
+| total turns across attempts | 1500 |
 
 **Gaps in this span:** none; every byte and record between the watermarks was read.
 
