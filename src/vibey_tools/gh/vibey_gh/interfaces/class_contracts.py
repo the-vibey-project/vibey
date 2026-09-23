@@ -171,6 +171,21 @@ class ProtectedRefInterface(Protocol):
 
 
 @runtime_checkable
+class NotSupportedInterface(Protocol):
+    @property
+    def kind(self) -> ForgeKindInterface: ...
+
+    @property
+    def verb(self) -> str: ...
+
+    @property
+    def reason(self) -> str: ...
+
+    @property
+    def problem(self) -> str: ...
+
+
+@runtime_checkable
 class GitHubForgeInterface(ForgeAdapterInterface, Protocol):
     """The GitHub implementation of the forge-neutral adapter."""
 
@@ -192,12 +207,29 @@ class ForgeAdapterReaderInterface(ForgeReaderInterface, Protocol):
 
 @runtime_checkable
 class ForgejoTransportInterface(ForgeTransportInterface, Protocol):
-    """The Forgejo transport implementation."""
+    """The Forgejo transport implementation.
+
+    `timeout` is declared here rather than on `ForgeTransportInterface` because only the two
+    HTTP transports have one: the `gh` transport shells out to a client that owns its own.
+    Left undeclared, the seam this change exists to add would be invisible to any caller
+    typed against this interface -- a public attribute that works and cannot be seen is not
+    a seam (ADR-0016: interfaces declare).
+    """
+
+    @property
+    def timeout(self) -> float:
+        """Seconds a single call may take before it is abandoned."""
+        ...
 
 
 @runtime_checkable
 class GitLabTransportInterface(ForgeTransportInterface, Protocol):
     """The GitLab transport implementation."""
+
+    @property
+    def timeout(self) -> float:
+        """Seconds a single call may take before it is abandoned."""
+        ...
 
 
 @runtime_checkable

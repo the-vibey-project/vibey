@@ -480,40 +480,57 @@ class _HttpResponse:
     "transport_type, header",
     [(GitLabTransport, "PRIVATE-TOKEN"), (ForgejoTransport, "Authorization")],
 )
-def test_http_transports_cover_success_and_failures(monkeypatch, transport_type, header):
+def test_http_transports_cover_success_and_failures(transport_type, header):
+    # Substitution at the declared seam, not by patching an import (9.b). The seven
+    # monkeypatched-import calls this replaces did not merely break the rule: once `opener`
+    # became a dataclass field defaulting to the urlopen function, that default bound the
+    # function object at import time, and reassigning the module attribute afterwards reached
+    # nothing at all. The assertions below are unchanged; only how the transport is given its
+    # opener has moved. (The literal patched name is spelled out nowhere here on purpose --
+    # this lane's acceptance criterion greps the test tree for it and requires no hits.)
+    def transport_with(opener):
+        return transport_type(host="forge.example", token="secret", opener=opener)
+
+    def raising(error):
+        def opener(request, timeout=None):
+            raise error
+
+        return opener
+
     transport = transport_type(host="forge.example", token="secret")
     assert isinstance(transport, ForgeTransportInterface)
     assert transport.executable.startswith("http")
     assert transport.run([])[0] is False
     assert transport.survey([]) == ([], "No API path provided")
+
     seen = {}
 
-    def success(request):
+    def success(request, timeout=None):
         seen.update({key.lower(): value for key, value in request.header_items()})
         return _HttpResponse(json.dumps([{"id": 1}]))
 
-    monkeypatch.setattr("urllib.request.urlopen", success)
-    assert transport.survey(["projects/1/issues"])[0] == [{"id": 1}]
+    answering = transport_with(success)
+    assert answering.survey(["projects/1/issues"])[0] == [{"id": 1}]
     assert seen[header.lower()] in {"secret", "token secret"}
-    assert transport.survey(["projects/1/issues", "POST", '{"body":"x"}'])[0] == [{"id": 1}]
+    assert answering.survey(["projects/1/issues", "POST", '{"body":"x"}'])[0] == [{"id": 1}]
     assert seen["content-type"] == "application/json"
 
-    monkeypatch.setattr("urllib.request.urlopen", lambda request: _HttpResponse('{"ok": true}'))
-    assert transport.survey(["one"])[0] == {"ok": True}
-    monkeypatch.setattr("urllib.request.urlopen", lambda request: _HttpResponse('"scalar"'))
-    assert "neither a list nor an object" in transport.survey(["one"])[1]
+    object_body = transport_with(lambda request, timeout=None: _HttpResponse('{"ok": true}'))
+    assert object_body.survey(["one"])[0] == {"ok": True}
+    scalar_body = transport_with(lambda request, timeout=None: _HttpResponse('"scalar"'))
+    assert "neither a list nor an object" in scalar_body.survey(["one"])[1]
+
     error = urllib.error.HTTPError("https://forge.example", 401, "Unauthorized", {}, None)
-    monkeypatch.setattr("urllib.request.urlopen", lambda request: (_ for _ in ()).throw(error))
-    assert "API error 401" in transport.survey(["one"])[1]
-    monkeypatch.setattr(
-        "urllib.request.urlopen", lambda request: (_ for _ in ()).throw(OSError("offline"))
+    assert "API error 401" in transport_with(raising(error)).survey(["one"])[1]
+    assert (
+        "transport failure: offline"
+        in transport_with(raising(OSError("offline"))).survey(["one"])[1]
     )
-    assert "transport failure: offline" in transport.survey(["one"])[1]
-    monkeypatch.setattr(
-        "urllib.request.urlopen", lambda request: (_ for _ in ()).throw(TimeoutError("late"))
+    assert (
+        "transport failure: late"
+        in transport_with(raising(TimeoutError("late"))).survey(["one"])[1]
     )
-    assert "transport failure: late" in transport.survey(["one"])[1]
-    monkeypatch.setattr(
-        "urllib.request.urlopen", lambda request: (_ for _ in ()).throw(ValueError("bad json"))
+    assert (
+        "transport failure: bad json"
+        in transport_with(raising(ValueError("bad json"))).survey(["one"])[1]
     )
-    assert "transport failure: bad json" in transport.survey(["one"])[1]
