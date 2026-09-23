@@ -29,6 +29,7 @@ That lane is skipped and picked up on the next pass, once it has finished.
 import argparse
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -100,6 +101,34 @@ def refresh_integration(target: str, dry: bool) -> str:
     return f"moved to {target[:9]}" if not code else f"FAILED: {out[:120]}"
 
 
+def resolve_conflict(lane: Path, slug: str) -> str | None:
+    """Hand a conflicted lane to lane-resolve.py. None when it merged, a reason when it did not.
+
+    The merge state is read back from git afterwards rather than from the resolver's exit
+    code. The resolver aborts the merge itself when it refuses, so two things could be true
+    at once -- it exited non-zero AND left a clean tree, or exited zero having resolved
+    nothing -- and only the repository knows which. A lane left half-merged is the one
+    outcome neither script may produce, so the check is: is a merge still in progress?
+    """
+    code, out = run(
+        [sys.executable, str(STORM / "tools/lane-resolve.py"), "--resolve", "--only", slug],
+        STORM,
+        timeout=1200,
+    )
+    in_progress = run(["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"], lane)[0] == 0
+    if in_progress:
+        run(["git", "merge", "--abort"], lane)
+        return "resolver left a merge in progress; aborted"
+    unmerged = run(["git", "diff", "--name-only", "--diff-filter=U"], lane)[1].strip()
+    if unmerged:
+        run(["git", "merge", "--abort"], lane)
+        return "paths still unmerged; aborted"
+    lines = [line for line in out.splitlines() if slug in line]
+    if lines and "resolved" in lines[-1]:
+        return None
+    return (lines[-1].split(slug, 1)[-1].strip()[:70] if lines else "refused") or "refused"
+
+
 def refresh_lane(slug: str, target: str, dry: bool) -> str:
     lane = LANES / slug
     if run(["git", "merge-base", "--is-ancestor", target, "HEAD"], lane)[0] == 0:
@@ -118,10 +147,17 @@ def refresh_lane(slug: str, target: str, dry: bool) -> str:
 
     code, out = run(["git", "merge", "--no-edit", "-q", target], lane, 600)
     if code:
-        run(["git", "merge", "--abort"], lane)
-        if stashed:
-            run(["git", "stash", "pop", "-q"], lane)
-        return f"CONFLICT merging; left at its old base -- {out.strip().splitlines()[0][:80]}"
+        # A conflict used to end here, and that was safe once and wrong forever: develop keeps
+        # moving, so a lane that conflicts on one pass conflicts on every pass after and never
+        # catches up on its own. lane-resolve.py settles the conflicts that are decidable from
+        # the tree and refuses the rest, aborting the merge itself when it refuses -- so the
+        # old guarantee still holds for everything it will not touch.
+        note = resolve_conflict(lane, slug)
+        if note is not None:
+            if stashed:
+                run(["git", "stash", "pop", "-q"], lane)
+            first = out.strip().splitlines()[0][:70] if out.strip() else "conflict"
+            return f"CONFLICT merging; left at its old base -- {first} [{note}]"
 
     if stashed:
         code, out = run(["git", "stash", "pop", "-q"], lane)
