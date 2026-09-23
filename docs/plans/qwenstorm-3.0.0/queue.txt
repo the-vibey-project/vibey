@@ -5,61 +5,590 @@ qwenloop-run-telemetry 382 qwenloop-request-timeout
 qwenloop-toolcall-retry 386 qwenloop-run-telemetry
 default-model-p1 387 qwenloop-toolcall-retry
 default-model-p2 388 default-model-p1
-default-model-p3 389 default-model-p2
+default-model-p3 389 default-model-p1
+installer-catalogue 469
+installer-host-runner 470 installer-catalogue
+installer-orchestrator 471 installer-catalogue
 install-ollama 391 default-model-p1,installer-host-runner,installer-orchestrator
 surfaces-env 323
 engines-pool 321 engines-provider
-visual-design-provider 324 engines-provider
 chart-operator-forgejo-p1 326
 opencodeloop-parity-p1 328
-openstack-client-p1 330 engines-pool,visual-design-provider
 chart-operator-forgejo-p2 327 chart-operator-forgejo-p1
 opencodeloop-parity-p2 329 opencodeloop-parity-p1
-openstack-client-p2 331 openstack-client-p1
-forge-0a 332
-forge-0b 333 forge-0a
-forge-0c 334 forge-0b
-forge-0d 335 forge-0c
-forge-0e 336 forge-0d
-forge-0f 337 forge-0e
-forge-0g 338 forge-0f
-forge-1 339 forge-0g
-forge-2 340 forge-0g
-forge-3 341 forge-0g
-forge-4 342 forge-0g
-forge-5 343 forge-0g
-forge-6 344 forge-0g
+split-332-1-transport-seams 1001
+split-332-2-adapter-paging 1002 split-332-1-transport-seams
+split-332-3-repository-name 858 split-332-2-adapter-paging
+split-332-4-selector-resolve 859 split-332-3-repository-name
+split-333-1-facts-translators 860 split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve
+split-333-2-change-request-reads 861 split-333-1-facts-translators
+split-333-3-change-request-text 862 split-333-2-change-request-reads
+split-334-1-labelled-listings 863 split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text
+split-334-2-open-branches 864 split-334-1-labelled-listings
+split-334-3-wait-for-checks 865 split-334-2-open-branches
+split-335-1-create-edit-merge 866 split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks
+split-335-2-ready-close-comment 867 split-335-1-create-edit-merge
+split-335-3-labels 868 split-335-2-ready-close-comment
+split-336-1-issue-reads 869 split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+split-336-2-comment-writes 870 split-336-1-issue-reads
+split-336-3-review-comment 871 split-336-2-comment-writes
+split-336-4-review-threads 872 split-336-3-review-comment
+forge-0f 337 split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels,split-336-1-issue-reads,split-336-2-comment-writes,split-336-3-review-comment,split-336-4-review-threads
+forge-0g 338 split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels,split-336-1-issue-reads,split-336-2-comment-writes,split-336-3-review-comment,split-336-4-review-threads,forge-0f
+forge-1 339 forge-0g,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+forge-2 340 forge-0g,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+split-342-1-state-comment 875 forge-0g,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels,split-336-1-issue-reads,split-336-2-comment-writes,split-336-3-review-comment,split-336-4-review-threads
+forge-5 343 forge-0g,split-342-1-state-comment,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels,split-336-1-issue-reads,split-336-2-comment-writes,split-336-3-review-comment,split-336-4-review-threads
 rmq-r01-queue-config 348
 rmq-r02-wakeup-composition 349
 rmq-r03-amqp-dependency 350
-rmq-r05-async-outbox 352
+orm-bootstrap-async-engine 434
+rmq-r05-async-outbox 352 orm-bootstrap-async-engine
 rmq-r06-job-dispatch-envelope 353
 rmq-r08-dispatch-migration 355
-rmq-r09-reap-bound 356
-rmq-r19-run-protocol 366
-rmq-r20-run-dir-extraction 367
-rmq-r04-bootstrap-amqp 351 rmq-r03-amqp-dependency
+orm-tables 549
+orm-job-statements-enqueue 592 orm-tables
+orm-job-statements-settle 593 orm-job-statements-enqueue
+orm-database-seam 435 orm-bootstrap-async-engine
+orm-app-resources 548 orm-database-seam
+orm-test-harness 436 orm-database-seam
+orm-job-enqueue 594 orm-job-statements-enqueue,orm-app-resources,orm-test-harness
+orm-job-settle 595 orm-job-statements-settle,orm-job-enqueue
+fakes-harness-decouple 400
+fakes-registry 401 fakes-harness-decouple
+fakes-queue-gates 403 fakes-registry
+rmq-r09-reap-bound 356 orm-job-settle,orm-job-statements-enqueue,orm-job-statements-settle,orm-job-enqueue,orm-tables,orm-database-seam,orm-test-harness,fakes-queue-gates
 rmq-r07-dispatch-miss-policy 354 rmq-r06-job-dispatch-envelope
-rmq-r10-dispatch-records-enqueue 357 rmq-r05-async-outbox,rmq-r06-job-dispatch-envelope,rmq-r08-dispatch-migration
-rmq-r21-local-run-executor 368 rmq-r19-run-protocol,rmq-r20-run-dir-extraction
+rmq-r10-dispatch-records-enqueue 357 rmq-r05-async-outbox,rmq-r06-job-dispatch-envelope,rmq-r08-dispatch-migration,orm-job-settle,orm-job-statements-enqueue,orm-job-statements-settle,orm-job-enqueue,orm-tables,orm-database-seam,orm-test-harness,fakes-queue-gates
 rmq-r29-chart-broker-core 376 rmq-r01-queue-config,chart-operator-forgejo-p2
-rmq-r11-dispatch-records-settle 358 rmq-r07-dispatch-miss-policy,rmq-r09-reap-bound,rmq-r10-dispatch-records-enqueue
-rmq-r12-queue-topology 359 rmq-r04-bootstrap-amqp,rmq-r06-job-dispatch-envelope
-rmq-r15-gate-redispatch 362 rmq-r10-dispatch-records-enqueue
-rmq-r22-loop-service-host 369 rmq-r04-bootstrap-amqp,rmq-r21-local-run-executor
-rmq-r24-loop-service-client 371 rmq-r04-bootstrap-amqp,rmq-r19-run-protocol
-rmq-r13-dispatch-relay 360 rmq-r05-async-outbox,rmq-r08-dispatch-migration,rmq-r10-dispatch-records-enqueue,rmq-r12-queue-topology
+split-351-1-amqp-contract 561
+split-351-2-amqp-client 562 rmq-r03-amqp-dependency,split-351-1-amqp-contract
+rmq-r12-queue-topology 359 rmq-r01-queue-config,split-351-1-amqp-contract,split-351-2-amqp-client,rmq-r06-job-dispatch-envelope
+orm-human-gate 601 orm-app-resources,orm-test-harness,orm-tables
+rmq-r15-gate-redispatch 362 orm-human-gate,rmq-r10-dispatch-records-enqueue,rmq-r08-dispatch-migration,fakes-queue-gates
+split-358-1-fenced-claim 626 rmq-r10-dispatch-records-enqueue,rmq-r07-dispatch-miss-policy
+rmq-r13-dispatch-relay 360 rmq-r01-queue-config,rmq-r05-async-outbox,rmq-r08-dispatch-migration,rmq-r10-dispatch-records-enqueue,split-358-1-fenced-claim,rmq-r12-queue-topology
 rmq-r14-project-deliveries 361 rmq-r12-queue-topology
-rmq-r23-loop-service-control 370 rmq-r22-loop-service-host
-rmq-r25-loop-service-adapter 372 rmq-r20-run-dir-extraction,rmq-r24-loop-service-client
-rmq-r16-rabbitmq-job-repository 363 rmq-r11-dispatch-records-settle,rmq-r13-dispatch-relay,rmq-r14-project-deliveries,rmq-r15-gate-redispatch
-rmq-r26-loop-service-executor 373 rmq-r24-loop-service-client,rmq-r25-loop-service-adapter
-rmq-r17-queue-backend-selection 364 rmq-r01-queue-config,rmq-r02-wakeup-composition,rmq-r16-rabbitmq-job-repository
-rmq-r18-queue-contract-suite 365 rmq-r17-queue-backend-selection
-rmq-r27-loop-service-cli 374 rmq-r17-queue-backend-selection,rmq-r23-loop-service-control,rmq-r24-loop-service-client,rmq-r25-loop-service-adapter
-rmq-r28-invocation-selection 375 rmq-r01-queue-config,rmq-r25-loop-service-adapter,rmq-r26-loop-service-executor,rmq-r27-loop-service-cli
-rmq-r30-chart-loop-services 377 rmq-r27-loop-service-cli,rmq-r29-chart-broker-core
-rmq-r31-chart-keda-rabbitmq 378 rmq-r29-chart-broker-core,rmq-r30-chart-loop-services
-rmq-r33-install-and-doctor 380 rmq-r28-invocation-selection
-rmq-r32-ci-rabbitmq 379 rmq-r18-queue-contract-suite,rmq-r30-chart-loop-services,rmq-r31-chart-keda-rabbitmq
-rmq-r34-defaults-flip 381 rmq-r01-queue-config,rmq-r02-wakeup-composition,rmq-r03-amqp-dependency,rmq-r04-bootstrap-amqp,rmq-r05-async-outbox,rmq-r06-job-dispatch-envelope,rmq-r07-dispatch-miss-policy,rmq-r08-dispatch-migration,rmq-r09-reap-bound,rmq-r10-dispatch-records-enqueue,rmq-r11-dispatch-records-settle,rmq-r12-queue-topology,rmq-r13-dispatch-relay,rmq-r14-project-deliveries,rmq-r15-gate-redispatch,rmq-r16-rabbitmq-job-repository,rmq-r17-queue-backend-selection,rmq-r18-queue-contract-suite,rmq-r19-run-protocol,rmq-r20-run-dir-extraction,rmq-r21-local-run-executor,rmq-r22-loop-service-host,rmq-r23-loop-service-control,rmq-r24-loop-service-client,rmq-r25-loop-service-adapter,rmq-r26-loop-service-executor,rmq-r27-loop-service-cli,rmq-r28-invocation-selection,rmq-r29-chart-broker-core,rmq-r30-chart-loop-services,rmq-r31-chart-keda-rabbitmq,rmq-r32-ci-rabbitmq,rmq-r33-install-and-doctor
+split-358-2-redispatching-settles 890 rmq-r10-dispatch-records-enqueue,rmq-r09-reap-bound,split-358-1-fenced-claim
+split-358-3-sweep-and-park 627 rmq-r10-dispatch-records-enqueue,rmq-r09-reap-bound,split-358-1-fenced-claim
+orm-cli-recover 770 orm-job-settle
+rmq-r16-rabbitmq-job-repository 363 rmq-r01-queue-config,rmq-r07-dispatch-miss-policy,split-358-1-fenced-claim,split-358-2-redispatching-settles,split-358-3-sweep-and-park,rmq-r13-dispatch-relay,rmq-r14-project-deliveries,rmq-r15-gate-redispatch,orm-cli-recover
+fakes-job-wakeup 415 fakes-queue-gates,rmq-r02-wakeup-composition
+rmq-r17-queue-backend-selection 364 rmq-r01-queue-config,rmq-r02-wakeup-composition,split-351-2-amqp-client,rmq-r13-dispatch-relay,rmq-r15-gate-redispatch,rmq-r16-rabbitmq-job-repository,orm-app-resources,orm-job-settle,orm-human-gate,fakes-job-wakeup
+rmq-r18-queue-contract-suite 365 rmq-r17-queue-backend-selection,rmq-r09-reap-bound,rmq-r10-dispatch-records-enqueue,split-358-1-fenced-claim,split-358-2-redispatching-settles,split-358-3-sweep-and-park,rmq-r12-queue-topology,rmq-r13-dispatch-relay,rmq-r14-project-deliveries,rmq-r15-gate-redispatch,rmq-r16-rabbitmq-job-repository,fakes-queue-gates,orm-test-harness
+loops-engine-id-sovereignloop 543 engines-pool
+loops-domain-loop-id 544 loops-engine-id-sovereignloop
+loops-run-protocol-messages 545 loops-domain-loop-id
+loops-run-codec 546 loops-run-protocol-messages
+loops-ledger-kinds 547 loops-domain-loop-id
+fakes-engines 404 fakes-registry
+orm-engine-health 550 orm-app-resources,orm-test-harness,orm-tables
+orm-rotation-cursor 551 orm-app-resources,orm-test-harness,orm-tables
+loops-weighted-candidates 552 loops-ledger-kinds,fakes-engines,orm-engine-health,orm-rotation-cursor
+loops-loop-selector 553 loops-weighted-candidates,loops-domain-loop-id,fakes-registry
+loops-routing-ports 554 loops-loop-selector,loops-run-protocol-messages,fakes-registry,fakes-engines
+loops-result-store 555 loops-run-codec,loops-ledger-kinds,loops-routing-ports
+loops-residency-policy 556
+loops-seat-chooser 557 loops-residency-policy,loops-run-protocol-messages
+loops-state-stores 558 loops-result-store,loops-seat-chooser
+loops-run-args-policy 559 loops-run-protocol-messages
+split-367-1-run-dir 421
+split-367-2-process-launcher 422 split-367-1-run-dir
+loops-local-run-executor 560 loops-result-store,loops-run-args-policy,split-367-1-run-dir,split-367-2-process-launcher
+harness-T21a-amqp-consumer-count-client 563 split-351-1-amqp-contract,split-351-2-amqp-client
+harness-T21-amqp-consumer-count 564 harness-T21a-amqp-consumer-count-client
+loops-amqp-queue-depth 565 split-351-2-amqp-client,harness-T21-amqp-consumer-count
+loops-amqp-exclusive-consume 566 loops-amqp-queue-depth
+loops-config-loop-services 567 rmq-r01-queue-config,loops-residency-policy,loops-domain-loop-id
+harness-T20a-qwenloop-shell-timeout-config 472
+harness-T20b-qwenloop-shell-timeout-env 473 harness-T20a-qwenloop-shell-timeout-config
+harness-T20c-qwenloop-shell-timeout-sandbox 474
+harness-T20-qwenloop-shell-timeout 475 harness-T20b-qwenloop-shell-timeout-env,harness-T20c-qwenloop-shell-timeout-sandbox
+fakes-tenant-qwen-1 476 fakes-registry,qwenloop-toolcall-retry,default-model-p3,install-ollama,harness-T20-qwenloop-shell-timeout
+fakes-tenant-qwen-2 477 fakes-tenant-qwen-1
+loops-tenant-rename 568 loops-engine-id-sovereignloop,fakes-tenant-qwen-2,default-model-p3
+loops-tenant-legacy-env 569 loops-tenant-rename
+loops-tenant-legacy-paths 570 loops-tenant-legacy-env
+loops-config-engine-names 571 loops-engine-id-sovereignloop,engines-pool
+loops-vibey-local-engine-names 572 loops-tenant-legacy-paths,loops-config-engine-names
+loops-seat-host-core 573 loops-local-run-executor,loops-amqp-exclusive-consume,loops-config-loop-services,loops-vibey-local-engine-names
+loops-worktree-fence 574 loops-result-store,split-367-1-run-dir
+loops-seat-host-fence 575 loops-seat-host-core,loops-worktree-fence
+loops-seat-host-drain 576 loops-seat-host-fence
+loops-residency-schedule 577 loops-residency-policy
+loops-model-runtime 578 loops-result-store
+loops-resident-schedule 579 loops-seat-host-drain,loops-residency-schedule,loops-model-runtime
+loops-router-routing 580 loops-state-stores,loops-resident-schedule,loops-amqp-exclusive-consume,loops-config-loop-services
+loops-router-forwarding 581 loops-router-routing
+loops-control-and-dead-letters 582 loops-seat-host-drain,loops-router-forwarding
+loops-probe-consumer 583 loops-control-and-dead-letters,loops-resident-schedule
+loops-service-process 584 loops-router-forwarding,loops-probe-consumer,loops-control-and-dead-letters,loops-resident-schedule
+loops-client 585 loops-amqp-exclusive-consume,loops-routing-ports,loops-result-store
+fakes-projects 406 fakes-registry
+fakes-ledger 407 fakes-projects
+fakes-build 410 fakes-ledger,fakes-engines
+loops-queue-saturated 586 fakes-build
+loops-service-adapter-run 587 loops-client,loops-queue-saturated,split-367-1-run-dir,fakes-ledger
+loops-service-adapter-control 588 loops-service-adapter-run
+loops-adapter-factory 589 loops-service-adapter-control,rmq-r01-queue-config,engines-pool
+orm-ledger 590 orm-app-resources,orm-test-harness,orm-tables
+loops-subprocess-fallback-declared 591 loops-loop-selector,fakes-ledger,orm-ledger,engines-pool
+loops-selecting-loop-provider 596 loops-routing-ports,loops-queue-saturated,loops-subprocess-fallback-declared,orm-job-settle
+fakes-process-executor 420 fakes-registry
+loops-command-executor 597 loops-client,loops-queue-saturated,fakes-process-executor
+orm-project 598 orm-ledger
+orm-ledger-search 599 orm-ledger
+orm-handoff 600 orm-app-resources,orm-test-harness,orm-tables
+orm-advisory-lock 602 orm-app-resources,orm-test-harness
+orm-migrator-callers 603 orm-app-resources,orm-test-harness
+orm-migrator 604 orm-migrator-callers,orm-tables
+orm-ledger-guard 605 orm-database-seam,orm-test-harness
+orm-bootstrap-engine 606 orm-project,orm-ledger-search,orm-engine-health,orm-rotation-cursor,orm-handoff,orm-human-gate,orm-job-settle,orm-advisory-lock,orm-migrator,orm-ledger-guard
+loops-invocation-composition 607 loops-adapter-factory,loops-selecting-loop-provider,loops-command-executor,rmq-r17-queue-backend-selection,orm-bootstrap-engine,loops-config-loop-services
+loops-bootstrap-loop-service 608 loops-service-process,loops-invocation-composition
+loops-cli-loop-service 609 loops-bootstrap-loop-service
+rmq-r30-chart-loop-services 377 rmq-r29-chart-broker-core,rmq-r01-queue-config,loops-cli-loop-service,loops-config-loop-services
+rmq-r31-chart-keda-rabbitmq 378 rmq-r06-job-dispatch-envelope,rmq-r29-chart-broker-core
+rmq-r32-ci-rabbitmq 379 rmq-r18-queue-contract-suite,rmq-r29-chart-broker-core,rmq-r30-chart-loop-services,rmq-r31-chart-keda-rabbitmq,loops-router-forwarding,loops-seat-host-drain,loops-cli-loop-service
+split-380-1-loop-doctor 891 split-351-1-amqp-contract,loops-run-protocol-messages,loops-client,loops-amqp-queue-depth,harness-T21-amqp-consumer-count
+installer-service-runner 677 installer-host-runner
+installer-package-dependency 678 installer-service-runner,installer-orchestrator
+installer-local-service-adapter 679 installer-orchestrator
+installer-postgres 680 installer-catalogue
+installer-composition 681 installer-package-dependency,installer-local-service-adapter,install-ollama,installer-postgres
+installer-container-runtime 682 installer-package-dependency
+installer-toolchain 683 installer-container-runtime
+installer-broker-cache 684 installer-catalogue
+installer-cli 685 installer-composition,installer-toolchain,installer-broker-cache
+installer-doctor 686 installer-cli
+split-380-2-doctor-cli 892 split-380-1-loop-doctor,rmq-r17-queue-backend-selection,installer-doctor,loops-invocation-composition,loops-config-loop-services
+rmq-r34-defaults-flip 381 rmq-r01-queue-config,rmq-r02-wakeup-composition,rmq-r03-amqp-dependency,split-351-1-amqp-contract,split-351-2-amqp-client,rmq-r05-async-outbox,rmq-r06-job-dispatch-envelope,rmq-r07-dispatch-miss-policy,rmq-r08-dispatch-migration,rmq-r09-reap-bound,rmq-r10-dispatch-records-enqueue,split-358-1-fenced-claim,split-358-2-redispatching-settles,split-358-3-sweep-and-park,rmq-r12-queue-topology,rmq-r13-dispatch-relay,rmq-r14-project-deliveries,rmq-r15-gate-redispatch,rmq-r16-rabbitmq-job-repository,rmq-r17-queue-backend-selection,rmq-r18-queue-contract-suite,split-367-1-run-dir,split-367-2-process-launcher,rmq-r29-chart-broker-core,rmq-r30-chart-loop-services,rmq-r31-chart-keda-rabbitmq,rmq-r32-ci-rabbitmq,split-380-1-loop-doctor,split-380-2-doctor-cli,loops-run-protocol-messages,loops-state-stores,loops-worktree-fence,loops-router-forwarding,loops-seat-host-drain,loops-resident-schedule,loops-control-and-dead-letters,loops-client,loops-service-adapter-control,loops-command-executor,loops-cli-loop-service,loops-adapter-factory,loops-amqp-queue-depth,loops-invocation-composition,installer-broker-cache,installer-cli,fakes-harness-decouple
+fakes-isolation-guard 402 fakes-harness-decouple
+fakes-observability 405 fakes-registry
+fakes-ledger-publication 408 fakes-ledger
+fakes-design 409 fakes-ledger
+fakes-review-visual 411 fakes-design,fakes-build
+fakes-review-routing 412 fakes-review-visual,fakes-queue-gates
+fakes-deploy 413 fakes-ledger,fakes-observability
+fakes-deploy-review 414 fakes-deploy,fakes-review-routing
+fakes-http-transport 416 fakes-registry
+fakes-sockets 417 fakes-http-transport
+fakes-sovereign-http 418 fakes-http-transport
+fakes-sovereign-smtp 419 fakes-registry
+fakes-process-spawner 423 fakes-process-executor,split-367-2-process-launcher
+fakes-operator-k8s 424 fakes-registry
+fakes-bootstrap-seam 425 fakes-ledger-publication,fakes-build,fakes-review-visual,fakes-deploy,fakes-job-wakeup,fakes-observability
+fakes-cli-composition 426 fakes-bootstrap-seam,fakes-process-executor,fakes-operator-k8s
+fakes-cli-operational-1 427 fakes-cli-composition
+fakes-cli-operational-2 428 fakes-cli-operational-1
+fakes-cli-operational-3 429 fakes-cli-operational-2
+fakes-cli-ledger-deploy 430 fakes-cli-operational-1
+fakes-cli-main-providers 431 fakes-cli-operational-1,fakes-http-transport
+fakes-tui-system 432 fakes-bootstrap-seam,fakes-operator-k8s
+fakes-cluster-preflight 433 fakes-bootstrap-seam
+fakes-db-unit-of-work 437 orm-test-harness,fakes-queue-gates,fakes-engines,fakes-ledger
+fakes-db-sql-transcripts 438 fakes-db-unit-of-work
+fakes-contracts-repositories 439 fakes-queue-gates,fakes-engines,fakes-ledger-publication
+fakes-contracts-queue 440 fakes-contracts-repositories,rmq-r18-queue-contract-suite
+fakes-contracts-surfaces 441 fakes-sovereign-http,fakes-sovereign-smtp,fakes-sockets
+fakes-root-stragglers 442 fakes-cli-operational-3,fakes-process-spawner,fakes-sockets,fakes-tui-system
+fakes-ci-no-services 443 fakes-isolation-guard,fakes-db-sql-transcripts,fakes-cli-ledger-deploy,fakes-cli-main-providers,fakes-cluster-preflight,fakes-contracts-repositories,fakes-contracts-surfaces,fakes-deploy-review,fakes-root-stragglers
+harness-T01-test-run-key 444
+harness-T02-test-reuse-policy 445 harness-T01-test-run-key
+harness-T03-test-harness-messages 446 harness-T01-test-run-key
+harness-T04-test-run-records 447 harness-T02-test-reuse-policy,harness-T03-test-harness-messages
+harness-T05a-test-harness-config-keys 448 harness-T01-test-run-key
+harness-T05-test-harness-config 449 harness-T05a-test-harness-config-keys
+harness-T06-machine-lock 450 harness-T05-test-harness-config,fakes-registry
+harness-T08-working-tree-digest 451 harness-T05-test-harness-config,fakes-registry,fakes-process-executor
+harness-T10-file-run-store 452 harness-T04-test-run-records,harness-T05-test-harness-config,fakes-registry
+harness-T11-run-executor 453 harness-T01-test-run-key,harness-T05-test-harness-config,fakes-registry
+harness-T12-coverage-gates 454 harness-T03-test-harness-messages,harness-T05-test-harness-config,fakes-registry
+harness-T13-harness-instance 455 harness-T02-test-reuse-policy,harness-T04-test-run-records,harness-T06-machine-lock,harness-T08-working-tree-digest,harness-T10-file-run-store,harness-T11-run-executor,harness-T12-coverage-gates,fakes-observability
+harness-T09-environment-probe 456 harness-T01-test-run-key,harness-T05-test-harness-config,fakes-registry,orm-database-seam
+harness-T14a-request-builder 457 harness-T02-test-reuse-policy,harness-T04-test-run-records,harness-T08-working-tree-digest,harness-T09-environment-probe,harness-T10-file-run-store,fakes-observability,fakes-registry
+harness-T14-local-client 458 harness-T06-machine-lock,harness-T10-file-run-store,harness-T14a-request-builder,fakes-registry
+fakes-test-harness 459 fakes-registry,harness-T13-harness-instance,harness-T14-local-client
+harness-T07-pytest-lock-route 460 harness-T05-test-harness-config,harness-T06-machine-lock
+harness-T15a-test-harness-composition 461 harness-T13-harness-instance,harness-T14-local-client,fakes-test-harness
+harness-T15b-test-run-command 462 harness-T15a-test-harness-composition
+harness-T15c-python-m-vibey 463 harness-T15b-test-run-command
+harness-T15-test-run-cli 464 harness-T15c-python-m-vibey
+harness-T17-pytest-queue-route 465 harness-T07-pytest-lock-route,harness-T15-test-run-cli
+fakes-harness-degrade 466 fakes-harness-decouple,fakes-process-executor,harness-T09-environment-probe,harness-T17-pytest-queue-route
+fakes-embedded-postgres 467 fakes-harness-decouple,fakes-isolation-guard
+fakes-tenant-common 468 fakes-registry
+fakes-tenant-gh-1 479 fakes-registry
+fakes-tenant-gh-2 480 fakes-tenant-gh-1
+fakes-tenant-gh-3 481 fakes-tenant-gh-2
+fakes-tenant-bootstrap-1 482 fakes-registry
+fakes-tenant-bootstrap-2 483 fakes-tenant-bootstrap-1
+fakes-tenant-bootstrap-3 484 fakes-tenant-bootstrap-2,split-351-1-amqp-contract,split-351-2-amqp-client
+fakes-tenant-codex 485 fakes-tenant-common
+fakes-tenant-claude-1 486 fakes-tenant-common
+fakes-tenant-claude-2 487 fakes-tenant-claude-1
+fakes-tenant-claude-3 488 fakes-tenant-claude-2
+fakes-tenant-agy-1 489 fakes-tenant-common
+fakes-tenant-agy-2 490 fakes-tenant-agy-1
+fakes-tenant-cursor 491 fakes-tenant-common
+gap-agent-tree-parity 492
+gap-aws-secrets 493
+gap-cdd-build-trajectory 497
+gap-cdd-distance 498
+gap-chain-dispatch 499
+gap-ci-arch-gates 500
+gap-ci-installer-smoke 501
+gap-ci-macos-gates 502
+gap-ci-os-required-checks 503
+gap-ci-tenants-arch-macos-1 504
+gap-ci-tenants-arch-macos-2 505
+gap-deploy-plan-1 506 fakes-deploy
+gap-deploy-plan-2 507 gap-deploy-plan-1,fakes-deploy-review
+split-331-1-heat-renderer 885
+split-330-1-deploy-target-config 881
+split-330-2-scope-digest 882
+split-330-3-spec-follows-target 883 split-330-1-deploy-target-config,split-330-2-scope-digest
+split-330-4-az-scope-guard 884 split-330-3-spec-follows-target
+split-331-2-openstack-cli-adapter 886 split-331-1-heat-renderer,split-330-4-az-scope-guard
+split-331-3-az-preflight 887 split-330-4-az-scope-guard
+split-331-4-worker-cloud-flag 888 split-331-2-openstack-cli-adapter,split-331-3-az-preflight,split-330-1-deploy-target-config,split-330-3-spec-follows-target,fakes-job-wakeup
+split-331-5-openstack-installer 889 installer-catalogue,installer-toolchain
+gap-deploy-plan-3 508 gap-deploy-plan-1,split-331-1-heat-renderer,split-331-2-openstack-cli-adapter,split-331-3-az-preflight,split-331-4-worker-cloud-flag,split-331-5-openstack-installer
+gap-deploy-plan-4 509 gap-deploy-plan-1,split-330-1-deploy-target-config,split-330-2-scope-digest,split-330-3-spec-follows-target,split-330-4-az-scope-guard,fakes-process-executor
+gap-deploy-rollback-1 510
+gap-deploy-execute-control 511 gap-deploy-plan-2,gap-deploy-plan-3,gap-deploy-plan-4,gap-deploy-rollback-1,fakes-deploy
+gap-deploy-cancel 512 gap-deploy-execute-control,gap-deploy-plan-2
+gap-deploy-rollback-2 513 gap-deploy-cancel,gap-deploy-rollback-1,gap-deploy-execute-control
+gap-deploy-cli-1 514 gap-deploy-rollback-2,gap-deploy-rollback-1,gap-deploy-cancel
+gap-deploy-cli-2 515 gap-deploy-cli-1,fakes-cli-ledger-deploy
+gap-paid-defaults 516
+gap-spike-aws-iac 517
+gap-deploy-target-paid 518 gap-paid-defaults,split-330-1-deploy-target-config,split-330-2-scope-digest,split-330-3-spec-follows-target,split-330-4-az-scope-guard,gap-spike-aws-iac
+gap-deploy-target-status 519 gap-deploy-target-paid,gap-deploy-cli-2
+gap-design-via-sovereignloop-1 520 fakes-registry
+gap-design-via-sovereignloop-2 521 gap-design-via-sovereignloop-1
+gap-design-via-sovereignloop-3 522 fakes-registry
+gap-design-via-sovereignloop-4 523 gap-design-via-sovereignloop-1,gap-design-via-sovereignloop-3
+gap-docs-adr-land 524
+gap-docs-adr-records-1 525
+gap-docs-adr-records-2 526
+gap-docs-adr-records-3 527
+gap-docs-adr-status-1 528
+gap-docs-adr-status-2 529
+gap-docs-agent-briefs 530
+gap-docs-changelog 531
+gap-docs-skill-trees-1 532
+gap-docs-skill-trees-2 533
+gap-docs-skill-trees-3 534
+gap-docs-skill-trees-4 535
+gap-gh-doctor-actions-forgejo 536
+gap-gh-forgejo-ruleset-profile-1 537
+gap-gh-forgejo-ruleset-profile-2 538
+gap-gh-gate-pagination 539
+gap-gh-platform-paid 540 forge-0g
+gap-gh-release-channels-1 541
+gap-gh-review-transport 542 default-model-p3
+loops-cli-loop-submit 610 loops-cli-loop-service
+gap-gh-review-via-sovereignloop-1 611 gap-gh-review-transport,loops-cli-loop-submit
+gap-gh-review-via-sovereignloop-2 612 gap-gh-review-via-sovereignloop-1,rmq-r01-queue-config
+gap-heartbeat-registered 613
+gap-image-arch 614
+gap-install-ollama-gpu-1 615
+gap-install-ollama-gpu-2 616
+gap-install-ollama-gpu-3 617
+gap-lane-capacity-1 618
+gap-lane-capacity-2 619
+gap-ledger-job-events-1 620 orm-test-harness
+gap-ledger-job-events-2 621 gap-ledger-job-events-1,orm-job-settle,orm-ledger,fakes-queue-gates,fakes-ledger
+gap-ledger-job-events-3 622 gap-ledger-job-events-2
+gap-ledger-job-events-4 623 gap-ledger-job-events-2,rmq-r09-reap-bound
+gap-ledger-job-events-5 624 gap-ledger-job-events-2,orm-human-gate
+gap-ledger-job-events-6 625 gap-ledger-job-events-2,rmq-r10-dispatch-records-enqueue
+gap-ledger-job-events-7 628 gap-ledger-job-events-6,split-358-1-fenced-claim,split-358-3-sweep-and-park
+gap-ledger-job-events-8 629 gap-ledger-job-events-3,gap-ledger-job-events-4,gap-ledger-job-events-7
+gap-ledger-provider-turns-1 630 fakes-engines
+gap-ledger-provider-turns-2 631 gap-ledger-provider-turns-1,fakes-ledger,fakes-projects
+split-324-1-visual-provider 632 engines-provider,default-model-p1
+split-324-2-visual-cli 633 split-324-1-visual-provider,engines-provider
+gap-ledger-provider-turns-3 634 gap-ledger-provider-turns-2,split-324-2-visual-cli
+gap-ledger-redact-pii-1 635
+gap-ledger-redact-pii-2 636
+gap-ledger-redaction-recorded 637
+gap-ledger-search-all-projects-1 638 orm-ledger-search,fakes-ledger-publication
+gap-ledger-search-all-projects-2 639 gap-ledger-search-all-projects-1,fakes-cli-ledger-deploy,orm-app-resources
+gap-ledger-selection-events-1 640 fakes-ledger,fakes-engines
+gap-ledger-selection-events-2 641 orm-engine-health,orm-ledger,fakes-engines,fakes-ledger,fakes-projects
+gap-measure-domain 642
+gap-measure-port 643 gap-measure-domain,fakes-registry
+gap-measure-gh-1 644
+gap-measure-config 645 gap-measure-domain
+gap-measure-fleet-ledger 646 gap-measure-port,orm-project
+gap-measure-ledger-sink 647 gap-measure-port,gap-measure-config,gap-measure-fleet-ledger
+gap-measure-log-sink 648 gap-measure-port,gap-measure-gh-1,gap-measure-ledger-sink
+gap-measure-gh-2 649 gap-measure-gh-1
+gap-measure-log-ingest 650 gap-measure-log-sink,gap-measure-gh-2
+gap-measure-test-runs 651 gap-measure-log-sink,harness-T04-test-run-records
+gap-status-vocabulary 652
+gap-measure-cli 653 gap-measure-log-ingest,gap-measure-test-runs,gap-status-vocabulary
+gap-measure-engine-runs-1 654 gap-measure-port,fakes-ledger,fakes-observability
+gap-measure-engine-runs-2 655 gap-measure-engine-runs-1,gap-measure-ledger-sink
+gap-measure-otel-sink 656 gap-measure-ledger-sink
+gap-measure-ticker 657 gap-measure-port,gap-measure-config,gap-measure-ledger-sink
+gap-measure-queue-sampler 658 gap-measure-ticker,orm-tables,orm-test-harness,orm-app-resources
+gap-measure-meta 659 gap-measure-otel-sink,gap-measure-engine-runs-2,gap-measure-queue-sampler
+gap-measure-models-1 660 gap-measure-ledger-sink,fakes-observability
+gap-measure-models-2 661 gap-measure-ticker,gap-measure-models-1
+gap-measure-queue-sampler-rmq 662 gap-measure-queue-sampler,loops-amqp-queue-depth,rmq-r12-queue-topology
+gap-measure-surfaces-1 663 gap-measure-port,gap-measure-ledger-sink
+gap-measure-surfaces-2 664 gap-measure-surfaces-1,gap-measure-queue-sampler
+gap-meta-interface-ratchet 665
+gap-models-bench-1 666
+gap-models-bench-2 667
+gap-paid-defaults-agree 673 gap-paid-defaults,gap-gh-platform-paid
+loops-vscode-spike 674
+loops-claudeloop-local-paid 675 loops-config-engine-names,engines-pool
+loops-config-sovereignloop-table 676 loops-config-engine-names
+loops-doctor-legacy-spellings 687 loops-config-sovereignloop-table,loops-tenant-legacy-paths,loops-vibey-local-engine-names,loops-claudeloop-local-paid,installer-doctor
+loops-chart-sovereignloop-names 688 loops-vibey-local-engine-names,rmq-r30-chart-loop-services
+loops-cli-provider-name 689 loops-engine-id-sovereignloop
+loops-drop-qwenloop-alias 690 loops-doctor-legacy-spellings,loops-chart-sovereignloop-names,loops-cli-provider-name
+loops-vscode-engine-ids 691 loops-vscode-spike,loops-claudeloop-local-paid,loops-drop-qwenloop-alias
+loops-vscode-paid-config 692 loops-vscode-engine-ids,loops-config-engine-names
+gap-paid-ide-default-1 693 gap-paid-defaults,loops-vscode-paid-config
+gap-paid-ide-default-2 694 gap-paid-ide-default-1,loops-vscode-paid-config
+gap-pkg-channels 695 gap-gh-release-channels-1
+gap-pkg-migrations-in-wheel 696
+gap-release-image-publish 697 gap-pkg-channels
+gap-release-image-arch 698 gap-image-arch,gap-release-image-publish
+gap-release-image-sovereign 699 gap-release-image-publish
+gap-release-single-file-1 700
+gap-release-single-file-2 701 gap-ops-canon-rulings,gap-release-single-file-1,gap-pkg-migrations-in-wheel,gap-pkg-channels
+gap-release-yank-workflow-1 702
+gap-release-yank-workflow-2 703
+gap-residency-tuning-1 704
+gap-residency-tuning-2 705
+gap-rotation-derived-weights-1 706
+gap-rotation-derived-weights-2 707
+gap-rotation-derived-weights-3 708
+gap-rotation-derived-weights-4 709
+gap-runners-declared-1 710
+gap-runners-declared-2 711
+gap-runners-declared-3 712
+gap-sabbath-window-guard 934
+gap-sd01-carriage 713 gap-agent-tree-parity
+gap-spike-clearance 714 gap-status-vocabulary
+gap-spike-relay 715
+gap-spike-storm-command 716
+gap-spike-surface-consumers 717
+gap-status-evidence-dashboard 718 gap-status-vocabulary,fakes-tui-system
+gap-status-cli-evidence 719 gap-status-evidence-dashboard,fakes-cli-operational-1
+gap-storm-1-editing-rules 720 qwenloop-edit-tool
+gap-storm-2-gutted-file-guard 721 fakes-tenant-qwen-1
+gap-storm-3-gutted-file-wiring 722 gap-storm-2-gutted-file-guard,fakes-tenant-qwen-2
+gap-surface-notify-config 723
+gap-surface-notify-messaging 724 gap-surface-notify-config,fakes-sockets
+gap-surface-notify-wiring 725 gap-surface-notify-messaging,surfaces-env,fakes-bootstrap-seam
+gap-surface-timeouts-1 726
+gap-surface-timeouts-2 727 gap-surface-timeouts-1,fakes-sovereign-http
+gap-surface-timeouts-3 728 gap-surface-timeouts-1,fakes-sovereign-http
+gap-surface-timeouts-4 729 gap-surface-timeouts-1,fakes-sovereign-http
+gap-surface-timeouts-5 730 gap-surface-timeouts-1,fakes-sovereign-smtp
+gap-surface-timeouts-6 731 gap-surface-timeouts-2,gap-surface-timeouts-3,gap-surface-timeouts-4
+gap-vscode-agent-router 732 loops-vscode-spike,gap-sd01-carriage
+gap-vscode-agent-tree 733 gap-agent-tree-parity,gap-sd01-carriage,loops-vscode-spike
+harness-T16-test-inspect-cli 734 harness-T15-test-run-cli
+harness-T18-hooks-route 735 harness-T15-test-run-cli
+harness-T19-ci-route 736 harness-T15-test-run-cli,harness-T16-test-inspect-cli,fakes-ci-no-services
+harness-T22-harness-topology 737 split-351-1-amqp-contract,split-351-2-amqp-client,harness-T05-test-harness-config,fakes-registry
+harness-T23-harness-service 738 split-351-1-amqp-contract,split-351-2-amqp-client,harness-T13-harness-instance,harness-T22-harness-topology,fakes-test-harness,fakes-observability
+harness-T24-harness-amqp-client 739 split-351-1-amqp-contract,split-351-2-amqp-client,harness-T14-local-client,harness-T21-amqp-consumer-count,harness-T22-harness-topology
+harness-T25a-harness-backend-resolver 740 harness-T05-test-harness-config
+harness-T25b-test-harness-composition-amqp 741 harness-T15-test-run-cli,harness-T23-harness-service,harness-T24-harness-amqp-client,harness-T25a-harness-backend-resolver,rmq-r01-queue-config,rmq-r17-queue-backend-selection
+harness-T25-harness-backend-selection 742 harness-T25b-test-harness-composition-amqp,harness-T16-test-inspect-cli
+harness-T26a-harness-routing-environment 743 harness-T05-test-harness-config
+harness-T26b-adapter-factory-routing-overlay 744 loops-invocation-composition
+harness-T26-engine-route-env 745 harness-T26a-harness-routing-environment,harness-T26b-adapter-factory-routing-overlay,loops-cli-loop-service,loops-invocation-composition,fakes-bootstrap-seam
+harness-T27a-chart-test-harness-deployment 746 rmq-r29-chart-broker-core,rmq-r30-chart-loop-services,rmq-r31-chart-keda-rabbitmq,rmq-r34-defaults-flip,harness-T25-harness-backend-selection
+harness-T27-chart-test-harness 747 harness-T27a-chart-test-harness-deployment,harness-T26-engine-route-env
+harness-T28-route-flip 748 harness-T16-test-inspect-cli,harness-T17-pytest-queue-route,harness-T18-hooks-route,harness-T19-ci-route,harness-T25-harness-backend-selection,harness-T26-engine-route-env,harness-T27-chart-test-harness,fakes-ci-no-services,fakes-harness-degrade
+installer-vscode 749 installer-catalogue
+installer-paid-engine-clis 750 installer-catalogue
+loops-paidloop-keyword 751 loops-claudeloop-local-paid,loops-domain-loop-id
+loops-runid-common 752
+loops-invocation-cli 753 loops-invocation-composition,loops-cli-provider-name
+loops-vscodeloop-scaffold 754 loops-vscode-spike,loops-runid-common,loops-tenant-rename
+loops-vscodeloop-run-store 755 loops-vscodeloop-scaffold
+loops-vscodeloop-runner 756 loops-vscodeloop-run-store
+loops-vscodeloop-cli 757 loops-vscodeloop-runner
+loops-vscodeloop-editor-settings 758 loops-vscodeloop-cli
+loops-vscodeloop-oss-driver 759 loops-vscodeloop-editor-settings
+loops-vscodeloop-doctor 760 loops-vscodeloop-oss-driver
+loops-vscode-vibey-wiring 761 loops-vscodeloop-doctor,loops-vscode-paid-config,loops-vibey-local-engine-names,loops-seat-host-core
+loops-retire-opencode-refusals 762 loops-vscode-vibey-wiring,loops-invocation-cli,loops-paidloop-keyword
+loops-retire-opencode-infra 763 loops-retire-opencode-refusals
+loops-retire-opencode-id 764 loops-retire-opencode-infra
+loops-remove-opencode-tenant 765 loops-retire-opencode-id,loops-vscodeloop-scaffold
+loops-gh-failover-seats 766 loops-remove-opencode-tenant,loops-tenant-rename
+orm-import-contracts 767
+orm-notifier 768 orm-bootstrap-async-engine
+orm-cluster-preflight 769 orm-migrator
+orm-raw-sql-guard 771 orm-bootstrap-engine,orm-notifier,orm-cluster-preflight,orm-cli-recover,orm-import-contracts
+roadmap-114-design-codec-chunking 772
+roadmap-114-design-rotation 773
+roadmap-114-postgres-tier-store-p1 774
+roadmap-114-postgres-tier-store-p2 775
+roadmap-114-postgres-tier-store-p3 776
+roadmap-114-postgres-tier-store-p4 777
+roadmap-114-tier-aware-reads-p1 778
+roadmap-114-tier-aware-reads-p2 779
+roadmap-114-tier-aware-reads-p3 780
+roadmap-114-tier-config 781
+roadmap-134-agency-probe-p1 782
+roadmap-134-agency-probe-p2 783
+roadmap-134-agency-probe-p3 784
+roadmap-134-agent-information-probes-p1 785
+roadmap-134-agent-information-probes-p2 786
+roadmap-134-agent-information-probes-p3 787
+roadmap-134-agent-information-probes-p4 788
+roadmap-134-billing-ledger-export 789
+roadmap-134-cost-integral-p1 790
+roadmap-134-cost-integral-p2 791
+roadmap-134-cost-integral-p3 792
+roadmap-134-cost-integral-p4 793
+roadmap-134-design-phi-gradient 794
+roadmap-134-hardware-series-p1 795
+roadmap-134-hardware-series-p2 796
+roadmap-134-hardware-series-p3 797
+roadmap-134-network-probe-p1 798
+roadmap-134-network-probe-p2 799
+roadmap-134-software-probe-p1 800
+roadmap-134-software-probe-p2 801
+roadmap-134-software-probe-p3 802
+roadmap-136-capture-checks 803
+roadmap-136-capture-repo-metadata 804
+roadmap-136-capture-timelines 805
+roadmap-136-design-forge-ledger 806
+roadmap-136-snapshot-verify 807
+roadmap-138-design-forge-workflow-templates 808
+roadmap-138-exact-head-property 809
+roadmap-138-origin-platform-warning 810
+roadmap-138-tenant-forge-declared 811
+roadmap-143-api-read-projects-p1 812
+roadmap-143-api-read-projects-p2 813
+roadmap-143-api-read-projects-p3 814
+roadmap-143-api-read-projects-p4 815
+roadmap-143-api-read-projects-p5 816
+roadmap-143-api-read-projects-p6 817
+roadmap-143-api-read-projects-p7 818
+roadmap-145-capture-rules 819
+roadmap-145-capture-traffic 820
+roadmap-145-capture-workflow-runs 821
+roadmap-145-design-graphql-reads 822
+roadmap-145-design-wiki-capture 823
+roadmap-145-vibey-mention 824
+roadmap-155-single-source-guard 935
+roadmap-290-design-extension-toolchain 936
+roadmap-301-adversarial-injection-suite-p1 937
+roadmap-301-adversarial-injection-suite-p2 938
+roadmap-301-adversarial-injection-suite-p3 939
+roadmap-301-design-fairness 940
+roadmap-301-design-tamper-evidence 976
+roadmap-85-interaction-policy 977
+roadmap-85-jira-tracker-adapter 978
+roadmap-86-free-path-parity 979
+roadmap-87-design-proposal-gates 980
+roadmap-87-explorer-candidate 981
+roadmap-87-explorer-skeleton-p1 982
+roadmap-87-explorer-skeleton-p2 983
+roadmap-87-intake-provenance 984
+roadmap-87-polite-fetcher 985
+roadmap-87-scoring-skiplist-p1 986
+roadmap-87-scoring-skiplist-p2 987
+roadmap-88-phase-timing-distributions 988
+roadmap-89-correlation-log-context 989
+roadmap-89-design-spend-correlation 990
+seo-cli-reference-examples 991
+seo-configuration-reference-examples 992
+seo-docs-structured-data 993
+seo-favicon-social-image 994
+seo-llms-txt 995
+seo-pypi-metadata 996
+seo-readme-link-hygiene 997
+seo-readme-toc 998 seo-readme-link-hygiene
+seo-repo-profile-activation 999
+seo-robots-sitemap 1000
+split-341-1-reconcile 873 forge-0g,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+split-341-2-release-publication 874 forge-0g,forge-0f,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve
+split-342-2-pr-automation 876 split-342-1-state-comment,forge-0g,split-333-1-facts-translators,split-333-2-change-request-reads,split-333-3-change-request-text,split-334-1-labelled-listings,split-334-2-open-branches,split-334-3-wait-for-checks,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+split-342-3-fork-mirror 877 split-342-2-pr-automation,split-335-1-create-edit-merge,split-335-2-ready-close-comment,split-335-3-labels
+split-342-4-install-notices 878 forge-0g,forge-0f,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve
+split-344-1-rulesets 879 forge-0g,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve
+split-344-2-flatten 880 forge-0g,split-332-1-transport-seams,split-332-2-adapter-paging,split-332-3-repository-name,split-332-4-selector-resolve,split-336-1-issue-reads,split-336-2-comment-writes,split-336-3-review-comment,split-336-4-review-threads
+split-383-1-model-catalogue 893 default-model-p1
+split-383-3-memory-probe 894
+split-383-2-qwen-entries 895 split-383-1-model-catalogue
+split-383-4-ram-tier-selection 896 split-383-1-model-catalogue,split-383-3-memory-probe
+split-383-5-reasoning-channels 897 split-383-1-model-catalogue
+split-383-6-model-verify-doctor 898 split-383-1-model-catalogue,split-383-4-ram-tier-selection
+surfaces-amqp-publish-modes 899 split-351-1-amqp-contract,split-351-2-amqp-client
+surfaces-amqp-queue-limits 900 surfaces-amqp-publish-modes
+surfaces-amqp-lease-memory 901 split-351-1-amqp-contract
+surfaces-amqp-lease-client 902 surfaces-amqp-lease-memory,rmq-r03-amqp-dependency,split-351-2-amqp-client
+surfaces-async-retry 903
+surfaces-memo 904
+surfaces-errors 905
+surfaces-catalogue 906
+surfaces-queue-names 907 surfaces-catalogue
+surfaces-protocol 908 surfaces-catalogue,surfaces-errors
+surfaces-args-codec 909 surfaces-catalogue,surfaces-errors
+surfaces-redaction 910 surfaces-catalogue,surfaces-args-codec
+surfaces-config 911 rmq-r01-queue-config
+surfaces-config-env 912 surfaces-config,surfaces-env
+surfaces-adapter-tracker 913 fakes-sovereign-http,fakes-contracts-surfaces
+surfaces-adapter-docs 914 fakes-sovereign-http,fakes-contracts-surfaces
+surfaces-adapter-messaging 915 fakes-sovereign-http,fakes-contracts-surfaces
+surfaces-adapter-siem 916 fakes-http-transport,fakes-contracts-surfaces
+surfaces-adapter-email 917 fakes-sovereign-smtp,fakes-contracts-surfaces
+surfaces-adapter-sms 918 fakes-sovereign-http,fakes-contracts-surfaces
+surfaces-adapter-timeouts-secrets-files 919 fakes-sovereign-http
+surfaces-adapter-timeouts-config-blob-bus 920 fakes-sovereign-http,fakes-http-transport
+surfaces-pipelined-redis 921 fakes-sockets,fakes-registry
+surfaces-migration 922 rmq-r08-dispatch-migration
+surfaces-operation-repository 923 surfaces-migration,orm-database-seam,orm-tables,orm-test-harness
+surfaces-dead-letter-repository 924 surfaces-migration,orm-database-seam,orm-tables,orm-test-harness
+surfaces-records-fakes 925 surfaces-operation-repository,surfaces-dead-letter-repository,fakes-registry,fakes-contracts-repositories,fakes-observability
+surfaces-caller-scope 926 surfaces-protocol,fakes-registry,split-351-1-amqp-contract
+surfaces-topology 927 surfaces-caller-scope,surfaces-queue-names,surfaces-config,surfaces-amqp-queue-limits
+surfaces-reply-router 928 surfaces-caller-scope,surfaces-protocol,surfaces-amqp-publish-modes,fakes-observability
+surfaces-lane-client 929 surfaces-topology,surfaces-reply-router,surfaces-args-codec,fakes-observability
+surfaces-failure-policy 930 surfaces-caller-scope,surfaces-catalogue,surfaces-config,surfaces-async-retry
+surfaces-operation-handler 931 surfaces-failure-policy,surfaces-args-codec,surfaces-protocol,fakes-observability,surfaces-adapter-tracker,surfaces-adapter-docs,surfaces-adapter-messaging,surfaces-adapter-siem,surfaces-adapter-email,surfaces-adapter-sms
+surfaces-guarded-execution 932 surfaces-operation-handler,surfaces-records-fakes,surfaces-redaction
+surfaces-cache-handler 933 surfaces-pipelined-redis,surfaces-memo,surfaces-operation-handler
+surfaces-ledger-recorder 1003 surfaces-redaction,surfaces-protocol,surfaces-caller-scope,surfaces-operation-handler,fakes-ledger,fakes-projects,fakes-observability
+surfaces-lane-meter 969 surfaces-cache-handler,surfaces-operation-handler,surfaces-lane-client,harness-T21-amqp-consumer-count,fakes-observability
+surfaces-dispatcher 970 surfaces-guarded-execution,surfaces-cache-handler,surfaces-ledger-recorder,surfaces-lane-meter,surfaces-lane-client,surfaces-topology
+surfaces-reconcile 971 surfaces-dispatcher,surfaces-records-fakes,surfaces-ledger-recorder,surfaces-config
+surfaces-lane-host 972 surfaces-dispatcher,surfaces-reconcile,surfaces-amqp-lease-memory,surfaces-amqp-queue-limits
+surfaces-queued-records 973 surfaces-lane-client,surfaces-adapter-tracker,surfaces-adapter-docs
+surfaces-queued-stores 974 surfaces-lane-client
+surfaces-queued-sends 1004 surfaces-lane-client,surfaces-adapter-email,surfaces-adapter-sms,surfaces-adapter-messaging,surfaces-adapter-siem
+surfaces-direct-factory 1005 surfaces-config,surfaces-catalogue,surfaces-caller-scope,surfaces-adapter-tracker,surfaces-adapter-docs,surfaces-adapter-messaging,surfaces-adapter-siem,surfaces-adapter-email,surfaces-adapter-sms,surfaces-adapter-timeouts-secrets-files,surfaces-adapter-timeouts-config-blob-bus,surfaces-env,fakes-sockets
+surfaces-transport-selection 1006 surfaces-direct-factory,surfaces-queued-records,surfaces-queued-stores,surfaces-queued-sends,surfaces-errors
+surfaces-app-records 1007 surfaces-records-fakes,orm-app-resources,fakes-bootstrap-seam
+surfaces-composition 1008 surfaces-transport-selection,surfaces-lane-host,surfaces-app-records,surfaces-config-env,surfaces-amqp-lease-client,rmq-r17-queue-backend-selection,split-351-2-amqp-client
+surfaces-requeue 1009 surfaces-reconcile,surfaces-guarded-execution,surfaces-topology,surfaces-ledger-recorder,surfaces-records-fakes
+surfaces-cli-serve-ping 1010 surfaces-composition,fakes-job-wakeup,fakes-bootstrap-seam
+surfaces-cli-dead-letters 1011 surfaces-cli-serve-ping,surfaces-requeue,surfaces-app-records
+surfaces-contracts-lane 1012 surfaces-composition,fakes-contracts-surfaces,surfaces-app-records
+surfaces-consumer-notifications 1013 surfaces-composition,surfaces-adapter-messaging,surfaces-contracts-lane,fakes-sockets
+surfaces-callers-registry 1014 surfaces-consumer-notifications,surfaces-catalogue
+surfaces-chart-valkey 1015 rmq-r29-chart-broker-core
+surfaces-chart-env-helper 1016 rmq-r29-chart-broker-core,surfaces-chart-valkey
+surfaces-chart-lane-deployments 1017 surfaces-chart-env-helper,surfaces-cli-serve-ping
+surfaces-chart-surface-health 1018 surfaces-chart-lane-deployments
+surfaces-cluster-smoke 1019 surfaces-chart-surface-health,surfaces-cli-serve-ping
+surfaces-bench 1020 surfaces-composition,surfaces-chart-valkey
+surfaces-docs-wave 1021 surfaces-bench,surfaces-cluster-smoke,surfaces-contracts-lane,surfaces-cli-dead-letters,surfaces-callers-registry
+surfaces-default-flip 1022 surfaces-docs-wave,surfaces-cluster-smoke,surfaces-contracts-lane,surfaces-cli-dead-letters,surfaces-callers-registry,surfaces-consumer-notifications
+surfaces-docs-flip 1023 surfaces-default-flip

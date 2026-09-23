@@ -142,7 +142,18 @@ def wave_of(slug: str) -> str:
         return next((w for r, w in SPLIT_WAVE.items() if parent in r), "gaps")
     if prefix == "gap":
         return "gaps"
-    return {"install": "installer", "rmq": "job-queue"}.get(prefix, prefix)
+    # The wave-1 slugs predate the wave names, so they carry their own prefixes; each belongs
+    # to a wave that already exists rather than to one invented for it. Every prefix must land
+    # on a WAVES key — `epics` raises KeyError on one that does not, after filing everything.
+    return {
+        "install": "installer",
+        "rmq": "job-queue",
+        "qwenloop": "core",
+        "engines": "core",
+        "opencodeloop": "core",
+        "default": "models",
+        "chart": "deploy",
+    }.get(prefix, prefix)
 
 
 def gh(*args: str) -> str:

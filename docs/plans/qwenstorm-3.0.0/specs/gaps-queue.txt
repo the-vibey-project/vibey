@@ -126,6 +126,7 @@ gap-rotation-derived-weights-4 -
 gap-runners-declared-1 -
 gap-runners-declared-2 -
 gap-runners-declared-3 -
+gap-sabbath-window-guard -
 gap-sd01-carriage - gap-agent-tree-parity
 gap-spike-aws-iac -
 gap-spike-clearance - gap-status-vocabulary
