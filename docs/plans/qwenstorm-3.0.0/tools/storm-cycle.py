@@ -40,6 +40,7 @@ hold a lock on a repository the operator had finished with.
 """
 
 import argparse
+import fcntl
 import subprocess
 import sys
 import time
@@ -103,12 +104,29 @@ def cycle(dry: bool) -> None:
     if dry:
         say("merge: would run the repository's own merge train")
     else:
-        # The train merges what its gate allows; this asks it to look, and reports what it did.
-        code, out = run(["uv", "run", "vibey-gh", "merge-train"], MAIN, timeout=1800)
-        tail = [line for line in out.splitlines() if line.strip()][-6:]
-        say(f"merge-train: exit {code}")
-        for line in tail:
-            print(f"    {line}", flush=True)
+        # ONE TRAIN AT A TIME, whichever scheduler asked for it.
+        # `storm-merge.py` runs the same command hourly as a backstop for when this cycle
+        # is not up, and both start immediately, so they coincide on the hour. Each train
+        # reads the whole open-pull-request list, judges it, then merges: interleave two
+        # and the second decides from state the first has already changed, and the train
+        # falls through to its `--admin` path when what it expected is no longer there.
+        # `flock`, so a scheduler killed mid-train leaves nothing behind to clear by hand;
+        # non-blocking, because whoever holds it is already doing this step.
+        lock = STORM / "scratch/merge-train.lock"
+        lock.parent.mkdir(parents=True, exist_ok=True)
+        with lock.open("w") as handle:
+            try:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                say("merge-train: another scheduler holds it; skipped this cycle")
+            else:
+                # The train merges what its gate allows; this asks it to look, and reports
+                # what it did.
+                code, out = run(["uv", "run", "vibey-gh", "merge-train"], MAIN, timeout=1800)
+                tail = [line for line in out.splitlines() if line.strip()][-6:]
+                say(f"merge-train: exit {code}")
+                for line in tail:
+                    print(f"    {line}", flush=True)
 
     # Last, so the snapshot records what this pass actually did rather than what it was about
     # to do. Cheap on both counts: it writes nothing at all when the run state has not moved

@@ -61,6 +61,12 @@ ORDER = (
     ("queue", "storm-queue.sh"),
     ("lane", "qwenlane.py"),
     ("cycle", "storm-cycle.py"),
+    # The hourly merge train, after the cycle: it is the backstop for the cycle being down,
+    # so stopping it first would let the cycle start one more train on the way out. Left out
+    # of this list it survives a stop entirely, and `storm-queue.sh` then sees the stale
+    # process on the next resume, skips starting a fresh one, and the storm runs with a
+    # train nobody asked for still attached to the previous run.
+    ("merge", "storm-merge.py"),
 )
 
 

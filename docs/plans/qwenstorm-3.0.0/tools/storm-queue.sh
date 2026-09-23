@@ -20,6 +20,18 @@ touch "$Q/integrated.txt" "$Q/abandoned.txt"
 # loop that outlived the inner one would keep publishing lanes nobody was still producing.
 # `ps -Ao args=`, not pgrep -f: macOS pgrep has no -a, and the check must not silently answer
 # "not running" and start a second cycle beside the first.
+# The hourly merge train, deliberately in its own process. The cycle runs the train every ten
+# minutes as one of its steps, so on a healthy night this finds nothing to do -- it exists for
+# the night the cycle dies, when the train would otherwise stop with it while lanes keep
+# finishing and pull requests pile up behind a queue nobody is draining. A backstop sharing a
+# process with the thing it backs up is not a backstop.
+if ! ps -Ao args= | grep -q '[s]torm-merge.py'; then
+  nohup python3 "$Q/tools/storm-merge.py" --run --every 3600 --detached \
+    > "$Q/scratch/storm-merge.log" 2>&1 < /dev/null &
+  disown 2>/dev/null || true
+  echo "$(date -u +%FT%TZ) hourly merge train started (backstop for the 10-minute cycle)" \
+    | tee -a "$Q/progress.log"
+fi
 if ! ps -Ao args= | grep -q '[s]torm-cycle.py'; then
   nohup python3 "$Q/tools/storm-cycle.py" --run --every 600 --detached \
     > "$Q/scratch/storm-cycle.log" 2>&1 < /dev/null &
