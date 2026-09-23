@@ -27,3 +27,8 @@ htmlcov/
 # versions no environment ever resolved. Keep them out.
 src/vibey_runners/*/uv.lock
 src/vibey_tools/*/uv.lock
+
+# pre-commit writes here: `[env] PRE_COMMIT_HOME = ".cache/pre-commit"` in
+# .claude/settings.json keeps its cache inside the sandbox-writable tree, which means
+# every worktree grows a .cache/ that is tooling state, never repository content.
+.cache/
