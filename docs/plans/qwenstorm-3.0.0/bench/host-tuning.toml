@@ -1,0 +1,69 @@
+# Host tuning for the sovereign loop, measured on this machine (sub-doctrine 8.g: always
+# measured). Every number here was read off a running storm, not estimated. Re-measure on a
+# different host rather than copying these values: they are a record of one machine, and the
+# method below is the part that transfers.
+
+[host]
+measured_at = "2026-09-22T01:10:00Z"
+os = "macOS (Darwin 25.6.0, Apple Silicon)"
+ram_gb = 24
+disk_free_gb = 498
+
+# Why there is no swap setting here, though the obvious reading of "the machine is thrashing"
+# is "give it more swap". macOS has no swap knob: no swapon, no swappiness, no swap partition,
+# and dynamic_pager does not run on a modern system. The kernel allocates swapfiles on demand
+# and grows them into free disk, so the total below is what it had taken, never a ceiling --
+# with 498 GB free it takes more whenever it wants. Adding swap is not a lever on this OS.
+# The lever is not needing it.
+[swap.observed_before]
+total_mb = 18432
+used_mb = 17042
+free_mb = 1390
+pages_free = 4569          # ~18 MB genuinely free on a 24 GB machine
+swapouts = 10626300
+memory_free_percent = 10
+
+[cause]
+process = "llama-server"
+rss_gb = 14.93             # 62% of all RAM in one process
+model = "gpt-oss:20b"
+context_window = 131072
+note = """
+The KV cache a model reserves scales with its context window, and that reservation is what
+was consuming the machine. The question is therefore not how much memory the model may have,
+but how much context a lane actually uses -- which the run ledger already records.
+"""
+
+# The experiment: 838 turns across every lane run on 2026-09-22, read from each run's
+# events.jsonl (input_tokens + output_tokens per turn). No synthetic benchmark; this is the
+# real workload.
+[context.measured]
+turns = 838
+p50 = 20070
+p90 = 32026
+p95 = 36816
+p99 = 42979
+max = 49118
+turns_over_32k = 71
+turns_over_64k = 0
+
+[context.decision]
+context_window = 65536
+headroom_tokens = 16418    # 33% over the observed peak
+rationale = """
+65536 is the smallest power of two that covers every turn ever recorded, with a third again
+as headroom. 32768 would have truncated 71 turns (8.5%), and trimming a transcript mid-lane
+costs the model the evidence it is reasoning from. 131072 was never reached by any turn: it
+bought nothing and cost roughly half the machine.
+"""
+raise_only_if = """
+A measurement shows a turn needing more -- max approaching 60k, or transcript trimming
+appearing in the run log. Not a hunch, and not because a lane failed for some other reason.
+"""
+
+# What a host should check before running a local engine at all. These are the thresholds this
+# machine taught us; a lane implementing this automatically should measure rather than assume.
+[thresholds]
+model_rss_fraction_of_ram = 0.62   # what it was; anything near this thrashes
+healthy_free_memory_percent = 20
+swap_used_fraction_warn = 0.75     # 0.92 observed while thrashing
