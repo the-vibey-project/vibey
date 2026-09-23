@@ -14,6 +14,29 @@ on:
   # (ADR-0036).
   merge_group:
 
+# A superseded pull-request run is measurement nobody will ever read. Over the hundred CI
+# runs before this line was written, thirteen kept going after a newer commit replaced
+# them -- 181 minutes of wall clock, every one of it spent deciding something about a
+# commit that no longer existed. The cost is not only the machine: a dead run holds
+# concurrency slots, so the live run queues behind work that has already been abandoned,
+# and the person waiting pays for both (sub-doctrine 12.g, ADR-0050).
+#
+# What must never be cancelled is named here rather than left to a default, because 12.g's
+# bound is that speed is never bought with what a check measures:
+#
+#   - `push` (main, develop): every push to develop is a distinct pull request the merge
+#     train just landed, and it publishes its own dev build. Cancel one and a merged
+#     commit carries no green CI at all -- the check did not get faster, it stopped
+#     existing. Those 27 runs are not waste; they are the record.
+#   - `merge_group`: a cancelled queue run is a check that never reports, which ADR-0036
+#     records as the thing that ejects a pull request from the queue.
+#
+# Measured, not assumed: all thirteen superseded runs were `pull_request` events, so this
+# condition covers the whole of what was found and provably reaches nothing else.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   uv-lock:
     name: uv.lock is in sync with pyproject.toml

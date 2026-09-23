@@ -17,8 +17,32 @@ permissions:
   issues: read
   pull-requests: read
 
+# One repository-wide group was the right mutex for the wrong set of runs. Every event
+# shared it, so a pull request's estimate check cancelled an unrelated pull request's, and
+# either one cancelled the integration branch's ledger refresh. Measured over the hundred
+# runs before this was written: 72 cancelled, 50 of them `pull_request` -- fifty pull
+# requests whose estimate was computed far enough to spend a runner and never far enough
+# to report (sub-doctrine 12.g, ADR-0050).
+#
+# What the two lanes actually contend for is different, so they are keyed differently:
+#
+#   - A `pull_request` run checks out that pull request's head and runs `forecast
+#     --no-record --no-report`. It writes nothing and shares nothing, so it contends only
+#     with its own older run, which a newer commit should still supersede.
+#   - Every other event refreshes the published ledger on the integration branch and the
+#     `publish` job commits it. Those genuinely must not overlap, so they keep the single
+#     repository-wide group they always had, unchanged.
+#
+# `cancel-in-progress` stays true for both: an estimate is a whole-state recompute, so the
+# newer run subsumes the older rather than continuing it, and nothing is lost by stopping.
 concurrency:
-  group: delivery-estimate-${{ github.repository }}
+  # 12.g-whole-state: every event here recomputes the estimate from the whole tracker
+  # rather than advancing a cursor, so a cancelled run leaves no gap -- the next one
+  # derives the same answer from scratch. That is why `cancel-in-progress` is true for
+  # the ledger lane as well as the read-only one.
+  # Written on one line on purpose: a folded scalar keeps the newlines of its
+  # more-indented lines, which would put literal newlines inside the group name.
+  group: delivery-estimate-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'ledger' }}
   cancel-in-progress: true
 
 jobs:
