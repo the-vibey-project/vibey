@@ -8,21 +8,6 @@ repos:
 
   - repo: local
     hooks:
-      - id: test-suite
-        name: parallel test suite
-        entry: uv run --extra dev pytest -q -p no:cacheprovider
-        language: system
-        pass_filenames: false
-        # `stages: [pre-push]`, like every other local hook below. Without it pre-commit
-        # runs this at EVERY stage, so `git commit` paid the full 1519-test suite —
-        # measured at 259s — even for a commit touching only docs or config.
-        #
-        # At pre-push it is also nearly redundant: `coverage-gates` runs the same suite
-        # with coverage, a strict superset. Between the two, one push ran the whole suite
-        # three times. Kept rather than deleted so a plain test failure is still reported
-        # as itself rather than as a coverage-gate failure.
-        stages: [pre-push]
-
       - id: mypy
         name: mypy --strict
         entry: uv run --extra dev mypy --strict src/vibey
@@ -38,7 +23,17 @@ repos:
         stages: [pre-push]
 
       - id: coverage-gates
-        name: per-layer 100% coverage gates
+        # Runs the whole suite ONCE and gates the four layers on that run. `test-suite`
+        # used to run the same suite again beforehand without coverage: measured at 147s
+        # against 147s WITH coverage, so the instrumentation was free and the second run
+        # was pure duplication -- half the pre-push time, on every push of every branch,
+        # for a strictly smaller measurement (12.g).
+        #
+        # It was kept once so a plain test failure read as itself rather than as a
+        # coverage failure. That reason survives in the name rather than in a second run:
+        # `&&` short-circuits, so a failing test still prints FAILED and the coverage
+        # reports never run.
+        name: test suite, then per-layer 100% coverage gates
         entry: bash -c 'uv run --extra dev pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= && uv run --extra dev coverage report --include="src/vibey/domain/*" --fail-under=100 && uv run --extra dev coverage report --include="src/vibey/application/*" --fail-under=100 && uv run --extra dev coverage report --include="src/vibey/infrastructure/*" --fail-under=100 && uv run --extra dev coverage report --include="src/vibey/cli/*" --fail-under=100'
         language: system
         pass_filenames: false

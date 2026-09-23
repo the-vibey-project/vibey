@@ -66,7 +66,7 @@ STAMP = re.compile(r"^Snapshot .*$", re.M)
 # the snapshot. Everything else still runs, and the pull-request gate still runs all of it on
 # the forge. A blanket --no-verify would have been the lazy version of this and is not used:
 # the narrowing is conditional, verified, and says out loud what it skipped.
-HEAVY_HOOKS = "test-suite,coverage-gates"
+HEAVY_HOOKS = "coverage-gates"
 SNAPSHOT_PATHS = (
     "docs/plans/qwenstorm-3.0.0/RUN-STATE.md",
     "docs/plans/qwenstorm-3.0.0/evidence/ledger.jsonl",
