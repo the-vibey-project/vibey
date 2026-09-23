@@ -562,6 +562,41 @@ not leave a person doing work no person should have to do.
 And automation that reports success it did not observe is not automation, it is a liability
 wearing its clothes (10.f). A step that cannot verify its own effect says so instead.
 
+**12.f — the delegated approver** *(ratified by the merge that carried this entry)*: an
+operator may name an agent to give, in their place and while they are away, the approval a
+change needs before it lands. The naming is a grant of 12.d's kind and is read the same way --
+narrowly, never generously -- and it answers to one rule above all the others: **the approver is
+never the author**. Whatever wrote a change does not approve it. Where an agent repaired a
+change it wrote that repair, whatever produced the first draft, and it is an author there
+however little it touched; the question is who wrote the diff in front of the reviewer, not
+whose name is on the branch.
+
+This does not automate judgement away, which 12.e forbids. The judgement remains the operator's:
+they exercise it once, in the grant, by fixing what may be approved and what may never be, and it
+stands only until they say otherwise. What is delegated is the applying of a standard a human
+set, to changes of a class a human named, with the standard itself beyond reach. An agent
+choosing its own standard would be the decision nobody made; an agent applying the operator's is
+the operator still deciding, at a distance they chose.
+
+A delegated approval is evidence, not ceremony. It names what it checked, names what it could not
+check, and withholds itself wherever the evidence does not reach -- an approval that cannot say
+what it rests on is worth less than none, and worse, because it will be believed (10.f). It never
+widens its own mandate: the grant itself, the gates it stands beside, the governance corpus, and
+any rule deciding who may approve are all outside what a delegated approver may ever approve. It
+adds to the gates and never stands in for one.
+
+And it holds only while a human still wants it to. Any human may withdraw it at once -- by a
+means that needs no merge, no quorum, no notice and no reason given -- and the withdrawal binds
+from that moment, mid-run, with whatever was in flight left for a person. The absence of a grant
+is refusal and never permission, so a delegated approver that cannot read its own authorization
+has already lost it. Granting is deliberate, declared and reviewed; withdrawal is immediate and
+unilateral, and the asymmetry is the whole of the protection: the power to stop must never be
+harder to exercise than the power that was given.
+
+This stands under humans first because the last human checkpoint is the furthest an agent's
+authority can reach, and the one place where a person must always be able to reach in and stop it
+without asking anyone's permission -- including the agent's.
+
 ---
 
 *The counts are sealed — twelve doctrines, ten rights, ten commandments — and the
