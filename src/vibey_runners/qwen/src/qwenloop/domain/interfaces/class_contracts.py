@@ -36,6 +36,9 @@ class QwenConfigInterface(Protocol):
     def max_turns(self) -> int: ...
 
     @property
+    def max_empty_reply_retries(self) -> int: ...
+
+    @property
     def base_url(self) -> str: ...
 
     @property

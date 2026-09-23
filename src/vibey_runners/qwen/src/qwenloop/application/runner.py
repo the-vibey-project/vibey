@@ -14,6 +14,7 @@ from qwenloop.application.interfaces import (
     RunStore,
     ToolExecutor,
 )
+from qwenloop.domain.config import DEFAULT_MAX_EMPTY_REPLY_RETRIES
 from qwenloop.domain.model import (
     DONE_MARKER,
     ChatChunk,
@@ -35,6 +36,12 @@ _MAX_TOOL_CALL_PARSE_RETRIES = 3
 _TOOL_CALL_RETRY_PROMPT = (
     "Your last reply was not a valid tool call. Call exactly one of the tools read_file, "
     "write_file, edit_file or shell, with JSON arguments, and no other text."
+)
+#: What a retried empty turn is told: that it sent nothing, and the two ways forward. Neutral
+#: on purpose; it neither scolds nor steers the model towards one tool.
+_EMPTY_REPLY_PROMPT = (
+    "Your last reply was empty: it contained no tool call and no text. Either call one of "
+    "the tools read_file, write_file, edit_file or shell, or answer in plain text."
 )
 _CONTINUE_PROMPT = (
     "Continue the plan and call one of the available coding tools to make progress. "
@@ -216,8 +223,14 @@ class AutonomousRunner:
         profile: ModelProfile,
         server_info: ServerInfo,
         max_turns: int,
+        max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     ) -> RunState:
         state = RunState(run_id=run_id, status=RunStatus.RUNNING)
+        # Consecutive turns with no tool call and no text. Each retry is its own model call
+        # inside the `max_turns` loop, so the turn cap bounds retries as well as this does.
+        empty_replies = 0
+        # Why the run failed, when something other than the turn cap ended it.
+        failure: dict[str, object] | None = None
         any_tool_called = False
         progress_tool_called = False
         saw_verdict = False
@@ -243,6 +256,9 @@ class AutonomousRunner:
                 "context_window": profile.context_window,
                 "cwd": str(cwd),
                 "server_settings": self._server_settings(server_info),
+                # The bounds this run was held to, so a failure can be attributed to them.
+                "max_turns": max_turns,
+                "max_empty_reply_retries": max_empty_reply_retries,
             },
         )
         await self._notify("Qwen run started", f"Run {run_id} started.")
@@ -266,11 +282,17 @@ class AutonomousRunner:
             # are tuned by different settings, so one duration would hide which one moved.
             answered: float | None = None
             server_timings: dict[str, float] | None = None
+            finish_reason: str | None = None
+            reasoning_chars: int | None = None
             async for chunk in self._chat(run_id, turn, server_info, state):
                 if answered is None:
                     answered = self._clock.monotonic()
                 if chunk.timings is not None:
                     server_timings = dict(chunk.timings)
+                if chunk.finish_reason is not None:
+                    finish_reason = chunk.finish_reason
+                if chunk.reasoning_chars is not None:
+                    reasoning_chars = chunk.reasoning_chars
                 state.input_tokens += chunk.input_tokens
                 state.output_tokens += chunk.output_tokens
                 if chunk.text:
@@ -342,6 +364,9 @@ class AutonomousRunner:
                 f"Run {run_id} completed model turn {turn}.",
             )
             answer = "".join(text_parts)
+            empty = not tool_called and not answer
+            if not empty:
+                empty_replies = 0
             current_verdict = f"```{_VERDICT_TOOL_NAME}" in answer
             saw_verdict = saw_verdict or current_verdict
             if tool_calls:
@@ -370,18 +395,55 @@ class AutonomousRunner:
                 invalid_completion_claims += 1
                 if invalid_completion_claims >= _MAX_INVALID_COMPLETION_CLAIMS:
                     state.status = RunStatus.FAILED
+                    failure = {"reason": "invalid_completion_claims"}
                     break
                 state.transcript.append(ChatMessage("user", _INVALID_COMPLETION_PROMPT))
                 continue
-            if not tool_called and not answer:
-                state.status = RunStatus.FAILED
-                break
+            if empty:
+                empty_replies += 1
+                retrying = empty_replies <= max_empty_reply_retries
+                # What the empty turn actually was, so an empty reply is evidence rather
+                # than a mystery: how the model stopped, what it cost, whether it reasoned.
+                self._store.append_event(
+                    run_id,
+                    {
+                        "type": "turn.empty",
+                        "turn": turn,
+                        "finish_reason": finish_reason,
+                        "input_tokens": state.input_tokens - input_before,
+                        "output_tokens": state.output_tokens - output_before,
+                        "reasoning_present": reasoning_chars is not None,
+                        "reasoning_chars": reasoning_chars or 0,
+                        "empty_replies": empty_replies,
+                        "max_empty_reply_retries": max_empty_reply_retries,
+                        "retrying": retrying,
+                    },
+                )
+                if not retrying:
+                    state.status = RunStatus.FAILED
+                    failure = {
+                        "reason": "empty_response",
+                        "empty_replies": empty_replies,
+                        "max_empty_reply_retries": max_empty_reply_retries,
+                    }
+                    break
+                state.transcript.append(ChatMessage("user", _EMPTY_REPLY_PROMPT))
+                continue
             if state.transcript[-1].role == "assistant":
                 state.transcript.append(ChatMessage("user", _CONTINUE_PROMPT))
         if state.status is RunStatus.RUNNING:
             state.status = RunStatus.FAILED
+        # The turn cap is the reason only when nothing else ended the run first.
+        failure = failure or {"reason": "turn_limit"}
         self._store.append_event(
-            run_id, {"type": "failed", "reason": "turn limit or empty response"}
+            run_id,
+            {
+                "type": "failed",
+                "reason": failure["reason"],
+                "turn": state.turns,
+                "max_turns": max_turns,
+                **{key: value for key, value in failure.items() if key != "reason"},
+            },
         )
         await self._notify("Qwen run failed", f"Run {run_id} failed after {state.turns} turns.")
         self._store.write_snapshot(run_id, _snapshot(state))

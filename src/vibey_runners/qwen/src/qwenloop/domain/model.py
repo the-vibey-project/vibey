@@ -105,6 +105,11 @@ class ChatChunk:
     # llama-server's own per-request timings (prompt_n, cache_n, prompt_ms, predicted_n,
     # predicted_ms, predicted_per_second); None when the server sent none.
     timings: Mapping[str, float] | None = None
+    # Why the model stopped (`stop`, `length`, `tool_calls`, ...); None when not reported.
+    finish_reason: str | None = None
+    # Length of the reply's separate reasoning field (gpt-oss on Ollama sends one), in
+    # characters; None when the server sent no reasoning at all. Never its content.
+    reasoning_chars: int | None = None
 
 
 class ToolCallParseError(RuntimeError):

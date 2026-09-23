@@ -48,6 +48,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   indefinitely) instead of a hard-coded 300 s ([#345](https://github.com/the-vibey-project/vibey/issues/345))
 * **qwenloop:** an HTTP 500 "error parsing tool call" no longer ends a run: the turn is retried
   up to three times with a correction, each retry recorded as `turn.retried` ([#386](https://github.com/the-vibey-project/vibey/issues/386))
+* **qwenloop:** one empty model reply (no tool call, no text) no longer ends a run. It is
+  retried with a neutral nudge up to `max_empty_reply_retries` consecutive times (default 2,
+  `0` restores the old behaviour); each retry is a new model call that spends a turn of
+  `max_turns`. Every empty turn writes a `turn.empty` event with its `finish_reason`, token
+  counts and whether the reply carried a reasoning field (its length, never its content). The
+  `failed` event now names one reason — `empty_response`, `turn_limit` or
+  `invalid_completion_claims` — with the run's `turn` and `max_turns`, and `meta.json` records
+  `max_turns` and `max_empty_reply_retries`
 
 ## [2.0.0] (2026-09-21)
 

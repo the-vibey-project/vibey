@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+from qwenloop.domain.config import DEFAULT_MAX_EMPTY_REPLY_RETRIES
 from qwenloop.domain.model import ModelProfile, RunState, ServerInfo
 
 
@@ -20,4 +21,5 @@ class AutonomousRunnerInterface(Protocol):
         profile: ModelProfile,
         server_info: ServerInfo,
         max_turns: int,
+        max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     ) -> RunState: ...

@@ -74,6 +74,7 @@ model, not qwenloop.
 | Endpoint probe timeout (seconds) | — | — | `endpoint_timeout_seconds` | `5` |
 | Backend | `--backend` | — | `backend` | `auto` |
 | Turn limit | `--max-turns` | — | `max_turns` | `40` |
+| Consecutive empty replies retried before a run fails | — | — | `max_empty_reply_retries` | `2` |
 | Server startup wait (seconds) | — | — | `startup_timeout_seconds` | `180` |
 | Context window (tokens) | — | — | `context_window` | `32768` |
 

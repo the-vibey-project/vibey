@@ -108,6 +108,7 @@ def main() -> None:
                     config.max_turns,
                     startup_timeout_seconds=config.startup_timeout_seconds,
                     desktop_notifications=True,
+                    max_empty_reply_retries=config.max_empty_reply_retries,
                 )
             )
         except (OSError, RuntimeError) as exc:

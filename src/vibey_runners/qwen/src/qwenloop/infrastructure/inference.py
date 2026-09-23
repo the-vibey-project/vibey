@@ -36,6 +36,9 @@ from qwenloop.domain.model import (
 #: How Ollama words a model reply it could not parse as a tool call (#386).
 _TOOL_CALL_PARSE_FAILURE = re.compile(r"error parsing tool call", re.IGNORECASE)
 
+#: Where OpenAI-compatible servers put a reasoning model's separate reasoning text.
+_REASONING_KEYS = ("reasoning", "reasoning_content", "thinking")
+
 #: The llama-server `timings` keys a run records per turn (#382).
 _SERVER_TIMING_KEYS = (
     "prompt_n",
@@ -174,7 +177,8 @@ class OpenAIServer:
                 raise ToolCallParseError(detail) from exc
             raise RuntimeError(detail) from exc
         data = json.loads(response.read())
-        message = data["choices"][0]["message"]
+        choice = data["choices"][0]
+        message = choice["message"]
         calls = message.get("tool_calls", [])
         content = message.get("content") or ""
         if not calls:
@@ -201,6 +205,8 @@ class OpenAIServer:
             input_tokens=int(usage.get("prompt_tokens", 0)),
             output_tokens=int(usage.get("completion_tokens", 0)),
             timings=self._server_timings(data.get("timings")),
+            finish_reason=self._finish_reason(choice.get("finish_reason")),
+            reasoning_chars=self._reasoning_chars(message),
         )
 
     async def stop(self, info: ServerInfo) -> None:
@@ -249,6 +255,26 @@ class OpenAIServer:
             if isinstance(timings.get(key), int | float) and not isinstance(timings[key], bool)
         }
         return kept or None
+
+    @staticmethod
+    def _finish_reason(value: object) -> str | None:
+        """Why the model stopped, as the server said it; nothing when it said nothing."""
+        return value if isinstance(value, str) and value else None
+
+    @staticmethod
+    def _reasoning_chars(message: dict[str, object]) -> int | None:
+        """How long the reply's separate reasoning was, or None when it carried none.
+
+        Reasoning models answer with it beside `content`: Ollama's OpenAI API names it
+        `reasoning`, vLLM and DeepSeek-style servers `reasoning_content`, Ollama's native
+        API `thinking`. Only its length leaves this adapter; the text is the model's
+        scratch work, not something a run records or feeds back to it.
+        """
+        for key in _REASONING_KEYS:
+            value = message.get(key)
+            if isinstance(value, str):
+                return len(value)
+        return None
 
     @staticmethod
     def _auth(token: str) -> dict[str, str]:

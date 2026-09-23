@@ -809,3 +809,41 @@ async def test_other_server_errors_are_not_retryable(
         async for _ in LlamaCppServer().chat_stream(info, [ChatMessage("user", "x")]):
             pass
     assert not isinstance(caught.value, ToolCallParseError)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field", ["reasoning", "reasoning_content", "thinking"])
+async def test_chat_stream_reports_how_the_reply_ended_and_its_reasoning_length(
+    monkeypatch: pytest.MonkeyPatch, field: str
+) -> None:
+    # gpt-oss on Ollama answers with a separate reasoning field; an "empty" turn may have
+    # spent its tokens there. Its length is recorded, never its content.
+    reply = {
+        "choices": [
+            {
+                "finish_reason": "stop",
+                "message": {"content": "", field: "I should read the file."},
+            }
+        ],
+        "usage": {"prompt_tokens": 20, "completion_tokens": 11},
+    }
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"completions": reply}))
+    info = ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:11434/v1", False, True)
+    chunks = [chunk async for chunk in ollama().chat_stream(info, [ChatMessage("user", "hi")])]
+    assert (chunks[-1].text, chunks[-1].finish_reason, chunks[-1].reasoning_chars) == (
+        "",
+        "stop",
+        len("I should read the file."),
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("message", [{"content": None}, {"content": "", "reasoning": None}])
+async def test_chat_stream_invents_no_finish_reason_or_reasoning(
+    monkeypatch: pytest.MonkeyPatch, message: dict[str, object]
+) -> None:
+    reply = {"choices": [{"message": message}], "usage": {}}
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"completions": reply}))
+    info = ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:11434/v1", False, True)
+    chunks = [chunk async for chunk in ollama().chat_stream(info, [ChatMessage("user", "hi")])]
+    assert (chunks[-1].finish_reason, chunks[-1].reasoning_chars) == (None, None)

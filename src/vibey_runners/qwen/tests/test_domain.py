@@ -6,6 +6,7 @@ from qwenloop.application.interfaces import BackendSelectorInterface
 from qwenloop.domain.config import (
     DEFAULT_ENDPOINT_BASE_URL,
     DEFAULT_ENDPOINT_MODEL,
+    DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     QwenConfig,
     QwenConfigParser,
 )
@@ -189,3 +190,13 @@ def test_a_running_local_ollama_is_the_default_backend_when_nothing_is_configure
         ).backend
         is Backend.VLLM
     )
+
+
+def test_empty_reply_retries_are_declared_configuration() -> None:
+    # declared, not compiled in: the default lives on QwenConfig and a file can change it
+    assert QwenConfig().max_empty_reply_retries == DEFAULT_MAX_EMPTY_REPLY_RETRIES == 2
+    assert parser.parse({"max_empty_reply_retries": 5}).max_empty_reply_retries == 5
+    # zero is meaningful: the first empty reply fails the run, as it did before
+    assert parser.parse({"max_empty_reply_retries": 0}).max_empty_reply_retries == 0
+    with pytest.raises(ValueError, match="max_empty_reply_retries must be non-negative"):
+        parser.parse({"max_empty_reply_retries": -1})

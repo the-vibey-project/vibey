@@ -14,6 +14,11 @@ DEFAULT_ENDPOINT_BASE_URL = "http://127.0.0.1:11434/v1"
 #: This era's default free model (sub-doctrine 8.d): GPT-OSS 20B, under the name Ollama
 #: gives it. The pinned llama.cpp profiles are a separate choice and keep their own model.
 DEFAULT_ENDPOINT_MODEL = "gpt-oss:20b"
+#: How many consecutive empty model replies (no tool call, no text) a run retries before it
+#: fails. One empty reply is a bad turn, not a dead run: 27 of 60 failed QwenStorm runs
+#: ended on the first one. Each retry is a new model call and spends a turn of `max_turns`,
+#: so the turn cap still bounds the run. 0 restores fail-on-first-empty.
+DEFAULT_MAX_EMPTY_REPLY_RETRIES = 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +30,7 @@ class QwenConfig:
     startup_timeout_seconds: int = 180
     context_window: int = 32_768
     max_turns: int = 40
+    max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES
     # The OpenAI-compatible base URL to attach to, `/v1` included. Empty means none is
     # configured, and `auto` selection then never picks the openai-compat backend.
     base_url: str = ""
@@ -73,6 +79,9 @@ class QwenConfigParser:
             ),
             context_window=int(data.get("context_window", defaults.context_window)),
             max_turns=int(data.get("max_turns", defaults.max_turns)),
+            max_empty_reply_retries=int(
+                data.get("max_empty_reply_retries", defaults.max_empty_reply_retries)
+            ),
             base_url=self._base_url(str(data.get("base_url", defaults.base_url))),
             model=str(data.get("model", defaults.model)).strip(),
             endpoint_timeout_seconds=int(
@@ -81,6 +90,8 @@ class QwenConfigParser:
         )
         if config.idle_timeout_seconds < 0:
             raise ValueError("idle_timeout_seconds must be non-negative")
+        if config.max_empty_reply_retries < 0:
+            raise ValueError("max_empty_reply_retries must be non-negative")
         if (
             config.startup_timeout_seconds <= 0
             or config.context_window <= 0

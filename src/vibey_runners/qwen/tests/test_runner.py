@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from qwenloop.application.runner import (
+    _EMPTY_REPLY_PROMPT,
     AutonomousRunner,
     _has_cdd_evidence,
     _render_native_verdict,
@@ -14,6 +15,7 @@ from qwenloop.application.runner import (
     _trim_transcript,
     _truncate_tool_result,
 )
+from qwenloop.domain.config import QwenConfig
 from qwenloop.domain.model import (
     Backend,
     ChatChunk,
@@ -953,16 +955,262 @@ async def test_a_fourth_unparseable_tool_call_fails_the_run_as_before(tmp_path: 
 
 
 @pytest.mark.asyncio
-async def test_a_model_call_that_yields_nothing_is_not_retried(tmp_path: Path) -> None:
+async def test_with_no_empty_reply_retries_an_empty_reply_fails_the_run_as_before(
+    tmp_path: Path,
+) -> None:
     server = ScriptedServer([[], [ChatChunk(text=_DONE)]])
     info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
     result = await AutonomousRunner(
         server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
     ).run(
-        run_id="empty", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=3
+        run_id="empty",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=3,
+        max_empty_reply_retries=0,
     )
-    # an empty reply is not a parse failure: it is not retried, and fails the run as before
+    # an empty reply is not a parse failure: with no retries declared it fails the run
     assert result.status is RunStatus.FAILED
     assert len(server.seen) == 1
-    events = (tmp_path / ".qwenloop" / "runs" / "empty" / "events.jsonl").read_text()
-    assert '"turn.retried"' not in events
+    events = _events(tmp_path, "empty")
+    assert not [event for event in events if event["type"] == "turn.retried"]
+    assert events[-1] == {
+        "type": "failed",
+        "reason": "empty_response",
+        "turn": 1,
+        "max_turns": 3,
+        "empty_replies": 1,
+        "max_empty_reply_retries": 0,
+    }
+
+
+def _events(root: Path, run_id: str) -> list[dict[str, object]]:
+    path = root / ".qwenloop" / "runs" / run_id / "events.jsonl"
+    return [json.loads(line) for line in path.read_text().splitlines()]
+
+
+def _empty(**kwargs: object) -> list[ChatChunk]:
+    """One turn with no tool call and no text: what gpt-oss sent in 27 of 60 failed runs."""
+    return [ChatChunk(**kwargs)]  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_an_empty_reply_is_recorded_and_retried_with_a_nudge(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            _empty(input_tokens=900, output_tokens=11, finish_reason="stop", reasoning_chars=37),
+            [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}})],
+            [ChatChunk(text=_DONE)],
+        ]
+    )
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="nudge",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=5,
+        max_empty_reply_retries=2,
+    )
+    assert result.status is RunStatus.COMPLETED
+    events = _events(tmp_path, "nudge")
+    empty = [event for event in events if event["type"] == "turn.empty"]
+    # what the empty turn actually contained: how it ended, what it cost, whether the
+    # model reasoned; the reasoning's length only, never its content
+    assert empty == [
+        {
+            "type": "turn.empty",
+            "turn": 1,
+            "finish_reason": "stop",
+            "input_tokens": 900,
+            "output_tokens": 11,
+            "reasoning_present": True,
+            "reasoning_chars": 37,
+            "empty_replies": 1,
+            "max_empty_reply_retries": 2,
+            "retrying": True,
+        }
+    ]
+    # the retry is a new model call, so it spends a turn of the budget
+    turns = [event["turn"] for event in events if event["type"] == "turn.completed"]
+    assert turns == [1, 2, 3]
+    # the retry sees a neutral nudge naming both ways out, and nothing else new
+    nudge = server.seen[1][-1]
+    assert (nudge.role, nudge.content) == ("user", _EMPTY_REPLY_PROMPT)
+    assert server.seen[1][:-1] == server.seen[0]
+    assert "call one of the tools" in _EMPTY_REPLY_PROMPT
+    assert "answer in plain text" in _EMPTY_REPLY_PROMPT
+
+
+@pytest.mark.asyncio
+async def test_an_empty_reply_without_finish_reason_or_reasoning_says_so(tmp_path: Path) -> None:
+    server = ScriptedServer([_empty(), [ChatChunk(text=_DONE)]])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="bare", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=2
+    )
+    empty = next(event for event in _events(tmp_path, "bare") if event["type"] == "turn.empty")
+    assert (empty["finish_reason"], empty["reasoning_present"], empty["reasoning_chars"]) == (
+        None,
+        False,
+        0,
+    )
+
+
+@pytest.mark.asyncio
+async def test_exhausted_empty_reply_retries_fail_the_run_for_that_reason(tmp_path: Path) -> None:
+    server = ScriptedServer([_empty(finish_reason="stop") for _ in range(10)])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="silent",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=10,
+        max_empty_reply_retries=2,
+    )
+    assert result.status is RunStatus.FAILED
+    # the first empty reply plus two retries, then the run stops: bounded, not max_turns
+    assert len(server.seen) == 3
+    events = _events(tmp_path, "silent")
+    retrying = [event["retrying"] for event in events if event["type"] == "turn.empty"]
+    assert retrying == [True, True, False]
+    assert events[-1] == {
+        "type": "failed",
+        "reason": "empty_response",
+        "turn": 3,
+        "max_turns": 10,
+        "empty_replies": 3,
+        "max_empty_reply_retries": 2,
+    }
+
+
+@pytest.mark.asyncio
+async def test_empty_reply_retries_spend_the_turn_budget_and_cannot_outlast_it(
+    tmp_path: Path,
+) -> None:
+    server = ScriptedServer([_empty() for _ in range(10)])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="cap",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=2,
+        max_empty_reply_retries=50,
+    )
+    assert result.status is RunStatus.FAILED
+    assert len(server.seen) == 2
+    # the cap stopped it, and the event says so rather than blaming the empty reply
+    assert _events(tmp_path, "cap")[-1] == {
+        "type": "failed",
+        "reason": "turn_limit",
+        "turn": 2,
+        "max_turns": 2,
+    }
+
+
+@pytest.mark.asyncio
+async def test_empty_reply_retries_bound_consecutive_empty_turns_only(tmp_path: Path) -> None:
+    tool = [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}})]
+    server = ScriptedServer([_empty(), tool, _empty(), tool, [ChatChunk(text=_DONE)]])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    result = await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="reset",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=5,
+        max_empty_reply_retries=1,
+    )
+    # a turn that did something clears the count: two separated empty replies both retry
+    assert result.status is RunStatus.COMPLETED
+    empty = [event for event in _events(tmp_path, "reset") if event["type"] == "turn.empty"]
+    assert [(event["turn"], event["empty_replies"]) for event in empty] == [(1, 1), (3, 1)]
+
+
+@pytest.mark.asyncio
+async def test_a_turn_limit_failure_names_the_cap(tmp_path: Path) -> None:
+    server = ScriptedServer([[ChatChunk(text="still working")]])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="limit", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=1
+    )
+    assert _events(tmp_path, "limit")[-1] == {
+        "type": "failed",
+        "reason": "turn_limit",
+        "turn": 1,
+        "max_turns": 1,
+    }
+
+
+@pytest.mark.asyncio
+async def test_repeated_invalid_completion_claims_fail_for_that_reason(tmp_path: Path) -> None:
+    server = ScriptedServer([[ChatChunk(text="QWENLOOP_TASK_FULLY_COMPLETE")] for _ in range(3)])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="claims", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=9
+    )
+    assert _events(tmp_path, "claims")[-1] == {
+        "type": "failed",
+        "reason": "invalid_completion_claims",
+        "turn": 3,
+        "max_turns": 9,
+    }
+
+
+@pytest.mark.asyncio
+async def test_meta_records_the_turn_cap_and_the_empty_reply_bound(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}})],
+            [ChatChunk(text=_DONE)],
+        ]
+    )
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="caps",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=60,
+        max_empty_reply_retries=4,
+    )
+    meta = json.loads((tmp_path / ".qwenloop" / "runs" / "caps" / "meta.json").read_text())
+    assert (meta["max_turns"], meta["max_empty_reply_retries"]) == (60, 4)
+
+
+@pytest.mark.asyncio
+async def test_the_runner_defaults_to_the_declared_empty_reply_bound(tmp_path: Path) -> None:
+    server = ScriptedServer([[ChatChunk(text=_DONE)]])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="dflt", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=1
+    )
+    meta = json.loads((tmp_path / ".qwenloop" / "runs" / "dflt" / "meta.json").read_text())
+    assert meta["max_empty_reply_retries"] == QwenConfig().max_empty_reply_retries
