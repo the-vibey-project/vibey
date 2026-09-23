@@ -104,4 +104,7 @@ nav:
           - "0048 — A job that consumes an accumulating record reads every datum in the gap": architecture/decisions/0048-the-unbroken-read.md
           - "0049 — A named agent may approve an unattended change, and is never its author": architecture/decisions/0049-the-delegated-approver.md
           - "0050 — The harness and every automation are kept fast, and speed never buys less measurement": architecture/decisions/0050-the-machinery-does-not-waste-a-persons-time.md
+          - "0051 — Configuration is declared in TOML, never written into a source file": architecture/decisions/0051-nothing-is-compiled-in-that-could-be-declared.md
+          - "0052 — A tracker is kept true by the machinery that changes what it describes": architecture/decisions/0052-the-tracker-tells-the-truth.md
+          - "0053 — An unattended run takes direction only from the operator's account": architecture/decisions/0053-the-unattended-run-admits-no-stranger.md
   - Research paper: paper.md
