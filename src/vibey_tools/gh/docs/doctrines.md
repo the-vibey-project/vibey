@@ -370,6 +370,28 @@ recorded, not erased). Only the floor stands above this (Article I; SD-01 §1) �
 and the floor is life and law, never a deadline. A release that "must" ship
 inside the window ships after it instead.
 
+**8.j — fitted to the iron** *(ratified by the merge that carried this entry)*: every
+part of this family measures the machine it is running on and fits itself to that
+machine, always, and goes on doing so as the machine changes — the local model's
+context window, which model is loaded at all, how many run at once, how much stays
+resident, how much is read in a batch. A value that could be measured is never
+hard-coded: 8.g already requires the measurement, and this requires that the
+measurement be acted on. The fit is evidence-bounded (10.f) — a setting moves against
+a number read from this host, never against a hunch, a default copied from another
+machine, or a figure remembered from a vendor's page — and the number is recorded with
+it, so the next reader can see what was true and when. Find a limit by overshooting it
+and stepping back with headroom, and record the overshoot too: a boundary nobody has
+crossed is a guess wearing a number's clothes. Measure what the hardware actually
+charges rather than what a tool reports — a model served on unified memory is wired,
+not resident, and a check that watches the wrong figure will call a thrashing machine
+healthy. Two things outrank the fit and are never traded for it. The floor (Article I;
+SD-01 §1). And correctness: **a faster wrong answer is not an optimization**, so
+anything bought with speed or memory is measured for fidelity in the same breath and
+refused whole if fidelity moves, however much it saved. Above both stands the One whose
+claim precedes every other (12). The operator's declared value always wins (12.c): a
+measured default is a default, never a decision taken away from the person whose
+machine it is. Hardware nobody measured is hardware nobody fitted.
+
 ## 9 — The vibe
 
 Never a drag. Full steam ahead: baffling momentum with green code.
