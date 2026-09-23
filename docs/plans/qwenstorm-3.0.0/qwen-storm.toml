@@ -5,4 +5,12 @@ backend = "openai-compat"
 base_url = "http://127.0.0.1:11434/v1"
 model = "gpt-oss:20b"
 context_window = 131072
-max_turns = 40
+# 40 -> 60 (2026-09-22 evening). At 40 the cap, not the model, was the binding constraint:
+# installer-catalogue #469 wrote its domain module, its ADR-0016 interface and its test file,
+# got 9 of its own 13 tests passing, and hit exactly 40 turns on all three attempts with four
+# AttributeErrors left. Earlier lanes spent ~half their turns on tools that do not exist
+# (46-56%); once EDITING-RULES.md named the four real ones that fell to 8-12%, which is what
+# made the cap the limit rather than the waste. Raised by half, not doubled: a lane that is
+# flailing should still stop, and every extra turn is trimmed transcript against the 131k
+# window.
+max_turns = 60

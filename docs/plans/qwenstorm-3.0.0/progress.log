@@ -32,3 +32,16 @@
 2026-09-22T15:23:58Z start default-model-p3 #389 on integration@e219f9a2
 2026-09-22T15:27:33Z end   default-model-p3 #389 exit=0 issue#389	failed
 2026-09-22T15:27:33Z waiting for review: default-model-p3
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/engines-provider @ d9444749 on storm/engines-provider
+2026-09-22T22:06:36Z start engines-provider #322 on integration@d9444749
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/surfaces-env @ d9444749 on storm/surfaces-env
+2026-09-22T22:07:29Z start surfaces-env #323 on integration@d9444749
+2026-09-22T22:20:12Z end   surfaces-env #323 exit=0 issue#323	failed
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/engines-pool @ d9444749 on storm/engines-pool
+2026-09-22T22:20:15Z start engines-pool #321 on integration@d9444749
+2026-09-22T22:23:17Z end   engines-pool #321 exit=0 
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/visual-design-provider @ d9444749 on storm/visual-design-provider
+2026-09-22T22:23:20Z start visual-design-provider #324 on integration@d9444749
+2026-09-22T22:35:18Z end   visual-design-provider #324 exit=0 issue#324	completed
+/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes/engines-pool @ d9444749 on storm/engines-pool
+2026-09-22T22:35:21Z start engines-pool #321 on integration@d9444749
