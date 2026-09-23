@@ -37,7 +37,8 @@
       "Bash(gh run *)",
       "Bash(gh api *)",
       "Bash(gh repo view *)",
-      "Bash(psql *)"
+      "Bash(psql *)",
+      "Edit(/src/vibey_tools/gh/docs/doctrines.md)"
     ]
   },
   "env": {
@@ -53,6 +54,9 @@
         "*.githubusercontent.com",
         "localhost",
         "127.0.0.1"
+      ],
+      "allowUnixSockets": [
+        "/tmp/.s.PGSQL.5432"
       ]
     }
   }
