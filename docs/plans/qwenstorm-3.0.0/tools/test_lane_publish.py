@@ -43,15 +43,15 @@ def test_cd_sets_the_directory_for_every_later_check(tmp_path: Path) -> None:
     """The reason this exists: a tenant's suite cannot run from the repository root."""
     lane = lane_with(tmp_path, "cd src/vibey_tools/gh\npython -m pytest -q")
     checks = lane_publish.checks_of(lane)
-    assert [argv for argv, _ in checks] == [["python", "-m", "pytest", "-q"]]
-    assert checks[0][1] == (lane / "src/vibey_tools/gh").resolve()
+    assert [c.argv for c in checks] == [["python", "-m", "pytest", "-q"]]
+    assert checks[0].cwd == (lane / "src/vibey_tools/gh").resolve()
 
 
 def test_cd_back_out_of_a_tenant_returns_to_the_lane(tmp_path: Path) -> None:
     """`cd ../../..` is how every tenant spec closes, and it must land on the lane root."""
     lane = lane_with(tmp_path, "cd src/vibey_tools/gh\ncd ../../..\nruff check .")
     checks = lane_publish.checks_of(lane)
-    assert checks[0][1] == lane.resolve()
+    assert checks[0].cwd == lane.resolve()
 
 
 def test_a_cd_that_leaves_the_lane_abandons_the_rest(tmp_path: Path) -> None:
@@ -74,7 +74,7 @@ def test_checks_before_a_bad_cd_are_still_kept(tmp_path: Path) -> None:
     """Only what follows the unrunnable `cd` is in doubt; what precedes it was fine."""
     lane = lane_with(tmp_path, "ruff check .\ncd /etc\npython -m pytest -q")
     checks = lane_publish.checks_of(lane)
-    assert [argv for argv, _ in checks] == [["ruff", "check", "."]]
+    assert [c.argv for c in checks] == [["ruff", "check", "."]]
 
 
 @pytest.mark.parametrize("note", ["(run in `src/vibey_tools/gh`)", "(in src/vibey_tools/gh)"])
@@ -82,32 +82,89 @@ def test_an_annotation_beats_the_running_directory(tmp_path: Path, note: str) ->
     """The line says where it runs; that is more specific than where the block had got to."""
     lane = lane_with(tmp_path, f"python -m pytest -q {note}")
     checks = lane_publish.checks_of(lane)
-    assert checks[0][0] == ["python", "-m", "pytest", "-q"]
-    assert checks[0][1] == (lane / "src/vibey_tools/gh").resolve()
+    assert checks[0].argv == ["python", "-m", "pytest", "-q"]
+    assert checks[0].cwd == (lane / "src/vibey_tools/gh").resolve()
 
 
 def test_a_comment_is_not_an_argument(tmp_path: Path) -> None:
     """`# whole suite` once reached pytest as three paths, and it answered "no tests ran"."""
     lane = lane_with(tmp_path, "python -m pytest -q   # whole suite, 100% line+branch")
-    assert [argv for argv, _ in lane_publish.checks_of(lane)] == [["python", "-m", "pytest", "-q"]]
+    assert [c.argv for c in lane_publish.checks_of(lane)] == [["python", "-m", "pytest", "-q"]]
 
 
 def test_quoting_survives_because_a_shell_would_have_stripped_it(tmp_path: Path) -> None:
     """378 specs quote `--include=...` so a shell will not glob it; nothing else strips it."""
     lane = lane_with(tmp_path, "python -m coverage report --include='src/vibey/domain/*'")
-    argv = lane_publish.checks_of(lane)[0][0]
+    argv = lane_publish.checks_of(lane)[0].argv
     assert argv[-1] == "--include=src/vibey/domain/*"
 
 
-def test_a_line_needing_a_shell_is_skipped_not_guessed_at(tmp_path: Path) -> None:
-    lane = lane_with(tmp_path, "ruff check . && mypy src\npython -m pytest -q")
-    assert [argv for argv, _ in lane_publish.checks_of(lane)] == [["python", "-m", "pytest", "-q"]]
+def test_and_and_is_a_sequence_not_a_shell(tmp_path: Path) -> None:
+    """555 of 643 specs joined checks with `&&` and every one was dropped whole."""
+    lane = lane_with(tmp_path, "ruff check . && mypy src")
+    assert [c.argv for c in lane_publish.checks_of(lane)] == [
+        ["ruff", "check", "."],
+        ["mypy", "src"],
+    ]
+
+
+def test_a_chained_cd_is_scoped_to_its_own_line(tmp_path: Path) -> None:
+    """`cd X && cmd` is the subshell idiom; treating it as persistent compounds the paths."""
+    lane = lane_with(tmp_path, "cd src/vibey_tools/gh && ruff check .\nmypy src")
+    checks = lane_publish.checks_of(lane)
+    assert checks[0].cwd == (lane / "src/vibey_tools/gh").resolve()
+    assert checks[1].cwd == lane.resolve()
+
+
+def test_a_chained_cd_that_fails_drops_only_its_line(tmp_path: Path) -> None:
+    lane = lane_with(tmp_path, "cd nowhere && ruff check .\nmypy src")
+    assert [c.argv for c in lane_publish.checks_of(lane)] == [["mypy", "src"]]
+
+
+def test_and_and_inside_quotes_is_not_a_separator(tmp_path: Path) -> None:
+    """Splitting the tokens rather than the text is what makes this safe."""
+    lane = lane_with(tmp_path, "grep -r 'a && b' src")
+    assert [c.argv for c in lane_publish.checks_of(lane)] == [["grep", "-r", "a && b", "src"]]
+
+
+def test_a_fallback_is_still_refused(tmp_path: Path) -> None:
+    """`||` means "try, else do something else" -- a decision this cannot make for an author."""
+    lane = lane_with(tmp_path, 'python -c "import x" || python -m pip install x')
+    assert lane_publish.checks_of(lane) == []
+
+
+@pytest.mark.parametrize("token", ["|", ">", "<", "$("])
+def test_the_rest_of_the_shell_is_still_refused(tmp_path: Path, token: str) -> None:
+    lane = lane_with(tmp_path, f"ruff check . {token} thing")
+    assert lane_publish.checks_of(lane) == []
+
+
+def test_an_inline_assignment_becomes_the_command_environment(tmp_path: Path) -> None:
+    """96 lines were dropped as "not a command" because their first word was a variable."""
+    lane = lane_with(tmp_path, "UV_CACHE_DIR=/tmp/uvcache ruff check .")
+    check = lane_publish.checks_of(lane)[0]
+    assert check.argv == ["ruff", "check", "."]
+    assert check.env == {"UV_CACHE_DIR": "/tmp/uvcache"}
+
+
+def test_export_sets_the_environment_for_what_follows(tmp_path: Path) -> None:
+    """261 `export` lines were dropped; each of them configures the checks beneath it."""
+    lane = lane_with(tmp_path, "export VIBEY_FEATURE_QWENLOOP=1\nruff check .\nmypy src")
+    checks = lane_publish.checks_of(lane)
+    assert [c.argv[0] for c in checks] == ["ruff", "mypy"]
+    assert all(c.env == {"VIBEY_FEATURE_QWENLOOP": "1"} for c in checks)
+
+
+def test_an_inline_assignment_does_not_leak_into_later_checks(tmp_path: Path) -> None:
+    """A prefix configures one command; `export` is the one that persists."""
+    lane = lane_with(tmp_path, "UV_CACHE_DIR=/tmp/c ruff check .\nmypy src")
+    assert [c.env for c in lane_publish.checks_of(lane)] == [{"UV_CACHE_DIR": "/tmp/c"}, {}]
 
 
 def test_the_tenant_formatters_are_runnable_checks(tmp_path: Path) -> None:
     """CI's `tools-lint` enforces both, so a parser that drops them turns a gate off."""
     lane = lane_with(tmp_path, "black --line-length 100 --check vibey_gh\nisort --check-only .")
-    assert [argv[0] for argv, _ in lane_publish.checks_of(lane)] == ["black", "isort"]
+    assert [c.argv[0] for c in lane_publish.checks_of(lane)] == ["black", "isort"]
 
 
 # --- why_failed: the reason a person is shown -----------------------------------------

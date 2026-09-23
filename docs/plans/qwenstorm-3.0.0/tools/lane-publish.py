@@ -41,6 +41,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import NamedTuple
 
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
 # resolve but lanes/ and integration/ exist only in the runtime root.
@@ -72,12 +73,17 @@ SAFE = (
 )
 
 
-def run(argv: list[str], cwd: Path, timeout: int = 900) -> tuple[int, str]:
+def run(
+    argv: list[str], cwd: Path, timeout: int = 900, extra: dict[str, str] | None = None
+) -> tuple[int, str]:
     # VIRTUAL_ENV is inherited from whatever shell started this, and `uv run` obeys it: a lane's
     # checks would then run against the environment of the checkout this script was launched
     # from rather than the lane's own, and pass or fail for reasons that have nothing to do with
     # the lane. Drop it and let uv resolve the environment from the lane it is standing in.
     env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
+    # What the spec set with `export` or a `NAME=value` prefix. Applied last, because a
+    # check that names a variable means its value, not the launching shell's.
+    env.update(extra or {})
     try:
         done = subprocess.run(
             argv, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=env
@@ -151,6 +157,16 @@ def issue_of(slug: str) -> int | None:
 # "(run in `src/vibey_tools/gh`)" or "(in src/vibey_tools/gh)" -- prose the spec already uses
 # in its acceptance criteria, read here and removed before the command is split.
 ANNOTATION = re.compile(r"\(\s*(?:run\s+)?in\s+`?[\w./-]+`?\s*\)")
+# A leading `NAME=value`, the one piece of shell syntax that needs no shell to honour.
+ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+
+class Check(NamedTuple):
+    """One command a lane's spec asks for, and the two things that decide what it means."""
+
+    argv: list[str]
+    cwd: Path
+    env: dict[str, str]
 
 
 def where(lane: Path, raw: str) -> Path:
@@ -186,7 +202,7 @@ def inside(lane: Path, base: Path, target: str) -> Path | None:
     return candidate if candidate.is_dir() else None
 
 
-def checks_of(lane: Path) -> list[tuple[list[str], Path]]:
+def checks_of(lane: Path) -> list[Check]:
     """The commands the lane's own spec says must pass.
 
     The lane's shell runs argv with no shell at all, so a check block is a list of argv lines:
@@ -230,17 +246,48 @@ def checks_of(lane: Path) -> list[tuple[list[str], Path]]:
     issue = lane / ".qwenstorm/issue.md"
     if not issue.is_file():
         return []
-    text = issue.read_text(encoding="utf-8")
+    return parse_checks(issue.read_text(encoding="utf-8"), lane)[0]
+
+
+def block_of(text: str) -> str | None:
+    """The check block of a spec or a lane's issue.md, or None when it has none.
+
+    Stops at the CLOSING fence, not at the next heading. Every spec follows its block with a
+    sentence or two of advice ("If black or isort reports a file you touched, run ..."), and
+    those are prose about the checks rather than checks. Running them is harmless -- nothing
+    in them is a command this would run -- but reporting them as checks that never run is
+    noise in exactly the report that has to stay worth reading.
+    """
     if "## Checks the lane must run" not in text:
-        return []
-    block = text.split("## Checks the lane must run", 1)[1].split("\n## ", 1)[0]
-    found: list[tuple[list[str], Path]] = []
+        return None
+    section = text.split("## Checks the lane must run", 1)[1].split("\n## ", 1)[0]
+    if "```" not in section:
+        return section  # an indented block, which has no closing marker to find
+    # Everything after the opening fence begins with its info string -- "bash" -- which is
+    # not a check. Stripping backticks off the raw line cannot remove it, because by then it
+    # no longer looks like a fence.
+    inside_fence = section.split("```", 1)[1].split("\n", 1)[-1]
+    return inside_fence.split("```", 1)[0] if "```" in inside_fence else inside_fence
+
+
+def parse_checks(text: str, lane: Path) -> tuple[list[Check], list[tuple[str, str]]]:
+    """The checks this can run, and every line it had to drop, with the reason why.
+
+    The dropped list is the point of the split. `lint-specs.py` reports it, so a spec author
+    is told which of their check lines will never run -- by this parser, not by a second
+    copy of its rules that can drift from it (10.e). A gate nobody knows is off is the
+    cheapest way to ship an unverified lane, and the storm shipped several.
+    """
+    block = block_of(text)
+    if block is None:
+        return [], []
+    found: list[Check] = []
+    dropped: list[tuple[str, str]] = []
     here = lane
+    exported: dict[str, str] = {}
     for raw in block.splitlines():
         line = raw.strip().strip("`")
         if not line or line.startswith(("#", "```", "-", "(", "*")):
-            continue
-        if any(token in ANNOTATION.sub("", line) for token in ("&&", "|", ">", "<", "$(")):
             continue
         # The directory annotation is prose for a person, not an argument for the command --
         # `where()` has already read it. And `comments=True`: a check written as
@@ -252,22 +299,80 @@ def checks_of(lane: Path) -> list[tuple[list[str], Path]]:
         except ValueError:
             # Unbalanced quotes: the line is not a command anybody could run, and guessing
             # where the quote was meant to close would be inventing the check.
+            dropped.append((line, "unbalanced quotes"))
             continue
         if not parts:
             continue
-        if parts[0] == "cd":
-            moved = inside(lane, here, parts[1]) if len(parts) == 2 else None
-            if moved is None:
-                # `cd` with no argument means home, `cd -` means the last directory, and a
-                # path that leaves the lane or is not there means the author was describing
-                # a tree this is not. Either way the rest of the block belongs somewhere
-                # this cannot reach, so it is abandoned rather than run in the wrong place.
-                break
-            here = moved
-            continue
-        if parts[0] in SAFE:
-            found.append((parts, where(lane, raw) if ANNOTATION.search(raw) else here))
-    return found
+        # SPLIT ON `&&` AFTER shlex, NEVER BEFORE
+        # 555 of 643 specs -- 86% -- carried a check line joined with `&&`, and every one of
+        # them was dropped whole for "needing a shell". It does not: `A && B` is "run A, then
+        # B, and both must pass", which is what this list already means, so it is two checks.
+        # Splitting the TOKENS rather than the text is what makes it safe -- shlex has
+        # already consumed the quotes, so a literal `&&` inside `grep 'a && b'` stays inside
+        # its one token and is never mistaken for a separator.
+        segments: list[list[str]] = [[]]
+        for token in parts:
+            if token == "&&":
+                segments.append([])
+            else:
+                segments[-1].append(token)
+        # A `cd` ON ITS OWN LINE sets the directory for the block; a `cd` INSIDE a chain sets
+        # it for that line alone. Both idioms are in these specs, and CLAUDE.md itself writes
+        # the second as `(cd src/vibey_tools/gh && ...)` -- a subshell, deliberately scoped.
+        # Treating a chained `cd` as persistent compounds them, so a spec visiting two tenants
+        # on two lines goes looking for `gh/src/vibey_runners/qwen`; 71 specs lost every check
+        # after their first tenant line that way.
+        chained = len(segments) > 1
+        run_from = here
+        stop = False
+        for parts in segments:
+            if not parts:
+                continue
+            shell = [t for t in ("||", "|", ">", "<", "$(") if any(t in p for p in parts)]
+            if shell:
+                # `||` is a fallback, not a sequence: `python -c "import x" || pip install x`
+                # means "try, and if it fails do something else", which is a decision this
+                # cannot make on the author's behalf. Reported, never guessed.
+                dropped.append((line, f"needs a shell ({shell[0]}) and the lane's tool has none"))
+                continue
+            if parts[0] == "export":
+                parts = parts[1:]  # `export FOO=bar` sets FOO for what follows, and runs nothing
+            # `FOO=bar cmd ...` and a bare `export FOO=bar` are the same syntax: leading
+            # assignments. 261 `export` lines and 96 `VAR=value cmd` prefixes were dropped
+            # for being "not a command", which is true of the first token and not of the line.
+            env = dict(exported)
+            while parts and ASSIGNMENT.match(parts[0]):
+                name, _, value = parts[0].partition("=")
+                env[name] = os.path.expandvars(value)
+                parts = parts[1:]
+            if not parts:
+                exported = env  # nothing left to run: it was an `export`, so it persists
+                continue
+            if parts[0] == "cd":
+                moved = inside(lane, run_from, parts[1]) if len(parts) == 2 else None
+                if moved is None:
+                    # `cd` with no argument means home, `cd -` means the last directory, and
+                    # a path that leaves the lane or is not there means the author was
+                    # describing a tree this is not. Whatever the rest of it was meant to
+                    # check, it belongs somewhere this cannot reach -- so it is abandoned
+                    # rather than run in the wrong place, for the line or for the block
+                    # depending on which the `cd` governed.
+                    reach = "this line" if chained else "every check after it"
+                    dropped.append((line, f"cannot be honoured, so {reach} is dropped"))
+                    stop = not chained
+                    break
+                run_from = moved
+                if not chained:
+                    here = moved
+                continue
+            if parts[0] in SAFE:
+                where_it_runs = where(lane, raw) if ANNOTATION.search(raw) else run_from
+                found.append(Check(parts, where_it_runs, env))
+            else:
+                dropped.append((line, f"{parts[0]!r} is not a command this runs"))
+        if stop:
+            break
+    return found, dropped
 
 
 def verify(slug: str) -> tuple[bool, list[str]]:
@@ -374,10 +479,11 @@ def ready(slug: str) -> tuple[bool, list[str]]:
         return False, ["its spec names no check block this script can run"]
     interpreter = lane / ".venv/bin/python"
     failures = []
-    for argv, cwd in ran:
+    for check in ran:
+        argv = check.argv
         if argv[0] in {"python", "python3", "pytest"} and interpreter.is_file():
             argv = [str(interpreter), *(["-m"] if argv[0] == "pytest" else []), *argv[1:]]
-        code, out = run(argv, cwd)
+        code, out = run(argv, check.cwd, extra=check.env)
         if code:
             failures.append(f"check failed: {' '.join(argv)[:55]} -- {why_failed(out)[:110]}")
     return (not failures), failures
