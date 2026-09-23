@@ -5,6 +5,16 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- `approve-check PR [--head SHA]`: the delegated approver's grant, enforced by code. Exits 0
+  only when every `[unattended_approval]` condition holds for the pull request — `enabled`,
+  the live switch reading exactly its value, the author in `authors` (expanded by
+  `expand_authors`), the base in `branches`, no changed file in `forbidden_paths` (a `**/`
+  also matches zero directories; one hit refuses the whole pull request; an unlistable or
+  truncated listing refuses), every check and status on the head green with both merge-train
+  gates, and the authenticated account neither the author nor a commit author — and prints
+  each refusal otherwise. New `[unattended_approval]` keys `switch_variable` (default
+  `VIBEY_UNATTENDED_APPROVAL`) and `switch_value` (default `on`) declare the live switch.
+
 - Split `pr-automation.yml` into `pr-evaluate.yml` (PR evaluate) and `pr-review.yml`
   (PR review) with two required check runs instead of one, so a red gate names its task:
   `PR evaluate / gate` certifies every configured scan settled on the exact head (red scan

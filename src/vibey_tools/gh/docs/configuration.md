@@ -95,8 +95,9 @@ expression is refused at load time.
 
 The operator's grant to a delegated approver (sub-doctrine 12.f, ADR-0049). This is the
 **declared** half of the grant, reviewed in a pull request like any other state (12.c). The
-**live** half is the repository variable `VIBEY_UNATTENDED_APPROVAL`, which must read exactly
-`on`; it is deliberately not a config key, because withdrawal must need no merge:
+**live** half is the repository variable `switch_variable` names (`VIBEY_UNATTENDED_APPROVAL`
+by default), which must read exactly `switch_value` (`on` by default); its value is
+deliberately not a config key, because withdrawal must need no merge:
 
 ```bash
 gh variable set VIBEY_UNATTENDED_APPROVAL --body off   # binds from that moment
@@ -112,6 +113,13 @@ read its own authorization has already lost it.
 | `authors` | string list / `[]` | Forge logins whose pull requests an approver may act on. Empty is refused when `enabled` — a grant that names nobody authorises nobody, and the absence of a grant is refusal rather than permission (12.f). The entry `@codeowners` expands to every login `.github/CODEOWNERS` names, `@` stripped, in order and without duplicates, so the allowlist and the owners of the protected paths cannot drift apart by one of them being edited alone. |
 | `forbidden_paths` | string list / the corpus, this file, `.claude/settings.json`, `.github/**`, `CODEOWNERS` | Paths no delegated approval may ever touch. A change touching one is refused **whole** — an approver does not approve the safe subset of a pull request. Must contain `.vibey-gh.toml`, enforced: an approver may never approve a change to its own grant. |
 | `require_all_gates` | boolean / `true` | Every deterministic gate must already be green. A delegated approval is added to the gates and never substituted for one. |
+| `switch_variable` | string / `"VIBEY_UNATTENDED_APPROVAL"` | The repository variable holding the live switch. Declared rather than compiled in (12.h); it must be a valid variable name — a switch nobody can set is a grant nobody can withdraw. |
+| `switch_value` | string / `"on"` | The exact value the switch must read. Compared byte for byte, so `On`, `on ` and an empty variable all refuse; surrounding whitespace is rejected when the configuration loads. |
+
+`vibey-gh approve-check PR` is what reads both halves: it exits `0` only when every condition
+above holds for that pull request, and prints each one that does not
+([CLI reference](cli.md)). The delegated approver runs it first and refuses on a non-zero exit,
+so none of these conditions rests on a model remembering to apply it.
 
 `authors` is the bound `branches` cannot express: a branch glob says nothing about who pushed
 to it. A repository with no `.github/CODEOWNERS` expands `@codeowners` to nothing rather than

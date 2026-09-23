@@ -351,6 +351,13 @@ forbidden_paths = [
   "src/vibey_tools/gh/vibey_gh/config.py",
   "src/vibey_tools/gh/vibey_gh/fingerprints.py",
 
+  # The approver's own enforcement: `vibey-gh approve-check`, the seam it is declared by, and
+  # the path matcher it applies this list with. A change to any of them could make the check
+  # say yes to what this grant refuses, which is the grant widened by another route.
+  "src/vibey_tools/gh/vibey_gh/approval_check.py",
+  "src/vibey_tools/gh/vibey_gh/interfaces/approval_check_interface.py",
+  "src/vibey_tools/gh/vibey_gh/protected_paths.py",
+
   # The local gates, and the hooks that invoke them.
   ".pre-commit-config.yaml",
   ".githooks/**",

@@ -30,6 +30,7 @@ from vibey_gh import (
     surfaces,
     versioning,
 )
+from vibey_gh.approval_check import ApprovalCheck
 from vibey_gh.config import load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
 from vibey_gh.interfaces.fallback_pin_resolver_interface import FallbackPinResolverInterface
@@ -1982,6 +1983,14 @@ def main(argv: list[str] | None = None) -> int:
     rs = sub.add_parser("rulesets", help="reconcile the integration and release branch rulesets")
     rs.add_argument("--dry-run", action="store_true", help="decide without applying anything")
     rs.set_defaults(func=_rulesets)
+
+    ac = sub.add_parser(
+        "approve-check",
+        help="exit 0 only if every [unattended_approval] condition holds for a pull request",
+    )
+    ac.add_argument("pr", type=int, help="the pull request to judge")
+    ac.add_argument("--head", metavar="SHA", help="refuse unless the head is exactly this commit")
+    ac.set_defaults(func=lambda a: ApprovalCheck().run(a.pr, a.head))
 
     for surface in ("api", "mcp", "sdk", "webhook"):
         adapter = sub.add_parser(surface, help=f"invoke a capability through the {surface} adapter")
