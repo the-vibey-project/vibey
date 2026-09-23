@@ -99,4 +99,5 @@ nav:
           - "0043 — Sovereign operational surfaces deploy into the Kubernetes cluster with reconciled health": architecture/decisions/0043-sovereign-surfaces-install.md
           - "0044 — The job queue is a port; RabbitMQ dispatches and every loop runs as one service": architecture/decisions/0044-job-queue-port-and-loop-services.md
           - "0045 — Every deployment measures the machine it runs on and fits itself to it": architecture/decisions/0045-fitted-to-the-iron.md
+          - "0046 — Standing authority to act unattended is bounded by a gate a human defined": architecture/decisions/0046-unattended-authority-is-bounded-by-a-gate.md
   - Research paper: paper.md
