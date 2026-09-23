@@ -288,7 +288,9 @@ def _merge_train(args) -> int:
         if method == "squash" and cfg.trailer not in (pr.get("body") or ""):
             existing = (pr.get("body") or "").strip()
             squash_body = (existing + "\n\n" if existing else "") + cfg.trailer
-        ok, bypassed, error = merge_train.merge(v.number, method, squash_body)
+        ok, bypassed, error = merge_train.merge(
+            v.number, method, squash_body, admin_fallback=args.admin_fallback
+        )
         if ok:
             note = " (review requirement bypassed)" if bypassed else ""
             cleanup = ""
@@ -304,9 +306,11 @@ def _merge_train(args) -> int:
         else:
             # The stderr is the diagnosis: "refused it" alone once cost an hour of
             # ruleset archaeology when the real cause was a token missing the repository.
-            reason = error or "the ruleset refused it"
-            print(f"  #{v.number} could not be merged — {reason}")
-            rows.append((v.number, v.title, f"blocked: {reason[:120]}"))
+            # Without `--admin-fallback` a refusal is the gate working, not a fault: the
+            # pull request waits for a person and the pass carries on (ADR-0053, 12.d).
+            reason = f"needs a human merge: {error or 'the ruleset refused it'}"
+            print(f"  #{v.number} {reason}")
+            rows.append((v.number, v.title, reason[:160]))
             skipped += 1
 
     print(f"vibey-gh: merged {merged}, skipped {skipped}")
@@ -1389,6 +1393,15 @@ def main(argv: list[str] | None = None) -> int:
         "--summary",
         metavar="FILE",
         help="write a markdown table here (default: $GITHUB_STEP_SUMMARY)",
+    )
+    # A flag and never a configuration key: a declared default-on would re-enable the
+    # bypass for every unattended caller (CI, the storm tools). ADR-0053, sub-doctrine 12.d.
+    m.add_argument(
+        "--admin-fallback",
+        action="store_true",
+        help="retry a merge GitHub refuses with `gh pr merge --admin`, bypassing the "
+        "ruleset. Off by default; for a person at the keyboard, for this run only. "
+        "Unattended callers must never pass it",
     )
     m.set_defaults(func=_merge_train)
 

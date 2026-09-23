@@ -434,6 +434,15 @@ and manual modes remain recovery backstops. A ready PR is open, current with its
 conflict-free, green, free of requested changes, and carries successful exact-head
 `PR evaluate / gate` and `PR review / gate` checks when an outside-author review is required.
 
+The train admits no stranger. A pull request whose author is not the owner or in
+`[merge_train] trusted_authors` is never merged unattended — not on green gates, not on an
+approval — and is labelled, reported "needs a human merge", and waits for a person. That
+includes Dependabot: a dependency bump landing unreviewed overnight is the plainest
+supply-chain case (ADR-0053). Nor does the train route around a gate that refused it: a
+merge GitHub rejects (for example `REVIEW_REQUIRED`) is reported "needs a human merge" and
+the pass continues. `--admin-fallback` retries it with `gh pr merge --admin`; that is a
+person's decision for one run, never a configuration default, and CI never passes it.
+
 Outside authors receive a fresh structured Claude review after scans pass. Findings feed
 the same bounded repair loop as failed scans. Forks are never mutated with privileged
 credentials; when a fork needs edits, automation preserves its exact head in a linked

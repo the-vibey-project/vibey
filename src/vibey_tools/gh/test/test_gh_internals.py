@@ -371,9 +371,19 @@ def test_merge_never_injects_a_body_into_a_rebase(fake_gh):
     assert fake_gh.calls() == ["pr merge 5 --rebase"]
 
 
-def test_merge_falls_back_to_admin_and_reports_the_bypass(fake_gh):
+def test_a_refused_merge_is_never_retried_with_admin_by_default(fake_gh):
+    """ADR-0053 / 12.d: an unattended caller never routes around a gate. The refusal is
+    reported in GitHub's own words and nothing bypasses the ruleset."""
     fake_gh.script({"pr merge 5 --rebase --admin": {"code": 0}})
-    assert merge_train.merge(5, "rebase") == (True, True, "")
+    merged, bypassed, error = merge_train.merge(5, "rebase")
+    assert (merged, bypassed) == (False, False)
+    assert error  # GitHub's reason for the refusal, never empty
+    assert not [c for c in fake_gh.calls() if c.endswith("--admin")]
+
+
+def test_merge_falls_back_to_admin_only_when_a_human_asks(fake_gh):
+    fake_gh.script({"pr merge 5 --rebase --admin": {"code": 0}})
+    assert merge_train.merge(5, "rebase", admin_fallback=True) == (True, True, "")
     assert fake_gh.calls()[-1].endswith("--admin")
 
 
@@ -382,7 +392,7 @@ def test_merge_reports_failure_when_even_admin_is_refused(fake_gh):
     problem into an hour of ruleset archaeology: every failure read "the ruleset
     refused it" while the API was naming the actual cause the whole time."""
     fake_gh.script({})
-    merged, bypassed, error = merge_train.merge(5)
+    merged, bypassed, error = merge_train.merge(5, admin_fallback=True)
     assert (merged, bypassed) == (False, True)
     assert error  # the scripted stub's own refusal text, but never empty
 
@@ -781,6 +791,25 @@ def test_pinning_the_tooling_version_is_a_visible_one_line_diff(repo):
     assert 'python -m pip install --quiet -e "$self"\n' in pinned
 
 
+def test_no_rendered_workflow_runs_the_train_with_the_admin_fallback(repo):
+    """The train runs unattended in CI; `--admin-fallback` is a person's per-run decision
+    (ADR-0053, sub-doctrine 12.d), so no workflow this tool renders may pass it."""
+    from vibey_gh.install import WORKFLOWS, render_workflow
+
+    cfg = GhConfig(root=repo)
+    rendered = {path.name: render_workflow(path, cfg) for path in WORKFLOWS.glob("*.yml")}
+    assert "merge-train.yml" in rendered
+    runs_train = [
+        line
+        for body in rendered.values()
+        for line in body.splitlines()
+        if "vibey-gh merge-train" in line
+    ]
+    assert runs_train
+    assert not [line for line in runs_train if "--admin" in line]
+    assert "--admin" not in rendered["merge-train.yml"]
+
+
 # ---------------------------------------------------------------- holding for review
 
 
@@ -870,6 +899,79 @@ def test_the_trust_gate_marks_the_verdict_as_held():
     assert outside.held_for_review is True
 
 
+def _green(login: str, **extra) -> dict:
+    """A pull request with nothing wrong with it but, possibly, its author."""
+    return {
+        "number": 1,
+        "title": "t",
+        "author": {"login": login},
+        "statusCheckRollup": [
+            {"name": "PR evaluate / gate", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"name": "PR review / gate", "status": "COMPLETED", "conclusion": "SUCCESS"},
+        ],
+        **extra,
+    }
+
+
+@pytest.mark.parametrize("automation", [True, False])
+@pytest.mark.parametrize("review", ["", "APPROVED"])
+@pytest.mark.parametrize("login", ["random-stranger", "app/dependabot", "dependabot[bot]"])
+def test_a_stranger_is_held_for_a_human_merge_whatever_else_is_green(automation, review, login):
+    """ADR-0053 / sub-doctrine 12.j: an unattended run admits no stranger.
+
+    `[merge_train] trusted_authors` used to bind only when PR automation was off, so with
+    it on -- as in this repository -- a stranger's pull request with both gates green was
+    ready, and the one thing between it and the integration branch was a model's verdict.
+    An approving review does not change it either: ADR-0049's delegated approver can give
+    one, and the train must not land a stranger's change on a robot's say-so."""
+    cfg = GhConfig(
+        root=Path.cwd(),
+        owner="theowner",
+        trusted_authors=("theowner", "claude[bot]"),
+        pr_automation=PrAutomationConfig(enabled=automation),
+    )
+    verdict = merge_train.judge(_green(login, reviewDecision=review), cfg)
+    assert not verdict.ready
+    assert verdict.held_for_review  # reportable, labelled, and the owner told once
+    assert verdict.reason == (
+        f"needs a human merge: author {login} is not in [merge_train] trusted_authors"
+    )
+
+
+def test_a_trusted_author_still_merges_on_green():
+    cfg = GhConfig(root=Path.cwd(), owner="theowner", trusted_authors=("claude[bot]",))
+    assert merge_train.judge(_green("theowner"), cfg).ready  # the owner is always trusted
+    assert merge_train.judge(_green("app/claude"), cfg).ready  # either spelling of a bot
+
+
+def test_the_external_repair_label_holds_even_a_trusted_author():
+    """A replacement pull request mirrored from a fork carries a stranger's code under a
+    trusted account's name; the label is what says so."""
+    cfg = GhConfig(root=Path.cwd(), owner="theowner", trusted_authors=("theowner",))
+    verdict = merge_train.judge(_green("theowner", labels=[pa.EXTERNAL_REPAIR_LABEL]), cfg)
+    assert not verdict.ready and verdict.held_for_review
+    assert verdict.reason == (
+        f"needs a human merge: it carries the {pa.EXTERNAL_REPAIR_LABEL} label"
+        " (outside code under a trusted account)"
+    )
+
+
+def test_the_hold_notice_asks_for_a_human_merge_not_an_approval(fake_gh):
+    """An approval no longer releases a stranger's pull request to the train, so telling
+    the owner "approve it and the next train will take it" would be a false promise."""
+    cfg = GhConfig(root=Path.cwd(), owner="theowner")
+    fake_gh.script(
+        {
+            "pr edit 7 --add-label needs-human-review": {},
+            "pr view 7 --json comments -q .comments[].body": {"out": ""},
+        },
+    )
+    merge_train.hold_for_review(a_held_verdict(), cfg)
+    comment = next(c for c in fake_gh.calls() if c.startswith("pr comment"))
+    assert "merge it yourself" in comment
+    assert "next train will take it" not in comment
+
+
 def test_merge_train_trust_without_an_owner():
     cfg = GhConfig(root=Path.cwd(), owner="", trusted_authors=("trusted",))
     verdict = merge_train.judge({"number": 7, "title": "t", "author": {"login": "trusted"}}, cfg)
@@ -896,19 +998,12 @@ def test_event_driven_merge_guards_and_single_pr_lookup(monkeypatch):
         cfg,
     )
     assert "operator" in blocked.reason
-    outsider = merge_train.judge(
-        {
-            "number": 1,
-            "title": "t",
-            "author": {"login": "outsider"},
-            "statusCheckRollup": [
-                {"name": "PR evaluate / gate", "status": "COMPLETED", "conclusion": "SUCCESS"},
-                {"name": "PR review / gate", "status": "COMPLETED", "conclusion": "SUCCESS"},
-            ],
-        },
-        cfg,
-    )
-    assert outsider.ready
+    outsider = merge_train.judge(_green("outsider"), cfg)
+    # Both gates green is a model's verdict, not a person's (ADR-0053 rejects "trust the
+    # model to notice"), so a stranger's pull request is held for a human merge.
+    assert not outsider.ready
+    assert outsider.held_for_review
+    assert merge_train.judge(_green("owner"), cfg).ready
     monkeypatch.setattr(merge_train, "_gh_json", lambda *a: {"number": 9})
     assert merge_train.pull_request(9) == {"number": 9, "statusCheckRollup": []}
     assert merge_train.open_pull_requests(cfg, 9) == [{"number": 9, "statusCheckRollup": []}]
@@ -986,14 +1081,17 @@ def test_owed_at_rederives_against_an_arbitrary_committed_head(repo):
 def test_the_train_holds_an_unbumped_promotion(repo, monkeypatch):
     """#254's teeth: a promotion whose current head owes a bump is not ready, and the
     reason names the exact release commit owed."""
+    from dataclasses import replace
+
     from vibey_gh import merge_train, versioning
     from vibey_gh.config import load_config
 
-    cfg = load_config(repo)
+    # The promotion is the owner's own pull request: a stranger's would be held first.
+    cfg = replace(load_config(repo), owner="owner")
     promotion = {
         "number": 9,
         "title": "chore(release): 1.0.0",
-        "author": {"login": cfg.owner or "owner"},
+        "author": {"login": "owner"},
         "isDraft": False,
         "mergeable": "MERGEABLE",
         "mergeStateStatus": "CLEAN",

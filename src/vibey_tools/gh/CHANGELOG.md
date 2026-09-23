@@ -5,6 +5,19 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Breaking:** the merge train admits no stranger (vibey ADR-0053, sub-doctrine 12.j). A
+  pull request whose author is not the owner or in `[merge_train] trusted_authors`, or that
+  carries `vibey-gh:external-repair`, is never merged unattended: it is held, labelled, and
+  reported "needs a human merge: author <login> is not in [merge_train] trusted_authors",
+  regardless of `[pr_automation] enabled`, green gates or an approving review. Before, the
+  list bound only with PR automation off, so with it on a stranger's pull request merged on
+  a model's review verdict. Dependabot's pull requests now wait for a person; add a login to
+  `trusted_authors`, in a reviewed diff, to change that.
+- **Breaking:** `merge-train` no longer retries a refused merge with `gh pr merge --admin`.
+  A refusal is reported "needs a human merge: <GitHub's reason>" and the pass continues.
+  `--admin-fallback` turns the retry on for one run; it is a flag a person passes, and no
+  configuration key can make it the default (sub-doctrine 12.d). No rendered workflow
+  passes it.
 - Split `pr-automation.yml` into `pr-evaluate.yml` (PR evaluate) and `pr-review.yml`
   (PR review) with two required check runs instead of one, so a red gate names its task:
   `PR evaluate / gate` certifies every configured scan settled on the exact head (red scan
