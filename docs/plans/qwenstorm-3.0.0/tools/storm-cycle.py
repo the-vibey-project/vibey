@@ -5,12 +5,19 @@
     python3 storm-cycle.py --run --every 600  # do a pass every 10 minutes, while a storm runs
 
 The inner loop is storm-queue.sh, which turns issues into lane worktrees. This is the outer
-one, and it is four steps, each already its own script and each gated on evidence:
+one, and it is five steps, each already its own script and each gated on evidence:
 
+  resolve   lane-resolve.py  -- settle the conflicts decidable from the tree, refuse the rest
   refresh   lane-refresh.py  -- carry what merged into develop into every idle lane
   repair    lane-repair.py   -- fix only what a formatter or a delete can fix
   publish   lane-publish.py  -- for lanes that pass every gate: commit, push, open a PR
   merge     vibey-gh merge-train
+
+Resolve runs before refresh and not only inside it. Refresh calls the resolver itself for a
+conflict it causes, but a lane can be sitting mid-conflict for reasons refresh never saw -- a
+pass killed partway, a merge started by hand. Those lanes are invisible to every later step,
+because a repo with a merge in progress cannot be refreshed, repaired or published. Clearing
+that state is the first thing worth doing, not the last.
 
 WHY THIS DOES NOT MERGE ANYTHING ITSELF
 ---------------------------------------
@@ -75,6 +82,13 @@ def cycle(dry: bool) -> None:
     python = sys.executable
     say("pass starting" + (" (dry run)" if dry else ""))
 
+    if not dry:
+        # Idempotent and cheap, and it must reach lanes created since the last pass: rerere
+        # is per-clone configuration, so a lane set up an hour ago has none of it until this
+        # runs. Turning it on is what makes one hand-made resolution settle the same conflict
+        # in every other lane and on every pass after.
+        step("install", [python, str(TOOLS / "lane-resolve.py"), "--install"], keep=2)
+    step("resolve", [python, str(TOOLS / "lane-resolve.py"), *([] if dry else ["--resolve"])])
     step("refresh", [python, str(TOOLS / "lane-refresh.py"), *([] if dry else ["--refresh"])])
     step("repair", [python, str(TOOLS / "lane-repair.py"), *([] if dry else ["--repair"])], keep=10)
     step(
