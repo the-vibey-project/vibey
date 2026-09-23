@@ -165,7 +165,7 @@ All tests go in `tests/infrastructure/test_host_packages.py` and use `FakeComman
     uv run lint-imports
     uv run bandit -q -r src/vibey
     uv run pytest -q -p no:cacheprovider tests/infrastructure/test_host_packages.py tests/application/test_interfaces_convention.py
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/infrastructure
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/infrastructure/host_packages.py' --fail-under=100
 
 ## Out of scope

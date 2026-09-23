@@ -78,7 +78,7 @@ fixture; build the repository as the file's other tests do, `PostgresProjectRepo
     export VIBEY_PG_URL="$VIBEY_TEST_DATABASE_URL"
     # Postgres-backed (integration tier):
     uv run pytest -q -p no:cacheprovider tests/infrastructure/db/test_project_repository.py
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/infrastructure tests/application tests/fakes
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100
     uv run coverage report --include='src/vibey/application/*' --fail-under=100
 

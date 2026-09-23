@@ -82,11 +82,11 @@ facility. Lands after `roadmap-143-api-read-projects-p1` and `-p4` (the package)
     uv run mypy --strict src/vibey
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/infrastructure/api tests/fakes
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/infrastructure/api
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/infrastructure/api/*' --fail-under=100
     export VIBEY_TEST_DATABASE_URL="${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}"
     export VIBEY_PG_URL="$VIBEY_TEST_DATABASE_URL"
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/infrastructure
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100
 
 ## Out of scope

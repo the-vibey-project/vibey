@@ -181,7 +181,7 @@ Tests:
     uv run pytest -q -p no:cacheprovider tests/cli/test_billing_ledger_export.py tests/domain/test_publication_policy.py
     export VIBEY_TEST_DATABASE_URL="${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}"
     uv run pytest -q -p no:cacheprovider tests/cli/test_ledger_publication_cli.py
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/cli
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/cli/*' --fail-under=100
 
 ## Out of scope

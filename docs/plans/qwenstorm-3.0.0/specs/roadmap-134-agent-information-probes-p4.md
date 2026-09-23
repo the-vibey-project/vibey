@@ -109,7 +109,7 @@ Tests:
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/domain/test_config.py tests/test_bootstrap_information_probe.py tests/test_bootstrap.py tests/infrastructure/test_sovereign_surfaces.py
     export VIBEY_TEST_DATABASE_URL="${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}"
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/domain
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/domain/*' --fail-under=100
 
 ## Out of scope

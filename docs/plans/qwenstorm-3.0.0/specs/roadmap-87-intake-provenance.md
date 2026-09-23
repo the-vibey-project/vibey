@@ -95,7 +95,7 @@ and readers already tolerate kinds they do not know (`tests/domain/test_forward_
     uv run mypy --strict src/vibey
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/domain/test_intake_source.py tests/cli/test_new_source.py tests/domain/test_domain_purity.py tests/domain/test_ledger.py tests/domain/test_ledger_query.py tests/domain/test_forward_compatible_readers.py
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/domain tests/cli
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/domain/*' --fail-under=100
     uv run coverage report --include='src/vibey/cli/*' --fail-under=100
 
