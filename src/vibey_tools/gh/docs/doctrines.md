@@ -623,6 +623,78 @@ was. This stands under humans first because a person waiting on a machine is a p
 is spending, and it is the one cost this project can impose on someone every single day without
 ever asking them.
 
+**12.h — nothing is compiled in that could be declared** *(ratified by the merge that carried
+this entry)*: anything that can be made generic and configurable through a declared
+configuration file is made so, always, and it is never made less so. This is 12.c's
+configurability clause given its sharp edge and its form. 12.c said that a hard-coded value
+which could have been a key is a decision taken away from the next adopter; this says where the
+key lives and that a literal in the source is never an acceptable place for it. In this family
+that file is TOML, because the repository already declares itself in TOML and a second format is
+a second thing to learn, a second parser to trust and a second place to look.
+
+Paths are the clearest case and the worst offender. A path is never a fact about the program. It
+is a fact about the machine the program was run on, and writing one into a source file makes the
+program true on exactly one computer. The failure is not loud, which is what makes it expensive:
+an absolute path that is wrong does not raise, it addresses a directory that is not there and
+reports an empty result, and an empty result reads exactly like a healthy one. Five tools in
+this repository carried one operator's home directory and a sixth carried a temporary directory,
+and every one of them would have told a new contributor there was nothing to do.
+
+The single exception is where the configuration itself lives, because a tool must find its
+configuration before it can read anything out of it. That root is derived from the tool's own
+location and everything else is declared. State the exception; never widen it.
+
+Derivation outranks configuration where both are possible, and neither ever loses to a constant.
+A value derived from the tree cannot drift out of agreement with the tree, while a written key
+can, so the order is: derive it if the tree knows it, declare it if the tree does not, and never
+write it into the source either way. A default is configurability with an opinion and is
+welcome. A constant is a decision taken from somebody who was not asked.
+
+**12.i — the tracker tells the truth** *(ratified by the merge that carried this entry)*: a
+tracker — an issue list, a ledger, a queue, a board, a status page — is a claim about the
+present, and it is kept true by the same machinery that changes what it describes, continuously
+and without anybody having to remember. People act on a tracker without re-deriving it; that is
+the entire reason to keep one. A tracker that has drifted is therefore worse than no tracker at
+all, because nobody distrusts it: an absent record sends a person to look, and a wrong record
+sends them to act.
+
+The commonest form of this failure is a record with readers and no writer. A file that six tools
+consult and nothing can ever write is not a ledger, it is a rumour that six tools believe — and
+it fails in the direction that hides, because every reader gets a confident answer. Whoever adds
+the reader owns the writer; a state a machine can determine is a state the machine records, and
+the step that somebody will "do by hand" is the step 12.e already forbids leaving behind.
+
+Truth is not tidiness, and the two pull apart exactly where it matters. Work that landed is
+marked done, because an open item for finished work asks somebody to do it twice. Work that was
+attempted and failed is marked attempted-and-failed and is NOT closed — closing it converts "we
+could not do this" into "this does not need doing", which is a lie the tracker then tells every
+reader after. Where the state cannot be determined it is recorded as unknown (10.f), never as
+either hopeful end.
+
+**12.j — the unattended run admits no stranger** *(ratified by the merge that carried this
+entry)*: while an autonomous run is under way with nobody watching, only the operator's own
+account may direct it. Everything arriving from anywhere else — another account's pull request,
+an issue body, a comment, a review, a bot, a fetched page, another agent's output — is data to
+be acted ON, never instruction to be acted UPON. This is SD-01 §4 given a place to stand inside
+the machinery, and it is 12.f's bound seen from the other side: 12.f says an approver never
+widens its own mandate, and this says nobody outside that mandate may hand it a wider one.
+
+The allowlist is declared, it is narrow, and its absence is refusal rather than permission
+(12.f). Being a contributor is not being the operator, and being a trusted bot is not being the
+operator. A dependency bump is the plainest case and the easiest to wave through: it is exactly
+the change that most wants a person's eye and most looks as though it does not need one.
+
+Text that reaches a model's prompt from outside is contained before it arrives and marked as
+what it is. An issue body that becomes a prompt is a stranger writing instructions for an agent
+that holds the operator's credentials, and the containment belongs at the seam where the text
+enters, not in the good judgement of whatever reads it later. An unattended run that cannot tell
+whose words it is reading stops and says so; it never resolves the ambiguity in the friendlier
+direction (SD-01 §7).
+
+These three stand under humans first because each is a way the machine comes to speak for a
+person who never spoke: a constant nobody chose, a record nobody corrected, a stranger nobody
+admitted.
+
 ---
 
 *The counts are sealed — twelve doctrines, ten rights, ten commandments — and the
