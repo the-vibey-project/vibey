@@ -18,7 +18,7 @@ from pathlib import Path
 
 # Dogfood the latest *verified* qwenloop: the integration branch's own source, not the
 # installed release. A lane's edit_file tool (#346) exists only there.
-sys.path.insert(0, str(Path(__file__).parent / "integration/src/vibey_runners/qwen/src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "integration/src/vibey_runners/qwen/src"))
 
 from qwenloop.application.storm import build_plan
 from qwenloop.cli.app import _load_config, _run_plan, _server_for, _tracked_repository_context
@@ -63,7 +63,7 @@ def main() -> None:
     import os
 
     # The storm's model is chosen in one file beside this driver, not per lane.
-    storm_config = Path(__file__).parent / "qwen-storm.toml"
+    storm_config = Path(__file__).parent.parent / "qwen-storm.toml"
     if storm_config.is_file():
         os.environ.setdefault("QWENLOOP_CONFIG", str(storm_config))
     parser = argparse.ArgumentParser()
@@ -76,7 +76,7 @@ def main() -> None:
     args = parser.parse_args()
 
     lane = args.lane_dir.resolve()
-    rules = (Path(__file__).parent / "EDITING-RULES.md").read_text()
+    rules = (Path(__file__).parent.parent / "EDITING-RULES.md").read_text()
     item = RepoItem(number=args.issue, title=args.title, body=args.body_file.read_text() + rules)
     plan_text = build_plan(
         repo="vibey",

@@ -32,12 +32,21 @@ Exact commands. For src/vibey:
   uv run pytest -q -p no:cacheprovider <focused tests>
   (100% branch coverage per layer: domain/, application/, infrastructure/, cli/)
 For tenants: the tenant's own suite and static gates (see CLAUDE.md "Commands worth memorizing").
-Each command runs as one line on its own: no heredoc (`<<'PY'`), no backslash continuation, no
-multi-line inline script. A check needing more than one statement becomes a single
-`python3 -c '...'` line (semicolons and generator expressions in place of loops); single-quote
-the whole argument and double-quote every string literal inside it, since these commands run
-through a real shell and a bare backtick or `$` inside a double-quoted outer string is not
-literal there.
+**There is no shell.** The lane runs each command with `create_subprocess_exec(*argv)` from the
+worktree root, so a check block is a list of argv commands, not a script: `&&`, `|`, `>`, `*`
+globs, `$VAR`, `cd` and heredocs are passed as literal arguments and do nothing. Write each
+check as one command that stands alone:
+
+- one statement per line, and nothing that needs more than one statement;
+- no `cd`: a tenant's suite runs from the root by path —
+  `python -m pytest -q src/vibey_tools/gh/test/test_x.py`, never
+  `cd src/vibey_tools/gh && python -m pytest -q test/test_x.py`;
+- no `A && B`: that is two lines;
+- no `VAR=x cmd`: if a check truly needs an environment variable, say so in prose and let the
+  lane set it, rather than writing an assignment that becomes a literal argv element;
+- a check needing more than one statement becomes a single `python3 -c '...'` line (semicolons
+  and generator expressions in place of loops). Quote it so it survives a human pasting it into
+  a terminal too: single-quote the whole argument, double-quote the string literals inside it.
 
 ## Out of scope
 What NOT to touch (other lanes own it). Do not edit CHANGELOG.md, docs/, ADRs, CLAUDE.md,

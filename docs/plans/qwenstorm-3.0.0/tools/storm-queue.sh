@@ -19,12 +19,17 @@ settled() { grep -qx "$1" "$Q/integrated.txt" "$Q/abandoned.txt"; }
 said=""
 say_once() { [ "$said" = "$1" ] || { echo "$(date -u +%FT%TZ) $1" | tee -a "$Q/progress.log"; said="$1"; }; }
 while true; do
-  while pgrep -f "qwenstorm-3.0.0/qwenlane.py" >/dev/null; do sleep 30; done
+  while pgrep -f "qwenstorm-3.0.0/tools/qwenlane.py" >/dev/null; do sleep 30; done
   unreviewed=""; pending=0; next=""
   while read -r slug issue deps; do
     [ -z "$slug" ] && continue
+    # The ledger decides, not the scratch directory. A lane in integrated.txt or abandoned.txt
+    # is done however little of lanes/ survives: /tmp is wiped between sessions, and keying
+    # "done" off result.json re-ran every already-integrated lane on top of work the
+    # integration branch already carries.
+    settled "$slug" && continue
     if [ -f "$Q/lanes/$slug/.qwenstorm/result.json" ]; then
-      settled "$slug" || unreviewed="$unreviewed $slug"; continue
+      unreviewed="$unreviewed $slug"; continue
     fi
     pending=$((pending + 1))
     [ -n "$next" ] && continue
@@ -46,7 +51,7 @@ while true; do
   said=""
   set -- $next; L="$Q/lanes/$1"
   if [ ! -d "$L" ]; then
-    "$Q/lane-setup.sh" "$1" integration >> "$Q/progress.log" 2>&1 \
+    "$Q/tools/lane-setup.sh" "$1" integration >> "$Q/progress.log" 2>&1 \
       || { echo "$(date -u +%FT%TZ) setup failed $1" | tee -a "$Q/progress.log"; mkdir -p "$L/.qwenstorm"; echo '{"completed": false, "setup_failed": true}' > "$L/.qwenstorm/result.json"; continue; }
   fi
   if [ ! -s "$L/.qwenstorm/issue.md" ]; then
@@ -55,7 +60,7 @@ while true; do
     (cd /Users/adam/git/vibey && gh issue view "$2" -R the-vibey-project/vibey --json title --jq .title) > "$L/.qwenstorm/title.txt"
   fi
   echo "$(date -u +%FT%TZ) start $1 #$2 on integration@$(git -C "$Q/integration" rev-parse --short HEAD)" | tee -a "$Q/progress.log"
-  "$PY" "$Q/qwenlane.py" "$L" "$2" "$(cat "$L/.qwenstorm/title.txt")" "$L/.qwenstorm/issue.md" > "$L/.qwenstorm/lane.log" 2>&1
+  "$PY" "$Q/tools/qwenlane.py" "$L" "$2" "$(cat "$L/.qwenstorm/title.txt")" "$L/.qwenstorm/issue.md" > "$L/.qwenstorm/lane.log" 2>&1
   echo "$(date -u +%FT%TZ) end   $1 #$2 exit=$? $(tail -1 "$L/.qwenstorm/lane.log")" | tee -a "$Q/progress.log"
   [ -f "$L/.qwenstorm/result.json" ] || echo '{"completed": false, "crashed": true}' > "$L/.qwenstorm/result.json"
 done
