@@ -597,6 +597,32 @@ This stands under humans first because the last human checkpoint is the furthest
 authority can reach, and the one place where a person must always be able to reach in and stop it
 without asking anyone's permission -- including the agent's.
 
+**12.g — the machinery does not waste a person's time** *(ratified by the merge that carried
+this entry)*: the test harness and every automation are kept fast, continuously and on purpose.
+Not once, not when somebody complains, and not as a project with an end: a standing property of
+the thing, so that a harness or an automation which has grown slower has acquired a defect and is
+repaired like any other. This is 12.e read at its own pace. Toil is work a human has to do again;
+waiting is the same tax collected without even the dignity of doing something, levied on every
+person, on every change, forever, and it compounds silently because no single wait is worth
+complaining about. A suite that takes five minutes instead of one has not cost four minutes. It
+has cost four minutes times every run by every person for the life of the project, and it has
+also cost the changes nobody made because running it was not worth the wait -- which is the real
+damage and the one that never appears in a timing.
+
+Speed is never bought with correctness, with coverage, or with what a check actually measures. A
+gate that got faster by measuring less did not get faster: it became a weaker gate wearing the
+old gate's name, and it will be trusted at the old gate's strength. That is the more dangerous
+direction of this rule and the one to watch, because the optimisation always looks like progress
+in the timing and never announces what it stopped checking. Where speed and certainty genuinely
+conflict, certainty wins and the cost is stated rather than quietly paid.
+
+And an optimisation is a claim about behaviour, so it is measured before it is believed (10.f) --
+named, with its object and its cutoff, against the thing as it actually runs rather than as
+somebody reasoned it ought to. Work that was not measured is not an optimisation, whatever it
+was. This stands under humans first because a person waiting on a machine is a person the machine
+is spending, and it is the one cost this project can impose on someone every single day without
+ever asking them.
+
 ---
 
 *The counts are sealed — twelve doctrines, ten rights, ten commandments — and the
