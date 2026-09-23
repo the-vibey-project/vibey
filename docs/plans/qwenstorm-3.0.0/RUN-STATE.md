@@ -1,6 +1,6 @@
 # QwenStorm 3.0.0 — run state
 
-Snapshot 2026-09-23T04:40:49Z, written by `tools/storm-snapshot.py`.
+Snapshot 2026-09-23T04:43:52Z, written by `tools/storm-snapshot.py`.
 
 The runner's durable record is `integrated.txt` and `abandoned.txt`: a lane in neither is
 unsettled, whatever exists under `lanes/`. `lanes/` lives in /tmp and is wiped between
