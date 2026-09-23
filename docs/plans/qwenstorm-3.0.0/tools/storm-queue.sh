@@ -83,11 +83,20 @@ while true; do
     "$Q/tools/lane-setup.sh" "$1" integration >> "$Q/progress.log" 2>&1 \
       || { echo "$(date -u +%FT%TZ) setup failed $1" | tee -a "$Q/progress.log"; mkdir -p "$L/.qwenstorm"; echo '{"completed": false, "setup_failed": true}' > "$L/.qwenstorm/result.json"; continue; }
   fi
-  if [ ! -s "$L/.qwenstorm/issue.md" ]; then
-    mkdir -p "$L/.qwenstorm"
-    (cd "$MAIN" && gh issue view "$2" -R "$SLUG" --json body --jq .body) > "$L/.qwenstorm/issue.md"
-    (cd "$MAIN" && gh issue view "$2" -R "$SLUG" --json title --jq .title) > "$L/.qwenstorm/title.txt"
+  # Outside text is contained at the seam it enters (12.j, ADR-0053). The issue is fetched,
+  # WITH its author and every edit and rename, in one query, and admitted only if each account
+  # is one [unattended_approval] authors names -- asked of vibey-gh through storm_trust.py, not
+  # re-parsed here. Every start re-asks, so an issue edited since an earlier fetch is judged as
+  # it is now. A stranger, or a history that cannot be read, is a refusal: the helper writes
+  # result.json (as a blocked lane gets) and the reason goes to progress.log -- never skipped.
+  mkdir -p "$L/.qwenstorm"
+  if ! why="$(python3 "$Q/tools/storm_trust.py" admit "$L/.qwenstorm" "$2")"; then
+    [ -f "$L/.qwenstorm/result.json" ] \
+      || echo '{"completed": false, "refused": "the provenance check did not finish"}' > "$L/.qwenstorm/result.json"
+    echo "$(date -u +%FT%TZ) refused $1 #$2: ${why:-the provenance check did not finish}" | tee -a "$Q/progress.log"
+    continue
   fi
+  echo "$(date -u +%FT%TZ) $why" >> "$Q/progress.log"
   echo "$(date -u +%FT%TZ) start $1 #$2 on integration@$(git -C "$Q/integration" rev-parse --short HEAD)" | tee -a "$Q/progress.log"
   "$PY" "$Q/tools/qwenlane.py" "$L" "$2" "$(cat "$L/.qwenstorm/title.txt")" "$L/.qwenstorm/issue.md" > "$L/.qwenstorm/lane.log" 2>&1
   echo "$(date -u +%FT%TZ) end   $1 #$2 exit=$? $(tail -1 "$L/.qwenstorm/lane.log")" | tee -a "$Q/progress.log"

@@ -20,6 +20,10 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import cast
+
+import storm_paths
+import storm_trust
 
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
 # and queue.txt exist but lanes/ and integration/ do not -- those are real directories in the
@@ -63,7 +67,10 @@ def changed(lane: Path) -> list[str]:
     # the status codes, so nothing here parses them.
     paths: set[str] = set()
     sources = [
-        ["git", "diff", "--name-only", base_of(lane)],
+        # --no-renames: a rename is reported as its old path AND its new one. With rename
+        # detection on, moving a forbidden file away shows only the innocent new name, and
+        # renaming a protected file away is a change to it.
+        ["git", "diff", "--name-only", "--no-renames", base_of(lane)],
         ["git", "ls-files", "--others", "--exclude-standard"],
     ]
     for argv in sources:
@@ -98,6 +105,34 @@ def module_of(lane: Path, path: str) -> tuple[str, Path] | None:
     return (".".join(parts), folder) if parts else None
 
 
+def forbidden_problem(files: list[str]) -> str | None:
+    """Why this lane may not be published because of WHERE it wrote, or None.
+
+    `[unattended_approval] forbidden_paths` bounds what a delegated approver may ever approve
+    -- the gates as they run and as they are written, the canon, this grant, the storm's own
+    tools. A lane is an unattended change on its way to exactly that approver, so a lane that
+    touches one is refused whole here, before publishing, rather than travelling to a pull
+    request nobody may approve. Read from the configuration through vibey-gh (10.e, 12.h):
+    a list copied into this file would agree until the day the grant changed.
+
+    Refuses on what it cannot read, too: a list that could not be loaded rules nothing out.
+    """
+    try:
+        hits = storm_trust.forbidden_touched(storm_paths.repo(STORM), files)
+    except (Exception, SystemExit) as exc:  # fail closed on ANY unreadable grant
+        return (
+            f"[unattended_approval] forbidden_paths could not be read ({exc}), so no path "
+            "can be ruled out -- refused whole"
+        )
+    if not hits:
+        return None
+    shown = ", ".join(hits[:4]) + (f" and {len(hits) - 4} more" if len(hits) > 4 else "")
+    return (
+        f"touches forbidden path(s) {shown} ([unattended_approval] forbidden_paths) -- "
+        "refused whole; a human lands this"
+    )
+
+
 def verify(lane: Path) -> dict[str, object]:
     files = changed(lane)
     python = [f for f in files if f.endswith(".py") and (lane / f).is_file()]
@@ -107,6 +142,12 @@ def verify(lane: Path) -> dict[str, object]:
     if not files:
         problems.append("the lane finished having changed nothing")
         return report
+
+    # First, and before any check that returns early: a lane with no venv must still be
+    # refused for writing where no unattended change may land (12.j, ADR-0053).
+    forbidden = forbidden_problem(files)
+    if forbidden:
+        problems.append(forbidden)
 
     interpreter = lane / ".venv/bin/python"
     if not interpreter.is_file():
@@ -195,6 +236,11 @@ def main() -> int:
         claim = json.loads((lane / ".qwenstorm/result.json").read_text())
         report = verify(lane)
         report["claimed"] = bool(claim.get("completed"))
+        if claim.get("refused"):
+            # Refused at the seam before it ran: say so, rather than only "changed nothing".
+            cast(list[str], report["problems"]).insert(
+                0, f"refused before it ran: {claim['refused']}"
+            )
         (lane / ".qwenstorm/verify.json").write_text(json.dumps(report, indent=2))
         problems = report["problems"]
         mark = "ok  " if not problems else "BAD "
