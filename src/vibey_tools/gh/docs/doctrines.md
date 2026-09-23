@@ -478,6 +478,12 @@ everyone; default posture unverified; nothing presumed human; the law is a floor
 
 **10.f — evidence-bounded status** *(ratified by the merge that carried this entry)*: every claim about implementation, completion, failure, research or live operation is tied to observable source, test, remote or log evidence whose scope and cutoff are stated. A verdict is not completion, a marker is not delivery, an active run is not terminal, a generated artifact is not a feature, and silence is not success. When evidence is missing, stale, contradictory or outside the stated scope, the state is unknown or blocked and is reported that way; no agent fills the gap with optimism, inference or a larger claim than the evidence supports.
 
+**10.g — the unbroken read** *(ratified by the merge that carried this entry)*: a job that consumes an accumulating record consumes everything written since its own last run, and can show that it did. No datum captured in the gap is ever skipped, sampled, or quietly dropped — not because it looked uninteresting, not because the run was late, not because the source was briefly unreadable.
+
+A timestamp is not a watermark. Records sharing the cutoff instant, and records that arrive out of order or late, fall through a time comparison silently and leave no trace of having been missed — which is the worst property a gap can have. The watermark is a position in the thing itself: a byte offset into an append-only stream, an identity set over records, a sequence the source defines. It advances only *after* the data it covers is durably recorded, so a crash re-reads rather than skips: at-least-once with de-duplication, never at-most-once.
+
+A source that cannot be read is a failure to report, never a gap to step over. The run says which source, for what span, and leaves its watermark where it was, so the next run covers the same ground. And anything derived from a read that cannot account for its own span is not evidence and is not published as such — this is 10.f's rule applied to the input rather than the claim: a total, a rate or a figure computed over an unknown subset states a precision it does not have, and is more misleading than no figure at all.
+
 ## 11 — The living roadmap
 
 Every project keeps an active, living roadmap until its goal is achieved and its

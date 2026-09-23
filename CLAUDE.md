@@ -92,6 +92,16 @@ lives in `docs/architecture/decisions/`.
   it stays with the human and the automation surrounds it. Automation that
   reports success it did not observe is a liability wearing its clothes.
   ADR-0047; sub-doctrine 12.e.
+- **Consume the whole gap, and prove the span.** A job that reads an
+  accumulating record reads everything written since its own last run. A
+  timestamp is not a watermark — records sharing the cutoff instant, or
+  arriving late or out of order, fall through a time comparison silently. The
+  watermark is a position in the data: a byte offset, an identity set, a
+  sequence. It advances only after the data is durably recorded, so a crash
+  re-reads rather than skips (at-least-once, de-duplicated by identity). An
+  unreadable source is reported and the watermark left unmoved, never stepped
+  over. A figure computed over an unknown subset is not evidence.
+  ADR-0048; sub-doctrine 10.g.
 - **Code lives in classes, and every class has an interface beside it.** A
   module-level function is the method of last resort, and its reason is written
   at the definition. `src/<pkg>/services/github_service.py` implies
@@ -241,7 +251,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (47 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (48 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

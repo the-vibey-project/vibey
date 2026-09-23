@@ -56,6 +56,13 @@ procedures live in `.agent/rules/`
   it cannot be whole, automate the check that says the step was missed. The
   judgement is never automated away. Automation that reports success it did not
   observe is a liability wearing its clothes. ADR-0047; sub-doctrine 12.e.
+- Consume the whole gap and prove the span: a job reading an accumulating
+  record reads everything since its own last run. A timestamp is not a
+  watermark (same-instant and late records fall through silently); use a byte
+  offset or identity set, advanced only after the data is durably recorded --
+  at-least-once, de-duplicated by identity. An unreadable source is reported
+  and the watermark left unmoved, never stepped over. A figure computed over an
+  unknown subset is not evidence. ADR-0048; sub-doctrine 10.g.
 - Code lives in classes, each with an interface beside it
   (`services/x.py` → `services/interfaces/x_interface.py`). Module-level
   functions are last resort with a written reason. Interfaces declare, never
@@ -175,7 +182,7 @@ automation has no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (47 ADRs: 0001–0047) |
+| ADRs | `docs/architecture/decisions/` (48 ADRs: 0001–0048) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |
