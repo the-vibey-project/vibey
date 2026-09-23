@@ -2081,9 +2081,9 @@ in the consumed span.
 \node[vibeynote,anchor=north west,align=left] at (-4.0,-9.20)
   {\textcolor{vibeygreen!80}{$\blacksquare$} attempt completed \quad \textcolor{vibeyred!55}{$\blacksquare$} attempt failed \quad
    30 lanes, 70 attempts, 2,606 turns; 17 lanes claimed completion,
-   8 were integrated and 2 abandoned by the reviewer};
+   12 were integrated and 14 abandoned by the reviewer};
 \end{tikzpicture}
-\caption{Every lane of the QwenStorm 3.0.0 evidence ledger, one row per lane in issue order. Each bar is one attempt, its length the turns the local model spent, green where the attempt ended in a completion claim and red where it failed; a lane gets at most three. Of 30 lanes, 17 claimed completion, and a claim is not delivery: the reviewer integrated 8 and abandoned 2 over the same span. Read from the ledger between 2026-09-23T04:40:49Z and 2026-09-23T11:27:36Z with no gaps.}
+\caption{Every lane of the QwenStorm 3.0.0 evidence ledger, one row per lane in issue order. Each bar is one attempt, its length the turns the local model spent, green where the attempt ended in a completion claim and red where it failed; a lane gets at most three. Of 30 lanes, 17 claimed completion, and a claim is not delivery: the reviewer integrated 12 and abandoned 14 over the same span. Read from the ledger between 2026-09-23T04:40:49Z and 2026-09-23T11:27:36Z with no gaps.}
 \label{fig:storm-lanes}
 \end{figure*}
 ```
