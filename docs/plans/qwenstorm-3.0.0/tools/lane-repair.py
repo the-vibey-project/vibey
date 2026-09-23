@@ -17,13 +17,15 @@ And, since the sweep of 2026-09-23, two shapes of module that will not import --
 that sweep six of fifteen finished lanes were held by exactly this, and four of the ten
 failures were debris sitting on top of working code rather than the code being wrong:
 
-  a lone `}` on its own line. Python has no closing brace, so it was never part of the
-  program. rmq-r01-queue-config and rmq-r02-wakeup-composition both finished `completed`
-  carrying one.
+  the one `}` the parser objects to. Python does use braces -- for dicts and sets -- so
+  "delete every line that is just a brace" is a destructive rule, not a tidy one. Only the
+  line the reported `unmatched '}'` points at is removed.
 
-  a name used but never imported, where this tree already imports it in exactly one way --
-  `pytest` in a test file, `field` beside `dataclass`. The import is read out of the lane, not
-  from a table here, so it matches what the surrounding code actually does.
+  a name that is not bound where it is used. If the file already imports it but too late --
+  `import pytest` on line 22 under `pytestmark = pytest.mark.integration` on line 19 -- that
+  statement is moved above its first use, never duplicated below it. If the name is absent
+  entirely, the import is read out of the lane rather than from a table here, so it matches
+  what the surrounding code actually does, and is never placed below the line needing it.
 
 Every such repair is verified by importing the file afterwards, and a file that still will not
 import is restored byte for byte. A partial repair is the worst result available: it changes
@@ -41,6 +43,7 @@ to find is the work. Everything repaired here is debris; every judgement is left
 """
 
 import argparse
+import ast
 import json
 import re
 import subprocess
@@ -136,6 +139,39 @@ def canonical_import(lane: Path, name: str) -> str | None:
     return sources.pop() if len(sources) == 1 else None
 
 
+def binds(line: str, name: str) -> bool:
+    """Whether this one line is a top-level import that binds `name`."""
+    if (
+        re.fullmatch(rf"import {re.escape(name)}(\s+as\s+\w+)?", line.strip())
+        and line[:1] not in " \t"
+    ):
+        return True
+    found = re.fullmatch(r"from ([\w.]+) import (.+)", line.strip())
+    if not found or line[:1] in " \t":
+        return False
+    return name in [n.strip().split(" as ")[0] for n in found.group(2).split(",")]
+
+
+def existing_import(lines: list[str], name: str) -> int | None:
+    """Where this file already imports `name`, if it does."""
+    for index, line in enumerate(lines):
+        if binds(line, name):
+            return index
+    return None
+
+
+def first_use(lines: list[str], name: str) -> int | None:
+    """The first line that uses `name` for something other than importing it."""
+    word = re.compile(rf"\b{re.escape(name)}\b")
+    for index, line in enumerate(lines):
+        if binds(line, name):
+            continue
+        without_comment = line.split("#", 1)[0]
+        if word.search(without_comment):
+            return index
+    return None
+
+
 def insertion_point(lines: list[str]) -> int:
     """After the last top-level import, or after the docstring when there are none."""
     last = None
@@ -155,9 +191,10 @@ def mechanical_fix(lane: Path, path: str, reason: str) -> str | None:
 
     Only two shapes qualify, and both are debris rather than code:
 
-      a lone `}` -- Python has no closing brace, so a line that is nothing but one was never
-      part of the program. EDITING-RULES.md rule 11 tells the model this and it still happens;
-      rmq-r01-queue-config and rmq-r02-wakeup-composition both finished `completed` on it.
+      the single `}` the parser itself objects to. Not "every line that is only a brace":
+      a dict closed on its own line is ordinary Python, and that broader rule broke 2833
+      otherwise-fine files across the lanes when it was tried. Only the line carrying the
+      reported `unmatched '}'` is removed, and only when that line is nothing else.
 
       a name with exactly one import in this tree -- `pytest` in a test file that never
       imported it, `field` used beside `dataclass`. Adding the import the surrounding code
@@ -175,20 +212,48 @@ def mechanical_fix(lane: Path, path: str, reason: str) -> str | None:
         return None
     lines = text.splitlines(keepends=True)
 
-    if "unmatched '}'" in reason or "unmatched '}'" in reason.replace('"', "'"):
-        kept = [line for line in lines if line.strip() != "}"]
-        if len(kept) == len(lines):
-            return None
-        file.write_text("".join(kept))
-        return f"removed {len(lines) - len(kept)} stray '}}' line(s)"
+    # Ask the parser which line it objects to, and touch only that one. An earlier version
+    # deleted every line that was nothing but `}`, which is a different rule entirely and a
+    # destructive one: a dict literal closed on its own line is ordinary Python, and across
+    # the lanes that rule broke 2833 files that had nothing wrong with them. The revert would
+    # have caught every one, but a rule that is only safe because something else undoes it is
+    # not a rule worth having. The parser knows the offending line; nothing else is guessed.
+    try:
+        ast.parse(text)
+    except SyntaxError as broken:
+        at = (broken.lineno or 0) - 1
+        objection = broken.msg or ""
+        if "unmatched '}'" in objection and 0 <= at < len(lines) and lines[at].strip() == "}":
+            del lines[at]
+            file.write_text("".join(lines))
+            return f"removed the stray '}}' the parser objected to, line {at + 1}"
+        return None
+    except (ValueError, RecursionError):
+        return None
 
     missing = re.search(r"name '([A-Za-z_]\w*)' is not defined", reason)
     if missing:
         name = missing.group(1)
+        plain = [line.rstrip("\n") for line in lines]
+        # The name may already be imported, just too late. fakes-harness-decouple had
+        # `import pytest` on line 22 and `pytestmark = pytest.mark.integration` on line 19 --
+        # the model dropped a statement into the middle of its own import block. Adding a
+        # second import below the first use would have been provably useless, so the fix is
+        # to move the one that exists, which changes nothing except when the name is bound.
+        here, used = existing_import(plain, name), first_use(plain, name)
+        if here is not None:
+            if used is None or here < used:
+                return None  # already imported early enough; the defect is something else
+            moved = lines.pop(here)
+            lines.insert(used, moved)
+            file.write_text("".join(lines))
+            return f"moved `{moved.strip()}` above its first use (line {here + 1} -> {used + 1})"
         statement = canonical_import(lane, name)
         if statement is None:
             return None
-        at = insertion_point([line.rstrip("\n") for line in lines])
+        at = insertion_point(plain)
+        if used is not None and at > used:
+            at = used  # never insert an import below the line that needs it
         lines.insert(at, statement + "\n")
         file.write_text("".join(lines))
         return f"added `{statement}`"
