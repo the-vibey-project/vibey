@@ -13,6 +13,29 @@ class BackendInterface(Protocol):
 
 
 @runtime_checkable
+class ToolLimitsInterface(Protocol):
+    """What one tool call may read or return."""
+
+    @property
+    def max_read_chars(self) -> int: ...
+
+    @property
+    def max_search_matches(self) -> int: ...
+
+    @property
+    def max_find_results(self) -> int: ...
+
+    @property
+    def max_line_chars(self) -> int: ...
+
+    @property
+    def max_file_bytes(self) -> int: ...
+
+    @property
+    def skip_dirs(self) -> tuple[str, ...]: ...
+
+
+@runtime_checkable
 class QwenConfigInterface(Protocol):
     @property
     def backend(self) -> BackendInterface: ...
@@ -43,6 +66,9 @@ class QwenConfigInterface(Protocol):
 
     @property
     def endpoint_timeout_seconds(self) -> int: ...
+
+    @property
+    def tools(self) -> ToolLimitsInterface: ...
 
     @property
     def endpoint_configured(self) -> bool: ...
