@@ -1476,14 +1476,14 @@ cheaply.
 
 | quantity | value |
 |---|---|
-| ledger records | 238 |
-| span consumed | 2026-09-23T04:40:49Z to 2026-09-23T09:13:49Z |
-| lanes observed | 29 |
+| ledger records | 245 |
+| span consumed | 2026-09-23T04:40:49Z to 2026-09-23T11:27:36Z |
+| lanes observed | 30 |
 | lanes claiming completion | 17 |
-| lane starts / ends logged | 47 / 41 |
+| lane starts / ends logged | 49 / 42 |
 | lanes integrated / abandoned | 8 / 2 |
-| recorded attempts | 67 |
-| total turns across attempts | 2470 |
+| recorded attempts | 70 |
+| total turns across attempts | 2606 |
 
 **Gaps in this span:** none; every byte and record between the watermarks was read.
 

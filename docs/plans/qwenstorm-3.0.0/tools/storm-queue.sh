@@ -12,8 +12,13 @@
 # lane no longer holds the storm. Every lane whose dependencies are integrated runs, and finished
 # lanes wait for a batch review; integrating a batch unlocks the lanes that depend on it.
 # The queue is re-read on every pass, so lanes can be appended or reordered while this runs.
-Q=/private/tmp/claude-501/storm/qwenstorm-3.0.0
-PY=/Users/adam/git/vibey/.venv-vibey-2.0.0/bin/python
+# Declared in storm.toml, derived from the tree when it is silent -- never a literal here
+# (12.h). A shell script cannot read TOML, so it asks the one resolver the Python tools use
+# rather than keeping a second copy that agrees until the day it does not.
+Q="$(cd "$(dirname "$0")/.." && pwd)"
+PY="$(python3 "$Q/tools/storm_paths.py" python)"
+SLUG="$(python3 "$Q/tools/storm_paths.py" slug)"
+MAIN="$(python3 "$Q/tools/storm_paths.py" repo)"
 touch "$Q/integrated.txt" "$Q/abandoned.txt"
 # The outer loop: refresh, repair, publish, merge-train, every ten minutes. Started here so it
 # is on whenever a storm is, and --detached makes it stop when this runner does -- an outer
@@ -80,8 +85,8 @@ while true; do
   fi
   if [ ! -s "$L/.qwenstorm/issue.md" ]; then
     mkdir -p "$L/.qwenstorm"
-    (cd /Users/adam/git/vibey && gh issue view "$2" -R the-vibey-project/vibey --json body --jq .body) > "$L/.qwenstorm/issue.md"
-    (cd /Users/adam/git/vibey && gh issue view "$2" -R the-vibey-project/vibey --json title --jq .title) > "$L/.qwenstorm/title.txt"
+    (cd "$MAIN" && gh issue view "$2" -R "$SLUG" --json body --jq .body) > "$L/.qwenstorm/issue.md"
+    (cd "$MAIN" && gh issue view "$2" -R "$SLUG" --json title --jq .title) > "$L/.qwenstorm/title.txt"
   fi
   echo "$(date -u +%FT%TZ) start $1 #$2 on integration@$(git -C "$Q/integration" rev-parse --short HEAD)" | tee -a "$Q/progress.log"
   "$PY" "$Q/tools/qwenlane.py" "$L" "$2" "$(cat "$L/.qwenstorm/title.txt")" "$L/.qwenstorm/issue.md" > "$L/.qwenstorm/lane.log" 2>&1

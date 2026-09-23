@@ -5,8 +5,10 @@
 # or move the operator's own branches. Hooks match the main checkout (Made-With trailer).
 set -euo pipefail
 SLUG="$1"; BASE="${2:-origin/develop}"
-MAIN=/Users/adam/git/vibey
-ROOT=/private/tmp/claude-501/storm/qwenstorm-3.0.0/lanes
+# Declared in storm.toml, derived from the tree when it is silent -- never a literal (12.h).
+STORM="$(cd "$(dirname "$0")/.." && pwd)"
+MAIN="$(python3 "$STORM/tools/storm_paths.py" repo)"
+ROOT="$STORM/lanes"
 LANE="$ROOT/$SLUG"
 mkdir -p "$ROOT"
 [ -e "$LANE" ] && { echo "exists: $LANE" >&2; exit 1; }

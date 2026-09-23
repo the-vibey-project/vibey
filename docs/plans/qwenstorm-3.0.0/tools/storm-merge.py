@@ -39,10 +39,16 @@ import subprocess
 import time
 from pathlib import Path
 
+import storm_paths
+
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
 # resolve but lanes/ and integration/ exist only in the runtime root.
 STORM = Path(__file__).absolute().parent.parent
-MAIN = Path("/Users/adam/git/vibey")
+
+# Declared in storm.toml, derived from the tree when it is silent -- never a literal
+# in this file. One operator's home directory compiled into five tools is a decision
+# taken away from the next adopter, and it fails by reporting an empty tree (12.h).
+MAIN = storm_paths.repo(STORM)
 
 
 def say(message: str) -> None:
