@@ -1,0 +1,147 @@
+# Host tuning for the sovereign loop, measured on this machine (sub-doctrine 8.g: always
+# measured). Every number here was read off a running storm, not estimated. Re-measure on a
+# different host rather than copying these values: they are a record of one machine, and the
+# method below is the part that transfers.
+
+[host]
+measured_at = "2026-09-22T01:10:00Z"
+os = "macOS (Darwin 25.6.0, Apple Silicon)"
+ram_gb = 24
+disk_free_gb = 498
+page_size_bytes = 16384    # Apple Silicon, NOT the 4096 every vm_stat example assumes
+
+# Read vm_stat against hw.pagesize, never against a remembered 4096: this machine's pages are
+# 16 KB, so a count of 4,569 free pages is 71 MB and not the 18 MB a 4 KB assumption gives.
+# A tuning lane that gets this wrong is wrong by 4x in the direction that looks reassuring.
+
+# Why there is no swap setting here, though the obvious reading of "the machine is thrashing"
+# is "give it more swap". macOS has no swap knob: no swapon, no swappiness, no swap partition,
+# and dynamic_pager does not run on a modern system. The kernel allocates swapfiles on demand
+# and grows them into free disk, so the total below is what it had taken, never a ceiling --
+# with 498 GB free it takes more whenever it wants. Adding swap is not a lever on this OS.
+# The lever is not needing it.
+[swap.observed_before]
+total_mb = 18432
+used_mb = 17097
+free_mb = 1335           # 93% of allocated swap in use
+swapouts = 10626300
+
+# The decisive figure, and the one a naive reading misses. Wired memory cannot be paged out
+# at all. On Apple Silicon the GPU shares system memory, so a model that `ollama ps` reports
+# as "100% GPU" has its weights AND its KV cache wired through Metal -- which is why
+# llama-server's 14.85 GB RSS undercounts what it truly costs the machine.
+[memory.observed_before]
+wired_gb = 18.85         # of 24 GB, unswappable
+active_gb = 1.07
+inactive_gb = 1.06
+free_mb = 73
+note = """
+18.85 GB wired leaves about 2.2 GB for every other process on the machine, so everything else
+is forced into swap: hence 16.7 GB swapped out and 10.6M swapouts. Adding swap would only have
+made the thrashing more comfortable; it could never return the wired memory, because wired is
+precisely the memory swap cannot touch.
+"""
+
+[cause]
+process = "llama-server"
+rss_gb = 14.85           # understates it: Metal allocations are wired, not resident
+model = "gpt-oss:20b"
+processor = "100% GPU"
+context_window = 131072
+note = """
+The KV cache a model reserves scales with its context window, it is wired on this hardware,
+and that reservation is what consumed the machine. The question is therefore not how much
+memory the model may have, but how much context a lane actually uses -- which the run ledger
+already records, turn by turn.
+"""
+
+# The experiment: 838 turns across every lane run on 2026-09-22, read from each run's
+# events.jsonl (input_tokens + output_tokens per turn). No synthetic benchmark; this is the
+# real workload.
+[context.measured]
+turns = 838
+p50 = 20070
+p90 = 32026
+p95 = 36816
+p99 = 42979
+max = 49118
+turns_over_32k = 71
+turns_over_64k = 0
+
+# The sweep (bench/host-sweep.py), run on this host with the storm paused. Every row reloads
+# the model and measures cost, speed and fidelity together: optimising on cost alone is how a
+# machine ends up fast and wrong.
+[[sweep]]
+config = "A"
+context = 131072
+kv_cache = "f16"
+wired_gb = 18.55
+llama_rss_gb = 14.85
+tokens_per_second = 28.0
+fidelity = "8/8"
+note = "baseline: what the storm ran all evening"
+
+[[sweep]]
+config = "B"
+context = 65536
+kv_cache = "f16"
+wired_gb = 17.25
+llama_rss_gb = 14.34
+tokens_per_second = 32.5
+fidelity = "8/8"
+note = "the measured context. -1.30 GB wired and 16% faster, with fidelity intact."
+
+[[sweep]]
+config = "C"
+context = 65536
+kv_cache = "q8_0 (requested)"
+wired_gb = 17.24
+tokens_per_second = 30.9
+fidelity = "8/8"
+result = "inconclusive"
+note = """
+Not a measurement of q8_0: the setting never reached the model. Ollama 0.34.2 did not pass
+OLLAMA_KV_CACHE_TYPE through to llama-server -- its argv carries no --cache-type-k/-v -- and
+wired came out at 17.24 against B's 17.25, which is the same number. Quantising the KV cache
+also needs flash attention on, and the server runs `--flash-attn auto`. Unresolved, not
+refuted: worth retrying on a build that passes the flag, for perhaps 0.65 GB more.
+"""
+
+# What the sweep cost to learn, recorded because the mistake is instructive. The first attempt
+# at C started a second `ollama serve` while the app's own server was still running, and Metal
+# failed with kIOGPUCommandBufferCallbackErrorOutOfMemory -- two servers bidding for one GPU's
+# memory. It read as "q8_0 breaks the model" and was nothing of the kind. It was also a
+# straightforward breach of 8.c, a single instance per model, by the very experiment measuring
+# the machine that rule exists to protect. Configure the app through `launchctl setenv`; never
+# run a second server beside it.
+[sweep.invalidated]
+cause = "two model servers running at once"
+symptom = "kIOGPUCommandBufferCallbackErrorOutOfMemory, 0 tok/s, 0/8 fidelity"
+lesson = "check the instance count before believing a memory measurement"
+
+[context.decision]
+context_window = 65536
+headroom_tokens = 16418    # 33% over the observed peak
+rationale = """
+65536 is the smallest power of two that covers every turn ever recorded, with a third again
+as headroom. 32768 would have truncated 71 turns (8.5%), and trimming a transcript mid-lane
+costs the model the evidence it is reasoning from. 131072 was never reached by any turn: it
+bought nothing and cost roughly half the machine.
+"""
+raise_only_if = """
+A measurement shows a turn needing more -- max approaching 60k, or transcript trimming
+appearing in the run log. Not a hunch, and not because a lane failed for some other reason.
+"""
+
+# What a host should check before running a local engine at all. These are the thresholds this
+# machine taught us; a lane implementing this automatically should measure rather than assume.
+[thresholds]
+wired_fraction_of_ram_warn = 0.70   # 0.79 observed while thrashing; wired is the scarce kind
+healthy_free_memory_percent = 20
+swap_used_fraction_warn = 0.75      # 0.93 observed while thrashing
+
+# Measure wired, not resident. On unified memory a GPU-served model's cost shows up as wired
+# and is understated by RSS, so a check that watches RSS alone will call this machine healthy
+# while it swaps 16.7 GB. On a discrete-GPU Linux host the same model's weights sit in VRAM
+# and none of this applies -- which is why these thresholds are recorded per host, and why a
+# lane implementing them must measure rather than copy these numbers.

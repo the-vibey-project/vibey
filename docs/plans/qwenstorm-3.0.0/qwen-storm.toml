@@ -1,10 +1,17 @@
-# The storm's model (2026-09-22): GPT-OSS 20B through the local Ollama, which serves it with its
-# full 131k context. Measured 2.5x faster than Qwen2.5-Coder-14B on llama.cpp for the same session
-# (bench/results.jsonl). One loop instance per deployment (8.c): Ollama is that one instance.
+# The storm's model (2026-09-22): GPT-OSS 20B through the local Ollama. Measured 2.5x faster
+# than Qwen2.5-Coder-14B on llama.cpp for the same session (bench/results.jsonl). One loop
+# instance per deployment (8.c): Ollama is that one instance.
 backend = "openai-compat"
 base_url = "http://127.0.0.1:11434/v1"
 model = "gpt-oss:20b"
-context_window = 131072
+# 131072 -> 65536 (2026-09-22 evening), measured rather than guessed: bench/host-tuning.toml.
+# Across 838 recorded turns the largest single turn was 49,118 tokens (p50 20,070; p90 32,026;
+# p99 42,979) and not one exceeded 64k, so this covers every turn ever observed with 33%
+# headroom. The reserved KV cache is what a context window costs in memory, and at 131072
+# llama-server held 14.9 GB RSS of this 24 GB machine with swap 95% full, 4,569 pages free and
+# 10.6M swapouts: the machine was thrashing to reserve a context no lane has used half of.
+# Raise it only against a measurement showing a turn that needs it (8.g, always measured).
+context_window = 65536
 # 40 -> 60 (2026-09-22 evening). At 40 the cap, not the model, was the binding constraint:
 # installer-catalogue #469 wrote its domain module, its ADR-0016 interface and its test file,
 # got 9 of its own 13 tests passing, and hit exactly 40 turns on all three attempts with four
