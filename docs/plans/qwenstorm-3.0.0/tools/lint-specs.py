@@ -30,6 +30,10 @@ OPERATOR_PREFIXES = ("gap-ops-", "gap-canon-")
 # Any delimiter, not a fixed list: a `psql ... <<'SQL'` block sat in a queued spec unseen
 # because SQL was not in the list. What breaks the lane is the heredoc, not its name.
 HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_][A-Za-z0-9_]*['\"]?")
+# A coverage run narrowed to particular test paths, beside a gate over a whole layer. The two
+# together are the contradiction: the run measures a slice, the gate judges the whole.
+NARROWED_COVERAGE = re.compile(r"^\s*uv run pytest .*--cov-report=((?:\s+tests/\S*)+)\s*$", re.M)
+COVERAGE_GATE = re.compile(r"coverage report --include=.*--fail-under=100")
 POINTERS = re.compile(
     r"\b(as (specified |shown )?above|see the parent|same block as|the Part \d block|"
     r"see #\d+'s spec)\b",
@@ -112,6 +116,19 @@ def lint(path: Path, *, need_sections: bool = True) -> list[str]:
         for m in ELLIPSIS_FAILURE.finditer(text)
         if (path.name, m.group(0)) not in ALLOWED
     ]
+    # A coverage gate that cannot pass however good the lane's work is. Layer coverage is
+    # produced by the whole suite -- domain code is exercised from application, infrastructure
+    # and system tests -- so a run narrowed to `tests/domain` and then measured against
+    # `--include='src/vibey/domain/*' --fail-under=100` reports 78% and always will. Thirty-
+    # three specs carried this, and every lane under them was unpublishable by construction
+    # rather than by anything the model did. CLAUDE.md's real gate names no path; neither may
+    # a spec that then demands a whole layer.
+    if COVERAGE_GATE.search(text):
+        problems += [
+            f"coverage run narrowed to {m.group(1).strip()!r} but the gate demands a whole "
+            "layer -- it can never reach 100%; drop the path so the full suite runs"
+            for m in NARROWED_COVERAGE.finditer(text)
+        ]
     return problems
 
 

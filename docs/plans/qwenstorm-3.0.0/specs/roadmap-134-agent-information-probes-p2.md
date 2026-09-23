@@ -142,7 +142,7 @@ Append to `tests/infrastructure/test_preflight_feasibility.py`. It reuses `_heal
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/application/test_preflight_readings.py tests/application/test_preflight.py tests/infrastructure/test_preflight_feasibility.py tests/fakes
     export VIBEY_TEST_DATABASE_URL="${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}"
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/application tests/infrastructure tests/fakes
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/application/*' --fail-under=100
     uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100
 
