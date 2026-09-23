@@ -1,17 +1,17 @@
 # QwenStorm 3.0.0 — run state
 
-Snapshot 2026-09-23T06:07:48Z, written by `tools/storm-snapshot.py`.
+Snapshot 2026-09-23T06:20:04Z, written by `tools/storm-snapshot.py`.
 
 The runner's durable record is `integrated.txt` and `abandoned.txt`: a lane in neither is
 unsettled, whatever exists under `lanes/`. `lanes/` lives in /tmp and is wiped between
 sessions, so nothing here depends on it surviving.
 
 - queue: **594 lanes** · integrated: **8** · abandoned: **2**
-- lane worktrees: **19** · finished awaiting review: **18** · unsettled: **19**
+- lane worktrees: **20** · finished awaiting review: **19** · unsettled: **20**
 - integration branch: `876fee98`
-- last line of progress.log: `2026-09-23T06:03:43Z start harness-T20c-qwenloop-shell-timeout-sandbox #474 on integration@876fee98`
+- last line of progress.log: `2026-09-23T06:09:44Z start harness-T01-test-run-key #444 on integration@876fee98`
 
-Still running or never finished (1): `harness-T20c-qwenloop-shell-timeout-sandbox`
+Still running or never finished (1): `harness-T01-test-run-key`
 
 
 ## How to resume
