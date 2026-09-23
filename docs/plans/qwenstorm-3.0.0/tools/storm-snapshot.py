@@ -254,10 +254,23 @@ def not_ours() -> list[str]:
     paper = REPO / "docs/paper.md"
     if not paper.is_file():
         return []
-    code, committed = run(["git", "show", "HEAD:docs/paper.md"], REPO, timeout=120)
-    if code:
+    # NOT `run()`: it strips its output, so the committed copy loses the trailing newline
+    # that the working copy keeps, the two can never compare equal, and this guard refuses
+    # EVERY snapshot forever -- a fail-closed that never opens is just off. `lane-resolve.py`
+    # carries a `read_blob()` for the same reason and the same mistake was made again here.
+    try:
+        done = subprocess.run(
+            ["git", "show", "HEAD:docs/paper.md"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if done.returncode:
         return []  # no committed version to compare against; nothing to protect yet
-    if hand_written(committed) == hand_written(paper.read_text(encoding="utf-8")):
+    if hand_written(done.stdout) == hand_written(paper.read_text(encoding="utf-8")):
         return []
     return ["docs/paper.md"]
 

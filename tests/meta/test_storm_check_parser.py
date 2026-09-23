@@ -242,3 +242,45 @@ def test_with_no_recognisable_failure_the_last_line_stands_in() -> None:
 
 def test_no_output_says_so() -> None:
     assert lane_publish.why_failed("   \n\n") == "no output"
+
+
+# --- storm-snapshot's ownership guard ---------------------------------------------------
+
+
+SNAPSHOT = (
+    Path(__file__).resolve().parents[2] / "docs/plans/qwenstorm-3.0.0/tools/storm-snapshot.py"
+)
+_SS = importlib.util.spec_from_file_location("storm_snapshot", SNAPSHOT)
+assert _SS and _SS.loader, f"the storm's snapshot tool is missing: {SNAPSHOT}"
+storm_snapshot = importlib.util.module_from_spec(_SS)
+_SS.loader.exec_module(storm_snapshot)
+
+
+def test_the_committed_blob_is_read_raw_not_through_run() -> None:
+    """`run()` strips its output, and a stripped file can never equal an unstripped one.
+
+    `not_ours()` compares the committed `docs/paper.md` against the working copy with the
+    generated block removed. Read through `run()`, the committed side loses its trailing
+    newline while the working side keeps one, so the two never match and the guard refuses
+    EVERY snapshot -- a fail-closed that never opens is just off, and it disabled the
+    snapshot job silently.
+
+    `lane-resolve.py` carries a `read_blob()` for exactly this reason. The same mistake was
+    made again here, which is why it is now a test rather than a comment.
+    """
+    source = SNAPSHOT.read_text(encoding="utf-8")
+    body = source.split("def not_ours(", 1)[1].split("\ndef ", 1)[0]
+    assert 'run(["git", "show"' not in body, (
+        "not_ours() reads the committed blob through run(), which strips it"
+    )
+    assert "subprocess.run(" in body, "not_ours() should read the blob raw"
+
+
+def test_the_guard_tells_the_storms_own_output_from_somebody_elses(tmp_path) -> None:
+    """Inside the markers is the storm's; outside them is a person's."""
+    begin, end = storm_snapshot.GENERATED
+    base = f"intro\n{begin}\nNUMBERS\n{end}\nconclusion\n"
+    regenerated = f"intro\n{begin}\nDIFFERENT NUMBERS\n{end}\nconclusion\n"
+    edited = f"intro EDITED\n{begin}\nNUMBERS\n{end}\nconclusion\n"
+    assert storm_snapshot.hand_written(base) == storm_snapshot.hand_written(regenerated)
+    assert storm_snapshot.hand_written(base) != storm_snapshot.hand_written(edited)
