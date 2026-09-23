@@ -5,13 +5,15 @@
     python3 storm-cycle.py --run --every 600  # do a pass every 10 minutes, while a storm runs
 
 The inner loop is storm-queue.sh, which turns issues into lane worktrees. This is the outer
-one, and it is six steps, each already its own script and each gated on evidence:
+one, and it is seven steps, each already its own script and each gated on evidence:
 
   resolve   lane-resolve.py  -- settle the conflicts decidable from the tree, refuse the rest
   refresh   lane-refresh.py  -- carry what merged into develop into every idle lane
   repair    lane-repair.py   -- fix only what a formatter or a delete can fix
   publish   lane-publish.py  -- for lanes that pass every gate: commit, push, open a PR
   merge     vibey-gh merge-train
+  evidence  storm-evidence.py -- consume every datum since the last run; keep the paper's
+            derived block and the delta report current (10.g)
   snapshot  storm-snapshot.py -- record the run state in git, when it has changed
 
 Resolve runs before refresh and not only inside it. Refresh calls the resolver itself for a
@@ -113,6 +115,19 @@ def cycle(dry: bool) -> None:
     # (the ledger changes when a lane settles, a handful of times an hour, not every ten
     # minutes), and when it does push, storm-snapshot.py skips the two hooks that each run the
     # whole suite -- having first proven the push carries nothing but one markdown file.
+    # Before the snapshot, because the snapshot should describe a ledger that is already
+    # current. It reads every byte and record written since its own last run (10.g) -- the
+    # watermark is a position in the data, the ledger is what de-duplication consults, and a
+    # truncated or unreadable source is reported as a gap rather than stepped over.
+    step(
+        "evidence",
+        [
+            python,
+            str(TOOLS / "storm-evidence.py"),
+            *([] if dry else ["--consume", "--paper", "--report"]),
+        ],
+        keep=6,
+    )
     step(
         "snapshot",
         [
