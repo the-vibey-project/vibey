@@ -1015,8 +1015,36 @@ def test_the_docs_deploy_announces_itself_only_through_a_secret(tmp_path):
     assert '("paper.pdf", "paper, PDF")' in on
     assert '("book.epub", "book, EPUB")' in on
     assert "if (site / path).is_file()" in on
+    # A webhook that fails does not fail a deploy that already published the site.
+    assert "except (urllib.error.URLError, OSError, ValueError) as exc:" in on
+    assert "::warning::announce: the Discord webhook post failed and the deploy stands" in on
     # The secret's value never appears in a rendered workflow, whatever the configuration.
     assert "discord.com/api/" + "webhooks/" not in on
+
+
+def test_the_papers_author_fields_are_quoted_for_the_shell(tmp_path):
+    """The three author values become arguments of a shell command; an apostrophe in an
+    affiliation (O'Reilly) must neither break that command nor be able to extend it."""
+    from vibey_gh.config import DocumentationConfig, GhConfig
+    from vibey_gh.install import render_workflow
+
+    on = render_workflow(
+        WORKFLOWS / "release-surfaces.yml",
+        GhConfig(
+            root=tmp_path,
+            documentation=DocumentationConfig(
+                generate_paper=True,
+                author_email="ada@example.test",
+                author_affiliation="O'Reilly Media; $(touch owned)",
+                author_url="https://example.test/ada's page",
+            ),
+        ),
+    )
+    assert "--affiliation 'O'\"'\"'Reilly Media; $(touch owned)'" in on
+    assert "--author-url 'https://example.test/ada'\"'\"'s page'" in on
+    assert "--email ada@example.test" in on
+    assert "--affiliation 'O'Reilly" not in on
+    assert "'__VIBEY_GH_DOC_AUTHOR" not in on
 
 
 def test_the_book_and_the_paper_are_findable_on_every_published_surface(tmp_path):

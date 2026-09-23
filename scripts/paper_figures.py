@@ -1489,14 +1489,19 @@ def main(argv: list[str] | None = None) -> int:
         revision = subprocess.run(
             ["git", "rev-parse", "HEAD"], cwd=args.repo, check=True, capture_output=True, text=True
         ).stdout.strip()
-    revision = subprocess.run(
-        ["git", "rev-parse", revision], cwd=args.repo, check=True, capture_output=True, text=True
-    ).stdout.strip()
-
     # A shallow clone has no log to recompute the history figures from: the check covers
     # the rest and says which figures it could not check, rather than failing on a source
-    # it cannot read or passing over one it never looked at.
+    # it cannot read or passing over one it never looked at. Decided before the pinned
+    # revision is resolved, because that revision is usually absent from such a clone.
     skipped = HISTORY_FIGURES if args.check and _is_shallow(args.repo) else frozenset()
+    if not skipped:
+        revision = subprocess.run(
+            ["git", "rev-parse", revision],
+            cwd=args.repo,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
     if skipped:
         print(
             f"{SCRIPT}: shallow clone; not checked here, they need the full history: "

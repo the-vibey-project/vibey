@@ -487,18 +487,20 @@ jobs:
             if [ -f .paper-source.md ]; then PAPER_SOURCE=.paper-source.md; fi
             # What a submitted article states about itself, computed here and never
             # typed: the revision being published and its commit time, the render time,
-            # and the corresponding author from `[documentation]`.
+            # and the corresponding author from `[documentation]`. The three author
+            # values are shell-quoted by the renderer (an affiliation may hold an
+            # apostrophe), so they stand bare here: quoting them again would break.
             PAPER_SITE="https://${GITHUB_REPOSITORY%%/*}.github.io/${GITHUB_REPOSITORY#*/}/$CHANNEL/"
             vibey-gh paper --source "$PAPER_SOURCE" --author "${AUTHOR:-${GITHUB_REPOSITORY%%/*}}" \
               --provenance --revision "$RELEASE_SHA" \
               --email '' --affiliation '' \
-              --author-url 'https://vibewithadam.matthewsteinberger.com' --site "$PAPER_SITE" \
+              --author-url https://vibewithadam.matthewsteinberger.com --site "$PAPER_SITE" \
               --repository "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
               --output paper-out/paper.tex
             vibey-gh paper --source "$PAPER_SOURCE" --author "${AUTHOR:-${GITHUB_REPOSITORY%%/*}}" \
               --provenance --revision "$RELEASE_SHA" \
               --email '' --affiliation '' \
-              --author-url 'https://vibewithadam.matthewsteinberger.com' --site "$PAPER_SITE" \
+              --author-url https://vibewithadam.matthewsteinberger.com --site "$PAPER_SITE" \
               --repository "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
               --output paper-out/paper.docx --format docx
             # Tectonic: one pinned, checksummed binary — a full TeX Live would cost
@@ -1340,6 +1342,7 @@ jobs:
           import json
           import os
           import pathlib
+          import urllib.error
           import urllib.request
 
           channel = os.environ["CHANNEL"]
@@ -1363,13 +1366,19 @@ jobs:
               if (site / path).is_file():
                   link = root + (path[: -len("index.html")] if path.endswith("index.html") else path)
                   lines.append(f"- {label}: {link}")
-          request = urllib.request.Request(
-              os.environ["DISCORD_WEBHOOK_URL"],
-              data=json.dumps({"username": "vibey", "content": "\n".join(lines)}).encode(),
-              headers={"Content-Type": "application/json", "User-Agent": "vibey-gh release-surfaces"},
-          )
-          with urllib.request.urlopen(request, timeout=30) as response:
-              print(f"announce: posted {len(lines) - 1} surface links to Discord ({response.status})")
+          # The site is already published when this runs, and `attach` needs this job:
+          # a webhook that times out or answers with an error is a warning in the log,
+          # never a failed deploy (sub-doctrine 12.e: say it out loud, do not mask it).
+          try:
+              request = urllib.request.Request(
+                  os.environ["DISCORD_WEBHOOK_URL"],
+                  data=json.dumps({"username": "vibey", "content": "\n".join(lines)}).encode(),
+                  headers={"Content-Type": "application/json", "User-Agent": "vibey-gh release-surfaces"},
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  print(f"announce: posted {len(lines) - 1} surface links to Discord ({response.status})")
+          except (urllib.error.URLError, OSError, ValueError) as exc:
+              print(f"::warning::announce: the Discord webhook post failed and the deploy stands: {exc}")
           PY
 
   attach:
