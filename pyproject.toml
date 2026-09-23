@@ -20,6 +20,8 @@ dependencies = [
     # the conductor
     "typer>=0.15",
     "asyncpg>=0.30",
+    # the job-queue and loop-service transport (ADR-0044): AMQP 0-9-1 for RabbitMQ
+    "aio-pika>=9.5",
     # SQLModel gives the PostgreSQL schema a typed SQLAlchemy ORM projection while
     # keeping every mapped object a Pydantic model (raw asyncpg repositories retain
     # the queue and ledger transaction semantics).

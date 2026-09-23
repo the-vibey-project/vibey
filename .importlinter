@@ -47,6 +47,9 @@ forbidden_modules =
     asyncpg
     psycopg
     httpx
+    aio_pika
+    aiormq
+    pamqp
     typer
     structlog
     pydantic
