@@ -541,6 +541,11 @@ DEFAULT_APPROVAL_FORBIDDEN: tuple[str, ...] = (
     ".github/**",
     "CODEOWNERS",
 )
+# The one entry an `unattended_approval.authors` list may carry instead of naming every
+# maintainer a second time. It expands from `.github/CODEOWNERS`, which already records who
+# may approve a change to an owned path, so the two lists cannot drift apart by one of them
+# being edited alone and nobody noticing.
+CODEOWNERS_SENTINEL = "@codeowners"
 
 
 @dataclass(frozen=True)
@@ -553,15 +558,22 @@ class UnattendedApprovalConfig:
     DECLARED half of the grant (12.c). The live half is the repository variable
     `VIBEY_UNATTENDED_APPROVAL`, deliberately not here: withdrawal must need no merge.
 
-    Defaults refuse. `enabled` is False and `branches` is empty, so a repository that has
-    merely upgraded vibey-gh has granted nothing -- absence of a grant is refusal, never
-    permission, and a default that approved anything would make the upgrade itself a grant.
+    Defaults refuse. `enabled` is False and `branches` and `authors` are empty, so a
+    repository that has merely upgraded vibey-gh has granted nothing -- absence of a grant is
+    refusal, never permission, and a default that approved anything would make the upgrade
+    itself a grant.
     """
 
     enabled: bool = False
     # Branch globs a delegated approver may act on. Empty means none, which is why
     # `enabled = true` with no branches is rejected below rather than silently doing nothing.
     branches: tuple[str, ...] = ()
+    # Forge logins whose pull requests a delegated approver may act on. `branches` bounds
+    # WHERE a change may land; this bounds WHOSE change may be approved there, and the two
+    # are not the same bound -- a lane glob says nothing about who pushed to it. An entry may
+    # be `CODEOWNERS_SENTINEL`, expanded by `expand_authors` below. Empty means nobody, which
+    # is why `enabled = true` with no authors is rejected rather than quietly meaning anyone.
+    authors: tuple[str, ...] = ()
     # Paths that no delegated approval may ever touch. A change touching one is refused
     # WHOLE: an approver does not approve the safe subset of a pull request.
     forbidden_paths: tuple[str, ...] = DEFAULT_APPROVAL_FORBIDDEN
@@ -574,11 +586,18 @@ class UnattendedApprovalConfig:
         if not self.enabled:
             return
         _unique_nonempty("unattended_approval.branches", self.branches)
+        _unique_nonempty("unattended_approval.authors", self.authors)
         _unique_nonempty("unattended_approval.forbidden_paths", self.forbidden_paths)
         if not self.branches:
             raise ValueError(
                 "unattended_approval.branches must not be empty when enabled -- "
                 "an approver with no branch to act on is a grant that says nothing"
+            )
+        if not self.authors:
+            raise ValueError(
+                "unattended_approval.authors must not be empty when enabled -- "
+                "a grant that names nobody authorises nobody, and the absence of a grant "
+                "is refusal and never permission (12.f)"
             )
         if not self.forbidden_paths:
             raise ValueError(
@@ -590,6 +609,51 @@ class UnattendedApprovalConfig:
                 "unattended_approval.forbidden_paths must contain '.vibey-gh.toml' -- "
                 "12.f: an approver may never approve a change to its own grant"
             )
+
+
+def expand_authors(authors: tuple[str, ...], root: Path) -> tuple[str, ...]:
+    """Resolve `@codeowners` in an author allowlist to the logins CODEOWNERS names.
+
+    A tuple without the sentinel comes back unchanged, so a repository that spells its
+    maintainers out pays nothing for this. Where the sentinel is present, it is replaced in
+    place by every distinct owner `.github/CODEOWNERS` names, order preserved and duplicates
+    dropped -- so a list that both spells a login out and inherits it through the sentinel
+    yields that login once, where it first appeared.
+
+    The leading `@` is stripped from each owner because CODEOWNERS writes a login the way a
+    mention does and a forge reports an author the way an account is named:
+    `adammatthewsteinberger`, never `@adammatthewsteinberger`. Comparing the two spellings
+    would match nobody while looking like a populated allowlist.
+
+    This is a module-level function rather than a method because it reads the filesystem and
+    `UnattendedApprovalConfig` is the declared grant -- a frozen value that validates itself
+    and touches no disk. Expansion is a separate act, performed where a root is in hand.
+    """
+    if CODEOWNERS_SENTINEL not in authors:
+        return authors
+    # A repository with no CODEOWNERS expands the sentinel to NOTHING rather than raising.
+    # That is defensible only because it fails CLOSED, and so does the neighbouring case of a
+    # CODEOWNERS that names nobody: both leave the allowlist empty, and an empty allowlist
+    # authorises nobody -- never everybody. `__post_init__` refuses an enabled grant with no
+    # authors, so a silent expansion to nothing can never become a silent widening.
+    codeowners = root / ".github" / "CODEOWNERS"
+    owners: list[str] = []
+    if codeowners.is_file():
+        for line in codeowners.read_text(encoding="utf-8").splitlines():
+            # An owner is a whitespace-delimited token beginning with `@`. Matching the token
+            # rather than the `@` itself is what keeps the domain of an email owner -- which
+            # CODEOWNERS also permits -- out of a list that is compared against forge logins.
+            owners.extend(
+                token[1:]
+                for token in line.partition("#")[0].split()
+                if token.startswith("@") and len(token) > 1
+            )
+    expanded: list[str] = []
+    for entry in authors:
+        for login in owners if entry == CODEOWNERS_SENTINEL else [entry]:
+            if login not in expanded:
+                expanded.append(login)
+    return tuple(expanded)
 
 
 @dataclass(frozen=True)
@@ -1851,6 +1915,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         unattended_approval=UnattendedApprovalConfig(
             enabled=approval.get("enabled", False),
             branches=tuple(approval.get("branches", ())),
+            authors=tuple(approval.get("authors", ())),
             forbidden_paths=tuple(approval.get("forbidden_paths", DEFAULT_APPROVAL_FORBIDDEN)),
             require_all_gates=approval.get("require_all_gates", True),
         ),
