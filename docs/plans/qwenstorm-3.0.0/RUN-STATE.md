@@ -1,6 +1,6 @@
 # QwenStorm 3.0.0 — run state
 
-Snapshot 2026-09-23T09:13:49Z, written by `tools/storm-snapshot.py`.
+Snapshot 2026-09-23T09:17:48Z, written by `tools/storm-snapshot.py`.
 
 The runner's durable record is `integrated.txt` and `abandoned.txt`: a lane in neither is
 unsettled, whatever exists under `lanes/`. `lanes/` lives in /tmp and is wiped between
@@ -12,6 +12,14 @@ sessions, so nothing here depends on it surviving.
 - last line of progress.log: `2026-09-23T09:02:40Z start gap-ci-tenants-arch-macos-1 #504 on integration@876fee98`
 
 Still running or never finished (1): `gap-ci-tenants-arch-macos-1`
+
+## How it was stopped
+
+- SIGTERM watch (66685)
+- SIGTERM queue (54774)
+- SIGTERM lane (7337)
+- SIGTERM cycle (54779)
+- all stopped
 
 
 ## How to resume
