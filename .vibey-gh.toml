@@ -293,12 +293,21 @@ google_analytics_id = "G-DMYG7PHCQP"
 [unattended_approval]
 enabled = true
 
-# The operator chose the widest branch scope, so this list is the ONLY bound between an
-# approver and any change in the repository. Every entry below answers one question: could
-# a change here alter WHAT A GATE MEASURES, WHO MAY APPROVE, or WHAT AN AGENT MAY DO? Where
-# the answer is yes, it is forbidden, and a change touching one is refused WHOLE -- an
-# approver does not approve the safe subset of a pull request.
+# The operator chose the widest branch scope, so the two lists below carry the whole bound
+# between an approver and any change in the repository. Every forbidden path answers one
+# question: could a change here alter WHAT A GATE MEASURES, WHO MAY APPROVE, or WHAT AN
+# AGENT MAY DO? Where the answer is yes, it is forbidden, and a change touching one is
+# refused WHOLE -- an approver does not approve the safe subset of a pull request.
 branches = ["*"]
+
+# Whose pull requests an approver may act on. A branch glob says nothing about who pushed
+# to it, so with the widest branch scope above this is the other half of the bound. Of the
+# last 200 merged pull requests, 195 were authored by `adammatthewsteinberger` and 5 by
+# `app/dependabot`. Dependabot is deliberately left out: a dependency bump landing
+# unreviewed overnight is exactly the supply-chain case a human should see. `@codeowners`
+# expands to whoever .github/CODEOWNERS names, so this list and the owners of the protected
+# paths cannot drift apart by one of them being edited alone.
+authors = ["adammatthewsteinberger", "@codeowners"]
 
 # Every deterministic gate must already be green. A delegated approval is added to the
 # gates and never substituted for one (12.f).
