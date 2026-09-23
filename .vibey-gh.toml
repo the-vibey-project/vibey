@@ -68,6 +68,11 @@ release     = "main"
 
 [merge_train]
 owner           = "adammatthewsteinberger"
+# Whose pull requests the train may merge on a green gate. This is not the same list as
+# `[unattended_approval] authors` below, which is whose work a delegated approver may vouch
+# for while no human is watching. The two lists answer different questions and differ on
+# purpose: the bots are trusted to land work that passed every gate, never to have their
+# work approved on the operator's behalf. Do not merge the lists or derive one from the other.
 trusted_authors = ["adammatthewsteinberger", "claude[bot]", "github-actions[bot]", "vibey[bot]"]
 # The protected paths (#213): the tests that prove vibey works, which a build must never
 # weaken on its own say-so (docs/plans/implementation-plan.md, "Bootstrapping"). A pull
@@ -311,6 +316,11 @@ branches = ["*"]
 # unreviewed overnight is exactly the supply-chain case a human should see. `@codeowners`
 # expands to whoever .github/CODEOWNERS names, so this list and the owners of the protected
 # paths cannot drift apart by one of them being edited alone.
+#
+# This is not `[merge_train] trusted_authors` above. That list decides whose pull requests
+# the train may merge once every gate is green; this one decides whose work an approver may
+# vouch for with no human watching, which is a narrower grant. The bots appear there and not
+# here on purpose. Do not merge the lists or derive one from the other.
 authors = ["adammatthewsteinberger", "@codeowners"]
 
 # Every deterministic gate must already be green. A delegated approval is added to the
