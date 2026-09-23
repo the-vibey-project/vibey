@@ -1,17 +1,17 @@
 # QwenStorm 3.0.0 — run state
 
-Snapshot 2026-09-23T04:43:52Z, written by `tools/storm-snapshot.py`.
+Snapshot 2026-09-23T05:20:56Z, written by `tools/storm-snapshot.py`.
 
 The runner's durable record is `integrated.txt` and `abandoned.txt`: a lane in neither is
 unsettled, whatever exists under `lanes/`. `lanes/` lives in /tmp and is wiped between
 sessions, so nothing here depends on it surviving.
 
 - queue: **594 lanes** · integrated: **8** · abandoned: **2**
-- lane worktrees: **17** · finished awaiting review: **14** · unsettled: **17**
+- lane worktrees: **17** · finished awaiting review: **15** · unsettled: **17**
 - integration branch: `876fee98`
-- last line of progress.log: `2026-09-23T04:37:16Z start chart-operator-forgejo-p1 #326 on integration@d10ac25b`
+- last line of progress.log: `2026-09-23T05:14:03Z start rmq-r01-queue-config #348 on integration@876fee98`
 
-Still running or never finished (3): `chart-operator-forgejo-p1`, `rmq-r01-queue-config`, `split-367-1-run-dir`
+Still running or never finished (2): `rmq-r01-queue-config`, `split-367-1-run-dir`
 
 
 ## How to resume
