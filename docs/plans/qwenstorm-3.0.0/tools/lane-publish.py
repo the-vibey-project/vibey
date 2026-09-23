@@ -202,6 +202,26 @@ def inside(lane: Path, base: Path, target: str) -> Path | None:
     return candidate if candidate.is_dir() else None
 
 
+def resolve(lane: Path, argv: list[str]) -> list[str]:
+    """The same command, run with the LANE's tools rather than the publisher's.
+
+    Substituting only the interpreter was enough while `python -m black` was the only
+    spelling anyone used. It stopped being enough the moment bare `black` and `isort` became
+    runnable checks: `run()` drops VIRTUAL_ENV and never puts the lane's `.venv/bin` on
+    PATH, so a bare console script resolves to whatever environment launched this, or to
+    nothing at all. Either way the formatter gate would report on a tree other than the
+    lane's -- which is precisely the mistake that gate was added to catch.
+
+    A lane without a built venv is left alone: the check then runs against whatever is on
+    PATH and says so by failing, rather than being silently skipped.
+    """
+    interpreter = lane / ".venv/bin/python"
+    if argv[0] in {"python", "python3", "pytest"} and interpreter.is_file():
+        return [str(interpreter), *(["-m"] if argv[0] == "pytest" else []), *argv[1:]]
+    script = lane / ".venv/bin" / argv[0]
+    return [str(script), *argv[1:]] if script.is_file() else list(argv)
+
+
 def checks_of(lane: Path) -> list[Check]:
     """The commands the lane's own spec says must pass.
 
@@ -477,12 +497,9 @@ def ready(slug: str) -> tuple[bool, list[str]]:
     ran = checks_of(lane)
     if not ran:
         return False, ["its spec names no check block this script can run"]
-    interpreter = lane / ".venv/bin/python"
     failures = []
     for check in ran:
-        argv = check.argv
-        if argv[0] in {"python", "python3", "pytest"} and interpreter.is_file():
-            argv = [str(interpreter), *(["-m"] if argv[0] == "pytest" else []), *argv[1:]]
+        argv = resolve(lane, check.argv)
         code, out = run(argv, check.cwd, extra=check.env)
         if code:
             failures.append(f"check failed: {' '.join(argv)[:55]} -- {why_failed(out)[:110]}")
