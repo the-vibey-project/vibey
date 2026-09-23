@@ -79,6 +79,12 @@ lane with no pull request yet -- that last one is the publish backlog and belong
 `lane-publish.py`. It reports a lane with no verdict at all and leaves it alone: that is a
 lane killed mid-run, and whether its work is worth keeping is a question for a person.
 
+It does not reap a REFUSED lane -- one whose `result.json` carries a `refused` reason because
+its issue failed the provenance check (12.j) and the runner declined to start it. Nothing
+gave up, so "abandoned" would be false; and an issue the storm declined to trust is not one
+to comment on. It is reported in its own bucket, left unsettled, and its queued dependants
+are named on every pass, so they are held visibly rather than skipped in silence.
+
 It does NOT confirm that `lane-publish.py` evaluated a lane in the same pass before reaping
 it. `storm-cycle.py` runs publish first and reap second, and that ordering is the whole of
 the guarantee: a pass in which publish failed or was skipped is not detected here.
@@ -255,6 +261,7 @@ def survey(
         "publishable": [],
         "unfinished": [],
         "young": [],
+        "refused": [],
     }
     for lane in sorted(p for p in LANES.iterdir() if p.is_dir()):
         slug = lane.name
@@ -292,6 +299,14 @@ def survey(
             out["unfinished"].append(
                 (slug, "no readable verdict -- killed mid-run, or still being written")
             )
+        elif "refused" in found:
+            # The runner declined to START this lane -- its issue failed the provenance check
+            # (12.j) -- so nothing was attempted and nothing gave up. Reaping it would write a
+            # false "gave up after 0 attempt(s)" into the ledger (10.f), cascade that into
+            # every dependant as a dead dependency, and post a comment on an issue the storm
+            # has just declined to trust. Whether the issue is sound is a person's call; the
+            # lane stays unsettled until one makes it, and its dependants are named below.
+            out["refused"].append((slug, f"refused to start: {found['refused']}"))
         elif found.get("completed") is True and not pr:
             out["publishable"].append((slug, "the runner completed it; lane-publish.py owns it"))
         elif found.get("completed") is True:
@@ -577,6 +592,11 @@ def main() -> int:
         and not set(deps) <= set(lines_of("integrated.txt"))
     }
     frees = blocked_by(dead | set(lines_of("abandoned.txt")), waiting) - dead
+    # A refused lane is left unsettled, so storm-queue.sh -- which names a lane blocked only
+    # when its dependency is in abandoned.txt -- would skip its dependants in silence. They
+    # are named here instead, every pass, until a person settles the refusal.
+    refused = {slug for slug, _ in found["refused"]}
+    held_back = sorted(blocked_by(refused, waiting) - refused)
 
     for bucket, label in (
         ("live", "left alone -- a runner is inside"),
@@ -584,6 +604,7 @@ def main() -> int:
         ("young", "left alone -- within the repair grace period"),
         ("publishable", "left alone -- the publisher's, not this tool's"),
         ("unfinished", "REPORTED, not settled -- needs a person"),
+        ("refused", "REFUSED, not settled and not reaped -- needs a person"),
     ):
         for slug, why in found[bucket]:
             print(f"  {slug:44s} {label}: {why}")
@@ -611,8 +632,15 @@ def main() -> int:
     print(
         f"\n{len(found['integrate'])} landed, {len(found['reap'])} dead, "
         f"{len(found['publishable'])} awaiting publish, {len(found['in-flight'])} in flight, "
-        f"{len(found['unfinished'])} unfinished, {len(found['settled'])} already settled"
+        f"{len(found['unfinished'])} unfinished, {len(found['refused'])} refused, "
+        f"{len(found['settled'])} already settled"
     )
+    if refused:
+        print(
+            f"{len(held_back)} queued lane(s) wait on a refused lane and cannot start until a "
+            f"person settles it: {', '.join(held_back[:12]) or 'none'}"
+            + (f" and {len(held_back) - 12} more" if len(held_back) > 12 else "")
+        )
     if landed:
         print(
             f"{len(eligible)} queued lane(s) {'are now' if args.reap else 'would become'} eligible to start -- "

@@ -281,6 +281,38 @@ def test_a_mention_does_not_integrate_a_lane(reaper, storm: Path) -> None:
     assert [slug for slug, _ in found["reap"]] == ["gap-ci-arch-gates"]
 
 
+REFUSED = '{"completed": false, "refused": "issue #500 was edited by an account not allowed"}'
+
+
+def test_a_refused_lane_is_its_own_verdict_not_a_give_up(reaper, storm: Path) -> None:
+    """12.j: a lane the runner refused to start never gave up, so it is not reaped."""
+    (storm / "lanes/gap-ci-arch-gates/.qwenstorm/result.json").write_text(REFUSED)
+    found = reaper.survey(0, [])
+    assert found["reap"] == []
+    assert [slug for slug, _ in found["refused"]] == ["gap-ci-arch-gates"]
+    assert "not allowed" in found["refused"][0][1]
+
+
+def test_a_refused_lane_is_never_recorded_or_commented_on(
+    reaper, storm: Path, monkeypatch, capsys
+) -> None:
+    """--reap --sync-issues writes no abandonment and posts nothing on a refused issue."""
+    (storm / "lanes/gap-ci-arch-gates/.qwenstorm/result.json").write_text(REFUSED)
+    (storm / "queue.txt").write_text(
+        "gap-ci-arch-gates 500\nwaits-on-it 501 gap-ci-arch-gates\n", encoding="utf-8"
+    )
+    posted: list = []
+    monkeypatch.setattr(reaper, "forge", lambda: [])
+    monkeypatch.setattr(reaper, "gh", lambda args: posted.append(args) or True)
+    monkeypatch.setattr(reaper, "worktrees", lambda prs, apply: (0, 0))
+    monkeypatch.setattr(sys, "argv", ["lane-reap.py", "--reap", "--sync-issues", "--grace", "0"])
+    assert reaper.main() == 0
+    assert "gap-ci-arch-gates" not in reaper.lines_of("abandoned.txt")
+    assert posted == []
+    out = capsys.readouterr().out
+    assert "refused" in out and "waits-on-it" in out, "its dependants must be named as held"
+
+
 def test_the_head_ref_map_keeps_the_newest_pull_request(reaper) -> None:
     prs = [PR(2, "OPEN", "lane/x", frozenset()), PR(1, "CLOSED", "lane/x", frozenset())]
     assert reaper.heads(prs) == {"lane/x": (2, "OPEN")}
