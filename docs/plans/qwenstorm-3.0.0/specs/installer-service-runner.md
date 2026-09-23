@@ -96,7 +96,7 @@ The operator requires that the installer wait for Docker to answer `docker info`
     uv run mypy --strict src/vibey
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/infrastructure/test_host_services.py tests/infrastructure/test_host_packages.py tests/application/test_interfaces_convention.py
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/infrastructure
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/infrastructure/host_services.py' --fail-under=100
 
 ## Out of scope

@@ -98,7 +98,7 @@ fake-runner style (see :350-371):
     uv run lint-imports
     uv run bandit -q -r src/vibey
     uv run pytest -q -p no:cacheprovider tests/infrastructure/test_postgres_local.py tests/cli/test_operational_commands.py
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/infrastructure/test_postgres_local.py
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/infrastructure/postgres.py' --fail-under=100
 
 ## Out of scope

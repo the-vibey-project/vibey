@@ -89,7 +89,7 @@ Append to `tests/infrastructure/test_correlation_log_context.py`:
     uv run mypy --strict src/vibey
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/application/test_worker.py tests/infrastructure/test_correlation_log_context.py tests/fakes
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/application tests/infrastructure/test_correlation_log_context.py
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/application/*' --fail-under=100
 
 ## Out of scope

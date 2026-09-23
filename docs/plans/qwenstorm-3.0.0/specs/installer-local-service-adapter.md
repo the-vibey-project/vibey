@@ -71,7 +71,7 @@ per-service copy.
     uv run mypy --strict src/vibey
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/infrastructure/test_local_service_installer.py tests/infrastructure/test_postgres_local.py tests/application/test_interfaces_convention.py
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/infrastructure/test_local_service_installer.py
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/infrastructure/local_service_installer.py' --fail-under=100
 
 ## Out of scope

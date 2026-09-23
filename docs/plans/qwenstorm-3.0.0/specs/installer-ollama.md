@@ -104,7 +104,7 @@ default, as #391 asked ("never hard-coded twice").
     uv run mypy --strict src/vibey
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/infrastructure/test_ollama_model.py tests/infrastructure/engines tests/cli
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/infrastructure/test_ollama_model.py
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/infrastructure/ollama_model.py' --fail-under=100
 
 ## Out of scope

@@ -153,7 +153,7 @@ uv run lint-imports
 uv run bandit -q -r src/vibey
 uv run pytest -q -p no:cacheprovider tests/domain tests/infrastructure/test_package_dependency.py
 uv run pytest -q -p no:cacheprovider --noconftest -n 0 tests/domain/test_local_stack.py tests/infrastructure/test_package_dependency.py
-uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/domain
+uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
 uv run coverage report --include='src/vibey/domain/*' --fail-under=100
 ```
 One coverage run at a time. Until lane `fakes-harness-decouple` lands, `tests/conftest.py:146-156`

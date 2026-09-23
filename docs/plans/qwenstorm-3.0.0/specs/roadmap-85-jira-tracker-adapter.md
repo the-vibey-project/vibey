@@ -90,7 +90,7 @@ made here; the authentication scheme is declared by the caller (12.c).
     uv run lint-imports
     uv run bandit -q -r src/vibey/infrastructure/tracker
     uv run pytest -q -p no:cacheprovider tests/infrastructure/test_jira_tracker.py
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/infrastructure
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100
 
 ## Out of scope

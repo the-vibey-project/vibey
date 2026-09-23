@@ -70,7 +70,7 @@ Append to `tests/domain/test_local_stack.py`:
     uv run mypy --strict src/vibey
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/domain
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/domain
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/domain/*' --fail-under=100
 
 ## Out of scope

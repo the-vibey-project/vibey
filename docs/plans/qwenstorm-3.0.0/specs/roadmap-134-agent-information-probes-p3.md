@@ -135,7 +135,7 @@ New `src/vibey/application/information_probe.py`:
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/application/test_information_probe.py tests/fakes
     export VIBEY_TEST_DATABASE_URL="${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}"
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/application tests/fakes
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/application/*' --fail-under=100
 
 ## Out of scope

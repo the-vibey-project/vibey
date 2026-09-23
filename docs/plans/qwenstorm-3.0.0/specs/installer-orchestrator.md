@@ -85,7 +85,7 @@ the catalogue, so later catalogue lanes cannot break these tests.
     uv run mypy --strict src/vibey
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/application/test_local_install.py tests/application/test_interfaces_convention.py
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/application
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/application/local_install.py' --fail-under=100
 
 ## Out of scope

@@ -157,7 +157,7 @@ Build records with `replace(_health(pid, engine, conformant=True), circuit=..., 
     uv run lint-imports
     uv run pytest -q -p no:cacheprovider tests/infrastructure/test_preflight_feasibility.py tests/application/test_preflight.py
     export VIBEY_TEST_DATABASE_URL="${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}"
-    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/infrastructure tests/application
+    uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
     uv run coverage report --include='src/vibey/infrastructure/*' --fail-under=100
 
 ## Out of scope

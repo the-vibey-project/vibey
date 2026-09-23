@@ -159,7 +159,7 @@ uv run bandit -q -r src/vibey
 # Focused tests (default tier: no service needed)
 uv run pytest -q -p no:cacheprovider tests/domain
 # Every added line of deployment.py is covered by the domain tests alone
-uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report= tests/domain
+uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
 uv run coverage report --include='src/vibey/domain/deployment.py' --fail-under=100
 # Per-layer 100% branch coverage over the whole suite (the CI gate)
 uv run pytest -q -p no:cacheprovider --cov=vibey --cov-branch --cov-report=
