@@ -116,6 +116,12 @@ lives in `docs/architecture/decisions/`.
 - **The ledger is append-only.** No updates, no deletes. Corrections are new
   events that supersede prior ones.
 - **Every commit follows Conventional Commits.** Enforced by a pre-commit hook.
+- **Run `git commit` and `git push` in the foreground and wait for them.** Never edit
+  a file in a worktree while a git hook is running there. The pre-push hooks test the
+  *working tree*, not the refs being pushed, so a file written mid-run fails the push
+  with `files were modified by this hook` — while the suite itself passed. It reads as
+  a test failure and is not one. Knowing the hazard does not prevent it; this rule is
+  here because it happened again to someone who had already written the warning down.
 - **Never implement on `main`.** Feature PRs squash into `develop` through the
   merge train (`vibey-gh merge-train`); `develop` is promoted to `main` by
   `vibey-gh promote` as a **rebase** merge, keeping history linear
