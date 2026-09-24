@@ -76,6 +76,11 @@ def declared(root: Path, section: str, key: str) -> str | None:
 def declared_list(root: Path, section: str, key: str) -> tuple[str, ...] | None:
     """A list of names from `storm.toml`, or None when the file or the key is absent.
 
+    A function, not a method, for the reason every reader in this module is one: it holds
+    no state, and the shell tools and every Python tool call the same resolver by name.
+    Wrapping it in a class would add an instance nobody needs to the one module a script
+    run by path can import before it knows where anything is (ADR-0016's written reason).
+
     `declared` stringifies, which turns a list into its own repr -- a value no caller could
     use, and one that would never match a name. So a list has its own reader, and anything
     that is not a list of non-empty strings refuses rather than being read as some other
@@ -99,6 +104,9 @@ def declared_list(root: Path, section: str, key: str) -> tuple[str, ...] | None:
 
 def priority_log(root: Path) -> Path:
     """The storm's append-only priority log (ADR-0054): declared, else beside the ledgers.
+
+    A function, not a method, for the reason `declared_list` gives: `storm_queue.py` and
+    `storm-evidence.py` must name the same file, and they ask this one stateless resolver.
 
     `[priority] log` in storm.toml. A relative path is read from the storm root, where
     `queue.txt`, `integrated.txt` and `abandoned.txt` live, so the default and a declared

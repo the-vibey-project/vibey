@@ -60,20 +60,26 @@ while true; do
   # review and holds the storm unless UNATTENDED, a lane met before the next one whose
   # dependency was abandoned is marked blocked -- and the priority lane goes first.
   # It answers: run SLUG ISSUE | review SLUG.. | wait [SLUG..] | empty. A resolver that cannot
-  # answer (an unreadable priority log) is waited out and said, never read as "empty".
-  if ! decision="$("$PY" "$Q/tools/storm_queue.py" next)"; then
-    say_once "waiting: cannot decide what runs next: ${decision:-the resolver did not answer}"
+  # answer is waited out and said, never read as "empty": exit 3 is an unknown priority order
+  # (an unreadable or vanished priority log), exit 4 a crash (see storm_queue.py).
+  decision="$("$PY" "$Q/tools/storm_queue.py" next)"; rc=$?
+  if [ "$rc" != 0 ]; then
+    say_once "waiting: cannot decide what runs next (resolver exit $rc): ${decision:-the resolver did not answer}"
     sleep 60; continue
   fi
-  set -- $decision
-  verdict="$1"; shift
+  # `read`, never an unquoted `set --` of the decision: that word-splits AND globs, so a slug
+  # like `qu*` would have become whatever it matched in the current directory. The resolver
+  # refuses such a slug; this keeps the runner safe even if one ever got through.
+  read -r verdict rest <<<"$decision"
   case "$verdict" in
     empty) say_once "queue empty"; exit 0 ;;
-    review) say_once "waiting for review: $*"; sleep 60; continue ;;
-    wait) say_once "waiting: no pending lane has all dependencies integrated (awaiting batch review: ${*:-none})"; sleep 60; continue ;;
+    review) say_once "waiting for review: $rest"; sleep 60; continue ;;
+    wait) say_once "waiting: no pending lane has all dependencies integrated (awaiting batch review: ${rest:-none})"; sleep 60; continue ;;
     run) ;;
     *) say_once "waiting: the resolver answered '$decision', which this runner does not know"; sleep 60; continue ;;
   esac
+  read -r slug issue _ <<<"$rest"
+  set -- "$slug" "$issue"
   said=""
   L="$Q/lanes/$1"
   if [ ! -d "$L" ]; then
