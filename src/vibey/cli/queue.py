@@ -3,7 +3,8 @@
 
 `bump` puts a job next in line -- after whatever is running, which is never interrupted
 -- behind every job bumped before it and ahead of everything else, and pulls its
-unfinished dependencies forward with it. `unbump` undoes exactly what that bump moved.
+unfinished dependencies forward with it. `unbump` takes it out of the named set; the lane
+is re-derived, so nothing it pulled in is left behind unless another named job needs it.
 `list` shows what will run, in the order it will run.
 
 Who may reorder is decided by the project's own reviewed configuration, never by
@@ -54,8 +55,8 @@ class QueuePresenter:
             mark = f"bumped #{job.bump_seq}" if job.bump_seq is not None else ""
             item = f" {job.work_item_id}" if job.work_item_id is not None else ""
             pulled = ""
-            if job.bump_origin is not None and job.bump_origin != job.id:
-                pulled = f"  (pulled forward for {job.bump_origin})"
+            if job.bump_seq is not None and not job.bump_named:
+                pulled = "  (pulled in as a bumped job's dependency)"
             waits = ""
             if entry.waiting_on:
                 count = len(entry.waiting_on)
@@ -90,7 +91,7 @@ class QueuePresenter:
                     "phase": job.phase.value,
                     "work_item_id": job.work_item_id,
                     "bump_seq": job.bump_seq,
-                    "bump_origin": str(job.bump_origin) if job.bump_origin is not None else None,
+                    "bump_named": job.bump_named,
                     "priority": job.priority,
                     "run_after": job.run_after.isoformat(),
                     "waiting_on": [str(dep) for dep in entry.waiting_on],
@@ -263,8 +264,8 @@ def queue_unbump(
     source: SourceOption = None,
     as_json: JsonOption = False,
 ) -> None:
-    """Undo exactly what a bump moved: the job, and the dependencies it pulled forward
-    that no other bumped job needs. Refused while a bumped job still needs this one."""
+    """Take a job out of the lane, with every pulled-in dependency no remaining named job
+    needs. Refused while another named job depends on this one."""
     with guard():
         asyncio.run(QUEUE.unbump(job_id, project_id=project_id, source=source, as_json=as_json))
 

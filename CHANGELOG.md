@@ -63,7 +63,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   after whatever is running — never interrupting it — behind anything bumped before it
   and ahead of all un-bumped waiting work, and pulls its unfinished dependencies forward
   with it; a dependency that can never finish refuses the bump. `vibey queue unbump JOB`
-  undoes exactly what that bump moved, and is refused while a bumped job still needs it.
+  takes it out of the lane, which is always the jobs bumped by name plus their unfinished
+  dependencies, so nothing is left behind; it is refused while another named job needs it.
   `vibey queue list [PROJECT]` shows the queue in claim order with every bump marked;
   `vibey design resume PROJECT --priority` enqueues the interview bumped. The claim orders
   `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so the order among

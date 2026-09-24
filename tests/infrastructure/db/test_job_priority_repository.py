@@ -97,6 +97,22 @@ async def _events(pool: asyncpg.Pool, project_id: UUID) -> list[LedgerEvent]:
     return [e for e in events if e.kind in kinds]
 
 
+async def _blocked_on_a_row_lock(pool: asyncpg.Pool) -> None:
+    """Wait until some backend of this database is waiting on a row lock -- the reorder
+    under test -- instead of guessing with a sleep. A loaded machine (the parallel suite)
+    can take longer than any fixed sleep to get the reorder that far."""
+    async with pool.acquire() as conn:
+        for _ in range(200):
+            waiting = await conn.fetchval(
+                "SELECT count(*) FROM pg_stat_activity "
+                "WHERE datname = current_database() AND wait_event_type = 'Lock'"
+            )
+            if waiting:
+                return
+            await asyncio.sleep(0.05)
+    raise AssertionError("the reorder never waited on the held row")
+
+
 async def _set_state(pool: asyncpg.Pool, job: UUID, state: str) -> None:
     async with pool.acquire() as conn:
         await conn.execute(
@@ -132,7 +148,7 @@ async def test_a_bumped_job_is_claimed_next_ahead_of_everything_waiting(
     assert [m.job_id for m in change.moved] == [urgent]
     assert change.moved[0].previous is None
     record = await repo.get(urgent)
-    assert record is not None and record.bump_origin == urgent
+    assert record is not None and record.bump_named
     assert await _claim_all(repo, project_id) == [urgent, first, second, third]
 
 
@@ -173,7 +189,7 @@ async def test_a_bump_pulls_its_unfinished_dependencies_forward_and_never_jumps_
     assert seqs == sorted(seqs)
     for pulled in (base, middle):
         record = await repo.get(pulled)
-        assert record is not None and record.bump_origin == target
+        assert record is not None and not record.bump_named, "pulled in, not named"
     first = await repo.claim(project_id, owner="w", lease=LEASE)
     assert first is not None and first.id == base
     stalled = await repo.claim(project_id, owner="w", lease=LEASE)
@@ -506,10 +522,10 @@ async def test_an_unbump_undoes_exactly_what_the_bump_moved(
     assert event.kind is EventKind.JOB_PRIORITY_UNBUMPED
     assert event.payload["by"] == "source:storm"
     own_record = await repo.get(own)
-    assert own_record is not None and own_record.bump_origin == own, "bumped by name, kept"
+    assert own_record is not None and own_record.bump_named, "bumped by name, kept"
     for back in (target, dep):
         record = await repo.get(back)
-        assert record is not None and (record.bump_seq, record.bump_origin) == (None, None)
+        assert record is not None and (record.bump_seq, record.bump_named) == (None, False)
     assert (await _claim_all(repo, project_id))[:2] == [own, plain]
 
 
@@ -549,30 +565,39 @@ async def test_bumping_a_pulled_job_by_name_keeps_it_when_its_puller_goes_back(
     after = await repo.get(dep)
     assert before is not None and after is not None
     assert after.bump_seq == before.bump_seq, "it keeps its place"
-    assert after.bump_origin == dep
+    assert after.bump_named
 
 
-async def test_a_kept_dependency_passes_to_the_bump_that_still_needs_it(
+async def test_the_reviewers_sequence_leaves_no_orphan_and_records_what_it_cleared(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:
+    """x, d, a (needs d), b (needs d): bump a, bump b, un-bump a, un-bump b. The lane is
+    derived, so d leaves with b; each un-bump's event lists exactly what it cleared."""
     repo = PostgresJobRepository(migrated_pool)
     store = PostgresJobPriorityStore(migrated_pool)
-    (shared,) = await _enqueue(repo, project_id, "shared")
-    first = (await repo.enqueue(_request(project_id, "first", depends_on=(shared,)))).id
-    second = (await repo.enqueue(_request(project_id, "second", depends_on=(shared,)))).id
-    await store.bump(first, context=_context(project_id), at=AT)
-    await store.bump(second, context=_context(project_id), at=AT)
+    x, d = await _enqueue(repo, project_id, "x", "d")
+    a = (await repo.enqueue(_request(project_id, "a", depends_on=(d,)))).id
+    b = (await repo.enqueue(_request(project_id, "b", depends_on=(d,)))).id
 
-    change = await store.unbump(first, context=_context(project_id), at=AT)
+    await store.bump(a, context=_context(project_id), at=AT)
+    await store.bump(b, context=_context(project_id), at=AT)
+    first = await store.unbump(a, context=_context(project_id), at=AT)
+    kept = await repo.get(d)
+    second = await store.unbump(b, context=_context(project_id), at=AT)
 
-    assert change.reattributed == ((shared, second),)
-    record = await repo.get(shared)
-    assert record is not None and record.bump_origin == second
-    event = (await _events(migrated_pool, project_id))[-1]
-    assert event.payload["removed"] == [str(first)]
-    assert event.payload["reattributed"] == [{"job_id": str(shared), "origin": str(second)}]
-    back = await store.unbump(second, context=_context(project_id), at=AT)
-    assert {m.job_id for m in back.moved} == {second, shared}, "nothing left behind"
+    assert [m.job_id for m in first.moved] == [a]
+    assert kept is not None and kept.bump_seq is not None, "b still needs d"
+    assert {m.job_id for m in second.moved} == {b, d}
+    for job in (x, d, a, b):
+        record = await repo.get(job)
+        assert record is not None and record.bump_seq is None and not record.bump_named
+    assert await _claim_all(repo, project_id) == [x, d], "back to plain order"
+    removed = [
+        e.payload["removed"]
+        for e in await _events(migrated_pool, project_id)
+        if e.kind is EventKind.JOB_PRIORITY_UNBUMPED
+    ]
+    assert removed == [[str(a)], [str(m.job_id) for m in second.moved]]
 
 
 async def test_unbumping_a_job_a_bumped_job_needs_is_refused_naming_it(
@@ -647,13 +672,13 @@ async def test_a_deadlock_the_database_breaks_is_a_clean_refusal_not_a_traceback
         await tx.start()
         await holder.execute("SELECT 1 FROM job WHERE id = $1 FOR UPDATE", high)
         bump = asyncio.create_task(store.bump(target, context=_context(project_id), at=AT))
-        await asyncio.sleep(0.3)
+        await _blocked_on_a_row_lock(migrated_pool)
         cross = asyncio.create_task(
             holder.execute("SELECT 1 FROM job WHERE id = $1 FOR UPDATE", low)
         )
         with pytest.raises(ReorderConflict) as caught:
-            await bump
-        await cross
+            await asyncio.wait_for(bump, timeout=20)
+        await asyncio.wait_for(cross, timeout=20)
         await tx.rollback()
 
     assert caught.value.job_id == target
@@ -686,7 +711,7 @@ async def test_the_queue_lists_running_work_then_waiting_work_in_claim_order(
 
     assert [e.job.id for e in entries] == [running, dep, target, plain, stranger]
     assert entries[0].job.state is JobState.LEASED
-    assert entries[1].job.bump_origin == target
+    assert not entries[1].job.bump_named and entries[2].job.bump_named
     assert entries[2].waiting_on == (dep,)
     assert entries[4].job.state == UnrecognizedJobState("quarantined")
     assert entries[4].job.phase == UnrecognizedPhase("triage")
@@ -763,7 +788,7 @@ async def test_a_bump_waits_for_a_claim_holding_the_row_then_sees_it_running(
         await tx.start()
         await holder.execute("SELECT 1 FROM job WHERE id = $1 FOR UPDATE", job)
         bump = asyncio.create_task(store.bump(job, context=_context(project_id), at=AT))
-        await asyncio.sleep(0.3)
+        await _blocked_on_a_row_lock(migrated_pool)
         assert not bump.done(), "the bump read a row a claim still held"
         await holder.execute(
             """UPDATE job SET state = 'leased', lease_owner = 'w',

@@ -335,7 +335,7 @@ def test_list_shows_running_work_then_claim_order_with_bumps_marked(tmp_path: Pa
     lines = out.strip().splitlines()
     assert lines[0].split()[0] == "running" and str(running) in lines[0]
     assert lines[1].split()[:2] == ["1", "bumped"] and str(dep) in lines[1]
-    assert f"(pulled forward for {target})" in lines[1]
+    assert "(pulled in as a bumped job's dependency)" in lines[1]
     assert str(target) in lines[2] and "(waits on 1 job)" in lines[2]
     assert lines[3].split()[0] == "3" and str(plain) in lines[3]
     assert lines[4] == "4 unfinished jobs, 2 bumped; the claim takes waiting work top to bottom"
@@ -352,7 +352,7 @@ def test_list_defaults_to_the_latest_project_and_speaks_json(tmp_path: Path) -> 
     assert document["project_id"] == str(pid)
     (entry,) = document["jobs"]
     assert entry["job_id"] == str(job) and entry["position"] == 1
-    assert entry["bump_origin"] == str(job)
+    assert entry["bump_named"] is True
     assert entry["phase"] == "build" and entry["waiting_on"] == []
 
 
@@ -361,7 +361,7 @@ def test_list_marks_running_work_with_no_position_in_json(tmp_path: Path) -> Non
     asyncio.run(_claim(pid))
     (entry,) = json.loads(_run("list", str(pid), "--json")[1])["jobs"]
     assert entry["position"] is None and entry["state"] == "leased"
-    assert entry["bump_origin"] is None
+    assert entry["bump_named"] is False
 
 
 def test_an_empty_queue_says_so(tmp_path: Path) -> None:

@@ -8,7 +8,7 @@ Every change is one transaction that:
    is then a question about a queue nobody else is reordering;
 2. finds the rows the change can reach -- a bump's dependency closure, which stops at
    finished rows; an un-bump's bumped jobs -- and locks them `FOR NO KEY UPDATE` in id
-   order. `NO KEY` because only `bump_seq` and `bump_origin` change: an enqueue naming one
+   order. `NO KEY` because only `bump_seq` and `bump_named` change: an enqueue naming one
    of these jobs as a dependency takes `KEY SHARE` on it, which this lock never blocks;
 3. reads each row's state only once its lock is held, so a row that finished while the
    closure was being found is judged as finished;
@@ -85,12 +85,12 @@ SELECT id FROM closure
 
 # Locked in id order, so overlapping reorders take their locks in the same order.
 _LOCK_CLOSURE: Final = """
-SELECT id, phase, state, priority, run_after, bump_seq, bump_origin FROM job WHERE id = ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE
+SELECT id, phase, state, priority, run_after, bump_seq, bump_named FROM job WHERE id = ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE
 """
 
 # An un-bump writes only the target and bumped jobs, so only those are locked.
 _LOCK_BUMPED: Final = """
-SELECT id, phase, state, priority, run_after, bump_seq, bump_origin FROM job
+SELECT id, phase, state, priority, run_after, bump_seq, bump_named FROM job
 WHERE project_id = $2
   AND (id = $1 OR (bump_seq IS NOT NULL AND state NOT IN ('succeeded', 'failed', 'cancelled')))
 ORDER BY id
@@ -98,7 +98,7 @@ FOR NO KEY UPDATE
 """
 
 _UNFINISHED: Final = """
-SELECT id, phase, state, priority, run_after, bump_seq, bump_origin FROM job
+SELECT id, phase, state, priority, run_after, bump_seq, bump_named FROM job
 WHERE project_id = $1 AND state NOT IN ('succeeded', 'failed', 'cancelled') AND NOT (id = ANY($2::uuid[]))
 """
 
@@ -160,10 +160,9 @@ class PriorityEventDraftBuilder:
             "note": change.note,
         }
         if change.action is PriorityAction.UNBUMP:
+            # Exactly the jobs this un-bump cleared: the target, and every pulled job the
+            # remaining named jobs no longer need (ADR-0054 item 6).
             payload["removed"] = [str(m.job_id) for m in change.moved]
-            payload["reattributed"] = [
-                {"job_id": str(dep), "origin": str(owner)} for dep, owner in change.reattributed
-            ]
         return self._draft(context, kind, change.target, Provenance.TRUSTED, at, payload)
 
     def refused(self, refusal: PriorityRefusal, *, at: datetime) -> LedgerEventDraft:
@@ -256,16 +255,16 @@ class PostgresJobPriorityStore:
             moved: list[MovedJob] = []
             for moving in plan.moved:
                 seq = await conn.fetchval(
-                    """UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_origin = $2,
+                    """UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_named = $2,
                               updated_at = now()
                        WHERE id = $1 RETURNING bump_seq""",
                     moving,
-                    job_id,
+                    moving == job_id,
                 )
                 moved.append(MovedJob(job_id=moving, bump_seq=seq, previous=None))
             if plan.named:
                 await conn.execute(
-                    "UPDATE job SET bump_origin = id, updated_at = now() WHERE id = $1", job_id
+                    "UPDATE job SET bump_named = true, updated_at = now() WHERE id = $1", job_id
                 )
             note = ""
             if not moved and not plan.named:
@@ -296,16 +295,10 @@ class PostgresJobPriorityStore:
             snapshot = await self._snapshot(conn, job_id, [*locked, *rest])
             plan = self._unbumps.plan(job_id, snapshot)
             await conn.execute(
-                """UPDATE job SET bump_seq = NULL, bump_origin = NULL, updated_at = now()
+                """UPDATE job SET bump_seq = NULL, bump_named = false, updated_at = now()
                    WHERE id = ANY($1::uuid[])""",
                 list(plan.moved),
             )
-            for dep, owner in plan.reattributed:
-                await conn.execute(
-                    "UPDATE job SET bump_origin = $2, updated_at = now() WHERE id = $1",
-                    dep,
-                    owner,
-                )
             change = PriorityChange(
                 action=PriorityAction.UNBUMP,
                 requested_by=context.requested_by,
@@ -315,7 +308,6 @@ class PostgresJobPriorityStore:
                     for moving in plan.moved
                 ),
                 note="" if plan.moved else "it is not bumped; nothing moved",
-                reattributed=plan.reattributed,
             )
             await self._appender.append(conn, self._drafts.changed(change, context=context, at=at))
             return change
@@ -366,7 +358,7 @@ class PostgresJobPriorityStore:
                 run_after=row["run_after"],
                 bump_seq=row["bump_seq"],
                 depends_on=tuple(sorted(edges.get(row_id, ()))),
-                bump_origin=row["bump_origin"],
+                bump_named=row["bump_named"],
                 phase_known=isinstance(self._rows.phase(row["phase"]), Phase),
             )
             for row_id, row in by_id.items()
