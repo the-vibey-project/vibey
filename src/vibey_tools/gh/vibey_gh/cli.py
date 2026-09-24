@@ -841,6 +841,21 @@ def _fit(args) -> int:
     return 0 if verdict.ok else 1
 
 
+def _slots(args) -> int:
+    # Module-level like every other handler here: argparse dispatches through
+    # `set_defaults(func=...)`. It only resolves configuration; the work is `SlotCommands`'
+    # (ADR-0016).
+    from vibey_gh.slot_commands import SlotCommands
+
+    cfg = load_config()
+    commands = SlotCommands(
+        cfg.local_models,
+        fallback_model=cfg.pr_automation.fallback.model,
+        fallback_url=cfg.pr_automation.fallback.base_url,
+    )
+    return int(getattr(commands, args.slots_action)(args))
+
+
 def _estimate(args) -> int:
     # Module-level like every other handler in this file: argparse dispatches through
     # `set_defaults(func=...)`. It only resolves configuration and prints; the estimate
@@ -1883,6 +1898,100 @@ def main(argv: list[str] | None = None) -> int:
         help="decide from this call alone: record nothing and read nothing back",
     )
     ft.set_defaults(func=_fit)
+
+    sl = sub.add_parser(
+        "slots",
+        help="how many runs of one local model fit on this device at once (8.c, 8.j):"
+        " measured per device, gated on the evidence",
+    )
+    sl_sub = sl.add_subparsers(dest="slots_action", required=True)
+    sl_corpus = sl_sub.add_parser(
+        "corpus", help="draw a stratified corpus of turn segments from a turn pool"
+    )
+    sl_corpus.add_argument("--pool", required=True, help="a vibey-gh/turn-pool/1 JSON-lines file")
+    sl_corpus.add_argument("--out", required=True, help="where the corpus is written")
+    sl_corpus.add_argument("--segments", type=int, default=16, help="segments to draw")
+    sl_corpus.add_argument(
+        "--segment-length", type=int, default=3, help="consecutive turns per segment"
+    )
+    sl_corpus.add_argument(
+        "--strata",
+        default="16384,32768,49152",
+        help="prompt-depth edges in tokens, comma-separated (default 16384,32768,49152)",
+    )
+    sl_corpus.add_argument(
+        "--min-per-stratum", type=int, default=2, help="segments every non-empty stratum keeps"
+    )
+    sl_corpus.add_argument("--seed", type=int, default=0, help="the sampling seed")
+    sl_allowed = sl_sub.add_parser(
+        "allowed",
+        help="print how many runs of the model may run at once on this device; the reason"
+        " goes to stderr, and missing or stale evidence requests a calibration",
+    )
+    sl_allowed.add_argument("--model", default="", help="default: [local_models] model")
+    sl_allowed.add_argument(
+        "--base-url", default="", help="the production runner (default: $VIBEY_OLLAMA_URL)"
+    )
+    sl_allowed.add_argument("--json", action="store_true", help="print the decision as JSON")
+    sl_allowed.add_argument(
+        "--strict", action="store_true", help="exit 2 when a declared number was refused"
+    )
+    sl_cal = sl_sub.add_parser(
+        "calibrate",
+        help="sweep N = 1, 2, ... concurrent runs on this device and record the evidence",
+    )
+    sl_cal.add_argument("--corpus", required=True, help="a corpus from `vibey-gh slots corpus`")
+    sl_cal.add_argument("--model", default="", help="default: [local_models] model")
+    sl_cal.add_argument(
+        "--context-window", type=int, default=0, help="default: [local_models] context_window"
+    )
+    sl_cal.add_argument(
+        "--base-url", default="", help="the production runner (default: $VIBEY_OLLAMA_URL)"
+    )
+    sl_cal.add_argument(
+        "--binary", default="", help="the runner binary (default: [local_models] ollama_binary)"
+    )
+    sl_cal.add_argument(
+        "--port", type=int, default=0, help="default: [local_models] calibration_port"
+    )
+    sl_cal.add_argument("--max-runs", type=int, default=0, help="default: [local_models] max_runs")
+    sl_cal.add_argument("--num-predict", type=int, default=768, help="output tokens per turn")
+    sl_cal.add_argument("--seed", type=int, default=42, help="the sampling seed (temperature 0)")
+    sl_cal.add_argument(
+        "--no-repeat-baseline",
+        action="store_true",
+        help="measure one slot once, not twice (fidelity is then judged against 1.0)",
+    )
+    sl_cal.add_argument(
+        "--extra",
+        action="append",
+        help="also measure N@CONTEXT after the sweep, e.g. 2@32768; recorded, never gating",
+    )
+    sl_cal.add_argument(
+        "--server-setting",
+        action="append",
+        help="an OLLAMA_NAME=VALUE the calibration runner starts with",
+    )
+    sl_cal.add_argument("--interval", type=float, default=1.0, help="seconds between samples")
+    sl_cal.add_argument("--lock", default="", help="default: [local_models] lock")
+    sl_cal.add_argument(
+        "--wait-idle",
+        type=float,
+        default=1800.0,
+        help="seconds to wait for the production runner to idle before giving up",
+    )
+    sl_cal.add_argument(
+        "--if-requested",
+        action="store_true",
+        help="calibrate only when `slots allowed` has requested it for this device",
+    )
+    sl_cal.add_argument("--log-dir", default="", help="where the calibration runner logs")
+    sl_cal.add_argument(
+        "--out",
+        default="",
+        help="also write the evidence (and a .md summary) here, after every step",
+    )
+    sl.set_defaults(func=_slots)
 
     es = sub.add_parser(
         "estimate",
