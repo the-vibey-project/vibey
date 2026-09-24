@@ -108,6 +108,11 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "a CI runner's scratch, as above (the template vibey-gh renders)",
     ),
     (
+        "src/vibey/infrastructure/db/local_auth.py",
+        r"`/tmp`, which `urlsplit\(\)\.hostname`",
+        "the Postgres unix-socket directory a DSN names, explained in a docstring; no work kept",
+    ),
+    (
         "deploy/docker/Dockerfile",
         r"/tmp/codex",
         "an image build's scratch, deleted in the same layer",

@@ -194,8 +194,10 @@ python3 <storm>/tools/push_gate.py run -- git push origin HEAD:<branch>
 
 `<storm>` is the storm root, the directory that holds `storm.toml`: `<home>/qwenstorm-3.0.0`
 under the storm home (see [Where your work lives](#where-your-work-lives-and-how-often-it-is-saved);
-on the operator's Mac, `~/git/vibey-storm/qwenstorm-3.0.0`). From a checkout with no storm, use
-the tracked copy and name the machine's shared lock, `<home>/.push-lock`:
+on the operator's Mac, `~/git/vibey-storm/qwenstorm-3.0.0`). It must be on a durable path, never
+under a temporary directory such as `/tmp` or `/private/tmp`: a reboot wipes those, and on
+2026-09-24 one took the storm's lock and state with it. From a checkout with no storm, use the
+tracked copy and name the machine's shared lock, `<home>/.push-lock`:
 `VIBEY_PUSH_LOCK=<home>/.push-lock python3 docs/plans/qwenstorm-3.0.0/tools/push_gate.py run -- git push …`.
 Run from a checkout without a named lock, the tool refuses. A lock derived there would be
 private to that checkout and would exclude nobody.

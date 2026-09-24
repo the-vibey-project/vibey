@@ -151,6 +151,7 @@ class ReviewedGrant:
 
     def _git(self, *args: str) -> str:
         try:
+            # push-gate: not a push (reads the integration branch's reviewed history)
             done = subprocess.run(
                 ["git", "-C", str(self.repo), *args], capture_output=True, text=True, timeout=60
             )
