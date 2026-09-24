@@ -127,8 +127,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   takes it out of the lane, which is always the jobs bumped by name plus their unfinished
   dependencies, so nothing is left behind; it is refused while another named job needs it.
   A named job that ends cancelled or failed is swept out with what it alone pulled in by
-  the project's next bump or un-bump, recorded; a job in a phase this vibey does not know
-  is left in place and named rather than refusing the request.
+  the project's next admitted bump or un-bump, recorded (a refused request changes
+  nothing); a job this vibey cannot write -- an unknown phase or state -- is left in place
+  with everything it still needs, and named, rather than refusing the request. The lane is
+  derived through a dependency in an unknown state, so a job a live named job needs is
+  never swept past it. `tests/meta/test_migration_drops.py` reads SQL as PostgreSQL lexes
+  it -- comments, strings, `DO` bodies and `EXECUTE` strings -- and also catches renamed
+  and retyped columns and tables taken away; the ADR sentence must name the workers to drain.
   `vibey queue list [PROJECT]` shows the queue in claim order with every bump marked;
   `vibey design resume PROJECT --priority` enqueues the interview bumped. The claim orders
   `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so the order among
