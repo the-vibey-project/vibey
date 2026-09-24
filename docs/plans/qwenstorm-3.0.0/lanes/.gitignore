@@ -1,0 +1,6 @@
+# The storm's lane clones. Run from a repository checkout, storm_paths.storm() is this
+# plans directory, so lane-setup.sh clones every lane here: full repositories, each with
+# its own .git, which `git add -A` would sweep into a commit as embedded repositories.
+# They are runtime, never record; the record is the ledgers beside this directory.
+*
+!.gitignore

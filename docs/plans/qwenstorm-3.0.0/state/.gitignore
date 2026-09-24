@@ -1,0 +1,6 @@
+# The watchdog's per-attempt state (lane_watchdog.py): each attempt's spec, which carries
+# the fenced plan, is written here, outside the lane's worktree, and bound by digest. Run
+# from a repository checkout this is the plans directory, so ignore everything here: an
+# attempt spec is runtime, never record.
+*
+!.gitignore
