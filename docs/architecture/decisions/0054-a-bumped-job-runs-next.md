@@ -102,7 +102,10 @@ locks is the closure that holds after.
 
 **What cannot be moved is reported.** A dependency that cannot run and cannot be moved —
 failed, cancelled, or in a state this version does not know — is listed as blocking the
-target, not skipped over; the target still cannot run until someone resolves it.
+target, not skipped over; the target still cannot run until someone resolves it. The
+storm's queue refuses such a push outright — an abandoned, unknown or cyclic dependency
+stops it (#1089). Both keep the contract: neither moves a job past a dependency it cannot
+satisfy, and both say which dependency stands in the way.
 
 **An un-bump sends back what cannot run without it.** Because a bumped job cannot run before
 its dependencies, un-bumping a dependency also un-bumps every bumped job that depends on it
