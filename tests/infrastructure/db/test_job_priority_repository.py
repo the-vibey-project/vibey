@@ -232,8 +232,10 @@ async def test_the_closure_stops_at_finished_rows_and_never_locks_past_them(
 
     async with migrated_pool.acquire() as holder, holder.transaction():
         await holder.execute("SELECT 1 FROM job WHERE id = $1 FOR UPDATE", beyond)
+        # A bump that locked `beyond` would wait for as long as the holder lives, so any
+        # finite bound proves it did not; 5s tripped under a loaded pre-push run.
         change = await asyncio.wait_for(
-            store.bump(target, context=_context(project_id), at=AT), timeout=5
+            store.bump(target, context=_context(project_id), at=AT), timeout=60
         )
 
     assert [m.job_id for m in change.moved] == [target]
@@ -405,6 +407,8 @@ async def test_a_bump_appends_one_event_naming_who_asked_and_everything_moved(
         "kept": [],
         "named": False,
         "note": "",
+        "removed": [],
+        "skipped": [],
     }
 
 
@@ -606,6 +610,56 @@ async def test_the_reviewers_sequence_leaves_no_orphan_and_records_what_it_clear
         if e.kind is EventKind.JOB_PRIORITY_UNBUMPED
     ]
     assert removed == [[str(a)], [str(m.job_id) for m in second.moved]]
+
+
+@pytest.mark.parametrize("request_kind", ["bump another job", "unbump a job not bumped"])
+async def test_a_cancelled_named_job_leaves_nothing_behind_after_the_next_request(
+    migrated_pool: asyncpg.Pool, project_id: UUID, request_kind: str
+) -> None:
+    """Finding 2: enqueue d, enqueue a(d), bump a, cancel a. The next request of any kind
+    sweeps d -- the lane no longer derives it -- and its event lists d as removed."""
+    repo = PostgresJobRepository(migrated_pool)
+    store = PostgresJobPriorityStore(migrated_pool)
+    d, x = await _enqueue(repo, project_id, "d", "x")
+    a = (await repo.enqueue(_request(project_id, "a", depends_on=(d,)))).id
+    await store.bump(a, context=_context(project_id), at=AT)
+    await _set_state(migrated_pool, a, "cancelled")
+
+    if request_kind == "bump another job":
+        change = await store.bump(x, context=_context(project_id), at=AT)
+    else:
+        change = await store.unbump(x, context=_context(project_id), at=AT)
+
+    assert [m.job_id for m in change.swept] == [d]
+    record = await repo.get(d)
+    assert record is not None and record.bump_seq is None and not record.bump_named
+    assert (await _events(migrated_pool, project_id))[-1].payload["removed"] == [str(d)]
+
+
+async def test_an_unbump_leaves_a_job_in_an_unknown_phase_and_records_it(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    """Finding 4: a pulled job in a phase this vibey does not know is never written, and
+    no longer refuses the whole un-bump: it is left, and the record names it."""
+    repo = PostgresJobRepository(migrated_pool)
+    store = PostgresJobPriorityStore(migrated_pool)
+    (d,) = await _enqueue(repo, project_id, "d")
+    a = (await repo.enqueue(_request(project_id, "a", depends_on=(d,)))).id
+    await store.bump(a, context=_context(project_id), at=AT)
+    async with migrated_pool.acquire() as conn:
+        await conn.execute("ALTER TYPE phase ADD VALUE IF NOT EXISTS 'triage'")
+    async with migrated_pool.acquire() as conn:
+        await conn.execute("UPDATE job SET phase = 'triage' WHERE id = $1", d)
+
+    change = await store.unbump(a, context=_context(project_id), at=AT)
+
+    assert [m.job_id for m in change.moved] == [a]
+    assert change.skipped == (d,)
+    assert "left in the lane" in change.note
+    event = (await _events(migrated_pool, project_id))[-1]
+    assert event.payload["skipped"] == [str(d)]
+    async with migrated_pool.acquire() as conn:
+        assert await conn.fetchval("SELECT bump_seq FROM job WHERE id = $1", d) is not None
 
 
 async def test_unbumping_a_job_a_bumped_job_needs_is_refused_naming_it(

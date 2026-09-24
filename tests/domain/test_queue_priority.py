@@ -387,15 +387,16 @@ def test_a_dependency_that_finishes_mid_sequence_leaves_the_lane_quietly() -> No
 
 
 def test_an_unbump_clears_every_pulled_job_nothing_named_still_needs() -> None:
-    # 5 is a pulled job no named job needs (its puller finished some other way): the
-    # next un-bump re-derives the lane and clears it too.
+    # 5 is a pulled job no named job needs (its puller ended some other way): the next
+    # un-bump re-derives the lane and sweeps it too, apart from what it itself released.
     jobs = _index(
         _job(1, bump_seq=1, named=False),
         _job(3, bump_seq=2, deps=(1,)),
         _job(5, bump_seq=3, named=False),
     )
-    assert set(UNBUMP_PLANNER.plan(_id(3), jobs).moved) == {_id(1), _id(3), _id(5)}
-    assert UNBUMP_PLANNER.plan(_id(3), jobs).moved[0] == _id(3)
+    plan = UNBUMP_PLANNER.plan(_id(3), jobs)
+    assert plan.moved == (_id(3), _id(1))
+    assert plan.swept == (_id(5),)
 
 
 def test_unbumping_a_job_a_bumped_job_needs_is_refused_naming_the_dependents() -> None:
@@ -419,12 +420,60 @@ def test_a_finished_or_missing_target_cannot_be_unbumped() -> None:
         UNBUMP_PLANNER.plan(_id(1), _index())
 
 
-def test_an_unbump_never_writes_a_job_in_an_unknown_phase() -> None:
+def test_an_unbump_leaves_a_job_in_an_unknown_phase_and_says_so() -> None:
+    """Finding 4: one unknown-phase job it would clear must not refuse the whole request;
+    it is left where it is, never written, and named as skipped."""
     jobs = _index(
-        _job(1, bump_seq=1, named=False, phase_known=False), _job(2, bump_seq=2, deps=(1,))
+        _job(1, bump_seq=1, named=False, phase_known=False),
+        _job(2, bump_seq=2, deps=(1,)),
+        _job(3, bump_seq=3),
     )
-    with pytest.raises(NotReorderable, match="phase"):
-        UNBUMP_PLANNER.plan(_id(2), jobs)
+    plan = UNBUMP_PLANNER.plan(_id(2), jobs)
+    assert plan.moved == (_id(2),)
+    assert plan.skipped == (_id(1),)
+    # An unknown-phase orphan outside the target's closure does not block either.
+    other = UNBUMP_PLANNER.plan(_id(3), jobs)
+    assert other.moved == (_id(3),) and other.skipped == ()
+
+
+# -- a named job that ends without finishing its dependencies (finding 2) ----------------
+
+
+def _orphaned() -> Mapping[UUID, QueuedJob]:
+    """d (1) was pulled in for a (2); a was then cancelled. x (3) is a plain job."""
+    return _index(
+        _job(1, bump_seq=1, named=False),
+        _job(2, bump_seq=2, deps=(1,), state=JobState.CANCELLED),
+        _job(3),
+    )
+
+
+def test_any_bump_sweeps_what_a_cancelled_named_job_left_behind() -> None:
+    plan = BUMP_PLANNER.plan(_id(3), _orphaned())
+    assert plan.moved == (_id(3),)
+    assert plan.swept == (_id(1),)
+    finished = BUMP_PLANNER.plan(_id(2), _orphaned(), finished_ok=True)
+    assert finished.moved == () and finished.swept == (_id(1),)
+
+
+def test_an_unbump_of_a_job_that_is_not_bumped_still_sweeps() -> None:
+    plan = UNBUMP_PLANNER.plan(_id(3), _orphaned())
+    assert plan.moved == ()
+    assert plan.swept == (_id(1),)
+
+
+def test_a_bump_keeps_an_orphan_it_needs_rather_than_sweeping_it() -> None:
+    jobs = dict(_orphaned())
+    jobs[_id(4)] = _job(4, deps=(1,))
+    plan = BUMP_PLANNER.plan(_id(4), jobs)
+    assert plan.moved == (_id(4),) and plan.kept == (_id(1),) and plan.swept == ()
+
+
+def test_a_sweep_skips_a_job_in_an_unknown_phase() -> None:
+    jobs = dict(_orphaned())
+    jobs[_id(1)] = _job(1, bump_seq=1, named=False, phase_known=False)
+    plan = BUMP_PLANNER.plan(_id(3), jobs)
+    assert plan.swept == () and plan.skipped == (_id(1),)
 
 
 # -- the records a change leaves behind -------------------------------------------------------
@@ -561,15 +610,19 @@ class _Lane:
         )
 
     def bump(self, target: UUID) -> tuple[UUID, ...]:
+        """As the store bumps: a finished target is a recorded no-op (which still sweeps),
+        and a refusal changes nothing."""
         try:
-            plan = BUMP_PLANNER.plan(target, self.jobs)
-        except NotReorderable:
+            plan = BUMP_PLANNER.plan(target, self.jobs, finished_ok=True)
+        except (NotReorderable, DependencyCannotFinish):
             return ()
         for moving in plan.moved:
             self.seq += 1
             self._set(moving, seq=self.seq, named=moving == target)
         if plan.named:
             self._set(target, seq=self.jobs[target].bump_seq, named=True)
+        for gone in plan.swept:
+            self._set(gone, seq=None, named=False)
         return plan.moved
 
     def unbump(self, target: UUID) -> tuple[UUID, ...] | None:
@@ -577,9 +630,18 @@ class _Lane:
             plan = UNBUMP_PLANNER.plan(target, self.jobs)
         except (DependentsStillBumped, NotReorderable):
             return None
-        for moving in plan.moved:
+        for moving in (*plan.moved, *plan.swept):
             self._set(moving, seq=None, named=False)
         return plan.moved
+
+    def end(self, job_id: UUID, state: JobState) -> bool:
+        """End an unfinished job without it succeeding -- cancelled, or failed out of
+        attempts -- whatever its dependencies are doing."""
+        job = self.jobs[job_id]
+        if not job.movable:
+            return False
+        self._set(job_id, seq=job.bump_seq, named=job.bump_named, state=state)
+        return True
 
     def finish(self, job_id: UUID) -> bool:
         """Run a job to success, as a worker would -- only once its dependencies have."""
@@ -651,6 +713,18 @@ class QueueMachine(RuleBasedStateMachine):
     def finish(self, pick: int) -> None:
         """A dependency (or any job) finishing part-way through the sequence."""
         self.lane.finish(self._pick(pick))
+
+    @rule(
+        pick=st.integers(min_value=0, max_value=100),
+        state=st.sampled_from([JobState.CANCELLED, JobState.FAILED]),
+    )
+    def end(self, pick: int, state: JobState) -> None:
+        """A job -- a named one included -- cancelled or failed with its dependencies
+        unfinished. The next request, here a recorded no-op bump of the ended job itself,
+        sweeps what the lane no longer derives; the invariants run after it."""
+        job = self._pick(pick)
+        if self.lane.end(job, state):
+            self.lane.bump(job)
 
     @invariant()
     def the_lane_is_its_derivation(self) -> None:

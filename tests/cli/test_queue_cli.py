@@ -529,3 +529,23 @@ def test_a_row_this_vibey_cannot_claim_is_marked_and_given_no_place() -> None:
     jobs = json.loads(QueuePresenter().entries_json(UUID(int=8), entries))["jobs"]
     assert [j["position"] for j in jobs] == [1, None, None, 2]
     assert [j["claimable_here"] for j in jobs] == [True, False, False, True]
+
+
+def test_the_presenter_says_what_a_request_swept_and_what_it_left() -> None:
+    target, gone, left = UUID(int=3), UUID(int=1), UUID(int=2)
+    change = PriorityChange(
+        action=PriorityAction.UNBUMP,
+        requested_by="operator:adam",
+        target=target,
+        moved=(),
+        note="it is not bumped; nothing moved",
+        swept=(MovedJob(job_id=gone, bump_seq=None, previous=4),),
+        skipped=(left,),
+    )
+    lines = QueuePresenter().change(change)
+    assert lines[0].startswith(f"job {target}: it is not bumped")
+    assert any(str(gone) in line and "no longer needed" in line for line in lines)
+    assert any(str(left) in line and "phase" in line for line in lines)
+    document = json.loads(QueuePresenter().change_json(change))
+    assert document["swept"] == [{"job_id": str(gone), "bump_seq": None, "previous": 4}]
+    assert document["skipped"] == [str(left)]

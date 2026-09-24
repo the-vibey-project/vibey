@@ -105,14 +105,38 @@ overwrote.
 
 **The lane is derived (item 6).** `bump_named` replaced 0014's `bump_origin` in
 `migrations/0015_job_bump_named.sql`, which also clears any pulled job the per-bump rule had
-left in the lane with nothing named needing it. An un-bump takes the target out of the named set and, in
-the same transaction, clears `bump_seq` on every pulled job the remaining named jobs no
-longer need -- wherever it came from -- so the lane afterwards is exactly its derivation.
-A job pulled in and later bumped by name keeps its number and joins the named set. A
-property test (a Hypothesis state machine) drives random, overlapping bumps and un-bumps,
-including the sequence that exposed the orphan in the per-bump rule (x, d, a needing d, b
-needing d: bump a, bump b, un-bump a, un-bump b), and asserts after every step that the
-lane equals the derivation, and that un-bumping every named job clears it.
+left in the lane with nothing named needing it. An un-bump takes the target out of the
+named set and, in the same transaction, clears `bump_seq` on every pulled job the remaining
+named jobs no longer need -- wherever it came from -- so the lane afterwards is exactly its
+derivation. A job pulled in and later bumped by name keeps its number and joins the named
+set. A named job that ends cancelled or failed leaves the named set by derivation (only an
+unfinished named job is live), so the pulled jobs it alone needed are orphans until
+something clears them: every bump and every un-bump -- an un-bump of a job that is not
+bumped included -- sweeps each lane member that is no longer derived, lists it in the
+event's `removed`, and says so in its output. A job the sweep or an un-bump would clear
+but that sits in a phase this vibey does not know is left in the lane, unwritten, and named
+in the event's `skipped` with a note; it does not refuse the request. A property test (a
+Hypothesis state machine) drives random, overlapping bumps and un-bumps and cancels or
+fails named jobs, including the sequence that exposed the orphan in the per-bump rule (x,
+d, a needing d, b needing d: bump a, bump b, un-bump a, un-bump b), and asserts after every
+step -- a cancel or failure followed by the next request -- that the lane equals the
+derivation, and that un-bumping every named job clears it.
+
+**Known gap: 0015's clearing is not on the ledger.** The orphans 0015 clears change
+priority state without a `JobPriorityUnbumped` event, so a replay of the ledger over a
+database that held such an orphan puts it back in the lane where the table has it out. A
+migration cannot write the correcting event faithfully: the event's digest over its
+canonical JSON, its delivery correlation id and its redaction are computed by vibey's
+writer, not by SQL, and once 0015 has run nothing records which rows it cleared, so the
+events cannot be reconstructed afterwards either. 0015 is merged and may already have been
+applied (a push to `develop` publishes `vibey-dev`), and editing an applied migration forks
+the schema history, so the gap is recorded here rather than closed. It is bounded: it
+touches only orphans the 0014 rule left before 0015 ran, and from 0015 on every lane
+change, sweeps included, is recorded.
+
+**Replaying `design resume --priority`.** The flag bumps the resumed job by name, so a
+replay of that command after the operator has un-bumped the job bumps it again. That is
+the command doing what it says, not a lost un-bump; both requests are in the ledger.
 
 **The claim stays strict.** The claim selects only jobs in a phase this vibey knows, and
 every `PostgresJobRepository` read maps `phase` and `state` strictly, as it always did: a
@@ -233,9 +257,16 @@ take a run away from the worker holding it.
 claims — and every other write to `job` — stall until it commits, for as long as building
 the index over the table's ready rows takes. A worker still running the previous release
 then claims by the old order and ignores `bump_seq` until it is replaced: during a rolling
-upgrade a bump is honoured by the new workers only. Old workers neither read nor write the
-new columns, so the migration is safe under them, but "runs next" holds once every worker
-runs this release.
+upgrade a bump is honoured by the new workers only. 0014 is additive, so it is safe under
+workers of the release before it. **`migrations/0015_job_bump_named.sql` is not: it drops
+`bump_origin`, which a worker
+built with 0014 but not 0015 maps from every `SELECT *` and `RETURNING *` on `job`, so that
+worker fails every job read once 0015 commits. Every worker from a build before 0015 must
+be drained or replaced before 0015 runs.** "Runs next" holds once every worker runs this
+release. The next change that removes a column should expand then contract: stop reading
+it in one release, drop it in a later one. `tests/meta/test_migration_drops.py` fails any
+migration that drops a column unless an ADR names that migration and says what must be
+drained first.
 
 Anything that rewrites the claim statement must keep `bump_seq ASC NULLS LAST` at the head
 of its order and the known-phase filter. The repository tests pin the claim's order against

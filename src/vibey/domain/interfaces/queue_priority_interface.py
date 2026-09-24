@@ -138,6 +138,16 @@ class BumpPlanInterface(Protocol):
     @property
     def named(self) -> bool: ...
 
+    @property
+    def swept(self) -> tuple[UUID, ...]:
+        """Lane members no longer derived, cleared by this request."""
+        ...
+
+    @property
+    def skipped(self) -> tuple[UUID, ...]:
+        """Jobs it would clear but leaves alone: their phase is unknown to this vibey."""
+        ...
+
 
 @runtime_checkable
 class UnbumpPlanInterface(Protocol):
@@ -146,6 +156,12 @@ class UnbumpPlanInterface(Protocol):
 
     @property
     def moved(self) -> tuple[UUID, ...]: ...
+
+    @property
+    def swept(self) -> tuple[UUID, ...]: ...
+
+    @property
+    def skipped(self) -> tuple[UUID, ...]: ...
 
 
 @runtime_checkable
@@ -184,6 +200,12 @@ class PriorityChangeInterface(Protocol):
 
     @property
     def note(self) -> str: ...
+
+    @property
+    def swept(self) -> tuple[MovedJob, ...]: ...
+
+    @property
+    def skipped(self) -> tuple[UUID, ...]: ...
 
     @property
     def changed(self) -> bool:

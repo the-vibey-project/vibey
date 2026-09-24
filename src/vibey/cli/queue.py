@@ -113,7 +113,10 @@ class QueuePresenter:
 
     def change(self, change: PriorityChangeInterface) -> list[str]:
         if not change.changed:
-            return [f"job {change.target}: {change.note} (recorded; by {change.requested_by})"]
+            return [
+                f"job {change.target}: {change.note} (recorded; by {change.requested_by})",
+                *self._aftermath(change),
+            ]
         verb = "un-bumped" if change.action is PriorityAction.UNBUMP else "bumped"
         lines = [f"{verb} job {change.target} (by {change.requested_by})"]
         if change.named:
@@ -126,6 +129,19 @@ class QueuePresenter:
             lines.append(f"  moved    {place:<9} {moved.job_id}")
         for kept in change.kept:
             lines.append(f"  ahead    {'':<9} {kept}  (already bumped; keeps its place)")
+        return [*lines, *self._aftermath(change)]
+
+    @staticmethod
+    def _aftermath(change: PriorityChangeInterface) -> list[str]:
+        """What the request also cleared, and what it could not."""
+        lines = [
+            f"  swept    was #{m.previous:<5} {m.job_id}  (no longer needed by any named job)"
+            for m in change.swept
+        ]
+        lines += [
+            f"  left     {'':<9} {job_id}  (in a phase this vibey does not know; not written)"
+            for job_id in change.skipped
+        ]
         return lines
 
     def change_json(self, change: PriorityChangeInterface) -> str:
@@ -142,6 +158,11 @@ class QueuePresenter:
                     for m in change.moved
                 ],
                 "kept": [str(job_id) for job_id in change.kept],
+                "swept": [
+                    {"job_id": str(m.job_id), "bump_seq": m.bump_seq, "previous": m.previous}
+                    for m in change.swept
+                ],
+                "skipped": [str(job_id) for job_id in change.skipped],
             },
             indent=2,
         )

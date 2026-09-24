@@ -96,6 +96,9 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   with it; a dependency that can never finish refuses the bump. `vibey queue unbump JOB`
   takes it out of the lane, which is always the jobs bumped by name plus their unfinished
   dependencies, so nothing is left behind; it is refused while another named job needs it.
+  A named job that ends cancelled or failed is swept out with what it alone pulled in by
+  the project's next bump or un-bump, recorded; a job in a phase this vibey does not know
+  is left in place and named rather than refusing the request.
   `vibey queue list [PROJECT]` shows the queue in claim order with every bump marked;
   `vibey design resume PROJECT --priority` enqueues the interview bumped. The claim orders
   `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so the order among
@@ -107,6 +110,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   way to reorder work; the KEDA scaler counts only jobs in a phase this release claims.
   The migration's index rebuild stalls claims until it commits, and during a rolling
   upgrade workers still on the previous release ignore bumps until they are replaced.
+  **Upgrade note:** `migrations/0015_job_bump_named.sql` drops `job.bump_origin`, so every
+  worker from a build before 0015 must be drained or replaced before 0015 runs; a worker
+  still on such a build fails every job read once it commits. The orphans 0015 clears are
+  not recorded on the ledger (ADR-0054, known gap).
 * **vibey_gh:** `vibey-gh approve-check PR [--head SHA] [--approve]` enforces the delegated approver's grant
   by code (sub-doctrines 12.f, 12.j): it exits 0 only when every `[unattended_approval]`
   condition holds — live switch, author allowlist (`@codeowners` expanded), branch globs,
