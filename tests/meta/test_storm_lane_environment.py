@@ -38,7 +38,11 @@ _SPEC.loader.exec_module(lane_environment)
 LaneEnvironment = lane_environment.LaneEnvironment
 ForeignEnvironment = lane_environment.ForeignEnvironment
 
-BIN = "Scripts" if os.name == "nt" else "bin"
+# The storm runs on macOS; the tool refuses any non-POSIX platform outright, and these tests
+# build POSIX venvs (`bin/`, shell-script stand-ins) to prove it.
+pytestmark = pytest.mark.skipif(os.name != "posix", reason="the storm is POSIX-only")
+
+BIN = "bin"
 PRINT_PREFIX = ["python", "-c", "import sys; print(sys.prefix)"]
 
 
@@ -217,7 +221,6 @@ def test_a_path_that_resolves_python_elsewhere_is_refused(lane: Path, foreign: P
         LaneEnvironment(lane).verify(env)
 
 
-@pytest.mark.skipif(os.name == "nt", reason="a POSIX shell script stands in for python")
 def test_a_lane_python_that_runs_another_interpreter_is_refused(lane: Path, foreign: Path) -> None:
     """Resolving the name is not enough: the interpreter it runs must be the lane's too."""
     impostor = lane / ".venv" / BIN / "python"
@@ -315,3 +318,143 @@ def test_qwenlane_refuses_a_lane_without_its_own_venv_before_the_model_runs(
     result = json.loads((bare / ".qwenstorm" / "result.json").read_text(encoding="utf-8"))
     assert result["completed"] is False
     assert "no .venv of its own" in result["environment_refused"]
+
+
+# --- relative PATH entries, the other tools a lane runs, and the platform -------------------
+
+
+def executable(where: Path, body: str = "#!/bin/sh\nexit 0\n") -> Path:
+    where.parent.mkdir(parents=True, exist_ok=True)
+    where.write_text(body)
+    where.chmod(0o755)
+    return where
+
+
+def resolved_in_lane(lane: Path, env: dict[str, str], name: str) -> str:
+    """Where `name` resolves for a command run the way the shell tool runs it: cwd=lane."""
+    done = subprocess.run(
+        ["/bin/sh", "-c", f"command -v {name} || true"],
+        cwd=lane,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return done.stdout.strip()
+
+
+def test_a_relative_path_entry_into_a_foreign_venv_is_dropped(
+    tmp_path: Path, lane: Path, foreign: Path
+) -> None:
+    """`../../other/.venv/bin` is resolved from the lane, the directory commands run in."""
+    other = make_venv(tmp_path / "other" / ".venv")
+    pytest_there = executable(other / BIN / "pytest")
+    relative = os.path.relpath(other / BIN, lane)
+    assert not os.path.isabs(relative) and relative.startswith("..")
+    base = inherited(foreign)
+    base["PATH"] = os.pathsep.join([relative, base["PATH"]])
+    before = resolved_in_lane(lane, base, "pytest")
+    assert Path(before).resolve() == pytest_there.resolve(), "the fixture must leak"
+    env = LaneEnvironment(lane).build(base)
+    assert relative not in env["PATH"].split(os.pathsep)
+    assert all(os.path.isabs(e) for e in env["PATH"].split(os.pathsep))
+    after = resolved_in_lane(lane, env, "pytest")
+    assert not after or LaneEnvironment(lane).inside(Path(after).parent), after
+
+
+def test_a_relative_path_entry_outside_any_venv_but_outside_the_lane_is_dropped(
+    tmp_path: Path, lane: Path, foreign: Path
+) -> None:
+    (tmp_path / "loose").mkdir()
+    base = inherited(foreign)
+    base["PATH"] = os.pathsep.join([os.path.relpath(tmp_path / "loose", lane), base["PATH"]])
+    entries = LaneEnvironment(lane).build(base)["PATH"].split(os.pathsep)
+    assert str(tmp_path / "loose") not in entries
+    assert os.path.relpath(tmp_path / "loose", lane) not in entries
+
+
+def test_a_relative_path_entry_inside_the_lane_is_kept_absolute(lane: Path, foreign: Path) -> None:
+    base = inherited(foreign)
+    base["PATH"] = os.pathsep.join(["tools", base["PATH"]])
+    entries = LaneEnvironment(lane).build(base)["PATH"].split(os.pathsep)
+    assert str(lane / "tools") in entries
+    assert "tools" not in entries
+
+
+def test_relative_interpreter_variables_are_resolved_from_the_lane(
+    tmp_path: Path, lane: Path, foreign: Path
+) -> None:
+    outside = os.path.relpath(tmp_path / "other" / "lib", lane)
+    env = LaneEnvironment(lane).build(
+        inherited(foreign, PYTHONPATH=os.pathsep.join([outside, "src"]))
+    )
+    assert env["PYTHONPATH"] == "src", "the relative entry inside the lane stays"
+    env = LaneEnvironment(lane).build(
+        inherited(foreign, UV_PROJECT_ENVIRONMENT=os.path.relpath(foreign, lane))
+    )
+    assert "UV_PROJECT_ENVIRONMENT" not in env
+    env = LaneEnvironment(lane).build(inherited(foreign, UV_PROJECT_ENVIRONMENT=".venv"))
+    assert env["UV_PROJECT_ENVIRONMENT"] == ".venv"
+
+
+def test_verify_refuses_a_relative_entry_that_exposes_a_foreign_pytest(
+    tmp_path: Path, lane: Path, foreign: Path
+) -> None:
+    """python is shadowed by the lane venv; the tool that would still leak is checked too."""
+    other = make_venv(tmp_path / "other" / ".venv")
+    executable(other / BIN / "pytest")
+    env = LaneEnvironment(lane).build(inherited(foreign))
+    env["PATH"] = os.pathsep.join([env["PATH"], os.path.relpath(other / BIN, lane)])
+    with pytest.raises(ForeignEnvironment, match="`pytest` resolves"):
+        LaneEnvironment(lane).verify(env)
+
+
+def test_verify_refuses_a_pip_in_a_foreign_environment(
+    tmp_path: Path, lane: Path, foreign: Path
+) -> None:
+    executable(foreign / BIN / "pip")
+    env = LaneEnvironment(lane).build(inherited(foreign))
+    env["PATH"] = os.pathsep.join([env["PATH"], str(foreign / BIN)])
+    with pytest.raises(ForeignEnvironment, match="`pip` resolves"):
+        LaneEnvironment(lane).verify(env)
+
+
+def test_verify_follows_a_console_script_symlinked_out_of_a_foreign_venv(
+    tmp_path: Path, lane: Path, foreign: Path
+) -> None:
+    """pipx's shape: ~/.local/bin/pytest -> <a venv>/bin/pytest runs in that venv."""
+    real = executable(foreign / BIN / "pytest")
+    shims = tmp_path / "home" / ".local" / "bin"
+    shims.mkdir(parents=True)
+    (shims / "pytest").symlink_to(real)
+    base = inherited(foreign)
+    base["PATH"] = os.pathsep.join([str(shims), base["PATH"]])
+    env = LaneEnvironment(lane).build(base)
+    with pytest.raises(ForeignEnvironment, match="`pytest` resolves"):
+        LaneEnvironment(lane).verify(env)
+
+
+def test_verify_accepts_tools_in_the_lane_or_at_a_plain_system_location(
+    tmp_path: Path, lane: Path, foreign: Path
+) -> None:
+    """The lane's own pytest, and a uv that is a native binary -- even one a uv-tool venv holds."""
+    executable(lane / ".venv" / BIN / "pytest")
+    system = tmp_path / "usr-local" / "bin"
+    executable(system / "pip3")
+    tool_venv = make_venv(tmp_path / "home" / ".local" / "share" / "uv" / "tools" / "uv")
+    uv_binary = executable(tool_venv / BIN / "uv")
+    shims = tmp_path / "home" / ".local" / "bin"
+    shims.mkdir(parents=True)
+    (shims / "uv").symlink_to(uv_binary)
+    base = inherited(foreign)
+    base["PATH"] = os.pathsep.join([str(shims), str(system), base["PATH"]])
+    env = LaneEnvironment(lane).build(base)
+    assert LaneEnvironment(lane).verify(env) == lane / ".venv" / BIN / "python"
+
+
+def test_a_non_posix_platform_is_refused_outright(
+    monkeypatch: pytest.MonkeyPatch, lane: Path, foreign: Path
+) -> None:
+    monkeypatch.setattr(LaneEnvironment, "platform", "nt")
+    with pytest.raises(ForeignEnvironment, match="POSIX"):
+        LaneEnvironment(lane).enter(inherited(foreign))

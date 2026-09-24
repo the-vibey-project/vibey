@@ -17,9 +17,18 @@ Nothing chose that. It was inherited, one hop at a time:
 
 `lane-setup.sh` gives every lane its own `.venv`; nothing ever put it in front.
 
+POSIX ONLY
+----------
+The storm runs on macOS. This assumes a POSIX venv (`bin/python`, `bin/python3`) and says
+so: on any other platform `verify()` refuses the lane outright rather than half-supporting
+a layout it has never been run against.
+
 THE RULE
 --------
-Nothing a lane's command inherits may point outside the lane's workspace. That is derived,
+Nothing a lane's command inherits may point outside the lane's workspace. A relative path is
+read the way a lane's command reads it -- from the lane, the directory every command runs in
+-- so `../other/.venv/bin` on PATH is judged by where it lands, not by how it is spelled. That
+is derived,
 not a denylist of one path (12.h): a PATH entry is dropped because the directory IS a Python
 environment's `bin/` -- it sits beside a `pyvenv.cfg` or a `conda-meta/` -- and lies outside
 the lane, not because it is spelled like the operator's. The variables that choose an
@@ -34,6 +43,14 @@ Cleaning an environment is a claim; `verify()` is the evidence. Before a lane st
 rather than letting it run and report on somebody else's tree. A lane with no `.venv` of its
 own -- `lane-setup.sh` only warns when `uv sync` fails -- is refused the same way.
 
+python is not the only way back out: the lane venv shadows it, and a foreign `pytest` or
+`pip` further down PATH would not be shadowed if the lane has none of its own. So the other
+tools a lane runs are resolved too, and each must land inside the lane or somewhere that is
+not a Python environment. A console script (`pip`, `pytest`) runs in the environment it is
+installed in, so its symlink is followed -- pipx's `~/.local/bin/pytest` is a foreign venv's
+pytest. `uv` is a native binary that chooses the interpreter from the project, not from where
+it is installed, so its symlink is not followed (a `uv tool install`ed uv lives in a venv).
+
 A class, per sub-doctrine 9.b, with its declaration beside it in
 `interfaces/lane_environment_interface.py`. Underscored because it is imported, not run.
 """
@@ -46,7 +63,7 @@ import subprocess
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
-BIN = "Scripts" if os.name == "nt" else "bin"
+BIN = "bin"
 
 
 class ForeignEnvironment(RuntimeError):
@@ -77,6 +94,11 @@ class LaneEnvironment:
     CONDA_FAMILY = "CONDA_"
     # It labels whichever venv VIRTUAL_ENV used to name; left behind, it would lie.
     DROPPED = frozenset({"VIRTUAL_ENV_PROMPT"})
+    # The tools a lane runs besides python, and whether each runs in the environment it is
+    # installed in (a console script: follow its symlink) or not (a native binary).
+    TOOLS = {"pip": True, "pip3": True, "pytest": True, "uv": False}
+    # The platform this was written for and has been run on; anything else is refused.
+    platform = os.name
 
     def __init__(self, lane: Path) -> None:
         self.lane = lane.absolute()
@@ -104,29 +126,46 @@ class LaneEnvironment:
                 del env[name]
             elif name in self.INTERPRETER_VARIABLES:
                 self._confine(env, name)
-        kept = [
-            entry
-            for entry in env.get("PATH", "").split(os.pathsep)
-            if entry
-            and entry not in activated
-            and not self._foreign_environment_bin(entry)
-            and Path(entry) != self.bin
-        ]
+        kept: list[str] = []
+        for entry in env.get("PATH", "").split(os.pathsep):
+            if not entry:
+                continue
+            if not os.path.isabs(entry):
+                # A lane's commands run with cwd=lane, so that is where this entry points.
+                # Written absolute so it means the same thing from any directory, and
+                # dropped when it lands outside the lane at all.
+                entry = str(self.lane / entry)
+                if not self.inside(entry):
+                    continue
+            if (
+                entry in activated
+                or self._python_environment_bin(Path(entry))
+                or Path(entry) == self.bin
+                or entry in kept
+            ):
+                continue
+            kept.append(entry)
         env["PATH"] = os.pathsep.join([str(self.bin), *kept])
         env["VIRTUAL_ENV"] = str(self.venv)
         return env
 
     def verify(self, env: Mapping[str, str]) -> Path:
         """The lane's python under `env`, or `ForeignEnvironment` saying where it went instead."""
+        if self.platform != "posix":
+            raise ForeignEnvironment(
+                f"the storm is POSIX-only (macOS) and this platform is {self.platform!r}; "
+                "a lane is refused rather than run against a venv layout never tested"
+            )
         if not (self.bin / "python").exists():
             raise ForeignEnvironment(
                 f"{self.lane} has no .venv of its own ({self.bin / 'python'} is missing); "
                 "lane-setup.sh's `uv sync` failed or never ran, and without it every "
                 "`python` this lane runs would be somebody else's"
             )
+        search = self._from_lane(env.get("PATH", ""))
         python = ""
         for name in ("python3", "python"):
-            found = shutil.which(name, path=env.get("PATH", ""))
+            found = shutil.which(name, path=search)
             # The directory, not the file: a venv's python is a symlink to its base
             # interpreter, which is outside the lane by design.
             if found is None or not self.inside(Path(found).parent):
@@ -135,6 +174,18 @@ class LaneEnvironment:
                     f"(lane {self.lane}); its tests would measure another tree"
                 )
             python = found
+        for name, runs_in_its_environment in self.TOOLS.items():
+            found = shutil.which(name, path=search)
+            if found is None:
+                continue
+            homes = {Path(found).parent}
+            if runs_in_its_environment:
+                homes.add(Path(os.path.realpath(found)).parent)
+            if any(self._python_environment_bin(home) for home in homes):
+                raise ForeignEnvironment(
+                    f"`{name}` resolves outside the lane, into another Python environment: "
+                    f"{found} (lane {self.lane}); it would run and install against that tree"
+                )
         try:
             done = subprocess.run(  # nosec B603 - the lane's own interpreter, fixed argv
                 [python, "-c", "import sys; print(sys.prefix)"],
@@ -169,18 +220,27 @@ class LaneEnvironment:
         return python
 
     def _confine(self, env: dict[str, str], name: str) -> None:
-        """Keep `env[name]` only while every absolute path it names is inside the lane."""
+        """Keep `env[name]` only while every path it names is inside the lane.
+
+        A relative entry is read from the lane, as a lane's command reads it.
+        """
         entries = [entry for entry in env[name].split(os.pathsep) if entry]
-        inside = [e for e in entries if not os.path.isabs(e) or self.inside(e)]
+        inside = [e for e in entries if self.inside(self.lane / e)]
         if name == "PYTHONPATH" and inside:
             env[name] = os.pathsep.join(inside)
         elif not entries or len(inside) != len(entries):
             del env[name]
 
-    def _foreign_environment_bin(self, entry: str) -> bool:
-        """True when `entry` is the executables directory of a Python environment elsewhere."""
-        directory = Path(entry)
-        if not directory.is_absolute() or self.inside(directory):
+    def _from_lane(self, path: str) -> str:
+        """`path` with every relative entry made absolute from the lane, where commands run."""
+        return os.pathsep.join(str(self.lane / entry) for entry in path.split(os.pathsep) if entry)
+
+    def _python_environment_bin(self, directory: Path) -> bool:
+        """True when `directory` is the executables directory of a Python environment elsewhere.
+
+        Inside the lane is never "elsewhere": the lane's own venv is the one allowed.
+        """
+        if self.inside(directory):
             return False
         home = directory.parent
         return (home / "pyvenv.cfg").is_file() or (home / "conda-meta").is_dir()
