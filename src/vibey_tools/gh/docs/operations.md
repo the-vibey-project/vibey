@@ -88,15 +88,47 @@ Read: [site](<https://the-vibey-project.github.io/vibey/develop/>) · [paper PDF
 ```
 
 **Where "since" starts.** The range is a position, never a time (sub-doctrine 10.g). Every
-`Release surfaces` run is titled `<name> · <branch> · <release commit>`, and the step
-`Record the announced position` succeeds only when Discord accepted the post. The next
-develop announcement reads the Actions API for the newest successful run on its branch whose
-marker step succeeded, and announces the commits from that run's release commit to this one.
-When no such run exists (the first announcement ever, runs past `max_history_pages`, the API
-not answering), the message says `changes since: unknown (<why>) — this commit only:` and
-lists only the commit being published. A release on the release branch announces its own
-notes instead: the version's section of `CHANGELOG.md`, with the commit count and compare
-link from the previous version's tag when that tag resolves.
+`Release surfaces` run is titled `<name> · <branch> · <release commit>`. The next develop
+announcement reads the Actions API for the newest successful run on its branch whose
+`Record the announced position` step succeeded, and announces the commits from that run's
+release commit to this one. The announce step writes `posted=` and `position=` for that
+marker, and the marker runs only on `posted == 'true' && position != 'unknown'`. The
+position is one of three things, and the message says which:
+
+- **known**: the previous position was read and compared. `changes since <commit>:`. Recorded.
+- **unknown**: the history could not be READ. The Actions API errored or answered something
+  malformed, a run's jobs or the compare could not be listed, or a dispatched run named no
+  commit. The message says `changes since: unknown (<why>) — this commit only; the next
+  announcement covers the span again:`, and it is **not recorded**: the watermark stays
+  where it was, so the next announcement starts from the last recorded commit and covers
+  everything since, this commit included. An API outage delays an announcement; it never
+  loses one.
+- **re-anchored**: the history was read and holds no usable position. That covers the
+  first announcement ever; a last-announced commit that is no longer an ancestor (a
+  force-push); nothing accepted within the API's window (a status-filtered run listing stops
+  at its 1000th result, which is why `max_history_pages` stops at 10); and more than
+  `max_history_candidates` runs for the branch in a row whose announcement was not accepted.
+  Reading again would find the same thing, so the message says `re-anchored here (<why>) —
+  this commit only:` and **is recorded**, and the next announcement starts here. The commits
+  between the old position and this one are not listed, and the message says so rather than
+  claiming a range.
+
+A release on the release branch announces its own notes instead: the version's section of
+`CHANGELOG.md`, with the commit count and compare link from the previous version's tag when
+that tag resolves. A branch or tag prefix may contain `/` (`release/next`, `v/`); refs are
+URL-encoded wherever they enter an API path.
+
+**At least once, not exactly once.** A run that posted but whose marker step never ran (the
+runner died between the two, or the marker was skipped because the position was unknown) is
+not a recorded position. The next announcement covers its commits again, so a reader can see
+a change twice; that is the direction 10.g chooses, since a re-read repeats and a skip loses.
+Two things are de-duplicated by identity. A run for a commit that is already the recorded
+position (a re-run, or a replayed deploy of the same release) posts nothing and prints
+`announce: <commit> was already announced for <branch>; nothing posted`. Within one
+message, a commit is listed once. Docs jobs for one repository queue behind a single
+concurrency group and never overlap, so each announcement reads the position the previous
+one recorded. A pending docs job that GitHub cancels in favour of a newer one records
+nothing, and its commits are covered by the newer one's range.
 
 To preview a message without posting, run it from the repository root:
 

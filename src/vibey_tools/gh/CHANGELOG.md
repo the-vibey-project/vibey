@@ -13,8 +13,11 @@ This file follows Keep a Changelog and semantic versioning conventions.
   listed, and the surface links follow. The message fits Discord's 2000 characters by
   construction, and a hostile subject can neither ping nor format it. The range is the
   commits since the previous accepted announcement, read from the Actions API through each
-  run's `run-name` and the `Record the announced position` marker step. When that is unknown
-  it says so and announces the one commit; a release announces its `CHANGELOG.md` section. No
+  run's `run-name` and the `Record the announced position` marker step. A history that could
+  not be read is announced as unknown and never recorded, so the next announcement covers the
+  span again. The first announcement, a force-push, and an exhausted window re-anchor, and say
+  so. A re-run of an announced commit posts nothing. A release announces its `CHANGELOG.md`
+  section. Branches and tag prefixes may contain `/`. No
   webhook is a notice and a failed post a `::warning::`. The deploy never fails and the URL is
   never printed. New `[announce]` table; see configuration.md and operations.md.
 

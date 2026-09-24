@@ -368,10 +368,14 @@ each surface the deploy actually produced, through the optional repository secre
 message format and [configuration](configuration.md#announce) for its keys). With no secret
 set the step says so and passes, so a missing announcement is a line in the log rather than
 a silence. Nothing the step does can fail the deploy: a webhook, install or tool failure is a
-`::warning::`. The job reads its own earlier runs from the Actions API (`actions: read`), so
-every run carries a `run-name` recording its branch and release commit. The step that
-follows, `Record the announced position`, runs only when the post was accepted, and its
-success is what the next announcement starts from.
+`::warning::`. The announcer is installed by its own step, `Install the announcer`, which
+carries neither the webhook nor the token in its environment and upgrades a release that
+predates `announce` (`PIP_UPGRADE`, or the `[install] pin_version` pin). The job reads its
+own earlier runs from the Actions API (`actions: read`), so every run carries a `run-name`
+recording its branch and release commit. The step that follows, `Record the announced
+position`, runs only when the post was accepted and its position was not `unknown`. Its
+success is what the next announcement starts from. A history that could not be read is
+never recorded (see [operations](operations.md#discord_webhook_url-optional)).
 
 With `documentation.governance_source` set, the `docs` job also publishes the governance
 corpus — the Constitution, the doctrines, the commandments, the bill of rights and every

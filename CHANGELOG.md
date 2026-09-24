@@ -140,9 +140,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   character a commit subject carries, and the payload sets `allowed_mentions: {"parse": []}`.
   The range is a position (sub-doctrine 10.g). Each `Release surfaces` run records its branch
   and release commit in its `run-name`, and a `Record the announced position` step records
-  that Discord accepted the post. The next announcement starts from there, or says `changes
-  since: unknown` and lists the one commit. A release announces its `CHANGELOG.md` section
-  with the tag range. Configured by the new `[announce]` table; the inline heredoc is gone.
+  that Discord accepted the post and the position was read. The next announcement starts
+  from there. A history that could not be read is announced as `unknown` and never recorded,
+  so nothing is skipped; the first announcement, a force-push, or an exhausted window
+  re-anchors and says so. A release announces its `CHANGELOG.md` section with the tag range. Configured by the new `[announce]` table; the inline heredoc is gone.
 
 * **cli:** `vibey doctor` prints a `db-passwordless` line: `WARN` when the app DSN's database
   accepts a login with no password (trust or peer authentication) as the DSN's role or the OS

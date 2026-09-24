@@ -776,8 +776,8 @@ The changelog `vibey-gh announce` posts to Discord after each documentation depl
 | Field | Type / default | Meaning |
 |---|---|---|
 | `enabled` | boolean / `true` | Post at all. Off, the step says so and passes. |
-| `webhook_secret` | string / `DISCORD_WEBHOOK_URL` | The repository secret holding the webhook. A secret NAME, rendered into `${{ secrets.… }}`; never the URL. |
-| `username` | string / `vibey` | The name the message is posted under (1–80 characters). |
+| `webhook_secret` | string / `DISCORD_WEBHOOK_URL` | The repository secret holding the webhook. A secret NAME, rendered into `${{ secrets.… }}`; never the URL. `GITHUB_*` is refused: GitHub reserves the prefix. |
+| `username` | string / `vibey` | The name the message is posted under (1–80 characters). Refused where Discord would refuse it: containing `discord`, `clyde`, `@`, `#`, `:` or ` ``` `, or being `everyone` or `here`. |
 | `max_changes` | integer / `8` | Lines listed before `…and N more` (1–50). Breaking changes are never counted against it. |
 | `max_subject_chars` | integer / `100` | A longer description is cut with `…` (20–400). |
 | `max_message_chars` | integer / `2000` | The message's ceiling in UTF-16 units (200–2000, Discord's limit). The message fits by construction: listed lines go first, then breaking lines shorten, then overflowing breaking changes are counted by name. |
@@ -791,8 +791,9 @@ The changelog `vibey-gh announce` posts to Discord after each documentation depl
 | `link_compare` | boolean / `true` | Link the compare view, or the changelog, after the list. |
 | `link_surfaces` | boolean / `true` | End with the channel site and the surfaces this deploy produced. |
 | `suppress_embeds` | boolean / `true` | Post with Discord's no-link-preview flag. |
-| `changelog_path` | string / `CHANGELOG.md` | A release announces this file's section for its version. |
-| `max_history_pages` | integer / `10` | Pages of 100 runs, and of 100 compared commits, read for the previous position and the range (1–50). Anything beyond is reported as unknown or counted, never skipped. |
+| `changelog_path` | string / `CHANGELOG.md` | A release announces this file's section for its version. Repository-relative; letters, digits and `. _ / -` only, since it is also written into a link. |
+| `max_history_pages` | integer / `10` | Pages of 100 runs, and of 100 compared commits, read for the previous position and the range (1–10: the Actions API serves a status-filtered run listing only to its 1000th result). Commits beyond are counted; no accepted announcement inside the window re-anchors, and says so. |
+| `max_history_candidates` | integer / `20` | Runs for the branch whose announcement was not accepted that are read, one jobs call each, before the announcement re-anchors and says so (1–100). Staying unknown instead would never recover from a long outage. |
 
 ```toml
 [announce]
