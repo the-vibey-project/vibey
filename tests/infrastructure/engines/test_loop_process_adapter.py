@@ -2110,3 +2110,41 @@ async def test_a_real_engine_process_never_sees_the_queue_dsn(
     leaked = names & set(_WORKER_SECRETS)
     assert leaked == set(), f"leaked into the engine session: {sorted(leaked)}"
     assert not any(name.startswith("VIBEY_") for name in names)
+
+
+# ── a forbidden declaration fails when the adapter is built, not on first spawn ──
+#
+# A descriptor's `env_passthrough` and the adapter's overlay were checked against the
+# forbidden rule only when a process was about to be spawned -- the first BUILD
+# session, possibly hours into a run. They are checked when the adapter is built now,
+# and so again whenever a project's policy is applied to it (`dataclasses.replace`).
+
+
+@pytest.mark.parametrize("entry", ["VIBEY_PG_URL", "PGPASSWORD", "PG*", "APP_DATABASE_URL"])
+def test_a_descriptor_that_passes_through_a_forbidden_name_is_refused_when_built(
+    entry: str,
+) -> None:
+    from dataclasses import replace
+
+    descriptor = replace(CLAUDELOOP, env_passthrough=(*CLAUDELOOP.env_passthrough, entry))
+
+    with pytest.raises(ValueError, match="can never be passed"):
+        LoopProcessAdapter(descriptor=descriptor)
+
+
+def test_an_overlay_carrying_a_forbidden_name_is_refused_when_built() -> None:
+    with pytest.raises(ValueError, match="VIBEY_OLLAMA_URL can never be passed"):
+        LoopProcessAdapter(descriptor=CLAUDELOOP, env_overlay={"VIBEY_OLLAMA_URL": "x"})
+
+
+def test_applying_a_project_policy_rechecks_the_descriptor() -> None:
+    from dataclasses import replace
+
+    from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
+
+    adapter = LoopProcessAdapter(descriptor=CLAUDELOOP)
+    applied = EngineEnvironmentPolicy(allow=("JAVA_HOME",)).applied_to(adapter)
+    assert isinstance(applied, LoopProcessAdapter)
+    assert applied.environment.allow_list(CLAUDELOOP).admits("JAVA_HOME")
+    with pytest.raises(ValueError, match="can never be passed"):
+        replace(applied, descriptor=replace(CLAUDELOOP, env_passthrough=("VIBEY_*",)))

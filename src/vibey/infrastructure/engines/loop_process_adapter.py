@@ -135,6 +135,14 @@ class LoopProcessAdapter:
     _reaper: ProcessReaperInterface = field(init=False, compare=False, repr=False)
 
     def __post_init__(self) -> None:
+        # The descriptor's passthrough and the overlay are checked against the forbidden
+        # rule now, when the adapter is built -- and again whenever a project's policy is
+        # applied, since `dataclasses.replace` builds a new one -- rather than on the
+        # first spawn, which may be the first BUILD session hours into a run. Building
+        # the ChildEnvironment validates both; it reads no environment until build().
+        self.environment.environment(
+            self.descriptor, overlay=self.env_overlay, python_env=self.python_env
+        )
         # Built once, here, so an invalid grace fails when the adapter is built rather
         # than on the first probe that times out.
         object.__setattr__(
