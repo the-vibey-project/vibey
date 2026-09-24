@@ -237,7 +237,8 @@ no shell, no tools, and no network beyond the local inference port reach the mod
 `PR evaluate / gate` check run for the exact head — green when the scans it named all
 settled, red titled with the scan state and the failing checks when any did not — and, on
 success, dispatches `pr-review.yml` against the same exact head. `pr-review.yml` then runs
-the structured review (sovereign lane and, when configured, the local fallback) and its
+the structured review — the sovereign lane alone, answering the whole review, unless
+`[pr_automation] paid_review` declares a paid one beside it (8.b) — and its
 `gate` publishes `PR review / gate`, the check the merge train and the ruleset actually
 block on; on success it dispatches `merge-train.yml`. When the primary review returned no
 verdict and the fallback ran and found nothing blocking, the review gate still succeeds but

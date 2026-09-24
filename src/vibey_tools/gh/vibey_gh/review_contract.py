@@ -36,6 +36,14 @@ lane is up it carries the diff-groundable half, and the paid reviewer is handed 
 it writes its own prose and findings into. `vibey_gh.review_composition` puts the two
 answers back together into one verdict that says which lane carried which field.
 
+With no paid review declared (sub-doctrine 8.b) there is no second lane at all: the
+sovereign reviewer answers the whole schema itself. That is when two more facts in this
+table earn their keep. `field_questions` is what each documentation judgment ASKS, so the
+prompt a local model is handed is built from the same rows as the schema it answers; and
+`scope_field` is where every local verdict names the halves it actually answered, so a
+diff-only verdict -- whose documentation judgments are placeholders -- can never be read
+as a whole review.
+
 Deliberately data, not behaviour. It decides nothing and calls nothing; it states what
 each half means — and what JSON type each field is answered in — so the reviewers, the
 workflow templates and the tests can all agree.
@@ -126,6 +134,64 @@ DEFAULT_FIELD_SCHEMAS: Mapping[str, Mapping[str, object]] = {
     DEFAULT_WIDER_FINDINGS_FIELD: {"type": "array", "items": DEFAULT_FINDING_SCHEMA},
 }
 
+# What each documentation judgment asks, in one line a reviewer can answer from a change.
+# The paid reviewer's prompt states the whole contract in prose; a local model answering the
+# whole review with no paid lane declared (8.b) is handed these instead, so its prompt is
+# built from the same rows as its schema and cannot list a judgment the schema lacks.
+DEFAULT_FIELD_QUESTIONS: Mapping[str, str] = {
+    "complete": "nothing user-facing that the change adds, alters or removes is left undocumented",
+    "accurate": "no documentation says something the changed code no longer does",
+    "human_readable": (
+        "prose the change adds orients a first-time reader and defines every load-bearing term"
+        " where it is first used"
+    ),
+    "opening_accessible": (
+        "the first two text blocks of README.md (and of the documentation landing page, when"
+        " supplied) survive zero project context"
+    ),
+    "opening_bluf": (
+        "those same opening blocks state a problem the reader recognises before any project"
+        " vocabulary or description of what the software is"
+    ),
+    "audience_order": (
+        "documentation the change adds sits where the beginner-first arc puts it: the beginner"
+        " on-ramp before engineering reference, theory after"
+    ),
+    "architecture_diagram_complete": (
+        "a change to a module, public interface, workflow, data flow, security boundary or"
+        " release channel updates docs/project.mmd to match"
+    ),
+    "all_capabilities_documented": (
+        "every CLI, SDK, API, MCP or webhook capability the change adds or alters is documented"
+    ),
+    "all_commands_documented": "every command, subcommand or flag the change adds or alters is documented",
+    "all_configuration_documented": (
+        "every configuration key the change adds or alters is documented, with its default"
+    ),
+    "examples_sufficient": (
+        "each surface the change adds has a working example naming only things that exist"
+    ),
+    "onboarding_sufficient": "installation, prerequisites and the quick start remain correct",
+    "operations_sufficient": (
+        "anything operational the change adds says how to run it, recover it and troubleshoot it"
+    ),
+    "security_sufficient": (
+        "every trust boundary, secret or permission the change adds or alters is documented"
+    ),
+    "release_process_sufficient": (
+        "every effect the change has on release, provenance or upgrade is documented"
+    ),
+    "links_valid": (
+        "every link the change adds is well formed, and a link to a repository path names one"
+        " that exists"
+    ),
+}
+
+# Where a local verdict names the halves it actually answered -- `[DIFF_GROUNDABLE]` for a
+# diff-only review, both halves for a whole one. Neither a judgment nor a report field: the
+# reviewer does not answer it, the code that ran the reviewer states it.
+DEFAULT_SCOPE_FIELD = "scope"
+
 # Said in the verdict's own summary, because the verdict travels further than this module
 # does: it lands in a job log, a PR comment and an artifact, read by people who will never
 # open this file.
@@ -172,6 +238,13 @@ class ReviewContract:
     # two holds the findings.
     wider_summary_field: str = DEFAULT_WIDER_SUMMARY_FIELD
     wider_findings_field: str = DEFAULT_WIDER_FINDINGS_FIELD
+    # Judgment name -> what it asks (see `DEFAULT_FIELD_QUESTIONS`). Out of the hash for the
+    # same reason as `field_schemas`; a judgment with no entry makes `questions` raise.
+    field_questions: Mapping[str, str] = dataclasses.field(
+        default_factory=lambda: DEFAULT_FIELD_QUESTIONS, hash=False
+    )
+    # Where a local verdict names the halves it answered (see `DEFAULT_SCOPE_FIELD`).
+    scope_field: str = DEFAULT_SCOPE_FIELD
 
     def __post_init__(self) -> None:
         for label, fields in (
@@ -191,6 +264,10 @@ class ReviewContract:
             # A report field that is also a judgment would be written by two lanes at once
             # -- the collision the report fields exist to avoid.
             raise ValueError(f"a wider report field cannot be a review field: {', '.join(clash)}")
+        if self.scope_field in self.fields + self.wider_report_fields:
+            # A lane writing the scope would be claiming its own remit; the scope is what
+            # the code that ran it says it asked.
+            raise ValueError(f"the scope field cannot be a review field: {self.scope_field}")
 
     @classmethod
     def default(cls) -> ReviewContract:
@@ -242,6 +319,18 @@ class ReviewContract:
         `unevaluated_notice`, which belongs in the same payload.
         """
         return {field: self.unevaluated_placeholder for field in self.requires_wider_context}
+
+    def questions(self) -> list[tuple[str, str]]:
+        """Each documentation judgment with the question it asks, in the contract's order.
+
+        Raises `KeyError` for a judgment with no declared question, for the reason
+        `json_schema` refuses an untyped field: a reviewer asked something nobody wrote down
+        is answering a different question than the one the gate reads.
+        """
+        missing = [name for name in self.requires_wider_context if name not in self.field_questions]
+        if missing:
+            raise KeyError(f"no question declared for review field(s): {', '.join(missing)}")
+        return [(name, self.field_questions[name]) for name in self.requires_wider_context]
 
     def json_schema(self, halves: Iterable[str] | None = None) -> dict[str, object]:
         """The JSON Schema a reviewer answering `halves` is held to.

@@ -118,6 +118,7 @@ from vibey_gh.interfaces.forge_snapshot_interface import (
     ChainHeadInterface,
     ForgeReadInterface,
 )
+from vibey_gh.interfaces.local_review_interface import WholeReviewInterface
 from vibey_gh.interfaces.paper_interface import (
     PaperDocumentInterface,
     PaperErrorInterface,
@@ -240,6 +241,7 @@ __all__ = [
     "TidyConfigInterface",
     "TrackRecordInterface",
     "VerdictInterface",
+    "WholeReviewInterface",
     "WorkHistoryInterface",
     "_ChainInterface",
 ]

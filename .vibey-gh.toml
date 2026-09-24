@@ -211,6 +211,19 @@ scan_workflows = ["CI", "Provenance", "Conventional Commits"]
 # did in one day, and three branches were force-pushed by hand to clear them. A label an
 # author can amend before merge is cheaper than a rewrite they cannot avoid after it.
 normalise_commit_subjects = true
+# No paid review is declared here, so none runs (sub-doctrine 8.b: reaching for a paid
+# counterparty is the move that must be declared aloud, by a human, in the repository).
+# The operator's instruction, 2026-09-24: "Wire this up so that it uses the sovereign lanes
+# instead of ANTHROPIC_API_KEY", and "make this honest". With this false the sovereign lane
+# on `vibey-local-vibey` answers the WHOLE exact-head review -- both halves of the review
+# contract -- for a trusted author whose head is in this repository, the paid `review` job
+# never runs, and nothing on that path reads ANTHROPIC_API_KEY. Every other pull request --
+# an outside author, a fork, or one arriving while the sovereign runner has no fresh
+# heartbeat -- gets no automated pass and is told plainly that it needs a human review.
+# Setting it true is the declaration: the two-lane review returns exactly as it was.
+# Scope: the review only. Repair and conflict resolution still call the paid model when
+# their state arises; they are not governed by this key.
+paid_review = false
 
 # The delivery forecast is a repository-owned, append-only projection.  The workflow
 # refreshes it on integration changes, issue/PR changes and a schedule; these paths and

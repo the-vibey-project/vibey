@@ -14,6 +14,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### BREAKING CHANGES
 
+* **vibey_gh:** the exact-head review reaches a paid model only where `[pr_automation]
+  paid_review = true` declares one (sub-doctrine 8.b: a paid counterparty is declared-only).
+  Undeclared, the default, the paid `review` job never runs: the sovereign lane answers the
+  whole review — the diff and the documentation-contract judgments, judged against the pages
+  in `[pr_automation.fallback] context_paths` — for a trusted author whose head is in the
+  repository, and every other pull request fails `PR review / gate` with `needs a human
+  review: <why> (no paid review is declared, 8.b)`. This repository declares none, on the
+  operator's instruction. A refused paid call (review, repair, conflict resolution) is now
+  reported as `the paid <job> was refused by the API: <reason>` rather than as the action's
+  closing "Result subtype: success". Set `paid_review = true` to keep the two-lane review
 * **engines:** this era's default local model is `gpt-oss:20b` (sub-doctrine 8.d). vibey's
   Ollama default, qwenloop's endpoint default and the Helm chart's `ollama.model` all name it.
   An install that never set a model now asks Ollama for `gpt-oss:20b` instead of

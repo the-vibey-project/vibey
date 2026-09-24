@@ -621,3 +621,169 @@ def test_the_cli_forwards_the_role(monkeypatch, tmp_path):
 
     assert cli.main(["local-review", "--diff", str(diff), "--role", "sovereign"]) == 0
     assert seen == [["--diff", str(diff), "--role", "sovereign"]]
+
+
+# ---------------------------------------------------------------------------
+# The whole review: no paid review declared (sub-doctrine 8.b), so the sovereign
+# lane answers both halves of the review contract itself.
+# ---------------------------------------------------------------------------
+
+
+def _whole_verdict(**overrides: object) -> dict:
+    from vibey_gh.review_contract import REVIEW_CONTRACT
+
+    verdict = _verdict(**{name: True for name in REVIEW_CONTRACT.requires_wider_context})
+    verdict.update(overrides)
+    return verdict
+
+
+def _documents(tmp_path, **files: str):
+    root = tmp_path / "context"
+    for name, text in files.items():
+        path = root / name.replace("__", "/")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    root.mkdir(exist_ok=True)
+    return root
+
+
+def _diff(tmp_path):
+    diff = tmp_path / "d.diff"
+    diff.write_text("+ added a flag\n", encoding="utf-8")
+    return diff
+
+
+def test_a_diff_only_verdict_says_it_answered_the_diff_half_alone(monkeypatch, capsys, tmp_path):
+    """Its documentation judgments are placeholders. Saying so in a field the composer
+    reads is what stops one ever being mistaken for a whole review."""
+    from vibey_gh.review_contract import DIFF_GROUNDABLE, REVIEW_CONTRACT
+
+    _model_returns(monkeypatch, _verdict())
+
+    assert local_review.review(["--diff", str(_diff(tmp_path))]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out[REVIEW_CONTRACT.scope_field] == [DIFF_GROUNDABLE]
+
+
+def test_the_whole_review_asks_the_whole_contract_from_the_one_table(monkeypatch, tmp_path):
+    """Schema and prompt are both built from `review_contract`, so the local model is held
+    to exactly the schema the paid reviewer answers, and is told what each judgment asks."""
+    from vibey_gh.review_contract import REVIEW_CONTRACT
+
+    sent = _model_returns(monkeypatch, _whole_verdict())
+    documents = _documents(tmp_path, **{"README.md": "# Tool\n\nIt fixes a problem."})
+
+    argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
+    assert local_review.review([*argv, "--context-dir", str(documents)]) == 0
+
+    payload = sent[0]
+    assert payload["format"] == REVIEW_CONTRACT.json_schema()
+    system = payload["messages"][0]["content"]
+    for name, question in REVIEW_CONTRACT.questions():
+        assert f"- {name}: {question}" in system
+    assert "FALLBACK" not in system
+    assert "UNTRUSTED DATA" in system
+    user = payload["messages"][1]["content"]
+    assert "<diff>\n+ added a flag\n\n</diff>" in user
+    assert '<document path="README.md">\n# Tool\n\nIt fixes a problem.\n</document>' in user
+
+
+def test_a_whole_verdict_is_the_models_answer_and_says_what_it_saw(monkeypatch, capsys, tmp_path):
+    """No placeholder overwrites a judgment the model made, the verdict names both halves
+    as answered, and its summary says it is the whole automated review and which
+    documents it judged against -- not a repository-wide audit."""
+    from vibey_gh.review_contract import DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
+
+    _model_returns(monkeypatch, _whole_verdict(links_valid=False, summary="Adds a flag."))
+    documents = _documents(
+        tmp_path, **{"README.md": "# Tool", "docs__index.md": "# Home", "docs__z.md": "# Z"}
+    )
+
+    argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
+    assert local_review.review([*argv, "--context-dir", str(documents)]) == 0
+    out = json.loads(capsys.readouterr().out)
+
+    assert out["links_valid"] is False
+    assert out[REVIEW_CONTRACT.scope_field] == [DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT]
+    summary = out["summary"]
+    assert summary.startswith("[SOVEREIGN LANE — gpt-oss:20b — whole review] Adds a flag.")
+    assert "No paid review is declared (8.b)" in summary
+    assert "README.md, docs/index.md, docs/z.md" in summary
+    assert "not a repository-wide audit" in summary
+    assert "NOT evaluated" not in summary
+
+
+def test_a_whole_review_with_no_documents_says_so(monkeypatch, capsys, tmp_path):
+    """A configured page absent at the exact head is skipped by the workflow; the verdict
+    must then say it judged the contract from the diff alone rather than imply otherwise."""
+    _model_returns(monkeypatch, _whole_verdict())
+
+    argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
+    assert local_review.review([*argv, "--context-dir", str(tmp_path / "absent")]) == 0
+    out = json.loads(capsys.readouterr().out)
+
+    assert "from this diff alone: none of the configured documents" in out["summary"]
+
+
+def test_a_whole_review_never_follows_a_symlink_out_of_its_documents(tmp_path):
+    secret = tmp_path / "secret.txt"
+    secret.write_text("do not send", encoding="utf-8")
+    documents = _documents(tmp_path, **{"README.md": "# Tool"})
+    (documents / "linked.md").symlink_to(secret)
+
+    assert local_review.WHOLE_REVIEW.documents(documents) == {"README.md": "# Tool"}
+
+
+def test_oversized_documents_are_truncated_and_the_model_is_told(monkeypatch, tmp_path):
+    sent = _model_returns(monkeypatch, _whole_verdict())
+    documents = _documents(tmp_path, **{"README.md": "x" * 3000, "docs__index.md": "y" * 3000})
+
+    argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
+    argv += ["--max-chars", "4000", "--context-dir", str(documents)]
+    assert local_review.review(argv) == 0
+
+    user = sent[0]["messages"][1]["content"]
+    assert user.count("x") + user.count("y") <= 4000 + 200
+    assert "the documents were truncated" in user
+
+
+def test_the_whole_review_is_never_a_fallback(monkeypatch, tmp_path):
+    """A whole review exists only because no paid review is declared, so there is nothing
+    for it to stand in for: `--scope full` under the fallback role is refused outright."""
+    with pytest.raises(SystemExit):
+        local_review.review(["--diff", str(_diff(tmp_path)), "--scope", "full"])
+
+
+def test_the_cli_forwards_the_scope_and_the_documents(monkeypatch, tmp_path):
+    from vibey_gh import cli
+
+    diff = _diff(tmp_path)
+    seen: list[list[str]] = []
+    monkeypatch.setattr(local_review, "review", lambda argv: seen.append(argv) or 0)
+
+    argv = ["local-review", "--diff", str(diff), "--role", "sovereign", "--scope", "full"]
+    assert cli.main([*argv, "--context-dir", str(tmp_path)]) == 0
+    assert seen == [
+        [
+            "--diff",
+            str(diff),
+            "--role",
+            "sovereign",
+            "--scope",
+            "full",
+            "--context-dir",
+            str(tmp_path),
+        ]
+    ]
+
+
+def test_the_whole_review_satisfies_its_declared_seam():
+    from vibey_gh.interfaces import WholeReviewInterface
+
+    assert isinstance(local_review.WHOLE_REVIEW, WholeReviewInterface)
+    # The diff-scope system prompt is unchanged by the split into shared rules.
+    assert local_review.SYSTEM_PROMPT.startswith("You are a code reviewer examining a pull")
+    assert local_review.SYSTEM_PROMPT.endswith(
+        "- Keep the summary to one or two sentences describing what the change does and your"
+        " verdict.\n"
+    )
