@@ -172,6 +172,11 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "PostgreSQL's socket directories, probed read-only; a socket is recreated at start",
     ),
     (
+        "src/vibey/infrastructure/db/local_auth.py",
+        r"`/tmp`, which `urlsplit\(\)\.hostname`",
+        "a docstring naming PostgreSQL's socket directory, which LocalAuthProbe reads, not stores",
+    ),
+    (
         "docs/architecture/decisions/0055-*.md",
         r"/tmp -d postgres",
         "psql pointed at PostgreSQL's socket directory; a socket, not stored work",
