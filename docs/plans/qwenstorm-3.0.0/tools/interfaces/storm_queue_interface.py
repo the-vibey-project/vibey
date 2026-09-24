@@ -68,6 +68,10 @@ class LedgerInterface(Protocol):
         """True when the lane has a `result.json` -- it ran and awaits review."""
         ...
 
+    def running(self, slug: str) -> bool:
+        """The lane has started and not yet ended (its `.qwenstorm/running` mark exists)."""
+        ...
+
     def unattended(self) -> bool:
         """True when finished lanes wait for a batch review instead of holding the storm."""
         ...
