@@ -59,8 +59,10 @@ EXEMPT: tuple[tuple[str, str], ...] = (
 #: saying that the location is volatile, never when it is using one.
 RULE_TEXTS = (
     "CONTRIBUTING.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
     "src/vibey_tools/gh/docs/doctrines.md",
-    "docs/architecture/decisions/0057-*.md",
     "docs/plans/qwenstorm-3.0.0/README.md",
     "docs/plans/qwenstorm-3.0.0/STORM-CONTEXT.md",
     "docs/plans/qwenstorm-3.0.0/tools/storm_durability.py",
@@ -133,6 +135,11 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "docs/plans/qwenstorm-3.0.0/tools/lane_environment.py",
         r"\(/tmp is /private/tmp\)",
         "explains symlink resolution; names no place to keep work",
+    ),
+    (
+        "docs/architecture/decisions/0057-*.md",
+        r".",
+        "the decision record of the incident: it names what was lost and where, to forbid it",
     ),
     (
         "docs/architecture/decisions/0051-*.md",
