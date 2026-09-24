@@ -229,8 +229,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   with everything it still needs, and named, rather than refusing the request. The lane is
   derived through a dependency in an unknown state, so a job a live named job needs is
   never swept past it. `tests/meta/test_migration_drops.py` reads SQL as PostgreSQL lexes
-  it -- comments, strings, `DO` bodies and `EXECUTE` strings -- and also catches renamed
-  and retyped columns and tables taken away; the ADR sentence must name the workers to drain.
+  it -- comments, strings (`E''`, `U&''`, and literals joined by `||`), quoted names
+  (`U&""` too), `DO` bodies and `EXECUTE` strings -- and catches every step that takes
+  something from a running reader: a column dropped, renamed or retyped; a table, view or
+  sequence dropped, renamed away or moved by `SET SCHEMA`; a table replaced under its own
+  name without a column it had (known by replaying the migrations in order); and a type
+  dropped or renamed, or an enum value renamed (`ALTER TYPE ... RENAME VALUE`), which fails
+  an older worker's strict `phase` or `state` read. The ADR sentence must name the workers
+  to drain against this migration or an `N.N.N` release, and not negate the drain.
   `vibey queue list [PROJECT]` shows the queue in claim order with every bump marked;
   `vibey design resume PROJECT --priority` enqueues the interview bumped. The claim orders
   `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so the order among
