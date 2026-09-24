@@ -9,9 +9,14 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
+from vibey.domain.budget import BudgetLedger
 from vibey.domain.circuit import StoredCircuitState
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId, IsolationLevel, StoredEngineId
+from vibey.domain.interfaces.budget_caps_interface import (
+    CapChangeInterface,
+    CapHistoryEntryInterface,
+)
 from vibey.domain.job import FailureClass, StoredJobState
 from vibey.domain.phase import Phase, StoredPhase
 from vibey.domain.queue_reap import PolicyOutcome, ReapVerdict
@@ -297,3 +302,50 @@ class QueueReapReport:
             notes=self.notes + other.notes,
             unreadable=self.unreadable + other.unreadable,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectBudget:
+    """A project's caps, its current cycle's spend against them, and every change to
+    the caps (`vibey budget`).
+
+    `budget` is the brake's own reading, never a second opinion: the caps through
+    `LedgerBudgetSource.caps_from_config`, the spend through `LedgerBudgetSource.current`
+    -- what the worker checks before every BUILD session. `history` is read back from
+    the ledger's `BudgetCapChanged` events, oldest first.
+    """
+
+    project_id: UUID
+    name: str
+    cycle: int
+    budget: BudgetLedger
+    history: tuple[CapHistoryEntryInterface, ...] = ()
+
+    @property
+    def exhausted(self) -> bool:
+        """A cap is reached: the next BUILD session parks a `budget_exhausted` gate."""
+        return self.budget.any_exhausted
+
+
+@dataclass(frozen=True, slots=True)
+class CapChangeOutcome:
+    """What a budget store's write did: the project row as its transaction left it, and
+    the changes it made -- none when the request left every cap as it was."""
+
+    project: ProjectRecord
+    changes: tuple[CapChangeInterface, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class BudgetChange:
+    """What `vibey budget set` or `clear` did, and what holds now.
+
+    `by` is the name the change was recorded under. `parked` names the project's open
+    `budget_exhausted` gates: a changed cap applies to a job parked on one only once the
+    gate is answered, so the command says so rather than leaving a person waiting.
+    """
+
+    after: ProjectBudget
+    by: str
+    changes: tuple[CapChangeInterface, ...] = ()
+    parked: tuple[UUID, ...] = ()

@@ -29,6 +29,10 @@ from vibey.infrastructure.db.interfaces.ledger_search_repository_interface impor
 from vibey.infrastructure.db.interfaces.local_auth_interface import LocalAuthProbeInterface
 from vibey.infrastructure.db.interfaces.migrator_interface import MigratorInterface
 from vibey.infrastructure.db.interfaces.orm_interface import PostgresOrmInterface
+from vibey.infrastructure.db.interfaces.project_budget_store_interface import (
+    BudgetCapDraftBuilderInterface,
+    PostgresProjectBudgetStoreInterface,
+)
 from vibey.infrastructure.db.interfaces.project_repository_interface import (
     PhaseTransitionedDraftBuilderInterface,
     ProjectRowMapperInterface,
@@ -42,6 +46,8 @@ from vibey.infrastructure.db.interfaces.rotation_cursor_repository_interface imp
 )
 
 __all__ = [
+    "BudgetCapDraftBuilderInterface",
+    "PostgresProjectBudgetStoreInterface",
     "DatabaseEndpointsInterface",
     "DatabaseRoleReconcilerInterface",
     "LedgerGuardInspectorInterface",

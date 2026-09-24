@@ -45,6 +45,13 @@ class BudgetExceeded(VibeyError):
     """A spend would exceed the project's budget caps."""
 
 
+class InvalidBudgetChange(VibeyError):
+    """A requested change to a project's caps is not one vibey can make: a value that is
+    not a cap (dollars must be a finite number above zero, turns a whole number above
+    zero), a request that names no cap, or an actor label that cannot be recorded.
+    Nothing was changed and nothing was recorded."""
+
+
 class UnknownProject(VibeyError):
     """No project exists with the given id."""
 

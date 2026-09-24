@@ -79,6 +79,11 @@ class EventKind(StrEnum):
     # are written in the same transaction as the rows they change; a surfaced condition
     # changes nothing and is recorded once per sighting.
     QUEUE_REAPED = "QueueReaped"
+    # A project's cycle cap changed (`vibey budget set` / `clear`): the field, its old and
+    # new value, who named themselves and which account ran the command. Written in the
+    # same transaction as the project config it describes, so the config is the cap the
+    # brake enforces and these events are its history. Not spend: nothing counts it.
+    BUDGET_CAP_CHANGED = "BudgetCapChanged"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)
