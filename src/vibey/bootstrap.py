@@ -89,6 +89,7 @@ from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealt
 from vibey.infrastructure.db.handoff_repository import PostgresHandoffRepository
 from vibey.infrastructure.db.human_gate_repository import PostgresHumanGateRepository
 from vibey.infrastructure.db.interfaces import MigratorInterface
+from vibey.infrastructure.db.job_priority_repository import PostgresJobPriorityStore
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
@@ -168,6 +169,8 @@ class AppResources:
     bus: BusPort
     blob: BlobPort
     siem: SiemPort
+    # Queue priority (ADR-0054): bump, un-bump and list, atomically with the ledger.
+    job_priority: PostgresJobPriorityStore
     integration_lock: PostgresAdvisoryLock | None = None
 
 
@@ -948,6 +951,7 @@ async def build_app(
             bus=bus_port,
             blob=blob_port,
             siem=siem_port,
+            job_priority=PostgresJobPriorityStore(pool),
             integration_lock=PostgresAdvisoryLock(pool),
         )
     finally:

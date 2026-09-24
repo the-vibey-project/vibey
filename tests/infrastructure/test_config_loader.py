@@ -194,3 +194,34 @@ def test_surface_env_overlay_rejects_non_table_sections(
 
     with pytest.raises(ValueError, match="tracker must be a table"):
         load_config_from_path(config_path)
+
+
+# -- QueueConfigLoader (ADR-0054) ----------------------------------------------------
+
+
+def test_queue_config_reads_declared_sources_without_a_project_table(tmp_path: Path) -> None:
+    from vibey.infrastructure.config_loader import QUEUE_CONFIG
+    from vibey.infrastructure.interfaces import QueueConfigLoaderInterface
+
+    path = tmp_path / "vibey.toml"
+    path.write_text('[queue.priority]\nsources = ["storm"]\n')
+
+    assert isinstance(QUEUE_CONFIG, QueueConfigLoaderInterface)
+    assert QUEUE_CONFIG.load(path).priority.sources == ("storm",)
+
+
+def test_a_missing_file_declares_no_source(tmp_path: Path) -> None:
+    from vibey.infrastructure.config_loader import QueueConfigLoader
+
+    assert QueueConfigLoader().load(tmp_path / "absent.toml").priority.sources == ()
+
+
+def test_a_malformed_file_is_an_error_never_an_empty_declaration(tmp_path: Path) -> None:
+    from vibey.domain.config import ConfigError
+    from vibey.infrastructure.config_loader import QueueConfigLoader
+
+    path = tmp_path / "vibey.toml"
+    path.write_text("[queue.priority\nsources = [")
+
+    with pytest.raises(ConfigError, match="is not valid TOML"):
+        QueueConfigLoader().load(path)

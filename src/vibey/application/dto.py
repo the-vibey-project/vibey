@@ -79,6 +79,18 @@ class JobRecord:
     last_error: Mapping[str, object] | None
     created_at: datetime
     updated_at: datetime
+    bump_seq: int | None = None
+    """The job's place among bumped jobs (ADR-0054), or None in normal order. Last,
+    with a default, so a record built before the column existed still builds."""
+
+
+@dataclass(frozen=True, slots=True)
+class QueueEntry:
+    """One job as `vibey queue list` shows it: the row, and the dependencies it
+    still waits on (not yet succeeded), which the claim will not jump."""
+
+    job: JobRecord
+    waiting_on: tuple[UUID, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

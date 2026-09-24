@@ -12,6 +12,10 @@ from vibey.cli.interfaces.ledger_search_interface import (
     LedgerSearchPresenterInterface,
     TimeBoundParserInterface,
 )
+from vibey.cli.interfaces.queue_interface import (
+    QueueCommandInterface,
+    QueuePresenterInterface,
+)
 
 __all__ = [
     "LedgerExportCommandInterface",
@@ -19,6 +23,8 @@ __all__ = [
     "LedgerSearchPresenterInterface",
     "LedgerSiteCommandInterface",
     "PublicationPresenterInterface",
+    "QueueCommandInterface",
+    "QueuePresenterInterface",
     "SigtermLatchInterface",
     "TimeBoundParserInterface",
 ]

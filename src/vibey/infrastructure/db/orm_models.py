@@ -242,9 +242,11 @@ class JobOrm(VibeyOrmModel, table=True):
             "(state = 'leased') = (lease_owner IS NOT NULL AND lease_expires_at IS NOT NULL)",
             name="job_lease_consistent",
         ),
+        CheckConstraint("bump_seq IS NULL OR bump_seq > 0", name="job_bump_seq_positive"),
         Index(
             "job_claim",
             "project_id",
+            "bump_seq",
             "priority",
             "run_after",
             "id",
@@ -316,6 +318,7 @@ class JobOrm(VibeyOrmModel, table=True):
         default_factory=_utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()")),
     )
+    bump_seq: int | None = Field(default=None, sa_column=Column(BigInteger))
 
 
 class JobDependencyOrm(VibeyOrmModel, table=True):

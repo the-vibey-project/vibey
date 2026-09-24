@@ -7,39 +7,65 @@ correctness rests on Postgres's guarantees, not ours."""
 import json
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta
+from typing import Final
 from uuid import UUID
 
 import asyncpg
 
 from vibey.application.dto import EnqueueRequest, JobRecord
 from vibey.domain.engine import EngineId
-from vibey.domain.job import JOB_STATE_PARSER, JobState, StoredJobState
-from vibey.domain.phase import Phase
+from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
+from vibey.domain.job import JOB_STATE_PARSER, JobState, StoredJobState, UnrecognizedJobState
+from vibey.domain.phase import PHASE_PARSER, Phase, UnrecognizedPhase
+from vibey.infrastructure.db.interfaces import JobRowMapperInterface
 
 
-def _row_to_job_record(row: asyncpg.Record) -> JobRecord:
-    return JobRecord(
-        id=row["id"],
-        project_id=row["project_id"],
-        cycle=row["cycle"],
-        phase=Phase(row["phase"]),
-        kind=row["kind"],
-        state=JobState(row["state"]),
-        priority=row["priority"],
-        work_item_id=row["work_item_id"],
-        payload=json.loads(row["payload"]),
-        requirement=json.loads(row["requirement"]),
-        idempotency_key=row["idempotency_key"],
-        attempts=row["attempts"],
-        max_attempts=row["max_attempts"],
-        run_after=row["run_after"],
-        lease_owner=row["lease_owner"],
-        lease_expires_at=row["lease_expires_at"],
-        assigned_engine=row["assigned_engine"],
-        last_error=json.loads(row["last_error"]) if row["last_error"] is not None else None,
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
-    )
+class JobRowMapper:
+    """Maps one `job` row to a `JobRecord`, reading `phase` and `state`
+    forward-compatibly (vibey#287): a value a newer vibey wrote comes back as its
+    stored text, never a `ValueError`. `vibey queue list` shows every unfinished job,
+    so one row in a state this vibey predates must not make the queue unreadable."""
+
+    def __init__(
+        self,
+        *,
+        states: StoredValueParserInterface[JobState, UnrecognizedJobState] = JOB_STATE_PARSER,
+        phases: StoredValueParserInterface[Phase, UnrecognizedPhase] = PHASE_PARSER,
+    ) -> None:
+        self._states = states
+        self._phases = phases
+
+    def state(self, raw: str) -> StoredJobState:
+        return self._states.parse(raw)
+
+    def to_record(self, row: asyncpg.Record) -> JobRecord:
+        return JobRecord(
+            id=row["id"],
+            project_id=row["project_id"],
+            cycle=row["cycle"],
+            phase=self._phases.parse(row["phase"]),
+            kind=row["kind"],
+            state=self.state(row["state"]),
+            priority=row["priority"],
+            work_item_id=row["work_item_id"],
+            payload=json.loads(row["payload"]),
+            requirement=json.loads(row["requirement"]),
+            idempotency_key=row["idempotency_key"],
+            attempts=row["attempts"],
+            max_attempts=row["max_attempts"],
+            run_after=row["run_after"],
+            lease_owner=row["lease_owner"],
+            lease_expires_at=row["lease_expires_at"],
+            assigned_engine=row["assigned_engine"],
+            last_error=json.loads(row["last_error"]) if row["last_error"] is not None else None,
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+            bump_seq=row["bump_seq"],
+        )
+
+
+JOB_ROWS: Final[JobRowMapperInterface] = JobRowMapper()
+"""The one row mapper every reader of `job` shares. Stateless, so one instance serves."""
 
 
 class PostgresJobRepository:
@@ -112,7 +138,7 @@ class PostgresJobRepository:
                     "enqueue: conflicting idempotency key but no existing row found "
                     f"(project_id={request.project_id}, key={request.idempotency_key!r})"
                 )
-            return _row_to_job_record(row)
+            return JOB_ROWS.to_record(row)
 
         job_id = row["id"]
         for dep_id in depends_on:
@@ -131,7 +157,7 @@ class PostgresJobRepository:
         # transaction it is delivered at commit (and a rolled-back batch
         # announces nothing), with duplicates in one transaction folded.
         await conn.execute(f"NOTIFY vibey_job_ready, '{request.project_id}'")
-        return _row_to_job_record(row)
+        return JOB_ROWS.to_record(row)
 
     async def _job_id(
         self,
@@ -173,7 +199,7 @@ class PostgresJobRepository:
                 cycle,
                 kind,
             )
-            return tuple(_row_to_job_record(row) for row in rows)
+            return tuple(JOB_ROWS.to_record(row) for row in rows)
 
     async def claim(self, project_id: UUID, *, owner: str, lease: timedelta) -> JobRecord | None:
         async with self._pool.acquire() as conn:
@@ -195,7 +221,8 @@ class PostgresJobRepository:
                           JOIN job p ON p.id = d.depends_on_job_id
                           WHERE d.job_id = j.id AND p.state <> 'succeeded'
                       )
-                    ORDER BY j.priority DESC, j.run_after ASC, j.id ASC
+                    ORDER BY j.bump_seq ASC NULLS LAST, j.priority DESC,
+                             j.run_after ASC, j.id ASC
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                 )
@@ -205,7 +232,7 @@ class PostgresJobRepository:
                 lease,
                 project_id,
             )
-            return _row_to_job_record(row) if row is not None else None
+            return JOB_ROWS.to_record(row) if row is not None else None
 
     async def heartbeat(self, job_id: UUID, *, owner: str, lease: timedelta) -> bool:
         async with self._pool.acquire() as conn:
@@ -364,7 +391,7 @@ class PostgresJobRepository:
     async def get(self, job_id: UUID) -> JobRecord | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow("SELECT * FROM job WHERE id = $1", job_id)
-            return _row_to_job_record(row) if row is not None else None
+            return JOB_ROWS.to_record(row) if row is not None else None
 
 
 def _rowcount(command_tag: str) -> int:

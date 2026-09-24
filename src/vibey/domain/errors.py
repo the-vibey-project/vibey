@@ -81,3 +81,51 @@ class SovereignResearchUnavailable(VibeyError):
         self.detail = detail
         self.evidence_name = evidence_name
         super().__init__(detail)
+
+
+class UnknownJob(VibeyError):
+    """No job exists with the given id."""
+
+    def __init__(self, job_id: object) -> None:
+        self.job_id = job_id
+        super().__init__(f"unknown job {job_id}")
+
+
+class NotReorderable(VibeyError):
+    """A job's place in the queue cannot be changed (ADR-0054).
+
+    Only a job that is still waiting, parked or running can be moved: a finished
+    job will never be claimed again, and a job in a state this vibey does not know is
+    one it will not write (vibey#287). Nothing was changed.
+    """
+
+    def __init__(self, job_id: object, why: str) -> None:
+        self.job_id = job_id
+        self.why = why
+        super().__init__(f"job {job_id} cannot be moved in the queue: {why}")
+
+
+class DependencyCycle(VibeyError):
+    """Jobs depend on one another in a ring, so none of them can ever be claimed.
+
+    The planner refuses to order a ring rather than break it arbitrarily: which job
+    of a ring should run first is not a question an ordering rule can answer.
+    """
+
+    def __init__(self, job_ids: tuple[object, ...]) -> None:
+        self.job_ids = job_ids
+        listed = ", ".join(str(job_id) for job_id in job_ids)
+        super().__init__(f"these jobs depend on one another in a ring: {listed}")
+
+
+class PriorityRefused(VibeyError):
+    """A request to reorder the queue came from a source with no grant (12.j).
+
+    The refusal is recorded on the ledger before this is raised, so it is
+    reportable output rather than silence (12.d).
+    """
+
+    def __init__(self, source: str, reason: str) -> None:
+        self.source = source
+        self.reason = reason
+        super().__init__(f"refused: {reason}")

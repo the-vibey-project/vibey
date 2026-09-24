@@ -3,6 +3,8 @@ from vibey.domain.interfaces.circuit_interface import EngineFailurePolicyInterfa
 from vibey.domain.interfaces.config_interface import (
     NotificationsConfigInterface,
     NotificationWebhookConfigInterface,
+    QueueConfigInterface,
+    QueuePriorityConfigInterface,
     TelemetryConfigInterface,
 )
 from vibey.domain.interfaces.correlation_interface import (
@@ -54,6 +56,18 @@ from vibey.domain.interfaces.publication_policy_interface import (
     PublicationRulesInterface,
     TrimCountsInterface,
 )
+from vibey.domain.interfaces.queue_priority_interface import (
+    BumpPlanInterface,
+    BumpPlannerInterface,
+    ClaimOrderInterface,
+    MovedJobInterface,
+    PriorityChangeInterface,
+    PriorityGrantInterface,
+    PriorityRefusalInterface,
+    QueuedJobInterface,
+    UnbumpPlanInterface,
+    UnbumpPlannerInterface,
+)
 from vibey.domain.interfaces.stored_value_interface import (
     StoredValueParserInterface,
     UnrecognizedValueInterface,
@@ -87,6 +101,18 @@ from vibey.domain.interfaces.value_objects_interface import (
 )
 
 __all__ = [
+    "BumpPlanInterface",
+    "BumpPlannerInterface",
+    "ClaimOrderInterface",
+    "MovedJobInterface",
+    "PriorityChangeInterface",
+    "PriorityGrantInterface",
+    "PriorityRefusalInterface",
+    "QueueConfigInterface",
+    "QueuePriorityConfigInterface",
+    "QueuedJobInterface",
+    "UnbumpPlanInterface",
+    "UnbumpPlannerInterface",
     "ActorInterface",
     "ActorResolverInterface",
     "ActorScopeInterface",
