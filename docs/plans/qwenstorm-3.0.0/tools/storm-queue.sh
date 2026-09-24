@@ -3,7 +3,7 @@
 #
 # HOW MANY AT ONCE is `[local_models] concurrent_runs` in .vibey-gh.toml, asked of vibey-gh
 # (`vibey-gh slots allowed`), which checks it against THIS device's own calibration evidence
-# (ADR-0057) -- never a literal here. The declared default is 1, 8.c as written. No evidence,
+# (ADR-0058) -- never a literal here. The declared default is 1, 8.c as written. No evidence,
 # evidence for a device this no longer is, or a vibey-gh that cannot answer, all mean one: said
 # in progress.log with the reason, and `slots allowed` records a calibration request that the
 # queue runs itself, under the model lock, the next time the storm is idle.

@@ -582,7 +582,7 @@ spending is a form of permission to act.
 ## `[local_models]` and `vibey-gh slots`
 
 How many runs of one local model may run at once on a device is **measured on that
-device, never assumed** (sub-doctrines 8.c and 8.j, ADR-0057). A second run of a model
+device, never assumed** (sub-doctrines 8.c and 8.j, ADR-0058). A second run of a model
 already resident can double throughput, or it can overflow the machine's wired memory,
 swap it into the ground, or refuse the deep prompts the first run served. Which of these
 happens depends on the model, its context window, the runner and the hardware, so the
@@ -670,7 +670,7 @@ file says now.
 
 ```toml
 [local_models]
-concurrent_runs = 1        # 8.c as written; "measured" once the operator chooses it (ADR-0057)
+concurrent_runs = 1        # 8.c as written; "measured" once the operator chooses it (ADR-0058)
 model = "gpt-oss:20b"
 context_window = 65536
 ```
@@ -679,7 +679,7 @@ context_window = 65536
 as a Job pinned to the node (`nodeSelector`), inside the model runner's pod network, with
 `VIBEY_GH_SLOTS_DIR` on a volume that outlives the Job, and give the workers the same
 directory. A node without evidence, or with stale evidence, runs one. The chart does not
-yet template this Job (ADR-0057 records it as owed).
+yet template this Job (ADR-0058 records it as owed).
 
 ## `[tidy]`
 

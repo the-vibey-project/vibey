@@ -495,7 +495,7 @@ def test_nothing_eligible_waits(tmp_path: Path) -> None:
 
 
 def test_a_running_lane_is_never_chosen_again_and_keeps_the_storm_alive(tmp_path: Path) -> None:
-    """With more than one lane at once (ADR-0057), the lane already running is skipped --
+    """With more than one lane at once (ADR-0058), the lane already running is skipped --
     never started twice -- and still counts as pending, so the storm is not "empty" while
     it runs beside the runner."""
     root = storm(tmp_path, queue="a 1\nb 2\n")

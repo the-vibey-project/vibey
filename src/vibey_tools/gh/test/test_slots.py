@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Local slot calibration (`vibey_gh.slots`): the logic, exactly, with every machine faked.
 
-The measurement itself is evidence, not a test (ADR-0057). What is tested here is that the
+The measurement itself is evidence, not a test (ADR-0058). What is tested here is that the
 evidence is read, judged and gated the way the ADR says: the bounds, the stop rule, the
 ideal N, the fingerprint that keys it, the checkpoint that lets a sweep survive a reboot,
 and the gate that turns a declaration into a number.

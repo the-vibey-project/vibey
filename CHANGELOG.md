@@ -134,7 +134,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 * **vibey_gh:** `vibey-gh slots corpus|calibrate|allowed` measure how many runs of one local
   model fit on a device at once, and `[local_models] concurrent_runs` declares it (sub-doctrines
-  8.c and 8.j, ADR-0057). `calibrate` replays storm-shaped turns (`truncate: false`, so a prompt
+  8.c and 8.j, ADR-0058). `calibrate` replays storm-shaped turns (`truncate: false`, so a prompt
   a slot cannot hold is refused, never silently cut) at N = 1, 2, 3, ... on a runner of its own
   beside an idle production runner. It samples wired memory, swap-ins and swap-outs, and
   residency every second, compares every answer with the one-slot answers, and stops at a

@@ -229,7 +229,7 @@ paid_repair = false
 paid_conflict_resolution = false
 
 # How many runs of one local model run at once on a device (sub-doctrines 8.c and 8.j,
-# ADR-0057). Declared here, checked by `vibey-gh slots allowed` against THAT device's own
+# ADR-0058). Declared here, checked by `vibey-gh slots allowed` against THAT device's own
 # calibration evidence, and read by the storm runner (storm-queue.sh) in place of the
 # host-wide "is any lane running?" it used to hard-code. `1` is 8.c as written: one run at
 # a time, no evidence needed, nothing probed. `"measured"` would take whatever the

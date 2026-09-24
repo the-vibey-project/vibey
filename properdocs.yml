@@ -110,5 +110,5 @@ nav:
           - "0054 — A bumped job runs next, first in first out, and only the operator or a declared source may bump": architecture/decisions/0054-a-bumped-job-runs-next.md
           - "0055 — The ledger is append-only by the database, not by convention": architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md
           - "0056 — Everything a queue guards is reaped by measurement": architecture/decisions/0056-everything-a-queue-guards-is-reaped-by-measurement.md
-          - "0057 — Concurrent runs of a local model are measured on each device, and unmeasured or stale means one": architecture/decisions/0057-concurrent-local-runs-are-measured-per-device.md
+          - "0058 — Concurrent runs of a local model are measured on each device, and unmeasured or stale means one": architecture/decisions/0058-concurrent-local-runs-are-measured-per-device.md
   - Research paper: paper.md

@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""The storm's turn pool: storm turns as the payloads qwenloop sends (ADR-0057).
+"""The storm's turn pool: storm turns as the payloads qwenloop sends (ADR-0058).
 
 `vibey-gh slots calibrate` replays these payloads to measure how many runs of the model fit
 on a device, so a pool built wrongly would measure the wrong work. Both sources use

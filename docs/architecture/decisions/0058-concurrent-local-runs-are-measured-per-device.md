@@ -1,4 +1,4 @@
-# 0057 — Concurrent runs of a local model are measured on each device, and unmeasured or stale means one
+# 0058 — Concurrent runs of a local model are measured on each device, and unmeasured or stale means one
 
 **Status:** accepted as mechanism; the amendment to sub-doctrine 8.c it proposes is **not** ratified by this record — only the operator's merge of the separate canon pull request ratifies it (Constitution Article II.3) · **Date:** 2026-09-24 · **Cites:** sub-doctrines 8.c, 8.j, 8.g, 10.f, 12.c, 12.e, and ADR-0045 · **Related:** ADR-0016, ADR-0018, ADR-0020, ADR-0045, ADR-0054 · **Evidence:** `docs/architecture/evidence/slots-2026-09-24-mac17-2.json` and its `.md` summary, produced by `vibey-gh slots calibrate` on this device
 

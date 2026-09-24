@@ -337,7 +337,7 @@ thresholds are [`[queue.reap]`](configuration.md#queuereap).
 ## `vibey-gh slots`
 
 How many runs of one local model may run at once on this device, measured per device
-([ADR-0057](../architecture/decisions/0057-concurrent-local-runs-are-measured-per-device.md)).
+([ADR-0058](../architecture/decisions/0058-concurrent-local-runs-are-measured-per-device.md)).
 This is a `vibey-gh` command, part of the same distribution:
 
 | Subcommand | What it does |

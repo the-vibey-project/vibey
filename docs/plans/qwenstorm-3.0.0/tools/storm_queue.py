@@ -6,7 +6,7 @@ of it." ADR-0054 is the contract, and vibey's PostgreSQL job queue keeps the sam
 
 1. NEXT MEANS NEXT AFTER WHATEVER IS RUNNING. Nothing running is interrupted. Lanes run one
    at a time (8.c) unless this device's calibration evidence supports more
-   (`[local_models] concurrent_runs`, ADR-0057), and `storm-queue.sh` asks what is next only
+   (`[local_models] concurrent_runs`, ADR-0058), and `storm-queue.sh` asks what is next only
    once fewer lanes run than that. A running lane is never chosen again; nothing here stops,
    signals or rewrites a running lane.
 2. PRIORITY ITEMS RUN FIRST, FIFO, ahead of every un-bumped `queue.txt` line. Re-bumping an
