@@ -1,5 +1,6 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import logging
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
@@ -7,9 +8,19 @@ import asyncpg
 import pytest
 
 from vibey.domain.ledger import EventKind, LedgerEvent, Provenance
-from vibey.domain.phase import Phase
+from vibey.domain.phase import Phase, UnrecognizedPhase
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
+from vibey.infrastructure.interfaces import PostgresProjectRepositoryInterface
+
+CREATED = datetime(2026, 9, 24, 9, 0, tzinfo=UTC)
+
+
+async def _created_at(owner: asyncpg.Pool, project_id: UUID, at: datetime) -> None:
+    """Pins a project's creation time, as the owner: the order under test is then
+    `created_at`'s, never the order the rows happened to be inserted in."""
+    async with owner.acquire() as conn:
+        await conn.execute("UPDATE project SET created_at = $2 WHERE id = $1", project_id, at)
 
 
 async def test_create_get_and_transition_project(
@@ -247,3 +258,65 @@ async def test_create_raises_lookup_error_when_fetchrow_returns_none() -> None:
     repo = PostgresProjectRepository(_NullPool())  # type: ignore[arg-type]
     with pytest.raises(LookupError, match="project insert returned no row"):
         await repo.create("test", Path("/tmp/test"), max_cycles=1, config={})
+
+
+async def test_the_repository_satisfies_its_interface(migrated_pool: asyncpg.Pool) -> None:
+    assert isinstance(PostgresProjectRepository(migrated_pool), PostgresProjectRepositoryInterface)
+
+
+async def test_list_all_is_empty_when_no_project_exists(migrated_pool: asyncpg.Pool) -> None:
+    assert await PostgresProjectRepository(migrated_pool).list_all() == ()
+
+
+async def test_list_all_lists_every_project_newest_first(
+    owner_pool: asyncpg.Pool, migrated_pool: asyncpg.Pool, tmp_path: Path
+) -> None:
+    repo = PostgresProjectRepository(migrated_pool)
+    first = await repo.create("first", tmp_path / "a", max_cycles=1, config={})
+    second = await repo.create("second", tmp_path / "b", max_cycles=2, config={})
+    third = await repo.create("third", tmp_path / "c", max_cycles=3, config={})
+    # Created in one order, dated in another: the listing follows the dates.
+    await _created_at(owner_pool, first.project_id, CREATED + timedelta(minutes=2))
+    await _created_at(owner_pool, second.project_id, CREATED)
+    await _created_at(owner_pool, third.project_id, CREATED + timedelta(minutes=1))
+
+    listed = await repo.list_all()
+
+    assert [project.name for project in listed] == ["first", "third", "second"]
+    assert list(listed) == [await repo.get(project.project_id) for project in listed]
+
+
+async def test_list_all_breaks_a_created_at_tie_by_id(
+    owner_pool: asyncpg.Pool, migrated_pool: asyncpg.Pool, tmp_path: Path
+) -> None:
+    repo = PostgresProjectRepository(migrated_pool)
+    one = await repo.create("one", tmp_path / "a", max_cycles=1, config={})
+    two = await repo.create("two", tmp_path / "b", max_cycles=1, config={})
+    for project in (one, two):
+        await _created_at(owner_pool, project.project_id, CREATED)
+
+    listed = await repo.list_all()
+
+    assert [project.project_id for project in listed] == sorted(
+        (one.project_id, two.project_id), reverse=True
+    )
+
+
+async def test_list_all_reads_a_phase_a_newer_vibey_wrote_as_its_stored_text(
+    owner_pool: asyncpg.Pool, migrated_pool: asyncpg.Pool, tmp_path: Path
+) -> None:
+    """vibey#287: a phase this vibey has no member for is listed, never a crash."""
+    repo = PostgresProjectRepository(migrated_pool)
+    created = await repo.create("from-the-future", tmp_path, max_cycles=1, config={})
+    # ALTER TYPE is the owner's (ADR-0055); the application role may not.
+    async with owner_pool.acquire() as conn:
+        await conn.execute("ALTER TYPE phase ADD VALUE IF NOT EXISTS 'future_phase_listing'")
+        await conn.execute(
+            "UPDATE project SET phase = 'future_phase_listing'::phase WHERE id = $1",
+            created.project_id,
+        )
+
+    (listed,) = await repo.list_all()
+
+    assert listed.project_id == created.project_id
+    assert listed.phase == UnrecognizedPhase("future_phase_listing")

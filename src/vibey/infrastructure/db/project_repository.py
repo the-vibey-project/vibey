@@ -204,6 +204,17 @@ class PostgresProjectRepository:
             row = await conn.fetchrow("SELECT * FROM project ORDER BY created_at DESC LIMIT 1")
             return self._rows.to_record(row) if row is not None else None
 
+    async def list_all(self) -> tuple[ProjectRecord, ...]:
+        """Every project, newest first: `created_at` descending, then id, so two projects
+        created in one instant still come back in one order every time.
+
+        Read through the shared row mapper, so a project in a phase a newer vibey wrote
+        is listed with its stored text (vibey#287) rather than taking the listing down.
+        """
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM project ORDER BY created_at DESC, id DESC")
+            return tuple(self._rows.to_record(row) for row in rows)
+
     async def transition(
         self,
         project_id: UUID,

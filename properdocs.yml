@@ -111,5 +111,6 @@ nav:
           - "0055 — The ledger is append-only by the database, not by convention": architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md
           - "0056 — Everything a queue guards is reaped by measurement": architecture/decisions/0056-everything-a-queue-guards-is-reaped-by-measurement.md
           - "0057 — Storm work lives on durable storage, is committed and pushed often, and a tool refuses volatile paths": architecture/decisions/0057-the-work-outlives-the-machine.md
+          - "0058 — Concurrent runs of a local model are measured on each device, and unmeasured or stale means one": architecture/decisions/0058-concurrent-local-runs-are-measured-per-device.md
           - "0058 — The heartbeat tells the truth, and passes the gate by the gate's own rule": architecture/decisions/0058-the-heartbeat-tells-the-truth-and-passes-the-gate-by-its-rule.md
   - Research paper: paper.md

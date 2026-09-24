@@ -145,6 +145,38 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **cli:** finding a project or an open gate no longer takes SQL. `vibey projects` lists every
+  project, newest first, with its id, phase, cycle and open-gate count; `vibey gates
+  [PROJECT_ID]` lists every open gate, oldest first, with its project, kind and prompt, and
+  `answer with:` -- the exact `vibey answer` command that answers it. Both take `--json`
+  (a projects array; `{"gates": [...]}`), the contract the VS Code extension reads, and both
+  exit 0 on an empty list. How each gate kind is answered is declared once, in
+  `vibey.cli.gate_answers`: a verdict or choice from the gate's own options, `--defaults` for
+  the interview, `--raw '{"max_dollars": N}'` and the other grants with the number left to
+  the person, `--raw '{}'` where any answer retries, and `--raw '<json>'` for the rest; a
+  test fails when a gate kind is raised without an entry there. The repositories gain
+  `list_all()` and `open_all()`, and the next-step hints, the README, the CLI reference and
+  the greeter runbook point at `vibey gates` instead of a `human_gate` query
+
+* **vibey_gh:** `vibey-gh slots corpus|calibrate|allowed` measure how many runs of one local
+  model fit on a device at once, and `[local_models] concurrent_runs` declares it (sub-doctrines
+  8.c and 8.j, ADR-0058). `calibrate` replays storm-shaped turns (`truncate: false`, so a prompt
+  a slot cannot hold is refused, never silently cut) at N = 1, 2, 3, ... on a runner of its own
+  beside an idle production runner. It samples wired memory, swap-ins and swap-outs, and
+  residency every second, compares every answer with the one-slot answers, and stops at a
+  broken bound or a plateau. Every completed step is checkpointed, so a sweep a reboot
+  interrupts resumes. The evidence is keyed to a device fingerprint (hardware, memory,
+  accelerator, OS, runner version, model digest, context window). `allowed` prints the number
+  a queue may run here: the default `1` probes nothing, `"measured"` takes what this device's
+  evidence supports, and a larger number is refused unless the device measured it inside every
+  bound. Missing or stale evidence means one, said out loud, with a calibration requested. A
+  step taken while another runner held a model is discarded, and a 200 with no `done_reason`
+  counts as a failure, not an answer.
+* **storm:** `storm-queue.sh` asks `vibey-gh slots allowed` how many lanes may run at once,
+  instead of the host-wide `pgrep` it hard-coded. It runs more than one only when this device's
+  evidence says so, and calibrates itself when its queue empties and a calibration was
+  requested, from its own lane records or, when none survive, its committed specs
+  (`storm_turn_pool.py`).
 * **vibey_gh:** the Discord announcement after a docs deploy now says what changed: `vibey-gh
   announce` posts one line per merged change, grouped Breaking / Added / Fixed / Other, capped
   at `[announce] max_changes` (default 8) with `…and N more` and a compare link, merge and
@@ -275,6 +307,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **tests:** a killed test run no longer leaves its databases behind for good. Each session
+  now holds an advisory lock on its database for as long as it lives, and marks the database.
+  Every run drops, in the background, the test databases that no live session holds
+  (`tests/db_reaper.py`; `uv run python -m tests.db_reaper --dry-run` shows what would go).
+  An unmarked database from an older harness is dropped only when no other test session is
+  running, and a database with an open connection is always kept. On the first run, 1,141
+  leaked databases, about 15 GB, were dropped from one machine.
 * **storm:** the push-gate reaper, now on an unattended schedule, acts only on what it has
   checked (the independent review of #1105 and #1107).
   - **Kill safety.** The lock and the traced push are read again under the lock's mutex before

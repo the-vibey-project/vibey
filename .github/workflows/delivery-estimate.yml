@@ -117,10 +117,20 @@ jobs:
         run: |
           set -euo pipefail
           vibey-gh forecast
+          # The paper's forecast figure is generated from the ledger `forecast` just
+          # appended to, so the pull request carries both or neither (sub-doctrine 12.e).
+          # Without this, #1125 merged a new record and every branch's pre-push failed
+          # tests/meta/test_paper_figures.py on develop. The history figures stay pinned
+          # to the revision in the paper's markers; only the forecast block moves.
+          python scripts/paper_figures.py
 
       - name: Publish the changed estimate ledger and report
+        # The Actions token may not open pull requests here ("GitHub Actions is not
+        # permitted to create or approve pull requests"), so the pull request is opened
+        # with the same token every other workflow uses for that, falling back to the
+        # Actions token where the secret is not set (a fork) so the push still lands.
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
           GH_REPO: ${{ github.repository }}
           ESTIMATE_BRANCH: automation/delivery-estimate
         run: |
@@ -132,7 +142,7 @@ jobs:
           git switch --force-create "$ESTIMATE_BRANCH" origin/develop
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .vibey/delivery-estimates.jsonl docs/estimate.md
+          git add .vibey/delivery-estimates.jsonl docs/estimate.md docs/paper.md
           if git diff --cached --quiet; then
             echo "delivery estimate is unchanged"
             exit 0

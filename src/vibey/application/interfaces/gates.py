@@ -43,3 +43,12 @@ class HumanGateRepository(Protocol):
         answering it look like progress when nothing moved.
         """
         ...
+
+    async def open_all(self) -> tuple[HumanGateRecord, ...]:
+        """Every gate not yet answered, across all projects, oldest first: `raised_at`,
+        then `gate_id`, so gates raised in one instant still list in one order.
+
+        What `vibey gates` shows with no project named -- everything waiting on a
+        person, in the order it started waiting.
+        """
+        ...

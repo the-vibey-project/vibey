@@ -589,6 +589,108 @@ stability or reliability shortfall should dilate duration through φ rather than
 the work impossible, and φ is not measured yet. **Paid credit counts as agency**:
 spending is a form of permission to act.
 
+## `[local_models]` and `vibey-gh slots`
+
+How many runs of one local model may run at once on a device is **measured on that
+device, never assumed** (sub-doctrines 8.c and 8.j, ADR-0058). A second run of a model
+already resident can double throughput, or it can overflow the machine's wired memory,
+swap it into the ground, or refuse the deep prompts the first run served. Which of these
+happens depends on the model, its context window, the runner and the hardware, so the
+answer is a calibration recorded per device, and a declaration is checked against it.
+
+```bash
+# A pool of storm-shaped turns: from a storm's own lane records, or its committed specs ...
+python docs/plans/qwenstorm-3.0.0/tools/storm_turn_pool.py specs --out pool.jsonl
+vibey-gh slots corpus --pool pool.jsonl --out corpus.json --segments 20 --min-per-stratum 5
+# ... swept at N = 1, 2, 3, ... beside an idle production runner.
+vibey-gh slots calibrate --corpus corpus.json --lock /path/to/.ollama-lock --out evidence.json
+# What a queue reads: the number on stdout, the reason on stderr.
+vibey-gh slots allowed
+```
+
+**The declaration.** `concurrent_runs` is `1` by default: 8.c as written, one run at a
+time, which needs no evidence and probes nothing. `"measured"` takes whatever this
+device's evidence supports. A number above one runs only if this device's evidence
+measured that number inside every bound and faster than one; otherwise **one runs**, and
+the refusal names what is missing (`--strict` exits `2` on a refusal).
+
+**The device.** Evidence is keyed to a fingerprint of the hardware model, processor,
+memory, accelerator, operating system, runner version, model digest and context window.
+Evidence for a device this no longer is (a runner upgrade, another model digest, more
+memory) is **stale**, and so is evidence older than `max_evidence_age_days`. Missing or
+stale evidence means one, said on stderr, and `slots allowed` writes a calibration
+request beside the evidence. `slots calibrate --if-requested` acts on exactly those
+requests, so an idle window closes the gap without anyone remembering it: the storm
+runner does this itself when its queue empties (`storm-queue.sh`).
+
+**The sweep.** `calibrate` starts its own `ollama serve` on `calibration_port`, with
+`OLLAMA_NUM_PARALLEL=N` and `OLLAMA_NOPRUNE`, beside the production runner, which it
+never restarts or reconfigures. It waits until the production runner has nothing
+resident, and a step during which production loads a model is discarded and measured
+again: two resident models bidding for one accelerator is the contention 8.c forbids, so
+a reading taken beside one measures the wrong thing. It replays the corpus with N
+closed-loop workers through `/api/chat` with `truncate: false` and `shift: false`, so a
+prompt the slot cannot hold is a recorded refusal, never a silent loss of its front
+half, and a `200` with no `done_reason` (what the runner answers when its decode fails
+underneath it) is a failure, not an answer. It samples the host every second: wired
+memory (on macOS, `vm_stat`'s wired pages; on Linux, `Unevictable` plus what an NVIDIA
+accelerator holds), the free share, swap-ins and swap-outs, and what both runners hold
+resident. It reads the runner's own log for slots, context per slot, KV cache sizes,
+model loads, truncations, context shifts and device failures. One slot is measured
+twice, so fidelity is judged against the model's agreement with itself. The sweep stops
+when a bound breaks, or after two consecutive steps without a significant gain. The
+**ideal N** is the smallest that reaches the best throughput inside every bound. At one
+slot the memory bounds are reported as *floor warnings* and never refuse: one is 8.c's
+floor.
+
+**Resumable.** Each completed step is written under `<evidence_dir>/progress/<sweep>`
+the moment it finishes, keyed by the device fingerprint, the corpus hash and the replay
+method; `--out` gets the evidence so far after every step. An interrupted sweep, run
+again with the same arguments, takes the steps it already has and measures the rest, and
+`--max-runs` can walk it one step at a time.
+
+**The runner must match.** The evidence records the runner version of every step. A
+calibration that ran on a different binary from the production runner's (Homebrew's
+`ollama` on `PATH` beside the macOS app's, say) is **not recorded** for this device. Pass
+`--binary` or set `ollama_binary`. Running N lanes also needs the production runner
+started with `OLLAMA_NUM_PARALLEL` of at least N **and** the calibrated context per slot:
+a runner that sizes every slot to its own `OLLAMA_CONTEXT_LENGTH` is not the runner that
+was measured.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `concurrent_runs` | integer ≥ 1 or `"measured"` / `1` | How many runs of the model run at once on this device, checked against this device's evidence as above. |
+| `model` | string / empty | The model calibrated and gated. Empty means `[pr_automation.fallback] model`. |
+| `context_window` | integer / `65536` | The context every slot is calibrated at: the window the loop declares, so every turn fits one slot. Part of the fingerprint. |
+| `evidence_dir` | string / empty | Where evidence, requests and checkpoints live. Empty means `$VIBEY_GH_SLOTS_DIR`, else `~/.local/state/vibey-gh/slots`, on the device the evidence describes. |
+| `max_runs` | integer / `8` | The sweep's upper limit. It normally stops earlier. |
+| `calibration_port` | integer / `11435` | Where the calibration runner listens, beside production. |
+| `ollama_binary` | string / empty | The runner binary. Empty means `ollama` on `PATH`, else the macOS app's bundled runner. |
+| `lock` | string / empty | A `mkdir` lock held for the whole calibration, shared with anything else that must not use the model meanwhile. `--lock`, then `$VIBEY_OLLAMA_LOCK` (a machine's own convention), then this; empty takes none. |
+| `wired_ceiling_fraction` | float / `0.80` | Peak wired memory, as a share of physical memory, that a step above one may reach. |
+| `swap_growth_factor` | float / `2.0` | Swap-outs above one may reach this multiple of the one-slot rate ... |
+| `swap_floor_mb_per_minute` | float / `64.0` | ... and are never judged below this rate. |
+| `fidelity_tolerance` | float / `0.05` | How far structural agreement with the one-slot answers may fall below one slot's agreement with itself. |
+| `min_throughput_gain` | float / `0.10` | What counts as a significant gain, for the plateau rule, the ideal N, and a declared number. |
+| `max_evidence_age_days` | float / `30` | Evidence older than this is stale. |
+
+The bounds are read when a decision is made, not frozen into the evidence, so tightening
+one takes effect at once: the gate re-judges the stored measurements against what this
+file says now.
+
+```toml
+[local_models]
+concurrent_runs = 1        # 8.c as written; "measured" once the operator chooses it (ADR-0058)
+model = "gpt-oss:20b"
+context_window = 65536
+```
+
+**On a cluster.** Every node that serves a model is its own device. Run the calibration
+as a Job pinned to the node (`nodeSelector`), inside the model runner's pod network, with
+`VIBEY_GH_SLOTS_DIR` on a volume that outlives the Job, and give the workers the same
+directory. A node without evidence, or with stale evidence, runs one. The chart does not
+yet template this Job (ADR-0058 records it as owed).
+
 ## `[tidy]`
 
 The clean repo (**sub-doctrine 9.a**): every repository is kept technically clean at

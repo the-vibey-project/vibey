@@ -2114,6 +2114,81 @@ class EstimateConfig:
 
 
 @dataclass(frozen=True)
+class LocalModelsConfig:
+    """`[local_models]`: how many runs of one local model run at once on a device (8.c, 8.j).
+
+    `concurrent_runs` is the declaration (12.c), and it is checked against the device's own
+    evidence by `vibey_gh.slots.SlotGate` rather than trusted:
+
+    - `1` (the default) is 8.c as written -- one run at a time -- and needs no evidence.
+    - `"measured"` takes whatever the calibration recorded for THIS device supports. No
+      evidence, or evidence for a device this no longer is (another model digest, runner
+      version, memory, accelerator or context window), means one, said out loud, with a
+      calibration requested.
+    - A number above one is refused -- one runs instead -- unless this device's evidence
+      measured that number inside every bound below and faster than one.
+
+    The bounds are declared here, not recorded with the evidence, so tightening one takes
+    effect on the next decision without recalibrating: the gate re-judges the stored
+    measurements against what this file says now.
+
+    - `model` (empty): the model calibrated and gated. Empty means `[pr_automation.fallback]
+      model`, the model the local lane runs.
+    - `context_window` (65536): the context every slot is calibrated at -- the window the
+      loop declares, so every recorded turn fits one slot.
+    - `evidence_dir` (empty): where evidence lives. Empty means `$VIBEY_GH_SLOTS_DIR`, else
+      `~/.local/state/vibey-gh/slots` -- on the device the evidence describes.
+    - `max_runs` (8): the sweep's upper limit; it normally stops earlier, at a broken bound
+      or a plateau.
+    - `calibration_port` (11435): where the calibration runner listens, beside production.
+    - `ollama_binary` (empty): the runner binary; empty means `ollama` on `PATH`, else the
+      macOS app's bundled one.
+    - `lock` (empty): a `mkdir` lock held for the whole calibration, shared with anything
+      else that must not use the model at the same time. Empty takes no lock.
+    """
+
+    concurrent_runs: int | str = 1
+    model: str = ""
+    context_window: int = 65536
+    evidence_dir: str = ""
+    max_runs: int = 8
+    calibration_port: int = 11435
+    ollama_binary: str = ""
+    lock: str = ""
+    wired_ceiling_fraction: float = 0.80
+    swap_growth_factor: float = 2.0
+    swap_floor_mb_per_minute: float = 64.0
+    fidelity_tolerance: float = 0.05
+    min_throughput_gain: float = 0.10
+    max_evidence_age_days: float = 30.0
+
+    def __post_init__(self) -> None:
+        runs = self.concurrent_runs
+        if runs != "measured" and not (type(runs) is int and runs >= 1):
+            raise ValueError(
+                'local_models.concurrent_runs must be a whole number of at least 1, or "measured"'
+            )
+        if self.context_window < 1 or self.max_runs < 1:
+            raise ValueError("local_models.context_window and max_runs must be at least 1")
+        if not 0 < self.wired_ceiling_fraction <= 1:
+            raise ValueError("local_models.wired_ceiling_fraction must be above 0 and at most 1")
+        for name in (
+            "swap_growth_factor",
+            "swap_floor_mb_per_minute",
+            "fidelity_tolerance",
+            "min_throughput_gain",
+            "max_evidence_age_days",
+        ):
+            if getattr(self, name) < 0:
+                raise ValueError(f"local_models.{name} must not be negative")
+
+    @classmethod
+    def from_table(cls, section: dict) -> LocalModelsConfig:
+        known = {f.name for f in dataclasses.fields(cls)}
+        return cls(**{key: value for key, value in section.items() if key in known})
+
+
+@dataclass(frozen=True)
 class GhConfig:
     root: Path
     text: str = DEFAULT_TEXT
@@ -2158,6 +2233,7 @@ class GhConfig:
     documentation: DocumentationConfig = DocumentationConfig()
     marketplace: MarketplaceConfig = MarketplaceConfig()
     estimate: EstimateConfig = EstimateConfig()
+    local_models: LocalModelsConfig = LocalModelsConfig()
     runners: RunnersConfig = RunnersConfig()
     # Which bundled workflow templates this repository wants installed and kept current.
     # None means all of them, which is the right default for a repository adopting the
@@ -2516,6 +2592,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         social_signals=_social_signals(data.get("social_signals", {})),
         announce=AnnounceConfig.from_table(data.get("announce", {})),
         estimate=EstimateConfig.from_table(data.get("estimate", {})),
+        local_models=LocalModelsConfig.from_table(data.get("local_models", {})),
         runners=_runners(data.get("runners", {})),
         workflow_names=_workflow_names(data.get("workflow_names", {})),
         tidy=TidyConfig(

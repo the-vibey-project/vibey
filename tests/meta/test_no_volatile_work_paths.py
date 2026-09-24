@@ -45,6 +45,10 @@ EXEMPT: tuple[tuple[str, str], ...] = (
     ("src/*/test/*", "test code, as above"),
     ("src/*/*/tests/*", "test code, as above"),
     ("src/*/*/test/*", "test code, as above"),
+    (
+        "clients/*/test/*",
+        "the editor clients' test code: fixture strings and each test's own scratch directory",
+    ),
     ("*.jsonl", "append-only records of what happened (7.c); rewriting them falsifies them"),
     ("*.log", "append-only records of what happened (7.c); rewriting them falsifies them"),
     (
@@ -66,6 +70,9 @@ RULE_TEXTS = (
     "docs/plans/qwenstorm-3.0.0/README.md",
     "docs/plans/qwenstorm-3.0.0/STORM-CONTEXT.md",
     "docs/plans/qwenstorm-3.0.0/tools/storm_durability.py",
+    # The VS Code extension's port of storm_durability.py: the same volatile locations, each
+    # listed with the reason it is volatile, so the gate refuses what the storm refuses.
+    "clients/vscode/src/core/storage.ts",
     "docs/plans/qwenstorm-3.0.0/tools/storm_checkpoint.py",
     "docs/plans/qwenstorm-3.0.0/tools/storm-queue.sh",
     "docs/plans/qwenstorm-3.0.0/tools/storm-watch.py",
@@ -81,6 +88,21 @@ STATES_THE_RULE = re.compile(
 
 #: (file glob, what the line contains, why it may stay). Category (b) only.
 ALLOWED: tuple[tuple[str, str, str], ...] = (
+    (
+        "docs/architecture/decisions/0058-*.md",
+        r"/private/tmp",
+        "the record of the 2026-09-24 reboot that erased the lanes' payloads: history, not a path in use",
+    ),
+    (
+        "docs/architecture/evidence/slots-*",
+        r"/private/tmp",
+        "the sweep's evidence says why the lanes' payloads were lost: history, not a path in use",
+    ),
+    (
+        "docs/plans/qwenstorm-3.0.0/tools/storm_turn_pool.py",
+        r"/private/tmp",
+        "a comment recording why the pool replays specs, the payloads having gone with /private/tmp; not a path in use",
+    ),
     (
         "src/vibey/infrastructure/db/local_auth.py",
         r"`/tmp`",
@@ -106,11 +128,6 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "src/vibey_tools/gh/vibey_gh/templates/workflows/*.yml",
         r"/tmp/",
         "a CI runner's scratch, as above (the template vibey-gh renders)",
-    ),
-    (
-        "src/vibey/infrastructure/db/local_auth.py",
-        r"`/tmp`, which `urlsplit\(\)\.hostname`",
-        "the Postgres unix-socket directory a DSN names, explained in a docstring; no work kept",
     ),
     (
         "deploy/docker/Dockerfile",
@@ -181,11 +198,6 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "src/vibey/infrastructure/db/*.py",
         r"DEFAULT_SOCKET_DIRS",
         "PostgreSQL's socket directories, probed read-only; a socket is recreated at start",
-    ),
-    (
-        "src/vibey/infrastructure/db/local_auth.py",
-        r"`%2Ftmp` is the socket directory|^\s+`/tmp`, which `urlsplit\(\)\.hostname`",
-        "explains how a libpq socket-directory host is decoded; a socket, not stored work",
     ),
     (
         "src/vibey_tools/gh/vibey_gh/heartbeat_timer.py",

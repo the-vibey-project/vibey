@@ -7,10 +7,10 @@ and the code disagree, the code wins. `vibey <command> --help` prints the
 code's own help text, which is shorter than this page and in places less
 complete (for example, `vibey work --help` does not list `qwenloop`).
 
-Top-level commands, in `vibey --help` order: `new`, `answer`, `work`,
-`watch`, `recover`, `status`, `engines`, `cost`, `install`, `doctor`,
-`operator`, `worker`, and the command groups `design`, `visual`, `deploy`, `ledger`,
-`queue`.
+Top-level commands, in `vibey --help` order: `new`, `projects`, `gates`,
+`answer`, `work`, `watch`, `recover`, `status`, `engines`, `cost`, `install`,
+`doctor`, `migrate`, `operator`, `worker`, and the command groups `design`,
+`visual`, `deploy`, `ledger`, `queue`.
 Bare `vibey`, and each bare command group, prints help.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
@@ -44,16 +44,17 @@ with payloads.
 | Code | Meaning |
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
-| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
+| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `gates` (said on stderr), or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
 | `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 
 ### Guarded and unguarded commands
 
-Ten commands run inside `vibey.cli.errors.guard()`: `new`,
-`design resume`, `design accept`, `work`, `visual accept`, `visual waive`,
-`queue bump`, `queue unbump`, `queue list`, and `worker`. For these, any `VibeyError` — an unknown project or provider,
+Thirteen commands run inside `vibey.cli.errors.guard()`: `new`, `projects`,
+`gates`, `design resume`, `design accept`, `work`, `visual accept`,
+`visual waive`, `queue bump`, `queue unbump`, `queue list`, `queue reap`, and
+`worker`. For these, any `VibeyError` — an unknown project or provider,
 a wrong phase, an invalid spec, no eligible engine, a rejected handoff, an
 unset `VIBEY_PG_URL` — becomes the one-line `Error:` message and exit 3.
 Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
@@ -91,9 +92,9 @@ exists, and a test asserts it (`tests/cli/test_errors_and_logging.py`).
 | Error | Hint printed | Notes |
 |---|---|---|
 | `NoEligibleEngine` | Every engine is excluded, circuit-open, or missing a capability; run `vibey engines` or `vibey doctor`. | |
-| `BudgetExceeded` | A tripped cap parks a `budget_exhausted` gate; raise it with `vibey answer GATE_ID --raw '{"max_dollars": 25}'` (or `"max_turns"`), and `vibey cost` shows where the spend went. Ends with the [gate query](#finding-a-gate-id). | Nothing in `src/vibey` raises this error today, and no runtime code reads `[budget]` from `vibey.toml` — which is why the hint names neither. |
-| `EscalationExhausted` | The work item failed at every rung of the effort ladder and parked a human gate; `vibey answer GATE_ID` it. Ends with the [gate query](#finding-a-gate-id). | |
-| `HandoffRejected` | The no-loss gate refused the handoff and parked a human gate whose `prompt` says what could not be carried over; `vibey answer GATE_ID` it. Ends with the [gate query](#finding-a-gate-id). | |
+| `BudgetExceeded` | A tripped cap parks a `budget_exhausted` gate; raise it with `vibey answer GATE_ID --raw '{"max_dollars": 25}'` (or `"max_turns"`), and `vibey cost` shows where the spend went. Ends by naming [`vibey gates`](#vibey-gates-project_id), which lists the gate. | Nothing in `src/vibey` raises this error today, and no runtime code reads `[budget]` from `vibey.toml` — which is why the hint names neither. |
+| `EscalationExhausted` | The work item failed at every rung of the effort ladder and parked a human gate; `vibey answer GATE_ID` it. Ends by naming [`vibey gates`](#vibey-gates-project_id). | |
+| `HandoffRejected` | The no-loss gate refused the handoff and parked a human gate whose `prompt` says what could not be carried over; `vibey answer GATE_ID` it. Ends by naming [`vibey gates`](#vibey-gates-project_id). | |
 | `IllegalTransitionError` | The project is not in a phase this command applies to; `vibey status` shows the phase. | |
 | `InvalidSpecError` | Run `vibey design` to finish the spec before building. | |
 | `InvalidPhaseError` | Likely a bug in vibey rather than the project. | |
@@ -112,7 +113,134 @@ Create a project and enqueue its first DESIGN interview.
 | `--skills-context-budget N` | `6000` | Token budget for skills retrieval (1,000–32,000). Stored only when the mode is not `off`. |
 
 Prints `project <id>` and `design job <id>`. The project id is the
-`PROJECT_ID` the other commands take.
+`PROJECT_ID` the other commands take; [`vibey projects`](#vibey-projects)
+prints it again later.
+
+## `vibey projects`
+
+List every project, newest first (by creation time, then id), with its phase,
+its cycle, and how many gates are waiting for your answer.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--json` | off | Print a JSON array instead of the table. |
+
+The table has one row per project — `NAME`, `PHASE`, `CYCLE`
+(`cycle/max_cycles`), `OPEN GATES`, `CREATED (UTC)`, `PROJECT ID` — then a
+line counting them that, when any gate is open, points at `vibey gates`.
+`PHASE` is the phase's name, such as `BUILD`. A phase a newer vibey wrote,
+which this one has no name for (vibey#287), is shown as its stored text; it
+never fails the listing.
+
+`--json` prints an array, newest first, of one object per project with exactly
+these keys:
+
+```json
+[
+  {
+    "project_id": "0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10",
+    "name": "greeter",
+    "phase": "BUILD",
+    "cycle": 1,
+    "max_cycles": 3,
+    "repo_path": "/Users/me/src/greeter",
+    "created_at": "2026-09-24T09:00:00.123456+00:00",
+    "open_gates": 2
+  }
+]
+```
+
+`phase` follows the table's rule, `created_at` is ISO-8601 with its offset,
+and `open_gates` counts the project's unanswered gates. With no projects both
+forms exit 0: the table form prints
+``no projects yet; create one with `vibey new <name> --repo <path>` `` and
+`--json` prints `[]`. An empty list is an answer, not an error — unlike
+`vibey status`, which needs a project to report on and exits 1 without one.
+
+## `vibey gates [PROJECT_ID]`
+
+List every open gate — a job parked until a person answers it (ADR-0009) —
+oldest first (by raise time, then gate id), across every project or only
+`PROJECT_ID`'s. Each gate shows its project's name, its kind, its prompt as
+one wrapped paragraph, and the exact command that answers it:
+
+```text
+1 open gate, oldest first -- each is a job waiting for your answer:
+
+1. greeter: approval gate, raised 2026-09-24 12:03 UTC
+   Review artifacts ready for cycle 1. Accept, request changes, or ask
+   questions.
+   answer with: vibey answer 5e1f0c7a-8b2d-4e5f-9a61-2c3d4e5f6a7b --verdict accept
+```
+
+| Argument / option | Default | What it does |
+|---|---|---|
+| `PROJECT_ID` | every project | Only this project's open gates. An unknown id exits 1 with `unknown project <id>` on stderr and nothing on stdout. |
+| `--json` | off | Print `{"gates": [...]}` instead. |
+
+`--json` prints one object whose `gates` array holds, oldest first, one object
+per gate with exactly these keys:
+
+```json
+{
+  "gates": [
+    {
+      "gate_id": "5e1f0c7a-8b2d-4e5f-9a61-2c3d4e5f6a7b",
+      "project_id": "0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10",
+      "project_name": "greeter",
+      "job_id": "9d2a7b1c-3e4f-4a5b-8c6d-7e8f9a0b1c2d",
+      "kind": "approval",
+      "prompt": "Review artifacts ready for cycle 1. Accept, request changes, or ask questions.",
+      "options": ["accept", "changes", "cancel"],
+      "default_answer": null,
+      "raised_at": "2026-09-24T12:03:04.567890+00:00",
+      "timeout_at": null,
+      "answer_with": "vibey answer 5e1f0c7a-8b2d-4e5f-9a61-2c3d4e5f6a7b --verdict accept"
+    }
+  ]
+}
+```
+
+`job_id`, `default_answer` and `timeout_at` are `null` when the gate has none;
+`prompt` is the gate's own text, line breaks included. With nothing waiting,
+both forms exit 0: the text form prints
+`no open gates: nothing is waiting for your answer` and `--json` prints
+`{"gates": []}`.
+
+### How each kind of gate is answered
+
+`answer_with` is one line a shell runs as printed: every word is quoted as the
+shell needs it. Its form depends on the gate's kind, declared once in
+`src/vibey/cli/gate_answers.py`; a test fails when a gate kind is raised
+anywhere in `src/vibey` without an entry there.
+
+| Kind | `answer_with` (`ID` is the gate id) | Raised by |
+|---|---|---|
+| `question` | `vibey answer ID --defaults` | The DESIGN interview. Accepts every question's default. |
+| `approval` | `vibey answer ID --verdict accept` | REVIEW. Its other options are `changes` and `cancel`. |
+| `deploy_demo_review` | `vibey answer ID --verdict approve` | The Phase ⑥ demo. Or `request_changes`. |
+| `choice` | `vibey answer ID --choice local_only` | The deployment opt-in after REVIEW. `deploy` opts in. |
+| `deploy_interview` | `vibey answer ID --choice accept_defaults` | The Phase ④ interview. |
+| `deploy_acceptance` | `vibey answer ID --choice reject` | Phase ④ spec consent; see below. |
+| `deploy_failure_triage` | `vibey answer ID --choice LOOP_DEPLOY_DESIGN` | The Phase ⑥ triage. Or `RETRY_DEPLOY_EXECUTE`, `ABORT_DEPLOYMENT`. |
+| `bus_dead_lettered` | `vibey answer ID --choice replay`, or `dismiss` when the message cannot be replayed | A dead-lettered bus message. |
+| `budget_exhausted` | `vibey answer ID --raw '{"max_dollars": N}'` | The budget brake. |
+| `escalation_exhausted`, `attempts_exhausted` | `vibey answer ID --raw '{"max_attempts": N}'` | A spent effort ladder; a job out of attempts. |
+| `verify_repair_exhausted`, `integrate_repair_exhausted` | `vibey answer ID --raw '{"max_rounds": N}'` | BUILD's verify and integrate repair loops. |
+| `delivery_exhausted`, `research_evidence`, `engine_misconfigured` | `vibey answer ID --raw '{}'` | Any answer retries, once the cause outside vibey is fixed. |
+| `handoff_gate_failed`, `too_many_wind_downs`, and any kind not listed | `vibey answer ID --raw '<json>'` | Nothing reads a particular answer; you write it. |
+
+A verdict or choice uses the gate's declared default, else its first option;
+`options` in `--json` lists the rest. `N` and `<json>` are placeholders, and
+the text form says what to put there. Neither is valid JSON, so a command
+pasted without filling it in is refused by `vibey answer` (exit 2), never
+sent. How much more money or how many more tries to grant is a person's
+decision, so no number is suggested; the gate's prompt usually proposes one.
+
+`deploy_acceptance` prints its declared default, `reject`. Accepting the
+deployment spec also takes explicit consent to change real infrastructure,
+which no flag sends and `answer_with` never suggests:
+`vibey answer ID --raw '{"verdict": "accept", "explicit_mutation_authorized": true}'`.
 
 ## `vibey answer GATE_ID [QUESTION_ID=ANSWER ...]`
 
@@ -127,6 +255,9 @@ Answer a parked human gate. Exactly one of the following modes is required
 | `--verdict VALUE` | Review gates: sends `{"verdict": VALUE}` — `accept`, `changes`, `cancel`, `approve`, or `request_changes`. |
 | `--raw JSON` | Any other gate shape, e.g. raising a tripped budget cap: `--raw '{"max_dollars": 25}'` or `--raw '{"max_turns": 50}'`. |
 
+[`vibey gates`](#vibey-gates-project_id) prints, beside each open gate, the
+form that answers it.
+
 Prints `answered <gate_id>`. These exit 2 with a one-line message:
 combining `--defaults` with `--choice`, `--verdict`, or `--raw`; giving no
 mode or more than one; `--raw` that is not valid JSON or not a JSON object.
@@ -136,16 +267,11 @@ guarded.
 
 ### Finding a gate id
 
-No `vibey` command lists open gates today. Gates live in the `human_gate`
-table; the worker also sends `NOTIFY vibey_gate_raised` with the gate id when
-one is raised. To list open gates:
-
-```sql
-SELECT gate_id, project_id, kind, prompt, options, default_answer, raised_at
-FROM human_gate
-WHERE answered_at IS NULL
-ORDER BY raised_at;
-```
+[`vibey gates`](#vibey-gates-project_id) lists every open gate with its id,
+its prompt, and the `vibey answer` command that answers it;
+`vibey gates PROJECT_ID` lists one project's. The worker also sends
+`NOTIFY vibey_gate_raised` with the gate id when one is raised, for a program
+that would rather listen than poll.
 
 ## `vibey work PROJECT_ID`
 
@@ -333,6 +459,20 @@ observe. It never deletes a dead letter: answer the parked job's gate with `vibe
 GATE_ID --choice replay` (publish it back to the queue it died on, at least once) or
 `--choice dismiss`; the broker's copy stays on the dead-letter queue either way. Its
 thresholds are [`[queue.reap]`](configuration.md#queuereap).
+
+## `vibey-gh slots`
+
+How many runs of one local model may run at once on this device, measured per device
+([ADR-0058](../architecture/decisions/0058-concurrent-local-runs-are-measured-per-device.md)).
+This is a `vibey-gh` command, part of the same distribution:
+
+| Subcommand | What it does |
+|---|---|
+| `vibey-gh slots corpus --pool FILE --out FILE` | Draw a stratified corpus of turn segments from a turn pool (the storm builds one with `storm_turn_pool.py`). |
+| `vibey-gh slots calibrate --corpus FILE` | Sweep N = 1, 2, 3, ... on this device beside an idle production runner. Stops at a broken bound or a plateau, checkpoints every step, and records the evidence keyed to the device's fingerprint. |
+| `vibey-gh slots allowed` | Print the number a queue may run at once here, with the reason on stderr. Missing or stale evidence prints `1` and requests a calibration. |
+
+Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/cli.md).
 
 ## `vibey deploy`
 

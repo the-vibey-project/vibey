@@ -12,6 +12,7 @@ from pathlib import Path
 import asyncpg
 import pytest
 
+from tests.db_roles import TestDatabaseRoles
 from vibey.bootstrap import build_app, migrations_dir
 from vibey.domain.engine import EngineId
 from vibey.infrastructure.cluster_preflight import (
@@ -433,6 +434,12 @@ async def test_full_preflight_against_a_live_database(tmp_path: Path) -> None:
         async def probe(self, app: object, app_url: str) -> LocalAuthFinding:
             return LocalAuthFinding(AuthVerdict.PASS, "refused")
 
+    # A test earlier on this worker may have dropped `public` and rebuilt it as the owner,
+    # which takes the application role's grants with it (tests/db_roles.py, `restore`). This
+    # test runs the sweep as that role, so it puts them back first, as every test that runs as
+    # the application role after one of those must. Without it, the test passed or failed on
+    # which tests xdist happened to schedule before it on the same worker.
+    await TestDatabaseRoles.from_environ(os.environ).restore(_test_dsn(), migrations_dir())
     app_dsn = os.environ.get("VIBEY_TEST_APP_DATABASE_URL", _test_dsn())
     preflight = ClusterPreflight(
         engine_auth=EngineAuthCheck(which=_every_binary),
