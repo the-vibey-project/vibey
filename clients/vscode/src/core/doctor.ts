@@ -60,7 +60,7 @@ export class Doctor implements DoctorInterface {
     const catalogue = await this.deps.catalogue();
     checks.push(
       catalogue.source === 'vibey'
-        ? Doctor.check('loops', 'pass', `vibey loops: ${catalogue.loops.map((loop) => `${loop.loop} (${loop.engines.filter((engine) => engine.enabled).map((engine) => engine.engine_id).join(', ') || 'none switched on'})`).join('; ')}`)
+        ? Doctor.check('loops', 'pass', `vibey loops: ${catalogue.loops.map((loop) => `${loop.loop} (${loop.engines.filter((engine) => engine.enabled && !engine.repealed).map((engine) => engine.engine_id).join(', ') || 'none switched on'})`).join('; ')}`)
         : Doctor.check('loops', 'warn', catalogue.notice as string),
     );
     checks.push(...(await this.ollama()));

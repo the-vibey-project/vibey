@@ -200,6 +200,8 @@ export interface TaskRunInterface {
   /** The engine and model of the attempt running now, once chosen. */
   readonly current: { readonly engine: string; readonly model: string | null; readonly effort: Effort } | undefined;
   readonly stopRequestedAt: number | undefined;
+  /** Whether the engine running now acts on a follow-up: no prompt box otherwise. */
+  readonly takesFollowUps: boolean;
   /** Set when a budget wound this run down or refused it. */
   readonly budgetBreach: BudgetBreach | undefined;
   items(): readonly RunItem[];
