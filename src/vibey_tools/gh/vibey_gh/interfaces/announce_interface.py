@@ -8,7 +8,7 @@ them a deploy says is the announcer's. A test hands the announcer a scripted his
 recording poster and reads the message it would have sent: no network, no clock.
 
 The records they speak in (`CommitRecord`, `CommitRange`, `ChangeSet`, `ReleaseNotes`,
-`Surface`, `AnnounceRequest`, `Announcement`) are frozen data from `vibey_gh.announce`,
+`Surface`, `AnnounceRequest`, `Announcement`) are frozen data from `vibey_gh.announce_records`,
 imported for typing only: naming the shape a seam speaks in is declaring, not consuming.
 """
 
@@ -18,7 +18,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from vibey_gh.announce import (
+    from vibey_gh.announce_records import (
         Announcement,
         AnnounceRequest,
         ChangeSet,

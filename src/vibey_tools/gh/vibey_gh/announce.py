@@ -40,11 +40,22 @@ import unicodedata
 import urllib.error
 import urllib.request
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from vibey_gh import fingerprints
+from vibey_gh.announce_records import (
+    HEX_SHA,
+    PLAIN_REF,
+    Announcement,
+    AnnounceRequest,
+    Change,
+    ChangeSet,
+    CommitRange,
+    CommitRecord,
+    ReleaseNotes,
+    Surface,
+)
 from vibey_gh.config import AnnounceConfig, GhConfig, load_config
 from vibey_gh.flatten import Flattener
 from vibey_gh.gh_transport import GhTransport
@@ -93,8 +104,8 @@ WEBHOOK_ENV = "DISCORD_WEBHOOK_URL"
 _SUPPRESS_EMBEDS = 1 << 2
 
 # A commit or tag this module names in an API path: nothing that could step out of it.
-_REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
-_SHA = re.compile(r"^[0-9a-f]{7,40}$")
+_REF = PLAIN_REF
+_SHA = HEX_SHA
 
 _SUBJECT = re.compile(
     r"^(?P<type>[a-z][a-z0-9-]*)(?:\((?P<scope>[^)]*)\))?(?P<bang>!)?: (?P<description>.+)$"
@@ -171,95 +182,6 @@ def _units(text: str) -> int:
 def _plural(count: int, noun: str) -> str:
     """`1 change`, `2 changes`. Module-level for the reason `_units` is."""
     return f"{count} {noun}" if count == 1 else f"{count} {noun}s"
-
-
-@dataclass(frozen=True)
-class CommitRecord:
-    """One commit: its identity and its whole message."""
-
-    sha: str
-    message: str
-
-
-@dataclass(frozen=True)
-class CommitRange:
-    """`base...head` as the forge compared it. `total` counts every commit in the range,
-    `commits` only those read, so `total - len(commits)` is what was never read."""
-
-    status: str
-    total: int
-    commits: tuple[CommitRecord, ...]
-    html_url: str
-
-
-@dataclass(frozen=True)
-class Change:
-    """One announced line, its parts kept apart until they are rendered and escaped."""
-
-    group: str
-    word: str
-    scope: str
-    description: str
-    reference: str = ""
-    url: str = ""
-    breaking: bool = False
-
-
-@dataclass(frozen=True)
-class ChangeSet:
-    """The classified range: changes in display order, plus what is counted and not listed."""
-
-    changes: tuple[Change, ...] = ()
-    noise: int = 0
-    unread: int = 0
-
-
-@dataclass(frozen=True)
-class ReleaseNotes:
-    """A version's changelog section, and the version the section after it names."""
-
-    changes: ChangeSet
-    previous_version: str | None
-
-
-@dataclass(frozen=True)
-class Surface:
-    """A published file the message links to."""
-
-    label: str
-    url: str
-
-
-@dataclass(frozen=True)
-class AnnounceRequest:
-    """What a deploy published: the channel, the branch it came from, and its commit."""
-
-    channel: str
-    branch: str
-    sha: str
-    repository: str
-    server_url: str = "https://github.com"
-    site_dir: Path = Path("channel-site")
-    version: str = ""
-
-    def __post_init__(self) -> None:
-        if not _SHA.fullmatch(self.sha):
-            raise ValueError(f"announce: --sha must be a hex commit id, not {self.sha!r}")
-        parts = self.repository.split("/")
-        if len(parts) != 2 or not all(_REF.fullmatch(part) for part in parts):
-            raise ValueError(f"announce: --repository must be owner/name: {self.repository!r}")
-        for name in ("channel", "branch"):
-            if not _REF.fullmatch(getattr(self, name)):
-                raise ValueError(f"announce: --{name} is not a plain name: {getattr(self, name)!r}")
-
-
-@dataclass(frozen=True)
-class Announcement:
-    """The message, and how much of it there is, for the log line that reports the post."""
-
-    content: str
-    listed: int = 0
-    surfaces: int = 0
 
 
 class ReleaseHistory(ReleaseHistoryInterface):
@@ -417,10 +339,12 @@ class ChangelogComposer(ChangelogComposerInterface):
                 noise += 1
                 continue
             kind, scope, text = "", "", subject
-            if fingerprints.conventional_subject(subject):
-                match = _SUBJECT.match(subject)
-                if match is not None:
-                    kind, scope, text = match["type"], match["scope"] or "", match["description"]
+            # Conformance is `fingerprints`' to decide, as it is for every gate in this package;
+            # `_SUBJECT` only takes a conforming subject apart.
+            conforming = fingerprints.conventional_subject(subject)
+            match = _SUBJECT.match(subject) if conforming else None
+            if match is not None:
+                kind, scope, text = match["type"], match["scope"] or "", match["description"]
             number = _TRAILING_PR.search(text)
             reference = record.sha
             if number is not None:
@@ -589,13 +513,13 @@ class DiscordWebhook(WebhookPosterInterface):
     def post(self, url: str, payload: Mapping[str, Any]) -> tuple[bool, str]:
         if not url.startswith(("https://", "http://")):
             return False, "the webhook is not an http(s) URL"
-        request = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode(),
-            headers={"Content-Type": "application/json", "User-Agent": "vibey-gh announce"},
-            method="POST",
-        )
         try:
+            request = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json", "User-Agent": "vibey-gh announce"},
+                method="POST",
+            )
             # The scheme is checked just above: http(s) only, never file: or a custom one.
             with urllib.request.urlopen(request, timeout=self._timeout) as response:  # nosec B310
                 return True, f"HTTP {response.status}"
