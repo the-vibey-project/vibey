@@ -5,7 +5,9 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
-- `approve-check PR [--head SHA]`: the delegated approver's grant, enforced by code. Exits 0
+- `approve-check PR [--head SHA] [--approve] [--body TEXT]`: the delegated approver's grant,
+  enforced by code; `--approve` submits one approval pinned to `--head`, only after every
+  condition held. Exits 0
   only when every `[unattended_approval]` condition holds for the pull request — `enabled`,
   the live switch reading exactly its value, the author in `authors` (expanded by
   `expand_authors`), the base in `branches`, no changed file in `forbidden_paths` (a `**/`

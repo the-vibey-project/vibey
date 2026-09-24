@@ -29,13 +29,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
-* **vibey_gh:** `vibey-gh approve-check PR [--head SHA]` enforces the delegated approver's grant
+* **vibey_gh:** `vibey-gh approve-check PR [--head SHA] [--approve]` enforces the delegated approver's grant
   by code (sub-doctrines 12.f, 12.j): it exits 0 only when every `[unattended_approval]`
   condition holds — live switch, author allowlist (`@codeowners` expanded), branch globs,
   `forbidden_paths` (whole-PR refusal), green gates, and an approving account that wrote none
   of the change — and prints every refusal otherwise. `switch_variable` and `switch_value` are
-  now declared keys. The `unattended-approver` agent runs it first and loses its `gh api`
-  grant.
+  now declared keys. `--approve` submits one approval pinned to the checked head, and only
+  after every condition held. The `unattended-approver` agent runs it first and approves only
+  through it; its `gh api` grant is gone.
 * **qwenloop:** an `edit_file` tool that replaces exactly one match; `write_file` refuses to
   shrink an existing file of 40 or more lines by more than half ([#346](https://github.com/the-vibey-project/vibey/issues/346))
 * **qwenloop:** every `turn.completed` event records `started_at`, `ended_at`, `duration_ms`,

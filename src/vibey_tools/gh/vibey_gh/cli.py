@@ -1990,7 +1990,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     ac.add_argument("pr", type=int, help="the pull request to judge")
     ac.add_argument("--head", metavar="SHA", help="refuse unless the head is exactly this commit")
-    ac.set_defaults(func=lambda a: ApprovalCheck().run(a.pr, a.head))
+    ac.add_argument(
+        "--approve",
+        action="store_true",
+        help="when every condition holds, submit one approving review pinned to --head; "
+        "submit nothing otherwise",
+    )
+    ac.add_argument("--body", help="the approving review's body (with --approve)")
+    ac.set_defaults(func=lambda a: ApprovalCheck().run(a.pr, a.head, a.approve, a.body))
 
     for surface in ("api", "mcp", "sdk", "webhook"):
         adapter = sub.add_parser(surface, help=f"invoke a capability through the {surface} adapter")

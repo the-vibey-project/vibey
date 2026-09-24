@@ -14,13 +14,14 @@ reader -- never by patching an import (9.b).
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from vibey_gh import cli, merge_train
+from vibey_gh import approval_check, cli, merge_train
 from vibey_gh.approval_check import ApprovalCheck, ApprovalVerdict
 from vibey_gh.config import (
     CODEOWNERS_SENTINEL,
@@ -506,16 +507,27 @@ def test_a_verdict_with_no_head_says_so() -> None:
 def test_the_command_is_registered_and_passes_its_arguments(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    calls: list[tuple[int, str | None]] = []
+    calls: list[tuple[Any, ...]] = []
 
-    def run(self: ApprovalCheck, number: int, head: str | None = None) -> int:
-        calls.append((number, head))
+    def run(
+        self: ApprovalCheck,
+        number: int,
+        head: str | None = None,
+        approve: bool = False,
+        body: str | None = None,
+    ) -> int:
+        calls.append((number, head, approve, body))
         return 1
 
     monkeypatch.setattr(ApprovalCheck, "run", run)
     assert cli.main(["approve-check", "12"]) == 1
     assert cli.main(["approve-check", "12", "--head", HEAD]) == 1
-    assert calls == [(12, None), (12, HEAD)]
+    assert cli.main(["approve-check", "12", "--head", HEAD, "--approve", "--body", "V"]) == 1
+    assert calls == [
+        (12, None, False, None),
+        (12, HEAD, False, None),
+        (12, HEAD, True, "V"),
+    ]
 
 
 # ----------------------------------------------------------- the declared switch, validated
@@ -581,3 +593,171 @@ def test_this_repository_forbids_the_approver_its_own_machinery(path: str) -> No
     pr[CHANGED_PATHS_KEY] = [path]
     subject = ApprovalCheck(config=lambda: cfg, transport=forge(), reader=lambda n, c: pr)
     assert f"forbidden path: touches {path}" in subject.evaluate(7).refusals
+
+
+def _imported_modules() -> list[str]:
+    """Every `vibey_gh` module `approval_check` imports, read from its own source."""
+    source = Path(approval_check.__file__)
+    found: set[str] = set()
+    for node in ast.walk(ast.parse(source.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.ImportFrom) and node.module:
+            if node.module == "vibey_gh":
+                found.update(f"vibey_gh.{alias.name}" for alias in node.names)
+            elif node.module.startswith("vibey_gh."):
+                found.add(node.module)
+    return sorted(found)
+
+
+def test_the_import_scan_sees_what_the_check_is_built_from() -> None:
+    """The scan below is only as good as this: it must see the modules the check leans on."""
+    modules = _imported_modules()
+    for expected in ("vibey_gh.merge_train", "vibey_gh.pr_automation", "vibey_gh.gh_transport"):
+        assert expected in modules
+
+
+@pytest.mark.parametrize("module", _imported_modules())
+def test_every_module_the_check_imports_is_forbidden_to_the_approver(module: str) -> None:
+    """A change to anything the check is built from could loosen it while passing it.
+
+    Derived from the check's own imports rather than listed, so a new import cannot join the
+    check without joining `forbidden_paths` too.
+    """
+    path = "src/vibey_tools/gh/" + module.replace(".", "/") + ".py"
+    assert (REPO_ROOT / path).is_file(), path
+    test_this_repository_forbids_the_approver_its_own_machinery(path)
+
+
+# ------------------------------------------------------------------ fail-closed shapes (#1083)
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        {"name": "CodeQL", "conclusion": "SUCCESS"},
+        {"name": "CodeQL", "status": "COMPLETED"},
+        {"name": "CodeQL", "status": "COMPLETED", "conclusion": None},
+        {"name": "CodeQL", "status": "WEIRD", "conclusion": "SUCCESS"},
+    ],
+    ids=["no-status", "no-conclusion", "null-conclusion", "unknown-status"],
+)
+def test_a_check_of_unproven_shape_is_not_green(tmp_path: Path, item: dict[str, Any]) -> None:
+    """Green is an explicit COMPLETED with an explicit passing conclusion, and nothing less."""
+    found = refusals(tmp_path, pr=pull_request(statusCheckRollup=[*green(), item]))
+    assert len(found) == 1
+    assert found[0].startswith("gates: ")
+    assert "CodeQL" in found[0]
+
+
+@pytest.mark.parametrize(
+    "commits",
+    [
+        [],
+        [{"authors": []}],
+        [{"authors": ["vibey-approver"]}],
+        [{"authors": [{"name": "unlinked co-author"}]}],
+        [{"authors": [{"login": ""}]}],
+        [{"authors": [{"login": None}]}],
+    ],
+    ids=["no-commits", "no-authors", "non-dict-author", "no-login", "empty-login", "null-login"],
+)
+def test_a_commit_author_that_cannot_be_named_refuses(tmp_path: Path, commits: list) -> None:
+    """An author with no login might be the approver; unprovable is refusal."""
+    transport = forge(**{"pr view 7 --json commits": {"commits": commits}})
+    (found,) = refusals(tmp_path, transport=transport)
+    assert found.startswith("authorship: could not be established")
+
+
+def test_an_unreadable_codeowners_refuses_instead_of_crashing(tmp_path: Path) -> None:
+    (tmp_path / ".github").mkdir()
+    (tmp_path / ".github" / "CODEOWNERS").write_bytes(b"* @\xff\xfe\n")
+    found = refusals(tmp_path, authors=(CODEOWNERS_SENTINEL,))
+    assert len(found) == 1
+    assert found[0].startswith("author: [unattended_approval] authors could not be expanded")
+
+
+def test_the_check_never_raises(tmp_path: Path) -> None:
+    """Whatever goes wrong mid-check, the answer is a refusal and never a traceback."""
+
+    class Broken:
+        def touched(self, patterns, paths):
+            raise RuntimeError("matcher exploded")
+
+    cfg = config(tmp_path)
+    subject = ApprovalCheck(
+        config=lambda: cfg, transport=forge(), reader=lambda n, c: pull_request(), guard=Broken()
+    )
+    verdict = subject.evaluate(7)
+    assert verdict.refusals == ("check: failed before every condition was read (matcher exploded)",)
+    assert verdict.head == HEAD
+
+
+@pytest.mark.parametrize(
+    "kw, match",
+    [({"switch_variable": "1BAD"}, "switch_variable"), ({"switch_value": "on "}, "switch_value")],
+)
+def test_the_switch_is_validated_even_while_the_grant_is_off(
+    kw: dict[str, str], match: str
+) -> None:
+    """A switch that could never be set is wrong the day the grant is turned on, so say so now."""
+    with pytest.raises(ValueError, match=match):
+        UnattendedApprovalConfig(enabled=False, **kw)
+
+
+# ------------------------------------------------------------------------------ --approve
+
+REVIEWS = "api -X POST repos/{owner}/{repo}/pulls/7/reviews"
+
+
+def _submitted(transport: Forge) -> list[str]:
+    return [asked for asked in transport.asked if asked.startswith(REVIEWS)]
+
+
+def test_approve_submits_exactly_one_approval_pinned_to_the_head(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    key = f"{REVIEWS} -f event=APPROVE -f commit_id={HEAD} -f body=VERDICT: approved"
+    transport = forge(**{key: {"state": "APPROVED", "commit_id": HEAD}})
+    assert (
+        check(tmp_path, transport=transport).run(7, HEAD, approve=True, body="VERDICT: approved")
+        == 0
+    )
+    assert _submitted(transport) == [key]
+    assert f"approved #7 at {HEAD}" in capsys.readouterr().out
+
+
+def test_approve_submits_nothing_after_a_refusal(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    transport = forge(**{f"api {VARIABLE}": {"value": "off"}})
+    assert check(tmp_path, transport=transport).run(7, HEAD, approve=True, body="x") == 1
+    assert _submitted(transport) == []
+    assert "no approval was submitted" in capsys.readouterr().out
+
+
+def test_approve_requires_a_pinned_head(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    transport = forge()
+    assert check(tmp_path, transport=transport).run(7, None, approve=True) == 1
+    assert _submitted(transport) == []
+    assert transport.asked == []
+    assert "--approve needs --head" in capsys.readouterr().out
+
+
+def test_approve_submits_nothing_when_the_head_has_moved(tmp_path: Path) -> None:
+    transport = forge()
+    assert check(tmp_path, transport=transport).run(7, "b" * 40, approve=True) == 1
+    assert _submitted(transport) == []
+
+
+@pytest.mark.parametrize(
+    "answer",
+    ["HTTP 422: Can not approve your own pull request", {"state": "COMMENTED"}, ["APPROVED"]],
+    ids=["refused", "wrong-state", "wrong-shape"],
+)
+def test_an_approval_the_forge_did_not_record_is_a_failure(
+    tmp_path: Path, answer: Any, capsys: pytest.CaptureFixture[str]
+) -> None:
+    key = f"{REVIEWS} -f event=APPROVE -f commit_id={HEAD} -f body=" + approval_check.DEFAULT_BODY
+    transport = forge(**{key: answer})
+    assert check(tmp_path, transport=transport).run(7, HEAD, approve=True) == 1
+    assert _submitted(transport) == [key]
+    assert "was not recorded" in capsys.readouterr().out

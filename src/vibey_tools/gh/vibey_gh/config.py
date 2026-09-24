@@ -593,8 +593,9 @@ class UnattendedApprovalConfig:
     switch_value: str = "on"
 
     def __post_init__(self) -> None:
-        if not self.enabled:
-            return
+        # The switch is validated whether or not the grant is on: a switch that could never
+        # be set is wrong the day somebody turns the grant on, and that is the worst day to
+        # find out. Everything below the early return binds only an enabled grant.
         if not SECRET_NAME_PATTERN.fullmatch(self.switch_variable):
             raise ValueError(
                 "unattended_approval.switch_variable must be a repository variable name "
@@ -607,6 +608,8 @@ class UnattendedApprovalConfig:
                 "whitespace -- it is compared exactly, and whitespace nobody can see is a "
                 "value nobody can match"
             )
+        if not self.enabled:
+            return
         _unique_nonempty("unattended_approval.branches", self.branches)
         _unique_nonempty("unattended_approval.authors", self.authors)
         _unique_nonempty("unattended_approval.forbidden_paths", self.forbidden_paths)

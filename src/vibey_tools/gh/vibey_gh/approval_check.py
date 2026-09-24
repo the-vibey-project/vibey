@@ -22,14 +22,21 @@ The conditions, each a refusal when it does not hold or cannot be read:
 4. **it touches nothing forbidden** -- no changed file matches a `forbidden_paths` entry, and
    the WHOLE pull request is refused when one does; there is no safe subset. A listing that
    failed or came back shorter than GitHub's own count cannot rule a path out, so it refuses.
-5. **the gates are green** (when `require_all_gates`) -- every current check on the head has
-   completed without failing, and both of the merge train's `GATES` succeeded on it.
+5. **the gates are green** (when `require_all_gates`) -- every current check on the head says
+   COMPLETED with an explicit passing conclusion (a missing or null field is not a pass), every
+   commit status says SUCCESS, and both of the merge train's `GATES` succeeded on it.
 6. **the approving account wrote none of it** -- 12.f's load-bearing rule at the one level a
    machine can see: the account `gh` is authenticated as is neither the pull request's author
-   nor an author of any of its commits. Whether THIS SESSION wrote any of the diff is not
+   nor an author of any of its commits; a commit author with no account login might be it, so
+   that refuses too. Whether THIS SESSION wrote any of the diff is not
    visible to a command and stays with the approver.
 7. **it is an open pull request, ready for review, at the head that was examined** -- and with
    `--head`, a head that has moved since is refused, so what was examined is what is approved.
+
+With `--approve` (which requires `--head`), and only when every condition holds, the command
+submits ONE approving review pinned to that head and confirms the forge recorded it. That is
+the only write the delegated approver is granted: no `gh pr review`, which can also request
+changes or comment, and no `gh api`, which reaches every write endpoint the token can.
 
 Glob semantics for `forbidden_paths` are the merge train's (`ProtectedPathsGuard`: shell
 globs, case-sensitive, over the whole root-relative path, `*` crossing `/`) PLUS the other
@@ -66,7 +73,7 @@ from vibey_gh.interfaces.protected_paths_interface import ProtectedPathsInterfac
 from vibey_gh.pr_automation import OWN_CHECKS, newest_per_name
 from vibey_gh.protected_paths import CHANGED_PATHS_KEY, LISTED_FILES_KEY, ProtectedPathsGuard
 
-__all__ = ["ApprovalCheck", "ApprovalVerdict", "PullRequestReader"]
+__all__ = ["DEFAULT_BODY", "ApprovalCheck", "ApprovalVerdict", "PullRequestReader"]
 
 # How the pull request is read: `merge_train.pull_request`'s shape, so the default is that
 # function and a test substitutes a table at this declared seam.
@@ -80,6 +87,13 @@ _SHOWN = 3
 _COMMIT_PAGE = 100
 # A commit status (not a check run) carries `state`; these two mean it has not finished.
 _UNFINISHED_STATES = ("PENDING", "EXPECTED")
+# A check run is green only when it says so twice over: an explicit COMPLETED status and one
+# of these explicit conclusions -- the non-failing set the merge train accepts. A missing or
+# null field is not a pass; it is a shape nobody can vouch for.
+_PASSING_CONCLUSIONS = ("SUCCESS", "NEUTRAL", "SKIPPED")
+_RUNNING_STATUSES = ("QUEUED", "IN_PROGRESS", "WAITING", "PENDING", "REQUESTED")
+# The review body `--approve` submits when the approver supplies none.
+DEFAULT_BODY = "Approved under [unattended_approval] after `vibey-gh approve-check` passed."
 
 
 @dataclass(frozen=True)
@@ -103,8 +117,8 @@ class ApprovalVerdict:
             return "\n".join(lines)
         return (
             f"{_PROG}: #{self.number} at {at}: every condition of [unattended_approval] holds.\n"
-            f"  Re-run with --head {self.head} immediately before approving; a head that has\n"
-            "  moved since is refused."
+            f"  Approve with --head {self.head} --approve, which re-checks every condition and\n"
+            "  submits nothing if any fails or the head has moved."
         )
 
 
@@ -141,18 +155,72 @@ class ApprovalCheck(ApprovalCheckInterface):
         guarded = dataclasses.replace(cfg, protected_paths=cfg.unattended_approval.forbidden_paths)
         return merge_train.pull_request(number, guarded)
 
-    def run(self, number: int, head: str | None = None) -> int:
-        verdict = self.evaluate(number, head)
+    def run(
+        self,
+        number: int,
+        head: str | None = None,
+        approve: bool = False,
+        body: str | None = None,
+    ) -> int:
+        if approve and head is None:
+            # Nothing is read and nothing is sent: an approval not pinned to the commit that
+            # was examined could land on whatever the head became in the meantime.
+            print(f"{_PROG}: #{number}: REFUSED\n  - --approve needs --head SHA", file=sys.stdout)
+            return 1
+        verdict, cfg = self._evaluate(number, head)
         print(verdict.report(), file=sys.stdout)
-        return 0 if verdict.granted else 1
+        if not verdict.granted or cfg is None:
+            if approve:
+                print(f"{_PROG}: no approval was submitted", file=sys.stdout)
+            return 1
+        if not approve:
+            return 0
+        return self._approve(cfg, number, verdict.head, DEFAULT_BODY if body is None else body)
+
+    def _approve(self, cfg: GhConfig, number: int, head: str, body: str) -> int:
+        """Submit ONE approving review, pinned to `head`, and confirm the forge recorded it.
+
+        The only write this module makes, and reached only after every condition held. It
+        goes through the same transport as every read; `survey` never raises and returns the
+        forge's answer beside a problem sentence, which is exactly what confirming a write
+        needs. `-f` sends each field as a raw string, so a body is never read as a file.
+        """
+        answer, problem = self._transport.survey(
+            [
+                "api",
+                "-X",
+                "POST",
+                f"repos/{{owner}}/{{repo}}/pulls/{number}/reviews",
+                "-f",
+                "event=APPROVE",
+                "-f",
+                f"commit_id={head}",
+                "-f",
+                f"body={body}",
+            ],
+            cwd=cfg.root,
+        )
+        state = answer.get("state") if isinstance(answer, dict) else None
+        if problem or state != "APPROVED":
+            print(
+                f"{_PROG}: the approval of #{number} at {head} was not recorded "
+                f"({problem or f'the forge answered state {state!r}'})",
+                file=sys.stdout,
+            )
+            return 1
+        print(f"{_PROG}: approved #{number} at {head}", file=sys.stdout)
+        return 0
 
     def evaluate(self, number: int, head: str | None = None) -> ApprovalVerdictInterface:
+        return self._evaluate(number, head)[0]
+
+    def _evaluate(self, number: int, head: str | None) -> tuple[ApprovalVerdict, GhConfig | None]:
+        """The verdict, and the configuration it was judged under (None when unreadable)."""
         try:
             cfg = self._config()
         except Exception as exc:  # noqa: BLE001 -- any failure to read the grant is refusal
-            return ApprovalVerdict(
-                number, "", (f"grant: .vibey-gh.toml could not be read ({exc})",)
-            )
+            refused = (f"grant: .vibey-gh.toml could not be read ({exc})",)
+            return ApprovalVerdict(number, "", refused), None
         grant = cfg.unattended_approval
         refusals: list[str] = []
         if not grant.enabled:
@@ -162,9 +230,24 @@ class ApprovalCheck(ApprovalCheckInterface):
             pr = self._reader(number, cfg)
         except Exception as exc:  # noqa: BLE001 -- any failure to read the forge is refusal
             refusals.append(f"pull request: #{number} could not be read from the forge ({exc})")
-            return ApprovalVerdict(number, "", tuple(refusals))
+            return ApprovalVerdict(number, "", tuple(refusals)), cfg
         actual = str(pr.get("headRefOid") or "")
-        refusals += self._state(pr)
+        try:
+            refusals += self._conditions(number, head, actual, pr, cfg)
+        except Exception as exc:  # noqa: BLE001 -- the check never raises; unread is refused
+            refusals.append(f"check: failed before every condition was read ({exc})")
+        return ApprovalVerdict(number, actual, tuple(refusals)), cfg
+
+    def _conditions(
+        self,
+        number: int,
+        head: str | None,
+        actual: str,
+        pr: Mapping[str, Any],
+        cfg: GhConfig,
+    ) -> list[str]:
+        grant = cfg.unattended_approval
+        refusals = self._state(pr)
         if head is not None and head != actual:
             refusals.append(f"head: is {actual}, not the pinned {head}")
         refusals += self._author(pr, cfg)
@@ -173,7 +256,7 @@ class ApprovalCheck(ApprovalCheckInterface):
         if grant.require_all_gates:
             refusals += self._gates(pr, cfg)
         refusals += self._authorship(number, pr, cfg)
-        return ApprovalVerdict(number, actual, tuple(refusals))
+        return refusals
 
     # ------------------------------------------------------------------------ conditions
 
@@ -211,10 +294,11 @@ class ApprovalCheck(ApprovalCheckInterface):
         return []
 
     def _author(self, pr: Mapping[str, Any], cfg: GhConfig) -> list[str]:
-        admitted = {
-            normalise_actor(login)
-            for login in expand_authors(cfg.unattended_approval.authors, cfg.root)
-        }
+        try:
+            expanded = expand_authors(cfg.unattended_approval.authors, cfg.root)
+        except (OSError, UnicodeError) as exc:
+            return [f"author: [unattended_approval] authors could not be expanded ({exc})"]
+        admitted = {normalise_actor(login) for login in expanded}
         if not admitted:
             return ["author: [unattended_approval] authors expands to nobody"]
         author = _login(pr.get("author"))
@@ -248,6 +332,7 @@ class ApprovalCheck(ApprovalCheckInterface):
         ignored = set(cfg.pr_automation.ignored_checks) | OWN_CHECKS
         running: list[str] = []
         failing: list[str] = []
+        unreadable: list[str] = []
         for item in rollup:
             name = str(item.get("name") or item.get("context") or "unnamed check")
             if name in ignored:
@@ -260,9 +345,11 @@ class ApprovalCheck(ApprovalCheckInterface):
                     running.append(name)
                 elif state != "SUCCESS":
                     failing.append(name)
-            elif item.get("status") not in (None, "COMPLETED"):
+            elif item.get("status") in _RUNNING_STATUSES:
                 running.append(name)
-            elif item.get("conclusion") not in (None, "SUCCESS", "NEUTRAL", "SKIPPED"):
+            elif item.get("status") != "COMPLETED" or item.get("conclusion") is None:
+                unreadable.append(name)
+            elif item.get("conclusion") not in _PASSING_CONCLUSIONS:
                 failing.append(name)
         missing = [
             gate
@@ -278,6 +365,7 @@ class ApprovalCheck(ApprovalCheckInterface):
         for label, names in (
             ("failing", failing),
             ("still running", running),
+            ("of no provable result (no COMPLETED status or no conclusion)", unreadable),
             ("not green on this head", missing),
         ):
             if names:
@@ -301,12 +389,19 @@ class ApprovalCheck(ApprovalCheckInterface):
             return [f"{unknown} — the commits are unreadable ({problem or 'no commit list'})"]
         if len(commits) >= _COMMIT_PAGE:
             return [f"{unknown} — the commit listing may be truncated at {len(commits)}"]
+        if not commits:
+            return [f"{unknown} — the pull request lists no commits"]
         authors: list[str] = []
         for commit in commits:
             named = commit.get("authors") if isinstance(commit, dict) else None
-            if not isinstance(named, list):
+            if not isinstance(named, list) or not named:
                 return [f"{unknown} — a commit lists no authors"]
-            authors += [normalise_actor(_login(entry)) for entry in named]
+            logins = [_login(entry) for entry in named]
+            if not all(logins):
+                # An author GitHub could not tie to an account -- an unlinked co-author
+                # trailer, say -- might be the approving account. Unprovable is refusal.
+                return [f"{unknown} — a commit author has no account login"]
+            authors += [normalise_actor(login) for login in logins]
         if mine in authors:
             return [
                 (

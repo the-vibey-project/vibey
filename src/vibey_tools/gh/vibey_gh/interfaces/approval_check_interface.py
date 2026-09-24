@@ -54,6 +54,17 @@ class ApprovalCheckInterface(Protocol):
         approved. Never raises: a failure to read is a refusal (12.f)."""
         ...
 
-    def run(self, number: int, head: str | None = None) -> int:
-        """Print the verdict and return the command's exit status: 0 granted, 1 refused."""
+    def run(
+        self,
+        number: int,
+        head: str | None = None,
+        approve: bool = False,
+        body: str | None = None,
+    ) -> int:
+        """Print the verdict and return the command's exit status: 0 granted, 1 refused.
+
+        With `approve`, and only when every condition held for the pinned `head`, submit ONE
+        approving review pinned to that commit and return 0 only if the forge recorded it.
+        `approve` without `head` is refused before anything is read; a refusal submits
+        nothing. This is the only write the approver needs, so it is the only one it gets."""
         ...

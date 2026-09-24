@@ -351,12 +351,20 @@ forbidden_paths = [
   "src/vibey_tools/gh/vibey_gh/config.py",
   "src/vibey_tools/gh/vibey_gh/fingerprints.py",
 
-  # The approver's own enforcement: `vibey-gh approve-check`, the seam it is declared by, and
-  # the path matcher it applies this list with. A change to any of them could make the check
-  # say yes to what this grant refuses, which is the grant widened by another route.
+  # The approver's own enforcement: `vibey-gh approve-check` and every `vibey_gh` module it
+  # imports -- the seams it is declared by, the path matcher it applies this list with, the
+  # check deduplication and exclusions it reads gates through (pr_automation.py), and the
+  # transport it reads the forge and submits its approval with (gh_transport.py). A change to
+  # any of them could make the check say yes to what this grant refuses, which is the grant
+  # widened by another route. test_approve_check.py derives this set from the check's own
+  # imports, so a new import cannot join the check without joining this list.
   "src/vibey_tools/gh/vibey_gh/approval_check.py",
   "src/vibey_tools/gh/vibey_gh/interfaces/approval_check_interface.py",
   "src/vibey_tools/gh/vibey_gh/protected_paths.py",
+  "src/vibey_tools/gh/vibey_gh/interfaces/protected_paths_interface.py",
+  "src/vibey_tools/gh/vibey_gh/pr_automation.py",
+  "src/vibey_tools/gh/vibey_gh/gh_transport.py",
+  "src/vibey_tools/gh/vibey_gh/interfaces/forge_transport_interface.py",
 
   # The local gates, and the hooks that invoke them.
   ".pre-commit-config.yaml",
