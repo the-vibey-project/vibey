@@ -21,7 +21,7 @@ in config; a GitHub label or issue from anyone else can never jump the queue (12
 
 There are two queues. vibey's is the PostgreSQL `job` table, claimed with
 `FOR UPDATE SKIP LOCKED` (ADR-0002, ADR-0044). The storm's is the lane queue under
-`docs/plans/qwenstorm-3.0.0`, built in its own lane and pull request. This record is the
+`docs/plans/qwenstorm-3.0.0`, built in its own pull request (#1089). This record is the
 contract both implement; the storm's lane cites it. The mechanism section below is vibey's.
 
 vibey's queue already had half a priority feature and none of the other half. The claim
@@ -43,9 +43,7 @@ number, had there been a way to set it, would not have said what the operator as
 3. **Dependencies are respected and pulled forward.** Bumping a job whose dependencies are
    unfinished bumps those dependencies too, transitively, dependencies before what needs
    them, keeping their relative order; the result lists everything moved. A bump never
-   makes a job claimable before its dependencies succeed. A dependency that cannot run and
-   cannot be moved — failed, cancelled, or in a state this version does not know — is
-   reported as blocking, not skipped over.
+   makes a job claimable before its dependencies succeed.
 4. **Authorisation.** Only the operator, or a source declared in configuration, may bump or
    un-bump. The command line run by the operator is the operator. Anything else is refused,
    and the refusal is recorded and reported (12.j, 12.d). The absence of a declaration is
@@ -61,9 +59,11 @@ number, had there been a way to set it, would not have said what the operator as
    job moved. The ledger is append-only; the row's ordering field is queue state and the
    ledger is its history. The queue can be shown in claim order with every bump marked.
 7. **Reversible.** An un-bump returns a job to normal order and is recorded the same way.
-   Because a bumped job cannot run before its dependencies, un-bumping a dependency also
-   un-bumps every bumped job that depends on it — the mirror of the pull-forward — so a
-   bump never holds a place its job cannot use.
+
+The storm's queue implements this contract over `queue.txt` and an append-only priority log
+(`docs/plans/qwenstorm-3.0.0/tools/storm_queue.py`, `[priority] sources` in `storm.toml`).
+Where the two differ below the contract, the difference is named in the mechanism that has
+it.
 
 ### vibey's mechanism
 
@@ -99,6 +99,16 @@ taking waits for the claim to commit, then sees the job running and moves it wit
 touching the lease; a claim that meets a row a bump holds passes over it, as `SKIP LOCKED`
 always has. Dependencies are written once, at enqueue, so the closure found before the
 locks is the closure that holds after.
+
+**What cannot be moved is reported.** A dependency that cannot run and cannot be moved —
+failed, cancelled, or in a state this version does not know — is listed as blocking the
+target, not skipped over; the target still cannot run until someone resolves it.
+
+**An un-bump sends back what cannot run without it.** Because a bumped job cannot run before
+its dependencies, un-bumping a dependency also un-bumps every bumped job that depends on it
+— the mirror of the pull-forward — so a bump never holds a place its job cannot use. The
+storm's queue reports those dependents instead and leaves them prioritised; neither lets a
+job past a dependency, so both keep the contract.
 
 **A running job can be bumped, and a running dependency is pulled.** Its lease is untouched;
 the number only matters if the attempt returns the job to the queue, where it then keeps its
