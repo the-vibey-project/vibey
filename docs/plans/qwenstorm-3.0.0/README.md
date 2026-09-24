@@ -41,39 +41,49 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
      prioritises a lane, first appending it to `queue.txt` if it is new; `bump SLUG`
      prioritises a queued lane; `unbump SLUG` undoes that; `list` prints the order the storm
      will run, with blocked and settled lanes and skipped `queue.txt` lines marked.
-     - A prioritised lane runs next after the lane running now. It never interrupts it.
-     - Prioritised lanes run first pushed first, ahead of every other `queue.txt` line.
-     - A push also prioritises every dependency that is not yet integrated, transitively and
-       in dependency order, and says what it moved. A push whose dependency can never finish
-       (abandoned, or queued nowhere) is refused, naming it. A lane still starts only once
-       all its dependencies are in `integrated.txt`.
-     - `unbump` undoes exactly what the push or bump moved: the lane, plus each dependency
-       it pulled forward that no other prioritised lane needs and that was not pushed in its
-       own right. Un-bumping a lane another prioritised lane depends on is refused, naming
-       the dependents.
-     - Every caller must run as the account that owns the storm's `queue.txt` (checked by
-       uid; the name recorded comes from the password database, never `$USER`). With no
-       `--source` that caller is the operator; automation passes `--source NAME`, and NAME
-       must be listed under `[priority] sources` in `storm.toml`. A process carrying
-       `VIBEY_STORM_LANE`, which every lane command inherits, is refused. Anything else is
-       refused, recorded and reported (sub-doctrine 12.j). Nothing reads a label or an issue
-       to decide priority.
-     - **What that does not do.** Lanes run as the operator's uid today, so a lane's process
-       can unset `VIBEY_STORM_LANE`, claim a declared source, or append to the priority log
-       and `queue.txt` directly. The marker catches mistakes; it does not contain a hostile
-       lane, and a source name identifies automation without authenticating it. The fix is
-       to run lanes as a separate low-privilege OS user: `specs/storm-lane-os-user.md`.
-     - Admission still applies: `storm_trust.py` judges a pushed lane's issue when it
-       starts, and `lane-verify.py` still refuses forbidden paths.
+
+     The contract, numbered as ADR-0054 numbers it:
+
+     1. Next means next after whatever is running. A running lane is never interrupted.
+     2. Prioritised lanes run first pushed first, ahead of every other `queue.txt` line.
+        Re-bumping a lane keeps its place.
+     3. A push also prioritises every dependency that is not yet integrated, transitively
+        and dependencies first, and says what it moved. A dependency that can never finish
+        (abandoned, queued nowhere, or in a cycle) refuses the push, naming it. A lane still
+        starts only once all its dependencies are in `integrated.txt`.
+     4. Every caller must run as the account that owns the storm's `queue.txt`, checked by
+        uid; the name recorded comes from the password database, never `$USER`. With no
+        `--source` that caller is the operator; automation passes `--source NAME`, and NAME
+        must be listed under `[priority] sources` in `storm.toml`. A process carrying
+        `VIBEY_STORM_LANE`, which every lane command inherits, is refused. Nothing reads a
+        label or an issue to decide priority, and no other gate is bypassed: `storm_trust.py`
+        judges a pushed lane's issue when it starts, and `lane-verify.py` still refuses
+        forbidden paths.
+     5. Every request, whether it moved something, moved nothing or was refused, is one JSON
+        line appended to the priority log (`[priority] log` in `storm.toml`, else
+        `priority.log` beside the ledgers) and one line in `progress.log`, with outside text
+        escaped. Authorisation runs before any lookup. The order is always the log's replay;
+        nothing is edited in place.
+     6. `unbump` undoes exactly what the push or bump moved: the lane, plus each dependency
+        it pulled forward that no other prioritised lane needs. A lane pushed or bumped by
+        name keeps its place. Un-bumping a lane another prioritised lane depends on is
+        refused, naming the dependents.
+     7. `push` enqueues a new lane already prioritised, in one step. Pushing or bumping a
+        finished lane (settled, or run and awaiting review) is a recorded no-op.
+
+     Beyond the contract:
+
+     - **What the authorisation does not do.** Lanes run as the operator's uid today, so a
+       lane's process can unset `VIBEY_STORM_LANE`, claim a declared source, or append to
+       the priority log and `queue.txt` directly. The marker catches mistakes; it does not
+       contain a hostile lane, and a source name identifies automation without
+       authenticating it. The fix is to run lanes as a separate low-privilege OS user:
+       `specs/storm-lane-os-user.md`.
      - Slugs, dependencies and source names must match `[A-Za-z0-9][A-Za-z0-9._-]*` with no
        `..`. A `queue.txt` line outside that is skipped, never run, and said in
        `progress.log`.
-     - Every request, whether it moved something, moved nothing or was refused, is one JSON
-       line appended to the priority log (`[priority] log` in `storm.toml`, else
-       `priority.log` beside the ledgers) and one line in `progress.log`, with outside text
-       escaped. The order is always the log's replay; nothing is edited in place. Replay
-       refuses a malformed entry, which checks shape, not who wrote it. A log that is gone
-       after it existed is an unknown order: the storm waits and says so.
+     - Replay refuses a malformed entry, which checks shape, not who wrote it. A log that is
+       gone after it existed is an unknown order: the storm waits and says so.
        `storm-evidence.py` consumes the log by byte offset with the other ledgers, and
        counts lane starts and ends only from `progress.log`.
      - Exit codes: 0 done, 1 refused (not authorised), 2 refused (cannot be carried out),

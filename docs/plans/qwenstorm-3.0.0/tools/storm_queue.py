@@ -4,31 +4,39 @@ The operator's request (2026-09-24): "The system should be able to push a priori
 the queue and have that run next so that it doesn't have to wait for the other jobs in front
 of it." ADR-0054 is the contract, and vibey's PostgreSQL job queue keeps the same one:
 
-1. NEXT MEANS NEXT AFTER WHATEVER IS RUNNING. Lanes run one at a time (8.c) and
-   `storm-queue.sh` asks what is next only once no lane is running. Nothing here stops,
-   signals or rewrites a running lane; a push changes only which lane starts after it.
-2. PRIORITY ITEMS RUN FIRST, FIRST PUSHED FIRST, ahead of every other eligible line of
-   `queue.txt`.
-3. DEPENDENCIES ARE RESPECTED AND PULLED FORWARD. Pushing an item whose dependencies are not
-   integrated prioritises those too, transitively and in dependency order, and the report
-   names everything that moved. A push or bump whose dependency can never finish -- it was
-   abandoned, or nothing queues it -- is refused, naming it. Eligibility is unchanged: a
-   lane starts only when every dependency is in `integrated.txt`.
-4. AUTHORISATION. See `Authority`: the operator, or a declared source, running as the
-   account that owns the storm. Anything else is refused, recorded and reported (12.j).
-   Nothing here reads the forge. Priority never bypasses admission: `storm_trust.py admit`
-   still judges a pushed issue when its lane starts, and `lane-verify.py` still refuses
-   forbidden paths at publish.
-5. RECORDED, APPEND-ONLY, VISIBLE. EVERY request -- one that moved something, one that
-   moved nothing, and one that was refused -- is one JSON line appended to the priority log
-   (`[priority] log` in storm.toml, beside the ledgers when undeclared), plus a plain-words
-   line in `progress.log`. The lane order is the log's replay; nothing is edited in place.
-   `storm-evidence.py` consumes the log by byte offset like the other ledgers (10.g).
-6. REVERSIBLE. Un-bump undoes exactly what the push or bump moved: the lane itself, plus
-   each dependency its own push or bump pulled forward that no other still-prioritised lane
-   needs and that was not pushed or bumped in its own right. Un-bumping a lane another
-   prioritised lane still depends on is refused, naming the dependents.
-7. A NEW ITEM is appended to `queue.txt`, with its dependencies, and prioritised in one step.
+1. NEXT MEANS NEXT AFTER WHATEVER IS RUNNING. Nothing running is interrupted. Lanes run one
+   at a time (8.c) and `storm-queue.sh` asks what is next only once no lane is running;
+   nothing here stops, signals or rewrites a running lane.
+2. PRIORITY ITEMS RUN FIRST, FIFO, ahead of every un-bumped `queue.txt` line. Re-bumping an
+   item keeps its place.
+3. DEPENDENCIES PULLED FORWARD, transitively and dependencies first, keeping their relative
+   order. A dependency that can never finish refuses the push or bump and is named: in the
+   storm that is one in `abandoned.txt` (where a failed or cancelled lane is settled), one
+   nothing queues, or one in a cycle. Eligibility is unchanged: a lane starts only when every
+   dependency is in `integrated.txt`.
+4. AUTHORISATION. The operator is the account that owns the storm's `queue.txt`, checked by
+   uid against the file owner, never a typed name or $USER. A `--source` must be declared in
+   storm.toml `[priority] sources` AND run as the operator's account; no declaration means no
+   source is accepted. Nothing reads the forge. Priority never bypasses another gate:
+   `storm_trust.py admit` still judges a pushed issue when its lane starts, and
+   `lane-verify.py` still refuses forbidden paths at publish. See `Authority` for what this
+   check cannot do while lanes run as the operator's uid.
+5. EVERY REQUEST IS RECORDED: moved something, moved nothing, or refused -- one JSON line in
+   the priority log (`[priority] log` in storm.toml, beside the ledgers when undeclared), plus
+   a plain-words line in `progress.log`. Authorisation runs before any lookup. The lane order
+   is the log's replay; nothing is edited in place. `storm-evidence.py` consumes the log by
+   byte offset like the other ledgers (10.g).
+6. UN-BUMP UNDOES EXACTLY WHAT THE BUMP MOVED: the item, plus the dependencies its own push or
+   bump pulled forward that no other still-bumped item needs. An item bumped by name keeps its
+   place. Un-bumping an item a bumped item depends on is refused, naming the dependents.
+7. AN ITEM CAN BE ENQUEUED ALREADY PRIORITISED IN ONE STEP: `push` appends a new slug to
+   `queue.txt` with its dependencies and prioritises it. Doing so for a finished item -- one
+   settled in either ledger, or one that has run and awaits review -- is a recorded no-op.
+
+Where the storm's mechanism differs from vibey's job queue, as ADR-0054 records: the
+declaration lives in storm.toml `[priority] sources` and the operator is the owner of
+`queue.txt`; the record is this priority log and its replay, not a ledger written in the same
+transaction; and a refusal exits 1 here, not 3.
 
 ORDER OF A REQUEST
 ------------------
@@ -712,6 +720,11 @@ class PriorityDesk:
             entry = QueueEntry(slug, issue, tuple(deps))
             known[slug] = entry
             appended = True
+        finished = self._finished(slug)
+        if finished is not None:
+            # ADR-0054 item 7: prioritising a finished item is a recorded no-op, and a
+            # settled slug is never queued again.
+            return self._record("push", entry, by, [], [], [], lane, False, finished)
         moved, already, notes = self._pull(entry, known, lane)
         if appended:
             self.queue.append(entry)
@@ -722,6 +735,9 @@ class PriorityDesk:
         known = {entry.slug: entry for entry in self.queue.entries()}
         if slug not in known:
             raise Invalid(f"{slug} is not in queue.txt; push it with its issue number")
+        finished = self._finished(slug)
+        if finished is not None:
+            return self._record("bump", known[slug], by, [], [], [], lane, None, finished)
         moved, already, notes = self._pull(known[slug], known, lane)
         return self._record("bump", known[slug], by, moved, already, notes, lane, None)
 
@@ -802,14 +818,6 @@ class PriorityDesk:
         """(moved, already prioritised, notes): `entry` and every dependency it still needs,
         in dependency order. Raises `Invalid` for a lane that can never run."""
         integrated, abandoned = self.ledger.integrated(), self.ledger.abandoned()
-        if entry.slug in integrated or entry.slug in abandoned:
-            which = "integrated" if entry.slug in integrated else "abandoned"
-            raise Invalid(f"{entry.slug} is already settled ({which}); there is nothing to run")
-        if self.ledger.finished(entry.slug):
-            raise Invalid(
-                f"{entry.slug} has already run and awaits review; delete its result.json to "
-                "run it again"
-            )
         needed: list[str] = []
         notes: list[str] = []
         self._visit(entry.slug, known, integrated, abandoned, (entry.slug,), needed, notes)
@@ -846,6 +854,16 @@ class PriorityDesk:
         if slug not in needed:
             needed.append(slug)
 
+    def _finished(self, slug: str) -> str | None:
+        """Why `slug` has nothing left to run (settled, or run and awaiting review), or None."""
+        if slug in self.ledger.integrated():
+            return "it is already settled (integrated)"
+        if slug in self.ledger.abandoned():
+            return "it is already settled (abandoned)"
+        if self.ledger.finished(slug):
+            return "it has already run and awaits review; delete its result.json to run it again"
+        return None
+
     def _needs(
         self, slug: str, known: dict[str, QueueEntry], integrated: frozenset[str]
     ) -> set[str]:
@@ -870,6 +888,7 @@ class PriorityDesk:
         notes: list[str],
         lane: list[str],
         appended: bool | None,
+        noop: str | None = None,
     ) -> list[str]:
         event: dict[str, Any] = {
             "action": verb,
@@ -882,8 +901,15 @@ class PriorityDesk:
         }
         if appended is not None:
             event["appended"] = appended
-        self.log.append(event)
         done = "pushed" if verb == "push" else "bumped"
+        if noop is not None:
+            event["noop"] = noop
+            self.log.append(event)
+            self.ledger.say(
+                f"priority: {by} {done} {entry.slug} (#{entry.issue}); nothing to do: {noop}"
+            )
+            return [f"{done} {entry.slug} (#{entry.issue}) by {by}: nothing to do, {noop}"]
+        self.log.append(event)
         self.ledger.say(
             f"priority: {by} {done} {entry.slug} (#{entry.issue}); moved to the front: "
             f"{', '.join(moved) or 'nothing new'}"

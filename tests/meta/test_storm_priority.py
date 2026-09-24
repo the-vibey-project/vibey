@@ -414,18 +414,42 @@ def test_pushing_a_queued_slug_under_another_issue_is_an_error(tmp_path: Path) -
         desk(root).push("e", "99", (), None)
 
 
-def test_pushing_a_settled_item_is_an_error(tmp_path: Path) -> None:
+@pytest.mark.parametrize("verb", ["push", "bump"])
+@pytest.mark.parametrize("ledger", ["integrated.txt", "abandoned.txt"])
+def test_pushing_a_settled_item_is_a_recorded_no_op(tmp_path: Path, verb: str, ledger: str) -> None:
+    """ADR-0054 item 7: prioritising a finished item does nothing, says so, and succeeds."""
     root = storm(tmp_path)
-    settle(root, "e")
-    with pytest.raises(storm_queue.Invalid, match="settled"):
-        desk(root).bump("e", None)
+    settle(root, "e", ledger)
+    priority = desk(root)
+    report = priority.push("e", "5", (), None) if verb == "push" else priority.bump("e", None)
+    event = log_lines(root)[-1]
+    assert event["action"] == verb and event["moved"] == [] and "settled" in event["noop"]
+    assert any("nothing to do" in line for line in report), report
+    assert "e" not in storm_queue.PriorityLog(storm_paths.priority_log(root)).replay()
 
 
-def test_a_finished_item_is_not_pushed_again(tmp_path: Path) -> None:
+def test_pushing_a_new_slug_that_is_already_settled_does_not_queue_it(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    settle(root, "z")
+    desk(root).push("z", "26", (), None)
+    assert "z 26" not in (root / "queue.txt").read_text()
+    assert log_lines(root)[-1]["appended"] is False
+
+
+def test_pushing_a_finished_item_is_a_recorded_no_op(tmp_path: Path) -> None:
     root = storm(tmp_path)
     finish(root, "e")
-    with pytest.raises(storm_queue.Invalid, match="awaits review"):
-        desk(root).bump("e", None)
+    report = desk(root).bump("e", None)
+    assert "awaits review" in log_lines(root)[-1]["noop"]
+    assert any("nothing to do" in line for line in report), report
+
+
+def test_the_cli_exits_zero_for_a_no_op(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\n")
+    settle(root, "b")
+    done = priority_cli(root, env, "push", "b", "2")
+    assert done.returncode == 0, done.stderr
+    assert log_lines(root)[-1]["noop"]
 
 
 # --- the resolver keeps storm-queue.sh's own rules --------------------------------------
