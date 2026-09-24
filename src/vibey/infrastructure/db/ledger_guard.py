@@ -329,7 +329,13 @@ class LedgerGuardInspector:
     not own the ledger (directly or through membership), holds none of UPDATE, DELETE
     or TRUNCATE on it or on any of its partitions, and the triggers of migrations 0016/0017
     are present and enabled on every one of them.
+
+    `allowed_definers` names the SECURITY DEFINER functions the application role may
+    call without failing the guard. It defaults to the reviewed, declared set.
     """
+
+    def __init__(self, allowed_definers: frozenset[str] = ALLOWED_SECURITY_DEFINERS) -> None:
+        self._allowed_definers = allowed_definers
 
     async def inspect(self, conn: OwnedConnection) -> LedgerGuardStatus:
         async with conn.transaction():
@@ -362,7 +368,7 @@ class LedgerGuardInspector:
             more = len(owned) - _OWNED_SHOWN
             problems.append(f"it owns {shown}" + (f" and {more} more" if more > 0 else ""))
         for definer in await conn.fetch(_DEFINERS, ledger):
-            if definer["name"] not in ALLOWED_SECURITY_DEFINERS:
+            if definer["name"] not in self._allowed_definers:
                 problems.append(
                     f"it may call SECURITY DEFINER {definer['name']}, "
                     f"which runs as {definer['runs_as']}"

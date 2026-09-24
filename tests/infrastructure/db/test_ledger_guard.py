@@ -565,6 +565,22 @@ async def test_finding_1_a_security_definer_function_the_app_can_call_fails_the_
     assert any("SECURITY DEFINER public.definer_door()" in p for p in problems), problems
 
 
+@split_only
+async def test_finding_1_a_declared_security_definer_is_not_reported(
+    owner_conn: asyncpg.Connection, app_conn: asyncpg.Connection
+) -> None:
+    """The allow-list is how a reviewed definer (the planned append_event) stays in force."""
+    await owner_conn.execute(
+        "CREATE FUNCTION public.definer_door() RETURNS int LANGUAGE sql SECURITY DEFINER "
+        "AS 'SELECT 1'"
+    )
+
+    inspector = LedgerGuardInspector(allowed_definers=frozenset({"public.definer_door()"}))
+    problems = (await inspector.inspect(app_conn)).problems
+
+    assert not any("definer_door" in p for p in problems), problems
+
+
 async def test_finding_1_the_guard_functions_pin_their_search_path(
     owner_conn: asyncpg.Connection,
 ) -> None:
