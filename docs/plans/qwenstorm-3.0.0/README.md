@@ -87,9 +87,22 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
        `progress.log`.
      - Replay refuses a malformed entry, which checks shape, not who wrote it. After every
        append a witness (`.priority.log.witness`, which a `priority.log*` glob does not
-       match) records the log's length. A log that is gone after it existed, or shorter
-       than recorded, is an unknown order: the storm waits and says so, and no request,
-       not even a refusal, re-creates it (exit 3).
+       match) records the log's length; it is fsynced, and so is its directory. The
+       witness is read under the same lock as the log, so a read racing an append never
+       reports a false truncation. A log that is gone after it existed, shorter than
+       recorded, or whose witness is empty is an unknown order: the storm waits and says
+       so, and no request, not even a refusal, re-creates it (exit 3).
+     - **The way out of "order unknown"** is `storm-priority.py reset --reason TEXT`, and the
+       message names it. Only the operator can run it (the storm owner's uid, never a
+       `--source`, never from inside a lane), and only while the log is NOT readable: a
+       reset never replaces a readable order. It keeps the old file, if any, as
+       `priority.log.abandoned-<stamp>`, starts a new log whose first line is a `reset`
+       event naming the length it abandons and the reason, rewrites the witness, and says in
+       `progress.log` that the prior priority order was abandoned. Every lane then runs in
+       `queue.txt` order until pushed again. This also recovers a fresh storm root whose
+       tracked evidence watermark still carries an offset from an earlier root: the
+       watermark offset is set aside once the log begins with a reset that abandoned it, and
+       `storm-evidence.py` re-bases on that line and reports the discontinuity as a gap.
      - Authority is checked before the lock, so a caller without write access to the storm
        is refused (exit 1), not crashed; if the refusal cannot be written it says "could not
        be recorded (no write access)".

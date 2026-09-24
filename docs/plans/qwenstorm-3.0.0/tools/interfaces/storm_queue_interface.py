@@ -107,6 +107,14 @@ class PriorityLogInterface(Protocol):
         """The items pushed or bumped by name and not since un-bumped, first named first."""
         ...
 
+    def restart(self, event: dict[str, Any]) -> Path | None:
+        """Start a new log with `event` first, keeping the old file under a new name."""
+        ...
+
+    def abandonable(self) -> int:
+        """The largest length anything records for the log, trusting nothing."""
+        ...
+
     def recorded_length(self) -> int:
         """The longest length the witness or the evidence watermark recorded for the log."""
         ...
@@ -175,6 +183,10 @@ class PriorityDeskInterface(Protocol):
 
     def unbump(self, slug: str, source: str | None) -> list[str]:
         """Return `slug` to its `queue.txt` position."""
+        ...
+
+    def reset(self, reason: str, source: str | None) -> list[str]:
+        """Start a new log after the old one was lost; operator only, never over a readable one."""
         ...
 
 

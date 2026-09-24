@@ -115,7 +115,7 @@ import pwd
 import re
 import sys
 from collections.abc import Callable, Iterator, Mapping, Sequence
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -128,8 +128,14 @@ VERSION = 1
 # ASCII digits only: `str.isdigit()` also accepts "\u0663" and "\u00b2", which no forge numbers
 # an issue with and `storm_trust.py admit` would then refuse far from where it entered.
 ISSUE = re.compile(r"[0-9]+")
-VERBS = ("push", "bump", "unbump")
+VERBS = ("push", "bump", "unbump", "reset")
 ACTIONS = frozenset({*VERBS, "refused"})
+# Said in every "order unknown" message, so the message itself names the way out.
+RECOVER = (
+    "restore the log, or -- as the operator, on the storm owner's account -- start a new one "
+    "with `storm-priority.py reset --reason TEXT`, which records that the prior order was "
+    "abandoned"
+)
 
 
 class Refusal(Exception):
@@ -326,17 +332,30 @@ class PriorityLog:
 
     THE WITNESS. After every append, `.<log name>.witness` beside the log records that the
     log exists and how long it is. It is a dotfile so a `priority.log*` glob -- the obvious
-    way to clear the log away -- does not take the witness with it. With it:
+    way to clear the log away -- does not take the witness with it. It is written to a
+    `.new` file, fsynced, renamed over the old one, and the directory is fsynced, so a power
+    loss leaves the old witness or the new one, never an empty one. With it:
 
     * a log that is missing while the witness says it existed is an unknown order, and so is
-      one SHORTER than the witness recorded (truncated): both are `Unreadable`;
+      one SHORTER than recorded (truncated), and so is an unreadable or empty witness: each
+      is `Unreadable`, and each message names the way out (`RECOVER`);
     * `append` never creates the log when the witness says it existed, so a refused request
-      meeting a lost log cannot quietly start a fresh, empty one -- which is what #1092 did.
+      meeting a lost log cannot quietly start a fresh, empty one.
 
-    A log LONGER than recorded is accepted: that is a crash between the append and the
-    witness update, and re-reading it is safe. `watermark` and `key` name the evidence job's
-    record of how far it read this log, a second witness; both are optional. None of this
-    stops the same uid from rewriting the log AND the witness together (see `Authority`).
+    The witness is read inside the same shared lock as the log, against the log's size under
+    that lock, so a read racing an append never sees a false truncation. A log LONGER than
+    recorded is accepted: a crash between the append and the witness update, safe to re-read.
+    `watermark` and `key` name the evidence job's record of how far it read this log, a
+    second witness; both are optional.
+
+    THE WAY OUT. A lost or unreadable log is recovered by `restart`, behind
+    `PriorityDesk.reset`: the old file, if any, is kept under a new name, never deleted, and
+    the new log's first line is a `reset` event naming the length it abandons. A watermark
+    offset no greater than that is then about the abandoned log, not this one, and is set
+    aside; `storm-evidence.py` re-bases on the same line and reports the gap (10.g).
+
+    None of this stops the same uid rewriting the log AND the witness together (see
+    `Authority`).
     """
 
     def __init__(self, path: Path, watermark: Path | None = None, key: str | None = None):
@@ -347,38 +366,47 @@ class PriorityLog:
         self.key = key
 
     def events(self) -> list[dict[str, Any]]:
+        # The log is created before its witness and never removed by this module, so "no
+        # log" followed by "a witness" may be a writer creating both in between: look again
+        # before calling the log lost.
         if not self.path.is_file():
-            if self.existed():
+            if self.existed() and not self.path.is_file():
                 raise Unreadable(
                     f"{self.path} is missing, but it existed (its witness or the evidence "
-                    "watermark says so): the priority order is unknown until it is restored"
+                    f"watermark says so): the priority order is unknown; {RECOVER}"
                 )
             return []
         try:
             with self.path.open("rb") as handle:
-                # Shared lock: a line being appended is never read half-written.
+                # Shared lock: an append (exclusive) is never read half-written, and the
+                # witness it writes is read under the same lock, against the size now.
                 fcntl.flock(handle, fcntl.LOCK_SH)
                 data = handle.read()
+                size = os.fstat(handle.fileno()).st_size
+                recorded = self.recorded_length()
             raw = data.decode("utf-8")
         except (OSError, UnicodeDecodeError) as exc:
-            raise Unreadable(f"{self.path}: {exc}") from exc
-        recorded = self.recorded_length()
-        if len(data) < recorded:
+            raise Unreadable(f"{self.path}: {exc}; {RECOVER}") from exc
+        if size < recorded:
             raise Unreadable(
-                f"{self.path} is truncated: {len(data)} bytes, but {recorded} were recorded; "
-                "the priority order is unknown until it is restored"
+                f"{self.path} is truncated: {size} bytes, but {recorded} were recorded; the "
+                f"priority order is unknown; {RECOVER}"
             )
-        events = []
+        events: list[dict[str, Any]] = []
         for number, line in enumerate(raw.splitlines(), 1):
             if not line.strip():
                 continue
             try:
                 event = json.loads(line)
             except json.JSONDecodeError as exc:
-                raise Unreadable(f"{self.path} line {number} is not JSON: {exc}") from exc
+                raise Unreadable(
+                    f"{self.path} line {number} is not JSON: {exc}; {RECOVER}"
+                ) from exc
             fault = self._fault(event)
+            if fault is None and event["action"] == "reset" and events:
+                fault = "a reset anywhere but the first line"
             if fault is not None:
-                raise Unreadable(f"{self.path} line {number} is malformed: {fault}")
+                raise Unreadable(f"{self.path} line {number} is malformed: {fault}; {RECOVER}")
             events.append(event)
         return events
 
@@ -409,10 +437,10 @@ class PriorityLog:
 
     def append(self, event: dict[str, Any]) -> None:
         """Append one line and record the new length. Never creates a log that existed."""
-        if not self.path.is_file() and self.existed():
+        if not self.path.is_file() and self.existed() and not self.path.is_file():
             raise Unreadable(
                 f"{self.path} is missing, but it existed: nothing is appended to a fresh one, "
-                "so the order stays unknown until the log is restored"
+                f"so the order stays unknown; {RECOVER}"
             )
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as handle:
@@ -421,30 +449,64 @@ class PriorityLog:
             handle.write(json.dumps({"v": VERSION, **event}, sort_keys=True) + "\n")
             handle.flush()
             os.fsync(handle.fileno())
-            length = os.fstat(handle.fileno()).st_size
-            pending = self.witness.with_name(self.witness.name + ".new")
-            pending.write_text(
-                json.dumps({"log": self.path.name, "length": length, "at": event.get("at")})
-            )
-            pending.replace(self.witness)
+            self._witness(os.fstat(handle.fileno()).st_size, event.get("at"))
+
+    def restart(self, event: dict[str, Any]) -> Path | None:
+        """Start a new log whose first line is `event` (a `reset`), keeping the old file, if
+        any, under a new name -- never deleting it. Returns where the old file went."""
+        aside: Path | None = None
+        if self.path.exists():
+            stamp = str(event.get("at", "")).replace(":", "")
+            aside = self.path.with_name(f"{self.path.name}.abandoned-{stamp}")
+            number = 1
+            while aside.exists():
+                number += 1
+                aside = self.path.with_name(f"{self.path.name}.abandoned-{stamp}-{number}")
+            self.path.rename(aside)
+            self._sync_directory()
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("x", encoding="utf-8") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            handle.write(json.dumps({"v": VERSION, **event}, sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+            self._witness(os.fstat(handle.fileno()).st_size, event.get("at"))
+        return aside
 
     def recorded_length(self) -> int:
-        """The longest length a witness records for the log: its own file, or the evidence
-        watermark's offset. 0 when neither has recorded anything."""
+        """The longest length recorded for the log -- by its witness, or by the evidence
+        watermark unless the log now begins with a `reset` that abandoned at least that
+        much. 0 when nothing has recorded anything."""
         lengths = [0]
         try:
-            lengths.append(int(json.loads(self.witness.read_text())["length"]))
+            text = self.witness.read_text()
         except FileNotFoundError:
-            pass
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            raise Unreadable(f"{self.witness} could not be read: {exc}") from exc
-        if self.watermark is not None and self.key is not None and self.watermark.is_file():
+            text = None
+        except OSError as exc:
+            raise Unreadable(f"{self.witness} could not be read: {exc}; {RECOVER}") from exc
+        if text is not None:
             try:
-                offsets = json.loads(self.watermark.read_text()).get("offsets", {})
-                lengths.append(int(offsets.get(self.key, 0)))
-            except (OSError, ValueError, AttributeError, TypeError):
-                # The evidence job reports its own unreadable watermark (10.g).
-                pass
+                lengths.append(int(json.loads(text)["length"]))
+            except (ValueError, KeyError, TypeError) as exc:
+                raise Unreadable(
+                    f"{self.witness} is empty or unreadable ({exc}), so the log's length is "
+                    f"unknown; {RECOVER}"
+                ) from exc
+        offset = self._watermark_offset()
+        if offset:
+            head = self._head()
+            if head is None or head.get("action") != "reset" or head.get("abandons", -1) < offset:
+                lengths.append(offset)
+        return max(lengths)
+
+    def abandonable(self) -> int:
+        """What a reset abandons, read without trusting anything: the largest of the log's
+        current size, the witness's record and the watermark's offset that can be read."""
+        lengths = [self.path.stat().st_size if self.path.is_file() else 0]
+        # An unreadable witness is exactly what a reset recovers from: read what can be.
+        with suppress(OSError, ValueError, KeyError, TypeError):
+            lengths.append(int(json.loads(self.witness.read_text())["length"]))
+        lengths.append(self._watermark_offset())
         return max(lengths)
 
     def existed(self) -> bool:
@@ -465,6 +527,41 @@ class PriorityLog:
             finally:
                 fcntl.flock(handle, fcntl.LOCK_UN)
 
+    def _witness(self, length: int, at: object) -> None:
+        pending = self.witness.with_name(self.witness.name + ".new")
+        with pending.open("w", encoding="utf-8") as handle:
+            handle.write(json.dumps({"log": self.path.name, "length": length, "at": at}))
+            handle.flush()
+            os.fsync(handle.fileno())
+        pending.replace(self.witness)
+        self._sync_directory()
+
+    def _sync_directory(self) -> None:
+        """A rename is durable only once its directory is: fsync the directory too."""
+        descriptor = os.open(self.path.parent, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+
+    def _watermark_offset(self) -> int:
+        if self.watermark is None or self.key is None or not self.watermark.is_file():
+            return 0
+        try:
+            return int(json.loads(self.watermark.read_text()).get("offsets", {}).get(self.key, 0))
+        except (OSError, ValueError, AttributeError, TypeError):
+            # The evidence job reports its own unreadable watermark (10.g).
+            return 0
+
+    def _head(self) -> dict[str, Any] | None:
+        """The log's first event, if the first line parses as one; None otherwise."""
+        try:
+            with self.path.open("rb") as handle:
+                first = json.loads(handle.readline())
+        except (OSError, ValueError):
+            return None
+        return first if isinstance(first, dict) else None
+
     @staticmethod
     def _fault(event: Any) -> str | None:
         """Why an entry is not one this version wrote, or None. Shape only (see module)."""
@@ -475,9 +572,18 @@ class PriorityLog:
         action = event.get("action")
         if action not in ACTIONS:
             return f"unknown action {action!r}"
-        for field in ("slug", "by", "at"):
+        for field in ("by", "at"):
             if not isinstance(event.get(field), str):
                 return f"no {field}"
+        if action == "reset":
+            abandons = event.get("abandons")
+            if not isinstance(abandons, int) or isinstance(abandons, bool) or abandons < 0:
+                return "a reset without the length it abandons"
+            if not isinstance(event.get("reason"), str) or not event["reason"].strip():
+                return "a reset without its reason"
+            return None
+        if not isinstance(event.get("slug"), str):
+            return "no slug"
         if action == "refused":
             if event.get("requested") not in VERBS or not isinstance(event.get("reason"), str):
                 return "a refusal without its request or reason"
@@ -752,6 +858,67 @@ class PriorityDesk:
             "unbump", slug, source, lambda: None, lambda by: self._unbump(slug, by)
         )
 
+    def reset(self, reason: str, source: str | None) -> list[str]:
+        """Start a new priority log after the old one was lost or became unreadable.
+
+        The operator's alone -- the storm owner's uid, no lane marker, never a `--source` --
+        and refused while the log is still readable: a reset never replaces a readable order.
+        The new log's first line records the length it abandons and the reason, the old file
+        is kept under a new name, and progress.log says in plain words that the prior
+        priority order was abandoned."""
+        by = self.authority.describe(source)
+        try:
+            if not reason.strip():
+                raise Invalid("a reset needs a --reason saying why the old order was abandoned")
+            if source is not None:
+                raise Unauthorised(
+                    by, "a reset is the operator's alone, never a --source's: run it yourself"
+                )
+            by = self.authority.authorise(None)
+        except Refusal as refused:
+            if isinstance(refused, Unauthorised):
+                by = refused.principal
+            self._refuse("reset", "", by, False, refused, lost_ok=True)
+            raise
+        with self.log.locked():
+            try:
+                self.log.events()
+            except Unreadable as unknown:
+                return self._restart(reason, by, unknown)
+            readable = Invalid(
+                "the priority log is readable, so there is nothing to recover: a reset never "
+                "replaces a readable order (un-bump what should not run first)"
+            )
+            self._refuse("reset", "", by, True, readable)
+            raise readable
+
+    def _restart(self, reason: str, by: str, unknown: Unreadable) -> list[str]:
+        abandons = self.log.abandonable()
+        aside = self.log.restart(
+            {
+                "action": "reset",
+                "reason": reason.strip(),
+                "abandons": abandons,
+                "by": by,
+                "at": self._now(),
+            }
+        )
+        where = (
+            f"the old file is kept as {aside.name}" if aside else "the old file was already gone"
+        )
+        self._say(
+            f"priority: {by} reset the priority log ({NAMES.quote(reason.strip())}): the prior "
+            f"priority order was abandoned ({abandons} recorded byte(s); {where}); every lane "
+            "runs in queue.txt order until it is pushed or bumped again"
+        )
+        return [
+            f"reset the priority log by {by}: the prior priority order was abandoned "
+            f"({abandons} recorded byte(s))",
+            where,
+            f"it was: {unknown}",
+            "push or bump again whatever should run first",
+        ]
+
     def _request(
         self,
         verb: str,
@@ -875,7 +1042,15 @@ class PriorityDesk:
             )
         return report
 
-    def _refuse(self, verb: str, slug: str, by: str, authorised: bool, refused: Refusal) -> None:
+    def _refuse(
+        self,
+        verb: str,
+        slug: str,
+        by: str,
+        authorised: bool,
+        refused: Refusal,
+        lost_ok: bool = False,
+    ) -> None:
         """Record a refusal: the request as JSON in the log, escaped in progress.log.
 
         Two things can stop the record. A log that is lost (see `PriorityLog`) is never
@@ -901,6 +1076,10 @@ class PriorityDesk:
                 f"priority: refused a {verb} of {NAMES.quote(slug)} from {by}: {reason}; not "
                 f"recorded, order unknown: {unknown}"
             )
+            if lost_ok:
+                # A refused reset meets a lost log by its nature: still a refusal (1 or 2).
+                refused.recorded = False
+                return
             unknown.reported = True
             raise unknown from refused
         except OSError:

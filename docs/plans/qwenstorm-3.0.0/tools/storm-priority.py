@@ -4,6 +4,11 @@
     python3 storm-priority.py bump SLUG                      # a queued lane; prioritise it
     python3 storm-priority.py unbump SLUG                    # back to its queue.txt place
     python3 storm-priority.py list                           # the order the storm will run
+    python3 storm-priority.py reset --reason TEXT            # after the log was lost
+
+`reset` is the recorded way out of "order unknown" (exit 3): the operator only, refused while
+the log is still readable, and it starts a new log that records the length and order it
+abandons. See `PriorityLog` and `PriorityDesk.reset` in `storm_queue.py`.
 
 Automation adds `--source NAME`, and only a NAME listed in `storm.toml` `[priority] sources`
 is accepted. Without `--source`, the caller is the operator -- and must be the account that
@@ -57,6 +62,10 @@ class PriorityCli:
             verbs.add_parser(name, help=text).add_argument("slug")
         for sub in verbs.choices.values():
             sub.add_argument("--source", help="the declared automation making this change")
+        reset = verbs.add_parser(
+            "reset", help="start a new priority log after the old one was lost (operator only)"
+        )
+        reset.add_argument("--reason", required=True, help="why the old order is abandoned")
         verbs.add_parser("list", help="the effective order the storm will run")
         return parser
 
@@ -71,6 +80,8 @@ class PriorityCli:
                 report = desk.push(args.slug, args.issue, deps, args.source)
             elif args.verb == "bump":
                 report = desk.bump(args.slug, args.source)
+            elif args.verb == "reset":
+                report = desk.reset(args.reason, None)
             else:
                 report = desk.unbump(args.slug, args.source)
         except (Unauthorised, Invalid) as refused:

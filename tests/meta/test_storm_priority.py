@@ -1196,3 +1196,249 @@ def test_the_priority_tools_cannot_reach_the_forge(filename: str) -> None:
         if isinstance(node, ast.ImportFrom)
     }
     assert not imported & {"subprocess", "urllib", "storm_forge", "http", "socket"}, imported
+
+
+# --- the re-review of #1092 at 1792f572: a recorded way out of a lost log ---------------
+
+
+def reset_cli(root: Path, env: dict[str, str], *extra: str) -> subprocess.CompletedProcess:
+    return priority_cli(root, env, "reset", "--reason", "the log was lost in a disk move", *extra)
+
+
+def test_the_order_unknown_message_names_the_way_out(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    desk(root).bump("c", None)
+    storm_paths.priority_log(root).unlink()
+    with pytest.raises(storm_queue.Unreadable, match="storm-priority.py reset --reason"):
+        storm_queue.Resolver.at(root).plan()
+
+
+def test_reset_recovers_a_lost_log(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\nc 3\n")
+    assert priority_cli(root, env, "bump", "c").returncode == 0
+    recorded = storm_paths.priority_log(root).stat().st_size
+    storm_paths.priority_log(root).unlink()
+    assert priority_cli(root, env, "list").returncode == 3
+    done = reset_cli(root, env)
+    assert done.returncode == 0, done.stderr
+    first = log_lines(root)[0]
+    assert first["action"] == "reset" and first["abandons"] == recorded
+    assert first["reason"] == "the log was lost in a disk move"
+    assert "abandoned" in progress(root)[-1] and "reset" in progress(root)[-1]
+    listed = priority_cli(root, env, "list")
+    assert listed.returncode == 0 and listed.stdout.splitlines()[0] == "next: a #1"
+    assert priority_cli(root, env, "bump", "b").returncode == 0
+    assert run_storm(root, env) == ["b", "a", "c"]
+
+
+@pytest.mark.parametrize("keep", [0, 10])
+def test_reset_recovers_a_truncated_or_shorter_restored_log_and_keeps_it(
+    tmp_path: Path, keep: int
+) -> None:
+    root = storm(tmp_path)
+    priority = desk(root)
+    priority.bump("c", None)
+    priority.bump("e", None)
+    log = storm_paths.priority_log(root)
+    shorter = log.read_bytes()[:keep]
+    log.write_bytes(shorter)
+    with pytest.raises(storm_queue.Unreadable):
+        storm_queue.Resolver.at(root).plan()
+    priority.reset("restored from an old backup", None)
+    kept = [p for p in root.iterdir() if p.name.startswith("priority.log.abandoned-")]
+    assert len(kept) == 1 and kept[0].read_bytes() == shorter  # never deleted
+    assert order(root) == ["a", "b", "c", "d", "e"]
+
+
+def test_reset_recovers_a_fresh_root_holding_a_stale_evidence_watermark(tmp_path: Path) -> None:
+    """The reviewer's probe 6: the tracked watermark carries an offset from an earlier root."""
+    root = storm(tmp_path, queue="a 1\nb 2\n")
+    watermark = tmp_path / "watermark.json"
+    watermark.write_text(json.dumps({"offsets": {"priority.log": 812}}))
+    log = storm_queue.PriorityLog(storm_paths.priority_log(root), watermark, "priority.log")
+    priority = storm_queue.PriorityDesk(
+        storm_queue.QueueFile(root),
+        storm_queue.Ledger(root),
+        log,
+        storm_queue.Authority(root, sources=()),
+    )
+    with pytest.raises(storm_queue.Unreadable, match="reset"):
+        priority.bump("b", None)
+    priority.reset("a fresh storm root; the tracked watermark is from the last one", None)
+    assert log.events()[0]["abandons"] == 812
+    priority.bump("b", None)  # the stale offset no longer wedges the storm
+    assert log.replay() == ["b"]
+
+
+def test_reset_is_refused_while_the_log_is_readable(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\n")
+    assert priority_cli(root, env, "bump", "b").returncode == 0
+    done = reset_cli(root, env)
+    assert done.returncode == 2
+    assert "readable" in done.stderr
+    assert log_lines(root)[-1]["action"] == "refused"
+    assert log_lines(root)[-1]["requested"] == "reset"
+    assert storm_queue.PriorityLog(storm_paths.priority_log(root)).replay() == ["b"]
+
+
+def test_reset_of_a_storm_that_never_had_a_log_is_refused(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    with pytest.raises(storm_queue.Invalid, match="readable"):
+        desk(root).reset("nothing to recover", None)
+
+
+def test_reset_is_operator_only(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    desk(root).bump("c", None)
+    storm_paths.priority_log(root).unlink()
+    inside = storm_queue.Authority(root, sources=(), environ={"VIBEY_STORM_LANE": "x"})
+    with pytest.raises(storm_queue.Unauthorised):
+        storm_queue.PriorityDesk.at(root, authority=inside).reset("from a lane", None)
+    stranger = storm_queue.Authority(root, sources=(), uid=os.getuid() + 1)
+    with pytest.raises(storm_queue.Unauthorised):
+        storm_queue.PriorityDesk.at(root, authority=stranger).reset("another uid", None)
+    root_env = storm(tmp_path / "declared", toml='[priority]\nsources = ["bot"]\n')
+    desk(root_env).bump("c", None)
+    storm_paths.priority_log(root_env).unlink()
+    with pytest.raises(storm_queue.Unauthorised, match="operator"):
+        storm_queue.PriorityDesk.at(root_env).reset("a declared source", "bot")
+    assert not storm_paths.priority_log(root).exists()  # nothing restarted the log
+
+
+def test_reset_needs_a_reason(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\n")
+    done = priority_cli(root, env, "reset", "--reason", "  ")
+    assert done.returncode == 2
+
+
+def test_a_reset_line_anywhere_but_first_is_malformed(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    desk(root).bump("c", None)
+    with storm_paths.priority_log(root).open("a") as handle:
+        handle.write(
+            json.dumps(
+                {"v": 1, "action": "reset", "abandons": 5, "reason": "r", "by": "o", "at": "t"}
+            )
+            + "\n"
+        )
+    with pytest.raises(storm_queue.Unreadable, match="line 2"):
+        storm_queue.Resolver.at(root).plan()
+
+
+def test_the_evidence_job_rebases_a_reset_log_and_reports_the_gap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    evidence = _load("storm_evidence_reset", "storm-evidence.py")
+    root = storm(tmp_path)
+    for name, value in (
+        ("STORM", root),
+        ("LANES", root / "lanes"),
+        ("EVIDENCE", tmp_path / "evidence"),
+        ("LEDGER", tmp_path / "evidence/ledger.jsonl"),
+        ("WATERMARK", tmp_path / "evidence/watermark.json"),
+    ):
+        monkeypatch.setattr(evidence, name, value)
+    priority = desk(root)
+    priority.bump("c", None)
+    priority.bump("e", None)
+    records, mark, gaps = evidence.collect(evidence.load_watermark())
+    evidence.append(records, "T1")
+    evidence.advance(mark, "T1", gaps)
+    storm_paths.priority_log(root).unlink()
+    priority.reset("lost in a disk move", None)
+    priority.bump("b", None)
+    records, mark, gaps = evidence.collect(evidence.load_watermark())
+    assert any("reset" in gap and "lost in a disk move" in gap for gap in gaps), gaps
+    lines = [r["line"] for r in records if r.get("source") == "priority.log"]
+    assert any('"action": "reset"' in line for line in lines)  # read from the new start
+    assert any('"slug": "b"' in line for line in lines)
+    assert mark["offsets"]["priority.log"] == storm_paths.priority_log(root).stat().st_size
+    assert "reset" in evidence.report(records, "T2", gaps)
+    evidence.append(records, "T2")
+    evidence.advance(mark, "T2", gaps)
+    _, _, again = evidence.collect(evidence.load_watermark())
+    assert not any("reset" in gap for gap in again)  # re-based once, not every run
+
+
+# --- B: a read racing an append is never "truncated" -------------------------------------
+
+
+@pytest.mark.parametrize("fresh", [False, True], ids=["existing-log", "fresh-storm"])
+def test_a_read_racing_appends_never_reports_a_false_truncation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fresh: bool
+) -> None:
+    """The reviewer's race2.py, with its injected delay, in threads. A fresh storm also races
+    the log's creation: no log yet, then a log and its witness, must never read as lost."""
+    import threading
+    import time
+
+    root = storm(tmp_path, queue="a 1\nb 2\nc 3\n")
+    if not fresh:
+        desk(root).bump("c", None)
+    original = storm_queue.PriorityLog.recorded_length
+
+    def slow(self: object) -> int:
+        time.sleep(0.005)
+        return original(self)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(storm_queue.PriorityLog, "recorded_length", slow)
+    first_existed = storm_queue.PriorityLog.existed
+
+    def late(self: object) -> bool:
+        time.sleep(0.005)  # a reader descheduled between "no log" and "was there one?"
+        return first_existed(self)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(storm_queue.PriorityLog, "existed", late)
+
+    def writer() -> None:
+        priority = desk(root)
+        for i in range(40):
+            priority.bump("c" if i % 2 else "b", None)
+
+    writers = [threading.Thread(target=writer) for _ in range(3)]
+    for thread in writers:
+        thread.start()
+    bad = reads = 0
+    last = ""
+    while any(thread.is_alive() for thread in writers):
+        reads += 1
+        try:
+            storm_queue.PriorityLogs().at(root).replay()
+        except storm_queue.Unreadable as exc:
+            bad += 1
+            last = str(exc)
+    for thread in writers:
+        thread.join()
+    assert reads > 0
+    assert bad == 0, last
+
+
+# --- C: the witness survives a power loss ------------------------------------------------
+
+
+def test_an_empty_witness_points_to_reset(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    desk(root).bump("c", None)
+    witness(root).write_text("")
+    with pytest.raises(storm_queue.Unreadable, match="storm-priority.py reset"):
+        storm_queue.Resolver.at(root).plan()
+
+
+def test_the_witness_is_fsynced_with_its_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = storm(tmp_path)
+    synced: list[str] = []
+    real = os.fsync
+
+    def spy(fd: int) -> None:
+        import stat as st
+
+        mode = os.fstat(fd).st_mode
+        synced.append("dir" if st.S_ISDIR(mode) else "file")
+        real(fd)
+
+    monkeypatch.setattr(storm_queue.os, "fsync", spy)
+    desk(root).bump("c", None)
+    # the log line, the pending witness, then the directory holding the rename
+    assert synced.count("file") >= 2 and "dir" in synced
