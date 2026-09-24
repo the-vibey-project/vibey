@@ -12,9 +12,11 @@ from typer.testing import CliRunner
 
 from qwenloop import __version__
 from qwenloop.cli.app import app
+from qwenloop.domain.config import ToolLimits
 from qwenloop.domain.model import Backend, RepoItem, RunState, RunStatus, ServerInfo
 from qwenloop.infrastructure.inference import LlamaCppServer, OpenAICompatServer
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE
+from qwenloop.infrastructure.tools import SandboxTools
 
 runner = CliRunner()
 
@@ -653,11 +655,12 @@ class RecordingRunner:
 
     calls: list[dict[str, object]] = []
 
-    def __init__(self, server, *_args, **_kwargs):  # type: ignore[no-untyped-def]
+    def __init__(self, server, _store, tools, *_args, **_kwargs):  # type: ignore[no-untyped-def]
         self.server = server
+        self.tools = tools
 
     async def run(self, **kwargs):  # type: ignore[no-untyped-def]
-        RecordingRunner.calls.append({**kwargs, "server": self.server})
+        RecordingRunner.calls.append({**kwargs, "server": self.server, "tools": self.tools})
         return RunState(str(kwargs["run_id"]), status=RunStatus.COMPLETED, turns=2)
 
 
@@ -795,6 +798,34 @@ def test_storm_sweeps_through_the_same_endpoint(
     assert "qwenstorm complete: 2/2 repos completed" in result.stdout
     backends = {call["server_info"].backend for call in recording_runner}  # type: ignore[attr-defined]
     assert backends == {Backend.OPENAI_COMPAT}
+
+
+def test_the_tools_table_bounds_every_run_and_storm_item(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    isolated_settings: Path,
+    recording_runner: list[dict[str, object]],
+) -> None:
+    isolated_settings.write_text(
+        '[tools]\nmax_search_matches = 7\nskip_dirs = ["vendor"]\n', encoding="utf-8"
+    )
+    monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
+    _no_managed_servers(monkeypatch)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_issues", lambda _owner, _repo: None)
+    monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: None)
+    (tmp_path / "a" / ".git").mkdir(parents=True)
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    assert runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)]).exit_code == 0
+    storm = runner.invoke(app, ["run", "--storm", "--repos-root", str(tmp_path), "--repo", "a"])
+    assert storm.exit_code == 0, storm.output
+    expected = ToolLimits(max_search_matches=7, skip_dirs=("vendor",))
+    assert len(recording_runner) == 2
+    for call in recording_runner:
+        tools = call["tools"]
+        assert isinstance(tools, SandboxTools)
+        assert tools.limits == expected
 
 
 def test_doctor_passes_when_the_endpoint_serves_the_model(monkeypatch: pytest.MonkeyPatch) -> None:

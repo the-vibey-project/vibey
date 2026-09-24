@@ -21,7 +21,7 @@ from qwenloop.application.backend_selection import BackendSelector, Hardware
 from qwenloop.application.interfaces import InferenceServer, OllamaProbeInterface
 from qwenloop.application.runner import AutonomousRunner
 from qwenloop.application.storm import build_item_plans
-from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, QwenConfig
+from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, QwenConfig, ToolLimits
 from qwenloop.domain.model import (
     EXIT_CODE_WIND_DOWN,
     Backend,
@@ -268,6 +268,7 @@ def _run_single(
                 config.max_turns,
                 startup_timeout_seconds=config.startup_timeout_seconds,
                 desktop_notifications=desktop_notifications,
+                tool_limits=config.tools,
             )
         )
     except (OSError, RuntimeError) as exc:
@@ -289,6 +290,7 @@ async def _run_plan(
     *,
     startup_timeout_seconds: int,
     desktop_notifications: bool = True,
+    tool_limits: ToolLimits | None = None,
 ) -> RunState:
     """Start (or, for an attached endpoint, check) the server if it is not healthy, then
     drive one AutonomousRunner run to a verdict."""
@@ -299,7 +301,7 @@ async def _run_plan(
     runner = AutonomousRunner(
         server,
         FileRunStore(cwd),
-        SandboxTools(cwd),
+        SandboxTools(cwd, limits=tool_limits),
         DesktopNotifier(enabled=desktop_notifications),
         clock=SystemClock(),
     )
@@ -433,6 +435,7 @@ def _run_storm(
                             config.max_turns,
                             startup_timeout_seconds=config.startup_timeout_seconds,
                             desktop_notifications=desktop_notifications,
+                            tool_limits=config.tools,
                         )
                     )
                 except (OSError, RuntimeError) as exc:

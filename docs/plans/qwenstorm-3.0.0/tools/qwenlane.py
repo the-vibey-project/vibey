@@ -120,6 +120,7 @@ def run_attempt(spec_path: Path) -> int:
                 config.max_turns,
                 startup_timeout_seconds=config.startup_timeout_seconds,
                 desktop_notifications=True,
+                tool_limits=config.tools,
             )
         )
     except (OSError, RuntimeError) as exc:
