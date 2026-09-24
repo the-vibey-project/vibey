@@ -99,25 +99,35 @@ step.
    `calibrate` and `allowed`, with the seams in `vibey_gh/interfaces/slots_interface.py`
    (ADR-0016). It reads macOS through `sysctl`, `system_profiler`, `vm_stat` and
    `memory_pressure`, and Linux through `/proc`, `/sys` and `nvidia-smi`.
-2. **Evidence is keyed to a device fingerprint**: hardware model, processor, memory,
+2. **Every platform assumption lives behind a seam** (#1116: Ubuntu 26.04 LTS is
+   first-class, Windows follows, #1097). `DeviceProbeInterface` states the machine
+   (`DarwinDeviceProbe`: `sysctl`, `system_profiler`, `sw_vers`; `LinuxDeviceProbe`: `/proc`,
+   `/sys`, `nvidia-smi`, `/etc/os-release`); `HostMemorySamplerInterface` reads what it charges
+   (`vm_stat` and `memory_pressure`; `/proc/meminfo`, `/proc/vmstat` and GPU memory, with
+   cgroup limits to follow); `RunnerParallelismInterface` sets the production runner's
+   parallelism and restarts it (`MacOSAppParallelism`: `launchctl setenv` and an app restart;
+   `SystemdParallelism`: a clearly marked stub that renders the `Environment=` drop-in and
+   raises until a Linux host measures it). `PlatformProbes` picks them; nothing else names an
+   operating system. The calibration's own runner is a plain `ollama serve`, the same on both.
+3. **Evidence is keyed to a device fingerprint**: hardware model, processor, memory,
    accelerator, operating system, runner version, model digest and context window. Evidence
    for another fingerprint is stale; so is evidence older than 30 days.
-3. **`[local_models] concurrent_runs` is the declaration** (12.c), default `1`: 8.c as
+4. **`[local_models] concurrent_runs` is the declaration** (12.c), default `1`: 8.c as
    written, which probes nothing and needs no evidence. `"measured"` takes the ideal N the
    device's evidence supports, re-judged against today's bounds. A number above one runs only
    where the device measured it inside every bound and faster than one; otherwise one runs,
    and the refusal names what is missing. This repository declares `1`.
-4. **Unmeasured or stale means one, out loud, and the gap closes itself** (12.e). `slots
+5. **Unmeasured or stale means one, out loud, and the gap closes itself** (12.e). `slots
    allowed` writes a calibration request beside the evidence; `storm-queue.sh` asks `slots
    allowed` on every pass instead of the host-wide `pgrep` it hard-coded, logs the answer and
    its reason, and when its queue empties it builds a corpus (its own lane records, else its
    committed specs) and runs `slots calibrate --if-requested` under the shared model lock.
-5. **A calibration that is not clean is not evidence.** A step taken while the production
+6. **A calibration that is not clean is not evidence.** A step taken while the production
    runner held a model is discarded and measured again (twice at most); a run that never gets a
    clean step, or that ran on a runner version other than production's, is written to `--out`
    for the record and **not** recorded for the device. A 200 without a `done_reason` is a
    failed turn.
-6. **A sweep survives a reboot.** Each completed step is checkpointed, keyed by fingerprint,
+7. **A sweep survives a reboot.** Each completed step is checkpointed, keyed by fingerprint,
    corpus and method, and a rerun takes what it has.
 
 ## Proposed amendment to 8.c (not ratified here)

@@ -18,7 +18,7 @@ from vibey_gh.cli import main
 from vibey_gh.config import LocalModelsConfig, load_config
 from vibey_gh.doctor import _check_unknown_keys
 from vibey_gh.interfaces.slot_commands_interface import SlotCommandsInterface
-from vibey_gh.slot_commands import MACOS_APP_OLLAMA, SlotCommands
+from vibey_gh.slot_commands import SlotCommands
 from vibey_gh.slots import EVIDENCE_SCHEMA, POOL_SCHEMA, DeviceFingerprint, HostSample
 
 GIB = 2**30
@@ -123,6 +123,7 @@ def commands(
         fingerprinter_factory=Fingerprinter(result or fp()),
         sampler_factory=Sampler,
         which=lambda name: None,
+        platform_name="darwin",
         now=lambda: NOW,
         sleep=lambda seconds: None,
         out=out,
@@ -146,7 +147,9 @@ def test_settings_resolve_argument_then_declaration_then_default(tmp_path: Path)
     assert commands(tmp_path)[0].model(Namespace(model="")) == "gpt-oss:20b"
     assert made.binary(Namespace(binary="/b")) == "/b"
     assert made.binary(Namespace()) == "/opt/ollama"
-    assert commands(tmp_path)[0].binary(Namespace()) == MACOS_APP_OLLAMA
+    assert commands(tmp_path)[0].binary(Namespace()).startswith("/Applications/Ollama.app/")
+    linux = SlotCommands(LocalModelsConfig(), which=lambda name: None, platform_name="linux")
+    assert linux.binary(Namespace()) == "/usr/local/bin/ollama"
     on_path = SlotCommands(LocalModelsConfig(), which=lambda name: "/usr/bin/ollama")
     assert on_path.binary(Namespace()) == "/usr/bin/ollama"
     env = SlotCommands(LocalModelsConfig(), environ={"VIBEY_OLLAMA_URL": "http://box:11434/"})

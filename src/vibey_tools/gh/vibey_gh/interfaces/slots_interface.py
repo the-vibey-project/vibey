@@ -50,6 +50,30 @@ class DeviceFingerprinterInterface(Protocol):
 
 
 @runtime_checkable
+class DeviceProbeInterface(Protocol):
+    """One platform's statement of its own hardware: what a fingerprint's machine half is."""
+
+    def machine(self) -> dict[str, Any]:
+        """`hardware`, `processor`, `memory_bytes`, `accelerator` and `os`; an unreadable
+        field is empty or zero, never guessed."""
+        ...
+
+
+@runtime_checkable
+class RunnerParallelismInterface(Protocol):
+    """How a platform's production runner is told how many runs to serve at once, and
+    restarted so it takes effect (macOS: the app; Linux: systemd, #1116)."""
+
+    def current(self) -> int | None:
+        """The parallelism the runner is set to, or `None` when it states none (its default)."""
+        ...
+
+    def apply(self, parallel: int) -> None:
+        """Set the runner's parallelism and restart it, returning once it answers again."""
+        ...
+
+
+@runtime_checkable
 class HostMemorySamplerInterface(Protocol):
     """What the hardware charges right now: wired memory, free share, swap counters."""
 

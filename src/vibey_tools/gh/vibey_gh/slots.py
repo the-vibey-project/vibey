@@ -52,14 +52,16 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, ClassVar, Self
 
 from vibey_gh.fit import TextFileReader
 from vibey_gh.interfaces.slots_interface import (
     CorpusSamplerInterface,
     DeviceFingerprinterInterface,
+    DeviceProbeInterface,
     HostMemorySamplerInterface,
     OllamaClientInterface,
+    RunnerParallelismInterface,
     SlotEvidenceStoreInterface,
     SlotGateInterface,
     SlotServerInterface,
@@ -231,59 +233,37 @@ class OllamaClient(OllamaClientInterface):
         return status, {"error": "no answer" if status == 0 else "an answer that was not JSON"}
 
 
-class DeviceFingerprinter(DeviceFingerprinterInterface):
-    """Reads the device's own statement of itself, on macOS or Linux.
-
-    macOS answers through `sysctl`, `system_profiler` and `sw_vers`; Linux through the
-    kernel's files, `nvidia-smi` where there is an NVIDIA accelerator, and `/etc/os-release`.
-    A field that cannot be read stays empty, and `DeviceFingerprint.missing` names it: an
-    unreadable device is never keyed to a guess.
-    """
-
-    def __init__(
-        self,
-        client: OllamaClientInterface,
-        *,
-        platform_name: str = "",
-        run: Runner | None = None,
-        reader: TextFileReaderInterface | None = None,
-    ) -> None:
-        self._client = client
-        self._platform = platform_name or sys.platform
-        self._run = run or _run
-        self._reader: TextFileReaderInterface = reader or TextFileReader()
-
-    def fingerprint(self, model: str, context_window: int) -> DeviceFingerprint:
-        machine = self._linux() if self._platform.startswith("linux") else self._darwin()
-        version = self._client.version()
-        return DeviceFingerprint(
-            **machine,
-            runtime=f"ollama {version}" if version else "",
-            model=model,
-            model_digest=self._client.digest(model),
-            context_window=context_window,
-        )
+class DeviceProbe:
+    """What every platform's device probe shares: reading a labelled field from a report."""
 
     @staticmethod
-    def _field(text: str, label: str) -> str:
+    def field(text: str, label: str) -> str:
         match = re.search(rf"^\s*{re.escape(label)}:\s*(.+?)\s*$", text, re.MULTILINE)
         return match.group(1) if match else ""
 
-    def _darwin(self) -> dict[str, Any]:
+
+class DarwinDeviceProbe(DeviceProbe, DeviceProbeInterface):
+    """macOS states itself through `sysctl`, `system_profiler` and `sw_vers`. A sandboxed
+    caller may be refused `sysctl` but not `system_profiler`, so the hardware report is the
+    fallback for the three fields `sysctl` would have given."""
+
+    def __init__(self, run: Runner | None = None) -> None:
+        self._run = run or _run
+
+    def machine(self) -> dict[str, Any]:
         hardware = self._run(["sysctl", "-n", "hw.model"]).strip()
         processor = self._run(["sysctl", "-n", "machdep.cpu.brand_string"]).strip()
         raw_memory = self._run(["sysctl", "-n", "hw.memsize"]).strip()
         memory = int(raw_memory) if raw_memory.isdigit() else 0
         if not (hardware and processor and memory):
-            # A sandboxed caller may be refused `sysctl` but not `system_profiler`.
             profile = self._run(["system_profiler", "SPHardwareDataType"])
-            hardware = hardware or self._field(profile, "Model Identifier")
-            processor = processor or self._field(profile, "Chip")
-            stated = re.match(r"(\d+)\s*GB", self._field(profile, "Memory"))
+            hardware = hardware or self.field(profile, "Model Identifier")
+            processor = processor or self.field(profile, "Chip")
+            stated = re.match(r"(\d+)\s*GB", self.field(profile, "Memory"))
             memory = memory or (int(stated.group(1)) * 2**30 if stated else 0)
         displays = self._run(["system_profiler", "SPDisplaysDataType"])
-        chipset = self._field(displays, "Chipset Model")
-        cores = self._field(displays, "Total Number of Cores")
+        chipset = self.field(displays, "Chipset Model")
+        cores = self.field(displays, "Total Number of Cores")
         accelerator = f"{chipset} GPU, {cores} cores" if chipset and cores else chipset or "none"
         name = self._run(["sw_vers", "-productName"]).strip()
         release = self._run(["sw_vers", "-productVersion"]).strip()
@@ -295,10 +275,24 @@ class DeviceFingerprinter(DeviceFingerprinterInterface):
             "os": f"{name} {release}".strip(),
         }
 
-    def _linux(self) -> dict[str, Any]:
+
+class LinuxDeviceProbe(DeviceProbe, DeviceProbeInterface):
+    """Linux states itself through the kernel's files, `nvidia-smi` where there is an NVIDIA
+    accelerator, and `/etc/os-release` -- the same on Ubuntu 26.04, Arch and a container.
+    A container's memory is the cgroup's limit, not the host's; that refinement is
+    `vibey_gh.fit.LinuxMemorySampler`'s and joins here when a Linux host is first measured
+    (#1116)."""
+
+    def __init__(
+        self, run: Runner | None = None, reader: TextFileReaderInterface | None = None
+    ) -> None:
+        self._run = run or _run
+        self._reader: TextFileReaderInterface = reader or TextFileReader()
+
+    def machine(self) -> dict[str, Any]:
         hardware = (self._reader.read("/sys/devices/virtual/dmi/id/product_name") or "").strip()
         cpuinfo = self._reader.read("/proc/cpuinfo") or ""
-        processor = self._field(cpuinfo, "model name") or self._field(cpuinfo, "Model")
+        processor = self.field(cpuinfo, "model name") or self.field(cpuinfo, "Model")
         meminfo = self._reader.read("/proc/meminfo") or ""
         total = re.search(r"^MemTotal:\s*(\d+)\s*kB", meminfo, re.MULTILINE)
         gpus = self._run(
@@ -313,6 +307,32 @@ class DeviceFingerprinter(DeviceFingerprinterInterface):
             "accelerator": "; ".join(line.strip() for line in gpus.splitlines()) or "none",
             "os": pretty.group(1) if pretty else "",
         }
+
+
+class DeviceFingerprinter(DeviceFingerprinterInterface):
+    """This device, this runner and this model, as a `DeviceFingerprint`.
+
+    The machine is read by a platform's `DeviceProbeInterface` (`PlatformProbes` picks it);
+    the runner's version and the model's digest are read from the runner itself. A field
+    that cannot be read stays empty, and `DeviceFingerprint.missing` names it: an unreadable
+    device is never keyed to a guess.
+    """
+
+    def __init__(
+        self, client: OllamaClientInterface, *, probe: DeviceProbeInterface | None = None
+    ) -> None:
+        self._client = client
+        self._probe = probe or PlatformProbes.device_probe()
+
+    def fingerprint(self, model: str, context_window: int) -> DeviceFingerprint:
+        version = self._client.version()
+        return DeviceFingerprint(
+            **self._probe.machine(),
+            runtime=f"ollama {version}" if version else "",
+            model=model,
+            model_digest=self._client.digest(model),
+            context_window=context_window,
+        )
 
 
 # ---------------------------------------------------------------------------------------
@@ -405,14 +425,132 @@ class LinuxHostSampler(HostMemorySamplerInterface):
         )
 
 
-class PlatformProbes:
-    """The probes that can read the machine this actually is."""
+class MacOSAppParallelism(RunnerParallelismInterface):
+    """The Ollama macOS app's parallelism: a `launchctl` environment variable the app hands
+    its server, applied by quitting the app and opening it again.
+
+    Beware what a relaunch does besides: the app applies any update it has staged, so the
+    runner that comes back may be a different version -- which makes this device's evidence
+    stale (its fingerprint names the runner version) and falls back to one until it is
+    measured again. That is the gate working, not a failure; it is why the calibration
+    itself never uses this and runs its own `ollama serve` instead.
+    """
+
+    VARIABLE = "OLLAMA_NUM_PARALLEL"
+
+    def __init__(
+        self,
+        client: OllamaClientInterface,
+        *,
+        app: str = "Ollama",
+        run: Runner | None = None,
+        sleep: Callable[[float], None] = time.sleep,
+        clock: Callable[[], float] = time.monotonic,
+        timeout_s: float = 120.0,
+    ) -> None:
+        self._client = client
+        self._app = app
+        self._run = run or _run
+        self._sleep = sleep
+        self._clock = clock
+        self._timeout_s = timeout_s
+
+    def current(self) -> int | None:
+        raw = self._run(["launchctl", "getenv", self.VARIABLE]).strip()
+        return int(raw) if raw.isdigit() else None
+
+    def _until(self, answering: bool) -> bool:
+        deadline = self._clock() + self._timeout_s
+        while self._clock() < deadline:
+            if bool(self._client.version()) == answering:
+                return True
+            self._sleep(1.0)
+        return False
+
+    def apply(self, parallel: int) -> None:
+        if parallel > 1:
+            self._run(["launchctl", "setenv", self.VARIABLE, str(parallel)])
+        else:
+            # One is Ollama's own default; unset rather than pinned, as the app ships.
+            self._run(["launchctl", "unsetenv", self.VARIABLE])
+        self._run(["osascript", "-e", f'quit app "{self._app}"'])
+        self._until(answering=False)
+        self._run(["open", "-a", self._app])
+        if not self._until(answering=True):
+            raise RuntimeError(
+                f"the {self._app} app did not answer at {self._client.base_url} after a restart"
+            )
+
+
+class SystemdParallelism(RunnerParallelismInterface):
+    """UNTESTED -- the Linux (systemd) runner's parallelism, for Ubuntu 26.04 LTS (#1116).
+
+    The intended mechanism is a drop-in, `/etc/systemd/system/ollama.service.d/` holding
+    `Environment=OLLAMA_NUM_PARALLEL=N`, then `systemctl daemon-reload` and `systemctl
+    restart ollama`. It has not been exercised on a Linux host, so it refuses rather than
+    guesses: `drop_in` renders the file for an operator to review, and `current` and `apply`
+    raise until a Linux host measures them.
+    """
+
+    DROP_IN = "/etc/systemd/system/ollama.service.d/vibey-parallel.conf"
 
     @staticmethod
-    def host_sampler(platform_name: str = "") -> HostMemorySamplerInterface:
-        if (platform_name or sys.platform).startswith("linux"):
+    def drop_in(parallel: int) -> str:
+        return f"[Service]\nEnvironment=OLLAMA_NUM_PARALLEL={parallel}\n"
+
+    def current(self) -> int | None:
+        raise NotImplementedError(
+            "reading a systemd runner's parallelism is not implemented yet (#1116)"
+        )
+
+    def apply(self, parallel: int) -> None:
+        raise NotImplementedError(
+            f"write {self.DROP_IN} with {self.drop_in(parallel)!r}, then `systemctl"
+            " daemon-reload && systemctl restart ollama` -- not yet tested on a Linux host"
+            " (#1116)"
+        )
+
+
+class PlatformProbes:
+    """The probes, and the runner controls, that fit the machine this actually is.
+
+    Every platform assumption lives in the classes these return; nothing else in this
+    module names an operating system.
+    """
+
+    #: Where the macOS app keeps its runner, and where Ollama's Linux installer puts it.
+    BINARIES: ClassVar[dict[str, str]] = {
+        "darwin": "/Applications/Ollama.app/Contents/Resources/ollama",
+        "linux": "/usr/local/bin/ollama",
+    }
+
+    @staticmethod
+    def _linux(platform_name: str) -> bool:
+        return (platform_name or sys.platform).startswith("linux")
+
+    @classmethod
+    def host_sampler(cls, platform_name: str = "") -> HostMemorySamplerInterface:
+        if cls._linux(platform_name):
             return LinuxHostSampler()
         return DarwinHostSampler()
+
+    @classmethod
+    def device_probe(cls, platform_name: str = "") -> DeviceProbeInterface:
+        if cls._linux(platform_name):
+            return LinuxDeviceProbe()
+        return DarwinDeviceProbe()
+
+    @classmethod
+    def parallelism(
+        cls, client: OllamaClientInterface, platform_name: str = ""
+    ) -> RunnerParallelismInterface:
+        if cls._linux(platform_name):
+            return SystemdParallelism()
+        return MacOSAppParallelism(client)
+
+    @classmethod
+    def default_binary(cls, platform_name: str = "") -> str:
+        return cls.BINARIES["linux" if cls._linux(platform_name) else "darwin"]
 
 
 class MemoryWatch:

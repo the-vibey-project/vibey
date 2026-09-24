@@ -48,8 +48,6 @@ from vibey_gh.slots import (
     TurnReplayer,
 )
 
-#: The macOS app's own runner, used when `ollama` is not on `PATH`.
-MACOS_APP_OLLAMA = "/Applications/Ollama.app/Contents/Resources/ollama"
 OLLAMA_URL_ENV = "VIBEY_OLLAMA_URL"
 
 
@@ -69,6 +67,7 @@ class SlotCommands(SlotCommandsInterface):
         sampler_factory: Callable[[], Any] = PlatformProbes.host_sampler,
         lock_factory: Callable[..., AbstractContextManager[Any]] = DirectoryLock,
         which: Callable[[str], str | None] = shutil.which,
+        platform_name: str = "",
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         sleep: Callable[[float], None] = time.sleep,
         out: TextIO | None = None,
@@ -84,6 +83,7 @@ class SlotCommands(SlotCommandsInterface):
         self._sampler_factory = sampler_factory
         self._lock_factory = lock_factory
         self._which = which
+        self._platform = platform_name
         self._now = now
         self._sleep = sleep
         self._out = out or sys.stdout
@@ -117,7 +117,7 @@ class SlotCommands(SlotCommandsInterface):
             getattr(args, "binary", "")
             or self._cfg.ollama_binary
             or self._which("ollama")
-            or MACOS_APP_OLLAMA
+            or PlatformProbes.default_binary(self._platform)
         )
 
     def _say(self, line: str) -> None:

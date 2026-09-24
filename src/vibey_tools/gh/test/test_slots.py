@@ -24,8 +24,10 @@ from vibey_gh import slots
 from vibey_gh.interfaces.slots_interface import (
     CorpusSamplerInterface,
     DeviceFingerprinterInterface,
+    DeviceProbeInterface,
     HostMemorySamplerInterface,
     OllamaClientInterface,
+    RunnerParallelismInterface,
     SlotEvidenceStoreInterface,
     SlotGateInterface,
     SlotServerInterface,
@@ -39,12 +41,15 @@ from vibey_gh.slots import (
     POOL_SCHEMA,
     AnswerShape,
     CorpusSampler,
+    DarwinDeviceProbe,
     DarwinHostSampler,
     DeviceFingerprint,
     DeviceFingerprinter,
     DirectoryLock,
     HostSample,
+    LinuxDeviceProbe,
     LinuxHostSampler,
+    MacOSAppParallelism,
     MemoryWatch,
     OllamaClient,
     PlatformProbes,
@@ -59,6 +64,7 @@ from vibey_gh.slots import (
     SpawnedOllamaServer,
     StepSummary,
     SweepCheckpoint,
+    SystemdParallelism,
     TurnOutcome,
     TurnPool,
     TurnReplayer,
@@ -229,6 +235,10 @@ def test_every_class_honours_its_declared_seam(tmp_path: Path) -> None:
     client = OllamaClient("http://127.0.0.1:11434")
     assert isinstance(client, OllamaClientInterface)
     assert isinstance(DeviceFingerprinter(client), DeviceFingerprinterInterface)
+    assert isinstance(DarwinDeviceProbe(), DeviceProbeInterface)
+    assert isinstance(LinuxDeviceProbe(), DeviceProbeInterface)
+    assert isinstance(MacOSAppParallelism(client), RunnerParallelismInterface)
+    assert isinstance(SystemdParallelism(), RunnerParallelismInterface)
     assert isinstance(DarwinHostSampler(), HostMemorySamplerInterface)
     assert isinstance(LinuxHostSampler(), HostMemorySamplerInterface)
     assert isinstance(SpawnedOllamaServer("ollama", tmp_path), SlotServerInterface)
@@ -330,10 +340,9 @@ DARWIN = {
 
 
 def test_a_mac_states_itself() -> None:
-    reader = DeviceFingerprinter(
-        FakeClient(), platform_name="darwin", run=lambda argv: DARWIN.get(tuple(argv), "")
-    )
-    assert reader.fingerprint("gpt-oss:20b", 65536) == fingerprint(model_digest="d1")
+    probe = DarwinDeviceProbe(run=lambda argv: DARWIN.get(tuple(argv), ""))
+    got = DeviceFingerprinter(FakeClient(), probe=probe).fingerprint("gpt-oss:20b", 65536)
+    assert got == fingerprint(model_digest="d1")
 
 
 def test_a_sandboxed_mac_is_read_from_system_profiler_instead() -> None:
@@ -343,17 +352,13 @@ def test_a_sandboxed_mac_is_read_from_system_profiler_instead() -> None:
         ),
         ("system_profiler", "SPDisplaysDataType"): "  Chipset Model: Apple M5\n",
     }
-    got = DeviceFingerprinter(
-        FakeClient(version=""),
-        platform_name="darwin",
-        run=lambda argv: answers.get(tuple(argv), ""),
-    ).fingerprint("m", 8)
+    probe = DarwinDeviceProbe(run=lambda argv: answers.get(tuple(argv), ""))
+    got = DeviceFingerprinter(FakeClient(version=""), probe=probe).fingerprint("m", 8)
     assert (got.hardware, got.processor, got.memory_bytes) == ("Mac17,2", "Apple M5", 24 * GIB)
     assert got.accelerator == "Apple M5" and got.runtime == "" and got.os == ""
     assert "runtime" in got.missing
-    blank = DeviceFingerprinter(FakeClient(), platform_name="darwin", run=lambda argv: "")
-    got = blank.fingerprint("m", 8)
-    assert (got.memory_bytes, got.accelerator) == (0, "none")
+    blank = DarwinDeviceProbe(run=lambda argv: "").machine()
+    assert (blank["memory_bytes"], blank["accelerator"]) == (0, "none")
 
 
 def test_a_linux_host_states_itself_from_its_own_files() -> None:
@@ -362,27 +367,29 @@ def test_a_linux_host_states_itself_from_its_own_files() -> None:
             "/sys/devices/virtual/dmi/id/product_name": "ThinkStation\n",
             "/proc/cpuinfo": "processor: 0\nmodel name: AMD Ryzen 9\n",
             "/proc/meminfo": "MemTotal: 1000 kB\n",
-            "/etc/os-release": 'NAME="Arch"\nPRETTY_NAME="Arch Linux"\n',
+            "/etc/os-release": 'NAME="Ubuntu"\nPRETTY_NAME="Ubuntu 26.04 LTS"\n',
         }
     )
     two = "NVIDIA RTX 4090, 24564 MiB\nNVIDIA RTX 4090, 24564 MiB\n"
-    got = DeviceFingerprinter(
-        FakeClient(), platform_name="linux", run=lambda argv: two, reader=files
-    ).fingerprint("m", 8)
+    probe = LinuxDeviceProbe(run=lambda argv: two, reader=files)
+    got = DeviceFingerprinter(FakeClient(), probe=probe).fingerprint("m", 8)
     assert got.hardware == "ThinkStation" and got.processor == "AMD Ryzen 9"
-    assert got.memory_bytes == 1000 * 1024 and got.os == "Arch Linux"
+    assert got.memory_bytes == 1000 * 1024 and got.os == "Ubuntu 26.04 LTS"
     assert got.accelerator == "NVIDIA RTX 4090, 24564 MiB; NVIDIA RTX 4090, 24564 MiB"
     arm = Files({"/proc/cpuinfo": "Model: Raspberry Pi 5\n"})
-    bare = DeviceFingerprinter(
-        FakeClient(), platform_name="linux", run=lambda argv: "", reader=arm
-    ).fingerprint("m", 8)
-    assert (bare.processor, bare.memory_bytes, bare.accelerator, bare.os, bare.hardware) == (
-        "Raspberry Pi 5",
-        0,
-        "none",
-        "",
-        "",
-    )
+    bare = LinuxDeviceProbe(run=lambda argv: "", reader=arm).machine()
+    assert bare == {
+        "hardware": "",
+        "processor": "Raspberry Pi 5",
+        "memory_bytes": 0,
+        "accelerator": "none",
+        "os": "",
+    }
+
+
+def test_the_fingerprinter_asks_this_platform_by_default() -> None:
+    made = DeviceFingerprinter(FakeClient())
+    assert isinstance(made._probe, DarwinDeviceProbe | LinuxDeviceProbe)
 
 
 # ---------------------------------------------------------------------------------------
@@ -430,9 +437,60 @@ def test_a_linux_host_reports_unevictable_memory_plus_the_accelerator() -> None:
     assert (nothing.readable, nothing.free_percent) == (False, None)
 
 
-def test_the_probes_follow_the_platform() -> None:
+def test_the_probes_and_controls_follow_the_platform() -> None:
     assert isinstance(PlatformProbes.host_sampler("linux"), LinuxHostSampler)
     assert isinstance(PlatformProbes.host_sampler("darwin"), DarwinHostSampler)
+    assert isinstance(PlatformProbes.device_probe("linux"), LinuxDeviceProbe)
+    assert isinstance(PlatformProbes.device_probe("darwin"), DarwinDeviceProbe)
+    assert isinstance(PlatformProbes.parallelism(FakeClient(), "linux"), SystemdParallelism)
+    assert isinstance(PlatformProbes.parallelism(FakeClient(), "darwin"), MacOSAppParallelism)
+    assert PlatformProbes.default_binary("linux") == "/usr/local/bin/ollama"
+    assert PlatformProbes.default_binary("darwin").startswith("/Applications/Ollama.app/")
+
+
+def test_the_macos_app_is_told_its_parallelism_and_restarted() -> None:
+    calls: list[list[str]] = []
+    answers = {("launchctl", "getenv", "OLLAMA_NUM_PARALLEL"): "2\n"}
+
+    def run(argv: Any) -> str:
+        calls.append(list(argv))
+        return answers.get(tuple(argv), "")
+
+    states = iter(["0.34.4", "", "", "0.34.4"])
+    client = FakeClient()
+    client.version = lambda: next(states)  # type: ignore[method-assign]
+    app = MacOSAppParallelism(client, run=run, sleep=lambda s: None, clock=Clock())
+    assert app.current() == 2
+    app.apply(3)
+    assert calls[1:] == [
+        ["launchctl", "setenv", "OLLAMA_NUM_PARALLEL", "3"],
+        ["osascript", "-e", 'quit app "Ollama"'],
+        ["open", "-a", "Ollama"],
+    ]
+    calls.clear()
+    back = iter(["", "0.34.4"])
+    client.version = lambda: next(back)  # type: ignore[method-assign]
+    app.apply(1)
+    assert calls[0] == ["launchctl", "unsetenv", "OLLAMA_NUM_PARALLEL"]
+    assert MacOSAppParallelism(client, run=lambda argv: "").current() is None
+
+
+def test_a_macos_app_that_never_comes_back_is_reported() -> None:
+    client = FakeClient(version="")
+    app = MacOSAppParallelism(
+        client, run=lambda argv: "", sleep=lambda s: None, clock=Clock(step=50.0), timeout_s=100.0
+    )
+    with pytest.raises(RuntimeError, match="did not answer"):
+        app.apply(2)
+
+
+def test_the_systemd_runner_is_a_marked_stub_until_a_linux_host_measures_it() -> None:
+    stub = SystemdParallelism()
+    assert stub.drop_in(2) == "[Service]\nEnvironment=OLLAMA_NUM_PARALLEL=2\n"
+    with pytest.raises(NotImplementedError, match="#1116"):
+        stub.current()
+    with pytest.raises(NotImplementedError, match="systemctl daemon-reload"):
+        stub.apply(2)
 
 
 class Samples:
