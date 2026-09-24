@@ -17,7 +17,7 @@ import type {
 } from './interfaces/commands-interface';
 
 export class CommandTable {
-  static readonly GROUPS: readonly CommandGroup[] = ['Run', 'Loop & model', 'Lanes', 'Projects & gates', 'Ollama', 'Doctor'];
+  static readonly GROUPS: readonly CommandGroup[] = ['Run', 'Loop & model', 'Lanes', 'Projects & gates', 'Budgets', 'Ollama', 'Doctor'];
 
   static readonly ALL: readonly CommandSpec[] = [
     {
@@ -306,6 +306,60 @@ export class CommandTable {
       wraps: 'vibey queue bump',
     },
     {
+      id: 'vibey.showBudgets',
+      title: 'Show budgets',
+      group: 'Budgets',
+      icon: 'graph',
+      slash: 'budget',
+      usage: '[list]',
+      description: "Every budget, for vibey projects and for this machine's lanes, with what is spent.",
+      example: '/budget list',
+      wraps: 'vibey budget --all --json',
+    },
+    {
+      id: 'vibey.addBudget',
+      title: 'Add a budget',
+      group: 'Budgets',
+      icon: 'add',
+      slash: 'budget add',
+      usage: 'scope=run|day|month loop=any|sovereignloop|paidloop [engine=ID] dollars=N turns=N minutes=N',
+      description: "Cap what this machine's lanes may spend: dollars, turns or minutes, per run, day or month.",
+      example: '/budget add scope=day loop=paidloop dollars=5',
+    },
+    {
+      id: 'vibey.editBudget',
+      title: 'Edit a budget',
+      group: 'Budgets',
+      icon: 'edit',
+      slash: 'budget edit',
+      usage: '<budget id> dollars=N turns=N minutes=N',
+      description: "Change a budget's caps; for a vibey project, its cycle caps.",
+      example: '/budget edit 1a2b3c4d dollars=10',
+      wraps: 'vibey budget set --by vibey-vscode (for a project)',
+    },
+    {
+      id: 'vibey.removeBudget',
+      title: 'Remove a budget',
+      group: 'Budgets',
+      icon: 'remove',
+      slash: 'budget remove',
+      usage: '<budget id>',
+      description: 'Remove a budget; for a vibey project, clear its caps.',
+      example: '/budget remove 1a2b3c4d',
+      wraps: 'vibey budget clear --by vibey-vscode (for a project)',
+    },
+    {
+      id: 'vibey.grantBudget',
+      title: 'Grant more budget',
+      group: 'Budgets',
+      icon: 'plus',
+      slash: 'budget grant',
+      usage: '<gate or budget id> $N | N turns',
+      description: 'Raise a used-up budget, or answer a parked budget_exhausted gate with more dollars or turns.',
+      example: '/budget grant 3f2a9c1e-0b7d-4c55-9a51-2b1f0e8d7c6a $10',
+      wraps: 'vibey answer --raw \'{"max_dollars": N}\'',
+    },
+    {
       id: 'vibey.startOllama',
       title: 'Start Ollama',
       group: 'Ollama',
@@ -358,18 +412,34 @@ export class CommandTable {
 export class SlashCommands implements SlashCommandsInterface {
   constructor(private readonly table: readonly CommandSpec[] = CommandTable.ALL) {}
 
+  /** The longest slash name that the input starts with wins: `/budget add` before `/budget`. */
   parse(input: string): SlashParse {
     const text = input.trim();
     if (!text.startsWith('/')) {
       return { kind: 'text', text };
     }
-    const match = /^\/(\S*)\s*([\s\S]*)$/.exec(text) as RegExpExecArray;
-    const name = (match[1] as string).toLowerCase();
-    const spec = this.table.find((candidate) => candidate.slash === name);
-    if (spec === undefined) {
-      return { kind: 'unknown', name, reply: `Unknown command /${name}. Try /help.` };
+    const words = text.slice(1).split(/\s+/);
+    const candidates = this.table
+      .filter((spec): spec is CommandSpec & { slash: string } => spec.slash !== undefined)
+      .sort((left, right) => right.slash.split(' ').length - left.slash.split(' ').length);
+    for (const spec of candidates) {
+      const name = spec.slash.split(' ');
+      if (name.every((word, index) => (words[index] ?? '').toLowerCase() === word)) {
+        const consumed = new RegExp(`^/${name.map(SlashCommands.escape).join('\\s+')}\\s*`, 'i');
+        return { kind: 'command', spec, args: text.replace(consumed, '').trim() };
+      }
     }
-    return { kind: 'command', spec, args: (match[2] as string).trim() };
+    const name = (words[0] as string).toLowerCase();
+    return { kind: 'unknown', name, reply: `Unknown command /${name}. Try /help.` };
+  }
+
+  /** The first word of every slash command, once each: what @vibey declares as its commands. */
+  firstWords(): readonly string[] {
+    return [...new Set(this.table.filter((spec) => spec.slash !== undefined).map((spec) => (spec.slash as string).split(' ')[0] as string))];
+  }
+
+  private static escape(word: string): string {
+    return word.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
   }
 
   complete(typed: string): readonly CommandSpec[] {

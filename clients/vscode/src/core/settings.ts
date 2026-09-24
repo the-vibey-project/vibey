@@ -105,7 +105,7 @@ export class SettingsResolver implements SettingsResolverInterface {
       contextWindow: SettingsResolver.atLeast(raw, 'contextWindow'),
       loop: SettingsResolver.loop(raw.loop),
       effort: SettingsResolver.effort(raw.effort, 'auto'),
-      baseEffort: SettingsResolver.effort(raw.baseEffort, 'LOW') as Effort,
+      baseEffort: SettingsResolver.level(raw.baseEffort, 'LOW'),
       engine: raw.engine.trim() || 'auto',
       runInPlace: raw.runInPlace,
       baseRef: raw.baseRef.trim(),
@@ -149,6 +149,12 @@ export class SettingsResolver implements SettingsResolverInterface {
       return 'auto';
     }
     const upper = trimmed.toUpperCase();
+    return Efforts.is(upper) ? upper : fallback;
+  }
+
+  /** An effort level (any case); `auto` or anything else is the fallback: a base is a level. */
+  private static level(value: string, fallback: Effort): Effort {
+    const upper = value.trim().toUpperCase();
     return Efforts.is(upper) ? upper : fallback;
   }
 

@@ -2,7 +2,7 @@
 /** Every command the extension offers, declared once: palette, menu, slash commands and @vibey. */
 import type { EffortSetting, LoopName } from './catalogue-interface';
 
-export type CommandGroup = 'Run' | 'Loop & model' | 'Lanes' | 'Projects & gates' | 'Ollama' | 'Doctor';
+export type CommandGroup = 'Run' | 'Loop & model' | 'Lanes' | 'Projects & gates' | 'Budgets' | 'Ollama' | 'Doctor';
 
 export interface CommandSpec {
   /** The VS Code command id: `vibey.ask`. */
@@ -35,6 +35,8 @@ export interface SlashCommandsInterface {
   complete(typed: string): readonly CommandSpec[];
   /** Every slash command, grouped, as `/help` shows them. */
   help(): string;
+  /** The first word of every slash command, once each: what @vibey declares as its commands. */
+  firstWords(): readonly string[];
 }
 
 export interface SlashArgumentsInterface {
