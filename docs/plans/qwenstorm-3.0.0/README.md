@@ -250,5 +250,5 @@ the machine's push lock), and a red WIP cannot pass it. Nothing may skip that ga
 What protects a lane's uncommitted work instead is that it now lives on durable storage.
 
 The specs and audit notes here write the storm root as `STORM/`, as `STORM-CONTEXT.md`
-defines it. Older copies named a directory under `/private/tmp`. That storm is gone, and its
-paths should be read as relative to this folder.
+defines it. Older copies named a directory under `/private/tmp`, which the reboot emptied. Read
+those paths as relative to this folder.
