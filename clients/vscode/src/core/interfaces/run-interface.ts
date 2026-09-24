@@ -44,6 +44,8 @@ export interface RunRequest {
   readonly contextWindow: number;
   /** The task's own turn limit, which wins over the effort's and the setting's. */
   readonly maxTurns?: number;
+  /** What the task may change, as repository-relative globs; its commit holds nothing else. */
+  readonly paths?: readonly string[];
   /** What the finished work is committed as, on the task's own branch. */
   readonly commitMessage: string;
   /** What the branch and worktree are named after: the title, or a task file's stem. */
@@ -74,6 +76,8 @@ export type RunOutcome =
   | 'completed'
   | 'completed-no-change'
   | 'completed-commit-refused'
+  /** Completed, with changes outside the task's `paths` left uncommitted for a person to review. */
+  | 'completed-out-of-scope'
   | 'failed'
   | 'wound-down'
   | 'budget-exhausted'
@@ -136,6 +140,10 @@ export interface RunRecord {
   readonly failure?: RunFailure;
   readonly error?: string;
   readonly commit_error?: string;
+  /** The task's scope, when its task file named one. */
+  readonly paths?: readonly string[];
+  /** Changed paths outside that scope, left in the task's copy and not committed. */
+  readonly out_of_scope?: readonly string[];
   /** The budget that refused this run, or wound it down when it was used up. */
   readonly budget?: { readonly id: string; readonly cap: string; readonly limit: number; readonly spent: number; readonly message: string };
   /** What the run was projected to cost before it started, and where the per-turn figures came from. */

@@ -33,6 +33,7 @@ from vibey.bootstrap import (
     build_design_worker,
     build_visual_worker,
 )
+from vibey.cli.budget import budget_app
 from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.gates import GATES
 from vibey.cli.ledger_publication import ledger_export, ledger_site
@@ -95,6 +96,7 @@ ledger_app.command("search")(ledger_search)
 ledger_app.command("export")(ledger_export)
 ledger_app.command("site")(ledger_site)
 app.add_typer(queue_app, name="queue")
+app.add_typer(budget_app, name="budget")
 
 
 def _version_callback(value: bool) -> None:
@@ -915,8 +917,6 @@ def cost(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
 ) -> None:
     """Show the cycle's spend against the caps the budget brake enforces."""
-    from vibey.application.budget_source import LedgerBudgetSource
-    from vibey.application.interfaces import LedgerBudgetSourceInterface
     from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 
     async def show_cost() -> None:
@@ -938,13 +938,10 @@ def cost(
             # The brake's own numbers, not a second opinion (issue #210): the
             # caps through the one parser the worker uses, and the spend from
             # the ledger sum the worker checks before every BUILD session --
-            # which also carries DESIGN's spend, unlike engine_health. Typed as
-            # its interface so mypy holds the class to the declared seam.
-            max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
-            source: LedgerBudgetSourceInterface = LedgerBudgetSource(
-                resources.ledger, max_dollars=max_dollars, max_turns=max_turns
-            )
-            budget = await source.current(project.project_id, project.cycle)
+            # which also carries DESIGN's spend, unlike engine_health. Read
+            # through the one budget reader `vibey budget` shows, too.
+            budget = (await resources.project_budgets.show(project.project_id)).budget
+            max_dollars, max_turns = budget.max_dollars, budget.max_turns
             dollar_cap = f"${max_dollars:.2f}" if max_dollars is not None else "none (uncapped)"
             turn_cap = str(max_turns) if max_turns is not None else "none"
 

@@ -173,6 +173,7 @@ Every command's flags and defaults are in the
 | `vibey design resume/accept` / `vibey visual accept/waive` | Resume or accept DESIGN; accept or waive VISUAL_DESIGN. |
 | `vibey watch` / `vibey status` | Live dashboard, or one-shot status (`--json` for scripting). |
 | `vibey engines` / `vibey cost` / `vibey ledger show` | Engine health, budget spend, and event-ledger inspection. |
+| `vibey budget` / `budget set` / `budget clear` | A project's per-cycle caps and spend, and changing the caps after creation (`--json` for scripting). |
 | `vibey deploy status/inspect/plan/cancel/rollback` | Inspect and control Phases ④–⑥. |
 | `vibey recover` | Recover jobs stuck under a dead worker's lease. |
 | `vibey operator` | Run the Kubernetes operator (`pip install 'vibey[operator]'`; ADR-0025). |
@@ -199,7 +200,10 @@ What does configure a project today is a handful of `vibey new` CLI flags
 (`--max-cycles`, `--max-cycle-dollars`, `--max-cycle-turns`,
 `--skills-context-mode`, `--skills-context-budget`) recorded directly into
 that project's stored config at creation time — see the
-[CLI reference](reference/cli.md).
+[CLI reference](reference/cli.md). The two caps can be changed after that:
+`vibey budget set` and `vibey budget clear` rewrite them in the stored config,
+record each change on the ledger, and bind the next BUILD session of a worker
+already running.
 
 ## Notifications
 
