@@ -119,7 +119,7 @@ repository's main checkout every `heartbeat_interval_minutes` — 0 takes half o
 stales the lane.
 
 Render refuses an interpreter, a `vibey_gh`, or a log directory under a temporary directory
-(a reboot empties it: this machine lost `/private/tmp` the day this was written) or inside a
+(a reboot empties it: this machine lost its temporary directory the day this was written; ADR-0057) or inside a
 git work tree (a lane's worktree is deleted when the lane ends; a checkout's virtualenv changes
 under every sync), and a checkout that is a linked worktree. The interpreter is the one running
 the install unless `[runners] heartbeat_python` names another; the `vibey_gh` location is asked

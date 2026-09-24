@@ -172,6 +172,16 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "PostgreSQL's socket directories, probed read-only; a socket is recreated at start",
     ),
     (
+        "src/vibey/infrastructure/db/local_auth.py",
+        r"`%2Ftmp` is the socket directory|^\s+`/tmp`, which `urlsplit\(\)\.hostname`",
+        "explains how a libpq socket-directory host is decoded; a socket, not stored work",
+    ),
+    (
+        "src/vibey_tools/gh/vibey_gh/heartbeat_timer.py",
+        r'^\s+"(?:/private)?/(?:tmp|var/tmp|var/folders|dev/shm|run/user)",$',
+        "the directories the heartbeat timer refuses to run from (ADR-0058): named to forbid them",
+    ),
+    (
         "docs/architecture/decisions/0055-*.md",
         r"/tmp -d postgres",
         "psql pointed at PostgreSQL's socket directory; a socket, not stored work",
