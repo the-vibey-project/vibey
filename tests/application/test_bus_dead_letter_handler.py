@@ -22,10 +22,12 @@ from vibey.application.interfaces import (
     BusDeadLetterHandlerInterface,
 )
 from vibey.application.interfaces.queue import Park, Success
+from vibey.domain.config import QueueReapConfig
 from vibey.domain.job import JobState
 from vibey.domain.phase import Phase
 
 PROJECT = UUID("6f1c2a4e-0000-4000-8000-000000000000")
+OWNER = QueueReapConfig().broker_policy()
 
 
 @dataclass
@@ -51,6 +53,7 @@ def _payload(**overrides: object) -> dict[str, object]:
         "first_death_at": "1",
         "truncated": False,
         "payload": {"job_id": "x"},
+        "origin_owned": True,
     }
     values.update(overrides)
     return values
@@ -88,7 +91,7 @@ async def _answered(gates: FakeHumanGateRepository, job: JobRecord, choice: obje
 
 
 def test_the_handler_and_gate_satisfy_their_seams() -> None:
-    handler = BusDeadLetterHandler(gates=FakeHumanGateRepository(), bus=RecordingBus())
+    handler = BusDeadLetterHandler(gates=FakeHumanGateRepository(), bus=RecordingBus(), owner=OWNER)
     assert isinstance(handler, BusDeadLetterHandlerInterface)
     assert isinstance(BUS_DEAD_LETTER_GATE, BusDeadLetterGateInterface)
 
@@ -103,6 +106,11 @@ def test_the_gate_offers_replay_only_for_a_whole_json_object() -> None:
     assert truncated.options == (DISMISS,)
     assert "cannot be replayed" in truncated.prompt
     assert BUS_DEAD_LETTER_GATE.request(_payload(payload=None)).options == (DISMISS,)
+    foreign = BUS_DEAD_LETTER_GATE.request(_payload(origin_owned=False))
+    assert foreign.options == (DISMISS,)
+    assert "not one vibey owns" in foreign.prompt
+    legacy = {k: v for k, v in _payload().items() if k != "origin_owned"}
+    assert BUS_DEAD_LETTER_GATE.request(legacy).options == (DISMISS,)
 
 
 def test_the_gate_quotes_and_cuts_what_the_message_said() -> None:
@@ -119,7 +127,7 @@ async def test_dismiss_settles_it_and_sends_nothing() -> None:
     gates, bus = FakeHumanGateRepository(), RecordingBus()
     job = _job(_payload())
     await _answered(gates, job, " Dismiss ")
-    outcome = await BusDeadLetterHandler(gates=gates, bus=bus).handle(job)
+    outcome = await BusDeadLetterHandler(gates=gates, bus=bus, owner=OWNER).handle(job)
     assert outcome == Success({"dismissed": "id:m1"})
     assert bus.published == []
 
@@ -128,7 +136,7 @@ async def test_replay_publishes_it_back_to_where_it_died() -> None:
     gates, bus = FakeHumanGateRepository(), RecordingBus()
     job = _job(_payload())
     await _answered(gates, job, REPLAY)
-    outcome = await BusDeadLetterHandler(gates=gates, bus=bus).handle(job)
+    outcome = await BusDeadLetterHandler(gates=gates, bus=bus, owner=OWNER).handle(job)
     assert outcome == Success({"replayed": "id:m1", "to": "vibey.jobs"})
     assert bus.published == [("vibey.jobs", {"job_id": "x"})]
 
@@ -140,15 +148,18 @@ async def test_replay_publishes_it_back_to_where_it_died() -> None:
         _payload(payload=None),
         _payload(origin_queue=""),
         _payload(origin_queue=3),
+        _payload(origin_queue="celery"),
     ],
 )
 async def test_a_replay_that_cannot_be_made_raises_the_gate_again(
     payload: dict[str, object],
 ) -> None:
+    """Finding 11 / probe_forge: the origin is read from the message's own headers, so a
+    forged `x-first-death-queue: celery` must never have vibey publish into Plane's queue."""
     gates, bus = FakeHumanGateRepository(), RecordingBus()
     job = _job(payload)
     await _answered(gates, job, REPLAY)
-    outcome = await BusDeadLetterHandler(gates=gates, bus=bus).handle(job)
+    outcome = await BusDeadLetterHandler(gates=gates, bus=bus, owner=OWNER).handle(job)
     assert isinstance(outcome, Park)
     assert outcome.request.prompt.startswith("That dead letter cannot be replayed.")
     assert bus.published == []
@@ -160,7 +171,7 @@ async def test_anything_else_raises_the_gate_again(choice: object) -> None:
     job = _job(_payload())
     if choice is not None:
         await _answered(gates, job, choice)
-    outcome = await BusDeadLetterHandler(gates=gates, bus=bus).handle(job)
+    outcome = await BusDeadLetterHandler(gates=gates, bus=bus, owner=OWNER).handle(job)
     assert isinstance(outcome, Park)
     assert outcome.request.prompt.startswith("Answer --choice replay or --choice dismiss.")
 
@@ -169,5 +180,5 @@ async def test_an_unanswered_gate_is_no_answer() -> None:
     gates, bus = FakeHumanGateRepository(), RecordingBus()
     job = _job(_payload())
     await gates.raise_gate(PROJECT, job.id, HumanGateRequest(kind="k", prompt="p"))
-    outcome = await BusDeadLetterHandler(gates=gates, bus=bus).handle(job)
+    outcome = await BusDeadLetterHandler(gates=gates, bus=bus, owner=OWNER).handle(job)
     assert isinstance(outcome, Park)

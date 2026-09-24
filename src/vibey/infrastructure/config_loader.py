@@ -185,7 +185,9 @@ class QueueConfigLoader:
     that cannot be read is not the same fact as no declaration (10.f).
     """
 
-    def load(self, path: Path) -> QueueConfig:
+    def load(self, path: Path, *, environ: Mapping[str, str] | None = None) -> QueueConfig:
+        """`environ`, when given, is overlaid as `load_config_from_path` overlays it, so a
+        `VIBEY_QUEUE_REAP_*` variable still beats the file."""
         try:
             text = path.read_text()
         except FileNotFoundError:
@@ -198,6 +200,8 @@ class QueueConfigLoader:
             data = parse_toml_string(text)
         except tomllib.TOMLDecodeError as exc:
             raise ConfigError(str(path), f"is not valid TOML: {exc}") from exc
+        if environ is not None:
+            apply_env_overrides(data, environ)
         return QueueConfig.from_data(data)
 
 

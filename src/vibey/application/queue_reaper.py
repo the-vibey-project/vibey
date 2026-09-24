@@ -5,25 +5,33 @@ A pass, in order:
 
 1. **Leases** on the PostgreSQL job queue: every expired lease is judged by
    `QueueReapPolicy` and requeued while attempts remain, or parked with a
-   `delivery_exhausted` gate once they are spent -- each in one transaction with its
-   `QueueReaped` event (`QueueReapStore.reap_leases`). The worker's idle loop already
-   reaps leases through `JobRepository.reap()`, which is the same code, so it asks for a
-   pass without them.
-2. **Ready work** on the job queue that has waited past `stale_ready_seconds`: surfaced.
-3. **The broker**, when one is configured: vibey's policy is reconciled onto the queues
-   it owns and read back; every queue is measured; an owned dead-letter queue's messages
-   each become a parked job and a `human_gate` row; everything else stuck is surfaced.
-   A queue vibey does not own -- Plane's Celery queues on the shared broker -- is only
-   ever measured and surfaced, never touched.
+   `delivery_exhausted` gate once they are spent -- each lease in a transaction of its own
+   with its `QueueReaped` event (`QueueReapStore.reap_leases`). The worker's idle loop
+   already reaps leases through `JobRepository.reap()`, which is the same code, so it asks
+   for a pass without them.
+2. **Claimable, unclaimed work** on the job queue, in every project -- a project with no
+   worker at all included -- that has waited past `stale_ready_seconds`: surfaced.
+3. **The broker**, when one is configured: vibey's policies are reconciled onto the queues
+   it owns and read back, off the queues themselves; every queue is measured; an owned
+   dead-letter queue's messages each become a parked job and a `human_gate` row; everything
+   else stuck is surfaced. A queue vibey does not own -- Plane's Celery queues on the shared
+   broker -- is only ever measured and surfaced, never touched.
 
-A source that cannot be read is named in the report and nothing is concluded from it;
-the pass carries on with the rest and is not `ok` (10.f, 12.e). A surfaced condition is
-recorded once when it is first seen and again only after it has cleared, so a queue
-stuck for an hour is one event, not sixty. A dry run judges everything and writes
-nothing, not even the broker policy.
+**A sighting is recorded once, fleet-wide** (#1108 review finding 4). The ledger, not the
+process, holds it open: before a surfaced condition is recorded, the latest `QueueReaped`
+event for the same sighting is read, and if it is still open nothing is written. Every pod
+and every `vibey queue reap` sees the same ledger, so two pods and the CLI record one
+event, not three. When a pass that read the source whole no longer sees an open sighting,
+it records it `cleared`, so the condition's return is a new sighting. A broker sighting
+is recorded once for the whole fleet, under the project the pass ran for, and is
+`untrusted`: the broker's names are not vibey's words.
+
+A source that cannot be read is named in the report and nothing is concluded from it --
+no sighting it would have shown is cleared -- and the pass is not `ok` (10.f, 12.e). A dry
+run judges everything and writes nothing, not even the broker policy.
 """
 
-from dataclasses import replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import Final
 from uuid import UUID
@@ -36,18 +44,26 @@ from vibey.application.interfaces.queue_reap import (
     QueueReapStore,
 )
 from vibey.application.interfaces.system import Clock
+from vibey.domain.errors import LeaseReapIncomplete
 from vibey.domain.interfaces.config_interface import QueueReapConfigInterface
-from vibey.domain.interfaces.queue_reap_interface import QueueReapPolicyInterface
+from vibey.domain.interfaces.queue_reap_interface import (
+    BrokerPolicyInterface,
+    QueueReapPolicyInterface,
+)
 from vibey.domain.job import DELIVERY_EXHAUSTED_GATE_KIND
 from vibey.domain.queue_reap import (
     QUEUE_REAP_POLICY,
+    PolicyOutcome,
     QueueDepth,
     ReapAction,
+    ReapSource,
     ReapThresholds,
     ReapVerdict,
 )
 
-type _SurfaceKey = tuple[UUID, str, str, str]
+MAX_DEAD_LETTER_READ: Final = 10_000
+"""The most dead letters one pass reads off one queue: the ones already parked, which a
+read cannot skip because they sit at the head, plus `dead_letter_peek_limit` new ones."""
 
 
 class DeliveryExhaustedGate:
@@ -69,6 +85,42 @@ class DeliveryExhaustedGate:
 DELIVERY_EXHAUSTED_GATE: Final[DeliveryExhaustedGateInterface] = DeliveryExhaustedGate()
 
 
+@dataclass(slots=True)
+class _Pass:
+    """What one pass has found so far, and which sources it read whole."""
+
+    report: QueueReapReport
+    project_of: dict[str, UUID] = field(default_factory=dict)
+    """Each job-queue verdict's queue, to the project it is recorded under."""
+    job_queue_read: bool = False
+    broker_read: bool = False
+    unmeasured: set[str] = field(default_factory=set)
+    """Broker queues this pass could not judge whole: none of their sightings clear."""
+
+    def add(
+        self,
+        *,
+        acted: tuple[ReapVerdict, ...] = (),
+        surfaced: tuple[ReapVerdict, ...] = (),
+        cleared: tuple[ReapVerdict, ...] = (),
+        policy: PolicyOutcome | None = None,
+        notes: tuple[str, ...] = (),
+        unreadable: tuple[str, ...] = (),
+    ) -> None:
+        self.report = self.report.joined(
+            QueueReapReport(
+                project_id=self.report.project_id,
+                dry_run=self.report.dry_run,
+                acted=acted,
+                surfaced=surfaced,
+                cleared=cleared,
+                policy=policy,
+                notes=notes,
+                unreadable=unreadable,
+            )
+        )
+
+
 class QueueReaper:
     """Reaps the job queue and the broker by measurement, and records every reap."""
 
@@ -88,7 +140,6 @@ class QueueReaper:
         self._clock = clock
         self._log = logger
         self._policy = policy
-        self._surfaced: set[_SurfaceKey] = set()
         self._last_pass: datetime | None = None
 
     async def run_if_due(self, project_id: UUID) -> QueueReapReport | None:
@@ -107,148 +158,183 @@ class QueueReaper:
         self, project_id: UUID, *, dry_run: bool = False, leases: bool = True
     ) -> QueueReapReport:
         thresholds = self._config.thresholds()
-        report = QueueReapReport(project_id=project_id, dry_run=dry_run)
+        found = _Pass(QueueReapReport(project_id=project_id, dry_run=dry_run))
         if leases:
-            report = report.joined(await self._leases(report))
-        report = report.joined(await self._ready(report, thresholds))
+            await self._leases(found)
+        await self._ready(found, thresholds)
         if self._bus is None:
-            report = report.joined(
-                replace(
-                    self._empty(report),
-                    notes=(
-                        "broker: none configured ([bus] url, username, password); only the "
-                        "PostgreSQL job queue was reaped",
-                    ),
+            found.add(
+                notes=(
+                    "broker: none configured ([bus] url, username, password); only the "
+                    "PostgreSQL job queue was reaped",
                 )
             )
         else:
-            report = report.joined(await self._broker(report, self._bus, thresholds))
+            await self._broker(found, self._bus, thresholds)
         if not dry_run:
-            report = report.joined(await self._record_surfaced(report))
-        self._log_report(report)
-        return report
+            await self._record(found)
+        self._log_report(found.report)
+        return found.report
 
-    @staticmethod
-    def _empty(like: QueueReapReport) -> QueueReapReport:
-        return QueueReapReport(project_id=like.project_id, dry_run=like.dry_run)
-
-    async def _leases(self, like: QueueReapReport) -> QueueReapReport:
+    async def _leases(self, found: _Pass) -> None:
         try:
-            if like.dry_run:
+            if found.report.dry_run:
                 verdicts = await self._store.preview_leases()
             else:
                 verdicts = await self._store.reap_leases()
+        except LeaseReapIncomplete as exc:
+            found.add(
+                acted=tuple(v for v in exc.reaped if isinstance(v, ReapVerdict)),
+                unreadable=tuple(f"job-queue lease {failure}" for failure in exc.failures),
+            )
+            return
         except Exception as exc:
-            return replace(self._empty(like), unreadable=(f"job-queue leases: {exc}",))
-        return replace(self._empty(like), acted=verdicts)
+            found.add(unreadable=(f"job-queue leases: {exc}",))
+            return
+        found.add(acted=verdicts)
 
-    async def _ready(self, like: QueueReapReport, thresholds: ReapThresholds) -> QueueReapReport:
+    async def _ready(self, found: _Pass, thresholds: ReapThresholds) -> None:
         try:
-            depths = await self._store.ready_depths(like.project_id)
+            measured = await self._store.ready_depths()
         except Exception as exc:
-            return replace(self._empty(like), unreadable=(f"job-queue ready work: {exc}",))
-        surfaced = tuple(
-            verdict
-            for depth in depths
-            for verdict in self._policy.judge_queue(depth, thresholds=thresholds)
-        )
-        return replace(self._empty(like), surfaced=surfaced)
+            found.add(unreadable=(f"job-queue claimable work: {exc}",))
+            return
+        found.job_queue_read = True
+        for project, depth in measured:
+            found.project_of[depth.queue] = project
+            found.add(surfaced=self._policy.judge_queue(depth, thresholds=thresholds))
 
     async def _broker(
-        self, like: QueueReapReport, bus: BusInspectorPort, thresholds: ReapThresholds
-    ) -> QueueReapReport:
-        part = self._empty(like)
+        self, found: _Pass, bus: BusInspectorPort, thresholds: ReapThresholds
+    ) -> None:
         policy = self._config.broker_policy()
-        if like.dry_run:
-            part = replace(
-                part, notes=(f"broker policy {policy.name!r}: not reconciled in a dry run",)
-            )
+        if found.report.dry_run:
+            found.add(notes=(f"broker policy {policy.name!r}: not reconciled in a dry run",))
         else:
             try:
-                part = replace(part, policy=await bus.apply_policy(policy))
+                found.add(policy=await bus.apply_policy(policy))
             except Exception as exc:
-                part = replace(part, unreadable=(f"broker policy {policy.name!r}: {exc}",))
+                found.add(unreadable=(f"broker policy {policy.name!r}: {exc}",))
         try:
             measured = await bus.depths()
         except Exception as exc:
-            return part.joined(replace(self._empty(like), unreadable=(f"broker queues: {exc}",)))
+            found.add(unreadable=(f"broker queues: {exc}",))
+            return
+        found.broker_read = True
         for raw in measured:
             depth = replace(
                 raw, owned=policy.owns(raw.queue), dead_letter=policy.is_dead_letter(raw.queue)
             )
+            if (
+                not depth.dead_letter
+                and depth.ready > 0
+                and depth.consumers == 0
+                and depth.oldest_ready_age_seconds is None
+            ):
+                # 10.f: unmeasured is not old, and not silently fine either (finding 12).
+                found.add(
+                    notes=(
+                        f"{depth.queue}: {depth.ready} ready with no consumer, age not "
+                        f"measurable (a {depth.kind or 'queue'} whose head message carries "
+                        "no timestamp the broker reports; quorum queues report none)",
+                    )
+                )
             for verdict in self._policy.judge_queue(depth, thresholds=thresholds):
                 if verdict.action is ReapAction.PARK:
-                    part = part.joined(await self._dead_letters(like, bus, depth, thresholds))
+                    await self._dead_letters(found, bus, depth, thresholds, policy)
                 else:
-                    part = part.joined(replace(self._empty(like), surfaced=(verdict,)))
-        return part
+                    found.add(surfaced=(verdict,))
 
     async def _dead_letters(
         self,
-        like: QueueReapReport,
+        found: _Pass,
         bus: BusInspectorPort,
         depth: QueueDepth,
         thresholds: ReapThresholds,
-    ) -> QueueReapReport:
+        policy: BrokerPolicyInterface,
+    ) -> None:
         try:
-            peek = await bus.peek_dead_letters(
-                depth.queue, limit=self._config.dead_letter_peek_limit
-            )
+            parked = await self._store.parked_count(depth.queue)
+            # Messages a read returns go back to where they were, so the parked ones stay
+            # at the head: the read reaches past them to the next unparked (finding 10).
+            limit = min(parked + self._config.dead_letter_peek_limit, MAX_DEAD_LETTER_READ)
+            peek = await bus.peek_dead_letters(depth.queue, limit=limit)
         except Exception as exc:
-            return replace(self._empty(like), unreadable=(f"dead letters on {depth.queue}: {exc}",))
+            found.unmeasured.add(depth.queue)
+            found.add(unreadable=(f"dead letters on {depth.queue}: {exc}",))
+            return
         unread = self._policy.judge_unread(peek)
-        acted: list[ReapVerdict] = []
-        unreadable: list[str] = []
+        if unread is not None:
+            found.add(surfaced=(unread,))
         already = 0
         for item in peek.items:
             verdict = self._policy.judge_dead_letter(item, depth, thresholds=thresholds)
-            if like.dry_run:
-                acted.append(verdict)
+            if found.report.dry_run:
+                found.add(acted=(verdict,))
                 continue
             try:
-                parked = await self._store.park_dead_letter(like.project_id, item, verdict)
+                job_id = await self._store.park_dead_letter(
+                    found.report.project_id,
+                    item,
+                    verdict,
+                    origin_owned=policy.owns(item.origin_queue),
+                )
             except Exception as exc:
-                unreadable.append(f"parking {item.identity} from {depth.queue}: {exc}")
+                found.unmeasured.add(depth.queue)
+                found.add(unreadable=(f"parking {item.identity} from {depth.queue}: {exc}",))
                 continue
-            if parked is None:
+            if job_id is None:
                 already += 1
             else:
-                acted.append(replace(verdict, detail={**verdict.detail, "job_id": str(parked)}))
-        notes = (
-            (
-                f"{depth.queue}: {already} dead letter(s) already parked; each stays on the "
-                "queue as evidence until a person clears it",
+                found.add(
+                    acted=(replace(verdict, detail={**verdict.detail, "job_id": str(job_id)}),)
+                )
+        if already:
+            found.add(
+                notes=(
+                    f"{depth.queue}: {already} dead letter(s) already parked; each stays on "
+                    "the queue as evidence until a person clears it",
+                )
             )
-            if already
-            else ()
-        )
-        return replace(
-            self._empty(like),
-            acted=tuple(acted),
-            surfaced=(unread,) if unread is not None else (),
-            notes=notes,
-            unreadable=tuple(unreadable),
-        )
 
-    async def _record_surfaced(self, report: QueueReapReport) -> QueueReapReport:
-        seen: set[_SurfaceKey] = set()
+    async def _record(self, found: _Pass) -> None:
+        """Record each sighting once, fleet-wide, and close the ones that cleared."""
+        report = found.report
+        seen = {verdict.sighting for verdict in report.surfaced}
         unreadable: list[str] = []
         for verdict in report.surfaced:
-            key = (report.project_id, verdict.queue, verdict.condition.value, verdict.subject)
-            if key in self._surfaced:
-                seen.add(key)
-                continue
+            project = (
+                found.project_of.get(verdict.queue, report.project_id)
+                if verdict.source is ReapSource.JOB_QUEUE
+                else report.project_id
+            )
             try:
-                await self._store.record(report.project_id, verdict)
+                await self._store.record_sighting(project, verdict)
             except Exception as exc:
                 unreadable.append(f"recording {verdict.condition.value} on {verdict.queue}: {exc}")
+        cleared: list[ReapVerdict] = []
+        try:
+            open_sightings = await self._store.open_sightings()
+        except Exception as exc:
+            unreadable.append(f"open sightings: {exc}")
+            open_sightings = ()
+        for project, sighting in open_sightings:
+            if sighting.sighting in seen or not self._read_whole(found, sighting):
                 continue
-            seen.add(key)
-        # A condition that cleared is forgotten, so its return is recorded again -- but
-        # only when every source was read: an unread source says nothing about clearing.
-        whole = not report.unreadable and not unreadable
-        self._surfaced = seen if whole else self._surfaced | seen
-        return replace(self._empty(report), unreadable=tuple(unreadable))
+            try:
+                if await self._store.record_cleared(project, sighting):
+                    cleared.append(sighting.cleared())
+            except Exception as exc:
+                unreadable.append(f"clearing {sighting.condition.value} on {sighting.queue}: {exc}")
+        found.add(cleared=tuple(cleared), unreadable=tuple(unreadable))
+
+    @staticmethod
+    def _read_whole(found: _Pass, sighting: ReapVerdict) -> bool:
+        """Whether this pass read the source a sighting came from whole: only then does
+        not seeing it mean it cleared."""
+        if sighting.source is ReapSource.JOB_QUEUE:
+            return found.job_queue_read
+        return found.broker_read and sighting.queue not in found.unmeasured
 
     def _log_report(self, report: QueueReapReport) -> None:
         project = str(report.project_id)
@@ -257,6 +343,8 @@ class QueueReaper:
             self._log.warning(event, project_id=project, **verdict.payload())
         for verdict in report.surfaced:
             self._log.warning("queue.stuck", project_id=project, **verdict.payload())
+        for verdict in report.cleared:
+            self._log.info("queue.unstuck", project_id=project, **verdict.payload())
         for source in report.unreadable:
             self._log.warning("queue.reap_unreadable", project_id=project, source=source)
         if report.policy is not None and not report.policy.verified:

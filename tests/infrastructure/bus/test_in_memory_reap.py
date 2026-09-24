@@ -36,7 +36,7 @@ class Clock:
 
 @dataclass
 class ParkingStore:
-    """Just enough of the PostgreSQL store: parks by identity, records what it is told."""
+    """Just enough of the PostgreSQL store: parks by identity, keeps sightings open."""
 
     parked: dict[str, tuple[DeadLetter, ReapVerdict]] = field(default_factory=dict)
     recorded: list[ReapVerdict] = field(default_factory=list)
@@ -47,19 +47,31 @@ class ParkingStore:
     async def reap_leases(self) -> tuple[ReapVerdict, ...]:
         return ()
 
-    async def ready_depths(self, project_id: UUID) -> tuple[QueueDepth, ...]:
+    async def ready_depths(self) -> tuple[tuple[UUID, QueueDepth], ...]:
         return ()
 
+    async def parked_count(self, queue: str) -> int:
+        return sum(1 for item, _ in self.parked.values() if item.queue == queue)
+
     async def park_dead_letter(
-        self, project_id: UUID, item: DeadLetter, verdict: ReapVerdict
+        self, project_id: UUID, item: DeadLetter, verdict: ReapVerdict, *, origin_owned: bool
     ) -> UUID | None:
         if item.identity in self.parked:
             return None
         self.parked[item.identity] = (item, verdict)
         return uuid4()
 
-    async def record(self, project_id: UUID, verdict: ReapVerdict) -> None:
+    async def record_sighting(self, project_id: UUID, verdict: ReapVerdict) -> bool:
+        if any(v.sighting == verdict.sighting for v in self.recorded):
+            return False
         self.recorded.append(verdict)
+        return True
+
+    async def open_sightings(self) -> tuple[tuple[UUID, ReapVerdict], ...]:
+        return ()
+
+    async def record_cleared(self, project_id: UUID, verdict: ReapVerdict) -> bool:
+        return False  # pragma: no cover - no sighting is ever returned open here
 
 
 def test_the_in_memory_bus_is_a_bus_and_an_inspector() -> None:
@@ -80,7 +92,12 @@ async def test_depths_measure_what_waits_and_for_how_long() -> None:
     clock.at = T0 + timedelta(seconds=90)
     depths = {d.queue: d for d in await bus.depths()}
     assert depths["vibey.jobs"] == QueueDepth(
-        queue="vibey.jobs", ready=2, unacked=0, consumers=0, oldest_ready_age_seconds=90.0
+        queue="vibey.jobs",
+        ready=2,
+        unacked=0,
+        consumers=0,
+        oldest_ready_age_seconds=90.0,
+        kind="classic",
     )
     assert depths["vibey.jobs.dlq"].oldest_ready_age_seconds is None
 
@@ -136,7 +153,9 @@ async def test_a_policy_is_kept_and_read_back() -> None:
     policy = QueueReapConfig().broker_policy()
     outcome = await bus.apply_policy(policy)
     assert outcome.verified
-    assert bus.policy(policy.name) == policy.body()
+    quorum, classic = policy.documents()
+    assert bus.policy(quorum.name) == quorum.body()
+    assert bus.policy(classic.name) == classic.body()
     assert bus.policy("other") is None
 
 

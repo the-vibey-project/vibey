@@ -159,6 +159,7 @@ def test_the_presenter_shows_what_is_stuck_the_policy_and_the_notes() -> None:
         surfaced=(stuck,),
         policy=PolicyOutcome(policy="vibey-reap", verified=False, detail="refused"),
         notes=("a note",),
+        cleared=(stuck.cleared(),),
     )
     lines = QUEUE_PRESENTER.reap(report)
     assert lines[0] == f"queue reap for project {PROJECT}"
@@ -170,6 +171,11 @@ def test_the_presenter_shows_what_is_stuck_the_policy_and_the_notes() -> None:
     ) in lines
     assert "broker policy 'vibey-reap': NOT VERIFIED (refused)" in lines
     assert "note: a note" in lines
+    assert "no longer stuck, closed on the ledger:" in lines
+    assert (
+        "  cleared     stale_ready    celery on celery: 0 seconds ready with no consumer "
+        "(threshold 900)"
+    ) in lines
     verified = QueueReapReport(
         project_id=PROJECT,
         dry_run=False,
@@ -182,6 +188,7 @@ def test_the_presenter_shows_what_is_stuck_the_policy_and_the_notes() -> None:
     assert body["ok"] is False
     assert body["policy"] == {"name": "vibey-reap", "verified": False, "detail": "refused"}
     assert body["surfaced"][0]["condition"] == "stale_ready"
+    assert body["cleared"][0]["action"] == "cleared"
     assert json.loads(QUEUE_PRESENTER.reap_json(verified))["ok"] is True
     no_policy = QueueReapReport(project_id=PROJECT, dry_run=True)
     assert json.loads(QUEUE_PRESENTER.reap_json(no_policy))["policy"] is None

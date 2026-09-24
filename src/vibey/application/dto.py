@@ -305,6 +305,9 @@ class QueueReapReport:
     acted: tuple[ReapVerdict, ...] = ()
     surfaced: tuple[ReapVerdict, ...] = ()
     policy: PolicyOutcome | None = None
+    cleared: tuple[ReapVerdict, ...] = ()
+    """Sightings recorded open earlier that this pass, reading their source whole, no
+    longer found -- each closed on the ledger (#1108 review finding 4)."""
     notes: tuple[str, ...] = ()
     unreadable: tuple[str, ...] = ()
 
@@ -322,6 +325,7 @@ class QueueReapReport:
             acted=self.acted + other.acted,
             surfaced=self.surfaced + other.surfaced,
             policy=other.policy if other.policy is not None else self.policy,
+            cleared=self.cleared + other.cleared,
             notes=self.notes + other.notes,
             unreadable=self.unreadable + other.unreadable,
         )

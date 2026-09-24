@@ -225,3 +225,21 @@ class PriorityRefused(ReorderRefused):
 class HandbackRefused(VibeyError):
     """A handback was asked for with no successful probe recorded after the latest
     failover, or with a failover that names no known engine (ADR-0070)."""
+
+
+class LeaseReapIncomplete(VibeyError):
+    """Some expired leases could not be reaped (ADR-0056, #1108 review finding 8).
+
+    Each lease is reaped in a transaction of its own, so one row that cannot be moved never
+    rolls back or blocks the others. `reaped` holds the verdicts that were written and
+    recorded; `failures` names each lease left as it was, and why. Raised only after every
+    other lease was tried.
+    """
+
+    def __init__(self, reaped: tuple[object, ...], failures: tuple[str, ...]) -> None:
+        self.reaped = reaped
+        self.failures = failures
+        super().__init__(
+            f"{len(failures)} expired lease(s) could not be reaped, {len(reaped)} were: "
+            + "; ".join(failures)
+        )

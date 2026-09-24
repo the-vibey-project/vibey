@@ -98,6 +98,7 @@ class InMemoryBus(BusPort, BusInspectorPort):
                 oldest_ready_age_seconds=(
                     (now - messages[0].published_at).total_seconds() if messages else None
                 ),
+                kind="classic",
             )
             for name, messages in sorted(self._queues.items())
         )
@@ -118,12 +119,13 @@ class InMemoryBus(BusPort, BusInspectorPort):
         return DeadLetterPeek(queue=queue, depth=len(messages), items=items)
 
     async def apply_policy(self, policy: BrokerPolicyInterface) -> PolicyOutcome:
-        self._policies[policy.name] = policy.body()
-        observed = self._policies.get(policy.name)
+        for document in policy.documents():
+            self._policies[document.name] = document.body()
+        verified = all(
+            document.matches(self._policies.get(document.name)) for document in policy.documents()
+        )
         return PolicyOutcome(
-            policy=policy.name,
-            verified=policy.matches(observed),
-            detail="kept in memory and read back",
+            policy=policy.name, verified=verified, detail="kept in memory and read back"
         )
 
     def policy(self, name: str) -> dict[str, object] | None:
