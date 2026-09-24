@@ -26,6 +26,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "integration/src/vibey_runners/qwen/src"))
 
 import storm_paths
+
+# Beside this file; a script's own directory is on sys.path when it is run.
+from lane_environment import ForeignEnvironment, LaneEnvironment
 from lane_watchdog import REPORT_FD_ENV, SPEC_SHA256_ENV, ChildGuard, LaneAttempts, LaneLimits
 from qwenloop.application.storm import build_plan
 from qwenloop.cli.app import _load_config, _run_plan, _server_for, _tracked_repository_context
@@ -174,6 +177,22 @@ def main() -> None:
     args = parser.parse_args()
 
     lane = args.lane_dir.resolve()
+    # Each attempt child inherits this process's environment, and qwenloop's shell tool hands
+    # every command the child's os.environ, so the lane's environment is made here, before
+    # any attempt starts: its own .venv first, nothing inherited that points outside it. A
+    # lane whose python still resolves elsewhere does not start -- its tests would measure
+    # somebody else's tree (lane_environment.py).
+    try:
+        LaneEnvironment(lane).enter()
+    except ForeignEnvironment as exc:
+        (lane / ".qwenstorm").mkdir(exist_ok=True)
+        (lane / ".qwenstorm" / "result.json").write_text(
+            json.dumps(
+                {"issue": args.issue, "completed": False, "environment_refused": str(exc)},
+                indent=2,
+            )
+        )
+        raise SystemExit(f"issue#{args.issue}\trefused\t{exc}") from exc
     rules = (Path(__file__).parent.parent / "EDITING-RULES.md").read_text()
     try:
         item = lane_item(lane, args.issue, args.title, args.body_file, rules)

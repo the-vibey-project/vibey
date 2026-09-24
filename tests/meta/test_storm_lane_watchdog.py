@@ -27,6 +27,7 @@ import sys
 import textwrap
 import time
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
@@ -528,7 +529,16 @@ def test_qwenlane_counts_every_stalled_attempt_against_max_attempts(
     monkeypatch.setattr(
         sys, "argv", ["qwenlane.py", str(lane), "504", "a title", str(body), "--max-attempts", "2"]
     )
-    qwenlane.main()
+    # A lane starts only with an environment of its own (lane_environment.py), which main()
+    # enters by rewriting os.environ -- so it is given one, and os.environ is restored after.
+    subprocess.run(
+        [sys.executable, "-m", "venv", "--without-pip", str(lane / ".venv")],
+        check=True,
+        capture_output=True,
+    )
+    plain = {"HOME": os.environ.get("HOME", "/"), "PATH": os.pathsep.join(["/usr/bin", "/bin"])}
+    with mock.patch.dict(os.environ, plain, clear=True):
+        qwenlane.main()
     result = json.loads((lane / ".qwenstorm" / "result.json").read_text())
     assert result["completed"] is False
     assert [a["status"] for a in result["attempts"]] == ["stalled", "stalled"]
