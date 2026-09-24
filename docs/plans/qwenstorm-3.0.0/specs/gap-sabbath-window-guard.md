@@ -594,6 +594,6 @@ here. Do not edit `doctrines.md` or `corpus-index.json`; the canon lands by its 
   `feat(gh): hold the merge train and promotion for the Sabbath (8.i)`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 **Depends on:** none

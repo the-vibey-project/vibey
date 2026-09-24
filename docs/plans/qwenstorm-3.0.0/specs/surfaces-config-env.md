@@ -73,10 +73,10 @@ Append to `tests/infrastructure/test_config_loader.py`:
 - **Shares a file with:** `src/vibey/infrastructure/config_loader.py` (R01 adds bus/queue rows; `surfaces-env` adds `load_config_from_environment`). Keep their rows; append yours last.
 - **Must keep passing unchanged:** `tests/infrastructure/test_config_loader.py`, `tests/infrastructure/test_sovereign_surfaces.py`, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file.
+  - Read `STORM/EDITING-RULES.md` before changing a file.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Substitute only at a declared seam (`environ=`); never `monkeypatch.setattr`, `mock.patch`, `MagicMock` or `AsyncMock`.
   - The default run needs no service.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

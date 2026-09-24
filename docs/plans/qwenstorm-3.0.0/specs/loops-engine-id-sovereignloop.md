@@ -266,4 +266,4 @@ integration-tier tests: they need that database themselves.
 **Depends on:** `engines-pool`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

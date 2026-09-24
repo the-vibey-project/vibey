@@ -52,7 +52,7 @@ source files, the same three test modules, a message count instead of a consumer
    passes unedited.
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first; `memory.py` and
+Read `STORM/EDITING-RULES.md` first; `memory.py` and
 `client.py` are long, so change them with `edit_file` only. All source paths are under
 `src/vibey_tools/bootstrap/vibey_bootstrap/amqp/`, all test paths under
 `src/vibey_tools/bootstrap/test/amqp/`.
@@ -146,4 +146,4 @@ git diff --stat
 **Depends on:** `split-351-2-amqp-client`, `harness-T21-amqp-consumer-count`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

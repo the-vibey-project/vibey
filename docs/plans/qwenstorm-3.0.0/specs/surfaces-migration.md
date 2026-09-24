@@ -121,10 +121,10 @@ Append to `tests/infrastructure/db/test_migrator.py` (integration by that direct
 - **Shares a file with:** `src/vibey/infrastructure/db/orm_models.py`, `tests/infrastructure/db/test_orm.py` (R08 and any later migration lane). Keep their models and names.
 - **Must keep passing unchanged:** every test in `tests/infrastructure/db/` (the chaos test is protected), the PostgreSQL 14–18 compatibility set, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file. `orm_models.py` is long: `edit_file` only.
+  - Read `STORM/EDITING-RULES.md` before changing a file. `orm_models.py` is long: `edit_file` only.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new Python file is the provenance comment, copied byte-for-byte from a sibling (a `.sql` file carries none, like its siblings).
   - Never hand-edit an applied migration; this lane only adds 0015.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

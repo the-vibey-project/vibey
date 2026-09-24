@@ -324,4 +324,4 @@ keys are `last_sb_settle_age_seconds` and `last_consumer_iteration_age_seconds` 
 - split-351-1-amqp-contract: the package, `AmqpSettings`, `AmqpProperties`, the three errors and the two Protocols this client implements.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -29,7 +29,7 @@ standard (no new raw SQL outside migrations). The deliverable is one draft ADR; 
 
 ## Required behaviour
 1. Write exactly one file:
-   `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-114-rotation.md`.
+   `STORM/specs/ADR-roadmap-114-rotation.md`.
    Change no file in the lane's clone; commit nothing.
 2. Read, and cite with `path:line` anchors you have read yourself in the clone:
    `migrations/0002_event.sql`, `migrations/0009_event_produced_at.sql`,
@@ -65,7 +65,7 @@ standard (no new raw SQL outside migrations). The deliverable is one draft ADR; 
    Evidence for F1–F4: if `psql` is on PATH and the test database answers, gather it and quote
    the output. The statements carry `$$`-quoted bodies and apostrophes, so they go in a file
    rather than on a command line: write this with `write_file` to the absolute path
-   `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_evidence.sql` — a real
+   `STORM/scratch/adr114_evidence.sql` — a real
    directory outside every lane clone, so it can never reach `git status` — then run it with
    the single command below (autocommit; the errors are expected and are the evidence).
    Do not hand `write_file` a path containing `$TMPDIR`: it is a tool, not a shell, and would
@@ -93,8 +93,8 @@ standard (no new raw SQL outside migrations). The deliverable is one draft ADR; 
    DROP SCHEMA adr114_scratch CASCADE;
    ```
    ```
-   psql "${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}" -f /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_evidence.sql
-   rm -f /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_evidence.sql
+   psql "${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}" -f STORM/scratch/adr114_evidence.sql
+   rm -f STORM/scratch/adr114_evidence.sql
    ```
    (Expected: the `t_1` create fails naming the default partition; the concurrent detach fails;
    the plain detach and drop succeed and `rows_left` is 1; the delete fails with `refused`.)
@@ -166,13 +166,13 @@ standard (no new raw SQL outside migrations). The deliverable is one draft ADR; 
 None (a design spike). The check script below is the test.
 
 ## Checks the lane must run (all must pass)
-Write this check with `write_file` to `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_check.py` — outside the clone, so it can
+Write this check with `write_file` to `STORM/scratch/adr114_check.py` — outside the clone, so it can
 never show up in `git status` — then run it as one command and delete it:
 
 ```python
 import re
 from pathlib import Path
-p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-114-rotation.md")
+p = Path("STORM/specs/ADR-roadmap-114-rotation.md")
 assert p.is_file(), "the ADR draft was not written"
 text = p.read_text(encoding="utf-8")
 flat = " ".join(text.split())
@@ -201,8 +201,8 @@ for word in ("TBD", "lorem", "TODO"):
 print("ADR draft complete")
 ```
 
-    python3 "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_check.py"   # prints: ADR draft complete
-    rm -f "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/adr114_check.py"
+    python3 "STORM/scratch/adr114_check.py"   # prints: ADR draft complete
+    rm -f "STORM/scratch/adr114_check.py"
     # The scratch schema of Required behaviour 3 must be gone:
     psql "${VIBEY_TEST_DATABASE_URL:-postgresql://$USER@localhost:5432/vibey_test}" -tAc "SELECT count(*) FROM pg_namespace WHERE nspname = 'adr114_scratch'" 2>/dev/null || true   # prints 0 (or nothing without psql)
     git status --porcelain   # must print nothing: the clone is unchanged
@@ -213,4 +213,4 @@ print("ADR draft complete")
 - The tree's `docs/` and ADR directories. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

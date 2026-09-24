@@ -2,15 +2,15 @@
 
 This sheet is the single source of names, signatures, files, dependencies and decisions for
 the `loops-*` lane specs. A spec writer expands each lane below into a full spec in
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/loops-<slug>.md`, following
+`STORM/specs/loops-<slug>.md`, following
 `STORM/SPEC-TEMPLATE.md` exactly (sections: Title, Why, Required behaviour, Where to change,
 Acceptance criteria, Tests to write first (TDD), Checks the lane must run, Out of scope,
 Depends on, and the closing `## Hard repository rules (always)` block that says only
-`See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.`). Read
+`See STORM/SPEC-TEMPLATE.md.`). Read
 `STORM/STORM-CONTEXT.md` first; it wins over this sheet. Read `STORM/EDITING-RULES.md`: every
 spec must be implementable under it (edit_file only for files >100 lines; provenance line 1).
 
-STORM = `/private/tmp/claude-501/storm/qwenstorm-3.0.0`. Code to read = `STORM/integration`
+STORM = the storm root, `$VIBEY_STORM_HOME/qwenstorm-3.0.0` (default `~/git/vibey-storm/qwenstorm-3.0.0`). Code to read = `STORM/integration`
 (branch `storm/integration`, HEAD `d3b4a388`). NEVER read `/Users/adam/git/vibey`.
 Cite `file:line` from STORM/integration and say "at integration `d3b4a388`". Where another
 unmerged lane changes the same lines first, name the anchor by function/text, not only by line.
@@ -122,7 +122,7 @@ unmerged lane changes the same lines first, name the anchor by function/text, no
 
 Gate text for gated lanes (paste verbatim, adjusting the marker):
 > **Gate (ADR-0046 §8, CDD bounded divergence).** Before any edit run
-> `grep -n "V-VS VERDICT: FEASIBLE" /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
+> `grep -n "V-VS VERDICT: FEASIBLE" STORM/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
 > If nothing matches, change nothing and report `gated: V-VS verdict is not FEASIBLE`.
 L38/L39 use the marker `V-VS CONFORMANCE: PASS` (the operator records it after running
 `vibey doctor --conformance --engine vscode` live on Arch Linux and macOS).

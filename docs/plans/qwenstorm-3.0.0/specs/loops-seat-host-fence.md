@@ -3,7 +3,7 @@ feat(loop-service): the seat host rebinds a redelivered run, abandons a crashed 
 ADR-0046 lane L28b (slug `loops-seat-host-fence`).
 
 ## Why
-Draft ADR-0046's idempotency table (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:183-191`) gives the seat host the "a run" row ("an active run is rebound, a persisted result is re-sent, a non-terminal run directory is abandoned") and the worktree fence the "run ownership" row, "across both loops". §6 (lines 238–253) spells out the fence's outcomes and says "the seat host acquires the lock before it starts a run, and releases it after the result is persisted". The superseded host's rules b and d carry over unchanged (`specs/rmq-r22-loop-service-host.md`, behaviour 3; closing note `issue-audit/updates/369.md`); its rule g, which ADR-0046 *Context* (lines 55–58) shows could not supersede at prefetch 1 and guarded only one instance, is replaced by the fence of lane `loops-worktree-fence`. Sub-doctrine 8.c's replay rule (`src/vibey_tools/gh/docs/doctrines.md:196-234`): a message delivered twice is answered once. 8.g (`:316-324`): every refusal is measured (subject REJECT).
+Draft ADR-0046's idempotency table (`STORM/specs/ADR-two-loops.md:183-191`) gives the seat host the "a run" row ("an active run is rebound, a persisted result is re-sent, a non-terminal run directory is abandoned") and the worktree fence the "run ownership" row, "across both loops". §6 (lines 238–253) spells out the fence's outcomes and says "the seat host acquires the lock before it starts a run, and releases it after the result is persisted". The superseded host's rules b and d carry over unchanged (`specs/rmq-r22-loop-service-host.md`, behaviour 3; closing note `issue-audit/updates/369.md`); its rule g, which ADR-0046 *Context* (lines 55–58) shows could not supersede at prefetch 1 and guarded only one instance, is replaced by the fence of lane `loops-worktree-fence`. Sub-doctrine 8.c's replay rule (`src/vibey_tools/gh/docs/doctrines.md:196-234`): a message delivered twice is answered once. 8.g (`:316-324`): every refusal is measured (subject REJECT).
 
 Lane `loops-seat-host-core` wrote `seat_host.py` in full; this lane edits it at the anchors below.
 
@@ -226,4 +226,4 @@ Nothing here is OS-specific beyond the fence's POSIX calls, which behave alike o
 - `loops-worktree-fence`: `WorktreeFence`, `FenceHolder`, `FenceOutcome`, `FenceDecision` and `InMemoryWorktreeFence`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

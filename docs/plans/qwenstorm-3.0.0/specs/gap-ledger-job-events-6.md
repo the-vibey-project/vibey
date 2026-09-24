@@ -119,4 +119,4 @@ Commit as `feat(ledger): every RabbitMQ dispatch is a ledger event`. Do not push
 - **Must keep passing unchanged:** the protected tests, `rmq-r10`'s and `rmq-r17`'s tests.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

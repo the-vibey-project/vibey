@@ -103,4 +103,4 @@ Nothing here is platform-specific: the same commands prove the change on macOS (
 - split-336-2-comment-writes: the adapter and protocol files as it leaves them (this lane appends after its methods). Through it and `split-336-1-issue-reads`: `ISSUE_FACT_KEYS`/`SUBJECT_FACT_KEYS` in `forge.py`, the `# --- Issues ---` block, and every wave-1 helper (`_read`, `_pages`, `repository_name`, `host`, `RoutedTransport`).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

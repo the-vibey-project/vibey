@@ -3,11 +3,11 @@
 Updated 2026-09-22 11:45 EDT. Everything here is settled. Where a spec contradicts it, this file wins.
 
 ## Where things are
-- Storm root: `/private/tmp/claude-501/storm/qwenstorm-3.0.0/` ("STORM").
+- Storm root: `$VIBEY_STORM_HOME/qwenstorm-3.0.0/` ("STORM"; the home defaults to `~/git/vibey-storm`, durable storage, sub-doctrine 10.h). It was under `/private/tmp` until a reboot emptied it on 2026-09-24; never put it there again.
 - Code to read: the integration clone `STORM/integration`, branch `storm/integration`. That is
   `develop` plus the verified storm lanes. Never read `/Users/adam/git/vibey`, which is stale.
 - Spec format: `STORM/SPEC-TEMPLATE.md`. End every spec with
-  `## Hard repository rules (always)\nSee /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.`
+  `## Hard repository rules (always)\nSee STORM/SPEC-TEMPLATE.md.`
 - Queues: `STORM/queue.txt` (filed lanes, `slug issue deps`) and `STORM/specs/*-queue.txt`
   (unfiled lanes, `slug - deps`). A dependency may name any slug in either.
 - Audit: `STORM/issue-audit/` holds `updates/<N>.md` (rewritten bodies), `gaps.md`,

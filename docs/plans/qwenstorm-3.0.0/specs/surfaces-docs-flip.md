@@ -44,4 +44,4 @@ agent-surface trees change together. This lane makes every page that names the d
 - **Standing constraints:** the four agent trees change together; evidence stays bounded (10.f).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

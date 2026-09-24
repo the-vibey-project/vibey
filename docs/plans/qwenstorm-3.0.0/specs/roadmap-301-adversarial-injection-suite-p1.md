@@ -78,4 +78,4 @@ The module above is the deliverable: `test_known_injections_are_flagged`,
   the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

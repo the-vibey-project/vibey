@@ -109,4 +109,4 @@ Append to `tests/application/test_build_verify_handler.py`:
 Commit as `feat(build): every verify attempt records its CDD trajectory`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

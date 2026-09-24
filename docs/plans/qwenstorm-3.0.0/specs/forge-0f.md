@@ -304,9 +304,9 @@ never alternate between them.
 Each adapter class is the **last statement** of its module, so add new methods by
 appending to the end of the file. A shell heredoc spans several lines and cannot survive
 one-command-per-call, so write the four-space-indented methods with `write_file` to
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append-forge.txt` (a concrete
+`STORM/scratch/append-forge.txt` (a concrete
 absolute path outside the clone), then append and clean up in one command:
-`cat /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append-forge.txt >> vibey_gh/forge_github.py && rm /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append-forge.txt`.
+`cat STORM/scratch/append-forge.txt >> vibey_gh/forge_github.py && rm STORM/scratch/append-forge.txt`.
 Then run black once.
 Read only the slices you need (`sed -n '120,200p' file`). Do not rewrite a whole module.
 

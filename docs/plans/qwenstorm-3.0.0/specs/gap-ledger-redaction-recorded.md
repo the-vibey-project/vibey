@@ -107,4 +107,4 @@ Append to `tests/infrastructure/ledger/test_redact.py`:
 Commit as `feat(ledger): each redaction is recorded with its path and class`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

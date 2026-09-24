@@ -139,4 +139,4 @@ Commit as `feat(config): [deploy] target = "paid" resolves to aws, 8.b's default
   `tests/domain/test_domain_purity.py`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

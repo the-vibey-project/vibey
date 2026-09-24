@@ -50,7 +50,7 @@ trace of why sovereign lost. This lane writes the declaration in subprocess mode
    `engine_id` column value, and the engine in the payload (`src/vibey/infrastructure/db/review_ledger.py:34-58`).
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first. Both source files
+Read `STORM/EDITING-RULES.md` first. Both source files
 are over 100 lines: `edit_file` only.
 
 - `src/vibey/application/engine_selection.py` (403 lines):
@@ -215,4 +215,4 @@ First run `uv run ruff format src/vibey/application/engine_selection.py src/vibe
 **Depends on:** `loops-loop-selector`, `fakes-ledger`, `orm-ledger`, `engines-pool`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

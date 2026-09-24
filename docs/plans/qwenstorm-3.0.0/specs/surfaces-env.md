@@ -49,4 +49,4 @@ Injecting more surface variables from the Helm chart (a later lane). Engine pool
 Do not push. Commit as `fix(surfaces): ...`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
