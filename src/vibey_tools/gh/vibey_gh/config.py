@@ -43,8 +43,10 @@ from __future__ import annotations
 
 import dataclasses
 import math
+import os
 import re
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -560,6 +562,123 @@ class PrAutomationFallbackConfig:
             raise ValueError(
                 "pr_automation.fallback.heartbeat_max_age_minutes must be between 1 and 1440"
             )
+
+
+_RUNNER_SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
+_RUNNER_PREFIX_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
+_RUNNER_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+@dataclass(frozen=True)
+class RunnersConfig:
+    """The sovereign review runner this repository registers, declared (sub-doctrine 12.c).
+
+    `[pr_automation.fallback]` says a sovereign lane exists and which label it schedules
+    onto; this says how the machine that serves it is stood up -- which repository it
+    registers with, what its LaunchAgent is called, where its supervisor lives, and which
+    credential it may use. `vibey-gh runner install` renders all of it from here, so the
+    runner can be restored from a clone rather than from one operator's home directory.
+    The label is `[pr_automation.fallback] runner_label` and is never declared twice (10.e).
+    """
+
+    # owner/name the runner registers with. Empty derives it from `[platform] repository`,
+    # so a repository that already names itself there says nothing twice.
+    repository: str = ""
+    # The launchd Label is `<unit_prefix>-<repository name>`. A prefix rather than a whole
+    # label so `runner cleanup` can find every agent this family ever installed, including
+    # ones for repositories the tree no longer declares.
+    unit_prefix: str = "org.vibey.runner"
+    # Where the supervisor, its Dockerfile and entrypoint are installed on the host.
+    install_dir: str = "~/.local/share/vibey-runner"
+    launch_agents_dir: str = "~/Library/LaunchAgents"
+    log_dir: str = "~/Library/Logs"
+    # The runner's OWN gh configuration: a file-based login made with
+    # `gh auth login --insecure-storage`, separate from the operator's keyring login,
+    # holding a fine-grained token scoped to this one repository.
+    gh_config_dir: str = "~/.config/gh-runner"
+    image: str = "vibey-runner:latest"
+    # The actions/runner release the image is built from; the Dockerfile has no default.
+    runner_version: str = "2.337.0"
+    # The model endpoint as the CONTAINER sees it. The host side is
+    # `[pr_automation.fallback] base_url`; only the name of the host differs.
+    container_model_url: str = "http://host.docker.internal:11434"
+    # Refuse to hold a laptop awake on battery just to idle-poll for a job.
+    require_ac: bool = True
+    # launchd's ThrottleInterval: every refusal resolves on a human timescale.
+    throttle_seconds: int = 120
+    # Consecutive runner failures before the supervisor stops rather than spins.
+    max_failures: int = 5
+    # launchd starts a job with a near-empty PATH; docker and gh must be reachable from it.
+    path: str = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+    def __post_init__(self) -> None:
+        if self.repository and not _RUNNER_SLUG_RE.fullmatch(self.repository):
+            raise ValueError(f"runners.repository must be owner/name: {self.repository!r}")
+        if not _RUNNER_PREFIX_RE.fullmatch(self.unit_prefix):
+            raise ValueError(
+                "runners.unit_prefix must be letters, digits, dots and dashes:"
+                f" {self.unit_prefix!r}"
+            )
+        for name in ("install_dir", "launch_agents_dir", "log_dir", "gh_config_dir"):
+            value = getattr(self, name)
+            if not value.startswith(("/", "~/")):
+                raise ValueError(f"runners.{name} must be absolute or start with ~/: {value!r}")
+        if self.shares_operator_gh_dir(Path(os.path.expanduser("~")), os.environ):
+            raise ValueError(
+                f"runners.gh_config_dir {self.gh_config_dir!r} must be a directory of its own,"
+                " not gh's default (whose login the macOS keyring holds, where launchd cannot"
+                " read it)"
+            )
+        for name in ("image", "path"):
+            if not getattr(self, name).strip():
+                raise ValueError(f"runners.{name} must not be empty")
+        if not _RUNNER_VERSION_RE.fullmatch(self.runner_version):
+            raise ValueError(f"runners.runner_version must be X.Y.Z: {self.runner_version!r}")
+        if not self.container_model_url.startswith(("http://", "https://")):
+            url = self.container_model_url
+            raise ValueError(f"runners.container_model_url must be an http(s) URL: {url!r}")
+        if not 10 <= self.throttle_seconds <= 3600:
+            raise ValueError("runners.throttle_seconds must be between 10 and 3600")
+        if not 1 <= self.max_failures <= 100:
+            raise ValueError("runners.max_failures must be between 1 and 100")
+
+    def resolved_gh_config_dir(self, home: Path) -> Path:
+        """`gh_config_dir` against `home`, with `..` and every symlink resolved."""
+        declared = self.gh_config_dir
+        path = home / declared[2:] if declared.startswith("~/") else Path(declared)
+        return Path(os.path.realpath(path))
+
+    def shares_operator_gh_dir(self, home: Path, environ: Mapping[str, str]) -> bool:
+        """Whether `gh_config_dir` IS gh's own default directory, however it is spelled.
+
+        gh's default is `$XDG_CONFIG_HOME/gh` when that is set, else `~/.config/gh`. Both are
+        refused, since an operator with XDG set may still keep a login in the other. The
+        comparison is between resolved paths, so an absolute spelling, a `..` or a symlink
+        cannot route the runner onto the operator's keyring-backed login.
+        """
+        defaults = [home / ".config" / "gh"]
+        if environ.get("XDG_CONFIG_HOME"):
+            defaults.append(Path(environ["XDG_CONFIG_HOME"]) / "gh")
+        mine = self.resolved_gh_config_dir(home)
+        return any(Path(os.path.realpath(default)) == mine for default in defaults)
+
+    def registration(self, platform: PlatformConfig) -> tuple[str, str, str]:
+        """`(owner/name, registration URL, problem)`; the problem is empty when resolvable."""
+        if platform.kind != ForgeKind.GITHUB.value:
+            kind = platform.kind
+            return (
+                "",
+                "",
+                f"the sovereign runner is a GitHub Actions runner; [platform] kind is {kind}",
+            )
+        slug = self.repository or platform.repository
+        if not slug:
+            return (
+                "",
+                "",
+                "runners.repository is empty and [platform] names no repository to derive it from",
+            )
+        return slug, f"https://{platform.host or 'github.com'}/{slug}", ""
 
 
 DEFAULT_APPROVAL_FORBIDDEN: tuple[str, ...] = (
@@ -1712,6 +1831,7 @@ class GhConfig:
     documentation: DocumentationConfig = DocumentationConfig()
     marketplace: MarketplaceConfig = MarketplaceConfig()
     estimate: EstimateConfig = EstimateConfig()
+    runners: RunnersConfig = RunnersConfig()
     # Which bundled workflow templates this repository wants installed and kept current.
     # None means all of them, which is the right default for a repository adopting the
     # whole thing. A repository with its own richer workflows sets `workflows = []` and
@@ -1890,6 +2010,21 @@ def _workflow_names(raw: dict) -> WorkflowNamesConfig:
     )
 
 
+def _runners(table: dict) -> RunnersConfig:
+    """`[runners]`, every key defaulting to the dataclass's own value.
+
+    A module function rather than a method: it is the loader's parsing step for one table,
+    the same shape as `_workflow_names` and `_social_signals` beside it.
+    """
+    defaults = RunnersConfig()
+    return RunnersConfig(
+        **{
+            field.name: table.get(field.name, getattr(defaults, field.name))
+            for field in dataclasses.fields(RunnersConfig)
+        }
+    )
+
+
 def load_config(root: Path | None = None, config: Path | None = None) -> GhConfig:
     """This repository's configuration, or an alternate one describing a second
     distribution that the same repository publishes.
@@ -2046,6 +2181,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         ),
         social_signals=_social_signals(data.get("social_signals", {})),
         estimate=EstimateConfig.from_table(data.get("estimate", {})),
+        runners=_runners(data.get("runners", {})),
         workflow_names=_workflow_names(data.get("workflow_names", {})),
         tidy=TidyConfig(
             enabled=data.get("tidy", {}).get("enabled", True),
