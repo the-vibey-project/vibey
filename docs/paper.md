@@ -1673,9 +1673,69 @@ it. Handoffs between seats stay lossless because pushes use a compare-and-swap o
 remote ref whose lease is captured before any fetch; fetching first would silently
 re-arm the lease and reduce the swap to an overwrite.
 
+**A verdict binds to what the model read.** The exact-head invariant binds a claim to
+the revision it evaluated. A reviewer running on a local model needs a second binding:
+the claim must be about the input the model actually read, and a local server can read
+less than it was sent without saying so. In 3.0.0 the review lane became sovereign by
+declaration (#1087, #1088): paid review, repair and conflict resolution are declared
+off, and the self-hosted runner, restored at 08:41Z on 2026-09-24 and declared as code
+(#1086), answers the whole review. Its first review, of #1090, failed with an
+unparseable answer. The first diagnosis, carried in #1094's description, was silent
+truncation: at an estimated three characters per token the prompt came to about 41,000
+tokens against a 32,768-token window. That diagnosis was wrong, and #1101 restates it.
+The server's own counters show 31,765 prompt tokens read and 1,004 generated, 32,769 in
+all, which is the whole window: the model read its entire prompt and ran out of room to
+answer (`done_reason=length`). The error was in the estimate, not the server. The
+prompt, about 124,000 characters, ran at about 3.95 characters per token, and the ratio
+is a property of the text, not a constant of the model:
+
+| Text | Characters per token |
+|---|---:|
+| #1090's review prompt | 3.95 |
+| a lockfile | about 2.1 |
+| hexadecimal | about 1.9 |
+| base64 | about 1.5 |
+| CJK prose | about 1.4 |
+| emoji | about 0.7 |
+
+The first row is #1090's own ratio as #1101 records it; the others are recorded,
+rounded, in the configuration reference beside the `chars_per_token` setting
+(`src/vibey_tools/gh/docs/configuration.md`). A fixed estimate of three over-counts
+prose and code, the safe direction, and under-counts dense text by up to a factor of
+four, so the estimate now decides only what to trim, and the request itself refuses to
+be cut.
+
+Real truncation looks different, and #1101 reproduced it on the storm's host with
+Ollama 0.34.2 and `gpt-oss:20b` at a 32,768-token window. A lockfile-style prompt of
+80,060 characters, which the server counted as 36,798 tokens, was answered with HTTP
+200 and `prompt_eval_count` 16,386: no error, and about half the window, which is
+$32768 - (32768 - 4)/2$. The same request sent with `truncate: false` and
+`shift: false` was refused with HTTP 400 in 0.3 s. A reviewer that reads only the
+upper bound on the server's count cannot see this cut, since 16,386 is far under any
+bound. Which end of the prompt the server discards is disputed. A reading of the
+server's source put the cut at the front, where the review rules and the start of the
+diff sit (the throughput audit's record); one canary run on the cut prompt echoed the
+code placed at the start of the system prompt but not the one after the diff, which
+suggests the tail (#1101). One run does not settle it, and the design does not need it
+settled.
+
+The fixes refuse a verdict on a cut prompt four ways (#1094, #1101). Every request asks
+the server to refuse rather than truncate, and a refusal is reported in the server's
+own words. Every request carries a fresh random check code at the start of the system
+prompt and another after the diff, and the answer must echo both, so a cut at either
+end is caught whichever end the server chooses. A diff too large for the window is
+refused before anything is sent, never cut, and the gate asks a person. And when a
+supporting document had to be cut or left out, the verdict claims only the half of the
+review the diff alone can ground, so the composer refuses it as the whole review. The
+upper-bound check on the server's count stays. What is not yet known is the check
+code's false-refusal rate on live reviews: at the cutoff no live review had exercised
+it, an availability fix (a budget for supporting documents) was still to come, and no
+pull request had yet passed the review gate on the sovereign reviewer's verdict alone
+(the 3.0.0 release-gate record, 2026-09-24 12:22Z).
+
 ```latex
 \begin{plainwords}
-A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot loop forever. And the key that grades a change is never the key that publishes it, so no single stolen key can both cheat and ship.
+A pull request changes over time, like a homework draft that gets rewritten. A grade belongs to one draft only. Vibey never uses a grade from an old draft to decide about a new one. It counts repairs, not reviews, so the helpers cannot loop forever. And the key that grades a change is never the key that publishes it, so no single stolen key can both cheat and ship. A grade must also be about the whole draft the grader actually read. A small computer running the grader can quietly read only half of a long draft and still hand back a confident grade, so every request now tells it to refuse instead, and hides a secret word at the start and at the end that the grader must repeat back. If either word is missing, the grade is thrown away. Our first guess at why one grade failed was wrong, and we say so: that time the grader had read everything and simply ran out of room to answer.
 \end{plainwords}
 ```
 
