@@ -3,7 +3,7 @@ feat(loop-service): a loop runs one request as its own adapter's subprocess, and
 ADR-0046 lane L24 (slug `loops-local-run-executor`).
 
 ## Why
-Draft ADR-0046 (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md`, §3 step 7 and §10) has each run executed by a loop's **seat host**, which runs the binaries of its own loop's adapters. The superseded R21 (`specs/rmq-r21-local-run-executor.md`, behaviours 2–3; closing note `issue-audit/updates/368.md`) specified this executor for one binary per engine service; ADR-0046 keeps its name and role (`local_run_executor.py`) and widens it to "the binaries of **its own** adapters" (*Security impact*): `args[0]` is validated by `RunArgsPolicy`, `cwd` must lie under `[loop_services] root`, and the environment comes only from the loop's configuration, never from a message.
+Draft ADR-0046 (`STORM/specs/ADR-two-loops.md`, §3 step 7 and §10) has each run executed by a loop's **seat host**, which runs the binaries of its own loop's adapters. The superseded R21 (`specs/rmq-r21-local-run-executor.md`, behaviours 2–3; closing note `issue-audit/updates/368.md`) specified this executor for one binary per engine service; ADR-0046 keeps its name and role (`local_run_executor.py`) and widens it to "the binaries of **its own** adapters" (*Security impact*): `args[0]` is validated by `RunArgsPolicy`, `cwd` must lie under `[loop_services] root`, and the environment comes only from the loop's configuration, never from a message.
 
 It reuses what the family already has (10.e, `src/vibey_tools/gh/docs/doctrines.md:417`): the spawner and resolver seams and `isolate_python_env` of R20's child 2 (`specs/split-367-2-process-launcher.md`), `RunInbox` of R20's child 1 (`specs/split-367-1-run-dir.md`), and the bounded kill-and-reap `ProcessReaper` (`src/vibey/infrastructure/process/reaper.py:45-98` at integration `d3b4a388`). Its output handling copies `LoopProcessAdapter.start` (`src/vibey/infrastructure/engines/loop_process_adapter.py:361-378`): a RUN writes stdout and stderr to `<cwd>/.vibey/diagnostics/<run_id>.stdout|.stderr` (pipes nobody drains deadlock a long run, PR #299), and a probe captures them. Substitution is through injected seams only (9.b, `doctrines.md:349`).
 
@@ -274,4 +274,4 @@ The real-process tests use `/bin/sh`, `sleep`, `mkdir`, `printf`, `head` and `tr
 - `split-367-1-run-dir` and `split-367-2-process-launcher` (the design sheet's D13 names; the unfiled specs are `specs/split-367-1-run-dir.md` and `specs/split-367-2-process-launcher.md`, slugs `split-367-1-run-dir` and `split-367-2-process-launcher`): `RunInbox`, the spawner and resolver seams, `isolate_python_env` in `process/python_env.py`, and `tests/fakes/process.py`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

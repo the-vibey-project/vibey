@@ -47,4 +47,4 @@ install flags, the no-flag default, the confirmation and the doctor lines.
 RabbitMQ install (R33), llama.cpp, the model catalogue (#383), docs. Commit as `feat(install): ...`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

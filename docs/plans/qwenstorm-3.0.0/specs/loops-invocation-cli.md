@@ -6,7 +6,7 @@ ADR-0046 lane L61 (slug `loops-invocation-cli`).
 ## Why
 `loops-cli-provider-name`'s own out-of-scope note names this lane directly: "The four
 `AsyncSubprocessExecutor()` sites (lane `loops-invocation-cli`)." Draft ADR-0046 §3, "Pinned runs
-send one message" (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:181`):
+send one message" (`STORM/specs/ADR-two-loops.md:181`):
 "These are DESIGN and DECOMPOSE through the command executor". `loops-invocation-composition`
 built the two things this lane wires together: `AppResources.loop_client` (non-`None` only in
 service mode) and the invocation mode itself. §2's closing paragraph keeps subprocess mode's

@@ -78,4 +78,4 @@ Append to `src/vibey_tools/gh/test/test_forge_github.py`:
 Commit as `fix(gh): the exact-head gate reads every page of check runs`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

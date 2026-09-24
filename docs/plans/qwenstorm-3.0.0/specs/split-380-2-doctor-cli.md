@@ -4,7 +4,7 @@
 feat(cli): vibey doctor reports the broker and both loops when the queue or the engines use the bus
 
 ## Why
-`vibey doctor` (`src/vibey/cli/main.py:1185-1391` at integration `4317cff6`) checks PostgreSQL (the line printed at `:1341`) and the engines, and lane `installer-doctor` adds one line per local-stack dependency after the PostgreSQL line. Once #381 flips the defaults, a laptop with no broker fails with R17's `QueueBackendNotConfigured` (#364), and a worker whose runs sit on a queue nobody consumes looks healthy. Child 1 (`split-380-1-loop-doctor`) built `LoopDoctor`, which checks the broker, each loop's router and each model's seat (draft ADR-0046 §3-§4, `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md`). This child composes it in `bootstrap.py`, the one composition root, and runs it from `vibey doctor` only when the bus is in use: the resolved queue backend is `rabbitmq`, or the resolved engine invocation is `service` (ADR-0046 §2 keeps both invocation modes, "Subprocess invocation (kept, 12.c)", line 138). With the defaults nothing changes and nothing connects.
+`vibey doctor` (`src/vibey/cli/main.py:1185-1391` at integration `4317cff6`) checks PostgreSQL (the line printed at `:1341`) and the engines, and lane `installer-doctor` adds one line per local-stack dependency after the PostgreSQL line. Once #381 flips the defaults, a laptop with no broker fails with R17's `QueueBackendNotConfigured` (#364), and a worker whose runs sit on a queue nobody consumes looks healthy. Child 1 (`split-380-1-loop-doctor`) built `LoopDoctor`, which checks the broker, each loop's router and each model's seat (draft ADR-0046 §3-§4, `STORM/specs/ADR-two-loops.md`). This child composes it in `bootstrap.py`, the one composition root, and runs it from `vibey doctor` only when the bus is in use: the resolved queue backend is `rabbitmq`, or the resolved engine invocation is `service` (ADR-0046 §2 keeps both invocation modes, "Subprocess invocation (kept, 12.c)", line 138). With the defaults nothing changes and nothing connects.
 
 The loops follow sub-doctrine 8.c (`src/vibey_tools/gh/docs/doctrines.md:196-234`): sovereignloop always, with its declared models, defaulting to the 8.d model `gpt-oss:20b` (`src/vibey/infrastructure/engines/ollama_chat.py:39`); paidloop only when a paid engine id is in `[engines].enabled`, because 8.b (`doctrines.md:120`) makes paid engines declared-only.
 
@@ -189,4 +189,4 @@ grep -n "AmqpClient\b\|AmqpSettings" src/vibey_tools/bootstrap/vibey_bootstrap/a
 - loops-config: `LoopServicesConfig` (`root`, `loop(LoopId).models`) and `VibeyConfig.loop_services`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

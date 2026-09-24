@@ -121,4 +121,4 @@ If the pytest session fails at start because no PostgreSQL is reachable, add `--
 Commit as `docs(adr): ADR-0042's table states 8.b as ratified, ADR-0043 names Forgejo, and the amended records say so`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

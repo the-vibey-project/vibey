@@ -297,4 +297,4 @@ four default-tier files prove every behaviour above.
   it also edits `bootstrap.py`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

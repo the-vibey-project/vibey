@@ -31,7 +31,7 @@ deliverable is one draft ADR; no code.
 
 ## Required behaviour
 1. Write exactly one file:
-   `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-114-codec-chunking.md`.
+   `STORM/specs/ADR-roadmap-114-codec-chunking.md`.
    Change no file in the lane's clone; commit nothing.
 2. Read, and cite with `path:line` anchors you have read yourself in the clone, at least:
    `pyproject.toml:10`, `src/vibey/infrastructure/ledger/compression.py:17-27`,
@@ -140,13 +140,13 @@ deliverable is one draft ADR; no code.
 None (a design spike). The check script below is the test.
 
 ## Checks the lane must run (all must pass)
-Write this script byte for byte with `write_file` to `/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/check-adr-114-codec.py` — outside the
+Write this script byte for byte with `write_file` to `STORM/scratch/check-adr-114-codec.py` — outside the
 clone, so it can never appear in `git diff --stat` — then run the three commands below in order.
 
 ```python
 import re
 from pathlib import Path
-p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-114-codec-chunking.md")
+p = Path("STORM/specs/ADR-roadmap-114-codec-chunking.md")
 assert p.is_file(), "the ADR draft was not written"
 text = p.read_text(encoding="utf-8")
 flat = " ".join(text.split())
@@ -176,8 +176,8 @@ for word in ("TBD", "lorem", "TODO"):
 print("ADR draft complete")
 ```
 
-    python3 "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/check-adr-114-codec.py"
-    rm -f "/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/check-adr-114-codec.py"
+    python3 "STORM/scratch/check-adr-114-codec.py"
+    rm -f "STORM/scratch/check-adr-114-codec.py"
     git status --porcelain   # must print nothing: the clone is unchanged
 
 ## Out of scope
@@ -186,4 +186,4 @@ print("ADR draft complete")
 - The tree's `docs/` and ADR directories. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

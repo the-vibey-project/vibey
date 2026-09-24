@@ -78,4 +78,4 @@ no service. The real-service integration tier stays on Ubuntu (`postgres-compati
 Commit as `ci: the gates run on Arch Linux`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

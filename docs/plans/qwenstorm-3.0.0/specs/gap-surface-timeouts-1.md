@@ -122,4 +122,4 @@ Commit as `feat(config): declare [surfaces] adapter_timeout_seconds`. Do not pus
 - **Must keep passing unchanged:** `tests/domain/test_config.py`, `tests/infrastructure/test_config_loader.py`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

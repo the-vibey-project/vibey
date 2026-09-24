@@ -91,4 +91,4 @@ compares installed units with a fresh render.
 Commit as `feat(gh): render the sovereign runner's units from [runners]`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

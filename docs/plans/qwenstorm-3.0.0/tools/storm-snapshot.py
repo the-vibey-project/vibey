@@ -129,8 +129,9 @@ def render(state: dict, notes: list[str] | None = None) -> str:
 Snapshot {state["when"]}, written by `tools/storm-snapshot.py`.
 
 The runner's durable record is `integrated.txt` and `abandoned.txt`: a lane in neither is
-unsettled, whatever exists under `lanes/`. `lanes/` lives in /tmp and is wiped between
-sessions, so nothing here depends on it surviving.
+unsettled, whatever exists under `lanes/`. `lanes/` lives in the storm root, on durable
+storage under the storm home (sub-doctrine 10.h), but it is working material rather than the
+record, so nothing here depends on it surviving.
 
 - queue: **{state["queue"]} lanes** · integrated: **{len(state["integrated"])}** · abandoned: **{len(state["abandoned"])}**
 - lane worktrees: **{len(state["lanes"])}** · finished awaiting review: **{len(state["finished"])}** · unsettled: **{len(state["unsettled"])}**
@@ -307,7 +308,8 @@ def publish(text: str, commit: bool, push: bool) -> list[str]:
         return notes
     # Every artifact the run produces, not only RUN-STATE.md: the evidence ledger, its
     # watermark, the delta report and the paper's regenerated block are all written by this
-    # pass and would otherwise be left uncommitted on a machine whose /tmp is wiped.
+    # pass and would otherwise be left uncommitted, and uncommitted work is one reboot or one
+    # lost disk from gone (10.h).
     if waiting:
         return notes + [
             "REFUSED to commit: "

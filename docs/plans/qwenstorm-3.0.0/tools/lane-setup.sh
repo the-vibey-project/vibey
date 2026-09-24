@@ -10,6 +10,8 @@ STORM="$(cd "$(dirname "$0")/.." && pwd)"
 MAIN="$(python3 "$STORM/tools/storm_paths.py" repo)"
 ROOT="$STORM/lanes"
 LANE="$ROOT/$SLUG"
+# A lane is hours of a model's work: never cloned where a reboot empties it (10.h, ADR-0057).
+python3 "$STORM/tools/storm_durability.py" check --path "lane=$LANE"
 mkdir -p "$ROOT"
 [ -e "$LANE" ] && { echo "exists: $LANE" >&2; exit 1; }
 # BASE "lane:<slug>" stacks this lane on another lane's branch (its Part 1, say);
