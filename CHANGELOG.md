@@ -307,6 +307,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **ci:** the delivery estimate refreshes once an hour, and by hand, instead of on every push,
+  pull request and issue event. Its pull request now runs every CI gate: the `[skip ci]` that
+  let #1125 merge a ledger record, and break develop's paper-figure check with no check run,
+  is gone.
 * **tests:** a killed test run no longer leaves its databases behind for good. Each session
   now holds an advisory lock on its database for as long as it lives, and marks the database.
   Every run drops, in the background, the test databases that no live session holds
