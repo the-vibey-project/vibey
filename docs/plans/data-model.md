@@ -702,7 +702,8 @@ one transaction, where `now()` is one instant for all of them (sub-doctrine 10.g
 not since un-bumped. The lane is derived from it -- the named jobs plus all their
 unfinished transitive dependencies -- so an un-bump clears the target and every pulled job
 the remaining named jobs no longer need, and every bump or un-bump sweeps (and records) any
-pulled job a cancelled or failed named job left behind, so no orphan outlives the next request.
+pulled job a cancelled or failed named job left behind, so no orphan outlives the next admitted
+bump or un-bump (a refused request changes nothing).
 
 `PostgresJobPriorityStore` (`src/vibey/infrastructure/db/job_priority_repository.py`)
 is reached only through `QueuePriorityService`, which checks the grant first. Each
