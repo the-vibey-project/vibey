@@ -5,6 +5,20 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- `runner install [--load]`, `runner check`, `runner cleanup [--apply]` and
+  `runner uninstall [--apply]`: the sovereign review runner stood up from the tree (12.c).
+  A new `[runners]` table declares the repository it registers with, its LaunchAgent prefix,
+  install and log paths, image, runner release, container model URL, AC rule, throttle,
+  failure limit, `PATH`, and `gh_config_dir`, the runner's own file-based gh login. The
+  supervisor, Dockerfile, entrypoint and LaunchAgent ship as templates under
+  `vibey_gh/templates/runner/`. The supervisor now takes every setting from its unit (no
+  repository default), uses only `GH_CONFIG_DIR`'s file-based token (clearing `GH_TOKEN` and
+  `GITHUB_TOKEN`, refusing a keyring-held or world-readable login), checks Docker and its
+  image explicitly instead of dying silently under `set -e`, and hands the registration
+  token to the container through the environment rather than the argv. `install` loads
+  nothing without `--load`; `cleanup` and `uninstall` are dry runs without `--apply`, and
+  cleanup moves plists aside rather than deleting them.
+
 - `approve-check PR [--head SHA] [--approve] [--body TEXT]`: the delegated approver's grant,
   enforced by code; `--approve` submits one approval pinned to `--head`, only after every
   condition held. `python -m vibey_gh.approval_check` is the same command without the CLI,
