@@ -357,12 +357,13 @@ class PostgresJobPriorityStore:
 
     @staticmethod
     def _skipping(note: str, skipped: tuple[UUID, ...]) -> str:
-        """Say so when a job was left in the lane because this vibey cannot write it."""
+        """Say so when a job was left in the lane because this vibey cannot write it --
+        its phase or state is one a newer vibey wrote -- or because one such job needs it."""
         if not skipped:
             return note
         left = (
-            f"left in the lane: {len(skipped)} job{'' if len(skipped) == 1 else 's'} in a "
-            "phase this vibey does not know"
+            f"left in the lane: {len(skipped)} job{'' if len(skipped) == 1 else 's'} this "
+            "vibey cannot write, or that one of them needs"
         )
         return f"{note}; {left}" if note else left
 

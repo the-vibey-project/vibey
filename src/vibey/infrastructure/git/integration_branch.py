@@ -11,6 +11,8 @@ from pathlib import Path
 from vibey.application.build_integrate_handler import MergeOutcome
 from vibey.domain.worktree import branch_name
 from vibey.infrastructure.git.clean_env import CleanGitEnvSubprocessExecutor
+from vibey.infrastructure.git.interfaces import RepositoryConfigGuardInterface
+from vibey.infrastructure.git.repository_config_guard import RepositoryConfigGuard
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.interfaces import CommandExecutor
 
@@ -24,10 +26,14 @@ class IntegrationBranch:
         *,
         cycle: int,
         executor: CommandExecutor | None = None,
+        guard: RepositoryConfigGuardInterface | None = None,
     ) -> None:
         self._cycle = cycle
         self._executor = executor or CleanGitEnvSubprocessExecutor()
-        self._worktrees = GitWorktreeManager(repo_root, cycle=cycle, executor=self._executor)
+        self._guard = guard if guard is not None else RepositoryConfigGuard(self._executor)
+        self._worktrees = GitWorktreeManager(
+            repo_root, cycle=cycle, executor=self._executor, guard=self._guard
+        )
 
     async def ensure(self, *, base_ref: str = "HEAD") -> Path:
         return await self._worktrees.ensure(INTEGRATION_ITEM_ID, base_ref=base_ref)
@@ -35,8 +41,16 @@ class IntegrationBranch:
     async def merge_item(self, item_id: str) -> MergeOutcome:
         path = await self.ensure()
         branch = branch_name(self._cycle, item_id)
+        # A merge runs the merge and filter drivers the repository's config names.
+        await self._guard.check(path)
+        # `--no-verify` here is NOT skipping a gate: vibey's gates run separately, in
+        # SubprocessGateRunner, before an item reaches integration. It switches off hooks
+        # the REPOSITORY planted -- pre-merge-commit and commit-msg -- in vibey's own
+        # internal merge plumbing, where an engine could have written them from its
+        # linked worktree. The executor's `core.hooksPath=/dev/null` already does; this
+        # says so at the call, and holds if the executor ever changes (clean_env.py).
         result = await self._executor.execute(
-            ("git", "-C", str(path), "merge", "--no-edit", branch)
+            ("git", "-C", str(path), "merge", "--no-edit", "--no-verify", branch)
         )
         if result.returncode == 0:
             return MergeOutcome(ok=True, detail="")
