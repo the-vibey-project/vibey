@@ -5,8 +5,10 @@ the queue and have that run next so that it doesn't have to wait for the other j
 of it." ADR-0054 is the contract, and vibey's PostgreSQL job queue keeps the same one:
 
 1. NEXT MEANS NEXT AFTER WHATEVER IS RUNNING. Nothing running is interrupted. Lanes run one
-   at a time (8.c) and `storm-queue.sh` asks what is next only once no lane is running;
-   nothing here stops, signals or rewrites a running lane.
+   at a time (8.c) unless this device's calibration evidence supports more
+   (`[local_models] concurrent_runs`, ADR-0058), and `storm-queue.sh` asks what is next only
+   once fewer lanes run than that. A running lane is never chosen again; nothing here stops,
+   signals or rewrites a running lane.
 2. PRIORITY ITEMS RUN FIRST, FIFO, ahead of every un-bumped `queue.txt` line. Re-bumping an
    item keeps its place.
 3. DEPENDENCIES PULLED FORWARD, transitively and dependencies first, keeping their relative
@@ -292,6 +294,12 @@ class Ledger:
     def finished(self, slug: str) -> bool:
         """The lane has a verdict and awaits review (or a reviewer's settling)."""
         return (self.root / "lanes" / slug / ".qwenstorm" / "result.json").is_file()
+
+    def running(self, slug: str) -> bool:
+        """The lane has started and not ended: `storm-queue.sh` marks it before the lane
+        starts and clears the mark when it ends, so a second lane running beside it (when
+        `[local_models] concurrent_runs` allows more than one) is never the same lane."""
+        return (self.root / "lanes" / slug / ".qwenstorm" / "running").is_file()
 
     def unattended(self) -> bool:
         return (self.root / "UNATTENDED").is_file()
@@ -694,7 +702,7 @@ class Row:
 
     entry: QueueEntry
     prioritised: bool
-    state: str  # next | ready | waiting | blocked | finished | settled
+    state: str  # next | ready | waiting | blocked | running | finished | settled
     status: str
 
 
@@ -749,6 +757,12 @@ class Resolver:
             if self.ledger.finished(slug):
                 unreviewed.append(slug)
                 rows.append(Row(entry, prioritised, "finished", "finished, awaiting review"))
+                continue
+            if self.ledger.running(slug):
+                # Still pending -- it has not finished -- so the storm is never "empty" while
+                # a lane runs beside the runner; but never chosen again while it runs.
+                pending += 1
+                rows.append(Row(entry, prioritised, "running", "running now"))
                 continue
             pending += 1
             state, status, dead = self._judge(entry, integrated, abandoned)

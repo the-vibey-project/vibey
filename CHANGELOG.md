@@ -145,6 +145,25 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **vibey_gh:** `vibey-gh slots corpus|calibrate|allowed` measure how many runs of one local
+  model fit on a device at once, and `[local_models] concurrent_runs` declares it (sub-doctrines
+  8.c and 8.j, ADR-0058). `calibrate` replays storm-shaped turns (`truncate: false`, so a prompt
+  a slot cannot hold is refused, never silently cut) at N = 1, 2, 3, ... on a runner of its own
+  beside an idle production runner. It samples wired memory, swap-ins and swap-outs, and
+  residency every second, compares every answer with the one-slot answers, and stops at a
+  broken bound or a plateau. Every completed step is checkpointed, so a sweep a reboot
+  interrupts resumes. The evidence is keyed to a device fingerprint (hardware, memory,
+  accelerator, OS, runner version, model digest, context window). `allowed` prints the number
+  a queue may run here: the default `1` probes nothing, `"measured"` takes what this device's
+  evidence supports, and a larger number is refused unless the device measured it inside every
+  bound. Missing or stale evidence means one, said out loud, with a calibration requested. A
+  step taken while another runner held a model is discarded, and a 200 with no `done_reason`
+  counts as a failure, not an answer.
+* **storm:** `storm-queue.sh` asks `vibey-gh slots allowed` how many lanes may run at once,
+  instead of the host-wide `pgrep` it hard-coded. It runs more than one only when this device's
+  evidence says so, and calibrates itself when its queue empties and a calibration was
+  requested, from its own lane records or, when none survive, its committed specs
+  (`storm_turn_pool.py`).
 * **vibey_gh:** the Discord announcement after a docs deploy now says what changed: `vibey-gh
   announce` posts one line per merged change, grouped Breaking / Added / Fixed / Other, capped
   at `[announce] max_changes` (default 8) with `…and N more` and a compare link, merge and

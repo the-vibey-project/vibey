@@ -427,6 +427,29 @@ stale_ready_seconds = 600
 dead_letter_peek_limit = 200
 ```
 
+## Concurrent local runs: `[local_models]` in `.vibey-gh.toml` { #local_models }
+
+How many runs of one local model run at once on a device is not a `vibey.toml` key. It
+is declared once per repository in `.vibey-gh.toml` `[local_models] concurrent_runs`,
+and checked against **that device's own calibration evidence**
+([ADR-0058](../architecture/decisions/0058-concurrent-local-runs-are-measured-per-device.md),
+sub-doctrines 8.c and 8.j). The default, `1`, is 8.c as written and needs no evidence.
+`"measured"` takes what the device's evidence supports. A number above one runs only if
+the device measured that number inside every bound. Missing or stale evidence (another
+runner version, model digest, memory or context window) means one, and a calibration is
+requested. The storm runner reads the answer from `vibey-gh slots allowed`, and the queue
+runs one lane at a time until it says more. Every key, the bounds and the calibration
+are documented in the vibey-gh
+[configuration reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/configuration.md#local_models-and-vibey-gh-slots).
+
+```toml
+# .vibey-gh.toml
+[local_models]
+concurrent_runs = 1
+model = "gpt-oss:20b"
+context_window = 65536
+```
+
 ## Operational surfaces (sovereign defaults, declared-only paid relays)
 
 Each table is optional: an omitted table (or an omitted key) leaves the

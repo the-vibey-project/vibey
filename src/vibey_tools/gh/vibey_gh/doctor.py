@@ -40,6 +40,7 @@ from vibey_gh.config import (
     GhConfig,
     GithubReleaseConfig,
     IssueAutomationConfig,
+    LocalModelsConfig,
     MarketplaceConfig,
     PlatformConfig,
     PrAutomationConfig,
@@ -99,6 +100,7 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     # `requirements` is one table per stage, and stage names are adopter-defined; the
     # loader and `vibey_gh.feasibility` validate what is inside it, loudly.
     "estimate": _fields(EstimateConfig),
+    "local_models": _fields(LocalModelsConfig),
     # free-form: per-branch tables validated by their own machinery
     "rulesets": None,
 }
