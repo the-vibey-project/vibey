@@ -305,15 +305,15 @@ with the reason.
 
 **Every request is recorded** on the project ledger — `JobPriorityBumped`,
 `JobPriorityUnbumped` or `JobPriorityRefused` — whether it moved something, moved
-nothing (bumping a job already bumped, un-bumping one that is not: exit 0 with `nothing
-moved`), or was refused. The grant is checked before the job is looked up, so a refused
+nothing (bumping a job already bumped or already finished, un-bumping one that is not:
+exit 0 with `nothing moved` or `nothing to move`), or was refused. The grant is checked before the job is looked up, so a refused
 request is recorded whether or not the job exists. `vibey ledger search --kind
 JobPriorityRefused` lists the refusals. Refused with exit 3, and recorded:
 
 - a caller that is not the operator, or a source not declared or not run as the operator;
 - a `vibey.toml` or repository this process may not read, or one that is not valid TOML;
-- a job that does not exist in the project, has finished, or is in a state or phase this
-  vibey does not know;
+- a job that does not exist in the project, or is in a state or phase this
+  vibey does not know; an un-bump of a finished job;
 - a bump whose dependency can never finish (failed or cancelled), or a dependency ring —
   the message names it;
 - an un-bump of a job that another named job still depends on — the message names them;

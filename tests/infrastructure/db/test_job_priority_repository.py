@@ -318,16 +318,24 @@ async def test_bumping_a_parked_job_keeps_it_parked_until_its_gate_is_answered(
 # -- what a request refuses (items 3 and 6) -------------------------------------------------------
 
 
-async def test_a_finished_job_cannot_be_moved(
+async def test_bumping_a_finished_job_is_a_recorded_no_op(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:
+    """As the storm does (ADR-0054 item 7): nothing moves, and the record says why."""
     repo = PostgresJobRepository(migrated_pool)
     store = PostgresJobPriorityStore(migrated_pool)
     (job,) = await _enqueue(repo, project_id, "done")
     await _set_state(migrated_pool, job, "succeeded")
 
-    with pytest.raises(NotReorderable, match="succeeded"):
-        await store.bump(job, context=_context(project_id), at=AT)
+    change = await store.bump(job, context=_context(project_id), at=AT)
+
+    assert not change.changed
+    assert change.note == "it is succeeded; nothing to move"
+    (event,) = await _events(migrated_pool, project_id)
+    assert event.kind is EventKind.JOB_PRIORITY_BUMPED
+    assert event.payload["moved"] == [] and event.payload["note"] == change.note
+    record = await repo.get(job)
+    assert record is not None and record.bump_seq is None
     with pytest.raises(NotReorderable, match="succeeded"):
         await store.unbump(job, context=_context(project_id), at=AT)
 

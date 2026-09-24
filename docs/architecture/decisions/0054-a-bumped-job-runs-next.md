@@ -74,8 +74,9 @@ a position, not a weight.
    named item depends on X. Everything else follows by derivation, so no orphan can
    remain." The un-bump's record lists exactly the items it `removed` from the lane.
 7. **A new item can be enqueued already prioritised, in one step,** through the same grant.
-   Re-enqueueing an item that has already finished is a recorded no-op, as a plain
-   re-enqueue of a finished item is.
+   Bumping or re-enqueueing an item that has already finished is a recorded no-op: nothing
+   moves, the record says why, and the request succeeds, as a plain re-enqueue of a
+   finished item does.
 
 ## Decision: vibey's mechanism
 
@@ -218,9 +219,6 @@ Until then this record claims conformance for vibey's queue only.
   lane order by replaying it.
 - **A refused request's exit code.** vibey exits 3 (a guarded command blocked by a domain
   rule, as every vibey refusal does); the storm exits 1.
-- **Bumping a finished item.** vibey refuses it, recorded, as `NotReorderable`; the storm
-  records it as a no-op. Re-enqueueing a finished item with priority is a recorded no-op in
-  both.
 - **What cannot be recorded.** vibey records every request against the project it names. A
   request naming no project that exists, or a project in a phase this vibey does not know,
   has nowhere it can be recorded; it is reported and goes no further.

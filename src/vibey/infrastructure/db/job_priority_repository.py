@@ -251,7 +251,9 @@ class PostgresJobPriorityStore:
             ]
             snapshot = await self._snapshot(conn, job_id, await conn.fetch(_LOCK_CLOSURE, ids))
             target = snapshot[job_id]
-            plan = self._bumps.plan(job_id, snapshot, finished_ok=action is PriorityAction.ENQUEUE)
+            # A finished target -- bumped or re-enqueued with priority -- is a recorded
+            # no-op, never a refusal (ADR-0054 item 7), as the storm's queue has it.
+            plan = self._bumps.plan(job_id, snapshot, finished_ok=True)
             moved: list[MovedJob] = []
             for moving in plan.moved:
                 seq = await conn.fetchval(

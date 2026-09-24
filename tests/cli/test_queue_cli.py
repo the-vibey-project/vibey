@@ -296,7 +296,7 @@ def test_an_unknown_job_is_refused_and_recorded(tmp_path: Path) -> None:
     assert event.payload["reason"] == f"unknown job {missing}"
 
 
-def test_a_finished_job_cannot_be_moved(tmp_path: Path) -> None:
+def test_bumping_a_finished_job_is_a_recorded_no_op(tmp_path: Path) -> None:
     pid, (job,) = asyncio.run(_seed(tmp_path, "x"))
 
     async def finish() -> None:
@@ -306,9 +306,10 @@ def test_a_finished_job_cannot_be_moved(tmp_path: Path) -> None:
 
     asyncio.run(finish())
     code, out = _run("bump", str(job))
-    assert code == 3
-    assert "cannot be moved in the queue: it is succeeded" in out
-    assert "vibey queue list" in out
+    assert code == 0, out
+    assert f"job {job}: it is succeeded; nothing to move (recorded; by operator:" in out
+    (event,) = asyncio.run(_events(pid))
+    assert event.payload["moved"] == []
 
 
 def test_an_unknown_project_exits_1(tmp_path: Path) -> None:

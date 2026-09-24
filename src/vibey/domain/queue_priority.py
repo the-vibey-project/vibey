@@ -63,8 +63,8 @@ class PriorityAction(StrEnum):
     BUMP = "bump"
     UNBUMP = "unbump"
     ENQUEUE = "enqueue"
-    """Enqueue a job already bumped (contract item 7). Re-enqueueing a job that has
-    already finished is a recorded no-op, the way a plain re-enqueue is a no-op."""
+    """Enqueue a job already bumped (contract item 7). Bumping or re-enqueueing a job
+    that has already finished is a recorded no-op, the way a plain re-enqueue is."""
 
 
 @dataclass(frozen=True, slots=True)
