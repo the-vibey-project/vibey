@@ -45,7 +45,7 @@ with payloads.
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
 | `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 
@@ -392,13 +392,26 @@ missing ones print `NOT INSTALLED` — and adds `qwenloop` when
 Each engine line shows install state, version, and auth. Auth is the exit
 status of `<binary> doctor`; if that command cannot run, doctor falls back
 to the engine's API-key variable (see
-[Environment variables](#environment-variables)).
+[Environment variables](#environment-variables)). Each probe starts from the
+engine's allow-listed environment, never doctor's own: the defaults, or with
+`--record` the target project's `engine_environment`, so a credential that project
+declares reaches the auth check and the conformance run as it reaches a session. A
+forbidden declaration in that project exits 2.
 
 The final `postgresql` line shows `READY`, `NOT READY`, `UNSUPPORTED`, or
 `NOT INSTALLED`. `READY` means a local PostgreSQL server at port 5432 accepts
 connections and is at least version 14. `--install-postgres` exits 1 if the
 package manager or service start fails, or if verification still does not reach
 that state.
+
+The `db-passwordless` line after it asks whether the app DSN's database admits a
+login with no password at all: as the DSN's role and as the OS user doctor runs as,
+on the DSN's host and, when that host is local, on each local socket directory. It
+prints `WARN` when one is let in (trust or peer authentication: any process running
+as that user, an engine session included, can open the database without
+`VIBEY_PG_URL`; see [SECURITY.md](https://github.com/the-vibey-project/vibey/blob/main/SECURITY.md) §5),
+`PASS` when every attempt was refused, and `UNKNOWN` when none reached the server or
+`VIBEY_PG_URL` is unset. It never changes the exit code.
 
 With `--conformance`, the command exits 1 if any engine fails a check. The
 worker does not select an engine for engine-driven jobs until a
