@@ -5,6 +5,19 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- `approve-check PR [--head SHA] [--approve] [--body TEXT]`: the delegated approver's grant,
+  enforced by code; `--approve` submits one approval pinned to `--head`, only after every
+  condition held. `python -m vibey_gh.approval_check` is the same command without the CLI,
+  and the form the delegated approver is granted; its whole import closure is forbidden to
+  it. Exits 0 only when every `[unattended_approval]` condition holds for the pull request — `enabled`,
+  the live switch reading exactly its value, the author in `authors` (expanded by
+  `expand_authors`), the base in `branches`, no changed file in `forbidden_paths` (a `**/`
+  also matches zero directories; one hit refuses the whole pull request; an unlistable or
+  truncated listing refuses), every check and status on the head green with both merge-train
+  gates, and the authenticated account neither the author nor a commit author — and prints
+  each refusal otherwise. New `[unattended_approval]` keys `switch_variable` (default
+  `VIBEY_UNATTENDED_APPROVAL`) and `switch_value` (default `on`) declare the live switch.
+
 - **Breaking:** the merge train admits no stranger (vibey ADR-0053, sub-doctrine 12.j). A
   pull request whose author is not the owner or in `[merge_train] trusted_authors`, or that
   carries `vibey-gh:external-repair`, is never merged unattended: it is held, labelled, and

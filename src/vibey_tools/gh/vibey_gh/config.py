@@ -556,7 +556,9 @@ class UnattendedApprovalConfig:
     approved and what never may, once, and the approver applies a standard it did not choose
     and cannot alter. This dataclass is that standard as the repository declares it -- the
     DECLARED half of the grant (12.c). The live half is the repository variable
-    `VIBEY_UNATTENDED_APPROVAL`, deliberately not here: withdrawal must need no merge.
+    `switch_variable` names (`VIBEY_UNATTENDED_APPROVAL` by default), whose value is
+    deliberately not here: withdrawal must need no merge. `vibey-gh approve-check`
+    (`vibey_gh.approval_check`) is what reads both halves.
 
     Defaults refuse. `enabled` is False and `branches` and `authors` are empty, so a
     repository that has merely upgraded vibey-gh has granted nothing -- absence of a grant is
@@ -581,8 +583,31 @@ class UnattendedApprovalConfig:
     # Configurable because an adopter may gate differently, but off is a decision to state,
     # not a default to inherit.
     require_all_gates: bool = True
+    # The LIVE half of the grant: the repository variable `vibey-gh approve-check` reads on
+    # every check, and the exact value it must hold. The variable's VALUE is deliberately not
+    # a key -- withdrawal must need no merge -- but which variable, and what "on" is spelled
+    # as, are facts about the repository and are declared here rather than compiled in
+    # (12.h). Anything but exactly `switch_value`, including a variable nobody can read, is
+    # refusal.
+    switch_variable: str = "VIBEY_UNATTENDED_APPROVAL"
+    switch_value: str = "on"
 
     def __post_init__(self) -> None:
+        # The switch is validated whether or not the grant is on: a switch that could never
+        # be set is wrong the day somebody turns the grant on, and that is the worst day to
+        # find out. Everything below the early return binds only an enabled grant.
+        if not SECRET_NAME_PATTERN.fullmatch(self.switch_variable):
+            raise ValueError(
+                "unattended_approval.switch_variable must be a repository variable name "
+                "(letters, digits and underscores, not starting with a digit) -- a switch "
+                "nobody can set is a grant nobody can withdraw"
+            )
+        if not self.switch_value or self.switch_value != self.switch_value.strip():
+            raise ValueError(
+                "unattended_approval.switch_value must be non-empty with no surrounding "
+                "whitespace -- it is compared exactly, and whitespace nobody can see is a "
+                "value nobody can match"
+            )
         if not self.enabled:
             return
         _unique_nonempty("unattended_approval.branches", self.branches)
@@ -1931,6 +1956,10 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             authors=tuple(approval.get("authors", ())),
             forbidden_paths=tuple(approval.get("forbidden_paths", DEFAULT_APPROVAL_FORBIDDEN)),
             require_all_gates=approval.get("require_all_gates", True),
+            switch_variable=approval.get(
+                "switch_variable", UnattendedApprovalConfig.switch_variable
+            ),
+            switch_value=approval.get("switch_value", UnattendedApprovalConfig.switch_value),
         ),
         issue_automation=IssueAutomationConfig(
             enabled=issues.get("enabled", True),

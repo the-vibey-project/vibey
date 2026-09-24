@@ -8,6 +8,10 @@ tree. `.importlinter` enforces it.
 
 from __future__ import annotations
 
+from vibey_gh.interfaces.approval_check_interface import (
+    ApprovalCheckInterface,
+    ApprovalVerdictInterface,
+)
 from vibey_gh.interfaces.book_interface import (
     BookChapterInterface,
     BookErrorInterface,
@@ -132,6 +136,8 @@ from vibey_gh.interfaces.review_contract_interface import (
 
 __all__ = [
     "AppendOutcomeInterface",
+    "ApprovalCheckInterface",
+    "ApprovalVerdictInterface",
     "AutomationStateInterface",
     "BillingForecastInterface",
     "BillingLedgerReaderInterface",
