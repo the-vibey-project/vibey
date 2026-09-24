@@ -6,6 +6,15 @@ sessions; ``VIBEY_TEST_TEMPLATE_DB`` renames it) and clones it into
 ``vibey_test_<worker_id>`` for this process.
 ``VIBEY_TEST_DATABASE_URL`` is repointed so every downstream fixture and test
 helper picks up the isolated per-worker database transparently.
+
+The application connects as a restricted role, as a split production install does
+(ADR-0055): ``VIBEY_PG_URL`` names ``vibey_test_app`` (``VIBEY_TEST_APP_ROLE``
+renames it; an empty value falls back to one role for everything), which holds only
+the declared grants, and ``VIBEY_PG_MIGRATE_URL`` names the owner. So the whole suite
+runs every application path under the grants production runs it under, and a query
+that needs a privilege nobody declared fails here, as ``permission denied``.
+``VIBEY_TEST_DATABASE_URL`` stays the owner's, for fixtures that set up or inspect
+state the application itself never touches.
 """
 
 import asyncio
@@ -18,6 +27,7 @@ import asyncpg
 import pytest
 from hypothesis import HealthCheck, settings
 
+from tests.db_roles import TestDatabaseRoles
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
 # The no-loss lane: `pytest -m noloss --hypothesis-profile=noloss`, the CI job "No-loss
@@ -43,6 +53,7 @@ _MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 # with VIBEY_TEST_TEMPLATE_DB; the default is the name it has always had.
 _TEMPLATE_DB = os.environ.get("VIBEY_TEST_TEMPLATE_DB", "vibey_test_template")
 _BASE_DSN: str | None = None
+_ROLES = TestDatabaseRoles.from_environ(os.environ)
 
 
 def _resolve_base_dsn() -> str:
@@ -102,6 +113,10 @@ async def _setup(base_dsn: str) -> str:
             try:
                 migrations = discover_migrations(_MIGRATIONS_DIR)
                 await apply_migrations(tmpl_conn, migrations)
+                # Roles are cluster-wide; grants live in the database, so the clone
+                # below inherits them from the template.
+                await _ROLES.ensure(conn)
+                await _ROLES.grant(tmpl_conn)
             finally:
                 await tmpl_conn.close()
 
@@ -150,10 +165,14 @@ def pytest_configure(config: pytest.Config) -> None:
     worker_dsn = asyncio.run(_setup(_BASE_DSN))
     os.environ["VIBEY_TEST_DATABASE_URL"] = worker_dsn
     # Some integration tests exercise the application entry point directly, whose
-    # production setting is VIBEY_PG_URL rather than the fixture-specific name.
-    # Point both names at the same isolated worker database so those tests cannot
-    # fall through to an unset configuration or a shared database.
-    os.environ["VIBEY_PG_URL"] = worker_dsn
+    # production settings are VIBEY_PG_URL (the application role) and
+    # VIBEY_PG_MIGRATE_URL (the owner). Point both at this worker's isolated database
+    # so those tests cannot fall through to an unset configuration or a shared one.
+    app_dsn = _ROLES.app_dsn(worker_dsn)
+    os.environ["VIBEY_TEST_APP_DATABASE_URL"] = app_dsn
+    os.environ["VIBEY_PG_URL"] = app_dsn
+    if app_dsn != worker_dsn:
+        os.environ["VIBEY_PG_MIGRATE_URL"] = worker_dsn
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:

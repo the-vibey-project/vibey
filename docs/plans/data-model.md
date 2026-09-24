@@ -12,9 +12,9 @@
 > PostgreSQL 14+. CI exercises majors 14–18; the chart default is PostgreSQL 17.
 > All timestamps `timestamptz`. All ids `uuid` except `event.seq`
 > (gapless bigint per project) and human-facing item ids (short prefixed strings).
-> Migrations are forward-only and applied automatically by `build_app()`
-> (`src/vibey/bootstrap.py`) every time a CLI command or worker opens the
-> database through it; there is no `vibey migrate` command (§7).
+> Migrations are forward-only. They run as the schema's owner: `vibey migrate`, or
+> `build_app()` (`src/vibey/bootstrap.py`) when `VIBEY_PG_MIGRATE_URL` is set or the
+> application's own role may migrate (a single-DSN install); see §7 and ADR-0055.
 
 The live schema also has a Pydantic-backed SQLAlchemy projection in
 `src/vibey/infrastructure/db/orm_models.py`. It uses SQLModel so every one of
@@ -286,13 +286,26 @@ CREATE INDEX event_kind          ON event (project_id, kind, seq);
 CREATE INDEX event_correlation   ON event (correlation_id, seq);
 CREATE INDEX event_payload_gin   ON event USING gin (payload jsonb_path_ops);
 
--- Append-only: no UPDATE, no DELETE. Enforced, not merely intended.
-CREATE RULE event_no_update AS ON UPDATE TO event DO INSTEAD NOTHING;
-CREATE RULE event_no_delete AS ON DELETE TO event DO INSTEAD NOTHING;
+-- Append-only: no UPDATE, no DELETE, no TRUNCATE -- by the database (0016, ADR-0055).
+CREATE TRIGGER event_append_only BEFORE UPDATE OR DELETE ON event
+    FOR EACH ROW EXECUTE FUNCTION ledger_refuse_rewrite();
+CREATE TRIGGER event_no_truncate BEFORE TRUNCATE ON event
+    FOR EACH STATEMENT EXECUTE FUNCTION ledger_refuse_rewrite();
 ```
 
-The `RULE`s make `UPDATE` and `DELETE` silent no-ops rather than errors: a stray
-write affects zero rows.
+A rewrite is refused out loud: `the ledger is append-only: UPDATE on event is refused`,
+SQLSTATE `42501`, for every role, the owner included.
+
+- **Partitions.** The row trigger is cloned onto every partition, present and future.
+  `ledger_guard_partitions()` attaches the `TRUNCATE` guard, which PostgreSQL does not
+  clone, on every migration run.
+- **The earlier rules.** Migrations 0002 and 0013 used `DO INSTEAD NOTHING` rules, which
+  made a stray write a silent no-op. They did not fire for a statement addressed to a
+  partition or for `TRUNCATE`, and the owner (whom the worker connected as) could disable
+  them. 0016 drops them.
+- **The application role.** It holds `SELECT` and `INSERT` on `event` and nothing more
+  (`APP_ROLE_GRANTS`), so it cannot disable a trigger either. See
+  [the configuration reference](../reference/configuration.md#database-roles).
 
 **`kind` is open text, read forward-compatibly (vibey#275).** The column has no
 constraint and no enum type, so a newer vibey writes a kind an older one has never
@@ -1002,10 +1015,19 @@ CREATE TABLE IF NOT EXISTS schema_migration (
 `checksum` is the sha256 hex of the file's text. Each pending migration runs in its
 own transaction together with its `schema_migration` insert.
 
-There is no `vibey migrate` command. `build_app()` in `src/vibey/bootstrap.py` runs
-`PostgresMigrator.from_environ(os.environ).apply(conn, discover_migrations(migrations_dir()))`
-every time it opens the pool, so every CLI command that opens the database, and every
-worker start, brings the schema up to date.
+Migrations run as the schema's owner (ADR-0055), in one of three ways:
+
+- **`vibey migrate`** applies them on `VIBEY_PG_MIGRATE_URL`, then reconciles the
+  application role's grants.
+- **`build_app()`** in `src/vibey/bootstrap.py` (`SchemaPreparer`), every time it opens
+  the pool:
+  - on an owner connection when `VIBEY_PG_MIGRATE_URL` is set, then reconciling grants;
+  - on the application's own connection when that role may migrate (a single-DSN
+    install);
+  - otherwise it only verifies (`PostgresMigrator.pending`, no DDL, no lock) and refuses
+    to start while anything is pending.
+
+So every worker start either brings the schema up to date or says why it cannot.
 `migrations_dir()` resolves to `<checkout>/migrations` from a source tree and to
 `/app/migrations` in the container image. Every start also re-verifies checksums:
 `apply` raises `MigrationChecksumError` if an already-applied migration's file has

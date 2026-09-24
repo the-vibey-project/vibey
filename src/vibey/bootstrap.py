@@ -85,14 +85,21 @@ from vibey.infrastructure.build.automated_review_runner import SubprocessAutomat
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
 from vibey.infrastructure.db.advisory_lock import PostgresAdvisoryLock
 from vibey.infrastructure.db.build_ledger import PostgresBuildLedger
+from vibey.infrastructure.db.database_setup import SchemaPreparer
 from vibey.infrastructure.db.design_ledger import PostgresDesignLedger
 from vibey.infrastructure.db.design_spec_repository import FileDesignSpecRepository
 from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 from vibey.infrastructure.db.handoff_repository import PostgresHandoffRepository
 from vibey.infrastructure.db.human_gate_repository import PostgresHumanGateRepository
-from vibey.infrastructure.db.interfaces import MigratorInterface
+from vibey.infrastructure.db.interfaces import MigratorInterface, SchemaPreparerInterface
 from vibey.infrastructure.db.job_priority_repository import PostgresJobPriorityStore
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
+from vibey.infrastructure.db.ledger_guard import (
+    DatabaseEndpoints,
+    DatabaseRoleReconciler,
+    LedgerGuardInspector,
+    LedgerGuardStatus,
+)
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
@@ -176,6 +183,9 @@ class AppResources:
     # handed to nothing else, so no entry point can reorder the queue past the grant.
     queue_priority: QueuePriorityServiceInterface
     integration_lock: PostgresAdvisoryLock | None = None
+    # Whether the role this process connects as could rewrite the ledger (ADR-0055).
+    # `vibey worker` logs it at every start when it could; `vibey doctor` fails on it.
+    ledger_guard: LedgerGuardStatus | None = None
 
 
 class SystemClock:
@@ -704,7 +714,8 @@ async def build_app(
     # Read before the pool opens, so a bad VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS
     # fails the start before anything touches the database.
     migrator: MigratorInterface = PostgresMigrator.from_environ(os.environ)
-    pool = await asyncpg.create_pool(url or database_url(), min_size=1, max_size=10)
+    endpoints = DatabaseEndpoints.from_environ(os.environ, app_url=url or database_url())
+    pool = await asyncpg.create_pool(endpoints.app_url, min_size=1, max_size=10)
     if pool is None:
         raise RuntimeError("asyncpg did not create a pool")
     try:
@@ -713,7 +724,17 @@ async def build_app(
             server_version = parse_postgres_server_version(server_version_num)
             if server_version is None or not server_version.supported:
                 raise UnsupportedPostgresVersion(server_version_num)
-            await migrator.apply(conn, discover_migrations(migrations_dir()))
+            # Migrate with the role allowed to (the owner's DSN when the roles are
+            # split), then ask, as the application, whether it could rewrite the
+            # ledger (ADR-0055). A single-DSN install still starts -- an upgrade never
+            # strands one -- but the worker says so at every start (not every CLI
+            # command, whose stdout may be JSON), and `vibey doctor` fails on it.
+            preparer: SchemaPreparerInterface = SchemaPreparer(
+                migrator=migrator,
+                reconciler=DatabaseRoleReconciler(),
+                inspector=LedgerGuardInspector(),
+            )
+            guard = await preparer.prepare(conn, endpoints, discover_migrations(migrations_dir()))
 
         telemetry_tracer = TelemetryTracer()
         telemetry_metrics = TelemetryMetrics()
@@ -966,6 +987,7 @@ async def build_app(
                 clock=clock,
             ),
             integration_lock=PostgresAdvisoryLock(pool),
+            ledger_guard=guard,
         )
     finally:
         await pool.close()

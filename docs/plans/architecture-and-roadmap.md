@@ -100,7 +100,9 @@ They are enforced by CI, not by convention.
    the lease will expire and another worker will pick it up. Every job type must
    be safe to run twice.
 7. **The ledger is append-only.** No updates, no deletes. Corrections are new
-   events that supersede prior ones.
+   events that supersede prior ones. The database enforces it: triggers refuse any
+   rewrite, even by the owner, and the application connects as a role that holds only
+   `SELECT` and `INSERT` on the ledger (ADR-0055).
 8. **Every commit follows Conventional Commits.** Enforced by a git hook.
 9. **No engine-specific types leak past `infrastructure/engines/`.** The domain
    knows `EngineId` and `Effort`; it never knows what `--preset` means.
@@ -235,7 +237,9 @@ processes**, plus an optional Kubernetes operator.
   jobs, bounded to `min(parallelism, engines × 2, cpu_count)`. `vibey work
   <project-id>` processes one ready DESIGN job in the foreground and exits.
 - Every process reads its DSN from `VIBEY_PG_URL` and refuses to start without it
-  (`DatabaseNotConfigured`); there is no default database. `vibey install --postgres`
+  (`DatabaseNotConfigured`); there is no default database. That DSN names the
+  application role; migrations and grants run as the owner, `VIBEY_PG_MIGRATE_URL`
+  (`vibey migrate`, ADR-0055). `vibey install --postgres`
   can install and start a local PostgreSQL 14+ server through Homebrew, apt, or dnf.
   Postgres may also be brought by the operator as a container or through the Helm
   chart's in-cluster `postgres:17-alpine`.

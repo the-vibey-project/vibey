@@ -126,10 +126,23 @@ worker applies migrations itself at startup.
 The built-in Postgres is **development only** — `postgres.password`
 defaults to `vibey` in plain values. For anything real, set
 `postgres.enabled: false` and point `dsn.existingSecret` at a Secret
-whose `dsn` key (or the key named by `dsn.existingSecretKey`) holds the
-managed instance's DSN. The chart injects it as `VIBEY_PG_URL` into the
-worker and, when enabled, the operator. Use a fully qualified host or an
-IP address: KEDA reads the same DSN from another namespace.
+with two keys
+([ADR-0055](../architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)):
+
+- `dsn` (or the key named by `dsn.existingSecretKey`) is the application role's DSN. The
+  chart injects it as `VIBEY_PG_URL` into the worker and, when enabled, the operator.
+- `migrate-dsn` (or `dsn.existingSecretMigrateKey`) is the owner's DSN. It is mounted
+  only into the `migrate` init container, which runs `vibey migrate`: it applies
+  migrations, creates the application role if it is missing, grants it exactly the
+  declared privileges, and fails the pod if that role could still rewrite the ledger.
+
+An empty `dsn.existingSecretMigrateKey` makes a single-DSN install. The worker then
+migrates as the one role, and `vibey doctor --cluster` fails `ledger-guard` until the roles
+are split ([database roles](../reference/configuration.md#database-roles)). Use a fully
+qualified host or an IP address: KEDA reads the application's DSN from another namespace.
+
+The built-in Postgres (`postgres.enabled: true`) does this for you: `postgres.user` is the
+owner and `postgres.appRole` (default `vibey_app`) the application role.
 
 The `wait-for-postgres` init container is rendered only for the built-in
 Postgres. Against a managed instance the worker connects directly at

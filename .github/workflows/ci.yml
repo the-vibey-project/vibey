@@ -992,6 +992,33 @@ jobs:
           cat /tmp/log
           grep -q "worker started: project=demo" /tmp/log
 
+      # ADR-0055: the ledger is append-only by the database. The `migrate` init
+      # container ran as the owner and reported the guard in force; the role every
+      # workload connects as is refused any rewrite by privilege; the owner itself is
+      # refused by the triggers; and the worker's own doctor agrees.
+      - name: Contract - the worker's role cannot rewrite the ledger
+        run: |
+          kubectl logs -n vibey deployment/vibey-vibey-worker -c migrate > /tmp/migrate.log 2>&1 || true
+          cat /tmp/migrate.log
+          grep -q "ledger guard in force: vibey_app" /tmp/migrate.log
+          as() {
+            kubectl exec -n vibey statefulset/vibey-vibey-postgres -- \
+              psql -U "$1" -d vibey -v ON_ERROR_STOP=1 -c "$2" 2>&1 || true
+          }
+          test "$(as vibey 'SELECT count(*) > 0 FROM event' | grep -c ' t$')" = "1"
+          for sql in "UPDATE event SET digest = 'forged'" "DELETE FROM event" "TRUNCATE event"; do
+            as vibey_app "$sql" | tee /tmp/app.out
+            grep -q "permission denied" /tmp/app.out
+            as vibey "$sql" | tee /tmp/owner.out
+            grep -q "the ledger is append-only" /tmp/owner.out
+          done
+          as vibey_app "ALTER TABLE event DISABLE TRIGGER event_append_only" | tee /tmp/ddl.out
+          grep -q "must be owner" /tmp/ddl.out
+          kubectl exec -n vibey deploy/vibey-vibey-worker -- vibey doctor --cluster > /tmp/doctor 2>&1 || true
+          cat /tmp/doctor
+          grep -q "PASS ledger-guard" /tmp/doctor
+          grep -Eq "(PASS|FAIL|UNKNOWN) local-auth" /tmp/doctor
+
       # KEDA's operator runs in its own namespace and dials Postgres
       # itself, so it is the only thing here that exercises the DSN from
       # outside the release namespace. An unqualified DSN passes every

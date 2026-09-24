@@ -295,7 +295,8 @@ spec:
         runAsNonRoot: true
         runAsUser: 10001
       initContainers:
-        # The worker applies migrations itself at startup, but it cannot
+        # The `migrate` init container (or, on a single-DSN install, the
+        # worker itself) applies migrations at startup, but it cannot
         # do that against a database that is not accepting connections
         # yet. Waiting here keeps the failure mode "pod pending" rather
         # than "CrashLoopBackOff with a stack trace".
@@ -309,6 +310,27 @@ spec:
                 echo "waiting for postgres..."
                 sleep 2
               done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+        - name: migrate
+          image: "vibey:dev"
+          imagePullPolicy: Never
+          args: ["migrate"]
+          env:
+            - name: VIBEY_PG_MIGRATE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-dsn
+                  key: migrate-dsn
+            - name: VIBEY_PG_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-dsn
+                  key: dsn
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

@@ -47,6 +47,7 @@ from vibey.infrastructure.interfaces.class_contracts import (
 )
 from vibey.infrastructure.interfaces.cluster_preflight_interface import (
     ClusterPreflightInterface,
+    DatabaseSecurityChecksInterface,
     EngineAuthCheckInterface,
 )
 from vibey.infrastructure.interfaces.logging_interface import CorrelationLogContextInterface
@@ -83,6 +84,7 @@ __all__ = [
     "ClaudeLoopDesignProviderInterface",
     "ClaudeLoopWorkPlanProducerInterface",
     "ClusterPreflightInterface",
+    "DatabaseSecurityChecksInterface",
     "CommandExecutor",
     "ConnectionEventAppenderInterface",
     "CorrelationLogContextInterface",

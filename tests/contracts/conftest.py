@@ -11,6 +11,7 @@ import asyncpg
 import pytest
 import pytest_asyncio
 
+from tests.db_roles import TestDatabaseRoles
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "migrations"
@@ -38,13 +39,18 @@ def database_url() -> str:
 
 @pytest_asyncio.fixture
 async def migrated_pool(database_url: str) -> AsyncIterator[asyncpg.Pool]:
-    pool = await asyncpg.create_pool(database_url, min_size=1, max_size=5)
+    """Migrated as the owner; handed out as the application role (ADR-0055)."""
+    roles = TestDatabaseRoles.from_environ(os.environ)
+    owner = await asyncpg.connect(database_url)
+    try:
+        await owner.execute("DROP SCHEMA public CASCADE")
+        await owner.execute("CREATE SCHEMA public")
+        await apply_migrations(owner, discover_migrations(MIGRATIONS_DIR))
+        await roles.grant(owner)
+    finally:
+        await owner.close()
+    pool = await asyncpg.create_pool(roles.app_dsn(database_url), min_size=1, max_size=5)
     assert pool is not None
-    async with pool.acquire() as conn:
-        await conn.execute("DROP SCHEMA public CASCADE")
-        await conn.execute("CREATE SCHEMA public")
-        migrations = discover_migrations(MIGRATIONS_DIR)
-        await apply_migrations(conn, migrations)
     try:
         yield pool
     finally:

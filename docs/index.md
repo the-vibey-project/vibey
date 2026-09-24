@@ -70,9 +70,17 @@ which is what `vibey doctor` checks.
 
 ```bash
 uv tool install vibey          # or: pipx install vibey / pip install vibey
-export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey
-vibey doctor                   # pre-flight: engines installed, versions, auth
+export VIBEY_PG_MIGRATE_URL=postgresql://user@localhost:5432/vibey        # the owner
+export VIBEY_PG_URL=postgresql://vibey_app:change-me@localhost:5432/vibey # the application
+vibey migrate                  # migrate as the owner; create and grant vibey_app
+vibey doctor                   # pre-flight: engines, and whether the ledger is guarded
 ```
+
+Two DSNs, because the ledger is append-only by the database
+([ADR-0055](architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)):
+the application connects as a role that can read and append to the ledger and nothing
+more. One DSN still works, but `vibey doctor` fails its `ledger-guard` check until the
+roles are split ([database roles](reference/configuration.md#database-roles)).
 
 `vibey doctor` alone checks only the engines. `--record` also writes the result
 to the database for a project, and `--cluster` runs the in-cluster preflight
@@ -296,7 +304,7 @@ things those runners deliberately do not do:
 | [Phase protocols](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/main/CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (54 ADRs) |
+| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (55 ADRs) |
 
 ## Status
 

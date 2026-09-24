@@ -52,9 +52,19 @@ postgres:
   enabled: true
   image: postgres:17-alpine
   database: vibey
+  # The owner (ADR-0055): the server's bootstrap role, which runs migrations and
+  # owns every table. Its DSN reaches only the `migrate` init container.
   user: vibey
   # Dev-only default; cloud presets require existingSecret instead.
   password: vibey
+  # The application role: what the worker, the operator and the KEDA scaler
+  # connect as. It can read and append to the ledger and nothing more, and owns
+  # nothing. `vibey migrate` creates it on first use and grants it exactly the
+  # declared privileges on every rollout.
+  appRole:
+    name: vibey_app
+    # Dev-only default; cloud presets require existingSecret instead.
+    password: vibey_app
   storage: 8Gi
   resources:
     requests:
@@ -71,10 +81,16 @@ postgres:
 clusterDomain: cluster.local
 
 dsn:
-  # When set, this Secret's key supplies VIBEY_PG_URL and the built-in
-  # postgres block is ignored.
+  # When set, this Secret's keys supply the DSNs and the built-in postgres
+  # block is ignored.
   existingSecret: ""
+  # The application role's DSN: VIBEY_PG_URL for every workload.
   existingSecretKey: dsn
+  # The owner's DSN: VIBEY_PG_MIGRATE_URL, for the `migrate` init container
+  # only. Empty makes a single-DSN install, where the worker migrates as the one
+  # role and `vibey doctor` fails the ledger-guard check until the roles are
+  # split (docs/reference/configuration.md#database-roles).
+  existingSecretMigrateKey: migrate-dsn
 
 engineAuth:
   # Interactive subscription login does not exist in a cluster, so engines

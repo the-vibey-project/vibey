@@ -357,12 +357,12 @@ async def test_a_job_outside_the_named_project_is_unknown(
 
 
 async def test_a_job_in_a_phase_this_vibey_does_not_know_is_not_written(
-    migrated_pool: asyncpg.Pool, project_id: UUID
+    migrated_pool: asyncpg.Pool, project_id: UUID, owner_pool: asyncpg.Pool
 ) -> None:
     repo = PostgresJobRepository(migrated_pool)
     store = PostgresJobPriorityStore(migrated_pool)
     (job,) = await _enqueue(repo, project_id, "x")
-    async with migrated_pool.acquire() as conn:
+    async with owner_pool.acquire() as conn:
         await conn.execute("ALTER TYPE phase ADD VALUE 'triage'")
     async with migrated_pool.acquire() as conn:
         await conn.execute("UPDATE job SET phase = 'triage' WHERE id = $1", job)
@@ -664,7 +664,7 @@ async def test_a_bump_holding_its_locks_never_blocks_an_enqueue_naming_its_rows(
 
 
 async def test_a_deadlock_the_database_breaks_is_a_clean_refusal_not_a_traceback(
-    migrated_pool: asyncpg.Pool, project_id: UUID
+    migrated_pool: asyncpg.Pool, project_id: UUID, owner_pool: asyncpg.Pool
 ) -> None:
     repo = PostgresJobRepository(migrated_pool)
     store = PostgresJobPriorityStore(migrated_pool)
@@ -672,7 +672,7 @@ async def test_a_deadlock_the_database_breaks_is_a_clean_refusal_not_a_traceback
     target = (await repo.enqueue(_request(project_id, "target", depends_on=(dep,)))).id
     low, high = sorted((dep, target))
 
-    async with migrated_pool.acquire() as holder:
+    async with owner_pool.acquire() as holder:
         # The holder waits longest before checking, so the bump's backend is the one
         # that finds the cycle and is aborted.
         await holder.execute("SET deadlock_timeout = '30s'")
@@ -697,7 +697,7 @@ async def test_a_deadlock_the_database_breaks_is_a_clean_refusal_not_a_traceback
 
 
 async def test_the_queue_lists_running_work_then_waiting_work_in_claim_order(
-    migrated_pool: asyncpg.Pool, project_id: UUID
+    migrated_pool: asyncpg.Pool, project_id: UUID, owner_pool: asyncpg.Pool
 ) -> None:
     repo = PostgresJobRepository(migrated_pool)
     store = PostgresJobPriorityStore(migrated_pool)
@@ -706,7 +706,7 @@ async def test_the_queue_lists_running_work_then_waiting_work_in_claim_order(
     await repo.claim(project_id, owner="w", lease=LEASE)
     await _set_state(migrated_pool, done, "succeeded")
     await store.bump(target, context=_context(project_id), at=AT)
-    async with migrated_pool.acquire() as conn:
+    async with owner_pool.acquire() as conn:
         await conn.execute("ALTER TYPE job_state ADD VALUE 'quarantined'")
         await conn.execute("ALTER TYPE phase ADD VALUE 'triage'")
     stranger = (await repo.enqueue(_request(project_id, "stranger"))).id
@@ -727,11 +727,11 @@ async def test_the_queue_lists_running_work_then_waiting_work_in_claim_order(
 
 
 async def test_a_worker_is_never_handed_a_job_in_a_phase_it_does_not_know(
-    migrated_pool: asyncpg.Pool, project_id: UUID
+    migrated_pool: asyncpg.Pool, project_id: UUID, owner_pool: asyncpg.Pool
 ) -> None:
     repo = PostgresJobRepository(migrated_pool)
     (job,) = await _enqueue(repo, project_id, "x")
-    async with migrated_pool.acquire() as conn:
+    async with owner_pool.acquire() as conn:
         await conn.execute("ALTER TYPE phase ADD VALUE 'triage'")
     async with migrated_pool.acquire() as conn:
         await conn.execute("UPDATE job SET phase = 'triage' WHERE id = $1", job)

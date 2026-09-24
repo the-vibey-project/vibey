@@ -39,3 +39,14 @@ class MigratorInterface(Protocol):
         transaction -- and return the versions applied by this call (empty in
         `check_only` mode, which verifies checksums and applies nothing)."""
         ...
+
+    async def may_migrate(self, conn: OwnedConnection) -> bool:
+        """Whether `conn`'s role may apply migrations (a superuser, the owner of the
+        migration catalog, or a creator on a never-migrated database)."""
+        ...
+
+    async def pending(
+        self, conn: OwnedConnection, migrations: tuple[Migration, ...]
+    ) -> tuple[str, ...]:
+        """The versions not yet applied, read without DDL or the lock."""
+        ...

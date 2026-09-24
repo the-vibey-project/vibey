@@ -20,9 +20,16 @@ from urllib.parse import urlsplit
 import asyncpg
 
 from vibey.domain.engine import EngineDescriptor, EngineId
+from vibey.infrastructure.db.interfaces import (
+    LedgerGuardInspectorInterface,
+    LocalAuthProbeInterface,
+)
+from vibey.infrastructure.db.ledger_guard import LedgerGuardInspector
+from vibey.infrastructure.db.local_auth import AuthVerdict, LocalAuthProbe
 from vibey.infrastructure.db.migrator import discover_migrations
 from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCRIPTORS
 from vibey.infrastructure.interfaces.cluster_preflight_interface import (
+    DatabaseSecurityChecksInterface,
     EngineAuthCheckInterface,
 )
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, parse_postgres_server_version
@@ -33,6 +40,14 @@ class ClusterCheck:
     name: str
     ok: bool
     detail: str = ""
+    # Could not be determined either way. Not a failure, and never printed as a pass.
+    unknown: bool = False
+
+    @property
+    def mark(self) -> str:
+        if not self.ok:
+            return "FAIL"
+        return "UNKNOWN" if self.unknown else "PASS"
 
 
 # Subscription login is a TTY flow and does not exist in a cluster, so an
@@ -286,6 +301,34 @@ async def check_migrations(conn: asyncpg.Connection, migrations_dir: Path) -> Cl
     return ClusterCheck("migrations", True, f"{len(applied)} applied")
 
 
+class DatabaseSecurityChecks:
+    """The two database checks of ADR-0055, shared by `vibey doctor` and its --cluster
+    sweep: can the application's role rewrite the ledger, and can anyone connect as a
+    role that could without a password."""
+
+    def __init__(
+        self,
+        *,
+        inspector: LedgerGuardInspectorInterface | None = None,
+        probe: LocalAuthProbeInterface | None = None,
+    ) -> None:
+        self._inspector = inspector if inspector is not None else LedgerGuardInspector()
+        self._probe = probe if probe is not None else LocalAuthProbe()
+
+    async def run(self, conn: asyncpg.Connection, dsn: str) -> tuple[ClusterCheck, ...]:
+        guard = await self._inspector.inspect(conn)
+        finding = await self._probe.probe(conn, dsn)
+        return (
+            ClusterCheck("ledger-guard", guard.in_force, guard.describe()),
+            ClusterCheck(
+                "local-auth",
+                finding.verdict is not AuthVerdict.FAIL,
+                finding.detail,
+                unknown=finding.verdict is AuthVerdict.UNKNOWN,
+            ),
+        )
+
+
 class ClusterPreflight:
     """Every in-cluster wiring check, in the order ``vibey doctor --cluster`` prints them.
 
@@ -294,8 +337,16 @@ class ClusterPreflight:
     not carry that -- only the worker's command line does.
     """
 
-    def __init__(self, *, engine_auth: EngineAuthCheckInterface) -> None:
+    def __init__(
+        self,
+        *,
+        engine_auth: EngineAuthCheckInterface,
+        database_security: DatabaseSecurityChecksInterface | None = None,
+    ) -> None:
         self._engine_auth = engine_auth
+        self._database_security = (
+            database_security if database_security is not None else DatabaseSecurityChecks()
+        )
 
     async def run(
         self,
@@ -317,6 +368,7 @@ class ClusterPreflight:
         if conn is not None:
             try:
                 checks.append(await check_migrations(conn, migrations_dir))
+                checks.extend(await self._database_security.run(conn, dsn))
             finally:
                 await conn.close()
         return tuple(checks)

@@ -12,7 +12,10 @@ from qwenloop.infrastructure.interfaces.inference_interface import (
     ManagedServerInterface,
 )
 from qwenloop.infrastructure.interfaces.settings_interface import SettingsLoaderInterface
-from qwenloop.infrastructure.interfaces.tools_interface import SandboxToolsInterface
+from qwenloop.infrastructure.interfaces.tools_interface import (
+    SandboxToolsInterface,
+    ShellEnvironmentInterface,
+)
 
 __all__ = [
     "AttachedServerInterface",
@@ -21,6 +24,7 @@ __all__ = [
     "OpenAICompatServerInterface",
     "OpenAIServerInterface",
     "SandboxToolsInterface",
+    "ShellEnvironmentInterface",
     "SettingsLoaderInterface",
     "VllmServerInterface",
 ]

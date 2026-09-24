@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:  # the concrete result type lives beside its checks
     from vibey.infrastructure.cluster_preflight import ClusterCheck
@@ -25,6 +25,16 @@ class EngineAuthCheckInterface(Protocol):
 
     def check(self, environ: Mapping[str, str]) -> ClusterCheck:
         """One ``engine-auth`` verdict for this environment. Never raises."""
+        ...
+
+
+@runtime_checkable
+class DatabaseSecurityChecksInterface(Protocol):
+    """ADR-0055's checks: the ledger guard, and password-less access to the roles it
+    cannot guard against."""
+
+    async def run(self, conn: Any, dsn: str) -> tuple[ClusterCheck, ...]:
+        """``ledger-guard`` and ``local-auth``, as the role ``conn`` is connected as."""
         ...
 
 

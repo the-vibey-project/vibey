@@ -91,7 +91,14 @@ stringData:
   # it: KEDA's operator lives in its own namespace and dials Postgres
   # itself to evaluate the scaler query. A short name works for the worker
   # and fails for the autoscaler.
-  dsn: postgresql://vibey:vibey@vibey-vibey-postgres.vibey.svc.cluster.local:5432/vibey
+  #
+  # Two roles (ADR-0055). `dsn` is the application role's -- every worker,
+  # operator and the KEDA scaler connect as it, and it can read and append to
+  # the ledger and nothing more. `migrate-dsn` is the owner's, mounted only
+  # into the `migrate` init container, which creates the application role on
+  # first use.
+  dsn: postgresql://vibey_app:vibey_app@vibey-vibey-postgres.vibey.svc.cluster.local:5432/vibey
+  migrate-dsn: postgresql://vibey:vibey@vibey-vibey-postgres.vibey.svc.cluster.local:5432/vibey
   password: "vibey"
 
 ---
@@ -3314,7 +3321,8 @@ spec:
         runAsNonRoot: true
         runAsUser: 10001
       initContainers:
-        # The worker applies migrations itself at startup, but it cannot
+        # The `migrate` init container (or, on a single-DSN install, the
+        # worker itself) applies migrations at startup, but it cannot
         # do that against a database that is not accepting connections
         # yet. Waiting here keeps the failure mode "pod pending" rather
         # than "CrashLoopBackOff with a stack trace".
@@ -3328,6 +3336,27 @@ spec:
                 echo "waiting for postgres..."
                 sleep 2
               done
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: false
+        - name: migrate
+          image: "vibey:dev"
+          imagePullPolicy: Never
+          args: ["migrate"]
+          env:
+            - name: VIBEY_PG_MIGRATE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-dsn
+                  key: migrate-dsn
+            - name: VIBEY_PG_URL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-dsn
+                  key: dsn
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
