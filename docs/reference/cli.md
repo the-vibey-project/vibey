@@ -287,7 +287,7 @@ See the job queue in claim order, and move a job to the front of it
 | `queue bump JOB_ID` | `--project PROJECT_ID` | latest project | Run the job next: after whatever is running, ahead of every un-bumped waiting job, behind anything bumped before it. Its unfinished dependencies move forward with it, dependencies first. Prints every job moved with its new place and any already ahead. |
 | | `--source NAME` | unset | An automation naming itself (see below). |
 | | `--json` | off | Print the change as JSON. |
-| `queue unbump JOB_ID` | `--project`, `--source`, `--json` | as `bump` | Undo exactly what the job's bumps moved: the job, and the dependencies they pulled forward that no other bumped job needs. One another bump still needs stays, and passes to that bump. |
+| `queue unbump JOB_ID` | `--project`, `--source`, `--json` | as `bump` | Take the job out of the lane. The lane is always the jobs bumped by name plus their unfinished dependencies, so every pulled-in job no remaining named job needs leaves with it; the output and the ledger list exactly what was removed. Refused while another named job depends on this one. |
 
 A bump changes order only. It never interrupts the running job or touches its lease,
 never makes a job claimable before its dependencies succeed, and never shortens a
@@ -305,18 +305,18 @@ with the reason.
 
 **Every request is recorded** on the project ledger — `JobPriorityBumped`,
 `JobPriorityUnbumped` or `JobPriorityRefused` — whether it moved something, moved
-nothing (bumping a job already bumped, un-bumping one that is not: exit 0 with `nothing
-moved`), or was refused. The grant is checked before the job is looked up, so a refused
+nothing (bumping a job already bumped or already finished, un-bumping one that is not:
+exit 0 with `nothing moved` or `nothing to move`), or was refused. The grant is checked before the job is looked up, so a refused
 request is recorded whether or not the job exists. `vibey ledger search --kind
 JobPriorityRefused` lists the refusals. Refused with exit 3, and recorded:
 
 - a caller that is not the operator, or a source not declared or not run as the operator;
 - a `vibey.toml` or repository this process may not read, or one that is not valid TOML;
-- a job that does not exist in the project, has finished, or is in a state or phase this
-  vibey does not know;
+- a job that does not exist in the project, or is in a state or phase this
+  vibey does not know; an un-bump of a finished job;
 - a bump whose dependency can never finish (failed or cancelled), or a dependency ring —
   the message names it;
-- an un-bump of a job that a bumped job still depends on — the message names them;
+- an un-bump of a job that another named job still depends on — the message names them;
 - a request the database aborted to break a lock cycle (retry it).
 
 ## `vibey deploy`

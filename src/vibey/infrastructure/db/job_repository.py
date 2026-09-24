@@ -72,7 +72,7 @@ class JobRowMapper:
             created_at=row["created_at"],
             updated_at=row["updated_at"],
             bump_seq=row["bump_seq"],
-            bump_origin=row["bump_origin"],
+            bump_named=row["bump_named"],
         )
 
 

@@ -497,10 +497,10 @@ CREATE TABLE job (
     created_at        timestamptz NOT NULL DEFAULT now(),
     updated_at        timestamptz NOT NULL DEFAULT now(),
     bump_seq          bigint,                 -- 0014: place among bumped jobs; NULL = normal order
-    bump_origin       uuid,                   -- 0014: the job whose bump moved this one
+    bump_named        boolean NOT NULL DEFAULT false,  -- 0015: in the named set
     CONSTRAINT job_idem_uniq UNIQUE (project_id, idempotency_key),
     CONSTRAINT job_bump_seq_positive CHECK (bump_seq IS NULL OR bump_seq > 0),
-    CONSTRAINT job_bump_origin_with_seq CHECK ((bump_seq IS NULL) = (bump_origin IS NULL)),
+    CONSTRAINT job_bump_named_in_lane CHECK (NOT bump_named OR bump_seq IS NOT NULL),
     CONSTRAINT job_lease_consistent CHECK (
         (state = 'leased') = (lease_owner IS NOT NULL AND lease_expires_at IS NOT NULL)
     )
@@ -654,9 +654,10 @@ job in normal order; a bump draws it from the sequence `job_bump_seq`
 the order they were bumped, and the order among un-bumped jobs is exactly what it
 was. A sequence and not a timestamp: one bump moves a job and its dependencies in
 one transaction, where `now()` is one instant for all of them (sub-doctrine 10.g).
-`bump_origin` is the job whose bump moved this one — itself when bumped by name, the
-named job when pulled forward — which is how an un-bump undoes exactly what its bump
-moved.
+`bump_named` (0015, replacing 0014's `bump_origin`) marks the named set: the jobs bumped (or enqueued prioritised) by name and
+not since un-bumped. The lane is derived from it -- the named jobs plus all their
+unfinished transitive dependencies -- so an un-bump clears the target and every pulled job
+the remaining named jobs no longer need, and no orphan can remain.
 
 `PostgresJobPriorityStore` (`src/vibey/infrastructure/db/job_priority_repository.py`)
 is reached only through `QueuePriorityService`, which checks the grant first. Each
@@ -668,14 +669,13 @@ in `domain/queue_priority.py`, and the event appended on the same connection:
 
 ```sql
 -- BUMP (for each job the planner moves, dependencies before what needs them)
-UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_origin = $target, updated_at = now()
+UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_named = (id = $target),
+               updated_at = now()
 WHERE id = $1 RETURNING bump_seq;
 
--- UN-BUMP (the job, and what its own bumps pulled forward that nothing else needs)
-UPDATE job SET bump_seq = NULL, bump_origin = NULL, updated_at = now()
+-- UN-BUMP (the target, and every pulled job the remaining named jobs no longer need)
+UPDATE job SET bump_seq = NULL, bump_named = false, updated_at = now()
 WHERE id = ANY($1::uuid[]);
--- ...and what it pulled forward that another bump still needs passes to that bump
-UPDATE job SET bump_origin = $owner, updated_at = now() WHERE id = $1;
 ```
 
 A bump never touches `state`, `lease_owner`, `lease_expires_at` or `run_after`,
