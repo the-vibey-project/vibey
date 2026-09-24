@@ -32,6 +32,10 @@ WHAT storm.toml LOOKS LIKE
     [paths]
     repo = "~/git/vibey"        # the repository the storm publishes into
 
+    [priority]                  # storm-priority.py (ADR-0054)
+    log = "priority.log"        # the append-only priority log, relative to the storm root
+    sources = ["nightly-triage"]  # automation, besides the operator, that may push
+
 Every key is optional. An absent key is derived from the tree rather than guessed at, so a
 storm with no `storm.toml` at all still works on the machine it was set up on -- the file is
 how a DIFFERENT machine says where things are, which is the point of having it.
@@ -67,6 +71,44 @@ def declared(root: Path, section: str, key: str) -> str | None:
         raise SystemExit(f"{path} could not be read: {exc}") from exc
     value = found.get(section, {}).get(key)
     return str(value) if value is not None else None
+
+
+def declared_list(root: Path, section: str, key: str) -> tuple[str, ...] | None:
+    """A list of names from `storm.toml`, or None when the file or the key is absent.
+
+    `declared` stringifies, which turns a list into its own repr -- a value no caller could
+    use, and one that would never match a name. So a list has its own reader, and anything
+    that is not a list of non-empty strings refuses rather than being read as some other
+    list (10.f): a sources key spelled as one string must not quietly authorise nobody, or
+    its characters.
+    """
+    path = root / CONFIG
+    if not path.is_file():
+        return None
+    try:
+        found = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (tomllib.TOMLDecodeError, OSError) as exc:
+        raise SystemExit(f"{path} could not be read: {exc}") from exc
+    value = found.get(section, {}).get(key)
+    if value is None:
+        return None
+    if not isinstance(value, list) or not all(isinstance(v, str) and v for v in value):
+        raise SystemExit(f"{path}: [{section}] {key} must be a list of names, not {value!r}")
+    return tuple(value)
+
+
+def priority_log(root: Path) -> Path:
+    """The storm's append-only priority log (ADR-0054): declared, else beside the ledgers.
+
+    `[priority] log` in storm.toml. A relative path is read from the storm root, where
+    `queue.txt`, `integrated.txt` and `abandoned.txt` live, so the default and a declared
+    relative path both keep the log with the ledgers it orders.
+    """
+    declared_path = declared(root, "priority", "log")
+    if declared_path is None:
+        return root / "priority.log"
+    path = Path(declared_path).expanduser()
+    return path if path.is_absolute() else root / path
 
 
 def repo(root: Path) -> Path:

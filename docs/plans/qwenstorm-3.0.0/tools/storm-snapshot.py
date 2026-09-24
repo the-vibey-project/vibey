@@ -152,6 +152,13 @@ macOS has no `setsid`; `nohup ... & disown` is what survives the launching shell
 A lane with a `.qwenstorm/result.json` is treated as finished and awaiting review; delete that
 file to have it run again.
 
+To run a lane next, after the lane running now (ADR-0054; the operator or a declared source):
+
+```bash
+python3 tools/storm-priority.py push SLUG ISSUE --deps a,b   # or: bump SLUG / unbump SLUG
+python3 tools/storm-priority.py list                         # the order the storm will run
+```
+
 Health, without needing `ps` (which the sandbox refuses):
 
 ```bash
