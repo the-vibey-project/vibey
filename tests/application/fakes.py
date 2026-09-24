@@ -279,6 +279,14 @@ class FakeHumanGateRepository:
             if record.project_id == project_id and record.answered_at is None
         )
 
+    async def open_all(self) -> tuple[HumanGateRecord, ...]:
+        return tuple(
+            sorted(
+                (record for record in self.raised if record.answered_at is None),
+                key=lambda record: (record.raised_at, record.gate_id),
+            )
+        )
+
 
 def _with(job: JobRecord, **overrides: object) -> JobRecord:
     from dataclasses import replace

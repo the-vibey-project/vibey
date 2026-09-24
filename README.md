@@ -150,6 +150,7 @@ vibey worker --provider claudeloop \
   --engines claudeloop,agyloop -j 2          # live DESIGN provider; unattended build across the pool
 
 # When vibey parks for your input (design gates, review, budget grants):
+vibey gates                                  # each open gate, its prompt, and the command that answers it
 vibey answer <gate-id> --defaults            # accept the interview defaults, or:
 vibey answer <gate-id> --raw '{"max_dollars": 25}'   # raise a tripped budget cap
 vibey design accept <project-id> --no-visual
@@ -161,13 +162,11 @@ vibey answer <gate-id> --choice local_only   # decline deployment → DONE (loca
 `vibey new`. `vibey worker` defaults to `--provider scripted`, a test double —
 or to `--provider qwenloop` when a local engine is switched on; pass
 `--provider claudeloop` for a live, paid DESIGN interview and BUILD
-decomposition, or `--provider qwenloop` for the same on a local model. No
-command prints open gate ids yet; read them from the `human_gate` table:
-
-```bash
-psql "$VIBEY_PG_URL" -c "SELECT gate_id, kind, prompt FROM human_gate
-  WHERE project_id = '<project-id>' AND answered_at IS NULL ORDER BY raised_at"
-```
+decomposition, or `--provider qwenloop` for the same on a local model.
+`vibey gates` lists every open gate with its id, its prompt, and the exact
+`vibey answer` command that answers it (`vibey gates <project-id>` for one
+project); `vibey projects` lists your projects, their ids, and how many gates
+each is waiting on. Both take `--json`.
 
 The [greeter live-demo runbook](docs/guides/greeter-live-demo.md) walks a full
 paid run end to end, including the zero-touch contracts.
@@ -344,7 +343,7 @@ test — the no-loss handoff gate is deterministic code, not a model's opinion.
 | `VIBEY_PG_URL is not set` | No database connection string in the environment. | `export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey`, pointing at a database you own. |
 | `vibey doctor` reports `auth FAIL` | The engine's own vendor credentials aren't configured. | Run that engine's own login/auth flow, then re-run `vibey doctor --conformance`. |
 | `vibey worker` logs `no recorded conformance for ...` | `vibey doctor --conformance --record` has never passed for that engine on this project. | Run it before starting the worker; engine-driven jobs won't select an unrecorded engine. |
-| A project is parked and nothing progresses | A human gate (interview, review verdict, budget cap) is waiting. | `vibey status <project-id>` shows an `AWAITING_HUMAN` count in the queue depth, but no command prints the gate id or prompt yet. Read them with `psql "$VIBEY_PG_URL" -c "SELECT gate_id, kind, prompt FROM human_gate WHERE project_id = '<project-id>' AND answered_at IS NULL ORDER BY raised_at"`, then `vibey answer <gate-id> ...`. |
+| A project is parked and nothing progresses | A human gate (interview, review verdict, budget cap) is waiting. | `vibey gates` (or `vibey gates <project-id>`) prints each open gate's id, its prompt, and the exact `vibey answer` command that answers it. Run that command, putting your value where it shows `N` or `<json>`. |
 | Jobs sit `leased` after a worker crash | The lease hasn't expired yet, or nothing has reclaimed it. | `vibey recover --project <id>` (or `--all`) sets them back to `ready`. |
 | Budget cap trips mid-cycle | The project's `max_cycle_dollars` / `max_cycle_turns` cap (set by `vibey new --max-cycle-dollars` / `--max-cycle-turns`) was exceeded — by design. | `vibey answer <gate-id> --raw '{"max_dollars": 25}'` (or `{"max_turns": N}`) to grant more, or accept the park. |
 | Kubernetes-specific issues | — | See the [Kubernetes guide's Troubleshooting section](docs/guides/kubernetes.md#troubleshooting). |

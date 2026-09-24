@@ -1,16 +1,57 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-from uuid import UUID
+from datetime import UTC, datetime, timedelta
+from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
 
 from vibey.application.dto import HumanGateRequest, JobRecord
+from vibey.application.interfaces.gates import HumanGateRepository
 from vibey.application.worker import Outcome, Park, WorkerLoop
 from vibey.domain.job import JobState
 from vibey.infrastructure.db.human_gate_repository import PostgresHumanGateRepository
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
 
 from .test_job_repository import LEASE, _request
+
+RAISED = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
+
+
+async def _other_project(owner: asyncpg.Pool) -> UUID:
+    async with owner.acquire() as conn:
+        pid = await conn.fetchval(
+            "INSERT INTO project (name, repo_path, config) VALUES ($1, $2, '{}'::jsonb) "
+            "RETURNING id",
+            "other",
+            "/tmp/other",
+        )
+    return UUID(str(pid))
+
+
+async def _gate_row(
+    owner: asyncpg.Pool,
+    project_id: UUID,
+    *,
+    gate_id: UUID,
+    raised_at: datetime,
+    answered: bool = False,
+) -> None:
+    """A gate with the id and raise time the test names, written as the owner: setting
+    `raised_at` is fixture work, not something the application does."""
+    async with owner.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO human_gate (gate_id, project_id, kind, prompt, raised_at,
+                                    answer, answered_at, answered_by)
+            VALUES ($1, $2, 'approval', 'proceed?', $3, $4::jsonb, $5, $6)
+            """,
+            gate_id,
+            project_id,
+            raised_at,
+            '{"verdict": "accept"}' if answered else None,
+            raised_at if answered else None,
+            "adam" if answered else None,
+        )
 
 
 class _ParkingHandler:
@@ -99,3 +140,67 @@ async def test_parked_job_releases_lease_immediately_and_worker_is_free(
     next_claim = await jobs.claim(project_id, owner="w1", lease=LEASE)
     assert next_claim is not None
     assert next_claim.id == other.id
+
+
+async def test_the_repository_satisfies_its_port(migrated_pool: asyncpg.Pool) -> None:
+    assert isinstance(PostgresHumanGateRepository(migrated_pool), HumanGateRepository)
+
+
+async def test_open_all_is_empty_when_nothing_waits(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    assert await PostgresHumanGateRepository(migrated_pool).open_all() == ()
+
+
+async def test_open_all_lists_every_projects_unanswered_gates_oldest_first(
+    owner_pool: asyncpg.Pool, migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    other = await _other_project(owner_pool)
+    newest, oldest, middle, answered = uuid4(), uuid4(), uuid4(), uuid4()
+    await _gate_row(owner_pool, project_id, gate_id=newest, raised_at=RAISED + timedelta(minutes=2))
+    await _gate_row(owner_pool, other, gate_id=oldest, raised_at=RAISED)
+    await _gate_row(owner_pool, project_id, gate_id=middle, raised_at=RAISED + timedelta(minutes=1))
+    # The oldest of all, but answered: it waits on no one.
+    await _gate_row(
+        owner_pool, other, gate_id=answered, raised_at=RAISED - timedelta(minutes=1), answered=True
+    )
+
+    listed = await PostgresHumanGateRepository(migrated_pool).open_all()
+
+    assert [gate.gate_id for gate in listed] == [oldest, middle, newest]
+    assert [gate.project_id for gate in listed] == [other, project_id, project_id]
+    assert all(gate.answered_at is None and gate.answer is None for gate in listed)
+
+
+async def test_open_all_breaks_a_raised_at_tie_by_gate_id(
+    owner_pool: asyncpg.Pool, migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    low, high = UUID(int=1), UUID(int=2)
+    await _gate_row(owner_pool, project_id, gate_id=high, raised_at=RAISED)
+    await _gate_row(owner_pool, project_id, gate_id=low, raised_at=RAISED)
+
+    listed = await PostgresHumanGateRepository(migrated_pool).open_all()
+
+    assert [gate.gate_id for gate in listed] == [low, high]
+
+
+async def test_open_all_reads_every_field_a_raised_gate_carries(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    jobs = PostgresJobRepository(migrated_pool)
+    gates = PostgresHumanGateRepository(migrated_pool)
+    job = await jobs.enqueue(_request(project_id))
+    raised = await gates.raise_gate(
+        project_id,
+        job.id,
+        HumanGateRequest(
+            kind="choice",
+            prompt="Deploy?",
+            options=("local_only", "deploy"),
+            default_answer="local_only",
+            timeout_at=RAISED + timedelta(days=7),
+        ),
+    )
+
+    assert await gates.open_all() == (raised,)
+    assert await gates.open_all() == await gates.open_for_project(project_id)

@@ -34,8 +34,10 @@ from vibey.bootstrap import (
     build_visual_worker,
 )
 from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.gates import GATES
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
+from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
@@ -248,6 +250,40 @@ def new_project(
     with guard():
         project_id, job_id = asyncio.run(create())
     typer.echo(f"project {project_id}\ndesign job {job_id}")
+
+
+@app.command("projects")
+def list_projects(
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print a JSON array instead: one object per project, newest first.",
+        ),
+    ] = False,
+) -> None:
+    """List every project, newest first: its id, phase, cycle, and open gates."""
+    with guard():
+        asyncio.run(PROJECTS.run(as_json=as_json))
+
+
+@app.command("gates")
+def list_gates(
+    project_id: Annotated[
+        UUID | None,
+        typer.Argument(help="Only this project's gates; defaults to every project's."),
+    ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help='Print JSON instead: {"gates": [...]}, oldest first.',
+        ),
+    ] = False,
+) -> None:
+    """List open gates, oldest first, each with the `vibey answer` command that answers it."""
+    with guard():
+        asyncio.run(GATES.run(project_id, as_json=as_json))
 
 
 @design_app.callback(invoke_without_command=True)

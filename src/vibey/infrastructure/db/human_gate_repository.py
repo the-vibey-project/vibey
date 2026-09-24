@@ -103,6 +103,17 @@ class PostgresHumanGateRepository:
             )
             return tuple(_row_to_record(r) for r in rows)
 
+    async def open_all(self) -> tuple[HumanGateRecord, ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT * FROM human_gate
+                WHERE answered_at IS NULL
+                ORDER BY raised_at ASC, gate_id ASC
+                """
+            )
+            return tuple(_row_to_record(r) for r in rows)
+
     async def latest_for_job(
         self, job_id: UUID, *, include_queue_gates: bool = False
     ) -> HumanGateRecord | None:

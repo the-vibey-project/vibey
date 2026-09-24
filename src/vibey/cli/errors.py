@@ -36,12 +36,11 @@ from vibey.domain.errors import (
 EXIT_USAGE = 2
 EXIT_BLOCKED = 3
 
-# No command lists open gates today, so the honest instruction is the query that
-# does. Kept in one place because three hints end with it.
+# How an operator finds the gate a hint tells them to answer. Kept in one place
+# because three hints end with it.
 _FINDING_A_GATE = (
-    "No command lists open gates yet; find the id with:\n"
-    "  SELECT gate_id, kind, prompt FROM human_gate\n"
-    "  WHERE answered_at IS NULL ORDER BY raised_at;"
+    "`vibey gates` lists every open gate with its id, its prompt, and the exact\n"
+    "`vibey answer` command that answers it."
 )
 
 # What to suggest next, per error type. Absent means "no honest suggestion" --
