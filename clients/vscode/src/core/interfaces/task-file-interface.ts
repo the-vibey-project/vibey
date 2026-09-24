@@ -10,6 +10,11 @@ export interface TaskMetadata {
   readonly maxTurns?: number;
   /** An effort level, or `auto` to climb the ladder. */
   readonly effort?: EffortSetting;
+  /**
+   * What the task may change: repository-relative globs. Its commit holds only matching
+   * changes; any other change is left uncommitted and reported as out of scope.
+   */
+  readonly paths?: readonly string[];
 }
 
 export interface TaskFile {

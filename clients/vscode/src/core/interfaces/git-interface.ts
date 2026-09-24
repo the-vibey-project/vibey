@@ -12,6 +12,8 @@ export interface CommitOutcome {
   readonly committed: boolean;
   /** Why the commit failed (a hook refused it, no identity, ...), in git's own words. */
   readonly error?: string;
+  /** Changed paths the task's scope does not cover: left in its copy, not committed. */
+  readonly outOfScope?: readonly string[];
 }
 
 export type MergeOutcome =
@@ -35,10 +37,11 @@ export interface GitClientInterface {
   deleteBranch(repository: string, branch: string): Promise<void>;
   branchExists(repository: string, branch: string): Promise<boolean>;
   /**
-   * Stage everything but the directories in `exclude` (engines' run records, attachments),
-   * and commit it if anything changed.
+   * Stage everything .gitignore allows except the directories in `exclude` (engines' run
+   * records, attachments) and, when `paths` is given, anything its globs do not cover; commit
+   * it if anything changed.
    */
-  commitAll(worktree: string, message: string, exclude?: readonly string[]): Promise<CommitOutcome>;
+  commitAll(worktree: string, message: string, exclude?: readonly string[], paths?: readonly string[]): Promise<CommitOutcome>;
   diffStat(repository: string, from: string, to: string): Promise<string>;
   changedFiles(repository: string, from: string, to: string): Promise<readonly ChangedFile[]>;
   diff(repository: string, from: string, to: string): Promise<string>;

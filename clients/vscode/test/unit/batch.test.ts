@@ -222,7 +222,7 @@ describe('BatchRunner', () => {
     const s = setup([ends({ outcome: 'completed', head_sha: 'c'.repeat(40) }), ends({ outcome: 'completed-no-change' }, { branch: undefined })]);
     const readme = s.task(
       '01-readme.md',
-      '---\ntitle: "docs(readme): a short front page: for beginners"\ncommit_message: "docs(readme): rewrite the front page"\ncontext_window: 65536\nmax_turns: 60\neffort: high\n---\nRewrite the README.\n',
+      '---\ntitle: "docs(readme): a short front page: for beginners"\ncommit_message: "docs(readme): rewrite the front page"\ncontext_window: 65536\nmax_turns: 60\neffort: high\npaths: ["README.md"]\n---\nRewrite the README.\n',
     );
     const install = s.task('02-install.md', '# Install guide\n\nWrite it.\n');
     fs.writeFileSync(path.join(s.folder, 'notes.txt'), 'not a task');
@@ -259,6 +259,7 @@ describe('BatchRunner', () => {
       baseSha: BASE,
       contextWindow: 65536,
       maxTurns: 60,
+      paths: ['README.md'],
       loop: 'sovereignloop',
       effort: 'HIGH',
       baseEffort: 'LOW',
@@ -270,6 +271,7 @@ describe('BatchRunner', () => {
     });
     expect(s.requests[1]).toMatchObject({ title: 'Install guide', contextWindow: 32768, effort: 'auto', commitMessage: 'docs: 02-install' });
     expect(s.requests[1]).not.toHaveProperty('maxTurns');
+    expect(s.requests[1]).not.toHaveProperty('paths');
     const lines = s.journal();
     expect(lines.map((line) => `${String(line.type)} ${String(line.file ?? '')}`.trim())).toEqual([
       'batch.opened',
@@ -302,11 +304,13 @@ describe('BatchRunner', () => {
       base_sha: BASE,
       context_window: 65536,
       max_turns: 60,
+      paths: ['README.md'],
       at: '2026-09-24T12:00:00.000Z',
     });
     expect(lines[2]).toMatchObject({ file: '01-readme.md', sha256: readme.sha256, run_id: 'run-1', outcome: 'completed', head_sha: 'c'.repeat(40) });
     expect(lines[3]).not.toHaveProperty('branch');
     expect(lines[3]).not.toHaveProperty('max_turns');
+    expect(lines[3]).not.toHaveProperty('paths');
     expect(s.runs.map((run) => run.listening)).toEqual([0, 0]);
   });
 
@@ -401,7 +405,7 @@ describe('BatchRunner', () => {
     });
     const only = s.task('01.md', 'one');
     new JsonlJournal(s.options.journal).append({ type: 'batch.opened', batch_id: 'b', base_ref: 'HEAD', base_sha: BASE });
-    new JsonlJournal(s.options.journal).append({ type: 'task.finished', file: only.name, sha256: only.sha256, outcome: 'completed-commit-refused' });
+    new JsonlJournal(s.options.journal).append({ type: 'task.finished', file: only.name, sha256: only.sha256, outcome: 'completed-out-of-scope' });
     expect(await s.runner.run(s.options)).toMatchObject({ total: 1, skipped: 1, ran: 0, remaining: 0 });
     expect(checked).toBe(0);
   });

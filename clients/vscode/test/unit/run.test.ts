@@ -159,8 +159,8 @@ class FakeGit implements GitClientInterface {
     return false;
   }
 
-  async commitAll(worktree: string, message: string, exclude?: readonly string[]): Promise<CommitOutcome> {
-    this.calls.push(['commitAll', worktree, message, exclude]);
+  async commitAll(worktree: string, message: string, exclude?: readonly string[], paths?: readonly string[]): Promise<CommitOutcome> {
+    this.calls.push(paths === undefined ? ['commitAll', worktree, message, exclude] : ['commitAll', worktree, message, exclude, paths]);
     return this.commitOutcome;
   }
 
@@ -250,6 +250,10 @@ class ScriptedBudgets implements BudgetGuardInterface {
 
   exhausted(): BudgetBreach | undefined {
     return this.used;
+  }
+
+  usage(): undefined {
+    return undefined;
   }
 }
 
@@ -553,6 +557,36 @@ describe('TaskRun', () => {
       child.exit({ code: 0, signal: null });
     };
     expect(await refused.run.execute()).toMatchObject({ outcome: 'completed-commit-refused', commit_error: 'trailing-whitespace....Failed' });
+  });
+
+  it("commits only the task's paths, and calls the task completed-out-of-scope when it changed more", async () => {
+    const h = harness({ request: { paths: ['docs/guides/install.md'] } });
+    h.git.commitOutcome = { committed: true, outOfScope: ['pyproject.toml', 'uv.lock'] };
+    h.processes.onSpawn = (child) => {
+      write(child, ...DONE);
+      child.exit({ code: 0, signal: null });
+    };
+    const record = await h.run.execute();
+    expect(h.git.named('commitAll')[0]?.[4]).toEqual(['docs/guides/install.md']);
+    expect(record).toMatchObject({ outcome: 'completed-out-of-scope', paths: ['docs/guides/install.md'], out_of_scope: ['pyproject.toml', 'uv.lock'] });
+    expect(h.notices()).toContain("Left uncommitted, outside this task's paths: pyproject.toml, uv.lock. Review them in its copy.");
+
+    const refused = harness({ request: { paths: ['docs/'] } });
+    refused.git.commitOutcome = { committed: false, error: 'hook said no', outOfScope: ['uv.lock'] };
+    refused.processes.onSpawn = (child) => {
+      write(child, ...DONE);
+      child.exit({ code: 0, signal: null });
+    };
+    expect(await refused.run.execute()).toMatchObject({ outcome: 'completed-commit-refused', commit_error: 'hook said no', out_of_scope: ['uv.lock'] });
+
+    const inScope = harness({ request: { paths: ['docs/'] } });
+    inScope.processes.onSpawn = (child) => {
+      write(child, ...DONE);
+      child.exit({ code: 0, signal: null });
+    };
+    const clean = await inScope.run.execute();
+    expect(clean).toMatchObject({ outcome: 'completed', paths: ['docs/'] });
+    expect(clean).not.toHaveProperty('out_of_scope');
   });
 
   it('runs in place on the checked-out branch when asked, with a warning and no commit', async () => {
