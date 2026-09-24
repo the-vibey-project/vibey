@@ -29,8 +29,10 @@ it answered, so a diff-only verdict can never be read as a whole one.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import pathlib
+import secrets
 import sys
 import urllib.error
 import urllib.parse
@@ -140,8 +142,8 @@ DOCUMENT_FRAME = '<document path="{name}">\n{text}\n</document>'
 DOCUMENTS_OPEN = "\n\n<documents>\n"
 DOCUMENTS_CLOSE = "\n</documents>"
 DOCUMENTS_CUT_NOTE = (
-    "\n\n[NOTE: the documents were truncated to fit the model's window. "
-    "Judge only what is shown, and say so in your summary.]"
+    "\n\n[NOTE: to fit the model's window, the documents were not all shown in full ({what})."
+    " Judge only what is shown, and say so in your summary.]"
 )
 
 # Said in a whole verdict's summary: which review this is, and what it saw.
@@ -149,20 +151,51 @@ WHOLE_REVIEW_NOTICE = (
     "No paid review is declared (8.b), so this is the whole automated review. The"
     " documentation-contract judgments were made from {evidence}, not a repository-wide audit."
 )
+# Said instead when a declared document was cut or left out. The documentation judgments
+# were then made against less than the repository declared, so the verdict answers the diff
+# half alone: the composer refuses it as a whole review and the gate asks a human.
+WHOLE_REVIEW_PARTIAL = (
+    " Because a declared document was cut or left out to fit the model's window, these"
+    " documentation-contract judgments are not a whole review: this verdict answers the diff"
+    " half alone, and the documentation contract needs a human."
+)
+
+# The two check codes every local request carries (`SizedChat`), and the field the model
+# echoes them in. The first opens the system prompt and the second closes the user prompt,
+# after the diff, so a prompt cut at either end cannot echo both. Never sent as a `const`
+# or an `enum` in the schema: constrained decoding would then write the codes whether the
+# model read them or not.
+CANARY_FIELD = "integrity_check"
+CANARY_HEAD = (
+    "Integrity check: this request carries two check codes. The first is {code}. Write the"
+    " first check code, a space, and then the second check code -- given at the very end of"
+    " the user message -- in the `{field}` field, exactly as written.\n\n"
+)
+CANARY_TAIL = "\n\n[Integrity check: the second check code is {code}.]"
+
+
+class ReviewRefused(Exception):
+    """A request that cannot fit, or a reply that cannot honestly carry a verdict.
+
+    `str()` is the reason, in words the gate publishes after "the sovereign lane produced
+    no verdict:" -- so it names what happened (the window, the reserve, what the model read,
+    why it stopped) rather than the parse error it would otherwise surface as.
+    """
 
 
 def build_prompt(diff: str, max_chars: int) -> str:
-    truncated = False
+    """The diff half's prompt: the whole diff, or `ReviewRefused`. Never a cut one.
+
+    A diff-only verdict's `pass` is carried as the verdict on the diff (the composer's
+    `_split`), so a verdict on the first `max_chars` of a diff would pass whatever came after
+    it unread. A diff over the declared limit is refused and the gate asks a human.
+    """
     if len(diff) > max_chars:
-        diff = diff[:max_chars]
-        truncated = True
-    note = (
-        "\n\n[NOTE: the diff was truncated because it exceeded the size limit. "
-        "Review only what is shown, and say so in your summary.]"
-        if truncated
-        else ""
-    )
-    return f"Review this pull request diff.\n\n<diff>\n{diff}\n</diff>{note}"
+        raise ReviewRefused(
+            f"the diff ({len(diff)} characters) is longer than max_diff_chars ({max_chars}):"
+            " a verdict on part of it would pass the rest unread, so it is not reviewed"
+        )
+    return f"Review this pull request diff.\n\n<diff>\n{diff}\n</diff>"
 
 
 def _post(request: urllib.request.Request, timeout: int):
@@ -201,7 +234,7 @@ class WholeReview:
             WHOLE_REVIEW_INTRO + REVIEW_RULES + WHOLE_REVIEW_CONTRACT + items + WHOLE_REVIEW_VERDICT
         )
 
-    def documents(self, directory: pathlib.Path) -> dict[str, str]:
+    def documents(self, directory: pathlib.Path, order: Sequence[str] = ()) -> dict[str, str]:
         if not directory.is_dir():
             return {}
         found: dict[str, str] = {}
@@ -212,17 +245,34 @@ class WholeReview:
                 continue
             name = path.relative_to(directory).as_posix()
             found[name] = path.read_text(encoding="utf-8", errors="replace")
-        return found
+        # In the order the repository declared them, not the order the directory lists
+        # them: `trim` gives the last one way first, so the order is the priority.
+        rank = {name: index for index, name in enumerate(order)}
+        return dict(sorted(found.items(), key=lambda item: (rank.get(item[0], len(rank)), item[0])))
 
-    def user_prompt(self, diff: str, documents: Mapping[str, str], *, cut: bool = False) -> str:
+    def cut_note(self, cut: Sequence[str], dropped: Sequence[str]) -> str:
+        said = [f"cut short: {', '.join(cut)}"] if cut else []
+        said += [f"left out entirely: {', '.join(dropped)}"] if dropped else []
+        return DOCUMENTS_CUT_NOTE.format(what="; ".join(said)) if said else ""
+
+    def user_prompt(
+        self,
+        diff: str,
+        documents: Mapping[str, str],
+        *,
+        cut: Sequence[str] = (),
+        dropped: Sequence[str] = (),
+    ) -> str:
         # The diff is never cut: a whole review gates the merge alone, so it is shown the
-        # whole diff or refused (`fit`). Only the optional documents give way.
+        # whole diff or refused (`fit`). Only the optional documents give way, and the model
+        # is told which -- including when every one of them was left out.
         prompt = f"Review this pull request diff.\n\n<diff>\n{diff}\n</diff>"
-        if not documents:
-            return prompt
-        parts = [DOCUMENT_FRAME.format(name=name, text=text) for name, text in documents.items()]
-        note = DOCUMENTS_CUT_NOTE if cut else ""
-        return f"{prompt}{DOCUMENTS_OPEN}" + "\n".join(parts) + f"{DOCUMENTS_CLOSE}{note}"
+        if documents:
+            parts = [
+                DOCUMENT_FRAME.format(name=name, text=text) for name, text in documents.items()
+            ]
+            prompt += DOCUMENTS_OPEN + "\n".join(parts) + DOCUMENTS_CLOSE
+        return prompt + self.cut_note(cut, dropped)
 
     def trim(
         self, documents: Mapping[str, str], budget: int
@@ -250,13 +300,16 @@ class WholeReview:
         max_chars: int,
         sizer: ContextSizerInterface,
     ) -> tuple[dict[str, str], list[str], list[str]]:
+        # The note is counted at its longest -- every document named as both cut and left
+        # out -- because which of them it names is only known after trimming.
+        names = list(documents)
         fixed = (
             len(self.system_prompt())
             + len(json.dumps(self.schema()))
             + len(self.user_prompt(diff, {}))
             + len(DOCUMENTS_OPEN)
             + len(DOCUMENTS_CLOSE)
-            + len(DOCUMENTS_CUT_NOTE)
+            + len(self.cut_note(names, names))
         )
         return self.trim(documents, min(max_chars, sizer.room_chars(fixed)))
 
@@ -285,11 +338,20 @@ class WholeReview:
         else:
             evidence = "this diff alone: none of the configured documents existed at this head"
         notice = WHOLE_REVIEW_NOTICE.format(evidence=evidence)
+        partial = bool(cut or dropped)
+        if partial:
+            notice += WHOLE_REVIEW_PARTIAL
         verdict["summary"] = (
             f"[SOVEREIGN LANE — {model} — whole review] {verdict.get('summary', '').strip()} "
             f"{notice}"
         ).strip()
-        verdict[self.contract.scope_field] = [DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT]
+        # Judged against less than the repository declared, the documentation half is not
+        # an answer the gate may rely on: the verdict claims the diff half alone, and the
+        # composer then refuses to read it as the whole review. The model's judgments stay
+        # as it gave them -- nothing is written over them either way.
+        verdict[self.contract.scope_field] = (
+            [DIFF_GROUNDABLE] if partial else [DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT]
+        )
         return verdict
 
 
@@ -297,27 +359,64 @@ class WholeReview:
 WHOLE_REVIEW: WholeReviewInterface = WholeReview()
 
 
-class ReviewRefused(Exception):
-    """A request that cannot fit, or a reply that cannot honestly carry a verdict.
-
-    `str()` is the reason, in words the gate publishes after "the sovereign lane produced
-    no verdict:" -- so it names what happened (the window, the reserve, what the model read,
-    why it stopped) rather than the parse error it would otherwise surface as.
-    """
-
-
 @dataclass(frozen=True)
 class SizedChat:
-    """One `/api/chat` request that is sized, sent and read so a verdict is never partial.
+    """One `/api/chat` request sized, sent and read so a verdict is never about a partial prompt.
 
-    Two things went wrong on #1090 and both are closed here. The window was sized from the
-    user prompt alone and capped below the prompt, and Ollama does not refuse such a
-    request: it drops the excess and the model answers about the part it read. So `ask`
-    sizes from everything sent, refuses what does not fit rather than sending it, and
-    `answer` then checks the model's OWN count of what it read -- the estimate is only an
-    estimate. And a model that ran out of room mid-answer surfaced as a JSON parse error;
-    `answer` reads `done_reason` first and says what actually happened.
+    #1090 surfaced as "Unterminated string": the model read its whole 31,765-token prompt
+    and ran out of room to finish its answer in the 1,004 tokens a 32,768 window left
+    (`done_reason=length`). `answer` reads `done_reason` first and says so.
+
+    The investigation found a worse failure the same code allowed. Left to its defaults,
+    Ollama does not refuse a prompt over `num_ctx`: its context shift cuts it to about half
+    the window and the model answers about the part it kept. Reproduced on this host (Ollama
+    0.34.2, gpt-oss:20b, `num_ctx` 32768): a 36,798-token request came back as 16,386 prompt
+    tokens, no error. Three guards, each covering what the one before cannot:
+
+    - `ask` sizes from everything sent and refuses what the estimate says will not fit.
+      The estimate is optimistic for dense text (a lockfile, hex, base64, CJK, emoji).
+    - `seal` sends `truncate: false` and `shift: false`, so Ollama 0.34 refuses an
+      oversized prompt with HTTP 400 instead of cutting it; `ask` surfaces that refusal.
+    - For a runner that ignores those fields, `seal` puts a random check code at the start
+      of the system prompt and another at the end of the user prompt, and `answer` refuses
+      a reply whose schema field does not echo both. On this host the cut prompt above
+      echoed the first code and not the second. A cut that kept both ends and dropped only
+      the middle would pass this last guard; the second is the one that stops it.
+
+    `answer` also keeps the upper-bound check on `prompt_eval_count`: a count past what the
+    request was sized for means the reasoning reserve was eaten into.
     """
+
+    canary_field: str = CANARY_FIELD
+    code_bytes: int = 8
+
+    def seal(self, payload: Mapping[str, Any], head: str, tail: str) -> dict[str, Any]:
+        system, user = (message["content"] for message in payload["messages"])
+        schema: Mapping[str, Any] = payload["format"]
+        properties = dict(schema.get("properties", {}))
+        if self.canary_field in properties:
+            raise ValueError(f"the schema already has a field named {self.canary_field!r}")
+        return {
+            **payload,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": CANARY_HEAD.format(code=head, field=self.canary_field) + system,
+                },
+                {"role": "user", "content": user + CANARY_TAIL.format(code=tail)},
+            ],
+            # First, so the model writes the codes before anything else; a plain string --
+            # never a const or an enum, which constrained decoding would fill in unread.
+            "format": {
+                **schema,
+                "properties": {self.canary_field: {"type": "string"}, **properties},
+                "required": [self.canary_field, *schema.get("required", [])],
+            },
+            "options": dict(payload.get("options", {})),
+            # Refuse an oversized prompt rather than cut it (Ollama 0.34+).
+            "truncate": False,
+            "shift": False,
+        }
 
     def ask(
         self,
@@ -329,8 +428,10 @@ class SizedChat:
         what: str,
         shown_chars: int,
     ) -> dict[str, Any]:
-        system, user = (message["content"] for message in payload["messages"])
-        total = len(system) + len(user) + len(json.dumps(payload["format"]))
+        head, tail = secrets.token_hex(self.code_bytes), secrets.token_hex(self.code_bytes)
+        sealed = self.seal(payload, head, tail)
+        system, user = (message["content"] for message in sealed["messages"])
+        total = len(system) + len(user) + len(json.dumps(sealed["format"]))
         if not sizer.fits(total):
             instructions = sizer.tokens(total - shown_chars)
             raise ReviewRefused(
@@ -339,27 +440,68 @@ class SizedChat:
                 f" instructions and the {sizer.reserve}-token reasoning reserve are counted"
             )
         num_ctx = sizer.num_ctx(total)
-        payload["options"]["num_ctx"] = num_ctx
+        sealed["options"]["num_ctx"] = num_ctx
         request = urllib.request.Request(
             f"{base_url.rstrip('/')}/api/chat",
-            data=json.dumps(payload).encode(),
+            data=json.dumps(sealed).encode(),
             headers={"Content-Type": "application/json"},
         )
-        with _post(request, timeout) as response:
-            body = json.loads(response.read())
-        return self.answer(body, num_ctx=num_ctx, reserve=sizer.reserve)
+        try:
+            with _post(request, timeout) as response:
+                body = json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            # Caught here, before anything reads it as a `URLError` (its base class): the
+            # server answered, so it is not "unreachable". With truncation off, a prompt
+            # over the window is exactly this -- a 400 saying so.
+            raise ReviewRefused(
+                f"the model server refused the request (HTTP {error.code}): {self.said(error)}"
+            ) from error
+        return self.answer(body, num_ctx=num_ctx, reserve=sizer.reserve, codes=(head, tail))
 
-    def answer(self, body: Mapping[str, Any], *, num_ctx: int, reserve: int) -> dict[str, Any]:
+    def said(self, error: urllib.error.HTTPError) -> str:
+        """The server's own reason for refusing, unwrapped.
+
+        Ollama nests its runner's JSON error inside a string --
+        `{"error": "{\\"error\\": {\\"message\\": ...}}"}` -- so each layer is opened
+        while it still parses, and the innermost message is what is said.
+        """
+        try:
+            message = error.read().decode("utf-8", errors="replace").strip()
+        except OSError:
+            message = ""
+        for _ in range(3):
+            try:
+                parsed = json.loads(message)
+            except ValueError:
+                break
+            inner = parsed.get("error", parsed.get("message")) if isinstance(parsed, dict) else None
+            if isinstance(inner, dict):
+                inner = inner.get("message")
+            if not isinstance(inner, str):
+                break
+            message = inner.strip()
+        return (message or str(error.reason) or "no reason given")[:500]
+
+    def answer(
+        self,
+        body: Mapping[str, Any],
+        *,
+        num_ctx: int,
+        reserve: int,
+        codes: Sequence[str],
+    ) -> dict[str, Any]:
         read = body.get("prompt_eval_count")
         if not isinstance(read, int):
             raise ReviewRefused(
                 "the model did not report prompt_eval_count, so a truncated prompt cannot be"
                 " ruled out"
             )
-        # The request was sized so the prompt fits in `num_ctx - reserve` by a pessimistic
-        # estimate. A model that read MORE than that has eaten into the reserve -- and a
-        # prompt Ollama cut to fit reads as the whole window, which is exactly how #1090
-        # looked (31,765 of 32,768).
+        # The request was sized so the prompt fits in `num_ctx - reserve` by an estimate. A
+        # model that read MORE than that has eaten into the room its reasoning and answer
+        # needed, and the estimate was wrong by more than the reserve. This check can NOT see
+        # a prompt Ollama cut to fit: that reads as about half the window (16,386 of 32,768
+        # on this host), well under this bound. `seal`'s truncate/shift and check codes are
+        # what catch a cut; this catches an estimate that let too much through.
         if read > num_ctx - reserve:
             raise ReviewRefused(
                 f"the model read {read} prompt tokens of a {num_ctx}-token window, more than"
@@ -397,6 +539,14 @@ class SizedChat:
         # that is not actually Ollama cannot hand back something that is not a verdict.
         if not isinstance(verdict, dict):
             raise TypeError(f"expected a JSON object, got {type(verdict).__name__}")
+        # Taken out whatever it says: it is this request's evidence, not part of the verdict.
+        echoed = verdict.pop(self.canary_field, None)
+        if not codes or not isinstance(echoed, str) or any(code not in echoed for code in codes):
+            raise ReviewRefused(
+                "the model did not echo both of the request's check codes (it wrote"
+                f" {str(echoed)[:80]!r}), so it may not have read the whole prompt: a prompt"
+                " cut to fit the window loses the code at one end"
+            )
         return verdict
 
 
@@ -414,23 +564,25 @@ def call_ollama(
     sizer: ContextSizerInterface | None = None,
     whole: WholeReviewInterface | None = None,
     documents: Mapping[str, str] | None = None,
-    cut: bool = False,
+    cut: Sequence[str] = (),
+    dropped: Sequence[str] = (),
     think: str = "",
 ) -> dict:
     """One review request. `sizer` sizes it and says whether it fits; the default is
     `vibey_gh.fit`'s `ContextSizer`, the same rule the triage call uses. `whole` asks the
     whole review instead of the diff half, judged against `documents` (already trimmed to
-    fit; `cut` says some were). `think` is Ollama's reasoning effort, sent only when set.
-    Raises `ReviewRefused` for a request that does not fit or a reply that is not a whole
-    answer to all of it."""
+    fit; `cut` and `dropped` name the ones that were cut short or left out). `think` is
+    Ollama's reasoning effort, sent only when set. Raises `ReviewRefused` for a diff past
+    `max_chars` on the diff half, a request that does not fit, or a reply that is not a
+    whole answer to all of it."""
     schema: Mapping[str, object]
     if whole is None:
         payload_prompt = build_prompt(diff, max_chars)
-        system, schema, shown = SYSTEM_PROMPT, REVIEW_SCHEMA, min(len(diff), max_chars)
+        system, schema = SYSTEM_PROMPT, REVIEW_SCHEMA
     else:
         system = whole.system_prompt()
-        payload_prompt = whole.user_prompt(diff, documents or {}, cut=cut)
-        schema, shown = whole.schema(), len(diff)
+        payload_prompt = whole.user_prompt(diff, documents or {}, cut=cut, dropped=dropped)
+        schema = whole.schema()
     payload: dict[str, Any] = {
         "model": model,
         "messages": [
@@ -442,8 +594,8 @@ def call_ollama(
         "format": schema,
         "stream": False,
         # Deterministic-ish. A review that flips verdict between runs on an unchanged head
-        # is worse than useless when it gates a merge. num_ctx is filled by `SizedChat`,
-        # from everything sent; see `fit.ContextSizer`.
+        # is worse than useless when it gates a merge. num_ctx, and the switches that make
+        # Ollama refuse rather than cut an oversized prompt, are added by `SizedChat`.
         "options": {"temperature": 0},
     }
     if think:
@@ -454,7 +606,7 @@ def call_ollama(
         sizer=sizer or CONTEXT_SIZER,
         timeout=timeout,
         what="diff",
-        shown_chars=shown,
+        shown_chars=len(diff),
     )
 
 
@@ -471,9 +623,23 @@ def _declare_window(parser: argparse.ArgumentParser, defaults: Any) -> None:
     parser.add_argument("--think", choices=("", "low", "medium", "high"), default=defaults.think)
 
 
-def _sizer(args: argparse.Namespace) -> ContextSizerInterface:
-    """The sizer the flags above declare. Module-level beside `_declare_window`, for the
-    same reason."""
+def _sizer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> ContextSizerInterface:
+    """The sizer the flags above declare, held to the same rules as the configuration they
+    override -- by building that configuration, so the rule is written once. Module-level
+    beside `_declare_window`, for the same reason."""
+    from vibey_gh.config import PrAutomationFallbackConfig
+
+    try:
+        dataclasses.replace(
+            PrAutomationFallbackConfig(),
+            enabled=True,
+            context_window=args.context_window,
+            reasoning_reserve_tokens=args.reasoning_reserve,
+            chars_per_token=args.chars_per_token,
+            think=args.think,
+        )
+    except ValueError as error:
+        parser.error(f"--context-window, --reasoning-reserve or --chars-per-token: {error}")
     return ContextSizer(
         ceiling_tokens=args.context_window,
         reserve_tokens=args.reasoning_reserve,
@@ -511,6 +677,14 @@ def review(argv: list[str] | None = None) -> int:
         "--context-dir",
         help="documents the whole review judges the documentation contract against",
     )
+    parser.add_argument(
+        "--context-paths",
+        default=" ".join(defaults.context_paths),
+        help=(
+            "the declared order of those documents, space-separated: the last gives way"
+            " first when they do not all fit"
+        ),
+    )
     _declare_window(parser, defaults)
     args = parser.parse_args(argv)
     whole = args.scope == "full"
@@ -529,9 +703,11 @@ def review(argv: list[str] | None = None) -> int:
         print("refusing to review an empty diff", file=sys.stderr)
         return 1
 
-    sizer = _sizer(args)
+    sizer = _sizer(args, parser)
     documents = (
-        WHOLE_REVIEW.documents(pathlib.Path(args.context_dir)) if whole and args.context_dir else {}
+        WHOLE_REVIEW.documents(pathlib.Path(args.context_dir), args.context_paths.split())
+        if whole and args.context_dir
+        else {}
     )
     # The optional documents give way to the window, the last declared first; the diff
     # never does. What was cut or left out is said in the verdict.
@@ -548,7 +724,8 @@ def review(argv: list[str] | None = None) -> int:
             sizer=sizer,
             whole=WHOLE_REVIEW if whole else None,
             documents=kept,
-            cut=bool(cut or dropped),
+            cut=cut,
+            dropped=dropped,
             think=args.think,
         )
     except ReviewRefused as refused:
@@ -621,6 +798,9 @@ the text does not establish one.
 
 
 def build_triage_prompt(issue_text: str, max_chars: int) -> str:
+    # Cut, unlike a diff: a triage decides nothing. Its `needs_human` is forced true
+    # whatever the model says (`triage`), so a triage of part of an issue is a lead for the
+    # human already being asked -- and the model is told it saw only part.
     truncated = False
     if len(issue_text) > max_chars:
         issue_text = issue_text[:max_chars]
@@ -706,7 +886,7 @@ def triage(argv: list[str] | None = None) -> int:
             text,
             args.max_chars,
             args.timeout,
-            sizer=_sizer(args),
+            sizer=_sizer(args, parser),
             think=args.think,
         )
     except ReviewRefused as refused:

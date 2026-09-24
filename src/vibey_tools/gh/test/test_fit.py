@@ -763,7 +763,15 @@ def test_every_number_in_the_sizer_is_a_setting():
     "kw, message",
     [
         ({"chars_per_token": 0}, "chars_per_token"),
+        # Past any tokenizer met so far, fractional, not a number, or a bool: each would let
+        # the estimate wave a prompt many times the window through.
+        ({"chars_per_token": 9}, "chars_per_token"),
+        ({"chars_per_token": 2.5}, "chars_per_token"),
+        ({"chars_per_token": float("nan")}, "chars_per_token"),
+        ({"chars_per_token": True}, "chars_per_token"),
         ({"floor_tokens": 9000, "ceiling_tokens": 8192}, "floor_tokens"),
+        ({"reserve_tokens": -1}, "reserve_tokens"),
+        ({"reserve_tokens": 1.5}, "reserve_tokens"),
     ],
 )
 def test_a_sizer_that_could_not_size_anything_is_refused(kw, message):
