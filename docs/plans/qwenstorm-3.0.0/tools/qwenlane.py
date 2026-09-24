@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "integration/src/vibey_run
 from qwenloop.application.storm import build_plan
 from qwenloop.cli.app import _load_config, _run_plan, _server_for, _tracked_repository_context
 from qwenloop.domain.model import RepoItem, RunStatus
-from storm_trust import NEUTRAL_TITLE, Refused, admitted, contain, fence_nonce
+from storm_trust import NEUTRAL_TITLE, Admission, PromptFence, Refused
 
 # Verbatim from qwenloop.cli.app._run_storm, so a lane repairs exactly the way the storm does.
 REPAIR = (
@@ -65,16 +65,18 @@ def lane_item(lane: Path, issue: int, title: str, body_file: Path, rules: str) -
 
     Sub-doctrine 12.j, ADR-0053. The issue is forge text, and it used to be concatenated with
     the rules straight after it -- nothing marked where the operator's harness ended and a
-    stranger's edit could begin. Now the text must carry the admission `storm_trust.admit`
-    wrote for exactly these bytes (else `Refused`), the rules come first, and the title and
-    body travel only inside a fenced block that names their source, author and fetch time,
-    under a per-run random tag the quoted text cannot close. The forge title never sits on a
-    harness line: the item carries a neutral label, and the real title is inside the fence.
+    stranger's edit could begin. Now the text must carry the admission `IssueGate.admit`
+    wrote for exactly this title and these bytes (else `Refused`), the rules come first, and
+    the title and body travel only inside a fenced block that names their source, author and
+    fetch time, under a per-run random tag the quoted text cannot close. The forge title
+    never sits on a harness line: the item carries a neutral label, and the real title is
+    inside the fence.
     """
     body = body_file.read_bytes()
-    record = admitted(lane / ".qwenstorm", issue, title, body)
+    record = Admission().check(lane / ".qwenstorm", issue, title, body)
     text = body.decode("utf-8")
-    quoted = contain(record, title, text, fence_nonce(title, text))
+    fence = PromptFence()
+    quoted = fence.contain(record, title, text, fence.nonce(title, text))
     return RepoItem(number=issue, title=NEUTRAL_TITLE, body=f"{rules.rstrip()}\n\n---\n\n{quoted}")
 
 

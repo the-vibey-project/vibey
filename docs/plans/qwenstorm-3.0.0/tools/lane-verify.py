@@ -118,7 +118,7 @@ def forbidden_problem(files: list[str]) -> str | None:
     Refuses on what it cannot read, too: a list that could not be loaded rules nothing out.
     """
     try:
-        hits = storm_trust.forbidden_touched(storm_paths.repo(STORM), files)
+        hits = storm_trust.ReviewedGrant(storm_paths.repo(STORM)).forbidden_touched(files)
     except (Exception, SystemExit) as exc:  # fail closed on ANY unreadable grant
         return (
             f"[unattended_approval] forbidden_paths could not be read ({exc}), so no path "

@@ -90,7 +90,7 @@ while true; do
   # it is now. A stranger, or a history that cannot be read, is a refusal: the helper writes
   # result.json (as a blocked lane gets) and the reason goes to progress.log -- never skipped.
   mkdir -p "$L/.qwenstorm"
-  if ! why="$(python3 "$Q/tools/storm_trust.py" admit "$L/.qwenstorm" "$2")"; then
+  if ! why="$("$PY" "$Q/tools/storm_trust.py" admit "$L/.qwenstorm" "$2")"; then
     [ -f "$L/.qwenstorm/result.json" ] \
       || echo '{"completed": false, "refused": "the provenance check did not finish"}' > "$L/.qwenstorm/result.json"
     echo "$(date -u +%FT%TZ) refused $1 #$2: ${why:-the provenance check did not finish}" | tee -a "$Q/progress.log"
