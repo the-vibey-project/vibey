@@ -22,6 +22,7 @@ import asyncio
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -71,11 +72,30 @@ def lane(tmp_path: Path) -> Path:
     return root
 
 
+def system_bin(foreign: Path) -> Path:
+    """A stand-in for the host's ordinary executables: only `git`, which qwenlane runs.
+
+    Hermetic on purpose. A real /usr/bin differs by host -- Ubuntu's carries a `pip` that
+    macOS's does not -- and a test whose verdict depends on which runner it lands on is
+    measuring the runner, not the tool.
+    """
+    where = foreign.parent.parent / "system-bin"
+    if not where.is_dir():
+        where.mkdir()
+        git = shutil.which("git")
+        assert git, "git is needed to drive qwenlane"
+        (where / "git").symlink_to(git)
+    return where
+
+
 def inherited(foreign: Path, **extra: str) -> dict[str, str]:
-    """The environment the storm runner had: the foreign venv activated in front of PATH."""
+    """The environment the storm runner had: the foreign venv activated in front of PATH.
+
+    Built entirely here -- nothing from the host's PATH or VIRTUAL_ENV reaches it.
+    """
     return {
         "HOME": os.environ.get("HOME", "/"),
-        "PATH": os.pathsep.join([str(foreign / BIN), "/usr/bin", "/bin"]),
+        "PATH": os.pathsep.join([str(foreign / BIN), str(system_bin(foreign))]),
         "VIRTUAL_ENV": str(foreign),
         "VIRTUAL_ENV_PROMPT": "vibey-2.0.0",
         **extra,
@@ -91,7 +111,7 @@ def test_the_lane_venv_replaces_the_inherited_one(lane: Path, foreign: Path) -> 
     entries = env["PATH"].split(os.pathsep)
     assert entries[0] == str(lane / ".venv" / BIN)
     assert str(foreign / BIN) not in entries, "the foreign venv's bin/ is still on PATH"
-    assert entries[1:] == ["/usr/bin", "/bin"], "ordinary PATH entries must survive in order"
+    assert entries[1:] == [str(system_bin(foreign))], "ordinary PATH entries must survive"
     assert "VIRTUAL_ENV_PROMPT" not in env, "it labels the venv VIRTUAL_ENV used to name"
 
 
@@ -116,7 +136,7 @@ def test_an_activated_venv_leaves_path_even_when_its_directory_is_gone(
     """A deleted venv cannot be recognised by its files; its activation still names it."""
     gone = tmp_path / "deleted-venv"
     env = LaneEnvironment(lane).build(
-        {"PATH": os.pathsep.join([str(gone / BIN), "/usr/bin"]), "VIRTUAL_ENV": str(gone)}
+        {"PATH": os.pathsep.join([str(gone / BIN), str(tmp_path)]), "VIRTUAL_ENV": str(gone)}
     )
     assert str(gone / BIN) not in env["PATH"].split(os.pathsep)
 
@@ -331,7 +351,11 @@ def executable(where: Path, body: str = "#!/bin/sh\nexit 0\n") -> Path:
 
 
 def resolved_in_lane(lane: Path, env: dict[str, str], name: str) -> str:
-    """Where `name` resolves for a command run the way the shell tool runs it: cwd=lane."""
+    """Where `name` resolves for a command run the way the shell tool runs it: cwd=lane.
+
+    Absolute, read from the lane: dash (Ubuntu's /bin/sh) prints a relative PATH hit as
+    written, where macOS's sh prefixes the working directory.
+    """
     done = subprocess.run(
         ["/bin/sh", "-c", f"command -v {name} || true"],
         cwd=lane,
@@ -340,7 +364,8 @@ def resolved_in_lane(lane: Path, env: dict[str, str], name: str) -> str:
         text=True,
         check=True,
     )
-    return done.stdout.strip()
+    found = done.stdout.strip()
+    return str(lane / found) if found else ""
 
 
 def test_a_relative_path_entry_into_a_foreign_venv_is_dropped(
