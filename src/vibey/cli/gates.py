@@ -71,7 +71,7 @@ class GatesPresenter:
         raised = gate.raised_at.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
         lines = [
             f"{number}. {name}: {gate.kind} gate, raised {raised}",
-            self._paragraph(gate.prompt, indent),
+            *self._paragraph(gate.prompt, indent),
             f"{indent}answer with: {self._answers.command(gate)}",
         ]
         note = self._answers.rule(gate.kind).fill_in(gate)
@@ -79,13 +79,13 @@ class GatesPresenter:
             lines.append(f"{indent}(replace {note} before you run it)")
         return lines
 
-    def _paragraph(self, prompt: str, indent: str) -> str:
+    def _paragraph(self, prompt: str, indent: str) -> list[str]:
         """The prompt as one paragraph: its line breaks and runs of spaces become single
         spaces, and it is wrapped without splitting a word, so a URL or an id survives."""
         text = " ".join(prompt.split())
         if not text:
-            return f"{indent}(no prompt)"
-        return textwrap.fill(
+            return [f"{indent}(no prompt)"]
+        return textwrap.wrap(
             text,
             width=self._width,
             initial_indent=indent,
