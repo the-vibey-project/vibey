@@ -247,6 +247,18 @@ enabled = true
 runner_label = "vibey-local-vibey"
 trusted_only = true
 
+[runners]
+# The machine that serves the sovereign lane above, declared (12.c): `vibey-gh runner install`
+# renders its LaunchAgent and supervisor from this table, `runner check` reconciles the host
+# against it, and `runner cleanup` unloads agents under the prefix that the tree no longer
+# declares. The label is [pr_automation.fallback] runner_label; the credential is the
+# runner's own file-based gh login in `gh_config_dir` (default ~/.config/gh-runner). Steps:
+# docs/runbooks/sovereign-review-runner.md.
+repository = "the-vibey-project/vibey"
+# The prefix the operator's existing agents already carry, so an install replaces
+# `<prefix>-vibey` in place and cleanup finds the agents of the absorbed repositories.
+unit_prefix = "com.adammatthewsteinberger.vibey-runner"
+
 [issue_automation]
 # The issue path's counterpart, sharing the fallback runner and model: an exhausted API
 # key degrades to one bounded triage comment instead of silence.

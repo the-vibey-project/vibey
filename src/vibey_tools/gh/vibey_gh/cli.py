@@ -729,6 +729,53 @@ def _sovereign(args) -> int:
     return 0 if (result.ready or not args.beat) else 1
 
 
+def _runner(args, launchctl=None) -> int:
+    """Stand the sovereign review runner up from `[runners]`, or check or remove it (12.c).
+
+    Only `install --load` and `--apply` touch launchd; every other form reads or writes
+    files and prints what the operator runs next. `launchctl` is the seam tests replace.
+    """
+    from vibey_gh.sovereign_runner import PAT_PERMISSION, SovereignRunner
+
+    runner = SovereignRunner(load_config(), home=Path.home(), uid=os.getuid(), launchctl=launchctl)
+    plan, problem = runner.render()
+    if plan is None:
+        print(f"vibey-gh runner: {problem}", file=sys.stderr)
+        return 1
+    if args.action == "check":
+        problems = runner.check(plan)
+        for line in problems:
+            print(line, file=sys.stderr)
+        if problems:
+            return 1
+        print(f"vibey-gh runner: {plan.label} matches the tree and its credential is usable")
+        return 0
+    if args.action == "install":
+        lines, loaded = runner.install(plan, load=args.load)
+        for line in lines:
+            print(line)
+        if not loaded:
+            return 1
+        if not args.load:
+            print("nothing was loaded. Next, in order:")
+            print(
+                f"  0. create a fine-grained token: repository {plan.repository} only,"
+                f" {PAT_PERMISSION} (docs/runbooks/sovereign-review-runner.md)"
+            )
+            for number, step in enumerate(runner.next_steps(plan), start=1):
+                print(f"  {number}. {step}")
+        return 0
+    if args.action == "cleanup":
+        lines = runner.remove(runner.strays(plan), apply=args.apply)
+    else:
+        lines = runner.uninstall(plan, apply=args.apply)
+    for line in lines:
+        print(line)
+    if not args.apply:
+        print("dry run: nothing was changed; pass --apply to do it")
+    return 0
+
+
 def _fit(args) -> int:
     from pathlib import Path
 
@@ -1755,6 +1802,26 @@ def main(argv: list[str] | None = None) -> int:
     sv.add_argument("--beat", action="store_true", help="publish a heartbeat (run on a timer)")
     sv.add_argument("--remote", default="origin", help="git remote carrying the heartbeat ref")
     sv.set_defaults(func=_sovereign)
+
+    rn = sub.add_parser(
+        "runner",
+        help="stand the sovereign review runner up from [runners], or check or remove it",
+    )
+    rn_sub = rn.add_subparsers(dest="action", required=True)
+    rn_install = rn_sub.add_parser(
+        "install", help="render the LaunchAgent and supervisor; print the next commands"
+    )
+    rn_install.add_argument(
+        "--load", action="store_true", help="also (re)load the LaunchAgent with launchctl"
+    )
+    rn_sub.add_parser("check", help="compare the installed runner and its credential with the tree")
+    for action, helptext in (
+        ("cleanup", "unload agents under unit_prefix the tree no longer declares"),
+        ("uninstall", "unload the declared agent and delete the files install wrote"),
+    ):
+        removal = rn_sub.add_parser(action, help=f"{helptext} (dry run by default)")
+        removal.add_argument("--apply", action="store_true", help="do it, rather than list it")
+    rn.set_defaults(func=_runner, load=False, apply=False)
 
     ft = sub.add_parser(
         "fit",

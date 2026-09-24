@@ -362,6 +362,62 @@ class PrAutomationFallbackConfigInterface(_ConfigRecordInterface, Protocol):
 
 
 @runtime_checkable
+class RunnersConfigInterface(_ConfigRecordInterface, Protocol):
+    """`[runners]`: how the machine serving the sovereign lane is stood up (12.c)."""
+
+    @property
+    def repository(self) -> str: ...
+
+    @property
+    def unit_prefix(self) -> str: ...
+
+    @property
+    def install_dir(self) -> str: ...
+
+    @property
+    def launch_agents_dir(self) -> str: ...
+
+    @property
+    def log_dir(self) -> str: ...
+
+    @property
+    def gh_config_dir(self) -> str: ...
+
+    @property
+    def image(self) -> str: ...
+
+    @property
+    def runner_version(self) -> str: ...
+
+    @property
+    def container_model_url(self) -> str: ...
+
+    @property
+    def require_ac(self) -> bool: ...
+
+    @property
+    def throttle_seconds(self) -> int: ...
+
+    @property
+    def max_failures(self) -> int: ...
+
+    @property
+    def path(self) -> str: ...
+
+    def resolved_gh_config_dir(self, home: Path) -> Path:
+        """`gh_config_dir` against `home`, with `..` and every symlink resolved."""
+        ...
+
+    def shares_operator_gh_dir(self, home: Path, environ: Mapping[str, str]) -> bool:
+        """Whether `gh_config_dir` resolves to gh's own default directory."""
+        ...
+
+    def registration(self, platform: PlatformConfigInterface) -> tuple[str, str, str]:
+        """`(owner/name, registration URL, problem)`; the problem is empty when resolvable."""
+        ...
+
+
+@runtime_checkable
 class PrAutomationConfigInterface(_ConfigRecordInterface, Protocol):
     @property
     def enabled(self) -> bool: ...

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Rendered by `vibey-gh runner install` from the repository's [runners] table. Do not edit:
+  edit the table and re-install; `vibey-gh runner check` reports drift.
+
+  Keeps the sovereign review runner's supervisor alive across logins and reboots.
+
+  A user agent, not a daemon, deliberately: Docker Desktop only runs in a logged-in session,
+  and a LaunchDaemon would have none. It does NOT rely on the session's keychain: gh's login
+  for this runner is a file in GH_CONFIG_DIR, because a LaunchAgent cannot read the keyring.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>__LABEL__</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__SUPERVISOR__</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__INSTALL_DIR__</string>
+
+  <!--
+    launchd starts jobs with a near-empty PATH, not the shell's. Every binary the supervisor
+    shells out to has to be reachable from PATH: docker and gh from Homebrew, caffeinate and
+    pmset from /usr/bin. GH_CONFIG_DIR is the runner's own gh login and the only credential
+    the supervisor will use.
+  -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>VIBEY_REPO_URL</key>
+    <string>__REPO_URL__</string>
+    <key>VIBEY_RUNNER_LABEL</key>
+    <string>__RUNNER_LABEL__</string>
+    <key>VIBEY_RUNNER_IMAGE</key>
+    <string>__IMAGE__</string>
+    <key>VIBEY_OLLAMA_URL</key>
+    <string>__MODEL_URL__</string>
+    <key>VIBEY_CONTAINER_OLLAMA_URL</key>
+    <string>__CONTAINER_MODEL_URL__</string>
+    <key>VIBEY_REQUIRE_AC</key>
+    <string>__REQUIRE_AC__</string>
+    <key>VIBEY_MAX_FAILURES</key>
+    <string>__MAX_FAILURES__</string>
+    <key>GH_CONFIG_DIR</key>
+    <string>__GH_CONFIG_DIR__</string>
+    <key>PATH</key>
+    <string>__PATH__</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!--
+    KeepAlive is unconditional rather than SuccessfulExit=false, because a clean exit is
+    also a state worth retrying from. The supervisor exits 0 on battery, so restarting only
+    on failure would mean it never comes back when the machine is plugged in again.
+  -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <!--
+    Seconds between restarts. The supervisor exits when Docker is not running, Ollama is
+    unreachable, the machine is on battery, or its credential is missing: all conditions
+    that resolve on a human timescale. launchd's default 10s would fill the log for nothing.
+  -->
+  <key>ThrottleInterval</key>
+  <integer>__THROTTLE__</integer>
+
+  <key>StandardOutPath</key>
+  <string>__LOG__</string>
+  <key>StandardErrorPath</key>
+  <string>__LOG__</string>
+
+  <!--
+    Not ProcessType Background: that class is I/O-throttled and CPU-deprioritised, which is
+    wrong for something expected to pick up a job and run a model within seconds.
+  -->
+  <key>ProcessType</key>
+  <string>Standard</string>
+</dict>
+</plist>
