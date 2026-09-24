@@ -1,9 +1,15 @@
-"""Tests for qwenlane's wiring into qwenloop: what a lane's run is actually handed.
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""Tests for qwenlane's wiring into qwenloop: what a storm lane's run is actually handed.
 
-`testpaths = ["tests"]` in the root pyproject, so this is not collected by the repository
-suite. Run it directly:
+A `[tools]` table in `qwen-storm.toml` bounds what one tool call may read or return. If the
+lane driver loads that config and then does not pass it to `_run_plan`, every lane runs with
+the defaults while the file says otherwise -- a setting that reads as honoured and is not.
 
-    python3 -m pytest docs/plans/qwenstorm-3.0.0/tools/test_qwenlane.py -q
+This lives under tests/ rather than beside the tool for the reason
+`test_storm_check_parser.py` gives: `testpaths = ["tests"]`, so a test beside the tool is
+never collected and cannot fail anyone. `qwenlane.py` is addressed by path because it is a
+script, not an importable module. If the storm's tools are removed this fails loudly --
+delete it in the same commit that deletes them.
 """
 
 from __future__ import annotations
@@ -17,8 +23,9 @@ import pytest
 from qwenloop.domain.config import ToolLimits
 from qwenloop.domain.model import RunState, RunStatus
 
-SPEC = importlib.util.spec_from_file_location("qwenlane", Path(__file__).with_name("qwenlane.py"))
-assert SPEC and SPEC.loader
+TOOL = Path(__file__).resolve().parents[2] / "docs/plans/qwenstorm-3.0.0/tools/qwenlane.py"
+SPEC = importlib.util.spec_from_file_location("qwenlane", TOOL)
+assert SPEC and SPEC.loader, f"the storm's lane driver is missing: {TOOL}"
 qwenlane = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(qwenlane)
 
