@@ -28,5 +28,8 @@ git -C "$LANE" remote remove origin
 git -C "$LANE" config credential.helper ""
 git -C "$LANE" config core.hooksPath .githooks
 printf '.qwenstorm/\n.venv/\n' >> "$LANE/.git/info/exclude"
+# The lane's own environment. Only a warning here, but not a silent one downstream: qwenlane.py
+# refuses to start a lane with no .venv (lane_environment.py), because without it every
+# `python` the lane runs is whichever one the storm runner inherited.
 (cd "$LANE" && uv sync -q --extra dev >/dev/null 2>&1) || echo "warn: uv sync failed in $LANE" >&2
 echo "$LANE @ $(git -C "$LANE" rev-parse --short HEAD) on storm/$SLUG"
