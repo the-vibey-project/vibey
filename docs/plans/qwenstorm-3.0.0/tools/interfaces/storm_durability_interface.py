@@ -12,6 +12,29 @@ from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
+class PlatformStorageInterface(Protocol):
+    """Where one operating system keeps files through a reboot, and where it throws them away.
+
+    The one seam that knows the platform. macOS and Linux implement it; Windows (#1097) is
+    the implementation still to write: %LOCALAPPDATA%\\vibey\\storm durable, %TEMP% volatile.
+    """
+
+    name: str
+
+    def default_home(self, environ: Mapping[str, str]) -> Path:
+        """Where storm work lives when nothing declares otherwise."""
+        ...
+
+    def fixed_volatile(self) -> tuple[tuple[str, str], ...]:
+        """Every location this OS empties, with when and why."""
+        ...
+
+    def session_volatile(self) -> tuple[tuple[str, str], ...]:
+        """The environment variables that name this session's temporary directories."""
+        ...
+
+
+@runtime_checkable
 class VolatileLocationsInterface(Protocol):
     """Where the operating system discards files: at boot, by age, or when a session ends."""
 

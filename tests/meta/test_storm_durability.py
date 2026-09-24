@@ -54,6 +54,7 @@ durability = _load("storm_durability", "storm_durability.py")
 VolatileLocations = durability.VolatileLocations
 StormHome = durability.StormHome
 DurabilityGate = durability.DurabilityGate
+MAC, LINUX = durability.MacStorage(), durability.LinuxStorage()
 
 
 def _locations(tmp_path: Path, environ: dict[str, str] | None = None) -> VolatileLocations:
@@ -69,26 +70,45 @@ def _locations(tmp_path: Path, environ: dict[str, str] | None = None) -> Volatil
 
 
 @pytest.mark.parametrize(
-    "path",
+    ("platform", "path"),
     [
-        "/tmp/claude-501/storm/qwenstorm-3.0.0",
-        "/private/tmp/claude-501/storm/.push-lock",
-        "/var/tmp/bench",
-        "/var/folders/xx/T/lane",
-        "/dev/shm/storm",
-        "/run/user/1000/storm",
+        (MAC, "/tmp/claude-501/storm/qwenstorm-3.0.0"),
+        (MAC, "/private/tmp/claude-501/storm/.push-lock"),
+        (MAC, "/var/tmp/bench"),
+        (MAC, "/var/folders/xx/T/lane"),
+        (LINUX, "/tmp/storm/qwenstorm-3.0.0"),
+        (LINUX, "/var/tmp/bench"),
+        (LINUX, "/dev/shm/storm"),
+        (LINUX, "/run/user/1000/storm"),
     ],
+    ids=lambda value: getattr(value, "name", value),
 )
-def test_every_location_the_os_empties_is_volatile(path: str) -> None:
-    found = VolatileLocations({}).containing(Path(path))
-    assert found is not None, f"{path} was taken for durable storage"
+def test_every_location_the_os_empties_is_volatile(platform, path: str) -> None:
+    found = VolatileLocations({}, platform=platform).containing(Path(path))
+    assert found is not None, f"{path} was taken for durable storage on {platform.name}"
+
+
+@pytest.mark.parametrize("platform", [MAC, LINUX], ids=lambda p: p.name)
+def test_the_default_home_is_durable_on_its_own_platform(platform, tmp_path: Path) -> None:
+    environ = {"HOME": "/home/someone"}
+    home = platform.default_home(environ)
+    assert VolatileLocations(environ, platform=platform).containing(home) is None
 
 
 def test_tmp_is_volatile_through_its_symlink() -> None:
     """On macOS /tmp is a symlink to /private/tmp. Resolved or not, it is the same place."""
-    found = VolatileLocations({}).containing(Path("/tmp/x"))
+    found = VolatileLocations({}, platform=MAC).containing(Path("/tmp/x"))
     assert found is not None
     assert found[0] == Path("/tmp").resolve()
+
+
+def test_the_platform_is_decided_in_one_place() -> None:
+    assert durability.PlatformStorage.detect("darwin").name == "macos"
+    assert durability.PlatformStorage.detect("linux").name == "linux"
+    with pytest.raises(SystemExit) as refused:
+        durability.PlatformStorage.detect("win32")
+    assert "#1097" in str(refused.value)
+    assert "LOCALAPPDATA" in str(refused.value) and "TEMP" in str(refused.value)
 
 
 def test_the_temporary_directories_the_environment_names_are_volatile(tmp_path: Path) -> None:
@@ -126,10 +146,20 @@ def test_a_path_that_does_not_exist_yet_is_judged_by_where_it_would_be(tmp_path:
 # --- the one declared home --------------------------------------------------------------
 
 
-def test_the_home_defaults_to_the_git_directory_already_in_use(tmp_path: Path) -> None:
-    where, source = StormHome({"HOME": str(tmp_path)}).resolve()
+def test_on_macos_the_home_defaults_to_the_git_directory_already_in_use(tmp_path: Path) -> None:
+    where, source = StormHome({"HOME": str(tmp_path)}, platform=MAC).resolve()
     assert where == tmp_path / "git/vibey-storm"
-    assert source == "default"
+    assert source == "the macos default"
+
+
+def test_on_linux_the_home_defaults_to_the_xdg_data_directory(tmp_path: Path) -> None:
+    home = StormHome({"HOME": str(tmp_path)}, platform=LINUX)
+    assert home.resolve() == (tmp_path / ".local/share/vibey/storm", "the linux default")
+    xdg = {"HOME": str(tmp_path), "XDG_DATA_HOME": "/data/me"}
+    assert StormHome(xdg, platform=LINUX).resolve()[0] == Path("/data/me/vibey/storm")
+    # The XDG spec: a relative XDG_DATA_HOME is invalid and ignored.
+    relative = {"HOME": str(tmp_path), "XDG_DATA_HOME": "data"}
+    assert StormHome(relative, platform=LINUX).resolve()[0] == tmp_path / ".local/share/vibey/storm"
 
 
 def test_the_environment_outranks_storm_toml(tmp_path: Path) -> None:
@@ -279,6 +309,8 @@ def test_every_class_honours_the_interface_declared_beside_it(tmp_path: Path) ->
     declared = _load("storm_durability_interface", "interfaces/storm_durability_interface.py")
     locations = _locations(tmp_path)
     pairs = [
+        (MAC, declared.PlatformStorageInterface),
+        (LINUX, declared.PlatformStorageInterface),
         (locations, declared.VolatileLocationsInterface),
         (StormHome({}), declared.StormHomeInterface),
         (DurabilityGate(locations), declared.DurabilityGateInterface),

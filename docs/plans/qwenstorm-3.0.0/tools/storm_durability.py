@@ -31,14 +31,20 @@ It is declared, never typed into a tool (12.c, 12.h). The first of these that is
 
     VIBEY_STORM_HOME              the environment, for one shell or one scheduler
     [paths] home in storm.toml    the storm root's own declaration; relative to that root
-    ~/git/vibey-storm             the default
+    the platform's default        below
 
-The default is where the storm moved after the reboot, and where the operator's worktrees are
-now. It sits beside the main clone (`~/git/vibey`), where a person looks for checkouts, and it
-survives a reboot on macOS and on Arch alike. An XDG data directory
-(`~/.local/share/vibey/storm`) was the alternative. It is right for application state, and
-vibey-gh keeps its journals under `~/.local/state` for that reason. Worktrees are not
-application state: people `cd` into them, open them in an editor and push from them.
+The platform decides the default and the volatile locations, in one class per operating
+system, `PlatformStorage`, so a new one is a subclass and nothing else changes:
+
+    macOS    ~/git/vibey-storm
+             Where the storm moved after the reboot and where the operator's worktrees are.
+             It sits beside the main clone (~/git/vibey), where a person looks for checkouts.
+    Linux    $XDG_DATA_HOME/vibey/storm, else ~/.local/share/vibey/storm
+             The XDG Base Directory place for user data, which survives a reboot on Ubuntu
+             LTS and on Arch alike (#1116). vibey-gh keeps its journals under the XDG state
+             directory for the same reason.
+    Windows  not yet (#1097). The subclass to write: %LOCALAPPDATA%\\vibey\\storm durable,
+             %TEMP% and %TMP% volatile. Until it exists the gate refuses to guess.
 
 "Home", not "root", because "the storm root" already names the directory that holds
 `storm.toml` in every tool here. A second meaning for the same two words would be a trap.
@@ -51,11 +57,11 @@ message naming the key that moves it, when any of them resolves -- through symli
 /tmp that is really /private/tmp is caught either way -- under a location the operating system
 empties:
 
-    /tmp, /private/tmp        emptied at boot on macOS; tmpfs, or cleaned at boot, on most Linux
-    /var/tmp                  aged out: macOS's periodic clean-up, systemd-tmpfiles on Linux
-    /var/folders              macOS per-user temporary storage ($TMPDIR lives here)
-    /dev/shm, /run/user       memory-backed: gone at power-off, or at logout
-    $TMPDIR, $XDG_RUNTIME_DIR whatever this session calls temporary
+    macOS    /tmp and /private/tmp (emptied at boot), /var/tmp (aged out by periodic clean-up),
+             /var/folders (per-user temporary storage, where $TMPDIR lives)
+    Linux    /tmp (tmpfs, or emptied at boot by systemd-tmpfiles), /var/tmp (aged out by
+             systemd-tmpfiles), /dev/shm (memory), /run/user/<uid> (memory, gone at logout)
+    both     $TMPDIR and $XDG_RUNTIME_DIR: whatever this session calls temporary
 
 A throwaway storm, such as a test's, is refused like any other unless its own storm.toml says
 it is throwaway, with a reason:
@@ -96,32 +102,97 @@ import storm_paths
 
 #: The environment variable that declares the home, for one shell or one scheduler.
 HOME_ENV = "VIBEY_STORM_HOME"
-#: The home when nothing declares one. See the module docstring for why here.
-DEFAULT_HOME = "~/git/vibey-storm"
 #: EX_CONFIG from sysexits.h: the configuration names a place work cannot be kept.
 VOLATILE_EXIT = 78
 #: The key a person changes to move the work, named in every refusal.
 MOVE_IT = f"{HOME_ENV} (or [paths] home in storm.toml)"
-
-#: Where the operating system discards files, and when. Resolved through symlinks when used.
-FIXED_VOLATILE: tuple[tuple[str, str], ...] = (
-    ("/tmp", "emptied at boot on macOS; tmpfs or cleaned at boot on most Linux"),
-    ("/private/tmp", "emptied at boot on macOS"),
-    ("/var/tmp", "aged out by the OS (macOS periodic clean-up, systemd-tmpfiles)"),
-    ("/private/var/tmp", "aged out by the OS (macOS periodic clean-up)"),
-    ("/var/folders", "macOS per-user temporary storage, emptied at boot and by age"),
-    ("/private/var/folders", "macOS per-user temporary storage, emptied at boot and by age"),
-    ("/dev/shm", "memory-backed: gone at power-off"),
-    ("/run/user", "the per-user runtime directory: memory-backed, gone at logout"),
-)
-#: Temporary directories this session names for itself.
-ENV_VOLATILE: tuple[tuple[str, str], ...] = (
-    ("TMPDIR", "this session's temporary directory ($TMPDIR)"),
-    ("XDG_RUNTIME_DIR", "this session's runtime directory ($XDG_RUNTIME_DIR), gone at logout"),
-)
 #: A worktree name: one path component, no traversal, not hidden (the home's own dot-files
 #: are the push lock and its state).
 WORKTREE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+class PlatformStorage:
+    """Where one operating system keeps files through a reboot, and where it throws them away.
+
+    The only place in the storm that knows which platform it is on. A platform is a subclass
+    with a default home and its volatile locations; `detect` picks one. Windows (#1097) is the
+    subclass still to write: %LOCALAPPDATA%\\vibey\\storm durable, %TEMP% and %TMP% volatile.
+    """
+
+    name = "posix"
+    #: Locations the OS empties, and when: at boot, by age, or when a session ends.
+    FIXED: tuple[tuple[str, str], ...] = ()
+    #: Environment variables naming this session's own temporary directories.
+    SESSION: tuple[tuple[str, str], ...] = (
+        ("TMPDIR", "this session's temporary directory ($TMPDIR)"),
+        ("XDG_RUNTIME_DIR", "this session's runtime directory ($XDG_RUNTIME_DIR), gone at logout"),
+    )
+
+    def default_home(self, environ: Mapping[str, str]) -> Path:
+        """Where storm work lives when nothing declares otherwise."""
+        raise NotImplementedError
+
+    def fixed_volatile(self) -> tuple[tuple[str, str], ...]:
+        """Every location this OS empties, with when and why."""
+        return self.FIXED
+
+    def session_volatile(self) -> tuple[tuple[str, str], ...]:
+        """The environment variables that name this session's temporary directories."""
+        return self.SESSION
+
+    @classmethod
+    def detect(cls, system: str = sys.platform) -> PlatformStorage:
+        """The storage rules of the platform this runs on."""
+        if system == "darwin":
+            return MacStorage()
+        if system == "win32":
+            # A guess here would be exactly the silent wrong default this module exists to
+            # prevent. The rules are known; the subclass is the work (#1097).
+            raise SystemExit(
+                "storm-durability: Windows is not supported yet (#1097). Its storage rules: "
+                "%LOCALAPPDATA%\\vibey\\storm is durable; %TEMP% and %TMP% are volatile."
+            )
+        return LinuxStorage()
+
+    @staticmethod
+    def _user_home(environ: Mapping[str, str]) -> Path:
+        return Path(environ.get("HOME") or Path.home())
+
+
+class MacStorage(PlatformStorage):
+    """macOS: worktrees beside the main clone, and /private/tmp emptied at every boot."""
+
+    name = "macos"
+    FIXED = (
+        ("/tmp", "emptied at boot on macOS"),
+        ("/private/tmp", "emptied at boot on macOS"),
+        ("/var/tmp", "aged out by macOS's periodic clean-up"),
+        ("/private/var/tmp", "aged out by macOS's periodic clean-up"),
+        ("/var/folders", "macOS per-user temporary storage, emptied at boot and by age"),
+        ("/private/var/folders", "macOS per-user temporary storage, emptied at boot and by age"),
+    )
+
+    def default_home(self, environ: Mapping[str, str]) -> Path:
+        return self._user_home(environ) / "git" / "vibey-storm"
+
+
+class LinuxStorage(PlatformStorage):
+    """Linux (Ubuntu LTS, Arch): the XDG data directory, and tmpfs or tmpfiles-cleaned /tmp."""
+
+    name = "linux"
+    FIXED = (
+        ("/tmp", "tmpfs, or emptied at boot by systemd-tmpfiles, on most Linux"),
+        ("/var/tmp", "aged out by systemd-tmpfiles (30 days by default)"),
+        ("/dev/shm", "memory-backed: gone at power-off"),
+        ("/run/user", "the per-user runtime directory: memory-backed, gone at logout"),
+    )
+
+    def default_home(self, environ: Mapping[str, str]) -> Path:
+        data = environ.get("XDG_DATA_HOME")
+        # The XDG spec: a relative value is invalid and is ignored.
+        if data and Path(data).is_absolute():
+            return Path(data) / "vibey" / "storm"
+        return self._user_home(environ) / ".local" / "share" / "vibey" / "storm"
 
 
 def _resolved(path: Path) -> Path:
@@ -144,13 +215,15 @@ class VolatileLocations:
     def __init__(
         self,
         environ: Mapping[str, str],
-        fixed: Iterable[tuple[str, str]] = FIXED_VOLATILE,
+        fixed: Iterable[tuple[str, str]] | None = None,
+        platform: PlatformStorage | None = None,
     ) -> None:
+        platform = platform or PlatformStorage.detect()
         home = _resolved(Path(environ.get("HOME") or Path.home()))
         found: dict[Path, str] = {}
-        for raw, why in fixed:
+        for raw, why in platform.fixed_volatile() if fixed is None else fixed:
             found.setdefault(_resolved(Path(raw)), why)
-        for name, why in ENV_VOLATILE:
+        for name, why in platform.session_volatile():
             value = environ.get(name)
             if not value:
                 continue
@@ -179,9 +252,15 @@ class VolatileLocations:
 class StormHome:
     """The one declared durable directory all storm work on this machine lives under."""
 
-    def __init__(self, environ: Mapping[str, str], storm_root: Path | None = None) -> None:
+    def __init__(
+        self,
+        environ: Mapping[str, str],
+        storm_root: Path | None = None,
+        platform: PlatformStorage | None = None,
+    ) -> None:
         self._environ = environ
         self._root = storm_root
+        self._platform = platform or PlatformStorage.detect()
 
     def resolve(self) -> tuple[Path, str]:
         """The home, and where it was declared: the environment, storm.toml, or the default."""
@@ -201,9 +280,7 @@ class StormHome:
                     path if path.is_absolute() else self._root / path,
                     f"[paths] home in {self._root}",
                 )
-        home = self._environ.get("HOME")
-        default = Path(home) / DEFAULT_HOME[2:] if home else Path(DEFAULT_HOME).expanduser()
-        return default, "default"
+        return self._platform.default_home(self._environ), f"the {self._platform.name} default"
 
     def worktree(self, name: str) -> Path:
         """Where the worktree called `name` lives: directly under the home."""
@@ -287,8 +364,9 @@ class DurabilityGate:
             lines.append(f"  {hit.name:<{width}}  {shown}")
             lines.append(f"  {'':<{width}}  under {hit.location}: {hit.why}")
         lines.append(
-            f"Move it to durable storage with {key}, e.g. {DEFAULT_HOME}. Everything not yet "
-            "committed and pushed is lost at the next reboot. Sub-doctrine 10.h; ADR-0057."
+            f"Move it to storage a reboot keeps with {key}; unset, the platform default is one "
+            "(`storm_durability.py home` prints it). Everything not yet committed and pushed "
+            "there is lost at the next reboot. Sub-doctrine 10.h; ADR-0057."
         )
         return "\n".join(lines)
 
@@ -342,8 +420,9 @@ def main(argv: list[str] | None = None) -> int:
 
     root = (args.root or storm_paths.storm(__file__)).absolute()
     environ = dict(os.environ)
-    home, source = StormHome(environ, root).resolve()
-    locations = VolatileLocations(environ)
+    platform = PlatformStorage.detect()
+    home, source = StormHome(environ, root, platform).resolve()
+    locations = VolatileLocations(environ, platform=platform)
     gate = DurabilityGate(locations, disposable_root=root)
 
     if args.command == "home":
@@ -366,7 +445,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "check":
         gate.enforce(_named(root, home, args.path), MOVE_IT)
         return 0
-    target = StormHome(environ, root).worktree(args.name)
+    target = StormHome(environ, root, platform).worktree(args.name)
     gate.enforce({"storm home": home, "worktree": target}, MOVE_IT)
     print(target)
     return 0

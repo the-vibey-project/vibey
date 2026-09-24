@@ -22,7 +22,7 @@ Still running or never finished (1): `gap-ci-tenants-arch-macos-2`
 ## How to resume
 
 ```bash
-cd "${VIBEY_STORM_HOME:-$HOME/git/vibey-storm}/qwenstorm-3.0.0"   # the storm root (10.h)
+cd <storm home>/qwenstorm-3.0.0   # the storm root; tools/storm_durability.py home prints the home
 touch UNATTENDED                      # batch review; a finished lane does not block the queue
 nohup bash tools/storm-queue.sh > scratch/storm-run.log 2>&1 < /dev/null & disown
 ```

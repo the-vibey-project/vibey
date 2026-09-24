@@ -1,6 +1,6 @@
 # Brief for every split-spec writer (QwenStorm 3.0.0 issue audit)
 
-STORM = the storm root, $VIBEY_STORM_HOME/qwenstorm-3.0.0 (default ~/git/vibey-storm/qwenstorm-3.0.0)
+STORM = the storm root, $VIBEY_STORM_HOME/qwenstorm-3.0.0 (on macOS by default ~/git/vibey-storm/qwenstorm-3.0.0)
 
 You write lane specs only. Do NOT edit code, do NOT edit anything under STORM/integration, do NOT
 edit STORM/issue-audit/ or any existing spec, do NOT file issues, push, or run git commands that

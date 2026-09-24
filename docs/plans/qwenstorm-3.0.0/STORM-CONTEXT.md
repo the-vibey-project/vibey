@@ -3,7 +3,7 @@
 Updated 2026-09-22 11:45 EDT. Everything here is settled. Where a spec contradicts it, this file wins.
 
 ## Where things are
-- Storm root: `$VIBEY_STORM_HOME/qwenstorm-3.0.0/` ("STORM"; the home defaults to `~/git/vibey-storm`, durable storage, sub-doctrine 10.h). It was under `/private/tmp` until a reboot emptied it on 2026-09-24; never put it there again.
+- Storm root: `$VIBEY_STORM_HOME/qwenstorm-3.0.0/` ("STORM"; `python3 tools/storm_durability.py home` prints the home, which is on durable storage by sub-doctrine 10.h: `~/git/vibey-storm` on macOS, `~/.local/share/vibey/storm` on Linux). It was under `/private/tmp` until a reboot emptied it on 2026-09-24; never put it there again.
 - Code to read: the integration clone `STORM/integration`, branch `storm/integration`. That is
   `develop` plus the verified storm lanes. Never read `/Users/adam/git/vibey`, which is stale.
 - Spec format: `STORM/SPEC-TEMPLATE.md`. End every spec with

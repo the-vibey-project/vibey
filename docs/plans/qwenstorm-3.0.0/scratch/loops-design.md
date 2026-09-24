@@ -10,7 +10,7 @@ Depends on, and the closing `## Hard repository rules (always)` block that says 
 `STORM/STORM-CONTEXT.md` first; it wins over this sheet. Read `STORM/EDITING-RULES.md`: every
 spec must be implementable under it (edit_file only for files >100 lines; provenance line 1).
 
-STORM = the storm root, `$VIBEY_STORM_HOME/qwenstorm-3.0.0` (default `~/git/vibey-storm/qwenstorm-3.0.0`). Code to read = `STORM/integration`
+STORM = the storm root, `$VIBEY_STORM_HOME/qwenstorm-3.0.0` (on macOS by default `~/git/vibey-storm/qwenstorm-3.0.0`). Code to read = `STORM/integration`
 (branch `storm/integration`, HEAD `d3b4a388`). NEVER read `/Users/adam/git/vibey`.
 Cite `file:line` from STORM/integration and say "at integration `d3b4a388`". Where another
 unmerged lane changes the same lines first, name the anchor by function/text, not only by line.

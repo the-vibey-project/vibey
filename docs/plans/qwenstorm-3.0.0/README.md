@@ -203,8 +203,11 @@ paper draft and three lanes of fixes. Only committed work survived. Sub-doctrine
 ADR-0057 are the rule and the record.
 
 **One declared home.** All storm work on a machine lives under the storm home:
-`VIBEY_STORM_HOME`, else `[paths] home` in the storm root's `storm.toml`, else
-`~/git/vibey-storm`. The worktrees are `<home>/<name>`. The shared push lock and its state are
+`VIBEY_STORM_HOME`, else `[paths] home` in the storm root's `storm.toml`, else the platform's
+default. On macOS that is `~/git/vibey-storm`. On Linux (Ubuntu LTS, Arch) it is
+`$XDG_DATA_HOME/vibey/storm`, falling back to `~/.local/share/vibey/storm`. Windows is not
+supported yet (#1097): the gate refuses there rather than guess. The worktrees are
+`<home>/<name>`. The shared push lock and its state are
 `<home>/.push-lock` and `<home>/.push-lock.gate`. A storm root is `<home>/<storm>`, for example
 `<home>/qwenstorm-3.0.0`, and holds `storm.toml`, the queue, the ledgers, `lanes/`,
 `integration/` and `scratch/`.
@@ -217,8 +220,10 @@ git worktree add "$(python3 tools/storm_durability.py worktree fix-x)" -b fix/x 
 **A gate, not a judgement.** `storm-queue.sh`, `lane-setup.sh`, `storm-cycle.py --run` and both
 benchmarks refuse to start, with exit 78 and the key to change, when anything they would write
 resolves under a volatile location. Symlinks are followed, so `/tmp` is caught as
-`/private/tmp`. The volatile locations are `/tmp`, `/var/tmp`, `/var/folders`, `/dev/shm`,
-`/run/user`, `$TMPDIR` and `$XDG_RUNTIME_DIR`. A test's throwaway storm passes only by
+`/private/tmp`. On macOS the volatile locations are `/tmp`, `/var/tmp` and `/var/folders`. On
+Linux they are `/tmp`, `/var/tmp` (systemd-tmpfiles), `/dev/shm` and `/run/user/<uid>`. On
+both, `$TMPDIR` and `$XDG_RUNTIME_DIR` count too. One class per platform decides both lists
+(`PlatformStorage` in `storm_durability.py`). A test's throwaway storm passes only by
 declaring itself so in its own `storm.toml`, with a reason: `[durability] disposable = "..."`.
 
 **Moving a storm that is on volatile storage.** Stop it (`storm-stop.py --stop`). Commit and
