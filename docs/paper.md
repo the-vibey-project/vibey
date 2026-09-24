@@ -195,12 +195,70 @@ pure $f$, independent of any vendor session.
 \end{invariant}
 ```
 
-The invariant is enforced, not conventional: the event relation carries database
-rules that turn every `UPDATE` and `DELETE` into a no-op, and the per-project sequence
-number is claimed inside the same transaction as the insert, so every ledger range
-has a well-defined digest. Corrections are new events that supersede prior ones. The
-function $f$ is a set of pure projections (open items, the decision log, the cost
-report) computed from the event sequence alone.
+The per-project sequence number is claimed inside the same transaction as the insert,
+so every ledger range has a well-defined digest. Corrections are new events that
+supersede prior ones. The function $f$ is a set of pure projections (open items, the
+decision log, the cost report) computed from the event sequence alone.
+
+**Enforcement, and what it does not cover.** Until 3.0.0 the invariant held against
+vibey's own queries and against little else. It rested on two `DO INSTEAD NOTHING`
+rules on the partitioned parent `event`, and ADR-0055 records what a scratch database
+with every migration applied (PostgreSQL 18) did on 2026-09-24 when addressed as the
+role vibey connected as: an `UPDATE` of `event` changed nothing, silently; an `UPDATE`
+and a `DELETE` addressed to the default partition changed and deleted rows, because a
+rule on a partitioned parent does not fire for a statement addressed to a partition;
+`TRUNCATE event` emptied the ledger, because rules never fire on `TRUNCATE`; and after
+`DISABLE RULE` an update went through. That role owned the table, and in the Helm
+chart it was also the image's superuser. The same DSN had reached every engine session
+(see *What an engine may see*), so a session steered by text a model read held the
+means to erase the ledger unrecorded.
+
+The fix (#1100, ADR-0055) has two parts, because neither alone is a boundary. First,
+triggers replace the rules (migration 0016): a `BEFORE UPDATE OR DELETE` row trigger
+and a `BEFORE TRUNCATE` statement trigger refuse every rewrite, the owner's included,
+with an error rather than a silent no-op. PostgreSQL clones the row trigger onto every
+partition, present and future, but not the statement trigger, so a function attaches
+the `TRUNCATE` guard to every partition on every migration run. Second, the roles
+split. The owner's DSN runs migrations and nothing else; the application role, which
+every worker, command, operator and scaler connects as, owns nothing and holds on
+`event` only `SELECT` and `INSERT`, with no `DELETE` or `TRUNCATE` anywhere. The grants
+are declared in code, derived from the application's own queries, and reconciled on
+every migration run, so a grant added by hand does not survive the next start. An
+install still on one role is reported rather than stranded: `vibey doctor` fails its
+`ledger-guard` check, the worker says so on every start, and `vibey migrate` exits 1.
+The whole test suite now runs as a restricted application role; its first run so found
+35 failures, none a missing grant in application code: all were test setup doing
+owner-only work, or tests that had asserted the old silent no-op (#1100).
+
+The guard's reach is narrower than the word *append-only* suggests, and we state it.
+As the application role, the independent review of #1100 tried updates, deletes and
+truncations of the parent and of partitions, disabling, re-enabling as replica and
+dropping the triggers, detaching and attaching partitions, and switching the session
+to replica mode, and every one was refused (review probes of 2026-09-24; the merged
+tests pin the same refusals). The owner can still disable a trigger, so the triggers
+bind the owner's rewrites but not the owner's schema changes, and the owner's DSN is
+the thing to guard. A superuser can do anything. And the split protects the ledger only
+once the owner and every superuser need a password: a local PostgreSQL that trusts its
+socket, the common developer default, lets any process running as the right operating
+system user connect as a superuser with no DSN at all. The review found exactly that on
+the operator's machine, so `vibey doctor` gained a `local-auth` check that fails when
+such a connection is let in, passes only when every attempt is refused and the
+authentication rules read clean, and otherwise reports unknown, never a pass; changing
+the server's authentication rules is left to the operator (`SECURITY.md` §7). Same
+user, same authority: no grant separates processes of one operating-system account.
+
+The same review left findings open on `develop` at the cutoff (2026-09-24 12:22Z), of
+which two were rated high. Where the application role may create objects in the
+`public` schema, the PostgreSQL 14 default, it could plant an operator that the owner's
+unqualified catalog query resolved during `vibey migrate`, run code as the owner, and
+leave a backdoor that erased the ledger while `migrate` reported the guard in force;
+ADR-0055, as merged, had judged that privilege harmless to the ledger. And the owner's
+DSN reached any worker whose shell exported it, where an engine session could read it.
+Both were being fixed on a follow-up branch at the cutoff, which adds a migration 0017
+with `search_path` pinned rather than editing 0016: a migration that may already have
+been applied is never rewritten.
+
+<!-- TODO(3.0.0-pending: fix/ledger-guard-review) replace the paragraph above with the merged fix: its PR number, migration 0017 and the revoked CREATE on public, the owner DSN read only by vibey migrate, the other review findings it closes, and the review verdict on the result -->
 
 Crash recovery and engine handoff follow as corollaries: a successor engine
 re-derives context from the ledger alone, so a credit exhaustion on $e_i$ between
@@ -208,7 +266,7 @@ turns of an item reschedules the item onto $e_j$ with the open-question set inta
 
 ```latex
 \begin{plainwords}
-The ledger is a diary written in pen. You can add a page, but you can never tear one out or rub anything out. If you made a mistake, you write a new page that says so. Because the diary is the only source of truth, any helper can read it and know exactly what is going on, even a helper that has never seen the project before.
+The ledger is a diary written in pen. You can add a page, but you can never tear one out or rub anything out. If you made a mistake, you write a new page that says so. Because the diary is the only source of truth, any helper can read it and know exactly what is going on, even a helper that has never seen the project before. For a long time the promise that pages could not be torn out was kept by good manners: anyone holding the main key could still tear them out. Now the database itself refuses, the helpers are given a key that can only read and add pages, and the one key that could switch the refusal off is kept away from them. It is still not magic: someone logged in as the owner of the computer can do almost anything, and the paper says so.
 \end{plainwords}
 ```
 
