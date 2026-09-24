@@ -119,8 +119,12 @@ jobs:
           vibey-gh forecast
 
       - name: Publish the changed estimate ledger and report
+        # The Actions token may not open pull requests here ("GitHub Actions is not
+        # permitted to create or approve pull requests"), so the pull request is opened
+        # with the same token every other workflow uses for that, falling back to the
+        # Actions token where the secret is not set (a fork) so the push still lands.
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
           GH_REPO: ${{ github.repository }}
           ESTIMATE_BRANCH: automation/delivery-estimate
         run: |
