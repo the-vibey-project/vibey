@@ -88,6 +88,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **cli:** `vibey doctor` prints a `db-passwordless` line: `WARN` when the app DSN's database
+  accepts a login with no password (trust or peer authentication) as the DSN's role or the OS
+  user doctor runs as, on the DSN's host or a local socket. Any process running as that user,
+  an engine session included, could then open the queue and the ledger without
+  `VIBEY_PG_URL`. It never fails the command; SECURITY.md §5 now states this limit, and that
+  the unwired container boundary does not address same-user access
+
 * **vibey_gh:** `vibey-gh runner install|check|cleanup|uninstall` stands the sovereign review
   runner up from a new `[runners]` table instead of hand-written LaunchAgents (12.c). Its gh
   credential is a dedicated, file-based login in `~/.config/gh-runner` holding a fine-grained

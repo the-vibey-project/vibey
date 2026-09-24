@@ -2487,3 +2487,56 @@ def test_doctor_record_refuses_a_project_whose_engine_environment_is_forbidden(
 
     assert res.exit_code != 0
     assert "VIBEY_PG_URL" in res.output
+
+
+# ── doctor: is the app database reachable with no password at all? ──────────────
+
+
+def test_doctor_warns_when_the_app_database_admits_a_passwordless_login(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from unittest.mock import AsyncMock, patch
+
+    from vibey.application.dto import PreflightResult
+    from vibey.infrastructure.db.passwordless_reach import (
+        PasswordlessReachFinding,
+        ReachVerdict,
+    )
+
+    seen: list[str] = []
+
+    async def probe(self, dsn):  # type: ignore[no-untyped-def]
+        seen.append(dsn)
+        return PasswordlessReachFinding(ReachVerdict.WARN, "accepts a password-less login")
+
+    with (
+        patch(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            new=AsyncMock(return_value=PreflightResult(installed=True, version="1", auth_ok=True)),
+        ),
+        patch("vibey.infrastructure.db.passwordless_reach.PasswordlessReachProbe.probe", probe),
+    ):
+        res = runner.invoke(app, ["doctor", "--engine", "claudeloop"])
+
+    # A warning, not a failure: a trusted local database is a choice, said out loud.
+    assert res.exit_code == 0, res.output
+    assert "WARN db-passwordless" in res.output
+    assert "accepts a password-less login" in res.output
+    assert seen == [os.environ["VIBEY_PG_URL"]]
+
+
+def test_doctor_says_it_could_not_check_without_a_dsn(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import AsyncMock, patch
+
+    from vibey.application.dto import PreflightResult
+
+    monkeypatch.delenv("VIBEY_PG_URL", raising=False)
+    with patch(
+        "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+        new=AsyncMock(return_value=PreflightResult(installed=True, version="1", auth_ok=True)),
+    ):
+        res = runner.invoke(app, ["doctor", "--engine", "claudeloop"])
+
+    assert res.exit_code == 0, res.output
+    assert "UNKNOWN db-passwordless" in res.output
+    assert "VIBEY_PG_URL is not set" in res.output

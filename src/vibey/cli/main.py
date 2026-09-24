@@ -273,6 +273,25 @@ def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
     return LocalEngineSettings.from_toml((root or Path.cwd()) / "vibey.toml", environ=os.environ)
 
 
+async def _passwordless_reach_section() -> None:
+    """`vibey doctor`'s password-less-access line for the app DSN's database: WARN, PASS
+    or UNKNOWN, never a failure (SECURITY.md §5).
+
+    A module-level function because it is `doctor`'s own step, shared by nothing else,
+    like `_postgres_status_line` beside it; the check itself is
+    `PasswordlessReachProbe`.
+    """
+    from vibey.infrastructure.db.passwordless_reach import PasswordlessReachProbe
+
+    name = "db-passwordless"
+    dsn = os.environ.get("VIBEY_PG_URL", "").strip()
+    if not dsn:
+        typer.echo(f"UNKNOWN {name:<20} VIBEY_PG_URL is not set; nothing to check")
+        return
+    finding = await PasswordlessReachProbe().probe(dsn)
+    typer.echo(f"{finding.verdict.mark} {name:<20} {finding.detail}")
+
+
 def _postgres_status_line(status: PostgresStatus) -> str:
     """Render the local database check in the same compact style as engine doctor."""
     if not status.installed:
@@ -1365,6 +1384,9 @@ def doctor(
         if install_postgres and not local_postgres_status.ready:
             typer.echo(f"  detail: {local_postgres_status.detail}")
             raise typer.Exit(1)
+        # The database section. Keeping VIBEY_PG_URL out of every model-driven process
+        # protects nothing if the database lets the worker's OS user in without it.
+        await _passwordless_reach_section()
         if conformance and not all_ok:
             raise typer.Exit(1)
 
