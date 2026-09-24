@@ -61,11 +61,12 @@ class WholeReviewInterface(Protocol):
         self,
         diff: str,
         documents: Mapping[str, str],
-        max_chars: int,
+        max_document_chars: int,
         sizer: ContextSizerInterface,
     ) -> tuple[dict[str, str], list[str], list[str]]:
         """`trim`, to what the model's window leaves beside the diff and the instructions
-        (and never more than `max_chars`)."""
+        (and never more than `max_document_chars`, the documents' own declared limit --
+        never the diff's)."""
 
     def finish(
         self,
@@ -87,6 +88,11 @@ class WholeReviewInterface(Protocol):
 @runtime_checkable
 class SizedChatInterface(Protocol):
     """One chat request sized so the model reads all of it, and a reply read honestly."""
+
+    @property
+    def code_bytes(self) -> int:
+        """Random bytes in each check code, so a caller can size a request as it is sent."""
+        ...
 
     def seal(self, payload: Mapping[str, Any], head: str, tail: str) -> dict[str, Any]:
         """A copy of `payload` that asks the runner to refuse rather than cut an oversized

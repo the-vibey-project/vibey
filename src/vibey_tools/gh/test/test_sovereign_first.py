@@ -1971,6 +1971,8 @@ def test_the_sovereign_models_window_is_declared_not_compiled_in(tmp_path):
         ({"chars_per_token": 2.5}, "chars_per_token"),
         ({"chars_per_token": float("nan")}, "chars_per_token"),
         ({"think": "max"}, "think"),
+        ({"max_document_chars": 999}, "max_document_chars"),
+        ({"max_document_chars": 5000.0}, "max_document_chars"),
     ],
 )
 def test_a_window_that_could_not_hold_a_review_is_refused(changes, message):
@@ -1996,3 +1998,21 @@ def test_every_local_model_call_is_handed_the_declared_window(tmp_path, name):
     assert "--reasoning-reserve 6000" in text
     assert "--chars-per-token 4" in text
     assert "--think 'low'" in text
+
+
+def test_the_documents_have_a_limit_of_their_own_not_the_diffs(tmp_path):
+    """`max_document_chars` bounds the whole review's documents; `max_diff_chars` bounds the
+    diff. Tied together, this repository's own two pages reached the diff's 60,000 and a
+    small README edit turned every gate red. Declared, loaded, and handed to the review."""
+    from vibey_gh.config import PrAutomationConfig, PrAutomationFallbackConfig, load_config
+
+    assert PrAutomationFallbackConfig().max_document_chars == 120000
+    (tmp_path / ".vibey-gh.toml").write_text(
+        "[pr_automation.fallback]\nmax_document_chars = 250000\n", "utf-8"
+    )
+    assert load_config(tmp_path).pr_automation.fallback.max_document_chars == 250000
+
+    fallback = PrAutomationFallbackConfig(max_diff_chars=50000, max_document_chars=250000)
+    cfg = GhConfig(root=tmp_path, pr_automation=PrAutomationConfig(fallback=fallback))
+    text = render_workflow(WORKFLOWS / "pr-review.yml", cfg)
+    assert "--max-chars 50000 \\\n                --max-document-chars 250000" in text

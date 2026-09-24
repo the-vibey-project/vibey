@@ -275,6 +275,9 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_MODEL__", fallback.model)
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_BASE_URL__", fallback.base_url)
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_MAX_DIFF_CHARS__", str(fallback.max_diff_chars))
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_MAX_DOCUMENT_CHARS__", str(fallback.max_document_chars)
+    )
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_TIMEOUT_SECONDS__", str(fallback.timeout_seconds))
     # The model's declared window (#1090): what a local request is sized to fit, and refused
     # over, rather than a number compiled into the sizer.

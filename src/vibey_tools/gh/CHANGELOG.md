@@ -5,6 +5,16 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Fix:** a whole review's documents have a limit of their own, `[pr_automation.fallback]
+  max_document_chars` (default 120,000, at least 1000; `--max-document-chars`, passed by the
+  workflow), instead of sharing `max_diff_chars`. Tied to the diff's 60,000, this repository's
+  own README.md and docs/index.md already took 59,607 of it; 394 more characters of README cut
+  docs/index.md, the verdict claimed the diff half alone, and with no paid review declared every
+  pull request's gate went red for a human. The documents are now also budgeted from the request
+  as sent, check codes included, so documents trimmed to the window are never then refused for
+  not fitting it. A model-server error whose body breaks off mid-read (`IncompleteRead`) is
+  still a clean refusal in the status line's words.
+
 - **Fix:** a local review never returns a verdict on a prompt the model did not read in full,
   and says when the model ran out of room (#1090). What #1090 was: its whole review sent about
   124,000 characters, which the model counted as 31,765 prompt tokens (about 3.95 characters

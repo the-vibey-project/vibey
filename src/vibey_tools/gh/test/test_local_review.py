@@ -8,8 +8,10 @@ claims to have evaluated the documentation contract it cannot evaluate.
 
 from __future__ import annotations
 
+import http.client
 import io
 import json
+import pathlib
 import re
 import urllib.error
 from collections.abc import Callable
@@ -799,7 +801,7 @@ def test_oversized_documents_are_truncated_and_the_model_is_told(monkeypatch, tm
     documents = _documents(tmp_path, **{"README.md": "x" * 3000, "docs__index.md": "y" * 3000})
 
     argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
-    argv += ["--max-chars", "4000", "--context-dir", str(documents)]
+    argv += ["--max-document-chars", "4000", "--context-dir", str(documents)]
     assert local_review.review(argv) == 0
 
     user = sent[0]["messages"][1]["content"]
@@ -1003,6 +1005,7 @@ def test_a_whole_review_trims_the_documents_never_the_diff(monkeypatch, capsys, 
 
     argv = ["--diff", str(diff), "--role", "sovereign", "--scope", "full", "--max-chars", "5000"]
     argv += ["--context-dir", str(documents), "--context-window", "16384"]
+    argv += ["--max-document-chars", "5000"]
     assert local_review.review([*argv, "--reasoning-reserve", "4096"]) == 0
 
     user = sent[0]["messages"][1]["content"]
@@ -1209,6 +1212,8 @@ class _Body:
         (b"", "Service Unavailable", "Service Unavailable"),
         (b"", "", "no reason given"),
         (OSError("reset"), "Bad Request", "Bad Request"),
+        (http.client.IncompleteRead(b'{"err'), "Bad Request", "Bad Request"),
+        (http.client.HTTPException("broken"), "Bad Gateway", "Bad Gateway"),
     ],
 )
 def test_a_refusal_is_said_in_the_servers_own_words(raw, reason, said):
@@ -1328,7 +1333,7 @@ def test_a_whole_review_that_lost_a_document_claims_the_diff_half_alone(
     _model_returns(monkeypatch, _whole_verdict())
     documents = _documents(tmp_path, **{"README.md": "r" * 6_000, "docs__index.md": "i" * 6_000})
     argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
-    argv += ["--context-dir", str(documents), "--max-chars", "7000"]
+    argv += ["--context-dir", str(documents), "--max-document-chars", "7000"]
 
     assert local_review.review(argv) == 0
     out = json.loads(capsys.readouterr().out)
@@ -1339,12 +1344,26 @@ def test_a_whole_review_that_lost_a_document_claims_the_diff_half_alone(
 
 
 def test_the_model_is_told_when_every_document_was_left_out(monkeypatch, tmp_path):
-    """Even with nothing left to show, the model is told what it is not seeing, by name."""
+    """Even with nothing left to show, the model is told what it is not seeing, by name.
+
+    The diff is grown until the window leaves the documents less room than one frame, so
+    the real `fit` leaves every one of them out while the request itself still fits."""
+    pages = {"README.md": "# Tool", "docs/index.md": "# Home"}
+    sizer = ContextSizer(ceiling_tokens=16384, reserve_tokens=4096)
+    probe = "+ d\n"
+    kept, _, _ = local_review.WHOLE_REVIEW.fit(probe, {"README.md": "r" * 100_000}, 10**6, sizer)
+    frame = len(local_review.DOCUMENT_FRAME.format(name="README.md", text=""))
+    room = len(kept["README.md"]) + frame + 1  # what the documents had beside `probe`
+    diff = tmp_path / "d.diff"
+    diff.write_text(probe + "x" * (room - 10), encoding="utf-8")
+    assert local_review.WHOLE_REVIEW.fit(diff.read_text(), pages, 10**6, sizer)[2] == list(pages)
     sent = _model_returns(monkeypatch, _whole_verdict())
     documents = _documents(tmp_path, **{"README.md": "# Tool", "docs__index.md": "# Home"})
 
-    argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
-    assert local_review.review([*argv, "--context-dir", str(documents), "--max-chars", "10"]) == 0
+    argv = ["--diff", str(diff), "--role", "sovereign", "--scope", "full"]
+    argv += ["--max-chars", str(10**6), "--context-dir", str(documents)]
+    argv += ["--context-window", "16384"]
+    assert local_review.review([*argv, "--reasoning-reserve", "4096"]) == 0
 
     user = sent[0]["messages"][1]["content"]
     assert "<documents>" not in user
@@ -1363,7 +1382,7 @@ def test_documents_give_way_in_the_declared_order_not_the_listed_one(monkeypatch
     argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
     argv += ["--context-dir", str(documents), "--context-paths", "docs/z.md README.md"]
 
-    assert local_review.review([*argv, "--max-chars", "4000"]) == 0
+    assert local_review.review([*argv, "--max-document-chars", "4000"]) == 0
 
     user = sent[0]["messages"][1]["content"]
     assert user.index('<document path="docs/z.md">') < user.index('<document path="README.md">')
@@ -1404,4 +1423,82 @@ def test_a_window_flag_the_configuration_would_refuse_is_refused(capsys, tmp_pat
             local_review.review(["--diff", str(_diff(tmp_path)), *flags])
         else:
             local_review.triage(["--issue", str(_issue(tmp_path)), *flags])
-    assert "--context-window, --reasoning-reserve or --chars-per-token" in capsys.readouterr().err
+    assert "--context-window, --reasoning-reserve, --chars-per-token or --max-document-chars" in (
+        capsys.readouterr().err
+    )
+
+
+# ---------------------------------------------------------------------------
+# The documents are budgeted by the window and their own declared limit -- never by the
+# DIFF's limit. Bounded by `max_diff_chars` (60,000), this repository's own two pages
+# already needed 59,607 of it, so 394 more characters in README.md cut docs/index.md, the
+# verdict claimed the diff half alone, and every pull request's gate went red.
+# ---------------------------------------------------------------------------
+
+_REPO_ROOT = pathlib.Path(__file__).resolve().parents[4]
+
+
+def test_the_real_pages_grown_past_the_diff_limit_are_still_shown_whole(
+    monkeypatch, capsys, tmp_path
+):
+    """README.md grown by 394 characters, docs/index.md as it is, and a one-line diff --
+    passed exactly as the workflow passes them (`--max-chars 60000`, the declared window):
+    nothing is cut, and the verdict answers both halves."""
+    from vibey_gh.config import PrAutomationFallbackConfig
+    from vibey_gh.review_contract import DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT, REVIEW_CONTRACT
+
+    readme = (_REPO_ROOT / "README.md").read_text(encoding="utf-8") + "x" * 394
+    index = (_REPO_ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+    documents = _documents(tmp_path, **{"README.md": readme, "docs__index.md": index})
+    sent = _model_returns(monkeypatch, _whole_verdict())
+
+    argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
+    argv += ["--context-dir", str(documents), "--max-chars", "60000"]
+    assert local_review.review([*argv, "--context-window", "65536"]) == 0
+
+    _, cut, dropped = local_review.WHOLE_REVIEW.fit(
+        "+ added a flag\n",
+        {"README.md": readme, "docs/index.md": index},
+        PrAutomationFallbackConfig().max_document_chars,
+        ContextSizer(),
+    )
+    assert (cut, dropped) == ([], [])
+    user = sent[0]["messages"][1]["content"]
+    assert readme in user and index in user
+    assert "not all shown in full" not in user
+    out = json.loads(capsys.readouterr().out)
+    assert out[REVIEW_CONTRACT.scope_field] == [DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT]
+    assert "cut to fit" not in out["summary"]
+
+
+@pytest.mark.parametrize("window", [16384, 32768, 65536])
+def test_documents_trimmed_to_the_window_are_never_then_refused_by_it(
+    monkeypatch, capsys, tmp_path, window
+):
+    """`fit` budgets the documents from everything the request will send -- the check codes
+    `SizedChat` seals it with included -- so documents trimmed to fit are never refused
+    for not fitting once sealed."""
+    sent = _model_returns(monkeypatch, _whole_verdict())
+    documents = _documents(tmp_path, **{"README.md": "r" * 400_000})
+
+    argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
+    argv += ["--context-dir", str(documents), "--context-window", str(window)]
+    argv += ["--max-document-chars", "1000000"]
+    assert local_review.review([*argv, "--reasoning-reserve", "4096"]) == 0, capsys.readouterr().err
+    assert len(sent) == 1
+
+
+def test_the_cli_forwards_the_document_limit(monkeypatch, tmp_path):
+    from vibey_gh import cli
+
+    seen: list[list[str]] = []
+    monkeypatch.setattr(local_review, "review", lambda argv: seen.append(argv) or 0)
+
+    assert cli.main(["local-review", "--max-document-chars", "90000"]) == 0
+    assert seen == [["--max-document-chars", "90000"]]
+
+
+def test_a_document_limit_the_configuration_would_refuse_is_refused(capsys, tmp_path):
+    with pytest.raises(SystemExit):
+        local_review.review(["--diff", str(_diff(tmp_path)), "--max-document-chars", "10"])
+    assert "max_document_chars must be a whole number, at least 1000" in capsys.readouterr().err

@@ -256,6 +256,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **vibey_gh:** a whole sovereign review's documents are bounded by their own
+  `[pr_automation.fallback] max_document_chars` (default 120,000) and the window, no longer by
+  the diff's `max_diff_chars`. This repository's two pages already took 59,607 of the diff's
+  60,000, so a small README edit cut one, the review claimed the diff half alone, and every
+  gate asked a human. Documents trimmed to the window are also no longer refused once the
+  request's check codes are added, and a refusal whose body breaks off mid-read is still reported
 * **notify:** a desktop notification's title and message reach `osascript` as arguments of a
   fixed `on run argv` script, never as AppleScript source. Only `"` was escaped before, so a
   model- or gate-written message ending `\" & (do shell script ...) --` ran a shell command.

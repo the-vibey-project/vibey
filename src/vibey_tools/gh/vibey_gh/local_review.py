@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import http.client
 import json
 import pathlib
 import secrets
@@ -297,21 +298,32 @@ class WholeReview:
         self,
         diff: str,
         documents: Mapping[str, str],
-        max_chars: int,
+        max_document_chars: int,
         sizer: ContextSizerInterface,
     ) -> tuple[dict[str, str], list[str], list[str]]:
+        # Bounded by the window and by the documents' OWN declared limit -- never by
+        # `max_diff_chars`, which is the diff's. Tied to the diff's 60,000, this
+        # repository's two pages already took 59,607 of it, and 394 more characters of
+        # README cut docs/index.md and turned every pull request's gate red.
         # The note is counted at its longest -- every document named as both cut and left
         # out -- because which of them it names is only known after trimming.
         names = list(documents)
+        # Counted as SENT: sealed with check codes of the length `SIZED_CHAT` writes, so
+        # documents trimmed to fit are never then refused for not fitting once sealed.
+        code = "0" * (2 * SIZED_CHAT.code_bytes)
+        sealed = SIZED_CHAT.seal(
+            {"messages": [{"content": ""}, {"content": ""}], "format": self.schema()}, code, code
+        )
         fixed = (
             len(self.system_prompt())
-            + len(json.dumps(self.schema()))
+            + sum(len(message["content"]) for message in sealed["messages"])
+            + len(json.dumps(sealed["format"]))
             + len(self.user_prompt(diff, {}))
             + len(DOCUMENTS_OPEN)
             + len(DOCUMENTS_CLOSE)
             + len(self.cut_note(names, names))
         )
-        return self.trim(documents, min(max_chars, sizer.room_chars(fixed)))
+        return self.trim(documents, min(max_document_chars, sizer.room_chars(fixed)))
 
     def finish(
         self,
@@ -467,7 +479,9 @@ class SizedChat:
         """
         try:
             message = error.read().decode("utf-8", errors="replace").strip()
-        except OSError:
+        except (OSError, http.client.HTTPException):
+            # A body cut off mid-read (`IncompleteRead`) still leaves a clean refusal, in
+            # the status line's words.
             message = ""
         for _ in range(3):
             try:
@@ -637,9 +651,16 @@ def _sizer(args: argparse.Namespace, parser: argparse.ArgumentParser) -> Context
             reasoning_reserve_tokens=args.reasoning_reserve,
             chars_per_token=args.chars_per_token,
             think=args.think,
+            # Only `review` declares it; `triage` shows no documents.
+            max_document_chars=getattr(
+                args, "max_document_chars", PrAutomationFallbackConfig.max_document_chars
+            ),
         )
     except ValueError as error:
-        parser.error(f"--context-window, --reasoning-reserve or --chars-per-token: {error}")
+        parser.error(
+            "--context-window, --reasoning-reserve, --chars-per-token or --max-document-chars:"
+            f" {error}"
+        )
     return ContextSizer(
         ceiling_tokens=args.context_window,
         reserve_tokens=args.reasoning_reserve,
@@ -678,6 +699,12 @@ def review(argv: list[str] | None = None) -> int:
         help="documents the whole review judges the documentation contract against",
     )
     parser.add_argument(
+        "--max-document-chars",
+        type=int,
+        default=defaults.max_document_chars,
+        help="the most characters of documents a whole review is shown, whatever the window",
+    )
+    parser.add_argument(
         "--context-paths",
         default=" ".join(defaults.context_paths),
         help=(
@@ -712,7 +739,7 @@ def review(argv: list[str] | None = None) -> int:
     # The optional documents give way to the window, the last declared first; the diff
     # never does. What was cut or left out is said in the verdict.
     kept, cut, dropped = (
-        WHOLE_REVIEW.fit(diff, documents, args.max_chars, sizer) if whole else ({}, [], [])
+        WHOLE_REVIEW.fit(diff, documents, args.max_document_chars, sizer) if whole else ({}, [], [])
     )
     try:
         verdict = call_ollama(
