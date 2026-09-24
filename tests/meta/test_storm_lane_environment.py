@@ -282,25 +282,39 @@ def load_qwenlane() -> object:
     return module
 
 
-def drive(monkeypatch: pytest.MonkeyPatch, lane: Path, foreign: Path, seen: list[str]) -> object:
-    """Run qwenlane's main() on `lane` from a foreign venv, the model replaced by one command."""
+def drive(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, lane: Path, seen: Path) -> object:
+    """Run qwenlane's main() on `lane`, each attempt a child that runs the model's one command.
+
+    An attempt is a process of its own (lane_watchdog), so the command runs where the model's
+    would: in that child, through qwenloop's real shell tool, with the environment the child
+    inherited from main(). It writes what it saw to `seen`. Nothing calls a model.
+    """
     from types import SimpleNamespace
 
-    from qwenloop.domain.model import RunStatus
-    from qwenloop.infrastructure.tools import SandboxTools
-
     qwenlane = load_qwenlane()
-
-    async def one_command(_server, _profile, cwd, *_args, **_kwargs):
-        result = await SandboxTools(cwd).execute("shell", {"argv": PRINT_PREFIX})
-        seen.append(str(result.get("output", result)).strip())
-        return SimpleNamespace(status=RunStatus.FAILED, turns=1)
-
-    monkeypatch.setattr(qwenlane, "_run_plan", one_command)
+    attempt = tmp_path / "attempt.py"
+    attempt.write_text(
+        "import asyncio, json, os, sys\n"
+        "from pathlib import Path\n"
+        "from qwenloop.infrastructure.tools import SandboxTools\n"
+        "spec = json.loads(Path(sys.argv[1]).read_text())\n"
+        # Popped, as run_attempt pops them: the commands it starts must not see either.
+        f"fd = int(os.environ.pop({qwenlane.REPORT_FD_ENV!r}))\n"
+        f"assert os.environ.pop({qwenlane.SPEC_SHA256_ENV!r}), 'the spec digest arrived'\n"
+        "result = asyncio.run(\n"
+        f"    SandboxTools(Path(spec['lane'])).execute('shell', {{'argv': {PRINT_PREFIX!r}}})\n"
+        ")\n"
+        f"Path({str(seen)!r}).write_text(str(result.get('output', result)).strip())\n"
+        'os.write(fd, b\'result {"status": "failed", "turns": 1}\\n\')\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        qwenlane, "attempt_argv", lambda spec: [sys.executable, str(attempt), str(spec)]
+    )
+    monkeypatch.setattr(qwenlane, "STORM", tmp_path)
     monkeypatch.setattr(
         qwenlane, "_load_config", lambda: SimpleNamespace(max_turns=1, startup_timeout_seconds=1)
     )
-    monkeypatch.setattr(qwenlane, "_server_for", lambda _config: (None, None))
     monkeypatch.setattr(qwenlane, "_tracked_repository_context", lambda _lane: "")
     body = lane / "issue.md"
     body.write_text("an issue\n", encoding="utf-8")
@@ -312,14 +326,15 @@ def drive(monkeypatch: pytest.MonkeyPatch, lane: Path, foreign: Path, seen: list
 
 
 def test_qwenlane_runs_the_models_commands_in_the_lane_venv(
-    monkeypatch: pytest.MonkeyPatch, lane: Path, foreign: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, lane: Path, foreign: Path
 ) -> None:
-    seen: list[str] = []
-    qwenlane = drive(monkeypatch, lane, foreign, seen)
+    seen = tmp_path / "seen.txt"
+    qwenlane = drive(monkeypatch, tmp_path, lane, seen)
     with mock.patch.dict(os.environ, inherited(foreign), clear=True):
         qwenlane.main()
-    assert len(seen) == 1, seen
-    assert Path(seen[0]).resolve() == (lane / ".venv").resolve()
+    assert Path(seen.read_text(encoding="utf-8")).resolve() == (lane / ".venv").resolve()
+    result = json.loads((lane / ".qwenstorm" / "result.json").read_text(encoding="utf-8"))
+    assert [attempt["status"] for attempt in result["attempts"]] == ["failed"]
 
 
 def test_qwenlane_refuses_a_lane_without_its_own_venv_before_the_model_runs(
@@ -327,14 +342,14 @@ def test_qwenlane_refuses_a_lane_without_its_own_venv_before_the_model_runs(
 ) -> None:
     bare = tmp_path / "lanes" / "no-venv"
     bare.mkdir(parents=True)
-    seen: list[str] = []
-    qwenlane = drive(monkeypatch, bare, foreign, seen)
+    seen = tmp_path / "seen.txt"
+    qwenlane = drive(monkeypatch, tmp_path, bare, seen)
     with (
         mock.patch.dict(os.environ, inherited(foreign), clear=True),
         pytest.raises(SystemExit, match="refused"),
     ):
         qwenlane.main()
-    assert seen == [], "the model ran in a lane with no environment of its own"
+    assert not seen.exists(), "the model ran in a lane with no environment of its own"
     result = json.loads((bare / ".qwenstorm" / "result.json").read_text(encoding="utf-8"))
     assert result["completed"] is False
     assert "no .venv of its own" in result["environment_refused"]

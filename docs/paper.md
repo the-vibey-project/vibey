@@ -1853,7 +1853,7 @@ is an append-only evidence ledger
 Each lane was allowed at most three attempts. Across the 30 lanes the ledger holds,
 70 attempts and 2,606 model turns were logged ([Fig. 23](#fig:storm-lanes)). Seventeen
 lanes ended in a completion claim, and a claim is not delivery: over the same span the
-reviewer integrated 8 lanes and abandoned 2, and the rest remained unsettled at the
+reviewer integrated 12 lanes and abandoned 14, and the rest remained unsettled at the
 cutoff. The figures below are the tool's own, regenerated between its markers; every
 sentence about them is written outside those markers.
 
@@ -1865,13 +1865,13 @@ sentence about them is written outside those markers.
 
 | quantity | value |
 |---|---|
-| ledger records | 245 |
+| ledger records | 277 |
 | span consumed from | 2026-09-23T04:40:49Z |
-| span consumed to | 2026-09-23T11:27:36Z |
+| span consumed to | 2026-09-24T00:24:17Z |
 | lanes observed | 30 |
 | lanes claiming completion | 17 |
 | lane starts / ends logged | 49 / 42 |
-| lanes integrated / abandoned | 8 / 2 |
+| lanes integrated / abandoned | 12 / 14 |
 | recorded attempts | 70 |
 | total turns across attempts | 2606 |
 
@@ -2081,9 +2081,9 @@ in the consumed span.
 \node[vibeynote,anchor=north west,align=left] at (-4.0,-9.20)
   {\textcolor{vibeygreen!80}{$\blacksquare$} attempt completed \quad \textcolor{vibeyred!55}{$\blacksquare$} attempt failed \quad
    30 lanes, 70 attempts, 2,606 turns; 17 lanes claimed completion,
-   8 were integrated and 2 abandoned by the reviewer};
+   12 were integrated and 14 abandoned by the reviewer};
 \end{tikzpicture}
-\caption{Every lane of the QwenStorm 3.0.0 evidence ledger, one row per lane in issue order. Each bar is one attempt, its length the turns the local model spent, green where the attempt ended in a completion claim and red where it failed; a lane gets at most three. Of 30 lanes, 17 claimed completion, and a claim is not delivery: the reviewer integrated 8 and abandoned 2 over the same span. Read from the ledger between 2026-09-23T04:40:49Z and 2026-09-23T11:27:36Z with no gaps.}
+\caption{Every lane of the QwenStorm 3.0.0 evidence ledger, one row per lane in issue order. Each bar is one attempt, its length the turns the local model spent, green where the attempt ended in a completion claim and red where it failed; a lane gets at most three. Of 30 lanes, 17 claimed completion, and a claim is not delivery: the reviewer integrated 12 and abandoned 14 over the same span. Read from the ledger between 2026-09-23T04:40:49Z and 2026-09-24T00:24:17Z with no gaps.}
 \label{fig:storm-lanes}
 \end{figure*}
 ```

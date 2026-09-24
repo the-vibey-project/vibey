@@ -6,3 +6,7 @@ qwenloop-toolcall-retry
 default-model-p1
 default-model-p2
 default-model-p3
+gap-agent-tree-parity
+installer-catalogue
+loops-residency-policy
+split-332-1-transport-seams
