@@ -660,3 +660,55 @@ def test_the_spec_is_written_outside_the_lane_and_bound_end_to_end(tmp_path: Pat
     assert spec.is_relative_to(tmp_path / "state")
     assert not spec.is_relative_to(lane)
     assert not (lane / ".qwenstorm" / "attempts").exists()
+
+
+# --- a repository checkout never commits a storm's runtime -----------------------------------
+
+PLANS = TOOLS.parent
+REPO = PLANS.parents[2]
+
+
+def ignored(path: Path) -> bool:
+    """Whether git's ignore rules match `path` in this checkout. It need not exist.
+
+    `--no-index`: judged by the rules alone, so a tracked ledger an over-broad pattern would
+    hide still reads as ignored here, rather than passing because it is already tracked.
+    """
+    done = subprocess.run(
+        ["git", "check-ignore", "-q", "--no-index", str(path.relative_to(REPO))],
+        cwd=REPO,
+        capture_output=True,
+    )
+    assert done.returncode in (0, 1), done.stderr
+    return done.returncode == 0
+
+
+@pytest.mark.parametrize(
+    "runtime",
+    [
+        "lanes/a-lane/README.md",
+        "lanes/a-lane/.qwenstorm/result.json",
+        "lanes/a-lane/.git/HEAD",
+        "state/attempts/a-lane/1.json",
+    ],
+)
+def test_the_storm_runtime_is_never_tracked_from_a_checkout(runtime: str) -> None:
+    """Run from a repository checkout, `storm_paths.storm()` is this plans directory, so the
+    lane clones and the attempt specs land in it. Neither may ever be swept into a commit."""
+    assert ignored(PLANS / runtime), runtime
+
+
+@pytest.mark.parametrize(
+    "ledger",
+    [
+        "integrated.txt",
+        "abandoned.txt",
+        "queue.txt",
+        "evidence/ledger.jsonl",
+        "evidence/CHANGES.md",
+        "lanes/.gitignore",
+        "state/.gitignore",
+    ],
+)
+def test_the_ledgers_and_the_ignore_files_stay_tracked(ledger: str) -> None:
+    assert not ignored(PLANS / ledger), ledger
