@@ -8,6 +8,7 @@ they are checked against Postgres rather than a mock.
 """
 
 import os
+import re
 from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
@@ -96,6 +97,42 @@ async def test_spec_carries_budget_caps_into_project_config(tmp_path: Path) -> N
     assert stored.config["skills_context"] == {"mode": "shadow", "budget": 4000}
     with pytest.raises(ValueError, match="skillsContext must be an object"):
         handlers._project_config("demo", {"skillsContext": "shadow"})
+
+
+async def test_spec_carries_the_declared_gate_and_engine_environments(tmp_path: Path) -> None:
+    """The CR declares what `vibey new` reads from vibey.toml: `spec.gates` and
+    `spec.engineEnvironment` reach the record as `gates` and `engine_environment`."""
+    async with build_app() as resources:
+        project = await handlers.ensure_project(
+            resources,
+            name="demo",
+            spec={
+                "repo": str(tmp_path),
+                "gates": {"timeout_seconds": 900, "env_allow": ["JAVA_HOME"]},
+                "engineEnvironment": {"engines": {"agyloop": ["GOOGLE_ACCESS_TOKEN"]}},
+            },
+            known_project_id=None,
+        )
+        stored = await resources.projects.get(project.project_id)
+    assert stored is not None
+    assert stored.config["gates"] == {"timeout_seconds": 900, "env_allow": ["JAVA_HOME"]}
+    assert stored.config["engine_environment"] == {"engines": {"agyloop": ["GOOGLE_ACCESS_TOKEN"]}}
+
+
+@pytest.mark.parametrize(
+    ("spec", "message"),
+    [
+        ({"gates": "fast"}, "spec.gates must be an object"),
+        ({"engineEnvironment": ["X"]}, "spec.engineEnvironment must be an object"),
+        ({"gates": {"env_allow": ["VIBEY_PG_URL"]}}, "VIBEY_PG_URL can never be passed"),
+        ({"engineEnvironment": {"allow": ["PGHOST"]}}, "PGHOST can never be passed"),
+    ],
+)
+def test_a_malformed_or_forbidden_environment_in_the_spec_is_refused(
+    spec: dict[str, object], message: str
+) -> None:
+    with pytest.raises(ValueError, match=re.escape(message)):
+        handlers._project_config("demo", spec)
 
 
 async def test_answers_from_the_cr_go_through_the_shared_gate_service(tmp_path: Path) -> None:

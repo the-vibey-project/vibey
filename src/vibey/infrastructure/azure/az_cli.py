@@ -15,10 +15,12 @@ spec into an ARM template (arm.py) and submits it with
 worker to this adapter.
 """
 
+import asyncio
 import json
 import tempfile
+from collections.abc import Iterable
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any
 
 from vibey.application.interfaces import (
@@ -29,8 +31,63 @@ from vibey.application.interfaces import (
 from vibey.domain.deployment import AzureTargetScope, DeploymentConsent, DeploymentSpec
 from vibey.domain.errors import VibeyError
 from vibey.infrastructure.azure.arm import DEFAULT_IMAGE, render_template
-from vibey.infrastructure.git.clean_env import CleanGitEnvSubprocessExecutor
+from vibey.infrastructure.engines.claudeloop_process import CommandResult
 from vibey.infrastructure.interfaces import CommandExecutor
+from vibey.infrastructure.process import SYSTEM_ENVIRONMENT, ChildEnvironment
+
+# What `az` reads of its environment beyond the system basics: where its login and
+# extensions live, and its configuration, which it takes from `AZURE_<SECTION>_<NAME>`
+# for the sections it has. Nothing of vibey's -- `az` runs Python extensions -- and no
+# model-endpoint key (`AZURE_OPENAI_*`) it never reads. An operator who logs `az` in
+# from the environment instead of `az login` declares more through `env_allow`.
+AZ_CLI_ENV_ALLOW: tuple[str, ...] = (
+    "AZURE_CONFIG_DIR",
+    "AZURE_EXTENSION_DIR",
+    "AZURE_HTTP_USER_AGENT",
+    "AZURE_CORE_*",
+    "AZURE_DEFAULTS_*",
+    "AZURE_CLOUD_*",
+    "AZURE_LOGGING_*",
+    "AZURE_EXTENSION_*",
+)
+
+
+class AzCliSubprocessExecutor:
+    """Runs one `az` command, with an environment built from its own declaration and
+    never copied from the worker's. Satisfies `infrastructure/interfaces.CommandExecutor`;
+    declared by `interfaces/az_cli_interface.py`.
+
+    It used to share vibey's git executor, which then copied the worker's environment
+    minus `GIT_*` -- `VIBEY_PG_URL` included -- into a CLI that loads extensions.
+    """
+
+    __slots__ = ("_environment",)
+
+    def __init__(self, *, env_allow: Iterable[str] = ()) -> None:
+        self._environment = ChildEnvironment(
+            SYSTEM_ENVIRONMENT.extended((*AZ_CLI_ENV_ALLOW, *env_allow), where="az CLI environment")
+        )
+
+    @property
+    def environment(self) -> ChildEnvironment:
+        return self._environment
+
+    async def execute(self, argv: tuple[str, ...]) -> CommandResult:
+        if not argv or PurePath(argv[0]).name != "az":
+            raise ValueError(f"the az executor runs az only, not {argv[:1]!r}")
+        process = await asyncio.create_subprocess_exec(
+            *argv,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env=self._environment.build(),
+        )
+        try:
+            stdout, stderr = await process.communicate()
+        except asyncio.CancelledError:
+            process.terminate()
+            await process.wait()
+            raise
+        return CommandResult(process.returncode or 0, stdout.decode(), stderr.decode())
 
 
 class AzCliError(VibeyError):
@@ -51,8 +108,13 @@ class AzCliClientAdapter:
         executor: CommandExecutor | None = None,
         image: str = DEFAULT_IMAGE,
     ) -> None:
-        self._executor = executor or CleanGitEnvSubprocessExecutor()
+        self._executor = executor or AzCliSubprocessExecutor()
         self._image = image
+
+    @property
+    def executor(self) -> CommandExecutor:
+        """What every `az` call goes through."""
+        return self._executor
 
     async def _az_json(self, *args: str) -> Any:
         argv = ("az", *args, "-o", "json")
