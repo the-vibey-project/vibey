@@ -209,6 +209,12 @@ class BumpPlan:
     named: bool = False
     """True when the target was already in the lane as another job's dependency and is
     now bumped by name: it keeps its place, and joins the named set."""
+    swept: tuple[UUID, ...] = ()
+    """Lane members the lane no longer derives -- left behind by a named job that was
+    cancelled or failed with its dependencies unfinished -- cleared by this request."""
+    skipped: tuple[UUID, ...] = ()
+    """Jobs the sweep would clear but will not write: their phase is one this vibey does
+    not know (vibey#287). They stay where they are, and the request says so."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,8 +224,12 @@ class UnbumpPlan:
 
     target: UUID
     moved: tuple[UUID, ...]
-    """Every job the un-bump clears: the target, then the pulled jobs the remaining
-    named jobs no longer need, in claim order."""
+    """The jobs the un-bump itself clears: the target, then the pulled jobs the
+    remaining named jobs no longer need because the target left, in claim order."""
+    swept: tuple[UUID, ...] = ()
+    """Lane members the lane no longer derived before this request, cleared by it."""
+    skipped: tuple[UUID, ...] = ()
+    """Jobs it would clear but will not write, their phase unknown to this vibey."""
 
 
 class _SnapshotPlanner:
@@ -255,6 +265,30 @@ class _SnapshotPlanner:
         self._writable(job)
         return job
 
+    @staticmethod
+    def _alive_named(jobs: Mapping[UUID, QueuedJob]) -> set[UUID]:
+        """The named set that still counts: named jobs that have not finished. A named
+        job in a state this vibey does not know is kept, not guessed finished."""
+        return {j.id for j in jobs.values() if j.named and j.state not in FINISHED_STATES}
+
+    def _orphans(self, jobs: Mapping[UUID, QueuedJob], named: set[UUID]) -> set[UUID]:
+        """Unfinished lane members the lane, derived from `named`, does not contain."""
+        derived: set[UUID] = set()
+        for job_id in named:
+            derived |= set(self._needs(jobs, jobs[job_id]))
+        return {j.id for j in jobs.values() if j.bumped and j.movable and j.id not in derived}
+
+    def _clearable(
+        self, jobs: Mapping[UUID, QueuedJob], ids: set[UUID]
+    ) -> tuple[tuple[UUID, ...], tuple[UUID, ...]]:
+        """`ids` in claim order, split into those it may clear and those in a phase this
+        vibey does not know, which it leaves alone rather than refuse the request."""
+        ordered = self._order.sort(jobs[job_id] for job_id in ids)
+        return (
+            tuple(j.id for j in ordered if j.phase_known),
+            tuple(j.id for j in ordered if not j.phase_known),
+        )
+
     def _needs(self, jobs: Mapping[UUID, QueuedJob], root: QueuedJob) -> dict[UUID, QueuedJob]:
         """`root` and every unfinished job it depends on, transitively."""
         reached: dict[UUID, QueuedJob] = {}
@@ -278,8 +312,10 @@ class BumpPlanner(_SnapshotPlanner):
         self, target: UUID, jobs: Mapping[UUID, QueuedJob], *, finished_ok: bool = False
     ) -> BumpPlan:
         job = self._get(jobs, target)
+        orphans = self._orphans(jobs, self._alive_named(jobs))
         if finished_ok and job.state in FINISHED_STATES:
-            return BumpPlan(target=target, moved=())
+            swept, skipped = self._clearable(jobs, orphans)
+            return BumpPlan(target=target, moved=(), swept=swept, skipped=skipped)
         self._target(jobs, target)
         members = self._needs(jobs, job)
         blockers = sorted(
@@ -298,11 +334,14 @@ class BumpPlanner(_SnapshotPlanner):
         moved = tuple(member.id for member in ordered if not member.bumped)
         for moving in moved:
             self._writable(jobs[moving])
+        swept, skipped = self._clearable(jobs, orphans - set(members))
         return BumpPlan(
             target=target,
             moved=moved,
             kept=tuple(m.id for m in ordered if m.bumped and m.id != target),
             named=job.bumped and not job.named,
+            swept=swept,
+            skipped=skipped,
         )
 
     def _dependencies_first(self, members: Mapping[UUID, QueuedJob]) -> list[QueuedJob]:
@@ -350,26 +389,24 @@ class UnbumpPlanner(_SnapshotPlanner):
 
     def plan(self, target: UUID, jobs: Mapping[UUID, QueuedJob]) -> UnbumpPlan:
         root = self._target(jobs, target)
+        named = self._alive_named(jobs)
+        orphans = self._orphans(jobs, named) - {target}
+        swept, skipped = self._clearable(jobs, orphans)
         if not root.bumped:
-            return UnbumpPlan(target=target, moved=())
-        named = {
-            job.id: self._needs(jobs, job)
-            for job in jobs.values()
-            if job.named and job.movable and job.id != target
-        }
-        dependents = sorted(job_id for job_id, reach in named.items() if target in reach)
+            return UnbumpPlan(target=target, moved=(), swept=swept, skipped=skipped)
+        remaining = named - {target}
+        dependents = sorted(
+            job_id for job_id in remaining if target in self._needs(jobs, jobs[job_id])
+        )
         if dependents:
             raise DependentsStillBumped(target, tuple(dependents))
-        needed = set().union(*named.values())
-        cleared = [
-            job
-            for job in jobs.values()
-            if job.id != target and job.bumped and job.movable and job.id not in needed
-        ]
-        for job in cleared:
-            self._writable(job)
+        released = self._orphans(jobs, remaining) - orphans - {target}
+        cleared, held = self._clearable(jobs, released)
         return UnbumpPlan(
-            target=target, moved=(target, *(job.id for job in self._order.sort(cleared)))
+            target=target,
+            moved=(target, *cleared),
+            swept=swept,
+            skipped=tuple(sorted({*held, *skipped})),
         )
 
 
@@ -399,6 +436,11 @@ class PriorityChange:
     named: bool = False
     note: str = ""
     """Why nothing moved, when nothing did."""
+    swept: tuple[MovedJob, ...] = ()
+    """Lane members the lane no longer derived, cleared by this request (finding: a
+    named job cancelled or failed with its dependencies unfinished)."""
+    skipped: tuple[UUID, ...] = ()
+    """Jobs left in the lane because their phase is one this vibey does not know."""
 
     @property
     def changed(self) -> bool:

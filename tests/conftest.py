@@ -19,8 +19,10 @@ state the application itself never touches.
 
 import asyncio
 import contextlib
+import faulthandler
 import getpass
 import os
+import signal
 from pathlib import Path
 
 import asyncpg
@@ -158,8 +160,38 @@ async def _teardown(base_dsn: str) -> None:
         await conn.close()
 
 
+# Where SIGUSR1 sends this process's stacks. Kept open for the life of the process: the
+# handler writes to the descriptor, and a closed one would dump nothing.
+_STACKS_FILE: object = None
+
+
+# Module-level rather than a class (ADR-0016's written reason): pytest resolves hooks by
+# name at conftest scope, and this is called from one and by one meta test.
+def _arm_stack_dump() -> None:
+    """On SIGUSR1, dump every thread's stack, and keep running.
+
+    The storm's push-gate reaper sends it to a hung suite before it kills the suite, so the
+    kill leaves a record of what was stuck (tests/meta/test_a_hung_test_names_itself.py).
+    With `VIBEY_PYTEST_STACKS_DIR` set -- `push_gate.py run` sets it -- the dump goes to one
+    file per process there, because a worker's stderr is captured by pre-commit, which the
+    reaper is about to kill with it. Without it, to stderr.
+    """
+    global _STACKS_FILE
+    where = os.environ.get("VIBEY_PYTEST_STACKS_DIR")
+    if where:
+        Path(where).mkdir(parents=True, exist_ok=True)
+        _STACKS_FILE = open(  # noqa: SIM115 - must outlive this call; see _STACKS_FILE
+            Path(where) / f"pytest-{os.getpid()}.stacks", "a", encoding="utf-8"
+        )
+        faulthandler.register(signal.SIGUSR1, file=_STACKS_FILE, all_threads=True)
+    else:
+        faulthandler.register(signal.SIGUSR1, all_threads=True)
+
+
 def pytest_configure(config: pytest.Config) -> None:
     global _BASE_DSN
+    # First, so a hang in the database setup below is as legible as one in a test.
+    _arm_stack_dump()
     _BASE_DSN = _resolve_base_dsn()
     os.environ["_VIBEY_TEST_BASE_DSN"] = _BASE_DSN
     worker_dsn = asyncio.run(_setup(_BASE_DSN))
