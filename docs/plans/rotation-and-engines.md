@@ -293,16 +293,20 @@ the mechanism that could cause it. The cap is therefore checked *before* an
 engine session starts, not after.
 
 The caps are the project's `max_cycle_dollars` and `max_cycle_turns`, set
-with `vibey new --max-cycle-dollars/--max-cycle-turns`. When either is set,
-`BuildImplementHandler` compares the cycle's ledger-recorded spend with the
-cap before every attempt. It parks a `budget_exhausted` gate when the cap is
-reached. On attempts after the first, it also parks when the payload's
-`projected_cost_per_attempt` would exceed the cap. Answering
-`--raw '{"max_dollars": N}'` or `--raw '{"max_turns": N}'` raises the cap for
-that job only; the stored cap is unchanged. With neither setting, spend is
-uncapped. The worker and `vibey cost` read both caps through one parser,
-`LedgerBudgetSource.caps_from_config`, so the cap `vibey cost` prints is the
-cap the brake enforces. The `vibey.toml` keys `max_dollars_per_cycle` and
+with `vibey new --max-cycle-dollars/--max-cycle-turns` and changed afterwards
+with `vibey budget set` / `clear`, which records each change on the ledger as
+`BudgetCapChanged`. When either is set, `BuildImplementHandler` compares the
+cycle's ledger-recorded spend with the cap before every attempt. The caps are
+read from the project's stored config at that check, not when the worker
+started, so a change binds the next BUILD session of a running worker. It
+parks a `budget_exhausted` gate when the cap is reached. On attempts after the
+first, it also parks when the payload's `projected_cost_per_attempt` would
+exceed the cap. Answering `--raw '{"max_dollars": N}'` or
+`--raw '{"max_turns": N}'` raises the cap for that job only; the stored cap is
+unchanged. With neither setting, spend is uncapped. The worker, `vibey cost` and
+`vibey budget` read both caps through one parser,
+`LedgerBudgetSource.caps_from_config`, so the cap they print is the cap the
+brake enforces. The `vibey.toml` keys `max_dollars_per_cycle` and
 `max_turns_per_item` are parsed into the config model, but nothing reads
 them at runtime: not the brake, and not `vibey cost`.
 
