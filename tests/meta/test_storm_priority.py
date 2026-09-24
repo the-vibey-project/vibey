@@ -1,0 +1,609 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+"""The storm's priority lane: push an item and have it run next (ADR-0054).
+
+The operator asked for one thing -- "push a priority item into the queue and have that run
+next so that it doesn't have to wait for the other jobs in front of it" -- and ruled on who
+may: the operator, and automation the operator declares in config. A GitHub label or an
+issue from anyone else can never jump the queue (12.j). ADR-0054 is the contract both of
+vibey's queues keep; this file holds the storm's queue to it:
+
+1. "next" means next after whatever is running -- a running lane is never interrupted;
+2. priority items run first, in the order they were pushed;
+3. dependencies are respected and pulled forward, transitively, in dependency order;
+4. only the operator or a declared source may push, bump or un-bump, and admission
+   (storm_trust, 12.j) still judges a pushed issue at the moment its lane starts;
+5. every push, bump, un-bump and refusal is one appended line, and replaying the log
+   rebuilds the order;
+6. un-bump returns an item to its queue.txt position;
+7. pushing an item queue.txt does not yet carry appends it, with its dependencies.
+
+The shell and the CLI must agree on what runs next, so the last group runs the REAL
+`storm-queue.sh` in a throwaway storm whose model runner, admission and setup are stubs,
+and compares the order it ran lanes in with the order `storm-priority.py list` predicted.
+
+The tools are addressed by path for the reason `test_storm_check_parser.py` gives.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import inspect
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from types import ModuleType
+
+import pytest
+
+TOOLS = Path(__file__).resolve().parents[2] / "docs/plans/qwenstorm-3.0.0/tools"
+if str(TOOLS) not in sys.path:
+    sys.path.insert(0, str(TOOLS))
+
+
+def _load(name: str, filename: str) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(name, TOOLS / filename)
+    assert spec and spec.loader, f"the storm tool is missing: {TOOLS / filename}"
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+# storm_paths first, so the copy storm_queue imports by name is this one.
+storm_paths = _load("storm_paths", "storm_paths.py")
+storm_queue = _load("storm_queue", "storm_queue.py")
+
+QUEUE = "a 1\nb 2\nc 3\nd 4 b\ne 5\n"
+
+
+def storm(tmp_path: Path, queue: str = QUEUE, toml: str = "") -> Path:
+    """A storm root: queue.txt, the two ledgers, and storm.toml when one is given."""
+    root = tmp_path / "storm"
+    (root / "lanes").mkdir(parents=True)
+    (root / "queue.txt").write_text(queue, encoding="utf-8")
+    (root / "integrated.txt").write_text("", encoding="utf-8")
+    (root / "abandoned.txt").write_text("", encoding="utf-8")
+    if toml:
+        (root / "storm.toml").write_text(toml, encoding="utf-8")
+    return root
+
+
+def desk(root: Path, sources: tuple[str, ...] = ()) -> object:
+    authority = storm_queue.Authority(root, sources=sources)
+    return storm_queue.PriorityDesk.at(root, authority=authority)
+
+
+def order(root: Path) -> list[str]:
+    """The effective order the storm will run, slugs only, settled lanes left out."""
+    rows = storm_queue.Resolver.at(root).plan().rows
+    return [row.entry.slug for row in rows if row.state != "settled"]
+
+
+def settle(root: Path, slug: str, ledger: str = "integrated.txt") -> None:
+    with (root / ledger).open("a", encoding="utf-8") as handle:
+        handle.write(slug + "\n")
+
+
+def finish(root: Path, slug: str) -> None:
+    state = root / "lanes" / slug / ".qwenstorm"
+    state.mkdir(parents=True, exist_ok=True)
+    (state / "result.json").write_text('{"completed": true}', encoding="utf-8")
+
+
+def log_lines(root: Path) -> list[dict]:
+    path = storm_paths.priority_log(root)
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+# --- 2. priority items run first, first pushed first -----------------------------------
+
+
+def test_with_nothing_pushed_the_queue_runs_in_file_order(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    assert order(root) == ["a", "b", "c", "d", "e"]
+    assert storm_queue.Resolver.at(root).plan().decision == "run a 1"
+
+
+def test_pushed_items_run_first_in_the_order_they_were_pushed(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    priority = desk(root)
+    priority.bump("e", None)
+    priority.bump("c", None)
+    assert order(root) == ["e", "c", "a", "b", "d"]
+    assert storm_queue.Resolver.at(root).plan().decision == "run e 5"
+
+
+def test_bumping_an_item_already_in_the_lane_keeps_its_first_place(tmp_path: Path) -> None:
+    """FIFO is by first push: pushing again must not let an item overtake or fall behind."""
+    root = storm(tmp_path)
+    priority = desk(root)
+    priority.bump("e", None)
+    priority.bump("c", None)
+    report = priority.bump("e", None)
+    assert order(root)[:2] == ["e", "c"]
+    assert any("already" in line for line in report)
+
+
+# --- 3. dependencies are respected and pulled forward ----------------------------------
+
+
+def test_pushing_an_item_pulls_its_dependencies_forward_and_says_so(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="a 1\nb 2\nc 3 b\nd 4 c\ne 5\n")
+    report = desk(root).bump("d", None)
+    # Transitively, in dependency order: b before c before d.
+    assert order(root) == ["b", "c", "d", "a", "e"]
+    assert log_lines(root)[-1]["moved"] == ["b", "c", "d"]
+    assert any("b, c, d" in line for line in report), report
+
+
+def test_an_integrated_dependency_is_not_pulled_forward(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="a 1\nb 2\nc 3 b\nd 4 c\ne 5\n")
+    settle(root, "b")
+    desk(root).bump("d", None)
+    assert log_lines(root)[-1]["moved"] == ["c", "d"]
+    assert order(root) == ["c", "d", "a", "e"]
+
+
+def test_an_item_never_runs_before_its_dependencies_are_integrated(tmp_path: Path) -> None:
+    """Even pushed ahead of its dependency (which was then un-bumped), it waits."""
+    root = storm(tmp_path, queue="a 1\nb 2\nc 3 b\n")
+    priority = desk(root)
+    priority.bump("c", None)
+    priority.unbump("b", None)
+    plan = storm_queue.Resolver.at(root).plan()
+    assert plan.decision == "run a 1"
+    waiting = {row.entry.slug: row.status for row in plan.rows}
+    assert "waiting on b" in waiting["c"]
+
+
+def test_a_dependency_that_was_abandoned_refuses_the_push(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="a 1\nb 2\nc 3 b\n")
+    settle(root, "b", "abandoned.txt")
+    with pytest.raises(storm_queue.Invalid, match="abandoned"):
+        desk(root).bump("c", None)
+
+
+def test_an_unknown_dependency_refuses_the_push(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    with pytest.raises(storm_queue.Invalid, match="nowhere"):
+        desk(root).push("z", "26", ("nowhere",), None)
+    assert "z 26" not in (root / "queue.txt").read_text()
+
+
+# --- 1. next means next after whatever is running --------------------------------------
+
+
+def test_a_push_never_touches_a_running_lane(tmp_path: Path) -> None:
+    """A lane running has a directory and no result yet. Pushing writes only the log, the
+    progress line and (for a new item) queue.txt -- nothing under lanes/."""
+    root = storm(tmp_path)
+    running = root / "lanes" / "a" / ".qwenstorm"
+    running.mkdir(parents=True)
+    (running / "lane.log").write_text("attempt 1 in progress\n")
+    before = sorted(p.relative_to(root) for p in (root / "lanes").rglob("*"))
+    desk(root).push("z", "26", ("c",), None)
+    assert sorted(p.relative_to(root) for p in (root / "lanes").rglob("*")) == before
+    assert (running / "lane.log").read_text() == "attempt 1 in progress\n"
+
+
+def test_the_runner_waits_for_the_running_lane_before_it_asks_what_is_next() -> None:
+    """The host-wide wait (8.c) comes first in every pass; the resolver is asked after it."""
+    script = (TOOLS / "storm-queue.sh").read_text()
+    wait = script.index('while pgrep -f "qwenstorm-3.0.0/tools/qwenlane.py"')
+    ask = script.index('"$PY" "$Q/tools/storm_queue.py" next')
+    assert wait < ask
+
+
+# --- 4. who may push: the operator, or a declared source (12.j) ------------------------
+
+
+def test_the_operator_running_the_cli_locally_may_push(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    desk(root).bump("e", None)
+    assert log_lines(root)[-1]["by"].startswith("operator:")
+
+
+def test_a_declared_source_may_push(tmp_path: Path) -> None:
+    root = storm(tmp_path, toml='[priority]\nsources = ["nightly-triage"]\n')
+    storm_queue.PriorityDesk.at(root).bump("e", "nightly-triage")
+    assert log_lines(root)[-1]["by"] == "source:nightly-triage"
+    assert order(root)[0] == "e"
+
+
+@pytest.mark.parametrize("verb", ["push", "bump", "unbump"])
+def test_an_undeclared_source_is_refused_recorded_and_reported(tmp_path: Path, verb: str) -> None:
+    root = storm(tmp_path, toml='[priority]\nsources = ["nightly-triage"]\n')
+    priority = storm_queue.PriorityDesk.at(root)
+    priority.bump("c", None)  # so an un-bump has something to act on
+    calls = {
+        "push": lambda: priority.push("z", "26", (), "github-label"),
+        "bump": lambda: priority.bump("e", "github-label"),
+        "unbump": lambda: priority.unbump("c", "github-label"),
+    }
+    with pytest.raises(storm_queue.Unauthorised, match="github-label"):
+        calls[verb]()
+    refusal = log_lines(root)[-1]
+    assert refusal["action"] == "refused"
+    assert refusal["requested"] == verb
+    assert refusal["by"] == "source:github-label"
+    assert "refused" in (root / "progress.log").read_text().splitlines()[-1]
+    assert order(root)[0] == "c"  # nothing moved
+    assert "z 26" not in (root / "queue.txt").read_text()
+
+
+def test_no_sources_are_declared_unless_the_config_names_them(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    with pytest.raises(storm_queue.Unauthorised):
+        storm_queue.PriorityDesk.at(root).bump("e", "anything")
+
+
+def test_a_local_account_that_does_not_own_the_storm_is_not_the_operator(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    stranger = storm_queue.Authority(root, sources=(), uid=os.getuid() + 1, user="someone")
+    with pytest.raises(storm_queue.Unauthorised, match="someone"):
+        storm_queue.PriorityDesk.at(root, authority=stranger).bump("e", None)
+    assert log_lines(root)[-1]["by"] == "account:someone"
+
+
+def test_sources_must_be_declared_as_a_list_of_names(tmp_path: Path) -> None:
+    root = storm(tmp_path, toml='[priority]\nsources = "nightly-triage"\n')
+    with pytest.raises(SystemExit, match="sources"):
+        storm_queue.Authority.declared(root)
+
+
+def test_nothing_reads_the_forge_to_decide_priority() -> None:
+    """A label or an issue is outside text; no path from the forge reaches the lane."""
+    for name in ("storm_queue.py", "storm-priority.py"):
+        source = (TOOLS / name).read_text()
+        assert "gh " not in source and "graphql" not in source, name
+
+
+def test_admission_still_judges_a_pushed_lane_when_it_starts() -> None:
+    """Priority chooses which lane is next; storm_trust still decides whether it may run."""
+    script = (TOOLS / "storm-queue.sh").read_text()
+    ask = script.index('"$PY" "$Q/tools/storm_queue.py" next')
+    admit = script.index('"$PY" "$Q/tools/storm_trust.py" admit')
+    run = script.index('"$PY" "$Q/tools/qwenlane.py"')
+    assert ask < admit < run
+
+
+# --- 5. recorded, append-only, and replayable ------------------------------------------
+
+
+def test_replaying_the_log_rebuilds_the_order(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="a 1\nb 2\nc 3 b\nd 4\ne 5\n")
+    priority = desk(root)
+    priority.bump("e", None)
+    priority.bump("c", None)
+    priority.push("z", "26", ("d",), None)
+    priority.unbump("e", None)
+    expected = ["b", "c", "d", "z"]
+    replayed = storm_queue.PriorityLog(storm_paths.priority_log(root)).replay()
+    assert replayed == expected
+    assert order(root)[:4] == expected
+
+
+def test_the_log_is_only_ever_appended_to(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    priority = desk(root)
+    priority.bump("e", None)
+    first = storm_paths.priority_log(root).read_bytes()
+    priority.unbump("e", None)
+    priority.push("z", "26", (), None)
+    after = storm_paths.priority_log(root).read_bytes()
+    assert after.startswith(first)
+    assert [row["action"] for row in log_lines(root)] == ["bump", "unbump", "push"]
+
+
+def test_every_change_is_a_plain_words_line_in_progress_log(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    priority = desk(root)
+    priority.bump("e", None)
+    priority.unbump("e", None)
+    lines = (root / "progress.log").read_text().splitlines()
+    assert len(lines) == 2
+    assert all(" priority: " in line for line in lines)
+    # storm-evidence counts " start " and " end " lines as lane starts and ends.
+    assert not any(" start " in line or " end " in line for line in lines)
+
+
+def test_the_log_is_declared_not_compiled_in(tmp_path: Path) -> None:
+    elsewhere = tmp_path / "records" / "priority.jsonl"
+    root = storm(tmp_path, toml=f'[priority]\nlog = "{elsewhere}"\n')
+    assert storm_paths.priority_log(root) == elsewhere
+    desk(root).bump("e", None)
+    assert elsewhere.is_file()
+    relative = storm(tmp_path / "second", toml='[priority]\nlog = "ledgers/prio.log"\n')
+    assert storm_paths.priority_log(relative) == relative / "ledgers/prio.log"
+
+
+def test_an_unreadable_log_stops_the_resolver_rather_than_ignoring_priority(
+    tmp_path: Path,
+) -> None:
+    root = storm(tmp_path)
+    storm_paths.priority_log(root).write_text('{"action": "bump", "moved": ["e"]}\nnot json\n')
+    with pytest.raises(storm_queue.Unreadable):
+        storm_queue.Resolver.at(root).plan()
+    with pytest.raises(storm_queue.Unreadable):
+        desk(root).bump("c", None)
+
+
+def test_the_evidence_job_consumes_the_priority_log() -> None:
+    evidence = _load("storm_evidence", "storm-evidence.py")
+    name = storm_paths.priority_log(evidence.STORM)
+    assert str(name.relative_to(evidence.STORM)) in evidence.STREAMS
+
+
+# --- 6. un-bump returns an item to its queue.txt position ------------------------------
+
+
+def test_unbump_returns_an_item_to_its_queue_position(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    priority = desk(root)
+    priority.bump("e", None)
+    priority.bump("c", None)
+    priority.unbump("e", None)
+    assert order(root) == ["c", "a", "b", "d", "e"]
+    assert log_lines(root)[-1]["action"] == "unbump"
+
+
+def test_unbumping_an_item_not_in_the_lane_is_an_error(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    with pytest.raises(storm_queue.Invalid, match="not prioritised"):
+        desk(root).unbump("e", None)
+
+
+# --- 7. pushing a new item -------------------------------------------------------------
+
+
+def test_pushing_a_new_item_appends_it_with_its_dependencies_and_prioritises_it(
+    tmp_path: Path,
+) -> None:
+    root = storm(tmp_path)
+    desk(root).push("z", "26", ("c", "e"), None)
+    assert (root / "queue.txt").read_text().splitlines()[-1] == "z 26 c,e"
+    assert order(root)[:3] == ["c", "e", "z"]
+    event = log_lines(root)[-1]
+    assert event["action"] == "push" and event["appended"] is True
+
+
+def test_a_queue_without_a_final_newline_still_gains_a_whole_line(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="a 1\nb 2")
+    desk(root).push("z", "26", (), None)
+    assert (root / "queue.txt").read_text() == "a 1\nb 2\nz 26\n"
+
+
+def test_pushing_a_queued_slug_under_another_issue_is_an_error(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    with pytest.raises(storm_queue.Invalid, match="#5"):
+        desk(root).push("e", "99", (), None)
+
+
+def test_pushing_a_settled_item_is_an_error(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    settle(root, "e")
+    with pytest.raises(storm_queue.Invalid, match="settled"):
+        desk(root).bump("e", None)
+
+
+def test_a_finished_item_is_not_pushed_again(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    finish(root, "e")
+    with pytest.raises(storm_queue.Invalid, match="awaits review"):
+        desk(root).bump("e", None)
+
+
+# --- the resolver keeps storm-queue.sh's own rules --------------------------------------
+
+
+def test_a_finished_lane_holds_the_storm_unless_unattended(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    finish(root, "a")
+    assert storm_queue.Resolver.at(root).plan().decision == "review a"
+    (root / "UNATTENDED").touch()
+    assert storm_queue.Resolver.at(root).plan().decision == "run b 2"
+
+
+def test_an_abandoned_dependency_blocks_its_lane_visibly(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="d 4 b\nb 2\n")
+    settle(root, "b", "abandoned.txt")
+    resolver = storm_queue.Resolver.at(root)
+    # The shell's own sequence: this pass waits and marks d; the next holds for review of d.
+    assert resolver.plan().decision == "wait"
+    assert not (root / "lanes/d/.qwenstorm/result.json").exists()  # plan() writes nothing
+    assert resolver.next() == "wait"
+    assert resolver.plan().decision == "review d"
+    assert json.loads((root / "lanes/d/.qwenstorm/result.json").read_text()) == {
+        "completed": False,
+        "blocked_on": "b",
+    }
+    assert "blocked d #4: dependency b was abandoned" in (root / "progress.log").read_text()
+
+
+def test_the_queue_is_empty_when_everything_is_settled(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="a 1\n")
+    settle(root, "a")
+    assert storm_queue.Resolver.at(root).plan().decision == "empty"
+
+
+def test_nothing_eligible_waits(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="c 3 b\n")
+    assert storm_queue.Resolver.at(root).plan().decision == "wait"
+
+
+# --- the shape: classes, each with its interface beside it (ADR-0016, 9.b) --------------
+
+
+def test_each_class_honours_the_interface_declared_beside_it(tmp_path: Path) -> None:
+    declared = _load("storm_queue_interface", "interfaces/storm_queue_interface.py")
+    root = storm(tmp_path)
+    pairs = [
+        (storm_queue.QueueFile(root), declared.QueueFileInterface),
+        (storm_queue.Ledger(root), declared.LedgerInterface),
+        (storm_queue.PriorityLog(root / "p.log"), declared.PriorityLogInterface),
+        (storm_queue.Authority(root, sources=()), declared.AuthorityInterface),
+        (storm_queue.Resolver.at(root), declared.ResolverInterface),
+        (desk(root), declared.PriorityDeskInterface),
+    ]
+    for instance, interface in pairs:
+        assert isinstance(instance, interface), f"{type(instance).__name__} vs {interface}"
+        for name, member in vars(interface).items():
+            if name.startswith("_") or not callable(member):
+                continue
+            want = list(inspect.signature(member).parameters)
+            have = ["self", *inspect.signature(getattr(instance, name)).parameters]
+            assert have == want, f"{type(instance).__name__}.{name}: {have} != {want}"
+
+
+def test_the_interface_declares_and_never_consumes() -> None:
+    source = (TOOLS / "interfaces/storm_queue_interface.py").read_text(encoding="utf-8")
+    imported = {
+        line.split()[1].split(".")[0]
+        for line in source.splitlines()
+        if line.startswith(("import ", "from "))
+    }
+    assert imported <= set(sys.stdlib_module_names) | {"__future__"}, imported
+
+
+@pytest.mark.parametrize("filename", ["storm_queue.py", "storm-priority.py"])
+def test_the_only_bare_function_is_the_cli_entry_point(filename: str) -> None:
+    module = _load(filename.replace("-", "_").removesuffix(".py") + "_shape", filename)
+    bare = [
+        name
+        for name, member in vars(module).items()
+        if inspect.isfunction(member) and member.__module__ == module.__name__
+    ]
+    assert bare == ["main"]
+
+
+# --- the shell and the CLI agree: the real storm-queue.sh, in a throwaway storm ---------
+
+STUB_TRUST = """\
+import json, sys
+from pathlib import Path
+state, number = Path(sys.argv[2]), sys.argv[3]
+root = Path(__file__).absolute().parent.parent
+refused = (root / "refuse.txt").read_text().split() if (root / "refuse.txt").exists() else []
+if number in refused:
+    (state / "result.json").write_text(json.dumps({"completed": False, "refused": "stranger"}))
+    # Settled here only so the throwaway storm can reach "queue empty" and exit.
+    with (root / "abandoned.txt").open("a") as h:
+        h.write(state.parent.name + "\\n")
+    print("the issue was opened by stranger, who is not in [unattended_approval] authors")
+    sys.exit(1)
+(state / "title.txt").write_text("t" + number)
+(state / "issue.md").write_text("body")
+print("admitted #" + number + " by operator (operator)")
+"""
+
+STUB_LANE = """\
+import subprocess, sys
+from pathlib import Path
+lane = Path(sys.argv[1])
+root = Path(__file__).absolute().parent.parent
+with (root / "ran.txt").open("a") as h:
+    h.write(lane.name + "\\n")
+hook = root / "hooks" / lane.name
+if hook.exists():
+    subprocess.run(["bash", str(hook)], check=True)
+(lane / ".qwenstorm" / "result.json").write_text('{"completed": true}')
+with (root / "integrated.txt").open("a") as h:
+    h.write(lane.name + "\\n")
+"""
+
+
+def throwaway_storm(tmp_path: Path, queue: str) -> tuple[Path, dict[str, str]]:
+    """A storm whose runner, admission, setup and background loops are stubs, and whose
+    `pgrep`/`ps` see nothing -- so the live storm on this machine can never hold it up."""
+    root = storm(tmp_path, queue=queue)
+    tools = root / "tools"
+    tools.mkdir()
+    for name in ("storm-queue.sh", "storm_paths.py", "storm_queue.py", "storm-priority.py"):
+        shutil.copy2(TOOLS / name, tools / name)
+    (tools / "storm_trust.py").write_text(STUB_TRUST)
+    (tools / "qwenlane.py").write_text(STUB_LANE)
+    (tools / "storm-merge.py").write_text("")
+    (tools / "storm-cycle.py").write_text("")
+    (tools / "lane-setup.sh").write_text(
+        '#!/bin/bash\nmkdir -p "$(cd "$(dirname "$0")/.." && pwd)/lanes/$1/.qwenstorm"\n'
+    )
+    (tools / "lane-setup.sh").chmod(0o755)
+    (root / "scratch").mkdir()
+    (root / "hooks").mkdir()
+    (root / "storm.toml").write_text(
+        f'[paths]\nrepo = "{root}"\nslug = "owner/repo"\npython = "{sys.executable}"\n'
+    )
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    for name, body in (("pgrep", "exit 1"), ("ps", "exit 0")):
+        (bin_dir / name).write_text(f"#!/bin/bash\n{body}\n")
+        (bin_dir / name).chmod(0o755)
+    env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
+    return root, env
+
+
+def run_storm(root: Path, env: dict[str, str]) -> list[str]:
+    done = subprocess.run(
+        ["bash", str(root / "tools/storm-queue.sh")],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        env=env,
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "queue empty" in (root / "progress.log").read_text()
+    return (root / "ran.txt").read_text().split()
+
+
+def priority_cli(root: Path, env: dict[str, str], *argv: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        [sys.executable, str(root / "tools/storm-priority.py"), *argv],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=env,
+    )
+
+
+def test_the_shell_runs_lanes_in_the_order_the_cli_lists(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\nc 3\nd 4 b\ne 5\n")
+    assert priority_cli(root, env, "bump", "e").returncode == 0
+    assert priority_cli(root, env, "bump", "d").returncode == 0
+    listed = priority_cli(root, env, "list")
+    assert listed.returncode == 0, listed.stderr
+    assert listed.stdout.splitlines()[0] == "next: e #5"
+    predicted = [line.split()[1] for line in listed.stdout.splitlines() if line[:1].isdigit()]
+    assert predicted == ["e", "b", "d", "a", "c"]
+    assert run_storm(root, env) == predicted
+
+
+def test_a_push_mid_lane_runs_next_after_it_and_never_interrupts_it(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\nc 3\nd 4\n")
+    # While lane `a` is running, the operator pushes a new item that depends on `c`.
+    (root / "hooks" / "a").write_text(
+        f'"{sys.executable}" "{root}/tools/storm-priority.py" push z 26 --deps c\n'
+    )
+    ran = run_storm(root, env)
+    assert ran == ["a", "c", "z", "b", "d"]
+    assert ran.count("a") == 1  # never restarted, never interrupted
+    assert json.loads((root / "lanes/a/.qwenstorm/result.json").read_text())["completed"]
+
+
+def test_a_pushed_lane_whose_issue_admission_refuses_never_runs(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\n")
+    (root / "refuse.txt").write_text("26\n")
+    assert priority_cli(root, env, "push", "z", "26").returncode == 0
+    ran = run_storm(root, env)
+    assert ran == ["a", "b"]
+    assert "refused z #26" in (root / "progress.log").read_text()
+
+
+def test_the_cli_refuses_an_undeclared_source_with_a_nonzero_exit(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\n")
+    done = priority_cli(root, env, "bump", "b", "--source", "github-label")
+    assert done.returncode == 1
+    assert "github-label" in done.stdout + done.stderr
+    assert log_lines(root)[-1]["action"] == "refused"
