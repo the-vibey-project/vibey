@@ -276,6 +276,14 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_BASE_URL__", fallback.base_url)
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_MAX_DIFF_CHARS__", str(fallback.max_diff_chars))
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_TIMEOUT_SECONDS__", str(fallback.timeout_seconds))
+    # The model's declared window (#1090): what a local request is sized to fit, and refused
+    # over, rather than a number compiled into the sizer.
+    wanted = wanted.replace("__VIBEY_GH_FALLBACK_CONTEXT_WINDOW__", str(fallback.context_window))
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_REASONING_RESERVE__", str(fallback.reasoning_reserve_tokens)
+    )
+    wanted = wanted.replace("__VIBEY_GH_FALLBACK_CHARS_PER_TOKEN__", str(fallback.chars_per_token))
+    wanted = wanted.replace("__VIBEY_GH_FALLBACK_THINK__", fallback.think)
     wanted = wanted.replace(
         "__VIBEY_GH_SANITIZED_PROGRESS__",
         "true" if cfg.pr_automation.observability.sanitized_progress else "false",
