@@ -14,30 +14,46 @@ failed, not cancelled, simply pending. The job that publishes the required
 needs to *complete*. So switching the sovereign lane on by default, with no probe,
 blocks every pull request permanently and silently, with no red check to point at.
 
-**Asking GitHub is not the answer**, and not only because it is unavailable: the
-runners API needs `administration: read`, which `GITHUB_TOKEN` cannot be granted at
-all. Depending on a privileged forge API to discover whether one's *own* machine is
-up would also invert 8.a — it makes the sovereign lane's availability contingent on
-a counterparty's capability, which is precisely what doctrine 10.a warns about.
+**The workflow cannot ask GitHub**: the runners API needs `administration: read`, which
+`GITHUB_TOKEN` cannot be granted at all. Depending on a privileged forge API to discover
+whether one's *own* machine is up would also invert 8.a — it makes the sovereign lane's
+availability contingent on a counterparty's capability, which is precisely what doctrine
+10.a warns about.
 
 So the machine says so itself, in the plainest artifact both sides already share: a
-git ref. The operator's supervisor calls `beat()` on a timer, which pushes an empty
+git ref. A timer on the operator's machine calls `beat()`, which pushes an empty
 commit to a ref outside `refs/heads/` — no branch, nothing for doctrine 9.a's tidy
 pass to find. Any job with ordinary `contents: read` fetches that ref and reads its
 timestamp. Fresh means ready.
 
-The failure direction is deliberate: anything unreadable, unparseable, or stale
-reports **not ready**. A missing heartbeat costs a sovereign review; a false
-positive costs every gate in the repository.
+**A heartbeat is a claim, so it is published only when it is true** (ADR-0058). The machine
+that publishes it CAN ask GitHub, with the runner's own credential, and does: `beat()` takes
+a `LaneReadinessInterface` and pushes nothing unless the runner is registered and online and
+the model endpoint answers. A read that fails is a refusal, never an assumed "up". Withheld,
+the heartbeat goes stale on its own and the gate falls back honestly. The old publisher said
+"up" whenever its supervisor had a live process, which included the thirty seconds of every
+failing restart cycle.
+
+The failure direction is deliberate throughout: anything unreadable, unparseable, or stale
+reports **not ready**. A missing heartbeat costs a sovereign review; a false positive costs
+every gate in the repository.
 """
 
 from __future__ import annotations
 
 import subprocess
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 
-__all__ = ["Readiness", "beat", "probe"]
+from vibey_gh.interfaces.push_scope_interface import PushScopeInterface
+from vibey_gh.interfaces.sovereign_interface import (
+    LaneReadinessInterface,
+    SovereignHeartbeatInterface,
+)
+from vibey_gh.push_scope import PushScope
+
+__all__ = ["Readiness", "SovereignHeartbeat", "beat", "probe"]
 
 
 @dataclass(frozen=True)
@@ -49,7 +65,13 @@ class Readiness:
     age_seconds: int | None = None
 
 
+GitSeam = Callable[..., tuple[int, str]]
+
+
 def _run(*cmd: str, cwd: str | None = None) -> tuple[int, str]:
+    # A module function rather than a method: it is the one place this module starts a
+    # process, and the seam its tests have always replaced. The class calls it by name at
+    # call time, so replacing it here reaches every instance.
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False, cwd=cwd)
     except (OSError, subprocess.TimeoutExpired):
@@ -57,35 +79,169 @@ def _run(*cmd: str, cwd: str | None = None) -> tuple[int, str]:
     return proc.returncode, proc.stdout.strip()
 
 
-def beat(ref: str, *, remote: str = "origin", cwd: str | None = None) -> Readiness:
-    """Publish a heartbeat: the operator's machine saying "I am up" to the forge.
+class SovereignHeartbeat(SovereignHeartbeatInterface):
+    """Publishes and reads the heartbeat on one ref of one remote.
 
-    An empty commit pushed to a ref outside `refs/heads/`, so it is not a branch and
-    never becomes something a human or a tidy pass has to reason about. Force-pushed
-    because a heartbeat has no history worth keeping — only its most recent instant
-    means anything.
-
-    `--no-verify` is load-bearing, not a shortcut. A pre-push gate exists to judge code
-    on its way off the machine, and this pushes an **empty tree with no parents** —
-    there is no diff to lint, nothing to type-check, no dependency set to audit. Paying
-    that gate anyway is not merely wasteful: measured against a real project whose
-    pre-push stage runs the test suite, then a coverage pass that runs the suite a
-    second time, then a network dependency audit, a heartbeat ran past two minutes
-    without finishing, against **1.2 seconds** with the gate skipped. A timer that cannot
-    finish inside its own interval is not a heartbeat, and in a loop over several
-    repositories it stalls every repository queued behind it too.
+    `git` is the seam: it takes the arguments after `git` and returns the exit status and
+    the stripped standard output. `scope` judges whether the value the ref already holds is
+    itself a heartbeat; by default it asks through the same seam.
     """
-    code, tree = _run("git", "hash-object", "-t", "tree", "/dev/null", cwd=cwd)
-    if code != 0 or not tree:
-        return Readiness(False, "could not write the empty tree object; is this a git repository?")
-    stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    code, commit = _run("git", "commit-tree", tree, "-m", f"sovereign heartbeat {stamp}", cwd=cwd)
-    if code != 0 or not commit:
-        return Readiness(False, "could not create the heartbeat commit")
-    code, _ = _run("git", "push", "--force", "--no-verify", remote, f"{commit}:{ref}", cwd=cwd)
-    if code != 0:
-        return Readiness(False, f"could not push the heartbeat to {remote} {ref}")
-    return Readiness(True, f"heartbeat published to {ref} at {stamp}", age_seconds=0)
+
+    def __init__(
+        self,
+        ref: str,
+        *,
+        remote: str = "origin",
+        cwd: str | None = None,
+        git: GitSeam | None = None,
+        scope: PushScopeInterface | None = None,
+        clock: Callable[[], float] | None = None,
+    ) -> None:
+        self._ref = ref
+        self._remote = remote
+        self._cwd = cwd
+        self._git_seam = git
+        self._scope = scope or PushScope(git=lambda args: self._git(*args))
+        self._clock = clock
+
+    def _git(self, *args: str) -> tuple[int, str]:
+        if self._git_seam is not None:
+            return self._git_seam(*args)
+        return _run("git", *args, cwd=self._cwd)
+
+    def _now(self) -> float:
+        return self._clock() if self._clock is not None else time.time()
+
+    # --- publishing -----------------------------------------------------------------------
+
+    def beat(self, readiness: LaneReadinessInterface) -> Readiness:
+        """Publish a heartbeat, but only when the sovereign lane can actually serve.
+
+        `readiness` is asked first, and a lane that cannot serve publishes nothing: the
+        refusal comes back with its reason and no git command runs. That is the whole point
+        of the heartbeat — the gate schedules the sovereign review on its word, so a word
+        given when no runner can take the job queues that job forever.
+
+        The heartbeat itself is an empty commit on a ref outside `refs/heads/`, so it is
+        never a branch a human or a tidy pass has to reason about. It replaces the previous
+        one with a **compare-and-swap**, not a bare force: the ref's current value is read,
+        confirmed to be a heartbeat (the empty tree, no parents), and named as the lease
+        (`--force-with-lease=<ref>:<value>`). Only that exact value is ever replaced — a
+        concurrent write, or anything on the ref that is not a heartbeat, is refused and
+        left as it was. Sub-doctrine 12.d allows no unattended act that cannot be undone;
+        replacing a commit that carries nothing, and only the one that was read, is not one.
+
+        There is no `--no-verify`. The push goes through the checkout's own pre-push gate,
+        and the gate lets it through by its own rule (`vibey_gh.push_scope`): every ref
+        outside `refs/heads/` and `refs/tags/`, every commit the empty tree with no parents.
+        The gate is applying its scope, not being skipped — a heartbeat that carried a single
+        file, or rode beside a branch, would be judged in full.
+        """
+        state = readiness.assess()
+        if not state.serving:
+            return Readiness(False, f"heartbeat withheld: {state.reason}")
+        code, tree = self._git("hash-object", "-t", "tree", "/dev/null")
+        if code != 0 or not tree:
+            return Readiness(
+                False, "could not write the empty tree object; is this a git repository?"
+            )
+        stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self._now()))
+        code, commit = self._git("commit-tree", tree, "-m", f"sovereign heartbeat {stamp}")
+        if code != 0 or not commit:
+            return Readiness(False, "could not create the heartbeat commit")
+        lease, problem = self._lease()
+        if problem:
+            return Readiness(False, problem)
+        code, _ = self._git(
+            "push", f"--force-with-lease={self._ref}:{lease}", self._remote, f"{commit}:{self._ref}"
+        )
+        if code != 0:
+            return Readiness(
+                False,
+                f"could not push the heartbeat to {self._remote} {self._ref}"
+                " (the remote, the lease or the pre-push gate refused it)",
+            )
+        return Readiness(True, f"heartbeat published to {self._ref} at {stamp}: {state.reason}", 0)
+
+    def _lease(self) -> tuple[str, str]:
+        """(the value the push may replace, problem). An empty value leases on absence:
+        the push then succeeds only if the ref still does not exist."""
+        code, listed = self._git("ls-remote", self._remote, self._ref)
+        if code != 0:
+            return (
+                "",
+                f"could not read {self._ref} on {self._remote}, so there is nothing to lease against; nothing was pushed",
+            )
+        current = ""
+        for line in listed.splitlines():
+            value, _, name = line.partition("\t")
+            if name.strip() == self._ref:
+                current = value.strip()
+        if not current:
+            return "", ""
+        if self._git("cat-file", "-e", current)[0] != 0:
+            code, _ = self._git(
+                "fetch", "--no-tags", "--no-write-fetch-head", self._remote, self._ref
+            )
+            if code != 0:
+                return "", (
+                    f"could not fetch what {self._ref} holds on {self._remote} to confirm it is"
+                    " a heartbeat; nothing was pushed"
+                )
+        is_heartbeat, why = self._scope.is_empty_root(current)
+        if not is_heartbeat:
+            return "", (
+                f"{self._ref} on {self._remote} holds {current}, which is not a heartbeat"
+                f" ({why}); it is not replaced and nothing was pushed"
+            )
+        return current, ""
+
+    # --- reading --------------------------------------------------------------------------
+
+    def probe(self, *, max_age_minutes: int, now: float | None = None) -> Readiness:
+        """Read the heartbeat and decide whether the sovereign lane may be scheduled.
+
+        Every failure path answers "not ready" rather than raising: a probe that throws
+        inside a workflow step is a red job, and a red job here would be a *worse* outcome
+        than the absent sovereign review it is reporting.
+        """
+        code, _ = self._git("fetch", "--depth=1", self._remote, self._ref)
+        if code != 0:
+            return Readiness(
+                False, f"no sovereign heartbeat at {self._ref} — the local lane is not offered"
+            )
+        code, raw = self._git("log", "-1", "--format=%ct", "FETCH_HEAD")
+        if code != 0 or not raw.isdigit():
+            return Readiness(False, "the heartbeat ref carries no readable timestamp")
+        age = int((self._now() if now is None else now) - int(raw))
+        if age < 0:
+            return Readiness(
+                False, "the heartbeat is dated in the future; refusing to trust it", age
+            )
+        if age > max_age_minutes * 60:
+            return Readiness(
+                False,
+                f"the sovereign heartbeat is {age // 60}m old, past the {max_age_minutes}m"
+                " window — treating the runner as offline",
+                age,
+            )
+        return Readiness(True, f"sovereign runner heartbeat is {age}s old", age)
+
+
+# The two module functions below are the entry points the CLI and adopters' scripts have
+# always called. They stay functions so those callers keep working; each is one line into
+# the class, which is where the behaviour lives.
+
+
+def beat(
+    ref: str,
+    *,
+    readiness: LaneReadinessInterface,
+    remote: str = "origin",
+    cwd: str | None = None,
+) -> Readiness:
+    """`SovereignHeartbeat(...).beat(readiness)`: publish only when the lane can serve."""
+    return SovereignHeartbeat(ref, remote=remote, cwd=cwd).beat(readiness)
 
 
 def probe(
@@ -96,26 +252,7 @@ def probe(
     cwd: str | None = None,
     now: float | None = None,
 ) -> Readiness:
-    """Read the heartbeat and decide whether the sovereign lane may be scheduled.
-
-    Every failure path answers "not ready" rather than raising: a probe that throws
-    inside a workflow step is a red job, and a red job here would be a *worse* outcome
-    than the absent sovereign review it is reporting.
-    """
-    code, _ = _run("git", "fetch", "--depth=1", remote, ref, cwd=cwd)
-    if code != 0:
-        return Readiness(False, f"no sovereign heartbeat at {ref} — the local lane is not offered")
-    code, raw = _run("git", "log", "-1", "--format=%ct", "FETCH_HEAD", cwd=cwd)
-    if code != 0 or not raw.isdigit():
-        return Readiness(False, "the heartbeat ref carries no readable timestamp")
-    age = int((time.time() if now is None else now) - int(raw))
-    if age < 0:
-        return Readiness(False, "the heartbeat is dated in the future; refusing to trust it", age)
-    if age > max_age_minutes * 60:
-        return Readiness(
-            False,
-            f"the sovereign heartbeat is {age // 60}m old, past the {max_age_minutes}m"
-            " window — treating the runner as offline",
-            age,
-        )
-    return Readiness(True, f"sovereign runner heartbeat is {age}s old", age)
+    """`SovereignHeartbeat(...).probe(...)`: whether the lane may be scheduled now."""
+    return SovereignHeartbeat(ref, remote=remote, cwd=cwd).probe(
+        max_age_minutes=max_age_minutes, now=now
+    )

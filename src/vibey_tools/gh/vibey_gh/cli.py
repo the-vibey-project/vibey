@@ -716,21 +716,45 @@ def _push_scope(args) -> int:
     return 0
 
 
+def _lane_readiness(cfg):
+    """The sovereign lane's readiness as this machine can read it: the runner `[runners]`
+    declares, listed with its own credential, and the model `[pr_automation.fallback]`
+    names, read through the fit's sampler. One function so a test can hand `--beat` an exact
+    answer instead of a runner and a model endpoint."""
+    from vibey_gh.fit import OllamaModelSampler
+    from vibey_gh.sovereign_lane import SovereignLaneReadiness
+    from vibey_gh.sovereign_runner import SovereignRunner
+
+    fallback = cfg.pr_automation.fallback
+    runner = SovereignRunner(cfg, home=Path.home(), uid=os.getuid())
+    return SovereignLaneReadiness(
+        fallback, runner=runner, model=OllamaModelSampler(fallback.base_url)
+    )
+
+
 def _sovereign(args) -> int:
     """Publish or read the sovereign heartbeat (doctrine 8.a).
 
-    `--beat` is what the operator's supervisor runs on a timer; the bare form is what
-    a workflow runs to decide whether it may schedule the sovereign lane at all. The
-    probe prints its verdict and, under Actions, writes `ready=` to `$GITHUB_OUTPUT`
-    so a job `if:` can consume it.
+    `--beat` is what the heartbeat timer runs (`vibey-gh heartbeat install`); the bare form
+    is what a workflow runs to decide whether it may schedule the sovereign lane at all.
+    `--beat` publishes only when the lane can serve -- the runner registered and online, the
+    model endpoint answering -- and with `--record` writes what it did for `heartbeat status`.
+    The probe prints its verdict and, under Actions, writes `ready=` to `$GITHUB_OUTPUT` so a
+    job `if:` can consume it.
     """
-    import os
-
     from vibey_gh import sovereign
 
-    fallback = load_config().pr_automation.fallback
+    cfg = load_config()
+    fallback = cfg.pr_automation.fallback
     if args.beat:
-        result = sovereign.beat(fallback.heartbeat_ref, remote=args.remote)
+        result = sovereign.beat(
+            fallback.heartbeat_ref, readiness=_lane_readiness(cfg), remote=args.remote
+        )
+        if args.record:
+            from vibey_gh.heartbeat_timer import BeatRecord
+
+            now = datetime.now(UTC).timestamp()
+            BeatRecord(now, result.ready, result.reason).write(Path(args.record))
     else:
         result = sovereign.probe(
             fallback.heartbeat_ref,
@@ -750,15 +774,62 @@ def _sovereign(args) -> int:
     return 0 if (result.ready or not args.beat) else 1
 
 
+def _heartbeat_timer(cfg, service=None):
+    from vibey_gh.heartbeat_timer import HeartbeatTimer
+
+    return HeartbeatTimer(cfg, home=Path.home(), uid=os.getuid(), service=service)
+
+
+def _install_heartbeat(timer, *, load: bool) -> int:
+    plan, problem = timer.render()
+    if plan is None:
+        print(f"vibey-gh heartbeat: {problem}", file=sys.stderr)
+        return 1
+    lines, loaded = timer.install(plan, load=load)
+    for line in lines:
+        print(line)
+    if not loaded:
+        return 1
+    if not load:
+        print("the heartbeat timer was not loaded. Next, in order:")
+        for number, step in enumerate(timer.next_steps(plan), start=1):
+            print(f"  {number}. {step}")
+    return 0
+
+
+def _heartbeat(args, service=None) -> int:
+    """Stand the sovereign heartbeat's timer up from the tree, report on it, or remove it.
+
+    launchd on macOS, a systemd user timer on Linux. Only `install --load` and
+    `uninstall --apply` touch the service manager; `service` is the seam tests replace.
+    """
+    timer = _heartbeat_timer(load_config(), service)
+    if args.action == "install":
+        return _install_heartbeat(timer, load=args.load)
+    if args.action == "status":
+        lines, healthy = timer.status()
+        for line in lines:
+            print(line)
+        return 0 if healthy else 1
+    for line in timer.uninstall(apply=args.apply):
+        print(line)
+    if not args.apply:
+        print("dry run: nothing was changed; pass --apply to do it")
+    return 0
+
+
 def _runner(args, launchctl=None) -> int:
     """Stand the sovereign review runner up from `[runners]`, or check or remove it (12.c).
 
     Only `install --load` and `--apply` touch launchd; every other form reads or writes
     files and prints what the operator runs next. `launchctl` is the seam tests replace.
+    `install` and `uninstall` do the same for the heartbeat timer, which is what tells the
+    gate the runner is there.
     """
     from vibey_gh.sovereign_runner import PAT_PERMISSION, SovereignRunner
 
-    runner = SovereignRunner(load_config(), home=Path.home(), uid=os.getuid(), launchctl=launchctl)
+    cfg = load_config()
+    runner = SovereignRunner(cfg, home=Path.home(), uid=os.getuid(), launchctl=launchctl)
     plan, problem = runner.render()
     if plan is None:
         print(f"vibey-gh runner: {problem}", file=sys.stderr)
@@ -785,11 +856,13 @@ def _runner(args, launchctl=None) -> int:
             )
             for number, step in enumerate(runner.next_steps(plan), start=1):
                 print(f"  {number}. {step}")
-        return 0
+        print("the heartbeat timer:")
+        return _install_heartbeat(_heartbeat_timer(cfg, launchctl), load=args.load)
     if args.action == "cleanup":
         lines = runner.remove(runner.strays(plan), apply=args.apply)
     else:
         lines = runner.uninstall(plan, apply=args.apply)
+        lines += _heartbeat_timer(cfg, launchctl).uninstall(apply=args.apply)
     for line in lines:
         print(line)
     if not args.apply:
@@ -1865,7 +1938,32 @@ def main(argv: list[str] | None = None) -> int:
     )
     sv.add_argument("--beat", action="store_true", help="publish a heartbeat (run on a timer)")
     sv.add_argument("--remote", default="origin", help="git remote carrying the heartbeat ref")
+    sv.add_argument(
+        "--record",
+        metavar="FILE",
+        help="with --beat, write what it did (published or withheld, and why) for status",
+    )
     sv.set_defaults(func=_sovereign)
+
+    hb = sub.add_parser(
+        "heartbeat",
+        help="stand the sovereign heartbeat's timer up from the tree, report on it, remove it",
+    )
+    hb_sub = hb.add_subparsers(dest="action", required=True)
+    hb_install = hb_sub.add_parser(
+        "install", help="render the launchd agent or systemd timer; print the next commands"
+    )
+    hb_install.add_argument(
+        "--load", action="store_true", help="also (re)load it with launchctl or systemctl"
+    )
+    hb_sub.add_parser(
+        "status", help="installed, current, loaded, and the last beat's age and result"
+    )
+    hb_uninstall = hb_sub.add_parser(
+        "uninstall", help="unload the timer and move its units aside (dry run by default)"
+    )
+    hb_uninstall.add_argument("--apply", action="store_true", help="do it, rather than list it")
+    hb.set_defaults(func=_heartbeat, load=False, apply=False)
 
     rn = sub.add_parser(
         "runner",

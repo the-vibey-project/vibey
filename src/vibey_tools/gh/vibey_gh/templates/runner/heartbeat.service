@@ -1,0 +1,20 @@
+# Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+# Rendered by `vibey-gh heartbeat install` from [runners]; do not edit, re-install instead.
+#
+# One sovereign heartbeat, started by the timer beside this unit. `sovereign --beat` pushes
+# nothing unless the runner is registered and online and the model endpoint answers, and
+# records what it did in the record file named below, which `vibey-gh heartbeat status`
+# reads. The push goes through the checkout's own pre-push gate; nothing here skips it.
+[Unit]
+Description=vibey sovereign heartbeat for __REPOSITORY__
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=__CHECKOUT__
+Environment=__PATH_ASSIGNMENT__
+Environment=PYTHONSAFEPATH=1
+ExecStart=__EXEC_START__
+StandardOutput=append:__LOG__
+StandardError=append:__LOG__

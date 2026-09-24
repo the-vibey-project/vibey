@@ -35,9 +35,11 @@ from vibey_gh.config import (
     load_config,
 )
 from vibey_gh.doctor import _check_unknown_keys
+from vibey_gh.heartbeat_timer import HeartbeatTimer
 from vibey_gh.interfaces import RunnersConfigInterface
 from vibey_gh.interfaces.sovereign_runner_interface import (
     LaunchAgentUnitInterface,
+    RegisteredRunnerInterface,
     RunnerFileInterface,
     RunnerPlanInterface,
     SovereignRunnerInterface,
@@ -45,6 +47,7 @@ from vibey_gh.interfaces.sovereign_runner_interface import (
 from vibey_gh.sovereign_runner import (
     TEMPLATES,
     LaunchAgentUnit,
+    RegisteredRunner,
     RunnerFile,
     RunnerPlan,
     SovereignRunner,
@@ -200,6 +203,14 @@ def test_runners_registration_is_declared_or_derived(runners, platform, expected
         ("throttle_seconds", 3601),
         ("max_failures", 0),
         ("path", ""),
+        ("systemd_user_dir", "units"),
+        ("heartbeat_python", "bin/python"),
+        ("heartbeat_log_dir", "logs"),
+        ("heartbeat_scheduler", "cron"),
+        ("heartbeat_interval_minutes", 721),
+        ("heartbeat_interval_minutes", -1),
+        ("heartbeat_interval_minutes", 1.5),
+        ("heartbeat_interval_minutes", True),
     ],
 )
 def test_runners_invalid_fields_are_refused(field, value):
@@ -690,16 +701,27 @@ def test_the_runner_satisfies_its_interface(tmp_path):
 
 
 def _repo(tmp_path: Path, monkeypatch, extra: str = "") -> Path:
+    """A main clone declaring a runner, and a heartbeat interpreter outside any checkout.
+
+    `runner install` also installs the heartbeat timer, which refuses an interpreter under a
+    temporary directory -- where the suite's scratch tree lives -- so that refusal is turned
+    off here and tested on its own in `test_heartbeat_timer`."""
     repo = tmp_path / "repo"
-    repo.mkdir()
+    (repo / ".git").mkdir(parents=True)
+    python = tmp_path / "tool" / "bin" / "python"
+    python.parent.mkdir(parents=True)
+    python.write_text("#!/bin/sh\necho /opt/vibey-tool/lib/vibey_gh\n", encoding="utf-8")
+    python.chmod(0o755)
     (repo / ".vibey-gh.toml").write_text(
-        '[platform]\nkind = "github"\n\n[runners]\nrepository = "o/r"\n' + extra,
+        '[platform]\nkind = "github"\n\n[runners]\nrepository = "o/r"\n'
+        f'heartbeat_scheduler = "launchd"\nheartbeat_python = "{python}"\n' + extra,
         encoding="utf-8",
     )
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.chdir(repo)
+    monkeypatch.setattr(HeartbeatTimer, "temp_roots", staticmethod(lambda: ()))
     return home
 
 
@@ -714,6 +736,10 @@ def test_cli_install_writes_files_and_prints_the_next_commands(tmp_path, monkeyp
     assert f"launchctl bootstrap gui/{os.getuid()} {plist}" in out
     assert "Administration: Read and write" in out
     assert plist.is_file()
+    # The heartbeat timer comes with it: the runner is only offered while it beats.
+    heartbeat = home / "Library/LaunchAgents/org.vibey.runner-heartbeat-r.plist"
+    assert "the heartbeat timer:" in out and f"wrote {heartbeat}" in out
+    assert heartbeat.is_file()
 
 
 def _fake_gh_on_path(tmp_path: Path, monkeypatch, code: int) -> None:
@@ -1111,3 +1137,92 @@ def test_a_signal_stops_the_supervisor_without_registering_again(tmp_path, durin
     assert len([c for c in calls if "registration-token" in c]) == 1
     assert len([c for c in calls if c.startswith("docker run")]) == 1
     assert out.count("supervisor stopping") == 1
+
+
+# --- the runners GitHub lists, read with the runner's own login ---------------------------
+
+
+class _GhRead:
+    """Records each gh argv and environment, and answers with one exit code and output."""
+
+    def __init__(self, code: int = 0, out: str = "") -> None:
+        self.code, self.out = code, out
+        self.calls: list[tuple[tuple[str, ...], dict[str, str]]] = []
+
+    def __call__(self, argv: tuple[str, ...], env: dict[str, str]) -> tuple[int, str]:
+        self.calls.append((argv, env))
+        return self.code, self.out
+
+
+def _reader(tmp_path: Path, gh_read: _GhRead) -> SovereignRunner:
+    home = tmp_path / "home"
+    home.mkdir(exist_ok=True)
+    return SovereignRunner(_cfg(tmp_path), home=home, uid=UID, gh_read=gh_read)
+
+
+def test_registered_runners_are_read_with_the_runners_own_login(tmp_path, monkeypatch):
+    monkeypatch.setenv("GH_TOKEN", "ambient")
+    monkeypatch.setenv("GITHUB_TOKEN", "ambient")
+    online = '{"name":"a","status":"online","busy":true,"labels":["self-hosted","vibey-local-r"]}'
+    offline = '{"name":"b","status":"offline","busy":false,"labels":["self-hosted"]}'
+    gh = _GhRead(0, f"{online}\n\n{offline}\n")
+    runner = _reader(tmp_path, gh)
+    runners, problem = runner.registered_runners(_plan(runner))
+    assert problem == ""
+    assert runners == (
+        RegisteredRunner("a", True, True, ("self-hosted", "vibey-local-r")),
+        RegisteredRunner("b", False, False, ("self-hosted",)),
+    )
+    assert isinstance(runners[0], RegisteredRunnerInterface)
+    ((argv, env),) = gh.calls
+    assert argv[:6] == (
+        "gh",
+        "api",
+        "--hostname",
+        "github.com",
+        "--paginate",
+        "repos/o/r/actions/runners",
+    )
+    assert argv[-2] == "--jq" and argv[-1].endswith("| tojson")
+    assert env["GH_CONFIG_DIR"] == str(tmp_path / "home/.config/gh-runner")
+    assert "GH_TOKEN" not in env and "GITHUB_TOKEN" not in env
+
+
+@pytest.mark.parametrize(
+    "code, out, expected",
+    [
+        (1, "", "could not list the runners registered with o/r"),
+        (0, "not json\n", "was not the JSON asked for"),
+        (0, '{"name":"a"}\n', "was not the JSON asked for"),
+    ],
+)
+def test_a_listing_that_could_not_be_read_is_a_problem_never_an_empty_answer(
+    tmp_path, code, out, expected
+):
+    runner = _reader(tmp_path, _GhRead(code, out))
+    runners, problem = runner.registered_runners(_plan(runner))
+    assert runners == () and expected in problem
+
+
+def test_the_default_gh_output_seam_keeps_stdout_and_drops_stderr(tmp_path):
+    script = tmp_path / "gh"
+    script.write_text("#!/bin/sh\necho listed\necho secret >&2\nexit 3\n", encoding="utf-8")
+    script.chmod(0o755)
+    assert SovereignRunner._gh_output((str(script),), dict(os.environ)) == (3, "listed\n")
+    assert SovereignRunner._gh_output((str(tmp_path / "absent"),), {})[0] == 127
+
+
+def test_cleanup_never_retires_the_declared_heartbeat_timer(tmp_path):
+    runner = _runner(tmp_path)
+    agents = tmp_path / "home/Library/LaunchAgents"
+    ours = _agent(
+        agents, "org.vibey.runner-heartbeat-r.plist", "org.vibey.runner-heartbeat-r", None
+    )
+    theirs = _agent(
+        agents, "org.vibey.runner-heartbeat-gone.plist", "org.vibey.runner-heartbeat-gone", None
+    )
+    listed = [unit.path for unit in runner.strays(_plan(runner))]
+    assert ours not in listed and theirs in listed
+    assert SovereignRunner.heartbeat_label("org.vibey.runner", "o/r") == (
+        "org.vibey.runner-heartbeat-r"
+    )
