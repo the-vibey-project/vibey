@@ -53,15 +53,89 @@ something else in production:
 
 ## `DISCORD_WEBHOOK_URL` (optional)
 
-`Release surfaces` ends its documentation deploy by announcing what it published: the
-channel, the revision, and a link to each surface the deploy actually produced (the
-paper as PDF, DOCX and HTML; the book as PDF, EPUB and print HTML). It posts through a
-Discord webhook held in the repository secret `DISCORD_WEBHOOK_URL`. The secret is
-optional: with none set, the step prints `announce: no DISCORD_WEBHOOK_URL secret is
-set; nothing posted` and passes, so a missing announcement is visible in the log
-rather than silent. The webhook URL is a credential (whoever holds it can post as the
-project); it lives only in the secret, and a tree-wide check refuses any tracked file
-that carries one.
+`Release surfaces` ends its documentation deploy by announcing what changed and what it
+published. `vibey-gh announce` posts a concise changelog: one line per merged change,
+grouped **Breaking** / **Added** / **Fixed** / **Other**, capped at `[announce] max_changes`
+with the rest counted as `…and N more` and linked. Merge and release chores are hidden but
+counted (`+N maintenance commits`). The links to each surface the deploy actually produced
+come last. It posts through a Discord webhook held in the repository secret named by
+`[announce] webhook_secret`, `DISCORD_WEBHOOK_URL` by default (see
+[configuration](configuration.md#announce)).
+
+The secret is optional. With none set, the step prints `announce: no DISCORD_WEBHOOK_URL
+secret is set; nothing posted` and passes, so a missing announcement is visible in the log
+rather than silent. A webhook that fails is a `::warning::`, never a failed deploy. The
+webhook URL is a credential (whoever holds it can post as the project). It lives only in
+the secret, it is redacted from every log line the announcer prints, and a tree-wide check
+refuses any tracked file that carries one.
+
+What a develop deploy posts, from `test/golden/announce-develop.txt`:
+
+```text
+**the-vibey-project/vibey** published `develop` from `600f3db2883d` · changes since `b16ba7b590ab`:
+**Breaking**
+- Feature · storm: lanes run one at a time ([#1102](<https://github.com/the-vibey-project/vibey/pull/1102>))
+**Added**
+- Feature · gh: announce a concise changelog with every docs deploy ([#1106](<https://github.com/the-vibey-project/vibey/pull/1106>))
+**Fixed**
+- Fix · paper: draw the release cadence from the tags the repository holds ([#1104](<https://github.com/the-vibey-project/vibey/pull/1104>))
+- Fix · gh: quote the paper's author fields for the shell ([#1101](<https://github.com/the-vibey-project/vibey/pull/1101>))
+**Other**
+- Docs · canon: ratify sub-doctrine 12.f, unattended approval ([#1103](<https://github.com/the-vibey-project/vibey/pull/1103>))
+- Performance · queue: claim a job in one round trip ([#1099](<https://github.com/the-vibey-project/vibey/pull/1099>))
++2 maintenance commits · [compare b16ba7b…600f3db](<https://github.com/the-vibey-project/vibey/compare/b16ba7b590ab...600f3db2883d>)
+Read: [site](<https://the-vibey-project.github.io/vibey/develop/>) · [paper PDF](<https://the-vibey-project.github.io/vibey/develop/paper.pdf>) · [paper HTML](<https://the-vibey-project.github.io/vibey/develop/paper/>) · [book PDF](<https://the-vibey-project.github.io/vibey/develop/book.pdf>) · [book EPUB](<https://the-vibey-project.github.io/vibey/develop/book.epub>) · [book print](<https://the-vibey-project.github.io/vibey/develop/book-print.html>)
+```
+
+**Where "since" starts.** The range is a position, never a time (sub-doctrine 10.g). Every
+`Release surfaces` run is titled `<name> · <branch> · <release commit>`. The next develop
+announcement reads the Actions API for the newest successful run on its branch whose
+`Record the announced position` step succeeded, and announces the commits from that run's
+release commit to this one. The announce step writes `posted=` and `position=` for that
+marker, and the marker runs only on `posted == 'true' && position != 'unknown'`. The
+position is one of three things, and the message says which:
+
+- **known**: the previous position was read and compared. `changes since <commit>:`. Recorded.
+- **unknown**: the history could not be READ. The Actions API errored or answered something
+  malformed, a run's jobs or the compare could not be listed, or a dispatched run named no
+  commit. The message says `changes since: unknown (<why>) — this commit only; the next
+  announcement covers the span again:`, and it is **not recorded**: the watermark stays
+  where it was, so the next announcement starts from the last recorded commit and covers
+  everything since, this commit included. An API outage delays an announcement; it never
+  loses one.
+- **re-anchored**: the history was read and holds no usable position. That covers the
+  first announcement ever; a last-announced commit that is no longer an ancestor (a
+  force-push); nothing accepted within the API's window (a status-filtered run listing stops
+  at its 1000th result, which is why `max_history_pages` stops at 10); and more than
+  `max_history_candidates` runs for the branch in a row whose announcement was not accepted.
+  Reading again would find the same thing, so the message says `re-anchored here (<why>) —
+  this commit only:` and **is recorded**, and the next announcement starts here. The commits
+  between the old position and this one are not listed, and the message says so rather than
+  claiming a range.
+
+A release on the release branch announces its own notes instead: the version's section of
+`CHANGELOG.md`, with the commit count and compare link from the previous version's tag when
+that tag resolves. A branch or tag prefix may contain `/` (`release/next`, `v/`); refs are
+URL-encoded wherever they enter an API path.
+
+**At least once, not exactly once.** A run that posted but whose marker step never ran (the
+runner died between the two, or the marker was skipped because the position was unknown) is
+not a recorded position. The next announcement covers its commits again, so a reader can see
+a change twice; that is the direction 10.g chooses, since a re-read repeats and a skip loses.
+Two things are de-duplicated by identity. A run for a commit that is already the recorded
+position (a re-run, or a replayed deploy of the same release) posts nothing and prints
+`announce: <commit> was already announced for <branch>; nothing posted`. Within one
+message, a commit is listed once. Docs jobs for one repository queue behind a single
+concurrency group and never overlap, so each announcement reads the position the previous
+one recorded. A pending docs job that GitHub cancels in favour of a newer one records
+nothing, and its commits are covered by the newer one's range.
+
+To preview a message without posting, run it from the repository root:
+
+```bash
+vibey-gh announce --channel develop --branch develop --sha "$(git rev-parse origin/develop)" \
+  --repository OWNER/NAME --dry-run
+```
 
 ## Recovering from a review with no verdict
 

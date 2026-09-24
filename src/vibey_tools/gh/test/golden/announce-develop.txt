@@ -1,0 +1,13 @@
+**the-vibey-project/vibey** published `develop` from `600f3db2883d` · changes since `b16ba7b590ab`:
+**Breaking**
+- Feature · storm: lanes run one at a time ([#1102](<https://github.com/the-vibey-project/vibey/pull/1102>))
+**Added**
+- Feature · gh: announce a concise changelog with every docs deploy ([#1106](<https://github.com/the-vibey-project/vibey/pull/1106>))
+**Fixed**
+- Fix · paper: draw the release cadence from the tags the repository holds ([#1104](<https://github.com/the-vibey-project/vibey/pull/1104>))
+- Fix · gh: quote the paper's author fields for the shell ([#1101](<https://github.com/the-vibey-project/vibey/pull/1101>))
+**Other**
+- Docs · canon: ratify sub-doctrine 12.f, unattended approval ([#1103](<https://github.com/the-vibey-project/vibey/pull/1103>))
+- Performance · queue: claim a job in one round trip ([#1099](<https://github.com/the-vibey-project/vibey/pull/1099>))
++2 maintenance commits · [compare b16ba7b…600f3db](<https://github.com/the-vibey-project/vibey/compare/b16ba7b590ab...600f3db2883d>)
+Read: [site](<https://the-vibey-project.github.io/vibey/develop/>) · [paper PDF](<https://the-vibey-project.github.io/vibey/develop/paper.pdf>) · [paper HTML](<https://the-vibey-project.github.io/vibey/develop/paper/>) · [book PDF](<https://the-vibey-project.github.io/vibey/develop/book.pdf>) · [book EPUB](<https://the-vibey-project.github.io/vibey/develop/book.epub>) · [book print](<https://the-vibey-project.github.io/vibey/develop/book-print.html>)

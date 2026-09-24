@@ -32,6 +32,7 @@ from vibey_gh import fingerprints
 from vibey_gh.config import (
     CONFIG_NAME,
     AiConfig,
+    AnnounceConfig,
     BranchSyncConfig,
     ConversationConfig,
     DocumentationConfig,
@@ -87,6 +88,8 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "branch_sync": _fields(BranchSyncConfig),
     "realign": _fields(RealignConfig),
     "github_release": _fields(GithubReleaseConfig),
+    # `groups` and `type_words` are sub-tables, and fields of the dataclass.
+    "announce": _fields(AnnounceConfig),
     "repository_profile": _fields(RepositoryProfileConfig),
     "social_signals": _fields(SocialSignalsConfig) | {"entries"},
     "tidy": _fields(TidyConfig),
