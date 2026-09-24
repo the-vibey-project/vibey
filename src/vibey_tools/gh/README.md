@@ -96,7 +96,9 @@ and every transition between them to be reproducible and policy checked.
 
 - Python 3.12 or newer, Git, and the GitHub CLI (`gh`).
 - A GitHub repository with Actions enabled and Pages configured for Actions deployments.
-- `ANTHROPIC_API_KEY` for AI review, repair, conflict resolution, and documentation upkeep.
+- `ANTHROPIC_API_KEY` for AI repair, conflict resolution, and documentation upkeep — and for
+  the exact-head review only when `[pr_automation] paid_review = true` declares a paid one.
+  By default none is (sub-doctrine 8.b), and a self-hosted sovereign runner reviews instead.
 - `AUTOMERGE_TOKEN` when the default Actions token cannot merge or manage repository settings.
 - PyPI and TestPyPI trusted-publishing environments when Python publication is enabled.
 
@@ -325,7 +327,7 @@ access of its own. See [Threat model](docs/threat-model.md) for the full boundar
 | `vibey-gh local-authority --once` | The capped-lane sync loop: green local branches reach their remotes by themselves while local is the source of truth; drop `--once` for the daemon form. |
 | `vibey-gh failover --once` | The operator-seat failover engine: paid lane down, the seat moves to the first healthy local agent (qwenloop, then opencode) and moves back on recovery — configured per machine in `~/.config/vibey-gh/failover.toml`, off until enabled; drop `--once` for the daemon form. |
 | `vibey-gh report-superseded --index pypi\|testpypi --project NAME --version VERSION` | Report which prior releases a published version supersedes, since PyPI has no yank API; never yanks anything itself. Add `--governance-since REF` to evaluate Article V.4: a ratified governance change names every previous release, zero exceptions. |
-| `vibey-gh local-review [--diff FILE]` | Review a diff with a local Ollama-compatible model when the primary paid review returns no verdict at all. Opt-in fallback; see `[pr_automation.fallback]`. |
+| `vibey-gh local-review [--diff FILE]` | Review a diff with a local Ollama-compatible model: the sovereign lane's diff half, the fallback when a declared paid review returns no verdict, or — `--scope full`, with no paid review declared — the whole review. See `[pr_automation.fallback]`. |
 | `vibey-gh doctor` | Offline adoption preflight: reads `.vibey-gh.toml`, `pyproject.toml`, and `.github/workflows/` on disk (no network, no credentials, no execution) to catch a config key silently ignored in the wrong section, a merge train stuck forever with no installed gate workflow, a ruff rule that fails every stamped file, contending Pages deployers, and superseded fingerprint headers. |
 | `vibey-gh local-triage [--issue FILE]` | Triage an issue with the same local model when the primary paid solver produces nothing. Always marks the result `needs_human`. |
 | `vibey-gh pr-automation self-heal [--pr N]` | Refill a spent repair budget, itself bounded so a permanent failure still stops. |

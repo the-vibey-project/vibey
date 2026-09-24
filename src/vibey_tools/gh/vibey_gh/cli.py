@@ -344,10 +344,12 @@ def _pr_automation(args) -> int:
         elif args.action == "combine":
             # An empty --sovereign is how the workflow says the sovereign lane produced no
             # verdict; the composer then refuses a wider-half-only answer rather than
-            # passing a review whose diff half nobody carried.
+            # passing a review whose diff half nobody carried. An empty --paid is the paid
+            # lane returning nothing -- or, under `--half none`, no paid review declared.
             sovereign = _read_json(args.sovereign) if args.sovereign else None
+            paid = _read_json(args.paid) if args.paid else None
             envelope = REVIEW_COMPOSER.compose(
-                _read_json(args.paid), half=args.half, sovereign=sovereign, head_sha=args.head_sha
+                paid, half=args.half, sovereign=sovereign, head_sha=args.head_sha
             )
             print(json.dumps(envelope, ensure_ascii=False))
         elif args.action == "mirror-fork":
@@ -718,6 +720,9 @@ def _sovereign(args) -> int:
         if output:
             with open(output, "a", encoding="utf-8") as handle:
                 handle.write(f"ready={'true' if result.ready else 'false'}\n")
+                # Why, as well as whether: the gate names it when the lane is not offered.
+                # Every reason is this module's own one-line sentence, never forge text.
+                handle.write(f"reason={' '.join(result.reason.split())}\n")
     print(f"vibey-gh sovereign: {result.reason}")
     # A probe that finds no runner is a fact, not a failure: exiting non-zero would
     # turn "the sovereign lane is not available right now" into a red job.
@@ -1233,6 +1238,8 @@ def _local_review(args) -> int:
         ("--max-chars", args.max_chars),
         ("--timeout", args.timeout),
         ("--role", args.role),
+        ("--scope", args.scope),
+        ("--context-dir", args.context_dir),
     ):
         if value is not None:
             forwarded += [flag, str(value)]
@@ -1489,20 +1496,30 @@ def main(argv: list[str] | None = None) -> int:
         help="compose one review verdict from the lane or lanes that answered it",
     )
     combine.add_argument(
-        "--paid", required=True, help="the paid reviewer's answer: JSON object, file, or -"
+        "--paid",
+        default="",
+        help=(
+            "the paid reviewer's answer: JSON object, file, or -; empty when it returned"
+            " nothing, and always empty with --half none"
+        ),
     )
     combine.add_argument(
         "--half",
         required=True,
         choices=PAID_HALVES,
-        help="what the paid reviewer answered: the full schema, or the wider half alone",
+        help=(
+            "what the paid reviewer answered: the full schema, the wider half alone, or"
+            " 'none' when no paid review is declared and the sovereign verdict is the whole"
+            " review (8.b)"
+        ),
     )
     combine.add_argument(
         "--sovereign",
         default="",
         help=(
-            "the sovereign lane's diff-half verdict (JSON object or file); required with"
-            " --half requires-wider-context, empty when that lane produced none"
+            "the sovereign lane's verdict (JSON object or file): its diff half, required with"
+            " --half requires-wider-context; its whole review, required with --half none;"
+            " empty when that lane produced none"
         ),
     )
     combine.add_argument("--head-sha", required=True)
@@ -1666,6 +1683,18 @@ def main(argv: list[str] | None = None) -> int:
             "how the verdict labels itself: 'sovereign' when it carries the diff half,"
             " 'fallback' (the default) when it stands in for a paid review that failed"
         ),
+    )
+    local.add_argument(
+        "--scope",
+        choices=("diff-groundable", "full"),
+        help=(
+            "what to answer: the diff-groundable half (the default), or 'full' -- the whole"
+            " review, asked of the sovereign lane when no paid review is declared (8.b)"
+        ),
+    )
+    local.add_argument(
+        "--context-dir",
+        help="documents a whole review judges the documentation contract against",
     )
     local.set_defaults(func=_local_review)
 

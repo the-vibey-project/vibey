@@ -357,6 +357,9 @@ class PrAutomationFallbackConfigInterface(_ConfigRecordInterface, Protocol):
     @property
     def heartbeat_max_age_minutes(self) -> int: ...
 
+    @property
+    def context_paths(self) -> tuple[str, ...]: ...
+
 
 @runtime_checkable
 class RunnersConfigInterface(_ConfigRecordInterface, Protocol):
@@ -442,6 +445,9 @@ class PrAutomationConfigInterface(_ConfigRecordInterface, Protocol):
 
     @property
     def retain_schedule_backstop(self) -> bool: ...
+
+    @property
+    def paid_review(self) -> bool: ...
 
     @property
     def fallback(self) -> PrAutomationFallbackConfigInterface: ...

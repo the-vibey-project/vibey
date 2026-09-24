@@ -49,6 +49,8 @@ OWN_JOBS = (
     "Resolve merge conflicts",
     "Escalate exhausted repair lineage",
     "Sovereign diff review",
+    # Records the sovereign lane's whole review when no paid review is declared (8.b).
+    "Record the sovereign whole review",
     # The sovereign job's name before it went first (#133). Kept so a check run a
     # pre-upgrade run of this workflow left on a head is still recognised as our own.
     "Local review fallback",
@@ -442,14 +444,15 @@ def evaluate(
             return result("review", "current head requires automated review")
         if state.review_passed is not True:
             if state.review_repairable is False:
-                # The only findings came from the sovereign lane's diff review. Repair is a
-                # paid agent editing the branch, and a local model's finding is a lead for a
-                # human rather than a ruling, so it never spends a repair attempt -- the head
-                # is simply reviewed again, exactly as it was while that model was only a
+                # The only findings came from the sovereign lane -- its diff half, or its
+                # whole review when no paid review is declared (8.b). Repair is a paid agent
+                # editing the branch, and a local model's finding is a lead for a human
+                # rather than a ruling, so it never spends a repair attempt -- the head is
+                # simply reviewed again, exactly as it was while that model was only a
                 # fallback whose verdict was never recorded.
                 return result(
                     "review",
-                    "the sovereign lane's diff review has findings that automated repair "
+                    "the sovereign lane's review has findings that automated repair "
                     "does not act on; the head is reviewed again",
                 )
             if state.attempts >= cfg.pr_automation.max_repair_attempts:
