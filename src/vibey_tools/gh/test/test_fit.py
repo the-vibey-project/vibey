@@ -742,10 +742,10 @@ def test_a_model_that_is_not_loaded_says_its_size_is_a_lower_bound():
 @pytest.mark.parametrize(
     "chars", [0, 1, 6143, 6144, 6147, 60_000, 92_159, 92_160, 92_163, 10_000_000]
 )
-def test_the_default_sizer_is_exactly_the_rule_local_review_shipped_with(chars):
-    """Moving the rule into one class must not move a single window: these are the
-    values `local_review._num_ctx` returned, across both clamps and the line between."""
-    expected = min(32768, max(4096, chars // 3 + 2048))
+def test_the_default_sizer_keeps_its_rule_on_the_measured_window(chars):
+    """The rule is the one `local_review._num_ctx` shipped with -- floor, tokens plus a
+    reserve, ceiling -- on the window and reserve #1090 measured (65,536 and 8,192)."""
+    expected = min(65536, max(4096, -(-chars // 3) + 8192))
     assert ContextSizer().num_ctx(chars) == expected
 
 
@@ -769,3 +769,40 @@ def test_every_number_in_the_sizer_is_a_setting():
 def test_a_sizer_that_could_not_size_anything_is_refused(kw, message):
     with pytest.raises(ValueError, match=message):
         ContextSizer(**kw)
+
+
+# -- the window a request must fit INTO, not only the one it asks for (#1090) ----------
+
+
+def test_a_sizer_counts_tokens_pessimistically_and_says_what_fits():
+    """Measured on the #1090 whole review: 131,523 characters were 33,326 prompt tokens to
+    gpt-oss (3.95 per token), so 3 per token over-counts -- the safe direction for a
+    question whose wrong answer is a prompt the model silently never reads."""
+    sizer = ContextSizer(ceiling_tokens=10_000, reserve_tokens=2_000, chars_per_token=3)
+
+    assert sizer.window == 10_000 and sizer.reserve == 2_000
+    assert sizer.tokens(0) == 0 and sizer.tokens(1) == 1 and sizer.tokens(3) == 1
+    assert sizer.tokens(4) == 2  # rounded up, never down
+    assert sizer.fits(24_000) is True  # 8,000 + 2,000 == 10,000
+    assert sizer.fits(24_001) is False
+    assert sizer.room_chars(0) == 24_000
+    assert sizer.room_chars(23_000) == 1_000
+    assert sizer.room_chars(30_000) == 0  # never negative
+    assert isinstance(sizer, ContextSizerInterface)
+
+
+def test_the_default_window_and_reserve_are_the_measured_ones():
+    """65,536 is the window this host's tuning chose for gpt-oss:20b
+    (docs/plans/qwenstorm-3.0.0/bench/host-tuning.toml). 8,192 reserves more than twice
+    the 3,676 reasoning-and-answer tokens the #1090 whole review measured at default
+    reasoning, where 2,048 ran out of room mid-answer."""
+    from vibey_gh.fit import DEFAULT_CONTEXT_CEILING_TOKENS, DEFAULT_CONTEXT_RESERVE_TOKENS
+
+    assert DEFAULT_CONTEXT_CEILING_TOKENS == 65_536
+    assert DEFAULT_CONTEXT_RESERVE_TOKENS == 8_192
+    assert ContextSizer().window == 65_536 and ContextSizer().reserve == 8_192
+
+
+def test_a_reserve_that_leaves_no_room_is_refused():
+    with pytest.raises(ValueError, match="reserve_tokens"):
+        ContextSizer(ceiling_tokens=8192, reserve_tokens=8192)

@@ -360,6 +360,18 @@ class PrAutomationFallbackConfigInterface(_ConfigRecordInterface, Protocol):
     @property
     def context_paths(self) -> tuple[str, ...]: ...
 
+    @property
+    def context_window(self) -> int: ...
+
+    @property
+    def reasoning_reserve_tokens(self) -> int: ...
+
+    @property
+    def chars_per_token(self) -> int: ...
+
+    @property
+    def think(self) -> str: ...
+
 
 @runtime_checkable
 class RunnersConfigInterface(_ConfigRecordInterface, Protocol):

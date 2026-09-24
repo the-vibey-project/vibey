@@ -450,12 +450,21 @@ jobs:
           # verdict -- the paid lane then answers the whole review, and if it cannot either,
           # or if no paid review is declared, the gate stays red for a human -- never
           # resolve to a default pass. The reason is kept, so the gate can name it.
+          #
+          # The window is the one the repository's host measured, passed explicitly because
+          # this runner's working directory holds no .vibey-gh.toml. A request over it is
+          # refused rather than sent: Ollama drops the excess silently, and a model that
+          # never read the whole diff must never pass it (#1090).
           if ! vibey-gh local-review \
                 --diff "${RUNNER_TEMP}/pr.diff" \
                 --model 'gpt-oss:20b' \
                 --base-url "${VIBEY_OLLAMA_URL:-http://127.0.0.1:11434}" \
                 --max-chars 60000 \
                 --timeout 1800 \
+                --context-window 65536 \
+                --reasoning-reserve 8192 \
+                --chars-per-token 3 \
+                --think '' \
                 --role "$ROLE" \
                 ${SCOPE:+--scope "$SCOPE" --context-dir "${RUNNER_TEMP}/context"} \
                 > "${RUNNER_TEMP}/verdict.json" 2> "${RUNNER_TEMP}/local-review.err"; then

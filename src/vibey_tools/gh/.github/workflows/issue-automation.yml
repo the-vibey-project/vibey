@@ -612,6 +612,10 @@ jobs:
                 --base-url "${VIBEY_OLLAMA_URL:-http://127.0.0.1:11434}" \
                 --max-chars 60000 \
                 --timeout 1800 \
+                --context-window 65536 \
+                --reasoning-reserve 8192 \
+                --chars-per-token 3 \
+                --think '' \
                 > "${RUNNER_TEMP}/triage.json"; then
             echo "::warning::local triage fallback produced no verdict"
             exit 1

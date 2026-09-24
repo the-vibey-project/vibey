@@ -600,7 +600,9 @@ if argv[:1] == ["local-review"]:
         def __exit__(self, *exc):
             return None
 
-    body = json.dumps({{"message": {{"content": verdict}}}}).encode()
+    body = json.dumps(
+        {{"message": {{"content": verdict}}, "done_reason": "stop", "prompt_eval_count": 10}}
+    ).encode()
     local_review.urllib.request.urlopen = lambda request, timeout=None: _Response(body)
 from vibey_gh.cli import main
 raise SystemExit(main(argv))
@@ -1917,3 +1919,62 @@ def test_a_refused_repair_is_named_in_the_gate(workflow, tmp_path):
     (check,) = [call for call in calls if call[:2] == ["api", "repos/owner/repo/check-runs"]]
     assert f"output[summary]=completed checks are failing. {refusal}. Run " in " ".join(check)
     assert completed.returncode == 1
+
+
+# --------------------------------------------------------------------------------------
+# The sovereign model's window, declared from the host's own measurement (#1090)
+# --------------------------------------------------------------------------------------
+
+
+def test_the_sovereign_models_window_is_declared_not_compiled_in(tmp_path):
+    from vibey_gh import fit
+    from vibey_gh.config import PrAutomationFallbackConfig, load_config
+
+    default = PrAutomationFallbackConfig()
+    assert default.context_window == fit.DEFAULT_CONTEXT_CEILING_TOKENS == 65536
+    assert default.reasoning_reserve_tokens == fit.DEFAULT_CONTEXT_RESERVE_TOKENS == 8192
+    assert default.chars_per_token == fit.DEFAULT_CHARS_PER_TOKEN == 3
+    assert default.think == ""  # the model's own default: fidelity is not traded blind
+    (tmp_path / ".vibey-gh.toml").write_text(
+        "[pr_automation.fallback]\ncontext_window = 131072\nreasoning_reserve_tokens = 4096\n"
+        'chars_per_token = 4\nthink = "low"\n',
+        "utf-8",
+    )
+    loaded = load_config(tmp_path).pr_automation.fallback
+    assert (loaded.context_window, loaded.reasoning_reserve_tokens) == (131072, 4096)
+    assert (loaded.chars_per_token, loaded.think) == (4, "low")
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"context_window": 2048}, "context_window"),
+        ({"reasoning_reserve_tokens": 512}, "reasoning_reserve_tokens"),
+        ({"reasoning_reserve_tokens": 65536}, "reasoning_reserve_tokens"),
+        ({"chars_per_token": 0}, "chars_per_token"),
+        ({"think": "max"}, "think"),
+    ],
+)
+def test_a_window_that_could_not_hold_a_review_is_refused(changes, message):
+    from vibey_gh.config import PrAutomationFallbackConfig
+
+    with pytest.raises(ValueError, match=message):
+        PrAutomationFallbackConfig(**changes)
+
+
+@pytest.mark.parametrize("name", ["pr-review.yml", "issue-automation.yml"])
+def test_every_local_model_call_is_handed_the_declared_window(tmp_path, name):
+    """The runner's working directory holds no .vibey-gh.toml, so a window left to the
+    command's defaults would be the package's, not the host's own measurement."""
+    from vibey_gh.config import PrAutomationConfig, PrAutomationFallbackConfig
+
+    fallback = PrAutomationFallbackConfig(
+        context_window=131072, reasoning_reserve_tokens=6000, chars_per_token=4, think="low"
+    )
+    cfg = GhConfig(root=tmp_path, pr_automation=PrAutomationConfig(fallback=fallback))
+    text = render_workflow(WORKFLOWS / name, cfg)
+
+    assert "--context-window 131072" in text
+    assert "--reasoning-reserve 6000" in text
+    assert "--chars-per-token 4" in text
+    assert "--think 'low'" in text
