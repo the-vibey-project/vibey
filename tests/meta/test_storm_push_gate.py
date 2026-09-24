@@ -190,8 +190,11 @@ def rig(tmp_path: Path, **overrides: object) -> Rig:
 
 
 def owner(clock: FakeClock, tmp_path: Path, **overrides: object) -> Owner:
-    log = tmp_path / "push.log"
+    # Where `run` writes it: the gate reads a push log from nowhere else (#1105-2).
+    token = str(overrides.get("token", "tok-1"))
+    log = tmp_path / "gate" / "logs" / f"{token}.log"
     if not log.exists():
+        log.parent.mkdir(parents=True, exist_ok=True)
         log.write_text("".join(f"gate line {n}\n" for n in range(100)), encoding="utf-8")
     values: dict[str, object] = {
         "token": "tok-1",
@@ -564,7 +567,8 @@ def test_the_killer_refuses_groups_that_are_never_a_push(tmp_path: Path, pgid: i
 
 def test_evidence_is_written_before_the_kill(tmp_path: Path) -> None:
     r = rig(tmp_path)
-    held(r, tmp_path, stacks=str(tmp_path / "stacks"))
+    # The directory `run` arms, under the gate's own state; no other is followed (#1105-2).
+    held(r, tmp_path, stacks=str(r.cfg.state_dir / "stacks" / "tok-1"))
     r.table.groups[GROUP] = pytest_tree()
     seen: dict[str, object] = {}
 

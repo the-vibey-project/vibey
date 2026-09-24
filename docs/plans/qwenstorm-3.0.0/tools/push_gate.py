@@ -130,6 +130,7 @@ import os
 import re
 import shutil
 import signal
+import stat
 import string
 import subprocess
 import sys
@@ -263,6 +264,60 @@ def _iso(moment: float) -> str:
     return datetime.fromtimestamp(moment, UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# The three filesystem primitives below are module-level for one reason: every class that
+# keeps state -- the lock, the verdicts, the evidence, the samples, the runner's logs -- must
+# write it the same careful way, and a primitive with no state of its own is a function.
+
+
+def _private_dir(path: Path) -> Path:
+    """`path` as a directory only this uid can enter (0700), refusing a symlink or a stranger.
+
+    The state directory is where verdicts, evidence and samples are written; world-readable,
+    it leaked push logs, and a symlink planted in its place redirected every write (#1105-2).
+    """
+    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    found = os.lstat(path)
+    if stat.S_ISLNK(found.st_mode) or not stat.S_ISDIR(found.st_mode):
+        raise SystemExit(f"push-gate: refusing {path}: it is not a real directory")
+    if found.st_uid != os.getuid():
+        raise SystemExit(f"push-gate: refusing {path}: it belongs to uid {found.st_uid}")
+    if stat.S_IMODE(found.st_mode) != 0o700:
+        os.chmod(path, 0o700)
+    return path
+
+
+def _write_private(path: Path, text: str) -> None:
+    """Write `text` to `path` atomically, never through a symlink, readable by this uid only.
+
+    A fresh temporary is created exclusively (O_EXCL, O_NOFOLLOW) and renamed over `path`;
+    a rename replaces a planted link rather than writing through it.
+    """
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+    descriptor = os.open(temporary, flags, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(text)
+        os.replace(temporary, path)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
+def _read_private(path: Path, limit: int = 1 << 20) -> str | None:
+    """`path`'s text if it is a regular file of this uid, reached without a symlink; else None."""
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    except OSError:
+        return None
+    with os.fdopen(descriptor, "rb") as stream:
+        found = os.fstat(stream.fileno())
+        if not stat.S_ISREG(found.st_mode) or found.st_uid != os.getuid():
+            return None
+        stream.seek(max(0, found.st_size - limit))
+        return stream.read().decode("utf-8", errors="replace")
+
+
 # --- Configuration and records -----------------------------------------------------------
 
 
@@ -359,13 +414,54 @@ class Owner:
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> Owner:
+        """The record, or ValueError: nothing in it is believed until it has the right shape.
+
+        Anything able to write the lock directory can write this file, and its token becomes
+        a file name under the state directory and its log a file the evidence quotes. A token
+        like `../../x` wrote outside the state directory and a log of `~/.gitconfig` was
+        copied into the evidence (#1105-2); so every field is checked here, on read.
+        """
+        if not isinstance(data, dict):
+            raise ValueError("the owner record is not an object")
         names = {f.name for f in dataclasses.fields(cls)}
-        return cls(**{key: value for key, value in data.items() if key in names})
+        found = {key: value for key, value in data.items() if key in names}
+
+        def number(value: object) -> bool:
+            return isinstance(value, int | float) and not isinstance(value, bool)
+
+        checks = {
+            "token": lambda v: isinstance(v, str) and bool(TOKEN.match(v)),
+            "pid": lambda v: isinstance(v, int) and not isinstance(v, bool) and v > 1,
+            "pgid": lambda v: (
+                v is None or (isinstance(v, int) and not isinstance(v, bool) and v > 1)
+            ),
+            "dedicated": lambda v: isinstance(v, bool),
+            "uid": lambda v: isinstance(v, int) and not isinstance(v, bool),
+            "branch": lambda v: isinstance(v, str),
+            "worktree": lambda v: isinstance(v, str),
+            "started_at": number,
+            "command": lambda v: isinstance(v, list) and all(isinstance(w, str) for w in v),
+            "log": lambda v: v is None or isinstance(v, str),
+            "stacks": lambda v: v is None or isinstance(v, str),
+            "holder_started": lambda v: v is None or number(v),
+        }
+        required = {"token", "pid", "pgid", "dedicated", "uid", "branch", "worktree", "started_at"}
+        missing = required - found.keys()
+        if missing:
+            raise ValueError(f"the owner record lacks {sorted(missing)}")
+        for key, value in found.items():
+            if key in checks and not checks[key](value):
+                raise ValueError(f"the owner record's {key} is not acceptable: {value!r}"[:160])
+        return cls(**found)
 
 
 @dataclass(frozen=True)
 class LockState:
-    """`free`, `owned` (with its owner) or `ownerless` (a bare mkdir, or a record unreadable)."""
+    """`free`, `owned` (with its owner), `ownerless` (a bare mkdir) or `untrusted`.
+
+    `untrusted`: the lock or its record is a symlink, belongs to another uid, or is not a
+    well-formed record. Nothing is believed of it and the reaper never acts on it (#1105-2).
+    """
 
     kind: str
     owner: Owner | None = None
@@ -639,7 +735,7 @@ class PushLock:
 
     @contextlib.contextmanager
     def _mutex(self) -> Iterator[None]:
-        self._config.state_dir.mkdir(parents=True, exist_ok=True)
+        _private_dir(self._config.state_dir)
         with (self._config.state_dir / "lock.mutex").open("a") as handle:
             fcntl.flock(handle, fcntl.LOCK_EX)
             try:
@@ -649,29 +745,45 @@ class PushLock:
 
     def _read(self) -> LockState:
         try:
-            made = self.path.stat().st_mtime
+            found = os.lstat(self.path)
         except FileNotFoundError:
             return LockState("free")
+        made = found.st_mtime
         age = max(0.0, time.time() - made)
+        if stat.S_ISLNK(found.st_mode) or not stat.S_ISDIR(found.st_mode):
+            return LockState("untrusted", None, age, "the lock path is not a real directory", made)
+        if found.st_uid != os.getuid():
+            return LockState(
+                "untrusted", None, age, f"the lock belongs to uid {found.st_uid}", made
+            )
+        record = self.path / OWNER_FILE
         try:
-            data = json.loads((self.path / OWNER_FILE).read_text(encoding="utf-8"))
-            return LockState("owned", Owner.from_json(data), age, made_at=made)
+            os.lstat(record)
         except FileNotFoundError:
             return LockState(
                 "ownerless", None, age, "held with no owner record (a bare mkdir)", made
             )
-        except (OSError, ValueError, TypeError) as exc:
-            return LockState("ownerless", None, age, f"owner record unreadable: {exc}", made)
+        text = _read_private(record, limit=64 * 1024)
+        if text is None:
+            return LockState(
+                "untrusted",
+                None,
+                age,
+                "the owner record is a symlink, not a regular file, or another uid's",
+                made,
+            )
+        try:
+            return LockState("owned", Owner.from_json(json.loads(text)), age, made_at=made)
+        except (ValueError, TypeError) as exc:
+            return LockState("untrusted", None, age, f"owner record refused: {exc}", made)
 
     def _write(self, owner: Owner) -> None:
-        temporary = self.path / f".{OWNER_FILE}.{owner.token}.tmp"
-        temporary.write_text(json.dumps(owner.to_json(), indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, self.path / OWNER_FILE)
+        _write_private(self.path / OWNER_FILE, json.dumps(owner.to_json(), indent=2) + "\n")
 
     def _remove(self) -> None:
         for leftover in self.path.iterdir():
             if leftover.name == OWNER_FILE or leftover.name.startswith(f".{OWNER_FILE}."):
-                leftover.unlink(missing_ok=True)
+                leftover.unlink(missing_ok=True)  # a link is removed, never followed
         self.path.rmdir()
 
 
@@ -690,10 +802,10 @@ class Verdicts:
         self._dir = config.state_dir / "verdicts"
 
     def write(self, token: str, verdict: dict[str, Any]) -> None:
-        self._dir.mkdir(parents=True, exist_ok=True)
-        temporary = self._dir / f".{token}.tmp"
-        temporary.write_text(json.dumps(verdict, indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, self._dir / f"{token}.json")
+        if not TOKEN.match(token):
+            raise ValueError(f"refusing a verdict for token {token!r}")
+        _private_dir(self._dir)
+        _write_private(self._dir / f"{token}.json", json.dumps(verdict, indent=2) + "\n")
 
     def discard(self, token: str) -> None:
         """Withdraw a verdict whose kill did not happen."""
@@ -703,9 +815,10 @@ class Verdicts:
     def read(self, token: str) -> dict[str, Any] | None:
         if not TOKEN.match(token):
             return None
+        text = _read_private(self._dir / f"{token}.json", limit=64 * 1024)
         try:
-            found = json.loads((self._dir / f"{token}.json").read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+            found = json.loads(text) if text is not None else None
+        except ValueError:
             return None
         return found if isinstance(found, dict) else None
 
@@ -768,6 +881,26 @@ class GroupKiller:
         return "terminated"
 
 
+class PushLog:
+    """A push's own log: written by `run` under the gate's logs directory, read only there.
+
+    The owner record names the log, and anything able to write the lock can write the record;
+    a log of `~/.gitconfig` was copied into the evidence (#1105-2). So a log is read only when
+    it is `<state_dir>/logs/<token>.log`, a regular file of this uid, reached without a link.
+    """
+
+    def __init__(self, config: PushGateConfig) -> None:
+        self._dir = config.state_dir / "logs"
+
+    def path_for(self, token: str) -> Path:
+        return self._dir / f"{token}.log"
+
+    def read(self, owner: Owner) -> str | None:
+        if not owner.log or Path(owner.log) != self.path_for(owner.token):
+            return None
+        return _read_private(self.path_for(owner.token), limit=512 * 1024)
+
+
 class EvidenceCollector:
     """Writes what a person needs to explain the hang, before anything is killed."""
 
@@ -789,8 +922,12 @@ class EvidenceCollector:
 
     def collect(self, owner: Owner, decision: Decision) -> Path:
         stamp = datetime.fromtimestamp(self._clock.now(), UTC).strftime("%Y%m%dT%H%M%SZ")
-        folder = self._config.state_dir / "evidence" / f"{stamp}-{owner.token[:12]}"
-        folder.mkdir(parents=True, exist_ok=True)
+        if not TOKEN.match(owner.token):
+            raise ValueError(f"refusing evidence for token {owner.token!r}")
+        _private_dir(self._config.state_dir)
+        folder = _private_dir(
+            _private_dir(self._config.state_dir / "evidence") / f"{stamp}-{owner.token[:12]}"
+        )
         self._json(folder / "owner.json", owner.to_json())
         self._json(
             folder / "decision.json",
@@ -802,8 +939,8 @@ class EvidenceCollector:
             },
         )
         members = self._table.members(owner.pgid) if owner.pgid is not None else []
-        (folder / "process-tree.txt").write_text(self._tree(owner, members), encoding="utf-8")
-        (folder / "push-log-tail.txt").write_text(self._tail(owner), encoding="utf-8")
+        _write_private(folder / "process-tree.txt", self._tree(owner, members))
+        _write_private(folder / "push-log-tail.txt", self._tail(owner))
         self._stacks(owner, members or [], folder)
         return folder
 
@@ -822,37 +959,33 @@ class EvidenceCollector:
         return "\n".join(lines) + "\n"
 
     def _tail(self, owner: Owner) -> str:
-        if not owner.log:
-            return "(no push log was recorded for this push)\n"
-        try:
-            with Path(owner.log).open("rb") as stream:
-                stream.seek(0, os.SEEK_END)
-                stream.seek(max(0, stream.tell() - 512 * 1024))
-                text = stream.read().decode("utf-8", errors="replace")
-        except OSError as exc:
-            return f"(push log unreadable: {exc})\n"
+        text = PushLog(self._config).read(owner)
+        if text is None:
+            return "(no push log under the gate's own logs directory for this push)\n"
         lines = text.splitlines()[-self._config.log_tail_lines :]
         return "\n".join(lines) + "\n"
 
     def _stacks(self, owner: Owner, members: list[Proc], folder: Path) -> None:
         targets = [p for p in members if self._is_pytest(p)]
         if not targets:
-            (folder / "stacks-unavailable.txt").write_text(
-                "no pytest process was found in the group\n", encoding="utf-8"
-            )
+            _write_private(folder / "stacks-unavailable.txt", "no pytest process in the group\n")
             return
         spy = self._which("py-spy")
         if spy:
             for p in targets:
                 code, out = self._run([spy, "dump", "--pid", str(p.pid)])
-                (folder / f"py-spy-{p.pid}.txt").write_text(
-                    f"# py-spy dump --pid {p.pid}: exit {code}\n{out}\n", encoding="utf-8"
+                _write_private(
+                    folder / f"py-spy-{p.pid}.txt",
+                    f"# py-spy dump --pid {p.pid}: exit {code}\n{out}\n",
                 )
             return
-        if not owner.stacks:
-            (folder / "stacks-unavailable.txt").write_text(
+        stacks = self._config.state_dir / "stacks" / owner.token
+        if owner.stacks is None or Path(owner.stacks) != stacks:
+            # Only the directory `run` itself armed, under the gate's own state: a record
+            # naming any other place is not followed (#1105-2).
+            _write_private(
+                folder / "stacks-unavailable.txt",
                 "py-spy is not installed and the push did not arm the suite's SIGUSR1 dump\n",
-                encoding="utf-8",
             )
             return
         # Members of the owner's own group only, and only pytest and its workers: they are
@@ -860,11 +993,11 @@ class EvidenceCollector:
         for p in targets:
             self._signaller.send_process(p.pid, signal.SIGUSR1)
         self._clock.sleep(self._config.stack_wait_seconds)
-        dumps = folder / "stacks"
-        dumps.mkdir(exist_ok=True)
-        for found in sorted(Path(owner.stacks).glob("pytest-*.stacks")):
-            with contextlib.suppress(OSError):
-                shutil.copyfile(found, dumps / found.name)
+        dumps = _private_dir(folder / "stacks")
+        for found in sorted(stacks.glob("pytest-*.stacks")):
+            text = _read_private(found)
+            if text is not None:
+                _write_private(dumps / found.name, text)
 
     @staticmethod
     def _is_pytest(p: Proc) -> bool:
@@ -875,7 +1008,7 @@ class EvidenceCollector:
 
     @staticmethod
     def _json(path: Path, data: dict[str, Any]) -> None:
-        path.write_text(json.dumps(data, indent=2, default=str) + "\n", encoding="utf-8")
+        _write_private(path, json.dumps(data, indent=2, default=str) + "\n")
 
     @staticmethod
     def _subprocess(argv: list[str]) -> tuple[int, str]:
@@ -1067,6 +1200,14 @@ class Reaper:
         if state.kind == "free":
             self._forget_samples(keep=None)
             return Decision("none", None, "the push lock is free", {})
+        if state.kind == "untrusted":
+            return Decision(
+                "unknown",
+                None,
+                f"{state.detail}: nothing of it is believed, so nothing is done; a person "
+                "must look",
+                {},
+            )
         if state.owner is None:
             return self._ownerless(state, dry_run)
         owner = state.owner
@@ -1343,7 +1484,10 @@ class Reaper:
             "ownerless": ownerless,
         }
         self._config.reap_log.parent.mkdir(parents=True, exist_ok=True)
-        with self._config.reap_log.open("a", encoding="utf-8") as stream:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW
+        with os.fdopen(
+            os.open(self._config.reap_log, flags, 0o600), "a", encoding="utf-8"
+        ) as stream:
             stream.write(json.dumps(line, sort_keys=True) + "\n")
             stream.flush()
             os.fsync(stream.fileno())
@@ -1354,18 +1498,18 @@ class Reaper:
         return self._config.state_dir / "samples" / f"{token}.json"
 
     def _samples(self, token: str) -> list[dict[str, Any]]:
+        text = _read_private(self._sample_path(token))
         try:
-            found = json.loads(self._sample_path(token).read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+            found = json.loads(text) if text is not None else []
+        except ValueError:
             return []
         return [s for s in found if isinstance(s, dict)] if isinstance(found, list) else []
 
     def _save_samples(self, token: str, samples: list[dict[str, Any]]) -> None:
         path = self._sample_path(token)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(samples), encoding="utf-8")
-        os.replace(temporary, path)
+        _private_dir(self._config.state_dir)
+        _private_dir(path.parent)
+        _write_private(path, json.dumps(samples))
 
     def _forget_samples(self, keep: str | None) -> None:
         folder = self._config.state_dir / "samples"
@@ -1390,6 +1534,8 @@ class Status:
     def report(self) -> dict[str, Any]:
         state = self._lock.state()
         found: dict[str, Any] = {"lock": str(self._config.lock), "state": state.kind}
+        if state.kind == "untrusted":
+            found["detail"] = state.detail
         if state.kind == "ownerless":
             found["detail"] = state.detail
             found["age_seconds"] = state.age_seconds
@@ -1420,6 +1566,8 @@ class Status:
         found = self.report()
         if found["state"] == "free":
             return f"push lock {found['lock']}: free"
+        if found["state"] == "untrusted":
+            return f"push lock {found['lock']}: UNTRUSTED: {found['detail']}; nothing is believed"
         if found["state"] == "ownerless":
             head = (
                 f"push lock {found['lock']}: {found['detail']}, for "
@@ -1459,15 +1607,9 @@ class Status:
             lines.extend(f"    {line}" for line in found["log_tail"])
         return "\n".join(lines)
 
-    @staticmethod
-    def _tail(owner: Owner, count: int = 5) -> list[str]:
-        if not owner.log:
-            return []
-        try:
-            text = Path(owner.log).read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            return []
-        return text.splitlines()[-count:]
+    def _tail(self, owner: Owner, count: int = 5) -> list[str]:
+        text = PushLog(self._config).read(owner)
+        return [] if text is None else text.splitlines()[-count:]
 
 
 # --- The push -------------------------------------------------------------------------
@@ -1584,7 +1726,9 @@ class PushRunner:
     def _push(self, owner: Owner, argv: list[str], log: Path, stacks: Path) -> int:
         if self._stopped is not None:
             return 128 + self._stopped
-        log.parent.mkdir(parents=True, exist_ok=True)
+        _private_dir(self._config.state_dir)
+        _private_dir(log.parent)
+        _private_dir(stacks.parent)
         child = subprocess.Popen(  # nosec B603 - the caller's own push command, no shell
             argv,
             start_new_session=True,
@@ -1596,7 +1740,8 @@ class PushRunner:
         if self._stopped is not None:
             self._stop_child()
         self._lock.update(dataclasses.replace(owner, pgid=child.pid))
-        with log.open("ab") as sink:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW
+        with os.fdopen(os.open(log, flags, 0o600), "ab") as sink:
             reader = threading.Thread(target=self._tee, args=(child, sink), daemon=True)
             reader.start()
             try:

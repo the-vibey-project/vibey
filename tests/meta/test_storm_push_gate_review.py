@@ -624,7 +624,7 @@ def test_1105_9_a_failed_py_spy_falls_back_to_sigusr1(tmp_path: Path) -> None:
         r.cfg, r.table, r.signaller, r.clock, which=lambda n: "/bin/py-spy",
         run=lambda argv: (1, "Permission denied (need root)"),
     )  # fmt: skip
-    held = owner(r, stacks=str(tmp_path / "stacks"))
+    held = owner(r, stacks=str(r.cfg.state_dir / "stacks" / "tok-1"))
     r.table.groups[GROUP] = gate_tree()
     evidence.collect(held, push_gate.Decision("killed", "idle", "", {}))
     assert ("process", GROUP + 1, signal.SIGUSR1) in r.signaller.sent
@@ -977,13 +977,6 @@ def test_1107_8_the_shell_scan_sees_a_bare_push() -> None:
 #: Findings whose fix lands in a later commit of this pull request. Each is a strict xfail:
 #: it must fail until its fix lands, and the commit that fixes it deletes its line here.
 PENDING = {
-    "test_1105_2_a_forged_token_cannot_write_outside_the_state_dir",
-    "test_1105_2_an_owner_log_outside_the_gates_logs_is_never_read",
-    "test_1105_2_a_symlinked_owner_record_is_refused",
-    "test_1105_2_a_symlinked_lock_directory_is_refused",
-    "test_1105_2_a_lock_owned_by_another_uid_is_untrusted",
-    "test_1105_2_the_state_dir_is_private",
-    "test_1105_2_a_planted_symlink_is_never_written_through",
     "test_1105_3_a_group_that_ends_during_evidence_is_not_recorded_as_killed",
     "test_1105_3_a_group_of_another_uid_is_refused_not_killed",
     "test_1105_3_killed_is_claimed_only_once_the_group_is_seen_gone",
