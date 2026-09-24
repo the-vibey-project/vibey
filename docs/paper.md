@@ -1207,6 +1207,59 @@ Every turn, verdict and spend entry of a run is one line of JSON in an append-on
 trail under the run directory, so the runner obeys the same write-ahead discipline
 as the orchestrator, at the scale of one session.
 
+### What an engine may see
+
+A bound on what a run may spend is not a bound on what it may reach. Until 3.0.0 every
+engine process started from a copy of the worker's whole environment with four
+Python variables removed; the DESIGN and DECOMPOSE executors of two engines passed no
+environment at all and so inherited everything; and gate commands, which run
+engine-written code, got the same copy without git's variables (#1093). What reached
+processes that run model-chosen shell commands unattended therefore included the queue
+and ledger DSN, every other `VIBEY_*` secret, libpq's `PG*` variables, GitHub tokens
+and any cloud credential the worker held. With the DSN a session could rewrite queue
+rows, and, before the ledger guard above, the ledger, and nothing would record it.
+ADR-0054 records the same gap from the other side: the bump's grant separates
+operating-system accounts, and an engine holding the DSN could reach the queue below
+it.
+
+The change (#1093) builds every child's environment from an allow-list and never from a
+copy. Every child starts from the system basics only: the path with vibey's own
+virtual environment removed, the home directory and user, the shell, the temporary
+directory, locale, time zone, terminal, certificate bundle, proxy and the XDG
+directories. An engine adds the variables its descriptor declares for its runner and
+vendor CLI and its own credential; anything else reaches an engine or a gate only when
+the project declares it in reviewed configuration. Some names can never be declared by
+anyone: `VIBEY_*` and `PG*` for every child, `GIT_*` for gates, and for engines any name
+containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`; a declaration that tries is
+refused before the project exists and again when the worker is built. The same builder
+now starts the engines' probes, the gates, vibey's own git calls, the desktop notifier,
+the Azure CLI and the skills helper. vibey's own git calls also run with no hook at
+all, with the file-system monitor switched off, and against a repository whose local
+configuration declares a filter or merge driver they refuse to check out or merge,
+because an engine writes to a linked worktree of the repository vibey then runs git
+in, and a planted hook, monitor or driver would run inside vibey's call. A review found
+that planted programs ran with the DSN in hand before this, and that the notifier could
+be made to run injected shell commands; both are reproduced in tests that failed
+before the fix (#1093, review round 2).
+
+This control keeps secrets out of a child's *environment*. It is not a boundary
+between the worker and the processes it starts, because they are the same
+operating-system user, and the security policy that ships with #1093 says so in so
+many words. A local PostgreSQL with `trust` or `peer` authentication needs no DSN at
+all, so on such a machine the allow-list does not stop an engine reaching the queue,
+and `vibey doctor` warns of it. A process running as the worker's user can also read
+the worker's environment through the operating system and any file the worker can
+read. The container boundary that would separate them is implemented but not wired in.
+Running sessions as a separate low-privilege user is the containment that would close
+this, and it is not in 3.0.0.
+
+At the cutoff (2026-09-24 12:22Z) #1093 was open: all six first-round findings were
+fixed and verified, and a re-review had found one more blocking gap, the skills helper
+running with the full environment and loading code from the working directory, whose
+fix was being pushed (the 3.0.0 release-gate record).
+
+<!-- TODO(3.0.0-pending: fix/engine-env-no-db-credentials) replace the paragraph above with #1093's merge commit and date, the final review verdict, and any change to what the allow-list covers -->
+
 ### Windows versus credits
 
 The discrimination the family is built around separates a *window*, a rate limit that
