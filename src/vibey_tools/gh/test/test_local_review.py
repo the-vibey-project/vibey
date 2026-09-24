@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import urllib.error
+from collections.abc import Callable
 from typing import Self
 
 import pytest
@@ -39,6 +41,41 @@ def _reply(content: str, **extra: object) -> dict:
     return {"message": {"content": content}, "done_reason": "stop", "prompt_eval_count": 10} | extra
 
 
+# The check codes a request carries, found the way a model reading the prompt finds them:
+# by the words around them, not by anything the code under test hands the test directly.
+_CODE = re.compile(
+    "|".join(
+        re.escape(text).replace("@@", "([0-9a-f]+)")
+        for text in (
+            local_review.CANARY_HEAD.format(code="@@", field=local_review.CANARY_FIELD),
+            local_review.CANARY_TAIL.format(code="@@"),
+        )
+    )
+)
+
+
+def _codes(payload: dict) -> list[str]:
+    text = "".join(message["content"] for message in payload["messages"])
+    return [code for match in _CODE.finditer(text) for code in match.groups() if code]
+
+
+def _echoing(payload: dict, answer: dict) -> dict:
+    """`answer` as a model that read the whole prompt gives it: both check codes echoed."""
+    return {local_review.CANARY_FIELD: " ".join(_codes(payload))} | answer
+
+
+def _answer(request, answer: dict, **extra: object) -> _Response:
+    return _Response(_reply(json.dumps(_echoing(json.loads(request.data), answer)), **extra))
+
+
+def _schema_without_codes(payload: dict) -> dict:
+    """The schema a request was held to, less the check-code field every request adds."""
+    schema = json.loads(json.dumps(payload["format"]))
+    assert schema["properties"].pop(local_review.CANARY_FIELD) == {"type": "string"}
+    schema["required"].remove(local_review.CANARY_FIELD)
+    return schema
+
+
 def _verdict(**overrides: object) -> dict:
     verdict = {"pass": True, "summary": "looks fine", "findings": []}
     verdict.update(overrides)
@@ -50,7 +87,7 @@ def _model_returns(monkeypatch: pytest.MonkeyPatch, verdict: dict) -> list[dict]
 
     def fake_urlopen(request, timeout=None):
         sent.append(json.loads(request.data))
-        return _Response(_reply(json.dumps(verdict)))
+        return _answer(request, verdict)
 
     monkeypatch.setattr(local_review.urllib.request, "urlopen", fake_urlopen)
     return sent
@@ -95,7 +132,7 @@ def test_the_schema_is_sent_so_decoding_is_constrained(monkeypatch, tmp_path):
 
     assert local_review.review(["--diff", str(diff)]) == 0
     payload = sent[0]
-    assert payload["format"] == local_review.REVIEW_SCHEMA
+    assert _schema_without_codes(payload) == local_review.REVIEW_SCHEMA
     assert payload["options"]["temperature"] == 0
     assert payload["stream"] is False
 
@@ -196,15 +233,22 @@ def test_an_unusable_response_fails_closed(monkeypatch, capsys, tmp_path, payloa
     assert said in capsys.readouterr().err
 
 
-def test_an_oversized_diff_is_truncated_and_the_model_is_told(monkeypatch, tmp_path):
-    """Silently truncating would let the model certify a diff it only partly saw."""
+def test_a_diff_past_max_chars_is_refused_never_cut(monkeypatch, capsys, tmp_path):
+    """A diff-only verdict's `pass` is carried as the verdict on the diff, so one about the
+    first `max_chars` would pass the rest unread -- telling the model it was cut does not
+    change what the composer does with its pass. Refused; nothing is sent."""
     diff = tmp_path / "d.diff"
     diff.write_text("+ x\n" * 5000, encoding="utf-8")
     sent = _model_returns(monkeypatch, _verdict())
 
-    assert local_review.review(["--diff", str(diff), "--max-chars", "1000"]) == 0
-    prompt = sent[0]["messages"][1]["content"]
-    assert "truncated" in prompt
+    assert local_review.review(["--diff", str(diff), "--max-chars", "1000"]) == 1
+    assert sent == []
+    assert (
+        "the diff (20000 characters) is longer than max_diff_chars (1000): a verdict on part"
+        " of it would pass the rest unread" in capsys.readouterr().err
+    )
+    with pytest.raises(local_review.ReviewRefused):
+        local_review.build_prompt("x" * 11, 10)
 
 
 def test_a_diff_within_the_limit_carries_no_truncation_note(monkeypatch, tmp_path):
@@ -356,11 +400,11 @@ def test_triage_sends_the_triage_schema(monkeypatch, tmp_path):
 
     def fake_urlopen(request, timeout=None):
         sent.append(json.loads(request.data))
-        return _Response(_reply(json.dumps(_triage_verdict())))
+        return _answer(request, _triage_verdict())
 
     monkeypatch.setattr(local_review.urllib.request, "urlopen", fake_urlopen)
     assert local_review.triage(["--issue", str(issue)]) == 0
-    assert sent[0]["format"] == local_review.TRIAGE_SCHEMA
+    assert _schema_without_codes(sent[0]) == local_review.TRIAGE_SCHEMA
     assert sent[0]["options"]["temperature"] == 0
     assert sent[0]["options"]["num_ctx"] >= 4096
 
@@ -372,7 +416,7 @@ def test_triage_forces_needs_human_whatever_the_model_claims(monkeypatch, capsys
     issue.write_text("# Bug\n\nIt breaks.")
 
     def fake_urlopen(request, timeout=None):
-        return _Response(_reply(json.dumps(_triage_verdict(needs_human=False))))
+        return _answer(request, _triage_verdict(needs_human=False))
 
     monkeypatch.setattr(local_review.urllib.request, "urlopen", fake_urlopen)
     assert local_review.triage(["--issue", str(issue)]) == 0
@@ -386,7 +430,7 @@ def test_triage_reads_stdin_by_default(monkeypatch, capsys):
     monkeypatch.setattr("sys.stdin", io.StringIO("# Bug\n\nIt breaks."))
 
     def fake_urlopen(request, timeout=None):
-        return _Response(_reply(json.dumps(_triage_verdict())))
+        return _answer(request, _triage_verdict())
 
     monkeypatch.setattr(local_review.urllib.request, "urlopen", fake_urlopen)
     assert local_review.triage([]) == 0
@@ -443,7 +487,7 @@ def test_triage_truncates_an_oversized_issue_and_says_so(monkeypatch, tmp_path):
 
     def fake_urlopen(request, timeout=None):
         sent.append(json.loads(request.data))
-        return _Response(_reply(json.dumps(_triage_verdict())))
+        return _answer(request, _triage_verdict())
 
     monkeypatch.setattr(local_review.urllib.request, "urlopen", fake_urlopen)
     assert local_review.triage(["--issue", str(issue), "--max-chars", "100"]) == 0
@@ -539,7 +583,7 @@ def test_the_context_window_scales_with_the_prompt(monkeypatch, tmp_path):
 
     def fake_urlopen(request, timeout=None):
         captured.append(json.loads(request.data))
-        return _Response(_reply(json.dumps(_triage_verdict())))
+        return _answer(request, _triage_verdict())
 
     monkeypatch.setattr(local_review.urllib.request, "urlopen", fake_urlopen)
     assert local_review.triage(["--issue", str(issue)]) == 0
@@ -693,7 +737,7 @@ def test_the_whole_review_asks_the_whole_contract_from_the_one_table(monkeypatch
     assert local_review.review([*argv, "--context-dir", str(documents)]) == 0
 
     payload = sent[0]
-    assert payload["format"] == REVIEW_CONTRACT.json_schema()
+    assert _schema_without_codes(payload) == REVIEW_CONTRACT.json_schema()
     system = payload["messages"][0]["content"]
     for name, question in REVIEW_CONTRACT.questions():
         assert f"- {name}: {question}" in system
@@ -760,7 +804,7 @@ def test_oversized_documents_are_truncated_and_the_model_is_told(monkeypatch, tm
 
     user = sent[0]["messages"][1]["content"]
     assert user.count("x") + user.count("y") <= 4000 + 200
-    assert "the documents were truncated" in user
+    assert "the documents were not all shown in full (cut short: docs/index.md)" in user
 
 
 def test_the_whole_review_is_never_a_fallback(monkeypatch, tmp_path):
@@ -815,17 +859,21 @@ class _StubOllama:
     """A real HTTP server on a loopback port that answers /api/chat with one canned reply,
     so a reply's fields travel the same wire a real model's do."""
 
-    def __init__(self, reply: dict) -> None:
+    def __init__(self, reply: dict | Callable[[dict], tuple[int, bytes]]) -> None:
+        """`reply` is the body to send, or a function of the request that returns the status
+        and the raw body -- so a reply can depend on what was asked, as a model's does."""
         import http.server
         import threading
 
         received: list[dict] = []
-        body = json.dumps(reply).encode()
+        answer = reply if callable(reply) else (lambda _: (200, json.dumps(reply).encode()))
 
         class _Handler(http.server.BaseHTTPRequestHandler):
             def do_POST(self) -> None:
-                received.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
-                self.send_response(200)
+                request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                received.append(request)
+                status, body = answer(request)
+                self.send_response(status)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(body)
@@ -873,10 +921,11 @@ def test_a_model_that_ran_out_of_room_is_named_as_such_not_as_bad_json(capsys, t
 
 
 def test_a_prompt_the_model_did_not_read_in_full_is_never_a_verdict(monkeypatch, capsys, tmp_path):
-    """The serious half of #1090: Ollama read 31,765 prompt tokens of a 32,768 window and
-    answered about the part it read. Its own count is the evidence; a count that reaches
-    into the reasoning reserve means the prompt may have been cut, so no verdict -- even a
-    complete, schema-valid pass -- is read from that reply."""
+    """The upper bound: a model that read more prompt tokens than the request was sized for
+    has eaten into the room its reasoning and answer needed, so the estimate let too much
+    through. No verdict -- even a complete, schema-valid pass -- is read from that reply.
+    (A prompt Ollama CUT reads as about half the window instead, under this bound; the
+    check codes catch that, below.)"""
     sent = _model_returns(monkeypatch, _verdict())
     monkeypatch.setattr(
         local_review.urllib.request,
@@ -1044,10 +1093,315 @@ def test_triage_sends_the_declared_reasoning_effort(monkeypatch, tmp_path):
         local_review.urllib.request,
         "urlopen",
         lambda request, timeout=None: (
-            sent.append(json.loads(request.data))
-            or _Response(_reply(json.dumps(_triage_verdict())))
+            sent.append(json.loads(request.data)) or _answer(request, _triage_verdict())
         ),
     )
 
     assert local_review.triage(["--issue", str(issue), "--think", "medium"]) == 0
     assert sent[0]["think"] == "medium"
+
+
+# ---------------------------------------------------------------------------
+# Truncation, measured on this host (Ollama 0.34.2, gpt-oss:20b, num_ctx 32768): left to
+# its defaults, a 36,798-token request came back as 16,386 prompt tokens -- about HALF the
+# window, no error. Sent with truncate/shift off, the same request was refused with HTTP
+# 400. A prompt that was cut must never carry a verdict.
+# ---------------------------------------------------------------------------
+
+# The body Ollama 0.34.2 sent for that request, verbatim: its runner's JSON error, wrapped
+# in a string inside Ollama's own.
+_OVER_WINDOW_400 = json.dumps(
+    {
+        "error": json.dumps(
+            {
+                "error": {
+                    "code": 400,
+                    "message": "request (36798 tokens) exceeds the available context size"
+                    " (32768 tokens), try increasing it",
+                    "type": "exceed_context_size_error",
+                    "n_prompt_tokens": 36798,
+                    "n_ctx": 32768,
+                }
+            }
+        )
+    }
+).encode()
+
+
+def _issue(tmp_path):
+    issue = tmp_path / "issue.md"
+    issue.write_text("# Bug\n\nIt breaks.", encoding="utf-8")
+    return issue
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        pytest.param(["local-review"], id="diff-lane"),
+        pytest.param(["local-review", "--role", "sovereign", "--scope", "full"], id="whole"),
+        pytest.param(["local-triage"], id="triage"),
+    ],
+)
+def test_every_request_asks_ollama_to_refuse_rather_than_cut(tmp_path, argv):
+    """`truncate: false` and `shift: false` on every /api/chat payload -- the diff lane, the
+    whole review and the triage alike -- so Ollama 0.34 answers an oversized prompt with a
+    400 instead of cutting it to half the window and answering about the rest."""
+    triage = argv[0] == "local-triage"
+    answer = _triage_verdict() if triage else _whole_verdict()
+    with _StubOllama(
+        lambda sent: (200, json.dumps(_reply(json.dumps(_echoing(sent, answer)))).encode())
+    ) as server:
+        entry = local_review.triage if triage else local_review.review
+        source = ["--issue", str(_issue(tmp_path))] if triage else ["--diff", str(_diff(tmp_path))]
+        assert entry([*source, *argv[1:], "--base-url", server.url]) == 0
+
+    (payload,) = server.received
+    assert payload["truncate"] is False and payload["shift"] is False
+
+
+@pytest.mark.parametrize("entry", ["review", "triage"])
+def test_a_server_that_refuses_an_oversized_prompt_is_named_not_called_unreachable(
+    capsys, tmp_path, entry
+):
+    """The 400 is the server answering. It is caught before `URLError` (its base class) and
+    said in the server's own words, so the gate never reports a refusal as a dead model."""
+    with _StubOllama(lambda sent: (400, _OVER_WINDOW_400)) as server:
+        if entry == "review":
+            code = local_review.review(["--diff", str(_diff(tmp_path)), "--base-url", server.url])
+        else:
+            code = local_review.triage(["--issue", str(_issue(tmp_path)), "--base-url", server.url])
+
+    err = capsys.readouterr().err
+    assert code == 1
+    assert (
+        "the model server refused the request (HTTP 400): request (36798 tokens) exceeds the"
+        " available context size (32768 tokens), try increasing it" in err
+    )
+    assert "unreachable" not in err
+
+
+class _Body:
+    def __init__(self, raw: bytes | Exception) -> None:
+        self._raw = raw
+
+    def read(self, *_: object) -> bytes:
+        if isinstance(self._raw, Exception):
+            raise self._raw
+        return self._raw
+
+    def close(self) -> None:
+        return None
+
+
+@pytest.mark.parametrize(
+    ("raw", "reason", "said"),
+    [
+        (_OVER_WINDOW_400, "Bad Request", "request (36798 tokens) exceeds the available"),
+        (b'{"error": "model not found"}', "Not Found", "model not found"),
+        (
+            json.dumps({"error": json.dumps({"error": json.dumps({"message": "deep"})})}).encode(),
+            "Bad Request",
+            "deep",
+        ),
+        (b'{"error": 5}', "Bad Request", '{"error": 5}'),
+        (b"[1, 2]", "Bad Request", "[1, 2]"),
+        (b"upstream gone", "Bad Gateway", "upstream gone"),
+        (b"", "Service Unavailable", "Service Unavailable"),
+        (b"", "", "no reason given"),
+        (OSError("reset"), "Bad Request", "Bad Request"),
+    ],
+)
+def test_a_refusal_is_said_in_the_servers_own_words(raw, reason, said):
+    error = urllib.error.HTTPError("http://h/api/chat", 400, reason, {}, _Body(raw))  # type: ignore[arg-type]
+
+    assert local_review.SIZED_CHAT.said(error).startswith(said)
+
+
+def test_a_prompt_cut_to_half_the_window_is_never_a_verdict(capsys, tmp_path):
+    """The shape this host produced: a request sized near the window, a complete and
+    schema-valid pass, and a `prompt_eval_count` of about HALF the window -- well under the
+    upper-bound check, which therefore cannot see it. The model echoed the check code at
+    the start of the prompt and not the one at the end (as gpt-oss did here); no verdict."""
+    diff = tmp_path / "near.diff"
+    diff.write_text("+ x\n" * 8_250, encoding="utf-8")  # 33,000 chars, near a 16,384 window
+
+    def half_window(sent: dict) -> tuple[int, bytes]:
+        head = _codes(sent)[0]
+        verdict = {local_review.CANARY_FIELD: f"{head} {head}"} | _verdict()
+        reply = _reply(json.dumps(verdict), prompt_eval_count=sent["options"]["num_ctx"] // 2 + 2)
+        return 200, json.dumps(reply).encode()
+
+    argv = ["--diff", str(diff), "--max-chars", "60000", "--context-window", "16384"]
+    with _StubOllama(half_window) as server:
+        code = local_review.review([*argv, "--reasoning-reserve", "4096", "--base-url", server.url])
+
+    assert server.received[0]["options"]["num_ctx"] > 0.95 * 16384  # sized near the window
+    assert code == 1
+    assert "the model did not echo both of the request's check codes" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "echo",
+    [
+        pytest.param(lambda head, tail: None, id="field-missing"),
+        pytest.param(lambda head, tail: "", id="empty"),
+        pytest.param(lambda head, tail: "0123456789abcdef fedcba9876543210", id="wrong"),
+        pytest.param(lambda head, tail: head, id="head-only"),
+        pytest.param(lambda head, tail: tail, id="tail-only"),
+        pytest.param(lambda head, tail: 7, id="not-a-string"),
+    ],
+)
+def test_a_reply_that_does_not_echo_both_check_codes_is_refused(
+    monkeypatch, capsys, tmp_path, echo
+):
+    def fake_urlopen(request, timeout=None):
+        head, tail = _codes(json.loads(request.data))
+        written = echo(head, tail)
+        verdict = _verdict() | ({} if written is None else {local_review.CANARY_FIELD: written})
+        return _Response(_reply(json.dumps(verdict)))
+
+    monkeypatch.setattr(local_review.urllib.request, "urlopen", fake_urlopen)
+
+    assert local_review.review(["--diff", str(_diff(tmp_path))]) == 1
+    assert "did not echo both of the request's check codes" in capsys.readouterr().err
+
+
+def test_the_check_codes_are_fresh_per_request_and_never_in_the_schema(monkeypatch, tmp_path):
+    """Random per request, one at each end of the prompt, and asked for as a free string:
+    a `const` or an `enum` would let constrained decoding write them unread."""
+    sent = _model_returns(monkeypatch, _verdict())
+    assert local_review.review(["--diff", str(_diff(tmp_path))]) == 0
+    assert local_review.review(["--diff", str(_diff(tmp_path))]) == 0
+
+    first, second = (_codes(payload) for payload in sent)
+    assert len(first) == 2 and len(set(first + second)) == 4
+    system, user = (message["content"] for message in sent[0]["messages"])
+    assert system.startswith("Integrity check") and first[0] in system
+    assert user.rstrip().endswith(f"{first[1]}.]") and user.index(first[1]) > user.index("</diff>")
+    schema = json.dumps(sent[0]["format"])
+    assert first[0] not in schema and first[1] not in schema
+    assert sent[0]["format"]["properties"][local_review.CANARY_FIELD] == {"type": "string"}
+    assert next(iter(sent[0]["format"]["properties"])) == local_review.CANARY_FIELD
+    # The echo is evidence about the request, not part of the verdict.
+    out = local_review.SIZED_CHAT.answer(
+        _reply(json.dumps({local_review.CANARY_FIELD: "a b"} | _verdict())),
+        num_ctx=9000,
+        reserve=100,
+        codes=("a", "b"),
+    )
+    assert local_review.CANARY_FIELD not in out
+
+
+def test_no_check_codes_to_verify_is_no_verdict():
+    with pytest.raises(local_review.ReviewRefused, match="check codes"):
+        local_review.SIZED_CHAT.answer(
+            _reply(json.dumps({local_review.CANARY_FIELD: ""} | _verdict())),
+            num_ctx=9000,
+            reserve=100,
+            codes=(),
+        )
+
+
+def test_a_schema_that_already_has_the_check_code_field_is_refused():
+    payload = {
+        "messages": [{"content": "s"}, {"content": "u"}],
+        "format": {"properties": {local_review.CANARY_FIELD: {"type": "string"}}},
+    }
+    with pytest.raises(ValueError, match="already has a field"):
+        local_review.SIZED_CHAT.seal(payload, "a", "b")
+
+
+# ---------------------------------------------------------------------------
+# The documentation half is claimed only when every declared document was shown whole.
+# ---------------------------------------------------------------------------
+
+
+def test_a_whole_review_that_lost_a_document_claims_the_diff_half_alone(
+    monkeypatch, capsys, tmp_path
+):
+    """Judged against less than the repository declared, the documentation judgments are
+    not a whole review. The verdict says it answered the diff half alone, so the composer
+    refuses to record it as the whole review and the gate goes red for a human."""
+    from vibey_gh.review_composition import NO_PAID, REVIEW_COMPOSER
+    from vibey_gh.review_contract import DIFF_GROUNDABLE, REVIEW_CONTRACT
+
+    _model_returns(monkeypatch, _whole_verdict())
+    documents = _documents(tmp_path, **{"README.md": "r" * 6_000, "docs__index.md": "i" * 6_000})
+    argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
+    argv += ["--context-dir", str(documents), "--max-chars", "7000"]
+
+    assert local_review.review(argv) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out[REVIEW_CONTRACT.scope_field] == [DIFF_GROUNDABLE]
+    assert "the documentation contract needs a human" in out["summary"]
+    with pytest.raises(ValueError, match="did not answer both halves"):
+        REVIEW_COMPOSER.compose(None, half=NO_PAID, sovereign=out)
+
+
+def test_the_model_is_told_when_every_document_was_left_out(monkeypatch, tmp_path):
+    """Even with nothing left to show, the model is told what it is not seeing, by name."""
+    sent = _model_returns(monkeypatch, _whole_verdict())
+    documents = _documents(tmp_path, **{"README.md": "# Tool", "docs__index.md": "# Home"})
+
+    argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
+    assert local_review.review([*argv, "--context-dir", str(documents), "--max-chars", "10"]) == 0
+
+    user = sent[0]["messages"][1]["content"]
+    assert "<documents>" not in user
+    assert "left out entirely: README.md, docs/index.md" in user
+
+
+def test_documents_give_way_in_the_declared_order_not_the_listed_one(monkeypatch, capsys, tmp_path):
+    """The order is the priority: the LAST declared gives way first. It is the order the
+    repository declared (`context_paths`, passed by the workflow as `--context-paths`), not
+    the order the directory happens to list them in; an undeclared file comes after."""
+    sent = _model_returns(monkeypatch, _whole_verdict())
+    documents = _documents(
+        tmp_path,
+        **{"README.md": "r" * 3_000, "docs__z.md": "z" * 3_000, "docs__extra.md": "e" * 3_000},
+    )
+    argv = ["--diff", str(_diff(tmp_path)), "--role", "sovereign", "--scope", "full"]
+    argv += ["--context-dir", str(documents), "--context-paths", "docs/z.md README.md"]
+
+    assert local_review.review([*argv, "--max-chars", "4000"]) == 0
+
+    user = sent[0]["messages"][1]["content"]
+    assert user.index('<document path="docs/z.md">') < user.index('<document path="README.md">')
+    assert "z" * 3_000 in user and "r" * 3_000 not in user and "e" * 10 not in user
+    assert "cut short: README.md; left out entirely: docs/extra.md" in user
+    summary = json.loads(capsys.readouterr().out)["summary"]
+    assert "docs/z.md, README.md (cut to fit)" in summary
+
+
+def test_the_cli_forwards_the_declared_document_order(monkeypatch, tmp_path):
+    from vibey_gh import cli
+
+    seen: list[list[str]] = []
+    monkeypatch.setattr(local_review, "review", lambda argv: seen.append(argv) or 0)
+
+    assert cli.main(["local-review", "--context-paths", "docs/index.md README.md"]) == 0
+    assert seen == [["--context-paths", "docs/index.md README.md"]]
+
+
+# ---------------------------------------------------------------------------
+# The flags that override the declared window are held to the configuration's rules.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "flags",
+    [
+        ["--reasoning-reserve", "512"],
+        ["--reasoning-reserve", "40000"],
+        ["--context-window", "2048"],
+        ["--chars-per-token", "9"],
+    ],
+)
+@pytest.mark.parametrize("entry", ["review", "triage"])
+def test_a_window_flag_the_configuration_would_refuse_is_refused(capsys, tmp_path, flags, entry):
+    with pytest.raises(SystemExit):
+        if entry == "review":
+            local_review.review(["--diff", str(_diff(tmp_path)), *flags])
+        else:
+            local_review.triage(["--issue", str(_issue(tmp_path)), *flags])
+    assert "--context-window, --reasoning-reserve or --chars-per-token" in capsys.readouterr().err

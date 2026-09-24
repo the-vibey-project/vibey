@@ -5,19 +5,34 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
-- **Fix:** a local review never reads a prompt the model did not see in full (#1090). The
-  sovereign lane's request was sized from the user prompt alone and capped at 32,768 tokens;
-  Ollama silently dropped the excess (it read 31,765 of ~41,000 tokens) and the model answered
-  about part of the diff. Requests are now sized from everything sent, must fit the new
-  declared `[pr_automation.fallback] context_window` (default 65,536, this host's measured
-  window) beside `reasoning_reserve_tokens` (8,192), and are refused rather than sent when
-  they do not. A whole review never cuts the diff: its optional documents give way first, and
-  the verdict names what was cut or left out. Each reply is then checked against Ollama's own
-  `prompt_eval_count` and `done_reason`, so a truncated prompt or a model that ran out of room
-  is named as such instead of surfacing as "Unterminated string". New keys `chars_per_token`
-  (3) and `think` (empty: the model's default), and `local-review` / `local-triage` flags
-  `--context-window`, `--reasoning-reserve`, `--chars-per-token` and `--think`, which both
-  workflows now pass from the declared table.
+- **Fix:** a local review never returns a verdict on a prompt the model did not read in full,
+  and says when the model ran out of room (#1090). What #1090 was: its whole review sent about
+  124,000 characters, which the model counted as 31,765 prompt tokens (about 3.95 characters
+  per token), and 31,765 read plus 1,004 generated is 32,769 -- the whole 32,768 window. It
+  read its whole prompt and ran out of GENERATION room (`done_reason=length`), which surfaced as
+  "Unterminated string". It was not truncated. `answer` now reads `done_reason` first and says
+  `the model ran out of room`. What the investigation found besides: truncation IS possible on
+  this host. Left to its defaults Ollama 0.34.2 does not refuse an oversized prompt; it cut a
+  36,798-token request (gpt-oss:20b, `num_ctx` 32768) to 16,386 tokens -- about half the window
+  -- with no error, and a model that read half a diff could return `{"pass": true}`. That is
+  now refused three ways. Requests are sized from everything sent and must fit the new declared
+  `[pr_automation.fallback] context_window` (default 65,536, this host's measured window) beside
+  `reasoning_reserve_tokens` (8,192), or are not sent. Every `/api/chat` payload -- review,
+  whole review and triage -- carries `truncate: false` and `shift: false`, so Ollama 0.34
+  answers an oversized prompt with HTTP 400, reported as `the model server refused the request
+  (HTTP 400): …` in the server's words, never as "unreachable". And every request carries a
+  random check code at the start of the system prompt and another after the diff, which the
+  answer must echo in a free-string schema field (never a `const`: constrained decoding would
+  fake it); on this host the cut prompt above echoed only the first. The upper-bound check on
+  `prompt_eval_count` stays. The diff half now refuses a diff past `max_diff_chars` instead of
+  cutting it: its `pass` is carried as the verdict on the diff. A whole review never cuts the
+  diff; its optional documents give way in the order `context_paths` declares (new
+  `--context-paths` flag, passed by the workflow), the model is told by name which were cut or
+  left out, and the verdict then claims the diff half alone, so the composer refuses it as the
+  whole review and the gate asks a human. New keys `chars_per_token` (3, 1–8) and `think` (empty:
+  the model's default), and `local-review` / `local-triage` flags `--context-window`,
+  `--reasoning-reserve`, `--chars-per-token` and `--think`, validated as the keys are, which
+  both workflows now pass from the declared table.
 
 - `runner install [--load]`, `runner check`, `runner cleanup [--apply]` and
   `runner uninstall [--apply]`: the sovereign review runner stood up from the tree (12.c).

@@ -34,8 +34,9 @@ class ContextSizerInterface(Protocol):
 
     def fits(self, prompt_chars: int) -> bool:
         """Whether a prompt of `prompt_chars` -- everything sent -- leaves the reserve free
-        inside the window. A request that does not fit must not be sent: the runner drops
-        the excess silently, and the model answers about a prompt it never fully read."""
+        inside the window. A request that does not fit must not be sent: left to its
+        defaults the runner cuts it to about half the window, without an error, and the
+        model answers about a prompt it never fully read."""
         ...
 
     def room_chars(self, prompt_chars: int) -> int:

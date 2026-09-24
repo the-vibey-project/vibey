@@ -14,13 +14,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### BREAKING CHANGES
 
-* **vibey_gh:** the sovereign review never reads a prompt the model did not see in full
-  (#1090). Local requests are sized from everything sent and must fit the declared
-  `[pr_automation.fallback] context_window` (default 65,536) beside `reasoning_reserve_tokens`
-  (8,192), or are refused rather than silently truncated by Ollama; a whole review sends the
-  whole diff (never cut at `max_diff_chars`) and trims only its optional documents; each reply
-  is checked against Ollama's `prompt_eval_count` and `done_reason`, so a model that ran out of
-  room says so
+* **vibey_gh:** the sovereign review never returns a verdict on a prompt the model did not
+  read in full, and names a model that ran out of room (#1090). #1090 read its whole
+  31,765-token prompt and ran out of generation room in the 1,004 tokens a 32,768 window left
+  (`done_reason=length`); that is now reported as such, not as a JSON error. Truncation is
+  possible on this host -- left to its defaults Ollama 0.34.2 read a 36,798-token request as
+  16,386 tokens, about half the window, with no error -- and is now refused three ways:
+  requests are sized from everything sent against the declared `[pr_automation.fallback]
+  context_window` (default 65,536) beside `reasoning_reserve_tokens` (8,192); every request is
+  sent with `truncate: false` and `shift: false`, so Ollama answers an oversized one with HTTP
+  400, reported in its own words; and every request carries a random check code at each end
+  that the answer must echo. The diff half refuses a diff past `max_diff_chars` instead of
+  cutting it; a whole review sends the whole diff, trims only its documents in declared order,
+  and claims the diff half alone when any was cut or left out, so the gate asks a human
 * **vibey_gh:** the exact-head review reaches a paid model only where `[pr_automation]
   paid_review = true` declares one (sub-doctrine 8.b: a paid counterparty is declared-only).
   Undeclared, the default, the paid `review` job never runs: the sovereign lane answers the
