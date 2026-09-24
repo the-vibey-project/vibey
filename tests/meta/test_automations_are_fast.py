@@ -168,11 +168,16 @@ def test_the_ledger_refresh_keeps_its_mutex() -> None:
     separated from them; this asserts the separation went the right way round, because a
     group keyed per pull request for BOTH lanes would let two ledger writers overlap.
     """
-    group = load(WORKFLOWS / "delivery-estimate.yml")["concurrency"]["group"]
+    workflow = load(WORKFLOWS / "delivery-estimate.yml")
+    group = workflow["concurrency"]["group"]
     assert "github.repository" in group, (
         "the ledger lane must stay keyed on the repository so two refreshes cannot commit at once"
     )
-    assert "pull_request" in group, (
-        "read-only pull-request estimates must not share the ledger's single slot -- "
-        "50 of them were cancelled by it before the lanes were split (12.g)"
-    )
+    # Since 2026-09-24 the estimate runs hourly and by hand only, so there is no read-only
+    # pull-request lane left to separate. If one ever returns, it must get its own key
+    # again: 50 of them were cancelled by the shared slot before the lanes were split (12.g).
+    triggers = workflow.get("on", workflow.get(True))
+    if "pull_request" in triggers:
+        assert "pull_request" in group, (
+            "read-only pull-request estimates must not share the ledger's single slot (12.g)"
+        )
