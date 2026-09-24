@@ -14,10 +14,12 @@ import asyncpg
 
 from vibey.application.dto import EnqueueRequest, JobRecord
 from vibey.domain.engine import EngineId
+from vibey.domain.interfaces.queue_reap_interface import ReapThresholdsInterface
 from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
 from vibey.domain.job import JOB_STATE_PARSER, JobState, StoredJobState, UnrecognizedJobState
 from vibey.domain.phase import PHASE_PARSER, Phase, StoredPhase, UnrecognizedPhase
 from vibey.infrastructure.db.interfaces import JobRowMapperInterface
+from vibey.infrastructure.db.queue_reap_store import DEFAULT_THRESHOLDS, PostgresQueueReapStore
 
 
 class JobRowMapper:
@@ -87,8 +89,16 @@ KNOWN_PHASES: Final = tuple(phase.value for phase in Phase)
 
 
 class PostgresJobRepository:
-    def __init__(self, pool: asyncpg.Pool) -> None:
+    def __init__(
+        self,
+        pool: asyncpg.Pool,
+        *,
+        reap_thresholds: ReapThresholdsInterface = DEFAULT_THRESHOLDS,
+    ) -> None:
         self._pool = pool
+        # `reap` is the queue reaper's lease reap (ADR-0056): bounded by each job's
+        # attempts, and recorded on the ledger in the same transaction as each move.
+        self._reaper = PostgresQueueReapStore(pool, thresholds=reap_thresholds)
 
     async def enqueue(self, request: EnqueueRequest) -> JobRecord:
         async with self._pool.acquire() as conn, conn.transaction():
@@ -355,15 +365,10 @@ class PostgresJobRepository:
             return _rowcount(result) == 1
 
     async def reap(self) -> int:
-        async with self._pool.acquire() as conn:
-            result = await conn.execute(
-                """
-                UPDATE job SET
-                    state='ready', lease_owner=NULL, lease_expires_at=NULL, updated_at=now()
-                WHERE state='leased' AND lease_expires_at < now()
-                """
-            )
-            return _rowcount(result)
+        """Every expired lease: requeued while attempts remain, parked with a
+        `delivery_exhausted` gate once they are spent, each with its `QueueReaped` event.
+        The count is of reaps that were written, never of rows that were merely seen."""
+        return len(await self._reaper.reap_leases())
 
     async def assign_engine(self, job_id: UUID, *, owner: str, engine_id: EngineId) -> bool:
         async with self._pool.acquire() as conn:

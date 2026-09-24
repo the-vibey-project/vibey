@@ -255,6 +255,34 @@ spec:
                   name: {{ $fullName }}-rabbitmq
                   key: password
             {{- end }}
+            {{- /* The queue reaper's thresholds, as code (ADR-0056). The same ones judge the
+                   PostgreSQL job queue, so they are set with or without a broker. */}}
+            {{- with .Values.worker.queueReap }}
+            - name: VIBEY_QUEUE_REAP_ENABLED
+              value: {{ .enabled | quote }}
+            - name: VIBEY_QUEUE_REAP_INTERVAL_SECONDS
+              value: {{ .intervalSeconds | int | quote }}
+            - name: VIBEY_QUEUE_REAP_LEASE_GRACE_SECONDS
+              value: {{ .leaseGraceSeconds | int | quote }}
+            - name: VIBEY_QUEUE_REAP_STALE_READY_SECONDS
+              value: {{ .staleReadySeconds | int | quote }}
+            - name: VIBEY_QUEUE_REAP_DEAD_LETTER_MIN_DEPTH
+              value: {{ .deadLetterMinDepth | int | quote }}
+            - name: VIBEY_QUEUE_REAP_DEAD_LETTER_PEEK_LIMIT
+              value: {{ .deadLetterPeekLimit | int | quote }}
+            - name: VIBEY_QUEUE_REAP_OWNED_QUEUE_PATTERN
+              value: {{ .ownedQueuePattern | quote }}
+            - name: VIBEY_QUEUE_REAP_DEAD_LETTER_QUEUE_PATTERN
+              value: {{ .deadLetterQueuePattern | quote }}
+            - name: VIBEY_QUEUE_REAP_POLICY_NAME
+              value: {{ .policyName | quote }}
+            - name: VIBEY_QUEUE_REAP_POLICY_PRIORITY
+              value: {{ .policyPriority | int | quote }}
+            - name: VIBEY_QUEUE_REAP_CONSUMER_TIMEOUT_SECONDS
+              value: {{ .consumerTimeoutSeconds | int | quote }}
+            - name: VIBEY_QUEUE_REAP_DELIVERY_LIMIT
+              value: {{ .deliveryLimit | int | quote }}
+            {{- end }}
             {{- if .Values.surfaces.garage.enabled }}
             - name: VIBEY_BLOB_URL
               value: {{ include "vibey.surfaceURL" (dict "root" . "name" "garage" "port" 3900) | quote }}

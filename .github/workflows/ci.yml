@@ -1019,6 +1019,26 @@ jobs:
           grep -q "PASS ledger-guard" /tmp/doctor
           grep -Eq "(PASS|FAIL|UNKNOWN) local-auth" /tmp/doctor
 
+      # ADR-0056. The broker enforces the consumer_timeout the chart declares -- read back
+      # from the running node, never assumed from the file -- and the queue reaper, run
+      # in the worker pod with only the environment the chart gives it, reconciles its
+      # policy onto the broker and reads it back. That write is also the check that the
+      # pinned image accepts the `consumer-timeout` and `delivery-limit` policy keys.
+      - name: Contract - the broker enforces the declared consumer timeout and the reaper's policy
+        run: |
+          set -euo pipefail
+          got=$(kubectl exec -n vibey deploy/vibey-vibey-rabbitmq -- \
+            rabbitmqctl eval 'application:get_env(rabbit, consumer_timeout).' | tr -d '[:space:]')
+          echo "consumer_timeout on the running node: $got"
+          test "$got" = "{ok,1800000}"
+          kubectl exec -n vibey deploy/vibey-vibey-worker -- vibey queue reap --json > /tmp/reap.json
+          cat /tmp/reap.json
+          python3 -c 'import json; r = json.load(open("/tmp/reap.json")); assert r["ok"] and r["policy"]["verified"], r'
+          kubectl exec -n vibey deploy/vibey-vibey-rabbitmq -- \
+            rabbitmqctl list_policies -p / --formatter json > /tmp/policies.json
+          cat /tmp/policies.json
+          grep -q '"vibey-reap"' /tmp/policies.json
+
       # KEDA's operator runs in its own namespace and dials Postgres
       # itself, so it is the only thing here that exercises the DSN from
       # outside the release namespace. An unqualified DSN passes every

@@ -145,6 +145,14 @@ from vibey.application.interfaces.queue_priority import (
     PriorityGrantReader,
     QueuePriorityServiceInterface,
 )
+from vibey.application.interfaces.queue_reap import (
+    BusDeadLetterGateInterface,
+    BusDeadLetterHandlerInterface,
+    BusInspectorPort,
+    DeliveryExhaustedGateInterface,
+    QueueReaperInterface,
+    QueueReapStore,
+)
 from vibey.application.interfaces.review import (
     AutomatedFinding,
     AutomatedReviewRunner,
@@ -225,6 +233,12 @@ __all__ = [
     "JobReadyNotifier",
     "JobRepository",
     "QueuePriorityServiceInterface",
+    "BusDeadLetterGateInterface",
+    "BusDeadLetterHandlerInterface",
+    "BusInspectorPort",
+    "DeliveryExhaustedGateInterface",
+    "QueueReaperInterface",
+    "QueueReapStore",
     "LedgerExporterInterface",
     "InvalidLedgerShardInterface",
     "LedgerBudgetSourceInterface",

@@ -277,9 +277,10 @@ before `--limit`. Defaults to the most recently created project.
 
 ## `vibey queue`
 
-See the job queue in claim order, and move a job to the front of it
-([ADR-0054](../architecture/decisions/0054-a-bumped-job-runs-next.md)). Bare
-`vibey queue` prints help.
+See the job queue in claim order, move a job to the front of it
+([ADR-0054](../architecture/decisions/0054-a-bumped-job-runs-next.md)), and reap what is
+stuck ([ADR-0056](../architecture/decisions/0056-everything-a-queue-guards-is-reaped-by-measurement.md)).
+Bare `vibey queue` prints help.
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
@@ -287,6 +288,9 @@ See the job queue in claim order, and move a job to the front of it
 | `queue bump JOB_ID` | `--project PROJECT_ID` | latest project | Run the job next: after whatever is running, ahead of every un-bumped waiting job, behind anything bumped before it. Its unfinished dependencies move forward with it, dependencies first. Prints every job moved with its new place and any already ahead. |
 | | `--source NAME` | unset | An automation naming itself (see below). |
 | | `--json` | off | Print the change as JSON. |
+| `queue reap` | `--project PROJECT_ID` | latest project | One pass of the queue reaper: every expired lease (requeued while attempts remain, parked with a `delivery_exhausted` gate once they are spent), ready work nobody has taken for `[queue.reap] stale_ready_seconds`, and -- with a broker configured -- vibey's policy reconciled onto the queues it owns and read back, every queue measured, and each dead letter on an owned queue parked as a `bus.dead_letter` job. Ready work and broker verdicts are recorded under this project; a lease under its own job's project. |
+| | `--dry-run` | off | Judge everything and change nothing: no requeue, no park, no ledger event, no policy write. Prints what it would do. |
+| | `--json` | off | Print the report as JSON: `ok`, `acted`, `surfaced` (each with `object`, `queue`, `condition`, `measured`, `threshold`, `unit`, `action`), `policy`, `notes`, `unreadable`. |
 | `queue unbump JOB_ID` | `--project`, `--source`, `--json` | as `bump` | Take the job out of the lane. The lane is always the jobs bumped by name plus their unfinished dependencies, so every pulled-in job no remaining named job needs leaves with it; the output and the ledger list exactly what was removed. Refused while another named job depends on this one. |
 
 A bump changes order only. It never interrupts the running job or touches its lease,
@@ -318,6 +322,17 @@ JobPriorityRefused` lists the refusals. Refused with exit 3, and recorded:
   the message names it;
 - an un-bump of a job that another named job still depends on — the message names them;
 - a request the database aborted to break a lock cycle (retry it).
+
+**`queue reap`** prints what it reaped (`reaped:`), what is stuck and was only surfaced
+(`stuck, surfaced, nothing moved:`), the broker policy's read-back (`verified` or
+`NOT VERIFIED`), notes, and every source it could not read (`UNREAD:`). Each verdict line
+names the action, the condition, the object, the queue, the measured value and the
+threshold. It exits 0 when every source was read and the broker policy, where one was
+reconciled, read back as written; otherwise 1 -- a reaper never reports success it did not
+observe. It never deletes a dead letter: answer the parked job's gate with `vibey answer
+GATE_ID --choice replay` (publish it back to the queue it died on, at least once) or
+`--choice dismiss`; the broker's copy stays on the dead-letter queue either way. Its
+thresholds are [`[queue.reap]`](configuration.md#queuereap).
 
 ## `vibey deploy`
 
@@ -471,6 +486,12 @@ qwenloop as a standby engine (ADR-0015): the worker enables it only when
 read `[features] qwenloop` from `vibey.toml`; it falls back to a `features`
 table in the project's stored config, which no creation path writes today.
 In practice the environment variable is the only switch for the worker.
+
+The queue reaper (ADR-0056) runs in the same idle iterations: after the lease reap, at
+most once per `[queue.reap] interval_seconds` across all of the worker's loops, the
+worker surfaces stale ready work and -- with a broker configured -- reaps the broker, as
+`vibey queue reap` does. Its findings go to the ledger (`QueueReaped`) and to stderr
+(`queue.reaped`, `queue.stuck`, `queue.reap_unreadable`).
 
 Shutdown (ADR-0026): SIGTERM drains the worker — it finishes the job in
 hand, claims no more, and exits. A SIGTERM that arrives during startup,

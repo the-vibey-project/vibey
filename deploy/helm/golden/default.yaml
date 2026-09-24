@@ -381,6 +381,25 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: vibey-vibey-rabbitmq-conf
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: rabbitmq
+data:
+  20-vibey-reap.conf: |
+    # How long a consumer may hold an unacknowledged delivery before the broker
+    # closes its channel and requeues everything on it (ADR-0056, condition (a)).
+    consumer_timeout = 1800000
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: vibey-vibey-garage-config
   labels:
     app.kubernetes.io/name: vibey
@@ -2253,6 +2272,9 @@ spec:
         app.kubernetes.io/managed-by: Helm
         helm.sh/chart: vibey-0.3.0
         app.kubernetes.io/component: rabbitmq
+      annotations:
+        # A changed consumer_timeout reaches the broker by restarting it.
+        checksum/rabbitmq-conf: 37bf94938358f1fd6031153af84471b3d8340245e0bc61606ecc70ce65381aa8
     spec:
       containers:
         - name: rabbitmq
@@ -2290,10 +2312,17 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/rabbitmq
+            - name: conf
+              mountPath: /etc/rabbitmq/conf.d/20-vibey-reap.conf
+              subPath: 20-vibey-reap.conf
+              readOnly: true
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: vibey-vibey-rabbitmq-data
+        - name: conf
+          configMap:
+            name: vibey-vibey-rabbitmq-conf
 
 ---
 # Source: vibey/templates/surfaces.yaml
@@ -3496,6 +3525,30 @@ spec:
                 secretKeyRef:
                   name: vibey-vibey-rabbitmq
                   key: password
+            - name: VIBEY_QUEUE_REAP_ENABLED
+              value: "true"
+            - name: VIBEY_QUEUE_REAP_INTERVAL_SECONDS
+              value: "60"
+            - name: VIBEY_QUEUE_REAP_LEASE_GRACE_SECONDS
+              value: "0"
+            - name: VIBEY_QUEUE_REAP_STALE_READY_SECONDS
+              value: "900"
+            - name: VIBEY_QUEUE_REAP_DEAD_LETTER_MIN_DEPTH
+              value: "1"
+            - name: VIBEY_QUEUE_REAP_DEAD_LETTER_PEEK_LIMIT
+              value: "100"
+            - name: VIBEY_QUEUE_REAP_OWNED_QUEUE_PATTERN
+              value: "^vibey\\."
+            - name: VIBEY_QUEUE_REAP_DEAD_LETTER_QUEUE_PATTERN
+              value: "(\\.dlq|\\.dead)$"
+            - name: VIBEY_QUEUE_REAP_POLICY_NAME
+              value: "vibey-reap"
+            - name: VIBEY_QUEUE_REAP_POLICY_PRIORITY
+              value: "0"
+            - name: VIBEY_QUEUE_REAP_CONSUMER_TIMEOUT_SECONDS
+              value: "21600"
+            - name: VIBEY_QUEUE_REAP_DELIVERY_LIMIT
+              value: "20"
             - name: VIBEY_BLOB_URL
               value: "http://vibey-vibey-garage.vibey.svc.cluster.local:3900"
             - name: VIBEY_BLOB_ACCESS_KEY

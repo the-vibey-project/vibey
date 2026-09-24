@@ -372,3 +372,87 @@ def test_the_queue_table_parses_without_a_project_table() -> None:
 def test_an_invalid_queue_priority_table_is_refused(fragment: str, match: str) -> None:
     with pytest.raises(ConfigError, match=match):
         load_config_from_string(f'{fragment}\n[project]\nname = "demo"\n')
+
+
+# -- [queue.reap] (ADR-0056) ---------------------------------------------------------
+
+
+def test_queue_reap_defaults_are_the_declared_ones() -> None:
+    from vibey.domain.config import QueueReapConfig
+    from vibey.domain.interfaces import QueueReapConfigInterface
+    from vibey.domain.queue_reap import ReapThresholds
+
+    reap = load_config_from_string('[project]\nname = "demo"\n').queue.reap
+    assert reap == QueueReapConfig()
+    assert isinstance(reap, QueueReapConfigInterface)
+    assert reap.enabled is True
+    assert reap.interval_seconds == 60
+    assert reap.dead_letter_peek_limit == 100
+    assert reap.thresholds() == ReapThresholds()
+    policy = reap.broker_policy()
+    assert policy.name == "vibey-reap"
+    assert policy.body() == {
+        "pattern": r"^vibey\.",
+        "definition": {"consumer-timeout": 21_600_000, "delivery-limit": 20},
+        "priority": 0,
+        "apply-to": "queues",
+    }
+    assert policy.is_dead_letter("vibey.jobs.dead")
+
+
+def test_queue_reap_reads_every_key() -> None:
+    config = load_config_from_string(
+        '[project]\nname = "demo"\n'
+        "[queue.reap]\n"
+        "enabled = false\n"
+        "interval_seconds = 30\n"
+        "lease_grace_seconds = 5\n"
+        "stale_ready_seconds = 120\n"
+        "dead_letter_min_depth = 2\n"
+        "dead_letter_peek_limit = 10\n"
+        "owned_queue_pattern = '^mine\\.'\n"
+        "dead_letter_queue_pattern = '\\.parked$'\n"
+        "policy_name = 'mine'\n"
+        "policy_priority = 4\n"
+        "consumer_timeout_seconds = 60\n"
+        "delivery_limit = 3\n"
+    )
+    reap = config.queue.reap
+    assert reap.enabled is False
+    assert reap.thresholds().lease_grace_seconds == 5
+    assert reap.thresholds().stale_ready_seconds == 120
+    assert reap.thresholds().dead_letter_min_depth == 2
+    policy = reap.broker_policy()
+    assert policy.owns("mine.q") and not policy.owns("vibey.q")
+    assert policy.is_dead_letter("x.parked")
+    assert policy.body()["definition"] == {"consumer-timeout": 60_000, "delivery-limit": 3}
+    assert policy.body()["priority"] == 4
+
+
+@pytest.mark.parametrize(
+    ("fragment", "match"),
+    [
+        ("[queue]\nreap = 3", "queue.reap: 'reap' must be a dict"),
+        ("[queue.reap]\ninterval_seconds = 0", r"queue.reap.interval_seconds: must be at least 1"),
+        ("[queue.reap]\ndelivery_limit = -1", r"queue.reap.delivery_limit: must be at least 1"),
+        (
+            "[queue.reap]\nlease_grace_seconds = -1",
+            r"queue.reap.lease_grace_seconds: must not be negative",
+        ),
+        ("[queue.reap]\nstale_ready_seconds = true", r"must be a int, got bool"),
+        ("[queue.reap]\nenabled = 1", r"queue.reap.enabled: must be a bool, got int"),
+        ("[queue.reap]\npolicy_name = 3", r"must be a str, got int"),
+        ("[queue.reap]\nsurprise = 1", r"queue.reap.surprise: is not a \[queue.reap\] key"),
+        ("[queue.reap]\nowned_queue_pattern = '('", r"queue.reap: pattern is not a regular"),
+        ("[queue.reap]\npolicy_name = ' '", r"queue.reap: a broker policy needs a name"),
+    ],
+)
+def test_an_invalid_queue_reap_table_is_refused(fragment: str, match: str) -> None:
+    with pytest.raises(ConfigError, match=match):
+        load_config_from_string(f'{fragment}\n[project]\nname = "demo"\n')
+
+
+def test_the_bus_vhost_defaults_to_the_root_and_reads_as_written() -> None:
+    assert load_config_from_string('[project]\nname = "demo"\n').bus.vhost == "/"
+    config = load_config_from_string('[project]\nname = "demo"\n[bus]\nvhost = "vibey"\n')
+    assert config.bus.vhost == "vibey"

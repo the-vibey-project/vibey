@@ -8,10 +8,17 @@ touches the filesystem — reading the file is an infrastructure concern.
 
 import tomllib
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 from vibey.domain.errors import VibeyError
 from vibey.domain.queue_priority import OPERATOR_SOURCE
+from vibey.domain.queue_reap import (
+    DEFAULT_DEAD_LETTER_MIN_DEPTH,
+    DEFAULT_LEASE_GRACE_SECONDS,
+    DEFAULT_STALE_READY_SECONDS,
+    BrokerPolicy,
+    ReapThresholds,
+)
 
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
@@ -294,6 +301,8 @@ class BusConfig:
     url: str | None = None
     username: str | None = None
     password: str | None = None
+    vhost: str = "/"
+    """The vhost vibey's queues, and the reaper's reads, are scoped to (ADR-0056)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -354,10 +363,97 @@ class QueuePriorityConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class QueueReapConfig:
+    """`[queue.reap]`: when queued or held work counts as stuck, and what bounds it
+    (ADR-0056). Every threshold is a key (12.c); the defaults are measured choices, each
+    explained in docs/reference/configuration.md.
+
+    The same thresholds judge the PostgreSQL job queue and every queue on the broker, so
+    both reap identically. The broker keys (`owned_queue_pattern`, `consumer_timeout_seconds`,
+    `delivery_limit`, ...) become the policy vibey reconciles onto the queues it owns.
+    """
+
+    enabled: bool = True
+    interval_seconds: int = 60
+    lease_grace_seconds: int = DEFAULT_LEASE_GRACE_SECONDS
+    stale_ready_seconds: int = DEFAULT_STALE_READY_SECONDS
+    dead_letter_min_depth: int = DEFAULT_DEAD_LETTER_MIN_DEPTH
+    dead_letter_peek_limit: int = 100
+    owned_queue_pattern: str = r"^vibey\."
+    dead_letter_queue_pattern: str = r"(\.dlq|\.dead)$"
+    policy_name: str = "vibey-reap"
+    policy_priority: int = 0
+    consumer_timeout_seconds: int = 21600
+    """Six hours: at least the longest job lease (two hours for BUILD) with room, the
+    ADR-0044 default. Applies to vibey's own queues only; the broker-wide default is the
+    chart's `surfaces.rabbitmq.consumerTimeoutMs`."""
+    delivery_limit: int = 20
+
+    _POSITIVE: ClassVar[tuple[str, ...]] = (
+        "interval_seconds",
+        "stale_ready_seconds",
+        "dead_letter_min_depth",
+        "dead_letter_peek_limit",
+        "consumer_timeout_seconds",
+        "delivery_limit",
+    )
+
+    def __post_init__(self) -> None:
+        for name in self._POSITIVE:
+            if getattr(self, name) < 1:
+                raise ConfigError(f"queue.reap.{name}", "must be at least 1")
+        if self.lease_grace_seconds < 0:
+            raise ConfigError("queue.reap.lease_grace_seconds", "must not be negative")
+        try:
+            self.broker_policy()
+        except ValueError as exc:
+            raise ConfigError("queue.reap", str(exc)) from exc
+
+    @classmethod
+    def from_table(cls, table: dict[str, Any], path: str) -> "QueueReapConfig":
+        """Validate one already-parsed table; `path` names it in any error."""
+        values: dict[str, Any] = {}
+        for key in cls.__dataclass_fields__:
+            if key not in table:
+                continue
+            default = getattr(cls(), key)
+            value = table[key]
+            # bool is an int to isinstance; a threshold written `true` is a mistake.
+            if type(value) is not type(default):
+                raise ConfigError(
+                    f"{path}.{key}",
+                    f"must be a {type(default).__name__}, got {type(value).__name__}",
+                )
+            values[key] = value
+        unknown = sorted(set(table) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ConfigError(f"{path}.{unknown[0]}", "is not a [queue.reap] key")
+        return cls(**values)
+
+    def thresholds(self) -> ReapThresholds:
+        return ReapThresholds(
+            lease_grace_seconds=self.lease_grace_seconds,
+            stale_ready_seconds=self.stale_ready_seconds,
+            dead_letter_min_depth=self.dead_letter_min_depth,
+        )
+
+    def broker_policy(self) -> BrokerPolicy:
+        return BrokerPolicy(
+            name=self.policy_name,
+            pattern=self.owned_queue_pattern,
+            consumer_timeout_ms=self.consumer_timeout_seconds * 1000,
+            delivery_limit=self.delivery_limit,
+            priority=self.policy_priority,
+            dead_letter_pattern=self.dead_letter_queue_pattern,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class QueueConfig:
     """`[queue]`: the job queue's declared policy."""
 
     priority: QueuePriorityConfig = field(default_factory=QueuePriorityConfig)
+    reap: QueueReapConfig = field(default_factory=QueueReapConfig)
 
     @classmethod
     def from_data(cls, data: dict[str, Any]) -> "QueueConfig":
@@ -365,7 +461,11 @@ class QueueConfig:
         reader that wants only the queue policy does not demand `[project]`."""
         table = _optional(data, "queue", "queue", dict, {})
         priority = _optional(table, "priority", "queue.priority", dict, {})
-        return cls(priority=QueuePriorityConfig.from_table(priority, "queue.priority"))
+        reap = _optional(table, "reap", "queue.reap", dict, {})
+        return cls(
+            priority=QueuePriorityConfig.from_table(priority, "queue.priority"),
+            reap=QueueReapConfig.from_table(reap, "queue.reap"),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -680,6 +780,7 @@ def _parse_bus(data: dict[str, Any]) -> BusConfig:
         url=_optional(table, "url", "bus.url", str, None),
         username=_optional(table, "username", "bus.username", str, None),
         password=_optional(table, "password", "bus.password", str, None),
+        vhost=_optional(table, "vhost", "bus.vhost", str, "/"),
     )
 
 
