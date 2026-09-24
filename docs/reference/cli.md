@@ -388,12 +388,30 @@ With `--conformance`, the command exits 1 if any engine fails a check. The
 worker does not select an engine for engine-driven jobs until a
 `doctor --conformance --record` run has passed for it.
 
+When `VIBEY_PG_URL` is set, doctor ends with two database checks
+([ADR-0055](../architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)).
+Each prints `PASS`, `FAIL` or `UNKNOWN`, and doctor exits 1 if either fails:
+
+- `ledger-guard` fails when the role `VIBEY_PG_URL` connects as could rewrite the ledger:
+  it is a superuser, owns `event`, holds `UPDATE`, `DELETE` or `TRUNCATE` on it or a
+  partition, or finds a guard trigger missing or disabled. A single-DSN install fails here
+  until its roles are split
+  ([database roles](configuration.md#database-roles)).
+- `local-auth` fails when the server lets a password-less connection in as the owner or a
+  superuser. It attempts one on the DSN's host and, for a local host, on the local socket
+  directories. It also fails when `pg_hba.conf` has a `trust`, `peer` or `ident` rule that
+  can match them. It is `UNKNOWN` (not a failure, never a pass) when it could neither get
+  in nor read `pg_hba_file_rules`.
+
+With `VIBEY_PG_URL` unset, `ledger-guard` prints `UNKNOWN` and nothing is checked.
+
 `--cluster` ignores `--conformance`, `--engine`, `--record` and `--project`,
-runs up to six checks, and exits 1 if any fails: the DSN host resolves beyond
+runs up to eight checks, and exits 1 if any fails: the DSN host resolves beyond
 its own namespace, the process is not root, the workspace (current directory)
 is writable, the engines the worker uses have API keys, the database accepts a
-connection, and no migrations are pending. The migrations check is skipped
-when the database connection fails.
+connection, no migrations are pending, and the two database checks above
+(`ledger-guard`, `local-auth`). The last three are skipped when the database
+connection fails.
 
 The engine check (`engine-auth`) judges what the worker was told to run, not
 what is on `PATH` — every runner ships in the image since ADR-0037, so a
@@ -403,6 +421,26 @@ API-key variables set (qwenloop takes none). With neither, nothing is
 required: the check passes and reports which engines in the worker's default
 pool have a key, so a default install says plainly when no engine-driven job
 can run. `--engines` and `--provider` without `--cluster` exit 2.
+
+## `vibey migrate`
+
+Apply migrations as the schema's owner, then make the application role's privileges
+exactly the declared ones
+([ADR-0055](../architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)).
+It reads the owner's DSN from `VIBEY_PG_MIGRATE_URL` and the application's from
+`VIBEY_PG_URL`. It takes no options.
+
+1. Applies pending migrations under the migration lock, as the owner.
+2. Creates the role `VIBEY_PG_URL` names if it is missing and the DSN carries a password.
+   A role that is a superuser, the owner, or a member of the owner is refused.
+3. Revokes everything that role holds and grants exactly `APP_ROLE_GRANTS`.
+4. Attaches the `TRUNCATE` guard to any partition of `event` that lacks it.
+5. Connects as the application role and prints the ledger guard.
+
+It exits 2 when `VIBEY_PG_MIGRATE_URL` is unset. It exits 1 when `VIBEY_PG_URL` is unset
+(nothing reconciled, guard unchecked), or when the guard is not in force: for instance
+while `VIBEY_PG_URL` still names the owner. The Helm chart runs it as the `migrate` init
+container of the worker and the operator, the only place the owner's DSN is mounted.
 
 ## `vibey operator`
 
@@ -460,7 +498,8 @@ Variables read by code under `src/vibey`:
 
 | Variable | Read by | Effect |
 |---|---|---|
-| `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor --record`; `doctor --cluster` | PostgreSQL 14+ DSN. There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). `vibey install --postgres` installs the server but does not set this variable for the parent shell. |
+| `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor`; `migrate` | The application role's PostgreSQL 14+ DSN ([database roles](configuration.md#database-roles)). There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). `vibey install --postgres` installs the server but does not set this variable for the parent shell. |
+| `VIBEY_PG_MIGRATE_URL` | `migrate`; every command that opens the database, when set | The owner's DSN. Migrations run on it and the application role's grants are reconciled from it. Unset on a single-DSN install. |
 | `VIBEY_EVIDENCE_DIR` | `work --provider qwenloop`, `worker --provider qwenloop` | Directory of reading material for the qwenloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
 | `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop; any other set value disables it. When set it overrides config. When unset, `doctor` falls back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config. |
 | `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |

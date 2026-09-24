@@ -7,7 +7,7 @@ import json
 import os
 import re
 import sys
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 
 from qwenloop.domain.config import ToolLimits
@@ -38,13 +38,112 @@ _SCANNER_ENTRY = (
 )
 
 
+class ShellEnvironment:
+    """What a model-chosen shell command may see of this process's environment.
+
+    An allow-list, never a copy with a few names removed: the shell tool used to pass
+    everything but names containing KEY or TOKEN, so vibey's queue and ledger DSN
+    (`VIBEY_PG_URL`), libpq's `PGPASSWORD` and any `*_SECRET` reached commands a model
+    chose. Consistent with vibey's own engine environment (vibey ADR-0055): the system
+    basics below, plus whatever the caller declares in `extra` -- and never vibey's own
+    variables, libpq's, or anything shaped like a credential, whoever declares it.
+    Declared by `interfaces/tools_interface.py`.
+    """
+
+    SYSTEM_NAMES: frozenset[str] = frozenset(
+        {
+            "PATH",
+            "HOME",
+            "USER",
+            "LOGNAME",
+            "SHELL",
+            "TMPDIR",
+            "TMP",
+            "TEMP",
+            "LANG",
+            "LANGUAGE",
+            "TZ",
+            "TERM",
+            "COLORTERM",
+            "NO_COLOR",
+            "COLUMNS",
+            "LINES",
+            "SSL_CERT_FILE",
+            "SSL_CERT_DIR",
+            "REQUESTS_CA_BUNDLE",
+            "CURL_CA_BUNDLE",
+            "NODE_EXTRA_CA_CERTS",
+            "HTTP_PROXY",
+            "HTTPS_PROXY",
+            "NO_PROXY",
+            "ALL_PROXY",
+            "http_proxy",
+            "https_proxy",
+            "no_proxy",
+            "all_proxy",
+            "XDG_CONFIG_HOME",
+            "XDG_CACHE_HOME",
+            "XDG_DATA_HOME",
+            "XDG_STATE_HOME",
+            "XDG_RUNTIME_DIR",
+            "__CF_USER_TEXT_ENCODING",
+        }
+    )
+    SYSTEM_PREFIXES: tuple[str, ...] = ("LC_",)
+    FORBIDDEN_PREFIXES: tuple[str, ...] = ("VIBEY_", "PG")
+    FORBIDDEN_MARKERS: tuple[str, ...] = (
+        "KEY",
+        "TOKEN",
+        "SECRET",
+        "PASSWORD",
+        "PASSWD",
+        "CREDENTIAL",
+        "DSN",
+        "DATABASE_URL",
+    )
+
+    def __init__(
+        self, source: Mapping[str, str] | None = None, *, extra: Iterable[str] = ()
+    ) -> None:
+        self._source = source
+        self._extra = frozenset(extra)
+        for name in self._extra:
+            if self.forbids(name):
+                raise ValueError(f"{name} can never be passed to a shell command")
+
+    @classmethod
+    def forbids(cls, name: str) -> bool:
+        return name.startswith(cls.FORBIDDEN_PREFIXES) or any(
+            marker in name for marker in cls.FORBIDDEN_MARKERS
+        )
+
+    def admits(self, name: str) -> bool:
+        if self.forbids(name):
+            return False
+        return (
+            name in self.SYSTEM_NAMES
+            or name in self._extra
+            or name.startswith(self.SYSTEM_PREFIXES)
+        )
+
+    def build(self) -> dict[str, str]:
+        source = os.environ if self._source is None else self._source
+        return {name: value for name, value in source.items() if self.admits(name)}
+
+
 class SandboxTools:
     def __init__(
-        self, worktree: Path, *, allow_network: bool = False, limits: ToolLimits | None = None
+        self,
+        worktree: Path,
+        *,
+        allow_network: bool = False,
+        limits: ToolLimits | None = None,
+        shell_environment: ShellEnvironment | None = None,
     ) -> None:
         self.worktree = worktree.resolve()
         self.allow_network = allow_network
         self.limits = limits or ToolLimits()
+        self._shell_environment = shell_environment or ShellEnvironment()
 
     @property
     def tool_names(self) -> tuple[str, ...]:
@@ -78,11 +177,7 @@ class SandboxTools:
                 return {"error": "argv must be a non-empty string list"}
             if argv[0] in {"sudo", "rm", "shutdown", "reboot"}:
                 return {"error": "command denied by policy"}
-            env = {
-                key: value
-                for key, value in os.environ.items()
-                if "KEY" not in key and "TOKEN" not in key
-            }
+            env = self._shell_environment.build()
             if not self.allow_network:
                 env["QWENLOOP_NETWORK"] = "disabled"
             try:

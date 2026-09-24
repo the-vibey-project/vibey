@@ -76,8 +76,10 @@ spec:
     spec:
       serviceAccountName: {{ $fullName }}-operator
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- if .Values.postgres.enabled }}
+      {{- $migrate := include "vibey.migrateInitContainer" . }}
+      {{- if or .Values.postgres.enabled $migrate }}
       initContainers:
+      {{- if .Values.postgres.enabled }}
         - name: wait-for-postgres
           image: {{ .Values.postgres.image }}
           command:
@@ -89,6 +91,10 @@ spec:
                 sleep 2
               done
           securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+      {{- end }}
+      {{- with $migrate }}
+      {{- . | trim | nindent 8 }}
+      {{- end }}
       {{- end }}
       containers:
         - name: operator

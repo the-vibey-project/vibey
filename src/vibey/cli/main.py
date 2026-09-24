@@ -1397,10 +1397,16 @@ def doctor(
         if install_postgres and not local_postgres_status.ready:
             typer.echo(f"  detail: {local_postgres_status.detail}")
             raise typer.Exit(1)
-        # The database section. Keeping VIBEY_PG_URL out of every model-driven process
+        # The database section. ADR-0055: whenever there is a database to ask, ask
+        # whether the application's role could rewrite the ledger -- a single-DSN install
+        # fails here until the roles are split, so the step cannot be forgotten silently
+        # (12.e). Beside it: keeping VIBEY_PG_URL out of every model-driven process
         # protects nothing if the database lets the worker's OS user in without it.
+        database_ok = await _database_security_section()
+        # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above), which
+        # FAILS for the owner and superusers; reviewers to decide whether to consolidate.
         await _passwordless_reach_section()
-        if conformance and not all_ok:
+        if (conformance and not all_ok) or not database_ok:
             raise typer.Exit(1)
 
     async def run_cluster_doctor() -> None:
@@ -1434,8 +1440,7 @@ def doctor(
             uid=os.getuid(),
         )
         for check in checks:
-            mark = "PASS" if check.ok else "FAIL"
-            typer.echo(f"{mark} {check.name:<20} {check.detail}")
+            typer.echo(f"{check.mark} {check.name:<20} {check.detail}")
         if not all_ok(checks):
             raise typer.Exit(1)
 
@@ -1447,6 +1452,89 @@ def doctor(
         raise typer.Exit(EXIT_USAGE)
 
     asyncio.run(run_doctor())
+
+
+async def _database_security_section() -> bool:
+    """`vibey doctor`'s database section: the ledger guard and password-less access
+    (ADR-0055), printed as PASS, FAIL or UNKNOWN. False when either check failed.
+
+    A module-level function because it is `doctor`'s own step, shared by nothing
+    else; the checks themselves live in `DatabaseSecurityChecks`.
+    """
+    from vibey.infrastructure.cluster_preflight import DatabaseSecurityChecks, check_database
+
+    dsn = os.environ.get("VIBEY_PG_URL", "").strip()
+    if not dsn:
+        typer.echo(f"UNKNOWN {'ledger-guard':<20} VIBEY_PG_URL is not set; nothing to check")
+        return True
+    connected, conn = await check_database(dsn)
+    if conn is None:
+        typer.echo(f"FAIL {'ledger-guard':<20} {connected.detail}")
+        return False
+    try:
+        checks = await DatabaseSecurityChecks().run(conn, dsn)
+    finally:
+        await conn.close()
+    for check in checks:
+        typer.echo(f"{check.mark} {check.name:<20} {check.detail}")
+    return all(check.ok for check in checks)
+
+
+@app.command("migrate")
+def migrate() -> None:
+    """Apply migrations as the owner and reconcile the application role's grants.
+
+    Reads the owner's DSN from VIBEY_PG_MIGRATE_URL and the application's from
+    VIBEY_PG_URL (ADR-0055). Creates the application role if it is missing and its
+    DSN carries a password, revokes every privilege it holds, grants exactly the
+    declared ones, then connects as it and reports whether the ledger guard is in
+    force. Exits 1 when it is not, so an install still running as one role cannot
+    pass this step silently.
+    """
+    from vibey.bootstrap import migrations_dir
+    from vibey.infrastructure.db.database_setup import OwnerMigration
+    from vibey.infrastructure.db.ledger_guard import (
+        DatabaseEndpoints,
+        DatabaseRoleReconciler,
+        LedgerGuardInspector,
+    )
+    from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
+
+    owner_url = os.environ.get(DatabaseEndpoints.MIGRATE_ENV, "").strip()
+    if not owner_url:
+        typer.echo(
+            f"{DatabaseEndpoints.MIGRATE_ENV} is not set: `vibey migrate` runs as the "
+            "schema's owner, and needs that role's DSN"
+        )
+        raise typer.Exit(EXIT_USAGE)
+    app_url = os.environ.get(DatabaseEndpoints.APP_ENV, "").strip()
+    runner = OwnerMigration(
+        migrator=PostgresMigrator.from_environ(os.environ),
+        reconciler=DatabaseRoleReconciler(),
+        inspector=LedgerGuardInspector(),
+    )
+    report = asyncio.run(
+        runner.run(
+            owner_url=owner_url,
+            app=DatabaseEndpoints(app_url=app_url) if app_url else None,
+            migrations=discover_migrations(migrations_dir()),
+        )
+    )
+    typer.echo(
+        f"applied {len(report.applied)} migration(s)"
+        + (f": {', '.join(report.applied)}" if report.applied else "")
+    )
+    if report.reconciled_role is not None:
+        typer.echo(f"granted {report.reconciled_role} exactly the declared privileges")
+    if report.guard is None:
+        typer.echo(
+            f"{DatabaseEndpoints.APP_ENV} is not set: no application role reconciled, and "
+            "the ledger guard was not checked"
+        )
+        raise typer.Exit(1)
+    typer.echo(f"ledger guard {report.guard.describe()}")
+    if not report.guard.in_force:
+        raise typer.Exit(1)
 
 
 @app.command("operator")
@@ -1600,6 +1688,16 @@ def worker(
         typer.echo("sigterm handler registered", err=True)
 
         async with build_app() as resources:
+            # ADR-0055: a worker whose role could rewrite the ledger says so at every
+            # start, on stderr, and names the fix; it still runs, so an upgrade never
+            # strands an install, and `vibey doctor` fails until the roles are split.
+            guard = resources.ledger_guard
+            if guard is not None and not guard.in_force:
+                typer.echo(
+                    f"error: ledger guard {guard.describe()} -- split the roles: "
+                    "docs/reference/configuration.md#database-roles",
+                    err=True,
+                )
 
             async def _resolve_project() -> ProjectRecord | None:
                 if project_opt is not None:

@@ -31,6 +31,22 @@ runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
 
 
 @pytest.fixture(autouse=True)
+def _database_security_passes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These tests run as the schema's owner, and whether the local server accepts a
+    password-less connection depends on the machine. ADR-0055's database checks are
+    tested on their own (tests/cli/test_doctor_database.py); here they pass."""
+    from vibey.infrastructure.cluster_preflight import ClusterCheck, DatabaseSecurityChecks
+
+    async def passing(self: object, conn: object, dsn: str) -> tuple[ClusterCheck, ...]:
+        return (
+            ClusterCheck("ledger-guard", True, "stub"),
+            ClusterCheck("local-auth", True, "stub"),
+        )
+
+    monkeypatch.setattr(DatabaseSecurityChecks, "run", passing)
+
+
+@pytest.fixture(autouse=True)
 async def _use_test_database(monkeypatch: pytest.MonkeyPatch) -> None:
     url = os.environ.get(
         "VIBEY_TEST_DATABASE_URL",
