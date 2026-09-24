@@ -117,6 +117,9 @@ class OwnerMigration:
         and inspect the guard. Without `app`, migrate only."""
         owner = await self._connect(owner_url)
         try:
+            # Before any migration SQL runs as the owner, nobody else may create in
+            # `public` -- where an unqualified name in that SQL would look.
+            await self._reconciler.close_schema(owner)
             applied = await self._migrator.apply(owner, migrations)
             if app is None:
                 return MigrationReport(applied, None, None)
