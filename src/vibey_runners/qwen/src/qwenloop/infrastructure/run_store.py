@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from qwenloop.domain.model import FollowUp
+
 
 class FileRunStore:
     def __init__(self, cwd: Path) -> None:
@@ -50,3 +52,27 @@ class FileRunStore:
             except (OSError, json.JSONDecodeError):
                 continue
         return commands
+
+    def take_prompts(self, run_id: str) -> list[FollowUp]:
+        """Pending `prompt` controls, oldest first (their names begin with the time they were
+        sent). Each is moved to `control/ack` as it is taken, so a follow-up reaches the model
+        once, even if the process starts again. Anything else in the inbox is left alone."""
+        control = self._run_dir(run_id) / "control"
+        inbox = control / "inbox"
+        if not inbox.exists():
+            return []
+        taken: list[FollowUp] = []
+        for path in sorted(inbox.glob("*.json")):
+            try:
+                value: Any = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(value, dict) or value.get("type") != "prompt":
+                continue
+            text = value.get("text")
+            if not isinstance(text, str):
+                continue
+            (control / "ack").mkdir(parents=True, exist_ok=True)
+            path.replace(control / "ack" / path.name)
+            taken.append(FollowUp(id=path.stem, text=text))
+        return taken

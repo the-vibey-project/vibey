@@ -303,6 +303,19 @@ class AutonomousRunner:
                 await self._notify("Qwen run winding down", f"Run {run_id} is winding down.")
                 self._store.write_snapshot(run_id, _snapshot(state))
                 return state
+            # A person's follow-up (`qwenloop prompt`) joins the conversation here, at the turn
+            # boundary: the model reads it before this turn's answer, and only once.
+            for follow_up in self._store.take_prompts(run_id):
+                state.transcript.append(ChatMessage("user", follow_up.text))
+                self._store.append_event(
+                    run_id,
+                    {
+                        "type": "prompt.received",
+                        "turn": turn,
+                        "id": follow_up.id,
+                        "text": follow_up.text,
+                    },
+                )
             state.turns = turn
             state.transcript = _trim_transcript(state.transcript, profile.context_window)
             text_parts: list[str] = []
