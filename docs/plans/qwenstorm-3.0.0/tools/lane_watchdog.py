@@ -31,10 +31,26 @@ cancelled. A separate process can always be killed.
 
 Killing its process group is not the whole tree, though. qwenloop's shell tool starts every
 command with `start_new_session=True`, so a hung `pytest` the model launched lives in a
-session of its own and survives a `killpg` of the lane. The child records the pid of every
+session of its own and survives a `killpg` of the lane. The child reports the pid of every
 subprocess it starts in a new session (`ChildGuard`), and because a session leader's pid is
 its process group id, the watchdog reaches each of those groups by pid -- no `ps`, which the
 storm's tools cannot rely on (see storm-stop.py).
+
+WHERE THOSE PIDS TRAVEL, AND WHY NOT THROUGH A FILE
+---------------------------------------------------
+Not through the lane tree. The lane is the model's to write -- its shell tool runs any
+command there -- so a registry in it would let a prompt plant any pid and have a timeout
+`killpg` an unrelated process group of the same user. The child reports over a pipe the
+parent creates and hands it by descriptor (`QWENLANE_REPORT_FD`); the descriptor is made
+non-inheritable in the child, so no command it starts can write to it. The verdict travels
+the same way, so nothing the lane can write decides how an attempt ended.
+
+Even so, every pid is checked before it is signalled (`AttemptWatchdog.signallable`): never
+pid 1 or below, never this process or its own group, and only while it still leads a
+session of its own -- or, once that leader has exited, while the group it left still
+exists, since a process group id cannot be reused while its group does. Groups that vanish
+are forgotten at the next poll. Descent is established by provenance: only the attempt
+itself can write the channel, and it reports a pid the moment it created that process.
 
 THE LIMITS ARE DECLARED
 -----------------------
@@ -56,6 +72,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import math
 import os
 import signal
 import subprocess
@@ -96,6 +113,9 @@ POLL_SECONDS = 5
 #: How long a SIGTERMed tree gets to exit before SIGKILL.
 GRACE_SECONDS = 30
 
+#: Names the descriptor of the attempt's private report channel in the child's environment.
+REPORT_FD_ENV = "QWENLANE_REPORT_FD"
+
 #: Event types that end a run in qwenloop's own vocabulary.
 TERMINAL_EVENTS = frozenset({"completed", "failed"})
 
@@ -114,9 +134,10 @@ def _seconds(root: Path, key: str, default: float) -> float:
         value = float(raw)
     except ValueError:
         value = 0.0
-    if not value > 0:
-        # Zero kills every attempt at once and a word would silently mean the default --
-        # neither is what the operator declared, so the lane refuses to start (10.f).
+    if not (math.isfinite(value) and value > 0):
+        # Zero kills every attempt at once, a word would silently mean the default, and inf
+        # (or nan, which compares false with everything) switches the limit off -- none is
+        # what a safety limit may be declared as, so the lane refuses to start (10.f).
         raise SystemExit(
             f"{root / storm_paths.CONFIG}: [lane] {key} must be a positive number of "
             f"seconds, not {raw!r}"
@@ -170,6 +191,7 @@ class AttemptOutcome:
 
     `reason` is `exited` (the process ended by itself), `timeout`, `stalled`, or `stopped`
     (this lane was signalled). `silent_seconds` is how long the run had been quiet then.
+    `verdict` is what the attempt reported over its private channel, if anything.
     """
 
     reason: str
@@ -177,6 +199,7 @@ class AttemptOutcome:
     elapsed_seconds: float
     silent_seconds: float
     last_event_at: str | None
+    verdict: dict[str, Any] | None
 
 
 class _Stopped(Exception):
@@ -188,63 +211,109 @@ class AttemptWatchdog:
 
     def __init__(self, limits: LaneLimits) -> None:
         self._limits = limits
+        self._groups: set[int] = set()
+        self._pending = b""
+        self._verdict: dict[str, Any] | None = None
 
     def watch(
-        self, argv: list[str], *, cwd: Path, events: Path, pids: Path, budget_seconds: float
+        self, argv: list[str], *, cwd: Path, events: Path, budget_seconds: float
     ) -> AttemptOutcome:
+        self._groups, self._pending, self._verdict = set(), b"", None
         started = time.monotonic()
         quiet_since = started
         seen = self._mark(events)
-        with self._stop_on_signal():
-            # Started inside the handler's reach, so a SIGTERM from here on stops the tree.
-            process = subprocess.Popen(argv, cwd=cwd, start_new_session=True)  # nosec B603
-            try:
-                while True:
-                    try:
-                        returncode = process.wait(timeout=self._limits.poll_seconds)
-                    except subprocess.TimeoutExpired:
-                        returncode = None
-                    now = time.monotonic()
-                    mark = self._mark(events)
-                    if mark != seen:
-                        seen, quiet_since = mark, now
-                    if returncode is not None:
-                        reason = "exited"
-                    elif now - started >= budget_seconds:
-                        reason = "timeout"
-                    elif now - quiet_since >= self._limits.stall_seconds:
-                        reason = "stalled"
-                    else:
-                        continue
-                    break
-            except _Stopped:
-                reason, now = "stopped", time.monotonic()
-            if reason != "exited":
-                self.terminate(process, pids)
+        read_end, write_end = os.pipe()
+        os.set_blocking(read_end, False)
+        try:
+            with self._stop_on_signal():
+                # Started inside the handler's reach, so a SIGTERM from here on stops the tree.
+                process = subprocess.Popen(  # nosec B603 - argv is built by qwenlane, not the lane
+                    argv,
+                    cwd=cwd,
+                    start_new_session=True,
+                    pass_fds=(write_end,),
+                    env={**os.environ, REPORT_FD_ENV: str(write_end)},
+                )
+                os.close(write_end)
+                write_end = -1
+                try:
+                    while True:
+                        try:
+                            returncode = process.wait(timeout=self._limits.poll_seconds)
+                        except subprocess.TimeoutExpired:
+                            returncode = None
+                        now = time.monotonic()
+                        self._drain(read_end)
+                        self._forget_vanished()
+                        mark = self._mark(events)
+                        if mark != seen:
+                            seen, quiet_since = mark, now
+                        if returncode is not None:
+                            reason = "exited"
+                        elif now - started >= budget_seconds:
+                            reason = "timeout"
+                        elif now - quiet_since >= self._limits.stall_seconds:
+                            reason = "stalled"
+                        else:
+                            continue
+                        break
+                except _Stopped:
+                    reason, now = "stopped", time.monotonic()
+                self._drain(read_end)
+                # Always, not only on a limit: an attempt that crashed or was OOM-killed
+                # never reached a stop, and the commands it started in sessions of their own
+                # would go on changing the lane while the next attempt starts.
+                self.terminate(process)
                 returncode = process.returncode
+        finally:
+            os.close(read_end)
+            if write_end >= 0:
+                os.close(write_end)
         return AttemptOutcome(
             reason=reason,
             returncode=returncode,
             elapsed_seconds=now - started,
             silent_seconds=now - quiet_since,
             last_event_at=self.last_event_at(events),
+            verdict=self._verdict,
         )
 
-    def terminate(self, process: subprocess.Popen[bytes], pids: Path) -> None:
-        """Stop the attempt's group and every group it recorded: SIGTERM, grace, SIGKILL."""
-        groups = [process.pid, *self._recorded(pids)]
-        for group in groups:
+    def terminate(self, process: subprocess.Popen[bytes]) -> None:
+        """Stop the attempt's group and every session it reported: SIGTERM, grace, SIGKILL.
+
+        Only groups that pass `signallable` at the moment of signalling are touched, and it is
+        asked again before SIGKILL, so a group that went away in the grace period -- whose id
+        could then be reused -- is never signalled a second time.
+        """
+        groups = [process.pid, *sorted(self._groups)]
+        targets = [group for group in groups if self.signallable(group)]
+        for group in targets:
             self._signal(group, signal.SIGTERM)
         deadline = time.monotonic() + self._limits.grace_seconds
-        while time.monotonic() < deadline:
+        while targets and time.monotonic() < deadline:
             process.poll()  # reap it, or its zombie keeps its group "alive" below
-            if not any(self._alive(group) for group in groups):
+            if not any(self._group_exists(group) for group in targets):
                 break
             time.sleep(min(0.05, self._limits.poll_seconds))
-        for group in groups:
-            self._signal(group, signal.SIGKILL)
+        for group in targets:
+            if self.signallable(group):
+                self._signal(group, signal.SIGKILL)
         with contextlib.suppress(subprocess.TimeoutExpired):
             process.wait(timeout=self._limits.grace_seconds)
+
+    def signallable(self, group: int) -> bool:
+        """Whether `group` may be signalled as one of an attempt's own process groups."""
+        if group <= 1 or group in {os.getpid(), os.getpgrp()}:
+            return False
+        try:
+            # The leader is alive: it must still lead the session it was started in.
+            return os.getsid(group) == group
+        except ProcessLookupError:
+            # The leader has exited; its group may outlive it, and while it does the id
+            # cannot have been reused.
+            return self._group_exists(group)
+        except PermissionError:
+            return False
 
     @staticmethod
     def last_event_at(events: Path) -> str | None:
@@ -256,37 +325,60 @@ class AttemptWatchdog:
         return _stamp(stat.st_mtime) if stat.st_size else None
 
     @staticmethod
-    def _mark(events: Path) -> tuple[int, int] | None:
-        """What changes whenever an event is appended. None while the file does not exist."""
+    def _mark(events: Path) -> int | None:
+        """How many bytes of events there are. None while the file does not exist.
+
+        Size alone, never mtime: the liveness signal is an appended event, and a touch -- by
+        a command the model left running, say -- must not reset the stall clock.
+        """
         try:
-            stat = events.stat()
+            return events.stat().st_size
         except OSError:
             return None
-        return stat.st_size, stat.st_mtime_ns
 
-    @staticmethod
-    def _recorded(pids: Path) -> list[int]:
-        try:
-            lines = pids.read_text(encoding="utf-8").split()
-        except OSError:
-            return []
-        return [int(line) for line in lines if line.isdigit()]
+    def _drain(self, fd: int) -> None:
+        """Read whatever the attempt has reported since the last look."""
+        while True:
+            try:
+                chunk = os.read(fd, 65536)
+            except BlockingIOError:
+                return
+            if not chunk:
+                return
+            self._pending += chunk
+            *lines, self._pending = self._pending.split(b"\n")
+            for line in lines:
+                self._take(line.decode("utf-8", errors="replace"))
+
+    def _take(self, line: str) -> None:
+        kind, _, rest = line.partition(" ")
+        if kind == "pid" and rest.isdigit():
+            pid = int(rest)
+            if self.signallable(pid):
+                self._groups.add(pid)
+        elif kind == "result":
+            with contextlib.suppress(ValueError):
+                found = json.loads(rest)
+                if isinstance(found, dict) and "status" in found:
+                    self._verdict = found
+
+    def _forget_vanished(self) -> None:
+        self._groups = {group for group in self._groups if self._group_exists(group)}
 
     @staticmethod
     def _signal(group: int, sig: signal.Signals) -> None:
-        # A group that has already gone, or was never ours, is not an error: the point is
-        # that nothing of this attempt is left running, and a missing group is exactly that.
+        # A group that has already gone is not an error: the point is that nothing of this
+        # attempt is left running, and a missing group is exactly that.
         with contextlib.suppress(ProcessLookupError, PermissionError):
             os.killpg(group, sig)
 
     @staticmethod
-    def _alive(group: int) -> bool:
+    def _group_exists(group: int) -> bool:
         try:
             os.killpg(group, 0)
-        except ProcessLookupError:
+        except (ProcessLookupError, PermissionError):
+            # PermissionError: it exists, but it is not ours, so it is not the attempt's.
             return False
-        except PermissionError:
-            return True
         return True
 
     @staticmethod
@@ -362,9 +454,6 @@ class LaneAttempts:
         state = self._lane / ".qwenstorm" / "attempts"
         state.mkdir(parents=True, exist_ok=True)
         events = self._lane / ".qwenloop" / "runs" / run_id / "events.jsonl"
-        pids, result = state / f"{attempt}.pids", state / f"{attempt}.result.json"
-        for stale in (pids, result):
-            stale.unlink(missing_ok=True)
         spec = state / f"{attempt}.json"
         spec.write_text(
             json.dumps(
@@ -373,8 +462,6 @@ class LaneAttempts:
                     "run_id": run_id,
                     "plan": plan,
                     "events": str(events),
-                    "pids": str(pids),
-                    "result": str(result),
                     "parent_pid": os.getpid(),
                     "poll_seconds": self._limits.poll_seconds,
                 },
@@ -387,12 +474,11 @@ class LaneAttempts:
             self._child_argv(spec),
             cwd=self._lane,
             events=events,
-            pids=pids,
             budget_seconds=remaining if by_lane else self._limits.attempt_seconds,
         )
         record: dict[str, Any] = {"attempt": attempt, "run_id": run_id}
         if outcome.reason == "exited":
-            verdict = self._verdict(result)
+            verdict = outcome.verdict
             if verdict is None:
                 record["status"] = "crashed"
                 record["error"] = (
@@ -407,14 +493,6 @@ class LaneAttempts:
         self._record_terminal(events, record, outcome)
         self._report(attempt, outcome, by_lane)
         return record
-
-    @staticmethod
-    def _verdict(result: Path) -> dict[str, Any] | None:
-        try:
-            found = json.loads(result.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return None
-        return found if isinstance(found, dict) and "status" in found else None
 
     @staticmethod
     def _read(events: Path) -> list[dict[str, Any]]:
@@ -500,21 +578,26 @@ class LaneAttempts:
 
 
 class ChildGuard:
-    """The attempt child's half: record what escapes its group, and die with its parent.
+    """The attempt child's half: report what escapes its group, and die with its parent.
+
+    It writes to the private channel the parent handed it (see the module docstring), which
+    it makes non-inheritable first, so no command the model runs can write to it.
 
     `record_escaping_subprocesses` wraps `asyncio.create_subprocess_exec` -- the call
     qwenloop's shell tool makes -- so every subprocess started in a new session has its pid
-    appended to the pids file the watchdog reads. Only those: a subprocess in the child's
-    own group is already reached by the group kill.
+    reported the moment it exists. Only those: a subprocess in the child's own group is
+    already reached by the group kill. `report` sends the attempt's verdict the same way.
 
     `die_with(parent_pid)` covers the case the watchdog cannot: the lane itself killed with
     SIGKILL. The child is in a session of its own, so it would otherwise run on unwatched,
     and `storm-queue.sh` would wait on it for as long as it hung.
     """
 
-    def __init__(self, pids: Path, poll_seconds: float) -> None:
-        self._pids = pids
+    def __init__(self, fd: int, poll_seconds: float) -> None:
+        self._fd = fd
         self._poll = poll_seconds
+        self._started: list[int] = []
+        os.set_inheritable(fd, False)
 
     def record_escaping_subprocesses(self) -> None:
         original = asyncio.create_subprocess_exec
@@ -522,23 +605,30 @@ class ChildGuard:
         async def recording(*args: Any, **kwargs: Any) -> asyncio.subprocess.Process:
             process = await original(*args, **kwargs)
             if kwargs.get("start_new_session"):
-                self._record(process.pid)
+                self._started.append(process.pid)
+                self._send(f"pid {process.pid}")
             return process
 
         asyncio.create_subprocess_exec = recording  # type: ignore[assignment]
 
+    def report(self, verdict: dict[str, Any]) -> None:
+        self._send("result " + json.dumps(verdict))
+
     def die_with(self, parent_pid: int) -> None:
         threading.Thread(target=self._watch, args=(parent_pid,), daemon=True).start()
 
-    def _record(self, pid: int) -> None:
-        with self._pids.open("a", encoding="utf-8") as stream:
-            stream.write(f"{pid}\n")
+    def _send(self, line: str) -> None:
+        # A parent that has gone has nobody to tell; die_with deals with that case.
+        with contextlib.suppress(OSError):
+            os.write(self._fd, (line + "\n").encode("utf-8"))
 
     def _watch(self, parent_pid: int) -> None:
         while os.getppid() == parent_pid:
             time.sleep(self._poll)
-        for group in AttemptWatchdog._recorded(self._pids):
-            AttemptWatchdog._signal(group, signal.SIGTERM)
+        for group in self._started:
+            with contextlib.suppress(OSError):
+                if group > 1 and os.getsid(group) == group:
+                    AttemptWatchdog._signal(group, signal.SIGTERM)
         if os.getpgrp() == os.getpid():  # only ever our own session's group
             AttemptWatchdog._signal(os.getpid(), signal.SIGTERM)
         os._exit(1)

@@ -16,6 +16,7 @@ storm.toml `[lane]`, so one hung attempt can no longer hang the storm.
 import argparse
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -24,7 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "integration/src/vibey_runners/qwen/src"))
 
 import storm_paths
-from lane_watchdog import ChildGuard, LaneAttempts, LaneLimits
+from lane_watchdog import REPORT_FD_ENV, ChildGuard, LaneAttempts, LaneLimits
 from qwenloop.application.storm import build_plan
 from qwenloop.cli.app import _load_config, _run_plan, _server_for, _tracked_repository_context
 from qwenloop.domain.model import RepoItem, RunStatus
@@ -84,13 +85,14 @@ def run_attempt(spec_path: Path) -> int:
     one can cancel -- so an attempt is a process of its own that the parent can stop.
     """
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
-    guard = ChildGuard(Path(spec["pids"]), float(spec["poll_seconds"]))
+    # Popped, not read: the commands this attempt starts inherit its environment, and the
+    # report channel is for the attempt alone.
+    guard = ChildGuard(int(os.environ.pop(REPORT_FD_ENV)), float(spec["poll_seconds"]))
     guard.record_escaping_subprocesses()
     if "parent_pid" in spec:
         guard.die_with(int(spec["parent_pid"]))
     config = _load_config()
     server, profile = _server_for(config)
-    result = Path(spec["result"])
     try:
         state = asyncio.run(
             _run_plan(
@@ -108,9 +110,9 @@ def run_attempt(spec_path: Path) -> int:
         # The storm treats these as "unavailable" and stops. A lane keeps the worktree and
         # spends its next attempt instead: qwenloop's chat call has a fixed 300 s read
         # timeout, which a long prompt on a laptop can exceed without anything being wrong.
-        result.write_text(json.dumps({"status": "unavailable", "error": str(exc)[:300]}))
+        guard.report({"status": "unavailable", "error": str(exc)[:300]})
         return 0
-    result.write_text(json.dumps({"status": state.status.value, "turns": state.turns}))
+    guard.report({"status": state.status.value, "turns": state.turns})
     return 0
 
 

@@ -68,19 +68,24 @@ PATIENT = LaneLimits(
 
 
 def child(tmp_path: Path, body: str) -> list[str]:
-    """argv for a fake attempt: `body` runs with EVENTS and PIDS bound to the run's files."""
+    """argv for a fake attempt. `body` runs with the run's EVENTS file, `event()` to append to
+    it, and the private report channel the real child uses: `record(pid)` for a subprocess
+    it started in a new session, `verdict(...)` for its result."""
     script = tmp_path / f"child-{time.monotonic_ns()}.py"
     script.write_text(
         "import json, os, subprocess, sys, time\n"
         "from pathlib import Path\n"
         "spec = json.loads(Path(sys.argv[1]).read_text())\n"
         "EVENTS = Path(spec['events'])\n"
-        "PIDS = Path(spec['pids'])\n"
-        "RESULT = Path(spec['result'])\n"
+        f"FD = int(os.environ.pop({lane_watchdog.REPORT_FD_ENV!r}))\n"
         "EVENTS.parent.mkdir(parents=True, exist_ok=True)\n"
         "def event(kind, **more):\n"
         "    with EVENTS.open('a') as stream:\n"
         "        stream.write(json.dumps({'type': kind, **more}) + '\\n')\n"
+        "def record(pid):\n"
+        "    os.write(FD, f'pid {pid}\\n'.encode())\n"
+        "def verdict(**found):\n"
+        "    os.write(FD, ('result ' + json.dumps(found) + '\\n').encode())\n"
         + textwrap.dedent(body),
         encoding="utf-8",
     )
@@ -157,7 +162,7 @@ def test_storm_toml_declares_every_limit(tmp_path: Path) -> None:
     assert LaneLimits.declared(tmp_path) == LaneLimits(60.0, 120.0, 30.0, 0.5, 2.0)
 
 
-@pytest.mark.parametrize("value", ['"soon"', "0", "-5", "true"])
+@pytest.mark.parametrize("value", ['"soon"', "0", "-5", "true", "inf", "-inf", "nan"])
 def test_a_limit_that_is_not_a_positive_number_is_refused(tmp_path: Path, value: str) -> None:
     """A limit of zero would kill every attempt at once; a word would silently mean the
     default. Either is a decision the operator did not make, so it stops the lane (10.f)."""
@@ -175,7 +180,7 @@ def test_an_attempt_that_finishes_is_left_alone(tmp_path: Path) -> None:
         """
         event('turn.completed', turn=1)
         event('completed', turn=1)
-        RESULT.write_text(json.dumps({'status': 'completed', 'turns': 1}))
+        verdict(status='completed', turns=1)
         """,
         limits=PATIENT,
     )
@@ -196,8 +201,7 @@ def test_a_silent_run_is_stalled_and_its_whole_process_tree_stopped(tmp_path: Pa
         f"""
         event('turn.completed', turn=1, ended_at='2026-09-23T09:17:39.098Z')
         tool = subprocess.Popen(['sleep', '600'], start_new_session=True)
-        with PIDS.open('a') as stream:
-            stream.write(f'{{tool.pid}}\\n')
+        record(tool.pid)
         Path({str(marker)!r}).write_text(str(tool.pid))
         same_group = subprocess.Popen(['sleep', '600'])
         Path({str(marker)!r} + '.group').write_text(str(same_group.pid))
@@ -253,7 +257,7 @@ def test_a_run_that_already_ended_is_not_given_a_second_verdict(tmp_path: Path) 
         tmp_path,
         """
         event('failed', reason='turn limit or empty response')
-        RESULT.write_text(json.dumps({'status': 'failed', 'turns': 60}))
+        verdict(status='failed', turns=60)
         """,
         limits=PATIENT,
     )
@@ -275,7 +279,7 @@ def test_an_attempt_that_dies_without_a_verdict_is_recorded_as_crashed(tmp_path:
 def test_an_unavailable_model_is_recorded_as_the_run_outcome(tmp_path: Path) -> None:
     lane, attempts = runner(
         tmp_path,
-        "RESULT.write_text(json.dumps({'status': 'unavailable', 'error': 'timed out'}))\n",
+        "verdict(status='unavailable', error='timed out')\n",
         limits=PATIENT,
     )
     record = attempts.run(1, "plan")
@@ -311,6 +315,115 @@ def test_a_signalled_lane_stops_its_attempt_instead_of_orphaning_it(tmp_path: Pa
     (line,) = (tmp_path / "progress.log").read_text().splitlines()
     assert " stopped a-lane #504: attempt 1/3 was interrupted by a signal" in line
     assert signal.getsignal(signal.SIGTERM) == before  # the previous disposition is back
+
+
+def test_a_pid_planted_in_the_lane_is_never_signalled(tmp_path: Path) -> None:
+    """The lane tree is the model's to write -- its shell tool runs any command there. A pid
+    planted anywhere in it must not reach `killpg`: only what the attempt reports over its
+    private channel is recorded, so a same-user process outside the attempt survives."""
+    victim = subprocess.Popen(["sleep", "600"], start_new_session=True)
+    try:
+        lane, attempts = runner(
+            tmp_path,
+            f"""
+            for where in [Path('.qwenstorm/attempts/1.pids'), Path('pids'), EVENTS.parent / 'pids']:
+                where.parent.mkdir(parents=True, exist_ok=True)
+                where.write_text('{victim.pid}\\n')
+            time.sleep(600)
+            """,
+        )
+        record = attempts.run(1, "plan")
+        assert record["status"] == "stalled"
+        assert victim.poll() is None, "a pid planted in the lane was signalled"
+    finally:
+        victim.kill()
+        victim.wait()
+
+
+def test_a_reported_pid_is_signalled_only_while_it_is_an_attempt_session() -> None:
+    """Even over the private channel, nothing outside what an attempt can have started is
+    signalled: not init, not a non-positive pid, not this process or its own group, not a
+    process that leads no session of its own, and not a group that no longer exists."""
+    watchdog = lane_watchdog.AttemptWatchdog(FAST)
+    for refused in (-1, 0, 1, os.getpid(), os.getpgrp()):
+        assert not watchdog.signallable(refused), refused
+    same_session = subprocess.Popen(["sleep", "600"])
+    own_session = subprocess.Popen(["sleep", "600"], start_new_session=True)
+    try:
+        assert not watchdog.signallable(same_session.pid)
+        assert watchdog.signallable(own_session.pid)
+    finally:
+        for process in (same_session, own_session):
+            process.kill()
+            process.wait()
+    assert not watchdog.signallable(own_session.pid)
+
+
+def test_a_crashed_attempt_leaves_no_tool_running_into_the_next_one(tmp_path: Path) -> None:
+    """An attempt that dies without a verdict (a crash, an OOM kill) never reaches the
+    watchdog's stop, and the commands it started in sessions of their own would keep
+    changing the lane while the next attempt starts. They are stopped before any retry."""
+    marker = tmp_path / "tool.pid"
+    _, attempts = runner(
+        tmp_path,
+        f"""
+        tool = subprocess.Popen(['sleep', '600'], start_new_session=True)
+        record(tool.pid)
+        Path({str(marker)!r}).write_text(str(tool.pid))
+        os._exit(9)
+        """,
+        limits=PATIENT,
+    )
+    record = attempts.run(1, "plan")
+    assert record["status"] == "crashed"
+    assert gone(int(marker.read_text())), "a crashed attempt's tool outlived it"
+
+
+def test_touching_the_events_file_is_not_progress(tmp_path: Path) -> None:
+    """Only appended bytes are liveness. A stalled attempt -- or a command the model left
+    running -- that merely touches events.jsonl must not reset the stall clock."""
+    _, attempts = runner(
+        tmp_path,
+        """
+        event('turn.completed', turn=1)
+        while True:
+            os.utime(EVENTS)
+            time.sleep(0.05)
+        """,
+    )
+    record = attempts.run(1, "plan")
+    assert record["status"] == "stalled"
+
+
+def test_every_class_honours_the_interface_declared_beside_it(tmp_path: Path) -> None:
+    """ADR-0016 / 9.b: each class has a Protocol beside it, and each conforms to it."""
+    declared = _load("lane_watchdog_interface", "interfaces/lane_watchdog_interface.py")
+    limits = LaneLimits.declared(tmp_path)
+    outcome = lane_watchdog.AttemptOutcome("exited", 0, 1.0, 0.5, None, None)
+    attempts = lane_watchdog.LaneAttempts(
+        tmp_path,
+        slug="s",
+        issue=1,
+        max_attempts=1,
+        limits=limits,
+        progress_log=tmp_path / "progress.log",
+        child_argv=lambda spec: [],
+    )
+    read_end, write_end = os.pipe()
+    try:
+        guard = lane_watchdog.ChildGuard(write_end, 1.0)
+        pairs = [
+            (limits, declared.LaneLimitsInterface),
+            (outcome, declared.AttemptOutcomeInterface),
+            (lane_watchdog.AttemptWatchdog(limits), declared.AttemptWatchdogInterface),
+            (attempts, declared.LaneAttemptsInterface),
+            (guard, declared.ChildGuardInterface),
+        ]
+        for instance, interface in pairs:
+            assert isinstance(instance, interface), interface.__name__
+    finally:
+        os.close(read_end)
+        os.close(write_end)
 
 
 # --- progress.log says it in words -----------------------------------------------------------
@@ -427,6 +540,8 @@ def test_the_attempt_child_runs_the_plan_and_records_escaping_pids(
 
     monkeypatch.setattr(qwenlane, "_run_plan", fake_run_plan)
     monkeypatch.setattr(qwenlane, "_server_for", lambda config: (None, None))
+    read_end, write_end = os.pipe()
+    monkeypatch.setenv(lane_watchdog.REPORT_FD_ENV, str(write_end))
     spec = tmp_path / "spec.json"
     spec.write_text(
         json.dumps(
@@ -434,10 +549,7 @@ def test_the_attempt_child_runs_the_plan_and_records_escaping_pids(
                 "lane": str(lane),
                 "run_id": "run-1",
                 "plan": "the plan",
-                "pids": str(tmp_path / "pids"),
-                "result": str(tmp_path / "result.json"),
                 "events": str(lane / ".qwenloop/runs/run-1/events.jsonl"),
-                "parent_pid": os.getppid(),
                 "poll_seconds": 60,
             }
         )
@@ -447,9 +559,12 @@ def test_the_attempt_child_runs_the_plan_and_records_escaping_pids(
         assert qwenlane.run_attempt(spec) == 0
     finally:
         asyncio.create_subprocess_exec = original
-    assert json.loads((tmp_path / "result.json").read_text()) == {
-        "status": "completed",
-        "turns": 4,
-    }
+    os.close(write_end)
+    with os.fdopen(read_end) as stream:
+        lines = stream.read().splitlines()
+    assert lines == [f"pid {seen['pid']}", 'result {"status": "completed", "turns": 4}']
     assert (seen["cwd"], seen["run_id"], seen["text"]) == (lane, "run-1", "the plan")
-    assert (tmp_path / "pids").read_text().split() == [str(seen["pid"])]
+    # The channel is the child's alone: nothing it started in a new session inherits it,
+    # and nothing about it is left in the environment those commands see.
+    assert lane_watchdog.REPORT_FD_ENV not in os.environ
+    assert not list(lane.rglob("*.pids"))
