@@ -8,6 +8,20 @@ from typing import Any
 
 EXIT_CODE_WIND_DOWN = 75
 DONE_MARKER = "QWENLOOP_TASK_FULLY_COMPLETE"
+#: Every tool a run can call, in the order the model is told them. The one list the tool
+#: schema, the dispatcher and the prompts are all checked against, so a tool cannot be
+#: advertised without being callable or callable without being advertised. `search`,
+#: `find` and `open_file` exist because gpt-oss:20b called them 431 times across 82 storm
+#: runs while the dispatcher answered "unknown tool" (18% of every tool call it made).
+CODING_TOOL_NAMES: tuple[str, ...] = (
+    "read_file",
+    "write_file",
+    "edit_file",
+    "shell",
+    "search",
+    "find",
+    "open_file",
+)
 
 
 class Backend(StrEnum):

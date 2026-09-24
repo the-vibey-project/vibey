@@ -9,8 +9,10 @@ from qwenloop.domain.config import (
     DEFAULT_ENDPOINT_MODEL,
     DEFAULT_MAX_EMPTY_REPLY_RETRIES,
     DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+    DEFAULT_SKIP_DIRS,
     QwenConfig,
     QwenConfigParser,
+    ToolLimits,
 )
 from qwenloop.domain.interfaces import (
     ChatChunkInterface,
@@ -44,6 +46,45 @@ def test_config_validation() -> None:
         parser.parse({"backend": "unknown"})
     with pytest.raises(ValueError, match="positive"):
         parser.parse({"endpoint_timeout_seconds": 0})
+
+
+def test_tool_limits_default_and_come_from_the_tools_table() -> None:
+    default = parser.parse({})
+    assert isinstance(default, QwenConfigInterface)
+    assert default.tools == ToolLimits()
+    assert default.tools.skip_dirs == DEFAULT_SKIP_DIRS
+    assert ".git" in DEFAULT_SKIP_DIRS
+    configured = parser.parse(
+        {"tools": {"max_search_matches": 7, "max_read_chars": "50", "skip_dirs": ["vendor"]}}
+    )
+    assert configured.tools == ToolLimits(
+        max_search_matches=7, max_read_chars=50, skip_dirs=("vendor",)
+    )
+    assert default.tools.search_timeout_seconds == 10.0
+    timed = parser.parse({"tools": {"search_timeout_seconds": 2, "max_skipped_examples": 3}})
+    assert (timed.tools.search_timeout_seconds, timed.tools.max_skipped_examples) == (2.0, 3)
+
+
+@pytest.mark.parametrize(
+    ("tools", "message"),
+    [
+        ("100", "tools must be a table"),
+        ({"max_matches": 5}, "unknown qwenloop tools key\\(s\\): max_matches"),
+        ({"max_find_results": 0}, "tools.max_find_results must be positive"),
+        ({"max_line_chars": -1}, "tools.max_line_chars must be positive"),
+        ({"skip_dirs": ".git"}, "tools.skip_dirs must be a list"),
+        ({"skip_dirs": [".git", 3]}, "tools.skip_dirs must be a list"),
+        ({"skip_dirs": [""]}, "tools.skip_dirs must be a list"),
+        ({"max_skipped_examples": 0}, "tools.max_skipped_examples must be positive"),
+        ({"search_timeout_seconds": 0}, "tools.search_timeout_seconds must be a positive"),
+        ({"search_timeout_seconds": float("inf")}, "tools.search_timeout_seconds must be a"),
+        ({"search_timeout_seconds": float("nan")}, "tools.search_timeout_seconds must be a"),
+        ({"search_timeout_seconds": "soon"}, "tools.search_timeout_seconds must be a"),
+    ],
+)
+def test_tool_limits_refuse_what_they_cannot_honour(tools: object, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        parser.parse({"tools": tools})
 
 
 def test_config_refuses_unknown_keys_instead_of_ignoring_them() -> None:

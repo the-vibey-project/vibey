@@ -138,6 +138,27 @@ The API key is read only from the environment: it never goes in a file or on a c
 line. `portable_profile`, `nvidia_profile`, and `idle_timeout_seconds` are checked for
 validity, but nothing uses them yet.
 
+A run's model can call `read_file`, `write_file`, `edit_file`, `shell`, `search` (file
+contents, literal unless `regex` is true), `find` (file names, by glob or substring) and
+`open_file` (`read_file` by the name gpt-oss reaches for, with an optional line range).
+Every path stays inside the run's worktree. An unknown tool name is answered with the list
+of the ones that exist. How much one call may read or return is set in the config file's
+`[tools]` table, and a limit the model asks for can only narrow these. A `search` that
+could not read a candidate file (too large, binary, not UTF-8, unreadable) says so, and
+marks its answer `complete: false`. A `regex` search runs in a child process that is killed
+at `search_timeout_seconds`, because a pattern can backtrack catastrophically:
+
+| `[tools]` key | Bounds | Default |
+|---|---|---|
+| `max_read_chars` | characters `read_file` / `open_file` return | `200000` |
+| `max_search_matches` | matching lines `search` returns | `100` |
+| `max_find_results` | paths `find` returns | `200` |
+| `max_line_chars` | characters kept of one matching line | `240` |
+| `max_file_bytes` | larger files are skipped by `search` | `2000000` |
+| `max_skipped_examples` | skipped files `search` names (it always counts them all) | `5` |
+| `search_timeout_seconds` | how long a `regex` search may run before it is killed | `10` |
+| `skip_dirs` | directory names `search` and `find` never enter | `.git`, `.venv`, `node_modules`, caches, `.qwenloop` |
+
 Ollama must be able to hold `context_window` tokens. Set its own context length
 (`OLLAMA_CONTEXT_LENGTH`, or the model's `num_ctx`) to at least `context_window`, or
 lower `context_window` to match. Otherwise Ollama quietly drops the start of a long

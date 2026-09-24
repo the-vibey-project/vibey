@@ -8,7 +8,10 @@ import pytest
 
 from qwenloop.application.interfaces import AutonomousRunnerInterface
 from qwenloop.application.runner import (
+    _CONTINUE_PROMPT,
     _EMPTY_REPLY_PROMPT,
+    _INVALID_COMPLETION_PROMPT,
+    _TOOL_CALL_RETRY_PROMPT,
     AutonomousRunner,
     _has_cdd_evidence,
     _render_native_verdict,
@@ -18,6 +21,7 @@ from qwenloop.application.runner import (
 )
 from qwenloop.domain.config import QwenConfig
 from qwenloop.domain.model import (
+    CODING_TOOL_NAMES,
     Backend,
     ChatChunk,
     ChatMessage,
@@ -282,6 +286,18 @@ def test_system_prompt_marks_verdict_as_text_not_a_tool(tmp_path: Path) -> None:
     prompt = _system_prompt(tmp_path)
     assert "There is no qwenloop-verdict tool" in prompt
     assert "plain text in your final assistant response" in prompt
+
+
+def test_every_prompt_names_every_callable_tool(tmp_path: Path) -> None:
+    # A prompt that lists fewer tools than the schema tells the model the rest do not exist.
+    listed = ", ".join(CODING_TOOL_NAMES)
+    for prompt in (
+        _system_prompt(tmp_path),
+        _CONTINUE_PROMPT,
+        _INVALID_COMPLETION_PROMPT,
+        _TOOL_CALL_RETRY_PROMPT,
+    ):
+        assert listed in prompt
 
 
 def test_cdd_evidence_requires_all_delivery_fields_inside_one_verdict() -> None:
