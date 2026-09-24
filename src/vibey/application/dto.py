@@ -397,7 +397,8 @@ class EffortChoice:
 @dataclass(frozen=True, slots=True)
 class LoopEngine:
     """One engine as `vibey loops` reports it: its descriptor, how it stands right now,
-    every effort it can be asked for, and the argv template of its `run`."""
+    every effort it can be asked for, and the argv template of its `run`. A `repealed`
+    engine (canon 8.b) stays listed and is never offered for selection."""
 
     descriptor: EngineDescriptor
     enabled: bool
@@ -405,12 +406,14 @@ class LoopEngine:
     default_model: str | None
     efforts: tuple[EffortRun, ...]
     run: tuple[str, ...]
+    repealed: bool = False
     notes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
 class LoopView:
-    """One of the two loops (8.c) and every engine its tier holds."""
+    """One of the two loops (8.c) and every engine its tier holds. `by_effort` offers only
+    the engines not repealed."""
 
     loop: Loop
     tier: EngineTier

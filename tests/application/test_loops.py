@@ -101,6 +101,24 @@ def test_the_report_names_the_efforts_the_default_loop_the_paid_default_and_the_
     assert report.ladder.rotates_when_effort_rises is True
 
 
+def test_a_repealed_engine_stays_listed_and_nothing_selects_it_by_effort() -> None:
+    """Canon 8.b repeals OpenCode from both loops: it is listed, for transparency, and left
+    out of every by-effort view, so no consumer of `by_effort` picks it (amendment 5)."""
+    engines = [
+        _descriptor(EngineId.OPENCODE, tier=EngineTier.LOCAL),
+        _descriptor(EngineId.QWENLOOP, tier=EngineTier.LOCAL),
+    ]
+
+    sovereign = LoopCatalog().report([_context(d) for d in engines]).loops[0]
+
+    assert [(e.descriptor.engine_id, e.repealed) for e in sovereign.engines] == [
+        (EngineId.OPENCODE, True),
+        (EngineId.QWENLOOP, False),
+    ]
+    for effort, choices in sovereign.by_effort.items():
+        assert [choice.engine_id for choice in choices] == [EngineId.QWENLOOP], effort
+
+
 def test_a_loop_with_no_engines_is_still_listed_with_an_empty_view_per_effort() -> None:
     report = LoopCatalog().report([_context(_descriptor(EngineId.CLAUDELOOP))])
 
@@ -127,7 +145,7 @@ def test_the_state_the_resolvers_gave_passes_through_untouched() -> None:
         "gpt-oss:20b",
     )
     assert engine.run == ("{binary}", "run", "{plan}")
-    assert engine.notes == ()
+    assert (engine.repealed, engine.notes) == (False, ())
 
 
 def test_a_model_flag_names_the_model() -> None:
@@ -196,14 +214,14 @@ def test_by_effort_puts_exact_then_higher_then_lower_and_breaks_ties_by_price_th
         _descriptor(EngineId.CODEXLOOP, cost_out=0.5, projection=achieving(Effort.MAX)),
         _descriptor(EngineId.CURSORLOOP, cost_out=0.1, projection=achieving(Effort.LOW)),
         _descriptor(EngineId.CLAUDELOOP, cost_out=1.0, projection=achieving(Effort.STANDARD)),
-        _descriptor(EngineId.OPENCODE, cost_out=1.0, projection=achieving(Effort.STANDARD)),
+        _descriptor(EngineId.QWENLOOP, cost_out=1.0, projection=achieving(Effort.STANDARD)),
     ]
 
     paidloop = LoopCatalog().report([_context(d) for d in engines]).loops[1]
 
     assert paidloop.by_effort[Effort.STANDARD] == (
         EffortChoice(EngineId.CLAUDELOOP, None, Effort.STANDARD),
-        EffortChoice(EngineId.OPENCODE, None, Effort.STANDARD),
+        EffortChoice(EngineId.QWENLOOP, None, Effort.STANDARD),
         EffortChoice(EngineId.AGYLOOP, None, Effort.STANDARD),
         EffortChoice(EngineId.CODEXLOOP, None, Effort.MAX),
         EffortChoice(EngineId.CURSORLOOP, None, Effort.LOW),
@@ -215,6 +233,7 @@ def test_an_engine_the_canon_repeals_is_reported_as_the_code_says_with_a_note() 
 
     (engine,) = LoopCatalog().report([_context(opencode)]).loops[0].engines
 
+    assert engine.repealed is True
     assert engine.notes == (
         "sub-doctrine 8.b repeals opencode from both loops; reported here as its descriptor "
         "says, tier local",

@@ -8,6 +8,7 @@ command must not notice.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -17,11 +18,18 @@ from typer.testing import CliRunner
 from vibey.application.dto import EngineContext
 from vibey.application.loops import LoopCatalog
 from vibey.cli.interfaces.loops_interface import LoopsCommandInterface, LoopsPresenterInterface
-from vibey.cli.loops import LOOPS, LOOPS_PRESENTER, LoopsCommand, LoopsPresenter
+from vibey.cli.loops import (
+    LOOPS,
+    LOOPS_PRESENTER,
+    MALFORMED_SETTING,
+    LoopsCommand,
+    LoopsPresenter,
+)
 from vibey.cli.main import app
 from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineDescriptor, EngineId, EngineInvocation, EngineTier
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP
+from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment, LocalEngineSettings
 
 runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
 
@@ -34,7 +42,9 @@ CLEAN: dict[str, str | None] = {
     "VIBEY_CLAUDELOOP_LOCAL_PROFILE": None,
     "VIBEY_OLLAMA_URL": None,
     "VIBEY_OLLAMA_MODEL": None,
+    "VIBEY_OLLAMA_TIMEOUT": None,
     "QWENLOOP_MODEL": None,
+    "QWENLOOP_BASE_URL": None,
 }
 ENGINE_KEYS = [
     "engine_id",
@@ -42,6 +52,7 @@ ENGINE_KEYS = [
     "state_dir",
     "enabled",
     "switch",
+    "repealed",
     "cost_per_mtok_in",
     "cost_per_mtok_out",
     "default_model",
@@ -58,6 +69,15 @@ ENGINE_KEYS = [
     "notes",
 ]
 EFFORTS = ["TRIVIAL", "LOW", "STANDARD", "HIGH", "MAX"]
+OWN_CHOICE = "qwenloop's own configuration chooses the model"
+ENDPOINT = {"VIBEY_OLLAMA_URL": "http://127.0.0.1:11434"}
+
+# The golden: the document in one fixed environment -- every variable above cleared, then
+# qwenloop switched on and pointed at a local endpoint -- committed so the VS Code
+# extension's parser is tested against exactly what this command prints (amendment 7).
+GOLDEN = Path(__file__).parent / "golden" / "vibey-loops.json"
+GOLDEN_ENVIRONMENT = {"VIBEY_FEATURE_QWENLOOP": "1", **ENDPOINT}
+UPDATE_GOLDENS = "VIBEY_UPDATE_GOLDENS"
 
 
 @pytest.fixture(autouse=True)
@@ -167,20 +187,21 @@ def test_qwenloop_reads_as_the_contract_shows_it() -> None:
         "effort": "TRIVIAL",
         "argv": ["--max-turns", "8"],
         "achieved": "TRIVIAL",
-        "model": "gpt-oss:20b",
-        "notes": "",
+        "model": None,
+        "notes": OWN_CHOICE,
     }
     assert (qwenloop["binary"], qwenloop["state_dir"]) == ("qwenloop", ".qwenloop")
     assert (qwenloop["enabled"], qwenloop["switch"]) == (False, "VIBEY_FEATURE_QWENLOOP")
+    assert qwenloop["repealed"] is False
     assert (qwenloop["cost_per_mtok_in"], qwenloop["cost_per_mtok_out"]) == (0.0, 0.0)
-    assert qwenloop["default_model"] == "gpt-oss:20b"
+    assert qwenloop["default_model"] is None
     assert qwenloop["capabilities"]["images"] is False
     assert qwenloop["capabilities"]["plugins"] == "skills-context"
     assert "read_file" in qwenloop["capabilities"]["evidence"]["images"]
     assert qwenloop["controls"] == {
         "stop": ["stop", "{run_id}", "--cwd", "{cwd}"],
         "wind_down": ["wind-down", "{run_id}", "--cwd", "{cwd}"],
-        "prompt": None,
+        "prompt": ["prompt", "{run_id}", "{text}", "--cwd", "{cwd}"],
     }
     assert qwenloop["events"] == {
         "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
@@ -223,15 +244,52 @@ def test_a_paid_engine_is_listed_as_on_with_no_switch_and_its_model_chooser_note
     assert _engine(document, "agyloop")["controls"]["wind_down"] is None
 
 
-def test_opencode_is_reported_as_the_code_says_and_the_canon_is_noted() -> None:
-    opencode = _engine(_document(), "opencode")
+def test_only_a_runner_that_acts_on_a_mid_run_prompt_offers_a_prompt_control() -> None:
+    """cursorloop's CLI writes a `prompt` control, but its runner reads its inbox only while
+    it waits, acts on stop and wind-down alone, and drops the rest unread (amendment 3).
+    qwenloop's runner reads one at each turn boundary, since #1133."""
+    document = _document()
 
+    prompts = {
+        engine["engine_id"]: engine["controls"]["prompt"] is not None
+        for loop in document["loops"]
+        for engine in loop["engines"]
+    }
+    assert prompts == {
+        "opencode": False,
+        "qwenloop": True,
+        "claudeloop-local": True,
+        "claudeloop": True,
+        "codexloop": True,
+        "cursorloop": False,
+        "agyloop": True,
+    }
+    cursorloop = _engine(document, "cursorloop")
+    assert cursorloop["controls"]["stop"] == ["stop", "--run-id", "{run_id}", "--cwd", "{cwd}"]
+    assert "prompt" not in cursorloop["capabilities"]["evidence"]["paste_text"]
+
+
+def test_opencode_is_reported_as_the_code_says_and_the_canon_is_noted() -> None:
+    document = _document()
+    opencode = _engine(document, "opencode")
+
+    assert opencode["repealed"] is True
     assert opencode["notes"] == [
         "sub-doctrine 8.b repeals opencode from both loops; reported here as its descriptor "
         "says, tier local"
     ]
     assert opencode["controls"] == {"stop": None, "wind_down": None, "prompt": None}
     assert opencode["events"]["envelope"] == "event_type"
+    others = [e for loop in document["loops"] for e in loop["engines"] if e is not opencode]
+    assert {engine["repealed"] for engine in others} == {False}
+
+
+def test_a_repealed_engine_is_never_offered_by_effort() -> None:
+    """Listed for transparency, and out of every by-effort view, so neither the extension's
+    auto mode nor any other consumer of `by_effort` selects it (amendment 5)."""
+    for loop in _document()["loops"]:
+        for effort, choices in loop["by_effort"].items():
+            assert "opencode" not in [choice["engine_id"] for choice in choices], effort
 
 
 def test_by_effort_lists_exact_matches_first() -> None:
@@ -239,13 +297,11 @@ def test_by_effort_lists_exact_matches_first() -> None:
 
     assert sovereign["by_effort"]["STANDARD"] == [
         {"engine_id": "claudeloop-local", "model": None, "achieved": "STANDARD"},
-        {"engine_id": "opencode", "model": None, "achieved": "STANDARD"},
-        {"engine_id": "qwenloop", "model": "gpt-oss:20b", "achieved": "STANDARD"},
+        {"engine_id": "qwenloop", "model": None, "achieved": "STANDARD"},
     ]
-    assert [c["engine_id"] for c in sovereign["by_effort"]["MAX"]] == [
-        "qwenloop",
-        "claudeloop-local",
-        "opencode",
+    assert sovereign["by_effort"]["MAX"] == [
+        {"engine_id": "qwenloop", "model": None, "achieved": "MAX"},
+        {"engine_id": "claudeloop-local", "model": None, "achieved": "STANDARD"},
     ]
 
 
@@ -263,12 +319,33 @@ def test_claudeloop_local_is_listed_on_the_profile_it_would_run() -> None:
     assert local["switch"] == "VIBEY_FEATURE_CLAUDELOOP_LOCAL"
 
 
-def test_qwenloops_model_is_the_one_it_would_run() -> None:
-    assert _engine(_document(VIBEY_OLLAMA_MODEL="qwen3-coder"), "qwenloop")["default_model"] == (
-        "qwen3-coder"
+def _models(**env: str) -> tuple[str | None, set[str | None], set[str]]:
+    """qwenloop's default model, every effort's model, and every effort's notes."""
+    qwenloop = _engine(_document(**env), "qwenloop")
+    runs = qwenloop["efforts"]
+    return (
+        qwenloop["default_model"],
+        {run["model"] for run in runs},
+        {run["notes"] for run in runs},
     )
-    qwenloop = _engine(_document(QWENLOOP_MODEL="llama3.3"), "qwenloop")
-    assert {run["model"] for run in qwenloop["efforts"]} == {"llama3.3"}
+
+
+def test_qwenloops_model_mirrors_how_the_model_reaches_it() -> None:
+    """QWENLOOP_MODEL when set; else vibey's model only while VIBEY_OLLAMA_URL is set,
+    the one path by which it reaches the session; else none, and qwenloop's own
+    configuration chooses (amendment 4)."""
+    nothing = (None, {None}, {OWN_CHOICE})
+    assert _models() == nothing
+    assert _models(VIBEY_OLLAMA_MODEL="qwen3-coder") == nothing
+    assert _models(**ENDPOINT) == ("gpt-oss:20b", {"gpt-oss:20b"}, {""})
+    assert _models(**ENDPOINT, VIBEY_OLLAMA_MODEL="qwen3-coder") == (
+        "qwen3-coder",
+        {"qwen3-coder"},
+        {""},
+    )
+    assert _models(QWENLOOP_MODEL="llama3.3") == ("llama3.3", {"llama3.3"}, {""})
+    assert _models(**ENDPOINT, QWENLOOP_MODEL="llama3.3") == ("llama3.3", {"llama3.3"}, {""})
+    assert _models(**ENDPOINT, QWENLOOP_MODEL="  ") == nothing
 
 
 def test_environment_names_are_copied_and_never_their_values() -> None:
@@ -289,8 +366,14 @@ def test_the_table_says_what_each_effort_passes_and_how_to_switch_a_local_engine
 
     assert result.exit_code == 0, result.output
     lines = result.stdout.splitlines()
-    assert lines[0] == "sovereignloop (tier local): the default loop, always on"
-    assert "paidloop (tier paid): declared only: it runs when a paid engine is declared" in lines
+    assert lines[0] == (
+        "sovereignloop (tier local): the default loop by canon 8.b; a local engine runs only "
+        "while its switch is on"
+    )
+    assert (
+        "paidloop (tier paid): declared only by canon 8.b; the selector does not read a paid "
+        "declaration yet, and picks a paid engine whenever no local engine is eligible"
+    ) in lines
     assert any(line.split()[:1] == ["TRIVIAL"] and "max-turns 8" in line for line in lines)
     assert any("(no flags) -> STANDARD" in line for line in lines)
     assert (
@@ -299,8 +382,8 @@ def test_the_table_says_what_each_effort_passes_and_how_to_switch_a_local_engine
     ) in lines
     assert any(line.startswith("  note on opencode: sub-doctrine 8.b") for line in lines)
     assert lines[-1] == (
-        "A paid declaration reaches claudeloop unless it names another paid engine. "
-        "`vibey loops --json` has every engine's full facts."
+        "Canon 8.b names claudeloop the paid default; the selector does not apply it yet, and "
+        "rotates paid engines by weight. `vibey loops --json` has every engine's full facts."
     )
 
 
@@ -350,23 +433,81 @@ def test_a_loop_without_engines_says_so() -> None:
 
     lines = LoopsPresenter().lines(report)
 
-    assert lines[:2] == ["sovereignloop (tier local): the default loop, always on", "  no engines"]
+    assert lines[1] == "  no engines"
+    assert lines[0].startswith("sovereignloop (tier local): the default loop by canon 8.b")
 
 
-def test_the_command_reads_the_environment_and_directory_it_is_given(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    (tmp_path / "vibey.toml").write_text("[features]\nqwenloop = true\n")
-    command = LoopsCommand(environ={}, workdir=tmp_path)
+def test_the_command_asks_the_resolvers_it_is_given(capsys: pytest.CaptureFixture[str]) -> None:
+    """Built from interfaces: with its resolvers handed in, it reads neither the process's
+    environment nor `./vibey.toml`."""
+    settings = LocalEngineSettings(environ={}, config={"features": {"qwenloop": True}})
+    endpoint = LocalEndpointEnvironment({"QWENLOOP_MODEL": "llama3.3"})
 
-    command.run(as_json=True)
+    LoopsCommand(settings=settings, endpoint=endpoint).run(as_json=True)
 
     qwenloop = _engine(json.loads(capsys.readouterr().out), "qwenloop")
-    assert qwenloop["enabled"] is True
+    assert (qwenloop["enabled"], qwenloop["default_model"]) == (True, "llama3.3")
 
 
-def test_a_broken_local_endpoint_is_refused_as_the_worker_would_refuse_it() -> None:
-    result = runner.invoke(app, ["loops"], env={**CLEAN, "VIBEY_OLLAMA_URL": "ftp://nowhere"})
+SECRET = "s3cret-token"
+
+
+@pytest.mark.parametrize(
+    ("setting", "env", "toml"),
+    [
+        ("VIBEY_OLLAMA_URL", {"VIBEY_OLLAMA_URL": f"ftp://operator:{SECRET}@nowhere"}, ""),
+        ("VIBEY_OLLAMA_TIMEOUT", {**ENDPOINT, "VIBEY_OLLAMA_TIMEOUT": SECRET}, ""),
+        ("VIBEY_OLLAMA_TIMEOUT", {**ENDPOINT, "VIBEY_OLLAMA_TIMEOUT": "-424242"}, ""),
+        ("engines.claudeloop_local", {}, f'[engines]\nclaudeloop_local = "{SECRET}"\n'),
+    ],
+    ids=["url", "timeout-word", "timeout-negative", "vibey-toml"],
+)
+def test_a_malformed_setting_is_named_and_its_value_never_shown(
+    setting: str, env: dict[str, str], toml: str, tmp_path: Path
+) -> None:
+    """Exit 3 names the setting and never prints its value: a URL can carry `user:token@`,
+    and this message reaches a terminal, a log and a CI transcript (amendment 6)."""
+    if toml:
+        (tmp_path / "vibey.toml").write_text(toml)
+
+    result = runner.invoke(app, ["loops", "--json"], env={**CLEAN, **env})
 
     assert result.exit_code == 3
-    assert "Error:" in result.stderr and "VIBEY_OLLAMA_URL" in result.stderr
+    assert result.stderr.startswith(f"Error: {setting}: {MALFORMED_SETTING}")
+    for value in (SECRET, "424242"):
+        assert value not in result.stdout and value not in result.stderr
+
+
+# -- the golden ------------------------------------------------------------------------------
+
+
+def test_the_committed_golden_is_what_the_command_prints_in_its_fixed_environment() -> None:
+    """The VS Code extension's parser is tested against this file, so the producer and the
+    consumer cannot drift apart (amendment 7, sub-doctrine 12.e). After an intended change,
+    regenerate it and commit the diff with the change:
+
+        VIBEY_UPDATE_GOLDENS=1 uv run pytest tests/cli/test_loops_cli.py -k golden
+    """
+    result = runner.invoke(app, ["loops", "--json"], env={**CLEAN, **GOLDEN_ENVIRONMENT})
+    assert result.exit_code == 0, result.output
+
+    if os.environ.get(UPDATE_GOLDENS) == "1":
+        GOLDEN.parent.mkdir(exist_ok=True)
+        GOLDEN.write_text(result.stdout, encoding="utf-8")
+    assert GOLDEN.is_file(), f"{GOLDEN} is missing; regenerate it with {UPDATE_GOLDENS}=1"
+    assert result.stdout == GOLDEN.read_text(encoding="utf-8"), (
+        f"`vibey loops --json` no longer prints {GOLDEN.name}. If that is intended, "
+        f"regenerate it with {UPDATE_GOLDENS}=1 and commit it with the change."
+    )
+
+
+def test_the_golden_shows_every_kind_of_value_a_parser_must_read() -> None:
+    """The fixed environment is chosen so the file carries each field both ways: an engine
+    on and one off, a model and none, a switch and none, a repealed engine and the rest."""
+    engines = [e for loop in json.loads(GOLDEN.read_text())["loops"] for e in loop["engines"]]
+
+    for field in ("enabled", "repealed"):
+        assert {engine[field] for engine in engines} == {True, False}, field
+    for field in ("default_model", "switch"):
+        values = {engine[field] for engine in engines}
+        assert None in values and values - {None}, field

@@ -54,8 +54,9 @@ _RUN_EVENTS = "{cwd}/{state_dir}/runs/{run_id}/events.jsonl"
 
 # The evidence for `plugins: skills-context`, the same for every loop.
 _SKILLS_CONTEXT = (
-    "vibey appends the vibey-skills context packet to the plan's text before the run "
-    "starts (vibey application/build_implement_handler.py), whichever engine runs it"
+    "when the project sets skills_context.mode = inject, vibey appends the vibey-skills "
+    "context packet to the plan's text before the run starts (vibey "
+    "application/build_implement_handler.py), whichever engine runs it"
 )
 
 # claudeloop's own vocabulary, shared by claudeloop-local: the same binary.
@@ -167,6 +168,9 @@ CODEXLOOP = EngineDescriptor(
             Capability.SAVEPOINTS,
             Capability.UNWIND,
             Capability.STRUCTURED_VERDICT,
+            # Its runner queues a prompt control's text for the next turn
+            # (codexloop application/runner.py `_apply_controls`); see `controls`.
+            Capability.MID_RUN_PROMPT,
             Capability.SNAPSHOT,
             Capability.SANDBOX,
         }
@@ -288,16 +292,20 @@ CURSORLOOP = EngineDescriptor(
         plugins=PluginSystem.SKILLS_CONTEXT,
         evidence={
             "files": "it runs in the worktree (`run --cwd`, cursorloop cli/commands/run.py)",
-            "paste_text": "`prompt TEXT` (cursorloop cli/commands/control_cmds.py); the plan "
-            "itself is text",
+            "paste_text": "the plan is text (`run --plan`, cursorloop cli/commands/run.py), "
+            "and it is the run's first message",
             "plugins": _SKILLS_CONTEXT,
         },
     ),
-    # Each takes `--run-id` and `--cwd` (cursorloop cli/commands/control_cmds.py).
+    # `stop` and `wind-down` take `--run-id` and `--cwd` (cursorloop
+    # cli/commands/control_cmds.py), and act only while the run waits between turns. No
+    # prompt: its CLI writes a `prompt` control, but the runner reads its inbox only while
+    # it waits (`_sleep_interruptible`), acts on stop and wind-down alone, and
+    # `FileRunControl.poll` deletes every command it parsed, so a prompt sent that way is
+    # dropped unread (cursorloop application/runner.py, infrastructure/control.py).
     controls=EngineControls(
         stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
         wind_down=("wind-down", "--run-id", "{run_id}", "--cwd", "{cwd}"),
-        prompt=("prompt", "{text}", "--run-id", "{run_id}", "--cwd", "{cwd}"),
     ),
     # `{"ts", "run_id", "event_type", ..., "payload"}` (cursorloop infrastructure/events.py).
     events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.EVENT_TYPE_PAYLOAD),
@@ -327,7 +335,10 @@ AGYLOOP = EngineDescriptor(
         {
             Capability.UNWIND,
             Capability.STRUCTURED_VERDICT,
-            Capability.WEB_SEARCH,
+            # Its runner applies a prompt control at the next turn (agyloop
+            # application/runner.py); see `controls`. No WEB_SEARCH: nothing in agyloop's
+            # source searches the web, and its `run` has no `--web-search`.
+            Capability.MID_RUN_PROMPT,
             Capability.SNAPSHOT,
         }
     ),
@@ -460,7 +471,13 @@ QWENLOOP = EngineDescriptor(
     # QWENLOOP_BASE_URL and QWENLOOP_MODEL also arrive through the adapter's overlay,
     # derived from VIBEY_OLLAMA_URL -- which itself never reaches the session.
     env_passthrough=("QWENLOOP_*",),
-    capabilities=frozenset(Capability),
+    # No attachments or web search: `attach` and `web-search` only echo (qwenloop cli/app.py
+    # `_local_equivalent`). A mid-run prompt it does take: the runner adds each pending
+    # `prompt` control to the conversation at the next turn boundary (qwenloop
+    # application/runner.py, `take_prompts`); see `controls`. The other claims are not
+    # re-verified here, and `savepoints`, `unwind`, `effort`, `slash` and `sandbox` are
+    # echo-only commands in the same list.
+    capabilities=frozenset(Capability) - {Capability.ATTACHMENTS, Capability.WEB_SEARCH},
     effort_projection={
         Effort.TRIVIAL: EngineInvocation(("--max-turns", "8"), achieved=Effort.TRIVIAL),
         Effort.LOW: EngineInvocation(("--max-turns", "16"), achieved=Effort.LOW),
@@ -501,13 +518,14 @@ QWENLOOP = EngineDescriptor(
             "and `skill` commands only echo (qwenloop cli/app.py)",
         },
     ),
-    # `stop` and `wind-down` take the run id positionally, and `--cwd` (qwenloop
-    # cli/app.py). No prompt: its CLI writes a `prompt` control, but the runner acts on
-    # `stop` and `wind_down` alone (qwenloop application/runner.py), so a prompt sent that
-    # way is never read.
+    # Each takes the run id positionally, then `prompt` its text, and `--cwd` (qwenloop
+    # cli/app.py). The runner reads the prompt at the next turn boundary and moves it to
+    # `control/ack`, so it reaches the model once (qwenloop application/runner.py,
+    # infrastructure/run_store.py `take_prompts`).
     controls=EngineControls(
         stop=("stop", "{run_id}", "--cwd", "{cwd}"),
         wind_down=("wind-down", "{run_id}", "--cwd", "{cwd}"),
+        prompt=("prompt", "{run_id}", "{text}", "--cwd", "{cwd}"),
     ),
     # Flat, keyed `"type"` (qwenloop application/runner.py, infrastructure/run_store.py).
     events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.TYPE),

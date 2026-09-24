@@ -1,16 +1,19 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """What `vibey loops` reports, assembled from data vibey already holds.
 
-The family runs exactly two loops (sub-doctrine 8.c): `sovereignloop`, the default, always
-on, driving what runs on the operator's own hardware; and `paidloop`, declared-only, driving
-every paid engine, with Claude through claudeloop as its default (8.b). Each engine sits in
-the loop of its descriptor's tier -- reported as the code says, and noted where the canon
-says otherwise.
+The family runs exactly two loops (sub-doctrine 8.c): `sovereignloop`, driving what runs on
+the operator's own hardware, and `paidloop`, driving every paid engine. Canon 8.b makes the
+sovereign loop the default and the paid loop declared-only, with Claude through claudeloop
+as the paid default. That is the canon, reported as such: vibey's selector does not read a
+paid declaration yet, and today picks a paid engine, by weighted round robin, whenever no
+local engine is eligible. Each engine sits in the loop of its descriptor's tier -- reported
+as the code says, and noted where the canon says otherwise. An engine the canon repeals
+stays listed, and is left out of every by-effort view, so nothing selects it from there.
 
 For every engine this lists all five efforts with the argv the engine passes, the effort it
 really achieves, and the model: the value of a `--model` it passes, else the model vibey
-itself chooses for it, else nothing -- and then the reason names what chooses it. Nothing
-here reads a database, a network or a clock, so it answers on a machine with no PostgreSQL.
+hands it, else nothing -- and then the reason names what chooses it. Nothing here reads a
+database, a network or a clock, so it answers on a machine with no PostgreSQL.
 """
 
 from collections.abc import Mapping, Sequence
@@ -98,16 +101,18 @@ class LoopCatalog:
             loop=loop,
             tier=tier,
             default=loop is DEFAULT_LOOP,
-            # 8.b: everything but the sovereign default is reached only by declaration.
+            # Canon 8.b: everything but the sovereign default is reached only by declaration.
+            # The selector does not read a declaration yet; this reports the canon.
             declared_only=loop is not DEFAULT_LOOP,
             engines=held,
-            by_effort=self._by_effort(held),
+            by_effort=self._by_effort(tuple(engine for engine in held if not engine.repealed)),
         )
 
     def _engine(self, context: EngineContext) -> LoopEngine:
         descriptor = context.descriptor
+        repealed = descriptor.engine_id in REPEALED_FROM_LOOPS
         notes: tuple[str, ...] = ()
-        if descriptor.engine_id in REPEALED_FROM_LOOPS:
+        if repealed:
             notes = (
                 f"sub-doctrine 8.b repeals {descriptor.engine_id.value} from both loops; "
                 f"reported here as its descriptor says, tier {descriptor.tier.value}",
@@ -121,6 +126,7 @@ class LoopCatalog:
                 self._effort(descriptor, effort, context.model) for effort in self._efforts
             ),
             run=context.run,
+            repealed=repealed,
             notes=notes,
         )
 

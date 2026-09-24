@@ -68,6 +68,14 @@ def test_the_environment_wins_whenever_it_is_set(value: str, expected: bool) -> 
     assert on_in_config.enabled(EngineId.CLAUDELOOP_LOCAL) is expected
 
 
+def test_each_local_engine_is_switched_by_its_own_variable_and_a_paid_one_by_none() -> None:
+    settings = _settings()
+
+    assert settings.switch_for(EngineId.QWENLOOP) == QWEN_SWITCH
+    assert settings.switch_for(EngineId.CLAUDELOOP_LOCAL) == CLAUDE_LOCAL_SWITCH
+    assert settings.switch_for(EngineId.CLAUDELOOP) is None
+
+
 def test_a_paid_engine_has_no_switch_and_is_never_a_local_one() -> None:
     assert _settings({QWEN_SWITCH: "1"}).enabled(EngineId.CLAUDELOOP) is False
 
@@ -241,21 +249,33 @@ def test_a_non_http_endpoint_is_refused_by_the_same_rule_design_uses() -> None:
 
 
 # -- the model `vibey loops` reports for qwenloop --------------------------------------------
+#
+# It mirrors `overlay_for`, because that is the only path by which vibey's model reaches a
+# qwenloop session (contract amendment 4): QWENLOOP_MODEL when set, else vibey's model only
+# while VIBEY_OLLAMA_URL is set, else nothing -- qwenloop's own configuration chooses.
+
+URL = {"VIBEY_OLLAMA_URL": "http://127.0.0.1:11434"}
 
 
 def test_only_qwenloops_model_is_one_vibey_chooses() -> None:
-    endpoint = LocalEndpointEnvironment({"VIBEY_OLLAMA_MODEL": "qwen3-coder"})
+    endpoint = LocalEndpointEnvironment({**URL, "VIBEY_OLLAMA_MODEL": "qwen3-coder"})
     for engine_id in EngineId:
         if engine_id is not EngineId.QWENLOOP:
             assert endpoint.model_for(engine_id) is None, engine_id
 
 
-def test_qwenloops_model_defaults_to_the_one_the_sovereign_providers_use() -> None:
-    assert LocalEndpointEnvironment({}).model_for(EngineId.QWENLOOP) == "gpt-oss:20b"
+def test_without_the_endpoint_setting_vibey_hands_qwenloop_no_model() -> None:
+    """VIBEY_OLLAMA_MODEL alone never reaches qwenloop: nothing renders it into
+    QWENLOOP_MODEL unless VIBEY_OLLAMA_URL is set."""
+    assert LocalEndpointEnvironment({}).model_for(EngineId.QWENLOOP) is None
+    lone = LocalEndpointEnvironment({"VIBEY_OLLAMA_MODEL": "qwen3-coder"}, model="gemma3:27b")
+    assert lone.model_for(EngineId.QWENLOOP) is None
+    assert LocalEndpointEnvironment({"VIBEY_OLLAMA_URL": ""}).model_for(EngineId.QWENLOOP) is None
 
 
-def test_qwenloops_model_follows_vibey_ollama_model_and_ollama_model() -> None:
-    environ = {"VIBEY_OLLAMA_MODEL": "qwen3-coder"}
+def test_with_the_endpoint_setting_qwenloops_model_is_the_one_the_overlay_hands_it() -> None:
+    assert LocalEndpointEnvironment(URL).model_for(EngineId.QWENLOOP) == "gpt-oss:20b"
+    environ = {**URL, "VIBEY_OLLAMA_MODEL": "qwen3-coder"}
     assert LocalEndpointEnvironment(environ).model_for(EngineId.QWENLOOP) == "qwen3-coder"
     chosen = LocalEndpointEnvironment(environ, model="gemma3:27b")
     assert chosen.model_for(EngineId.QWENLOOP) == "gemma3:27b"
@@ -263,8 +283,24 @@ def test_qwenloops_model_follows_vibey_ollama_model_and_ollama_model() -> None:
 
 def test_a_model_the_operator_gave_qwenloop_itself_wins() -> None:
     """QWENLOOP_MODEL reaches qwenloop through its own passthrough, and the overlay never
-    replaces it, so it is the model qwenloop runs."""
-    environ = {"QWENLOOP_MODEL": "llama3.3", "VIBEY_OLLAMA_MODEL": "qwen3-coder"}
-    assert LocalEndpointEnvironment(environ).model_for(EngineId.QWENLOOP) == "llama3.3"
+    replaces it, so it is the model qwenloop runs -- with or without the endpoint setting."""
+    named = {"QWENLOOP_MODEL": "llama3.3", "VIBEY_OLLAMA_MODEL": "qwen3-coder"}
+    assert LocalEndpointEnvironment(named).model_for(EngineId.QWENLOOP) == "llama3.3"
+    assert LocalEndpointEnvironment({**URL, **named}).model_for(EngineId.QWENLOOP) == "llama3.3"
+
+
+def test_a_blank_qwenloop_model_is_ignored_and_never_replaced() -> None:
+    """qwenloop ignores a blank QWENLOOP_MODEL, and the overlay does not replace a variable
+    that is set, so neither name reaches it: qwenloop's own configuration chooses."""
     blank = {"QWENLOOP_MODEL": "  ", "VIBEY_OLLAMA_MODEL": "qwen3-coder"}
-    assert LocalEndpointEnvironment(blank).model_for(EngineId.QWENLOOP) == "qwen3-coder"
+    assert LocalEndpointEnvironment(blank).model_for(EngineId.QWENLOOP) is None
+    assert LocalEndpointEnvironment({**URL, **blank}).model_for(EngineId.QWENLOOP) is None
+
+
+def test_a_malformed_endpoint_is_refused_even_when_qwenloop_names_its_own_model() -> None:
+    """The worker resolves the overlay before it starts qwenloop, so a malformed setting
+    stops it whatever QWENLOOP_MODEL says; `vibey loops` refuses it the same way."""
+    environ = {"VIBEY_OLLAMA_URL": "ftp://nowhere", "QWENLOOP_MODEL": "llama3.3"}
+
+    with pytest.raises(ConfigError, match="VIBEY_OLLAMA_URL"):
+        LocalEndpointEnvironment(environ).model_for(EngineId.QWENLOOP)

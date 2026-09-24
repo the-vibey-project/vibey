@@ -66,11 +66,14 @@ LOOP_BY_TIER: Final[Mapping[EngineTier, Loop]] = MappingProxyType(
 operator's own hardware, the paid loop every paid engine."""
 
 DEFAULT_LOOP: Final = Loop.SOVEREIGN
-"""Sovereign by default, always (8.a, 8.b). Every other loop is reached only by declaration."""
+"""The canon's default loop (8.a, 8.b); every other loop is reached only by declaration. This
+states the rule. The selector does not read a paid declaration yet: it prefers the local tier
+(`TIER_PREFERENCE`) and falls back to a paid engine whenever no local engine is eligible."""
 
 PAID_DEFAULT_ENGINE: Final = EngineId.CLAUDELOOP
-"""8.b's paid default: Claude, through claudeloop. It settles which paid engine a paid
-declaration reaches; it never makes paid a default over sovereign."""
+"""The canon's paid default (8.b): Claude, through claudeloop, the paid engine a paid
+declaration reaches unless it names another. It never makes paid a default over sovereign.
+The selector does not act on it yet: within the paid tier it rotates by weight."""
 
 REPEALED_FROM_LOOPS: Final[frozenset[EngineId]] = frozenset({EngineId.OPENCODE})
 """Engines 8.b repeals from both loops. Their descriptors are not changed by being named

@@ -10,7 +10,7 @@ complete (for example, `vibey work --help` does not list `qwenloop`).
 Top-level commands, in `vibey --help` order: `new`, `projects`, `gates`,
 `answer`, `work`, `watch`, `recover`, `status`, `engines`, `loops`, `cost`,
 `install`, `doctor`, `migrate`, `operator`, `worker`, and the command groups
-`design`, `visual`, `deploy`, `ledger`, `queue`.
+`design`, `visual`, `deploy`, `ledger`, `queue`, `budget`.
 Bare `vibey`, and each bare command group, prints help.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
@@ -380,57 +380,77 @@ project.
 
 List the family's two loops (sub-doctrine 8.c), every engine each one holds,
 what each effort level passes to each engine, and what each engine can do.
-`sovereignloop` is tier local: the default, always on. `paidloop` is tier
-paid: declared only, with Claude through `claudeloop` as its default (8.b).
-Each engine is listed under the loop its descriptor's tier puts it in. The
-command needs no database and no network: local switches are read the way
+`sovereignloop` is tier local, and canon 8.b makes it the default loop. A local
+engine in it runs only while its switch is on. `paidloop` is tier paid, and
+canon 8.b makes it declared only, with Claude through `claudeloop` as its
+default. The canon is reported as the canon: vibey's selector does not read a
+paid declaration yet. Today it prefers an eligible local engine and, when none
+is eligible, picks a paid one by weighted round robin (ADR-0038). Each engine
+is listed under the loop its descriptor's tier puts it in.
+
+The command needs no database and no network. Local switches are read the way
 `vibey doctor` reads them, from the environment and then `./vibey.toml`. It
-exits 0. A malformed `VIBEY_OLLAMA_URL`, or a malformed
-`[engines.claudeloop_local]` table in `./vibey.toml`, exits 3 with the error,
-the same configuration that would stop the worker.
+exits 0. It exits 3 when a setting it must read is malformed:
+`VIBEY_OLLAMA_URL`, `VIBEY_OLLAMA_TIMEOUT` while `VIBEY_OLLAMA_URL` is set, or
+the `[engines.claudeloop_local]` table in `./vibey.toml`. That is the same
+configuration that would stop the worker. The message names the setting and
+never its value, because a URL can carry `user:token@`.
 
 | Option | Default | What it does |
 |---|---|---|
 | `--json` | off | Print the whole document instead of the tables. |
 
 Each loop gets a small table with one column per engine. Its rows are
-`switched on`, `$ per Mtok in/out`, `model` (the model vibey itself chooses,
-which is qwenloop's), and one row per effort. An effort's row shows the flags
-the engine is passed, without their dashes, followed by `-> STANDARD` (or the
-level it really reaches) when the engine runs at a different effort. After
-each table come the variable that switches each local engine on and any notes.
+`switched on`, `$ per Mtok in/out`, `model` (the model vibey hands the engine;
+see `default_model` below), and one row per effort. An effort's row shows the
+flags the engine is passed, without their dashes. It is followed by
+`-> STANDARD` (or the level it really reaches) when the engine runs at a
+different effort. After each table come the variable that switches each local
+engine on, and any notes.
 
 `--json` prints one object:
 
 - `efforts`: the five levels, in order: `TRIVIAL`, `LOW`, `STANDARD`, `HIGH`, `MAX`.
 - `default_loop`: `sovereignloop`. `paid_default_engine` and its alias
-  `paid_default`: `claudeloop`.
+  `paid_default`: `claudeloop`, the paid default canon 8.b names.
 - `ladder`: `phase_base` (each phase's starting effort, by phase name),
   `build_attempts` (BUILD's effort at attempts 1 to 6), `exhausted_after` (`6`;
   attempt 7 parks a human gate), and `rotates_when_effort_rises` (`true`).
 - `loops`: two objects, `sovereignloop` first. Each has `loop`, `tier`,
-  `default`, `declared_only`, `engines`, and `by_effort`.
+  `default`, `declared_only` (canon 8.b's rule, as above), `engines`, and
+  `by_effort`.
 
 Each engine object has these keys:
 
 | Key | What it holds |
 |---|---|
 | `engine_id`, `binary`, `state_dir`, `done_marker`, `plan_flag`, `supports_cwd_flag`, `base_weight`, `cost_per_mtok_in`, `cost_per_mtok_out` | The engine's descriptor, as declared. |
-| `enabled` | Whether the engine would run right now. A local engine follows its switch. An engine with no switch is `true`: being listed is not being selected, and a paid engine still runs only where one is declared. |
+| `enabled` | Whether the engine would run right now. A local engine follows its switch. An engine with no switch is `true`: the selector may pick it whenever it is eligible. Being listed is not being selected. |
 | `switch` | The variable that switches a local engine on (`VIBEY_FEATURE_QWENLOOP`, `VIBEY_FEATURE_CLAUDELOOP_LOCAL`), or `null`. |
-| `default_model` | The model vibey chooses for the engine itself, or `null`. For qwenloop this is `QWENLOOP_MODEL` as you set it, else `VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`. |
-| `efforts` | All five levels, in order. Each has `effort`, `argv` (from the descriptor's projection), `achieved` (the level it really reaches), and `model`. `model` is the value of a `--model` the level passes, else `default_model`, else `null`. `notes` gives the descriptor's own note and, when `model` is `null`, what chooses the model instead (`claudeloop preset high`). |
-| `capabilities` | `images`, `files`, `paste_text`, `paste_images`, `plugins` (`skills-context` or `claude-plugins`), and `mcp`. Each is `true`, `false`, or `null` for unknown, and a menu belongs only beside a value that is not `null`. `evidence` names, for each value that is set, where the runner's own code shows it. A local model's own abilities come from Ollama at run time, so an image menu needs both this loop's `images` and the model's `vision`. |
-| `run` | The argv template `build_argv` fills for a run: `{binary}`, `run`, `{plan_flag?}` (only when `plan_flag` is set: put that flag there), `{plan}`, `--run-id`, `{run_id}`, `{effort_argv...}`, and `--cwd {cwd}` when `supports_cwd_flag`. A test fills it and compares it with `build_argv` for every engine at every effort. |
-| `controls` | `stop`, `wind_down`, and `prompt`: argv templates after the binary, with `{run_id}`, `{cwd}` and `{text}` to fill in, or `null` where the runner's CLI has no such verb. A test holds each one to the runner's own Typer definition. |
-| `events` | `path` (`{cwd}/{state_dir}/runs/{run_id}/events.jsonl`) and `envelope`: `type` (a top-level `"type"`), `event_type+payload`, or `event_type` (a top-level `"event_type"` with no payload wrapper). |
+| `repealed` | `true` for an engine canon 8.b repeals from both loops (opencode today). It stays listed, and is left out of `by_effort`, so nothing that selects from `by_effort` picks it. `false` for every other engine. |
+| `default_model` | The model vibey hands the engine, or `null`. For qwenloop this follows how the model actually reaches it. It is `QWENLOOP_MODEL` when set. Otherwise it is vibey's model (`VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`), but only while `VIBEY_OLLAMA_URL` is set, because that is the only path by which vibey's model reaches the session. A worker started with `--ollama-model` hands that model instead, which this command cannot see. Otherwise it is `null`, and qwenloop's own configuration chooses the model. |
+| `efforts` | All five levels, in order. Each has `effort`, `argv` (from the descriptor's projection), `achieved` (the level it really reaches), and `model`. `model` is the value of a `--model` the level passes, else `default_model`, else `null`. `notes` gives the descriptor's own note and, when `model` is `null`, what chooses the model instead (`claudeloop preset high`, `qwenloop's own configuration chooses the model`). |
+| `capabilities` | `images`, `files`, `paste_text`, `paste_images`, `plugins` (`skills-context` or `claude-plugins`), and `mcp`. Each is `true`, `false`, or `null` for unknown, and a menu belongs only beside a value that is not `null`. `evidence` names, for each value that is set, where the runner's own code shows it. `skills-context` applies when the project sets `skills_context.mode = inject`: vibey then appends the vibey-skills context packet to the plan. A local model's own abilities come from Ollama at run time, so an image menu needs both this loop's `images` and the model's `vision`. |
+| `run` | The argv template `build_argv` fills for a run: `{binary}`, `run`, `{plan_flag?}` (only when `plan_flag` is set: put that flag there), `{plan}`, `--run-id`, `{run_id}`, `{effort_argv...}`, and `--cwd {cwd}` when `supports_cwd_flag`. Tests compare it with `build_argv` for every engine at every effort. They also read it, filled in at every effort, against the runner's own `run` definition. |
+| `controls` | `stop`, `wind_down`, and `prompt`: argv templates after the binary, with `{run_id}`, `{cwd}` and `{text}` to fill in. Each is `null` where the runner has no such verb, or does not act on it: cursorloop takes no mid-run prompt, whatever its CLI accepts. A test reads each template against the runner's own Typer definition. |
+| `events` | `path` (`{cwd}/{state_dir}/runs/{run_id}/events.jsonl`) and `envelope`, one of three values: `type` (a top-level `"type"`), `event_type+payload`, or `event_type` (a top-level `"event_type"` with no payload wrapper). |
 | `env` | `auth` and `passthrough`: the descriptor's `auth_env` and `env_passthrough`, names only and in declared order. The command never reads a value. |
-| `notes` | Anything the canon says otherwise. opencode's descriptor says tier local, and 8.b repeals it from both loops, so it is listed under `sovereignloop` with a note, as the code says. |
+| `notes` | A list of strings: anything the canon says otherwise. opencode's descriptor says tier local, and 8.b repeals it from both loops, so it is listed under `sovereignloop` with a note, as the code says. |
 
-`by_effort` maps each level to every engine in the loop, each with its
-`engine_id`, `model` and `achieved`. Engines that reach exactly that level
-come first, then those that go higher, then those that fall short. Ties go to
-the lower output price, then to the engine id.
+`by_effort` maps each level to every engine in the loop that is not repealed,
+each with its `engine_id`, `model` and `achieved`. Engines that reach exactly
+that level come first, then those that go higher, then those that fall short.
+Ties go to the lower output price, then to the engine id.
+
+The document for one fixed environment is committed as
+`tests/cli/golden/vibey-loops.json`. In that environment every variable the
+command reads is cleared, then `VIBEY_FEATURE_QWENLOOP=1` and
+`VIBEY_OLLAMA_URL=http://127.0.0.1:11434` are set. The test suite produces the
+document and fails when the command's output drifts from the file, so a parser
+tested against the file reads what the command prints. After an intended change,
+regenerate it with
+`VIBEY_UPDATE_GOLDENS=1 uv run pytest tests/cli/test_loops_cli.py -k golden`
+and commit it with the change.
 
 What the runners' own code shows today:
 
@@ -438,10 +458,10 @@ What the runners' own code shows today:
 |---|---|---|---|
 | `claudeloop`, `claudeloop-local` | files, pasted text, `claude-plugins` (`run --plugin`), MCP (`run --connector`); images unknown | `--run-id` and `--cwd` for each; `prompt TEXT --now` | `event_type+payload` |
 | `codexloop` | files, pasted text, `skills-context`; images and MCP unknown | `--run-id` for each and no `--cwd`: run it in the worktree; `prompt TEXT --now` | `type` |
-| `cursorloop` | files, pasted text, `skills-context`; images and MCP unknown | `--run-id` and `--cwd` for each; `prompt TEXT` | `event_type+payload` |
+| `cursorloop` | files, pasted text, `skills-context`; images and MCP unknown | `stop` and `wind-down` with `--run-id` and `--cwd`. Both act only while the run waits between turns. No prompt: its runner reads its inbox only while it waits, acts on stop and wind-down alone, and drops a prompt unread | `event_type+payload` |
 | `agyloop` | files, pasted text, `skills-context`; no MCP (`mcp_servers=[]`); images unknown | `stop` and `prompt TEXT --now` with `--run-id` and `--cwd`; no wind-down verb | `event_type+payload` |
 | `opencode` | files, pasted text, `skills-context`; images and MCP unknown | none: its CLI is `doctor`, `run`, `resume` | `event_type` |
-| `qwenloop` | files, pasted text, `skills-context`; no images, no pasted images, no MCP (text messages and a fixed tool set) | `stop` and `wind-down` take the run id positionally, with `--cwd`; no prompt: its runner never reads the control its `prompt` writes | `type` |
+| `qwenloop` | files, pasted text, `skills-context`; no images, no pasted images, no MCP (text messages and a fixed tool set) | each takes the run id positionally, with `--cwd`; `prompt RUN_ID TEXT`, which its runner adds to the conversation at the next turn boundary | `type` |
 
 ## `vibey cost [PROJECT_ID]`
 

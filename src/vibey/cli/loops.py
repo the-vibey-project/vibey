@@ -13,7 +13,7 @@ comes first; `--json` is the document the VS Code extension reads (doctrine 7).
 
 import json
 import os
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Final
 
@@ -23,15 +23,22 @@ from vibey.application.dto import EffortRun, EngineContext, LoopEngine, LoopsRep
 from vibey.application.interfaces.loops import LoopCatalogInterface
 from vibey.application.loops import LOOP_CATALOG
 from vibey.cli.interfaces.loops_interface import LoopsCommandInterface, LoopsPresenterInterface
+from vibey.domain.config import ConfigError
 from vibey.domain.engine import EngineAffordances, EngineDescriptor
 from vibey.infrastructure.engines.argv import RUN_ARGV_TEMPLATE
 from vibey.infrastructure.engines.descriptors import ALL_DESCRIPTORS
 from vibey.infrastructure.engines.interfaces.argv_interface import RunArgvTemplateInterface
-from vibey.infrastructure.engines.local_engines import (
-    LOCAL_ENGINE_SWITCHES,
-    LocalEndpointEnvironment,
-    LocalEngineSettings,
+from vibey.infrastructure.engines.interfaces.local_engines_interface import (
+    LocalEndpointEnvironmentInterface,
+    LocalEngineSettingsInterface,
 )
+from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment, LocalEngineSettings
+
+MALFORMED_SETTING: Final = (
+    "is malformed; `vibey loops` names the setting and never prints its value, which can "
+    "carry a credential (a URL's user:token@)"
+)
+"""Why `vibey loops` stopped, said without the setting's value (contract amendment 6)."""
 
 
 class LoopsPresenter:
@@ -42,8 +49,9 @@ class LoopsPresenter:
         for view in report.loops:
             lines += [*self._loop_lines(view, report), ""]
         lines.append(
-            f"A paid declaration reaches {report.paid_default_engine.value} unless it names "
-            "another paid engine. `vibey loops --json` has every engine's full facts."
+            f"Canon 8.b names {report.paid_default_engine.value} the paid default; the "
+            "selector does not apply it yet, and rotates paid engines by weight. "
+            "`vibey loops --json` has every engine's full facts."
         )
         return lines
 
@@ -52,9 +60,10 @@ class LoopsPresenter:
 
     def _loop_lines(self, view: LoopView, report: LoopsReport) -> list[str]:
         standing = (
-            "the default loop, always on"
+            "the default loop by canon 8.b; a local engine runs only while its switch is on"
             if view.default
-            else "declared only: it runs when a paid engine is declared"
+            else "declared only by canon 8.b; the selector does not read a paid declaration "
+            "yet, and picks a paid engine whenever no local engine is eligible"
         )
         lines = [f"{view.loop.value} (tier {view.tier.value}): {standing}"]
         if not view.engines:
@@ -143,6 +152,7 @@ class LoopsPresenter:
             "state_dir": descriptor.state_dir,
             "enabled": engine.enabled,
             "switch": engine.switch,
+            "repealed": engine.repealed,
             "cost_per_mtok_in": descriptor.cost_per_mtok_in,
             "cost_per_mtok_out": descriptor.cost_per_mtok_out,
             "default_model": engine.default_model,
@@ -209,7 +219,13 @@ LOOPS_PRESENTER: Final[LoopsPresenterInterface] = LoopsPresenter()
 
 class LoopsCommand:
     """Reads each engine as vibey's own resolvers see it right now, asks the one catalog to
-    assemble the loops, prints."""
+    assemble the loops, prints.
+
+    The resolvers are the ones `vibey doctor` reads: `settings` for the local switches and
+    the claudeloop-local profile, `endpoint` for the model vibey hands a local engine. Left
+    out, they are built when the command runs, from this process's environment and
+    `./vibey.toml`.
+    """
 
     def __init__(
         self,
@@ -218,18 +234,24 @@ class LoopsCommand:
         presenter: LoopsPresenterInterface = LOOPS_PRESENTER,
         templates: RunArgvTemplateInterface = RUN_ARGV_TEMPLATE,
         descriptors: Sequence[EngineDescriptor] = ALL_DESCRIPTORS,
-        environ: Mapping[str, str] | None = None,
-        workdir: Path | None = None,
+        settings: LocalEngineSettingsInterface | None = None,
+        endpoint: LocalEndpointEnvironmentInterface | None = None,
     ) -> None:
         self._catalog = catalog
         self._presenter = presenter
         self._templates = templates
         self._descriptors = descriptors
-        self._environ = environ
-        self._workdir = workdir
+        self._settings = settings
+        self._endpoint = endpoint
 
     def run(self, *, as_json: bool) -> None:
-        report = self._catalog.report(self._contexts())
+        try:
+            contexts = self._contexts()
+        except ConfigError as exc:
+            # Named, never shown: the setting's value can carry a credential, and this
+            # message reaches a terminal. `from None` keeps the original out of a traceback.
+            raise ConfigError(exc.path, MALFORMED_SETTING) from None
+        report = self._catalog.report(contexts)
         if as_json:
             typer.echo(self._presenter.json(report))
         else:
@@ -238,23 +260,26 @@ class LoopsCommand:
     def _contexts(self) -> list[EngineContext]:
         """Every engine as `vibey doctor` would resolve it here: a local engine through its
         switch and the configured claudeloop-local profile, every other one as declared."""
-        environ = os.environ if self._environ is None else self._environ
-        workdir = Path.cwd() if self._workdir is None else self._workdir
-        settings = LocalEngineSettings.from_toml(workdir / "vibey.toml", environ=environ)
-        endpoint = LocalEndpointEnvironment(environ)
-        switches = {switch.engine_id: switch for switch in LOCAL_ENGINE_SWITCHES}
+        settings: LocalEngineSettingsInterface = (
+            self._settings
+            if self._settings is not None
+            else LocalEngineSettings.from_toml(Path.cwd() / "vibey.toml", environ=os.environ)
+        )
+        endpoint: LocalEndpointEnvironmentInterface = (
+            self._endpoint if self._endpoint is not None else LocalEndpointEnvironment(os.environ)
+        )
         contexts: list[EngineContext] = []
         for declared in self._descriptors:
-            switch = switches.get(declared.engine_id)
+            switch = settings.switch_for(declared.engine_id)
             descriptor = declared if switch is None else settings.descriptor(declared.engine_id)
             contexts.append(
                 EngineContext(
                     descriptor=descriptor,
-                    # Listing is not selecting: an engine with no switch is always listed as
-                    # on, and a paid one still runs only where it is declared (8.b).
+                    # An engine with no switch is listed as on: the selector may pick it
+                    # whenever it is eligible. Listing it does not select it.
                     enabled=switch is None or settings.enabled(declared.engine_id),
                     run=self._templates.template(descriptor),
-                    switch=None if switch is None else switch.env_var,
+                    switch=switch,
                     model=endpoint.model_for(declared.engine_id),
                 )
             )

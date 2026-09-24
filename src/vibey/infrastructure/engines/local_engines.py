@@ -96,6 +96,11 @@ class LocalEngineSettings:
             data = {}
         return cls(environ=environ, config=data)
 
+    def switch_for(self, engine_id: EngineId) -> str | None:
+        """The variable that switches `engine_id` on, or None for an engine with no switch."""
+        switch = self._switches.get(engine_id)
+        return None if switch is None else switch.env_var
+
     def enabled(self, engine_id: EngineId) -> bool:
         switch = self._switches.get(engine_id)
         if switch is None:
@@ -178,20 +183,23 @@ class LocalEndpointEnvironment:
         self._model = model
 
     def model_for(self, engine_id: EngineId) -> str | None:
-        """The model vibey reports for an engine whose model it chooses itself: qwenloop's.
+        """The model `engine_id` runs, when it reaches the engine by a path vibey knows.
 
-        `QWENLOOP_MODEL` as the operator set it, which qwenloop reads and the overlay never
-        replaces; else the model the overlay would hand it -- `--ollama-model`, else
-        `VIBEY_OLLAMA_MODEL`, else the default, read through the same client. None for every
-        other engine: a model named in its argv, or chosen by its own configuration, is not
-        vibey's to report here.
+        For qwenloop, exactly as the model reaches it: `QWENLOOP_MODEL` as the operator set
+        it (qwenloop reads it and ignores a blank one, and the overlay never replaces it);
+        else the model `overlay_for` hands it, which it does only when `VIBEY_OLLAMA_URL` is
+        set; else None, and qwenloop's own configuration chooses. None for every other
+        engine: a model named in its argv, or chosen by its own configuration, is not one
+        vibey hands it.
+
+        The overlay is resolved first, always: a malformed endpoint setting is refused here
+        exactly as the worker refuses it, even when `QWENLOOP_MODEL` would name the model.
         """
         if engine_id is not EngineId.QWENLOOP:
             return None
+        handed = self.overlay_for(engine_id)
         named = (self._environ.get(QWENLOOP_MODEL_ENV) or "").strip()
-        if named:
-            return named
-        return OllamaChatClient.from_environment(self._environ, model=self._model).model
+        return named or handed.get(QWENLOOP_MODEL_ENV)
 
     def overlay_for(self, engine_id: EngineId) -> dict[str, str]:
         if engine_id is not EngineId.QWENLOOP or not self._environ.get(OLLAMA_URL_ENV):
