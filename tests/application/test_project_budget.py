@@ -309,4 +309,4 @@ async def test_a_change_names_the_budget_gates_still_parked_on_the_project() -> 
 
     change = await service.set_caps(project.project_id, max_dollars=30)
 
-    assert change.parked == (parked.gate_id,)
+    assert change.parked == (parked,)

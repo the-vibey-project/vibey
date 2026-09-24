@@ -26,9 +26,12 @@ import typer
 from typer.core import TyperGroup
 
 from vibey.application.dto import BudgetChange, ProjectBudget
+from vibey.application.project_budget import BUDGET_GATE_KIND
 from vibey.bootstrap import AppResources, build_app
 from vibey.cli.errors import guard
+from vibey.cli.gate_answers import ANY_ANSWER, GateAnswerCommands
 from vibey.cli.interfaces.budget_interface import BudgetCommandInterface, BudgetPresenterInterface
+from vibey.cli.interfaces.gate_answers_interface import GateAnswerCommandsInterface
 from vibey.domain.budget_caps import CAP_CHANGE_PLANNER, CapField
 from vibey.domain.errors import InvalidBudgetChange
 from vibey.domain.interfaces.budget_caps_interface import (
@@ -41,9 +44,19 @@ _CAP_NAMES: Final = {
     CapField.MAX_CYCLE_TURNS.value: "turn cap",
 }
 
+RESUME_UNDER_THE_STORED_CAPS: Final[GateAnswerCommandsInterface] = GateAnswerCommands(
+    {BUDGET_GATE_KIND: ANY_ANSWER}
+)
+"""`vibey gates`' renderer, with the one rule that differs after a cap change. There it
+answers a `budget_exhausted` gate with a grant for that one job; once the stored cap has
+changed, any answer resumes the job under it, so the answer is `--raw '{}'`."""
+
 
 class BudgetPresenter:
     """Renders budgets for a person as short plain blocks, or as the JSON contract."""
+
+    def __init__(self, answers: GateAnswerCommandsInterface = RESUME_UNDER_THE_STORED_CAPS) -> None:
+        self._answers = answers
 
     def budget(self, budget: ProjectBudget) -> list[str]:
         ledger = budget.budget
@@ -141,7 +154,7 @@ class BudgetPresenter:
                 f"{jobs} still parked on a budget_exhausted gate. A changed cap applies once "
                 f"the gate is answered:"
             )
-            lines.extend(f"  vibey answer {gate_id} --raw '{{}}'" for gate_id in change.parked)
+            lines.extend(f"  {self._answers.command(gate)}" for gate in change.parked)
         return lines
 
     def _entry(self, entry: CapHistoryEntryInterface) -> str:

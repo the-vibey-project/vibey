@@ -120,7 +120,7 @@ class ProjectBudgetService:
             project_id, request, by=by, account=account, at=self._clock.now()
         )
         parked = tuple(
-            gate.gate_id
+            gate
             for gate in await self._gates.open_for_project(project_id)
             if gate.kind == BUDGET_GATE_KIND
         )

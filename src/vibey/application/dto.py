@@ -340,7 +340,7 @@ class CapChangeOutcome:
 class BudgetChange:
     """What `vibey budget set` or `clear` did, and what holds now.
 
-    `by` is the name the change was recorded under. `parked` names the project's open
+    `by` is the name the change was recorded under. `parked` holds the project's open
     `budget_exhausted` gates: a changed cap applies to a job parked on one only once the
     gate is answered, so the command says so rather than leaving a person waiting.
     """
@@ -348,4 +348,4 @@ class BudgetChange:
     after: ProjectBudget
     by: str
     changes: tuple[CapChangeInterface, ...] = ()
-    parked: tuple[UUID, ...] = ()
+    parked: tuple[HumanGateRecord, ...] = ()
