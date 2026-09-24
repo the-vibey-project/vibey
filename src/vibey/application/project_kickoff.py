@@ -13,6 +13,7 @@ from uuid import UUID
 from vibey.application.dto import EnqueueRequest, ProjectRecord
 from vibey.application.interfaces.projects import ProjectStore
 from vibey.application.interfaces.queue import JobRepository
+from vibey.application.interfaces.queue_priority import QueuePriorityServiceInterface
 from vibey.domain.errors import UnknownProject, WrongPhase
 from vibey.domain.job import idempotency_key
 from vibey.domain.phase import Phase
@@ -24,6 +25,7 @@ async def enqueue_design_interview(
     jobs: JobRepository,
     project_id: UUID,
     origin: str = "interactive",
+    priority: QueuePriorityServiceInterface | None = None,
 ) -> UUID:
     """Move a fresh project into DESIGN and enqueue its interview.
 
@@ -35,6 +37,9 @@ async def enqueue_design_interview(
     `origin` participates in the idempotency key, so a project started from
     a custom resource and one started from the CLI are distinguishable in
     the ledger without changing behaviour.
+
+    `priority`, when given, enqueues the interview already bumped (ADR-0054): it runs
+    next, after whatever is running, through the same grant every bump passes.
     """
     project: ProjectRecord | None = await projects.get(project_id)
     if project is None:
@@ -43,14 +48,15 @@ async def enqueue_design_interview(
         project = await projects.transition(project_id, expected=Phase.INTAKE, to=Phase.DESIGN)
     if project.phase is not Phase.DESIGN:
         raise WrongPhase(f"project is in {project.phase.value}, not design")
-    job = await jobs.enqueue(
-        EnqueueRequest(
-            project_id=project_id,
-            cycle=project.cycle,
-            phase=Phase.DESIGN,
-            kind="design.interview",
-            idempotency_key=idempotency_key(project_id, project.cycle, "design.interview", origin),
-            requirement={"effort": "high"},
-        )
+    request = EnqueueRequest(
+        project_id=project_id,
+        cycle=project.cycle,
+        phase=Phase.DESIGN,
+        kind="design.interview",
+        idempotency_key=idempotency_key(project_id, project.cycle, "design.interview", origin),
+        requirement={"effort": "high"},
     )
-    return job.id
+    if priority is not None:
+        job, _ = await priority.enqueue(request)
+        return job.id
+    return (await jobs.enqueue(request)).id

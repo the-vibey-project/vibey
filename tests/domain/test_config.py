@@ -322,3 +322,53 @@ def test_an_explicit_pool_is_kept_as_written() -> None:
 def test_an_invalid_claudeloop_local_table_is_refused(table: str, match: str) -> None:
     with pytest.raises(ConfigError, match=match):
         load_config_from_string(f'[project]\nname = "x"\n\n[engines.claudeloop_local]\n{table}\n')
+
+
+# -- [queue.priority] (ADR-0054) ----------------------------------------------------
+
+
+def test_queue_priority_declares_no_source_by_default() -> None:
+    from vibey.domain.config import QueueConfig
+
+    config = load_config_from_string('[project]\nname = "demo"\n')
+    assert config.queue.priority.sources == ()
+    assert QueueConfig.from_data({}).priority.sources == ()
+
+
+def test_queue_priority_sources_parse_in_the_order_written() -> None:
+    config = load_config_from_string(
+        '[project]\nname = "demo"\n[queue.priority]\nsources = ["storm", " nightly "]\n'
+    )
+    assert config.queue.priority.sources == ("storm", "nightly")
+
+
+def test_the_queue_table_parses_without_a_project_table() -> None:
+    """`vibey queue` reads only `[queue]`: a vibey.toml holding nothing else is valid
+    for it, so the reader must not demand `[project].name`."""
+    from vibey.domain.config import QueueConfig, parse_toml_string
+
+    data = parse_toml_string('[queue.priority]\nsources = ["storm"]\n')
+    assert QueueConfig.from_data(data).priority.sources == ("storm",)
+
+
+@pytest.mark.parametrize(
+    ("fragment", "match"),
+    [
+        ("queue = 3", "queue: 'queue' must be a dict"),
+        ("[queue]\npriority = 3", "queue.priority: 'priority' must be a dict"),
+        ("[queue.priority]\nsources = 'storm'", "queue.priority.sources: 'sources' must be a list"),
+        ("[queue.priority]\nsources = [3]", r"queue.priority.sources\[0\]: must be a string"),
+        ("[queue.priority]\nsources = ['  ']", r"queue.priority.sources\[0\]: must name a source"),
+        (
+            "[queue.priority]\nsources = ['operator']",
+            r"queue.priority.sources\[0\]: 'operator' is reserved",
+        ),
+        (
+            "[queue.priority]\nsources = ['storm', 'storm']",
+            r"queue.priority.sources\[1\]: 'storm' is declared twice",
+        ),
+    ],
+)
+def test_an_invalid_queue_priority_table_is_refused(fragment: str, match: str) -> None:
+    with pytest.raises(ConfigError, match=match):
+        load_config_from_string(f'{fragment}\n[project]\nname = "demo"\n')

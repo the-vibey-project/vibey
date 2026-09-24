@@ -25,7 +25,8 @@ class EnqueueRequest:
     idempotency_key: str
     payload: Mapping[str, object] = field(default_factory=dict)
     requirement: Mapping[str, object] = field(default_factory=dict)
-    priority: int = 0
+    # No `priority`: a bump, through the grant, is the only way to reorder the queue
+    # (ADR-0054). A priority on the request would be a second way with no grant.
     work_item_id: str | None = None
     max_attempts: int = 7
     run_after: datetime | None = None
@@ -79,6 +80,21 @@ class JobRecord:
     last_error: Mapping[str, object] | None
     created_at: datetime
     updated_at: datetime
+    bump_seq: int | None = None
+    """The job's place among bumped jobs (ADR-0054), or None in normal order. Last,
+    with a default, so a record built before the column existed still builds."""
+    bump_origin: UUID | None = None
+    """The job whose bump moved this one: itself when bumped by name, the named job
+    when it was pulled forward as a dependency."""
+
+
+@dataclass(frozen=True, slots=True)
+class QueueEntry:
+    """One job as `vibey queue list` shows it: the row, and the dependencies it
+    still waits on (not yet succeeded), which the claim will not jump."""
+
+    job: JobRecord
+    waiting_on: tuple[UUID, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

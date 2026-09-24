@@ -36,6 +36,7 @@ from vibey.bootstrap import (
 from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
+from vibey.cli.queue import queue_app
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
     InvalidAnswer,
@@ -88,6 +89,7 @@ app.add_typer(ledger_app, name="ledger")
 ledger_app.command("search")(ledger_search)
 ledger_app.command("export")(ledger_export)
 ledger_app.command("site")(ledger_site)
+app.add_typer(queue_app, name="queue")
 
 
 def _version_callback(value: bool) -> None:
@@ -125,7 +127,7 @@ def main(
     configure_logging(plan, log_file=log_file)
 
 
-async def _enqueue_design(project_id: UUID) -> str:
+async def _enqueue_design(project_id: UUID, *, priority: bool = False) -> str:
     # The transition-and-enqueue logic lives in the application layer so the
     # Kubernetes operator starts projects through the same path this does.
     async with build_app() as resources:
@@ -133,6 +135,7 @@ async def _enqueue_design(project_id: UUID) -> str:
             projects=resources.projects,
             jobs=resources.jobs,
             project_id=project_id,
+            priority=resources.queue_priority if priority else None,
         )
         return str(job_id)
 
@@ -247,10 +250,20 @@ def design(ctx: typer.Context) -> None:
 
 
 @design_app.command("resume")
-def resume_design(project_id: UUID) -> None:
+def resume_design(
+    project_id: UUID,
+    priority: Annotated[
+        bool,
+        typer.Option(
+            "--priority",
+            help="Enqueue the interview bumped: it runs next, after whatever is "
+            "running (`vibey queue bump`, ADR-0054).",
+        ),
+    ] = False,
+) -> None:
     """Enqueue or resume the project's DESIGN interview."""
     with guard():
-        typer.echo(f"design job {asyncio.run(_enqueue_design(project_id))}")
+        typer.echo(f"design job {asyncio.run(_enqueue_design(project_id, priority=priority))}")
 
 
 def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
