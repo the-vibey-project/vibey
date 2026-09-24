@@ -78,10 +78,12 @@ no grant can stop it.
 3. **Where each DSN goes.**
    - In the Helm chart, the owner's DSN is mounted only into a `migrate` init container
      (worker and operator). The workloads get the application's DSN.
-   - `build_app()` migrates only on an owner connection when `VIBEY_PG_MIGRATE_URL` is set.
-   - Without the owner's DSN, `build_app()` migrates on the application's connection only
-     when that role may migrate: a superuser or a member of the migration catalog's owner.
-     That is a single-DSN install.
+   - Only `vibey migrate` reads `VIBEY_PG_MIGRATE_URL`. `build_app()` never does, so no
+     process that runs engine sessions or gate commands holds the owner's DSN (amended
+     after the review of #1100, which found the first version read it there).
+   - `build_app()` migrates on the application's connection only when that role may
+     migrate: a superuser or a member of the migration catalog's owner. That is a
+     single-DSN install.
    - Otherwise it verifies the schema without DDL and refuses to start on a stale one
      (`SchemaNotMigrated`).
    - The test harness runs the whole suite this way. `VIBEY_PG_URL` names a restricted
@@ -95,9 +97,9 @@ no grant can stop it.
    - `vibey worker` says so on stderr at every start;
    - `vibey migrate` exits 1.
 
-   The path: set `VIBEY_PG_MIGRATE_URL` to the current (owner) DSN, give `VIBEY_PG_URL` a
-   new role name and password, and run `vibey migrate`, which creates that role and grants
-   it.
+   The path: give `VIBEY_PG_URL` a new role name and password, then run
+   `VIBEY_PG_MIGRATE_URL=<the current DSN> vibey migrate` (never exported), which creates
+   that role and grants it.
 5. **Password-less access is checked too.** The split protects the ledger only once the
    owner and every superuser need a password to connect. `LocalAuthProbe` finds out two
    ways:

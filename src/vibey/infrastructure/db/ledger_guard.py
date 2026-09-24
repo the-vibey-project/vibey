@@ -68,8 +68,8 @@ class SchemaNotMigrated(VibeyError):
         self.pending = pending
         super().__init__(
             f"{len(pending)} migration(s) pending ({', '.join(pending)}) and VIBEY_PG_URL's "
-            "role may not apply them: set VIBEY_PG_MIGRATE_URL to the owner's DSN, or run "
-            "`vibey migrate` with it"
+            "role may not apply them: run `VIBEY_PG_MIGRATE_URL=<the owner's DSN> vibey "
+            "migrate` (never exported: only that command may hold the owner's DSN)"
         )
 
 
@@ -134,24 +134,17 @@ class RoleIdentifier:
 
 @dataclass(frozen=True, slots=True)
 class DatabaseEndpoints:
-    """The two DSNs, read from the environment. Declared by
-    `interfaces/ledger_guard_interface.py`.
+    """The application role's DSN. Declared by `interfaces/ledger_guard_interface.py`.
 
-    `app_url` (`VIBEY_PG_URL`) is the application role's; `migrate_url`
-    (`VIBEY_PG_MIGRATE_URL`) is the owner's, and absent on a single-DSN install.
+    Deliberately nothing of the owner's: only `vibey migrate` reads
+    `VIBEY_PG_MIGRATE_URL` (`MIGRATE_ENV`), so no process that runs engine sessions or
+    gate commands -- model-chosen shell commands -- ever holds it (review of #1100).
     """
 
     APP_ENV: ClassVar[str] = "VIBEY_PG_URL"
     MIGRATE_ENV: ClassVar[str] = "VIBEY_PG_MIGRATE_URL"
 
     app_url: str
-    migrate_url: str | None = None
-
-    @classmethod
-    def from_environ(cls, environ: Mapping[str, str], *, app_url: str) -> "DatabaseEndpoints":
-        """`app_url` is resolved by the caller (bootstrap refuses an unset one); the
-        owner's DSN is optional and blank means unset."""
-        return cls(app_url=app_url, migrate_url=environ.get(cls.MIGRATE_ENV, "").strip() or None)
 
     @property
     def app_role(self) -> str | None:

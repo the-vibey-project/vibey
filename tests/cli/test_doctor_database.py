@@ -16,7 +16,7 @@ from typer.testing import CliRunner
 
 from tests.db_roles import TestDatabaseRoles
 from vibey.application.dto import PreflightResult
-from vibey.bootstrap import build_app
+from vibey.bootstrap import migrations_dir
 from vibey.cli.main import _database_security_section, app
 from vibey.infrastructure.cluster_preflight import ClusterCheck, DatabaseSecurityChecks
 from vibey.infrastructure.db.local_auth import AuthVerdict, LocalAuthFinding, LocalAuthProbe
@@ -29,11 +29,7 @@ OWNER_DSN = os.environ["VIBEY_TEST_DATABASE_URL"]
 
 @pytest.fixture(autouse=True)
 def _migrated() -> None:
-    async def migrate() -> None:
-        async with build_app():
-            pass
-
-    asyncio.run(migrate())
+    asyncio.run(ROLES.restore(OWNER_DSN, migrations_dir()))
 
 
 def _probe_says(verdict: AuthVerdict, detail: str = "stub") -> object:
@@ -46,7 +42,11 @@ def _probe_says(verdict: AuthVerdict, detail: str = "stub") -> object:
 
 
 @split_only
-def test_migrate_reconciles_the_application_role_and_reports_the_guard_in_force() -> None:
+def test_migrate_reconciles_the_application_role_and_reports_the_guard_in_force(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("VIBEY_PG_MIGRATE_URL", OWNER_DSN)
+
     res = runner.invoke(app, ["migrate"])
 
     assert res.exit_code == 0, res.output

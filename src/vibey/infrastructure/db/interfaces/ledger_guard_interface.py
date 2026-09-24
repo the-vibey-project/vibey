@@ -25,13 +25,10 @@ class RoleIdentifierInterface(Protocol):
 
 @runtime_checkable
 class DatabaseEndpointsInterface(Protocol):
-    """The application role's DSN and, on a split install, the owner's."""
+    """The application role's DSN, and nothing of the owner's."""
 
     @property
     def app_url(self) -> str: ...
-
-    @property
-    def migrate_url(self) -> str | None: ...
 
     @property
     def app_role(self) -> str | None:
