@@ -1,24 +1,20 @@
 # QwenStorm 3.0.0 — run state
 
-Snapshot 2026-09-23T11:32:52Z, written by `tools/storm-snapshot.py`.
+Snapshot 2026-09-23T13:32:54Z, written by `tools/storm-snapshot.py`.
 
 The runner's durable record is `integrated.txt` and `abandoned.txt`: a lane in neither is
 unsettled, whatever exists under `lanes/`. `lanes/` lives in /tmp and is wiped between
 sessions, so nothing here depends on it surviving.
 
-- queue: **594 lanes** · integrated: **8** · abandoned: **2**
-- lane worktrees: **31** · finished awaiting review: **30** · unsettled: **31**
-- integration branch: `c00ae81d`
-- last line of progress.log: `2026-09-23T11:10:52Z start gap-ci-tenants-arch-macos-2 #505 on integration@c00ae81d`
+- queue: **594 lanes** · integrated: **12** · abandoned: **14**
+- lane worktrees: **31** · finished awaiting review: **30** · unsettled: **15**
+- integration branch: `023ec2c8`
+- last line of progress.log: `2026-09-23T13:32:38Z reaped surfaces-env: the runner gave up after 3 attempt(s), and nothing was ever publishe`
 
 Still running or never finished (1): `gap-ci-tenants-arch-macos-2`
 
 ## How it was stopped
 
-- SIGTERM queue (286)
-- SIGTERM lane (71490)
-- SIGTERM cycle (10306)
-- SIGTERM merge (291)
 - all stopped
 
 
@@ -53,6 +49,22 @@ integrated  qwenloop-toolcall-retry
 integrated  default-model-p1
 integrated  default-model-p2
 integrated  default-model-p3
+integrated  gap-agent-tree-parity
+integrated  installer-catalogue
+integrated  loops-residency-policy
+integrated  split-332-1-transport-seams
 abandoned   opencodeloop-parity-p1
 abandoned   opencodeloop-parity-p2
+abandoned   engines-pool
+abandoned   gap-cdd-build-trajectory
+abandoned   gap-cdd-distance
+abandoned   gap-ci-arch-gates
+abandoned   gap-ci-macos-gates
+abandoned   gap-ci-tenants-arch-macos-1
+abandoned   rmq-r01-queue-config
+abandoned   rmq-r06-job-dispatch-envelope
+abandoned   rmq-r08-dispatch-migration
+abandoned   split-351-1-amqp-contract
+abandoned   split-367-1-run-dir
+abandoned   surfaces-env
 ```
