@@ -71,8 +71,26 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # The chart's own broker, pinned by the same digest (values.yaml), so the queue
+      # reaper's broker tests run against what ships (ADR-0056, #1108 review):
+      # tests/infrastructure/bus/test_rabbitmq_live.py skips without it.
+      rabbitmq:
+        image: rabbitmq:4-management-alpine@sha256:b839b492a91788a1d9406ef3ec0e1d8a8448032c48148a54a9e0c68ed66cde9b
+        env:
+          RABBITMQ_DEFAULT_USER: vibey
+          RABBITMQ_DEFAULT_PASS: vibey
+        ports:
+          - 15672:15672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q check_running"
+          --health-interval 5s
+          --health-timeout 10s
+          --health-retries 30
     env:
       VIBEY_TEST_DATABASE_URL: postgresql://vibey:vibey@localhost:5432/vibey_test
+      VIBEY_TEST_RABBITMQ_URL: http://localhost:15672
+      VIBEY_TEST_RABBITMQ_USER: vibey
+      VIBEY_TEST_RABBITMQ_PASSWORD: vibey
     steps:
       - uses: actions/checkout@v4
         with:
@@ -1229,18 +1247,26 @@ jobs:
           grep -q "PASS ledger-guard" /tmp/doctor
           grep -Eq "(PASS|FAIL|UNKNOWN) local-auth" /tmp/doctor
 
-      # ADR-0056. The broker enforces the consumer_timeout the chart declares -- read back
-      # from the running node, never assumed from the file -- and the queue reaper, run
-      # in the worker pod with only the environment the chart gives it, reconciles its
-      # policy onto the broker and reads it back. That write is also the check that the
-      # pinned image accepts the `consumer-timeout` and `delivery-limit` policy keys.
+      # ADR-0056. The broker loads the consumer_timeout the chart declares. The value alone
+      # proves nothing -- the chart's default is the image's own (#1108 review finding 3)
+      # -- so the node must list the chart's conf.d file among the files it loaded, and
+      # hold the value the chart rendered. Then the queue reaper, run in the worker pod with
+      # only the environment the chart gives it, reconciles both of its policies (quorum
+      # and classic) and reads them back, which is also the check that the pinned image
+      # accepts those policy definitions.
       - name: Contract - the broker enforces the declared consumer timeout and the reaper's policy
         run: |
           set -euo pipefail
+          kubectl exec -n vibey deploy/vibey-vibey-rabbitmq -- \
+            rabbitmq-diagnostics status > /tmp/rabbit-status.txt
+          sed -n '/Config files/,/^$/p' /tmp/rabbit-status.txt
+          grep -q '/etc/rabbitmq/conf.d/20-vibey-reap.conf' /tmp/rabbit-status.txt
+          want=$(helm get values vibey -n vibey --all -o json \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["surfaces"]["rabbitmq"]["consumerTimeoutMs"])')
           got=$(kubectl exec -n vibey deploy/vibey-vibey-rabbitmq -- \
             rabbitmqctl eval 'application:get_env(rabbit, consumer_timeout).' | tr -d '[:space:]')
-          echo "consumer_timeout on the running node: $got"
-          test "$got" = "{ok,1800000}"
+          echo "consumer_timeout on the running node: $got (declared: $want)"
+          test "$got" = "{ok,$want}"
           kubectl exec -n vibey deploy/vibey-vibey-worker -- vibey queue reap --json > /tmp/reap.json
           cat /tmp/reap.json
           python3 -c 'import json; r = json.load(open("/tmp/reap.json")); assert r["ok"] and r["policy"]["verified"], r'
@@ -1248,6 +1274,7 @@ jobs:
             rabbitmqctl list_policies -p / --formatter json > /tmp/policies.json
           cat /tmp/policies.json
           grep -q '"vibey-reap"' /tmp/policies.json
+          grep -q '"vibey-reap-classic"' /tmp/policies.json
 
       # KEDA's operator runs in its own namespace and dials Postgres
       # itself, so it is the only thing here that exercises the DSN from
