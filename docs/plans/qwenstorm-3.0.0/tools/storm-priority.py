@@ -21,7 +21,8 @@ Every request is recorded, whatever its outcome. Exit:
     0  done (including a request that moved nothing)
     1  refused: the caller may not change the priority lane. A caller without write access
        to the storm (another uid) is refused all the same, and told the refusal "could not
-       be recorded (no write access)" -- ADR-0054 records the same case
+       be recorded (no write access)" -- ADR-0054 records the same case. A refused `reset`
+       meeting a lost log is told it "could not be recorded" because the log is lost
     2  refused: the request cannot be carried out (a bad name, an unknown or abandoned
        dependency, a lane another prioritised lane still needs, ...)
     3  the priority order is unknown: the log cannot be replayed, or it is missing after it
@@ -86,7 +87,9 @@ class PriorityCli:
                 report = desk.unbump(args.slug, args.source)
         except (Unauthorised, Invalid) as refused:
             recorded = (
-                "and recorded" if refused.recorded else ("could not be recorded (no write access)")
+                "and recorded"
+                if refused.recorded
+                else f"could not be recorded ({refused.unrecorded})"
             )
             print(f"refused; {recorded}: {refused}", file=sys.stderr)
             return 1 if isinstance(refused, Unauthorised) else 2
