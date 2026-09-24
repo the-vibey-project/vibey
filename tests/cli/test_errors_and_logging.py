@@ -50,13 +50,15 @@ def test_errors_with_a_known_remedy_say_what_to_try_next() -> None:
 
 
 def test_gate_hints_say_how_to_find_the_gate_and_how_to_answer_it() -> None:
-    """A parked gate is only actionable if the operator can find its id, and no
-    command lists open gates -- so the hint carries the query that does."""
+    """A parked gate is only actionable if the operator can find its id, so the hint
+    names the command that lists open gates -- not a SQL query against `human_gate`."""
     refused = GateResult(ok=False, mode=GateMode.STRICT, attempts=2, violations=(), rules_run=())
     for exc in (BudgetExceeded("over cap"), EscalationExhausted(3), HandoffRejected(refused)):
         message = render(exc)
         assert "vibey answer" in message
-        assert "human_gate" in message
+        assert "vibey gates" in message
+        assert "human_gate" not in message
+        assert "SELECT" not in message
 
 
 def test_no_hint_names_a_command_that_does_not_exist() -> None:

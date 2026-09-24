@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
+from vibey.application.dto import ProjectRecord
 from vibey.application.interfaces import (
     BuildLedger,
     CallerIdentity,
@@ -164,6 +165,11 @@ class PostgresProjectRepositoryInterface(ProjectStore, Protocol):
     async def create(self, *args: object, **kwargs: object) -> object: ...
 
     async def get_latest(self) -> object: ...
+
+    async def list_all(self) -> tuple[ProjectRecord, ...]:
+        """Every project, newest first: `created_at` descending, then id, so the order
+        is the same on every read. What `vibey projects` lists."""
+        ...
 
 
 @runtime_checkable

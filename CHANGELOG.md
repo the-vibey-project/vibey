@@ -145,6 +145,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **cli:** finding a project or an open gate no longer takes SQL. `vibey projects` lists every
+  project, newest first, with its id, phase, cycle and open-gate count; `vibey gates
+  [PROJECT_ID]` lists every open gate, oldest first, with its project, kind and prompt, and
+  `answer with:` -- the exact `vibey answer` command that answers it. Both take `--json`
+  (a projects array; `{"gates": [...]}`), the contract the VS Code extension reads, and both
+  exit 0 on an empty list. How each gate kind is answered is declared once, in
+  `vibey.cli.gate_answers`: a verdict or choice from the gate's own options, `--defaults` for
+  the interview, `--raw '{"max_dollars": N}'` and the other grants with the number left to
+  the person, `--raw '{}'` where any answer retries, and `--raw '<json>'` for the rest; a
+  test fails when a gate kind is raised without an entry there. The repositories gain
+  `list_all()` and `open_all()`, and the next-step hints, the README, the CLI reference and
+  the greeter runbook point at `vibey gates` instead of a `human_gate` query
+
 * **vibey_gh:** `vibey-gh slots corpus|calibrate|allowed` measure how many runs of one local
   model fit on a device at once, and `[local_models] concurrent_runs` declares it (sub-doctrines
   8.c and 8.j, ADR-0058). `calibrate` replays storm-shaped turns (`truncate: false`, so a prompt
