@@ -104,6 +104,7 @@ In storm.toml, section `[push_gate]`; an absent key is the default below.
     protected = ["ollama", "vibey-runner", "Runner.Listener", "Runner.Worker"]
     ownerless_match_seconds = 5
     worktree_roots = [".."]         # where a bare-mkdir push may stand; default: the lock's dir
+                                    # and the storm home
     schedule_seconds = 90
     schedule_label = "org.vibey.push-gate-reaper"
 
@@ -300,7 +301,10 @@ class PushGateConfig:
             isinstance(p, str) and p for p in protected
         ):
             raise SystemExit(f"[push_gate] protected must be a list of names, not {protected!r}")
-        roots = section.get("worktree_roots", [str(lock_path.parent)])
+        # Absent a declaration: the lock's own directory, and the storm home, where the lanes'
+        # worktrees live (10.h) even while a legacy lock is still taken somewhere else.
+        homes = dict.fromkeys([str(lock_path.parent), str(home.resolve()[0])])
+        roots = section.get("worktree_roots", list(homes))
         if not isinstance(roots, list) or not all(isinstance(r, str) and r for r in roots):
             raise SystemExit(f"[push_gate] worktree_roots must be a list of paths, not {roots!r}")
         label = section.get("schedule_label", SCHEDULE_LABEL)

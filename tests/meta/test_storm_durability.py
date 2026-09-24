@@ -204,6 +204,21 @@ def test_the_push_gates_default_lock_is_the_homes(tmp_path: Path, monkeypatch) -
     cfg = push_gate.PushGateConfig.declared(root)
     assert cfg.lock == Path("/srv/storm-home/.push-lock")
     assert cfg.state_dir == Path("/srv/storm-home/.push-lock.gate")
+    assert cfg.worktree_roots == (Path("/srv/storm-home"),)
+
+
+def test_a_legacy_lock_elsewhere_still_traces_pushes_from_the_home(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A bare-mkdir lock still taken in the old place must not blind the reaper's tracer to
+    the lanes, which now stand in the storm home."""
+    monkeypatch.delenv("VIBEY_STORM_HOME", raising=False)
+    push_gate = _load("push_gate", "push_gate.py")
+    root = tmp_path / "storm"
+    root.mkdir()
+    (root / "storm.toml").write_text('[paths]\nhome = "/srv/storm-home"\n', encoding="utf-8")
+    cfg = push_gate.PushGateConfig.declared(root, lock=Path("/legacy/storm/.push-lock"))
+    assert cfg.worktree_roots == (Path("/legacy/storm"), Path("/srv/storm-home"))
 
 
 # --- the gate -----------------------------------------------------------------------------
