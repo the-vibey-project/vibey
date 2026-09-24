@@ -116,6 +116,32 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
    - `lane_watchdog.py` bounds each lane attempt. It enforces a per-attempt and a per-lane
      wall clock and a stall watchdog, declared in `storm.toml` `[lane]`. A hung attempt
      cannot hold up the one-at-a-time queue.
+   - `push_gate.py` is the shared push lock as code, and its reaper. Push with
+     `python3 tools/push_gate.py run -- git push origin HEAD:<branch>`: it waits for the lock,
+     runs the push in a process group of its own, logs its output, and always releases,
+     including on a signal. `status` says who holds the lock and what it is doing; `acquire`
+     and `release TOKEN` are the shell form, and only the token's owner can release. The
+     lock is an atomic `mkdir` with an owner record inside (pid, process group, branch,
+     worktree, start time, uid), at `[push_gate] lock` in `storm.toml`, else `.push-lock`
+     beside the storm root.
+
+     The reaper (`push_gate.py reap`, `--dry-run` to only report) runs first in every
+     `storm-cycle.py` pass. It acts on exactly three measured conditions, each declared in
+     `[push_gate]` with a default:
+     - the holder is gone and nothing of its push still runs: the lock is released;
+     - the push's own process group used under `idle_cpu_seconds` (2) of CPU over
+       `idle_window_seconds` (600), sampled with `ps -o time` pass by pass;
+     - it has held the lock past `wall_ceiling_seconds` (3600).
+
+     Before a kill it writes evidence: the process tree, the push log's tail, and the suite's
+     stacks, from `py-spy dump` or else SIGUSR1, which `tests/conftest.py` arms. It then
+     sends SIGTERM to that group, waits `kill_grace_seconds`, and sends SIGKILL. It never
+     signals a process outside the group, a group taken by `acquire` (the shell's own), or a
+     group holding a `protected` process such as Ollama or the runner. Each reap is one line
+     in the append-only reap log, and the push reports `reaped: hang` (exit 124), not a test
+     failure. An unreadable process table (the sandbox refuses `ps`) is reported as unknown
+     and is never taken for idle. The classes are declared in
+     `interfaces/push_gate_interface.py`.
    - `storm_trust.py` contains forge text where it enters (sub-doctrine 12.j, ADR-0053).
      A lane starts only when every account that opened, edited or renamed its issue is in
      `[unattended_approval] authors`. That list is read from the integration branch's
