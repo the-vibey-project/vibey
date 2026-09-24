@@ -3,8 +3,12 @@
 the subprocess boundary. Live execution requires `az login` and a real
 subscription; everything up to that boundary is verified here."""
 
+import asyncio
 import json
+import os
+import stat
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -20,10 +24,13 @@ from vibey.domain.deployment import (
 )
 from vibey.infrastructure.azure.arm import DEFAULT_IMAGE, UnsupportedTopology, render_template
 from vibey.infrastructure.azure.az_cli import (
+    AZ_CLI_ENV_ALLOW,
     AzCliClientAdapter,
     AzCliError,
+    AzCliSubprocessExecutor,
     MutationNotAuthorized,
 )
+from vibey.infrastructure.azure.interfaces import AzCliExecutorInterface
 from vibey.infrastructure.engines.claudeloop_process import CommandResult
 
 NOW = datetime(2026, 8, 19, tzinfo=UTC)
@@ -245,3 +252,102 @@ async def test_az_failures_surface_argv_and_stderr() -> None:
         await adapter.discover_environment(_spec().target_scope)
 
     assert "not logged in" in str(excinfo.value)
+
+
+# ── the az executor: its own, with its own declared environment ─────────────
+#
+# `az` used to run through vibey's GIT executor, which copied the worker's whole
+# environment minus GIT_*. It has an executor of its own now, whose environment is
+# declared: the system basics plus the Azure CLI's own configuration variables.
+
+
+def test_the_default_executor_is_the_az_one_not_the_git_one() -> None:
+    adapter = AzCliClientAdapter()
+
+    assert isinstance(adapter.executor, AzCliSubprocessExecutor)
+    assert isinstance(adapter.executor, AzCliExecutorInterface)
+
+
+def test_the_az_environment_is_declared_and_carries_no_vibey_secret(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for name, value in {
+        "VIBEY_PG_URL": "postgresql://vibey:secret@db/vibey",
+        "PGPASSWORD": "secret",
+        "GH_TOKEN": "ghp_secret",
+        "AZURE_OPENAI_API_KEY": "model-key",
+        "AZURE_CONFIG_DIR": "/home/worker/.azure",
+        "AZURE_CORE_OUTPUT": "json",
+        "AZURE_DEFAULTS_GROUP": "rg",
+    }.items():
+        monkeypatch.setenv(name, value)
+
+    env = AzCliSubprocessExecutor().environment.build()
+
+    assert "AZURE_CONFIG_DIR" in AZ_CLI_ENV_ALLOW
+    assert env["AZURE_CONFIG_DIR"] == "/home/worker/.azure"
+    assert env["AZURE_CORE_OUTPUT"] == "json"
+    assert env["AZURE_DEFAULTS_GROUP"] == "rg"
+    assert "PATH" in env
+    for secret in ("VIBEY_PG_URL", "PGPASSWORD", "GH_TOKEN", "AZURE_OPENAI_API_KEY"):
+        assert secret not in env
+
+
+def test_an_operator_can_declare_more_for_az_but_never_vibeys_own() -> None:
+    executor = AzCliSubprocessExecutor(env_allow=("AZURE_CLIENT_ID",))
+    assert executor.environment.allow_list.admits("AZURE_CLIENT_ID")
+    with pytest.raises(ValueError, match="VIBEY_PG_URL"):
+        AzCliSubprocessExecutor(env_allow=("VIBEY_PG_URL",))
+
+
+async def test_the_az_executor_runs_az_only() -> None:
+    with pytest.raises(ValueError, match="az only"):
+        await AzCliSubprocessExecutor().execute(("git", "status"))
+
+
+async def test_a_real_az_process_sees_none_of_the_workers_secrets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """End to end: a stand-in `az` on PATH records the names it was started with."""
+    log = tmp_path / "az-env.log"
+    fake = tmp_path / "bin" / "az"
+    fake.parent.mkdir()
+    fake.write_text(f'#!/bin/sh\nenv | sed "s/=.*//" > "{log}"\necho "{{}}"\n')
+    fake.chmod(fake.stat().st_mode | stat.S_IXUSR)
+    monkeypatch.setenv("PATH", f"{fake.parent}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("VIBEY_PG_URL", "postgresql://vibey:secret@db/vibey")
+    monkeypatch.setenv("PGPASSWORD", "secret")
+
+    await AzCliClientAdapter().discover_environment(_spec().target_scope)
+
+    names = set(log.read_text().split())
+    assert "PATH" in names
+    assert not {n for n in names if n.startswith(("VIBEY_", "PG"))}
+
+
+async def test_a_cancelled_az_call_terminates_and_reaps_its_process(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeProcess:
+        returncode = None
+        terminated = False
+        waited = False
+
+        async def communicate(self) -> tuple[bytes, bytes]:
+            raise asyncio.CancelledError
+
+        def terminate(self) -> None:
+            FakeProcess.terminated = True
+
+        async def wait(self) -> None:
+            FakeProcess.waited = True
+
+    async def fake_create(*args: object, **kwargs: object) -> FakeProcess:
+        return FakeProcess()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create)
+
+    with pytest.raises(asyncio.CancelledError):
+        await AzCliSubprocessExecutor().execute(("az", "account", "show"))
+
+    assert FakeProcess.terminated and FakeProcess.waited

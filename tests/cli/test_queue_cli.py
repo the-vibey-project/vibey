@@ -545,7 +545,7 @@ def test_the_presenter_says_what_a_request_swept_and_what_it_left() -> None:
     lines = QueuePresenter().change(change)
     assert lines[0].startswith(f"job {target}: it is not bumped")
     assert any(str(gone) in line and "no longer needed" in line for line in lines)
-    assert any(str(left) in line and "phase" in line for line in lines)
+    assert any(str(left) in line and "cannot write" in line for line in lines)
     document = json.loads(QueuePresenter().change_json(change))
     assert document["swept"] == [{"job_id": str(gone), "bump_seq": None, "previous": 4}]
     assert document["skipped"] == [str(left)]
