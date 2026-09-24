@@ -3,9 +3,10 @@
 
 `.github/CODEOWNERS` tells GitHub whose review a change to them needs;
 `[merge_train] protected_paths` in `.vibey-gh.toml` tells the merge train never to merge
-one unattended, because its `--admin` fallback would bypass that review. Either list alone
-leaves a hole: a path only in CODEOWNERS is admin-merged by the train, and a path only in
-the train's list merges through the merge queue with nobody's review. The single guard
+one unattended, because a run given `--admin-fallback` retries with `--admin` and would
+bypass that review. Either list alone leaves a hole: a path only in CODEOWNERS is
+admin-merged by such a run, and a path only in the train's list merges through the merge
+queue with nobody's review. The single guard
 before these was a regex in scripts/fleet/land.sh that drifted from what it claimed to
 protect without anyone noticing, so the agreement is a test rather than a hope.
 

@@ -133,13 +133,26 @@ def checks_pass(cfg: GhConfig, number: int) -> bool:
     return ok
 
 
-def merge(cfg: GhConfig, number: int, method: str = DEFAULT_METHOD) -> tuple[bool, bool]:
-    """(merged, bypassed). Plain merge first: a ruleset's approving-review requirement
-    refuses it even for an admin's token, because bypassing is opt-in per call."""
-    base = ["pr", "merge", str(number), f"--{method}"]
-    if _gh(cfg, *base)[0]:
-        return True, False
-    return _gh(cfg, *base, "--admin")[0], True
+def merge(
+    cfg: GhConfig, number: int, method: str = DEFAULT_METHOD, admin_fallback: bool = False
+) -> tuple[bool, bool, str]:
+    """(merged, bypassed, error). A plain merge, and by default nothing else: a ruleset's
+    approving-review requirement refuses it, and that refusal is the gate working. Only
+    with `admin_fallback` -- `vibey-gh promote --wait --admin-fallback`, a person's choice
+    for one run and never a configuration default (vibey ADR-0053, sub-doctrine 12.d) --
+    is it retried with `--admin`. `error` is GitHub's own reason, "" on success.
+
+    Module-level beside `promote`, its one caller: callers and tests substitute it by name.
+    """
+    base = ["gh", "pr", "merge", str(number), f"--{method}"]
+    attempts = [base, base + ["--admin"]] if admin_fallback else [base]
+    detail = ""
+    for bypassed, argv in enumerate(attempts):
+        run = subprocess.run(argv, cwd=cfg.root, capture_output=True, text=True, check=False)
+        if run.returncode == 0:
+            return True, bool(bypassed), ""
+        detail = (run.stderr or run.stdout or "").strip() or detail
+    return False, admin_fallback, " ".join((detail or "GitHub refused the merge").split())[:300]
 
 
 def promote(
@@ -148,6 +161,7 @@ def promote(
     dry_run: bool = False,
     method: str = DEFAULT_METHOD,
     wait: bool = False,
+    admin_fallback: bool = False,
 ) -> Promotion:
     """Promote the integration branch, opening a pull request or refreshing the open one.
 
@@ -238,7 +252,7 @@ def promote(
         result.say(f"checks did not pass on #{number}; leaving it open")
         return result
 
-    merged, bypassed = merge(cfg, number, method)
+    merged, bypassed, error = merge(cfg, number, method, admin_fallback)
     result.merged, result.bypassed = merged, bypassed
     if merged:
         result.say(
@@ -246,7 +260,8 @@ def promote(
             + (" (review requirement bypassed)" if bypassed else "")
         )
     else:
-        result.say(f"could not merge #{number}; it is open and green for a human")
+        # Open and green, waiting on a person: the refusal is the gate, not a fault.
+        result.say(f"#{number} needs a human merge: {error}")
     return result
 
 

@@ -199,7 +199,30 @@ def test_an_existing_pull_request_is_reused(project, fake_gh):
     assert not [c for c in calls(fake_gh) if c.startswith("pr create")]
 
 
-def test_a_ruleset_that_refuses_the_plain_merge_falls_back_to_admin(project, fake_gh):
+_REFUSED = "GraphQL: Pull request is not mergeable: REVIEW_REQUIRED"
+
+
+def test_a_refused_promotion_waits_for_a_person_and_never_tries_admin(project, fake_gh):
+    """ADR-0053 / sub-doctrine 12.d: a promotion runs unattended, so a refusal is the gate
+    working. It is reported in GitHub's own words and nothing routes around it."""
+    advance_develop(project)
+    script(
+        fake_gh,
+        {
+            "pr list": {"out": "7\n"},
+            "pr checks 7": {},
+            # Would succeed if asked -- which is exactly what must not happen by default.
+            "pr merge 7 --rebase --admin": {},
+            "pr merge 7 --rebase": {"err": _REFUSED + "\n", "code": 1},
+        },
+    )
+    result = promote_mod.promote(cfg_for(project), wait=True)
+    assert result.merged is False and result.bypassed is False
+    assert not [c for c in calls(fake_gh) if c.endswith("--admin")]
+    assert f"#7 needs a human merge: {_REFUSED}" in result.notes
+
+
+def test_the_admin_fallback_is_a_persons_per_run_choice(project, fake_gh):
     advance_develop(project)
     script(
         fake_gh,
@@ -207,18 +230,20 @@ def test_a_ruleset_that_refuses_the_plain_merge_falls_back_to_admin(project, fak
             "pr list": {"out": "7\n"},
             "pr checks 7": {},
             "pr merge 7 --rebase --admin": {},
+            "pr merge 7 --rebase": {"err": _REFUSED + "\n", "code": 1},
         },
     )
-    result = promote_mod.promote(cfg_for(project), wait=True)
+    result = promote_mod.promote(cfg_for(project), wait=True, admin_fallback=True)
     assert result.merged is True and result.bypassed is True
+    assert calls(fake_gh)[-1].endswith("--admin")
 
 
 def test_a_merge_nothing_can_satisfy_leaves_the_pull_request_open(project, fake_gh):
     advance_develop(project)
     script(fake_gh, {"pr list": {"out": "7\n"}, "pr checks 7": {}})
-    result = promote_mod.promote(cfg_for(project), wait=True)
-    assert result.merged is False
-    assert "open and green for a human" in " ".join(result.notes)
+    result = promote_mod.promote(cfg_for(project), wait=True, admin_fallback=True)
+    assert result.merged is False and result.bypassed is True
+    assert "#7 needs a human merge: no scripted answer" in result.notes
 
 
 # ── the guards ─────────────────────────────────────────────────────────────

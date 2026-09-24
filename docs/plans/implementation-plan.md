@@ -324,9 +324,9 @@ Two guardrails, because a tool that edits itself while running is a footgun:
   human approval, so vibey cannot weaken the tests that prove it works.
   *(Enforced since #213 by `.github/CODEOWNERS` plus `require_code_owner_review` on
   both rulesets, and by `[merge_train] protected_paths`, which makes the merge train
-  refuse such a pull request as "needs a human merge" before its `--admin` fallback
-  could bypass the review; `tests/meta/test_protected_paths_agree.py` keeps the two
-  lists identical. The dormant `scripts/fleet/land.sh` check is superseded. The
+  refuse such a pull request as "needs a human merge" before a run given
+  `--admin-fallback` could bypass the review with `--admin`;
+  `tests/meta/test_protected_paths_agree.py` keeps the two lists identical. The dormant `scripts/fleet/land.sh` check is superseded. The
   ruleset keys take effect when the operator runs `vibey-gh reconcile`.)*
 
 ---

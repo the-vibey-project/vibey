@@ -225,7 +225,9 @@ def test_merge_train_merges_ready_and_skips_the_rest(repo, capsys, monkeypatch):
     )
     merged: list[int] = []
     monkeypatch.setattr(
-        merge_train, "merge", lambda n, m, b=None: (merged.append(n), (True, True, ""))[1]
+        merge_train,
+        "merge",
+        lambda n, m, b=None, admin_fallback=False: (merged.append(n), (True, True, ""))[1],
     )
 
     assert main(["merge-train"]) == 0
@@ -240,7 +242,9 @@ def test_merge_train_dry_run_merges_nothing(repo, capsys, monkeypatch):
     monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [{"number": 3}])
     monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: Verdict(3, "t", "owner", None))
     monkeypatch.setattr(
-        merge_train, "merge", lambda n, m, b=None: pytest.fail("dry run must not merge")
+        merge_train,
+        "merge",
+        lambda n, m, b=None, admin_fallback=False: pytest.fail("dry run must not merge"),
     )
     assert main(["merge-train", "--dry-run"]) == 0
     assert "would merge" in capsys.readouterr().out
@@ -250,13 +254,79 @@ def test_merge_train_reports_a_refused_merge(repo, capsys, monkeypatch):
     monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [{"number": 9}])
     monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: Verdict(9, "t", "owner", None))
     monkeypatch.setattr(
-        merge_train, "merge", lambda n, m, b=None: (False, True, "GraphQL: repo not granted")
+        merge_train,
+        "merge",
+        lambda n, m, b=None, admin_fallback=False: (False, True, "GraphQL: repo not granted"),
     )
     assert main(["merge-train"]) == 0
     out = capsys.readouterr().out
     # The API's own words, not a guess. "refused it" alone sent a token-scope problem
     # into ruleset archaeology.
-    assert "could not be merged — GraphQL: repo not granted" in out
+    assert "#9 needs a human merge: GraphQL: repo not granted" in out
+
+
+def test_a_refused_merge_waits_for_a_person_and_the_pass_continues(repo, capsys, monkeypatch):
+    """ADR-0053 / 12.d: no `--admin` unattended. A pull request GitHub refuses (e.g.
+    REVIEW_REQUIRED) is reported as waiting on a human, and the rest of the train runs."""
+    monkeypatch.setattr(
+        merge_train, "open_pull_requests", lambda cfg: [{"number": 1}, {"number": 2}]
+    )
+    monkeypatch.setattr(
+        merge_train, "judge", lambda pr, cfg: Verdict(pr["number"], "t", "owner", None)
+    )
+    asked: list[tuple[int, bool]] = []
+
+    def merge(n, m, b=None, admin_fallback=False):
+        asked.append((n, admin_fallback))
+        if n == 1:
+            return False, False, "Pull request is not mergeable: REVIEW_REQUIRED"
+        return True, False, ""
+
+    monkeypatch.setattr(merge_train, "merge", merge)
+    assert main(["merge-train"]) == 0
+    out = capsys.readouterr().out
+    assert asked == [(1, False), (2, False)]
+    assert "#1 needs a human merge: Pull request is not mergeable: REVIEW_REQUIRED" in out
+    assert "#2 squash-merged" in out
+    assert "merged 1, skipped 1" in out
+
+
+def test_only_a_human_flag_turns_the_admin_fallback_on(repo, monkeypatch):
+    monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [{"number": 4}])
+    monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: Verdict(4, "t", "owner", None))
+    asked: list[bool] = []
+    monkeypatch.setattr(
+        merge_train,
+        "merge",
+        lambda n, m, b=None, admin_fallback=False: (asked.append(admin_fallback), (True, True, ""))[
+            1
+        ],
+    )
+    assert main(["merge-train", "--admin-fallback"]) == 0
+    assert asked == [True]
+
+
+def test_no_configuration_key_can_turn_the_admin_fallback_on(repo, monkeypatch):
+    """A declared default-on would re-enable the bypass for every unattended caller, so
+    the switch exists only as a per-invocation flag a person types."""
+    config = repo / ".vibey-gh.toml"
+    config.write_text(
+        config.read_text().replace("[merge_train]\n", "[merge_train]\nadmin_fallback = true\n")
+    )
+    assert "admin_fallback = true" in config.read_text()
+    monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [{"number": 4}])
+    monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: Verdict(4, "t", "owner", None))
+    asked: list[bool] = []
+    monkeypatch.setattr(
+        merge_train,
+        "merge",
+        lambda n, m, b=None, admin_fallback=False: (
+            asked.append(admin_fallback),
+            (False, False, "no"),
+        )[1],
+    )
+    assert main(["merge-train"]) == 0
+    assert asked == [False]
 
 
 def _conflicting(number: int = 5, head: str = "feature/x"):
@@ -276,7 +346,11 @@ def test_merge_train_clears_a_conflict_it_created_itself(repo, capsys, monkeypat
     monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [pr])
     monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: verdict)
     monkeypatch.setattr(
-        merge_train, "merge", lambda n, m, b=None: pytest.fail("a restacked head is not merged yet")
+        merge_train,
+        "merge",
+        lambda n, m, b=None, admin_fallback=False: pytest.fail(
+            "a restacked head is not merged yet"
+        ),
     )
     asked: list[str] = []
     monkeypatch.setattr(
@@ -363,7 +437,9 @@ def test_merge_train_supplies_the_trailer_for_a_body_that_lacks_it(repo, capsys,
     monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: Verdict(pr["number"], "t", "o", None))
     seen: dict[int, object] = {}
     monkeypatch.setattr(
-        merge_train, "merge", lambda n, m, b=None: (seen.__setitem__(n, b), (True, False, ""))[1]
+        merge_train,
+        "merge",
+        lambda n, m, b=None, admin_fallback=False: (seen.__setitem__(n, b), (True, False, ""))[1],
     )
     assert main(["merge-train"]) == 0
     trailer = load_config().trailer
@@ -381,7 +457,9 @@ def test_merge_train_cleans_only_eligible_topic_branches(
     pr = {"number": 9, "headRefName": "fix/thing"}
     monkeypatch.setattr(merge_train, "open_pull_requests", lambda cfg: [pr])
     monkeypatch.setattr(merge_train, "judge", lambda pr, cfg: Verdict(9, "t", "owner", None))
-    monkeypatch.setattr(merge_train, "merge", lambda n, m, b=None: (True, False, ""))
+    monkeypatch.setattr(
+        merge_train, "merge", lambda n, m, b=None, admin_fallback=False: (True, False, "")
+    )
     monkeypatch.setattr(merge_train, "delete_head_branch", lambda value: deleted)
     assert main(["merge-train"]) == 0
     assert fragment in capsys.readouterr().out
@@ -453,7 +531,7 @@ def held(number: int = 7, author: str = "outsider") -> Verdict:
         number,
         "their work",
         author,
-        "from @outsider and not approved — needs owner's review",
+        "needs a human merge: author outsider is not in [merge_train] trusted_authors",
         held_for_review=True,
     )
 
@@ -514,7 +592,9 @@ def test_the_run_writes_a_markdown_summary(repo, monkeypatch, tmp_path):
             pr["number"], f"pr {pr['number']}", "owner", None if pr["number"] == 1 else "draft"
         ),
     )
-    monkeypatch.setattr(merge_train, "merge", lambda n, m, b=None: (True, False, ""))
+    monkeypatch.setattr(
+        merge_train, "merge", lambda n, m, b=None, admin_fallback=False: (True, False, "")
+    )
 
     out = tmp_path / "summary.md"
     assert main(["merge-train", "--summary", str(out)]) == 0
@@ -576,7 +656,49 @@ def test_promote_passes_its_flags_through(repo, monkeypatch):
 
     monkeypatch.setattr(promote_mod, "promote", fake)
     assert main(["promote", "--dry-run", "--no-wait", "--method", "squash"]) == 0
-    assert seen == {"dry_run": True, "wait": False, "method": "squash"}
+    assert seen == {"dry_run": True, "wait": False, "method": "squash", "admin_fallback": False}
+
+
+def test_only_a_human_flag_lets_a_promotion_fall_back_to_admin(repo, monkeypatch):
+    from vibey_gh import promote as promote_mod
+
+    seen: dict = {}
+
+    def fake(cfg, **kw):
+        seen.update(kw)
+        return promote_mod.Promotion()
+
+    monkeypatch.setattr(promote_mod, "promote", fake)
+    assert main(["promote", "--wait", "--admin-fallback"]) == 0
+    assert seen["admin_fallback"] is True and seen["wait"] is True
+
+
+def test_the_promotion_admin_fallback_means_nothing_without_wait(repo, monkeypatch, capsys):
+    """Without `--wait` the promotion never merges here -- the merge train does -- so the
+    flag would silently do nothing. Refused rather than accepted and ignored."""
+    from vibey_gh import promote as promote_mod
+
+    monkeypatch.setattr(
+        promote_mod, "promote", lambda cfg, **kw: pytest.fail("must not run without --wait")
+    )
+    assert main(["promote", "--admin-fallback"]) == 2
+    assert "--admin-fallback" in capsys.readouterr().err
+
+
+def test_no_configuration_key_lets_a_promotion_fall_back_to_admin(repo, monkeypatch):
+    from vibey_gh import promote as promote_mod
+
+    config = repo / ".vibey-gh.toml"
+    config.write_text(config.read_text() + "[promote]\nadmin_fallback = true\n")
+    seen: dict = {}
+
+    def fake(cfg, **kw):
+        seen.update(kw)
+        return promote_mod.Promotion()
+
+    monkeypatch.setattr(promote_mod, "promote", fake)
+    assert main(["promote", "--wait"]) == 0
+    assert seen["admin_fallback"] is False
 
 
 def test_a_promotion_that_cannot_proceed_is_an_error(repo, monkeypatch, capsys):

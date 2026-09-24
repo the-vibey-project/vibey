@@ -4,9 +4,9 @@
 A repository has files whose change should never land on a robot's say-so -- in vibey,
 the tests that prove the no-loss gate, the chaos test and the full-cycle system test. A
 CODEOWNERS entry plus a ruleset's `require_code_owner_review` asks GitHub to demand the
-owner's review for them, but the merge train falls back to `gh pr merge --admin` when a
-plain merge is refused, and an admin merge bypasses exactly that review. So the train has
-to refuse first, from configuration, before it attempts anything (vibey #213).
+owner's review for them, but a merge-train run given `--admin-fallback` retries a refused
+merge with `gh pr merge --admin`, and an admin merge bypasses exactly that review. So the
+train has to refuse first, from configuration, before it attempts anything (vibey #213).
 
 It refuses on what it cannot see, too. The changed files come from the paginated REST
 listing -- `gh pr view --json files` is a single GraphQL page of at most 100 -- and a

@@ -11,8 +11,9 @@
 # - this file names the owner, and `require_code_owner_review = true` on both rulesets in
 #   .vibey-gh.toml makes GitHub demand that owner's approval before such a change merges;
 # - `[merge_train] protected_paths` in .vibey-gh.toml makes the merge train refuse the
-#   change outright ("needs a human merge"), because the train falls back to
-#   `gh pr merge --admin` and an admin merge bypasses the code-owner review;
+#   change outright ("needs a human merge"), because a train run given
+#   `--admin-fallback` retries with `gh pr merge --admin`, and an admin merge bypasses
+#   the code-owner review;
 # - tests/meta/test_protected_paths_agree.py fails if this list and that one drift apart,
 #   or if a pattern stops matching any file.
 #

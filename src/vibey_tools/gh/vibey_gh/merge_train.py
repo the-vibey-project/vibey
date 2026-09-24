@@ -7,9 +7,16 @@ human's job, and a branch ruleset's. This decides only whether a change may merg
 UNATTENDED: not a draft, no conflicts, checks green, nobody has asked for changes.
 
 Who may merge unattended is the other half. A pull request from the owner or one of their
-own bots merges on a green build; from anyone else it additionally needs an approving
-review, because "CI passed" is not a review and an outside change must not reach the
-integration branch on a robot's say-so.
+own bots (`[merge_train] trusted_authors`) merges on a green build. From anyone else it
+never merges unattended, whatever is green and whoever approved it: it is held and reported
+"needs a human merge" (ADR-0053, sub-doctrine 12.j). "CI passed" is not a review, a model's
+review verdict is not a person's, and an approval may itself be a delegated robot's
+(ADR-0049) -- an outside change must not reach the integration branch on a robot's say-so.
+
+Nor does the train route around a gate it was refused by. A merge GitHub refuses is reported
+"needs a human merge" with GitHub's own reason; retrying it with `gh pr merge --admin` is a
+per-run decision a person makes with `--admin-fallback`, and no configuration key can make
+it the default (sub-doctrine 12.d).
 """
 
 from __future__ import annotations
@@ -48,10 +55,13 @@ class Verdict:
     title: str
     author: str
     reason: str | None  # None means ready to merge
-    # True when the ONLY thing standing in the way is the owner's approval. A draft or a
-    # failing build is the contributor's to fix and needs no notification; an outside
-    # contribution that is green and simply unapproved is waiting on the owner, and
-    # nobody finds out unless someone says so.
+    # True when the pull request carries code from outside the trusted set -- an author
+    # not in `[merge_train] trusted_authors`, or a trusted author's pull request labelled
+    # `vibey-gh:external-repair` -- so the train will never merge it unattended and a
+    # person has to (ADR-0053). Set whatever state its gates are in and whether or not it
+    # is approved; `reason` says which of the two causes holds it. Only such a verdict is
+    # labelled and announced: a draft or a failing build is the contributor's to fix and
+    # needs no notification, while this one waits on somebody who does not know yet.
     held_for_review: bool = False
     # True when the obstacle is only that the head is conflicting or behind -- a state
     # the train can clear for itself by merging the integration branch forward, rather
@@ -115,9 +125,13 @@ def hold_for_review(verdict: Verdict, cfg: GhConfig, label: str = NEEDS_REVIEW_L
         "comment",
         number,
         "--body",
-        f"@{owner} this pull request is green but comes from @{verdict.author}, who is not "
-        f"on the merge train's trusted list, so it is **{_NOTIFIED_MARKER}** rather than "
-        f"merging automatically. Approve it and the next train will take it.",
+        # Built from the verdict's own reason, so the owner is told the actual cause: an
+        # untrusted author and a trusted author's external-repair label are different
+        # things, and naming the wrong one sends the owner looking in the wrong place.
+        f"@{owner} this pull request from @{verdict.author} is **{_NOTIFIED_MARKER}** "
+        f"rather than merging automatically — {verdict.reason}. The train never merges "
+        f"it unattended, whatever its gates say and approved or not: review it and merge "
+        f"it yourself.",
     )
 
 
@@ -187,17 +201,18 @@ def judge(pr: dict, cfg: GhConfig) -> Verdict:
             )
             for gate in GATES
         )
-        untrusted = normalise_actor(author) not in trusted or EXTERNAL_REPAIR_LABEL in labels
-        if cfg.pr_automation.enabled and not automation_passed:
-            reason = (
-                "automated outside-author review has not passed"
-                if untrusted
-                else "PR automation gates have not passed"
-            )
-        elif untrusted and not cfg.pr_automation.enabled and review != "APPROVED":
-            owner = cfg.owner or "the code owner"
-            reason = f"from @{author} and not approved — needs {owner}'s review"
+        stranger = _stranger(author, trusted, labels)
+        if stranger:
+            # ADR-0053: an unattended run admits no stranger. Not "unless PR automation is
+            # on" -- that exemption left a model's review verdict as the only thing between
+            # a stranger and the integration branch -- and not "unless approved", because
+            # the approval may be a delegated robot's (ADR-0049). First, before the gates:
+            # whose code it is does not depend on whether they have reported, and a hold
+            # decided only once they pass leaves the owner unaware until then.
+            reason = f"needs a human merge: {stranger}"
             held = True
+        elif cfg.pr_automation.enabled and not automation_passed:
+            reason = "PR automation gates have not passed"
         elif pr.get("baseRefName") == cfg.release_branch:
             # The merge-time re-derivation (#254): a promotion opened when everything
             # was bumped can gain bump-deriving merges before it merges, and the
@@ -214,8 +229,8 @@ def judge(pr: dict, cfg: GhConfig) -> Verdict:
 
     # Last, so it is the reason given only when nothing else stands in the way: a pull
     # request touching a protected path is otherwise ready, and must still not merge
-    # unattended -- `merge()` would fall back to `--admin` and bypass the code-owner review
-    # the ruleset asks for. A promotion is exempt: everything it carries already merged
+    # unattended -- a run given `--admin-fallback` would bypass the code-owner review the
+    # ruleset asks for. A promotion is exempt: everything it carries already merged
     # into the integration branch, where this same check held it for a human.
     promotion = (
         pr.get("baseRefName") == cfg.release_branch
@@ -232,6 +247,24 @@ def judge(pr: dict, cfg: GhConfig) -> Verdict:
         held_for_review=held,
         restackable=restackable,
     )
+
+
+def _stranger(author: str, trusted: set[str], labels: set[str]) -> str:
+    """Why this pull request's code is a stranger's, or "" when it is not.
+
+    A module-level function beside `judge`, the function it serves: this module is the
+    merge train's functions and has not yet converged on classes (vibey ADR-0016, tenants
+    converge module by module). `[unattended_approval] authors` is deliberately not
+    consulted -- it answers whom a delegated approver may act for, not whose code the
+    train may land unattended.
+    """
+    if normalise_actor(author) not in trusted:
+        return f"author {author} is not in [merge_train] trusted_authors"
+    if EXTERNAL_REPAIR_LABEL in labels:
+        return (
+            f"it carries the {EXTERNAL_REPAIR_LABEL} label (outside code under a trusted account)"
+        )
+    return ""
 
 
 _PR_FIELDS = (
@@ -354,12 +387,17 @@ def delete_head_branch(pr: dict) -> bool:
 
 
 def merge(
-    number: int, method: str = "squash", squash_body: str | None = None
+    number: int,
+    method: str = "squash",
+    squash_body: str | None = None,
+    admin_fallback: bool = False,
 ) -> tuple[bool, bool, str]:
-    """(merged, bypassed, error). Plain merge first: it is refused while a ruleset's
-    approving-review requirement is unmet — even for an admin's token, because bypassing
-    is opt-in per call — so fall back to --admin, which succeeds only if the token really
-    carries the admin role.
+    """(merged, bypassed, error). A plain merge, and by default nothing else: it is refused
+    while a ruleset's approving-review requirement is unmet, and that refusal is the gate
+    working. Only with `admin_fallback` -- the `--admin-fallback` flag a person passes for
+    one run, never a configuration default, because the train runs unattended in CI and in
+    the storm tools (ADR-0053, sub-doctrine 12.d) -- is it retried with `--admin`, which
+    succeeds only if the token really carries the admin role.
 
     `error` is the failing attempt's stderr, "" on success. It used to be discarded, and
     every failure surfaced as "the ruleset refused it" — which sent a real token-scope
@@ -381,6 +419,9 @@ def merge(
     first = subprocess.run(base, capture_output=True, text=True, check=False)
     if first.returncode == 0:
         return True, False, ""
+    if not admin_fallback:
+        detail = (first.stderr or first.stdout).strip() or "GitHub refused the merge"
+        return False, False, " ".join(detail.split())[:300]
     second = subprocess.run(base + ["--admin"], capture_output=True, text=True, check=False)
     if second.returncode == 0:
         return True, True, ""

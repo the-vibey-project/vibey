@@ -448,8 +448,10 @@ def _pr(**kw):
             "failing",
         ),
         (_pr(statusCheckRollup=[]), True, None),
-        (_pr(author={"login": "outsider"}), False, "not approved"),
-        (_pr(author={"login": "outsider"}, reviewDecision="APPROVED"), True, None),
+        (_pr(author={"login": "outsider"}), False, "needs a human merge"),
+        # An approval does not admit a stranger either (ADR-0053): the approving review
+        # may itself be a delegated robot's, and the train merges unattended.
+        (_pr(author={"login": "outsider"}, reviewDecision="APPROVED"), False, "trusted_authors"),
     ],
 )
 def test_readiness_gate(tmp_path, pr, ready, fragment):
