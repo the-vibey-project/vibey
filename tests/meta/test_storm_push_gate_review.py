@@ -794,7 +794,7 @@ class Commands:
         for key, answer in self.answers.items():
             if key in " ".join(argv):
                 return answer
-        return 0, ""
+        return (0, "3 12") if argv[1:2] == ["-c"] else (0, "")
 
 
 def schedule(
@@ -859,6 +859,25 @@ def test_1107_4_install_refuses_volatile_paths_worktrees_and_old_pythons(
     assert not any(argv[0] == "launchctl" for argv in commands.ran)
 
 
+def test_1107_4_status_on_linux_reads_systemctl_show(tmp_path: Path) -> None:
+    """Ubuntu 26.04 LTS is first-class (#1116): the systemd user timer's health, with fakes."""
+    commands = Commands(
+        {
+            "is-active": (0, "active\n"),
+            "show": (0, "ExecMainStatus=1\nResult=success\n"),
+        }
+    )
+    made, cfg = schedule(tmp_path, target="systemd", commands=commands)
+    assert made.install()[0].startswith("wrote")
+    log = cfg.state_dir / "reaper.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text("push-gate: killed\n")
+    text = made.status()
+    assert "installed and loaded" in text and "last exit 1" in text
+    assert "STALE" not in text
+    assert any(argv[:3] == ["systemctl", "--user", "show"] for argv in commands.ran)
+
+
 def test_1107_4_contributing_names_no_volatile_storm_root() -> None:
     text = (ROOT / "CONTRIBUTING.md").read_text()
     section = text.split("## Pushing in this repository", 1)[1].split("\n## ", 1)[0]
@@ -904,6 +923,7 @@ def test_1107_7_lane_publish_reports_a_push_timeout_as_one() -> None:
 # --- #1107-8: the bare-push scanner ----------------------------------------------------------
 
 GATE = "push_gate.py"
+NOT_A_PUSH = "push-gate: not a push"
 
 
 def _words(node: ast.AST, consts: dict[str, object]) -> list[str]:
@@ -928,9 +948,30 @@ def _words(node: ast.AST, consts: dict[str, object]) -> list[str]:
     return out
 
 
+def _subcommand(after_git: list[str]) -> str | None:
+    """git's subcommand in an argv, as git reads it: past its options and their values.
+
+    Unknown ("?", or "*?" for a starred list that cannot be read) counts as a possible push:
+    the scan errs towards naming a line a person must look at.
+    """
+    skip = False
+    for word in after_git:
+        if skip:
+            skip = False
+            continue
+        if word in {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}:
+            skip = True
+            continue
+        if word.startswith("-"):
+            continue
+        return word
+    return None
+
+
 def bare_pushes(source: str) -> list[int]:
     """Lines where a call runs `git ... push` without going through push_gate.py."""
     tree = ast.parse(source)
+    lines = source.splitlines()
     consts: dict[str, object] = {}
     for node in tree.body:
         if (
@@ -949,6 +990,11 @@ def bare_pushes(source: str) -> list[int]:
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
             continue
+        # A generic git runner cannot be read statically; it says at the call site, with its
+        # reason, that it never pushes.
+        near = lines[max(0, node.lineno - 2) : node.lineno]
+        if any(NOT_A_PUSH in line for line in near):
+            continue
         shell = any(k.arg == "shell" and isinstance(k.value, ast.Constant) and k.value.value
                     for k in node.keywords)  # fmt: skip
         system = isinstance(node.func, ast.Attribute) and node.func.attr == "system"
@@ -966,10 +1012,12 @@ def bare_pushes(source: str) -> list[int]:
             if not isinstance(arg, ast.List | ast.Tuple):
                 continue
             words = _words(arg, consts)
-            if "git" in words:
-                after = words[words.index("git") + 1 :]
-                if "push" in after or "*?" in after:
-                    hits.append(node.lineno)
+            if "git" in words and _subcommand(words[words.index("git") + 1 :]) in {
+                "push",
+                "*?",
+                "?",
+            }:
+                hits.append(node.lineno)
     return hits
 
 
@@ -1015,7 +1063,9 @@ def test_1107_8_no_storm_tool_or_script_pushes_around_the_gate() -> None:
     shells = [*TOOLS.glob("*.sh"), *(ROOT / "scripts").rglob("*.sh")]
     for path in shells:
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            if SHELL_PUSH.search(line) and GATE not in line:
+            # Gated: the push is an argument of push_gate.py, named directly or through a
+            # PUSH_GATE variable on the same line.
+            if SHELL_PUSH.search(line) and not re.search("push_gate", line, re.IGNORECASE):
                 offenders.append(f"{path.relative_to(ROOT)}:{number}")
     offenders = [o for o in offenders if o.split(":")[0] not in ALLOWED]
     assert offenders == []
@@ -1025,26 +1075,3 @@ def test_1107_8_the_shell_scan_sees_a_bare_push() -> None:
     assert SHELL_PUSH.search('git push -u origin "$BRANCH"')
     assert SHELL_PUSH.search("  git -C dir push")
     assert not SHELL_PUSH.search("# git push is documented here")
-
-
-#: Findings whose fix lands in a later commit of this pull request. Each is a strict xfail:
-#: it must fail until its fix lands, and the commit that fixes it deletes its line here.
-PENDING = {
-    "test_1105_8_a_push_timeout_writes_evidence_and_a_reap_log_line",
-    "test_1105_8_the_docs_say_the_schedule_reaps_what_the_cycle_cannot",
-    "test_1105_9_a_failed_py_spy_falls_back_to_sigusr1",
-    "test_1107_2_another_users_push_is_never_the_holder",
-    "test_1107_3_a_symlinked_worktree_root_matches",
-    "test_1107_3_a_relative_dash_c_is_read_from_the_cwd",
-    "test_1107_4_status_reports_the_last_exit_and_how_old_the_log_is",
-    "test_1107_4_the_schedule_renders_an_absolute_resolved_lock",
-    "test_1107_4_install_refuses_volatile_paths_worktrees_and_old_pythons",
-    "test_1107_4_contributing_names_no_volatile_storm_root",
-    "test_1107_5_values_systemd_cannot_quote_are_refused",
-    "test_1107_7_lane_publish_reports_a_push_timeout_as_one",
-    "test_1107_8_no_storm_tool_or_script_pushes_around_the_gate",
-}
-for _name in PENDING:
-    globals()[_name] = pytest.mark.xfail(strict=True, reason="fixed later in this PR")(
-        globals()[_name]
-    )

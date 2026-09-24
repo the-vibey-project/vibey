@@ -162,8 +162,10 @@ waited on. There is one recipe:
 python3 <storm>/tools/push_gate.py run -- git push origin HEAD:<branch>
 ```
 
-`<storm>` is the storm root, the directory that holds `storm.toml` (on the operator's machine,
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0`). From a checkout with no storm, use the
+`<storm>` is the storm root, the directory that holds `storm.toml`. It must be on a durable
+path, never under a temporary directory such as `/tmp` or `/private/tmp`: a reboot wipes
+those, and on 2026-09-24 one took the storm's lock and state with it. From a checkout with no
+storm, use the
 tracked copy and name the machine's shared lock:
 `VIBEY_PUSH_LOCK=<dir> python3 docs/plans/qwenstorm-3.0.0/tools/push_gate.py run -- git push …`.
 Run from a checkout without a named lock, the tool refuses. A lock derived there would be

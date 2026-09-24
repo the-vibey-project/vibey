@@ -27,7 +27,6 @@ import dataclasses
 import importlib.util
 import json
 import os
-import re
 import signal
 import subprocess
 import sys
@@ -938,6 +937,7 @@ def legacy_push(r: Rig, tmp_path: Path, made: float, **push: object) -> None:
             made + 4,
         ),
     ]
+    r.table.groups[SHELL] = [dataclasses.replace(p, uid=UID) for p in r.table.groups[SHELL]]
     # The agent that started the shell: another group, never a candidate, never touched.
     r.table.groups[800] = [Proc(800, 1, 800, 900.0, "node claude", made - 3600)]
     r.table.cwds[PUSH] = lane
@@ -996,7 +996,7 @@ def test_two_candidate_pushes_are_unknown_and_never_killed(tmp_path: Path) -> No
     r = rig(tmp_path)
     made = bare_lock(r)
     legacy_push(r, tmp_path, made)
-    r.table.groups[1200] = [Proc(1200, 1, 1200, 0.0, "git push origin HEAD:other", made + 2)]
+    r.table.groups[1200] = [Proc(1200, 1, 1200, 0.0, "git push origin HEAD:other", made + 2, UID)]
     r.table.cwds[1200] = str(tmp_path / "other-lane")
     _never_killed(r, "2 pushes")
 
@@ -1118,6 +1118,8 @@ class Commands:
     answers: dict[str, int] = field(default_factory=dict)
 
     def __call__(self, argv: list[str]) -> tuple[int, str]:
+        if argv[1:2] == ["-c"]:
+            return 0, "3 12"  # the interpreter's version, which install checks (#1107-4)
         self.ran.append(argv)
         return self.answers.get(argv[0], 0), ""
 
@@ -1133,6 +1135,10 @@ def schedule(tmp_path: Path, target: str, **overrides: object):  # noqa: ANN201 
         target=target,
         home=tmp_path / "home",
         run=commands,
+        # tmp_path IS a temporary directory, and this checkout may be a linked worktree:
+        # both are refused for a real install, and have their own tests in the review file.
+        volatile=(),
+        linked_worktree=lambda path: False,
     )
     return made, commands, cfg
 
@@ -1213,16 +1219,8 @@ def test_the_schedule_templates_are_files_in_the_repository() -> None:
 # --- every storm tool that pushes, pushes through the gate -------------------------------------
 
 
-def test_no_storm_tool_pushes_around_the_gate() -> None:
-    """A raw `git push` in a storm tool is a gate run the push lock never sees."""
-    offenders = []
-    for tool in sorted(TOOLS.glob("*.py")):
-        if tool.name == "push_gate.py":
-            continue
-        text = tool.read_text(encoding="utf-8")
-        if re.search(r"""\[\s*["']git["']\s*,\s*["']push["']""", text):
-            offenders.append(tool.name)
-    assert offenders == []
+def test_the_storm_tools_that_push_go_through_the_gate() -> None:
+    """The AST scan in test_storm_push_gate_review.py (#1107-8) finds any push around it."""
     for tool in ("lane-publish.py", "storm-snapshot.py"):
         text = (TOOLS / tool).read_text(encoding="utf-8")
         assert '"push_gate.py"' in text and '"run"' in text, tool

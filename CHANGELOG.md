@@ -197,6 +197,33 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **storm:** the push-gate reaper, now on an unattended schedule, acts only on what it has
+  checked (the independent review of #1105 and #1107).
+  - **Kill safety.** The lock and the traced push are read again under the lock's mutex before
+    any signal, so a push that ends while the evidence is written is never followed by a kill
+    of the recipe's next command. `acquire` is judged by the caller's process group
+    (`--pid $$`), not by the `$(...)` subshell that exits at once and got the lock released
+    mid-push.
+  - **Trust.** The owner record is checked field by field. A lock or record that is a
+    symlink, another uid's, or malformed is untrusted and never acted on. The state directory
+    is 0700, nothing is written or read through a link, and a push log is read only from the
+    gate's own logs.
+  - **Observed kills.** A kill is recorded only once the group is seen gone. EPERM means
+    "not ours". `protected` matches the program, not the command line, and a group whose
+    members cannot be read is never killed.
+  - **Awake time.** Holds and idle windows are counted in awake time (CLOCK_UPTIME_RAW on
+    macOS, CLOCK_MONOTONIC on Linux), with the boot id, so a laptop's sleep is never a hang.
+    A reused holder pid is told apart by its start time.
+  - **Shared locks.** The mutex and the reap lock sit beside the lock.
+  - **Schedule health.** `schedule-status` reports the last exit, from `launchctl print` or
+    `systemctl --user show`, and flags a stale `reaper.log`. `install-schedule` refuses a
+    temporary directory, a linked worktree, a Python older than 3.11, or a value systemd
+    cannot quote.
+  - **Pushes around the gate.** `run --push-timeout` records its kill as a reap.
+    `scripts/fleet/land.sh` now pushes through the gate, and an AST scan finds any push that
+    goes around it.
+  - **Ubuntu 26.04 LTS.** Its systemd and /proc paths are first-class (#1116).
+
 * **queue:** the lease reaper is bounded (ADR-0056, closing ADR-0044 §8's latent gap). An
   expired lease whose attempts are spent is parked with a `delivery_exhausted` gate instead of
   re-readied, so a job that kills its worker on every attempt is no longer claimed forever;

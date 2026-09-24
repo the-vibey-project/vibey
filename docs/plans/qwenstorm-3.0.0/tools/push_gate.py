@@ -136,6 +136,7 @@ import stat
 import string
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import tomllib
@@ -185,6 +186,24 @@ SCHEDULE_SECONDS = 90.0
 SCHEDULE_LABEL = "org.vibey.push-gate-reaper"
 #: PATH for the scheduled pass: `ps`, `lsof`, `git`, and py-spy when Homebrew installed it.
 SCHEDULE_PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+#: Where an unattended schedule must never run from: a reboot wipes them (#1107-4).
+VOLATILE_ROOTS = tuple(
+    dict.fromkeys(
+        Path(p)
+        for p in (
+            tempfile.gettempdir(),
+            os.environ.get("TMPDIR", "/tmp"),
+            "/tmp",
+            "/private/tmp",
+            "/var/tmp",
+            "/private/var/folders",
+            "/dev/shm",
+        )
+    )
+)
+#: Characters a value cannot carry into a systemd unit: quotes and backslashes end or escape
+#: its quoting, a newline starts a new directive, `$` expands, `%` is a specifier (#1107-5).
+UNQUOTABLE = frozenset('"\\\n\r$%')
 #: Shells the legacy recipe runs in; the only ancestors a traced push's group may contain.
 SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh"})
 
@@ -365,6 +384,9 @@ class PushGateConfig:
         """What `root/storm.toml` declares; `lock` (from `--lock`) outranks it for one run."""
         section = _section(root)
         lock_path = lock or _path(root, section.get("lock"), root.parent / ".push-lock")
+        # Absolute, always: a relative lock means a different directory from every cwd
+        # (#1107-4), and the state beside it follows it.
+        lock_path = Path(os.path.abspath(lock_path.expanduser()))
         state = _path(root, section.get("state_dir"), lock_path.parent / f"{lock_path.name}.gate")
         protected = section.get("protected", PROTECTED)
         if not isinstance(protected, list | tuple) or not all(
@@ -1128,13 +1150,20 @@ class EvidenceCollector:
             return
         spy = self._which("py-spy")
         if spy:
+            failed = []
             for p in targets:
                 code, out = self._run([spy, "dump", "--pid", str(p.pid)])
                 _write_private(
                     folder / f"py-spy-{p.pid}.txt",
                     f"# py-spy dump --pid {p.pid}: exit {code}\n{out}\n",
                 )
-            return
+                if code != 0:
+                    failed.append(p)
+            if not failed:
+                return
+            # py-spy needs root on macOS; where it could not attach, the suite's own SIGUSR1
+            # dump still can (#1105-9).
+            targets = failed
         stacks = self._config.state_dir / "stacks" / owner.token
         if owner.stacks is None or Path(owner.stacks) != stacks:
             # Only the directory `run` itself armed, under the gate's own state: a record
@@ -1238,6 +1267,8 @@ class OwnerlessHolder:
             p
             for p in rows
             if self.is_git_push(p.command)
+            # Only this uid's pushes: another user's is never ours to name, or kill (#1107-2).
+            and p.uid == os.getuid()
             and p.started_at is not None
             and abs(p.started_at - made_at) <= window
             and self._in_worktrees(p)
@@ -1275,14 +1306,28 @@ class OwnerlessHolder:
         return Traced(owner, members, f"pid {push.pid} ({push.command[:80]})")
 
     def _in_worktrees(self, p: Proc) -> bool:
-        places = [self._table.cwd(p.pid)]
+        """Whether the push stands in (or `-C`s into) a declared worktree root.
+
+        Both sides are resolved, so a root declared through a symlink matches the real path
+        `lsof` or /proc reports (#1107-3, probe P5), and a relative `-C` is read from the
+        push's own cwd, as git reads it.
+        """
+        cwd = self._table.cwd(p.pid)
+        places: list[Path] = [Path(cwd)] if cwd else []
         words = p.command.split()
-        places += [words[i + 1] for i, w in enumerate(words[:-1]) if w == "-C"]
-        for place in places:
-            if not place:
+        for index, word in enumerate(words[:-1]):
+            if word != "-C":
                 continue
-            where = Path(place)
-            if any(where == root or root in where.parents for root in self._config.worktree_roots):
+            target = Path(words[index + 1])
+            if not target.is_absolute():
+                if cwd is None:
+                    continue
+                target = Path(cwd) / target
+            places.append(target)
+        roots = [root.resolve() for root in self._config.worktree_roots]
+        for place in places:
+            where = place.resolve()
+            if any(where == root or root in where.parents for root in roots):
                 return True
         return False
 
@@ -1709,29 +1754,7 @@ class Reaper:
         return None
 
     def _record(self, decision: Decision, outcome: dict[str, Any], ownerless: bool = False) -> None:
-        """One JSON line, appended and flushed: the reap log is never rewritten."""
-        owner = decision.owner
-        assert owner is not None
-        line = {
-            "time": _iso(self._clock.now()),
-            "condition": decision.condition,
-            "action": decision.action,
-            "owner": owner.to_json(),
-            "branch": owner.branch,
-            "detail": decision.measurements,
-            "reason": decision.detail,
-            "outcome": outcome,
-            "evidence": str(decision.evidence),
-            "ownerless": ownerless,
-        }
-        self._config.reap_log.parent.mkdir(parents=True, exist_ok=True)
-        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW
-        with os.fdopen(
-            os.open(self._config.reap_log, flags, 0o600), "a", encoding="utf-8"
-        ) as stream:
-            stream.write(json.dumps(line, sort_keys=True) + "\n")
-            stream.flush()
-            os.fsync(stream.fileno())
+        ReapLog(self._config, self._clock).append(decision, outcome, ownerless)
 
     # -- the samples, kept on disk between passes --
 
@@ -1766,6 +1789,42 @@ class Reaper:
         for path in folder.glob("*.json"):
             if path.stem != keep:
                 path.unlink(missing_ok=True)
+
+
+class ReapLog:
+    """The append-only record of every reap: one JSON line each, flushed, never rewritten.
+
+    Shared by the reaper and by `run`, whose own `--push-timeout` kill is a reap like any
+    other and is recorded as one, with evidence (#1105-8).
+    """
+
+    def __init__(self, config: PushGateConfig, clock: Clock) -> None:
+        self._config = config
+        self._clock = clock
+
+    def append(self, decision: Decision, outcome: dict[str, Any], ownerless: bool = False) -> None:
+        owner = decision.owner
+        assert owner is not None
+        line = {
+            "time": _iso(self._clock.now()),
+            "condition": decision.condition,
+            "action": decision.action,
+            "owner": owner.to_json(),
+            "branch": owner.branch,
+            "detail": decision.measurements,
+            "reason": decision.detail,
+            "outcome": outcome,
+            "evidence": str(decision.evidence),
+            "ownerless": ownerless,
+        }
+        self._config.reap_log.parent.mkdir(parents=True, exist_ok=True)
+        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW
+        with os.fdopen(
+            os.open(self._config.reap_log, flags, 0o600), "a", encoding="utf-8"
+        ) as stream:
+            stream.write(json.dumps(line, sort_keys=True) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
 
 
 class Status:
@@ -2002,11 +2061,37 @@ class PushRunner:
                 returncode = child.wait(timeout=self._push_timeout)
             except subprocess.TimeoutExpired:
                 self._timed_out = True
-                self._stop_child()
+                self._reap_timeout(dataclasses.replace(owner, pgid=child.pid))
+                self._stop_child()  # a no-op once the reap is seen through; else a backstop
                 returncode = child.wait()
             # A process that escaped the group may still hold the pipe; the push is over.
             reader.join(timeout=5)
         return returncode
+
+    def _reap_timeout(self, owner: Owner) -> None:
+        """The push ran past `--push-timeout`: evidence first, then the kill, then the record.
+
+        The same steps as the reaper's, because it is the same act (#1105-8): a caller's own
+        deadline (lane-publish.py) ending a hung gate run must leave the same trace.
+        """
+        assert owner.pgid is not None
+        table, signaller = ProcessTable(), Signaller()
+        limit = self._push_timeout or 0.0
+        decision = Decision(
+            "killed",
+            "push-timeout",
+            f"the push ran past its own {limit:g}s limit",
+            {"push_timeout_seconds": limit},
+            owner,
+        )
+        folder = EvidenceCollector(self._config, table, signaller, self._clock).collect(
+            owner, decision
+        )
+        stopped = GroupKiller(self._config, table, signaller, self._clock).stop(owner.pgid)
+        action = "killed" if stopped in {"terminated", "killed"} else "failed"
+        ReapLog(self._config, self._clock).append(
+            dataclasses.replace(decision, action=action, evidence=folder), {"group": stopped}
+        )
 
     @staticmethod
     def _tee(child: subprocess.Popen[bytes], sink: Any) -> None:
@@ -2079,11 +2164,15 @@ class Schedule:
         target: str | None = None,
         home: Path | None = None,
         run: Callable[[list[str]], tuple[int, str]] | None = None,
+        volatile: tuple[Path, ...] | None = None,
+        linked_worktree: Callable[[Path], bool] | None = None,
     ) -> None:
         self._config = config
         self._root = root
         self._tool = tool
         self._python = python
+        self._volatile = VOLATILE_ROOTS if volatile is None else volatile
+        self._linked_worktree = linked_worktree or _linked_worktree
         self._target = target or ("launchd" if sys.platform == "darwin" else "systemd")
         if self._target not in self.TARGETS:
             raise SystemExit(f"push-gate: unknown schedule target {self._target!r}")
@@ -2092,16 +2181,65 @@ class Schedule:
         self._label = config.schedule_label
 
     def values(self) -> dict[str, str]:
+        # Absolute and resolved: launchd starts the job in `/`, where a relative lock names a
+        # directory nobody pushes through, and a reaper of it watches nothing (#1107-4).
         return {
             "label": self._label,
             "python": self._python,
             "tool": str(self._tool),
-            "root": str(self._root),
-            "lock": str(self._config.lock),
+            "root": str(self._root.resolve()),
+            "lock": str(self._config.lock.resolve()),
             "interval": str(int(self._config.schedule_seconds)),
             "path": self._config.schedule_path,
-            "log": str(self._config.state_dir / "reaper.log"),
+            "log": str(self._config.state_dir.resolve() / "reaper.log"),
         }
+
+    def problems(self) -> list[str]:
+        """Why this schedule must not be installed, each line beginning REFUSED; else empty.
+
+        An unattended schedule outlives the session that installed it, so everything it runs
+        must outlive it too: not a temporary directory a reboot wipes (it did, on 2026-09-24),
+        not a linked git worktree removed when its branch lands, not a Python too old for the
+        tool (#1107-4). And a systemd unit cannot carry a value its quoting cannot hold
+        (#1107-5).
+        """
+        found: list[str] = []
+        v = self.values()
+        for label, raw in (("tool", v["tool"]), ("python", self._python), ("log", v["log"])):
+            where = Path(raw).expanduser().absolute()
+            resolved = where.resolve()
+            for root in self._volatile:
+                base = root.resolve()
+                if resolved == base or base in resolved.parents or root in where.parents:
+                    found.append(
+                        f"REFUSED: the {label} {raw} is under a temporary directory ({root}), "
+                        "which a reboot wipes"
+                    )
+                    break
+            else:
+                if self._linked_worktree(where):
+                    found.append(
+                        f"REFUSED: the {label} {raw} is inside a linked git worktree, which is "
+                        "removed when its branch is done"
+                    )
+        code, out = self._run([self._python, "-c", "import sys; print(*sys.version_info[:2])"])
+        try:
+            major, minor = (int(n) for n in out.split()[:2])
+        except ValueError:
+            major, minor = 0, 0
+        if code != 0 or (major, minor) < (3, 11):
+            found.append(
+                f"REFUSED: {self._python} is not Python 3.11 or newer (it said {out.strip()!r})"
+            )
+        if self._target == "systemd":
+            for key, value in v.items():
+                bad = sorted({c for c in value if c in UNQUOTABLE})
+                if bad:
+                    found.append(
+                        f"REFUSED: the {key} {value!r} holds {bad}, which a systemd unit cannot "
+                        "quote safely"
+                    )
+        return found
 
     def files(self) -> dict[Path, str]:
         """Every file the schedule consists of, rendered, keyed by where it is installed."""
@@ -2133,6 +2271,9 @@ class Schedule:
                 "(this tool never edits a crontab):",
                 self.cron_line(),
             ]
+        refused = self.problems()
+        if refused:
+            return refused
         lines = []
         for path, text in self.files().items():
             lines.append(f"{'would write' if dry_run else 'wrote'} {path}")
@@ -2164,13 +2305,40 @@ class Schedule:
         missing = [path for path in self.files() if not path.exists()]
         if missing:
             return f"{self._target}: not installed ({missing[0]} is absent)"
+        last: str | None = None
         if self._target == "launchd":
-            code, _ = self._run(["launchctl", "print", f"gui/{os.getuid()}/{self._label}"])
+            code, out = self._run(["launchctl", "print", f"gui/{os.getuid()}/{self._label}"])
+            match = re.search(r"last exit code = (\S+)", out)
+            last = match.group(1) if match else None
         else:
             code, _ = self._run(["systemctl", "--user", "is-active", f"{self._label}.timer"])
+            _, shown = self._run(
+                [
+                    "systemctl",
+                    "--user",
+                    "show",
+                    f"{self._label}.service",
+                    "--property=ExecMainStatus,Result",
+                ]
+            )
+            match = re.search(r"^ExecMainStatus=(\S+)", shown, re.MULTILINE)
+            last = match.group(1) if match else None
         state = "installed and loaded" if code == 0 else "installed but not loaded"
         every = int(self._config.schedule_seconds)
-        return f"{self._target}: {self._label} {state}; one reap pass every {every}s"
+        parts = [f"{self._target}: {self._label} {state}; one reap pass every {every}s"]
+        parts.append(f"last exit {last}" if last is not None else "no pass has exited yet")
+        # Nothing else observes the schedule, so its own log's age is the health check: a
+        # log older than three intervals means passes have stopped (#1107-4).
+        log = Path(self.values()["log"])
+        try:
+            age = max(0.0, time.time() - log.stat().st_mtime)
+        except OSError:
+            parts.append(f"{log} does not exist yet")
+        else:
+            parts.append(f"reaper.log updated {_span(age)} ago")
+            if age > 3 * self._config.schedule_seconds:
+                parts.append(f"STALE: no pass has written its log for {_span(age)}")
+        return "; ".join(parts)
 
     def _load_commands(self) -> list[tuple[list[str], bool]]:
         if self._target == "launchd":
@@ -2202,6 +2370,27 @@ class Schedule:
     def _render(self, name: str, values: dict[str, str]) -> str:
         template = (self.TEMPLATES / name).read_text(encoding="utf-8")
         return string.Template(template).substitute(values)
+
+
+def _linked_worktree(path: Path) -> bool:
+    """Whether `path` is inside a LINKED git worktree (`git worktree add`), which is removed
+    when its branch is done. The main checkout is durable and allowed. Module-level: one
+    stateless git question, beside `_inside_checkout`."""
+    here = path if path.is_dir() else path.parent
+    try:
+        done = subprocess.run(  # nosec B603 B607 - git with fixed arguments
+            ["git", "-C", str(here), "rev-parse", "--git-dir", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    lines = done.stdout.split()
+    if done.returncode != 0 or len(lines) != 2:
+        return False
+    git_dir, common = ((here / line).resolve() for line in lines)
+    return git_dir != common
 
 
 def _inside_checkout(root: Path) -> bool:
