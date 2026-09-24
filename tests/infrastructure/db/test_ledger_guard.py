@@ -781,3 +781,68 @@ def test_finding_9_the_verifier_is_rfc_5803_shaped() -> None:
         f"SCRAM-SHA-256$4096:{b64(salt).decode()}$"
         f"{b64(hashlib.sha256(client).digest()).decode()}:{b64(server).decode()}"
     )
+
+
+@split_only
+async def test_finding_8_a_granted_session_replication_role_is_reported_and_revoked(
+    owner_conn: asyncpg.Connection, app_conn: asyncpg.Connection
+) -> None:
+    """`SET session_replication_role = replica` silences every trigger."""
+    if int(await owner_conn.fetchval("SHOW server_version_num")) < 150000:
+        pytest.skip("parameter privileges arrived in PostgreSQL 15")
+    role = RoleIdentifier.quote(ROLES.app_role)
+    await owner_conn.execute(f"GRANT SET ON PARAMETER session_replication_role TO {role}")
+    try:
+        problems = (await LedgerGuardInspector().inspect(app_conn)).problems
+        assert "it may SET session_replication_role, which silences triggers" in problems
+
+        await DatabaseRoleReconciler().reconcile(owner_conn, app_role=ROLES.app_role)
+
+        assert not await app_conn.fetchval(
+            "SELECT has_parameter_privilege('session_replication_role', 'SET')"
+        )
+    finally:
+        await owner_conn.execute(f"REVOKE SET ON PARAMETER session_replication_role FROM {role}")
+
+
+class _OldServer:
+    """A PostgreSQL 14 connection, as far as the version check can tell."""
+
+    def __init__(self) -> None:
+        self.executed: list[str] = []
+
+    async def fetchval(self, sql: str, *args: object) -> str:
+        return "140013"
+
+    async def execute(self, sql: str, *args: object) -> str:
+        self.executed.append(sql)
+        return ""
+
+
+async def test_before_postgresql_15_there_is_no_parameter_privilege_to_check_or_revoke() -> None:
+    old = _OldServer()
+
+    assert await LedgerGuardInspector._may_set_replication_role(old) is False  # type: ignore[arg-type]
+    await DatabaseRoleReconciler._revoke_replication_role(old, '"app"')  # type: ignore[arg-type]
+    assert old.executed == []
+
+
+async def test_an_owner_that_may_not_revoke_the_parameter_leaves_it_to_the_inspector() -> None:
+    class _Refusing(_OldServer):
+        async def fetchval(self, sql: str, *args: object) -> str:
+            return "170000"
+
+        def transaction(self) -> object:
+            class _Tx:
+                async def __aenter__(self) -> None:
+                    return None
+
+                async def __aexit__(self, *exc: object) -> bool:
+                    return False
+
+            return _Tx()
+
+        async def execute(self, sql: str, *args: object) -> str:
+            raise asyncpg.InsufficientPrivilegeError("permission denied to revoke")
+
+    await DatabaseRoleReconciler._revoke_replication_role(_Refusing(), '"app"')  # type: ignore[arg-type]

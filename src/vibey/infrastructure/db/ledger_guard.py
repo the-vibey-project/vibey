@@ -21,19 +21,35 @@ fails `vibey doctor` until the operator splits the roles (12.e).
 Declared by `interfaces/ledger_guard_interface.py` (ADR-0016).
 """
 
+import base64
+import hashlib
+import hmac
+import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import ClassVar, Final
 from urllib.parse import unquote, urlsplit
 
+import asyncpg
+
 from vibey.domain.errors import VibeyError
-from vibey.infrastructure.db.migrator import OwnedConnection
+from vibey.infrastructure.db.migrator import OwnedConnection, PostgresMigrator
 
 LEDGER_TABLE: Final = "event"
 ROW_GUARD_TRIGGER: Final = "event_append_only"
 TRUNCATE_GUARD_TRIGGER: Final = "event_no_truncate"
 REWRITE_PRIVILEGES: Final = ("UPDATE", "DELETE", "TRUNCATE")
+REFUSE_REWRITE: Final = "public.ledger_refuse_rewrite()"
+# sha256 of `ledger_refuse_rewrite()`'s body as migration 0017 installs it: a function
+# replaced with `RETURN OLD` keeps its name and its trigger and refuses nothing.
+REFUSE_REWRITE_SHA256: Final = "8fbd6b11105ab01ad28442194ae962357a6705fb8537e71f5470a684164557b0"
+# pg_trigger.tgtype bits: ROW 1, BEFORE 2, INSERT 4, DELETE 8, UPDATE 16, TRUNCATE 32.
+EXPECTED_TGTYPE: Final = {"event_append_only": 1 | 2 | 8 | 16, "event_no_truncate": 2 | 32}
+_FIRES: Final = {
+    "event_append_only": "BEFORE UPDATE OR DELETE",
+    "event_no_truncate": "BEFORE TRUNCATE",
+}
 
 
 class RoleSeparationRefused(VibeyError):
@@ -46,6 +62,18 @@ class RoleSeparationRefused(VibeyError):
             f"refusing to reconcile grants for {app_role!r}: {reason}. VIBEY_PG_URL must "
             "name a role that neither owns the schema nor is a superuser "
             "(docs/reference/configuration.md#database-roles)"
+        )
+
+
+class OwnerCannotCreateRole(VibeyError):
+    """The owner may not create the missing application role."""
+
+    def __init__(self, app_role: str) -> None:
+        self.app_role = app_role
+        super().__init__(
+            f"the application role {app_role!r} does not exist and the owner lacks "
+            "CREATEROLE: create it as a role that may (CREATE ROLE "
+            f"{app_role} LOGIN PASSWORD '...'), then run `vibey migrate` again"
         )
 
 
@@ -117,6 +145,29 @@ APP_ROLE_GRANTS: Final = AppRoleGrants(
     sequences=MappingProxyType({"job_bump_seq": ("USAGE",)}),
     functions=("append_event",),
 )
+
+
+class ScramVerifier:
+    """A SCRAM-SHA-256 verifier computed here, so `CREATE ROLE` never carries the
+    plaintext -- which lands in the server log on an error, or with `log_statement`
+    set to `ddl` (review of #1100). RFC 5803's form, the one PostgreSQL stores.
+
+    Declared by `interfaces/ledger_guard_interface.py`.
+    """
+
+    ITERATIONS: ClassVar[int] = 4096
+
+    @staticmethod
+    def compute(password: str, *, salt: bytes | None = None, iterations: int = 4096) -> str:
+        salt = os.urandom(16) if salt is None else salt
+        salted = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
+        client_key = hmac.new(salted, b"Client Key", "sha256").digest()
+        server_key = hmac.new(salted, b"Server Key", "sha256").digest()
+        b64 = base64.b64encode
+        return (
+            f"SCRAM-SHA-256${iterations}:{b64(salt).decode()}$"
+            f"{b64(hashlib.sha256(client_key).digest()).decode()}:{b64(server_key).decode()}"
+        )
 
 
 class RoleIdentifier:
@@ -191,7 +242,10 @@ SELECT CURRENT_USER AS role,
          WHERE c.oid OPERATOR(pg_catalog.=) pg_catalog.to_regclass($1)) AS owns,
        pg_catalog.has_schema_privilege('public', 'CREATE') AS create_in_public,
        pg_catalog.has_database_privilege(pg_catalog.current_database(), 'CREATE')
-           AS create_in_database
+           AS create_in_database,
+       (SELECT pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc, 'UTF8')), 'hex')
+          FROM pg_catalog.pg_proc p
+         WHERE p.oid OPERATOR(pg_catalog.=) pg_catalog.to_regprocedure($2)) AS refuse_sha256
 """
 
 _PARTITIONS = """
@@ -200,7 +254,9 @@ FROM pg_catalog.pg_partition_tree(pg_catalog.to_regclass($1)) t
 """
 
 _TRIGGERS = """
-SELECT g.tgname::pg_catalog.text AS tgname, g.tgenabled::pg_catalog.text AS tgenabled
+SELECT g.tgname::pg_catalog.text AS tgname, g.tgenabled::pg_catalog.text AS tgenabled,
+       g.tgtype::pg_catalog.int4 AS tgtype,
+       g.tgfoid::pg_catalog.regprocedure::pg_catalog.text AS function
 FROM pg_catalog.pg_trigger g
 WHERE g.tgrelid OPERATOR(pg_catalog.=) pg_catalog.to_regclass($1)
 """
@@ -283,7 +339,7 @@ class LedgerGuardInspector:
     async def _inspect(self, conn: OwnedConnection) -> LedgerGuardStatus:
         ledger = f"public.{LEDGER_TABLE}"
         # A select with no FROM: exactly one row, whatever the catalogs hold.
-        (row,) = await conn.fetch(_ROLE, ledger)
+        (row,) = await conn.fetch(_ROLE, ledger, REFUSE_REWRITE)
         role = str(row["role"])
         if row["owner"] is None:
             return LedgerGuardStatus(role, ("the ledger table does not exist (unmigrated)",))
@@ -296,6 +352,10 @@ class LedgerGuardInspector:
             problems.append("it may CREATE in schema public")
         if row["create_in_database"]:
             problems.append("it may CREATE schemas in this database")
+        if await self._may_set_replication_role(conn):
+            problems.append("it may SET session_replication_role, which silences triggers")
+        if row["refuse_sha256"] != REFUSE_REWRITE_SHA256:
+            problems.append(f"{REFUSE_REWRITE} is not the function the migrations installed")
         owned = [f"{o['name']} ({o['kind']})" for o in await conn.fetch(_OWNED)]
         if owned:
             shown = ", ".join(owned[:_OWNED_SHOWN])
@@ -318,17 +378,42 @@ class LedgerGuardInspector:
             ]
             if held:
                 problems.append(f"it holds {', '.join(held)} on {name}")
-            expected = (TRUNCATE_GUARD_TRIGGER, ROW_GUARD_TRIGGER)
-            triggers = {
-                str(t["tgname"]): str(t["tgenabled"]) for t in await conn.fetch(_TRIGGERS, name)
-            }
-            for trigger in expected:
-                state = triggers.get(trigger)
-                if state is None:
-                    problems.append(f"{name} has no {trigger} trigger")
-                elif state == "D":
-                    problems.append(f"{trigger} is disabled on {name}")
+            problems.extend(await self._trigger_problems(conn, name))
         return LedgerGuardStatus(role, tuple(problems))
+
+    @staticmethod
+    async def _may_set_replication_role(conn: OwnedConnection) -> bool:
+        """Parameter privileges exist from PostgreSQL 15; before that only a superuser
+        may set session_replication_role, and a superuser is reported already."""
+        if int(str(await conn.fetchval("SHOW server_version_num"))) < 150000:
+            return False
+        return bool(
+            await conn.fetchval(
+                "SELECT pg_catalog.has_parameter_privilege('session_replication_role', 'SET')"
+            )
+        )
+
+    @staticmethod
+    async def _trigger_problems(conn: OwnedConnection, name: str) -> list[str]:
+        """Each guard trigger present, firing for every session ('O' origin, 'A'
+        always -- not 'R' replica-only or 'D' disabled), on the right events, calling
+        the right function."""
+        found = {str(t["tgname"]): t for t in await conn.fetch(_TRIGGERS, name)}
+        problems: list[str] = []
+        for trigger in (TRUNCATE_GUARD_TRIGGER, ROW_GUARD_TRIGGER):
+            row = found.get(trigger)
+            if row is None:
+                problems.append(f"{name} has no {trigger} trigger")
+                continue
+            if row["tgenabled"] == "D":
+                problems.append(f"{trigger} is disabled on {name}")
+            elif row["tgenabled"] not in ("O", "A"):
+                problems.append(f"{trigger} is not enabled for every session on {name}")
+            if row["function"] != REFUSE_REWRITE:
+                problems.append(f"{trigger} on {name} does not call {REFUSE_REWRITE}")
+            if row["tgtype"] != EXPECTED_TGTYPE[trigger]:
+                problems.append(f"{trigger} on {name} does not fire {_FIRES[trigger]}")
+        return problems
 
 
 class DatabaseRoleReconciler:
@@ -354,6 +439,7 @@ class DatabaseRoleReconciler:
         that an unqualified name in the owner's SQL resolves to (review of #1100)."""
         async with owner.transaction():
             await owner.execute(SAFE_SEARCH_PATH)
+            await owner.execute(_LOCK, PostgresMigrator.LOCK_KEY)
             await owner.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC")
 
     async def reconcile(
@@ -363,28 +449,31 @@ class DatabaseRoleReconciler:
             # Nothing another role created in `public` can be resolved in place of a
             # pg_catalog object for the rest of this transaction (review of #1100).
             await owner.execute(SAFE_SEARCH_PATH)
+            # Serialized with every other migrate and reconcile of this database: two
+            # init containers granting at once fail "tuple concurrently updated".
+            await owner.execute(_LOCK, PostgresMigrator.LOCK_KEY)
             await self._reconcile(owner, app_role=app_role, app_password=app_password)
 
     async def _reconcile(
         self, owner: OwnedConnection, *, app_role: str, app_password: str | None
     ) -> None:
-        exists = await owner.fetchrow(
-            "SELECT r.rolsuper, "
-            "pg_catalog.pg_has_role($1, CURRENT_USER, 'MEMBER') AS member "
-            "FROM pg_catalog.pg_roles r WHERE r.rolname OPERATOR(pg_catalog.=) $1",
-            app_role,
-        )
+        exists = await owner.fetchrow(_APP_ROLE, app_role, f"public.{LEDGER_TABLE}")
         if exists is None:
             if not app_password:
                 raise AppRoleMissing(app_role)
             ddl = await owner.fetchval(
                 "SELECT pg_catalog.format('CREATE ROLE %I LOGIN PASSWORD %L', $1::text, $2::text)",
                 app_role,
-                app_password,
+                ScramVerifier.compute(app_password),
             )
-            await owner.execute(ddl)
+            try:
+                await owner.execute(ddl)
+            except asyncpg.InsufficientPrivilegeError:
+                raise OwnerCannotCreateRole(app_role) from None
         elif exists["rolsuper"]:
             raise RoleSeparationRefused(app_role, "it is a superuser")
+        elif exists["rolcreaterole"]:
+            raise RoleSeparationRefused(app_role, "it may create roles, and so grant itself any")
         elif exists["member"]:
             raise RoleSeparationRefused(app_role, "it is, or is a member of, the owner")
         role = RoleIdentifier.quote(app_role)
@@ -398,6 +487,12 @@ class DatabaseRoleReconciler:
         await owner.execute(f"REVOKE CREATE ON DATABASE {database} FROM {role}")
         await owner.execute(f"REVOKE ALL ON ALL TABLES IN SCHEMA public FROM {role}")
         await owner.execute(f"REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM {role}")
+        await self._reset_defaults(owner, app_role, role)
+        # PUBLIC's grants reach the application role too.
+        for part in await owner.fetch(_PARTITIONS, f"public.{LEDGER_TABLE}"):
+            await owner.execute(f"REVOKE ALL ON TABLE {part['name']} FROM PUBLIC")
+        await owner.execute("REVOKE ALL ON TABLE public.event_seq FROM PUBLIC")
+        await self._revoke_replication_role(owner, role)
         await owner.execute(f"GRANT USAGE ON SCHEMA public TO {role}")
         for table, privileges in self._grants.tables.items():
             await owner.execute(
@@ -421,3 +516,57 @@ class DatabaseRoleReconciler:
             ):
                 await owner.execute(f"GRANT EXECUTE ON FUNCTION {signature['sig']} TO {role}")
         await owner.execute("SELECT public.ledger_guard_partitions()")
+
+    @staticmethod
+    async def _reset_defaults(owner: OwnedConnection, app_role: str, role: str) -> None:
+        """Default privileges that would hand the application role the next table a
+        migration creates, revoked where they were declared."""
+        for entry in await owner.fetch(_DEFAULT_ACL, app_role):
+            scope = f" IN SCHEMA {RoleIdentifier.quote(entry['schema'])}" if entry["schema"] else ""
+            await owner.execute(
+                f"ALTER DEFAULT PRIVILEGES FOR ROLE {RoleIdentifier.quote(entry['grantor'])}"
+                f"{scope} REVOKE ALL ON {entry['kind']} FROM {role}"
+            )
+
+    @staticmethod
+    async def _revoke_replication_role(owner: OwnedConnection, role: str) -> None:
+        """`SET session_replication_role = replica` silences every trigger. Only a
+        superuser may set it unless granted (PostgreSQL 15+); revoke any grant. An owner
+        that may not revoke it leaves it for the inspector to report."""
+        if int(str(await owner.fetchval("SHOW server_version_num"))) < 150000:
+            return
+        try:
+            async with owner.transaction():
+                await owner.execute(
+                    f"REVOKE SET ON PARAMETER session_replication_role FROM PUBLIC, {role}"
+                )
+        except asyncpg.PostgresError:
+            return
+
+
+_LOCK: Final = "SELECT pg_catalog.pg_advisory_xact_lock($1)"
+
+_APP_ROLE: Final = """
+SELECT r.rolsuper, r.rolcreaterole,
+       pg_catalog.pg_has_role($1, CURRENT_USER, 'MEMBER')
+       OR COALESCE((SELECT pg_catalog.pg_has_role($1, c.relowner, 'MEMBER')
+                      FROM pg_catalog.pg_class c
+                     WHERE c.oid OPERATOR(pg_catalog.=) pg_catalog.to_regclass($2)), false)
+           AS member
+  FROM pg_catalog.pg_roles r
+ WHERE r.rolname OPERATOR(pg_catalog.=) $1
+"""
+
+_DEFAULT_ACL: Final = """
+SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS grantor,
+       n.nspname::pg_catalog.text AS schema,
+       CASE d.defaclobjtype WHEN 'r' THEN 'TABLES' WHEN 'S' THEN 'SEQUENCES'
+            WHEN 'f' THEN 'FUNCTIONS' WHEN 'T' THEN 'TYPES' ELSE 'SCHEMAS' END AS kind
+  FROM pg_catalog.pg_default_acl d
+  LEFT JOIN pg_catalog.pg_namespace n ON n.oid OPERATOR(pg_catalog.=) d.defaclnamespace
+ WHERE EXISTS (
+       SELECT 1 FROM pg_catalog.aclexplode(d.defaclacl) a
+        WHERE a.grantee OPERATOR(pg_catalog.=) (
+              SELECT r.oid FROM pg_catalog.pg_roles r
+               WHERE r.rolname OPERATOR(pg_catalog.=) $1))
+"""

@@ -42,6 +42,7 @@ from vibey.domain.errors import (
     InvalidAnswer,
     UnknownProject,
     UnknownProvider,
+    VibeyError,
     WrongPhase,
 )
 from vibey.domain.job import JobState
@@ -1466,13 +1467,19 @@ def migrate() -> None:
         reconciler=DatabaseRoleReconciler(),
         inspector=LedgerGuardInspector(),
     )
-    report = asyncio.run(
-        runner.run(
-            owner_url=owner_url,
-            app=DatabaseEndpoints(app_url=app_url) if app_url else None,
-            migrations=discover_migrations(migrations_dir()),
+    try:
+        report = asyncio.run(
+            runner.run(
+                owner_url=owner_url,
+                app=DatabaseEndpoints(app_url=app_url) if app_url else None,
+                migrations=discover_migrations(migrations_dir()),
+            )
         )
-    )
+    except VibeyError as exc:
+        # A refusal (a missing role the owner may not create, an application role that
+        # cannot be guarded) is the answer, said plainly -- not a traceback.
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1) from None
     typer.echo(
         f"applied {len(report.applied)} migration(s)"
         + (f": {', '.join(report.applied)}" if report.applied else "")

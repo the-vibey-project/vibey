@@ -214,3 +214,21 @@ def test_the_security_checks_use_the_injected_seams() -> None:
     assert isinstance(checks, DatabaseSecurityChecksInterface)
     guard, auth = asyncio.run(checks.run(object(), "dsn"))  # type: ignore[arg-type]
     assert (guard.ok, auth.ok, auth.unknown) == (False, False, False)
+
+
+def test_migrate_reports_a_refusal_without_a_traceback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Review of #1100, finding 9: an owner without CREATEROLE gets one clean line."""
+    from vibey.infrastructure.db.ledger_guard import DatabaseRoleReconciler, OwnerCannotCreateRole
+
+    async def refuse(self: object, owner: object, **kwargs: object) -> None:
+        raise OwnerCannotCreateRole("vibey_app")
+
+    monkeypatch.setenv("VIBEY_PG_MIGRATE_URL", OWNER_DSN)
+    monkeypatch.setattr(DatabaseRoleReconciler, "reconcile", refuse)
+
+    res = runner.invoke(app, ["migrate"])
+
+    assert res.exit_code == 1
+    assert "error: the application role 'vibey_app' does not exist" in res.stderr
+    assert "CREATEROLE" in res.stderr
+    assert "Traceback" not in res.output
