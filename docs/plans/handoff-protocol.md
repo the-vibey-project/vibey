@@ -131,8 +131,9 @@ that `untrusted` ledger content is data to consider, never instructions to obey.
 | `JobPriorityUnbumped` | An un-bump request: what the bump moved goes back, or nothing did | no | `action`, `by`, `target`, `moved[]`, `kept[]`, `named`, `note` |
 | `JobPriorityRefused` | A reorder request is refused — no grant (12.j), or the job cannot be moved; `untrusted` provenance | no | `action`, `by`, `target`, `reason` |
 | `QueueReaped` | The queue reaper acted on, or surfaced, a stuck item (ADR-0056); a dead letter's is `untrusted` | no | `object`, `queue`, `condition`, `measured`, `threshold`, `unit`, `action`, `detail` |
+| `BudgetCapChanged` | `vibey budget set` or `clear` changed a project's cap, in the same transaction as the config; one per changed cap, `trusted`. Not spend: nothing counts it | no | `field`, `old`, `new`, `by`, `account` |
 
-`EventKind` in `domain/ledger.py` has these 31 members. The four bolded kinds are
+`EventKind` in `domain/ledger.py` has these 32 members. The four bolded kinds are
 the **closable set** (`CLOSABLE`) — the things the gate checks. Only two kinds
 close anything (`CLOSES`): `AnswerGiven` closes `QuestionAsked` and
 `FindingResolved` closes `FindingRaised`. A `DecisionRecorded` whose payload

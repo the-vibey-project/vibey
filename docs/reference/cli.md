@@ -17,6 +17,9 @@ Commands that read or write project state need `VIBEY_PG_URL` (see
 [Environment variables](#environment-variables)). `doctor` needs it only
 with `--record` or `--cluster`.
 
+[`vibey budget`](#vibey-budget-project_id) is a command group too, and the one whose
+bare form does not print help: bare `vibey budget` shows the latest project's budget.
+
 ## Global options
 
 These apply to every command; they must come before the subcommand name.
@@ -59,6 +62,9 @@ a wrong phase, an invalid spec, no eligible engine, a rejected handoff, an
 unset `VIBEY_PG_URL` — becomes the one-line `Error:` message and exit 3.
 Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
 `VibeyError` keep their Python traceback.
+
+`budget`, `budget show`, `budget set` and `budget clear` run inside `guard()` as
+well.
 
 The other commands (`answer`, `watch`, `recover`, `status`, `engines`,
 `cost`, `ledger show`, every `deploy` subcommand, `doctor`, `operator`) are
@@ -372,18 +378,121 @@ project.
 
 ## `vibey cost [PROJECT_ID]`
 
-Show per-engine spend for the current cycle, read from `engine_health`, with
-a total and two budget caps. The `(N turns)` figure after each engine is its
-selection count, not a turn count. Defaults to the most recently created
-project.
+Show the current cycle's spend against the caps the budget brake enforces, then
+each engine's metered BUILD spend. Defaults to the most recently created project;
+an unknown id prints `unknown project <id>` and exits 1.
 
-The caps come from a `budget` table in the project's stored config
-(`max_dollars_per_cycle`, `max_dollars_total`), with fallbacks of $40.00 and
-$250.00. No code path writes that table today — not `vibey new`, not the
-Kubernetes operator, and no runtime code reads `[budget]` from `vibey.toml` — so the command
-prints the $40.00 / $250.00 placeholders. The cap that is enforced is
-`--max-cycle-dollars` / `--max-cycle-turns` from `vibey new`, applied by the
-worker's budget brake; `vibey cost` does not print it.
+- `Cycle spend:` is the ledger sum the brake checks before every BUILD session:
+  `TurnCompleted` cost and `BudgetSpent` dollars, and one turn per `TurnCompleted`
+  plus `BudgetSpent` turns. DESIGN's spend is in it.
+- `Cycle dollar cap:` and `Cycle turn cap:` are the project's stored
+  `max_cycle_dollars` and `max_cycle_turns`, read through the brake's own parser,
+  or `none (uncapped)` and `none`. A reached cap adds
+  `Cap reached: the next BUILD session parks a budget_exhausted gate.`
+- `Per-engine (BUILD sessions, all cycles):` is each engine's metered spend from
+  `engine_health`, which accumulates across cycles, and how often rotation
+  selected it. That count is not a turn count.
+
+The spend and caps are the budget [`vibey budget`](#vibey-budget-project_id)
+shows. That command also changes the caps.
+
+## `vibey budget [PROJECT_ID]`
+
+Show a project's per-cycle caps and this cycle's spend against them. Add,
+change or remove the caps after the project exists. The caps are
+`max_cycle_dollars` and `max_cycle_turns` in the project's stored config, the
+one place the budget brake reads them. The spend is the same ledger sum
+`vibey cost` and the worker use. Bare `vibey budget`, or `vibey budget show`,
+shows the most recently created project.
+
+| Subcommand | Option | Default | What it does |
+|---|---|---|---|
+| `budget [show] [PROJECT_ID]` | `--json` | off | Print the budget as JSON (below). |
+| | `--all` | off | Every project, newest first (by creation time, then id). With `--json`, an array. Not together with `PROJECT_ID` (exit 2). |
+| `budget set [PROJECT_ID]` | `--max-cycle-dollars F` | unset | Set the dollar cap: a finite number above zero. |
+| | `--max-cycle-turns N` | unset | Set the turn cap: a whole number above zero. At least one of the two is required. |
+| | `--by NAME` | the account running it | The name the change is recorded under. A tool that runs the command names itself; the VS Code extension says `vibey-vscode`. |
+| `budget clear [PROJECT_ID]` | `--dollars`, `--turns`, `--all` | — | Remove the dollar cap, the turn cap, or both. At least one is required. The project is then uncapped for it, as if it had never been set. |
+| | `--by NAME` | the account running it | As for `set`. |
+
+The text form is one short block per project:
+
+```text
+greeter (0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10), cycle 2
+  dollars: $3.21 spent this cycle; cap $15.00
+  turns:   41 spent this cycle; no cap
+  last change: dollar cap none -> $15.00, by adam, 2026-09-24 19:02 UTC (1 change in all)
+```
+
+When a cap is reached, the block says so plainly:
+`The dollar cap is reached: the next BUILD session will park a budget_exhausted gate.`
+
+`--json` prints one object with exactly these keys. With `--all` it prints an
+array of them, newest project first:
+
+```json
+{
+  "project_id": "0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10",
+  "name": "greeter",
+  "cycle": 2,
+  "caps": {"max_cycle_dollars": 15.0, "max_cycle_turns": null},
+  "spend": {"dollars": 3.21, "turns": 41},
+  "exhausted": false,
+  "history": [
+    {"at": "2026-09-24T19:02:11.482113+00:00", "by": "adam", "field": "max_cycle_dollars", "old": null, "new": 15.0}
+  ]
+}
+```
+
+- A cap of `null` is no cap. The dollar cap is a number and the turn cap an
+  integer.
+- `spend.dollars` is the ledger sum, not rounded. `spend.turns` is the brake's
+  count: one per `TurnCompleted`, plus `BudgetSpent` turns.
+- `exhausted` is true when a cap is reached.
+- `history` lists every change `budget set` or `budget clear` recorded, oldest
+  first. Each entry has `at` (ISO-8601 with its offset), `by`, `field`, `old` and
+  `new`, where `null` is uncapped. A cap set at creation (by `vibey new` or the
+  Kubernetes operator) is not a change, so it has no entry.
+
+With no projects, bare `vibey budget` prints
+``no projects found; create one with `vibey new` first`` and exits 1. `--all`
+exits 0, printing `[]` with `--json`.
+
+**Changing a cap.** `set` and `clear` print what changed, then the budget block:
+
+```text
+Changed by adam:
+  dollar cap: none -> $15.00
+```
+
+A request that leaves every cap as it is prints
+`Nothing changed: the caps were already as asked.`, and writes and records
+nothing, so running it again is harmless. A cap at or below this cycle's spend
+is allowed. The block then says the next BUILD session will park a
+`budget_exhausted` gate.
+
+Each change writes the new caps into the project's config and appends one
+`BudgetCapChanged` event per changed cap to the ledger, in one transaction.
+The event carries `field`, `old`, `new`, `by` and `account`. `vibey ledger search
+--kind BudgetCapChanged` lists them, and `vibey ledger export` withholds them
+([What gets published](../guides/ledger-publication.md)). `--by` is a label for
+the record, not a permission. `account` is recorded beside it: the account the
+command ran as, from the password database, never `$USER`.
+
+The brake reads the caps at every BUILD session, so a worker that is already
+running applies a change to its next session. No restart is needed. A job
+already parked on a `budget_exhausted` gate stays parked until the gate is
+answered. The command lists each such gate with the answer that resumes the job
+under the stored caps, `vibey answer GATE_ID --raw '{}'`. Answering
+`--raw '{"max_dollars": N}'` still raises the cap for that job alone, as before.
+
+Exit codes: `0` on success, including an empty `--all`. `1` when there is no
+project or `PROJECT_ID` names none. `2` for a usage error, which writes nothing:
+a value that is not a cap, nothing to set or clear, a `--by` label that is empty,
+longer than 200 characters or holds control or formatting characters, or
+`PROJECT_ID` with `--all`. `3` for a change to a project in a phase this vibey
+does not know, because nothing can be recorded under it. Showing that project
+still works.
 
 ## `vibey ledger`
 

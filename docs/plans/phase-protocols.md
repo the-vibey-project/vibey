@@ -595,7 +595,7 @@ integrate findings. Nothing is rolled back.
 
 | Condition | Result |
 |---|---|
-| `max_cycle_dollars` / `max_cycle_turns` (set at `vibey new`) reached | The next `build.implement` to start parks a `budget_exhausted` gate before any engine session; attempts after the first also park when `projected_cost_per_attempt` would exceed the cap. Answer `--raw '{"max_dollars": N}'` or `--raw '{"max_turns": N}'` to raise it. In-flight sessions are not stopped. |
+| `max_cycle_dollars` / `max_cycle_turns` (set at `vibey new`, changed by `vibey budget set` / `clear`) reached | The next `build.implement` to start parks a `budget_exhausted` gate before any engine session; attempts after the first also park when `projected_cost_per_attempt` would exceed the cap. The caps are read at that check, so a change binds a running worker's next session. Answer `--raw '{"max_dollars": N}'` or `--raw '{"max_turns": N}'` to raise it for that job, or change the stored cap with `vibey budget set` and answer the gate. In-flight sessions are not stopped. |
 | No eligible engine | Job deferred: state `ready`, `run_after` = now + 5 min, attempt given back. Nothing burns. |
 | Engine capacity rejection | Job deferred 5 min; that engine's circuit opens, so the next claim rotates. |
 | Item hits attempt 7 | `escalation_exhausted` gate for that item only; the rest of the phase continues |

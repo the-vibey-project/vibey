@@ -172,6 +172,24 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   bound. Missing or stale evidence means one, said out loud, with a calibration requested. A
   step taken while another runner held a model is discarded, and a 200 with no `done_reason`
   counts as a failure, not an answer.
+* **cli:** a project's budget can be added to, changed and removed after the project exists;
+  until now nothing could change the caps `vibey new` set. `vibey budget [PROJECT_ID]` shows
+  the caps, this cycle's spend against them and every change to them; `--all` shows every
+  project, newest first; `--json` is the object the VS Code extension reads (`project_id`,
+  `name`, `cycle`, `caps`, `spend`, `exhausted`, `history`). `vibey budget set
+  [--max-cycle-dollars F] [--max-cycle-turns N]` and `vibey budget clear (--dollars | --turns
+  | --all)` change `max_cycle_dollars` / `max_cycle_turns` in the project's config, the one
+  place the brake reads them, and append one `BudgetCapChanged` event per changed cap
+  (`field`, `old`, `new`, `by`, `account`) in the same transaction; a change that changes
+  nothing records nothing. `--by NAME` lets a tool name itself, a label for the record with
+  the account recorded beside it. A cap at or below the cycle's spend is allowed and the
+  command says the next BUILD session will park a `budget_exhausted` gate, and it names any
+  job already parked on one with the `vibey answer` that resumes it. The brake now reads the
+  caps at every BUILD session instead of once when the worker starts, so a change binds a
+  running worker's next session and an uncapped project can be capped without a restart.
+  `vibey cost` reads through the same service, its output unchanged. The publication policy
+  now names every kind it withholds (`WITHHELD_KINDS`) and a test fails on a kind classified
+  nowhere; `BudgetCapChanged` is withheld from the public and the billing shard
 * **storm:** `storm-queue.sh` asks `vibey-gh slots allowed` how many lanes may run at once,
   instead of the host-wide `pgrep` it hard-coded. It runs more than one only when this device's
   evidence says so, and calibrates itself when its queue empties and a calibration was

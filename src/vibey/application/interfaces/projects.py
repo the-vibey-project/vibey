@@ -34,3 +34,22 @@ class ProjectTransitioner(Protocol):
         cycle: int | None = None,
         guard: str | None = None,
     ) -> Any: ...
+
+
+@runtime_checkable
+class ProjectLookup(Protocol):
+    """Reads one project as it is now. What the budget brake reads a project's caps
+    through, at every BUILD session."""
+
+    async def get(self, project_id: UUID) -> ProjectRecord | None: ...
+
+
+@runtime_checkable
+class ProjectReader(ProjectLookup, Protocol):
+    """Reads projects and changes nothing: one, the latest, or every one."""
+
+    async def get_latest(self) -> ProjectRecord | None: ...
+
+    async def list_all(self) -> tuple[ProjectRecord, ...]:
+        """Every project, newest first: `created_at` descending, then id."""
+        ...

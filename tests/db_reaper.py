@@ -52,6 +52,12 @@ LOCK_NAMESPACE = 0x76746462  # "vtdb"
 #: The per-worker names conftest.py creates: xdist's 32-hex run id, or a serial run's
 #: ``<pid>_<8 hex>``.
 WORKER_DB = re.compile(r"^vibey_test_(?:gw\d+|main)_(?:[0-9a-f]{32}|(?P<pid>\d+)_[0-9a-f]{8})$")
+#: The hold's poll, bound once, at import. A test may patch ``asyncio.sleep`` for its own
+#: module -- the worker's ``--wait-for-project`` test does, through ``vibey.cli.main.asyncio``,
+#: which is this very module -- and the hold, in its own thread, must never call the patched
+#: one: its side effect would run here, and one that raised would end the hold and free the
+#: lock that keeps the reaper away from this session's database.
+_POLL = asyncio.sleep
 
 
 def admin_dsn(dsn: str) -> str:
@@ -110,7 +116,7 @@ class TestDatabaseHold:
             )
             self._held.set()
             while not self._stop.is_set():
-                await asyncio.sleep(0.2)
+                await _POLL(0.2)
         finally:
             await conn.close()
 

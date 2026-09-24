@@ -11,8 +11,10 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import time
 import uuid
 from collections.abc import Iterator
+from unittest.mock import AsyncMock, patch
 
 import asyncpg
 import pytest
@@ -270,3 +272,34 @@ def test_this_sessions_own_database_is_marked_and_held() -> None:
     mark, free = asyncio.run(look())
     assert mark == HOLD_MARK
     assert not free, "a live session's database must be held"
+
+
+def test_a_test_that_patches_asyncio_sleep_never_reaches_the_hold() -> None:
+    """The worker's `--wait-for-project` test patches `asyncio.sleep` through
+    `vibey.cli.main.asyncio`, which is the module itself, to create a project. The hold's
+    poll called it too: the project was created twice, and a side effect that raised ended
+    the hold and freed the lock that keeps the reaper away from the session's database."""
+    name = _worker_name()
+    hold = TestDatabaseHold(_base_dsn(), name)
+    hold.start()
+
+    async def still_held() -> bool:
+        conn = await asyncpg.connect(admin_dsn(_base_dsn()))
+        try:
+            free = await conn.fetchval(
+                "SELECT pg_try_advisory_lock($1, hashtext($2))", LOCK_NAMESPACE, name
+            )
+            if free:
+                await conn.execute(
+                    "SELECT pg_advisory_unlock($1, hashtext($2))", LOCK_NAMESPACE, name
+                )
+            return not free
+        finally:
+            await conn.close()
+
+    try:
+        with patch("asyncio.sleep", new=AsyncMock(side_effect=RuntimeError("patched"))):
+            time.sleep(0.7)  # three of the hold's polls, on the real clock
+        assert asyncio.run(still_held()), "a patched asyncio.sleep ended the hold"
+    finally:
+        hold.release()

@@ -41,6 +41,7 @@ fields listed for that kind:
 | `ArtifactProduced` | `artifact_id`, `artifact_type`, `title`, `cycle` |
 | `VerdictRendered` | `complete`, `success`, `remaining_work` |
 | `VisualDesign*`, `Deployment*` choices | `choice` |
+| `DeliveryEstimateRecorded` | `schema`, `recorded_at`, `source_fingerprint`, `history`, `time`, `billing`, `materials`, `track_record`, `assumptions`, `problems` |
 
 Every other field of those events is withheld. Every event keeps its envelope —
 id, seq, cycle, phase, kind, engine, job, causation and correlation ids,
@@ -59,9 +60,20 @@ export until the policy can withhold it (see [Widening or narrowing](#widening-o
 - **Anything from outside.** An event with `untrusted` provenance carries text vibey
   did not write — a web page read during research, an issue body — and is withheld
   whole, so the site never re-serves a stranger's words under your project's name.
-- **Every kind not on the list**, including `SessionSeeded` (seed prompts),
-  `FileEdited` (diffs), `BudgetSpent` (your spend), `CapacityRejected`,
-  `SavePointCreated`, and the handoff kinds.
+- **Every kind not on the list.** The policy names each one it withholds
+  (`WITHHELD_KINDS` in `domain/publication_policy.py`), and a test fails when a
+  kind is on no list, so a new kind is never published or withheld by oversight:
+  - `SessionSeeded` (seed prompts), `TranscriptRecorded` (turn text) and
+    `FileEdited` (diffs);
+  - `BudgetSpent` (your spend) and `BudgetCapChanged` (the caps you set with
+    `vibey budget`, and the account that set them);
+  - `CapacityRejected`, `SavePointCreated` and the handoff kinds;
+  - the queue's `JobPriorityBumped`, `JobPriorityUnbumped`, `JobPriorityRefused`
+    and `QueueReaped`.
+
+  `vibey ledger export --billing`, the operator's billing projection, keeps the
+  metered spend fields and the operational kinds the forecast counts. A cap is
+  neither, so it withholds `BudgetCapChanged` too.
 - **`repo_path`, never.** Where the project lives on your machine is not published
   under any rules; a rule set that tries to allow it is refused.
 - **Absolute paths and email addresses** inside a published string are stripped:

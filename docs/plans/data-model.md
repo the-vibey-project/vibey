@@ -995,6 +995,23 @@ Handlers that must tolerate replay suppress that miss and continue with idempote
 work (for example `DeployDesignBridgeHandler`). There is no supervisor process; any
 number of workers may attempt a transition and exactly one wins.
 
+**A project's caps** (`vibey budget set` / `clear`, `PostgresProjectBudgetStore`) are
+changed under a row lock, with their ledger events on the same connection:
+
+```sql
+SELECT * FROM project WHERE id = $1 FOR NO KEY UPDATE;
+UPDATE project
+SET config = (config - $2::text[]) || $3::jsonb, updated_at = now()   -- cleared keys, set keys
+WHERE id = $1
+RETURNING *;
+SELECT append_event(...);                    -- one BudgetCapChanged per changed cap
+```
+
+Two changes to one project serialise on the row, so each reads the caps the other
+left and records them as its `old`. `NO KEY UPDATE` never blocks the `KEY SHARE` an
+event or job insert takes through its foreign key, so a worker keeps writing its
+ledger meanwhile. A change that changes nothing runs no `UPDATE` and appends nothing.
+
 **The integration branch** is guarded by a session-level advisory lock scoped to
 `(project_id, cycle)` (`PostgresAdvisoryLock`, ADR-0029):
 

@@ -31,13 +31,16 @@ The caps themselves come from one place too: ``caps_from_config``. Issue
 #210 was ``vibey cost`` reading a ``budget`` table that nothing writes and
 printing $40 / $250 fallbacks as if they were caps, while the worker
 enforced ``max_cycle_dollars`` from a second, private parse. Two readers of
-one setting is how the report and the enforcement drift apart.
+one setting is how the report and the enforcement drift apart. And they are
+read when the brake checks, not when the worker starts: a cap is something a
+person changes (``vibey budget``), and a brake holding a copy from its start
+would enforce a cap nobody has any longer.
 """
 
 from collections.abc import Mapping
 from uuid import UUID
 
-from vibey.application.interfaces import LedgerReader
+from vibey.application.interfaces import LedgerReader, ProjectLookup
 from vibey.domain.budget import BudgetLedger
 from vibey.domain.interfaces.phase_timing_interface import (
     LedgerSpendRuleInterface,
@@ -55,7 +58,8 @@ class LedgerBudgetSource:
 
         The keys are the top-level ``max_cycle_dollars`` / ``max_cycle_turns``
         that ``vibey new --max-cycle-dollars/--max-cycle-turns`` and the
-        Kubernetes operator's ``spec.maxCycleDollars/maxCycleTurns`` write. A
+        Kubernetes operator's ``spec.maxCycleDollars/maxCycleTurns`` write, and
+        ``vibey budget set`` / ``clear`` change afterwards. A
         key that is absent or not a number is no cap (``None``) rather than a
         default: opting in to the brake is explicit, never a silent limit that
         would surprise an existing project.
@@ -85,13 +89,25 @@ class LedgerBudgetSource:
         max_turns: int | None = None,
         max_dollars: float | None = None,
         spend_rule: LedgerSpendRuleInterface = LEDGER_SPEND_RULE,
+        projects: ProjectLookup | None = None,
     ) -> None:
+        """``max_turns`` / ``max_dollars`` are the caps this source was built with.
+
+        With ``projects``, the caps are read instead from the project's stored
+        config at every ``current()`` call -- the worker's brake is built that way,
+        once, when the worker starts, so a cap ``vibey budget`` sets or clears while
+        it runs binds the next BUILD session rather than the next restart, and a
+        project created uncapped can be capped later. A project that is gone
+        falls back to the caps given here.
+        """
         self._ledger_reader = ledger_reader
         self._max_turns = max_turns
         self._max_dollars = max_dollars
         self._spend_rule = spend_rule
+        self._projects = projects
 
     async def current(self, project_id: UUID, cycle: int) -> BudgetLedger:
+        max_dollars, max_turns = await self._caps(project_id)
         spent: PhaseSpendInterface = NO_SPEND
         for event in await self._ledger_reader.all_for_project(project_id):
             if event.cycle != cycle:
@@ -104,6 +120,13 @@ class LedgerBudgetSource:
         return BudgetLedger(
             turns_spent=spent.turn_completed_events + spent.budget_turns,
             dollars_spent=spent.dollars,
-            max_turns=self._max_turns,
-            max_dollars=self._max_dollars,
+            max_turns=max_turns,
+            max_dollars=max_dollars,
         )
+
+    async def _caps(self, project_id: UUID) -> tuple[float | None, int | None]:
+        if self._projects is not None:
+            project = await self._projects.get(project_id)
+            if project is not None:
+                return self.caps_from_config(project.config)
+        return self._max_dollars, self._max_turns

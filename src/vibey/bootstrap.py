@@ -60,6 +60,7 @@ from vibey.application.interfaces import (
     IssueTrackerPort,
     JobHandler,
     MessagingPort,
+    ProjectBudgetServiceInterface,
     QueuePriorityServiceInterface,
     QueueReaperInterface,
     SecretsPort,
@@ -70,6 +71,7 @@ from vibey.application.interfaces import (
 )
 from vibey.application.job_dispatcher import JobDispatcher
 from vibey.application.preflight import ConductorPreflight
+from vibey.application.project_budget import ProjectBudgetService
 from vibey.application.queue_priority import QueuePriorityService
 from vibey.application.queue_reaper import QueueReaper
 from vibey.application.review_collect_handler import ReviewCollectHandler
@@ -106,6 +108,7 @@ from vibey.infrastructure.db.ledger_guard import (
 )
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
+from vibey.infrastructure.db.project_budget_store import PostgresProjectBudgetStore
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
 from vibey.infrastructure.db.queue_reap_store import PostgresQueueReapStore
 from vibey.infrastructure.db.review_ledger import PostgresReviewLedger
@@ -191,6 +194,9 @@ class AppResources:
     # The queue reaper (ADR-0056): the worker's idle loop runs it when due, and
     # `vibey queue reap` on demand.
     queue_reaper: QueueReaperInterface
+    # Project budgets (`vibey budget`). Only the service: the store that writes a
+    # project's caps and their ledger events is built here and handed to nothing else.
+    project_budgets: ProjectBudgetServiceInterface
     integration_lock: PostgresAdvisoryLock | None = None
     # Whether the role this process connects as could rewrite the ledger (ADR-0055).
     # `vibey worker` logs it at every start when it could; `vibey doctor` fails on it.
@@ -424,16 +430,14 @@ def build_full_worker(
         metrics=metrics,
     )
     # The runaway brake: caps come from the project's own config
-    # (max_cycle_dollars / max_cycle_turns, set at `vibey new`). Without
-    # either, spend stays uncapped -- opting in is explicit, never a
-    # silent default that would surprise existing projects. The parse is
-    # LedgerBudgetSource's own, the same one `vibey cost` reports from.
-    max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
-    budget_source: LedgerBudgetSource | None = None
-    if max_dollars is not None or max_turns is not None:
-        budget_source = LedgerBudgetSource(
-            resources.ledger, max_dollars=max_dollars, max_turns=max_turns
-        )
+    # (max_cycle_dollars / max_cycle_turns, set at `vibey new` and changed by
+    # `vibey budget`). Without either, spend stays uncapped -- opting in is
+    # explicit, never a silent default that would surprise existing projects.
+    # The caps are read at every BUILD session through LedgerBudgetSource's own
+    # parser, the one `vibey cost` and `vibey budget` report from -- not once,
+    # here -- so a cap changed while this worker runs binds the next session,
+    # and a project started uncapped can be capped without a restart.
+    budget_source = LedgerBudgetSource(resources.ledger, projects=resources.projects)
     wind_down = WindDownOrchestrator(
         ledger=resources.ledger,
         # The pool, like the provider's own selection: a wind-down must hand off to an
@@ -977,10 +981,11 @@ async def build_app(
             clock=clock,
             logger=StructlogAppLogger(owner="queue-reaper"),
         )
+        gates = PostgresHumanGateRepository(pool)
         yield AppResources(
             projects=projects,
             jobs=jobs,
-            gates=PostgresHumanGateRepository(pool),
+            gates=gates,
             ledger=ledger,
             design_ledger=PostgresDesignLedger(ledger),
             design_specs=FileDesignSpecRepository(projects),
@@ -1017,6 +1022,14 @@ async def build_app(
                 jobs=jobs,
                 store=PostgresJobPriorityStore(pool),
                 grants=ProjectPriorityGrantReader(),
+                caller=ProcessCaller(),
+                clock=clock,
+            ),
+            project_budgets=ProjectBudgetService(
+                projects=projects,
+                ledger=ledger,
+                store=PostgresProjectBudgetStore(pool),
+                gates=gates,
                 caller=ProcessCaller(),
                 clock=clock,
             ),

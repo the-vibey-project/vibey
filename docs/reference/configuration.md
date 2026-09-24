@@ -38,8 +38,38 @@ The project record is written once, at creation, by one of two paths:
   `engine_environment` objects (validated the same way). `spec.engines` is stored as
   a flat `engines` list that nothing reads back yet.
 
-Neither path passes through `parse_config`. No command updates these values on
-an existing project.
+Neither path passes through `parse_config`. One command updates any of these values
+on an existing project, and only two of them: `vibey budget set` and
+`vibey budget clear` rewrite `max_cycle_dollars` and `max_cycle_turns` (see
+[Per-cycle caps](#per-cycle-caps-max_cycle_dollars-max_cycle_turns)). No command
+changes the rest after creation. The operator applies its spec at creation only,
+so later edits to a `VibeyProject`'s `maxCycleDollars` or `maxCycleTurns` change
+nothing; use `vibey budget`.
+
+### Per-cycle caps: `max_cycle_dollars`, `max_cycle_turns`
+
+The budget brake's caps. They are top-level keys of the project's stored
+`config`, and that is the only place the brake reads them
+(`LedgerBudgetSource.caps_from_config`).
+
+| Key | Type | Unset means | Set by |
+|---|---|---|---|
+| `max_cycle_dollars` | number above zero | no dollar cap | `vibey new --max-cycle-dollars`, the operator's `spec.maxCycleDollars`, `vibey budget set --max-cycle-dollars` |
+| `max_cycle_turns` | integer above zero | no turn cap | `vibey new --max-cycle-turns`, the operator's `spec.maxCycleTurns`, `vibey budget set --max-cycle-turns` |
+
+- **Read at every BUILD session**, not once when a worker starts. A cap changed
+  while a worker runs binds its next BUILD session. A project created uncapped
+  can be capped without a restart.
+- **Uncapped is absence.** `vibey budget clear` removes the key, leaving the config
+  as if the cap had never been set. A key that is not a number, or a `true` or
+  `false`, is also no cap. It is never a default.
+- **Every change is on the ledger.** Each `set` or `clear` that changes a cap
+  appends one `BudgetCapChanged` event (`field`, `old`, `new`, `by`, `account`)
+  in the same transaction as the config write. `vibey budget --json` reads its
+  `history` back from those events. A value set at creation has no event.
+- **A grant is not a cap change.** Answering a `budget_exhausted` gate with
+  `--raw '{"max_dollars": N}'` raises the cap for that one job and leaves the
+  stored cap as it is.
 
 Neither path writes a `features` key either, so the worker's check of the
 stored `features.qwenloop` is always false for projects created today:
@@ -233,16 +263,16 @@ for the same disclosure.
 
 None of these keys is read at runtime. The live brake is the project's stored
 `max_cycle_dollars` / `max_cycle_turns` (set by `vibey new --max-cycle-dollars`
-/ `--max-cycle-turns`, or the operator's `spec.maxCycleDollars` /
-`spec.maxCycleTurns`). `LedgerBudgetSource` sums them live from the current
-cycle's `TurnCompleted` and `BudgetSpent` ledger events — never estimated
-ahead of time — and tripping either parks a `budget_exhausted` gate. With
-neither set, spend is uncapped.
+/ `--max-cycle-turns` or the operator's `spec.maxCycleDollars` /
+`spec.maxCycleTurns`, and changed afterwards by `vibey budget set` / `clear`; see
+[Per-cycle caps](#per-cycle-caps-max_cycle_dollars-max_cycle_turns)).
+`LedgerBudgetSource` reads the caps at every BUILD session and sums the spend
+live from the current cycle's `TurnCompleted` and `BudgetSpent` ledger events,
+never estimating it ahead of time. Tripping either cap parks a
+`budget_exhausted` gate. With neither set, spend is uncapped.
 
-`vibey cost` prints caps from a `budget` key in the stored project config
-(`max_dollars_per_cycle`, `max_dollars_total`) that nothing writes, so it
-currently shows the fallbacks $40.00 (cycle) and $250.00 (total) rather than
-the real cap.
+`vibey cost` and `vibey budget` show those stored caps and that ledger sum. A
+`budget` key in the stored project config is not read by either.
 
 ## `[verify]`
 

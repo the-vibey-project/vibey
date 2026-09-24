@@ -128,11 +128,38 @@ DEFAULT_ALLOWLIST: Final[Mapping[EventKind, frozenset[str]]] = MappingProxyType(
 )
 """The default allowlist: the record of what was decided, asked, answered, assumed,
 found and resolved, and how the phases moved -- and nothing an engine said on the
-way. Kinds absent here (`SessionSeeded`, `FileEdited`, `CapacityRejected`,
-`SavePointCreated`, `HandoffInitiated`, `HandoffAccepted`, `BudgetSpent`) are
-withheld whole. Paths an artifact was written to, research content and raw spend are
-left out on purpose; the forecast is allowlisted because it is an explicitly derived,
-human-facing summary with its assumptions beside it."""
+way. Kinds absent here are withheld whole; `WITHHELD_KINDS` names every one of them.
+Paths an artifact was written to, research content and raw spend are left out on
+purpose; the forecast is allowlisted because it is an explicitly derived, human-facing
+summary with its assumptions beside it."""
+
+WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
+    {
+        # What an engine was told and what it wrote: seed prompts, turn text, diffs.
+        EventKind.SESSION_SEEDED,
+        EventKind.TRANSCRIPT_RECORDED,
+        EventKind.FILE_EDITED,
+        # The operator's provider accounts, repository and engine rotation.
+        EventKind.CAPACITY_REJECTED,
+        EventKind.SAVEPOINT_CREATED,
+        EventKind.HANDOFF_INITIATED,
+        EventKind.HANDOFF_ACCEPTED,
+        # Money: raw spend, and the caps the operator sets on it with the account that
+        # set them (`vibey budget`). Only the explicit billing projection below reads
+        # spend, and it reads no caps.
+        EventKind.BUDGET_SPENT,
+        EventKind.BUDGET_CAP_CHANGED,
+        # Queue operations: who reordered which job, and what the reaper did.
+        EventKind.JOB_PRIORITY_BUMPED,
+        EventKind.JOB_PRIORITY_UNBUMPED,
+        EventKind.JOB_PRIORITY_REFUSED,
+        EventKind.QUEUE_REAPED,
+    }
+)
+"""Every kind the default rules withhold whole, named so that none is withheld -- or
+published -- by omission. The policy is default-deny whatever this set says; it is the
+record of each decision, and `tests/domain/test_publication_policy.py` fails when a
+kind is in none of `DEFAULT_ALLOWLIST`, `ENGINE_CHATTER` and this set, or in two."""
 
 # A path starts where a word could: at the start of the text, or after whitespace, a
 # quote, an opening `(`, `[` or `{`, or one of `=,;:|>`. Not after a letter, a digit, a
