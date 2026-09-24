@@ -42,6 +42,21 @@ JOB_STATE_PARSER: Final[StoredValueParserInterface[JobState, UnrecognizedJobStat
 """The parser every reader of `job.state` shares. Stateless."""
 
 
+ATTEMPTS_EXHAUSTED_GATE_KIND: Final = "attempts_exhausted"
+"""The worker's gate when a job's handler failed on every attempt (ADR-0024)."""
+
+DELIVERY_EXHAUSTED_GATE_KIND: Final = "delivery_exhausted"
+"""The queue reaper's gate when a job's worker died on every attempt (ADR-0056)."""
+
+QUEUE_GATE_KINDS: Final = frozenset({ATTEMPTS_EXHAUSTED_GATE_KIND, DELIVERY_EXHAUSTED_GATE_KIND})
+"""The gates the queue raises on a job's behalf, never the job itself.
+
+Answering one buys the job another delivery and answers nothing its handler asked, so a
+handler's own gate lookup never returns one (`HumanGateRepository.latest_for_job`). Only the
+worker, which raised them, reads them back -- for the attempt grant an answer may carry.
+"""
+
+
 class FailureClass(StrEnum):
     CAPACITY = "capacity"  # opens the circuit
     ENGINE = "engine"  # opens after 3

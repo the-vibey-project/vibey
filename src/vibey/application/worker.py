@@ -32,7 +32,7 @@ from vibey.application.interfaces import (
 )
 from vibey.application.observability import StandardLibraryLogger
 from vibey.application.ports import HumanGateRepository, JobRepository
-from vibey.domain.job import FailureClass
+from vibey.domain.job import ATTEMPTS_EXHAUSTED_GATE_KIND, FailureClass
 from vibey.domain.phase import Phase
 
 # The grant key every attempt bound in the tree reads and writes. It is the
@@ -40,7 +40,7 @@ from vibey.domain.phase import Phase
 # purpose: one answer widens both the queue's attempt bound and the effort
 # ladder's, so a human never has to know there are two.
 ATTEMPTS_GRANT_KEY = "max_attempts"
-EXHAUSTED_GATE_KIND = "attempts_exhausted"
+EXHAUSTED_GATE_KIND = ATTEMPTS_EXHAUSTED_GATE_KIND
 
 
 class CapacityDeferred(Exception):
@@ -238,7 +238,7 @@ class WorkerLoop:
             self._landed(nacked, event="job.nack_rejected", job=job)
             return
 
-        gate = await self._gates.latest_for_job(job.id)
+        gate = await self._gates.latest_for_job(job.id, include_queue_gates=True)
         granted = self._granted_attempts(gate)
         if granted is not None and granted > job.attempts:
             # `granted > attempts >= max_attempts`, and only a lease-guarded
@@ -303,7 +303,7 @@ class WorkerLoop:
         # deliberately not notified again.
         gate = created_gate
         if gate is None:
-            existing = await self._gates.latest_for_job(job.id)
+            existing = await self._gates.latest_for_job(job.id, include_queue_gates=True)
             if existing is None or existing.answer is not None:
                 gate = await self._gates.raise_gate(job.project_id, job.id, request)
         if gate is not None:

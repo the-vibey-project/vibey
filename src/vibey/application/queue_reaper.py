@@ -38,6 +38,7 @@ from vibey.application.interfaces.queue_reap import (
 from vibey.application.interfaces.system import Clock
 from vibey.domain.interfaces.config_interface import QueueReapConfigInterface
 from vibey.domain.interfaces.queue_reap_interface import QueueReapPolicyInterface
+from vibey.domain.job import DELIVERY_EXHAUSTED_GATE_KIND
 from vibey.domain.queue_reap import (
     QUEUE_REAP_POLICY,
     QueueDepth,
@@ -47,8 +48,6 @@ from vibey.domain.queue_reap import (
 )
 
 type _SurfaceKey = tuple[UUID, str, str, str]
-
-DELIVERY_EXHAUSTED_GATE_KIND: Final = "delivery_exhausted"
 
 
 class DeliveryExhaustedGate:
