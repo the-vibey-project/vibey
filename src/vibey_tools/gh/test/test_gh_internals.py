@@ -966,6 +966,66 @@ def test_the_external_repair_label_holds_even_a_trusted_author():
     )
 
 
+@pytest.mark.parametrize(
+    "login,labels,cause",
+    [
+        ("outsider", [], "author outsider is not in [merge_train] trusted_authors"),
+        ("theowner", [pa.EXTERNAL_REPAIR_LABEL], f"it carries the {pa.EXTERNAL_REPAIR_LABEL}"),
+    ],
+)
+@pytest.mark.parametrize(
+    "gate", [None, "IN_PROGRESS", "FAILURE"], ids=["unreported", "pending", "red"]
+)
+def test_the_hold_applies_whatever_state_the_gates_are_in(login, labels, cause, gate):
+    """Copilot on #1079: with PR automation on and its gates not yet green, the gate
+    branch won first, so a stranger's pull request was not marked held -- no label, no
+    notice -- until its gates passed. Whose code it is does not depend on them."""
+    cfg = GhConfig(root=Path.cwd(), owner="theowner", trusted_authors=("theowner",))
+    pr = {"number": 1, "title": "t", "author": {"login": login}, "labels": labels}
+    if gate == "IN_PROGRESS":
+        pr["statusCheckRollup"] = [
+            {"name": "PR review / gate", "status": "IN_PROGRESS", "conclusion": None}
+        ]
+    elif gate == "FAILURE":
+        pr["statusCheckRollup"] = [
+            {"name": "PR review / gate", "status": "COMPLETED", "conclusion": "FAILURE"}
+        ]
+    verdict = merge_train.judge(pr, cfg)
+    assert verdict.held_for_review
+    assert verdict.reason.startswith(f"needs a human merge: {cause}")
+
+
+def _notice(fake_gh, verdict: merge_train.Verdict) -> str:
+    fake_gh.script(
+        {
+            "pr edit 1 --add-label needs-human-review": {},
+            "pr view 1 --json comments -q .comments[].body": {"out": ""},
+        },
+    )
+    merge_train.hold_for_review(verdict, GhConfig(root=Path.cwd(), owner="theowner"))
+    return next(c for c in fake_gh.calls() if c.startswith("pr comment"))
+
+
+def test_the_notice_names_an_untrusted_author_as_the_cause(fake_gh):
+    cfg = GhConfig(root=Path.cwd(), owner="theowner", trusted_authors=("theowner",))
+    notice = _notice(fake_gh, merge_train.judge(_green("outsider"), cfg))
+    assert "@theowner" in notice and "@outsider" in notice
+    assert "author outsider is not in [merge_train] trusted_authors" in notice
+    assert "awaiting your review" in notice  # the once-only marker survives
+
+
+def test_the_notice_names_the_label_not_the_author_when_the_author_is_trusted(fake_gh):
+    """Copilot on #1079: a trusted author holding `vibey-gh:external-repair` was told the
+    author was not on the trusted list -- a false explanation for a true hold."""
+    cfg = GhConfig(root=Path.cwd(), owner="theowner", trusted_authors=("theowner", "bot"))
+    verdict = merge_train.judge(_green("bot", labels=[pa.EXTERNAL_REPAIR_LABEL]), cfg)
+    notice = _notice(fake_gh, verdict)
+    assert f"it carries the {pa.EXTERNAL_REPAIR_LABEL} label" in notice
+    assert "not in [merge_train] trusted_authors" not in notice
+    assert "trusted list" not in notice
+    assert "awaiting your review" in notice
+
+
 def test_the_hold_notice_asks_for_a_human_merge_not_an_approval(fake_gh):
     """An approval no longer releases a stranger's pull request to the train, so telling
     the owner "approve it and the next train will take it" would be a false promise."""
@@ -997,7 +1057,9 @@ def test_event_driven_merge_guards_and_single_pr_lookup(monkeypatch):
     unreviewed = merge_train.judge(
         {"number": 1, "title": "t", "author": {"login": "outsider"}}, cfg
     )
-    assert "automated outside-author review" in unreviewed.reason
+    # Held before its gates have even reported: whether they pass changes nothing.
+    assert unreviewed.held_for_review
+    assert unreviewed.reason.startswith("needs a human merge: author outsider")
     behind = merge_train.judge(
         {"number": 1, "title": "t", "author": {"login": "owner"}, "mergeStateStatus": "BEHIND"},
         cfg,

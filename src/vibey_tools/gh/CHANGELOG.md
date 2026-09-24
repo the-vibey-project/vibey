@@ -9,7 +9,9 @@ This file follows Keep a Changelog and semantic versioning conventions.
   pull request whose author is not the owner or in `[merge_train] trusted_authors`, or that
   carries `vibey-gh:external-repair`, is never merged unattended: it is held, labelled, and
   reported "needs a human merge: author <login> is not in [merge_train] trusted_authors",
-  regardless of `[pr_automation] enabled`, green gates or an approving review. Before, the
+  regardless of `[pr_automation] enabled`, the state of its gates (held before they report)
+  or an approving review. The owner's one-time notice is built from that reason, so a
+  trusted author's `external-repair` hold is not misreported as an untrusted author. Before, the
   list bound only with PR automation off, so with it on a stranger's pull request merged on
   a model's review verdict. Dependabot's pull requests now wait for a person; add a login to
   `trusted_authors`, in a reviewed diff, to change that.

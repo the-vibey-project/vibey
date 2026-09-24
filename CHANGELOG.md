@@ -28,8 +28,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   not given (sub-doctrine 8.a) ([#322](https://github.com/the-vibey-project/vibey/issues/322))
 * **vibey_gh:** the merge train admits no stranger (ADR-0053, sub-doctrine 12.j). A pull request
   whose author is not the owner or in `[merge_train] trusted_authors`, or that carries
-  `vibey-gh:external-repair`, is held "needs a human merge" whatever its gates and approvals
-  say; `trusted_authors` used to bind only with PR automation off. Dependabot's pull requests
+  `vibey-gh:external-repair`, is held "needs a human merge" whatever state its gates are in
+  and whatever its approvals say, and the owner's notice names which of the two holds it; `trusted_authors` used to bind only with PR automation off. Dependabot's pull requests
   now wait for a person. The train also stops retrying a refused merge with
   `gh pr merge --admin`: a refusal (for example `REVIEW_REQUIRED`) is reported "needs a human
   merge" with GitHub's reason and the pass continues. `vibey-gh merge-train --admin-fallback`

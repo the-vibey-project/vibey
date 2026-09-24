@@ -264,9 +264,12 @@ def _merge_train(args) -> int:
                     skipped += 1
                     continue
                 v.reason = f"{v.reason} (restack declined: {detail})"
-            # Only a pull request held on the owner's approval gets labelled and
-            # announced. A draft or a red build is the contributor's to fix and needs no
-            # notification; this one is waiting on somebody who does not know yet.
+            # Only a pull request holding outside code -- an author not in
+            # `trusted_authors`, or the external-repair label -- gets labelled and
+            # announced, approved or not and whatever its gates say: the train will never
+            # merge it, so a person must. A draft or a red build is the contributor's to
+            # fix and needs no notification; this one waits on somebody who does not
+            # know yet (ADR-0053).
             if v.held_for_review and not args.dry_run and args.label != "":
                 merge_train.hold_for_review(v, cfg, label=args.label)
             print(f"  #{v.number} skipped — {v.reason}")

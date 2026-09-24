@@ -55,10 +55,13 @@ class Verdict:
     title: str
     author: str
     reason: str | None  # None means ready to merge
-    # True when the ONLY thing standing in the way is the owner's approval. A draft or a
-    # failing build is the contributor's to fix and needs no notification; an outside
-    # contribution that is green and simply unapproved is waiting on the owner, and
-    # nobody finds out unless someone says so.
+    # True when the pull request carries code from outside the trusted set -- an author
+    # not in `[merge_train] trusted_authors`, or a trusted author's pull request labelled
+    # `vibey-gh:external-repair` -- so the train will never merge it unattended and a
+    # person has to (ADR-0053). Set whatever state its gates are in and whether or not it
+    # is approved; `reason` says which of the two causes holds it. Only such a verdict is
+    # labelled and announced: a draft or a failing build is the contributor's to fix and
+    # needs no notification, while this one waits on somebody who does not know yet.
     held_for_review: bool = False
     # True when the obstacle is only that the head is conflicting or behind -- a state
     # the train can clear for itself by merging the integration branch forward, rather
@@ -122,10 +125,13 @@ def hold_for_review(verdict: Verdict, cfg: GhConfig, label: str = NEEDS_REVIEW_L
         "comment",
         number,
         "--body",
-        f"@{owner} this pull request is green but comes from @{verdict.author}, who is not "
-        f"on the merge train's trusted list, so it is **{_NOTIFIED_MARKER}** rather than "
-        f"merging automatically. The train never merges it unattended, approved or not: "
-        f"review it and merge it yourself.",
+        # Built from the verdict's own reason, so the owner is told the actual cause: an
+        # untrusted author and a trusted author's external-repair label are different
+        # things, and naming the wrong one sends the owner looking in the wrong place.
+        f"@{owner} this pull request from @{verdict.author} is **{_NOTIFIED_MARKER}** "
+        f"rather than merging automatically — {verdict.reason}. The train never merges "
+        f"it unattended, whatever its gates say and approved or not: review it and merge "
+        f"it yourself.",
     )
 
 
@@ -196,19 +202,17 @@ def judge(pr: dict, cfg: GhConfig) -> Verdict:
             for gate in GATES
         )
         stranger = _stranger(author, trusted, labels)
-        if cfg.pr_automation.enabled and not automation_passed:
-            reason = (
-                "automated outside-author review has not passed"
-                if stranger
-                else "PR automation gates have not passed"
-            )
-        elif stranger:
+        if stranger:
             # ADR-0053: an unattended run admits no stranger. Not "unless PR automation is
             # on" -- that exemption left a model's review verdict as the only thing between
             # a stranger and the integration branch -- and not "unless approved", because
-            # the approval may be a delegated robot's (ADR-0049). A person merges it.
+            # the approval may be a delegated robot's (ADR-0049). First, before the gates:
+            # whose code it is does not depend on whether they have reported, and a hold
+            # decided only once they pass leaves the owner unaware until then.
             reason = f"needs a human merge: {stranger}"
             held = True
+        elif cfg.pr_automation.enabled and not automation_passed:
+            reason = "PR automation gates have not passed"
         elif pr.get("baseRefName") == cfg.release_branch:
             # The merge-time re-derivation (#254): a promotion opened when everything
             # was bumped can gain bump-deriving merges before it merges, and the

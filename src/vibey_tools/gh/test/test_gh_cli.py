@@ -531,7 +531,7 @@ def held(number: int = 7, author: str = "outsider") -> Verdict:
         number,
         "their work",
         author,
-        "from @outsider and not approved — needs owner's review",
+        "needs a human merge: author outsider is not in [merge_train] trusted_authors",
         held_for_review=True,
     )
 
