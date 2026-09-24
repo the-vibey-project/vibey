@@ -2,7 +2,7 @@
 
     python3 push_gate.py status                     # who holds the lock, and what it is doing
     python3 push_gate.py run -- git push origin HEAD:feat/x   # wait, push, always release
-    token=$(python3 push_gate.py acquire --wait)    # the shell form: take the lock...
+    token=$(python3 push_gate.py acquire --wait --pid $$)  # the shell form: take the lock...
     python3 push_gate.py release "$token"           # ...and give it back (only its owner can)
     python3 push_gate.py reap --dry-run             # what it would do; signal, release, log nothing
     python3 push_gate.py reap                       # one reaper pass
@@ -33,8 +33,10 @@ everything it starts -- git, the hook, pre-commit, pytest, the xdist workers -- 
 process group that belongs to this push and to nothing else. That is what makes a kill safe.
 It tees the push's output to a log the reaper can quote, and it releases the lock however
 the push ends, including on SIGTERM, SIGINT and SIGHUP. `acquire` exists for the shell recipe
-and records the shell's group, which may hold anything; a push taken that way is never killed
-by the reaper, only released once its holder is gone.
+and records the calling shell's process group, which may hold anything; a push taken that way
+is never killed by the reaper, only released once that whole group has exited. Pass
+`--pid $$`: `$(...)` runs `acquire` in a subshell that exits at once, so its parent pid is
+no holder at all (#1105-1), whereas the group `$$` leads lives exactly as long as the recipe.
 
 THE REAPER: AUTOMATIC, BOUNDED BY A GATE (12.d, 12.e)
 -----------------------------------------------------
@@ -1071,8 +1073,9 @@ class Reaper:
         self._forget_samples(keep=owner.token)
         now = self._clock.now()
 
-        if self._stale(owner):
-            return self._release_stale(owner, dry_run)
+        stale = self._stale(owner)
+        if stale:
+            return self._release_stale(owner, stale, dry_run)
         if owner.pgid is None:
             return Decision("none", None, "the push has not started yet", {}, owner)
 
@@ -1154,14 +1157,23 @@ class Reaper:
 
     # -- the conditions --
 
-    def _stale(self, owner: Owner) -> bool:
+    def _stale(self, owner: Owner) -> str | None:
+        """Why the lock is stale, in words that claim only what was checked; else None."""
+        if not owner.dedicated and owner.pgid is not None:
+            # `acquire`: the holder is the calling shell's whole group, never one pid. The
+            # `$(...)` that ran `acquire` exits at once; the recipe's group does not (#1105-1).
+            if self._table.group_alive(owner.pgid):
+                return None
+            return f"the holder's process group {owner.pgid} has exited"
         if self._table.alive(owner.pid):
-            return False
+            return None
         if owner.dedicated and owner.pgid is not None:
             # The holder is gone; its push may not be. A group still running is a push in
             # flight, and releasing under it would start a second gate run beside it.
-            return not self._table.group_alive(owner.pgid)
-        return True
+            if self._table.group_alive(owner.pgid):
+                return None
+            return f"holder pid {owner.pid} is gone, and its push group {owner.pgid} has exited"
+        return f"holder pid {owner.pid} is gone"
 
     def _idle(self, owner: Owner, members: list[Proc], now: float) -> dict[str, Any] | None:
         samples = self._samples(owner.token)
@@ -1196,8 +1208,7 @@ class Reaper:
 
     # -- the actions --
 
-    def _release_stale(self, owner: Owner, dry_run: bool) -> Decision:
-        detail = f"holder pid {owner.pid} is gone, and nothing of its push is left running"
+    def _release_stale(self, owner: Owner, detail: str, dry_run: bool) -> Decision:
         if dry_run:
             return Decision("would-release", "stale", detail, {}, owner)
         decision = Decision("released", "stale", detail, {}, owner)
@@ -1841,7 +1852,9 @@ def main(argv: list[str] | None = None) -> int:
     status.add_argument("--json", action="store_true")
     acquire = commands.add_parser("acquire", help="take the lock; print the release token")
     acquire.add_argument("--wait", action="store_true", help="wait for a held lock")
-    acquire.add_argument("--pid", type=int, help="the holder (default: the calling shell)")
+    acquire.add_argument(
+        "--pid", type=int, help="the holder: pass $$ (default: this process's group)"
+    )
     release = commands.add_parser("release", help="give the lock back (its owner only)")
     release.add_argument("token")
     run = commands.add_parser("run", help="wait, run the push, always release")
@@ -1886,12 +1899,16 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(report.report(), indent=2) if args.json else report.render())
         return 0
     if args.command == "acquire":
-        holder = args.pid or os.getppid()
+        # The caller's process group, never `getppid()`: under `$(...)` the parent is a
+        # subshell that exits the moment this prints, and a lock judged by it is released as
+        # stale mid-push (#1105-1). `--pid $$` names the recipe's shell; without it, this
+        # process's own group is the caller's.
+        group = os.getpgid(args.pid) if args.pid else os.getpgrp()
         branch, worktree = _where()
         owner = Owner(
             token=uuid.uuid4().hex,
-            pid=holder,
-            pgid=os.getpgid(holder),
+            pid=args.pid or group,
+            pgid=group,
             dedicated=False,
             uid=os.getuid(),
             branch=branch,
@@ -1914,6 +1931,10 @@ def main(argv: list[str] | None = None) -> int:
             return REAPED_EXIT
         if outcome == "not-owner":
             print("push-gate: refused: the lock is not held by that token", file=sys.stderr)
+            return 1
+        if outcome == "free":
+            # Nothing was held, so nothing this caller did was protected: say so (#1105-1).
+            print("push-gate: nothing to release: the lock is free", file=sys.stderr)
             return 1
         return 0
     if args.command == "run":

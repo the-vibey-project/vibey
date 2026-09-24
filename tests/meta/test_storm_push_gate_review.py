@@ -977,9 +977,6 @@ def test_1107_8_the_shell_scan_sees_a_bare_push() -> None:
 #: Findings whose fix lands in a later commit of this pull request. Each is a strict xfail:
 #: it must fail until its fix lands, and the commit that fixes it deletes its line here.
 PENDING = {
-    "test_1105_1_acquire_from_command_substitution_is_not_stale_mid_push",
-    "test_1105_1_release_of_a_free_lock_is_an_error",
-    "test_1105_1_the_stale_message_claims_only_what_it_checked",
     "test_1105_2_a_forged_token_cannot_write_outside_the_state_dir",
     "test_1105_2_an_owner_log_outside_the_gates_logs_is_never_read",
     "test_1105_2_a_symlinked_owner_record_is_refused",
