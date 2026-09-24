@@ -27,7 +27,6 @@ import dataclasses
 import importlib.util
 import json
 import os
-import re
 import signal
 import subprocess
 import sys
@@ -76,6 +75,12 @@ class FakeClock:
     def sleep(self, seconds: float) -> None:
         self.t += seconds
 
+    def awake(self) -> float:
+        return self.t  # this clock's machine never sleeps
+
+    def boot_id(self) -> str:
+        return "boot-1"
+
 
 @dataclass
 class FakeTable:
@@ -91,6 +96,9 @@ class FakeTable:
         return pid in self.alive_pids
 
     def group_alive(self, pgid: int) -> bool:
+        return bool(self.groups.get(pgid))
+
+    def group_ours(self, pgid: int) -> bool:
         return bool(self.groups.get(pgid))
 
     def members(self, pgid: int) -> list | None:
@@ -118,6 +126,9 @@ class FakeTable:
     def cwd(self, pid: int) -> str | None:
         return self.cwds.get(pid)
 
+    def started(self, pid: int) -> float | None:
+        return None
+
     def burn(self, pgid: int, seconds: float) -> None:
         """Every member of `pgid` spends `seconds` of CPU, shared out evenly."""
         group = self.groups[pgid]
@@ -135,16 +146,19 @@ class FakeSignaller:
     sent: list[tuple[str, int, int]] = field(default_factory=list)
     before_kill: object = None
 
-    def send_group(self, pgid: int, sig: int) -> None:
+    def send_group(self, pgid: int, sig: int) -> bool:
         if sig in (signal.SIGTERM, signal.SIGKILL) and self.before_kill:
             self.before_kill()  # type: ignore[operator]
             self.before_kill = None
         self.sent.append(("group", pgid, sig))
+        delivered = bool(self.table.groups.get(pgid))
         if sig in self.lethal:
             self.table.groups.pop(pgid, None)
+        return delivered
 
-    def send_process(self, pid: int, sig: int) -> None:
+    def send_process(self, pid: int, sig: int) -> bool:
         self.sent.append(("process", pid, sig))
+        return True
 
 
 def config(tmp_path: Path, **overrides: object) -> PushGateConfig:
@@ -190,8 +204,11 @@ def rig(tmp_path: Path, **overrides: object) -> Rig:
 
 
 def owner(clock: FakeClock, tmp_path: Path, **overrides: object) -> Owner:
-    log = tmp_path / "push.log"
+    # Where `run` writes it: the gate reads a push log from nowhere else (#1105-2).
+    token = str(overrides.get("token", "tok-1"))
+    log = tmp_path / "gate" / "logs" / f"{token}.log"
     if not log.exists():
+        log.parent.mkdir(parents=True, exist_ok=True)
         log.write_text("".join(f"gate line {n}\n" for n in range(100)), encoding="utf-8")
     values: dict[str, object] = {
         "token": "tok-1",
@@ -565,7 +582,8 @@ def test_the_killer_refuses_groups_that_are_never_a_push(tmp_path: Path, pgid: i
 
 def test_evidence_is_written_before_the_kill(tmp_path: Path) -> None:
     r = rig(tmp_path)
-    held(r, tmp_path, stacks=str(tmp_path / "stacks"))
+    # The directory `run` arms, under the gate's own state; no other is followed (#1105-2).
+    held(r, tmp_path, stacks=str(r.cfg.state_dir / "stacks" / "tok-1"))
     r.table.groups[GROUP] = pytest_tree()
     seen: dict[str, object] = {}
 
@@ -801,6 +819,10 @@ def test_a_real_sleeping_push_under_the_lock_is_reaped_as_idle(tmp_path: Path) -
     assert "time.sleep(120)" in (Path(record["evidence"]) / "process-tree.txt").read_text()
 
 
+@pytest.mark.skipif(
+    push_gate.ProcessTable().members(os.getpgrp()) is None,
+    reason="`ps` cannot be run here, and a kill needs the group's members read (#1105-4)",
+)
 def test_a_real_push_past_the_wall_ceiling_is_reaped(tmp_path: Path) -> None:
     root = _storm(tmp_path, wall_ceiling_seconds=1, kill_grace_seconds=2)
     cfg = PushGateConfig.declared(root)
@@ -916,6 +938,7 @@ def legacy_push(r: Rig, tmp_path: Path, made: float, **push: object) -> None:
             made + 4,
         ),
     ]
+    r.table.groups[SHELL] = [dataclasses.replace(p, uid=UID) for p in r.table.groups[SHELL]]
     # The agent that started the shell: another group, never a candidate, never touched.
     r.table.groups[800] = [Proc(800, 1, 800, 900.0, "node claude", made - 3600)]
     r.table.cwds[PUSH] = lane
@@ -942,6 +965,8 @@ def test_a_bare_mkdir_lock_past_the_ceiling_is_reaped(tmp_path: Path) -> None:
     r = rig(tmp_path)
     made = bare_lock(r)
     legacy_push(r, tmp_path, made)
+    # Counted from the first pass that saw it, in awake time: the mtime may span a sleep.
+    assert r.reaper.tick().action == "none"
     r.clock.sleep(3601)
     decision = r.reaper.tick()
     assert (decision.action, decision.condition) == ("killed", "ceiling"), decision
@@ -972,7 +997,7 @@ def test_two_candidate_pushes_are_unknown_and_never_killed(tmp_path: Path) -> No
     r = rig(tmp_path)
     made = bare_lock(r)
     legacy_push(r, tmp_path, made)
-    r.table.groups[1200] = [Proc(1200, 1, 1200, 0.0, "git push origin HEAD:other", made + 2)]
+    r.table.groups[1200] = [Proc(1200, 1, 1200, 0.0, "git push origin HEAD:other", made + 2, UID)]
     r.table.cwds[1200] = str(tmp_path / "other-lane")
     _never_killed(r, "2 pushes")
 
@@ -1073,11 +1098,12 @@ def test_two_overlapping_reap_passes_never_act_twice(tmp_path: Path) -> None:
     r.clock.sleep(600)
     import fcntl
 
-    r.cfg.state_dir.mkdir(parents=True, exist_ok=True)
-    with (r.cfg.state_dir / push_gate.REAP_LOCK).open("a") as other:
+    path = push_gate.Reaper.reap_lock_path(r.cfg)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as other:
         fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)  # a second pass, mid-flight
         decision = r.reaper.tick()
-        assert decision.action == "none" and "another reap pass" in decision.detail
+        assert decision.action == "busy" and "another reap pass" in decision.detail
         assert r.signaller.sent == []
     assert r.reaper.tick().action == "killed"
     assert r.reaper.tick().action == "none"  # and again: nothing left to do
@@ -1093,6 +1119,8 @@ class Commands:
     answers: dict[str, int] = field(default_factory=dict)
 
     def __call__(self, argv: list[str]) -> tuple[int, str]:
+        if argv[1:2] == ["-c"]:
+            return 0, "3 12"  # the interpreter's version, which install checks (#1107-4)
         self.ran.append(argv)
         return self.answers.get(argv[0], 0), ""
 
@@ -1108,6 +1136,10 @@ def schedule(tmp_path: Path, target: str, **overrides: object):  # noqa: ANN201 
         target=target,
         home=tmp_path / "home",
         run=commands,
+        # tmp_path IS a temporary directory, and this checkout may be a linked worktree:
+        # both are refused for a real install, and have their own tests in the review file.
+        volatile=(),
+        linked_worktree=lambda path: False,
     )
     return made, commands, cfg
 
@@ -1188,16 +1220,8 @@ def test_the_schedule_templates_are_files_in_the_repository() -> None:
 # --- every storm tool that pushes, pushes through the gate -------------------------------------
 
 
-def test_no_storm_tool_pushes_around_the_gate() -> None:
-    """A raw `git push` in a storm tool is a gate run the push lock never sees."""
-    offenders = []
-    for tool in sorted(TOOLS.glob("*.py")):
-        if tool.name == "push_gate.py":
-            continue
-        text = tool.read_text(encoding="utf-8")
-        if re.search(r"""\[\s*["']git["']\s*,\s*["']push["']""", text):
-            offenders.append(tool.name)
-    assert offenders == []
+def test_the_storm_tools_that_push_go_through_the_gate() -> None:
+    """The AST scan in test_storm_push_gate_review.py (#1107-8) finds any push around it."""
     for tool in ("lane-publish.py", "storm-snapshot.py"):
         text = (TOOLS / tool).read_text(encoding="utf-8")
         assert '"push_gate.py"' in text and '"run"' in text, tool

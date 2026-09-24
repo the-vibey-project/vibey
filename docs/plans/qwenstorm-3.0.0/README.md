@@ -163,8 +163,22 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
      - `uninstall-schedule` removes it, and `schedule-status` reports its state;
      - `--target cron` only prints a cron line.
 
-     The storm cycle's own step stays in place. A non-blocking reap lock makes two
-     overlapping passes safe: the second one stands aside.
+     The storm cycle's own step stays in place, but it cannot reap a hang in its own
+     publish step: only the schedule can. A non-blocking reap lock, kept beside the lock,
+     makes two overlapping passes safe: the second stands aside (exit 3).
+
+     What the reaper believes, and what it records, is bounded (the review of #1105 and
+     #1107):
+     - the owner record is checked field by field, and a lock or record that is a symlink or
+       another uid's is untrusted and never acted on; the state directory is 0700, and no
+       file is written or read through a link;
+     - holds and idle windows are counted in awake time (CLOCK_UPTIME_RAW on macOS,
+       CLOCK_MONOTONIC on Linux), so a laptop's sleep is never a hang;
+     - a kill is recorded only once the group is seen gone, only this uid's groups are
+       signalled, `protected` matches the program (argv[0]), and a group whose members cannot
+       be read is never killed;
+     - before any signal the lock and the traced push are read again under the lock's mutex;
+     - `run --push-timeout` records its own kill as a reap, with evidence.
    - **Pushing in this repository.** Every push, by a lane, a tool or a person, uses one
      recipe:
      `python3 <storm>/tools/push_gate.py run -- git push origin HEAD:<branch>`.

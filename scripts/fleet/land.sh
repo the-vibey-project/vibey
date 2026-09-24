@@ -49,7 +49,12 @@ if git diff --quiet origin/develop... 2>/dev/null && [ -z "$(git log origin/deve
   exit 1
 fi
 
-git push -u origin "$BRANCH"
+# Through the push gate, like every push in this repository (CONTRIBUTING.md, "Pushing in
+# this repository"): one pre-push gate run at a time, and a hung one reaped by rule. From a
+# checkout with no storm it needs VIBEY_PUSH_LOCK, and refuses without it rather than push
+# around the gate.
+PUSH_GATE="${VIBEY_PUSH_GATE:-$REPO_ROOT/docs/plans/qwenstorm-3.0.0/tools/push_gate.py}"
+python3 "$PUSH_GATE" run -- git push -u origin "$BRANCH"
 
 PR_NUM="$(gh pr list -R "adammatthewsteinberger/$REPO" --head "$BRANCH" --json number -q '.[0].number' || true)"
 if [ -z "$PR_NUM" ]; then

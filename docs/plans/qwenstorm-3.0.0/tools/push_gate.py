@@ -2,7 +2,7 @@
 
     python3 push_gate.py status                     # who holds the lock, and what it is doing
     python3 push_gate.py run -- git push origin HEAD:feat/x   # wait, push, always release
-    token=$(python3 push_gate.py acquire --wait)    # the shell form: take the lock...
+    token=$(python3 push_gate.py acquire --wait --pid $$)  # the shell form: take the lock...
     python3 push_gate.py release "$token"           # ...and give it back (only its owner can)
     python3 push_gate.py reap --dry-run             # what it would do; signal, release, log nothing
     python3 push_gate.py reap                       # one reaper pass
@@ -34,8 +34,10 @@ everything it starts -- git, the hook, pre-commit, pytest, the xdist workers -- 
 process group that belongs to this push and to nothing else. That is what makes a kill safe.
 It tees the push's output to a log the reaper can quote, and it releases the lock however
 the push ends, including on SIGTERM, SIGINT and SIGHUP. `acquire` exists for the shell recipe
-and records the shell's group, which may hold anything; a push taken that way is never killed
-by the reaper, only released once its holder is gone.
+and records the calling shell's process group, which may hold anything; a push taken that way
+is never killed by the reaper, only released once that whole group has exited. Pass
+`--pid $$`: `$(...)` runs `acquire` in a subshell that exits at once, so its parent pid is
+no holder at all (#1105-1), whereas the group `$$` leads lives exactly as long as the recipe.
 
 THE REAPER: AUTOMATIC, BOUNDED BY A GATE (12.d, 12.e)
 -----------------------------------------------------
@@ -112,8 +114,10 @@ A copy of this tool outside a storm root (the tracked one, in a checkout) has no
 ask, so it takes the lock from `--lock` or `VIBEY_PUSH_LOCK`, and refuses without one.
 
 Exit codes. `run`: the push's own, 124 when reaped, 125 past `--push-timeout`, 3 when
-`--no-wait` or `--wait-timeout` gave up on the lock, 128+N when signalled. `reap`: 0 nothing to do, 1 reaped (or would have, under --dry-run), 2 a
-person should look (unknown, or refused). `release`: 0 released, 1 not the owner, 124 reaped.
+`--no-wait` or `--wait-timeout` gave up on the lock, 128+N when signalled. `reap`: 0 nothing
+to do, 1 reaped (or would have, under --dry-run), 2 a person should look (unknown, refused, or
+a kill that failed), 3 stood aside for another pass. `release`: 0 released, 1 not the owner or
+nothing held, 124 reaped.
 
 Underscored, not hyphenated: the tests import it.
 """
@@ -130,6 +134,7 @@ import os
 import re
 import shutil
 import signal
+import stat
 import string
 import subprocess
 import sys
@@ -183,8 +188,18 @@ SCHEDULE_SECONDS = 90.0
 SCHEDULE_LABEL = "org.vibey.push-gate-reaper"
 #: PATH for the scheduled pass: `ps`, `lsof`, `git`, and py-spy when Homebrew installed it.
 SCHEDULE_PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+#: Characters a value cannot carry into a systemd unit: quotes and backslashes end or escape
+#: its quoting, a newline starts a new directive, `$` expands, `%` is a specifier (#1107-5).
+UNQUOTABLE = frozenset('"\\\n\r$%')
 #: Shells the legacy recipe runs in; the only ancestors a traced push's group may contain.
 SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh"})
+
+#: A lock whose holder pid lives on while its push group has been gone this many passes is
+#: stale: the pid was reused, or the holder will never release (#1105-7).
+GONE_PASSES = 2
+#: Wall time running this far ahead of awake time between two samples means the machine
+#: slept between them; a window containing that is not evidence of a hang (#1105-5).
+SLEEP_GAP_SECONDS = 60.0
 
 OWNER_FILE = "owner.json"
 #: `run` exits with this when the reaper ended its push: a hang, not a test failure.
@@ -197,8 +212,6 @@ PUSH_TIMEOUT_EXIT = 125
 STACKS_ENV = "VIBEY_PYTEST_STACKS_DIR"
 #: The machine's shared push lock, for a copy of this tool that is not in a storm root.
 LOCK_ENV = "VIBEY_PUSH_LOCK"
-#: Held (non-blocking) for the whole of one reaper pass, so two passes never both act.
-REAP_LOCK = "reap.lock"
 #: Tokens become file names; anything else is refused rather than escaped.
 TOKEN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
@@ -264,6 +277,71 @@ def _iso(moment: float) -> str:
     return datetime.fromtimestamp(moment, UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# The three filesystem primitives below are module-level for one reason: every class that
+# keeps state -- the lock, the verdicts, the evidence, the samples, the runner's logs -- must
+# write it the same careful way, and a primitive with no state of its own is a function.
+
+
+def _private_dir(path: Path) -> Path:
+    """`path` as a directory only this uid can enter (0700), refusing a symlink or a stranger.
+
+    The state directory is where verdicts, evidence and samples are written; world-readable,
+    it leaked push logs, and a symlink planted in its place redirected every write (#1105-2).
+    """
+    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    found = os.lstat(path)
+    if stat.S_ISLNK(found.st_mode) or not stat.S_ISDIR(found.st_mode):
+        raise SystemExit(f"push-gate: refusing {path}: it is not a real directory")
+    if found.st_uid != os.getuid():
+        raise SystemExit(f"push-gate: refusing {path}: it belongs to uid {found.st_uid}")
+    if stat.S_IMODE(found.st_mode) != 0o700:
+        os.chmod(path, 0o700)
+    return path
+
+
+def _write_private(path: Path, text: str) -> None:
+    """Write `text` to `path` atomically, never through a symlink, readable by this uid only.
+
+    A fresh temporary is created exclusively (O_EXCL, O_NOFOLLOW) and renamed over `path`;
+    a rename replaces a planted link rather than writing through it.
+    """
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+    descriptor = os.open(temporary, flags, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(text)
+        os.replace(temporary, path)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
+@contextlib.contextmanager
+def _lock_file(path: Path) -> Iterator[int]:
+    """An open descriptor on `path` to `flock`, created 0600 and never through a symlink."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        yield descriptor
+    finally:
+        os.close(descriptor)
+
+
+def _read_private(path: Path, limit: int = 1 << 20) -> str | None:
+    """`path`'s text if it is a regular file of this uid, reached without a symlink; else None."""
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    except OSError:
+        return None
+    with os.fdopen(descriptor, "rb") as stream:
+        found = os.fstat(stream.fileno())
+        if not stat.S_ISREG(found.st_mode) or found.st_uid != os.getuid():
+            return None
+        stream.seek(max(0, found.st_size - limit))
+        return stream.read().decode("utf-8", errors="replace")
+
+
 # --- Configuration and records -----------------------------------------------------------
 
 
@@ -295,6 +373,9 @@ class PushGateConfig:
         # Absent a declaration, the machine's shared lock in the storm home (10.h, ADR-0057).
         home = storm_durability.StormHome(os.environ, root)
         lock_path = lock or _path(root, section.get("lock"), home.push_lock())
+        # Absolute, always: a relative lock means a different directory from every cwd
+        # (#1107-4), and the state beside it follows it.
+        lock_path = Path(os.path.abspath(lock_path.expanduser()))
         state = _path(root, section.get("state_dir"), lock_path.parent / f"{lock_path.name}.gate")
         protected = section.get("protected", PROTECTED)
         if not isinstance(protected, list | tuple) or not all(
@@ -356,19 +437,69 @@ class Owner:
     command: list[str] = field(default_factory=list)
     log: str | None = None
     stacks: str | None = None
+    #: When the holder process started, so a reused pid is told from the holder (and, for a
+    #: push traced behind a bare-mkdir lock, the push itself is told from a successor).
+    holder_started: float | None = None
+    #: `Clock.awake()` when the lock was taken, and the boot it belongs to: the ceiling is
+    #: measured in time the machine was awake, never across a sleep (#1105-5).
+    started_awake: float | None = None
+    boot_id: str | None = None
 
     def to_json(self) -> dict[str, Any]:
         return {**dataclasses.asdict(self), "started": _iso(self.started_at)}
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> Owner:
+        """The record, or ValueError: nothing in it is believed until it has the right shape.
+
+        Anything able to write the lock directory can write this file, and its token becomes
+        a file name under the state directory and its log a file the evidence quotes. A token
+        like `../../x` wrote outside the state directory and a log of `~/.gitconfig` was
+        copied into the evidence (#1105-2); so every field is checked here, on read.
+        """
+        if not isinstance(data, dict):
+            raise ValueError("the owner record is not an object")
         names = {f.name for f in dataclasses.fields(cls)}
-        return cls(**{key: value for key, value in data.items() if key in names})
+        found = {key: value for key, value in data.items() if key in names}
+
+        def number(value: object) -> bool:
+            return isinstance(value, int | float) and not isinstance(value, bool)
+
+        checks = {
+            "token": lambda v: isinstance(v, str) and bool(TOKEN.match(v)),
+            "pid": lambda v: isinstance(v, int) and not isinstance(v, bool) and v > 1,
+            "pgid": lambda v: (
+                v is None or (isinstance(v, int) and not isinstance(v, bool) and v > 1)
+            ),
+            "dedicated": lambda v: isinstance(v, bool),
+            "uid": lambda v: isinstance(v, int) and not isinstance(v, bool),
+            "branch": lambda v: isinstance(v, str),
+            "worktree": lambda v: isinstance(v, str),
+            "started_at": number,
+            "command": lambda v: isinstance(v, list) and all(isinstance(w, str) for w in v),
+            "log": lambda v: v is None or isinstance(v, str),
+            "stacks": lambda v: v is None or isinstance(v, str),
+            "holder_started": lambda v: v is None or number(v),
+            "started_awake": lambda v: v is None or number(v),
+            "boot_id": lambda v: v is None or isinstance(v, str),
+        }
+        required = {"token", "pid", "pgid", "dedicated", "uid", "branch", "worktree", "started_at"}
+        missing = required - found.keys()
+        if missing:
+            raise ValueError(f"the owner record lacks {sorted(missing)}")
+        for key, value in found.items():
+            if key in checks and not checks[key](value):
+                raise ValueError(f"the owner record's {key} is not acceptable: {value!r}"[:160])
+        return cls(**found)
 
 
 @dataclass(frozen=True)
 class LockState:
-    """`free`, `owned` (with its owner) or `ownerless` (a bare mkdir, or a record unreadable)."""
+    """`free`, `owned` (with its owner), `ownerless` (a bare mkdir) or `untrusted`.
+
+    `untrusted`: the lock or its record is a symlink, belongs to another uid, or is not a
+    well-formed record. Nothing is believed of it and the reaper never acts on it (#1105-2).
+    """
 
     kind: str
     owner: Owner | None = None
@@ -387,6 +518,8 @@ class Proc:
     cpu_seconds: float
     command: str
     started_at: float | None = None
+    uid: int | None = None
+    state: str = ""
 
 
 @dataclass(frozen=True)
@@ -404,6 +537,14 @@ class Decision:
     owner: Owner | None = None
     evidence: Path | None = None
 
+    def exit_code(self) -> int:
+        """0 nothing to do; 1 reaped (or would have); 2 a person should look; 3 stood aside."""
+        if self.action in {"released", "killed", "would-release", "would-kill"}:
+            return 1
+        if self.action in {"unknown", "refused", "failed"}:
+            return 2
+        return 3 if self.action == "busy" else 0
+
     def line(self) -> str:
         who = f" {self.owner.branch} (pid {self.owner.pid})" if self.owner else ""
         why = f" [{self.condition}]" if self.condition else ""
@@ -415,13 +556,54 @@ class Decision:
 
 
 class Clock:
-    """Wall-clock time. A seam so the tests can drive an hour in a millisecond."""
+    """Wall time, awake time, and which boot this is. A seam so tests drive an hour at once.
+
+    `awake()` stops while the machine sleeps -- CLOCK_UPTIME_RAW on macOS, CLOCK_MONOTONIC
+    on Linux (Ubuntu 26.04 LTS is first-class, #1116) -- so a laptop shut overnight is not
+    a push that ran all night: launchd runs a missed job on wake, and on wall time that pass
+    killed an in-flight push as past its ceiling (#1105-5). Awake times mean something only
+    within one boot, so `boot_id()` names it: /proc/sys/kernel/random/boot_id on Linux,
+    `sysctl kern.bootsessionuuid` on macOS.
+    """
+
+    def __init__(
+        self,
+        platform: str = sys.platform,
+        read: Callable[[Path], str] | None = None,
+        run: Callable[[list[str]], tuple[int, str]] | None = None,
+    ) -> None:
+        self._platform = platform
+        self._read = read or (lambda path: path.read_text(encoding="utf-8"))
+        self._run = run
+        self._boot: str | None = None
 
     def now(self) -> float:
         return time.time()
 
     def sleep(self, seconds: float) -> None:
         time.sleep(seconds)
+
+    def awake(self) -> float:
+        name = "CLOCK_UPTIME_RAW" if self._platform == "darwin" else "CLOCK_MONOTONIC"
+        clock = getattr(time, name, None)
+        return time.clock_gettime(clock) if clock is not None else time.monotonic()
+
+    def boot_id(self) -> str:
+        if self._boot is None:
+            self._boot = self._find_boot_id()
+        return self._boot
+
+    def _find_boot_id(self) -> str:
+        if self._platform.startswith("linux"):
+            with contextlib.suppress(OSError):
+                return self._read(Path("/proc/sys/kernel/random/boot_id")).strip()
+            return "unknown"
+        run = self._run or EvidenceCollector._subprocess
+        code, out = run(["sysctl", "-n", "kern.bootsessionuuid"])
+        if code == 0 and out.strip():
+            return out.strip()
+        code, out = run(["sysctl", "-n", "kern.boottime"])
+        return out.strip() if code == 0 and out.strip() else "unknown"
 
 
 class ProcessTable:
@@ -434,7 +616,17 @@ class ProcessTable:
     """
 
     # `lstart` is five words in the C locale on both macOS and procps: "Wed Sep 24 07:26:12 2026".
-    PS = ("ps", "-A", "-o", "pid=,ppid=,pgid=,lstart=,time=,command=")
+    # `uid` so a trace never names another user's push (#1107-2); `stat` so a group holding
+    # nothing but zombies is seen as the finished group it is.
+    PS = ("ps", "-A", "-o", "pid=,ppid=,pgid=,uid=,stat=,lstart=,time=,command=")
+
+    def __init__(self, platform: str = sys.platform, proc: Path = Path("/proc")) -> None:
+        self._linux = platform.startswith("linux")
+        self._proc = proc
+        self._ticks_per_second = (
+            os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") and self._linux else 100
+        )
+
     LISTING = ("ps", "-A", "-o", "pid,ppid,pgid,stat,time,etime,command")
 
     def alive(self, pid: int) -> bool:
@@ -447,12 +639,29 @@ class ProcessTable:
         return True
 
     def group_alive(self, pgid: int) -> bool:
+        """Whether anything of group `pgid` still runs.
+
+        A group left holding only zombies has finished: macOS answers `kill 0` on one with
+        EPERM, and Linux with success, so each answer is checked against the table, and a
+        table that cannot be read leaves the answer at "alive".
+        """
         try:
             os.killpg(pgid, 0)
         except ProcessLookupError:
             return False
         except PermissionError:
+            pass
+        members = self.members(pgid)
+        if members is None:
             return True
+        return any(not p.state.startswith("Z") for p in members)
+
+    def group_ours(self, pgid: int) -> bool:
+        """Whether this uid may signal group `pgid`: EPERM means it is not ours (#1105-3)."""
+        try:
+            os.killpg(pgid, 0)
+        except (ProcessLookupError, PermissionError):
+            return False
         return True
 
     def members(self, pgid: int) -> list[Proc] | None:
@@ -467,13 +676,42 @@ class ProcessTable:
 
     def cwd(self, pid: int) -> str | None:
         """Where `pid` is standing: /proc on Linux, `lsof` on macOS; None when unknowable."""
-        with contextlib.suppress(OSError):
-            return os.readlink(f"/proc/{pid}/cwd")
+        if self._linux:
+            with contextlib.suppress(OSError):
+                return os.readlink(self._proc / str(pid) / "cwd")
+            return None
         out = self._ps(("lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"))
         for line in (out or "").splitlines():
             if line.startswith("n/"):
                 return line[1:]
         return None
+
+    def started(self, pid: int) -> float | None:
+        """When `pid` started, in wall seconds; None when unknowable.
+
+        Linux reads /proc/<pid>/stat's starttime (clock ticks after boot, field 22) against
+        /proc/stat's `btime`; macOS asks `ps -o lstart`. Used to tell a holder from a later
+        process that inherited its pid (#1105-7).
+        """
+        if self._linux:
+            try:
+                raw = (self._proc / str(pid) / "stat").read_text(encoding="utf-8")
+                ticks = int(raw.rsplit(")", 1)[1].split()[19])
+                boot = next(
+                    int(line.split()[1])
+                    for line in (self._proc / "stat").read_text(encoding="utf-8").splitlines()
+                    if line.startswith("btime ")
+                )
+            except (OSError, ValueError, IndexError, StopIteration):
+                return None
+            return boot + ticks / self._ticks_per_second
+        out = self._ps(("ps", "-o", "lstart=", "-p", str(pid)))
+        if not out:
+            return None
+        try:
+            return time.mktime(time.strptime(" ".join(out.split()[1:5]), "%b %d %H:%M:%S %Y"))
+        except ValueError:
+            return None
 
     def listing(self) -> str | None:
         out = self._ps(self.LISTING)
@@ -510,19 +748,21 @@ class ProcessTable:
             return None
         rows: list[Proc] = []
         for line in out.splitlines():
-            parts = line.split(None, 9)
-            if len(parts) < 9:
+            parts = line.split(None, 11)
+            if len(parts) < 11:
                 continue
             try:
-                started = time.mktime(time.strptime(" ".join(parts[4:8]), "%b %d %H:%M:%S %Y"))
+                started = time.mktime(time.strptime(" ".join(parts[6:10]), "%b %d %H:%M:%S %Y"))
                 rows.append(
                     Proc(
                         pid=int(parts[0]),
                         ppid=int(parts[1]),
                         pgid=int(parts[2]),
-                        cpu_seconds=self.cpu_seconds(parts[8]),
-                        command=parts[9] if len(parts) > 9 else "",
+                        cpu_seconds=self.cpu_seconds(parts[10]),
+                        command=parts[11] if len(parts) > 11 else "",
                         started_at=started,
+                        uid=int(parts[3]),
+                        state=parts[4],
                     )
                 )
             except ValueError:
@@ -547,15 +787,21 @@ class ProcessTable:
 
 
 class Signaller:
-    """The only thing here that sends a signal. A group that is already gone is not an error."""
+    """The only thing here that sends a signal. Each says whether it was delivered."""
 
-    def send_group(self, pgid: int, sig: int) -> None:
-        with contextlib.suppress(ProcessLookupError, PermissionError):
+    def send_group(self, pgid: int, sig: int) -> bool:
+        try:
             os.killpg(pgid, sig)
+        except (ProcessLookupError, PermissionError):
+            return False
+        return True
 
-    def send_process(self, pid: int, sig: int) -> None:
-        with contextlib.suppress(ProcessLookupError, PermissionError):
+    def send_process(self, pid: int, sig: int) -> bool:
+        try:
             os.kill(pid, sig)
+        except (ProcessLookupError, PermissionError):
+            return False
+        return True
 
 
 # --- The lock ---------------------------------------------------------------------------
@@ -618,6 +864,16 @@ class PushLock:
             self._remove()
             return True
 
+    @contextlib.contextmanager
+    def guard(self) -> Iterator[Guarded]:
+        """The lock as it is now, held still: nothing takes, releases or evicts it meanwhile.
+
+        The reaper re-checks what it judged under this, and signals under it, so the lock
+        and the push it named cannot change between the last look and the kill (#1107-1).
+        """
+        with self._mutex():
+            yield Guarded(self._read(), self._remove)
+
     def evict_ownerless(self, made_at: float) -> bool:
         """Remove a bare-mkdir lock, only if it is still the one judged: no record, same mtime."""
         with self._mutex():
@@ -629,10 +885,19 @@ class PushLock:
             self._remove()
             return True
 
+    @staticmethod
+    def mutex_path(config: PushGateConfig) -> Path:
+        """Beside the lock, not in a state directory: every gate sharing the lock shares it.
+
+        Two configs naming one lock with different state directories used to take different
+        mutexes, and so did not exclude each other at all (#1105-6, probe P8).
+        """
+        return config.lock.parent / f".{config.lock.name}.mutex"
+
     @contextlib.contextmanager
     def _mutex(self) -> Iterator[None]:
-        self._config.state_dir.mkdir(parents=True, exist_ok=True)
-        with (self._config.state_dir / "lock.mutex").open("a") as handle:
+        _private_dir(self._config.state_dir)
+        with _lock_file(self.mutex_path(self._config)) as handle:
             fcntl.flock(handle, fcntl.LOCK_EX)
             try:
                 yield
@@ -641,30 +906,54 @@ class PushLock:
 
     def _read(self) -> LockState:
         try:
-            made = self.path.stat().st_mtime
+            found = os.lstat(self.path)
         except FileNotFoundError:
             return LockState("free")
+        made = found.st_mtime
         age = max(0.0, time.time() - made)
+        if stat.S_ISLNK(found.st_mode) or not stat.S_ISDIR(found.st_mode):
+            return LockState("untrusted", None, age, "the lock path is not a real directory", made)
+        if found.st_uid != os.getuid():
+            return LockState(
+                "untrusted", None, age, f"the lock belongs to uid {found.st_uid}", made
+            )
+        record = self.path / OWNER_FILE
         try:
-            data = json.loads((self.path / OWNER_FILE).read_text(encoding="utf-8"))
-            return LockState("owned", Owner.from_json(data), age, made_at=made)
+            os.lstat(record)
         except FileNotFoundError:
             return LockState(
                 "ownerless", None, age, "held with no owner record (a bare mkdir)", made
             )
-        except (OSError, ValueError, TypeError) as exc:
-            return LockState("ownerless", None, age, f"owner record unreadable: {exc}", made)
+        text = _read_private(record, limit=64 * 1024)
+        if text is None:
+            return LockState(
+                "untrusted",
+                None,
+                age,
+                "the owner record is a symlink, not a regular file, or another uid's",
+                made,
+            )
+        try:
+            return LockState("owned", Owner.from_json(json.loads(text)), age, made_at=made)
+        except (ValueError, TypeError) as exc:
+            return LockState("untrusted", None, age, f"owner record refused: {exc}", made)
 
     def _write(self, owner: Owner) -> None:
-        temporary = self.path / f".{OWNER_FILE}.{owner.token}.tmp"
-        temporary.write_text(json.dumps(owner.to_json(), indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, self.path / OWNER_FILE)
+        _write_private(self.path / OWNER_FILE, json.dumps(owner.to_json(), indent=2) + "\n")
 
     def _remove(self) -> None:
         for leftover in self.path.iterdir():
             if leftover.name == OWNER_FILE or leftover.name.startswith(f".{OWNER_FILE}."):
-                leftover.unlink(missing_ok=True)
+                leftover.unlink(missing_ok=True)  # a link is removed, never followed
         self.path.rmdir()
+
+
+@dataclass(frozen=True)
+class Guarded:
+    """The lock's state read under its mutex, and the way to remove it while still held."""
+
+    state: LockState
+    remove: Callable[[], None]
 
 
 class Verdicts:
@@ -674,17 +963,23 @@ class Verdicts:
         self._dir = config.state_dir / "verdicts"
 
     def write(self, token: str, verdict: dict[str, Any]) -> None:
-        self._dir.mkdir(parents=True, exist_ok=True)
-        temporary = self._dir / f".{token}.tmp"
-        temporary.write_text(json.dumps(verdict, indent=2) + "\n", encoding="utf-8")
-        os.replace(temporary, self._dir / f"{token}.json")
+        if not TOKEN.match(token):
+            raise ValueError(f"refusing a verdict for token {token!r}")
+        _private_dir(self._dir)
+        _write_private(self._dir / f"{token}.json", json.dumps(verdict, indent=2) + "\n")
+
+    def discard(self, token: str) -> None:
+        """Withdraw a verdict whose kill did not happen."""
+        if TOKEN.match(token):
+            (self._dir / f"{token}.json").unlink(missing_ok=True)
 
     def read(self, token: str) -> dict[str, Any] | None:
         if not TOKEN.match(token):
             return None
+        text = _read_private(self._dir / f"{token}.json", limit=64 * 1024)
         try:
-            found = json.loads((self._dir / f"{token}.json").read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+            found = json.loads(text) if text is not None else None
+        except ValueError:
             return None
         return found if isinstance(found, dict) else None
 
@@ -715,36 +1010,65 @@ class GroupKiller:
         self._clock = clock
 
     def signallable(self, pgid: int, require_session: bool = True) -> bool:
-        """Never 0, 1 or our own group; by default only a group leading its own session.
+        """Never 0, 1 or our own group; only a group this uid may signal (EPERM means not
+        ours, never "alive"); by default only one still leading its own session.
 
         `require_session=False` is for a push traced behind a bare-mkdir lock, whose group
-        `OwnerlessHolder` has just proven holds nothing but the push recipe; the group must
-        still exist.
+        `OwnerlessHolder` has just proven holds nothing but the push recipe.
         """
         if pgid <= 1 or pgid in {os.getpid(), os.getpgrp()}:
             return False
-        if not require_session:
-            return self._table.group_alive(pgid)
-        return self._table.session_leader(pgid)
+        if not self._table.group_ours(pgid):
+            return False
+        return self._table.session_leader(pgid) if require_session else True
 
     def stop(self, pgid: int, require_session: bool = True) -> str:
-        """`refused`, `gone` (already exited), `terminated`, or `killed` (needed SIGKILL)."""
-        if not self.signallable(pgid, require_session):
-            if not require_session and pgid > 1 and not self._table.group_alive(pgid):
-                return "gone"
+        """What was OBSERVED (#1105-3): `terminated` or `killed` only once the group is seen
+        gone; `gone` if it went before any signal; `refused` if it is not ours to signal;
+        `survived` if it outlived SIGKILL too."""
+        if pgid <= 1 or pgid in {os.getpid(), os.getpgrp()}:
             return "refused"
         if not self._table.group_alive(pgid):
             return "gone"
-        self._signaller.send_group(pgid, signal.SIGTERM)
+        if not self.signallable(pgid, require_session):
+            return "refused"
+        if not self._signaller.send_group(pgid, signal.SIGTERM):
+            return "refused" if self._table.group_alive(pgid) else "gone"
+        if self._gone_within(pgid):
+            return "terminated"
+        if not self._table.group_ours(pgid):
+            return "refused" if self._table.group_alive(pgid) else "terminated"
+        self._signaller.send_group(pgid, signal.SIGKILL)
+        return "killed" if self._gone_within(pgid) else "survived"
+
+    def _gone_within(self, pgid: int) -> bool:
         deadline = self._clock.now() + self._config.grace_seconds
-        while self._clock.now() < deadline:
+        while True:
             if not self._table.group_alive(pgid):
-                return "terminated"
+                return True
+            if self._clock.now() >= deadline:
+                return False
             self._clock.sleep(min(0.1, self._config.grace_seconds))
-        if self._table.group_alive(pgid) and self.signallable(pgid, require_session):
-            self._signaller.send_group(pgid, signal.SIGKILL)
-            return "killed"
-        return "terminated"
+
+
+class PushLog:
+    """A push's own log: written by `run` under the gate's logs directory, read only there.
+
+    The owner record names the log, and anything able to write the lock can write the record;
+    a log of `~/.gitconfig` was copied into the evidence (#1105-2). So a log is read only when
+    it is `<state_dir>/logs/<token>.log`, a regular file of this uid, reached without a link.
+    """
+
+    def __init__(self, config: PushGateConfig) -> None:
+        self._dir = config.state_dir / "logs"
+
+    def path_for(self, token: str) -> Path:
+        return self._dir / f"{token}.log"
+
+    def read(self, owner: Owner) -> str | None:
+        if not owner.log or Path(owner.log) != self.path_for(owner.token):
+            return None
+        return _read_private(self.path_for(owner.token), limit=512 * 1024)
 
 
 class EvidenceCollector:
@@ -768,8 +1092,12 @@ class EvidenceCollector:
 
     def collect(self, owner: Owner, decision: Decision) -> Path:
         stamp = datetime.fromtimestamp(self._clock.now(), UTC).strftime("%Y%m%dT%H%M%SZ")
-        folder = self._config.state_dir / "evidence" / f"{stamp}-{owner.token[:12]}"
-        folder.mkdir(parents=True, exist_ok=True)
+        if not TOKEN.match(owner.token):
+            raise ValueError(f"refusing evidence for token {owner.token!r}")
+        _private_dir(self._config.state_dir)
+        folder = _private_dir(
+            _private_dir(self._config.state_dir / "evidence") / f"{stamp}-{owner.token[:12]}"
+        )
         self._json(folder / "owner.json", owner.to_json())
         self._json(
             folder / "decision.json",
@@ -781,8 +1109,8 @@ class EvidenceCollector:
             },
         )
         members = self._table.members(owner.pgid) if owner.pgid is not None else []
-        (folder / "process-tree.txt").write_text(self._tree(owner, members), encoding="utf-8")
-        (folder / "push-log-tail.txt").write_text(self._tail(owner), encoding="utf-8")
+        _write_private(folder / "process-tree.txt", self._tree(owner, members))
+        _write_private(folder / "push-log-tail.txt", self._tail(owner))
         self._stacks(owner, members or [], folder)
         return folder
 
@@ -801,37 +1129,40 @@ class EvidenceCollector:
         return "\n".join(lines) + "\n"
 
     def _tail(self, owner: Owner) -> str:
-        if not owner.log:
-            return "(no push log was recorded for this push)\n"
-        try:
-            with Path(owner.log).open("rb") as stream:
-                stream.seek(0, os.SEEK_END)
-                stream.seek(max(0, stream.tell() - 512 * 1024))
-                text = stream.read().decode("utf-8", errors="replace")
-        except OSError as exc:
-            return f"(push log unreadable: {exc})\n"
+        text = PushLog(self._config).read(owner)
+        if text is None:
+            return "(no push log under the gate's own logs directory for this push)\n"
         lines = text.splitlines()[-self._config.log_tail_lines :]
         return "\n".join(lines) + "\n"
 
     def _stacks(self, owner: Owner, members: list[Proc], folder: Path) -> None:
         targets = [p for p in members if self._is_pytest(p)]
         if not targets:
-            (folder / "stacks-unavailable.txt").write_text(
-                "no pytest process was found in the group\n", encoding="utf-8"
-            )
+            _write_private(folder / "stacks-unavailable.txt", "no pytest process in the group\n")
             return
         spy = self._which("py-spy")
         if spy:
+            failed = []
             for p in targets:
                 code, out = self._run([spy, "dump", "--pid", str(p.pid)])
-                (folder / f"py-spy-{p.pid}.txt").write_text(
-                    f"# py-spy dump --pid {p.pid}: exit {code}\n{out}\n", encoding="utf-8"
+                _write_private(
+                    folder / f"py-spy-{p.pid}.txt",
+                    f"# py-spy dump --pid {p.pid}: exit {code}\n{out}\n",
                 )
-            return
-        if not owner.stacks:
-            (folder / "stacks-unavailable.txt").write_text(
+                if code != 0:
+                    failed.append(p)
+            if not failed:
+                return
+            # py-spy needs root on macOS; where it could not attach, the suite's own SIGUSR1
+            # dump still can (#1105-9).
+            targets = failed
+        stacks = self._config.state_dir / "stacks" / owner.token
+        if owner.stacks is None or Path(owner.stacks) != stacks:
+            # Only the directory `run` itself armed, under the gate's own state: a record
+            # naming any other place is not followed (#1105-2).
+            _write_private(
+                folder / "stacks-unavailable.txt",
                 "py-spy is not installed and the push did not arm the suite's SIGUSR1 dump\n",
-                encoding="utf-8",
             )
             return
         # Members of the owner's own group only, and only pytest and its workers: they are
@@ -839,11 +1170,11 @@ class EvidenceCollector:
         for p in targets:
             self._signaller.send_process(p.pid, signal.SIGUSR1)
         self._clock.sleep(self._config.stack_wait_seconds)
-        dumps = folder / "stacks"
-        dumps.mkdir(exist_ok=True)
-        for found in sorted(Path(owner.stacks).glob("pytest-*.stacks")):
-            with contextlib.suppress(OSError):
-                shutil.copyfile(found, dumps / found.name)
+        dumps = _private_dir(folder / "stacks")
+        for found in sorted(stacks.glob("pytest-*.stacks")):
+            text = _read_private(found)
+            if text is not None:
+                _write_private(dumps / found.name, text)
 
     @staticmethod
     def _is_pytest(p: Proc) -> bool:
@@ -854,7 +1185,7 @@ class EvidenceCollector:
 
     @staticmethod
     def _json(path: Path, data: dict[str, Any]) -> None:
-        path.write_text(json.dumps(data, indent=2, default=str) + "\n", encoding="utf-8")
+        _write_private(path, json.dumps(data, indent=2, default=str) + "\n")
 
     @staticmethod
     def _subprocess(argv: list[str]) -> tuple[int, str]:
@@ -928,6 +1259,8 @@ class OwnerlessHolder:
             p
             for p in rows
             if self.is_git_push(p.command)
+            # Only this uid's pushes: another user's is never ours to name, or kill (#1107-2).
+            and p.uid == os.getuid()
             and p.started_at is not None
             and abs(p.started_at - made_at) <= window
             and self._in_worktrees(p)
@@ -960,18 +1293,33 @@ class OwnerlessHolder:
             worktree=self._table.cwd(push.pid) or "",
             started_at=made_at,
             command=push.command.split(),
+            holder_started=push.started_at,
         )
         return Traced(owner, members, f"pid {push.pid} ({push.command[:80]})")
 
     def _in_worktrees(self, p: Proc) -> bool:
-        places = [self._table.cwd(p.pid)]
+        """Whether the push stands in (or `-C`s into) a declared worktree root.
+
+        Both sides are resolved, so a root declared through a symlink matches the real path
+        `lsof` or /proc reports (#1107-3, probe P5), and a relative `-C` is read from the
+        push's own cwd, as git reads it.
+        """
+        cwd = self._table.cwd(p.pid)
+        places: list[Path] = [Path(cwd)] if cwd else []
         words = p.command.split()
-        places += [words[i + 1] for i, w in enumerate(words[:-1]) if w == "-C"]
-        for place in places:
-            if not place:
+        for index, word in enumerate(words[:-1]):
+            if word != "-C":
                 continue
-            where = Path(place)
-            if any(where == root or root in where.parents for root in self._config.worktree_roots):
+            target = Path(words[index + 1])
+            if not target.is_absolute():
+                if cwd is None:
+                    continue
+                target = Path(cwd) / target
+            places.append(target)
+        roots = [root.resolve() for root in self._config.worktree_roots]
+        for place in places:
+            where = place.resolve()
+            if any(where == root or root in where.parents for root in roots):
                 return True
         return False
 
@@ -1027,44 +1375,61 @@ class Reaper:
         stands aside; every action is keyed to the token (or the mtime) it judged, so a pass
         that runs after another has acted finds nothing left to do.
         """
-        self._config.state_dir.mkdir(parents=True, exist_ok=True)
-        with (self._config.state_dir / REAP_LOCK).open("a") as handle:
+        _private_dir(self._config.state_dir)
+        with _lock_file(self.reap_lock_path(self._config)) as handle:
             try:
                 fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError:
+                # Its own action and exit code, so a scheduler can tell "stood aside" from
+                # "looked and found nothing" (#1107-6).
                 return Decision(
-                    "none", None, "another reap pass is running; this one stands aside", {}
+                    "busy", None, "another reap pass is running; this one stands aside", {}
                 )
             try:
                 return self._pass(dry_run)
             finally:
                 fcntl.flock(handle, fcntl.LOCK_UN)
 
+    @staticmethod
+    def reap_lock_path(config: PushGateConfig) -> Path:
+        """Keyed to the lock, like its mutex, so every reaper of one lock excludes the rest."""
+        return config.lock.parent / f".{config.lock.name}.reap"
+
     def _pass(self, dry_run: bool) -> Decision:
         state = self._lock.state()
         if state.kind == "free":
             self._forget_samples(keep=None)
             return Decision("none", None, "the push lock is free", {})
+        if state.kind == "untrusted":
+            return Decision(
+                "unknown",
+                None,
+                f"{state.detail}: nothing of it is believed, so nothing is done; a person "
+                "must look",
+                {},
+            )
         if state.owner is None:
             return self._ownerless(state, dry_run)
         owner = state.owner
         self._forget_samples(keep=owner.token)
-        now = self._clock.now()
 
-        if self._stale(owner):
-            return self._release_stale(owner, dry_run)
+        memo = self._memo(owner.token)
+        stale = self._stale(owner, memo)
+        self._save_memo(owner.token, memo)
+        if stale:
+            return self._release_stale(owner, stale, dry_run)
         if owner.pgid is None:
             return Decision("none", None, "the push has not started yet", {}, owner)
 
         members = self._table.members(owner.pgid)
-        held = now - owner.started_at
+        held = self._held(owner)
         if held >= self._config.wall_ceiling_seconds:
             measured = {
                 "held_seconds": held,
                 "ceiling_seconds": self._config.wall_ceiling_seconds,
             }
             detail = (
-                f"held the push lock for {_span(held)}, past the "
+                f"held the push lock for {_span(held)} awake, past the "
                 f"{_span(self._config.wall_ceiling_seconds)} ceiling"
             )
             return self._kill(owner, members, "ceiling", detail, measured, dry_run)
@@ -1077,7 +1442,7 @@ class Reaper:
                 {"held_seconds": held},
                 owner,
             )
-        idle = self._idle(owner, members, now)
+        idle = self._idle(owner.token, members)
         if idle is None:
             return Decision(
                 "none",
@@ -1107,16 +1472,20 @@ class Reaper:
             )
         owner, members = traced.owner, traced.members
         self._forget_samples(keep=owner.token)
-        now = self._clock.now()
-        held = now - made
+        # The lock's mtime is wall time, which may span a sleep; its ceiling is counted in
+        # awake time from the first pass that saw it, which can only under-count (#1105-5).
+        memo = self._memo(owner.token)
+        memo.setdefault("first_awake", self._clock.awake())
+        self._save_memo(owner.token, memo)
+        held = self._clock.awake() - float(memo["first_awake"])
         if held >= self._config.wall_ceiling_seconds:
             detail = (
-                f"bare-mkdir lock held {_span(held)} by {traced.detail}, past the "
+                f"bare-mkdir lock held {_span(held)} awake by {traced.detail}, past the "
                 f"{_span(self._config.wall_ceiling_seconds)} ceiling"
             )
             measured = {"held_seconds": held, "ceiling_seconds": self._config.wall_ceiling_seconds}
             return self._kill(owner, members, "ceiling", detail, measured, dry_run, made)
-        idle = self._idle(owner, members, now)
+        idle = self._idle(owner.token, members)
         if idle is None:
             return Decision(
                 "none",
@@ -1134,31 +1503,81 @@ class Reaper:
 
     # -- the conditions --
 
-    def _stale(self, owner: Owner) -> bool:
-        if self._table.alive(owner.pid):
-            return False
-        if owner.dedicated and owner.pgid is not None:
-            # The holder is gone; its push may not be. A group still running is a push in
-            # flight, and releasing under it would start a second gate run beside it.
-            return not self._table.group_alive(owner.pgid)
-        return True
+    def _held(self, owner: Owner) -> float:
+        """How long the lock has been held, in time the machine was awake (#1105-5).
 
-    def _idle(self, owner: Owner, members: list[Proc], now: float) -> dict[str, Any] | None:
-        samples = self._samples(owner.token)
+        A record from this boot carries `started_awake`; one without it (written by an older
+        gate) falls back to wall time, the old behaviour, rather than to no ceiling at all.
+        """
+        if owner.started_awake is not None and owner.boot_id == self._clock.boot_id():
+            return self._clock.awake() - owner.started_awake
+        return self._clock.now() - owner.started_at
+
+    def _stale(self, owner: Owner, memo: dict[str, Any]) -> str | None:
+        """Why the lock is stale, in words that claim only what was checked; else None."""
+        if not owner.dedicated and owner.pgid is not None:
+            # `acquire`: the holder is the calling shell's whole group, never one pid. The
+            # `$(...)` that ran `acquire` exits at once; the recipe's group does not (#1105-1).
+            if self._table.group_alive(owner.pgid):
+                return None
+            return f"the holder's process group {owner.pgid} has exited"
+        holder = self._table.alive(owner.pid) and not self._reused(owner)
+        if not holder:
+            if owner.dedicated and owner.pgid is not None:
+                # The holder is gone; its push may not be. A group still running is a push
+                # in flight, and releasing under it would start a second gate run beside it.
+                if self._table.group_alive(owner.pgid):
+                    return None
+                return f"holder pid {owner.pid} is gone, and its push group {owner.pgid} has exited"
+            return f"holder pid {owner.pid} is gone"
+        if owner.dedicated and owner.pgid is not None:
+            # A live pid whose push group is long gone: the pid was reused, or the wrapper
+            # will never release. Two passes, so a push that just ended is not raced (#1105-7).
+            if self._table.group_alive(owner.pgid):
+                memo["gone"] = 0
+                return None
+            memo["gone"] = int(memo.get("gone", 0)) + 1
+            if memo["gone"] >= GONE_PASSES:
+                return (
+                    f"push group {owner.pgid} has been gone for {memo['gone']} passes while "
+                    f"pid {owner.pid} lives on: a reused pid, or a holder that will never release"
+                )
+        return None
+
+    def _reused(self, owner: Owner) -> bool:
+        """Whether `owner.pid` now names a different process from the one that took the lock."""
+        if owner.holder_started is None:
+            return False
+        now = self._table.started(owner.pid)
+        return now is not None and abs(now - owner.holder_started) > 2.0
+
+    def _idle(self, token: str, members: list[Proc]) -> dict[str, Any] | None:
+        """Idle over the window, measured in awake time and never across a sleep (#1105-5)."""
+        memo = self._memo(token)
+        wall, awake = self._clock.now(), self._clock.awake()
         current = {str(p.pid): p.cpu_seconds for p in members}
-        samples.append({"t": now, "cpu": current})
         window = self._config.idle_window_seconds
-        samples = [s for s in samples if now - s["t"] <= 3 * window][-500:]
-        self._save_samples(owner.token, samples)
+        samples = [
+            s for s in memo.get("samples", []) if "a" in s and awake - float(s["a"]) <= 3 * window
+        ]
+        samples.append({"t": wall, "a": awake, "cpu": current})
+        memo["samples"] = samples[-500:]
+        self._save_memo(token, memo)
+        samples = memo["samples"]
         if not current:
             return None
         base = None
         for index, sample in enumerate(samples):
-            if now - sample["t"] >= window:
+            if awake - float(sample["a"]) >= window:
                 base = index
         if base is None:
             return None
         span = samples[base:]
+        for earlier, later in zip(span, span[1:], strict=False):
+            slept = (later["t"] - earlier["t"]) - (later["a"] - earlier["a"])
+            if slept > SLEEP_GAP_SECONDS:
+                # The machine slept inside the window; the tree was frozen, not hung.
+                return None
         pids = set(span[0]["cpu"])
         # A process appearing or vanishing inside the window is activity: a test forking
         # short-lived children spends CPU the survivors never show.
@@ -1169,15 +1588,14 @@ class Reaper:
             return None
         return {
             "cpu_seconds": round(used, 3),
-            "window_seconds": now - span[0]["t"],
+            "window_seconds": awake - float(span[0]["a"]),
             "processes": len(pids),
             "samples": len(span),
         }
 
     # -- the actions --
 
-    def _release_stale(self, owner: Owner, dry_run: bool) -> Decision:
-        detail = f"holder pid {owner.pid} is gone, and nothing of its push is left running"
+    def _release_stale(self, owner: Owner, detail: str, dry_run: bool) -> Decision:
         if dry_run:
             return Decision("would-release", "stale", detail, {}, owner)
         decision = Decision("released", "stale", detail, {}, owner)
@@ -1212,13 +1630,27 @@ class Reaper:
                 measured,
                 owner,
             )
-        for p in members or []:
-            hit = next((name for name in self._config.protected if name in p.command), None)
-            if hit:
+        if members is None:
+            # Membership unknown means "protected or not" is unknown, and unknown is never a
+            # licence: at the ceiling this used to skip the check and kill an `ollama serve`
+            # (#1105-4, probe P11).
+            return Decision(
+                "refused",
+                condition,
+                f"{detail}; but the group's members cannot be read here, so whether it holds a "
+                "protected program is unknown, and nothing is killed",
+                measured,
+                owner,
+            )
+        for p in members:
+            # The program, not the command line: a branch named `fix/ollama-url` made a push
+            # unkillable for ever when this matched substrings (#1105-4, probe P2).
+            program = Path(p.command.split(" ", 1)[0]).name if p.command else ""
+            if program in self._config.protected:
                 return Decision(
                     "refused",
                     condition,
-                    f"{detail}; but pid {p.pid} in the group matches protected '{hit}', "
+                    f"{detail}; but pid {p.pid} in the group is protected '{program}', "
                     "so nothing is killed",
                     measured,
                     owner,
@@ -1247,23 +1679,122 @@ class Reaper:
                 "time": _iso(self._clock.now()),
             },
         )
-        stopped = self._killer.stop(owner.pgid, require_session=not ownerless)
-        if ownerless_made_at is not None:
-            # The recipe's own `rmdir` died with its shell; the lock is removed here, and
-            # only if it is still the bare lock that was judged.
-            released = self._lock.evict_ownerless(ownerless_made_at)
-        else:
-            released = self._lock.evict(owner.token)
+        # Evidence takes seconds (py-spy, the SIGUSR1 wait), and the push may finish in them:
+        # the lock released, even re-taken, and a bare-mkdir recipe's shell moved on to its
+        # next command. So the judgement is re-checked under the lock's mutex, and the signal
+        # is sent under it, or nothing is signalled at all (#1107-1).
+        with self._lock.guard() as held:
+            changed = self._changed(held.state, owner, ownerless_made_at)
+            if changed:
+                self._verdicts.discard(owner.token)
+                return Decision(
+                    "none",
+                    condition,
+                    f"{detail}; but {changed} while the evidence was written, so nothing "
+                    "was signalled",
+                    measured,
+                    owner,
+                    folder,
+                )
+            stopped = self._killer.stop(owner.pgid, require_session=not ownerless)
+            if stopped in {"terminated", "killed"}:
+                # Removed while still held: the recipe's own `rmdir` died with its shell,
+                # and a dedicated owner's wrapper finds its lock gone and its verdict waiting.
+                held.remove()
         decision = dataclasses.replace(decision, evidence=folder)
-        self._record(
+        # The action is what was observed, never what was attempted (#1105-3).
+        if stopped in {"terminated", "killed"}:
+            self._record(decision, {"group": stopped, "lock": "released"}, ownerless=ownerless)
+            return decision
+        self._verdicts.discard(owner.token)
+        if stopped == "gone":
+            return dataclasses.replace(
+                decision,
+                action="none",
+                detail=f"{detail}; but the push ended before it was signalled",
+            )
+        if stopped == "refused":
+            return dataclasses.replace(
+                decision,
+                action="refused",
+                detail=f"{detail}; but group {owner.pgid} is not ours to signal",
+            )
+        failed = dataclasses.replace(
             decision,
-            {"group": stopped, "lock": "released" if released else "already changed hands"},
-            ownerless=ownerless,
+            action="failed",
+            detail=f"{detail}; but group {owner.pgid} outlived SIGTERM and SIGKILL",
         )
-        return decision
+        self._record(failed, {"group": stopped, "lock": "kept"}, ownerless=ownerless)
+        return failed
+
+    def _changed(self, state: LockState, owner: Owner, made_at: float | None) -> str | None:
+        """What changed since the judgement, if anything, read under the lock's mutex."""
+        if made_at is None:
+            if state.owner is None or state.owner.token != owner.token:
+                return "the lock changed hands"
+            return None
+        if state.kind != "ownerless" or state.made_at != made_at:
+            return "the bare-mkdir lock was released or re-taken"
+        again = self._holder.identify(made_at)
+        if (
+            again.owner is None
+            or again.owner.pid != owner.pid
+            or again.owner.pgid != owner.pgid
+            or again.owner.holder_started != owner.holder_started
+        ):
+            return "the traced push is no longer the one judged"
+        return None
 
     def _record(self, decision: Decision, outcome: dict[str, Any], ownerless: bool = False) -> None:
-        """One JSON line, appended and flushed: the reap log is never rewritten."""
+        ReapLog(self._config, self._clock).append(decision, outcome, ownerless)
+
+    # -- the samples, kept on disk between passes --
+
+    def _sample_path(self, token: str) -> Path:
+        return self._config.state_dir / "samples" / f"{token}.json"
+
+    def _memo(self, token: str) -> dict[str, Any]:
+        """What earlier passes learned about this owner: samples, first sighting, gone count.
+
+        Awake times mean nothing across a reboot, so a memo from another boot is dropped.
+        """
+        text = _read_private(self._sample_path(token))
+        try:
+            found = json.loads(text) if text is not None else {}
+        except ValueError:
+            found = {}
+        boot = self._clock.boot_id()
+        if not isinstance(found, dict) or found.get("boot") != boot:
+            return {"boot": boot}
+        return found
+
+    def _save_memo(self, token: str, memo: dict[str, Any]) -> None:
+        path = self._sample_path(token)
+        _private_dir(self._config.state_dir)
+        _private_dir(path.parent)
+        _write_private(path, json.dumps(memo))
+
+    def _forget_samples(self, keep: str | None) -> None:
+        folder = self._config.state_dir / "samples"
+        if not folder.is_dir():
+            return
+        for path in folder.glob("*.json"):
+            if path.stem != keep:
+                path.unlink(missing_ok=True)
+
+
+class ReapLog:
+    """The append-only record of every reap: one JSON line each, flushed, never rewritten.
+
+    Shared by the reaper and by `run`, whose own `--push-timeout` kill is a reap like any
+    other and is recorded as one, with evidence (#1105-8).
+    """
+
+    def __init__(self, config: PushGateConfig, clock: Clock) -> None:
+        self._config = config
+        self._clock = clock
+
+    def append(self, decision: Decision, outcome: dict[str, Any], ownerless: bool = False) -> None:
         owner = decision.owner
         assert owner is not None
         line = {
@@ -1279,37 +1810,13 @@ class Reaper:
             "ownerless": ownerless,
         }
         self._config.reap_log.parent.mkdir(parents=True, exist_ok=True)
-        with self._config.reap_log.open("a", encoding="utf-8") as stream:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW
+        with os.fdopen(
+            os.open(self._config.reap_log, flags, 0o600), "a", encoding="utf-8"
+        ) as stream:
             stream.write(json.dumps(line, sort_keys=True) + "\n")
             stream.flush()
             os.fsync(stream.fileno())
-
-    # -- the samples, kept on disk between passes --
-
-    def _sample_path(self, token: str) -> Path:
-        return self._config.state_dir / "samples" / f"{token}.json"
-
-    def _samples(self, token: str) -> list[dict[str, Any]]:
-        try:
-            found = json.loads(self._sample_path(token).read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return []
-        return [s for s in found if isinstance(s, dict)] if isinstance(found, list) else []
-
-    def _save_samples(self, token: str, samples: list[dict[str, Any]]) -> None:
-        path = self._sample_path(token)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(samples), encoding="utf-8")
-        os.replace(temporary, path)
-
-    def _forget_samples(self, keep: str | None) -> None:
-        folder = self._config.state_dir / "samples"
-        if not folder.is_dir():
-            return
-        for path in folder.glob("*.json"):
-            if path.stem != keep:
-                path.unlink(missing_ok=True)
 
 
 class Status:
@@ -1326,6 +1833,8 @@ class Status:
     def report(self) -> dict[str, Any]:
         state = self._lock.state()
         found: dict[str, Any] = {"lock": str(self._config.lock), "state": state.kind}
+        if state.kind == "untrusted":
+            found["detail"] = state.detail
         if state.kind == "ownerless":
             found["detail"] = state.detail
             found["age_seconds"] = state.age_seconds
@@ -1356,6 +1865,8 @@ class Status:
         found = self.report()
         if found["state"] == "free":
             return f"push lock {found['lock']}: free"
+        if found["state"] == "untrusted":
+            return f"push lock {found['lock']}: UNTRUSTED: {found['detail']}; nothing is believed"
         if found["state"] == "ownerless":
             head = (
                 f"push lock {found['lock']}: {found['detail']}, for "
@@ -1395,15 +1906,9 @@ class Status:
             lines.extend(f"    {line}" for line in found["log_tail"])
         return "\n".join(lines)
 
-    @staticmethod
-    def _tail(owner: Owner, count: int = 5) -> list[str]:
-        if not owner.log:
-            return []
-        try:
-            text = Path(owner.log).read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            return []
-        return text.splitlines()[-count:]
+    def _tail(self, owner: Owner, count: int = 5) -> list[str]:
+        text = PushLog(self._config).read(owner)
+        return [] if text is None else text.splitlines()[-count:]
 
 
 # --- The push -------------------------------------------------------------------------
@@ -1452,7 +1957,9 @@ class PushRunner:
             finally:
                 self._lock.release(token, uid)
         verdict = Verdicts(self._config).read(token)
-        if verdict is not None and returncode != 0:
+        # Only a push that died by a signal was reaped; one that failed by itself failed,
+        # whatever a verdict file says (#1105-3).
+        if verdict is not None and returncode < 0:
             print(Verdicts.say(verdict), flush=True)
             return REAPED_EXIT
         if self._timed_out:
@@ -1475,6 +1982,7 @@ class PushRunner:
     ) -> Owner | None:
         announced: str | None = None
         waited_total = 0.0
+        holder_started = ProcessTable().started(os.getpid())
         while self._stopped is None:
             owner = Owner(
                 token=token,
@@ -1485,6 +1993,9 @@ class PushRunner:
                 branch=branch,
                 worktree=worktree,
                 started_at=self._clock.now(),
+                started_awake=self._clock.awake(),
+                boot_id=self._clock.boot_id(),
+                holder_started=holder_started,
                 command=list(argv),
                 log=str(logs / f"{token}.log"),
                 stacks=str(stacks),
@@ -1520,7 +2031,9 @@ class PushRunner:
     def _push(self, owner: Owner, argv: list[str], log: Path, stacks: Path) -> int:
         if self._stopped is not None:
             return 128 + self._stopped
-        log.parent.mkdir(parents=True, exist_ok=True)
+        _private_dir(self._config.state_dir)
+        _private_dir(log.parent)
+        _private_dir(stacks.parent)
         child = subprocess.Popen(  # nosec B603 - the caller's own push command, no shell
             argv,
             start_new_session=True,
@@ -1532,18 +2045,45 @@ class PushRunner:
         if self._stopped is not None:
             self._stop_child()
         self._lock.update(dataclasses.replace(owner, pgid=child.pid))
-        with log.open("ab") as sink:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW
+        with os.fdopen(os.open(log, flags, 0o600), "ab") as sink:
             reader = threading.Thread(target=self._tee, args=(child, sink), daemon=True)
             reader.start()
             try:
                 returncode = child.wait(timeout=self._push_timeout)
             except subprocess.TimeoutExpired:
                 self._timed_out = True
-                self._stop_child()
+                self._reap_timeout(dataclasses.replace(owner, pgid=child.pid))
+                self._stop_child()  # a no-op once the reap is seen through; else a backstop
                 returncode = child.wait()
             # A process that escaped the group may still hold the pipe; the push is over.
             reader.join(timeout=5)
         return returncode
+
+    def _reap_timeout(self, owner: Owner) -> None:
+        """The push ran past `--push-timeout`: evidence first, then the kill, then the record.
+
+        The same steps as the reaper's, because it is the same act (#1105-8): a caller's own
+        deadline (lane-publish.py) ending a hung gate run must leave the same trace.
+        """
+        assert owner.pgid is not None
+        table, signaller = ProcessTable(), Signaller()
+        limit = self._push_timeout or 0.0
+        decision = Decision(
+            "killed",
+            "push-timeout",
+            f"the push ran past its own {limit:g}s limit",
+            {"push_timeout_seconds": limit},
+            owner,
+        )
+        folder = EvidenceCollector(self._config, table, signaller, self._clock).collect(
+            owner, decision
+        )
+        stopped = GroupKiller(self._config, table, signaller, self._clock).stop(owner.pgid)
+        action = "killed" if stopped in {"terminated", "killed"} else "failed"
+        ReapLog(self._config, self._clock).append(
+            dataclasses.replace(decision, action=action, evidence=folder), {"group": stopped}
+        )
 
     @staticmethod
     def _tee(child: subprocess.Popen[bytes], sink: Any) -> None:
@@ -1616,11 +2156,22 @@ class Schedule:
         target: str | None = None,
         home: Path | None = None,
         run: Callable[[list[str]], tuple[int, str]] | None = None,
+        volatile: tuple[Path, ...] | None = None,
+        linked_worktree: Callable[[Path], bool] | None = None,
     ) -> None:
         self._config = config
         self._root = root
         self._tool = tool
         self._python = python
+        # Where an unattended schedule must never run from: the storm's own account of the
+        # places a reboot or a session end wipes (storm_durability.py, 10.h), not a second
+        # list kept here (10.e).
+        self._volatile = (
+            tuple(root for root, _ in storm_durability.VolatileLocations(os.environ).roots())
+            if volatile is None
+            else volatile
+        )
+        self._linked_worktree = linked_worktree or _linked_worktree
         self._target = target or ("launchd" if sys.platform == "darwin" else "systemd")
         if self._target not in self.TARGETS:
             raise SystemExit(f"push-gate: unknown schedule target {self._target!r}")
@@ -1629,16 +2180,65 @@ class Schedule:
         self._label = config.schedule_label
 
     def values(self) -> dict[str, str]:
+        # Absolute and resolved: launchd starts the job in `/`, where a relative lock names a
+        # directory nobody pushes through, and a reaper of it watches nothing (#1107-4).
         return {
             "label": self._label,
             "python": self._python,
             "tool": str(self._tool),
-            "root": str(self._root),
-            "lock": str(self._config.lock),
+            "root": str(self._root.resolve()),
+            "lock": str(self._config.lock.resolve()),
             "interval": str(int(self._config.schedule_seconds)),
             "path": self._config.schedule_path,
-            "log": str(self._config.state_dir / "reaper.log"),
+            "log": str(self._config.state_dir.resolve() / "reaper.log"),
         }
+
+    def problems(self) -> list[str]:
+        """Why this schedule must not be installed, each line beginning REFUSED; else empty.
+
+        An unattended schedule outlives the session that installed it, so everything it runs
+        must outlive it too: not a temporary directory a reboot wipes (it did, on 2026-09-24),
+        not a linked git worktree removed when its branch lands, not a Python too old for the
+        tool (#1107-4). And a systemd unit cannot carry a value its quoting cannot hold
+        (#1107-5).
+        """
+        found: list[str] = []
+        v = self.values()
+        for label, raw in (("tool", v["tool"]), ("python", self._python), ("log", v["log"])):
+            where = Path(raw).expanduser().absolute()
+            resolved = where.resolve()
+            for root in self._volatile:
+                base = root.resolve()
+                if resolved == base or base in resolved.parents or root in where.parents:
+                    found.append(
+                        f"REFUSED: the {label} {raw} is under a temporary directory ({root}), "
+                        "which a reboot wipes"
+                    )
+                    break
+            else:
+                if self._linked_worktree(where):
+                    found.append(
+                        f"REFUSED: the {label} {raw} is inside a linked git worktree, which is "
+                        "removed when its branch is done"
+                    )
+        code, out = self._run([self._python, "-c", "import sys; print(*sys.version_info[:2])"])
+        try:
+            major, minor = (int(n) for n in out.split()[:2])
+        except ValueError:
+            major, minor = 0, 0
+        if code != 0 or (major, minor) < (3, 11):
+            found.append(
+                f"REFUSED: {self._python} is not Python 3.11 or newer (it said {out.strip()!r})"
+            )
+        if self._target == "systemd":
+            for key, value in v.items():
+                bad = sorted({c for c in value if c in UNQUOTABLE})
+                if bad:
+                    found.append(
+                        f"REFUSED: the {key} {value!r} holds {bad}, which a systemd unit cannot "
+                        "quote safely"
+                    )
+        return found
 
     def files(self) -> dict[Path, str]:
         """Every file the schedule consists of, rendered, keyed by where it is installed."""
@@ -1670,6 +2270,9 @@ class Schedule:
                 "(this tool never edits a crontab):",
                 self.cron_line(),
             ]
+        refused = self.problems()
+        if refused:
+            return refused
         lines = []
         for path, text in self.files().items():
             lines.append(f"{'would write' if dry_run else 'wrote'} {path}")
@@ -1701,13 +2304,40 @@ class Schedule:
         missing = [path for path in self.files() if not path.exists()]
         if missing:
             return f"{self._target}: not installed ({missing[0]} is absent)"
+        last: str | None = None
         if self._target == "launchd":
-            code, _ = self._run(["launchctl", "print", f"gui/{os.getuid()}/{self._label}"])
+            code, out = self._run(["launchctl", "print", f"gui/{os.getuid()}/{self._label}"])
+            match = re.search(r"last exit code = (\S+)", out)
+            last = match.group(1) if match else None
         else:
             code, _ = self._run(["systemctl", "--user", "is-active", f"{self._label}.timer"])
+            _, shown = self._run(
+                [
+                    "systemctl",
+                    "--user",
+                    "show",
+                    f"{self._label}.service",
+                    "--property=ExecMainStatus,Result",
+                ]
+            )
+            match = re.search(r"^ExecMainStatus=(\S+)", shown, re.MULTILINE)
+            last = match.group(1) if match else None
         state = "installed and loaded" if code == 0 else "installed but not loaded"
         every = int(self._config.schedule_seconds)
-        return f"{self._target}: {self._label} {state}; one reap pass every {every}s"
+        parts = [f"{self._target}: {self._label} {state}; one reap pass every {every}s"]
+        parts.append(f"last exit {last}" if last is not None else "no pass has exited yet")
+        # Nothing else observes the schedule, so its own log's age is the health check: a
+        # log older than three intervals means passes have stopped (#1107-4).
+        log = Path(self.values()["log"])
+        try:
+            age = max(0.0, time.time() - log.stat().st_mtime)
+        except OSError:
+            parts.append(f"{log} does not exist yet")
+        else:
+            parts.append(f"reaper.log updated {_span(age)} ago")
+            if age > 3 * self._config.schedule_seconds:
+                parts.append(f"STALE: no pass has written its log for {_span(age)}")
+        return "; ".join(parts)
 
     def _load_commands(self) -> list[tuple[list[str], bool]]:
         if self._target == "launchd":
@@ -1739,6 +2369,27 @@ class Schedule:
     def _render(self, name: str, values: dict[str, str]) -> str:
         template = (self.TEMPLATES / name).read_text(encoding="utf-8")
         return string.Template(template).substitute(values)
+
+
+def _linked_worktree(path: Path) -> bool:
+    """Whether `path` is inside a LINKED git worktree (`git worktree add`), which is removed
+    when its branch is done. The main checkout is durable and allowed. Module-level: one
+    stateless git question, beside `_inside_checkout`."""
+    here = path if path.is_dir() else path.parent
+    try:
+        done = subprocess.run(  # nosec B603 B607 - git with fixed arguments
+            ["git", "-C", str(here), "rev-parse", "--git-dir", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    lines = done.stdout.split()
+    if done.returncode != 0 or len(lines) != 2:
+        return False
+    git_dir, common = ((here / line).resolve() for line in lines)
+    return git_dir != common
 
 
 def _inside_checkout(root: Path) -> bool:
@@ -1788,7 +2439,9 @@ def main(argv: list[str] | None = None) -> int:
     status.add_argument("--json", action="store_true")
     acquire = commands.add_parser("acquire", help="take the lock; print the release token")
     acquire.add_argument("--wait", action="store_true", help="wait for a held lock")
-    acquire.add_argument("--pid", type=int, help="the holder (default: the calling shell)")
+    acquire.add_argument(
+        "--pid", type=int, help="the holder: pass $$ (default: this process's group)"
+    )
     release = commands.add_parser("release", help="give the lock back (its owner only)")
     release.add_argument("token")
     run = commands.add_parser("run", help="wait, run the push, always release")
@@ -1833,20 +2486,29 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(report.report(), indent=2) if args.json else report.render())
         return 0
     if args.command == "acquire":
-        holder = args.pid or os.getppid()
+        # The caller's process group, never `getppid()`: under `$(...)` the parent is a
+        # subshell that exits the moment this prints, and a lock judged by it is released as
+        # stale mid-push (#1105-1). `--pid $$` names the recipe's shell; without it, this
+        # process's own group is the caller's.
+        group = os.getpgid(args.pid) if args.pid else os.getpgrp()
         branch, worktree = _where()
         owner = Owner(
             token=uuid.uuid4().hex,
-            pid=holder,
-            pgid=os.getpgid(holder),
+            pid=args.pid or group,
+            pgid=group,
             dedicated=False,
             uid=os.getuid(),
             branch=branch,
             worktree=worktree,
             started_at=clock.now(),
+            started_awake=clock.awake(),
+            boot_id=clock.boot_id(),
+            holder_started=table.started(args.pid or group),
             command=["acquire"],
         )
-        while not lock.acquire(dataclasses.replace(owner, started_at=clock.now())):
+        while not lock.acquire(
+            dataclasses.replace(owner, started_at=clock.now(), started_awake=clock.awake())
+        ):
             if not args.wait:
                 print(Status(config, lock, table, clock).render(), file=sys.stderr)
                 return HELD_EXIT
@@ -1861,6 +2523,10 @@ def main(argv: list[str] | None = None) -> int:
             return REAPED_EXIT
         if outcome == "not-owner":
             print("push-gate: refused: the lock is not held by that token", file=sys.stderr)
+            return 1
+        if outcome == "free":
+            # Nothing was held, so nothing this caller did was protected: say so (#1105-1).
+            print("push-gate: nothing to release: the lock is free", file=sys.stderr)
             return 1
         return 0
     if args.command == "run":
@@ -1899,9 +2565,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     decision = reaper.tick(dry_run=args.dry_run)
     print(decision.line(), flush=True)
-    if decision.action in {"released", "killed", "would-release", "would-kill"}:
-        return 1
-    return 2 if decision.action in {"unknown", "refused"} else 0
+    return decision.exit_code()
 
 
 if __name__ == "__main__":

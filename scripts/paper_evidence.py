@@ -214,6 +214,7 @@ class GitHistory(GitHistoryInterface):
         self._revision = revision
 
     def _git(self, *args: str) -> str:
+        # push-gate: not a push (reads tags and history for the paper's evidence)
         done = subprocess.run(
             ["git", *args], cwd=self._repo, check=True, capture_output=True, text=True
         )
