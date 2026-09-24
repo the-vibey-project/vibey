@@ -61,8 +61,11 @@ async def test_claim_leases_the_highest_priority_ready_job(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:
     repo = PostgresJobRepository(migrated_pool)
-    await repo.enqueue(_request(project_id, subject="low", priority=0))
-    high = await repo.enqueue(_request(project_id, subject="high", priority=10))
+    await repo.enqueue(_request(project_id, subject="low"))
+    high = await repo.enqueue(_request(project_id, subject="high"))
+    # No request can set a priority (ADR-0054): only the database can, so a test does.
+    async with migrated_pool.acquire() as conn:
+        await conn.execute("UPDATE job SET priority = 10 WHERE id = $1", high.id)
 
     claimed = await repo.claim(project_id, owner="worker-1", lease=LEASE)
 
@@ -71,6 +74,21 @@ async def test_claim_leases_the_highest_priority_ready_job(
     assert claimed.state is JobState.LEASED
     assert claimed.lease_owner == "worker-1"
     assert claimed.attempts == 1
+
+
+def test_an_enqueue_request_cannot_carry_a_priority() -> None:
+    """ADR-0054: the only way to reorder the queue is a bump, through the grant. A
+    `priority` on the request would be a second, grant-free way, so there is none."""
+    import dataclasses
+
+    assert "priority" not in {field.name for field in dataclasses.fields(EnqueueRequest)}
+
+
+async def test_every_enqueued_job_starts_at_priority_zero(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    job = await PostgresJobRepository(migrated_pool).enqueue(_request(project_id))
+    assert job.priority == 0
 
 
 async def test_claim_returns_none_when_nothing_ready(

@@ -70,7 +70,7 @@ class FakeJobRepository:
             phase=request.phase,
             kind=request.kind,
             state=JobState.READY,
-            priority=request.priority,
+            priority=0,
             work_item_id=request.work_item_id,
             payload=request.payload,
             requirement=request.requirement,

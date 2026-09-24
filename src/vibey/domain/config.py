@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from vibey.domain.errors import VibeyError
+from vibey.domain.queue_priority import OPERATOR_SOURCE
 
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
@@ -316,6 +317,58 @@ class SiemConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class QueuePriorityConfig:
+    """`[queue.priority]`: who besides the operator may move a job ahead (ADR-0054).
+
+    ``sources`` names the automations the operator admits, each exactly as it will
+    identify itself. Empty -- the default -- admits nobody but the operator: the
+    absence of a grant is refusal (12.f, 12.j), and a source that relays another
+    person's words (a label anyone may set, an issue comment) is a stranger however
+    it is named. ``operator`` is reserved and never declared.
+    """
+
+    sources: tuple[str, ...] = ()
+
+    @classmethod
+    def from_table(cls, table: dict[str, Any], path: str) -> "QueuePriorityConfig":
+        """Validate one already-parsed table; `path` names it in any error."""
+        raw = _optional(table, "sources", f"{path}.sources", list, [])
+        sources: list[str] = []
+        for index, value in enumerate(raw):
+            where = f"{path}.sources[{index}]"
+            if not isinstance(value, str):
+                raise ConfigError(where, "must be a string naming a declared source")
+            name = value.strip()
+            if not name:
+                raise ConfigError(where, "must name a source, not be blank")
+            if name == OPERATOR_SOURCE:
+                raise ConfigError(
+                    where,
+                    f"{OPERATOR_SOURCE!r} is reserved: the operator is always admitted "
+                    "and is never declared",
+                )
+            if name in sources:
+                raise ConfigError(where, f"{name!r} is declared twice")
+            sources.append(name)
+        return cls(sources=tuple(sources))
+
+
+@dataclass(frozen=True, slots=True)
+class QueueConfig:
+    """`[queue]`: the job queue's declared policy."""
+
+    priority: QueuePriorityConfig = field(default_factory=QueuePriorityConfig)
+
+    @classmethod
+    def from_data(cls, data: dict[str, Any]) -> "QueueConfig":
+        """Read `[queue]` from a whole parsed document. Needs nothing else in it, so a
+        reader that wants only the queue policy does not demand `[project]`."""
+        table = _optional(data, "queue", "queue", dict, {})
+        priority = _optional(table, "priority", "queue.priority", dict, {})
+        return cls(priority=QueuePriorityConfig.from_table(priority, "queue.priority"))
+
+
+@dataclass(frozen=True, slots=True)
 class VibeyConfig:
     project: ProjectConfig
     isolation: IsolationConfig = field(default_factory=IsolationConfig)
@@ -340,6 +393,7 @@ class VibeyConfig:
     bus: BusConfig = field(default_factory=BusConfig)
     blob: BlobConfig = field(default_factory=BlobConfig)
     siem: SiemConfig = field(default_factory=SiemConfig)
+    queue: QueueConfig = field(default_factory=QueueConfig)
 
 
 def parse_toml_string(text: str) -> dict[str, Any]:
@@ -717,6 +771,7 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         bus=_parse_bus(data),
         blob=_parse_blob(data),
         siem=_parse_siem(data),
+        queue=QueueConfig.from_data(data),
     )
 
 

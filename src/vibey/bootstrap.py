@@ -58,6 +58,7 @@ from vibey.application.interfaces import (
     IssueTrackerPort,
     JobHandler,
     MessagingPort,
+    QueuePriorityServiceInterface,
     SecretsPort,
     SiemPort,
     SmsPort,
@@ -66,6 +67,7 @@ from vibey.application.interfaces import (
 )
 from vibey.application.job_dispatcher import JobDispatcher
 from vibey.application.preflight import ConductorPreflight
+from vibey.application.queue_priority import QueuePriorityService
 from vibey.application.review_collect_handler import ReviewCollectHandler
 from vibey.application.review_demo_handler import ReviewDemoHandler
 from vibey.application.review_deployment_choice_handler import ReviewDeploymentChoiceHandler
@@ -89,6 +91,7 @@ from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealt
 from vibey.infrastructure.db.handoff_repository import PostgresHandoffRepository
 from vibey.infrastructure.db.human_gate_repository import PostgresHumanGateRepository
 from vibey.infrastructure.db.interfaces import MigratorInterface
+from vibey.infrastructure.db.job_priority_repository import PostgresJobPriorityStore
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
@@ -120,6 +123,7 @@ from vibey.infrastructure.otel import TelemetryMetrics, TelemetryTracer
 from vibey.infrastructure.postgres import POSTGRES_MIN_MAJOR, parse_postgres_server_version
 from vibey.infrastructure.preflight_feasibility import VibeyGhFeasibilityAdapter
 from vibey.infrastructure.provision.agent_surface import AgentSurfaceProvisioner
+from vibey.infrastructure.queue_priority_grant import ProcessCaller, ProjectPriorityGrantReader
 from vibey.infrastructure.review_artifact_writer import FileReviewArtifactWriter
 from vibey.infrastructure.secrets.in_memory import InMemorySecrets
 from vibey.infrastructure.secrets.openbao import OpenBaoSecretsAdapter
@@ -168,6 +172,9 @@ class AppResources:
     bus: BusPort
     blob: BlobPort
     siem: SiemPort
+    # Queue priority (ADR-0054). Only the service: the store it wraps is built here and
+    # handed to nothing else, so no entry point can reorder the queue past the grant.
+    queue_priority: QueuePriorityServiceInterface
     integration_lock: PostgresAdvisoryLock | None = None
 
 
@@ -913,9 +920,11 @@ async def build_app(
 
             siem_port = InMemorySiem()
 
+        jobs = PostgresJobRepository(pool)
+        clock = SystemClock()
         yield AppResources(
             projects=projects,
-            jobs=PostgresJobRepository(pool),
+            jobs=jobs,
             gates=PostgresHumanGateRepository(pool),
             ledger=ledger,
             design_ledger=PostgresDesignLedger(ledger),
@@ -932,7 +941,7 @@ async def build_app(
             rotation_handoff=rotation_handoff,
             engine_adapters=engine_adapters,
             handoffs=PostgresHandoffRepository(pool),
-            clock=SystemClock(),
+            clock=clock,
             notifications=notifications,
             telemetry_tracer=telemetry_tracer,
             telemetry_metrics=telemetry_metrics,
@@ -948,6 +957,14 @@ async def build_app(
             bus=bus_port,
             blob=blob_port,
             siem=siem_port,
+            queue_priority=QueuePriorityService(
+                projects=projects,
+                jobs=jobs,
+                store=PostgresJobPriorityStore(pool),
+                grants=ProjectPriorityGrantReader(),
+                caller=ProcessCaller(),
+                clock=clock,
+            ),
             integration_lock=PostgresAdvisoryLock(pool),
         )
     finally:

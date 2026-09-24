@@ -49,8 +49,9 @@ def test_cli_commands_are_exposed() -> None:
 def test_design_command_enqueues_interview(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     project_id = uuid4()
 
-    async def fake_enqueue(received):  # type: ignore[no-untyped-def]
+    async def fake_enqueue(received, *, priority):  # type: ignore[no-untyped-def]
         assert received == project_id
+        assert priority is False
         return "job-1"
 
     monkeypatch.setattr(cli_main, "_enqueue_design", fake_enqueue)

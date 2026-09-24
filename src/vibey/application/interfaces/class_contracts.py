@@ -50,9 +50,6 @@ class EnqueueRequestInterface(Protocol):
     def requirement(self) -> Mapping[str, object]: ...
 
     @property
-    def priority(self) -> int: ...
-
-    @property
     def work_item_id(self) -> str | None: ...
 
     @property

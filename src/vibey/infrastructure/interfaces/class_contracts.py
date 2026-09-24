@@ -13,20 +13,24 @@ from typing import Protocol, runtime_checkable
 
 from vibey.application.interfaces import (
     BuildLedger,
+    CallerIdentity,
     DesignProvider,
     EngineAdapter,
     EngineHealthRepository,
+    JobPriorityStore,
     JobRepository,
     LedgerSearch,
     LedgerShardStore,
     LedgerSiteWriter,
     PhaseLedger,
+    PriorityGrantReader,
     ProjectStore,
     RotationCursorRepository,
     RunFeasibilityEvaluatorInterface,
     SkillsContextCompiler,
     WorkPlanProducer,
 )
+from vibey.domain.interfaces.config_interface import QueueConfigInterface
 from vibey.infrastructure.build.interfaces import (
     ConfigurableAutomatedReviewRunnerInterface,
     ConfigurableGateRunnerInterface,
@@ -67,6 +71,32 @@ class PostgresEngineHealthRepositoryInterface(EngineHealthRepository, Protocol):
 @runtime_checkable
 class PostgresJobRepositoryInterface(JobRepository, Protocol):
     """The Postgres implementation of the durable job repository port."""
+
+
+@runtime_checkable
+class PostgresJobPriorityStoreInterface(JobPriorityStore, Protocol):
+    """The Postgres implementation of the queue-priority store (ADR-0054)."""
+
+
+@runtime_checkable
+class ProjectPriorityGrantReaderInterface(PriorityGrantReader, Protocol):
+    """Reads a project's grant from `<repo_path>/vibey.toml`, and nowhere else."""
+
+
+@runtime_checkable
+class ProcessCallerInterface(CallerIdentity, Protocol):
+    """The account this process runs as: uid from the OS, name from pwd."""
+
+
+@runtime_checkable
+class QueueConfigLoaderInterface(Protocol):
+    """Reads `[queue]` from a vibey.toml, and only `[queue]`."""
+
+    def load(self, path: Path) -> QueueConfigInterface:
+        """The declared queue policy. A missing file declares nothing -- the operator
+        alone may reorder -- and a malformed one raises rather than being read as
+        empty, so a broken declaration is never mistaken for none."""
+        ...
 
 
 @runtime_checkable

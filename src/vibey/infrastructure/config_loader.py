@@ -1,11 +1,19 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import os
+import tomllib
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
-from vibey.domain.config import VibeyConfig, parse_config, parse_toml_string
+from vibey.domain.config import (
+    ConfigError,
+    QueueConfig,
+    VibeyConfig,
+    parse_config,
+    parse_toml_string,
+)
 from vibey.infrastructure.engines.local_engines import LOCAL_ENGINE_SWITCHES
+from vibey.infrastructure.interfaces.class_contracts import QueueConfigLoaderInterface
 
 RUNTIME_CONFIG_KEYS = ("notifications", "telemetry")
 
@@ -121,3 +129,33 @@ def load_runtime_config_from_path(path: Path) -> dict[str, object]:
         # real project record separately.
         parse_config({"project": {"name": "runtime-config"}, **runtime})
     return runtime
+
+
+class QueueConfigLoader:
+    """Reads `[queue]` from a vibey.toml, and only `[queue]` (ADR-0054).
+
+    The queue-priority grant reader needs the queue policy and nothing else, so it does
+    not demand the `[project]` table a whole-document parse requires. A missing file declares no
+    source: the operator alone may reorder the queue, which is the default the
+    absence of a grant means (12.f, 12.j). A malformed file raises -- a declaration
+    that cannot be read is not the same fact as no declaration (10.f).
+    """
+
+    def load(self, path: Path) -> QueueConfig:
+        try:
+            text = path.read_text()
+        except FileNotFoundError:
+            return QueueConfig()
+        except (OSError, UnicodeDecodeError) as exc:
+            # A file that is there and cannot be read -- no permission, a directory, not
+            # text -- is not the same fact as no file, and must never read as one.
+            raise ConfigError(str(path), f"cannot be read: {exc}") from exc
+        try:
+            data = parse_toml_string(text)
+        except tomllib.TOMLDecodeError as exc:
+            raise ConfigError(str(path), f"is not valid TOML: {exc}") from exc
+        return QueueConfig.from_data(data)
+
+
+QUEUE_CONFIG: Final[QueueConfigLoaderInterface] = QueueConfigLoader()
+"""The loader the queue-priority grant is read through. Stateless, so one instance serves."""

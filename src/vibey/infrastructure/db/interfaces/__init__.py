@@ -4,6 +4,9 @@
 from vibey.infrastructure.db.interfaces.engine_health_repository_interface import (
     EngineHealthRowMapperInterface,
 )
+from vibey.infrastructure.db.interfaces.job_priority_repository_interface import (
+    PriorityEventDraftBuilderInterface,
+)
 from vibey.infrastructure.db.interfaces.job_repository_interface import JobRowMapperInterface
 from vibey.infrastructure.db.interfaces.ledger_repository_interface import (
     EventAppenderInterface,
@@ -32,6 +35,7 @@ __all__ = [
     "MigratorInterface",
     "PostgresOrmInterface",
     "PhaseTransitionedDraftBuilderInterface",
+    "PriorityEventDraftBuilderInterface",
     "ProjectRowMapperInterface",
     "RotationCursorRowMapperInterface",
     "SearchStatementInterface",

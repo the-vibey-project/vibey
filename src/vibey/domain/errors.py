@@ -81,3 +81,91 @@ class SovereignResearchUnavailable(VibeyError):
         self.detail = detail
         self.evidence_name = evidence_name
         super().__init__(detail)
+
+
+class ReorderRefused(VibeyError):
+    """A request to reorder the queue was refused, and nothing moved (ADR-0054).
+
+    Every subclass is a reason a bump or an un-bump did not happen. The service
+    records each one on the ledger as `JobPriorityRefused` before it reaches the
+    caller: every request is recorded, whatever became of it (contract item 5).
+    """
+
+
+class UnknownJob(ReorderRefused):
+    """No job with the given id exists in the project the request named."""
+
+    def __init__(self, job_id: object) -> None:
+        self.job_id = job_id
+        super().__init__(f"unknown job {job_id}")
+
+
+class NotReorderable(ReorderRefused):
+    """A job's place in the queue cannot be changed.
+
+    Only a job that is still waiting, parked or running can be moved: a finished job
+    will never be claimed again, and a job in a state or phase this vibey does not
+    know is one it will not write (vibey#287).
+    """
+
+    def __init__(self, job_id: object, why: str) -> None:
+        self.job_id = job_id
+        self.why = why
+        super().__init__(f"job {job_id} cannot be moved in the queue: {why}")
+
+
+class DependencyCycle(ReorderRefused):
+    """Jobs depend on one another in a ring, so none of them can ever be claimed.
+
+    Refused rather than broken arbitrarily: which job of a ring should run first is
+    not a question an ordering rule can answer.
+    """
+
+    def __init__(self, job_ids: tuple[object, ...]) -> None:
+        self.job_ids = job_ids
+        listed = ", ".join(str(job_id) for job_id in job_ids)
+        super().__init__(f"these jobs depend on one another in a ring: {listed}")
+
+
+class DependencyCannotFinish(ReorderRefused):
+    """A job depends on one that can never succeed -- failed, cancelled, or in a state
+    this vibey does not know -- so bumping it would claim a place it can never use."""
+
+    def __init__(self, job_id: object, blockers: tuple[tuple[object, str], ...]) -> None:
+        self.job_id = job_id
+        self.blockers = blockers
+        listed = ", ".join(f"{blocker} ({state})" for blocker, state in blockers)
+        super().__init__(f"job {job_id} depends on jobs that can never finish: {listed}")
+
+
+class DependentsStillBumped(ReorderRefused):
+    """An un-bump of a job that bumped jobs still need. Un-bumping it would leave them
+    holding a place they cannot use; un-bump them first."""
+
+    def __init__(self, job_id: object, dependents: tuple[object, ...]) -> None:
+        self.job_id = job_id
+        self.dependents = dependents
+        listed = ", ".join(str(dependent) for dependent in dependents)
+        super().__init__(f"job {job_id} is needed by bumped jobs; un-bump them first: {listed}")
+
+
+class ReorderConflict(ReorderRefused):
+    """The database broke a lock cycle by aborting this request. Nothing moved; a
+    retry is safe, because every reorder is idempotent under replay."""
+
+    def __init__(self, job_id: object) -> None:
+        self.job_id = job_id
+        super().__init__(
+            f"job {job_id} was not moved: another transaction held the same rows and the "
+            "database aborted this request to break the deadlock; retry it"
+        )
+
+
+class PriorityRefused(ReorderRefused):
+    """A request to reorder the queue came from an account or source with no grant
+    (12.j). `requested_by` is who asked, as the ledger records it."""
+
+    def __init__(self, requested_by: str, reason: str) -> None:
+        self.requested_by = requested_by
+        self.reason = reason
+        super().__init__(f"refused: {reason}")

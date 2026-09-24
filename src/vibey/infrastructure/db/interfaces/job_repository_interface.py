@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from vibey.application.dto import JobRecord
     from vibey.domain.job import StoredJobState
+    from vibey.domain.phase import StoredPhase
 
 
 @runtime_checkable
@@ -21,10 +22,14 @@ class JobRowMapperInterface(Protocol):
     """Maps one row of the `job` table to a `JobRecord`."""
 
     def state(self, raw: str) -> StoredJobState:
-        """One stored `job.state`; a state this vibey does not know is kept as its
-        stored text, never raised (vibey#287)."""
+        """One stored `job.state`. The lenient reading keeps a state this vibey does
+        not know as its stored text (vibey#287); the strict reading raises."""
+        ...
+
+    def phase(self, raw: str) -> StoredPhase:
+        """One stored `job.phase`, lenient or strict as `state` is."""
         ...
 
     def to_record(self, row: asyncpg.Record) -> JobRecord:
-        """Every column, typed. `phase` and `state` are read forward-compatibly."""
+        """Every column, typed; `phase` and `state` read as the mapper was built to."""
         ...
