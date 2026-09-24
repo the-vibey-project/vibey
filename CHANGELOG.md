@@ -35,8 +35,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `forbidden_paths` (whole-PR refusal), green gates, and an approving account that wrote none
   of the change — and prints every refusal otherwise. `switch_variable` and `switch_value` are
   now declared keys. `--approve` submits one approval pinned to the checked head, and only
-  after every condition held. The `unattended-approver` agent runs it first and approves only
-  through it; its `gh api` grant is gone.
+  after every condition held. The `unattended-approver` agent runs it as `python -m vibey_gh.approval_check`
+  (keeping the CLI off its trust path), first and to approve; its `gh api` grant is gone.
 * **qwenloop:** an `edit_file` tool that replaces exactly one match; `write_file` refuses to
   shrink an existing file of 40 or more lines by more than half ([#346](https://github.com/the-vibey-project/vibey/issues/346))
 * **qwenloop:** every `turn.completed` event records `started_at`, `ended_at`, `duration_ms`,

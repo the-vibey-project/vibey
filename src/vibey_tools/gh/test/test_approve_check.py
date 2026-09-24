@@ -595,36 +595,119 @@ def test_this_repository_forbids_the_approver_its_own_machinery(path: str) -> No
     assert f"forbidden path: touches {path}" in subject.evaluate(7).refusals
 
 
-def _imported_modules() -> list[str]:
-    """Every `vibey_gh` module `approval_check` imports, read from its own source."""
-    source = Path(approval_check.__file__)
-    found: set[str] = set()
-    for node in ast.walk(ast.parse(source.read_text(encoding="utf-8"))):
-        if isinstance(node, ast.ImportFrom) and node.module:
-            if node.module == "vibey_gh":
-                found.update(f"vibey_gh.{alias.name}" for alias in node.names)
-            elif node.module.startswith("vibey_gh."):
-                found.add(node.module)
-    return sorted(found)
+PACKAGE = Path(approval_check.__file__).resolve().parent
+# The approver's entry point: what its agent definition is allowed to run.
+ENTRY_POINT = "vibey_gh.approval_check"
 
 
-def test_the_import_scan_sees_what_the_check_is_built_from() -> None:
-    """The scan below is only as good as this: it must see the modules the check leans on."""
-    modules = _imported_modules()
-    for expected in ("vibey_gh.merge_train", "vibey_gh.pr_automation", "vibey_gh.gh_transport"):
-        assert expected in modules
+def _source_of(module: str) -> Path | None:
+    """The file `module` executes from, or None for a name that is not a module."""
+    here = PACKAGE.joinpath(*module.split(".")[1:])
+    if (here / "__init__.py").is_file():
+        return here / "__init__.py"
+    return here.with_suffix(".py") if here.with_suffix(".py").is_file() else None
 
 
-@pytest.mark.parametrize("module", _imported_modules())
-def test_every_module_the_check_imports_is_forbidden_to_the_approver(module: str) -> None:
-    """A change to anything the check is built from could loosen it while passing it.
+def _closure(entry: str) -> list[str]:
+    """Every `vibey_gh` module that can execute when `entry` runs, followed recursively.
 
-    Derived from the check's own imports rather than listed, so a new import cannot join the
-    check without joining `forbidden_paths` too.
+    Conservative on purpose: every import anywhere in a module counts -- inside a function,
+    under `TYPE_CHECKING`, behind a branch -- and importing `a.b.c` counts `a` and `a.b`
+    too, because their `__init__` runs first. Over-counting forbids a file that did not need
+    it; under-counting lets a change the approver may approve rewrite the approver.
     """
-    path = "src/vibey_tools/gh/" + module.replace(".", "/") + ".py"
-    assert (REPO_ROOT / path).is_file(), path
+    seen: set[str] = set()
+    pending = [entry]
+    while pending:
+        module = pending.pop()
+        if module in seen:
+            continue
+        seen.add(module)
+        parts = module.split(".")
+        pending += [".".join(parts[:i]) for i in range(1, len(parts))]
+        source = _source_of(module)
+        assert source is not None, module
+        for node in ast.walk(ast.parse(source.read_text(encoding="utf-8"))):
+            named: list[str] = []
+            if isinstance(node, ast.ImportFrom):
+                # A relative import would escape the scan below; there are none, and a new
+                # one fails here rather than silently shrinking the closure.
+                assert node.level == 0, f"relative import in {module}"
+                if node.module and node.module.split(".")[0] == "vibey_gh":
+                    named.append(node.module)
+                    named += [f"{node.module}.{alias.name}" for alias in node.names]
+            elif isinstance(node, ast.Import):
+                named += [a.name for a in node.names if a.name.split(".")[0] == "vibey_gh"]
+            pending += [name for name in named if _source_of(name) is not None]
+    return sorted(seen)
+
+
+def test_the_closure_reaches_what_the_check_is_built_from_and_not_the_cli() -> None:
+    """The scan is only as good as this: it must see the transitive dependencies, and the
+    approver's entry point must not reach `cli.py` -- which is why `cli.py` is not forbidden."""
+    modules = _closure(ENTRY_POINT)
+    for expected in (
+        "vibey_gh",
+        "vibey_gh.merge_train",
+        "vibey_gh.pr_automation",
+        "vibey_gh.gh_transport",
+        "vibey_gh.forge",
+        "vibey_gh.reconcile",
+        "vibey_gh.versioning",
+        "vibey_gh.github_state",
+        "vibey_gh.interfaces",
+    ):
+        assert expected in modules
+    assert "vibey_gh.cli" not in modules
+
+
+@pytest.mark.parametrize("module", _closure(ENTRY_POINT))
+def test_every_module_the_approver_can_execute_is_forbidden_to_it(module: str) -> None:
+    """A change to anything the check runs could loosen it while passing it.
+
+    Derived from the entry point's transitive imports rather than listed, so no module can
+    join what the approver executes without joining `forbidden_paths` too.
+    """
+    source = _source_of(module)
+    assert source is not None
+    path = source.relative_to(REPO_ROOT).as_posix()
     test_this_repository_forbids_the_approver_its_own_machinery(path)
+
+
+# ------------------------------------------------------------------------- the entry point
+
+
+def test_the_module_entry_point_takes_the_same_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[Any, ...]] = []
+
+    def run(self: ApprovalCheck, number: int, head=None, approve=False, body=None) -> int:
+        calls.append((number, head, approve, body))
+        return 0
+
+    monkeypatch.setattr(ApprovalCheck, "run", run)
+    assert ApprovalCheck.main(["12"]) == 0
+    assert ApprovalCheck.main(["12", "--head", HEAD, "--approve", "--body", "V"]) == 0
+    assert calls == [(12, None, False, None), (12, HEAD, True, "V")]
+
+
+def test_python_dash_m_runs_the_check_without_the_cli() -> None:
+    """The form the approver is granted, run for real: argparse's usage error is exit 2."""
+    import subprocess
+    import sys
+
+    done = subprocess.run(
+        [sys.executable, "-m", ENTRY_POINT],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert done.returncode == 2
+    assert "python -m vibey_gh.approval_check" in done.stderr
+    helped = subprocess.run(
+        [sys.executable, "-m", ENTRY_POINT, "--help"], capture_output=True, text=True, check=False
+    )
+    assert helped.returncode == 0
+    assert "--approve" in helped.stdout
 
 
 # ------------------------------------------------------------------ fail-closed shapes (#1083)

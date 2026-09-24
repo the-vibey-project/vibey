@@ -1984,20 +1984,13 @@ def main(argv: list[str] | None = None) -> int:
     rs.add_argument("--dry-run", action="store_true", help="decide without applying anything")
     rs.set_defaults(func=_rulesets)
 
+    # A thin delegate for people. The delegated approver never comes this way: it runs
+    # `python -m vibey_gh.approval_check`, so this module is not on its trust path.
     ac = sub.add_parser(
         "approve-check",
         help="exit 0 only if every [unattended_approval] condition holds for a pull request",
     )
-    ac.add_argument("pr", type=int, help="the pull request to judge")
-    ac.add_argument("--head", metavar="SHA", help="refuse unless the head is exactly this commit")
-    ac.add_argument(
-        "--approve",
-        action="store_true",
-        help="when every condition holds, submit one approving review pinned to --head; "
-        "submit nothing otherwise",
-    )
-    ac.add_argument("--body", help="the approving review's body (with --approve)")
-    ac.set_defaults(func=lambda a: ApprovalCheck().run(a.pr, a.head, a.approve, a.body))
+    ApprovalCheck.declare(ac).set_defaults(func=ApprovalCheck.dispatch)
 
     for surface in ("api", "mcp", "sdk", "webhook"):
         adapter = sub.add_parser(surface, help=f"invoke a capability through the {surface} adapter")

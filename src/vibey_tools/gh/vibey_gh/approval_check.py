@@ -1,6 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """`vibey-gh approve-check`: the delegated approver's grant, enforced by code (12.f, 12.j).
 
+Run as `python -m vibey_gh.approval_check` -- the form the delegated approver is granted, and
+the only one it may use -- or as `vibey-gh approve-check`, a thin delegate kept for people.
+The module form keeps `vibey_gh.cli` off the approver's trust path: everything it executes is
+the transitive closure of this module's `vibey_gh` imports, and `forbidden_paths` covers all
+of it (test_approve_check.py derives the closure and enforces that).
+
 `[unattended_approval]` is the operator's grant to an agent that approves a change while they
 are away (ADR-0049), and `authors` bounds whose change it may approve (ADR-0053). Until this
 module, nothing in the tree read either: every condition of the grant was a sentence in the
@@ -53,6 +59,7 @@ configured `ignored_checks`; matching is `ProtectedPathsGuard.touched`.
 
 from __future__ import annotations
 
+import argparse
 import dataclasses
 import itertools
 import sys
@@ -142,6 +149,44 @@ class ApprovalCheck(ApprovalCheckInterface):
         self._transport: ForgeTransportInterface = transport or GhTransport()
         self._reader: PullRequestReader = reader or self.read_pull_request
         self._guard: ProtectedPathsInterface = guard or ProtectedPathsGuard()
+
+    @staticmethod
+    def declare(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+        """Add the command's arguments to `parser`: one declaration for both entry points,
+        `python -m vibey_gh.approval_check` and the `vibey-gh approve-check` delegate."""
+        parser.add_argument("pr", type=int, help="the pull request to judge")
+        parser.add_argument(
+            "--head", metavar="SHA", help="refuse unless the head is exactly this commit"
+        )
+        parser.add_argument(
+            "--approve",
+            action="store_true",
+            help="when every condition holds, submit one approving review pinned to --head; "
+            "submit nothing otherwise",
+        )
+        parser.add_argument("--body", help="the approving review's body (with --approve)")
+        return parser
+
+    @classmethod
+    def dispatch(cls, args: argparse.Namespace) -> int:
+        """Run parsed arguments with the production collaborators; the exit status."""
+        return cls().run(args.pr, args.head, args.approve, args.body)
+
+    @classmethod
+    def main(cls, argv: Sequence[str] | None = None) -> int:
+        """`python -m vibey_gh.approval_check`: the approver's own entry point.
+
+        It exists so that `vibey_gh.cli` is never on the approver's path. The CLI module is
+        large, frequently changed, and not forbidden to the approver; had the approver run
+        the check through it, an approvable change to `cli.py` could make the check say yes
+        to anything. This entry point imports only the check's own closure, every module of
+        which `forbidden_paths` covers (enforced by test_approve_check.py).
+        """
+        parser = argparse.ArgumentParser(
+            prog="python -m vibey_gh.approval_check",
+            description="Exit 0 only if every [unattended_approval] condition holds for a PR.",
+        )
+        return cls.dispatch(cls.declare(parser).parse_args(argv))
 
     @staticmethod
     def read_pull_request(number: int, cfg: GhConfig) -> Mapping[str, Any]:
@@ -430,3 +475,7 @@ def _both_readings(patterns: Iterable[str]) -> tuple[str, ...]:
             if variant not in out:
                 out.append(variant)
     return tuple(out)
+
+
+if __name__ == "__main__":
+    raise SystemExit(ApprovalCheck.main())
