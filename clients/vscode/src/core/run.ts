@@ -91,7 +91,8 @@ export class TaskRun implements TaskRunInterface {
   private lastActivity = 0;
   private hinted = false;
   private stderrTail = '';
-  private settle: (record: RunRecord) => void = () => undefined;
+  /** Resolves `result`; assigned in the constructor, by the promise's executor. */
+  private settle!: (record: RunRecord) => void;
   private readonly runDirectory: string;
   private readonly startedAt: Date;
   private readonly startedMono: number;
@@ -103,6 +104,7 @@ export class TaskRun implements TaskRunInterface {
   private changed: readonly ChangedFile[] = [];
   private uncommitted: readonly string[] = [];
   private commitError: string | undefined;
+  private outOfScope: readonly string[] = [];
   private breach: BudgetBreach | undefined;
   private projection: RunRecord['projection'];
   private spent = { turns: 0, input: 0, output: 0, dollars: 0, at: 0 };
@@ -487,7 +489,8 @@ export class TaskRun implements TaskRunInterface {
     const { clock, settings, processes } = this.services;
     const child = processes.spawn(invocation.command, invocation.args, { cwd, env: environment });
     this.child = child;
-    this.move(this.stopAt === undefined ? 'running' : 'stopping');
+    // A stop asked before this point aborted the run, so it never reaches a process.
+    this.move('running');
     child.onStderr((text) => {
       this.stderrTail = `${this.stderrTail}${text}`.slice(-TaskRun.STDERR_TAIL);
     });
@@ -619,10 +622,14 @@ export class TaskRun implements TaskRunInterface {
     const exclude = [...new Set([...catalogue.loops.flatMap((loop) => loop.engines.map((engine) => engine.state_dir)), ATTACHMENTS_DIRECTORY])];
     let final = outcome;
     if (final === 'completed' && space.mode === 'worktree') {
-      const commit = await git.commitAll(space.cwd, this.request.commitMessage, exclude);
+      const commit = await git.commitAll(space.cwd, this.request.commitMessage, exclude, this.request.paths);
+      this.outOfScope = commit.outOfScope ?? [];
       if (commit.error !== undefined) {
         final = 'completed-commit-refused';
         this.commitError = commit.error;
+      } else if (this.outOfScope.length > 0) {
+        final = 'completed-out-of-scope';
+        this.say('warn', `Left uncommitted, outside this task's paths: ${this.outOfScope.join(', ')}. Review them in its copy.`);
       }
     }
     this.headSha = await git.head(space.cwd);
@@ -681,6 +688,8 @@ export class TaskRun implements TaskRunInterface {
       ...(failure === undefined ? {} : { failure }),
       ...(error === undefined ? {} : { error }),
       ...(this.commitError === undefined ? {} : { commit_error: this.commitError }),
+      ...(this.request.paths === undefined ? {} : { paths: this.request.paths }),
+      ...(this.outOfScope.length === 0 ? {} : { out_of_scope: this.outOfScope }),
       ...(this.breach === undefined
         ? {}
         : { budget: { id: this.breach.budget.id, cap: this.breach.cap, limit: this.breach.limit, spent: this.breach.spent, message: this.breach.message } }),

@@ -18,6 +18,19 @@ export function scratch(prefix = 'vibey-vscode-'): string {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
 }
 
+/** Where `durable()` makes its directories: inside the checkout, which a restart keeps. */
+export const DURABLE_SCRATCH = path.join(__dirname, '..', '..', '.test-scratch');
+
+/**
+ * A fresh directory on storage a restart keeps, for tests of code that refuses anything
+ * else (the durability gate, sub-doctrine 10.h): the system temporary directory is exactly
+ * what it refuses. The global teardown removes them all.
+ */
+export function durable(prefix = 'vibey-vscode-'): string {
+  fs.mkdirSync(DURABLE_SCRATCH, { recursive: true });
+  return fs.realpathSync(fs.mkdtempSync(path.join(DURABLE_SCRATCH, prefix)));
+}
+
 export type Answer = Partial<CompletedProcess> | ((args: readonly string[], options: RunOptions) => Partial<CompletedProcess>);
 
 export interface FakeChildControl {

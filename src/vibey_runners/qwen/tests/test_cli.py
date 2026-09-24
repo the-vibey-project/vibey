@@ -64,6 +64,22 @@ def test_identity_usage_and_controls(tmp_path: Path) -> None:
     assert len(list(inbox.glob("*.json"))) == 3
 
 
+def test_controls_are_named_by_the_time_they_were_sent(tmp_path: Path) -> None:
+    ticks = iter(range(1_000, 1_003))
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr("qwenloop.cli.app.time.time_ns", lambda: next(ticks))
+        for arguments in (["prompt", "abc", "first"], ["stop", "abc"], ["prompt", "abc", "second"]):
+            assert runner.invoke(app, [*arguments, "--cwd", str(tmp_path)]).exit_code == 0
+    inbox = tmp_path / ".qwenloop" / "runs" / "abc" / "control" / "inbox"
+    files = sorted(inbox.glob("*.json"))
+    assert [path.name[:20] for path in files] == [f"{tick:020d}" for tick in range(1_000, 1_003)]
+    assert [json.loads(path.read_text(encoding="utf-8")) for path in files] == [
+        {"type": "prompt", "text": "first"},
+        {"type": "stop"},
+        {"type": "prompt", "text": "second"},
+    ]
+
+
 def test_model_inspection_validation_and_remove(tmp_path: Path) -> None:
     assert runner.invoke(app, ["model", "inspect"]).exit_code == 0
     with pytest.MonkeyPatch.context() as patch:

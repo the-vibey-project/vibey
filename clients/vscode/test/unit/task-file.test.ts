@@ -84,6 +84,35 @@ describe('TaskFileParser', () => {
     });
   });
 
+  it('reads paths as a flow list or a block list of globs', () => {
+    expect(parser.parse('a.md', '---\npaths: ["docs/guides/install.md", \'docs/a, b.md\', docs/*.md]  # the scope\n---\nx').metadata).toEqual({
+      paths: ['docs/guides/install.md', 'docs/a, b.md', 'docs/*.md'],
+    });
+    expect(parser.parse('a.md', '---\ntitle: t\npaths:\n  - docs/guides/install.md\n  - "docs/reference/*.md"\neffort: low\n---\nx').metadata).toEqual({
+      title: 't',
+      paths: ['docs/guides/install.md', 'docs/reference/*.md'],
+      effort: 'LOW',
+    });
+    expect(parser.parse('a.md', '---\npaths: [ "a\\"b.md" ]\n---\nx').metadata.paths).toEqual(['a"b.md']);
+  });
+
+  it.each([
+    ['---\npaths: []\n---\nx', 'name at least one path'],
+    ['---\npaths:\n---\nx', 'name at least one path'],
+    ['---\npaths: docs/a.md\n---\nx', 'expected a list like'],
+    ['---\npaths: ["a", ]\n---\nx', 'an empty item'],
+    ['---\npaths: [, "a"]\n---\nx', 'an empty item'],
+    ['---\npaths: ["a"\n---\nx', 'unterminated list'],
+    ['---\npaths: ["a"] extra\n---\nx', 'unexpected text after a quoted value'],
+    ['---\npaths: ["/etc/passwd"]\n---\nx', 'is not a path inside the repository'],
+    ['---\npaths: ["docs/../../x"]\n---\nx', 'is not a path inside the repository'],
+    ['---\npaths: ["C:/x"]\n---\nx', 'is not a path inside the repository'],
+    ['---\npaths: ["  "]\n---\nx', 'is not a path inside the repository'],
+    ['---\npaths: ["a"]\npaths: ["b"]\n---\nx', 'given twice'],
+  ])('refuses paths %j', (text, message) => {
+    expect(() => parser.parse('bad.md', text)).toThrow(message);
+  });
+
   it('reads effort auto, and ignores an empty value', () => {
     expect(parser.parse('a.md', '---\neffort: auto\ntitle: ""\n---\nx').metadata).toEqual({ effort: 'auto' });
     expect(parser.parse('a.md', '---\neffort:\n---\nx').metadata).toEqual({});

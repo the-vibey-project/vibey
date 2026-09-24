@@ -7,8 +7,10 @@
  * The lock is a directory, because creating one is atomic on every local filesystem, with
  * an `owner.json` saying who holds it. A holder that is gone (its process ended, or the
  * computer restarted since) no longer holds it, so a crash never leaves the model locked
- * for good. A lock held from another host is never broken from here. Declared by
- * `interfaces/model-lock-interface.ts`.
+ * for good. It is the same `mkdir` lock the family's other tools take (vibey-gh's
+ * `DirectoryLock`, storm shell tooling), which hold a bare directory for as long as they
+ * run: a lock whose holder does not say who is theirs, and is never broken from here, and
+ * neither is one held from another host. Declared by `interfaces/model-lock-interface.ts`.
  */
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -43,8 +45,6 @@ export class LocalHost implements HostFacts {
 export class ModelSlotLock implements ModelSlotLockInterface {
   /** Two boot times this far apart are two different boots. */
   static readonly BOOT_TOLERANCE_MS = 120_000;
-  /** A lock directory with no owner file, older than this, was left by a crash mid-take. */
-  static readonly ORPHAN_AFTER_MS = 60_000;
   private static readonly OWNER = 'owner.json';
 
   private held = false;
@@ -123,11 +123,8 @@ export class ModelSlotLock implements ModelSlotLockInterface {
   }
 
   private stale(holder: LockOwner | undefined): boolean {
-    if (holder === undefined) {
-      const age = this.clock.now().getTime() - fs.statSync(this.directory).mtimeMs;
-      return age > ModelSlotLock.ORPHAN_AFTER_MS;
-    }
-    if (holder.host !== this.facts.host) {
+    // No owner file: another tool's bare `mkdir` lock, held for as long as it runs.
+    if (holder === undefined || holder.host !== this.facts.host) {
       return false;
     }
     const otherBoot = Math.abs(holder.bootAt - this.facts.bootAt()) > ModelSlotLock.BOOT_TOLERANCE_MS;

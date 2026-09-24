@@ -118,6 +118,51 @@ describe('GitClient, against real git', () => {
     expect(await git().commitAll(repo, 'docs: add b')).toEqual({ committed: true });
   });
 
+  it('commits in a repository whose .gitignore holds .qwenloop/, and the commit holds neither runner directory', async () => {
+    const repo = await repository();
+    fs.writeFileSync(path.join(repo, '.gitignore'), '.qwenloop/\n');
+    await sh(repo, 'add', '.gitignore');
+    await sh(repo, 'commit', '-q', '-m', 'chore: ignore run records');
+    fs.mkdirSync(path.join(repo, '.qwenloop', 'runs', 'r1'), { recursive: true });
+    fs.writeFileSync(path.join(repo, '.qwenloop', 'runs', 'r1', 'events.jsonl'), '{}\n');
+    fs.mkdirSync(path.join(repo, '.vibey-attachments'));
+    fs.writeFileSync(path.join(repo, '.vibey-attachments', 'notes.txt'), 'pasted\n');
+    fs.mkdirSync(path.join(repo, 'docs'));
+    fs.writeFileSync(path.join(repo, 'docs', 'install.md'), '# Install\n');
+    expect(await git().commitAll(repo, 'docs: add the install guide', ['.qwenloop', '.vibey-attachments'])).toEqual({ committed: true });
+    expect((await sh(repo, 'show', '--name-only', '--format=', 'HEAD')).trim().split('\n')).toEqual(['docs/install.md']);
+    expect(await sh(repo, 'status', '--porcelain', '--untracked-files=all')).toBe('?? .vibey-attachments/notes.txt\n');
+  });
+
+  it("commits only the task's paths, and leaves every other change uncommitted and named", async () => {
+    const repo = await repository();
+    fs.mkdirSync(path.join(repo, 'docs', 'guides'), { recursive: true });
+    fs.writeFileSync(path.join(repo, 'docs', 'guides', 'install.md'), '# Install\n');
+    fs.writeFileSync(path.join(repo, 'pyproject.toml'), '[project]\nname = "x"\n');
+    fs.writeFileSync(path.join(repo, 'uv.lock'), 'version = 1\n');
+    fs.writeFileSync(path.join(repo, 'notes[1].md'), 'a file named like a glob\n');
+    const outcome = await git().commitAll(repo, 'docs: install', ['.qwenloop'], ['docs/**/*.md']);
+    expect(outcome).toEqual({ committed: true, outOfScope: ['notes[1].md', 'pyproject.toml', 'uv.lock'] });
+    expect((await sh(repo, 'show', '--name-only', '--format=', 'HEAD')).trim()).toBe('docs/guides/install.md');
+    expect([...(await git().uncommitted(repo))].sort()).toEqual(['notes[1].md', 'pyproject.toml', 'uv.lock']);
+    // Every change in scope: the commit is the task's, and nothing is left out.
+    fs.writeFileSync(path.join(repo, 'docs', 'guides', 'install.md'), '# Install, step by step\n');
+    expect(await git().commitAll(repo, 'docs: again', ['.qwenloop'], ['docs/', '*.md', 'pyproject.toml', 'uv.lock'])).toEqual({ committed: true });
+    fs.writeFileSync(path.join(repo, 'notes[1].md'), 'changed\n');
+    fs.writeFileSync(path.join(repo, 'pyproject.toml'), '[project]\nname = "y"\n');
+    // Nothing in scope changed: nothing is committed, and what changed is still named.
+    fs.writeFileSync(path.join(repo, 'uv.lock'), 'version = 2\n');
+    expect(await git().commitAll(repo, 'docs: once more', ['.qwenloop'], ['docs/'])).toEqual({ committed: false, outOfScope: ['notes[1].md', 'pyproject.toml', 'uv.lock'] });
+  });
+
+  it('keeps nothing out when told to keep nothing out', async () => {
+    const repo = await repository();
+    fs.mkdirSync(path.join(repo, '.qwenloop'));
+    fs.writeFileSync(path.join(repo, '.qwenloop', 'kept.json'), '{}\n');
+    expect(await git().commitAll(repo, 'chore: keep everything', [])).toEqual({ committed: true });
+    expect((await sh(repo, 'show', '--name-only', '--format=', 'HEAD')).trim()).toBe('.qwenloop/kept.json');
+  });
+
   it("runs the repository's hooks, and reports a refusal in git's words rather than bypassing it", async () => {
     const repo = await repository();
     hook(repo, 'pre-commit', 'echo "no commits today" >&2\nexit 1');
@@ -212,6 +257,14 @@ describe('GitClient, with a scripted git', () => {
     const silent = new FakeProcessRunner().on(['diff', '--cached', '--quiet'], { code: 1 }).on(['commit'], { code: 1 });
     expect(await new GitClient(silent, 'git', {}).commitAll('/w', 'm')).toEqual({ committed: false, error: 'exit 1' });
     expect(silent.calls.filter((call) => call.args.includes('commit'))).toHaveLength(2);
+    // A hook that refuses twice, with changes outside the scope: both are reported.
+    const scoped = new FakeProcessRunner()
+      .on(['--name-only', '--no-renames'], { stdout: 'docs/a.md\0uv.lock\0' })
+      .on(['diff', '--cached', '--quiet'], { code: 1 })
+      .on(['commit'], { code: 1, stderr: 'hook said no' });
+    expect(await new GitClient(scoped, 'git', {}).commitAll('/w', 'm', ['.qwenloop'], ['docs/'])).toEqual({ committed: false, error: 'hook said no', outOfScope: ['uv.lock'] });
+    const reset = scoped.calls.find((call) => call.args.includes('--literal-pathspecs'));
+    expect(reset?.args).toEqual(['--literal-pathspecs', '-C', '/w', 'reset', '-q', '--', 'uv.lock']);
   });
 
   it('skips a name-status entry that is cut short', async () => {

@@ -50,6 +50,25 @@ describe('RunTranscript with qwenloop events', () => {
     expect(transcript.verdict()).toEqual({ text: 'complete: yes\ntests: none needed for a README line', marker: true });
   });
 
+  it("adds a new attempt's turns to the earlier attempts', though each engine run counts its own from 1", () => {
+    const task = new RunTranscript();
+    task.accept({ type: 'turn.completed', turn: 1 });
+    task.accept({ type: 'turn.completed', turn: 2 });
+    task.beginAttempt();
+    task.accept({ type: 'turn.completed', turn: 1, input_tokens: 10 });
+    expect(task.turns).toBe(3);
+    expect(task.attemptTurns).toBe(1);
+    expect(task.items().at(-1)).toMatchObject({ kind: 'turn', turn: 1, detail: 'Turn 1 done · 10 tokens in, 0 out' });
+    task.accept({ type: 'turn.completed' });
+    expect(task.turns).toBe(4);
+    expect(task.items().at(-1)).toMatchObject({ turn: 2 });
+    task.accept({ type: 'turn.failed' });
+    expect(task.attemptTurns).toBe(3);
+    expect(task.items().at(-1)).toMatchObject({ text: 'Turn 3 failed: no reason given' });
+    task.accept({ type: 'completed' });
+    expect(task.items().at(-1)).toMatchObject({ text: 'The engine reports the task complete at turn 3.' });
+  });
+
   it('starts each attempt afresh while keeping the totals', () => {
     const again = new RunTranscript();
     again.accept({ type: 'failed', reason: 'turn_limit', turn: 1, max_turns: 16 });

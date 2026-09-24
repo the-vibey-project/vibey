@@ -106,7 +106,7 @@ export class Doctor implements DoctorInterface {
       return Doctor.check(name, missing, `${located.error} (looked in ${located.source})`, fix);
     }
     const version = await this.deps.processes.run(located.path, ['--version'], { env: this.deps.environment, timeoutMs: 30_000 });
-    const said = (version.stdout || version.stderr).trim().split('\n')[0] ?? '';
+    const said = (version.stdout || version.stderr).trim().replace(/\n[\s\S]*/, '');
     return version.code === 0
       ? Doctor.check(name, 'pass', `${said} at ${located.path} (from ${located.source})`)
       : Doctor.check(name, missing, `${located.path} (from ${located.source}) did not answer --version: ${said || version.error || `exit ${version.code}`}`, fix);
