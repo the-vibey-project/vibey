@@ -517,7 +517,7 @@ WHERE id = (
           JOIN job p ON p.id = d.depends_on_job_id
           WHERE d.job_id = j.id AND p.state <> 'succeeded'
       )
-    ORDER BY j.priority DESC, j.run_after ASC, j.id ASC
+    ORDER BY j.bump_seq ASC NULLS LAST, j.priority DESC, j.run_after ASC, j.id ASC
     FOR UPDATE SKIP LOCKED
     LIMIT 1
 )

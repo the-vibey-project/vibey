@@ -515,6 +515,11 @@ class EventKind(StrEnum):
     VISUAL_DESIGN_ACCEPTED = "VisualDesignAccepted"
     VISUAL_DESIGN_WAIVED = "VisualDesignWaived"
     DEPLOYMENT_OPTED_IN = "DeploymentOptedIn"; DEPLOYMENT_DECLINED = "DeploymentDeclined"
+    DELIVERY_ESTIMATE_RECORDED = "DeliveryEstimateRecorded"
+    # Queue priority (ADR-0054), in the same transaction as the job rows they describe
+    JOB_PRIORITY_BUMPED = "JobPriorityBumped"
+    JOB_PRIORITY_UNBUMPED = "JobPriorityUnbumped"
+    JOB_PRIORITY_REFUSED = "JobPriorityRefused"
 
 
 CLOSABLE: frozenset[EventKind] = frozenset({
@@ -742,6 +747,35 @@ class FailureClass(StrEnum):
 
 def backoff(attempt: int, *, base=timedelta(seconds=2), cap=timedelta(minutes=15)) -> timedelta: ...
 def idempotency_key(project_id: UUID, cycle: int, kind: str, subject: str) -> str: ...
+
+
+# queue_priority.py -- who may move a job ahead, and what moves with it (ADR-0054)
+MOVABLE_STATES = {READY, LEASED, AWAITING_HUMAN, AWAITING_CAPACITY}
+
+@dataclass(frozen=True, slots=True)
+class Caller:                            # uid from the OS, name from pwd -- never $USER
+    uid: int; name: str
+
+class PriorityGrant:                     # the reviewed config's owner, + declared sources
+    def decide(self, source: str | None, caller) -> PriorityDecision: ...
+    # no source: admitted iff caller owns the anchor -> "operator:NAME"
+    # a source:  admitted iff declared AND caller owns the anchor -> "source:NAME"
+
+@dataclass(frozen=True, slots=True)
+class QueuedJob:                         # the part of a row that decides its place
+    id: UUID; state: StoredJobState; priority: int; run_after: datetime
+    bump_seq: int | None = None; depends_on: tuple[UUID, ...] = ()
+    bump_named: bool = False; phase_known: bool = True
+
+class ClaimOrder:                        # the claim's ORDER BY, as a sort key
+    def key(self, job: QueuedJob) -> tuple[bool, int, int, datetime, UUID]: ...
+    # (bump_seq is None, bump_seq, -priority, run_after, id)
+
+class BumpPlanner:                       # target + unfinished deps, deps first, relative
+    def plan(self, target, jobs, *, finished_ok=False) -> BumpPlan: ...
+    # order kept; a dependency that can never finish, or a ring, is refused
+class UnbumpPlanner:                     # leave the named set, re-derive the lane; refused
+    def plan(self, target, jobs) -> UnbumpPlan: ...   # while another named job needs it
 
 
 # spec.py
@@ -1586,6 +1620,14 @@ class InvalidAnswer(VibeyError):
     """A human-gate answer was not in the expected QUESTION_ID=ANSWER form."""
 class UnknownProvider(VibeyError):
     """The requested engine provider is not one vibey knows how to build."""
+class ReorderRefused(VibeyError): ...      # queue priority (ADR-0054): every one is recorded
+class UnknownJob(ReorderRefused): ...
+class NotReorderable(ReorderRefused): ...  # finished, or a state/phase this vibey does not know
+class DependencyCycle(ReorderRefused): ... # a ring the planner will not order
+class DependencyCannotFinish(ReorderRefused): ...  # a failed or cancelled dependency
+class DependentsStillBumped(ReorderRefused): ...   # un-bump them first
+class ReorderConflict(ReorderRefused): ... # the database broke a lock cycle; retry
+class PriorityRefused(ReorderRefused): ... # no grant (12.j)
 ```
 
 ---

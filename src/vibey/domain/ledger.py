@@ -68,6 +68,12 @@ class EventKind(StrEnum):
     # A derived, append-only delivery forecast. It is not spend itself: the payload
     # carries measured usage, planned usage and the material/calculus basis.
     DELIVERY_ESTIMATE_RECORDED = "DeliveryEstimateRecorded"
+    # Queue priority (ADR-0054): who moved which jobs ahead, or back, and who was
+    # refused. Written in the same transaction as the job rows they describe, so the
+    # rows' order fields are queue state and these events are their history.
+    JOB_PRIORITY_BUMPED = "JobPriorityBumped"
+    JOB_PRIORITY_UNBUMPED = "JobPriorityUnbumped"
+    JOB_PRIORITY_REFUSED = "JobPriorityRefused"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)
