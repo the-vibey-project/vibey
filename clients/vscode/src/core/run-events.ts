@@ -19,6 +19,9 @@ import { QwenloopCommand } from './qwenloop';
 
 type EventRecord = Readonly<Record<string, unknown>>;
 
+/** How an engine wraps its events: a top-level `type`, or `event_type` plus a `payload`. */
+export type EventEnvelope = 'type' | 'event_type+payload';
+
 export class RunTranscript implements RunTranscriptInterface {
   /** The longest detail line kept for one tool call or result. */
   static readonly DETAIL_CHARS = 240;
@@ -33,9 +36,24 @@ export class RunTranscript implements RunTranscriptInterface {
   private failed: RunFailure | undefined;
   private tokensIn = 0;
   private tokensOut = 0;
+  private dollars = 0;
+  private attemptStart = 0;
 
   get turns(): number {
     return this.turnCount;
+  }
+
+  /** Turns since the current attempt began. */
+  get attemptTurns(): number {
+    return this.turnCount - this.attemptStart;
+  }
+
+  /** A new engine run inside the same task: its turns count afresh, and its verdict is its own. */
+  beginAttempt(): void {
+    this.attemptStart = this.turnCount;
+    this.done = false;
+    this.failed = undefined;
+    this.openText = undefined;
   }
 
   get completed(): boolean {
@@ -54,6 +72,11 @@ export class RunTranscript implements RunTranscriptInterface {
     return this.tokensOut;
   }
 
+  /** Dollars the engine itself reported for its turns (`cost_usd`), when it reports any. */
+  get reportedDollars(): number {
+    return this.dollars;
+  }
+
   items(): readonly RunItem[] {
     return this.shown;
   }
@@ -62,33 +85,44 @@ export class RunTranscript implements RunTranscriptInterface {
     return VerdictReader.read(this.assistant);
   }
 
-  accept(event: unknown): readonly RunPatch[] {
+  accept(event: unknown, envelope: EventEnvelope = 'type'): readonly RunPatch[] {
     if (typeof event !== 'object' || event === null || Array.isArray(event)) {
       return [this.notice('warn', `an event that is not a JSON object: ${RunTranscript.clip(String(JSON.stringify(event)))}`)];
     }
-    const record = event as EventRecord;
-    const type = typeof record.type === 'string' ? record.type : '';
+    const [type, record] = RunTranscript.normalize(event as EventRecord, envelope);
     if (type === 'text_delta') {
       return this.text(typeof record.text === 'string' ? record.text : '');
+    }
+    if (type === 'chatter.assistant') {
+      const said = RunTranscript.firstText(record, ['text', 'content', 'message']);
+      return said === undefined ? [] : this.text(said.endsWith('\n') ? said : `${said}\n`);
     }
     this.openText = undefined;
     const turn = RunTranscript.integer(record.turn);
     switch (type) {
       case 'tool.call':
+      case 'chatter.tool':
+      case 'tool_call':
+      case 'item.started':
+      case 'sdk.event':
         return [
           this.add({
             kind: 'tool-call',
             ...(turn === undefined ? {} : { turn }),
-            name: RunTranscript.name(record.name),
-            detail: RunTranscript.clip(RunTranscript.arguments(record.arguments)),
+            name: RunTranscript.name(record.name ?? record.tool ?? record.item_type),
+            detail: RunTranscript.clip(RunTranscript.arguments(record.arguments ?? record.input ?? record.args)),
           }),
         ];
-      case 'tool_result': {
-        const [ok, detail] = RunTranscript.result(record.result);
-        return [this.add({ kind: 'tool-result', name: RunTranscript.name(record.name), ok, detail })];
+      case 'tool_result':
+      case 'item.completed': {
+        const [ok, detail] = RunTranscript.result(record.result ?? record.output ?? (type === 'item.completed' ? record : undefined));
+        return [this.add({ kind: 'tool-result', name: RunTranscript.name(record.name ?? record.tool ?? record.item_type), ok, detail })];
       }
       case 'turn.completed':
         return this.turnCompleted(record, turn);
+      case 'turn.failed':
+        this.turnCount += 1;
+        return [this.notice('warn', `Turn ${turn ?? this.turnCount} failed: ${RunTranscript.clip(RunTranscript.firstText(record, ['error', 'message', 'reason']) ?? 'no reason given')}`)];
       case 'turn.retried':
         return [
           this.notice(
@@ -106,12 +140,52 @@ export class RunTranscript implements RunTranscriptInterface {
         return [this.add({ kind: 'follow-up', text: typeof record.text === 'string' ? record.text : '' })];
       case 'completed':
         this.done = true;
-        return [this.notice('info', `qwenloop reports the task complete at turn ${turn ?? this.turnCount}.`)];
+        return [this.notice('info', `The engine reports the task complete at turn ${turn ?? this.turnCount}.`)];
+      case 'finished':
+      case 'run.verdict':
+        return [this.verdictEvent(record, turn)];
       case 'failed':
         return [this.failedEvent(record, turn)];
+      case 'turn.starting':
+      case 'turn.started':
+      case 'chatter.prompt':
+        return [];
       default:
-        return [this.notice('info', `qwenloop event "${RunTranscript.clip(type || '(no type)')}"`)];
+        return [this.notice('info', `event "${RunTranscript.clip(type || '(no type)')}"`)];
     }
+  }
+
+  /** An event as (type, fields), whichever envelope the engine writes. */
+  static normalize(event: EventRecord, envelope: EventEnvelope): [string, EventRecord] {
+    if (envelope === 'type') {
+      return [typeof event.type === 'string' ? event.type : '', event];
+    }
+    const type = [event.event_type, event.kind, event.type].find((value): value is string => typeof value === 'string') ?? '';
+    const payload =
+      typeof event.payload === 'object' && event.payload !== null && !Array.isArray(event.payload)
+        ? (event.payload as EventRecord)
+        : {};
+    return [type, { ...payload, ...(payload.turn === undefined && event.turn !== undefined ? { turn: event.turn } : {}) }];
+  }
+
+  /** claudeloop and agyloop end with `finished` (payload.success); codexloop with `run.verdict` (complete). */
+  private verdictEvent(record: EventRecord, turn: number | undefined): RunPatch {
+    const success = record.success ?? record.complete;
+    if (success === true) {
+      this.done = true;
+      return this.notice('info', `The engine reports the task complete${turn === undefined ? '' : ` at turn ${turn}`}.`);
+    }
+    return this.failedEvent({ reason: RunTranscript.firstText(record, ['reason', 'error', 'message']) ?? 'the engine reported that the task is not complete' }, turn);
+  }
+
+  private static firstText(record: EventRecord, keys: readonly string[]): string | undefined {
+    for (const key of keys) {
+      const value = record[key];
+      if (typeof value === 'string' && value !== '') {
+        return value;
+      }
+    }
+    return undefined;
   }
 
   private text(delta: string): readonly RunPatch[] {
@@ -133,6 +207,7 @@ export class RunTranscript implements RunTranscriptInterface {
     const tokensOut = RunTranscript.integer(record.output_tokens) ?? 0;
     this.tokensIn += tokensIn;
     this.tokensOut += tokensOut;
+    this.dollars += typeof record.cost_usd === 'number' && Number.isFinite(record.cost_usd) ? record.cost_usd : 0;
     const duration = RunTranscript.integer(record.duration_ms);
     const model = RunTranscript.integer(record.model_ms);
     const parts = [`Turn ${number} done`];
@@ -154,7 +229,7 @@ export class RunTranscript implements RunTranscriptInterface {
       empty_response: 'the model kept sending empty replies.',
       invalid_completion_claims: 'the model said it was finished three times without doing the work and tests.',
     };
-    const explanation = explanations[reason] ?? `qwenloop gave the reason "${reason}".`;
+    const explanation = explanations[reason] ?? `the engine gave the reason "${reason}".`;
     this.failed = { reason, ...(turn === undefined ? {} : { turn }), explanation };
     return this.notice('error', `qwenloop stopped without finishing: ${explanation}`);
   }

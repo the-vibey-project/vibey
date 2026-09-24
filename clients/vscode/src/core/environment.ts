@@ -19,6 +19,8 @@ import type {
 } from './interfaces/environment-interface';
 
 const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+/** A value that is a PostgreSQL address, whatever variable carries it. */
+const DATABASE_ADDRESS = /^\s*postgres(?:ql)?:\/\//i;
 const PREFIX_BODY = /^[A-Za-z0-9_]*$/;
 
 export class ForbiddenEnvironment implements ForbiddenEnvironmentInterface {
@@ -119,9 +121,12 @@ export class ChildEnvironment implements ChildEnvironmentInterface {
     private readonly allow: EnvironmentAllowListInterface,
     overlay: Readonly<Record<string, string>> = {},
   ) {
-    for (const name of Object.keys(overlay)) {
+    for (const [name, value] of Object.entries(overlay)) {
       if (allow.forbidden.forbids(name)) {
         throw new Error(`${name} can never be passed to a model-driven process`);
+      }
+      if (DATABASE_ADDRESS.test(value)) {
+        throw new Error(`${name} holds a database address, which is never passed to a model-driven process`);
       }
     }
     this.overlay = { ...overlay };
@@ -130,7 +135,8 @@ export class ChildEnvironment implements ChildEnvironmentInterface {
   build(source: SourceEnvironment): Record<string, string> {
     const built: Record<string, string> = {};
     for (const [name, value] of Object.entries(source)) {
-      if (value !== undefined && this.allow.admits(name)) {
+      // A database address never crosses, whatever name a passthrough glob admits it under.
+      if (value !== undefined && this.allow.admits(name) && !DATABASE_ADDRESS.test(value)) {
         built[name] = value;
       }
     }

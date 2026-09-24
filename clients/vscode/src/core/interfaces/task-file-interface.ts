@@ -1,12 +1,15 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** A task file: a markdown plan, with an optional front-matter block the plan never sees. */
 
+import type { EffortSetting } from './catalogue-interface';
+
 export interface TaskMetadata {
   readonly title?: string;
   readonly commitMessage?: string;
   readonly contextWindow?: number;
   readonly maxTurns?: number;
-  readonly effort?: string;
+  /** An effort level, or `auto` to climb the ladder. */
+  readonly effort?: EffortSetting;
 }
 
 export interface TaskFile {

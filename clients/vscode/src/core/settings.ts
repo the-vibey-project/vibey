@@ -16,6 +16,8 @@ import type {
   ResolvedSettings,
   SettingsResolverInterface,
 } from './interfaces/settings-interface';
+import { Efforts } from './catalogue';
+import type { Effort, EffortSetting, LoopName } from './interfaces/catalogue-interface';
 import type { Environ, PlatformStorageInterface } from './interfaces/storage-interface';
 import { OllamaEndpoint } from './ollama';
 import { StormHome } from './storage';
@@ -29,11 +31,15 @@ export class Defaults {
     qwenloopPath: '',
     ollamaPath: '',
     gitPath: '',
+    vibeySkillsPath: '',
     ollamaUrl: '',
     ollamaAppPath: '/Applications/Ollama.app',
     model: '',
+    loop: 'sovereignloop',
+    effort: 'auto',
+    baseEffort: 'LOW',
+    engine: 'auto',
     maxTurns: 0,
-    effort: 'standard',
     contextWindow: 32768,
     runInPlace: false,
     baseRef: '',
@@ -43,6 +49,11 @@ export class Defaults {
     refreshSeconds: 30,
     pollMilliseconds: 500,
     stuckHintMinutes: 5,
+    forceStopAfterSeconds: 120,
+    lanesRecentMinutes: 60,
+    skillsBudget: 6000,
+    budgetInputTokensPerTurn: 20000,
+    budgetOutputTokensPerTurn: 2000,
     desktopNotifications: false,
     environmentAllow: [],
   };
@@ -55,6 +66,11 @@ export class Defaults {
     refreshSeconds: 5,
     pollMilliseconds: 100,
     stuckHintMinutes: 5,
+    forceStopAfterSeconds: 30,
+    lanesRecentMinutes: 1,
+    skillsBudget: 1000,
+    budgetInputTokensPerTurn: 1,
+    budgetOutputTokensPerTurn: 1,
   };
 }
 
@@ -87,13 +103,23 @@ export class SettingsResolver implements SettingsResolverInterface {
       modelLockPath: lock ? path.resolve(lock) : path.join(stormHome.path, SettingsResolver.LOCK_DIRECTORY),
       ...(maxTurns > 0 ? { maxTurns } : {}),
       contextWindow: SettingsResolver.atLeast(raw, 'contextWindow'),
-      effort: raw.effort.trim(),
+      loop: SettingsResolver.loop(raw.loop),
+      effort: SettingsResolver.effort(raw.effort, 'auto'),
+      baseEffort: SettingsResolver.effort(raw.baseEffort, 'LOW') as Effort,
+      engine: raw.engine.trim() || 'auto',
       runInPlace: raw.runInPlace,
       baseRef: raw.baseRef.trim(),
       maxConcurrentRuns: SettingsResolver.atLeast(raw, 'maxConcurrentRuns'),
       refreshMs: SettingsResolver.atLeast(raw, 'refreshSeconds') * 1000,
       pollMs: SettingsResolver.atLeast(raw, 'pollMilliseconds'),
       stuckHintMs: SettingsResolver.atLeast(raw, 'stuckHintMinutes') * 60_000,
+      forceStopAfterMs: SettingsResolver.atLeast(raw, 'forceStopAfterSeconds') * 1000,
+      lanesRecentMs: SettingsResolver.atLeast(raw, 'lanesRecentMinutes') * 60_000,
+      skillsBudget: Math.min(SettingsResolver.atLeast(raw, 'skillsBudget'), 32_000),
+      budgetPerTurn: {
+        input: SettingsResolver.atLeast(raw, 'budgetInputTokensPerTurn'),
+        output: SettingsResolver.atLeast(raw, 'budgetOutputTokensPerTurn'),
+      },
       desktopNotifications: raw.desktopNotifications,
       environmentAllow: raw.environmentAllow.map((entry) => entry.trim()).filter((entry) => entry !== ''),
     };
@@ -109,6 +135,21 @@ export class SettingsResolver implements SettingsResolverInterface {
       return [declared, variable];
     }
     return [fallback, 'the default'];
+  }
+
+  /** `paidloop` only when named; anything else is the sovereign default (8.b). */
+  private static loop(value: string): LoopName {
+    return value.trim() === 'paidloop' ? 'paidloop' : 'sovereignloop';
+  }
+
+  /** An effort level (any case) or `auto`; anything else is the fallback. */
+  private static effort(value: string, fallback: EffortSetting): EffortSetting {
+    const trimmed = value.trim();
+    if (trimmed.toLowerCase() === 'auto') {
+      return 'auto';
+    }
+    const upper = trimmed.toUpperCase();
+    return Efforts.is(upper) ? upper : fallback;
   }
 
   /** A whole number no smaller than the declared minimum; not a number means the default. */

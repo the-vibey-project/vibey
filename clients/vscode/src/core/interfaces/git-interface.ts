@@ -26,16 +26,19 @@ export interface GitClientInterface {
   resolveCommit(repository: string, ref: string): Promise<string>;
   /** The commit checked out in `directory`. */
   head(directory: string): Promise<string>;
-  /** Paths with changes not committed, qwenloop's own run records left out. */
-  uncommitted(directory: string): Promise<readonly string[]>;
+  /** Paths with changes not committed, leaving out the directories in `exclude`. */
+  uncommitted(directory: string, exclude?: readonly string[]): Promise<readonly string[]>;
   /** The checked-out branch, or undefined when HEAD is detached. */
   currentBranch(repository: string): Promise<string | undefined>;
   addWorktree(repository: string, worktree: string, branch: string, base: string): Promise<void>;
   removeWorktree(repository: string, worktree: string): Promise<void>;
   deleteBranch(repository: string, branch: string): Promise<void>;
   branchExists(repository: string, branch: string): Promise<boolean>;
-  /** Stage everything but qwenloop's own run records, and commit it if anything changed. */
-  commitAll(worktree: string, message: string): Promise<CommitOutcome>;
+  /**
+   * Stage everything but the directories in `exclude` (engines' run records, attachments),
+   * and commit it if anything changed.
+   */
+  commitAll(worktree: string, message: string, exclude?: readonly string[]): Promise<CommitOutcome>;
   diffStat(repository: string, from: string, to: string): Promise<string>;
   changedFiles(repository: string, from: string, to: string): Promise<readonly ChangedFile[]>;
   diff(repository: string, from: string, to: string): Promise<string>;

@@ -42,14 +42,18 @@ export interface Verdict {
 }
 
 export interface RunTranscriptInterface {
-  accept(event: unknown): readonly RunPatch[];
+  /** One event, in the envelope its engine writes (`type`, or `event_type+payload`). */
+  accept(event: unknown, envelope?: 'type' | 'event_type+payload'): readonly RunPatch[];
   /** A line from the extension itself (waiting, a hint, an error), in the same stream. */
   note(level: NoticeLevel, text: string): RunPatch;
   items(): readonly RunItem[];
   readonly turns: number;
+  readonly attemptTurns: number;
+  beginAttempt(): void;
   readonly completed: boolean;
   readonly failure: RunFailure | undefined;
   readonly inputTokens: number;
   readonly outputTokens: number;
+  readonly reportedDollars: number;
   verdict(): Verdict;
 }

@@ -26,6 +26,8 @@ import type {
   TaskFolderInterface,
   TaskMetadata,
 } from './interfaces/task-file-interface';
+import { Efforts } from './catalogue';
+import type { EffortSetting } from './interfaces/catalogue-interface';
 import { TaskNaming } from './support';
 
 export class TaskFileError extends Error {
@@ -192,7 +194,7 @@ export class TaskFileParser implements TaskFileParserInterface {
     return {
       ...TaskFileParser.text(found, 'title', 'title'),
       ...TaskFileParser.text(found, 'commit_message', 'commitMessage'),
-      ...TaskFileParser.text(found, 'effort', 'effort'),
+      ...TaskFileParser.effort(name, found),
       ...TaskFileParser.count(name, found, 'context_window', 'contextWindow', 1024),
       ...TaskFileParser.count(name, found, 'max_turns', 'maxTurns', 1),
     };
@@ -201,6 +203,18 @@ export class TaskFileParser implements TaskFileParserInterface {
   private static text(found: Record<string, string>, key: string, field: string): Record<string, string> {
     const value = found[key];
     return value === undefined || value === '' ? {} : { [field]: value };
+  }
+
+  private static effort(name: string, found: Record<string, string>): { effort?: EffortSetting } {
+    const value = found.effort;
+    if (value === undefined || value === '') {
+      return {};
+    }
+    const upper = value === 'auto' ? 'auto' : value.toUpperCase();
+    if (upper !== 'auto' && !Efforts.is(upper)) {
+      throw new TaskFileError(name, `effort must be auto or one of ${Efforts.ALL.join(', ')}, not ${JSON.stringify(value)}`);
+    }
+    return { effort: upper };
   }
 
   private static count(

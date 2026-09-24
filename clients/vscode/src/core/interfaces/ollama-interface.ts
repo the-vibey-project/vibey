@@ -39,6 +39,8 @@ export interface OllamaProbeInterface {
   models(): Promise<{ readonly names: readonly string[]; readonly source: string }>;
   /** GET /api/ps: the models in memory now. */
   loaded(): Promise<readonly LoadedModel[]>;
+  /** POST /api/show: what the model says it can do (completion, tools, vision, ...); undefined when unknown. */
+  capabilities(model: string): Promise<readonly string[] | undefined>;
   status(model: string, contextWindow: number): Promise<OllamaStatus>;
 }
 

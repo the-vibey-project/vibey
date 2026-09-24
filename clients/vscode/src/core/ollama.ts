@@ -118,6 +118,18 @@ export class OllamaProbe implements OllamaProbeInterface {
     return loaded;
   }
 
+  async capabilities(model: string): Promise<readonly string[] | undefined> {
+    try {
+      const response = await this.http.post(this.endpoint.url('/api/show'), { model }, this.listTimeoutMs);
+      const said = OllamaProbe.object(response.body).capabilities;
+      return response.status === 200 && Array.isArray(said)
+        ? said.filter((item): item is string => typeof item === 'string')
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   async status(model: string, contextWindow: number): Promise<OllamaStatus> {
     const base = { root: this.endpoint.root, model, contextWindow };
     const version = await this.version();

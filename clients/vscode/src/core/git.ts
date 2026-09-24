@@ -25,7 +25,7 @@ export class GitError extends Error {
 }
 
 export class GitClient implements GitClientInterface {
-  /** qwenloop's run records live in the worktree it runs in; they are never the work. */
+  /** Where qwenloop keeps its run records, in the worktree it runs in: never the work. */
   static readonly RUN_RECORDS = '.qwenloop';
 
   constructor(
@@ -50,14 +50,14 @@ export class GitClient implements GitClientInterface {
     return (await this.must(['-C', directory, 'rev-parse', 'HEAD'])).trim();
   }
 
-  async uncommitted(directory: string): Promise<readonly string[]> {
+  async uncommitted(directory: string, exclude: readonly string[] = [GitClient.RUN_RECORDS]): Promise<readonly string[]> {
     const output = await this.must(['-C', directory, 'status', '--porcelain', '-z', '--untracked-files=all']);
     const paths: string[] = [];
     const fields = output.split('\0').filter((field) => field !== '');
     for (let index = 0; index < fields.length; index += 1) {
       const entry = fields[index] as string;
       const where = entry.slice(3);
-      if (where !== GitClient.RUN_RECORDS && !where.startsWith(`${GitClient.RUN_RECORDS}/`)) {
+      if (!exclude.some((directory) => where === directory || where.startsWith(`${directory}/`))) {
         paths.push(where);
       }
       // A rename's entry is followed by the path it had before, which is not a change of its own.
@@ -90,14 +90,18 @@ export class GitClient implements GitClientInterface {
     return result.code === 0;
   }
 
-  async commitAll(worktree: string, message: string): Promise<CommitOutcome> {
+  async commitAll(
+    worktree: string,
+    message: string,
+    exclude: readonly string[] = [GitClient.RUN_RECORDS],
+  ): Promise<CommitOutcome> {
     // Twice at most: a formatting hook that rewrites files fails the first commit and
     // leaves its fixes unstaged, which is what a person would stage and commit again.
     // Anything a hook still refuses the second time is reported, not bypassed.
     let error: string | undefined;
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      await this.must(['-C', worktree, 'rm', '-r', '-q', '--cached', '--ignore-unmatch', '--', GitClient.RUN_RECORDS]);
-      await this.must(['-C', worktree, 'add', '-A', '--', '.', `:(exclude)${GitClient.RUN_RECORDS}`]);
+      await this.must(['-C', worktree, 'rm', '-r', '-q', '--cached', '--ignore-unmatch', '--', ...exclude]);
+      await this.must(['-C', worktree, 'add', '-A', '--', '.', ...exclude.map((directory) => `:(exclude)${directory}`)]);
       const staged = await this.git(['-C', worktree, 'diff', '--cached', '--quiet']);
       if (staged.code === 0) {
         return error === undefined ? { committed: false } : { committed: false, error };
