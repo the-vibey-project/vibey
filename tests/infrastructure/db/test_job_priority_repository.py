@@ -637,7 +637,7 @@ async def test_a_cancelled_named_job_leaves_nothing_behind_after_the_next_reques
 
 
 async def test_an_unbump_leaves_a_job_in_an_unknown_phase_and_records_it(
-    migrated_pool: asyncpg.Pool, project_id: UUID
+    migrated_pool: asyncpg.Pool, project_id: UUID, owner_pool: asyncpg.Pool
 ) -> None:
     """Finding 4: a pulled job in a phase this vibey does not know is never written, and
     no longer refuses the whole un-bump: it is left, and the record names it."""
@@ -646,7 +646,8 @@ async def test_an_unbump_leaves_a_job_in_an_unknown_phase_and_records_it(
     (d,) = await _enqueue(repo, project_id, "d")
     a = (await repo.enqueue(_request(project_id, "a", depends_on=(d,)))).id
     await store.bump(a, context=_context(project_id), at=AT)
-    async with migrated_pool.acquire() as conn:
+    # ALTER TYPE is the owner's (ADR-0055); `migrated_pool` is the application role's.
+    async with owner_pool.acquire() as conn:
         await conn.execute("ALTER TYPE phase ADD VALUE IF NOT EXISTS 'triage'")
     async with migrated_pool.acquire() as conn:
         await conn.execute("UPDATE job SET phase = 'triage' WHERE id = $1", d)
