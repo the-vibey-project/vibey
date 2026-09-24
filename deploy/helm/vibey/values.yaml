@@ -73,6 +73,14 @@ postgres:
   additionalDatabases:
     - plane
     - infisical
+  # Each additional database is owned by a login role of the same name, never by the
+  # owner above (ADR-0055): a surface pod holds its own database's credentials and
+  # nothing that could reach vibey's ledger. The postgres container creates the roles
+  # on first boot and on every start after, and hands an existing database (and what
+  # is in it) over to its role. Dev-only defaults; set real ones per install.
+  additionalDatabasePasswords:
+    plane: plane-dev-password
+    infisical: infisical-dev-password
 
 # Suffix for fully-qualified in-cluster DNS names. Only ever needs
 # changing on a cluster built with a non-default domain (kubeadm's
@@ -90,7 +98,11 @@ dsn:
   # only. Empty makes a single-DSN install, where the worker migrates as the one
   # role and `vibey doctor` fails the ledger-guard check until the roles are
   # split (docs/reference/configuration.md#database-roles).
-  existingSecretMigrateKey: migrate-dsn
+  #
+  # Empty by default, so an existing-Secret install is unchanged by upgrading: no
+  # `migrate` init container, and no reference to a key the Secret may not have.
+  # Name the owner's key here to opt in.
+  existingSecretMigrateKey: ""
 
 engineAuth:
   # Interactive subscription login does not exist in a cluster, so engines
