@@ -63,6 +63,13 @@ differ each set `VIBEY_TEST_TEMPLATE_DB` to a template name of their own. The
 default suite needs no engine binaries and no paid accounts: tests marked
 `paid` are deselected unless you ask for them (ADR-0030).
 
+A killed test run cannot drop its databases, so the harness reaps them. Each session holds a
+lock on its database for as long as it lives, and marks the database. At the start of every
+run, the harness drops, in the background, the test databases no live session holds
+(`tests/db_reaper.py`). `uv run python -m tests.db_reaper --dry-run` shows what it would drop.
+`VIBEY_TEST_REAP=0` turns the automatic reap off, and `VIBEY_TEST_REAP_LIMIT` (default 200)
+caps one run's drops.
+
 ### Where your work lives, and how often it is saved
 
 Keep every clone and worktree on storage a reboot keeps. Never put one under `/tmp`,
