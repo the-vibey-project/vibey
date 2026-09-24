@@ -62,15 +62,17 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **queue:** a job can be bumped to run next (ADR-0054). `vibey queue bump JOB` puts it
   after whatever is running — never interrupting it — behind anything bumped before it
   and ahead of all un-bumped waiting work, and pulls its unfinished dependencies forward
-  with it; `vibey queue unbump JOB` returns it, and every bumped job that needs it, to
-  normal order; `vibey queue list [PROJECT]` shows the queue in claim order with every
-  bump marked; `vibey design resume PROJECT --priority` enqueues the interview bumped.
-  The claim orders `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so
-  the order among un-bumped work is unchanged. Only the operator, and the sources named
-  in `[queue.priority] sources`, may bump; anyone else is refused, and the refusal is
-  recorded (sub-doctrine 12.j). Every bump, un-bump and refusal appends
-  `JobPriorityBumped`, `JobPriorityUnbumped` or `JobPriorityRefused` to the ledger in the
-  same transaction as the change.
+  with it; a dependency that can never finish refuses the bump. `vibey queue unbump JOB`
+  undoes exactly what that bump moved, and is refused while a bumped job still needs it.
+  `vibey queue list [PROJECT]` shows the queue in claim order with every bump marked;
+  `vibey design resume PROJECT --priority` enqueues the interview bumped. The claim orders
+  `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so the order among
+  un-bumped work is unchanged, and it now claims only jobs in a phase this vibey knows.
+  Only the operator — the account owning the project's own `vibey.toml` — and the
+  sources that file declares in `[queue.priority] sources`, run as that account, may
+  reorder; every request, moved something, moved nothing or refused, is recorded on the
+  ledger (sub-doctrine 12.j). During a rolling upgrade, workers still on the previous
+  release ignore bumps until they are replaced.
 * **vibey_gh:** `vibey-gh approve-check PR [--head SHA] [--approve]` enforces the delegated approver's grant
   by code (sub-doctrines 12.f, 12.j): it exits 0 only when every `[unattended_approval]`
   condition holds — live switch, author allowlist (`@codeowners` expanded), branch globs,

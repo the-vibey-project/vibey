@@ -497,8 +497,10 @@ CREATE TABLE job (
     created_at        timestamptz NOT NULL DEFAULT now(),
     updated_at        timestamptz NOT NULL DEFAULT now(),
     bump_seq          bigint,                 -- 0014: place among bumped jobs; NULL = normal order
+    bump_origin       uuid,                   -- 0014: the job whose bump moved this one
     CONSTRAINT job_idem_uniq UNIQUE (project_id, idempotency_key),
     CONSTRAINT job_bump_seq_positive CHECK (bump_seq IS NULL OR bump_seq > 0),
+    CONSTRAINT job_bump_origin_with_seq CHECK ((bump_seq IS NULL) = (bump_origin IS NULL)),
     CONSTRAINT job_lease_consistent CHECK (
         (state = 'leased') = (lease_owner IS NOT NULL AND lease_expires_at IS NOT NULL)
     )
@@ -556,6 +558,7 @@ WHERE id = (
     WHERE j.state = 'ready'
       AND j.run_after <= now()
       AND j.project_id = $3
+      AND j.phase::text = ANY($4::text[])   -- only phases this vibey knows (vibey#287)
       AND NOT EXISTS (
           SELECT 1 FROM job_dependency d
           JOIN job p ON p.id = d.depends_on_job_id
@@ -648,29 +651,34 @@ job in normal order; a bump draws it from the sequence `job_bump_seq`
 the order they were bumped, and the order among un-bumped jobs is exactly what it
 was. A sequence and not a timestamp: one bump moves a job and its dependencies in
 one transaction, where `now()` is one instant for all of them (sub-doctrine 10.g).
+`bump_origin` is the job whose bump moved this one — itself when bumped by name, the
+named job when pulled forward — which is how an un-bump undoes exactly what its bump
+moved.
 
 `PostgresJobPriorityStore` (`src/vibey/infrastructure/db/job_priority_repository.py`)
-does each change in one transaction: a recursive CTE finds the closure the change
-can reach (the job's dependencies for a bump, its dependents for an un-bump), the
-rows are locked `FOR UPDATE` in id order and read only once locked, the pure
-planner in `domain/queue_priority.py` decides what moves, and the event is
-appended on the same connection:
+is reached only through `QueuePriorityService`, which checks the grant first. Each
+change is one transaction: `pg_advisory_xact_lock` on the project, a recursive CTE
+for the closure the change can reach (a bump's dependencies, stopping at finished
+rows), `FOR NO KEY UPDATE` on the rows it may write in id order (never blocking an
+enqueue's foreign-key `KEY SHARE`), state read only once locked, the pure planner
+in `domain/queue_priority.py`, and the event appended on the same connection:
 
 ```sql
 -- BUMP (for each job the planner moves, dependencies before what needs them)
-UPDATE job SET bump_seq = nextval('job_bump_seq'), updated_at = now()
+UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_origin = $target, updated_at = now()
 WHERE id = $1 RETURNING bump_seq;
 
--- UN-BUMP (the job, and every bumped unfinished job depending on it)
-UPDATE job SET bump_seq = NULL, updated_at = now() WHERE id = ANY($1::uuid[]);
+-- UN-BUMP (the job, and what its bump pulled forward that no other bumped job needs)
+UPDATE job SET bump_seq = NULL, bump_origin = NULL, updated_at = now()
+WHERE id = ANY($1::uuid[]);
 ```
 
 A bump never touches `state`, `lease_owner`, `lease_expires_at` or `run_after`,
 and the claim's dependency check is unchanged, so a bump orders work and never
 admits it. A leased job can be bumped and keeps its place if its attempt returns it
-to `ready`. `bump_seq` is queue state; the history is the ledger —
-`JobPriorityBumped`, `JobPriorityUnbumped` and, for a source the grant refused,
-`JobPriorityRefused` (§3.2).
+to `ready`. The columns are queue state; the history is the ledger — every request,
+moved something, moved nothing or refused, as `JobPriorityBumped`,
+`JobPriorityUnbumped` or `JobPriorityRefused` (§3.2).
 
 ### 3.5 `work_item`
 

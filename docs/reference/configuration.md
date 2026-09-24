@@ -16,7 +16,7 @@ tables. The other schema tables remain documented inputs for future wiring.
 |---|---|---|
 | `./vibey.toml`, key `[features].qwenloop` | `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`) | Whether `qwenloop` is added to the health sweep. The file is read from the current directory with `parse_toml_string`; a missing or malformed file counts as `qwenloop = false`. |
 | `./vibey.toml`, `[notifications]` and `[telemetry]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels and the telemetry switch into the stored project config. |
-| `./vibey.toml` (or `--config PATH`), `[queue.priority] sources` | `vibey queue bump` / `unbump`, `vibey design resume --priority` (`infrastructure/config_loader.py` `QueueConfigLoader`) | Which sources besides the operator may reorder the queue ([`[queue.priority]`](#queuepriority)). Read fresh on every command; only the `[queue]` table is parsed, so the file needs no `[project]` table for this. A missing file declares none; a malformed one is an error. |
+| `<repo>/vibey.toml`, `[queue.priority] sources` — the project's own repository root, never the current directory | `vibey queue bump` / `unbump`, `vibey design resume --priority`, via `QueuePriorityService` (`infrastructure/queue_priority_grant.py` `ProjectPriorityGrantReader`) | Which automations besides the operator may reorder the project's queue ([`[queue.priority]`](#queuepriority)); the file's owner is the operator. Read fresh on every request; only the `[queue]` table is parsed. A missing file declares none; a malformed one refuses every request, recorded. |
 | The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, notification delivery, telemetry, and (in principle) `features.qwenloop` — see below. |
 | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the qwenloop switch, the sovereign DESIGN provider's evidence directory. |
 
@@ -302,18 +302,22 @@ them into `VibeyConfig`, but nothing passes them to the runner.
 
 Who besides the operator may move a job to the front of the queue
 ([ADR-0054](../architecture/decisions/0054-a-bumped-job-runs-next.md),
-sub-doctrines 12.h and 12.j).
+sub-doctrines 12.h and 12.j). Read from the `vibey.toml` at the root of the
+project's own repository — the reviewed file — and never from the current directory
+or a path given on the command line.
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `sources` | list of strings | `[]` | The automations admitted to `vibey queue bump` / `unbump` (and `--priority`), each exactly as it names itself with `--source`. Matched exactly, case included. Each entry must be a non-blank string, may not repeat, and may not be `operator`: the operator is always admitted and is never declared. |
+| `sources` | list of strings | `[]` | The automations admitted to `vibey queue bump` / `unbump` (and `--priority`), each exactly as it names itself with `--source`. Matched exactly, case included. Each entry must be a non-blank string, may not repeat, and may not be `operator`. |
 
-Empty — the default — admits the operator alone: the absence of a grant is
-refusal (12.f). A request from any other source is refused, recorded on the
-ledger as `JobPriorityRefused`, and the command exits 3. Declare a source only
-for an automation that decides for itself; a source that relays other people's
-words (a label anyone may set, an issue comment) admits everyone who can reach
-it.
+The **operator** is the account that owns this file (or the repository root, when
+there is no file), checked by the process's uid — not a name. A declared source is
+admitted only when it also runs as that account: a name is not a credential. Empty —
+the default — admits the operator alone: the absence of a grant is refusal (12.f).
+Every other request is refused and recorded on the ledger as `JobPriorityRefused`.
+Declare a source only for an automation that decides for itself; a source that
+relays other people's words (a label anyone may set, an issue comment) admits
+everyone who can reach it.
 
 ```toml
 [queue.priority]

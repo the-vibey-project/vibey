@@ -329,12 +329,12 @@ and every hold is bounded by a lease: a claim sets the lease expiry to
 $\mathrm{now} + L$, a live worker renews it, and a reaper returns any expired lease to
 the ready state. A crashed worker therefore costs at most $L$ of delay and never a
 lost item. Across priority classes the discipline is strict priority, not arrival
-order. Above every class sits the bump (ADR-0054): the operator, or a source the
-operator has declared, may move a waiting item to the front, where bumped items are
-claimed first-in-first-out by a sequence drawn at the bump, ahead of all un-bumped
-work. A bump orders and never admits: it neither preempts a held lease nor lets an
-item past a dependency that has not succeeded, whose own dependencies it pulls forward
-instead. Because workers die and leases expire, every job is idempotent under replay.
+order. Above every class sits the bump (ADR-0054): the operator -- the account owning
+the project's reviewed configuration -- or a source that configuration declares, may
+move a waiting item to the front, where bumped items are claimed first-in-first-out by
+a sequence drawn at the bump, ahead of all un-bumped work. A bump orders and never
+admits: it neither preempts a held lease nor lets an item past a dependency that has
+not succeeded, whose own dependencies it pulls forward instead. Because workers die and leases expire, every job is idempotent under replay.
 
 ```latex
 \begin{plainwords}

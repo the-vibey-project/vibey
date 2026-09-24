@@ -169,7 +169,7 @@ Bare `vibey design` prints help. Subcommands:
 
 | Subcommand | What it does |
 |---|---|
-| `design resume PROJECT_ID [--priority]` | Enqueue or resume the project's DESIGN interview. Prints `design job <id>`. `--priority` enqueues it bumped, so it runs next after whatever is running — the same grant and ledger record as [`vibey queue bump`](#vibey-queue). |
+| `design resume PROJECT_ID [--priority]` | Enqueue or resume the project's DESIGN interview. Prints `design job <id>`. `--priority` enqueues it bumped, so it runs next after whatever is running — the same grant and ledger record as [`vibey queue bump`](#vibey-queue). On an interview that has already finished, `--priority` is a recorded no-op, as plain `resume` is a no-op. |
 | `design accept PROJECT_ID [--spec-json PATH] [--visual/--no-visual]` | Accept the synthesized spec (optionally importing JSON first) and choose whether to enter the VISUAL_DESIGN interstitial. Defaults to `--no-visual`; the choice is never implicit. Prints `accepted design for <id>; entered <phase>; context under <repo_path>`. |
 
 `--spec-json` expects a JSON object with:
@@ -283,27 +283,40 @@ See the job queue in claim order, and move a job to the front of it
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
-| `queue list [PROJECT_ID]` | `--json` | off | Every unfinished job: running work first (`running`), then waiting work numbered in the order the claim will take it. A bumped job is marked `bumped #N`; a job still waiting on unfinished dependencies says how many. Defaults to the latest project; an unknown id prints `unknown project <id>` and exits 1. |
-| `queue bump JOB_ID` | `--source NAME` | `operator` | Run the job next: after whatever is running, ahead of every un-bumped waiting job, behind anything bumped before it. Its unfinished dependencies move forward with it, dependencies first. Prints every job moved with its new place, any already ahead, and any dependency that blocks it and cannot be moved (failed or cancelled). |
-| | `--config PATH` | `vibey.toml` | The file declaring `[queue.priority] sources`. A missing file declares none; a malformed one is an error. |
+| `queue list [PROJECT_ID]` | `--json` | off | Every unfinished job: running work first (`running`), then waiting work numbered in the order the claim will take it. A bumped job is marked `bumped #N`, one pulled forward for another job says which, and a job still waiting on unfinished dependencies says how many. Defaults to the latest project; an unknown id prints `unknown project <id>` and exits 1. |
+| `queue bump JOB_ID` | `--project PROJECT_ID` | latest project | Run the job next: after whatever is running, ahead of every un-bumped waiting job, behind anything bumped before it. Its unfinished dependencies move forward with it, dependencies first. Prints every job moved with its new place and any already ahead. |
+| | `--source NAME` | unset | An automation naming itself (see below). |
 | | `--json` | off | Print the change as JSON. |
-| `queue unbump JOB_ID` | `--source`, `--config`, `--json` | as `bump` | Return the job to normal order, and every bumped job that depends on it. |
+| `queue unbump JOB_ID` | `--project`, `--source`, `--json` | as `bump` | Undo exactly what the job's bump moved: the job, and the dependencies it pulled forward that no other bumped job needs. |
 
-A bump changes order only. It never interrupts the running job or touches its
-lease, never makes a job claimable before its dependencies succeed, and never
-shortens a `run_after` a capacity deferral set; phases and human gates apply as
-before. A job that is running can be bumped: it keeps its place if the attempt
-returns it to the queue. Bumping a job already bumped, or un-bumping one that
-is not, prints `nothing moved`, changes nothing and records nothing.
+A bump changes order only. It never interrupts the running job or touches its lease,
+never makes a job claimable before its dependencies succeed, and never shortens a
+`run_after` a capacity deferral set; phases and human gates apply as before. A job that
+is running can be bumped: it keeps its place if the attempt returns it to the queue.
 
-Whoever runs the command is the operator. `--source NAME` is how a declared
-automation names itself; a name that `[queue.priority] sources` does not declare
-is refused (sub-doctrine 12.j): nothing moves, `JobPriorityRefused` is appended
-to the ledger, and the command exits 3 with the reason. Every bump and un-bump
-appends `JobPriorityBumped` or `JobPriorityUnbumped` in the same transaction as
-the change; `vibey ledger search --kind JobPriorityBumped` finds them. A job that
-has finished, or is in a state or phase this vibey does not know, cannot be
-moved (exit 3).
+**Who may reorder** is decided by the project's own `vibey.toml` — at the root of the
+repository the project record names, never the current directory — and nothing on the
+command line can widen it. With no `--source`, the caller must be the operator: the
+account that owns that file (or the repository root, when there is none), checked by uid.
+With `--source NAME`, `NAME` must be declared in that file's `[queue.priority] sources`
+(see the [configuration reference](configuration.md#queuepriority)) **and** the caller must
+still be that account. Anything else is refused: nothing moves and the command exits 3
+with the reason.
+
+**Every request is recorded** on the project ledger — `JobPriorityBumped`,
+`JobPriorityUnbumped` or `JobPriorityRefused` — whether it moved something, moved
+nothing (bumping a job already bumped, un-bumping one that is not: exit 0 with `nothing
+moved`), or was refused. The grant is checked before the job is looked up, so a refused
+request is recorded whether or not the job exists. `vibey ledger search --kind
+JobPriorityRefused` lists the refusals. Refused with exit 3, and recorded:
+
+- a caller that is not the operator, or a source not declared or not run as the operator;
+- a job that does not exist in the project, has finished, or is in a state or phase this
+  vibey does not know;
+- a bump whose dependency can never finish (failed or cancelled), or a dependency ring —
+  the message names it;
+- an un-bump of a job that a bumped job still depends on — the message names them;
+- a request the database aborted to break a lock cycle (retry it).
 
 ## `vibey deploy`
 
