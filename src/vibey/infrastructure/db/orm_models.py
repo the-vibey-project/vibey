@@ -320,6 +320,9 @@ class JobOrm(VibeyOrmModel, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()")),
     )
     bump_seq: int | None = Field(default=None, sa_column=Column(BigInteger))
+    # Unused since 0015; kept for workers of the 0014 release during a rolling upgrade,
+    # and dropped by the contract migration 0016_drop_job_bump_origin.
+    bump_origin: UUID | None = Field(default=None, sa_column=Column(PostgresUUID(as_uuid=True)))
     bump_named: bool = Field(
         default=False,
         sa_column=Column(Boolean, nullable=False, server_default=text("false")),

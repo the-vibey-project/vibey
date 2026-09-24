@@ -497,6 +497,7 @@ CREATE TABLE job (
     created_at        timestamptz NOT NULL DEFAULT now(),
     updated_at        timestamptz NOT NULL DEFAULT now(),
     bump_seq          bigint,                 -- 0014: place among bumped jobs; NULL = normal order
+    bump_origin       uuid,                   -- 0014; unused since 0015, dropped by 0016 (contract)
     bump_named        boolean NOT NULL DEFAULT false,  -- 0015: in the named set
     CONSTRAINT job_idem_uniq UNIQUE (project_id, idempotency_key),
     CONSTRAINT job_bump_seq_positive CHECK (bump_seq IS NULL OR bump_seq > 0),
@@ -654,10 +655,11 @@ job in normal order; a bump draws it from the sequence `job_bump_seq`
 the order they were bumped, and the order among un-bumped jobs is exactly what it
 was. A sequence and not a timestamp: one bump moves a job and its dependencies in
 one transaction, where `now()` is one instant for all of them (sub-doctrine 10.g).
-`bump_named` (0015, replacing 0014's `bump_origin`) marks the named set: the jobs bumped (or enqueued prioritised) by name and
+`bump_named` (0015, superseding 0014's `bump_origin`, which stays unused until a contract migration drops it) marks the named set: the jobs bumped (or enqueued prioritised) by name and
 not since un-bumped. The lane is derived from it -- the named jobs plus all their
 unfinished transitive dependencies -- so an un-bump clears the target and every pulled job
-the remaining named jobs no longer need, and no orphan can remain.
+the remaining named jobs no longer need, and every bump or un-bump sweeps (and records) any
+pulled job a cancelled or failed named job left behind, so no orphan outlives the next request.
 
 `PostgresJobPriorityStore` (`src/vibey/infrastructure/db/job_priority_repository.py`)
 is reached only through `QueuePriorityService`, which checks the grant first. Each
