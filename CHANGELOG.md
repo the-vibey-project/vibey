@@ -60,6 +60,23 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **storm:** a hung push gate can no longer hold every other push hostage. After one push's
+  pytest sat at 0% CPU for 39 minutes holding the storm's shared push lock, three layers stand
+  in the way. No single test can hang either suite: `timeout = 300` (pytest-timeout, now in
+  both dev extras) fails the test by name and the suite carries on, and `faulthandler_timeout
+  = 240` dumps every thread's stack first; `tests/conftest.py` also dumps them on SIGUSR1,
+  into `VIBEY_PYTEST_STACKS_DIR` when set. The push lock is code:
+  `docs/plans/qwenstorm-3.0.0/tools/push_gate.py` `acquire` / `release` / `run -- git push …`
+  / `status`, an atomic `mkdir` holding an owner record (pid, process group, branch, worktree,
+  start time, uid), released only by its owner, at a declared path (`[push_gate] lock`). Its
+  reaper runs first in every `storm-cycle.py` pass and acts only on a measured condition — the
+  holder is gone; the push's own process group used under `idle_cpu_seconds` (2) over
+  `idle_window_seconds` (600), sampled with `ps -o time` across passes; or it passed
+  `wall_ceiling_seconds` (3600) — writing evidence (process tree, push-log tail, py-spy or
+  SIGUSR1 stacks) before it SIGTERMs, then SIGKILLs, that group and nothing else. Each reap is
+  one line in an append-only reap log, and the push reports `reaped: hang` (exit 124), never
+  a test failure. `--dry-run` reports without acting (sub-doctrines 12.d, 12.e)
+
 * **vibey_gh:** `vibey-gh runner install|check|cleanup|uninstall` stands the sovereign review
   runner up from a new `[runners]` table instead of hand-written LaunchAgents (12.c). Its gh
   credential is a dedicated, file-based login in `~/.config/gh-runner` holding a fine-grained
