@@ -20,6 +20,7 @@ import type {
   BudgetCaps,
   BudgetGuardInterface,
   BudgetStoreInterface,
+  BudgetUsage,
   PaidDeclaration,
   SpendEntry,
   SpendLedgerInterface,
@@ -285,6 +286,18 @@ export class BudgetGuard implements BudgetGuardInterface {
       }
     }
     return undefined;
+  }
+
+  usage(budget: Budget): BudgetUsage | undefined {
+    if (budget.scope === 'run') {
+      return undefined;
+    }
+    const spent = this.spent(budget, '', budget.engine_id ?? '');
+    const exhausted = (['dollars', 'turns', 'minutes'] as const).find((cap) => {
+      const limit = budget.caps[cap];
+      return limit !== undefined && spent[cap] >= limit;
+    });
+    return { spent, ...(exhausted === undefined ? {} : { exhausted }) };
   }
 
   private matching(loop: string, engineId: string): readonly Budget[] {

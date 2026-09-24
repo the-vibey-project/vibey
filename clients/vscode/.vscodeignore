@@ -1,0 +1,17 @@
+# What `vsce package` leaves out of the .vsix. The extension has no runtime dependency, so
+# the package is out/ (compiled), media/, package.json, README.md, LICENSE and CHANGELOG.md.
+src/**
+test/**
+scripts/**
+node_modules/**
+coverage/**
+.vscode-test/**
+.test-scratch/**
+.gitignore
+tsconfig*.json
+vitest.config.mts
+package-lock.json
+**/*.map
+**/*.tsbuildinfo
+*.vsix
+.node-version
