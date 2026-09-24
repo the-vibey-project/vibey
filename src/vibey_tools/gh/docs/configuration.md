@@ -151,6 +151,8 @@ a gate change wearing a dependency's clothes.
 | `plugin_marketplaces` | string list / empty | Claude Code plugin marketplaces loaded by the review, repair, and conflict-resolution jobs. Each entry is an `https://` Git URL, or a repository-relative path resolved inside the trusted checkout of the default branch (never the pull request's own tree). Empty by default: a marketplace that cannot be cloned fails the review outright. |
 | `plugins` | string list / empty | Plugins those jobs install, each `<plugin>@<marketplace>`. Requires at least one `plugin_marketplaces` entry. |
 | `paid_review` | boolean / `false` | The declaration [sub-doctrine 8.b](doctrines.md) asks for before the exact-head review reaches a paid model: may the `review` job call `anthropics/claude-code-action` with `[ai] auth_secret` (by default `ANTHROPIC_API_KEY`)? **False by default**, because 8.b makes a paid counterparty declared-only — undeclared means sovereign only. See [the paid-review declaration](#the-paid-review-declaration-paid_review) below. Must be a TOML boolean; a string or a number is refused when the file is loaded. |
+| `paid_repair` | boolean / `false` | The same declaration for the `repair` job, which hands failing scans (or a declared paid review's findings) to the paid model to edit the branch. Undeclared, the job — and `mirror-fork`'s repair case — is never scheduled, and the gate reports failing scans as `PR review: needs a human (failing scans)`, ending `needs a human: automated repair needs a paid model, and none is declared (8.b).` A declared paid review's findings are then reported with that sentence too, never with a promise that repair will address them. |
+| `paid_conflict_resolution` | boolean / `false` | The same declaration for the `resolve-conflict` job, which hands a merge conflict to the paid model. Undeclared, the job — and `mirror-fork`'s conflict case — is never scheduled, and the evaluation's step summary says `needs a human: automated conflict resolution needs a paid model, and none is declared (8.b)` (the gate publishes nothing for a conflict). |
 
 ### The paid-review declaration (`paid_review`)
 
@@ -201,9 +203,12 @@ execution record instead: when it carries `is_error`, the step fails with `the p
 <review|repair|conflict resolution> was refused by the API: <the API's text, or "no reason
 given">`, and the gate repeats that sentence rather than a bare job result.
 
-**Scope.** This key declares the *review*. The repair and conflict-resolution jobs, which
-also call the paid model when a pull request's scans fail or it conflicts with its base,
-are not governed by it.
+**One key per paid use.** `paid_review`, `paid_repair` and `paid_conflict_resolution` each
+declare one job, the way `review_untrusted_authors` and `repair_untrusted_authors` split the
+same two jobs by author: whether a paid model may *judge* a change and whether it may *edit*
+the branch are different questions, and a repository may answer them differently. With all
+three false — the default — no job in `pr-review.yml` that references the paid model or its
+secret can be scheduled, so the `[ai] auth_secret` repository secret can be deleted.
 
 ### `[pr_automation.observability]`
 

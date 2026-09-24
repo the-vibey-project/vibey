@@ -35,6 +35,11 @@ retain_schedule_backstop = true
 # instead of ANTHROPIC_API_KEY", and "make this honest". So the sovereign lane answers the
 # whole review, and a pull request it cannot review is told it needs a human.
 paid_review = false
+# Repair and conflict resolution call the paid model too, so they are declared the same way,
+# and by the same instruction are not: undeclared, neither job is scheduled, and a failing
+# scan or a merge conflict is reported as needing a human.
+paid_repair = false
+paid_conflict_resolution = false
 
 [pr_automation.observability]
 sanitized_progress = true

@@ -621,13 +621,28 @@ class _Workflow:
     predates it -- the two-lane review, its golden gate -- runs declared, which is the
     configuration it always described; the undeclared path has scenarios of its own."""
 
-    def __init__(self, tmp_path: Path, *, paid_review: bool = True, enabled: bool = True) -> None:
+    def __init__(
+        self,
+        tmp_path: Path,
+        *,
+        paid_review: bool = True,
+        paid_repair: bool | None = None,
+        paid_conflict_resolution: bool | None = None,
+        enabled: bool = True,
+    ) -> None:
         from vibey_gh.config import PrAutomationConfig, PrAutomationFallbackConfig
 
+        # Unless a scenario says otherwise, every paid use is declared together or not at
+        # all: declared is the world the golden gate was captured in.
         cfg = GhConfig(
             root=tmp_path,
             pr_automation=PrAutomationConfig(
-                paid_review=paid_review, fallback=PrAutomationFallbackConfig(enabled=enabled)
+                paid_review=paid_review,
+                paid_repair=paid_review if paid_repair is None else paid_repair,
+                paid_conflict_resolution=(
+                    paid_review if paid_conflict_resolution is None else paid_conflict_resolution
+                ),
+                fallback=PrAutomationFallbackConfig(enabled=enabled),
             ),
         )
         self.text = render_workflow(WORKFLOWS / "pr-review.yml", cfg)
@@ -1223,7 +1238,8 @@ def test_a_repository_that_opts_out_never_offers_the_lane(tmp_path):
     jobs = yaml.safe_load(render_workflow(WORKFLOWS / "pr-review.yml", cfg))["jobs"]
 
     assert jobs["review-sovereign"]["if"].startswith("false &&")
-    assert jobs["evaluate"]["steps"][-1]["env"]["ENABLED"] is False
+    lane = next(step for step in jobs["evaluate"]["steps"] if step.get("id") == "lane")
+    assert lane["env"]["ENABLED"] is False
 
 
 # --------------------------------------------------------------------------------------
@@ -1338,6 +1354,45 @@ def test_combine_composes_a_sovereign_only_review_from_the_command_line(capsys):
 # --------------------------------------------------------------------------------------
 # The declaration itself
 # --------------------------------------------------------------------------------------
+
+
+PAID_DECLARATIONS = ("paid_review", "paid_repair", "paid_conflict_resolution")
+
+
+@pytest.mark.parametrize("key", PAID_DECLARATIONS)
+def test_every_paid_call_in_pr_automation_is_declared_only(tmp_path, key):
+    """8.b, applied to every job that reaches the paid model -- review, repair, conflict
+    resolution -- one key per use, each false unless a human writes it true."""
+    from vibey_gh.config import PrAutomationConfig, load_config
+
+    assert getattr(PrAutomationConfig(), key) is False
+    assert getattr(load_config(tmp_path).pr_automation, key) is False
+    (tmp_path / ".vibey-gh.toml").write_text(f"[pr_automation]\n{key} = true\n", "utf-8")
+    assert getattr(load_config(tmp_path).pr_automation, key) is True
+    (tmp_path / ".vibey-gh.toml").write_text(f'[pr_automation]\n{key} = "true"\n', "utf-8")
+    with pytest.raises(ValueError, match=f"pr_automation.{key} must be true or false"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize("root", ["tenant", "workspace"])
+def test_this_repository_declares_no_paid_pr_automation(root):
+    """The operator's instruction: the sovereign lanes INSTEAD OF ANTHROPIC_API_KEY."""
+    from vibey_gh.config import load_config
+
+    tenant = Path(__file__).resolve().parent.parent
+    where = (
+        tenant
+        if root == "tenant"
+        else next(
+            (parent for parent in tenant.parents if (parent / ".vibey-gh.toml").is_file()), None
+        )
+    )
+    if where is None:  # pragma: no cover - a standalone sdist has no workspace
+        pytest.skip("no workspace configuration outside the tenant")
+    text = (where / ".vibey-gh.toml").read_text(encoding="utf-8")
+    for key in PAID_DECLARATIONS:
+        assert f"{key} = false" in text
+        assert getattr(load_config(where).pr_automation, key) is False
 
 
 def test_a_paid_review_is_declared_only():
@@ -1597,12 +1652,133 @@ def test_undeclared_a_sovereign_lane_that_gives_no_verdict_names_the_reason(unde
 
 
 @needs_bash_and_jq
-@pytest.mark.parametrize("state", ["repair", "blocked"])
-def test_undeclared_every_other_state_is_as_it_was(undeclared, state):
-    run = undeclared.run(heartbeat=True, credits=True, state=state)
+def test_undeclared_a_blocked_head_is_as_it_was(undeclared):
+    run = undeclared.run(heartbeat=True, credits=True, state="blocked")
 
     assert run.jobs["review"]["result"] == "skipped"
-    _assert_gate_is_golden(run.gate, _golden(state, "", "skipped"))
+    _assert_gate_is_golden(run.gate, _golden("blocked", "", "skipped"))
+
+
+_NO_PAID_REPAIR = "needs a human: automated repair needs a paid model, and none is declared (8.b)"
+
+
+@needs_bash_and_jq
+def test_undeclared_failing_scans_are_handed_to_a_human_not_a_paid_model(undeclared):
+    """Failing scans used to start a paid repair. Undeclared, the repair job is never
+    scheduled, and the gate says what that leaves: a person."""
+    run = undeclared.run(heartbeat=True, credits=True, state="repair")
+
+    assert run.jobs["repair"]["result"] == "skipped"
+    assert run.jobs["mirror-fork"]["result"] == "skipped"
+    assert run.gate["conclusion"] == "failure"
+    assert run.gate["title"] == "PR review: needs a human (failing scans)"
+    assert f"completed checks are failing. {_NO_PAID_REPAIR}." in run.gate["summary"]
+
+
+@needs_bash_and_jq
+def test_a_paid_review_without_paid_repair_never_promises_a_repair(tmp_path):
+    """Review declared, repair not: the paid review's findings stand, and the gate no
+    longer says a bounded repair will address them -- nothing will."""
+    workflow = _Workflow(tmp_path, paid_review=True, paid_repair=False)
+    run = workflow.run(heartbeat=False, credits=True, paid=_paid_full(findings=[FINDING]))
+
+    assert run.jobs["review"]["result"] == "success"
+    assert run.jobs["repair"]["result"] == "skipped"
+    assert run.gate["title"] == "PR review: review findings"
+    assert "Bounded repair" not in run.gate["summary"]
+    assert _NO_PAID_REPAIR in run.gate["summary"]
+
+
+@needs_bash_and_jq
+@pytest.mark.parametrize("declared", [True, False])
+def test_a_conflict_says_a_human_is_needed_when_no_paid_resolution_is_declared(tmp_path, declared):
+    """The gate publishes nothing for a conflict (a resolution will move the head), so the
+    evaluation says it, where the run's summary shows it."""
+    workflow = _Workflow(tmp_path, paid_review=True, paid_conflict_resolution=declared)
+    step = workflow._step("evaluate", id="unpaid")
+    context = {"steps": {"evaluate": {"outputs": {"state": "conflict"}}}}
+
+    completed, _ = workflow._bash(step, context, {})
+
+    said = (
+        "needs a human: automated conflict resolution needs a paid model, and none is"
+        " declared (8.b)"
+    )
+    assert completed.returncode == 0
+    assert (said in completed.stdout) is not declared
+    summary = tmp_path / "step-summary.md"
+    assert (summary.exists() and said in summary.read_text("utf-8")) is not declared
+
+
+def _paid_jobs(jobs: dict) -> dict:
+    """Every job that can hand anything to the paid model or read its secret."""
+    return {
+        name: job
+        for name, job in jobs.items()
+        if "claude-code-action" in json.dumps(job) or "ANTHROPIC" in json.dumps(job)
+    }
+
+
+def test_with_nothing_paid_declared_no_job_can_run_with_the_api_key(tmp_path):
+    """What the operator's next step rests on -- deleting the ANTHROPIC_API_KEY secret:
+    with every paid declaration false, every job that references the paid model or its
+    secret carries a literal `false` at the head of its condition, so GitHub can never
+    schedule it, whatever the event, the state or the author."""
+    from vibey_gh.config import PrAutomationConfig
+
+    cfg = GhConfig(root=tmp_path, pr_automation=PrAutomationConfig())
+    jobs = yaml.safe_load(render_workflow(WORKFLOWS / "pr-review.yml", cfg))["jobs"]
+
+    paid = _paid_jobs(jobs)
+    assert set(paid) == {"review", "repair", "resolve-conflict"}
+    for name, job in paid.items():
+        assert job["if"].startswith("false &&"), name
+        assert _truthy(_Expression(job["if"], {}).value()) is False, name
+    # And the ones that stay schedulable never touch it.
+    for name, job in jobs.items():
+        if name not in paid:
+            assert "secrets.ANTHROPIC" not in json.dumps(job), name
+
+
+@pytest.mark.parametrize("key", PAID_DECLARATIONS)
+def test_each_declaration_opens_exactly_its_own_job(tmp_path, key):
+    from vibey_gh.config import PrAutomationConfig
+
+    owner = {
+        "paid_review": "review",
+        "paid_repair": "repair",
+        "paid_conflict_resolution": "resolve-conflict",
+    }
+    cfg = GhConfig(root=tmp_path, pr_automation=PrAutomationConfig(**{key: True}))
+    jobs = yaml.safe_load(render_workflow(WORKFLOWS / "pr-review.yml", cfg))["jobs"]
+
+    for name, job in _paid_jobs(jobs).items():
+        assert job["if"].startswith("true &&" if name == owner[key] else "false &&"), name
+
+
+@pytest.mark.parametrize(
+    ("repair", "conflict", "state", "runs"),
+    [
+        (False, False, "repair", False),
+        (True, False, "repair", True),
+        (False, False, "conflict", False),
+        (False, True, "conflict", True),
+        (True, False, "conflict", False),
+    ],
+)
+def test_a_fork_is_mirrored_only_for_a_declared_paid_job(tmp_path, repair, conflict, state, runs):
+    """Mirroring a fork exists so a paid repair or resolution can work on it. With neither
+    declared it would replace a contributor's pull request for nothing."""
+    workflow = _Workflow(
+        tmp_path, paid_review=False, paid_repair=repair, paid_conflict_resolution=conflict
+    )
+    needs = {
+        "evaluate": {"result": "success", "outputs": {"fork": "true", "state": state}},
+        "review": {"result": "skipped", "outputs": {}},
+    }
+    context = {"inputs": {}, "needs": needs}
+
+    assert _condition(workflow.jobs["mirror-fork"], context, needs) is runs
 
 
 def test_undeclared_the_rendered_workflow_never_schedules_the_paid_review(tmp_path):

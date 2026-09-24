@@ -14,7 +14,11 @@ This file follows Keep a Changelog and semantic versioning conventions.
   --half none`, which refuses any verdict that did not answer both halves. An outside author,
   a fork, a lane switched off, a runner with no fresh heartbeat or a local model with no
   verdict each fail the gate with `needs a human review: <why> (no paid review is declared,
-  8.b)`. `true` keeps the two-lane review exactly as it was. Every local verdict now names
+  8.b)`. `true` keeps the two-lane review exactly as it was. `[pr_automation] paid_repair` and
+  `paid_conflict_resolution` (both default `false`) declare the repair and conflict-resolution
+  jobs the same way: undeclared, neither (nor `mirror-fork` on its behalf) is scheduled, and
+  failing scans or a conflict are reported as `needs a human: automated <repair|conflict
+  resolution> needs a paid model, and none is declared (8.b)`. Every local verdict now names
   the halves it answered under `scope`, and `vibey-gh sovereign` writes its `reason=` to the
   job output beside `ready=`. The review, repair and conflict-resolution jobs report an
   `is_error` execution record as `the paid <job> was refused by the API: <reason or "no
