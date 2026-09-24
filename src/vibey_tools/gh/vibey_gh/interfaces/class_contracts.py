@@ -401,6 +401,14 @@ class RunnersConfigInterface(_ConfigRecordInterface, Protocol):
     @property
     def path(self) -> str: ...
 
+    def resolved_gh_config_dir(self, home: Path) -> Path:
+        """`gh_config_dir` against `home`, with `..` and every symlink resolved."""
+        ...
+
+    def shares_operator_gh_dir(self, home: Path, environ: Mapping[str, str]) -> bool:
+        """Whether `gh_config_dir` resolves to gh's own default directory."""
+        ...
+
     def registration(self, platform: PlatformConfigInterface) -> tuple[str, str, str]:
         """`(owner/name, registration URL, problem)`; the problem is empty when resolvable."""
         ...

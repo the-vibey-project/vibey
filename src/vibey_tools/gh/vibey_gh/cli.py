@@ -746,8 +746,11 @@ def _runner(args, launchctl=None) -> int:
         print(f"vibey-gh runner: {plan.label} matches the tree and its credential is usable")
         return 0
     if args.action == "install":
-        for line in runner.install(plan, load=args.load):
+        lines, loaded = runner.install(plan, load=args.load)
+        for line in lines:
             print(line)
+        if not loaded:
+            return 1
         if not args.load:
             print("nothing was loaded. Next, in order:")
             print(

@@ -43,8 +43,10 @@ from __future__ import annotations
 
 import dataclasses
 import math
+import os
 import re
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -537,10 +539,6 @@ class PrAutomationFallbackConfig:
 _RUNNER_SLUG_RE = re.compile(r"^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
 _RUNNER_PREFIX_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
 _RUNNER_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
-# gh's own configuration directory. The runner's must be a different one: that is the whole
-# point of the key, since the operator's login keeps its token in the macOS keyring and a
-# LaunchAgent cannot read the keyring.
-_OPERATOR_GH_CONFIG_DIRS = ("~/.config/gh", "~/.config/gh/")
 
 
 @dataclass(frozen=True)
@@ -597,10 +595,11 @@ class RunnersConfig:
             value = getattr(self, name)
             if not value.startswith(("/", "~/")):
                 raise ValueError(f"runners.{name} must be absolute or start with ~/: {value!r}")
-        if self.gh_config_dir in _OPERATOR_GH_CONFIG_DIRS:
+        if self.shares_operator_gh_dir(Path(os.path.expanduser("~")), os.environ):
             raise ValueError(
-                "runners.gh_config_dir must be a directory of its own, not gh's default"
-                " (whose login the macOS keyring holds, where launchd cannot read it)"
+                f"runners.gh_config_dir {self.gh_config_dir!r} must be a directory of its own,"
+                " not gh's default (whose login the macOS keyring holds, where launchd cannot"
+                " read it)"
             )
         for name in ("image", "path"):
             if not getattr(self, name).strip():
@@ -614,6 +613,26 @@ class RunnersConfig:
             raise ValueError("runners.throttle_seconds must be between 10 and 3600")
         if not 1 <= self.max_failures <= 100:
             raise ValueError("runners.max_failures must be between 1 and 100")
+
+    def resolved_gh_config_dir(self, home: Path) -> Path:
+        """`gh_config_dir` against `home`, with `..` and every symlink resolved."""
+        declared = self.gh_config_dir
+        path = home / declared[2:] if declared.startswith("~/") else Path(declared)
+        return Path(os.path.realpath(path))
+
+    def shares_operator_gh_dir(self, home: Path, environ: Mapping[str, str]) -> bool:
+        """Whether `gh_config_dir` IS gh's own default directory, however it is spelled.
+
+        gh's default is `$XDG_CONFIG_HOME/gh` when that is set, else `~/.config/gh`. Both are
+        refused, since an operator with XDG set may still keep a login in the other. The
+        comparison is between resolved paths, so an absolute spelling, a `..` or a symlink
+        cannot route the runner onto the operator's keyring-backed login.
+        """
+        defaults = [home / ".config" / "gh"]
+        if environ.get("XDG_CONFIG_HOME"):
+            defaults.append(Path(environ["XDG_CONFIG_HOME"]) / "gh")
+        mine = self.resolved_gh_config_dir(home)
+        return any(Path(os.path.realpath(default)) == mine for default in defaults)
 
     def registration(self, platform: PlatformConfig) -> tuple[str, str, str]:
         """`(owner/name, registration URL, problem)`; the problem is empty when resolvable."""

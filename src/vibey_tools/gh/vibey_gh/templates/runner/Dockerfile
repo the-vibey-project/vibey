@@ -20,9 +20,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 # ("Libicu's dependencies is missing for Dotnet Core"). The runner ships an
 # `installdependencies.sh` that wants sudo at runtime; installing here instead keeps the
 # container's runtime privileges minimal, which is the point of running as `runner`.
+#
+# The native libraries are the ones that script asks apt for, spelled as noble spells them:
+# ubuntu:24.04 renamed liblttng-ust1 and libssl3 in the 64-bit time_t transition, to
+# liblttng-ust1t64 and libssl3t64 (the old names are "not available in this suite" on
+# packages.ubuntu.com/noble). libkrb5-3, zlib1g and libicu74 kept their names.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl git jq python3 python3-pip python3-venv \
-      libicu74 liblttng-ust1 libkrb5-3 zlib1g libssl3 \
+      libicu74 liblttng-ust1t64 libkrb5-3 zlib1g libssl3t64 \
     && rm -rf /var/lib/apt/lists/*
 
 # gh, for the diff fetch. The runner's own GITHUB_TOKEN authorises it; no PAT is baked in.

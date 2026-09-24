@@ -11,11 +11,15 @@ on `PATH`, the same way `test_templates.py` drives the workflow steps.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import plistlib
 import re
+import shlex
 import shutil
+import signal
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -75,11 +79,29 @@ class _Launchctl:
         return self.answers.get(argv[1], (0, ""))
 
 
-def _runner(tmp_path: Path, cfg: GhConfig | None = None, launchctl=None) -> SovereignRunner:
+class _GhStatus:
+    """Records each `gh auth status` argv and environment, and answers with one code."""
+
+    def __init__(self, code: int = 0) -> None:
+        self.code = code
+        self.calls: list[tuple[tuple[str, ...], dict[str, str]]] = []
+
+    def __call__(self, argv: tuple[str, ...], env: dict[str, str]) -> int:
+        self.calls.append((argv, env))
+        return self.code
+
+
+def _runner(
+    tmp_path: Path, cfg: GhConfig | None = None, launchctl=None, gh=None
+) -> SovereignRunner:
     home = tmp_path / "home"
     home.mkdir(exist_ok=True)
     return SovereignRunner(
-        cfg or _cfg(tmp_path), home=home, uid=UID, launchctl=launchctl or _Launchctl()
+        cfg or _cfg(tmp_path),
+        home=home,
+        uid=UID,
+        launchctl=launchctl or _Launchctl(),
+        gh=gh or _GhStatus(),
     )
 
 
@@ -183,6 +205,40 @@ def test_runners_registration_is_declared_or_derived(runners, platform, expected
 def test_runners_invalid_fields_are_refused(field, value):
     with pytest.raises(ValueError, match=rf"^runners\.{field} "):
         RunnersConfig(**{field: value})
+
+
+@pytest.mark.parametrize("spelling", ["absolute", "dotdot", "symlink", "xdg"])
+def test_the_operators_own_gh_directory_is_refused_however_it_is_spelled(
+    tmp_path, monkeypatch, spelling
+):
+    home = tmp_path / "home"
+    (home / ".config/gh").mkdir(parents=True)
+    (home / ".config/gh-runner").mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
+    if spelling == "absolute":
+        declared = str(home / ".config/gh")
+    elif spelling == "dotdot":
+        declared = "~/.config/gh-runner/../gh"
+    elif spelling == "symlink":
+        (home / "link").symlink_to(home / ".config/gh")
+        declared = str(home / "link")
+    else:
+        xdg = tmp_path / "xdg"
+        (xdg / "gh").mkdir(parents=True)
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg))
+        declared = str(xdg / "gh")
+    with pytest.raises(ValueError, match=r"^runners\.gh_config_dir .*not gh's default"):
+        RunnersConfig(gh_config_dir=declared)
+    assert RunnersConfig(gh_config_dir="~/.config/gh-runner").gh_config_dir
+
+
+def test_the_render_refuses_the_operators_gh_directory_under_its_own_home(tmp_path):
+    """Config load checks the invoking user's home; render checks the home it installs into."""
+    cfg = _cfg(tmp_path, gh_config_dir=str(tmp_path / "home/.config/gh-runner/../gh"))
+    plan, problem = _runner(tmp_path, cfg).render()
+    assert plan is None
+    assert problem.startswith("runners.gh_config_dir resolves to gh's default directory")
 
 
 def test_a_toml_runners_table_loads(tmp_path):
@@ -320,6 +376,21 @@ def test_the_dockerfile_takes_its_runner_version_from_the_build_not_a_default():
     assert "2.328.0" not in dockerfile
 
 
+def test_the_image_installs_the_noble_names_the_runner_itself_asks_for():
+    """ubuntu:24.04 renamed two of these in the 64-bit time_t transition (t64).
+
+    Verified against packages.ubuntu.com/noble (liblttng-ust1 and libssl3 are "not available
+    in this suite"; libkrb5-3t64 does not exist) and against actions/runner v2.337.0's
+    installdependencies.sh, which asks apt for libkrb5-3, zlib1g, liblttng-ust1t64,
+    libssl3t64 and the newest libicu it can find (libicu74 on noble).
+    """
+    dockerfile = (TEMPLATES / "Dockerfile").read_text(encoding="utf-8")
+    first = dockerfile.split("apt-get install -y --no-install-recommends", 1)[1]
+    packages = set(first.split("&&", 1)[0].replace("\\", " ").split())
+    assert {"libicu74", "liblttng-ust1t64", "libkrb5-3", "zlib1g", "libssl3t64"} <= packages
+    assert not packages & {"liblttng-ust1", "libssl3", "libkrb5-3t64"}
+
+
 def test_no_template_names_a_repository_or_a_person():
     """Nothing hard-coded (12.c): the supervisor reads everything from its unit."""
     for template in TEMPLATES.iterdir():
@@ -336,8 +407,8 @@ def test_install_writes_every_file_and_loads_nothing(tmp_path):
     launchctl = _Launchctl()
     runner = _runner(tmp_path, launchctl=launchctl)
     plan = _plan(runner)
-    lines = runner.install(plan, load=False)
-    assert lines == [f"wrote {f.path}" for f in plan.files]
+    lines, ok = runner.install(plan, load=False)
+    assert ok and lines == [f"wrote {f.path}" for f in plan.files]
     for rendered in plan.files:
         assert rendered.path.read_text(encoding="utf-8") == rendered.text
         assert bool(rendered.path.stat().st_mode & 0o111) is rendered.executable
@@ -348,7 +419,8 @@ def test_install_with_load_replaces_the_running_agent(tmp_path):
     launchctl = _Launchctl({"bootout": (3, "No such process")})
     runner = _runner(tmp_path, launchctl=launchctl)
     plan = _plan(runner)
-    lines = runner.install(plan, load=True)
+    lines, ok = runner.install(plan, load=True)
+    assert ok
     assert launchctl.calls == [
         ("launchctl", "bootout", f"gui/{UID}/org.vibey.runner-r"),
         ("launchctl", "bootstrap", f"gui/{UID}", str(plan.plist)),
@@ -359,7 +431,8 @@ def test_install_with_load_replaces_the_running_agent(tmp_path):
 def test_install_reports_a_load_that_launchd_refuses(tmp_path):
     launchctl = _Launchctl({"bootstrap": (5, "Input/output error")})
     runner = _runner(tmp_path, launchctl=launchctl)
-    lines = runner.install(_plan(runner), load=True)
+    lines, ok = runner.install(_plan(runner), load=True)
+    assert not ok
     assert lines[-1] == "launchctl bootstrap failed (exit 5): Input/output error"
 
 
@@ -386,15 +459,37 @@ def test_next_steps_are_the_exact_commands_in_order(tmp_path):
         ),
         "vibey-gh runner check",
         (
-            f"env -u GH_TOKEN -u GITHUB_TOKEN GH_CONFIG_DIR={gh_dir} gh api"
-            " repos/o/r/actions/runners --jq"
+            f"env -u GH_TOKEN -u GITHUB_TOKEN GH_CONFIG_DIR={gh_dir} gh api --hostname"
+            " github.com repos/o/r/actions/runners --jq"
             " '.runners[] | {name, status, busy, labels: [.labels[].name]}'"
         ),
     ]
 
 
+def test_next_steps_quote_every_path_for_the_shell(tmp_path):
+    install = tmp_path / "Application Support/vibey runner"
+    gh_dir = tmp_path / "my gh"
+    agents = tmp_path / "Launch Agents"
+    cfg = _cfg(
+        tmp_path,
+        install_dir=str(install),
+        gh_config_dir=str(gh_dir),
+        launch_agents_dir=str(agents),
+        image="reg.example/it's:1",
+    )
+    runner = _runner(tmp_path, cfg)
+    plan = _plan(runner)
+    words = [shlex.split(step) for step in runner.next_steps(plan)]
+    assert words[0] == ["mkdir", "-m", "700", "-p", str(gh_dir)]
+    assert f"GH_CONFIG_DIR={gh_dir}" in words[1]
+    assert words[2][-3:] == ["-t", "reg.example/it's:1", str(install)]
+    assert words[3][-1] == str(plan.plist)
+    assert f"GH_CONFIG_DIR={gh_dir}" in words[5] and words[5][-1].startswith(".runners[]")
+
+
 def test_check_reports_missing_drift_and_the_credential_then_passes(tmp_path):
-    runner = _runner(tmp_path)
+    gh = _GhStatus(0)
+    runner = _runner(tmp_path, gh=gh)
     plan = _plan(runner)
     home = tmp_path / "home"
     gh_dir = home / ".config/gh-runner"
@@ -427,9 +522,38 @@ def test_the_credential_check_names_what_is_wrong_and_never_the_token(tmp_path, 
         (home / ".config/gh-runner").mkdir(parents=True)
     else:
         _login(home, token=setup != "keyring", mode=0o644 if setup == "readable" else 0o600)
-    (problem,) = runner.credential_problems()
+    (problem,) = runner.credential_problems(_plan(runner))
     assert expected in problem
     assert SECRET not in problem
+
+
+def test_the_credential_is_usable_only_when_github_accepts_it(tmp_path, monkeypatch):
+    monkeypatch.setenv("GH_TOKEN", "ambient")
+    monkeypatch.setenv("GITHUB_TOKEN", "ambient")
+    monkeypatch.setenv("GH_ENTERPRISE_TOKEN", "ambient")
+    gh = _GhStatus(1)
+    cfg = GhConfig(
+        root=tmp_path,
+        platform=PlatformConfig(kind="github", host="ghe.example"),
+        runners=RunnersConfig(repository="o/r"),
+    )
+    runner = _runner(tmp_path, cfg, gh=gh)
+    gh_dir = _login(tmp_path / "home")
+    (problem,) = runner.credential_problems(_plan(runner))
+    assert problem.startswith(f"the token in {gh_dir} is not accepted by ghe.example")
+    assert SECRET not in problem
+    ((argv, env),) = gh.calls
+    assert argv == ("gh", "auth", "status", "--hostname", "ghe.example")
+    assert env["GH_CONFIG_DIR"] == str(gh_dir)
+    assert not {"GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN"} & set(env)
+    gh.code = 0
+    assert runner.credential_problems(_plan(runner)) == []
+
+
+def test_the_default_gh_seam_runs_gh_quietly_and_reports_its_status(tmp_path):
+    runner = SovereignRunner(_cfg(tmp_path), home=tmp_path, uid=UID)
+    assert runner._gh_status(("sh", "-c", "echo secret-output; exit 3"), {"PATH": "/bin"}) == 3
+    assert runner._gh_status(("/nonexistent/gh-for-test",), {}) == 127
 
 
 # --- cleanup and uninstall ---------------------------------------------------------------
@@ -496,6 +620,30 @@ def test_cleanup_applied_unloads_and_moves_aside_never_deletes(tmp_path):
         f"moved {old} to {retired / old.name}",
     ]
     assert not old.exists() and (retired / old.name).is_file()
+
+
+def test_cleanup_never_overwrites_an_earlier_retired_copy(tmp_path):
+    runner = _runner(tmp_path)
+    plan = _plan(runner)
+    agents = plan.plist.parent
+    retired = tmp_path / "home/.local/share/vibey-runner/retired-units"
+    first = _agent(agents, "org.vibey.runner-gone.plist", "org.vibey.runner-gone", "first")
+    runner.remove(runner.strays(plan), apply=True)
+    _agent(agents, first.name, "org.vibey.runner-gone", "second")
+    dry = runner.remove(runner.strays(plan), apply=False)
+    assert dry[0].endswith(f"to {retired / 'org.vibey.runner-gone.1.plist'} [serves second]")
+    runner.remove(runner.strays(plan), apply=True)
+    _agent(agents, first.name, "org.vibey.runner-gone", "third")
+    runner.remove(runner.strays(plan), apply=True)
+    urls = {
+        path.name: plistlib.loads(path.read_bytes())["EnvironmentVariables"]["VIBEY_REPO_URL"]
+        for path in retired.iterdir()
+    }
+    assert urls == {
+        "org.vibey.runner-gone.plist": "first",
+        "org.vibey.runner-gone.1.plist": "second",
+        "org.vibey.runner-gone.2.plist": "third",
+    }
 
 
 def test_nothing_to_clean_says_so(tmp_path):
@@ -568,12 +716,26 @@ def test_cli_install_writes_files_and_prints_the_next_commands(tmp_path, monkeyp
     assert plist.is_file()
 
 
+def _fake_gh_on_path(tmp_path: Path, monkeypatch, code: int) -> None:
+    bin_dir = tmp_path / "fake-gh"
+    bin_dir.mkdir(exist_ok=True)
+    (bin_dir / "gh").write_text(f"#!/bin/sh\necho {SECRET}\nexit {code}\n", encoding="utf-8")
+    (bin_dir / "gh").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}:{os.environ['PATH']}")
+
+
 def test_cli_check_passes_after_install_and_login_then_catches_drift(tmp_path, monkeypatch, capsys):
     home = _repo(tmp_path, monkeypatch)
     assert main(["runner", "check"]) == 1
     main(["runner", "install"])
     _login(home)
+    _fake_gh_on_path(tmp_path, monkeypatch, 1)
     capsys.readouterr()
+    assert main(["runner", "check"]) == 1
+    captured = capsys.readouterr()
+    assert "is not accepted by github.com" in captured.err
+    assert SECRET not in captured.out + captured.err
+    _fake_gh_on_path(tmp_path, monkeypatch, 0)
     assert main(["runner", "check"]) == 0
     assert "vibey-gh runner: org.vibey.runner-r matches the tree" in capsys.readouterr().out
     plist = home / "Library/LaunchAgents/org.vibey.runner-r.plist"
@@ -618,6 +780,9 @@ def test_cli_apply_goes_through_the_launchctl_seam(tmp_path, monkeypatch, capsys
     args = argparse.Namespace(action="install", apply=False, load=True)
     assert cli._runner(args, launchctl=launchctl) == 0
     assert "loaded org.vibey.runner-r" in capsys.readouterr().out
+    refused = _Launchctl({"bootstrap": (5, "Input/output error")})
+    assert cli._runner(args, launchctl=refused) == 1
+    assert "launchctl bootstrap failed (exit 5)" in capsys.readouterr().out
 
 
 # --- the supervisor's refusals, driven through fake binaries -----------------------------
@@ -632,12 +797,20 @@ case "$name $1" in
   "gh api")
     case "$*" in
       *registration-token*) cat "$FAKE_DIR/token" 2>/dev/null ;;
+      *" -X DELETE "*) ;;
+      *actions/runners) cat "$FAKE_DIR/runners.json" 2>/dev/null ;;
     esac
     exit 0 ;;
   "docker info") exit "$(cat "$FAKE_DIR/docker_rc" 2>/dev/null || echo 0)" ;;
   "docker image") exit 0 ;;
   "docker ps") exit 0 ;;
-  "docker run") printf 'RUNNER_TOKEN=%s\n' "${RUNNER_TOKEN:-}" >> "$FAKE_DIR/calls"; exit 1 ;;
+  "docker run")
+    printf 'RUNNER_TOKEN=%s\n' "${RUNNER_TOKEN:-}" >> "$FAKE_DIR/calls"
+    case "$(cat "$FAKE_DIR/run_mode" 2>/dev/null)" in
+      hang) exec sleep 30 ;;
+      ok) exit 0 ;;
+    esac
+    exit 1 ;;
   "pmset -g") echo "Now drawing from 'AC Power'" ;;
 esac
 exit 0
@@ -656,6 +829,20 @@ _ENV = {
 
 
 def _supervise(tmp_path: Path, *, gh_dir: Path | None, **env: str):
+    base, fake = _harness(tmp_path, gh_dir=gh_dir, **env)
+    done = subprocess.run(
+        ["bash", str(SUPERVISOR)],
+        env=base,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,  # the exit status IS the assertion
+    )
+    calls = (fake / "calls").read_text(encoding="utf-8") if (fake / "calls").exists() else ""
+    return done.returncode, done.stdout + done.stderr, calls, fake
+
+
+def _harness(tmp_path: Path, *, gh_dir: Path | None, **env: str) -> tuple[dict[str, str], Path]:
     if shutil.which("bash") is None:  # pragma: no cover - every supported host has bash
         pytest.skip("the supervisor is a bash script")
     fake = tmp_path / "fake"
@@ -676,16 +863,7 @@ def _supervise(tmp_path: Path, *, gh_dir: Path | None, **env: str):
     if gh_dir is not None:
         base["GH_CONFIG_DIR"] = str(gh_dir)
     base.update(env)
-    done = subprocess.run(
-        ["bash", str(SUPERVISOR)],
-        env=base,
-        capture_output=True,
-        text=True,
-        timeout=60,
-        check=False,  # the exit status IS the assertion
-    )
-    calls = (fake / "calls").read_text(encoding="utf-8") if (fake / "calls").exists() else ""
-    return done.returncode, done.stdout + done.stderr, calls, fake
+    return base, fake
 
 
 def test_the_supervisor_refuses_without_a_dedicated_config_dir(tmp_path):
@@ -774,7 +952,8 @@ def test_the_supervisor_registers_with_the_dedicated_credential_only(tmp_path):
     mint = [line for line in calls.splitlines() if "registration-token" in line]
     assert mint == [
         (
-            "gh api -X POST repos/o/r/actions/runners/registration-token --jq .token"
+            "gh api --hostname github.com -X POST repos/o/r/actions/runners/registration-token"
+            " --jq .token"
             f"|GH_CONFIG_DIR={gh_dir}|GH_TOKEN=|GITHUB_TOKEN="
         )
     ]
@@ -813,3 +992,122 @@ def test_the_runbook_and_the_code_name_the_same_permission():
     text = runbook.read_text(encoding="utf-8")
     assert PAT_PERMISSION in text and PAT_PERMISSION in SUPERVISOR.read_text(encoding="utf-8")
     assert f"RUNNER_VERSION={RunnersConfig().runner_version}" in text
+
+
+def _fake_files(tmp_path: Path, **files: str) -> None:
+    fake = tmp_path / "fake"
+    fake.mkdir(exist_ok=True)
+    for name, text in files.items():
+        (fake / name).write_text(text, encoding="utf-8")
+
+
+@pytest.mark.parametrize("spelling", ["symlink", "dotdot", "xdg"])
+def test_the_supervisor_refuses_the_operators_own_gh_directory(tmp_path, spelling):
+    operator = _login(tmp_path).parent / "gh"
+    operator.mkdir()
+    (operator / "hosts.yml").write_text(f"github.com:\n    oauth_token: {SECRET}\n")
+    (operator / "hosts.yml").chmod(0o600)
+    extra: dict[str, str] = {}
+    if spelling == "symlink":
+        (tmp_path / "link").symlink_to(operator)
+        gh_dir = tmp_path / "link"
+    elif spelling == "dotdot":
+        gh_dir = tmp_path / ".config/gh-runner/../gh"
+    else:
+        xdg = tmp_path / "xdg"
+        xdg.mkdir()
+        (xdg / "gh").symlink_to(tmp_path / ".config/gh-runner")
+        gh_dir = tmp_path / ".config/gh-runner"
+        extra["XDG_CONFIG_HOME"] = str(xdg)
+    code, out, calls, _ = _supervise(tmp_path, gh_dir=gh_dir, **extra)
+    assert code == 1 and "is gh's default directory" in out
+    assert "gh " not in calls and SECRET not in out
+
+
+def test_every_gh_call_names_the_configured_host(tmp_path):
+    _fake_files(tmp_path, token="REGTOKEN123\n")
+    code, _, calls, _ = _supervise(
+        tmp_path, gh_dir=_login(tmp_path), VIBEY_REPO_URL="https://ghe.example/o/r"
+    )
+    assert code == 1
+    gh_calls = [line.split("|")[0] for line in calls.splitlines() if line.startswith("gh ")]
+    assert any("registration-token" in call for call in gh_calls)
+    assert gh_calls and all("--hostname ghe.example" in call for call in gh_calls)
+
+
+@pytest.mark.parametrize(
+    ("label", "runners", "reaped"),
+    [
+        (
+            "vibey-local",
+            [
+                (1, "offline", ["self-hosted", "vibey-local"]),
+                (2, "offline", ["self-hosted", "vibey-local-other"]),
+                (3, "online", ["vibey-local"]),
+                (4, "offline", ["xvibey-local"]),
+            ],
+            {"1"},
+        ),
+        (
+            'we"ird',
+            [(7, "offline", ['we"ird']), (8, "offline", ["we"]), (9, "offline", ['we"irder'])],
+            {"7"},
+        ),
+    ],
+)
+def test_the_supervisor_reaps_only_offline_runners_with_exactly_its_label(
+    tmp_path, label, runners, reaped
+):
+    if shutil.which("jq", path="/usr/bin:/bin") is None:  # pragma: no cover - macOS ships jq
+        pytest.skip("the supervisor filters runners with jq")
+    body = {
+        "runners": [
+            {"id": i, "status": status, "labels": [{"name": n} for n in names]}
+            for i, status, names in runners
+        ]
+    }
+    _fake_files(tmp_path, token="REGTOKEN123\n", **{"runners.json": json.dumps(body)})
+    code, _, calls, _ = _supervise(tmp_path, gh_dir=_login(tmp_path), VIBEY_RUNNER_LABEL=label)
+    assert code == 1
+    deleted = {
+        line.split("|")[0].rsplit("/", 1)[1] for line in calls.splitlines() if " -X DELETE " in line
+    }
+    assert deleted == reaped
+
+
+def _poll(path: Path, needle: str, seconds: float = 20.0) -> None:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if path.exists() and needle in path.read_text(encoding="utf-8"):
+            return
+        time.sleep(0.05)
+    raise AssertionError(f"{needle!r} never appeared in {path}")  # pragma: no cover
+
+
+@pytest.mark.parametrize("during", ["hang", "ok"])
+def test_a_signal_stops_the_supervisor_without_registering_again(tmp_path, during):
+    """TERM during `docker run` (hang) or during the pause after it (ok) ends the loop."""
+    _fake_files(tmp_path, token="REGTOKEN123\n", run_mode=during)
+    env, fake = _harness(tmp_path, gh_dir=_login(tmp_path), VIBEY_MAX_FAILURES="5")
+    proc = subprocess.Popen(
+        ["bash", str(SUPERVISOR)],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    try:
+        _poll(fake / "calls", "docker run")
+        time.sleep(0.3)  # into the `docker run` (hang) or the pause after it (ok)
+        started = time.monotonic()
+        proc.send_signal(signal.SIGTERM)
+        out, _ = proc.communicate(timeout=15)
+    finally:
+        if proc.poll() is None:  # pragma: no cover - only when the assertion below fails
+            proc.kill()
+    assert proc.returncode == 143
+    assert time.monotonic() - started < 4  # neither the 30s run nor the 5s pause was waited out
+    calls = (fake / "calls").read_text(encoding="utf-8").splitlines()
+    assert len([c for c in calls if "registration-token" in c]) == 1
+    assert len([c for c in calls if c.startswith("docker run")]) == 1
+    assert out.count("supervisor stopping") == 1

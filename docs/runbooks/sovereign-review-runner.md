@@ -31,8 +31,11 @@ stored in a file by `gh auth login --insecure-storage`, and it holds a token tha
 nothing but manage this repository's runners. The supervisor refuses to start, and logs the
 command that fixes it, if that directory is unset or missing, if it holds no login, if its
 token went to the keyring, if its `hosts.yml` is readable by other users, or if GitHub
-rejects the token. It clears `GH_TOKEN` and `GITHUB_TOKEN` and never falls back to any other
-credential. It never prints the token.
+rejects the token. It also refuses a `GH_CONFIG_DIR` that resolves (through symlinks and
+`..`) to gh's own default directory, `$XDG_CONFIG_HOME/gh` or `~/.config/gh`; so does
+`vibey-gh` when it loads the configuration. It clears `GH_TOKEN` and `GITHUB_TOKEN`, names
+the configured host on every `gh` call, and never falls back to any other credential. It
+never prints the token.
 
 ### The token's permission
 
@@ -85,7 +88,9 @@ Run these from a checkout of this repository on `develop`, so `vibey-gh` reads i
    ```
 
    `--apply` boots each one out of launchd and moves its plist to
-   `~/.local/share/vibey-runner/retired-units/`. Nothing is deleted. To put one back:
+   `~/.local/share/vibey-runner/retired-units/`. Nothing is deleted, and an earlier retired
+   copy is never replaced: a second copy of the same agent is kept as `<name>.1.plist`, then
+   `.2`, and so on. To put one back:
    `mv ~/.local/share/vibey-runner/retired-units/<name>.plist ~/Library/LaunchAgents/`, then
    `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/<name>.plist`.
 
@@ -109,7 +114,8 @@ Run these from a checkout of this repository on `develop`, so `vibey-gh` reads i
    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.adammatthewsteinberger.vibey-runner-vibey.plist
    ```
 
-   `uv run vibey-gh runner install --load` does steps 4 and 6 together.
+   `uv run vibey-gh runner install --load` does steps 4 and 6 together, and exits non-zero
+   if launchd refuses to load the agent.
 
 ## Verify
 
@@ -117,12 +123,15 @@ Run these from a checkout of this repository on `develop`, so `vibey-gh` reads i
 uv run vibey-gh runner check
 tail -n 20 ~/Library/Logs/com.adammatthewsteinberger.vibey-runner-vibey.log
 env -u GH_TOKEN -u GITHUB_TOKEN GH_CONFIG_DIR=$HOME/.config/gh-runner \
-  gh api repos/the-vibey-project/vibey/actions/runners \
+  gh api --hostname github.com repos/the-vibey-project/vibey/actions/runners \
   --jq '.runners[] | {name, status, busy, labels: [.labels[].name]}'
 ```
 
 - `runner check` prints `... matches the tree and its credential is usable` and exits 0.
-  Otherwise it names each `missing:`, `drift:`, `not executable:` or `credential:` problem.
+  "Usable" means GitHub accepted the token: it runs `gh auth status --hostname github.com`
+  under the runner's `GH_CONFIG_DIR` with `GH_TOKEN` and `GITHUB_TOKEN` unset, and prints
+  none of gh's output. Otherwise it names each `missing:`, `drift:`, `not executable:` or
+  `credential:` problem.
 - The log shows `supervisor starting` and then `registering an ephemeral runner`. A line
   starting `REFUSING TO START:` names what is missing and the command that fixes it. The log
   moved: it was `~/Library/Logs/vibey-runner-vibey.log`, and is now named after the agent.

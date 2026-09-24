@@ -106,12 +106,28 @@ if [ -z "${GH_CONFIG_DIR:-}" ]; then
 keyring, which launchd cannot read). 'vibey-gh runner install' sets it from [runners] gh_config_dir"
 fi
 export GH_CONFIG_DIR
-LOGIN="env -u GH_TOKEN -u GITHUB_TOKEN GH_CONFIG_DIR=$GH_CONFIG_DIR gh auth login \
+Q_DIR=$(printf '%q' "$GH_CONFIG_DIR")
+LOGIN="env -u GH_TOKEN -u GITHUB_TOKEN GH_CONFIG_DIR=$Q_DIR gh auth login \
 --hostname $GH_HOSTNAME --with-token --insecure-storage   (paste the runner's fine-grained \
 token for $REPO_SLUG -- Administration: Read and write -- then Ctrl-D; see \
 docs/runbooks/sovereign-review-runner.md)"
 [ -d "$GH_CONFIG_DIR" ] || refuse "the runner's gh config directory $GH_CONFIG_DIR does not \
-exist. Create it and log in: mkdir -m 700 -p $GH_CONFIG_DIR && $LOGIN"
+exist. Create it and log in: mkdir -m 700 -p $Q_DIR && $LOGIN"
+
+# The directory must not BE gh's default one, however GH_CONFIG_DIR spells it: resolved with
+# `pwd -P`, so a symlink, a `..` or an absolute spelling cannot route the runner onto the
+# operator's keyring-backed login. gh's default is $XDG_CONFIG_HOME/gh when that is set, else
+# ~/.config/gh; both are refused.
+resolve_dir() { (cd "$1" 2> /dev/null && pwd -P); }
+RUNNER_DIR=$(resolve_dir "$GH_CONFIG_DIR")
+for default in "${XDG_CONFIG_HOME:+$XDG_CONFIG_HOME/gh}" "$HOME/.config/gh"; do
+  [ -n "$default" ] || continue
+  resolved=$(resolve_dir "$default") || continue
+  if [ "$resolved" = "$RUNNER_DIR" ]; then
+    refuse "GH_CONFIG_DIR $GH_CONFIG_DIR is gh's default directory ($resolved), the \
+operator's own login. Give the runner a directory of its own ([runners] gh_config_dir)"
+  fi
+done
 HOSTS="$GH_CONFIG_DIR/hosts.yml"
 [ -f "$HOSTS" ] || refuse "$GH_CONFIG_DIR holds no gh login (no hosts.yml). Log in: $LOGIN"
 grep -Eq '^[[:space:]]+oauth_token:[[:space:]]*[^[:space:]]' "$HOSTS" || refuse "$HOSTS holds \
@@ -131,34 +147,66 @@ fi
 
 # Checked explicitly: under `set -e` a dead daemon used to end this script silently at the
 # first `docker ps`, leaving a log of nothing but "supervisor stopping" every two minutes.
+command -v jq > /dev/null 2>&1 || refuse "jq is not on PATH -- it filters the runners to \
+reap (macOS ships /usr/bin/jq; otherwise brew install jq)"
 docker info > /dev/null 2>&1 || refuse "docker is not running -- start Docker Desktop (the \
 runner is a container)"
 docker image inspect "$RUNNER_IMAGE" > /dev/null 2>&1 || refuse "the image $RUNNER_IMAGE is \
 not built -- run the 'docker build' command 'vibey-gh runner install' printed"
 
+# Every gh call names the host: `gh api` otherwise talks to github.com, and a GitHub
+# Enterprise runner would mint and reap against the wrong forge.
 mint_token() {
-  gh api -X POST "repos/${REPO_SLUG}/actions/runners/registration-token" --jq .token 2> /dev/null
+  gh api --hostname "$GH_HOSTNAME" -X POST \
+    "repos/${REPO_SLUG}/actions/runners/registration-token" --jq .token 2> /dev/null
 }
 
 # Reap offline runners left behind by a container that was killed mid-life. The container
 # cannot do this itself: `config.sh remove` needs a REMOVAL token, a different credential
 # from the registration token it holds. The host has gh, so it does the reaping.
+#
+# Only runners carrying EXACTLY this label are touched: `vibey-local` must never reap an
+# unrelated `vibey-local-other`. The label reaches jq as an argument (`--arg`), never as
+# program text, so a quote in it is data.
 reap_offline() {
   local ids
-  ids=$(gh api "repos/${REPO_SLUG}/actions/runners" \
-    --jq ".runners[] | select(.status == \"offline\" and (.labels[].name | contains(\"${RUNNER_LABEL}\"))) | .id" \
-    2> /dev/null | sort -u) || true
+  ids=$(gh api --hostname "$GH_HOSTNAME" --paginate "repos/${REPO_SLUG}/actions/runners" \
+    2> /dev/null \
+    | jq -r --arg label "$RUNNER_LABEL" \
+      '.runners[] | select(.status == "offline" and any(.labels[]; .name == $label)) | .id' \
+      2> /dev/null | sort -u) || true
   for id in $ids; do
-    gh api -X DELETE "repos/${REPO_SLUG}/actions/runners/${id}" > /dev/null 2>&1 \
-      && log "reaped offline runner ${id}"
+    gh api --hostname "$GH_HOSTNAME" -X DELETE "repos/${REPO_SLUG}/actions/runners/${id}" \
+      > /dev/null 2>&1 && log "reaped offline runner ${id}"
   done
+}
+
+# Children run in the background and are `wait`ed for, because bash defers a trapped signal
+# until a FOREGROUND child returns: a TERM from launchd during `docker run` would otherwise
+# wait out the whole job, and one during the pause would let the loop mint and register
+# again. `wait` returns as soon as the signal lands; the handler stops the child and EXITs,
+# and the EXIT trap does the cleanup once.
+child=""
+run_child() {
+  "$@" &
+  child=$!
+  local status=0
+  wait "$child" || status=$?
+  child=""
+  return "$status"
+}
+on_signal() {
+  [ -z "$child" ] || kill -TERM "$child" 2> /dev/null || true
+  exit "$1"
 }
 
 cleanup() {
   log "supervisor stopping; sleep assertions released"
   reap_offline
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'on_signal 130' INT
+trap 'on_signal 143' TERM
 
 # Stop any container this supervisor left behind. `docker run` is owned by the Docker
 # daemon, not by this shell, so a SIGKILL here (launchd restarting the job, a hard kill)
@@ -191,7 +239,7 @@ ${GH_CONFIG_DIR} -- its token needs Administration: Read and write on that repos
   # so keep Ollama bound to loopback and treat it as the trust boundary. The registration
   # token goes over the environment (`-e RUNNER_TOKEN` with no value copies it from this
   # process), never the argv, where any local user's `ps` could read it.
-  if RUNNER_TOKEN="$token" docker run --rm \
+  if RUNNER_TOKEN="$token" run_child docker run --rm \
     --label "vibey-runner-label=${RUNNER_LABEL}" \
     --add-host host.docker.internal:host-gateway \
     -e RUNNER_REPOSITORY_URL="$REPO_URL" \
@@ -213,5 +261,5 @@ ${GH_CONFIG_DIR} -- its token needs Administration: Read and write on that repos
     fi
   fi
   token=""
-  sleep 5
+  run_child sleep 5
 done

@@ -15,9 +15,14 @@ This file follows Keep a Changelog and semantic versioning conventions.
   repository default), uses only `GH_CONFIG_DIR`'s file-based token (clearing `GH_TOKEN` and
   `GITHUB_TOKEN`, refusing a keyring-held or world-readable login), checks Docker and its
   image explicitly instead of dying silently under `set -e`, and hands the registration
-  token to the container through the environment rather than the argv. `install` loads
-  nothing without `--load`; `cleanup` and `uninstall` are dry runs without `--apply`, and
-  cleanup moves plists aside rather than deleting them.
+  token to the container through the environment rather than the argv. It names the
+  configured host on every `gh` call, reaps only offline runners whose label equals its own
+  (passed to jq with `--arg`), refuses a `GH_CONFIG_DIR` that resolves to gh's default
+  directory, and stops on TERM or INT without registering again. The runner image installs
+  noble's `liblttng-ust1t64` and `libssl3t64`. `install` loads nothing without `--load`, and
+  exits non-zero when launchd refuses the agent; `check` asks GitHub whether the token is
+  accepted; `cleanup` and `uninstall` are dry runs without `--apply`, and cleanup moves
+  plists aside without ever replacing an earlier retired copy.
 
 - `approve-check PR [--head SHA] [--approve] [--body TEXT]`: the delegated approver's grant,
   enforced by code; `--approve` submits one approval pinned to `--head`, only after every

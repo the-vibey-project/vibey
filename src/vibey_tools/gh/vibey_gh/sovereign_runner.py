@@ -23,9 +23,10 @@ Three rules shape it:
 
 from __future__ import annotations
 
+import os
 import plistlib
 import re
-import shutil
+import shlex
 import stat
 import subprocess
 from collections.abc import Callable, Sequence
@@ -51,14 +52,19 @@ TEMPLATES = Path(__file__).parent / "templates" / "runner"
 # access tokens"). Named once, so the CLI, the refusal and the runbook cannot disagree.
 PAT_PERMISSION = "Administration: Read and write"
 RETIRED_DIR = "retired-units"
-_RUNNERS_JQ = "'.runners[] | {name, status, busy, labels: [.labels[].name]}'"
+_RUNNERS_JQ = ".runners[] | {name, status, busy, labels: [.labels[].name]}"
 _NO_AMBIENT_TOKEN = "env -u GH_TOKEN -u GITHUB_TOKEN"
 # A token gh wrote into hosts.yml itself (`--insecure-storage`). Without the flag gh writes
 # the user entry and keeps the token in the keyring, so this key is simply absent. The same
 # pattern the supervisor greps for.
 _STORED_TOKEN = re.compile(r"^[ \t]+oauth_token:[ \t]*\S", re.MULTILINE)
 
+# The environment variables gh prefers over any stored login. Stripped from every gh call
+# made on the runner's behalf, so the answer is about the dedicated login and nothing else.
+_AMBIENT_TOKENS = ("GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN")
+
 Launchctl = Callable[[tuple[str, ...]], tuple[int, str]]
+GhStatus = Callable[[tuple[str, ...], dict[str, str]], int]
 
 
 @dataclass(frozen=True)
@@ -101,6 +107,7 @@ class SovereignRunner:
         uid: int,
         templates: Path | None = None,
         launchctl: Launchctl | None = None,
+        gh: GhStatus | None = None,
     ) -> None:
         self._cfg = cfg
         self._runners = cfg.runners
@@ -108,6 +115,7 @@ class SovereignRunner:
         self._uid = uid
         self._templates = templates or TEMPLATES
         self._launch = launchctl or self._launchctl
+        self._gh = gh or self._gh_status
 
     # --- paths ----------------------------------------------------------------------------
 
@@ -138,6 +146,12 @@ class SovereignRunner:
         slug, url, problem = self._runners.registration(self._cfg.platform)
         if problem:
             return None, problem
+        if self._runners.shares_operator_gh_dir(self._home, os.environ):
+            return None, (
+                f"runners.gh_config_dir resolves to gh's default directory"
+                f" ({self._runners.resolved_gh_config_dir(self._home)}), the operator's own"
+                " login; give the runner a directory of its own"
+            )
         label = f"{self._runners.unit_prefix}-{slug.split('/')[1]}"
         install = self._install_dir
         plist = self._agents_dir / f"{label}.plist"
@@ -173,7 +187,7 @@ class SovereignRunner:
 
     # --- install and verify ---------------------------------------------------------------
 
-    def install(self, plan: RunnerPlan, *, load: bool) -> list[str]:
+    def install(self, plan: RunnerPlan, *, load: bool) -> tuple[list[str], bool]:
         lines = []
         for rendered in plan.files:
             rendered.path.parent.mkdir(parents=True, exist_ok=True)
@@ -192,25 +206,38 @@ class SovereignRunner:
                 if code == 0
                 else f"launchctl bootstrap failed (exit {code}): {output}"
             )
-        return lines
+            return lines, code == 0
+        return lines, True
 
     def next_steps(self, plan: RunnerPlan) -> list[str]:
-        host = plan.repo_url.split("/")[2]
-        gh = f"{_NO_AMBIENT_TOKEN} GH_CONFIG_DIR={self._gh_dir}"
+        """Shell commands, every path and value quoted: `[runners]` paths may hold spaces."""
+        q = shlex.quote
+        host = q(self._host(plan))
+        gh_dir = q(str(self._gh_dir))
+        gh = f"{_NO_AMBIENT_TOKEN} GH_CONFIG_DIR={gh_dir}"
+        version = q(self._runners.runner_version)
+        target = f"gui/{self._uid}"
         return [
-            f"mkdir -m 700 -p {self._gh_dir}",
+            f"mkdir -m 700 -p {gh_dir}",
             f"{gh} gh auth login --hostname {host} --with-token --insecure-storage",
             (
-                f"docker build --build-arg RUNNER_VERSION={self._runners.runner_version}"
-                f" -t {self._runners.image} {self._install_dir}"
+                f"docker build --build-arg RUNNER_VERSION={version}"
+                f" -t {q(self._runners.image)} {q(str(self._install_dir))}"
             ),
             (
-                f"launchctl bootout gui/{self._uid}/{plan.label} 2>/dev/null;"
-                f" launchctl bootstrap gui/{self._uid} {plan.plist}"
+                f"launchctl bootout {q(f'{target}/{plan.label}')} 2>/dev/null;"
+                f" launchctl bootstrap {target} {q(str(plan.plist))}"
             ),
             "vibey-gh runner check",
-            f"{gh} gh api repos/{plan.repository}/actions/runners --jq {_RUNNERS_JQ}",
+            (
+                f"{gh} gh api --hostname {host}"
+                f" {q(f'repos/{plan.repository}/actions/runners')} --jq {q(_RUNNERS_JQ)}"
+            ),
         ]
+
+    @staticmethod
+    def _host(plan: RunnerPlan) -> str:
+        return plan.repo_url.split("/")[2]
 
     def check(self, plan: RunnerPlan) -> list[str]:
         problems = []
@@ -221,10 +248,15 @@ class SovereignRunner:
                 problems.append(f"drift: {rendered.path}")
             elif rendered.executable and not rendered.path.stat().st_mode & stat.S_IXUSR:
                 problems.append(f"not executable: {rendered.path}")
-        return problems + [f"credential: {p}" for p in self.credential_problems()]
+        return problems + [f"credential: {p}" for p in self.credential_problems(plan)]
 
-    def credential_problems(self) -> list[str]:
-        """The same rule the supervisor enforces, read from Python for `runner check`."""
+    def credential_problems(self, plan: RunnerPlan) -> list[str]:
+        """The supervisor's rule, ending as it does: GitHub itself must accept the token.
+
+        The last step runs `gh auth status --hostname <host>` under the dedicated
+        `GH_CONFIG_DIR` with every ambient token stripped. Its output is captured and
+        discarded, so neither the token nor gh's description of it reaches the caller.
+        """
         directory = self._gh_dir
         if not directory.is_dir():
             return [f"{directory} does not exist; create it and log in (vibey-gh runner install)"]
@@ -239,6 +271,15 @@ class SovereignRunner:
             return [keyring]
         if hosts.stat().st_mode & (stat.S_IRGRP | stat.S_IROTH):
             return [f"{hosts} is readable by other users; run: chmod 600 {hosts}"]
+        host = self._host(plan)
+        env = {k: v for k, v in os.environ.items() if k not in _AMBIENT_TOKENS}
+        env["GH_CONFIG_DIR"] = str(directory)
+        if self._gh(("gh", "auth", "status", "--hostname", host), env) != 0:
+            rejected = (
+                f"the token in {directory} is not accepted by {host} (expired, revoked, or"
+                " stored for another host); log in again"
+            )
+            return [rejected]
         return []
 
     # --- removal --------------------------------------------------------------------------
@@ -273,7 +314,7 @@ class SovereignRunner:
         retired = self._install_dir / RETIRED_DIR
         lines = []
         for unit in units:
-            target = retired / unit.path.name
+            target = self._free(retired, unit.path)
             serves = f" [serves {unit.repo_url}]" if unit.repo_url else ""
             if not apply:
                 lines.append(
@@ -288,9 +329,23 @@ class SovereignRunner:
                 else f"{unit.label} was not loaded (launchctl: {output})"
             )
             retired.mkdir(parents=True, exist_ok=True)
-            shutil.move(unit.path, target)
+            os.rename(unit.path, target)
             lines.append(f"moved {unit.path} to {target}")
         return lines
+
+    @staticmethod
+    def _free(retired: Path, path: Path) -> Path:
+        """The first name under `retired` nothing holds yet: an earlier copy is never replaced.
+
+        Re-running cleanup after an agent was restored and retired again must keep the
+        first copy, because that copy may be the only way back.
+        """
+        target = retired / path.name
+        n = 0
+        while target.exists():
+            n += 1
+            target = retired / f"{path.stem}.{n}{path.suffix}"
+        return target
 
     def uninstall(self, plan: RunnerPlan, *, apply: bool) -> list[str]:
         lines = []
@@ -306,7 +361,18 @@ class SovereignRunner:
                 lines.append(f"would delete {rendered.path}")
         return lines or ["nothing to remove"]
 
-    # --- the default launchctl seam -------------------------------------------------------
+    # --- the default seams ----------------------------------------------------------------
+
+    @staticmethod
+    def _gh_status(argv: tuple[str, ...], env: dict[str, str]) -> int:
+        """Run gh with its output captured and dropped; only the exit status leaves."""
+        try:
+            done = subprocess.run(  # nosec B603 - a fixed argv, never a shell
+                argv, capture_output=True, text=True, check=False, timeout=60, env=env
+            )
+        except OSError:
+            return 127
+        return done.returncode
 
     @staticmethod
     def _launchctl(argv: tuple[str, ...]) -> tuple[int, str]:

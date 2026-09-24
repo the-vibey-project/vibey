@@ -68,8 +68,12 @@ class SovereignRunnerInterface(Protocol):
         """The plan, or `(None, problem)` when the configuration cannot produce one."""
         ...
 
-    def install(self, plan: RunnerPlanInterface, *, load: bool) -> list[str]:
-        """Write every file; with `load`, replace the running agent. One line per act."""
+    def install(self, plan: RunnerPlanInterface, *, load: bool) -> tuple[list[str], bool]:
+        """Write every file; with `load`, replace the running agent.
+
+        One line per act, and whether everything asked for happened: false when launchd
+        refused to load the agent.
+        """
         ...
 
     def next_steps(self, plan: RunnerPlanInterface) -> list[str]:
@@ -80,8 +84,9 @@ class SovereignRunnerInterface(Protocol):
         """Every way the host differs from the tree, the credential included; [] when none."""
         ...
 
-    def credential_problems(self) -> list[str]:
-        """Why the runner's dedicated gh login is unusable by launchd; [] when it is usable."""
+    def credential_problems(self, plan: RunnerPlanInterface) -> list[str]:
+        """Why the runner's dedicated gh login is unusable by launchd, or rejected by the
+        plan's host; [] only when GitHub accepts it. Never includes the token."""
         ...
 
     def strays(self, plan: RunnerPlanInterface) -> tuple[LaunchAgentUnitInterface, ...]:
