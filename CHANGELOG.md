@@ -27,6 +27,37 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   that the answer must echo. The diff half refuses a diff past `max_diff_chars` instead of
   cutting it; a whole review sends the whole diff, trims only its documents in declared order,
   and claims the diff half alone when any was cut or left out, so the gate asks a human
+* **db:** the ledger is append-only by the database, not by convention
+  ([ADR-0055](docs/architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)).
+  - **Triggers.** Migration 0016 replaces the `DO INSTEAD NOTHING` rules with triggers that
+    refuse every `UPDATE`, `DELETE` and `TRUNCATE` of `event` and of each of its partitions,
+    for every role, the owner included, with `the ledger is append-only`. The rules did not
+    fire for a partition or for `TRUNCATE`, and the owner could disable them. A rewrite is
+    now an error, not a silent no-op, and `DELETE FROM project` no longer cascades through
+    a project's ledger.
+  - **Two roles.** The application connects as a role (`VIBEY_PG_URL`) that holds exactly
+    the declared grants: `SELECT` and `INSERT` on the ledger, no `DELETE` or `TRUNCATE`
+    anywhere, and no ownership. Migrations run as the owner, `VIBEY_PG_MIGRATE_URL`, through
+    the new `vibey migrate` or the Helm chart's new `migrate` init container. The chart
+    gains `postgres.appRole` (default `vibey_app`) and `dsn.existingSecretMigrateKey`.
+  - **Checks.** `vibey doctor` gains `ledger-guard` and `local-auth` checks. A single-DSN
+    install keeps running, but `vibey doctor` fails until its roles are split, `vibey
+    worker` says so on stderr at every start, and `vibey migrate` exits 1. `local-auth`
+    fails when the server lets a password-less connection in as the owner or a superuser;
+    SECURITY.md §7 gives the `pg_hba.conf` lines. Upgrade path:
+    [database roles](docs/reference/configuration.md#database-roles)
+* **qwenloop:** the `shell` tool runs with an allow-listed environment: the system basics
+  only, and never `VIBEY_*`, `PG*` or a name containing `KEY`, `TOKEN`, `SECRET`,
+  `PASSWORD`, `PASSWD`, `CREDENTIAL`, `DSN` or `DATABASE_URL`. It used to pass everything
+  except `KEY` and `TOKEN` names, so `VIBEY_PG_URL` and `PGPASSWORD` reached commands a
+  model chose.
+* **vibey_gh:** the sovereign review never reads a prompt the model did not see in full
+  (#1090). Local requests are sized from everything sent and must fit the declared
+  `[pr_automation.fallback] context_window` (default 65,536) beside `reasoning_reserve_tokens`
+  (8,192), or are refused rather than silently truncated by Ollama; a whole review sends the
+  whole diff (never cut at `max_diff_chars`) and trims only its optional documents; each reply
+  is checked against Ollama's `prompt_eval_count` and `done_reason`, so a model that ran out of
+  room says so
 * **vibey_gh:** the exact-head review reaches a paid model only where `[pr_automation]
   paid_review = true` declares one (sub-doctrine 8.b: a paid counterparty is declared-only).
   Undeclared, the default, the paid `review` job never runs: the sovereign lane answers the

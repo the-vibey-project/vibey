@@ -71,7 +71,7 @@ async def test_event_partition_migration_preserves_append_only_live_schema(
     pg_conn: asyncpg.Connection,
 ) -> None:
     migrations = discover_migrations(MIGRATIONS_DIR)
-    await apply_migrations(pg_conn, migrations[:-1])
+    await apply_migrations(pg_conn, tuple(m for m in migrations if m.version < "0013"))
     project_id = await pg_conn.fetchval(
         "INSERT INTO project (name, repo_path, config) VALUES ($1, $2, '{}'::jsonb) RETURNING id",
         "partitioned",
@@ -113,8 +113,13 @@ async def test_event_partition_migration_preserves_append_only_live_schema(
         await pg_conn.fetchval("SELECT count(*) FROM event WHERE project_id = $1", project_id) == 2
     )
 
-    await pg_conn.execute("UPDATE event SET digest = 'changed' WHERE project_id = $1", project_id)
-    await pg_conn.execute("DELETE FROM event WHERE project_id = $1", project_id)
+    # Append-only survives the swap: since 0016 by triggers that refuse, loudly.
+    with pytest.raises(asyncpg.InsufficientPrivilegeError, match="append-only"):
+        await pg_conn.execute(
+            "UPDATE event SET digest = 'changed' WHERE project_id = $1", project_id
+        )
+    with pytest.raises(asyncpg.InsufficientPrivilegeError, match="append-only"):
+        await pg_conn.execute("DELETE FROM event WHERE project_id = $1", project_id)
     assert (
         await pg_conn.fetchval(
             "SELECT digest FROM event WHERE project_id = $1 AND seq = 2", project_id

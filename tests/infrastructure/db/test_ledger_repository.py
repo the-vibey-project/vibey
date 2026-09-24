@@ -122,35 +122,28 @@ async def test_planted_secret_never_reaches_the_column(
     assert planted not in raw
 
 
-async def test_update_event_is_a_silent_no_op(
-    migrated_pool: asyncpg.Pool, project_id: UUID
+@pytest.mark.parametrize(
+    "statement",
+    [
+        "UPDATE event SET kind = 'PhaseTransitioned' WHERE event_id = $1",
+        "DELETE FROM event WHERE event_id = $1",
+    ],
+)
+async def test_a_rewrite_of_an_event_is_refused_even_for_the_owner(
+    migrated_pool: asyncpg.Pool, owner_pool: asyncpg.Pool, project_id: UUID, statement: str
 ) -> None:
+    """It used to be a silent no-op (a `DO INSTEAD NOTHING` rule). Now it is refused
+    loudly, by a trigger, for every role (ADR-0055)."""
     repo = PostgresLedgerRepository(migrated_pool)
     event = await repo.append(_draft(project_id))
 
-    async with migrated_pool.acquire() as conn:
-        await conn.execute(
-            "UPDATE event SET kind = 'PhaseTransitioned' WHERE event_id = $1", event.event_id
-        )
+    async with owner_pool.acquire() as conn:
+        with pytest.raises(asyncpg.InsufficientPrivilegeError, match="append-only"):
+            await conn.execute(statement, event.event_id)
         row = await conn.fetchrow("SELECT kind FROM event WHERE event_id = $1", event.event_id)
 
     assert row is not None
     assert row["kind"] == EventKind.TURN_REQUESTED.value
-
-
-async def test_delete_event_is_a_silent_no_op(
-    migrated_pool: asyncpg.Pool, project_id: UUID
-) -> None:
-    repo = PostgresLedgerRepository(migrated_pool)
-    event = await repo.append(_draft(project_id))
-
-    async with migrated_pool.acquire() as conn:
-        await conn.execute("DELETE FROM event WHERE event_id = $1", event.event_id)
-        count = await conn.fetchval(
-            "SELECT count(*) FROM event WHERE event_id = $1", event.event_id
-        )
-
-    assert count == 1
 
 
 async def test_to_drafts_round_trips_persisted_events(

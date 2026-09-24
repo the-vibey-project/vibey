@@ -34,7 +34,14 @@ stringData:
   # it: KEDA's operator lives in its own namespace and dials Postgres
   # itself to evaluate the scaler query. A short name works for the worker
   # and fails for the autoscaler.
-  dsn: postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ $fullName }}-postgres.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:5432/{{ .Values.postgres.database }}
+  #
+  # Two roles (ADR-0055). `dsn` is the application role's -- every worker,
+  # operator and the KEDA scaler connect as it, and it can read and append to
+  # the ledger and nothing more. `migrate-dsn` is the owner's, mounted only
+  # into the `migrate` init container, which creates the application role on
+  # first use.
+  dsn: postgresql://{{ .Values.postgres.appRole.name }}:{{ .Values.postgres.appRole.password }}@{{ $fullName }}-postgres.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:5432/{{ .Values.postgres.database }}
+  migrate-dsn: postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ $fullName }}-postgres.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:5432/{{ .Values.postgres.database }}
   password: {{ .Values.postgres.password | quote }}
 ---
 apiVersion: v1

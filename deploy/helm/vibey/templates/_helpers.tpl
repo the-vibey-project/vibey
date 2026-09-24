@@ -44,6 +44,47 @@ dsn
 {{- end -}}
 
 {{/*
+The owner's DSN (ADR-0055): the role that runs migrations and owns the tables.
+Empty means a single-DSN install -- an existing Secret with no owner key -- where
+the worker migrates as the one role and `vibey doctor` reports the ledger guard
+as not in force.
+*/}}
+{{- define "vibey.migrateSecretKey" -}}
+{{- if .Values.dsn.existingSecret -}}
+{{- .Values.dsn.existingSecretMigrateKey -}}
+{{- else -}}
+migrate-dsn
+{{- end -}}
+{{- end -}}
+
+{{/*
+`vibey migrate`, as an init container: the only place the owner's DSN is mounted.
+It applies migrations, creates the application role if it is missing, and grants it
+exactly the declared privileges, then fails the pod if the application's DSN could
+still rewrite the ledger. The workload that follows gets the application's DSN only.
+*/}}
+{{- define "vibey.migrateInitContainer" -}}
+{{- if include "vibey.migrateSecretKey" . }}
+- name: migrate
+  image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+  imagePullPolicy: {{ .Values.image.pullPolicy }}
+  args: ["migrate"]
+  env:
+    - name: VIBEY_PG_MIGRATE_URL
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "vibey.dsnSecretName" . }}
+          key: {{ include "vibey.migrateSecretKey" . }}
+    - name: VIBEY_PG_URL
+      valueFrom:
+        secretKeyRef:
+          name: {{ include "vibey.dsnSecretName" . }}
+          key: {{ include "vibey.dsnSecretKey" . }}
+  securityContext: {{- toYaml .Values.securityContext | nindent 4 }}
+{{- end }}
+{{- end -}}
+
+{{/*
 worker.project is a UUID, and two readers need it: the worker's --project
 argument and the KEDA scaler's SQL. The SQL is why it is checked here --
 a value interpolated into a query has to be proven to be the shape it

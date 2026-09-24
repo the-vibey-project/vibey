@@ -59,9 +59,11 @@ def test_every_migrated_relation_has_a_pydantic_orm_model() -> None:
 
 
 async def test_orm_session_round_trips_a_project(
-    migrated_pool: asyncpg.Pool, database_url: str
+    owner_pool: asyncpg.Pool, database_url: str
 ) -> None:
-    del migrated_pool
+    # The ORM projection is a tool for the schema's owner, not an application path:
+    # it maps every relation, including those the application role has no grant on.
+    del owner_pool
     orm = PostgresOrm(database_url)
     assert isinstance(orm, PostgresOrmInterface)
     assert orm.engine.url.drivername == "postgresql+asyncpg"
@@ -84,9 +86,9 @@ async def test_orm_session_round_trips_a_project(
 
 
 async def test_orm_columns_match_every_migrated_relation(
-    migrated_pool: asyncpg.Pool,
+    owner_pool: asyncpg.Pool,
 ) -> None:
-    rows = await migrated_pool.fetch(
+    rows = await owner_pool.fetch(
         """
         SELECT table_name, column_name
         FROM information_schema.columns
