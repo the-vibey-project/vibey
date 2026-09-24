@@ -9,6 +9,19 @@ from qwenloop.domain.config import ToolLimits
 
 
 @runtime_checkable
+class ShellEnvironmentInterface(Protocol):
+    """What a model-chosen shell command may see: an allow-list, never a copy."""
+
+    def admits(self, name: str) -> bool:
+        """Whether `name` may reach the command: allowed, and not forbidden."""
+        ...
+
+    def build(self) -> dict[str, str]:
+        """The allow-listed environment, read from the source at call time."""
+        ...
+
+
+@runtime_checkable
 class SandboxToolsInterface(ToolExecutor, Protocol):
     """Runs one named tool call inside `worktree` and answers with a JSON-able mapping.
 

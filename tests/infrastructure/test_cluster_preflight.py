@@ -420,10 +420,26 @@ async def test_full_preflight_against_a_live_database(tmp_path: Path) -> None:
     async with build_app(url=_test_dsn()):
         pass
     # Every engine on PATH and no key: the default chart install on the
-    # ADR-0037 image, which must pass the whole sweep.
-    preflight = ClusterPreflight(engine_auth=EngineAuthCheck(which=_every_binary))
+    # ADR-0037 image, which must pass the whole sweep. The sweep connects as the
+    # application role, as the chart's workloads do (ADR-0055); whether the server
+    # admits a password-less owner depends on the machine, so that probe is stubbed.
+    from vibey.infrastructure.cluster_preflight import DatabaseSecurityChecks
+    from vibey.infrastructure.db.local_auth import AuthVerdict, LocalAuthFinding
+
+    class _Refused:
+        def endpoints(self, app_url: str) -> tuple[tuple[str, int], ...]:
+            return ()
+
+        async def probe(self, app: object, app_url: str) -> LocalAuthFinding:
+            return LocalAuthFinding(AuthVerdict.PASS, "refused")
+
+    app_dsn = os.environ.get("VIBEY_TEST_APP_DATABASE_URL", _test_dsn())
+    preflight = ClusterPreflight(
+        engine_auth=EngineAuthCheck(which=_every_binary),
+        database_security=DatabaseSecurityChecks(probe=_Refused()),
+    )
     checks = await preflight.run(
-        dsn=_test_dsn(),
+        dsn=app_dsn,
         workspace=tmp_path,
         migrations_dir=migrations_dir(),
         environ={},
@@ -437,6 +453,8 @@ async def test_full_preflight_against_a_live_database(tmp_path: Path) -> None:
         "engine-auth",
         "database",
         "migrations",
+        "ledger-guard",
+        "local-auth",
     }
 
 

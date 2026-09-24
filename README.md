@@ -80,9 +80,17 @@ needs separately is its own vendor CLI and credentials — which is what
 ```bash
 uv tool install vibey          # or: pipx install vibey / pip install vibey
 vibey install --postgres       # install/start local PostgreSQL 18 when needed
-export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey
-vibey doctor                   # pre-flight: engines installed, versions, auth
+export VIBEY_PG_MIGRATE_URL=postgresql://user@localhost:5432/vibey        # the owner
+export VIBEY_PG_URL=postgresql://vibey_app:change-me@localhost:5432/vibey # the application
+vibey migrate                  # migrate as the owner; create and grant vibey_app
+vibey doctor                   # pre-flight: engines, and whether the ledger is guarded
 ```
+
+Two DSNs, because the ledger is append-only by the database
+([ADR-0055](docs/architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)):
+the application connects as a role that can read and append to the ledger and nothing
+more. One DSN still works, but `vibey doctor` fails its `ledger-guard` check until the
+roles are split ([database roles](docs/reference/configuration.md#database-roles)).
 
 `vibey install --postgres` uses Homebrew, apt, or dnf to install and start the
 current stable PostgreSQL major. `vibey doctor` reports local PostgreSQL
@@ -309,7 +317,7 @@ things those runners deliberately do not do:
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](docs/architecture/decisions/) | Why each hard call was made (54 ADRs) |
+| [Decision records](docs/architecture/decisions/) | Why each hard call was made (55 ADRs) |
 
 ## Status
 

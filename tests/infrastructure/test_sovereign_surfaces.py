@@ -48,6 +48,7 @@ from vibey.infrastructure.config_store.interfaces.in_memory_interface import (
 from vibey.infrastructure.config_store.interfaces.infisical_interface import (
     InfisicalConfigStoreAdapterInterface,
 )
+from vibey.infrastructure.db.ledger_guard import LedgerGuardStatus
 from vibey.infrastructure.docs.bookstack import BookStackDocsAdapter
 from vibey.infrastructure.docs.in_memory import InMemoryDocs
 from vibey.infrastructure.docs.interfaces.bookstack_interface import (
@@ -626,6 +627,16 @@ def _mock_pool() -> MagicMock:
     return mock_pool
 
 
+class _InForcePreparer:
+    """build_app's migrate-and-inspect step, for tests about what it wires afterwards."""
+
+    def __init__(self, **_: object) -> None:
+        pass
+
+    async def prepare(self, *_: object) -> LedgerGuardStatus:
+        return LedgerGuardStatus("app")
+
+
 @pytest.mark.asyncio
 async def test_build_app_defaults_to_in_memory_surfaces() -> None:
     mock_pool = _mock_pool()
@@ -635,6 +646,7 @@ async def test_build_app_defaults_to_in_memory_surfaces() -> None:
     with (
         patch("asyncpg.create_pool", new=AsyncMock(return_value=mock_pool)),
         patch("vibey.bootstrap.PostgresMigrator") as migrator_cls,
+        patch("vibey.bootstrap.SchemaPreparer", new=_InForcePreparer),
         patch("vibey.bootstrap.database_url", return_value="postgresql://x"),
         patch(
             "vibey.infrastructure.config_loader.load_config_from_path",
@@ -702,6 +714,7 @@ async def test_build_app_wires_concrete_adapters_from_config() -> None:
     with (
         patch("asyncpg.create_pool", new=AsyncMock(return_value=mock_pool)),
         patch("vibey.bootstrap.PostgresMigrator") as migrator_cls,
+        patch("vibey.bootstrap.SchemaPreparer", new=_InForcePreparer),
         patch("vibey.bootstrap.database_url", return_value="postgresql://x"),
     ):
         migrator_cls.from_environ.return_value = migrator
