@@ -28,6 +28,8 @@ from vibey.domain.errors import (
     InvalidPhaseError,
     InvalidSpecError,
     NoEligibleEngine,
+    NotReorderable,
+    PriorityRefused,
     VibeyError,
 )
 
@@ -70,6 +72,14 @@ _NEXT_STEP: dict[type[BaseException], str] = {
     ),
     InvalidSpecError: "Run `vibey design` to finish the spec before building.",
     InvalidPhaseError: "This looks like a bug in vibey rather than your project.",
+    PriorityRefused: (
+        "Nothing moved, and the refusal is on the ledger:\n"
+        "  vibey ledger search --kind JobPriorityRefused\n"
+        "The operator is the account that owns the project's own vibey.toml. An\n"
+        "automation is admitted by naming it in that file's `[queue.priority] sources`,\n"
+        "in a reviewed change, and running it as that account (ADR-0054)."
+    ),
+    NotReorderable: "Nothing moved. `vibey queue list` shows the jobs that can still be moved.",
 }
 
 

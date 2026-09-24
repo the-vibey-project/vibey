@@ -139,6 +139,12 @@ from vibey.application.interfaces.queue import (
     Park,
     Success,
 )
+from vibey.application.interfaces.queue_priority import (
+    CallerIdentity,
+    JobPriorityStore,
+    PriorityGrantReader,
+    QueuePriorityServiceInterface,
+)
 from vibey.application.interfaces.review import (
     AutomatedFinding,
     AutomatedReviewRunner,
@@ -213,8 +219,12 @@ __all__ = [
     "JobHandler",
     "JobHandlerFactory",
     "JobRecordInterface",
+    "CallerIdentity",
+    "JobPriorityStore",
+    "PriorityGrantReader",
     "JobReadyNotifier",
     "JobRepository",
+    "QueuePriorityServiceInterface",
     "LedgerExporterInterface",
     "InvalidLedgerShardInterface",
     "LedgerBudgetSourceInterface",

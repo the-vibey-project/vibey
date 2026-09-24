@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Contracts for the project notification and telemetry configuration values."""
+"""Contracts for the project notification, telemetry and queue configuration values."""
 
 from __future__ import annotations
 
@@ -34,3 +34,21 @@ class TelemetryConfigInterface(Protocol):
 
     @property
     def export_path(self) -> str | None: ...
+
+
+@runtime_checkable
+class QueuePriorityConfigInterface(Protocol):
+    """`[queue.priority]` (ADR-0054)."""
+
+    @property
+    def sources(self) -> tuple[str, ...]:
+        """The declared sources besides the operator, as written, in order."""
+        ...
+
+
+@runtime_checkable
+class QueueConfigInterface(Protocol):
+    """`[queue]`."""
+
+    @property
+    def priority(self) -> QueuePriorityConfigInterface: ...
