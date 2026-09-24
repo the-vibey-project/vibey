@@ -104,6 +104,11 @@ qwenloop doctor                                      # 0 only if it answers AND 
 qwenloop run plan.md --run-id <uuid> --cwd <worktree>
 ```
 
+A running run takes follow-ups: `qwenloop prompt <run-id> "<text>" --cwd <worktree>`
+writes one into the run's control inbox, and the model reads it at the start of its next
+turn, once, in the order follow-ups were sent. Each is recorded as a `prompt.received`
+event and moved to `control/ack` when it is taken.
+
 qwenloop never owns an attached server. `start` checks that the endpoint answers and
 serves the configured model, and fails with a message naming which check failed. `stop`
 does nothing. `auto` selects `openai-compat` whenever a base URL is configured, and an

@@ -616,7 +616,7 @@
         "vibey.modelLockPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "A lock directory that keeps runs on the same computer from sharing the model at once, including runs started from a terminal with `vibey-vscode`. Empty: `.ollama-lock` in the storm home."
+          "markdownDescription": "A lock directory that keeps runs on the same computer from sharing the model at once, including runs started from a terminal with `vibey-vscode`. Empty: the lock the computer declares with `VIBEY_OLLAMA_LOCK` (the one vibey-gh and storm tooling share), else `.ollama-lock` in the storm home. A lock held by something that does not say who is never broken."
         },
         "vibey.maxConcurrentRuns": {
           "type": "integer",

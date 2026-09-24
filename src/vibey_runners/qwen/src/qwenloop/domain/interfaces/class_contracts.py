@@ -120,6 +120,17 @@ class ChatChunkInterface(Protocol):
 
 
 @runtime_checkable
+class FollowUpInterface(Protocol):
+    """A person's message for a running run, taken from its control inbox once."""
+
+    @property
+    def id(self) -> str: ...
+
+    @property
+    def text(self) -> str: ...
+
+
+@runtime_checkable
 class ToolCallParseErrorInterface(Protocol):
     @property
     def detail(self) -> str: ...

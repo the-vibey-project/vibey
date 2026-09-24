@@ -125,6 +125,51 @@ export class YamlScalar {
     throw new Error(`unterminated single-quoted value ${text}`);
   }
 
+  /**
+   * A flow sequence of scalars: `["docs/a.md", 'b', c]`. Commas inside quotes belong to the
+   * value; nothing may follow the closing bracket but a comment.
+   */
+  static list(text: string): string[] {
+    const trimmed = text.trim();
+    if (!trimmed.startsWith('[')) {
+      throw new Error(`expected a list like ["docs/guides/install.md"], not ${trimmed}`);
+    }
+    const items: string[] = [];
+    let current = '';
+    let quote: '"' | "'" | undefined;
+    for (let index = 1; index < trimmed.length; index += 1) {
+      const character = trimmed.charAt(index);
+      if (quote !== undefined) {
+        current += character;
+        if (quote === '"' && character === '\\') {
+          current += trimmed.charAt(index + 1);
+          index += 1;
+        } else if (character === quote) {
+          quote = undefined;
+        }
+        continue;
+      }
+      if (character === '"' || character === "'") {
+        quote = character;
+        current += character;
+      } else if (character === ',' || character === ']') {
+        if (current.trim() !== '') {
+          items.push(YamlScalar.read(current));
+        } else if (character === ',' || items.length > 0) {
+          throw new Error(`an empty item in ${trimmed}`);
+        }
+        current = '';
+        if (character === ']') {
+          YamlScalar.onlyComment(trimmed.slice(index + 1));
+          return items;
+        }
+      } else {
+        current += character;
+      }
+    }
+    throw new Error(`unterminated list ${trimmed}`);
+  }
+
   /** After a closing quote only whitespace and a comment may follow. */
   private static onlyComment(rest: string): void {
     if (rest.trim() !== '' && !/^\s+#/.test(rest)) {
@@ -134,7 +179,7 @@ export class YamlScalar {
 }
 
 export class TaskFileParser implements TaskFileParserInterface {
-  private static readonly KEYS = new Set(['title', 'commit_message', 'context_window', 'max_turns', 'effort']);
+  private static readonly KEYS = new Set(['title', 'commit_message', 'context_window', 'max_turns', 'effort', 'paths']);
   private readonly naming = new TaskNaming();
 
   parse(name: string, text: string): TaskFile {
@@ -167,7 +212,9 @@ export class TaskFileParser implements TaskFileParserInterface {
 
   private metadata(name: string, lines: readonly string[]): TaskMetadata {
     const found: Record<string, string> = {};
-    for (const [offset, line] of lines.entries()) {
+    let paths: string[] | undefined;
+    for (let offset = 0; offset < lines.length; offset += 1) {
+      const line = lines[offset] as string;
       if (!line.trim() || line.trim().startsWith('#')) {
         continue;
       }
@@ -182,22 +229,50 @@ export class TaskFileParser implements TaskFileParserInterface {
           `unknown front matter key "${key}"; the keys are ${[...TaskFileParser.KEYS].join(', ')}`,
         );
       }
-      if (key in found) {
+      if (key in found || (key === 'paths' && paths !== undefined)) {
         throw new TaskFileError(name, `front matter key "${key}" is given twice`);
       }
       try {
+        if (key === 'paths') {
+          const value = match[2] ?? '';
+          if (value.trim() === '' || value.trim().startsWith('#')) {
+            // A block list: the lines after `paths:` that start with `- `.
+            paths = [];
+            while (offset + 1 < lines.length && /^\s*-\s/.test(lines[offset + 1] as string)) {
+              offset += 1;
+              paths.push(YamlScalar.read((lines[offset] as string).replace(/^\s*-\s/, '')));
+            }
+          } else {
+            paths = YamlScalar.list(value);
+          }
+          TaskFileParser.checkPaths(paths);
+          continue;
+        }
         found[key] = YamlScalar.read(match[2] ?? '');
       } catch (error) {
         throw new TaskFileError(name, `${key}: ${(error as Error).message}`);
       }
     }
     return {
+      ...(paths === undefined ? {} : { paths }),
       ...TaskFileParser.text(found, 'title', 'title'),
       ...TaskFileParser.text(found, 'commit_message', 'commitMessage'),
       ...TaskFileParser.effort(name, found),
       ...TaskFileParser.count(name, found, 'context_window', 'contextWindow', 1024),
       ...TaskFileParser.count(name, found, 'max_turns', 'maxTurns', 1),
     };
+  }
+
+  /** At least one glob, each relative to the repository and inside it. */
+  private static checkPaths(paths: readonly string[]): void {
+    if (paths.length === 0) {
+      throw new Error('name at least one path the task may change, like ["docs/guides/install.md"]');
+    }
+    for (const glob of paths) {
+      if (glob.trim() === '' || glob.startsWith('/') || /^[A-Za-z]:/.test(glob) || glob.split(/[\\/]/).includes('..')) {
+        throw new Error(`${JSON.stringify(glob)} is not a path inside the repository, relative to its top`);
+      }
+    }
   }
 
   private static text(found: Record<string, string>, key: string, field: string): Record<string, string> {

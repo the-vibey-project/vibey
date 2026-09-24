@@ -102,6 +102,18 @@ class ChatMessage:
 
 
 @dataclass(frozen=True, slots=True)
+class FollowUp:
+    """A person's message for a running run, sent with `qwenloop prompt`.
+
+    `id` is the control file's name without `.json`: the time it was sent, then a random
+    part, so follow-ups sort in the order they were sent.
+    """
+
+    id: str
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
 class RepoItem:
     """One open issue or pull request, as reported by `gh`."""
 

@@ -56,6 +56,7 @@ export class BatchRunner implements BatchRunnerInterface {
     'completed',
     'completed-no-change',
     'completed-commit-refused',
+    'completed-out-of-scope',
     'failed',
   ]);
   static readonly JOURNAL_VERSION = 1;
@@ -161,6 +162,7 @@ export class BatchRunner implements BatchRunnerInterface {
         baseSha,
         contextWindow: task.metadata.contextWindow ?? options.contextWindow,
         ...(task.metadata.maxTurns === undefined ? {} : { maxTurns: task.metadata.maxTurns }),
+        ...(task.metadata.paths === undefined ? {} : { paths: task.metadata.paths }),
         loop: options.loop,
         effort: task.metadata.effort ?? options.effort,
         baseEffort: options.baseEffort,
@@ -185,6 +187,7 @@ export class BatchRunner implements BatchRunnerInterface {
             base_sha: space.baseSha,
             context_window: run.request.contextWindow,
             ...(run.request.maxTurns === undefined ? {} : { max_turns: run.request.maxTurns }),
+            ...(run.request.paths === undefined ? {} : { paths: run.request.paths }),
             at: this.now(),
           });
         }

@@ -57,7 +57,9 @@ describe('VibeyCli', () => {
 
   it('says plainly which vibey lacks a command, and which release adds it; it never reads the database', async () => {
     const runner = new FakeProcessRunner().on(['projects'], noSuch).on(['--version'], { stdout: 'vibey 2.0.0\n' });
-    const error = await cli(runner).projects().catch((failure: unknown) => failure as VibeyCliError);
+    const error = (await cli(runner)
+      .projects()
+      .catch((failure: unknown) => failure)) as VibeyCliError;
     expect(error).toBeInstanceOf(VibeyCliError);
     expect(error.kind).toBe('missing-command');
     expect(error.message).toBe(

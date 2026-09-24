@@ -105,6 +105,13 @@ describe('SettingsResolver', () => {
     expect(path.isAbsolute(resolved.modelLockPath)).toBe(true);
   });
 
+  it("shares the model lock this computer declares with VIBEY_OLLAMA_LOCK, unless the setting names another", () => {
+    const storage = new MacStorage();
+    expect(new SettingsResolver({ HOME: home, VIBEY_OLLAMA_LOCK: ' /shared/.ollama-lock ' }, storage).resolve({}).modelLockPath).toBe('/shared/.ollama-lock');
+    expect(new SettingsResolver({ HOME: home, VIBEY_OLLAMA_LOCK: '/shared/.ollama-lock' }, storage).resolve({ modelLockPath: '/mine' }).modelLockPath).toBe('/mine');
+    expect(new SettingsResolver({ HOME: home, VIBEY_OLLAMA_LOCK: '  ' }, storage).resolve({}).modelLockPath).toBe('/home/me/git/vibey-storm/.ollama-lock');
+  });
+
   it('refuses an Ollama address that is not http or https', () => {
     expect(() => new SettingsResolver({ HOME: home }, new MacStorage()).resolve({ ollamaUrl: 'ftp://x' } as Partial<RawSettings>)).toThrow(
       'is not an http:// or https:// address',

@@ -145,6 +145,8 @@ describe('PullProgress', () => {
     expect(progress.accept('{"digest":"sha256:c"}').status).toBe('working');
     expect(progress.accept('{"status":"success"}').done).toBe(true);
     expect(progress.accept('[]').status).toBe('working');
+    expect(progress.accept('null').status).toBe('working');
+    expect(progress.accept('"pulling"').status).toBe('working');
   });
 
   it('carries an error line, and a line that is not JSON', () => {

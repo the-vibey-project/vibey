@@ -122,7 +122,7 @@ export class RunTranscript implements RunTranscriptInterface {
         return this.turnCompleted(record, turn);
       case 'turn.failed':
         this.turnCount += 1;
-        return [this.notice('warn', `Turn ${turn ?? this.turnCount} failed: ${RunTranscript.clip(RunTranscript.firstText(record, ['error', 'message', 'reason']) ?? 'no reason given')}`)];
+        return [this.notice('warn', `Turn ${turn ?? this.attemptTurns} failed: ${RunTranscript.clip(RunTranscript.firstText(record, ['error', 'message', 'reason']) ?? 'no reason given')}`)];
       case 'turn.retried':
         return [
           this.notice(
@@ -140,7 +140,7 @@ export class RunTranscript implements RunTranscriptInterface {
         return [this.add({ kind: 'follow-up', text: typeof record.text === 'string' ? record.text : '' })];
       case 'completed':
         this.done = true;
-        return [this.notice('info', `The engine reports the task complete at turn ${turn ?? this.turnCount}.`)];
+        return [this.notice('info', `The engine reports the task complete at turn ${turn ?? this.attemptTurns}.`)];
       case 'finished':
       case 'run.verdict':
         return [this.verdictEvent(record, turn)];
@@ -201,8 +201,10 @@ export class RunTranscript implements RunTranscriptInterface {
   }
 
   private turnCompleted(record: EventRecord, turn: number | undefined): readonly RunPatch[] {
-    const number = turn ?? this.turnCount + 1;
-    this.turnCount = Math.max(this.turnCount, number);
+    // An engine numbers its turns from 1 on every run, so an attempt's turn N is the task's
+    // turn (the earlier attempts' turns) + N. The item shows the engine's own number.
+    const number = turn ?? this.attemptTurns + 1;
+    this.turnCount = Math.max(this.turnCount, this.attemptStart + number);
     const tokensIn = RunTranscript.integer(record.input_tokens) ?? 0;
     const tokensOut = RunTranscript.integer(record.output_tokens) ?? 0;
     this.tokensIn += tokensIn;

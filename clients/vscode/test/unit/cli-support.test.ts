@@ -110,8 +110,12 @@ describe('Presenter', () => {
         budget: { id: 'b', cap: 'dollars', limit: 1, spent: 1, message: 'budget used up' },
         commit_error: 'hook said no',
         error: 'boom',
+        paths: ['docs/'],
+        out_of_scope: ['uv.lock'],
       }),
     );
+    expect(full).toContain('out of scope (docs/), left for a person to review: uv.lock');
+    expect(presenter.record(record({ out_of_scope: ['x'] }))).toContain('out of scope (), left for a person to review: x');
     expect(full).toContain('engine: qwenloop on its own model (sovereignloop, effort LOW)');
     expect(full).toContain(`branch: vibey/x-1 (${'a'.repeat(12)}..?)`);
     expect(full).toContain('worktree: /home/w');
@@ -139,10 +143,15 @@ describe('Presenter', () => {
     expect(presenter.batch(summary())).toContain('(1 completed, 1 failed)');
     expect(presenter.batch(summary())).toContain('done.');
     expect(presenter.batch(summary({ outcomes: {}, halted: 'the run was stopped', remaining: 2 }))).toContain('halted: the run was stopped');
-    expect(presenter.batchExitCode(summary())).toBe(0);
+    expect(presenter.batchExitCode(summary())).toBe(1);
     expect(presenter.batchExitCode(summary({ halted: 'the run was stopped' }))).toBe(75);
     expect(presenter.batchExitCode(summary({ halted: 'a budget is used up: x' }))).toBe(3);
     expect(presenter.batchExitCode(summary({ halted: 'an infrastructure error' }))).toBe(1);
+    // A batch that ran to its end says whether every task it ran completed.
+    expect(presenter.batchExitCode(summary({ outcomes: { completed: 1, failed: 1, 'completed-commit-refused': 1 } }))).toBe(1);
+    expect(presenter.batchExitCode(summary({ outcomes: { completed: 1, 'completed-commit-refused': 1 } }))).toBe(4);
+    expect(presenter.batchExitCode(summary({ outcomes: { 'completed-no-change': 2 } }))).toBe(0);
+    expect(presenter.batchExitCode(summary({ outcomes: { completed: 1, 'completed-out-of-scope': 1 } }))).toBe(4);
   });
 
   it('maps every outcome to an exit code', () => {
@@ -151,6 +160,7 @@ describe('Presenter', () => {
         presenter.exitCode(outcome),
       ),
     ).toEqual([0, 0, 4, 1, 75, 3, 1]);
+    expect(presenter.exitCode('completed-out-of-scope')).toBe(4);
   });
 
   it('gives a volatile path, a usage error and anything else their exit codes', () => {

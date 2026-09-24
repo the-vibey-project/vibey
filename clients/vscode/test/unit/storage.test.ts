@@ -85,10 +85,11 @@ describe('VolatileLocations', () => {
       [tmp, 'emptied again'],
       ['/dev/shm/x', 'memory'],
     ]));
-    expect(locations.roots()).toEqual([
+    const expected: [string, string][] = [
       [tmp, 'emptied'],
       ['/dev/shm/x', 'memory'],
-    ].sort((left, right) => right[0].length - left[0].length) as [string, string][]);
+    ];
+    expect(locations.roots()).toEqual(expected.sort((left, right) => right[0].length - left[0].length));
     expect(locations.containing(path.join(tmp, 'work'))).toEqual([tmp, 'emptied']);
     expect(locations.containing(path.join(root, 'durable'))).toBeUndefined();
     const rootTmp = new VolatileLocations({ HOME: '/home/me', TMPDIR: '/' }, platform([]));

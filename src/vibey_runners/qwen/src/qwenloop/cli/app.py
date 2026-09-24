@@ -595,30 +595,30 @@ def usage(cwd: Path = Path(".")) -> None:
     )
 
 
-def _control(run_id: str, kind: str, cwd: Path) -> None:
+def _control(run_id: str, payload: dict[str, object], cwd: Path) -> None:
+    # A module-level helper because each typer command below is one: it writes one control
+    # file, named by the time it was sent and then a random part, so the runner reads the
+    # inbox in the order things were sent (`FileRunStore.take_prompts` sorts by name).
     inbox = cwd / ".qwenloop" / "runs" / run_id / "control" / "inbox"
     inbox.mkdir(parents=True, exist_ok=True)
-    target = inbox / f"{uuid.uuid4()}.json"
-    target.write_text(json.dumps({"type": kind}) + "\n", encoding="utf-8")
+    target = inbox / f"{time.time_ns():020d}-{uuid.uuid4().hex}.json"
+    target.write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
 
 @app.command()
 def stop(run_id: str, cwd: Path = Path(".")) -> None:
-    _control(run_id, "stop", cwd)
+    _control(run_id, {"type": "stop"}, cwd)
 
 
 @app.command("wind-down")
 def wind_down(run_id: str, cwd: Path = Path(".")) -> None:
-    _control(run_id, "wind_down", cwd)
+    _control(run_id, {"type": "wind_down"}, cwd)
 
 
 @app.command()
 def prompt(run_id: str, text: str, cwd: Path = Path(".")) -> None:
-    inbox = cwd / ".qwenloop" / "runs" / run_id / "control" / "inbox"
-    inbox.mkdir(parents=True, exist_ok=True)
-    (inbox / f"{uuid.uuid4()}.json").write_text(
-        json.dumps({"type": "prompt", "text": text}) + "\n", encoding="utf-8"
-    )
+    """Send the running run a follow-up; the model reads it at the start of its next turn."""
+    _control(run_id, {"type": "prompt", "text": text}, cwd)
 
 
 def _local_equivalent(name: str):  # type: ignore[no-untyped-def]

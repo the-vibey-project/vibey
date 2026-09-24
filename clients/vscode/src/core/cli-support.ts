@@ -111,6 +111,9 @@ export class Presenter implements PresenterInterface {
     if (record.uncommitted.length > 0) {
       lines.push(`not committed: ${record.uncommitted.join(', ')}`);
     }
+    if (record.out_of_scope !== undefined) {
+      lines.push(`out of scope (${record.paths?.join(', ') ?? ''}), left for a person to review: ${record.out_of_scope.join(', ')}`);
+    }
     if (record.verdict !== undefined) {
       lines.push('verdict:', ...record.verdict.split('\n').map((line) => `  ${line}`));
     }
@@ -145,6 +148,7 @@ export class Presenter implements PresenterInterface {
       completed: 0,
       'completed-no-change': 0,
       'completed-commit-refused': 4,
+      'completed-out-of-scope': 4,
       failed: 1,
       'wound-down': 75,
       'budget-exhausted': 3,
@@ -153,14 +157,23 @@ export class Presenter implements PresenterInterface {
     return codes[outcome];
   }
 
+  /**
+   * 0 only when every task this run started ended completed: a batch that ran to its end
+   * with a failed task says so (1), and so does one a person must look at (4): a commit a
+   * hook refused, or changes left outside a task's paths.
+   */
   batchExitCode(summary: BatchSummary): number {
-    if (summary.halted === undefined) {
-      return 0;
+    if (summary.halted !== undefined) {
+      if (summary.halted.startsWith('the run was stopped')) {
+        return 75;
+      }
+      return summary.halted.startsWith('a budget') ? 3 : 1;
     }
-    if (summary.halted.startsWith('the run was stopped')) {
-      return 75;
+    if ((summary.outcomes.failed ?? 0) > 0) {
+      return 1;
     }
-    return summary.halted.startsWith('a budget') ? 3 : 1;
+    const review = (summary.outcomes['completed-commit-refused'] ?? 0) + (summary.outcomes['completed-out-of-scope'] ?? 0);
+    return review > 0 ? 4 : 0;
   }
 
   /** The exit code for an error that ended the command before or outside a run. */

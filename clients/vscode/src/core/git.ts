@@ -13,6 +13,7 @@ import type {
   MergeOutcome,
 } from './interfaces/git-interface';
 import type { CompletedProcess, Environment, ProcessRunnerInterface } from './interfaces/process-runner-interface';
+import { PathScope } from './path-scope';
 
 export class GitError extends Error {
   constructor(
@@ -94,26 +95,50 @@ export class GitClient implements GitClientInterface {
     worktree: string,
     message: string,
     exclude: readonly string[] = [GitClient.RUN_RECORDS],
+    paths?: readonly string[],
   ): Promise<CommitOutcome> {
     // Twice at most: a formatting hook that rewrites files fails the first commit and
     // leaves its fixes unstaged, which is what a person would stage and commit again.
     // Anything a hook still refuses the second time is reported, not bypassed.
     let error: string | undefined;
+    let outOfScope: readonly string[] = [];
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      await this.must(['-C', worktree, 'rm', '-r', '-q', '--cached', '--ignore-unmatch', '--', ...exclude]);
-      await this.must(['-C', worktree, 'add', '-A', '--', '.', ...exclude.map((directory) => `:(exclude)${directory}`)]);
+      // Everything .gitignore allows. An ignored path is never named in an `add` pathspec:
+      // git refuses one even inside :(exclude), and a repository that ignores `.qwenloop/`
+      // would then commit nothing at all.
+      await this.must(['-C', worktree, 'add', '-A']);
+      // The runners' records stay out whether or not the repository ignores them. An empty
+      // pathspec would reset the whole index, so an empty list resets nothing.
+      if (exclude.length > 0) {
+        await this.must(['-C', worktree, 'reset', '-q', '--', ...exclude]);
+      }
+      if (paths !== undefined) {
+        outOfScope = await this.keepInScope(worktree, new PathScope(paths));
+      }
+      const scope = outOfScope.length === 0 ? {} : { outOfScope };
       const staged = await this.git(['-C', worktree, 'diff', '--cached', '--quiet']);
       if (staged.code === 0) {
-        return error === undefined ? { committed: false } : { committed: false, error };
+        return { committed: false, ...(error === undefined ? {} : { error }), ...scope };
       }
       const commit = await this.git(['-C', worktree, 'commit', '-q', '-m', message]);
       if (commit.code === 0) {
-        return { committed: true };
+        return { committed: true, ...scope };
       }
       error = `${commit.stdout}\n${commit.stderr}`.trim() || commit.error || `exit ${commit.code}`;
     }
     // Only two refused commits reach this line, so there is always an error to report.
-    return { committed: false, error: error as string };
+    return { committed: false, error: error as string, ...(outOfScope.length === 0 ? {} : { outOfScope }) };
+  }
+
+  /** Unstage every staged path outside the scope; the paths it left out. */
+  private async keepInScope(worktree: string, scope: PathScope): Promise<readonly string[]> {
+    const staged = (await this.must(['-C', worktree, 'diff', '--cached', '--name-only', '--no-renames', '-z'])).split('\0').filter((file) => file !== '');
+    const outside = staged.filter((file) => !scope.matches(file));
+    if (outside.length > 0) {
+      // Literal pathspecs: a file named like a glob (`notes[1].md`) is that file and no other.
+      await this.must(['--literal-pathspecs', '-C', worktree, 'reset', '-q', '--', ...outside]);
+    }
+    return outside;
   }
 
   async diffStat(repository: string, from: string, to: string): Promise<string> {
