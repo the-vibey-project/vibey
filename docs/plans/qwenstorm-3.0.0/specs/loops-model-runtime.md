@@ -3,7 +3,7 @@ feat(loop-service): the loop reads which models Ollama holds, and unloads one on
 ADR-0046 lane L26 (slug `loops-model-runtime`).
 
 ## Why
-Draft ADR-0046 §4 (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:193-222`) keeps one local model resident: on a laptop a 24 GB machine holds one model at a time (*Context*, lines 60–69), and "on a switch the loop … unloads the old model through the runtime: Ollama `keep_alive: 0`". The resident schedule (lane `loops-resident-schedule`) also needs to know, at start, which declared model is already loaded. The superseded R27 residency had no unload (`issue-audit/updates/374.md`: "a behaviour this lane did not have"). ADR-0046 *Verification owed* V-OLL1 asks this lane to prove `GET /api/ps` lists loaded models and `POST /api/generate {"model": M, "keep_alive": 0}` unloads M.
+Draft ADR-0046 §4 (`STORM/specs/ADR-two-loops.md:193-222`) keeps one local model resident: on a laptop a 24 GB machine holds one model at a time (*Context*, lines 60–69), and "on a switch the loop … unloads the old model through the runtime: Ollama `keep_alive: 0`". The resident schedule (lane `loops-resident-schedule`) also needs to know, at start, which declared model is already loaded. The superseded R27 residency had no unload (`issue-audit/updates/374.md`: "a behaviour this lane did not have"). ADR-0046 *Verification owed* V-OLL1 asks this lane to prove `GET /api/ps` lists loaded models and `POST /api/generate {"model": M, "keep_alive": 0}` unloads M.
 
 Sub-doctrine 10.e (`src/vibey_tools/gh/docs/doctrines.md:417`) and ADR-0046's non-negotiable 5 say "the Ollama HTTP transport is the one `ollama_chat.py` already has, extended with `get_json`". Today `UrllibOllamaTransport` (`src/vibey/infrastructure/engines/ollama_chat.py:45-74` at integration `d3b4a388`) only POSTs, through `_send` (`:59-74`), which checks the scheme at the point of use. Decision D1 of the design sheet: a seat host starts without a runtime, so this class never raises for an unreachable Ollama; `loaded()` answers `None`.
 
@@ -194,4 +194,4 @@ VIBEY_TEST_OLLAMA_URL=http://127.0.0.1:11434 uv run pytest -q -p no:cacheprovide
 - `loops-result-store`: the `loop_service` package, its `.importlinter` entry, the loop fakes module and the registration script.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

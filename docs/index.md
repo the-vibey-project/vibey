@@ -70,9 +70,10 @@ which is what `vibey doctor` checks.
 
 ```bash
 uv tool install vibey          # or: pipx install vibey / pip install vibey
-export VIBEY_PG_MIGRATE_URL=postgresql://user@localhost:5432/vibey        # the owner
 export VIBEY_PG_URL=postgresql://vibey_app:change-me@localhost:5432/vibey # the application
-vibey migrate                  # migrate as the owner; create and grant vibey_app
+# The owner's DSN is given to `vibey migrate` alone, for that one command -- never exported,
+# so no worker, engine session or gate command ever holds it:
+VIBEY_PG_MIGRATE_URL=postgresql://user@localhost:5432/vibey vibey migrate
 vibey doctor                   # pre-flight: engines, and whether the ledger is guarded
 ```
 
@@ -304,7 +305,7 @@ things those runners deliberately do not do:
 | [Phase protocols](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/main/CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (56 ADRs) |
+| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (57 ADRs) |
 
 ## Status
 

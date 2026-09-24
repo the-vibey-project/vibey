@@ -10,7 +10,7 @@ helper picks up the isolated per-worker database transparently.
 The application connects as a restricted role, as a split production install does
 (ADR-0055): ``VIBEY_PG_URL`` names ``vibey_test_app`` (``VIBEY_TEST_APP_ROLE``
 renames it; an empty value falls back to one role for everything), which holds only
-the declared grants, and ``VIBEY_PG_MIGRATE_URL`` names the owner. So the whole suite
+the declared grants. ``VIBEY_PG_MIGRATE_URL`` is never exported. So the whole suite
 runs every application path under the grants production runs it under, and a query
 that needs a privilege nobody declared fails here, as ``permission denied``.
 ``VIBEY_TEST_DATABASE_URL`` stays the owner's, for fixtures that set up or inspect
@@ -46,6 +46,18 @@ settings.register_profile(
     deadline=None,
     suppress_health_check=[HealthCheck.too_slow],
 )
+
+# Every other run: Hypothesis' default example count, but no per-example deadline and no
+# too_slow check, for the same reason as the no-loss lane -- a loaded machine is not a
+# property failure. Under parallel suites (load average 60+) a 22 ms example took 253 ms
+# and failed `test_every_dollar_the_budget_brake_sees_is_charged_somewhere` as "flaky"
+# (2026-09-24). A test that genuinely needs a time bound declares it with @settings.
+settings.register_profile(
+    "vibey",
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+settings.load_profile("vibey")
 
 _MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 # The template is migrated from THIS checkout's migrations and then reused by
@@ -200,11 +212,12 @@ def pytest_configure(config: pytest.Config) -> None:
     # production settings are VIBEY_PG_URL (the application role) and
     # VIBEY_PG_MIGRATE_URL (the owner). Point both at this worker's isolated database
     # so those tests cannot fall through to an unset configuration or a shared one.
+    # The owner's DSN is never exported: only `vibey migrate` reads VIBEY_PG_MIGRATE_URL,
+    # and the tests that run it set it for that one call.
     app_dsn = _ROLES.app_dsn(worker_dsn)
     os.environ["VIBEY_TEST_APP_DATABASE_URL"] = app_dsn
     os.environ["VIBEY_PG_URL"] = app_dsn
-    if app_dsn != worker_dsn:
-        os.environ["VIBEY_PG_MIGRATE_URL"] = worker_dsn
+    os.environ.pop("VIBEY_PG_MIGRATE_URL", None)
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:

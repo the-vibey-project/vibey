@@ -3,8 +3,9 @@
 Snapshot 2026-09-23T13:32:54Z, written by `tools/storm-snapshot.py`.
 
 The runner's durable record is `integrated.txt` and `abandoned.txt`: a lane in neither is
-unsettled, whatever exists under `lanes/`. `lanes/` lives in /tmp and is wiped between
-sessions, so nothing here depends on it surviving.
+unsettled, whatever exists under `lanes/`. `lanes/` lives in the storm root, on durable
+storage under the storm home (sub-doctrine 10.h), but it is working material rather than the
+record, so nothing here depends on it surviving.
 
 - queue: **594 lanes** · integrated: **12** · abandoned: **14**
 - lane worktrees: **31** · finished awaiting review: **30** · unsettled: **15**
@@ -21,7 +22,7 @@ Still running or never finished (1): `gap-ci-tenants-arch-macos-2`
 ## How to resume
 
 ```bash
-cd /private/tmp/claude-501/storm/qwenstorm-3.0.0
+cd <storm home>/qwenstorm-3.0.0   # the storm root; tools/storm_durability.py home prints the home
 touch UNATTENDED                      # batch review; a finished lane does not block the queue
 nohup bash tools/storm-queue.sh > scratch/storm-run.log 2>&1 < /dev/null & disown
 ```

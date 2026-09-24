@@ -117,4 +117,4 @@ If properdocs cannot be installed (no network), say so in the verdict.
 Commit as `docs(adr): decision records for 7.c (the thorough ledger) and 8.g (always measured)`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -25,13 +25,10 @@ class RoleIdentifierInterface(Protocol):
 
 @runtime_checkable
 class DatabaseEndpointsInterface(Protocol):
-    """The application role's DSN and, on a split install, the owner's."""
+    """The application role's DSN, and nothing of the owner's."""
 
     @property
     def app_url(self) -> str: ...
-
-    @property
-    def migrate_url(self) -> str | None: ...
 
     @property
     def app_role(self) -> str | None:
@@ -57,6 +54,10 @@ class DatabaseRoleReconcilerInterface(Protocol):
 
     @property
     def grants(self) -> "AppRoleGrants": ...
+
+    async def close_schema(self, owner: OwnedConnection) -> None:
+        """Take CREATE on `public` from every role but its owner, before migrating."""
+        ...
 
     async def reconcile(
         self, owner: OwnedConnection, *, app_role: str, app_password: str | None = None

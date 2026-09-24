@@ -94,4 +94,4 @@ Commit as `feat(ledger): vibey ledger search --all-projects searches everything 
 - **Depends on:** `gap-ledger-search-all-projects-1`, `fakes-cli-ledger-deploy`, `orm-app-resources`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

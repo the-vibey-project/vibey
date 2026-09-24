@@ -12,8 +12,8 @@
 > PostgreSQL 14+. CI exercises majors 14–18; the chart default is PostgreSQL 17.
 > All timestamps `timestamptz`. All ids `uuid` except `event.seq`
 > (gapless bigint per project) and human-facing item ids (short prefixed strings).
-> Migrations are forward-only. They run as the schema's owner: `vibey migrate`, or
-> `build_app()` (`src/vibey/bootstrap.py`) when `VIBEY_PG_MIGRATE_URL` is set or the
+> Migrations are forward-only. They run as the schema's owner: `vibey migrate` (the only
+> reader of `VIBEY_PG_MIGRATE_URL`), or `build_app()` (`src/vibey/bootstrap.py`) when the
 > application's own role may migrate (a single-DSN install); see §7 and ADR-0055.
 
 The live schema also has a Pydantic-backed SQLAlchemy projection in
@@ -1053,8 +1053,7 @@ Migrations run as the schema's owner (ADR-0055), in one of three ways:
 - **`vibey migrate`** applies them on `VIBEY_PG_MIGRATE_URL`, then reconciles the
   application role's grants.
 - **`build_app()`** in `src/vibey/bootstrap.py` (`SchemaPreparer`), every time it opens
-  the pool:
-  - on an owner connection when `VIBEY_PG_MIGRATE_URL` is set, then reconciling grants;
+  the pool. It never reads the owner's DSN:
   - on the application's own connection when that role may migrate (a single-DSN
     install);
   - otherwise it only verifies (`PostgresMigrator.pending`, no DDL, no lock) and refuses

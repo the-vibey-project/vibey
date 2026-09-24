@@ -103,4 +103,4 @@ Nothing here is platform-specific: the same commands prove the change on macOS (
 - split-336-1-issue-reads: the `# --- Issues ---` block in the protocol, the comment mappings its reads return, and the adapter files as it leaves them (this lane appends after its methods). Through it, every wave-1 lane before it (`_scoped`, `_run`, `_failed`, `repository_name`, `RoutedTransport`).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

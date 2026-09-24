@@ -56,6 +56,24 @@ class TestDatabaseRoles:
         )
         await admin.execute(ddl)
 
+    async def restore(self, owner_dsn: str, migrations_dir: object) -> None:
+        """Bring this worker's database back to migrated-and-granted, as the owner.
+
+        Some tests drop `public` and rebuild it as the owner, which drops the
+        application role's grants with it. `build_app` no longer reconciles them (only
+        `vibey migrate` holds the owner's DSN), so a test that runs as the application
+        role after one of those puts them back first."""
+        from pathlib import Path
+
+        from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
+
+        owner = await asyncpg.connect(owner_dsn)
+        try:
+            await apply_migrations(owner, discover_migrations(Path(str(migrations_dir))))
+            await self.grant(owner)
+        finally:
+            await owner.close()
+
     async def grant(self, owner: asyncpg.Connection) -> None:
         """The declared grants, exactly as `vibey migrate` makes them."""
         if self.split:

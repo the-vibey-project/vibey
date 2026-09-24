@@ -145,4 +145,4 @@ Commit as `feat(deploy): DEPLOY_EXECUTE plans first, honours a cancel, and recor
 - **Must keep passing unchanged:** `tests/system/test_delivery_stage_set.py`, every deploy handler test.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

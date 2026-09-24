@@ -102,6 +102,13 @@ lives in `docs/architecture/decisions/`.
   unreadable source is reported and the watermark left unmoved, never stepped
   over. A figure computed over an unknown subset is not evidence.
   ADR-0048; sub-doctrine 10.g.
+- **Work outlives the machine.** Work in progress lives on durable storage
+  and is committed and pushed often; volatile storage holds only what can be
+  regenerated. Worktrees and storm roots live in the storm home
+  (`VIBEY_STORM_HOME`, else `~/git/vibey-storm` on macOS or
+  `~/.local/share/vibey/storm` on Linux), never under `/tmp` or `$TMPDIR`, and
+  the storm tools refuse volatile paths with exit 78. Push work in progress
+  to a draft PR at least every 30–45 minutes. ADR-0057; sub-doctrine 10.h.
 - **Code lives in classes, and every class has an interface beside it.** A
   module-level function is the method of last resort, and its reason is written
   at the definition. `src/<pkg>/services/github_service.py` implies
@@ -257,7 +264,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (56 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (57 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

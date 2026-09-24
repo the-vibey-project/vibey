@@ -628,7 +628,8 @@ spec:
             - name: PORT
               value: "8080"
             - name: DB_CONNECTION_URI
-              value: "postgres://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ $fullName }}-postgres:5432/infisical?sslmode=disable"
+              # Infisical's own role, owner of the `infisical` database only (ADR-0055).
+              value: "postgres://infisical:{{ include "vibey.surfaceDbPassword" (dict "root" . "name" "infisical") }}@{{ $fullName }}-postgres:5432/infisical?sslmode=disable"
             - name: REDIS_URL
               value: "redis://{{ $fullName }}-redis:6379/2"
             - name: ENCRYPTION_KEY

@@ -97,4 +97,4 @@ Do not push. Commit locally with the Title as the subject.
   - The ratchet's baseline may carry a `"reason"` key per entry. Extend the format in `test_patching_ratchet.py` if `fakes-registry` did not.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

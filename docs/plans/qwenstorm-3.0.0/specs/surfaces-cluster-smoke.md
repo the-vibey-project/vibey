@@ -72,8 +72,8 @@ job lives at `.github/workflows/ci.yml:871-1060` at integration `d3b4a388`; its 
 - **Shares a file with:** `.github/workflows/ci.yml` (R32, R34, T19 edit other parts). Keep their changes.
 - **Must keep passing unchanged:** every existing cluster-smoke contract, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file; `ci.yml` is long: `edit_file` only.
+  - Read `STORM/EDITING-RULES.md` before changing a file; `ci.yml` is long: `edit_file` only.
   - Never loosen an existing contract to make the new ones pass.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

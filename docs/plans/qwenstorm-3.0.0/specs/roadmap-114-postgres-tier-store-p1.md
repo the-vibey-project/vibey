@@ -183,4 +183,4 @@ Append to `tests/infrastructure/orm/test_append_only_guard_unit.py` (no database
   changes; commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

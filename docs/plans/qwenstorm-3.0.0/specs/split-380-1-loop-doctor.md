@@ -10,9 +10,9 @@ Once #381 flips the defaults, two failures are silent without this check:
 
 `vibey doctor` (`src/vibey/cli/main.py:1185-1391` at integration `4317cff6`) checks only PostgreSQL (the line printed at `:1341`) and the engines.
 
-**The install half of #380 is gone.** The draft installer ADR (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-installer.md:257-260`) drops `RabbitMqLocalService` and `install --rabbitmq` from #380: RabbitMQ is catalogue data on Arch Linux and macOS, lane `installer-broker-cache` declares it and lane `installer-cli` owns `vibey install --rabbitmq` (sub-doctrine 8.h, `src/vibey_tools/gh/docs/doctrines.md:326-333`; 10.e, `:417`).
+**The install half of #380 is gone.** The draft installer ADR (`STORM/specs/ADR-installer.md:257-260`) drops `RabbitMqLocalService` and `install --rabbitmq` from #380: RabbitMQ is catalogue data on Arch Linux and macOS, lane `installer-broker-cache` declares it and lane `installer-cli` owns `vibey install --rabbitmq` (sub-doctrine 8.h, `src/vibey_tools/gh/docs/doctrines.md:326-333`; 10.e, `:417`).
 
-**The doctor follows draft ADR-0046** (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md`), not ADR-0044's service per engine:
+**The doctor follows draft ADR-0046** (`STORM/specs/ADR-two-loops.md`), not ADR-0044's service per engine:
 - there are exactly two loops (8.c, `doctrines.md:196-234`);
 - each loop has one **router** consuming `vibey.runs.<loop>` and one **seat host** per model consuming `vibey.runs.<loop>.<seat>`, both exclusively (ADR-0046 §3);
 - probes go to `vibey.runs.<loop>.probe` and are answered by the loop, from its last real result, marked cached with its time, when the model is not resident (§4, lines 216-220);
@@ -174,4 +174,4 @@ grep -n "vibey.infrastructure.loop_service.interfaces" .importlinter
 - harness-T21-amqp-consumer-count: `consumer_count(queue)` on the family AMQP client and its in-memory double.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

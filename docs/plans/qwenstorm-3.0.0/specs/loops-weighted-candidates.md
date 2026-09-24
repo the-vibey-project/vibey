@@ -85,7 +85,7 @@ why each pool engine is not a candidate. Nothing is declared yet: lanes `loops-l
    (non-negotiable 2; `AdapterExclusion` from lane `loops-ledger-kinds` enforces it).
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first. All three source
+Read `STORM/EDITING-RULES.md` first. All three source
 files are over 100 lines: change them with `edit_file` (or the checked replacement below), never
 `write_file`.
 
@@ -390,4 +390,4 @@ First run `uv run ruff format src/vibey/application/dto.py src/vibey/application
 **Depends on:** `loops-ledger-kinds`, `fakes-engines`, `orm-engine-health`, `orm-rotation-cursor`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -69,4 +69,4 @@ they are never tuned.
 Commit as `feat(domain): lane read capacity from measured latency`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

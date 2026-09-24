@@ -116,4 +116,4 @@ Append to `tests/infrastructure/ledger/test_redact.py`:
 Commit as `feat(ledger): redaction covers people's private details, not only credentials`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

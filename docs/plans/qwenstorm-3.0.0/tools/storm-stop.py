@@ -24,8 +24,9 @@ Four things happen, and the order is the whole point.
    the whole reason the runner keeps its record in files rather than in memory.
 
 4. THE SNAPSHOT IS COMMITTED AND PUSHED. A pause recorded only on the machine that paused is
-   not recorded: /tmp is wiped between sessions and `lanes/` goes with it. The durable record
-   is `integrated.txt`, `abandoned.txt` and this file in git.
+   not recorded: a machine can reboot, fail or be wiped, and `lanes/` is working material
+   that goes with it (10.h). The durable record is `integrated.txt`, `abandoned.txt` and
+   this file in git.
 
 WHAT IT WILL NOT DO
 -------------------
