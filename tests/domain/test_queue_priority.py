@@ -476,6 +476,35 @@ def test_a_sweep_skips_a_job_in_an_unknown_phase() -> None:
     assert plan.swept == () and plan.skipped == (_id(1),)
 
 
+def _through_an_unknown_state() -> Mapping[UUID, QueuedJob]:
+    """a (3) named needs c (2), which needs d (1); both pulled. c is now in a state a
+    newer vibey wrote. x (4) is a plain job."""
+    return _index(
+        _job(1, bump_seq=1, named=False),
+        _job(2, bump_seq=2, named=False, deps=(1,), state=UnrecognizedJobState("future")),
+        _job(3, bump_seq=3, deps=(2,)),
+        _job(4),
+    )
+
+
+def test_the_lane_runs_through_a_dependency_in_an_unknown_state() -> None:
+    plan = BUMP_PLANNER.plan(_id(4), _through_an_unknown_state())
+    assert plan.moved == (_id(4),) and plan.swept == () and plan.skipped == ()
+
+
+def test_an_unbump_is_refused_while_a_named_job_needs_it_through_an_unknown_state() -> None:
+    with pytest.raises(DependentsStillBumped) as refused:
+        UNBUMP_PLANNER.plan(_id(1), _through_an_unknown_state())
+    assert _id(3) in refused.value.dependents
+
+
+def test_an_orphan_in_an_unknown_state_is_left_in_the_lane_and_named() -> None:
+    jobs = dict(_orphaned())
+    jobs[_id(1)] = _job(1, bump_seq=1, named=False, state=UnrecognizedJobState("future"))
+    plan = BUMP_PLANNER.plan(_id(3), jobs)
+    assert plan.swept == () and plan.skipped == (_id(1),)
+
+
 # -- the records a change leaves behind -------------------------------------------------------
 
 

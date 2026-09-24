@@ -271,22 +271,45 @@ class _SnapshotPlanner:
         job in a state this vibey does not know is kept, not guessed finished."""
         return {j.id for j in jobs.values() if j.named and j.state not in FINISHED_STATES}
 
+    @staticmethod
+    def _cannot_write(job: QueuedJob) -> bool:
+        """A row a newer vibey wrote: a phase or a state this one has no member for."""
+        return not job.phase_known or not isinstance(job.state, JobState)
+
+    def _lane_of(self, jobs: Mapping[UUID, QueuedJob], roots: Iterable[UUID]) -> set[UUID]:
+        """`roots` and every job they depend on, transitively, through every unfinished
+        link -- one in a state this vibey does not know included, since it is not finished.
+        This is the lane's derivation; what a bump may move is `_needs`, which stops there."""
+        reached: set[UUID] = set()
+        stack = list(roots)
+        while stack:
+            job_id = stack.pop()
+            if job_id in reached:
+                continue
+            reached.add(job_id)
+            for dep_id in self._get(jobs, job_id).depends_on:
+                if self._get(jobs, dep_id).state not in FINISHED_STATES:
+                    stack.append(dep_id)
+        return reached
+
     def _orphans(self, jobs: Mapping[UUID, QueuedJob], named: set[UUID]) -> set[UUID]:
         """Unfinished lane members the lane, derived from `named`, does not contain."""
-        derived: set[UUID] = set()
-        for job_id in named:
-            derived |= set(self._needs(jobs, jobs[job_id]))
-        return {j.id for j in jobs.values() if j.bumped and j.movable and j.id not in derived}
+        derived = self._lane_of(jobs, named)
+        return {
+            j.id
+            for j in jobs.values()
+            if j.bumped and j.state not in FINISHED_STATES and j.id not in derived
+        }
 
     def _clearable(
         self, jobs: Mapping[UUID, QueuedJob], ids: set[UUID]
     ) -> tuple[tuple[UUID, ...], tuple[UUID, ...]]:
-        """`ids` in claim order, split into those it may clear and those in a phase this
-        vibey does not know, which it leaves alone rather than refuse the request."""
+        """`ids` in claim order, split into those it may clear and those this vibey cannot
+        write, which it leaves alone rather than refuse the request."""
         ordered = self._order.sort(jobs[job_id] for job_id in ids)
         return (
-            tuple(j.id for j in ordered if j.phase_known),
-            tuple(j.id for j in ordered if not j.phase_known),
+            tuple(j.id for j in ordered if not self._cannot_write(j)),
+            tuple(j.id for j in ordered if self._cannot_write(j)),
         )
 
     def _needs(self, jobs: Mapping[UUID, QueuedJob], root: QueuedJob) -> dict[UUID, QueuedJob]:
@@ -396,7 +419,7 @@ class UnbumpPlanner(_SnapshotPlanner):
             return UnbumpPlan(target=target, moved=(), swept=swept, skipped=skipped)
         remaining = named - {target}
         dependents = sorted(
-            job_id for job_id in remaining if target in self._needs(jobs, jobs[job_id])
+            job_id for job_id in remaining if target in self._lane_of(jobs, {job_id})
         )
         if dependents:
             raise DependentsStillBumped(target, tuple(dependents))

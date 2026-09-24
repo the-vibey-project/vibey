@@ -663,6 +663,31 @@ async def test_an_unbump_leaves_a_job_in_an_unknown_phase_and_records_it(
         assert await conn.fetchval("SELECT bump_seq FROM job WHERE id = $1", d) is not None
 
 
+async def test_the_lane_runs_through_a_dependency_in_an_unknown_state(
+    migrated_pool: asyncpg.Pool, project_id: UUID, owner_pool: asyncpg.Pool
+) -> None:
+    """a, named, needs c, which needs d. c moves to a state a newer vibey wrote: the next
+    request must not sweep d, which a still needs, and d cannot be un-bumped."""
+    repo = PostgresJobRepository(migrated_pool)
+    store = PostgresJobPriorityStore(migrated_pool)
+    (d,) = await _enqueue(repo, project_id, "d")
+    c = (await repo.enqueue(_request(project_id, "c", depends_on=(d,)))).id
+    a = (await repo.enqueue(_request(project_id, "a", depends_on=(c,)))).id
+    (x,) = await _enqueue(repo, project_id, "x")
+    await store.bump(a, context=_context(project_id), at=AT)
+    # ALTER TYPE is the owner's (ADR-0055); `migrated_pool` is the application role's.
+    async with owner_pool.acquire() as conn:
+        await conn.execute("ALTER TYPE job_state ADD VALUE IF NOT EXISTS 'quarantined'")
+    await _set_state(migrated_pool, c, "quarantined")
+
+    change = await store.bump(x, context=_context(project_id), at=AT)
+    assert change.swept == () and change.skipped == ()
+    with pytest.raises(DependentsStillBumped):
+        await store.unbump(d, context=_context(project_id), at=AT)
+    async with migrated_pool.acquire() as conn:
+        assert await conn.fetchval("SELECT bump_seq FROM job WHERE id = $1", d) is not None
+
+
 async def test_unbumping_a_job_a_bumped_job_needs_is_refused_naming_it(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:
