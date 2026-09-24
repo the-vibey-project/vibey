@@ -38,6 +38,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `PASSWORD`, `PASSWD`, `CREDENTIAL`, `DSN` or `DATABASE_URL`. It used to pass everything
   except `KEY` and `TOKEN` names, so `VIBEY_PG_URL` and `PGPASSWORD` reached commands a
   model chose.
+* **vibey_gh:** the sovereign review never reads a prompt the model did not see in full
+  (#1090). Local requests are sized from everything sent and must fit the declared
+  `[pr_automation.fallback] context_window` (default 65,536) beside `reasoning_reserve_tokens`
+  (8,192), or are refused rather than silently truncated by Ollama; a whole review sends the
+  whole diff (never cut at `max_diff_chars`) and trims only its optional documents; each reply
+  is checked against Ollama's `prompt_eval_count` and `done_reason`, so a model that ran out of
+  room says so
 * **vibey_gh:** the exact-head review reaches a paid model only where `[pr_automation]
   paid_review = true` declares one (sub-doctrine 8.b: a paid counterparty is declared-only).
   Undeclared, the default, the paid `review` job never runs: the sovereign lane answers the
@@ -87,7 +94,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   after whatever is running — never interrupting it — behind anything bumped before it
   and ahead of all un-bumped waiting work, and pulls its unfinished dependencies forward
   with it; a dependency that can never finish refuses the bump. `vibey queue unbump JOB`
-  undoes exactly what that bump moved, and is refused while a bumped job still needs it.
+  takes it out of the lane, which is always the jobs bumped by name plus their unfinished
+  dependencies, so nothing is left behind; it is refused while another named job needs it.
   `vibey queue list [PROJECT]` shows the queue in claim order with every bump marked;
   `vibey design resume PROJECT --priority` enqueues the interview bumped. The claim orders
   `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so the order among

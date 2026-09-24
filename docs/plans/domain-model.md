@@ -765,7 +765,7 @@ class PriorityGrant:                     # the reviewed config's owner, + declar
 class QueuedJob:                         # the part of a row that decides its place
     id: UUID; state: StoredJobState; priority: int; run_after: datetime
     bump_seq: int | None = None; depends_on: tuple[UUID, ...] = ()
-    bump_origin: UUID | None = None; phase_known: bool = True
+    bump_named: bool = False; phase_known: bool = True
 
 class ClaimOrder:                        # the claim's ORDER BY, as a sort key
     def key(self, job: QueuedJob) -> tuple[bool, int, int, datetime, UUID]: ...
@@ -774,8 +774,8 @@ class ClaimOrder:                        # the claim's ORDER BY, as a sort key
 class BumpPlanner:                       # target + unfinished deps, deps first, relative
     def plan(self, target, jobs, *, finished_ok=False) -> BumpPlan: ...
     # order kept; a dependency that can never finish, or a ring, is refused
-class UnbumpPlanner:                     # exactly what the bump moved; refused while a
-    def plan(self, target, jobs) -> UnbumpPlan: ...   # bumped job still needs the target
+class UnbumpPlanner:                     # leave the named set, re-derive the lane; refused
+    def plan(self, target, jobs) -> UnbumpPlan: ...   # while another named job needs it
 
 
 # spec.py

@@ -5,6 +5,20 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Fix:** a local review never reads a prompt the model did not see in full (#1090). The
+  sovereign lane's request was sized from the user prompt alone and capped at 32,768 tokens;
+  Ollama silently dropped the excess (it read 31,765 of ~41,000 tokens) and the model answered
+  about part of the diff. Requests are now sized from everything sent, must fit the new
+  declared `[pr_automation.fallback] context_window` (default 65,536, this host's measured
+  window) beside `reasoning_reserve_tokens` (8,192), and are refused rather than sent when
+  they do not. A whole review never cuts the diff: its optional documents give way first, and
+  the verdict names what was cut or left out. Each reply is then checked against Ollama's own
+  `prompt_eval_count` and `done_reason`, so a truncated prompt or a model that ran out of room
+  is named as such instead of surfacing as "Unterminated string". New keys `chars_per_token`
+  (3) and `think` (empty: the model's default), and `local-review` / `local-triage` flags
+  `--context-window`, `--reasoning-reserve`, `--chars-per-token` and `--think`, which both
+  workflows now pass from the declared table.
+
 - `runner install [--load]`, `runner check`, `runner cleanup [--apply]` and
   `runner uninstall [--apply]`: the sovereign review runner stood up from the tree (12.c).
   A new `[runners]` table declares the repository it registers with, its LaunchAgent prefix,

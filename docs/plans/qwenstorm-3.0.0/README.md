@@ -39,23 +39,77 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
      resolver and cannot disagree.
    - `storm-priority.py` is the priority lane (ADR-0054). `push SLUG ISSUE [--deps a,b]`
      prioritises a lane, first appending it to `queue.txt` if it is new; `bump SLUG`
-     prioritises a queued lane; `unbump SLUG` returns it to its `queue.txt` place; `list`
-     prints the order the storm will run, with blocked and settled lanes marked.
-     - A prioritised lane runs next after the lane running now. It never interrupts it.
-     - Prioritised lanes run first pushed first, ahead of every other `queue.txt` line.
-     - A push also prioritises every dependency that is not yet integrated, transitively and
-       in dependency order, and says what it moved. A lane still starts only once all its
-       dependencies are in `integrated.txt`.
-     - Only the operator may change the lane: the account that owns the storm, running the
-       CLI locally. Automation may too if it passes `--source NAME` and `storm.toml` lists
-       NAME under `[priority] sources`. Anything else is refused, recorded and reported
-       (sub-doctrine 12.j). Nothing reads a label or an issue to decide priority.
-     - Admission still applies: `storm_trust.py` judges a pushed lane's issue when it
-       starts, and `lane-verify.py` still refuses forbidden paths.
-     - Every push, bump, un-bump and refusal is one JSON line appended to the priority log
-       (`[priority] log` in `storm.toml`, else `priority.log` beside the ledgers) and a
-       plain line in `progress.log`. The order is always the log's replay; nothing is edited
-       in place. `storm-evidence.py` consumes the log by byte offset with the other ledgers.
+     prioritises a queued lane; `unbump SLUG` undoes that; `list` prints the order the storm
+     will run, with blocked and settled lanes and skipped `queue.txt` lines marked.
+
+     The contract, numbered as ADR-0054 numbers it:
+
+     1. Next means next after whatever is running. A running lane is never interrupted.
+     2. Prioritised lanes run first pushed first, ahead of every other `queue.txt` line.
+        Re-bumping a lane keeps its place.
+     3. A push also prioritises every dependency that is not yet integrated, transitively
+        and dependencies first, and says what it moved. A dependency that can never finish
+        (abandoned, queued nowhere, or in a cycle) refuses the push, naming it. A lane still
+        starts only once all its dependencies are in `integrated.txt`.
+     4. Every caller must run as the account that owns the storm's `queue.txt`, checked by
+        uid; the name recorded comes from the password database, never `$USER`. With no
+        `--source` that caller is the operator; automation passes `--source NAME`, and NAME
+        must be listed under `[priority] sources` in `storm.toml`. A process carrying
+        `VIBEY_STORM_LANE`, which every lane command inherits, is refused. Nothing reads a
+        label or an issue to decide priority, and no other gate is bypassed: `storm_trust.py`
+        judges a pushed lane's issue when it starts, and `lane-verify.py` still refuses
+        forbidden paths.
+     5. Every request, whether it moved something, moved nothing or was refused, is one JSON
+        line appended to the priority log (`[priority] log` in `storm.toml`, else
+        `priority.log` beside the ledgers) and one line in `progress.log`, with outside text
+        escaped. Authorisation runs before any lookup. The order is always the log's replay;
+        nothing is edited in place.
+     6. `unbump` undoes exactly what the push or bump moved, by derivation: the priority lane
+        is exactly the lanes pushed or bumped by name and not since un-bumped, plus all their
+        unfinished transitive dependencies, first in first. Un-bumping a lane removes it from
+        that named set, and every lane nothing named still requires leaves with it, so no
+        orphan remains. It is refused, naming them, while another named lane depends on it.
+        The `unbump` line records its resulting `removed` list, so replay is exact. A lane
+        bumped by name keeps its place.
+     7. `push` enqueues a new lane already prioritised, in one step. Pushing or bumping a
+        finished lane (settled, or run and awaiting review) is a recorded no-op.
+
+     Beyond the contract:
+
+     - **What the authorisation does not do.** Lanes run as the operator's uid today, so a
+       lane's process can unset `VIBEY_STORM_LANE`, claim a declared source, or append to
+       the priority log and `queue.txt` directly. The marker catches mistakes; it does not
+       contain a hostile lane, and a source name identifies automation without
+       authenticating it. The fix is to run lanes as a separate low-privilege OS user:
+       `specs/storm-lane-os-user.md`.
+     - Slugs, dependencies and source names must match `[A-Za-z0-9][A-Za-z0-9._-]*` with no
+       `..`. A `queue.txt` line outside that is skipped, never run, and said in
+       `progress.log`.
+     - Replay refuses a malformed entry, which checks shape, not who wrote it. After every
+       append a witness (`.priority.log.witness`, which a `priority.log*` glob does not
+       match) records the log's length; it is fsynced, and so is its directory. The
+       witness is read under the same lock as the log, so a read racing an append never
+       reports a false truncation. A log that is gone after it existed, shorter than
+       recorded, or whose witness is empty is an unknown order: the storm waits and says
+       so, and no request, not even a refusal, re-creates it (exit 3).
+     - **The way out of "order unknown"** is `storm-priority.py reset --reason TEXT`, and the
+       message names it. Only the operator can run it (the storm owner's uid, never a
+       `--source`, never from inside a lane), and only while the log is NOT readable: a
+       reset never replaces a readable order. It keeps the old file, if any, as
+       `priority.log.abandoned-<stamp>`, starts a new log whose first line is a `reset`
+       event naming the length it abandons and the reason, rewrites the witness, and says in
+       `progress.log` that the prior priority order was abandoned. Every lane then runs in
+       `queue.txt` order until pushed again. This also recovers a fresh storm root whose
+       tracked evidence watermark still carries an offset from an earlier root: the
+       watermark offset is set aside once the log begins with a reset that abandoned it, and
+       `storm-evidence.py` re-bases on that line and reports the discontinuity as a gap.
+     - Authority is checked before the lock, so a caller without write access to the storm
+       is refused (exit 1), not crashed; if the refusal cannot be written it says "could not
+       be recorded (no write access)".
+       `storm-evidence.py` consumes the log by byte offset with the other ledgers, and
+       counts lane starts and ends only from `progress.log`.
+     - Exit codes: 0 done, 1 refused (not authorised), 2 refused (cannot be carried out),
+       3 order unknown, 4 crashed.
    - `lane-setup.sh` and `qwenlane.py` set up and drive a lane.
    - `lane_environment.py` gives a lane's commands its own `.venv` and nothing that points
      outside it, and refuses a lane whose `python` resolves elsewhere.
