@@ -380,23 +380,105 @@ which yields two properties without any global lock: *mutual exclusion per item*
 worker never waits on a peer's claim, so throughput scales as
 $\min(|Q|, |\mathrm{workers}|)$).
 
-Within a project, claims are ordered by priority descending, then by the earliest
-permitted run time, then by id, and they exclude items whose dependencies have not
-succeeded. Within one priority class an item can be bypassed only while it is held,
-and every hold is bounded by a lease: a claim sets the lease expiry to
-$\mathrm{now} + L$, a live worker renews it, and a reaper returns any expired lease to
-the ready state. A crashed worker therefore costs at most $L$ of delay and never a
-lost item. Across priority classes the discipline is strict priority, not arrival
-order. Above every class sits the bump (ADR-0054): the operator -- the account owning
-the project's reviewed configuration -- or a source that configuration declares, may
-move a waiting item to the front, where bumped items are claimed first-in-first-out by
-a sequence drawn at the bump, ahead of all un-bumped work. A bump orders and never
-admits: it neither preempts a held lease nor lets an item past a dependency that has
-not succeeded, whose own dependencies it pulls forward instead. Because workers die and leases expire, every job is idempotent under replay.
+Within a project, claims exclude items whose dependencies have not succeeded, and are
+ordered first by the priority lane described below, then by the earliest permitted run
+time, then by id. (A `priority` column keeps its place in the order, but since 3.0.0
+no request can set it, so it is zero for every job and orders nothing.) An item can
+be bypassed only while it is held, and every hold is bounded by a lease: a claim sets
+the lease expiry to $\mathrm{now} + L$, a live worker renews it, and a reaper returns
+any expired lease to the ready state. A crashed worker therefore costs at most $L$ of
+delay and never a lost item. Because workers die and leases expire, every job is
+idempotent under replay.
+
+**The priority lane.** The operator asked that an item pushed into the queue run next
+rather than wait behind the work in front of it, and that both of the family's queues
+do so: vibey's PostgreSQL job queue and the storm's lane queue. ADR-0054 states one
+contract for both (#1089 and #1092 for the storm, #1091 and #1095 for the job queue,
+with follow-ups #1102 and #1103). *Next* means next after whatever is running: a bump
+never preempts a claimed or leased item and never touches its lease, as 8.c requires. It
+never admits either. Phases, human gates, admission, a capacity deferral, the budget
+brake and the handoff gate still decide whether an item may run; a bump decides only
+which runnable item runs first, and it never makes an item runnable before its
+dependencies finish. The lane's contents are not remembered but derived.
+
+```latex
+\begin{invariant}[Derived priority lane]
+Let $B$ be the items bumped, or enqueued prioritised, by name and not since un-bumped.
+The lane is exactly $B$ together with every unfinished transitive dependency of a
+member of $B$, ordered first-in-first-out by when each item first entered the lane.
+Un-bumping $x$ removes $x$ from $B$, and is refused, naming them, while another member
+of $B$ depends on $x$.
+\end{invariant}
+```
+
+The derived form replaced a first rule, *un-bump undoes what that bump moved*, after an
+independent review of #1091 found it could leave an orphan: with $x$, $d$, and $a$ and
+$b$ both needing $d$, bumping $a$ and $b$ and then un-bumping both left $d$ in the lane
+with nothing needing it. Under the invariant nothing can remain that no named item
+needs, and every request re-derives the lane and sweeps what is no longer derived,
+including what a named job left behind when it was cancelled or failed (#1103). In the
+job queue the lane is a column set from a sequence drawn at the bump, not a timestamp,
+because one bump moves several rows in one transaction and `now()` is a single instant
+for all of them (10.g), and not a large priority value, because first-in-first-out
+would then need a counter disguised as a weight.
+
+Only two callers may bump or un-bump: the operator, meaning the operating-system
+account that owns the queue's reviewed declaration, checked by the process's user id
+against that file's owner rather than by a name typed on a command line; and an
+automation that names itself with a source the reviewed declaration lists, running as
+that same account, since a declared name is not a credential. Nothing reads the forge
+to decide priority, so no label, issue or comment from anyone can move work forward
+(12.j). Every request is recorded whatever became of it, whether it moved something,
+moved nothing or was refused, and authorisation comes before any lookup, so a stranger
+asking about any item, real or not, is refused and recorded without learning anything
+about it. In vibey the record is a ledger event written in the same transaction as the
+row change. In the storm it is an append-only priority log whose replay is the lane
+order, and after its post-merge review (#1092, #1102) that log is loss-evident: a
+witness outside the log records its length, and a log found shorter than its witness,
+or a witness that is empty or corrupt, makes the order *unknown* rather than silently
+falling back to no priority. A refused request can no longer append to such a log and
+re-witness the loss as normal, and a deliberate reset keeps the old file under an
+abandoned name rather than deleting it.
+
+The rule was tested adversarially as well as by unit tests. A Hypothesis state machine
+runs random, overlapping bumps and un-bumps with jobs finishing, failing or being
+cancelled part-way, and asserts after every step that the stored lane equals the
+derivation and that un-bumping every named job clears it; breaking the derivation on
+purpose makes it fail (#1095, #1103). In the job queue, five workers claiming at once
+under `SKIP LOCKED` take exactly the first five in order (the merged repository
+tests). The reviewers' own probes, which are review records rather than tracked tests,
+found no double claim with five workers claiming while three reorderers made 450
+random bumps and un-bumps against a real database (review of #1095), and no false
+*order unknown* in more than 9,000 concurrent reads of the storm's log (review of
+#1102).
+
+**Reapers by measured rule.** The lease reaper is the queue's oldest reaper; 3.0.0
+extends the idea on the rule that a hang is decided by measurement and that evidence
+is kept before anything is killed. The motivating incident: one pre-push test run of
+the storm (eight test workers) sat at 0% CPU for 39 minutes, every worker asleep, while
+it held the storm's shared push lock, and every other push queued behind it; a
+human-approved kill released it, and nothing recorded which test had hung (#1105). The
+push-gate reaper now acts only on one of three measured conditions: the lock's holder
+and its process group are gone; the holder's own process group used less than a
+declared number of CPU-seconds over a declared window, measured from samples kept
+across passes and never from a single snapshot, with an unreadable process table
+reported as unknown rather than idle; or the push has held the lock past a declared
+wall-clock ceiling. Before it signals anything it writes the owner record, the
+decision, the process tree, the log's tail and the stacks to an evidence directory,
+signals only the push's own process group, and appends one line per reap to an
+append-only log. Inside the suite, `pytest-timeout` with a `faulthandler` dump makes a
+hung test dump every thread's stack and then fail by name, so the next such hang names
+itself. Wall time alone is not the rule, because a slow test that is still computing is
+not a hung one. At the cutoff two extensions were open: a schedule of its own for the
+push-gate reaper and a safe trace of locks taken without an owner record (#1107), and
+reapers for every item the RabbitMQ bus guards, brought to the same semantics as the
+PostgreSQL job queue (#1108, ADR-0056).
+
+<!-- TODO(3.0.0-pending: feat/bus-reapers) describe the merged bus reapers (#1108, ADR-0056): the inventory of what the bus guards, each measured condition and its declared threshold (hung handler, held with no consumer, poison, stale ready, dead letters), dead letters parked behind a human gate and never deleted, every reap a QueueReaped ledger event, the at-most-once finding, and the review verdict; and #1107 once merged -->
 
 ```latex
 \begin{plainwords}
-Jobs wait in a line inside a database. A helper takes the job at the front and gets a timer with it, like a library book with a due date. A working helper keeps renewing the timer. If a helper crashes, the timer runs out and the job goes back into the line, so it is never lost. Helpers never wait for each other, so adding helpers makes the line move faster.
+Jobs wait in a line inside a database. A helper takes the job at the front and gets a timer with it, like a library book with a due date. A working helper keeps renewing the timer. If a helper crashes, the timer runs out and the job goes back into the line, so it is never lost. Helpers never wait for each other, so adding helpers makes the line move faster. The owner can now also say ``do this one next''. That job goes to the front, together with anything it needs done first, but it never pulls a job out of a helper's hands and never skips a checkpoint, and only the owner, or a helper the owner has named in writing, may ask. Every such request is written down, even the refused ones. And when a job seems stuck, a caretaker measures whether it is really doing nothing before stepping in, and writes down what it saw first.
 \end{plainwords}
 ```
 
