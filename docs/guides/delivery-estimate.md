@@ -7,8 +7,10 @@ branch's commit history. A refresh is a new record in the append-only
 not appended twice, while a billing-only change still creates a new record.
 
 The generated [current estimate](../estimate.md) is the quickest human view. The GitHub
-Actions job also writes the same lines to its job summary and refreshes the page after
-integration changes, issue and pull-request changes, and on a schedule.
+Actions job also writes the same lines to its job summary. It refreshes the page once an
+hour, or when someone runs the workflow by hand, and never on each push, pull request or
+issue. The refresh reaches develop through a pull request that runs every CI gate, like any
+other change.
 
 ## What is estimated
 
