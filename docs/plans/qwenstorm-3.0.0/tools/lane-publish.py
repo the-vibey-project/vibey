@@ -55,8 +55,8 @@ import time
 from pathlib import Path
 from typing import NamedTuple
 
-import storm_forge
 import storm_paths
+from storm_forge import PullRequest, StormForge, StormForgeInterface, Unreadable
 
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
 # resolve but lanes/ and integration/ exist only in the runtime root.
@@ -581,7 +581,7 @@ def verify(slug: str, record: bool) -> tuple[bool, list[str]]:
     return not problems, list(problems)
 
 
-def already_published(slug: str, prs: list[storm_forge.PullRequest]) -> str | None:
+def already_published(slug: str, prs: list[PullRequest], forge: StormForgeInterface) -> str | None:
     """Whether this lane is already out for review.
 
     Without this the sweep republishes anything it published on the previous pass: the gates
@@ -589,7 +589,7 @@ def already_published(slug: str, prs: list[storm_forge.PullRequest]) -> str | No
     from remembering -- a local note would be wrong the moment a PR is opened or closed
     anywhere else.
 
-    `prs` is the forge's whole list, read once per sweep (`storm_forge`). A pull request
+    `prs` is the forge's whole list, read once per sweep through `forge`. A pull request
     claims this lane if it was opened from the lane's own branch, or if its body CLOSES the
     lane's issue under any branch name: a lane published by hand will not be sitting on
     `lane/<slug>`, and rmq-r03-amqp-dependency went out as `feat/amqp-dependency` exactly
@@ -606,17 +606,19 @@ def already_published(slug: str, prs: list[storm_forge.PullRequest]) -> str | No
     if code == 0:
         return "a branch is already pushed"
     issue = issue_of(slug)
-    for pr in storm_forge.closing(prs, issue):
+    for pr in forge.closing(prs, issue):
         return f"#{pr.number} ({pr.state.lower()}) already closes issue #{issue}"
     return None
 
 
-def ready(slug: str, prs: list[storm_forge.PullRequest], record: bool) -> tuple[bool, list[str]]:
+def ready(
+    slug: str, prs: list[PullRequest], record: bool, forge: StormForgeInterface
+) -> tuple[bool, list[str]]:
     lane = LANES / slug
     result = lane / ".qwenstorm/result.json"
     if not result.is_file():
         return False, ["still running"]
-    out_already = already_published(slug, prs)
+    out_already = already_published(slug, prs, forge)
     if out_already:
         return False, [f"already published: {out_already}"]
     clean, problems = verify(slug, record)
@@ -764,7 +766,8 @@ def publish(slug: str, dry: bool) -> str:
     return f"published: {out.strip().splitlines()[-1]}" if not code else f"pr failed: {out[:120]}"
 
 
-def sweep(dry: bool, only: list[str] | None) -> int:
+def sweep(dry: bool, only: list[str] | None, forge: StormForgeInterface | None = None) -> int:
+    """One pass over every unsettled lane. `forge` is the seam; left out, the real one."""
     done = settled()
     slugs = (
         sorted(d.name for d in LANES.iterdir() if d.is_dir() and d.name not in done)
@@ -777,8 +780,9 @@ def sweep(dry: bool, only: list[str] | None) -> int:
         print("\n0 unsettled lane(s), 0 ready")
         return 0
     try:
-        prs = storm_forge.pull_requests(MAIN, REPO, storm_forge.limit(STORM))
-    except storm_forge.Unreadable as exc:
+        forge = forge or StormForge.declared(STORM, MAIN, REPO)
+        prs = forge.pull_requests()
+    except Unreadable as exc:
         # Not "nothing is published": nobody could find out. Publishing on that would open a
         # second pull request for work already out for review, so every lane is held.
         print(f"cannot read the forge -- {exc}")
@@ -786,7 +790,7 @@ def sweep(dry: bool, only: list[str] | None) -> int:
         return 0
     published = 0
     for slug in slugs:
-        ok, why = ready(slug, prs, record=not dry)
+        ok, why = ready(slug, prs, record=not dry, forge=forge)
         if ok:
             print(f"READY  {slug}\n       {publish(slug, dry)}")
             published += 1

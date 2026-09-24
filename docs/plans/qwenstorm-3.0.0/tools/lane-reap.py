@@ -99,8 +99,8 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-import storm_forge
 import storm_paths
+from storm_forge import PullRequest, StormForge, StormForgeInterface, Unreadable
 
 # The storm root is the one location that cannot come from configuration -- it is where the
 # configuration lives. `storm_paths.storm` derives it, spelling out the `.absolute()` that
@@ -173,66 +173,39 @@ def verdict(lane: Path) -> dict | None:
     return found if isinstance(found, dict) else None
 
 
-def forge() -> list[storm_forge.PullRequest] | None:
+def forge(source: StormForgeInterface) -> list[PullRequest] | None:
     """Every pull request on the forge, newest first, or None if it cannot be read whole.
 
     One call for every lane rather than one per lane: a query per lane over thirty lanes is
     thirty round trips to answer a question one round trip answers, which is the machinery
-    wasting its own time as surely as anybody else's (12.g). The read is `storm_forge`'s,
-    shared with `lane-publish.py`, so both tools agree on what a pull request closes (10.e).
+    wasting its own time as surely as anybody else's (12.g). `source` is the declared seam
+    (`interfaces/storm_forge_interface.py`), shared with `lane-publish.py`, so both tools
+    agree on what a pull request closes (10.e).
 
-    None, not [], when the read fails -- or comes back exactly as long as its limit, which
-    means the oldest may be missing. An empty list and an unreachable forge would otherwise
-    be the same value and opposite facts -- the first says "nothing was ever published", the
-    second says "I could not find out" -- and acting on the second would abandon lanes whose
-    work is sitting merged in `develop` (10.f).
+    None, not [], when the read fails -- or comes back exactly as long as its limit, or in a
+    shape that is not a list of pull requests. An empty list and an unreachable forge would
+    otherwise be the same value and opposite facts -- the first says "nothing was ever
+    published", the second says "I could not find out" -- and acting on the second would
+    abandon lanes whose work is sitting merged in `develop` (10.f).
     """
     try:
-        return storm_forge.pull_requests(MAIN, None, storm_forge.limit(STORM))
-    except storm_forge.Unreadable as exc:
+        return source.pull_requests()
+    except Unreadable as exc:
         print(f"  forge: {exc}")
         return None
 
 
-def heads(prs: list[storm_forge.PullRequest]) -> dict[str, tuple[int, str]]:
-    """Each head ref's newest pull request, as (number, state).
-
-    Keyed by the WHOLE head ref, not by lane slug. Keying on the slug meant the map held only
-    `lane/*` branches, so the worktree pass could not find a pull request for `docs/...` or
-    `fix/...` and kept all eighteen of them as "never published" -- a right answer to a
-    question about a map that had never been asked to hold them. The list is newest first,
-    so the first one seen is the live one: a branch republished after a closed attempt is
-    judged on the new request.
-    """
-    out: dict[str, tuple[int, str]] = {}
-    for pr in prs:
-        if pr.head and pr.head not in out:
-            out[pr.head] = (pr.number, pr.state)
-    return out
-
-
-def claimed(
-    prs: list[storm_forge.PullRequest], issue: str | None, state: str
-) -> storm_forge.PullRequest | None:
-    """The newest pull request in `state` whose body closes `issue`, under any branch name.
-
-    The lane's own `lane/<slug>` branch is not the only road to `develop`. rmq-r03 merged as
-    `feat/amqp-dependency` (#1040), and #396 carried eight wave-1 lanes at once; looking only
-    at `lane/<slug>` left rmq-r03 unsettled indefinitely, and every lane waiting on it waiting
-    with it. What says a pull request delivered an issue is the closing reference the forge
-    itself acts on, and `storm_forge` reads exactly that.
-    """
-    number = int(issue) if issue and issue.isdigit() else None
-    for pr in storm_forge.closing(prs, number):
-        if pr.state == state:
-            return pr
-    return None
-
-
 def survey(
-    grace_seconds: float, prs: list[storm_forge.PullRequest]
+    grace_seconds: float, prs: list[PullRequest], source: StormForgeInterface
 ) -> dict[str, list[tuple[str, str]]]:
-    """Every lane on disk, sorted into what may be done about it and why."""
+    """Every lane on disk, sorted into what may be done about it and why.
+
+    A lane's own `lane/<slug>` branch is not the only road to `develop`: rmq-r03 merged as
+    `feat/amqp-dependency` (#1040), and #396 carried eight wave-1 lanes at once. So a pull
+    request whose body CLOSES the lane's issue counts too, under any branch name -- merged,
+    the lane is integrated; open, it is in flight. What says a pull request delivered an
+    issue is the closing reference the forge itself acts on, and `source` reads exactly that.
+    """
     if not LANES.is_dir():
         raise SystemExit(f"no lanes directory at {LANES} -- run this from the runtime root")
 
@@ -251,7 +224,7 @@ def survey(
 
     done, live = settled(), STOP.lane_in_flight(table)
     now = time.time()
-    branches, issues = heads(prs), issue_of()
+    branches, issues = source.heads(prs), issue_of()
     out: dict[str, list[tuple[str, str]]] = {
         "integrate": [],
         "reap": [],
@@ -266,8 +239,10 @@ def survey(
     for lane in sorted(p for p in LANES.iterdir() if p.is_dir()):
         slug = lane.name
         pr = branches.get(LANE_BRANCH + slug)
-        merged = claimed(prs, issues.get(slug), "MERGED")
-        opened = claimed(prs, issues.get(slug), "OPEN")
+        number = issues.get(slug, "")
+        claims = source.closing(prs, int(number) if number.isdigit() else None)
+        merged = next((c for c in claims if c.state == "MERGED"), None)
+        opened = next((c for c in claims if c.state == "OPEN"), None)
         found = verdict(lane)
         if slug == live:
             out["live"].append((slug, "a runner is inside it"))
@@ -536,7 +511,8 @@ def record(name: str, verb: str, rows: list[tuple[str, str]]) -> None:
             log.write(f"{stamp} {verb} {slug}: {why}\n")
 
 
-def main() -> int:
+def main(source: StormForgeInterface | None = None) -> int:
+    """The entry point, and where the forge is composed. `source` is the seam for a test."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--reap", action="store_true", help="record the dead; without it, only report"
@@ -569,14 +545,15 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    prs = forge()
+    source = source or StormForge.declared(STORM, MAIN, None)
+    prs = forge(source)
     if prs is None:
         raise SystemExit(
             "cannot reach the forge, so cannot tell which lanes landed -- refusing to "
             "settle anything. Nothing was changed."
         )
 
-    found = survey(args.grace * 60, prs)
+    found = survey(args.grace * 60, prs, source)
     waiting = queue()
     dead = {slug for slug, _ in found["reap"]}
     landed = {slug for slug, _ in found["integrate"]}
@@ -627,7 +604,7 @@ def main() -> int:
         if found["reap"]:
             record("abandoned.txt", "reaped", found["reap"])
 
-    gone, held = worktrees(heads(prs), args.reap_worktrees)
+    gone, held = worktrees(source.heads(prs), args.reap_worktrees)
 
     print(
         f"\n{len(found['integrate'])} landed, {len(found['reap'])} dead, "

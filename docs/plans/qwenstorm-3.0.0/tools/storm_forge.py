@@ -42,8 +42,16 @@ a subset nobody chose (10.g). So a page that comes back exactly full is refused 
 unreadable rather than trusted, and the limit is declared (`[forge] pr_limit` in storm.toml)
 rather than compiled in (12.h).
 
-Module functions rather than a class: every sibling in this directory is a script of plain
-functions loaded by path, and this module exists to be the one shared copy of two of them.
+A WRONG SHAPE IS NOT A LIST EITHER
+----------------------------------
+`gh` can succeed and still hand back JSON that is not a list of pull requests -- an error
+envelope object, say. Iterating an object walks its keys, and the first `row["number"]` on a
+string raised TypeError, so publish and reap crashed instead of failing closed. The decoded
+value is checked: a list, of objects, each carrying the four fields read, each of the right
+type. Anything else is `Unreadable`, the same as a failed call.
+
+A class behind `interfaces/storm_forge_interface.py` (ADR-0016): the tools take the
+interface, and a test hands them a double instead of patching `subprocess`.
 """
 
 from __future__ import annotations
@@ -51,83 +59,119 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any
 
 import storm_paths
+from interfaces.storm_forge_interface import PullRequest, StormForgeInterface, Unreadable
 
-# Keyword, optional colon, `#N`. `(?!\d)` keeps the number whole, so a closing reference to
-# #123 is never read as one to #12. The leading `\b` keeps "encloses" and "disclosed" out.
-CLOSING = re.compile(
-    r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*#(\d+)(?!\d)",
-    re.IGNORECASE,
-)
-
-# A default, not a fact about any machine: storm.toml's `[forge] pr_limit` overrides it.
-DEFAULT_LIMIT = 2000
+__all__ = ["PullRequest", "StormForge", "StormForgeInterface", "Unreadable"]
 
 
-class Unreadable(RuntimeError):
-    """The forge could not be read completely, so nothing may be concluded from it."""
+class StormForge:
+    """The forge's pull requests, read in one call, and the closing references in each."""
 
+    # Keyword, optional colon, `#N`. `(?!\d)` keeps the number whole, so a closing reference
+    # to #123 is never read as one to #12. The leading `\b` keeps "encloses" and "disclosed"
+    # out.
+    CLOSING = re.compile(
+        r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*#(\d+)(?!\d)",
+        re.IGNORECASE,
+    )
+    # A default, not a fact about any machine: storm.toml's `[forge] pr_limit` overrides it.
+    DEFAULT_LIMIT = 2000
+    # Each field read from a row, and the types the forge sends it as. `body` is null for a
+    # pull request opened with no description.
+    FIELDS: dict[str, tuple[type, ...]] = {
+        "number": (int,),
+        "state": (str,),
+        "headRefName": (str,),
+        "body": (str, type(None)),
+    }
 
-class PullRequest(NamedTuple):
-    number: int
-    state: str  # OPEN, MERGED or CLOSED, as the forge spells them
-    head: str
-    closes: frozenset[int]
+    def __init__(
+        self,
+        cwd: Path,
+        repo: str | None,
+        most: int,
+        runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    ) -> None:
+        self.cwd, self.repo, self.most, self.runner = cwd, repo, most, runner
 
+    @classmethod
+    def declared(cls, root: Path, cwd: Path, repo: str | None) -> StormForge:
+        """A forge whose read limit is the one `storm.toml` declares, or the default."""
+        declared = storm_paths.declared(root, "forge", "pr_limit")
+        return cls(cwd, repo, int(declared) if declared is not None else cls.DEFAULT_LIMIT)
 
-def closes(body: str | None) -> frozenset[int]:
-    """Every issue number a pull request body closes, by the forge's own grammar."""
-    return frozenset(int(n) for n in CLOSING.findall(body or ""))
+    def closes(self, body: str | None) -> frozenset[int]:
+        """Every issue number a pull request body closes, by the forge's own grammar."""
+        return frozenset(int(n) for n in self.CLOSING.findall(body or ""))
 
+    def pull_requests(self) -> list[PullRequest]:
+        """Every pull request on the forge, newest first, or `Unreadable` saying why not.
 
-def limit(root: Path) -> int:
-    """How many pull requests one read may return, declared or defaulted."""
-    declared = storm_paths.declared(root, "forge", "pr_limit")
-    return int(declared) if declared is not None else DEFAULT_LIMIT
+        One call for every lane. Raising rather than returning an empty list, because an
+        empty list and an unreachable forge are the same value and opposite facts -- the
+        first says nothing was ever published, the second says nobody could find out.
+        """
+        argv = ["gh", "pr", "list", "--state", "all", "--limit", str(self.most)]
+        argv += ["--json", ",".join(("number", "state", "headRefName", "body"))]
+        if self.repo:
+            argv += ["--repo", self.repo]
+        try:
+            done = self.runner(argv, capture_output=True, text=True, timeout=300, cwd=self.cwd)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise Unreadable(f"gh could not be run: {exc}") from exc
+        if done.returncode != 0:
+            raise Unreadable(f"gh pr list failed: {done.stderr.strip()[:160]}")
+        try:
+            rows = json.loads(done.stdout or "[]")
+        except json.JSONDecodeError as exc:
+            raise Unreadable(f"gh pr list returned something that is not JSON: {exc}") from exc
+        if not isinstance(rows, list):
+            raise Unreadable(f"gh pr list returned a {type(rows).__name__}, not a list")
+        if len(rows) >= self.most:
+            raise Unreadable(
+                f"the forge returned {len(rows)} pull requests, the whole of the limit, so "
+                f"the oldest may be missing -- raise [forge] pr_limit in storm.toml"
+            )
+        return [self._row(row) for row in rows]
 
+    def closing(self, prs: list[PullRequest], issue: int | None) -> list[PullRequest]:
+        """The pull requests in `prs` that close `issue`, in the order given (newest first)."""
+        if issue is None:
+            return []
+        return [pr for pr in prs if issue in pr.closes]
 
-def pull_requests(cwd: Path, repo: str | None, most: int) -> list[PullRequest]:
-    """Every pull request on the forge, newest first, or `Unreadable` saying why not.
+    def heads(self, prs: list[PullRequest]) -> dict[str, tuple[int, str]]:
+        """Each head ref's newest pull request, as (number, state).
 
-    One call for every lane. Raising rather than returning an empty list, because an empty
-    list and an unreachable forge are the same value and opposite facts -- the first says
-    nothing was ever published, the second says nobody could find out.
-    """
-    argv = ["gh", "pr", "list", "--state", "all", "--limit", str(most)]
-    argv += ["--json", "number,state,headRefName,body"]
-    if repo:
-        argv += ["--repo", repo]
-    try:
-        done = subprocess.run(argv, capture_output=True, text=True, timeout=300, cwd=cwd)
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        raise Unreadable(f"gh could not be run: {exc}") from exc
-    if done.returncode != 0:
-        raise Unreadable(f"gh pr list failed: {done.stderr.strip()[:160]}")
-    try:
-        rows = json.loads(done.stdout or "[]")
-    except json.JSONDecodeError as exc:
-        raise Unreadable(f"gh pr list returned something that is not JSON: {exc}") from exc
-    if len(rows) >= most:
-        raise Unreadable(
-            f"the forge returned {len(rows)} pull requests, the whole of the limit, so the "
-            f"oldest may be missing -- raise [forge] pr_limit in storm.toml"
+        Keyed by the WHOLE head ref, not by lane slug: lane-reap's worktree pass looks up
+        `docs/...` and `fix/...` branches too, and a map keyed on slugs held only `lane/*`.
+        The list is newest first, so the first one seen is the live one -- a branch
+        republished after a closed attempt is judged on the new request.
+        """
+        out: dict[str, tuple[int, str]] = {}
+        for pr in prs:
+            if pr.head and pr.head not in out:
+                out[pr.head] = (pr.number, pr.state)
+        return out
+
+    def _row(self, row: Any) -> PullRequest:
+        """One decoded row as a `PullRequest`, or `Unreadable` if it is not one."""
+        if not isinstance(row, dict):
+            raise Unreadable(f"gh pr list returned a row that is a {type(row).__name__}")
+        for field, kinds in self.FIELDS.items():
+            if field not in row:
+                raise Unreadable(f"gh pr list returned a row without {field!r}")
+            # `bool` is an `int` to isinstance, and `true` is not a pull request number.
+            if not isinstance(row[field], kinds) or isinstance(row[field], bool):
+                raise Unreadable(f"gh pr list returned a {field!r} that is not {kinds}")
+        return PullRequest(
+            number=row["number"],
+            state=row["state"],
+            head=row["headRefName"],
+            closes=self.closes(row["body"]),
         )
-    return [
-        PullRequest(
-            number=int(row["number"]),
-            state=str(row.get("state", "")),
-            head=str(row.get("headRefName", "")),
-            closes=closes(row.get("body")),
-        )
-        for row in rows
-    ]
-
-
-def closing(prs: list[PullRequest], issue: int | None) -> list[PullRequest]:
-    """The pull requests that close `issue`, in the order given (newest first)."""
-    if issue is None:
-        return []
-    return [pr for pr in prs if issue in pr.closes]
