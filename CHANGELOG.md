@@ -37,9 +37,22 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
     a project's ledger.
   - **Two roles.** The application connects as a role (`VIBEY_PG_URL`) that holds exactly
     the declared grants: `SELECT` and `INSERT` on the ledger, no `DELETE` or `TRUNCATE`
-    anywhere, and no ownership. Migrations run as the owner, `VIBEY_PG_MIGRATE_URL`, through
-    the new `vibey migrate` or the Helm chart's new `migrate` init container. The chart
-    gains `postgres.appRole` (default `vibey_app`) and `dsn.existingSecretMigrateKey`.
+    anywhere, and no ownership. Migrations run as the owner, `VIBEY_PG_MIGRATE_URL`, read by
+    the new `vibey migrate` alone (given for that one command, never exported) or the Helm
+    chart's new `migrate` init container. The chart gains `postgres.appRole` (default
+    `vibey_app`), `dsn.existingSecretMigrateKey` (empty by default, so an existing-Secret
+    install is unchanged until it names an owner key), and
+    `postgres.additionalDatabasePasswords`: Plane and Infisical each connect as a role of
+    their own, which the postgres container creates and hands its database on every start,
+    instead of as the owner.
+  - **Hardened after review.** Migration 0017 pins the guard functions to
+    `search_path = pg_catalog, pg_temp`. `vibey migrate` takes `CREATE` on `public` away
+    from every role but its owner and reconciles under the migration lock. `ledger-guard`
+    also fails when the application role may create objects, owns any, may call a
+    `SECURITY DEFINER` function running as the owner, may set `session_replication_role`,
+    or when a guard trigger is replica-only, re-pointed, re-evented or its function
+    changed. The triggers refuse the owner's DML, not its DDL (`DROP` or `DETACH` of a
+    partition), which is why only `vibey migrate` holds the owner's DSN.
   - **Checks.** `vibey doctor` gains `ledger-guard` and `local-auth` checks. A single-DSN
     install keeps running, but `vibey doctor` fails until its roles are split, `vibey
     worker` says so on stderr at every start, and `vibey migrate` exits 1. `local-auth`

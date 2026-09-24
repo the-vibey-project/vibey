@@ -10,7 +10,7 @@ helper picks up the isolated per-worker database transparently.
 The application connects as a restricted role, as a split production install does
 (ADR-0055): ``VIBEY_PG_URL`` names ``vibey_test_app`` (``VIBEY_TEST_APP_ROLE``
 renames it; an empty value falls back to one role for everything), which holds only
-the declared grants, and ``VIBEY_PG_MIGRATE_URL`` names the owner. So the whole suite
+the declared grants. ``VIBEY_PG_MIGRATE_URL`` is never exported. So the whole suite
 runs every application path under the grants production runs it under, and a query
 that needs a privilege nobody declared fails here, as ``permission denied``.
 ``VIBEY_TEST_DATABASE_URL`` stays the owner's, for fixtures that set up or inspect
@@ -200,11 +200,12 @@ def pytest_configure(config: pytest.Config) -> None:
     # production settings are VIBEY_PG_URL (the application role) and
     # VIBEY_PG_MIGRATE_URL (the owner). Point both at this worker's isolated database
     # so those tests cannot fall through to an unset configuration or a shared one.
+    # The owner's DSN is never exported: only `vibey migrate` reads VIBEY_PG_MIGRATE_URL,
+    # and the tests that run it set it for that one call.
     app_dsn = _ROLES.app_dsn(worker_dsn)
     os.environ["VIBEY_TEST_APP_DATABASE_URL"] = app_dsn
     os.environ["VIBEY_PG_URL"] = app_dsn
-    if app_dsn != worker_dsn:
-        os.environ["VIBEY_PG_MIGRATE_URL"] = worker_dsn
+    os.environ.pop("VIBEY_PG_MIGRATE_URL", None)
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:

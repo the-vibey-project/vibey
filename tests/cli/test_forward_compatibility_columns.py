@@ -7,11 +7,21 @@ import asyncpg
 import pytest
 from typer.testing import CliRunner
 
-from vibey.bootstrap import build_app
+from tests.db_roles import TestDatabaseRoles
+from vibey.bootstrap import build_app, migrations_dir
 from vibey.cli.main import _work_once, app
 from vibey.domain.errors import WrongPhase
 
 runner = CliRunner()
+
+
+@pytest.fixture(autouse=True)
+def _migrated_and_granted() -> None:
+    asyncio.run(
+        TestDatabaseRoles.from_environ(os.environ).restore(
+            os.environ["VIBEY_TEST_DATABASE_URL"], migrations_dir()
+        )
+    )
 
 
 @pytest.mark.asyncio

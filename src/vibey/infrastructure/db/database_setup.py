@@ -2,15 +2,14 @@
 """Bringing a database to the migrated, guarded state, with the right role for each step.
 
 `SchemaPreparer` is what `build_app()` runs on every start, on the application's own
-connection:
+connection, and it never touches the owner's DSN -- only `vibey migrate` does, so no
+process that runs engine sessions or gate commands holds it (review of #1100):
 
-- **A split install with the owner's DSN** (`VIBEY_PG_MIGRATE_URL`) migrates on a
-  separate owner connection, then reconciles the application role's grants.
 - **A single-DSN install** (the application role may migrate: a superuser or the
   schema's owner) migrates as today. The guard is not in force, and the returned status
-  says why -- `build_app()` logs it at every start and `vibey doctor` fails on it.
-- **A split install without it** (the Helm worker, whose migrations ran in its init
-  container) migrates nothing and refuses to start on a stale schema.
+  says why -- `vibey worker` reports it at every start and `vibey doctor` fails on it.
+- **A split install** migrates nothing: `vibey migrate` (the Helm chart's init
+  container) already did. It verifies, and refuses to start on a stale schema.
 
 `OwnerMigration` is `vibey migrate`: the owner's DSN, then the reconcile, then the
 guard inspected from the application's side. Declared by
@@ -38,20 +37,16 @@ type Connector = Callable[[str], Awaitable[asyncpg.Connection]]
 
 
 class SchemaPreparer:
-    """Migrates (or verifies) and reports the guard, on every start."""
+    """Migrates (single-DSN install) or verifies, and reports the guard, on every start."""
 
     def __init__(
         self,
         *,
         migrator: MigratorInterface,
-        reconciler: DatabaseRoleReconcilerInterface,
         inspector: LedgerGuardInspectorInterface,
-        connect: Connector = asyncpg.connect,
     ) -> None:
         self._migrator = migrator
-        self._reconciler = reconciler
         self._inspector = inspector
-        self._connect = connect
 
     async def prepare(
         self,
@@ -59,19 +54,7 @@ class SchemaPreparer:
         endpoints: DatabaseEndpoints,
         migrations: tuple[Migration, ...],
     ) -> LedgerGuardStatus:
-        if endpoints.migrate_url is not None:
-            owner = await self._connect(endpoints.migrate_url)
-            try:
-                await self._migrator.apply(owner, migrations)
-                # A privileged application role (the owner again, or a superuser) has
-                # nothing to reconcile; the inspection below reports it instead of the
-                # start failing, so a misconfigured split never strands an install.
-                if not await self._migrator.may_migrate(app):
-                    role = str(await app.fetchval("SELECT current_user"))
-                    await self._reconciler.reconcile(owner, app_role=role)
-            finally:
-                await owner.close()
-        elif await self._migrator.may_migrate(app):
+        if await self._migrator.may_migrate(app):
             await self._migrator.apply(app, migrations)
         else:
             pending = await self._migrator.pending(app, migrations)
@@ -117,6 +100,9 @@ class OwnerMigration:
         and inspect the guard. Without `app`, migrate only."""
         owner = await self._connect(owner_url)
         try:
+            # Before any migration SQL runs as the owner, nobody else may create in
+            # `public` -- where an unqualified name in that SQL would look.
+            await self._reconciler.close_schema(owner)
             applied = await self._migrator.apply(owner, migrations)
             if app is None:
                 return MigrationReport(applied, None, None)

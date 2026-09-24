@@ -16,7 +16,7 @@ from typer.testing import CliRunner
 
 from tests.db_roles import TestDatabaseRoles
 from vibey.application.dto import PreflightResult
-from vibey.bootstrap import build_app
+from vibey.bootstrap import migrations_dir
 from vibey.cli.main import _database_security_section, app
 from vibey.infrastructure.cluster_preflight import ClusterCheck, DatabaseSecurityChecks
 from vibey.infrastructure.db.local_auth import AuthVerdict, LocalAuthFinding, LocalAuthProbe
@@ -29,11 +29,7 @@ OWNER_DSN = os.environ["VIBEY_TEST_DATABASE_URL"]
 
 @pytest.fixture(autouse=True)
 def _migrated() -> None:
-    async def migrate() -> None:
-        async with build_app():
-            pass
-
-    asyncio.run(migrate())
+    asyncio.run(ROLES.restore(OWNER_DSN, migrations_dir()))
 
 
 def _probe_says(verdict: AuthVerdict, detail: str = "stub") -> object:
@@ -46,7 +42,11 @@ def _probe_says(verdict: AuthVerdict, detail: str = "stub") -> object:
 
 
 @split_only
-def test_migrate_reconciles_the_application_role_and_reports_the_guard_in_force() -> None:
+def test_migrate_reconciles_the_application_role_and_reports_the_guard_in_force(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("VIBEY_PG_MIGRATE_URL", OWNER_DSN)
+
     res = runner.invoke(app, ["migrate"])
 
     assert res.exit_code == 0, res.output
@@ -214,3 +214,21 @@ def test_the_security_checks_use_the_injected_seams() -> None:
     assert isinstance(checks, DatabaseSecurityChecksInterface)
     guard, auth = asyncio.run(checks.run(object(), "dsn"))  # type: ignore[arg-type]
     assert (guard.ok, auth.ok, auth.unknown) == (False, False, False)
+
+
+def test_migrate_reports_a_refusal_without_a_traceback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Review of #1100, finding 9: an owner without CREATEROLE gets one clean line."""
+    from vibey.infrastructure.db.ledger_guard import DatabaseRoleReconciler, OwnerCannotCreateRole
+
+    async def refuse(self: object, owner: object, **kwargs: object) -> None:
+        raise OwnerCannotCreateRole("vibey_app")
+
+    monkeypatch.setenv("VIBEY_PG_MIGRATE_URL", OWNER_DSN)
+    monkeypatch.setattr(DatabaseRoleReconciler, "reconcile", refuse)
+
+    res = runner.invoke(app, ["migrate"])
+
+    assert res.exit_code == 1
+    assert "error: the application role 'vibey_app' does not exist" in res.stderr
+    assert "CREATEROLE" in res.stderr
+    assert "Traceback" not in res.output

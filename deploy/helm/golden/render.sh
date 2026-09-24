@@ -92,5 +92,10 @@ profile keda-project --show-only templates/keda-scaledobject.yaml -- \
 # All sovereign surfaces disabled: proves the chart still installs without
 # them and matches the non-surfaces baseline.
 profile surfaces-off -- --set surfaces.enabled=false
+# A managed database through an existing Secret (ADR-0055, review of #1100): no
+# `migrate` init container and no owner key unless the Secret names one, so an
+# upgrade never strands the worker on a key the Secret does not have.
+profile existing-secret --show-only templates/worker.yaml -- \
+  --set postgres.enabled=false --set dsn.existingSecret=vibey-db
 
 exit "$failed"
