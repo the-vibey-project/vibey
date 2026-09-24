@@ -15,7 +15,10 @@ from vibey.domain.config import (
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.local_engines import LOCAL_ENGINE_SWITCHES
-from vibey.infrastructure.interfaces.class_contracts import QueueConfigLoaderInterface
+from vibey.infrastructure.interfaces.class_contracts import (
+    EnvironmentConfigLoaderInterface,
+    QueueConfigLoaderInterface,
+)
 
 # The tables `vibey new` copies from vibey.toml into the project record. `gates` and
 # `engine_environment` decide what a gate command and an engine session may see of the
@@ -69,27 +72,58 @@ _SURFACE_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
     ("siem", "username", "VIBEY_SIEM_USERNAME", str),
     ("siem", "password", "VIBEY_SIEM_PASSWORD", str),
     ("siem", "index", "VIBEY_SIEM_INDEX", str),
+    ("bus", "vhost", "VIBEY_BUS_VHOST", str),
 )
+
+# `[queue.reap]` (ADR-0056): the reaper's thresholds and the broker policy they declare.
+# A dotted table is a nested one. In a cluster the chart renders these from
+# `worker.queueReap`, so the thresholds are code there too (12.c).
+_QUEUE_REAP_ENV_VARS: tuple[tuple[str, str, str, type], ...] = (
+    ("queue.reap", "enabled", "VIBEY_QUEUE_REAP_ENABLED", bool),
+    ("queue.reap", "interval_seconds", "VIBEY_QUEUE_REAP_INTERVAL_SECONDS", int),
+    ("queue.reap", "lease_grace_seconds", "VIBEY_QUEUE_REAP_LEASE_GRACE_SECONDS", int),
+    ("queue.reap", "stale_ready_seconds", "VIBEY_QUEUE_REAP_STALE_READY_SECONDS", int),
+    ("queue.reap", "dead_letter_min_depth", "VIBEY_QUEUE_REAP_DEAD_LETTER_MIN_DEPTH", int),
+    ("queue.reap", "dead_letter_peek_limit", "VIBEY_QUEUE_REAP_DEAD_LETTER_PEEK_LIMIT", int),
+    ("queue.reap", "owned_queue_pattern", "VIBEY_QUEUE_REAP_OWNED_QUEUE_PATTERN", str),
+    ("queue.reap", "dead_letter_queue_pattern", "VIBEY_QUEUE_REAP_DEAD_LETTER_QUEUE_PATTERN", str),
+    ("queue.reap", "policy_name", "VIBEY_QUEUE_REAP_POLICY_NAME", str),
+    ("queue.reap", "policy_priority", "VIBEY_QUEUE_REAP_POLICY_PRIORITY", int),
+    ("queue.reap", "consumer_timeout_seconds", "VIBEY_QUEUE_REAP_CONSUMER_TIMEOUT_SECONDS", int),
+    ("queue.reap", "delivery_limit", "VIBEY_QUEUE_REAP_DELIVERY_LIMIT", int),
+)
+
+_TRUE: Final = frozenset({"1", "true", "yes", "on"})
+_FALSE: Final = frozenset({"0", "false", "no", "off"})
 
 
 def apply_env_overrides(
     data: dict[str, Any], environ: Mapping[str, str] = os.environ
 ) -> dict[str, Any]:
-    """Overlay surface environment variables onto parsed TOML data, in place."""
-    for table, key, variable, cast in _SURFACE_ENV_VARS:
+    """Overlay surface and `[queue.reap]` environment variables onto parsed TOML data,
+    in place. A dotted table name is a nested table."""
+    for table, key, variable, cast in (*_SURFACE_ENV_VARS, *_QUEUE_REAP_ENV_VARS):
         raw = environ.get(variable)
         if raw is None or not raw.strip():
             continue
-        section = data.setdefault(table, {})
-        if not isinstance(section, dict):
-            raise ValueError(f"{table} must be a table")
+        section: Any = data
+        for part in table.split("."):
+            section = section.setdefault(part, {})
+            if not isinstance(section, dict):
+                raise ValueError(f"{table} must be a table")
+        value = raw.strip()
         if cast is int:
             try:
-                section[key] = int(raw.strip())
+                section[key] = int(value)
             except ValueError:
                 raise ValueError(f"{variable} must be an integer") from None
+        elif cast is bool:
+            lowered = value.lower()
+            if lowered not in _TRUE | _FALSE:
+                raise ValueError(f"{variable} must be a boolean value")
+            section[key] = lowered in _TRUE
         else:
-            section[key] = raw.strip()
+            section[key] = value
     return data
 
 
@@ -169,3 +203,23 @@ class QueueConfigLoader:
 
 QUEUE_CONFIG: Final[QueueConfigLoaderInterface] = QueueConfigLoader()
 """The loader the queue-priority grant is read through. Stateless, so one instance serves."""
+
+
+class EnvironmentConfigLoader:
+    """What the environment alone declares, for a process with no vibey.toml.
+
+    In a cluster the chart renders every operational endpoint into the worker's
+    environment and puts no vibey.toml in its working directory (`/work`, the worktrees
+    volume). `build_app` reads the environment overlay only through a vibey.toml, so the
+    bus and the reaper's thresholds were never composed there (ADR-0056). This reads the
+    same overlay on its own, under a placeholder project name nothing else sees.
+    """
+
+    PLACEHOLDER_PROJECT: Final = "environment"
+
+    def load(self, environ: Mapping[str, str] = os.environ) -> VibeyConfig:
+        data = apply_env_overrides({"project": {"name": self.PLACEHOLDER_PROJECT}}, environ)
+        return parse_config(data)
+
+
+ENVIRONMENT_CONFIG: Final[EnvironmentConfigLoaderInterface] = EnvironmentConfigLoader()
