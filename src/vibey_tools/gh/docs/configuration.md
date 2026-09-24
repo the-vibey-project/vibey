@@ -769,6 +769,43 @@ The handoff is lossless because the seats share one working tree and the
 | `generate_notes` | boolean / `true` | Ask GitHub to generate release notes. |
 | `require_new_version` | boolean / `false` | Fail instead of silently doing nothing when a release-branch push does not carry a new version (the tag it would need already exists at a different commit). Leave off for a repository where a docs-only or tooling-only promotion is a normal, frequent, versionless push. |
 
+## `[announce]`
+
+The changelog `vibey-gh announce` posts to Discord after each documentation deploy (see
+[operations](operations.md#discord_webhook_url-optional)). Every key is optional.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `enabled` | boolean / `true` | Post at all. Off, the step says so and passes. |
+| `webhook_secret` | string / `DISCORD_WEBHOOK_URL` | The repository secret holding the webhook. A secret NAME, rendered into `${{ secrets.… }}`; never the URL. `GITHUB_*` is refused: GitHub reserves the prefix. |
+| `username` | string / `vibey` | The name the message is posted under (1–80 characters). Refused where Discord would refuse it: containing `discord`, `clyde`, `@`, `#`, `:` or ` ``` `, or being `everyone` or `here`. |
+| `max_changes` | integer / `8` | Lines listed before `…and N more` (1–50). Breaking changes are never counted against it. |
+| `max_subject_chars` | integer / `100` | A longer description is cut with `…` (20–400). |
+| `max_message_chars` | integer / `2000` | The message's ceiling in UTF-16 units (200–2000, Discord's limit). The message fits by construction: listed lines go first, then breaking lines shorten, then overflowing breaking changes are counted by name. |
+| `include_other` | boolean / `true` | List types in no named group under `other_group`; off, they are only counted. |
+| `breaking_group` | string / `Breaking` | The heading for any `!` or `BREAKING CHANGE` commit. It always leads. |
+| `other_group` | string / `Other` | The heading for types no group names. |
+| `groups` | table / `Added = ["feat"]`, `Fixed = ["fix"]` | `[announce.groups]`: label = commit types, in display order. A type may be in one group only. |
+| `type_words` | table / `feat = "Feature"`, `fix = "Fix"`, `docs = "Docs"`, `perf = "Performance"`, … | `[announce.type_words]`: the word a type prefix becomes. Keys given here override; the rest keep their defaults. |
+| `noise_patterns` | list of regex / merge commits, `chore(merge)`, `chore(release)`, `chore(heartbeat)`, merge-conflict chores | Subjects hidden from the list and counted as `+N maintenance commits`. A breaking change is never noise. |
+| `link_pull_requests` | boolean / `true` | Link each line's `#N` (or short commit) to the forge. |
+| `link_compare` | boolean / `true` | Link the compare view, or the changelog, after the list. |
+| `link_surfaces` | boolean / `true` | End with the channel site and the surfaces this deploy produced. |
+| `suppress_embeds` | boolean / `true` | Post with Discord's no-link-preview flag. |
+| `changelog_path` | string / `CHANGELOG.md` | A release announces this file's section for its version. Repository-relative; letters, digits and `. _ / -` only, since it is also written into a link. |
+| `max_history_pages` | integer / `10` | Pages of 100 runs, and of 100 compared commits, read for the previous position and the range (1–10: the Actions API serves a status-filtered run listing only to its 1000th result). Commits beyond are counted; no accepted announcement inside the window re-anchors, and says so. |
+| `max_history_candidates` | integer / `20` | Runs for the branch whose announcement was not accepted that are read, one jobs call each, before the announcement re-anchors and says so (1–100). Staying unknown instead would never recover from a long outage. |
+
+```toml
+[announce]
+max_changes = 6
+include_other = false
+
+[announce.groups]
+Added = ["feat"]
+Fixed = ["fix", "perf"]
+```
+
 ## `[rulesets]`
 
 Reconciles GitHub repository rulesets for the integration and release branches, so the
