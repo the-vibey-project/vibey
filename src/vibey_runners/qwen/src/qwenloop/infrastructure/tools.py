@@ -3,13 +3,16 @@
 
 import asyncio
 import fnmatch
+import json
 import os
 import re
+import sys
 from collections.abc import Iterator, Mapping
 from pathlib import Path
 
 from qwenloop.domain.config import ToolLimits
 from qwenloop.domain.model import CODING_TOOL_NAMES
+from qwenloop.infrastructure.content_scanner import ContentScanner
 
 # The argument names a model uses for the same thing, first match wins. The canonical
 # name (first in each tuple) is the one the tool schema advertises; the rest are the
@@ -27,6 +30,12 @@ _LINE_START_KEYS = ("line_start", "start_line", "start", "line", "loc", "offset"
 _LINE_END_KEYS = ("line_end", "end_line", "end")
 _LINE_COUNT_KEYS = ("num_lines", "limit")
 _GLOB_CHARACTERS = frozenset("*?[")
+# The directory holding the qwenloop package, so the isolated regex scanner imports the
+# same qwenloop as this process without inheriting this process's environment.
+_PACKAGE_ROOT = str(Path(__file__).resolve().parents[2])
+_SCANNER_ENTRY = (
+    "from qwenloop.infrastructure.content_scanner import ContentScanner; ContentScanner.run_stdio()"
+)
 
 
 class SandboxTools:
@@ -46,7 +55,7 @@ class SandboxTools:
         if name in {"read_file", "open_file"}:
             return self._read(arguments)
         if name == "search":
-            return await asyncio.to_thread(self._search, arguments)
+            return await self._search(arguments)
         if name == "find":
             return await asyncio.to_thread(self._find, arguments)
         if name == "write_file":
@@ -142,18 +151,25 @@ class SandboxTools:
             "total_lines": len(lines),
         }
 
-    def _search(self, arguments: Mapping[str, object]) -> dict[str, object]:
-        """Lines matching a literal text (or, with regex=true, a pattern) under a path."""
+    async def _search(self, arguments: Mapping[str, object]) -> dict[str, object]:
+        """Lines matching a literal text (or, with regex=true, a pattern) under a path.
+
+        A literal search is matched in-process. A regex is the model's own program, so it
+        runs in a child interpreter killed at `search_timeout_seconds`: catastrophic
+        backtracking costs one bounded call, never a worker thread.
+        """
         query = self._first(arguments, _QUERY_KEYS)
         if not isinstance(query, str):
             return {
                 "error": "search needs a query: the text to look for (a regular expression "
                 "when regex is true)"
             }
+        regex = self._flag(arguments.get("regex"))
         ignore_case = any(self._flag(arguments.get(key)) for key in _IGNORE_CASE_KEYS)
-        source = query if self._flag(arguments.get("regex")) else re.escape(query)
+        pattern = query if regex else re.escape(query)
+        flags = re.IGNORECASE if ignore_case else 0
         try:
-            matcher = re.compile(source, re.IGNORECASE if ignore_case else 0)
+            re.compile(pattern, flags)
         except re.error as exc:
             return {"error": f"invalid regex {query!r}: {exc}"}
         raw = str(self._first(arguments, _DIR_KEYS) or ".")
@@ -161,22 +177,76 @@ class SandboxTools:
         if not base.exists():
             return {"error": f"no such file or directory: {raw}"}
         glob = self._first(arguments, _GLOB_KEYS)
+        candidates = await asyncio.to_thread(
+            self._candidates, base, glob if isinstance(glob, str) else None
+        )
         limit = self._requested_limit(arguments, self.limits.max_search_matches)
-        matches: list[str] = []
+        if not regex:
+            scanner = ContentScanner(
+                max_file_bytes=self.limits.max_file_bytes,
+                max_line_chars=self.limits.max_line_chars,
+                max_skipped_examples=self.limits.max_skipped_examples,
+            )
+            return await asyncio.to_thread(scanner.scan, candidates, pattern, flags, limit)
+        return await self._scan_isolated(
+            {
+                "candidates": candidates,
+                "pattern": pattern,
+                "flags": flags,
+                "limit": limit,
+                "max_file_bytes": self.limits.max_file_bytes,
+                "max_line_chars": self.limits.max_line_chars,
+                "max_skipped_examples": self.limits.max_skipped_examples,
+            }
+        )
+
+    def _candidates(self, base: Path, glob: str | None) -> list[tuple[str, str]]:
+        """(worktree-relative, absolute) paths of every confined file a search may read."""
+        found: list[tuple[str, str]] = []
         for file in self._files(base):
             relative = file.relative_to(self.worktree).as_posix()
-            if isinstance(glob, str) and not self._glob_match(relative, glob):
-                continue
-            text = self._searchable_text(file)
-            if text is None:
-                continue
-            for number, line in enumerate(text.splitlines(), start=1):
-                if not matcher.search(line):
-                    continue
-                if len(matches) == limit:
-                    return {"matches": matches, "count": len(matches), "truncated": True}
-                matches.append(f"{relative}:{number}: {self._clip(line)}")
-        return {"matches": matches, "count": len(matches), "truncated": False}
+            if glob is None or self._glob_match(relative, glob):
+                found.append((relative, str(file)))
+        return found
+
+    async def _scan_isolated(self, request: dict[str, object]) -> dict[str, object]:
+        """Run ContentScanner in a child interpreter, killed at the search timeout. The
+        child gets no environment beyond the path to qwenloop itself: no keys, no tokens."""
+        timeout = self.limits.search_timeout_seconds
+        try:
+            process = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "-c",
+                _SCANNER_ENTRY,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env={"PYTHONPATH": _PACKAGE_ROOT},
+                start_new_session=True,
+            )
+        except OSError as exc:
+            return {"error": f"search failed: {exc}"}
+        try:
+            output, errors = await asyncio.wait_for(
+                process.communicate(json.dumps(request).encode()), timeout=timeout
+            )
+        except TimeoutError:
+            process.kill()
+            await process.wait()
+            return {
+                "error": f"search timed out after {timeout}s; simplify the pattern (nested "
+                "quantifiers such as (a+)+ backtrack without end) or search literally"
+            }
+        answer: object = None
+        if process.returncode == 0:
+            try:
+                answer = json.loads(output)
+            except json.JSONDecodeError:
+                answer = None
+        if not isinstance(answer, dict):
+            detail = errors.decode(errors="replace").strip()[-500:] or "no result"
+            return {"error": f"search failed: {detail}"}
+        return answer
 
     def _find(self, arguments: Mapping[str, object]) -> dict[str, object]:
         """File paths under a path whose name matches: a glob when the pattern has glob
@@ -215,25 +285,6 @@ class SandboxTools:
                 candidate = Path(root) / name
                 if self._contains(candidate.resolve()):
                     yield candidate
-
-    def _searchable_text(self, file: Path) -> str | None:
-        """A file's text, or None for one too large, binary, undecodable or unreadable."""
-        try:
-            if file.stat().st_size > self.limits.max_file_bytes:
-                return None
-            data = file.read_bytes()
-        except OSError:
-            return None
-        if b"\0" in data:
-            return None
-        try:
-            return data.decode("utf-8")
-        except UnicodeDecodeError:
-            return None
-
-    def _clip(self, line: str) -> str:
-        limit = self.limits.max_line_chars
-        return line if len(line) <= limit else f"{line[:limit]}…"
 
     @staticmethod
     def _glob_match(relative: str, pattern: str) -> bool:

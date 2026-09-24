@@ -6,6 +6,9 @@ Across 82 QwenStorm 3.0.0 runs gpt-oss:20b called `search` 401 times, `find` 22 
 those calls, the confinement they share with read_file, and the bounds they obey.
 """
 
+import io
+import json
+import time
 from pathlib import Path
 
 import pytest
@@ -13,7 +16,8 @@ import pytest
 from qwenloop.domain.config import ToolLimits
 from qwenloop.domain.interfaces import ToolLimitsInterface
 from qwenloop.domain.model import CODING_TOOL_NAMES
-from qwenloop.infrastructure.interfaces import SandboxToolsInterface
+from qwenloop.infrastructure.content_scanner import ContentScanner
+from qwenloop.infrastructure.interfaces import ContentScannerInterface, SandboxToolsInterface
 from qwenloop.infrastructure.tools import SandboxTools
 
 
@@ -94,6 +98,7 @@ async def test_search_finds_literal_text_across_the_worktree(tmp_path: Path) -> 
         ],
         "count": 4,
         "truncated": False,
+        "complete": True,
     }
 
 
@@ -166,6 +171,12 @@ async def test_search_is_bounded_by_its_configured_limits(tmp_path: Path) -> Non
         ],
         "count": 3,
         "truncated": True,
+        "complete": False,
+        "skipped": {"count": 1, "examples": ["big.txt (larger than max_file_bytes)"]},
+        "note": (
+            "1 file(s) were not searched (larger than max_file_bytes), so a missing match "
+            "is not evidence that the text is absent there"
+        ),
     }
     # A model may ask for fewer than the limit, never for more.
     assert (await tools.execute("search", {"query": "hit", "max_results": 1}))["count"] == 1
@@ -186,6 +197,14 @@ async def test_search_skips_excluded_dirs_binaries_and_undecodable_files(tmp_pat
     (tmp_path / "kept.py").write_text("needle\n")
     result = await SandboxTools(tmp_path).execute("search", {"query": "needle"})
     assert result["matches"] == ["kept.py:1: needle"]
+    # Excluded directories are not candidates; the binary and non-UTF-8 files are, and the
+    # answer says they were not searched rather than implying the text is absent.
+    assert result["complete"] is False
+    assert result["skipped"] == {
+        "count": 2,
+        "examples": ["image.png (binary)", "latin1.txt (not UTF-8)"],
+    }
+    assert "2 file(s) were not searched (binary, not UTF-8)" in str(result["note"])
     custom = SandboxTools(tmp_path, limits=ToolLimits(skip_dirs=()))
     found = await custom.execute("search", {"query": "needle"})
     # A directory's own files come before its subdirectories', each level in name order.
@@ -231,6 +250,123 @@ async def test_search_reports_an_unreadable_file_instead_of_raising(
     monkeypatch.setattr(Path, "read_bytes", flaky)
     result = await SandboxTools(tmp_path).execute("search", {"query": "needle"})
     assert result["matches"] == ["b.txt:1: needle"]
+    assert result["skipped"] == {"count": 1, "examples": ["a.txt (unreadable)"]}
+    assert result["complete"] is False
+
+
+@pytest.mark.asyncio
+async def test_skipped_examples_are_bounded_but_the_count_is_not(tmp_path: Path) -> None:
+    for index in range(4):
+        (tmp_path / f"blob{index}.bin").write_bytes(b"\x00needle")
+    tools = SandboxTools(tmp_path, limits=ToolLimits(max_skipped_examples=2))
+    result = await tools.execute("search", {"query": "needle"})
+    assert result["matches"] == []
+    assert result["skipped"] == {
+        "count": 4,
+        "examples": ["blob0.bin (binary)", "blob1.bin (binary)"],
+    }
+    assert result["complete"] is False
+    assert str(result["note"]).startswith("4 file(s) were not searched")
+
+
+# -- regex isolation ------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_a_catastrophic_regex_times_out_instead_of_hanging(tmp_path: Path) -> None:
+    # (a+)+$ against a run of a's ending in b backtracks exponentially: 2**40 steps here.
+    (tmp_path / "trap.txt").write_text("a" * 40 + "b\n")
+    tools = SandboxTools(tmp_path, limits=ToolLimits(search_timeout_seconds=1.0))
+    started = time.monotonic()
+    result = await tools.execute("search", {"query": "(a+)+$", "regex": True})
+    assert time.monotonic() - started < 15
+    assert str(result["error"]).startswith("search timed out after 1.0s; simplify the pattern")
+
+
+@pytest.mark.asyncio
+async def test_a_regex_search_runs_isolated_and_answers_like_a_literal_one(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "a.txt").write_text("xx aab yy\nnothing\n")
+    (tmp_path / "blob.bin").write_bytes(b"aab\x00")
+    tools = SandboxTools(tmp_path)
+    result = await tools.execute("search", {"query": "a+b", "regex": True})
+    assert result["matches"] == ["a.txt:1: xx aab yy"]
+    assert result["skipped"] == {"count": 1, "examples": ["blob.bin (binary)"]}
+    folded = await tools.execute("search", {"query": "A+B", "regex": True, "ignore_case": True})
+    assert folded["matches"] == ["a.txt:1: xx aab yy"]
+
+
+class _FakeProcess:
+    def __init__(self, returncode: int, stdout: bytes, stderr: bytes) -> None:
+        self.returncode = returncode
+        self._output = (stdout, stderr)
+
+    async def communicate(self, _input: bytes) -> tuple[bytes, bytes]:
+        return self._output
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("process", "expected"),
+    [
+        (_FakeProcess(1, b"", b"Traceback\nboom\n"), "search failed: Traceback\nboom"),
+        (_FakeProcess(0, b"not json", b""), "search failed: no result"),
+        (_FakeProcess(0, b"[]", b""), "search failed: no result"),
+    ],
+)
+async def test_a_failed_regex_scanner_is_an_error_not_a_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, process: _FakeProcess, expected: str
+) -> None:
+    (tmp_path / "a.txt").write_text("aab\n")
+
+    async def create(*_args: object, **_kwargs: object) -> _FakeProcess:
+        return process
+
+    monkeypatch.setattr("asyncio.create_subprocess_exec", create)
+    result = await SandboxTools(tmp_path).execute("search", {"query": "a+b", "regex": True})
+    assert result == {"error": expected}
+
+
+@pytest.mark.asyncio
+async def test_a_regex_scanner_that_cannot_start_is_an_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "a.txt").write_text("aab\n")
+
+    async def create(*_args: object, **_kwargs: object) -> None:
+        raise OSError("no interpreter")
+
+    monkeypatch.setattr("asyncio.create_subprocess_exec", create)
+    result = await SandboxTools(tmp_path).execute("search", {"query": "a+b", "regex": True})
+    assert result == {"error": "search failed: no interpreter"}
+
+
+def test_the_scanner_entry_point_speaks_json_over_stdio(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "a.txt").write_text("one\ntwo\n")
+    request = {
+        "candidates": [["a.txt", str(tmp_path / "a.txt")]],
+        "pattern": "t.o",
+        "flags": 0,
+        "limit": 10,
+        "max_file_bytes": 1000,
+        "max_line_chars": 80,
+        "max_skipped_examples": 5,
+    }
+    stdout = io.StringIO()
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(request)))
+    monkeypatch.setattr("sys.stdout", stdout)
+    ContentScanner.run_stdio()
+    assert json.loads(stdout.getvalue()) == {
+        "matches": ["a.txt:2: two"],
+        "count": 1,
+        "truncated": False,
+        "complete": True,
+    }
+    scanner = ContentScanner(max_file_bytes=1, max_line_chars=1, max_skipped_examples=1)
+    assert isinstance(scanner, ContentScannerInterface)
 
 
 # -- find ---------------------------------------------------------------------------------

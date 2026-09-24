@@ -52,6 +52,9 @@ def test_tool_limits_default_and_come_from_the_tools_table() -> None:
     assert configured.tools == ToolLimits(
         max_search_matches=7, max_read_chars=50, skip_dirs=("vendor",)
     )
+    assert default.tools.search_timeout_seconds == 10.0
+    timed = parser.parse({"tools": {"search_timeout_seconds": 2, "max_skipped_examples": 3}})
+    assert (timed.tools.search_timeout_seconds, timed.tools.max_skipped_examples) == (2.0, 3)
 
 
 @pytest.mark.parametrize(
@@ -64,6 +67,11 @@ def test_tool_limits_default_and_come_from_the_tools_table() -> None:
         ({"skip_dirs": ".git"}, "tools.skip_dirs must be a list"),
         ({"skip_dirs": [".git", 3]}, "tools.skip_dirs must be a list"),
         ({"skip_dirs": [""]}, "tools.skip_dirs must be a list"),
+        ({"max_skipped_examples": 0}, "tools.max_skipped_examples must be positive"),
+        ({"search_timeout_seconds": 0}, "tools.search_timeout_seconds must be a positive"),
+        ({"search_timeout_seconds": float("inf")}, "tools.search_timeout_seconds must be a"),
+        ({"search_timeout_seconds": float("nan")}, "tools.search_timeout_seconds must be a"),
+        ({"search_timeout_seconds": "soon"}, "tools.search_timeout_seconds must be a"),
     ],
 )
 def test_tool_limits_refuse_what_they_cannot_honour(tools: object, message: str) -> None:

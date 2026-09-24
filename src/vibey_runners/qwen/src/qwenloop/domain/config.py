@@ -1,6 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Pure qwenloop configuration parsing."""
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass, fields
 from typing import Any
@@ -51,6 +52,11 @@ class ToolLimits:
     max_line_chars: int = 240
     # search: a file larger than this is skipped rather than read.
     max_file_bytes: int = 2_000_000
+    # search: skipped files named in an answer; the answer always counts all of them.
+    max_skipped_examples: int = 5
+    # search with regex=true: wall-clock seconds the isolated matcher may run before it is
+    # killed. A model-supplied pattern can backtrack catastrophically; this bounds one call.
+    search_timeout_seconds: float = 10.0
     # search / find: directory names never descended into.
     skip_dirs: tuple[str, ...] = DEFAULT_SKIP_DIRS
 
@@ -150,7 +156,7 @@ class QwenConfigParser:
         bounds = {
             item.name: int(data.get(item.name, getattr(defaults, item.name)))
             for item in fields(ToolLimits)
-            if item.name != "skip_dirs"
+            if item.name not in {"skip_dirs", "search_timeout_seconds"}
         }
         for name, value in bounds.items():
             if value <= 0:
@@ -160,7 +166,16 @@ class QwenConfigParser:
             isinstance(item, str) and item for item in skip_dirs
         ):
             raise ValueError("tools.skip_dirs must be a list of directory names")
-        return ToolLimits(**bounds, skip_dirs=tuple(skip_dirs))
+        timeout = data.get("search_timeout_seconds", defaults.search_timeout_seconds)
+        try:
+            seconds = float(timeout)
+        except (TypeError, ValueError):
+            seconds = math.nan
+        if not math.isfinite(seconds) or seconds <= 0:
+            raise ValueError(
+                "tools.search_timeout_seconds must be a positive, finite number of seconds"
+            )
+        return ToolLimits(**bounds, search_timeout_seconds=seconds, skip_dirs=tuple(skip_dirs))
 
     @staticmethod
     def _base_url(value: str) -> str:

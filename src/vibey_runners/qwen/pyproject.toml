@@ -97,4 +97,5 @@ forbidden_modules = [
   "qwenloop.infrastructure.inference",
   "qwenloop.infrastructure.settings",
   "qwenloop.infrastructure.tools",
+  "qwenloop.infrastructure.content_scanner",
 ]
