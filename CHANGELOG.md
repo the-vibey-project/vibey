@@ -14,6 +14,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### BREAKING CHANGES
 
+* **vibey_gh:** the sovereign review never reads a prompt the model did not see in full
+  (#1090). Local requests are sized from everything sent and must fit the declared
+  `[pr_automation.fallback] context_window` (default 65,536) beside `reasoning_reserve_tokens`
+  (8,192), or are refused rather than silently truncated by Ollama; a whole review sends the
+  whole diff (never cut at `max_diff_chars`) and trims only its optional documents; each reply
+  is checked against Ollama's `prompt_eval_count` and `done_reason`, so a model that ran out of
+  room says so
 * **vibey_gh:** the exact-head review reaches a paid model only where `[pr_automation]
   paid_review = true` declares one (sub-doctrine 8.b: a paid counterparty is declared-only).
   Undeclared, the default, the paid `review` job never runs: the sovereign lane answers the
