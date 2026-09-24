@@ -334,6 +334,20 @@ GATE_ID --choice replay` (publish it back to the queue it died on, at least once
 `--choice dismiss`; the broker's copy stays on the dead-letter queue either way. Its
 thresholds are [`[queue.reap]`](configuration.md#queuereap).
 
+## `vibey-gh slots`
+
+How many runs of one local model may run at once on this device, measured per device
+([ADR-0057](../architecture/decisions/0057-concurrent-local-runs-are-measured-per-device.md)).
+This is a `vibey-gh` command, part of the same distribution:
+
+| Subcommand | What it does |
+|---|---|
+| `vibey-gh slots corpus --pool FILE --out FILE` | Draw a stratified corpus of turn segments from a turn pool (the storm builds one with `storm_turn_pool.py`). |
+| `vibey-gh slots calibrate --corpus FILE` | Sweep N = 1, 2, 3, ... on this device beside an idle production runner. Stops at a broken bound or a plateau, checkpoints every step, and records the evidence keyed to the device's fingerprint. |
+| `vibey-gh slots allowed` | Print the number a queue may run at once here, with the reason on stderr. Missing or stale evidence prints `1` and requests a calibration. |
+
+Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/cli.md).
+
 ## `vibey deploy`
 
 Phases ④–⑥. Bare `vibey deploy` prints help. Each subcommand takes an
