@@ -15,3 +15,9 @@ Qwenloop treats model output, repository content, tool output, and retrieved
 content as untrusted. Model servers bind to loopback and use per-launch bearer
 credentials. Filesystem writes remain inside the assigned worktree, and model
 weights are installed only after an explicit operator command.
+
+A `shell` tool call runs with an allow-listed environment (`ShellEnvironment` in
+`src/qwenloop/infrastructure/tools.py`). It gets the system basics only: `PATH`, `HOME`,
+the user, the temp directory, locale, terminal, CA bundle, proxy and `XDG_*`. It never
+gets vibey's `VIBEY_*` variables, libpq's `PG*`, or any name containing `KEY`, `TOKEN`,
+`SECRET`, `PASSWORD`, `PASSWD`, `CREDENTIAL`, `DSN` or `DATABASE_URL`, whoever declares it.

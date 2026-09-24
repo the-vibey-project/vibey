@@ -444,20 +444,33 @@ jobs:
           # the fallback for anyone else.
           ROLE: ${{ (needs.evaluate.outputs.sovereign_carries == 'true' || needs.evaluate.outputs.sovereign_whole == 'true') && 'sovereign' || 'fallback' }}
           SCOPE: ${{ needs.evaluate.outputs.sovereign_whole == 'true' && 'full' || '' }}
+          # The declared order of the documents: when they do not all fit, the last gives
+          # way first, and the verdict then claims the diff half alone.
+          PATHS: __VIBEY_GH_FALLBACK_CONTEXT_PATHS__
         run: |
           set -euo pipefail
           # Fail closed. An unreachable model or an unusable response must leave no
           # verdict -- the paid lane then answers the whole review, and if it cannot either,
           # or if no paid review is declared, the gate stays red for a human -- never
           # resolve to a default pass. The reason is kept, so the gate can name it.
+          #
+          # The window is the one the repository's host measured, passed explicitly because
+          # this runner's working directory holds no .vibey-gh.toml. A request over it is
+          # refused rather than sent, and one sent anyway asks Ollama to refuse it too:
+          # left to its defaults Ollama cuts an oversized prompt to about half the window,
+          # and a model that never read the whole diff must never pass it.
           if ! vibey-gh local-review \
                 --diff "${RUNNER_TEMP}/pr.diff" \
                 --model '__VIBEY_GH_FALLBACK_MODEL__' \
                 --base-url "${VIBEY_OLLAMA_URL:-__VIBEY_GH_FALLBACK_BASE_URL__}" \
                 --max-chars __VIBEY_GH_FALLBACK_MAX_DIFF_CHARS__ \
                 --timeout __VIBEY_GH_FALLBACK_TIMEOUT_SECONDS__ \
+                --context-window __VIBEY_GH_FALLBACK_CONTEXT_WINDOW__ \
+                --reasoning-reserve __VIBEY_GH_FALLBACK_REASONING_RESERVE__ \
+                --chars-per-token __VIBEY_GH_FALLBACK_CHARS_PER_TOKEN__ \
+                --think '__VIBEY_GH_FALLBACK_THINK__' \
                 --role "$ROLE" \
-                ${SCOPE:+--scope "$SCOPE" --context-dir "${RUNNER_TEMP}/context"} \
+                ${SCOPE:+--scope "$SCOPE" --context-dir "${RUNNER_TEMP}/context" --context-paths "$PATHS"} \
                 > "${RUNNER_TEMP}/verdict.json" 2> "${RUNNER_TEMP}/local-review.err"; then
             cat "${RUNNER_TEMP}/local-review.err" >&2
             reason=$(grep -v '^[[:space:]]*$' "${RUNNER_TEMP}/local-review.err" | tail -n 1 \

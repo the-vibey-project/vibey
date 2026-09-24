@@ -16,6 +16,7 @@ interface beside it (ADR-0016), following tests/meta/: the rule is about product
 
 from __future__ import annotations
 
+import os
 from datetime import timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -95,8 +96,12 @@ async def _seed(pool: asyncpg.Pool) -> UUID:
             await _job(conn, newest, key)
     # A job in a phase this release does not know (a newer vibey wrote it): the claim
     # never takes it (vibey#287), so the scaler must not count it either.
-    async with pool.acquire() as conn:
-        await conn.execute("ALTER TYPE phase ADD VALUE IF NOT EXISTS 'triage'")
+    # ALTER TYPE is the owner's (ADR-0055); `pool` is the application role's.
+    owner = await asyncpg.connect(os.environ["VIBEY_TEST_DATABASE_URL"])
+    try:
+        await owner.execute("ALTER TYPE phase ADD VALUE IF NOT EXISTS 'triage'")
+    finally:
+        await owner.close()
     async with pool.acquire() as conn:
         for pid, key in ((BOUND, "unknown-phase"), (newest, "n-unknown-phase")):
             stranger = await _job(conn, pid, key)

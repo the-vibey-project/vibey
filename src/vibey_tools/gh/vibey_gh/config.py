@@ -522,6 +522,26 @@ class PrAutomationFallbackConfig:
     # they are about. A path absent at that head is skipped and the verdict says which
     # documents it saw.
     context_paths: tuple[str, ...] = ("README.md", "docs/index.md")
+    # The model's window, as this host measured it -- never a number compiled into the
+    # sizer. A request is sized from everything it sends and refused, or its optional
+    # documents trimmed, rather than sent over this: left to its defaults Ollama does not
+    # refuse an oversized prompt, it cuts it to about half the window and answers about
+    # the rest. 65536 is what docs/plans/qwenstorm-3.0.0/bench/host-tuning.toml chose for
+    # gpt-oss:20b. Kept equal to `vibey_gh.fit`'s defaults by a test.
+    context_window: int = 65536
+    # Room kept free for the model's reasoning AND its answer. #1090's whole review read its
+    # whole 31,765-token prompt and then ran out of room to answer in the 1,004 tokens a
+    # 32,768 window left it; re-run with room, it spent 3,676 tokens on both at default
+    # reasoning (471 with `think = "low"`).
+    reasoning_reserve_tokens: int = 8192
+    # Characters per token when estimating a prompt: pessimistic for prose and code
+    # (measured: 3.95), optimistic for dense text such as a lockfile (about 2.1). The
+    # estimate only decides what to trim; truncation is refused by the request itself.
+    chars_per_token: int = 3
+    # Ollama's `think` for a reasoning model: "low", "medium" or "high", or empty to send
+    # nothing and keep the model's default. Empty by default: on #1090 "low" returned the
+    # same verdict in an eighth of the tokens, but one sample is not a fidelity study.
+    think: str = ""
 
     def __post_init__(self) -> None:
         _unique_nonempty("pr_automation.fallback.context_paths", self.context_paths)
@@ -561,6 +581,26 @@ class PrAutomationFallbackConfig:
         if not 1 <= self.heartbeat_max_age_minutes <= 1440:
             raise ValueError(
                 "pr_automation.fallback.heartbeat_max_age_minutes must be between 1 and 1440"
+            )
+        if not 4096 <= self.context_window <= 1_048_576:
+            raise ValueError(
+                "pr_automation.fallback.context_window must be between 4096 and 1048576"
+            )
+        if not 1024 <= self.reasoning_reserve_tokens < self.context_window // 2:
+            raise ValueError(
+                "pr_automation.fallback.reasoning_reserve_tokens must be at least 1024 and"
+                " under half of context_window, so a prompt still fits beside it"
+            )
+        # A whole number from 1 to 8 (`vibey_gh.fit.MAX_CHARS_PER_TOKEN`, kept equal by a
+        # test). `type(...) is int`: TOML hands a float or a bool through unchanged, and a
+        # nan compares false against both bounds.
+        if type(self.chars_per_token) is not int or not 1 <= self.chars_per_token <= 8:
+            raise ValueError(
+                "pr_automation.fallback.chars_per_token must be a whole number from 1 to 8"
+            )
+        if self.think not in ("", "low", "medium", "high"):
+            raise ValueError(
+                f"pr_automation.fallback.think must be empty, low, medium or high: {self.think!r}"
             )
 
 
@@ -2112,6 +2152,10 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             heartbeat_ref=fallback.get("heartbeat_ref", "refs/vibey-gh/sovereign-heartbeat"),
             heartbeat_max_age_minutes=fallback.get("heartbeat_max_age_minutes", 15),
             context_paths=tuple(fallback.get("context_paths", ("README.md", "docs/index.md"))),
+            context_window=fallback.get("context_window", 65536),
+            reasoning_reserve_tokens=fallback.get("reasoning_reserve_tokens", 8192),
+            chars_per_token=fallback.get("chars_per_token", 3),
+            think=fallback.get("think", ""),
         ),
     )
     return GhConfig(

@@ -12,9 +12,9 @@
 > PostgreSQL 14+. CI exercises majors 14–18; the chart default is PostgreSQL 17.
 > All timestamps `timestamptz`. All ids `uuid` except `event.seq`
 > (gapless bigint per project) and human-facing item ids (short prefixed strings).
-> Migrations are forward-only and applied automatically by `build_app()`
-> (`src/vibey/bootstrap.py`) every time a CLI command or worker opens the
-> database through it; there is no `vibey migrate` command (§7).
+> Migrations are forward-only. They run as the schema's owner: `vibey migrate`, or
+> `build_app()` (`src/vibey/bootstrap.py`) when `VIBEY_PG_MIGRATE_URL` is set or the
+> application's own role may migrate (a single-DSN install); see §7 and ADR-0055.
 
 The live schema also has a Pydantic-backed SQLAlchemy projection in
 `src/vibey/infrastructure/db/orm_models.py`. It uses SQLModel so every one of
@@ -286,13 +286,26 @@ CREATE INDEX event_kind          ON event (project_id, kind, seq);
 CREATE INDEX event_correlation   ON event (correlation_id, seq);
 CREATE INDEX event_payload_gin   ON event USING gin (payload jsonb_path_ops);
 
--- Append-only: no UPDATE, no DELETE. Enforced, not merely intended.
-CREATE RULE event_no_update AS ON UPDATE TO event DO INSTEAD NOTHING;
-CREATE RULE event_no_delete AS ON DELETE TO event DO INSTEAD NOTHING;
+-- Append-only: no UPDATE, no DELETE, no TRUNCATE -- by the database (0016, ADR-0055).
+CREATE TRIGGER event_append_only BEFORE UPDATE OR DELETE ON event
+    FOR EACH ROW EXECUTE FUNCTION ledger_refuse_rewrite();
+CREATE TRIGGER event_no_truncate BEFORE TRUNCATE ON event
+    FOR EACH STATEMENT EXECUTE FUNCTION ledger_refuse_rewrite();
 ```
 
-The `RULE`s make `UPDATE` and `DELETE` silent no-ops rather than errors: a stray
-write affects zero rows.
+A rewrite is refused out loud: `the ledger is append-only: UPDATE on event is refused`,
+SQLSTATE `42501`, for every role, the owner included.
+
+- **Partitions.** The row trigger is cloned onto every partition, present and future.
+  `ledger_guard_partitions()` attaches the `TRUNCATE` guard, which PostgreSQL does not
+  clone, on every migration run.
+- **The earlier rules.** Migrations 0002 and 0013 used `DO INSTEAD NOTHING` rules, which
+  made a stray write a silent no-op. They did not fire for a statement addressed to a
+  partition or for `TRUNCATE`, and the owner (whom the worker connected as) could disable
+  them. 0016 drops them.
+- **The application role.** It holds `SELECT` and `INSERT` on `event` and nothing more
+  (`APP_ROLE_GRANTS`), so it cannot disable a trigger either. See
+  [the configuration reference](../reference/configuration.md#database-roles).
 
 **`kind` is open text, read forward-compatibly (vibey#275).** The column has no
 constraint and no enum type, so a newer vibey writes a kind an older one has never
@@ -497,10 +510,10 @@ CREATE TABLE job (
     created_at        timestamptz NOT NULL DEFAULT now(),
     updated_at        timestamptz NOT NULL DEFAULT now(),
     bump_seq          bigint,                 -- 0014: place among bumped jobs; NULL = normal order
-    bump_origin       uuid,                   -- 0014: the job whose bump moved this one
+    bump_named        boolean NOT NULL DEFAULT false,  -- 0015: in the named set
     CONSTRAINT job_idem_uniq UNIQUE (project_id, idempotency_key),
     CONSTRAINT job_bump_seq_positive CHECK (bump_seq IS NULL OR bump_seq > 0),
-    CONSTRAINT job_bump_origin_with_seq CHECK ((bump_seq IS NULL) = (bump_origin IS NULL)),
+    CONSTRAINT job_bump_named_in_lane CHECK (NOT bump_named OR bump_seq IS NOT NULL),
     CONSTRAINT job_lease_consistent CHECK (
         (state = 'leased') = (lease_owner IS NOT NULL AND lease_expires_at IS NOT NULL)
     )
@@ -654,9 +667,11 @@ job in normal order; a bump draws it from the sequence `job_bump_seq`
 the order they were bumped, and the order among un-bumped jobs is exactly what it
 was. A sequence and not a timestamp: one bump moves a job and its dependencies in
 one transaction, where `now()` is one instant for all of them (sub-doctrine 10.g).
-`bump_origin` is the job whose bump moved this one — itself when bumped by name, the
-named job when pulled forward — which is how an un-bump undoes exactly what its bump
-moved.
+`bump_named` (0015, replacing 0014's `bump_origin`) marks the named set: the jobs bumped (or enqueued prioritised) by name and
+not since un-bumped. The lane is derived from it -- the named jobs plus all their
+unfinished transitive dependencies -- so an un-bump clears the target and every pulled job
+the remaining named jobs no longer need, and every bump or un-bump sweeps (and records) any
+pulled job a cancelled or failed named job left behind, so no orphan outlives the next request.
 
 `PostgresJobPriorityStore` (`src/vibey/infrastructure/db/job_priority_repository.py`)
 is reached only through `QueuePriorityService`, which checks the grant first. Each
@@ -668,14 +683,13 @@ in `domain/queue_priority.py`, and the event appended on the same connection:
 
 ```sql
 -- BUMP (for each job the planner moves, dependencies before what needs them)
-UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_origin = $target, updated_at = now()
+UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_named = (id = $target),
+               updated_at = now()
 WHERE id = $1 RETURNING bump_seq;
 
--- UN-BUMP (the job, and what its own bumps pulled forward that nothing else needs)
-UPDATE job SET bump_seq = NULL, bump_origin = NULL, updated_at = now()
+-- UN-BUMP (the target, and every pulled job the remaining named jobs no longer need)
+UPDATE job SET bump_seq = NULL, bump_named = false, updated_at = now()
 WHERE id = ANY($1::uuid[]);
--- ...and what it pulled forward that another bump still needs passes to that bump
-UPDATE job SET bump_origin = $owner, updated_at = now() WHERE id = $1;
 ```
 
 A bump never touches `state`, `lease_owner`, `lease_expires_at` or `run_after`,
@@ -1002,10 +1016,19 @@ CREATE TABLE IF NOT EXISTS schema_migration (
 `checksum` is the sha256 hex of the file's text. Each pending migration runs in its
 own transaction together with its `schema_migration` insert.
 
-There is no `vibey migrate` command. `build_app()` in `src/vibey/bootstrap.py` runs
-`PostgresMigrator.from_environ(os.environ).apply(conn, discover_migrations(migrations_dir()))`
-every time it opens the pool, so every CLI command that opens the database, and every
-worker start, brings the schema up to date.
+Migrations run as the schema's owner (ADR-0055), in one of three ways:
+
+- **`vibey migrate`** applies them on `VIBEY_PG_MIGRATE_URL`, then reconciles the
+  application role's grants.
+- **`build_app()`** in `src/vibey/bootstrap.py` (`SchemaPreparer`), every time it opens
+  the pool:
+  - on an owner connection when `VIBEY_PG_MIGRATE_URL` is set, then reconciling grants;
+  - on the application's own connection when that role may migrate (a single-DSN
+    install);
+  - otherwise it only verifies (`PostgresMigrator.pending`, no DDL, no lock) and refuses
+    to start while anything is pending.
+
+So every worker start either brings the schema up to date or says why it cannot.
 `migrations_dir()` resolves to `<checkout>/migrations` from a source tree and to
 `/app/migrations` in the container image. Every start also re-verifies checksums:
 `apply` raises `MigrationChecksumError` if an already-applied migration's file has

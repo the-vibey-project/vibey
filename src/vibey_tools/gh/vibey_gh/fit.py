@@ -51,6 +51,7 @@ __all__ = [
     "DEFAULT_OLLAMA_URL",
     "DEFER",
     "FLOOR",
+    "MAX_CHARS_PER_TOKEN",
     "OLLAMA_URL_ENV",
     "ContextSizer",
     "DarwinMemorySampler",
@@ -126,11 +127,27 @@ DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_OLLAMA_TIMEOUT_S = 10
 
 # The context window a local call asks for, sized to its prompt (see `ContextSizer`). Each
-# is a default rather than a constant (ADR-0018).
+# is a default rather than a constant (ADR-0018), and `[pr_automation.fallback]` declares
+# the ones a repository's own host measured; these are that table's defaults.
 DEFAULT_CONTEXT_FLOOR_TOKENS = 4096
-DEFAULT_CONTEXT_CEILING_TOKENS = 32768
+# The window this host's tuning chose for gpt-oss:20b: the smallest power of two covering
+# every turn ever recorded (docs/plans/qwenstorm-3.0.0/bench/host-tuning.toml). It was 32768,
+# and #1090's whole review (~124,000 characters, 31,765 prompt tokens as the model counted
+# them) read its whole prompt and then ran out of room to answer in the 1,004 tokens left.
+DEFAULT_CONTEXT_CEILING_TOKENS = 65536
+# Pessimistic for prose and code: the #1090 whole review measured 3.95 characters per gpt-oss
+# token. It is NOT pessimistic for everything -- lockfiles tokenize at about 2.1, hex at 1.9,
+# base64 at 1.5, CJK at 1.4, emoji at 0.7 -- which is why a request is also sent with
+# truncation switched off and carries a canary (`vibey_gh.local_review.SizedChat`): the
+# estimate decides what to trim, never whether the model read everything.
 DEFAULT_CHARS_PER_TOKEN = 3
-DEFAULT_CONTEXT_RESERVE_TOKENS = 2048
+# An estimate above this is not an estimate of any tokenizer this module has met; it would
+# let a prompt many times the window through the sizer. Configured values are held to it.
+MAX_CHARS_PER_TOKEN = 8
+# Room left for the model's reasoning AND its answer. gpt-oss reasons before it answers:
+# the #1090 whole review spent 3,676 tokens doing both at default reasoning, and ran out of
+# room mid-answer under the old 2048. More than twice the measurement.
+DEFAULT_CONTEXT_RESERVE_TOKENS = 8192
 
 
 def _with_nested(paths: tuple[str, ...], relative: str) -> tuple[str, ...]:
@@ -643,8 +660,23 @@ class ContextSizer(ContextSizerInterface):
     window instead, and generation degrades from seconds to never-finishes — observed in
     production as the fallback timing out at 600s and then 1800s on a 717-line diff a
     10,000-character slice of which reviewed in 17 seconds. Code tokenizes at roughly
-    3 characters per token; 2048 covers the system prompt, schema and response. Capped
-    because an enormous request should fail visibly rather than exhaust the host.
+    3 characters per token. Capped because an enormous request should fail visibly rather
+    than exhaust the host.
+
+    A cap is also a promise the caller must keep. By default Ollama does not refuse a
+    prompt larger than `num_ctx`: its context shift (`llm/llama_server.go`) cuts the prompt
+    to about `num_ctx - (num_ctx - num_keep) / 2` tokens -- roughly HALF the window -- and
+    the model answers about the part it kept, with no error. Reproduced on this host
+    (Ollama 0.34.2, gpt-oss:20b, `num_ctx` 32768): a 36,798-token request came back with
+    `prompt_eval_count` 16,386. A cut prompt therefore reads as about half the window, not
+    as the whole of it, and no count of what was read can tell it from a short prompt.
+
+    So this is only the first of three guards. The caller sizes from EVERYTHING it sends
+    (system prompt, user prompt, schema), asks `fits` before sending, and trims or refuses
+    with `room_chars` when the answer is no; `reserve` is room for the model's reasoning
+    and its answer, not a rounding margin. But `tokens` is an estimate, and optimistic for
+    dense text (a lockfile, hex, base64, CJK, emoji), so the request itself also switches
+    truncation off and carries a canary -- see `vibey_gh.local_review.SizedChat`.
 
     Each of those numbers is a keyword with that value as its default (ADR-0018); the
     defaults reproduce the rule `local_review` shipped with exactly.
@@ -658,17 +690,42 @@ class ContextSizer(ContextSizerInterface):
         chars_per_token: int = DEFAULT_CHARS_PER_TOKEN,
         reserve_tokens: int = DEFAULT_CONTEXT_RESERVE_TOKENS,
     ) -> None:
-        if chars_per_token < 1:
-            raise ValueError("chars_per_token must be at least 1")
+        # `type(...) is int`, not `isinstance`: a bool is an int, and a float (nan among
+        # them) is a configuration mistake the comparisons below would wave through.
+        if type(chars_per_token) is not int or not 1 <= chars_per_token <= MAX_CHARS_PER_TOKEN:
+            raise ValueError(
+                f"chars_per_token must be a whole number from 1 to {MAX_CHARS_PER_TOKEN}"
+            )
         if floor_tokens > ceiling_tokens:
             raise ValueError("floor_tokens must not exceed ceiling_tokens")
+        if type(reserve_tokens) is not int or reserve_tokens < 0:
+            raise ValueError("reserve_tokens must be a whole number, never negative")
+        if reserve_tokens >= ceiling_tokens:
+            raise ValueError("reserve_tokens must leave room for a prompt under ceiling_tokens")
         self._floor = floor_tokens
         self._ceiling = ceiling_tokens
         self._chars_per_token = chars_per_token
         self._reserve = reserve_tokens
 
+    @property
+    def window(self) -> int:
+        return self._ceiling
+
+    @property
+    def reserve(self) -> int:
+        return self._reserve
+
+    def tokens(self, chars: int) -> int:
+        return -(-chars // self._chars_per_token)
+
+    def fits(self, prompt_chars: int) -> bool:
+        return self.tokens(prompt_chars) + self._reserve <= self._ceiling
+
+    def room_chars(self, prompt_chars: int) -> int:
+        return max(0, (self._ceiling - self._reserve) * self._chars_per_token - prompt_chars)
+
     def num_ctx(self, prompt_chars: int) -> int:
-        wanted = prompt_chars // self._chars_per_token + self._reserve
+        wanted = self.tokens(prompt_chars) + self._reserve
         return min(self._ceiling, max(self._floor, wanted))
 
 

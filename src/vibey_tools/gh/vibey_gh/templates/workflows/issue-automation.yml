@@ -611,6 +611,10 @@ jobs:
                 --base-url "${VIBEY_OLLAMA_URL:-__VIBEY_GH_FALLBACK_BASE_URL__}" \
                 --max-chars __VIBEY_GH_FALLBACK_MAX_DIFF_CHARS__ \
                 --timeout __VIBEY_GH_FALLBACK_TIMEOUT_SECONDS__ \
+                --context-window __VIBEY_GH_FALLBACK_CONTEXT_WINDOW__ \
+                --reasoning-reserve __VIBEY_GH_FALLBACK_REASONING_RESERVE__ \
+                --chars-per-token __VIBEY_GH_FALLBACK_CHARS_PER_TOKEN__ \
+                --think '__VIBEY_GH_FALLBACK_THINK__' \
                 > "${RUNNER_TEMP}/triage.json"; then
             echo "::warning::local triage fallback produced no verdict"
             exit 1

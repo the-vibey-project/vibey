@@ -296,7 +296,7 @@ def test_an_unknown_job_is_refused_and_recorded(tmp_path: Path) -> None:
     assert event.payload["reason"] == f"unknown job {missing}"
 
 
-def test_a_finished_job_cannot_be_moved(tmp_path: Path) -> None:
+def test_bumping_a_finished_job_is_a_recorded_no_op(tmp_path: Path) -> None:
     pid, (job,) = asyncio.run(_seed(tmp_path, "x"))
 
     async def finish() -> None:
@@ -306,9 +306,10 @@ def test_a_finished_job_cannot_be_moved(tmp_path: Path) -> None:
 
     asyncio.run(finish())
     code, out = _run("bump", str(job))
-    assert code == 3
-    assert "cannot be moved in the queue: it is succeeded" in out
-    assert "vibey queue list" in out
+    assert code == 0, out
+    assert f"job {job}: it is succeeded; nothing to move (recorded; by operator:" in out
+    (event,) = asyncio.run(_events(pid))
+    assert event.payload["moved"] == []
 
 
 def test_an_unknown_project_exits_1(tmp_path: Path) -> None:
@@ -335,7 +336,7 @@ def test_list_shows_running_work_then_claim_order_with_bumps_marked(tmp_path: Pa
     lines = out.strip().splitlines()
     assert lines[0].split()[0] == "running" and str(running) in lines[0]
     assert lines[1].split()[:2] == ["1", "bumped"] and str(dep) in lines[1]
-    assert f"(pulled forward for {target})" in lines[1]
+    assert "(pulled in as a bumped job's dependency)" in lines[1]
     assert str(target) in lines[2] and "(waits on 1 job)" in lines[2]
     assert lines[3].split()[0] == "3" and str(plain) in lines[3]
     assert lines[4] == "4 unfinished jobs, 2 bumped; the claim takes waiting work top to bottom"
@@ -352,7 +353,7 @@ def test_list_defaults_to_the_latest_project_and_speaks_json(tmp_path: Path) -> 
     assert document["project_id"] == str(pid)
     (entry,) = document["jobs"]
     assert entry["job_id"] == str(job) and entry["position"] == 1
-    assert entry["bump_origin"] == str(job)
+    assert entry["bump_named"] is True
     assert entry["phase"] == "build" and entry["waiting_on"] == []
 
 
@@ -361,7 +362,7 @@ def test_list_marks_running_work_with_no_position_in_json(tmp_path: Path) -> Non
     asyncio.run(_claim(pid))
     (entry,) = json.loads(_run("list", str(pid), "--json")[1])["jobs"]
     assert entry["position"] is None and entry["state"] == "leased"
-    assert entry["bump_origin"] is None
+    assert entry["bump_named"] is False
 
 
 def test_an_empty_queue_says_so(tmp_path: Path) -> None:
@@ -528,3 +529,23 @@ def test_a_row_this_vibey_cannot_claim_is_marked_and_given_no_place() -> None:
     jobs = json.loads(QueuePresenter().entries_json(UUID(int=8), entries))["jobs"]
     assert [j["position"] for j in jobs] == [1, None, None, 2]
     assert [j["claimable_here"] for j in jobs] == [True, False, False, True]
+
+
+def test_the_presenter_says_what_a_request_swept_and_what_it_left() -> None:
+    target, gone, left = UUID(int=3), UUID(int=1), UUID(int=2)
+    change = PriorityChange(
+        action=PriorityAction.UNBUMP,
+        requested_by="operator:adam",
+        target=target,
+        moved=(),
+        note="it is not bumped; nothing moved",
+        swept=(MovedJob(job_id=gone, bump_seq=None, previous=4),),
+        skipped=(left,),
+    )
+    lines = QueuePresenter().change(change)
+    assert lines[0].startswith(f"job {target}: it is not bumped")
+    assert any(str(gone) in line and "no longer needed" in line for line in lines)
+    assert any(str(left) in line and "phase" in line for line in lines)
+    document = json.loads(QueuePresenter().change_json(change))
+    assert document["swept"] == [{"job_id": str(gone), "bump_seq": None, "previous": 4}]
+    assert document["skipped"] == [str(left)]

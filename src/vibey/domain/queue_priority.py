@@ -10,10 +10,12 @@ changes order and nothing else: it never takes a lease from the worker holding i
 dependencies succeed -- which is why it pulls unfinished dependencies forward with it,
 and refuses outright when one of them can never finish.
 
-`job.bump_origin` records which bump moved a job: its own id when it was bumped by
-name, the named job's id when it was pulled forward as a dependency. An un-bump undoes
-exactly what a bump moved -- the job, and the dependencies pulled forward for it that
-no other still-bumped job needs -- and refuses while a bumped job still needs it.
+The lane is derived (contract item 6): it is exactly the jobs bumped (or enqueued
+prioritised) BY NAME and not since un-bumped, plus all their unfinished transitive
+dependencies, ordered first-in-first-out by when each first entered it. `job.bump_named`
+marks the named ones. Un-bumping a job removes it from the named set, and is refused while
+another named job depends on it; every pulled job the remaining named jobs no longer need
+leaves with it, so no orphan can remain.
 
 Only the operator, verified as the account that owns the project's reviewed
 configuration, and the sources that configuration declares, may bump (12.h, 12.j).
@@ -61,8 +63,8 @@ class PriorityAction(StrEnum):
     BUMP = "bump"
     UNBUMP = "unbump"
     ENQUEUE = "enqueue"
-    """Enqueue a job already bumped (contract item 7). Re-enqueueing a job that has
-    already finished is a recorded no-op, the way a plain re-enqueue is a no-op."""
+    """Enqueue a job already bumped (contract item 7). Bumping or re-enqueueing a job
+    that has already finished is a recorded no-op, the way a plain re-enqueue is."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,9 +159,8 @@ class QueuedJob:
     run_after: datetime
     bump_seq: int | None = None
     depends_on: tuple[UUID, ...] = ()
-    bump_origin: UUID | None = None
-    """The job whose bump moved this one: itself when bumped by name, the named job
-    when it was pulled forward as a dependency, None when not bumped."""
+    bump_named: bool = False
+    """Bumped by name and not since un-bumped; false for a job pulled into the lane."""
     phase_known: bool = True
     """False for a phase a newer vibey wrote; such a job is never written (vibey#287)."""
 
@@ -173,8 +174,8 @@ class QueuedJob:
 
     @property
     def named(self) -> bool:
-        """Bumped by name, rather than pulled forward for another job."""
-        return self.bumped and self.bump_origin == self.id
+        """In the named set: bumped by name, rather than pulled in for another job."""
+        return self.bumped and self.bump_named
 
 
 class ClaimOrder:
@@ -206,21 +207,29 @@ class BumpPlan:
     kept: tuple[UUID, ...] = ()
     """Dependencies already bumped. They keep the place they have."""
     named: bool = False
-    """True when the target was already bumped as another job's dependency and is now
-    bumped by name: its place is kept, and it no longer goes back with that job."""
+    """True when the target was already in the lane as another job's dependency and is
+    now bumped by name: it keeps its place, and joins the named set."""
+    swept: tuple[UUID, ...] = ()
+    """Lane members the lane no longer derives -- left behind by a named job that was
+    cancelled or failed with its dependencies unfinished -- cleared by this request."""
+    skipped: tuple[UUID, ...] = ()
+    """Jobs the sweep would clear but will not write: their phase is one this vibey does
+    not know (vibey#287). They stay where they are, and the request says so."""
 
 
 @dataclass(frozen=True, slots=True)
 class UnbumpPlan:
-    """What an un-bump returns to normal order: the target first, then the dependencies
-    its own bumps pulled forward that nothing else still needs, in claim order."""
+    """What an un-bump returns to normal order: the target first, then every pulled job
+    the remaining named jobs no longer need, in claim order."""
 
     target: UUID
     moved: tuple[UUID, ...]
-    reattributed: tuple[tuple[UUID, UUID], ...] = ()
-    """Dependencies the target's bumps pulled forward that another bumped job still
-    needs: each stays bumped, and now belongs to the bump by name that holds it --
-    `(dependency, new origin)`. The target's set resets: it owns nothing afterwards."""
+    """The jobs the un-bump itself clears: the target, then the pulled jobs the
+    remaining named jobs no longer need because the target left, in claim order."""
+    swept: tuple[UUID, ...] = ()
+    """Lane members the lane no longer derived before this request, cleared by it."""
+    skipped: tuple[UUID, ...] = ()
+    """Jobs it would clear but will not write, their phase unknown to this vibey."""
 
 
 class _SnapshotPlanner:
@@ -256,6 +265,30 @@ class _SnapshotPlanner:
         self._writable(job)
         return job
 
+    @staticmethod
+    def _alive_named(jobs: Mapping[UUID, QueuedJob]) -> set[UUID]:
+        """The named set that still counts: named jobs that have not finished. A named
+        job in a state this vibey does not know is kept, not guessed finished."""
+        return {j.id for j in jobs.values() if j.named and j.state not in FINISHED_STATES}
+
+    def _orphans(self, jobs: Mapping[UUID, QueuedJob], named: set[UUID]) -> set[UUID]:
+        """Unfinished lane members the lane, derived from `named`, does not contain."""
+        derived: set[UUID] = set()
+        for job_id in named:
+            derived |= set(self._needs(jobs, jobs[job_id]))
+        return {j.id for j in jobs.values() if j.bumped and j.movable and j.id not in derived}
+
+    def _clearable(
+        self, jobs: Mapping[UUID, QueuedJob], ids: set[UUID]
+    ) -> tuple[tuple[UUID, ...], tuple[UUID, ...]]:
+        """`ids` in claim order, split into those it may clear and those in a phase this
+        vibey does not know, which it leaves alone rather than refuse the request."""
+        ordered = self._order.sort(jobs[job_id] for job_id in ids)
+        return (
+            tuple(j.id for j in ordered if j.phase_known),
+            tuple(j.id for j in ordered if not j.phase_known),
+        )
+
     def _needs(self, jobs: Mapping[UUID, QueuedJob], root: QueuedJob) -> dict[UUID, QueuedJob]:
         """`root` and every unfinished job it depends on, transitively."""
         reached: dict[UUID, QueuedJob] = {}
@@ -279,8 +312,10 @@ class BumpPlanner(_SnapshotPlanner):
         self, target: UUID, jobs: Mapping[UUID, QueuedJob], *, finished_ok: bool = False
     ) -> BumpPlan:
         job = self._get(jobs, target)
+        orphans = self._orphans(jobs, self._alive_named(jobs))
         if finished_ok and job.state in FINISHED_STATES:
-            return BumpPlan(target=target, moved=())
+            swept, skipped = self._clearable(jobs, orphans)
+            return BumpPlan(target=target, moved=(), swept=swept, skipped=skipped)
         self._target(jobs, target)
         members = self._needs(jobs, job)
         blockers = sorted(
@@ -299,11 +334,14 @@ class BumpPlanner(_SnapshotPlanner):
         moved = tuple(member.id for member in ordered if not member.bumped)
         for moving in moved:
             self._writable(jobs[moving])
+        swept, skipped = self._clearable(jobs, orphans - set(members))
         return BumpPlan(
             target=target,
             moved=moved,
             kept=tuple(m.id for m in ordered if m.bumped and m.id != target),
             named=job.bumped and not job.named,
+            swept=swept,
+            skipped=skipped,
         )
 
     def _dependencies_first(self, members: Mapping[UUID, QueuedJob]) -> list[QueuedJob]:
@@ -340,51 +378,35 @@ class BumpPlanner(_SnapshotPlanner):
 
 
 class UnbumpPlanner(_SnapshotPlanner):
-    """Undoes exactly what a job's bumps moved (contract item 6).
+    """Removes a job from the named set, and re-derives the lane (contract item 6).
 
-    The target goes back, with each dependency its own bumps pulled forward -- the jobs
-    whose `bump_origin` is the target. A dependency stays when a still-bumped job needs
-    it (transitively, while unfinished), or when it was bumped by name and not since
-    un-bumped. A dependency that stays for another bump is handed to the bump by name
-    that holds it, so the target's set resets and no job is left bumped for a bump that
-    went back. Un-bumping a job that a bumped job still depends on is refused, naming
-    those jobs. `jobs` is the target and every unfinished job of its project.
+    The lane is exactly the named jobs plus all their unfinished transitive dependencies.
+    Un-bumping a job is refused, naming them, while another named job depends on it. It
+    otherwise clears the job and every pulled job the remaining named jobs no longer need
+    -- wherever it was pulled from -- so the lane afterwards is the derivation, with no
+    orphan left over. `jobs` is the target and every unfinished job of its project.
     """
 
     def plan(self, target: UUID, jobs: Mapping[UUID, QueuedJob]) -> UnbumpPlan:
         root = self._target(jobs, target)
+        named = self._alive_named(jobs)
+        orphans = self._orphans(jobs, named) - {target}
+        swept, skipped = self._clearable(jobs, orphans)
         if not root.bumped:
-            return UnbumpPlan(target=target, moved=())
-        needs = {
-            job.id: self._needs(jobs, job) for job in jobs.values() if job.bumped and job.movable
-        }
+            return UnbumpPlan(target=target, moved=(), swept=swept, skipped=skipped)
+        remaining = named - {target}
         dependents = sorted(
-            job_id for job_id, reach in needs.items() if job_id != target and target in reach
+            job_id for job_id in remaining if target in self._needs(jobs, jobs[job_id])
         )
         if dependents:
             raise DependentsStillBumped(target, tuple(dependents))
-        pulled = {
-            job_id: job
-            for job_id, job in needs[target].items()
-            if job_id != target and job.bumped and job.bump_origin == target
-        }
-        holders = self._order.sort(
-            jobs[job_id] for job_id in needs if job_id != target and job_id not in pulled
-        )
-        cleared: list[QueuedJob] = []
-        kept: list[tuple[UUID, UUID]] = []
-        for job_id, job in pulled.items():
-            holder = next((h for h in holders if job_id in needs[h.id]), None)
-            if holder is None:
-                self._writable(job)
-                cleared.append(job)
-            else:
-                owner = holder.id if holder.named else holder.bump_origin
-                kept.append((job_id, owner or holder.id))
+        released = self._orphans(jobs, remaining) - orphans - {target}
+        cleared, held = self._clearable(jobs, released)
         return UnbumpPlan(
             target=target,
-            moved=(target, *(job.id for job in self._order.sort(cleared))),
-            reattributed=tuple(sorted(kept)),
+            moved=(target, *cleared),
+            swept=swept,
+            skipped=tuple(sorted({*held, *skipped})),
         )
 
 
@@ -414,9 +436,11 @@ class PriorityChange:
     named: bool = False
     note: str = ""
     """Why nothing moved, when nothing did."""
-    reattributed: tuple[tuple[UUID, UUID], ...] = ()
-    """For an un-bump: `(dependency, new origin)` for each dependency it kept for
-    another bump that still needs it."""
+    swept: tuple[MovedJob, ...] = ()
+    """Lane members the lane no longer derived, cleared by this request (finding: a
+    named job cancelled or failed with its dependencies unfinished)."""
+    skipped: tuple[UUID, ...] = ()
+    """Jobs left in the lane because their phase is one this vibey does not know."""
 
     @property
     def changed(self) -> bool:

@@ -8,7 +8,7 @@ Every change is one transaction that:
    is then a question about a queue nobody else is reordering;
 2. finds the rows the change can reach -- a bump's dependency closure, which stops at
    finished rows; an un-bump's bumped jobs -- and locks them `FOR NO KEY UPDATE` in id
-   order. `NO KEY` because only `bump_seq` and `bump_origin` change: an enqueue naming one
+   order. `NO KEY` because only `bump_seq` and `bump_named` change: an enqueue naming one
    of these jobs as a dependency takes `KEY SHARE` on it, which this lock never blocks;
 3. reads each row's state only once its lock is held, so a row that finished while the
    closure was being found is judged as finished;
@@ -83,14 +83,20 @@ WITH RECURSIVE closure(id) AS (
 SELECT id FROM closure
 """
 
-# Locked in id order, so overlapping reorders take their locks in the same order.
+# A bump may write its closure and any lane member it sweeps, so it locks those, in id
+# order, so overlapping reorders take their locks in the same order.
 _LOCK_CLOSURE: Final = """
-SELECT id, phase, state, priority, run_after, bump_seq, bump_origin FROM job WHERE id = ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE
+SELECT id, phase, state, priority, run_after, bump_seq, bump_named FROM job
+WHERE id = ANY($1::uuid[])
+   OR (project_id = $2 AND bump_seq IS NOT NULL
+       AND state NOT IN ('succeeded', 'failed', 'cancelled'))
+ORDER BY id
+FOR NO KEY UPDATE
 """
 
 # An un-bump writes only the target and bumped jobs, so only those are locked.
 _LOCK_BUMPED: Final = """
-SELECT id, phase, state, priority, run_after, bump_seq, bump_origin FROM job
+SELECT id, phase, state, priority, run_after, bump_seq, bump_named FROM job
 WHERE project_id = $2
   AND (id = $1 OR (bump_seq IS NOT NULL AND state NOT IN ('succeeded', 'failed', 'cancelled')))
 ORDER BY id
@@ -98,7 +104,7 @@ FOR NO KEY UPDATE
 """
 
 _UNFINISHED: Final = """
-SELECT id, phase, state, priority, run_after, bump_seq, bump_origin FROM job
+SELECT id, phase, state, priority, run_after, bump_seq, bump_named FROM job
 WHERE project_id = $1 AND state NOT IN ('succeeded', 'failed', 'cancelled') AND NOT (id = ANY($2::uuid[]))
 """
 
@@ -159,11 +165,14 @@ class PriorityEventDraftBuilder:
             "named": change.named,
             "note": change.note,
         }
-        if change.action is PriorityAction.UNBUMP:
-            payload["removed"] = [str(m.job_id) for m in change.moved]
-            payload["reattributed"] = [
-                {"job_id": str(dep), "origin": str(owner)} for dep, owner in change.reattributed
-            ]
+        # Exactly the jobs this request took out of the lane (ADR-0054 item 6): for an
+        # un-bump, the target and what its leaving released; for any request, lane members
+        # the lane no longer derived (a named job cancelled or failed with its
+        # dependencies unfinished). `skipped` names those left because this vibey
+        # cannot write them.
+        cleared = change.moved if change.action is PriorityAction.UNBUMP else ()
+        payload["removed"] = [str(m.job_id) for m in (*cleared, *change.swept)]
+        payload["skipped"] = [str(job_id) for job_id in change.skipped]
         return self._draft(context, kind, change.target, Provenance.TRUSTED, at, payload)
 
     def refused(self, refusal: PriorityRefusal, *, at: datetime) -> LedgerEventDraft:
@@ -250,23 +259,29 @@ class PostgresJobPriorityStore:
                 row["id"]
                 for row in await conn.fetch(_DEPENDENCY_CLOSURE, job_id, context.project_id)
             ]
-            snapshot = await self._snapshot(conn, job_id, await conn.fetch(_LOCK_CLOSURE, ids))
+            locked = await conn.fetch(_LOCK_CLOSURE, ids, context.project_id)
+            held = [row["id"] for row in locked]
+            rest = await conn.fetch(_UNFINISHED, context.project_id, held)
+            snapshot = await self._snapshot(conn, job_id, [*locked, *rest])
             target = snapshot[job_id]
-            plan = self._bumps.plan(job_id, snapshot, finished_ok=action is PriorityAction.ENQUEUE)
+            # A finished target -- bumped or re-enqueued with priority -- is a recorded
+            # no-op, never a refusal (ADR-0054 item 7), as the storm's queue has it.
+            plan = self._bumps.plan(job_id, snapshot, finished_ok=True)
             moved: list[MovedJob] = []
             for moving in plan.moved:
                 seq = await conn.fetchval(
-                    """UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_origin = $2,
+                    """UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_named = $2,
                               updated_at = now()
                        WHERE id = $1 RETURNING bump_seq""",
                     moving,
-                    job_id,
+                    moving == job_id,
                 )
                 moved.append(MovedJob(job_id=moving, bump_seq=seq, previous=None))
             if plan.named:
                 await conn.execute(
-                    "UPDATE job SET bump_origin = id, updated_at = now() WHERE id = $1", job_id
+                    "UPDATE job SET bump_named = true, updated_at = now() WHERE id = $1", job_id
                 )
+            swept = await self._clear(conn, plan.swept, snapshot)
             note = ""
             if not moved and not plan.named:
                 note = (
@@ -281,7 +296,9 @@ class PostgresJobPriorityStore:
                 moved=tuple(moved),
                 kept=plan.kept,
                 named=plan.named,
-                note=note,
+                note=self._skipping(note, plan.skipped),
+                swept=swept,
+                skipped=plan.skipped,
             )
             await self._appender.append(conn, self._drafts.changed(change, context=context, at=at))
             return change
@@ -295,27 +312,18 @@ class PostgresJobPriorityStore:
             rest = await conn.fetch(_UNFINISHED, context.project_id, held)
             snapshot = await self._snapshot(conn, job_id, [*locked, *rest])
             plan = self._unbumps.plan(job_id, snapshot)
-            await conn.execute(
-                """UPDATE job SET bump_seq = NULL, bump_origin = NULL, updated_at = now()
-                   WHERE id = ANY($1::uuid[])""",
-                list(plan.moved),
-            )
-            for dep, owner in plan.reattributed:
-                await conn.execute(
-                    "UPDATE job SET bump_origin = $2, updated_at = now() WHERE id = $1",
-                    dep,
-                    owner,
-                )
+            moved = await self._clear(conn, plan.moved, snapshot)
+            swept = await self._clear(conn, plan.swept, snapshot)
             change = PriorityChange(
                 action=PriorityAction.UNBUMP,
                 requested_by=context.requested_by,
                 target=job_id,
-                moved=tuple(
-                    MovedJob(job_id=moving, bump_seq=None, previous=snapshot[moving].bump_seq)
-                    for moving in plan.moved
+                moved=moved,
+                note=self._skipping(
+                    "" if plan.moved else "it is not bumped; nothing moved", plan.skipped
                 ),
-                note="" if plan.moved else "it is not bumped; nothing moved",
-                reattributed=plan.reattributed,
+                swept=swept,
+                skipped=plan.skipped,
             )
             await self._appender.append(conn, self._drafts.changed(change, context=context, at=at))
             return change
@@ -331,6 +339,32 @@ class PostgresJobPriorityStore:
             QueueEntry(job=self._rows.to_record(row), waiting_on=tuple(row["waiting_on"]))
             for row in rows
         )
+
+    @staticmethod
+    async def _clear(
+        conn: _Connection, ids: tuple[UUID, ...], snapshot: Mapping[UUID, QueuedJob]
+    ) -> tuple[MovedJob, ...]:
+        """Take `ids` out of the lane; what each held before is what the record shows."""
+        await conn.execute(
+            """UPDATE job SET bump_seq = NULL, bump_named = false, updated_at = now()
+               WHERE id = ANY($1::uuid[])""",
+            list(ids),
+        )
+        return tuple(
+            MovedJob(job_id=job_id, bump_seq=None, previous=snapshot[job_id].bump_seq)
+            for job_id in ids
+        )
+
+    @staticmethod
+    def _skipping(note: str, skipped: tuple[UUID, ...]) -> str:
+        """Say so when a job was left in the lane because this vibey cannot write it."""
+        if not skipped:
+            return note
+        left = (
+            f"left in the lane: {len(skipped)} job{'' if len(skipped) == 1 else 's'} in a "
+            "phase this vibey does not know"
+        )
+        return f"{note}; {left}" if note else left
 
     @asynccontextmanager
     async def _reordering(self, job_id: UUID, project_id: UUID) -> AsyncIterator[_Connection]:
@@ -366,7 +400,7 @@ class PostgresJobPriorityStore:
                 run_after=row["run_after"],
                 bump_seq=row["bump_seq"],
                 depends_on=tuple(sorted(edges.get(row_id, ()))),
-                bump_origin=row["bump_origin"],
+                bump_named=row["bump_named"],
                 phase_known=isinstance(self._rows.phase(row["phase"]), Phase),
             )
             for row_id, row in by_id.items()

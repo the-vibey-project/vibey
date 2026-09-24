@@ -14,6 +14,50 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### BREAKING CHANGES
 
+* **vibey_gh:** the sovereign review never returns a verdict on a prompt the model did not
+  read in full, and names a model that ran out of room (#1090). #1090 read its whole
+  31,765-token prompt and ran out of generation room in the 1,004 tokens a 32,768 window left
+  (`done_reason=length`); that is now reported as such, not as a JSON error. Truncation is
+  possible on this host -- left to its defaults Ollama 0.34.2 read a 36,798-token request as
+  16,386 tokens, about half the window, with no error -- and is now refused three ways:
+  requests are sized from everything sent against the declared `[pr_automation.fallback]
+  context_window` (default 65,536) beside `reasoning_reserve_tokens` (8,192); every request is
+  sent with `truncate: false` and `shift: false`, so Ollama answers an oversized one with HTTP
+  400, reported in its own words; and every request carries a random check code at each end
+  that the answer must echo. The diff half refuses a diff past `max_diff_chars` instead of
+  cutting it; a whole review sends the whole diff, trims only its documents in declared order,
+  and claims the diff half alone when any was cut or left out, so the gate asks a human
+* **db:** the ledger is append-only by the database, not by convention
+  ([ADR-0055](docs/architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)).
+  - **Triggers.** Migration 0016 replaces the `DO INSTEAD NOTHING` rules with triggers that
+    refuse every `UPDATE`, `DELETE` and `TRUNCATE` of `event` and of each of its partitions,
+    for every role, the owner included, with `the ledger is append-only`. The rules did not
+    fire for a partition or for `TRUNCATE`, and the owner could disable them. A rewrite is
+    now an error, not a silent no-op, and `DELETE FROM project` no longer cascades through
+    a project's ledger.
+  - **Two roles.** The application connects as a role (`VIBEY_PG_URL`) that holds exactly
+    the declared grants: `SELECT` and `INSERT` on the ledger, no `DELETE` or `TRUNCATE`
+    anywhere, and no ownership. Migrations run as the owner, `VIBEY_PG_MIGRATE_URL`, through
+    the new `vibey migrate` or the Helm chart's new `migrate` init container. The chart
+    gains `postgres.appRole` (default `vibey_app`) and `dsn.existingSecretMigrateKey`.
+  - **Checks.** `vibey doctor` gains `ledger-guard` and `local-auth` checks. A single-DSN
+    install keeps running, but `vibey doctor` fails until its roles are split, `vibey
+    worker` says so on stderr at every start, and `vibey migrate` exits 1. `local-auth`
+    fails when the server lets a password-less connection in as the owner or a superuser;
+    SECURITY.md §7 gives the `pg_hba.conf` lines. Upgrade path:
+    [database roles](docs/reference/configuration.md#database-roles)
+* **qwenloop:** the `shell` tool runs with an allow-listed environment: the system basics
+  only, and never `VIBEY_*`, `PG*` or a name containing `KEY`, `TOKEN`, `SECRET`,
+  `PASSWORD`, `PASSWD`, `CREDENTIAL`, `DSN` or `DATABASE_URL`. It used to pass everything
+  except `KEY` and `TOKEN` names, so `VIBEY_PG_URL` and `PGPASSWORD` reached commands a
+  model chose.
+* **vibey_gh:** the sovereign review never reads a prompt the model did not see in full
+  (#1090). Local requests are sized from everything sent and must fit the declared
+  `[pr_automation.fallback] context_window` (default 65,536) beside `reasoning_reserve_tokens`
+  (8,192), or are refused rather than silently truncated by Ollama; a whole review sends the
+  whole diff (never cut at `max_diff_chars`) and trims only its optional documents; each reply
+  is checked against Ollama's `prompt_eval_count` and `done_reason`, so a model that ran out of
+  room says so
 * **vibey_gh:** the exact-head review reaches a paid model only where `[pr_automation]
   paid_review = true` declares one (sub-doctrine 8.b: a paid counterparty is declared-only).
   Undeclared, the default, the paid `review` job never runs: the sovereign lane answers the
@@ -53,6 +97,23 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **storm:** a hung push gate can no longer hold every other push hostage. After one push's
+  pytest sat at 0% CPU for 39 minutes holding the storm's shared push lock, three layers stand
+  in the way. No single test can hang either suite: `timeout = 300` (pytest-timeout, now in
+  both dev extras) fails the test by name and the suite carries on, and `faulthandler_timeout
+  = 240` dumps every thread's stack first; `tests/conftest.py` also dumps them on SIGUSR1,
+  into `VIBEY_PYTEST_STACKS_DIR` when set. The push lock is code:
+  `docs/plans/qwenstorm-3.0.0/tools/push_gate.py` `acquire` / `release` / `run -- git push …`
+  / `status`, an atomic `mkdir` holding an owner record (pid, process group, branch, worktree,
+  start time, uid), released only by its owner, at a declared path (`[push_gate] lock`). Its
+  reaper runs first in every `storm-cycle.py` pass and acts only on a measured condition — the
+  holder is gone; the push's own process group used under `idle_cpu_seconds` (2) over
+  `idle_window_seconds` (600), sampled with `ps -o time` across passes; or it passed
+  `wall_ceiling_seconds` (3600) — writing evidence (process tree, push-log tail, py-spy or
+  SIGUSR1 stacks) before it SIGTERMs, then SIGKILLs, that group and nothing else. Each reap is
+  one line in an append-only reap log, and the push reports `reaped: hang` (exit 124), never
+  a test failure. `--dry-run` reports without acting (sub-doctrines 12.d, 12.e)
+
 * **vibey_gh:** `vibey-gh runner install|check|cleanup|uninstall` stands the sovereign review
   runner up from a new `[runners]` table instead of hand-written LaunchAgents (12.c). Its gh
   credential is a dedicated, file-based login in `~/.config/gh-runner` holding a fine-grained
@@ -63,7 +124,11 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   after whatever is running — never interrupting it — behind anything bumped before it
   and ahead of all un-bumped waiting work, and pulls its unfinished dependencies forward
   with it; a dependency that can never finish refuses the bump. `vibey queue unbump JOB`
-  undoes exactly what that bump moved, and is refused while a bumped job still needs it.
+  takes it out of the lane, which is always the jobs bumped by name plus their unfinished
+  dependencies, so nothing is left behind; it is refused while another named job needs it.
+  A named job that ends cancelled or failed is swept out with what it alone pulled in by
+  the project's next bump or un-bump, recorded; a job in a phase this vibey does not know
+  is left in place and named rather than refusing the request.
   `vibey queue list [PROJECT]` shows the queue in claim order with every bump marked;
   `vibey design resume PROJECT --priority` enqueues the interview bumped. The claim orders
   `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so the order among
@@ -75,6 +140,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   way to reorder work; the KEDA scaler counts only jobs in a phase this release claims.
   The migration's index rebuild stalls claims until it commits, and during a rolling
   upgrade workers still on the previous release ignore bumps until they are replaced.
+  **Upgrade note:** `migrations/0015_job_bump_named.sql` drops `job.bump_origin`, so every
+  worker from a build before 0015 must be drained or replaced before 0015 runs; a worker
+  still on such a build fails every job read once it commits. The orphans 0015 clears are
+  not recorded on the ledger (ADR-0054, known gap).
 * **vibey_gh:** `vibey-gh approve-check PR [--head SHA] [--approve]` enforces the delegated approver's grant
   by code (sub-doctrines 12.f, 12.j): it exits 0 only when every `[unattended_approval]`
   condition holds — live switch, author allowlist (`@codeowners` expanded), branch globs,

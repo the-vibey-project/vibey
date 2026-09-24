@@ -1240,6 +1240,11 @@ def _local_review(args) -> int:
         ("--role", args.role),
         ("--scope", args.scope),
         ("--context-dir", args.context_dir),
+        ("--context-paths", args.context_paths),
+        ("--context-window", args.context_window),
+        ("--reasoning-reserve", args.reasoning_reserve),
+        ("--chars-per-token", args.chars_per_token),
+        ("--think", args.think),
     ):
         if value is not None:
             forwarded += [flag, str(value)]
@@ -1695,6 +1700,29 @@ def main(argv: list[str] | None = None) -> int:
     local.add_argument(
         "--context-dir",
         help="documents a whole review judges the documentation contract against",
+    )
+    local.add_argument(
+        "--context-paths",
+        help=(
+            "override [pr_automation.fallback] context_paths, space-separated: the order the"
+            " documents give way in, the last first"
+        ),
+    )
+    local.add_argument(
+        "--context-window",
+        type=int,
+        help="override [pr_automation.fallback] context_window: the model's window, in tokens",
+    )
+    local.add_argument(
+        "--reasoning-reserve",
+        type=int,
+        help="override reasoning_reserve_tokens: room kept for reasoning and the answer",
+    )
+    local.add_argument("--chars-per-token", type=int, help="override chars_per_token")
+    local.add_argument(
+        "--think",
+        choices=("", "low", "medium", "high"),
+        help="override think: the reasoning effort sent to the model (empty sends none)",
     )
     local.set_defaults(func=_local_review)
 

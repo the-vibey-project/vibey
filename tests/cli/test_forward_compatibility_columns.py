@@ -1,7 +1,9 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import asyncio
+import os
 from pathlib import Path
 
+import asyncpg
 import pytest
 from typer.testing import CliRunner
 
@@ -18,12 +20,16 @@ async def test_work_once_raises_wrong_phase_on_unrecognized_phase(tmp_path: Path
         project = await resources.projects.create(
             "test-proj-work-once", tmp_path, max_cycles=3, config={}
         )
-        async with resources.projects._pool.acquire() as conn:
+        # ALTER TYPE is the owner's (ADR-0055); the application role may not.
+        conn = await asyncpg.connect(os.environ["VIBEY_TEST_DATABASE_URL"])
+        try:
             await conn.execute("ALTER TYPE phase ADD VALUE IF NOT EXISTS 'future_phase_cli'")
             await conn.execute(
                 "UPDATE project SET phase = 'future_phase_cli'::phase WHERE id = $1",
                 project.project_id,
             )
+        finally:
+            await conn.close()
 
     with pytest.raises(WrongPhase, match="is unknown; upgrade vibey"):
         await _work_once(project.project_id, "scripted", 10, 10.0)
@@ -35,12 +41,15 @@ def test_worker_refuses_project_with_unrecognized_phase(tmp_path: Path) -> None:
             project = await resources.projects.create(
                 "test-proj-worker", tmp_path, max_cycles=3, config={}
             )
-            async with resources.projects._pool.acquire() as conn:
+            conn = await asyncpg.connect(os.environ["VIBEY_TEST_DATABASE_URL"])
+            try:
                 await conn.execute("ALTER TYPE phase ADD VALUE IF NOT EXISTS 'future_phase_cli2'")
                 await conn.execute(
                     "UPDATE project SET phase = 'future_phase_cli2'::phase WHERE id = $1",
                     project.project_id,
                 )
+            finally:
+                await conn.close()
             return project.project_id
 
     asyncio.run(seed())

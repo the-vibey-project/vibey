@@ -101,8 +101,8 @@ class QueuedJobInterface(Protocol):
     def depends_on(self) -> tuple[UUID, ...]: ...
 
     @property
-    def bump_origin(self) -> UUID | None:
-        """The job whose bump moved this one."""
+    def bump_named(self) -> bool:
+        """Bumped by name and not since un-bumped."""
         ...
 
     @property
@@ -138,6 +138,16 @@ class BumpPlanInterface(Protocol):
     @property
     def named(self) -> bool: ...
 
+    @property
+    def swept(self) -> tuple[UUID, ...]:
+        """Lane members no longer derived, cleared by this request."""
+        ...
+
+    @property
+    def skipped(self) -> tuple[UUID, ...]:
+        """Jobs it would clear but leaves alone: their phase is unknown to this vibey."""
+        ...
+
 
 @runtime_checkable
 class UnbumpPlanInterface(Protocol):
@@ -148,10 +158,10 @@ class UnbumpPlanInterface(Protocol):
     def moved(self) -> tuple[UUID, ...]: ...
 
     @property
-    def reattributed(self) -> tuple[tuple[UUID, UUID], ...]:
-        """`(dependency, new origin)` for what the target pulled forward and another
-        bump still needs."""
-        ...
+    def swept(self) -> tuple[UUID, ...]: ...
+
+    @property
+    def skipped(self) -> tuple[UUID, ...]: ...
 
 
 @runtime_checkable
@@ -192,7 +202,10 @@ class PriorityChangeInterface(Protocol):
     def note(self) -> str: ...
 
     @property
-    def reattributed(self) -> tuple[tuple[UUID, UUID], ...]: ...
+    def swept(self) -> tuple[MovedJob, ...]: ...
+
+    @property
+    def skipped(self) -> tuple[UUID, ...]: ...
 
     @property
     def changed(self) -> bool:
@@ -262,10 +275,12 @@ class BumpPlannerInterface(Protocol):
 
 @runtime_checkable
 class UnbumpPlannerInterface(Protocol):
-    """Decides what an un-bump moves: exactly what the target's bump moved."""
+    """Decides what an un-bump clears: the target, and whatever the lane no longer
+    derives once the target leaves the named set."""
 
     def plan(self, target: UUID, jobs: Mapping[UUID, QueuedJob]) -> UnbumpPlan:
         """`jobs` holds the target and every unfinished job of its project. Raises
         `NotReorderable` for a finished or unknown target, `DependentsStillBumped` while
-        a bumped job needs it, and `LookupError` for a target the snapshot lacks."""
+        another named job depends on it, and `LookupError` for a target the snapshot
+        lacks."""
         ...
