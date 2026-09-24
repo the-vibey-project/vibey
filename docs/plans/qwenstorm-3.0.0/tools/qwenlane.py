@@ -7,22 +7,33 @@ an isolated clone, so several lanes can run side by side without touching each o
 operator's main checkout.
 
 Usage: python qwenlane.py LANE_DIR ISSUE_NUMBER TITLE BODY_FILE [--max-attempts 3]
+
+Each attempt runs in a child process of this same script (`--attempt SPEC`), watched by
+`lane_watchdog`: a per-attempt and a per-lane wall clock and a stall watchdog, declared in
+storm.toml `[lane]`, so one hung attempt can no longer hang the storm.
 """
 
 import argparse
 import asyncio
+import hashlib
 import json
+import os
 import sys
-import uuid
 from pathlib import Path
 
 # Dogfood the latest *verified* qwenloop: the integration branch's own source, not the
 # installed release. A lane's edit_file tool (#346) exists only there.
 sys.path.insert(0, str(Path(__file__).parent.parent / "integration/src/vibey_runners/qwen/src"))
 
+import storm_paths
+from lane_watchdog import REPORT_FD_ENV, SPEC_SHA256_ENV, ChildGuard, LaneAttempts, LaneLimits
 from qwenloop.application.storm import build_plan
 from qwenloop.cli.app import _load_config, _run_plan, _server_for, _tracked_repository_context
 from qwenloop.domain.model import RepoItem, RunStatus
+
+# The storm root, for storm.toml's `[lane]` limits and progress.log. .absolute(), never
+# .resolve(): tools/ is a symlink, and storm_paths explains what resolving it costs.
+STORM = storm_paths.storm(__file__)
 
 # Verbatim from qwenloop.cli.app._run_storm, so a lane repairs exactly the way the storm does.
 REPAIR = (
@@ -59,6 +70,69 @@ def restore_destroyed_files(lane: Path) -> list[str]:
     return restored
 
 
+def attempt_argv(spec: Path) -> list[str]:
+    """How one attempt is started: this script again, as its own watched process.
+
+    The same script rather than a new one, so everything that finds a lane by its
+    `qwenlane.py` argv -- storm-queue.sh's wait, storm-stop.py -- finds its attempt too.
+    """
+    return [sys.executable, str(Path(__file__).absolute()), "--attempt", str(spec)]
+
+
+def run_attempt(spec_path: Path) -> int:
+    """The child half: run one plan with qwenloop and leave the verdict for the parent.
+
+    In-process qwenloop could not be bounded -- a model call blocks on a worker thread no
+    one can cancel -- so an attempt is a process of its own that the parent can stop.
+    """
+    # Popped, not read: the commands this attempt starts inherit its environment, and the
+    # report channel and the spec's digest are for the attempt alone.
+    guard = ChildGuard(int(os.environ.pop(REPORT_FD_ENV)))
+    expected = os.environ.pop(SPEC_SHA256_ENV, "")
+    # The spec carries the plan this process is about to run. Read once, as bytes, and
+    # checked against the digest the parent handed over out of band: a spec rewritten
+    # between the parent's write and this read -- by a process that escaped an earlier
+    # attempt, say -- runs nothing.
+    body = spec_path.read_bytes()
+    if not expected or hashlib.sha256(body).hexdigest() != expected:
+        guard.report(
+            {
+                "status": "crashed",
+                "error": f"attempt spec {spec_path} does not match the digest its lane wrote; "
+                "refusing to run it",
+            }
+        )
+        return 2
+    spec = json.loads(body)
+    guard.record_escaping_subprocesses()
+    if "parent_pid" in spec:
+        guard.die_with(int(spec["parent_pid"]), float(spec["poll_seconds"]))
+    config = _load_config()
+    server, profile = _server_for(config)
+    try:
+        state = asyncio.run(
+            _run_plan(
+                server,
+                profile,
+                Path(spec["lane"]),
+                spec["run_id"],
+                spec["plan"],
+                config.max_turns,
+                startup_timeout_seconds=config.startup_timeout_seconds,
+                desktop_notifications=True,
+                tool_limits=config.tools,
+            )
+        )
+    except (OSError, RuntimeError) as exc:
+        # The storm treats these as "unavailable" and stops. A lane keeps the worktree and
+        # spends its next attempt instead: qwenloop's chat call has a fixed 300 s read
+        # timeout, which a long prompt on a laptop can exceed without anything being wrong.
+        guard.report({"status": "unavailable", "error": str(exc)[:300]})
+        return 0
+    guard.report({"status": state.status.value, "turns": state.turns})
+    return 0
+
+
 def main() -> None:
     import os
 
@@ -89,42 +163,43 @@ def main() -> None:
     state_dir.mkdir(exist_ok=True)
     (state_dir / "plan.md").write_text(plan_text)
 
-    config = _load_config()
-    server, profile = _server_for(config)
+    # Loaded here only so a bad qwen-storm.toml fails the lane at once, before an attempt.
+    _load_config()
+    lanes = LaneAttempts(
+        lane,
+        slug=lane.name,
+        issue=args.issue,
+        max_attempts=args.max_attempts,
+        limits=LaneLimits.declared(STORM),
+        progress_log=STORM / "progress.log",
+        # Outside the lane's worktree: the spec carries the plan, and the lane is the model's.
+        state_dir=STORM / "state" / "attempts",
+        child_argv=attempt_argv,
+    )
     attempts: list[dict[str, object]] = []
     completed = False
     for attempt in range(1, args.max_attempts + 1):
         text = plan_text
         if attempt > 1:
             text += REPAIR.format(attempt=attempt, max_attempts=args.max_attempts)
-        try:
-            state = asyncio.run(
-                _run_plan(
-                    server,
-                    profile,
-                    lane,
-                    str(uuid.uuid4()),
-                    text,
-                    config.max_turns,
-                    startup_timeout_seconds=config.startup_timeout_seconds,
-                    desktop_notifications=True,
-                    tool_limits=config.tools,
-                )
-            )
-        except (OSError, RuntimeError) as exc:
-            # The storm treats these as "unavailable" and stops. A lane keeps the worktree and
-            # spends its next attempt instead: qwenloop's chat call has a fixed 300 s read
-            # timeout, which a long prompt on a laptop can exceed without anything being wrong.
-            attempts.append({"attempt": attempt, "status": "unavailable", "error": str(exc)[:300]})
+        record = lanes.run(attempt, text)
+        if record is None:
+            break  # the lane's wall clock is spent; LaneAttempts said so in progress.log
+        if record["status"] == "stopped":
+            # Signalled (storm-stop.py). No result.json: an unfinished lane is run again on
+            # restart, exactly as it was before attempts had a process of their own.
+            raise SystemExit(143)
+        attempts.append(record)
+        if record["status"] in {"unavailable", "crashed"}:
             print(
-                f"issue#{args.issue}\tattempt {attempt}/{args.max_attempts}\tunavailable\t{exc}",
+                f"issue#{args.issue}\tattempt {attempt}/{args.max_attempts}\t"
+                f"{record['status']}\t{record.get('error', '')}",
                 flush=True,
             )
             continue
-        attempts.append({"attempt": attempt, "status": state.status.value, "turns": state.turns})
         restored = restore_destroyed_files(lane)
         if restored:
-            attempts[-1]["restored"] = restored
+            record["restored"] = restored
             plan_text += (
                 "\n## Files restored after the previous attempt\n"
                 "These files lost most of their lines to a whole-file rewrite and were restored "
@@ -132,10 +207,10 @@ def main() -> None:
                 "each, using the targeted replacement in the Lane editing rules.\n"
             )
         print(
-            f"issue#{args.issue}\tattempt {attempt}/{args.max_attempts}\t{state.status.value}\t{state.turns}",
+            f"issue#{args.issue}\tattempt {attempt}/{args.max_attempts}\t{record['status']}\t{record['turns']}",
             flush=True,
         )
-        if state.status is RunStatus.COMPLETED:
+        if record["status"] == RunStatus.COMPLETED.value:
             # A verdict is never completion evidence by itself (CDD, sub-doctrine 9.c): a run
             # that claims completion with no surviving change -- nothing written, or its only
             # writes gutted a file and were restored -- has not done the item.
@@ -175,4 +250,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "--attempt":
+        raise SystemExit(run_attempt(Path(sys.argv[2])))
     main()
