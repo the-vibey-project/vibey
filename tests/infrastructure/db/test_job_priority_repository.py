@@ -69,6 +69,12 @@ def _request(project_id: UUID, subject: str, **overrides: object) -> EnqueueRequ
     return EnqueueRequest(**fields)  # type: ignore[arg-type]
 
 
+async def _prioritise(pool: asyncpg.Pool, job: UUID, priority: int) -> None:
+    """Set the band directly: no request can (ADR-0054)."""
+    async with pool.acquire() as conn:
+        await conn.execute("UPDATE job SET priority = $2 WHERE id = $1", job, priority)
+
+
 async def _enqueue(repo: PostgresJobRepository, project_id: UUID, *subjects: str) -> list[UUID]:
     return [(await repo.enqueue(_request(project_id, s))).id for s in subjects]
 
@@ -117,7 +123,8 @@ async def test_a_bumped_job_is_claimed_next_ahead_of_everything_waiting(
     store = PostgresJobPriorityStore(migrated_pool)
     assert isinstance(store, JobPriorityStore)
     first, second, third = await _enqueue(repo, project_id, "a", "b", "c")
-    urgent = (await repo.enqueue(_request(project_id, "urgent", priority=-10))).id
+    urgent = (await repo.enqueue(_request(project_id, "urgent"))).id
+    await _prioritise(migrated_pool, urgent, -10)
 
     change = await store.bump(urgent, context=_context(project_id), at=AT)
 
@@ -135,7 +142,8 @@ async def test_bumped_jobs_run_in_the_order_they_were_bumped(
     repo = PostgresJobRepository(migrated_pool)
     store = PostgresJobPriorityStore(migrated_pool)
     a, b, c, d = await _enqueue(repo, project_id, "a", "b", "c", "d")
-    high = (await repo.enqueue(_request(project_id, "high", priority=50))).id
+    high = (await repo.enqueue(_request(project_id, "high"))).id
+    await _prioritise(migrated_pool, high, 50)
 
     await store.bump(d, context=_context(project_id), at=AT)
     await store.bump(b, context=_context(project_id), at=AT)
@@ -154,9 +162,8 @@ async def test_a_bump_pulls_its_unfinished_dependencies_forward_and_never_jumps_
     base, done = await _enqueue(repo, project_id, "base", "done")
     await _set_state(migrated_pool, done, "succeeded")
     tail = (await repo.enqueue(_request(project_id, "tail"))).id
-    middle = (
-        await repo.enqueue(_request(project_id, "middle", depends_on=(base, done), priority=-1))
-    ).id
+    middle = (await repo.enqueue(_request(project_id, "middle", depends_on=(base, done)))).id
+    await _prioritise(migrated_pool, middle, -1)
     target = (await repo.enqueue(_request(project_id, "target", depends_on=(middle,)))).id
 
     change = await store.bump(target, context=_context(project_id), at=AT)
@@ -545,6 +552,29 @@ async def test_bumping_a_pulled_job_by_name_keeps_it_when_its_puller_goes_back(
     assert after.bump_origin == dep
 
 
+async def test_a_kept_dependency_passes_to_the_bump_that_still_needs_it(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    repo = PostgresJobRepository(migrated_pool)
+    store = PostgresJobPriorityStore(migrated_pool)
+    (shared,) = await _enqueue(repo, project_id, "shared")
+    first = (await repo.enqueue(_request(project_id, "first", depends_on=(shared,)))).id
+    second = (await repo.enqueue(_request(project_id, "second", depends_on=(shared,)))).id
+    await store.bump(first, context=_context(project_id), at=AT)
+    await store.bump(second, context=_context(project_id), at=AT)
+
+    change = await store.unbump(first, context=_context(project_id), at=AT)
+
+    assert change.reattributed == ((shared, second),)
+    record = await repo.get(shared)
+    assert record is not None and record.bump_origin == second
+    event = (await _events(migrated_pool, project_id))[-1]
+    assert event.payload["removed"] == [str(first)]
+    assert event.payload["reattributed"] == [{"job_id": str(shared), "origin": str(second)}]
+    back = await store.unbump(second, context=_context(project_id), at=AT)
+    assert {m.job_id for m in back.moved} == {second, shared}, "nothing left behind"
+
+
 async def test_unbumping_a_job_a_bumped_job_needs_is_refused_naming_it(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:
@@ -760,10 +790,9 @@ async def test_the_domain_claim_order_is_the_claim_query_order(
     specs = [(p, s) for p in (-1, 0, 2) for s in (0, 30, 30, 60)]
     ids: list[UUID] = []
     for n, (priority, offset) in enumerate(specs):
-        request = _request(
-            project_id, f"s{n}", priority=priority, run_after=past + timedelta(seconds=offset)
-        )
+        request = _request(project_id, f"s{n}", run_after=past + timedelta(seconds=offset))
         ids.append((await repo.enqueue(request)).id)
+        await _prioritise(migrated_pool, ids[-1], priority)
     for job in (ids[4], ids[0], ids[11]):
         await store.bump(job, context=_context(project_id), at=AT)
     snapshot: list[QueuedJob] = []

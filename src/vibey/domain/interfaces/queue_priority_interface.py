@@ -147,6 +147,12 @@ class UnbumpPlanInterface(Protocol):
     @property
     def moved(self) -> tuple[UUID, ...]: ...
 
+    @property
+    def reattributed(self) -> tuple[tuple[UUID, UUID], ...]:
+        """`(dependency, new origin)` for what the target pulled forward and another
+        bump still needs."""
+        ...
+
 
 @runtime_checkable
 class MovedJobInterface(Protocol):
@@ -184,6 +190,9 @@ class PriorityChangeInterface(Protocol):
 
     @property
     def note(self) -> str: ...
+
+    @property
+    def reattributed(self) -> tuple[tuple[UUID, UUID], ...]: ...
 
     @property
     def changed(self) -> bool:

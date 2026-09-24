@@ -99,3 +99,52 @@ def test_a_uid_with_no_account_is_named_by_its_number(monkeypatch: pytest.Monkey
 
     monkeypatch.setattr(pwd, "getpwuid", missing)
     assert ProcessCaller().current().name == f"uid-{os.getuid()}"
+
+
+_ROOT = os.getuid() == 0
+
+
+@pytest.mark.skipif(_ROOT, reason="root reads through a 0000 mode")
+def test_a_repository_it_cannot_search_is_an_error_not_a_grant(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / CONFIG_NAME).write_text('[queue.priority]\nsources = ["storm"]\n')
+    repo.chmod(0)
+    try:
+        with pytest.raises(ConfigError, match="cannot be read"):
+            ProjectPriorityGrantReader().read(_project(repo))
+    finally:
+        repo.chmod(0o755)
+
+
+@pytest.mark.skipif(_ROOT, reason="root reads through a 0000 mode")
+def test_a_config_it_cannot_read_is_an_error_not_a_grant(tmp_path: Path) -> None:
+    config = tmp_path / CONFIG_NAME
+    config.write_text('[queue.priority]\nsources = ["storm"]\n')
+    config.chmod(0)
+    try:
+        with pytest.raises(ConfigError, match="cannot be read"):
+            ProjectPriorityGrantReader().read(_project(tmp_path))
+    finally:
+        config.chmod(0o644)
+
+
+def test_a_config_that_is_not_text_is_an_error_not_a_grant(tmp_path: Path) -> None:
+    (tmp_path / CONFIG_NAME).write_bytes(b"\xff\xfe[queue]\n")
+    with pytest.raises(ConfigError, match="cannot be read"):
+        ProjectPriorityGrantReader().read(_project(tmp_path))
+
+
+def test_an_owner_it_cannot_stat_is_an_error_not_nobody(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real = Path.stat
+
+    def refusing(path: Path, *args: object, **kwargs: object) -> os.stat_result:
+        if path == tmp_path:
+            raise PermissionError(13, "Permission denied", str(path))
+        return real(path, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(Path, "stat", refusing)
+    with pytest.raises(ConfigError, match="cannot be read"):
+        ProjectPriorityGrantReader().read(_project(tmp_path))

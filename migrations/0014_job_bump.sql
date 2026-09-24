@@ -20,18 +20,20 @@ CREATE SEQUENCE job_bump_seq AS bigint;
 ALTER TABLE job ADD COLUMN bump_seq bigint;
 ALTER TABLE job ADD COLUMN bump_origin uuid;
 
--- Added NOT VALID, then validated: the constraint is taken without holding the table
--- lock through a full scan, and the scan that follows only needs a lighter one.
+-- Plain CHECKs. Both columns were just added and are NULL in every row, so the
+-- validating scan finds nothing to reject; and this migration runs in one transaction
+-- that already holds ACCESS EXCLUSIVE on job from the ADD COLUMNs above, so a NOT VALID /
+-- VALIDATE split would save no lock time here.
 ALTER TABLE job ADD CONSTRAINT job_bump_seq_positive
-    CHECK (bump_seq IS NULL OR bump_seq > 0) NOT VALID;
-ALTER TABLE job VALIDATE CONSTRAINT job_bump_seq_positive;
+    CHECK (bump_seq IS NULL OR bump_seq > 0);
 ALTER TABLE job ADD CONSTRAINT job_bump_origin_with_seq
-    CHECK ((bump_seq IS NULL) = (bump_origin IS NULL)) NOT VALID;
-ALTER TABLE job VALIDATE CONSTRAINT job_bump_origin_with_seq;
+    CHECK ((bump_seq IS NULL) = (bump_origin IS NULL));
 
--- A worker still running the previous release claims by the old index order and ignores
--- bump_seq until it is replaced: during a rolling upgrade a bump is honoured by the new
--- workers only (ADR-0054, Consequences).
+-- The index is rebuilt inside the same transaction, so claims -- and every other write to
+-- job -- wait until the migration commits; how long depends on how many ready rows the
+-- table holds. A worker still running the previous release claims by the old order and
+-- ignores bump_seq until it is replaced: during a rolling upgrade a bump is honoured by
+-- the new workers only (ADR-0054, Consequences).
 DROP INDEX job_claim;
 CREATE INDEX job_claim
     ON job (project_id, bump_seq ASC NULLS LAST, priority DESC, run_after ASC, id ASC)

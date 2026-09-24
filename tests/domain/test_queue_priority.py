@@ -6,8 +6,9 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
+from hypothesis.stateful import RuleBasedStateMachine, initialize, invariant, rule
 
 from vibey.domain.errors import (
     DependencyCannotFinish,
@@ -348,7 +349,38 @@ def test_a_pulled_dependency_another_bumped_job_needs_stays_bumped() -> None:
         _job(3, bump_seq=2, deps=(1,)),
         _job(4, bump_seq=3, deps=(1,)),
     )
-    assert UNBUMP_PLANNER.plan(_id(3), jobs).moved == (_id(3),)
+    plan = UNBUMP_PLANNER.plan(_id(3), jobs)
+    assert plan.moved == (_id(3),)
+    # 3's set resets: 1 now belongs to the bump that still needs it, so un-bumping 4
+    # later returns it, and nothing is left bumped for a job that went back.
+    assert plan.reattributed == ((_id(1), _id(4)),)
+
+
+def test_an_unbump_leaves_what_another_bump_pulled_forward() -> None:
+    # 1 was pulled forward for 4, which still needs it; 3 needs it too. Un-bumping 3
+    # returns only 3: it did not pull 1 forward.
+    jobs = _index(
+        _job(1, bump_seq=1, origin=4),
+        _job(4, bump_seq=2, deps=(1,)),
+        _job(3, bump_seq=3, deps=(1,)),
+    )
+    plan = UNBUMP_PLANNER.plan(_id(3), jobs)
+    assert plan.moved == (_id(3),)
+    assert plan.reattributed == ()
+
+
+def test_a_kept_dependency_goes_to_the_named_bump_behind_the_job_that_needs_it() -> None:
+    # 1 was pulled for 3. 2 was pulled for 5 and also needs 1. Un-bumping 3 keeps 1 for
+    # 2 -- and so for 5, the named bump that holds 2 -- never for 2, which is not named.
+    jobs = _index(
+        _job(1, bump_seq=1, origin=3),
+        _job(3, bump_seq=2, deps=(1,)),
+        _job(2, bump_seq=3, origin=5, deps=(1,)),
+        _job(5, bump_seq=4, deps=(2,)),
+    )
+    plan = UNBUMP_PLANNER.plan(_id(3), jobs)
+    assert plan.moved == (_id(3),)
+    assert plan.reattributed == ((_id(1), _id(5)),)
 
 
 def test_unbumping_a_job_a_bumped_job_needs_is_refused_naming_the_dependents() -> None:
@@ -500,3 +532,117 @@ def _unbumped(job: QueuedJob) -> QueuedJob:
         run_after=job.run_after,
         depends_on=job.depends_on,
     )
+
+
+# -- the invariants, over any sequence of bumps and un-bumps (items 3 and 6) ----------------
+
+
+class QueueMachine(RuleBasedStateMachine):
+    """Random bumps and un-bumps over a random acyclic queue, overlapping freely.
+
+    After every step: every unfinished dependency of a bumped job is bumped, and every
+    job pulled forward belongs to a bump by name that still needs it. At any point,
+    un-bumping every job bumped by name clears the whole queue.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.jobs: dict[UUID, QueuedJob] = {}
+        self.seq = 0
+
+    @initialize(
+        deps=st.lists(
+            st.lists(st.integers(min_value=0, max_value=30), max_size=3),
+            min_size=2,
+            max_size=9,
+        )
+    )
+    def build(self, deps: list[list[int]]) -> None:
+        for n, wanted in enumerate(deps, start=1):
+            chosen = tuple(sorted({(d % (n - 1)) + 1 for d in wanted})) if n > 1 else ()
+            self.jobs[_id(n)] = _job(n, deps=chosen)
+
+    def _set(self, job_id: UUID, *, seq: int | None, origin: UUID | None) -> None:
+        job = self.jobs[job_id]
+        self.jobs[job_id] = QueuedJob(
+            id=job.id,
+            state=job.state,
+            priority=job.priority,
+            run_after=job.run_after,
+            bump_seq=seq,
+            depends_on=job.depends_on,
+            bump_origin=origin,
+        )
+
+    def _bump(self, target: UUID) -> None:
+        plan = BUMP_PLANNER.plan(target, self.jobs)
+        for moving in plan.moved:
+            self.seq += 1
+            self._set(moving, seq=self.seq, origin=target)
+        if plan.named:
+            self._set(target, seq=self.jobs[target].bump_seq, origin=target)
+
+    def _unbump(self, target: UUID) -> bool:
+        try:
+            plan = UNBUMP_PLANNER.plan(target, self.jobs)
+        except DependentsStillBumped:
+            return False
+        for moving in plan.moved:
+            self._set(moving, seq=None, origin=None)
+        for dep, owner in plan.reattributed:
+            self._set(dep, seq=self.jobs[dep].bump_seq, origin=owner)
+        return True
+
+    @rule(pick=st.integers(min_value=0, max_value=100))
+    def bump(self, pick: int) -> None:
+        ids = sorted(self.jobs)
+        self._bump(ids[pick % len(ids)])
+
+    @rule(pick=st.integers(min_value=0, max_value=100))
+    def unbump(self, pick: int) -> None:
+        ids = sorted(self.jobs)
+        self._unbump(ids[pick % len(ids)])
+
+    @invariant()
+    def every_dependency_of_a_bumped_job_is_bumped(self) -> None:
+        for job in self.jobs.values():
+            if job.bumped:
+                for dep in job.depends_on:
+                    assert self.jobs[dep].bumped, f"{job.id} is bumped but {dep} is not"
+
+    @invariant()
+    def every_pulled_job_belongs_to_a_named_bump_that_needs_it(self) -> None:
+        for job in self.jobs.values():
+            if job.bumped and not job.named:
+                assert job.bump_origin is not None
+                owner = self.jobs[job.bump_origin]
+                assert owner.named, f"{job.id} belongs to {owner.id}, which is not named"
+                assert job.id in _reach(self.jobs, owner.id)
+
+    @invariant()
+    def unbumping_every_named_job_clears_the_queue(self) -> None:
+        saved = dict(self.jobs)
+        progress = True
+        while progress:
+            progress = False
+            for job in sorted(self.jobs.values(), key=lambda j: j.id):
+                if job.named and self._unbump(job.id):
+                    progress = True
+        left = [job.id for job in self.jobs.values() if job.bumped]
+        self.jobs = saved
+        assert left == [], f"still bumped after every named job went back: {left}"
+
+
+def _reach(jobs: Mapping[UUID, QueuedJob], root: UUID) -> set[UUID]:
+    seen: set[UUID] = set()
+    stack = [root]
+    while stack:
+        job_id = stack.pop()
+        if job_id not in seen:
+            seen.add(job_id)
+            stack.extend(jobs[job_id].depends_on)
+    return seen
+
+
+TestQueueMachine = QueueMachine.TestCase
+TestQueueMachine.settings = settings(max_examples=150, stateful_step_count=30, deadline=None)

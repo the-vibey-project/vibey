@@ -23,12 +23,13 @@ from uuid import UUID
 
 import typer
 
-from vibey.application.dto import QueueEntry
+from vibey.application.dto import JobRecord, QueueEntry
 from vibey.bootstrap import AppResources, build_app
 from vibey.cli.errors import guard
 from vibey.cli.interfaces.queue_interface import QueueCommandInterface, QueuePresenterInterface
 from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInterface
 from vibey.domain.job import JobState
+from vibey.domain.phase import Phase
 from vibey.domain.queue_priority import PriorityAction
 
 
@@ -42,7 +43,10 @@ class QueuePresenter:
         position = 0
         for entry in entries:
             job = entry.job
-            if job.state is JobState.LEASED:
+            held = self._unclaimable(job)
+            if held:
+                place = "-"
+            elif job.state is JobState.LEASED:
                 place = "running"
             else:
                 position += 1
@@ -58,7 +62,7 @@ class QueuePresenter:
                 waits = f"  (waits on {count} job{'' if count == 1 else 's'})"
             lines.append(
                 f"{place:>7}  {mark:<12} {job.state.value:<17} {job.kind} "
-                f"[{job.phase.value}] {job.id}{item}{pulled}{waits}"
+                f"[{job.phase.value}] {job.id}{item}{pulled}{waits}{held}"
             )
         bumped = sum(1 for entry in entries if entry.job.bump_seq is not None)
         lines.append(
@@ -73,7 +77,8 @@ class QueuePresenter:
         for entry in entries:
             job = entry.job
             place: int | None = None
-            if job.state is not JobState.LEASED:
+            claimable = not self._unclaimable(job)
+            if claimable and job.state is not JobState.LEASED:
                 position += 1
                 place = position
             jobs.append(
@@ -89,9 +94,21 @@ class QueuePresenter:
                     "priority": job.priority,
                     "run_after": job.run_after.isoformat(),
                     "waiting_on": [str(dep) for dep in entry.waiting_on],
+                    "claimable_here": claimable,
                 }
             )
         return json.dumps({"project_id": str(project_id), "jobs": jobs}, indent=2)
+
+    @staticmethod
+    def _unclaimable(job: JobRecord) -> str:
+        """Why no worker of this release will ever claim `job` -- a phase or a state a
+        newer vibey wrote (vibey#287) -- or "" when one can. Such a row is shown, never
+        given a place in a line it will not be taken from."""
+        if not isinstance(job.phase, Phase):
+            return f"  (not claimable by this vibey: phase {job.phase.value!r} is unknown)"
+        if not isinstance(job.state, JobState):
+            return f"  (not claimable by this vibey: state {job.state.value!r} is unknown)"
+        return ""
 
     def change(self, change: PriorityChangeInterface) -> list[str]:
         if not change.changed:

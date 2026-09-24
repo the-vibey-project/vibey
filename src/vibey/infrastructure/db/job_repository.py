@@ -123,11 +123,11 @@ class PostgresJobRepository:
         row = await conn.fetchrow(
             """
             INSERT INTO job (
-                project_id, cycle, phase, kind, priority, work_item_id,
+                project_id, cycle, phase, kind, work_item_id,
                 payload, requirement, idempotency_key, max_attempts, run_after
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10,
-                COALESCE($11, now())
+                $1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9,
+                COALESCE($10, now())
             )
             ON CONFLICT (project_id, idempotency_key) DO NOTHING
             RETURNING *
@@ -136,7 +136,6 @@ class PostgresJobRepository:
             request.cycle,
             request.phase.value,
             request.kind,
-            request.priority,
             request.work_item_id,
             json.dumps(dict(request.payload)),
             json.dumps(dict(request.requirement)),

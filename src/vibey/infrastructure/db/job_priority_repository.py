@@ -159,6 +159,11 @@ class PriorityEventDraftBuilder:
             "named": change.named,
             "note": change.note,
         }
+        if change.action is PriorityAction.UNBUMP:
+            payload["removed"] = [str(m.job_id) for m in change.moved]
+            payload["reattributed"] = [
+                {"job_id": str(dep), "origin": str(owner)} for dep, owner in change.reattributed
+            ]
         return self._draft(context, kind, change.target, Provenance.TRUSTED, at, payload)
 
     def refused(self, refusal: PriorityRefusal, *, at: datetime) -> LedgerEventDraft:
@@ -295,6 +300,12 @@ class PostgresJobPriorityStore:
                    WHERE id = ANY($1::uuid[])""",
                 list(plan.moved),
             )
+            for dep, owner in plan.reattributed:
+                await conn.execute(
+                    "UPDATE job SET bump_origin = $2, updated_at = now() WHERE id = $1",
+                    dep,
+                    owner,
+                )
             change = PriorityChange(
                 action=PriorityAction.UNBUMP,
                 requested_by=context.requested_by,
@@ -304,6 +315,7 @@ class PostgresJobPriorityStore:
                     for moving in plan.moved
                 ),
                 note="" if plan.moved else "it is not bumped; nothing moved",
+                reattributed=plan.reattributed,
             )
             await self._appender.append(conn, self._drafts.changed(change, context=context, at=at))
             return change

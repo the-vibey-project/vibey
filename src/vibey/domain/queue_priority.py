@@ -212,11 +212,15 @@ class BumpPlan:
 
 @dataclass(frozen=True, slots=True)
 class UnbumpPlan:
-    """What an un-bump returns to normal order: the target first, then the pulled
-    dependencies nothing else still needs, in claim order."""
+    """What an un-bump returns to normal order: the target first, then the dependencies
+    its own bumps pulled forward that nothing else still needs, in claim order."""
 
     target: UUID
     moved: tuple[UUID, ...]
+    reattributed: tuple[tuple[UUID, UUID], ...] = ()
+    """Dependencies the target's bumps pulled forward that another bumped job still
+    needs: each stays bumped, and now belongs to the bump by name that holds it --
+    `(dependency, new origin)`. The target's set resets: it owns nothing afterwards."""
 
 
 class _SnapshotPlanner:
@@ -336,12 +340,15 @@ class BumpPlanner(_SnapshotPlanner):
 
 
 class UnbumpPlanner(_SnapshotPlanner):
-    """Undoes exactly what a bump moved.
+    """Undoes exactly what a job's bumps moved (contract item 6).
 
-    The target goes back, with every dependency that was pulled forward (not bumped by
-    name) and that no other still-bumped job needs. A target that a bumped job still
-    depends on is refused, naming those jobs: sending it back would leave them holding a
-    place they cannot use. `jobs` is the target and every unfinished job of its project.
+    The target goes back, with each dependency its own bumps pulled forward -- the jobs
+    whose `bump_origin` is the target. A dependency stays when a still-bumped job needs
+    it (transitively, while unfinished), or when it was bumped by name and not since
+    un-bumped. A dependency that stays for another bump is handed to the bump by name
+    that holds it, so the target's set resets and no job is left bumped for a bump that
+    went back. Un-bumping a job that a bumped job still depends on is refused, naming
+    those jobs. `jobs` is the target and every unfinished job of its project.
     """
 
     def plan(self, target: UUID, jobs: Mapping[UUID, QueuedJob]) -> UnbumpPlan:
@@ -359,16 +366,25 @@ class UnbumpPlanner(_SnapshotPlanner):
         pulled = {
             job_id: job
             for job_id, job in needs[target].items()
-            if job_id != target and job.bumped and not job.named
+            if job_id != target and job.bumped and job.bump_origin == target
         }
-        others = [
-            reach for job_id, reach in needs.items() if job_id != target and job_id not in pulled
-        ]
-        cleared = [job for job_id, job in pulled.items() if not any(job_id in r for r in others)]
-        for job in cleared:
-            self._writable(job)
+        holders = self._order.sort(
+            jobs[job_id] for job_id in needs if job_id != target and job_id not in pulled
+        )
+        cleared: list[QueuedJob] = []
+        kept: list[tuple[UUID, UUID]] = []
+        for job_id, job in pulled.items():
+            holder = next((h for h in holders if job_id in needs[h.id]), None)
+            if holder is None:
+                self._writable(job)
+                cleared.append(job)
+            else:
+                owner = holder.id if holder.named else holder.bump_origin
+                kept.append((job_id, owner or holder.id))
         return UnbumpPlan(
-            target=target, moved=(target, *(job.id for job in self._order.sort(cleared)))
+            target=target,
+            moved=(target, *(job.id for job in self._order.sort(cleared))),
+            reattributed=tuple(sorted(kept)),
         )
 
 
@@ -398,6 +414,9 @@ class PriorityChange:
     named: bool = False
     note: str = ""
     """Why nothing moved, when nothing did."""
+    reattributed: tuple[tuple[UUID, UUID], ...] = ()
+    """For an un-bump: `(dependency, new origin)` for each dependency it kept for
+    another bump that still needs it."""
 
     @property
     def changed(self) -> bool:

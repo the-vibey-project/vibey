@@ -142,10 +142,16 @@ class QueueConfigLoader:
     """
 
     def load(self, path: Path) -> QueueConfig:
-        if not path.is_file():
-            return QueueConfig()
         try:
-            data = parse_toml_string(path.read_text())
+            text = path.read_text()
+        except FileNotFoundError:
+            return QueueConfig()
+        except (OSError, UnicodeDecodeError) as exc:
+            # A file that is there and cannot be read -- no permission, a directory, not
+            # text -- is not the same fact as no file, and must never read as one.
+            raise ConfigError(str(path), f"cannot be read: {exc}") from exc
+        try:
+            data = parse_toml_string(text)
         except tomllib.TOMLDecodeError as exc:
             raise ConfigError(str(path), f"is not valid TOML: {exc}") from exc
         return QueueConfig.from_data(data)

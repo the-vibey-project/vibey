@@ -246,6 +246,28 @@ def test_a_malformed_grant_refuses_rather_than_admitting_nobody_silently(tmp_pat
     assert len(asyncio.run(_events(pid))) == 1
 
 
+@pytest.mark.skipif(os.getuid() == 0, reason="root reads through a 0000 mode")
+@pytest.mark.parametrize("locked", ["directory", "file"])
+def test_a_grant_it_cannot_read_is_a_recorded_refusal(tmp_path: Path, locked: str) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    config = repo / "vibey.toml"
+    config.write_text('[queue.priority]\nsources = ["storm"]\n')
+    pid, (job,) = asyncio.run(_seed(repo, "x"))
+    target = repo if locked == "directory" else config
+    target.chmod(0)
+    try:
+        code, out = _run("bump", str(job))
+    finally:
+        target.chmod(0o755)
+
+    assert code == 3, out
+    assert "the grant cannot be read" in out
+    (event,) = asyncio.run(_events(pid))
+    assert event.kind is EventKind.JOB_PRIORITY_REFUSED
+    assert "cannot be read" in str(event.payload["reason"])
+
+
 def test_unbumping_a_job_a_bumped_job_needs_is_refused_naming_it(tmp_path: Path) -> None:
     pid, (dep,) = asyncio.run(_seed(tmp_path, "dep"))
     target = asyncio.run(_enqueue(pid, "target", depends_on=(dep,)))
@@ -458,3 +480,51 @@ def test_the_presenter_counts_what_a_job_waits_on() -> None:
     )
     assert line.endswith("(waits on 2 jobs)")
     assert summary.startswith("1 unfinished job, 0 bumped")
+
+
+def test_a_row_this_vibey_cannot_claim_is_marked_and_given_no_place() -> None:
+    from vibey.domain.job import UnrecognizedJobState
+    from vibey.domain.phase import UnrecognizedPhase
+
+    now = datetime.now(UTC)
+
+    def record(n: int, **overrides: object) -> JobRecord:
+        fields: dict[str, object] = {
+            "id": UUID(int=n),
+            "project_id": UUID(int=8),
+            "cycle": 1,
+            "phase": Phase.BUILD,
+            "kind": "build.implement",
+            "state": JobState.READY,
+            "priority": 0,
+            "work_item_id": None,
+            "payload": {},
+            "requirement": {},
+            "idempotency_key": f"k{n}",
+            "attempts": 0,
+            "max_attempts": 7,
+            "run_after": now,
+            "lease_owner": None,
+            "lease_expires_at": None,
+            "assigned_engine": None,
+            "last_error": None,
+            "created_at": now,
+            "updated_at": now,
+        }
+        fields.update(overrides)
+        return JobRecord(**fields)  # type: ignore[arg-type]
+
+    entries = [
+        QueueEntry(job=record(1)),
+        QueueEntry(job=record(2, phase=UnrecognizedPhase("triage"))),
+        QueueEntry(job=record(3, state=UnrecognizedJobState("quarantined"))),
+        QueueEntry(job=record(4)),
+    ]
+    lines = QueuePresenter().entries(entries)
+    assert lines[0].split()[0] == "1"
+    assert lines[1].split()[0] == "-" and "not claimable by this vibey: phase 'triage'" in lines[1]
+    assert lines[2].split()[0] == "-" and "state 'quarantined'" in lines[2]
+    assert lines[3].split()[0] == "2"
+    jobs = json.loads(QueuePresenter().entries_json(UUID(int=8), entries))["jobs"]
+    assert [j["position"] for j in jobs] == [1, None, None, 2]
+    assert [j["claimable_here"] for j in jobs] == [True, False, False, True]

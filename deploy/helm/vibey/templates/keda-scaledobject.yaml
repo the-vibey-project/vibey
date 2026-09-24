@@ -51,14 +51,18 @@ spec:
       metadata:
         # The claimable-work query, deliberately identical in spirit to
         # JobRepository.claim's SELECT arm: ready, due now, in the project
-        # this worker serves, and not blocked behind an unsatisfied
-        # dependency. Scaling on total queue depth instead would spin up
-        # workers for jobs nothing can claim yet.
+        # this worker serves, in a phase this release knows (a phase a newer
+        # vibey wrote is never claimed, vibey#287 -- the list is pinned to
+        # `Phase` by tests/infrastructure/db/test_keda_scaler_query.py), and
+        # not blocked behind an unsatisfied dependency. Scaling on total
+        # queue depth instead would spin up workers for jobs nothing can
+        # claim yet.
         query: >-
           SELECT count(*) FROM job j
           WHERE j.state = 'ready'
             AND j.run_after <= now()
             AND j.project_id = {{ $project }}
+            AND j.phase::text IN ('intake', 'design', 'visual_design', 'build', 'review', 'deploy_design', 'deploy_execute', 'deploy_review', 'deploy', 'done', 'abandoned')
             AND NOT EXISTS (
               SELECT 1 FROM job_dependency d
               JOIN job p ON p.id = d.depends_on_job_id

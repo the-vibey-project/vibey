@@ -25,7 +25,8 @@ class EnqueueRequest:
     idempotency_key: str
     payload: Mapping[str, object] = field(default_factory=dict)
     requirement: Mapping[str, object] = field(default_factory=dict)
-    priority: int = 0
+    # No `priority`: a bump, through the grant, is the only way to reorder the queue
+    # (ADR-0054). A priority on the request would be a second way with no grant.
     work_item_id: str | None = None
     max_attempts: int = 7
     run_after: datetime | None = None

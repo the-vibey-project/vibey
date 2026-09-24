@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Final
 
 from vibey.application.dto import ProjectRecord
+from vibey.domain.config import ConfigError
 from vibey.domain.queue_priority import Caller, PriorityGrant
 from vibey.infrastructure.config_loader import QUEUE_CONFIG
 from vibey.infrastructure.interfaces.class_contracts import QueueConfigLoaderInterface
@@ -36,17 +37,23 @@ class ProjectPriorityGrantReader:
     def read(self, project: ProjectRecord) -> PriorityGrant:
         root = Path(project.repo_path)
         anchor = root / CONFIG_NAME
+        owner = self._owner(anchor)
+        if owner is None:
+            owner = self._owner(root)
         declared = self._loader.load(anchor).priority.sources
-        owned = anchor if anchor.is_file() else root
-        return PriorityGrant(declared, owner_uid=self._owner(owned), anchor=str(anchor))
+        return PriorityGrant(declared, owner_uid=owner, anchor=str(anchor))
 
     @staticmethod
     def _owner(path: Path) -> int | None:
-        """The uid owning `path`, or None when nothing is there -- which admits nobody."""
+        """The uid owning `path`; None when nothing is there, which admits nobody. A
+        path that is there and cannot be examined is an error, never "nobody": the
+        grant is then unknown, and an unknown grant refuses (10.f)."""
         try:
             return path.stat().st_uid
         except FileNotFoundError:
             return None
+        except OSError as exc:
+            raise ConfigError(str(path), f"cannot be read: {exc}") from exc
 
 
 class ProcessCaller:
