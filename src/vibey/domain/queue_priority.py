@@ -301,15 +301,25 @@ class _SnapshotPlanner:
             if j.bumped and j.state not in FINISHED_STATES and j.id not in derived
         }
 
+    def _stuck(self, jobs: Mapping[UUID, QueuedJob]) -> set[UUID]:
+        """Lane members this vibey cannot write."""
+        return {
+            j.id
+            for j in jobs.values()
+            if j.bumped and j.state not in FINISHED_STATES and self._cannot_write(j)
+        }
+
     def _clearable(
         self, jobs: Mapping[UUID, QueuedJob], ids: set[UUID]
     ) -> tuple[tuple[UUID, ...], tuple[UUID, ...]]:
-        """`ids` in claim order, split into those it may clear and those this vibey cannot
-        write, which it leaves alone rather than refuse the request."""
+        """`ids` in claim order, split into those it may clear and those it leaves alone
+        rather than refuse the request: a job this vibey cannot write, and every job such
+        a job still needs -- clearing those would leave it ahead of work it waits on."""
+        left = self._lane_of(jobs, {i for i in ids if self._cannot_write(jobs[i])}) & ids
         ordered = self._order.sort(jobs[job_id] for job_id in ids)
         return (
-            tuple(j.id for j in ordered if not self._cannot_write(j)),
-            tuple(j.id for j in ordered if self._cannot_write(j)),
+            tuple(j.id for j in ordered if j.id not in left),
+            tuple(j.id for j in ordered if j.id in left),
         )
 
     def _needs(self, jobs: Mapping[UUID, QueuedJob], root: QueuedJob) -> dict[UUID, QueuedJob]:
@@ -414,22 +424,26 @@ class UnbumpPlanner(_SnapshotPlanner):
         root = self._target(jobs, target)
         named = self._alive_named(jobs)
         orphans = self._orphans(jobs, named) - {target}
-        swept, skipped = self._clearable(jobs, orphans)
         if not root.bumped:
+            swept, skipped = self._clearable(jobs, orphans)
             return UnbumpPlan(target=target, moved=(), swept=swept, skipped=skipped)
         remaining = named - {target}
+        # A named job needing it keeps it; so does a lane member this vibey cannot write,
+        # which no request can clear and which would otherwise wait behind it.
         dependents = sorted(
-            job_id for job_id in remaining if target in self._lane_of(jobs, {job_id})
+            job_id
+            for job_id in (remaining | self._stuck(jobs)) - {target}
+            if target in self._lane_of(jobs, {job_id})
         )
         if dependents:
             raise DependentsStillBumped(target, tuple(dependents))
         released = self._orphans(jobs, remaining) - orphans - {target}
-        cleared, held = self._clearable(jobs, released)
+        clear, left = self._clearable(jobs, orphans | released)
         return UnbumpPlan(
             target=target,
-            moved=(target, *cleared),
-            swept=swept,
-            skipped=tuple(sorted({*held, *skipped})),
+            moved=(target, *(job_id for job_id in clear if job_id in released)),
+            swept=tuple(job_id for job_id in clear if job_id in orphans),
+            skipped=left,
         )
 
 

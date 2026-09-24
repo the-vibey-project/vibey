@@ -688,6 +688,35 @@ async def test_the_lane_runs_through_a_dependency_in_an_unknown_state(
         assert await conn.fetchval("SELECT bump_seq FROM job WHERE id = $1", d) is not None
 
 
+async def test_a_sweep_leaves_what_a_skipped_job_still_needs(
+    migrated_pool: asyncpg.Pool, project_id: UUID, owner_pool: asyncpg.Pool
+) -> None:
+    """a, named, needed u, which needs d; a is cancelled, and u is in a phase this vibey
+    does not know. u is left -- so d, which u waits on, is left with it, and both named."""
+    repo = PostgresJobRepository(migrated_pool)
+    store = PostgresJobPriorityStore(migrated_pool)
+    (d,) = await _enqueue(repo, project_id, "d")
+    u = (await repo.enqueue(_request(project_id, "u", depends_on=(d,)))).id
+    a = (await repo.enqueue(_request(project_id, "a", depends_on=(u,)))).id
+    (x,) = await _enqueue(repo, project_id, "x")
+    await store.bump(a, context=_context(project_id), at=AT)
+    # ALTER TYPE is the owner's (ADR-0055); `migrated_pool` is the application role's.
+    async with owner_pool.acquire() as conn:
+        await conn.execute("ALTER TYPE phase ADD VALUE IF NOT EXISTS 'triage'")
+    async with migrated_pool.acquire() as conn:
+        await conn.execute("UPDATE job SET phase = 'triage' WHERE id = $1", u)
+    await _set_state(migrated_pool, a, "cancelled")
+
+    change = await store.bump(x, context=_context(project_id), at=AT)
+
+    assert change.swept == () and set(change.skipped) == {d, u}
+    event = (await _events(migrated_pool, project_id))[-1]
+    assert set(event.payload["skipped"]) == {str(d), str(u)}
+    async with migrated_pool.acquire() as conn:
+        seqs = await conn.fetch("SELECT bump_seq FROM job WHERE id = ANY($1::uuid[])", [d, u])
+    assert all(row["bump_seq"] is not None for row in seqs)
+
+
 async def test_unbumping_a_job_a_bumped_job_needs_is_refused_naming_it(
     migrated_pool: asyncpg.Pool, project_id: UUID
 ) -> None:

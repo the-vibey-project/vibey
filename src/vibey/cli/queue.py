@@ -139,7 +139,8 @@ class QueuePresenter:
             for m in change.swept
         ]
         lines += [
-            f"  left     {'':<9} {job_id}  (in a phase this vibey does not know; not written)"
+            f"  left     {'':<9} {job_id}  (this vibey cannot write it, or one it cannot "
+            "write needs it; not written)"
             for job_id in change.skipped
         ]
         return lines
