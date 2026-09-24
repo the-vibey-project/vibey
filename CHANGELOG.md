@@ -71,8 +71,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   Only the operator — the account owning the project's own `vibey.toml` — and the
   sources that file declares in `[queue.priority] sources`, run as that account, may
   reorder; every request, moved something, moved nothing or refused, is recorded on the
-  ledger (sub-doctrine 12.j). During a rolling upgrade, workers still on the previous
-  release ignore bumps until they are replaced.
+  ledger (sub-doctrine 12.j). `EnqueueRequest.priority` is removed, so a bump is the only
+  way to reorder work; the KEDA scaler counts only jobs in a phase this release claims.
+  The migration's index rebuild stalls claims until it commits, and during a rolling
+  upgrade workers still on the previous release ignore bumps until they are replaced.
 * **vibey_gh:** `vibey-gh approve-check PR [--head SHA] [--approve]` enforces the delegated approver's grant
   by code (sub-doctrines 12.f, 12.j): it exits 0 only when every `[unattended_approval]`
   condition holds — live switch, author allowlist (`@codeowners` expanded), branch globs,

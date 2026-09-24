@@ -283,11 +283,11 @@ See the job queue in claim order, and move a job to the front of it
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
-| `queue list [PROJECT_ID]` | `--json` | off | Every unfinished job: running work first (`running`), then waiting work numbered in the order the claim will take it. A bumped job is marked `bumped #N`, one pulled forward for another job says which, and a job still waiting on unfinished dependencies says how many. Defaults to the latest project; an unknown id prints `unknown project <id>` and exits 1. |
+| `queue list [PROJECT_ID]` | `--json` | off | Every unfinished job: running work first (`running`), then waiting work numbered in the order the claim will take it. A bumped job is marked `bumped #N`, one pulled forward for another job says which, and a job still waiting on unfinished dependencies says how many. A job in a phase or state this vibey does not know is listed with `-` in place of a number, marked as not claimable by this vibey (`claimable_here: false` in JSON). Defaults to the latest project; an unknown id prints `unknown project <id>` and exits 1. |
 | `queue bump JOB_ID` | `--project PROJECT_ID` | latest project | Run the job next: after whatever is running, ahead of every un-bumped waiting job, behind anything bumped before it. Its unfinished dependencies move forward with it, dependencies first. Prints every job moved with its new place and any already ahead. |
 | | `--source NAME` | unset | An automation naming itself (see below). |
 | | `--json` | off | Print the change as JSON. |
-| `queue unbump JOB_ID` | `--project`, `--source`, `--json` | as `bump` | Undo exactly what the job's bump moved: the job, and the dependencies it pulled forward that no other bumped job needs. |
+| `queue unbump JOB_ID` | `--project`, `--source`, `--json` | as `bump` | Undo exactly what the job's bumps moved: the job, and the dependencies they pulled forward that no other bumped job needs. One another bump still needs stays, and passes to that bump. |
 
 A bump changes order only. It never interrupts the running job or touches its lease,
 never makes a job claimable before its dependencies succeed, and never shortens a
@@ -311,6 +311,7 @@ request is recorded whether or not the job exists. `vibey ledger search --kind
 JobPriorityRefused` lists the refusals. Refused with exit 3, and recorded:
 
 - a caller that is not the operator, or a source not declared or not run as the operator;
+- a `vibey.toml` or repository this process may not read, or one that is not valid TOML;
 - a job that does not exist in the project, has finished, or is in a state or phase this
   vibey does not know;
 - a bump whose dependency can never finish (failed or cancelled), or a dependency ring —

@@ -1,6 +1,6 @@
 # 0054 — A bumped job runs next: after what is running, ahead of all un-bumped work, first in first out, and only the operator or a declared source may bump
 
-**Status:** accepted (cited by #1089, the storm's priority lane, and by #1091, vibey's job queue) · **Date:** 2026-09-24 · **Cites:** sub-doctrines 8.c, 12.j, 12.h and 10.f, and 10.g, 12.d, 12.f, SD-01 §2/§4 · **Related:** ADR-0002, ADR-0003, ADR-0016, ADR-0044, ADR-0051, ADR-0053 · **Evidence:** `develop` at `255f3f4a`: the claim at `src/vibey/infrastructure/db/job_repository.py:198` ordered `priority DESC, run_after ASC, id ASC`, `priority` existed on `EnqueueRequest` and `JobRecord`, and no caller, command or flag ever set it to anything but `0`
+**Status:** accepted (cited by #1089, the storm's priority lane, and by #1091, vibey's job queue; the storm conforms to items 4–7 once #1092 merges — see *Conformance* below) · **Date:** 2026-09-24 · **Cites:** sub-doctrines 8.c, 12.j, 12.h and 10.f, and 10.g, 12.d, 12.f, SD-01 §2/§4 · **Related:** ADR-0002, ADR-0003, ADR-0016, ADR-0044, ADR-0051, ADR-0053 · **Evidence:** `develop` at `255f3f4a`: the claim at `src/vibey/infrastructure/db/job_repository.py:198` ordered `priority DESC, run_after ASC, id ASC`, `priority` existed on `EnqueueRequest` and `JobRecord`, and no caller, command or flag ever set it to anything but `0`
 
 **Owes:** nothing new as conduct — this record is mechanism (ADR-0020). It applies
 ratified conduct: 8.c (one run at a time; waiting is ordered, visible and safe), 12.j
@@ -67,11 +67,14 @@ a position, not a weight.
    item, real or not, is refused and recorded without learning anything about it. The
    record is append-only; the queue can be shown in the order it will run, with every
    priority item marked.
-6. **Reversible, exactly.** An un-bump undoes exactly what the bump moved: the item, plus
-   the dependencies that bump pulled forward that no other still-bumped item needs. An item
-   bumped by name keeps its place when something that pulled it goes back. **Un-bumping an
-   item that another bumped item depends on is refused, naming the dependents** — un-bump
-   them first.
+6. **Reversible, exactly.** An un-bump removes the item plus each dependency that the
+   item's own bumps pulled forward; that set resets when the item is un-bumped. A
+   dependency stays if a still-prioritised item needs it (transitively, while unfinished),
+   or if it was bumped **by name** and not since un-bumped. A dependency that stays for
+   another item belongs thereafter to that item's bump by name, so un-bumping every item
+   bumped by name leaves nothing prioritised. **Un-bumping an item that a prioritised item
+   depends on is refused, naming the dependents** — un-bump them first. The un-bump's
+   record lists what it `removed`.
 7. **A new item can be enqueued already prioritised, in one step,** through the same grant.
    Re-enqueueing an item that has already finished is a recorded no-op, as a plain
    re-enqueue of a finished item is.
@@ -89,14 +92,21 @@ ORDER BY j.bump_seq ASC NULLS LAST, j.priority DESC, j.run_after ASC, j.id ASC
 FOR UPDATE SKIP LOCKED LIMIT 1
 ```
 
-and the partial claim index is rebuilt on the same key (`migrations/0014_job_bump.sql`;
-its CHECK constraints are added `NOT VALID` and then validated). Every bumped job sorts
-before every un-bumped one; bumped jobs sort by the order their numbers were drawn; the
-existing `priority` keeps its meaning as a band among un-bumped work. A sequence and not a
+and the partial claim index is rebuilt on the same key (`migrations/0014_job_bump.sql`).
+Every bumped job sorts before every un-bumped one; bumped jobs sort by the order their
+numbers were drawn. The `priority` column keeps its place in the order, but no request can
+set it any more: `EnqueueRequest.priority` is removed, because a priority on the request
+was a second way to reorder work with no grant. A bump is the only way; `priority` is 0 for
+every enqueued job. A sequence and not a
 timestamp: one bump moves a job and its dependencies in one transaction, where `now()` is
 the same instant for all of them (10.g). Not a large `priority`: first-in-first-out would
 need a counter disguised as a weight, and an un-bump would have to remember what it
-overwrote. `bump_origin` is what lets an un-bump undo exactly what its bump did (item 6).
+overwrote. `bump_origin` is what lets an un-bump undo exactly what its bump did (item 6): the
+un-bump clears the jobs whose origin is the target and that nothing else needs, and
+re-points the origin of those another bump still needs at the bump by name that holds
+them. A property test drives random, overlapping bumps and un-bumps and checks after every
+step that every dependency of a bumped job is bumped and every pulled job belongs to a
+bump by name that needs it, and that un-bumping every job bumped by name clears the queue.
 
 **The claim stays strict.** The claim selects only jobs in a phase this vibey knows, and
 every `PostgresJobRepository` read maps `phase` and `state` strictly, as it always did: a
@@ -123,6 +133,11 @@ the grant, the bump planner (closure, dependencies first, relative order kept, a
 that can never finish or a ring refused) and the un-bump planner. It has no I/O and no
 clock: the store hands it a locked snapshot and the caller and time come in from outside.
 
+**The scaler counts what the claim takes.** KEDA's scaler query carries the same
+known-phase filter as the claim, pinned to `Phase` by its test, so a job no worker of this
+release will claim never scales one up. `vibey queue list` shows such a job without a
+place in line, marked as not claimable by this vibey.
+
 **Authorisation.** The reviewed declaration is `vibey.toml` at the root of the repository
 the project record names — the path `bootstrap` resolves for the project — and nowhere
 else:
@@ -136,8 +151,18 @@ The operator is the account that owns that file, or the repository root when the
 file; the process's uid is compared with the owner's, and the account's name comes from the
 password database, never `$USER`. A repository nobody owns admits nobody. A missing file
 declares no source; a malformed one refuses every request, recorded, because "I could not
-read the declaration" and "there is no declaration" are different facts (10.f). `operator`
-is reserved and never declarable.
+read the declaration" and "there is no declaration" are different facts (10.f); the same
+holds for a declaration or a repository the process is not permitted to read, or that is
+not text. `operator` is reserved and never declarable.
+
+**What the grant separates, and what it does not.** The grant separates *operating-system
+accounts*: a request from any account but the one owning the reviewed declaration is
+refused. It does not separate *processes* running under the operator's uid. vibey's own
+engines run as the worker's uid, which is the operator's in a local install, and until
+`fix/engine-env-no-db-credentials` lands they also inherit the database DSN — so an engine
+could reach the queue directly, below the grant, as any other process of that account
+could. That PR is the fix for the credential half. This record does not claim the grant
+bounds an engine, and nothing here should be read as saying it does.
 
 **One way in.** `bootstrap.build_app` builds `QueuePriorityService` and exposes only the
 service on `AppResources`; the Postgres store is built there and handed to nothing else, so
@@ -160,6 +185,24 @@ text is data (SD-01 §4).
 resume PROJECT --priority` for item 7. There is no `--config`: the grant is never a path
 the caller supplies.
 
+### Conformance: the storm lane at `8281351e`
+
+The contract above is the one both queues are held to. The storm lane as merged in #1089
+(`8281351e`) does not yet keep items 4–7 in these respects:
+
+- **Item 4.** A declared `--source` is admitted from any uid, not only the operator's; and
+  the account name comes from `getpass` (`$USER`, `$LOGNAME`), not the password database.
+- **Item 5.** A request refused as `Invalid` — an unknown slug, an item that is not
+  prioritised, a settled item — raises without being recorded; only authorisation
+  refusals reach the priority log.
+- **Item 6.** An un-bump removes only the item: it leaves the dependencies its bump pulled
+  forward prioritised, and it does not refuse while a prioritised item depends on it.
+- **Item 7.** Pushing an item that has already settled raises without a record, rather
+  than being a recorded no-op.
+
+These close when the storm hardening PR (`fix/storm-priority-hardening`, #1092) merges.
+Until then this record claims conformance for vibey's queue only.
+
 ### Where the two queues differ below the contract
 
 - **The declaration and its anchor.** vibey reads `<repo>/vibey.toml` `[queue.priority]
@@ -180,10 +223,13 @@ A bump is the operator's lever over what runs next and nothing more. It cannot r
 past a gate, past a deferral a capacity rejection set, or past a dependency, and it cannot
 take a run away from the worker holding it.
 
-**Rolling deploys.** A worker still running the previous release claims by the old order
-and ignores `bump_seq` until it is replaced: during a rolling upgrade a bump is honoured by
-the new workers only. The migration is safe to apply under old workers — they neither read
-nor write the new columns — but "runs next" holds once every worker runs this release.
+**Rolling deploys.** The migration rebuilds the claim index inside its own transaction, so
+claims — and every other write to `job` — stall until it commits, for as long as building
+the index over the table's ready rows takes. A worker still running the previous release
+then claims by the old order and ignores `bump_seq` until it is replaced: during a rolling
+upgrade a bump is honoured by the new workers only. Old workers neither read nor write the
+new columns, so the migration is safe under them, but "runs next" holds once every worker
+runs this release.
 
 Anything that rewrites the claim statement must keep `bump_seq ASC NULLS LAST` at the head
 of its order and the known-phase filter. The repository tests pin the claim's order against

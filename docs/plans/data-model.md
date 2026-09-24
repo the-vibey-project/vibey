@@ -525,6 +525,9 @@ CREATE TABLE job_dependency (
 CREATE INDEX job_dep_reverse ON job_dependency (depends_on_job_id);
 ```
 
+**`priority`** is set by no request: `EnqueueRequest` has no priority field, so every
+enqueued job is 0 and a bump (§3.4, ADR-0054) is the only way to reorder work.
+
 **`idempotency_key`** is `sha256(f"{project_id}:{cycle}:{kind}:{subject}").hexdigest()`
 (`domain/job.py::idempotency_key`). Enqueue uses
 `ON CONFLICT (project_id, idempotency_key) DO NOTHING` and, on conflict, returns the
@@ -668,9 +671,11 @@ in `domain/queue_priority.py`, and the event appended on the same connection:
 UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_origin = $target, updated_at = now()
 WHERE id = $1 RETURNING bump_seq;
 
--- UN-BUMP (the job, and what its bump pulled forward that no other bumped job needs)
+-- UN-BUMP (the job, and what its own bumps pulled forward that nothing else needs)
 UPDATE job SET bump_seq = NULL, bump_origin = NULL, updated_at = now()
 WHERE id = ANY($1::uuid[]);
+-- ...and what it pulled forward that another bump still needs passes to that bump
+UPDATE job SET bump_origin = $owner, updated_at = now() WHERE id = $1;
 ```
 
 A bump never touches `state`, `lease_owner`, `lease_expires_at` or `run_after`,
