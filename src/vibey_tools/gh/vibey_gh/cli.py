@@ -265,9 +265,12 @@ def _merge_train(args) -> int:
                     skipped += 1
                     continue
                 v.reason = f"{v.reason} (restack declined: {detail})"
-            # Only a pull request held on the owner's approval gets labelled and
-            # announced. A draft or a red build is the contributor's to fix and needs no
-            # notification; this one is waiting on somebody who does not know yet.
+            # Only a pull request holding outside code -- an author not in
+            # `trusted_authors`, or the external-repair label -- gets labelled and
+            # announced, approved or not and whatever its gates say: the train will never
+            # merge it, so a person must. A draft or a red build is the contributor's to
+            # fix and needs no notification; this one waits on somebody who does not
+            # know yet (ADR-0053).
             if v.held_for_review and not args.dry_run and args.label != "":
                 merge_train.hold_for_review(v, cfg, label=args.label)
             print(f"  #{v.number} skipped — {v.reason}")
@@ -289,7 +292,9 @@ def _merge_train(args) -> int:
         if method == "squash" and cfg.trailer not in (pr.get("body") or ""):
             existing = (pr.get("body") or "").strip()
             squash_body = (existing + "\n\n" if existing else "") + cfg.trailer
-        ok, bypassed, error = merge_train.merge(v.number, method, squash_body)
+        ok, bypassed, error = merge_train.merge(
+            v.number, method, squash_body, admin_fallback=args.admin_fallback
+        )
         if ok:
             note = " (review requirement bypassed)" if bypassed else ""
             cleanup = ""
@@ -305,9 +310,11 @@ def _merge_train(args) -> int:
         else:
             # The stderr is the diagnosis: "refused it" alone once cost an hour of
             # ruleset archaeology when the real cause was a token missing the repository.
-            reason = error or "the ruleset refused it"
-            print(f"  #{v.number} could not be merged — {reason}")
-            rows.append((v.number, v.title, f"blocked: {reason[:120]}"))
+            # Without `--admin-fallback` a refusal is the gate working, not a fault: the
+            # pull request waits for a person and the pass carries on (ADR-0053, 12.d).
+            reason = f"needs a human merge: {error or 'the ruleset refused it'}"
+            print(f"  #{v.number} {reason}")
+            rows.append((v.number, v.title, reason[:160]))
             skipped += 1
 
     print(f"vibey-gh: merged {merged}, skipped {skipped}")
@@ -441,9 +448,18 @@ def _flatten(args) -> int:
 
 
 def _promote(args) -> int:
+    if args.admin_fallback and not args.wait:
+        # Without --wait nothing merges here (the merge train does), so the flag would be
+        # accepted and silently ignored -- refused instead, so nobody believes it applied.
+        print("vibey-gh: --admin-fallback only applies with --wait", file=sys.stderr)
+        return 2
     try:
         result = promote.promote(
-            load_config(), dry_run=args.dry_run, method=args.method, wait=args.wait
+            load_config(),
+            dry_run=args.dry_run,
+            method=args.method,
+            wait=args.wait,
+            admin_fallback=args.admin_fallback,
         )
     except RuntimeError as exc:
         print(f"vibey-gh: {exc}", file=sys.stderr)
@@ -1391,6 +1407,15 @@ def main(argv: list[str] | None = None) -> int:
         metavar="FILE",
         help="write a markdown table here (default: $GITHUB_STEP_SUMMARY)",
     )
+    # A flag and never a configuration key: a declared default-on would re-enable the
+    # bypass for every unattended caller (CI, the storm tools). ADR-0053, sub-doctrine 12.d.
+    m.add_argument(
+        "--admin-fallback",
+        action="store_true",
+        help="retry a merge GitHub refuses with `gh pr merge --admin`, bypassing the "
+        "ruleset. Off by default; for a person at the keyboard, for this run only. "
+        "Unattended callers must never pass it",
+    )
     m.set_defaults(func=_merge_train)
 
     automation = sub.add_parser(
@@ -1505,6 +1530,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument(
         "--summary", metavar="FILE", help="write markdown here (default: $GITHUB_STEP_SUMMARY)"
+    )
+    # A flag and never a configuration key, as for merge-train (ADR-0053, 12.d).
+    p.add_argument(
+        "--admin-fallback",
+        action="store_true",
+        help="with --wait: retry a merge GitHub refuses with `gh pr merge --admin`, "
+        "bypassing the ruleset. Off by default; for a person at the keyboard, for this "
+        "run only. Unattended callers must never pass it",
     )
     p.set_defaults(func=_promote)
 

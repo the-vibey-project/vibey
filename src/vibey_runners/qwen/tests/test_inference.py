@@ -8,8 +8,15 @@ from pathlib import Path
 import pytest
 
 from qwenloop.domain.interfaces.class_contracts import ToolCallParseErrorInterface
-from qwenloop.domain.model import Backend, ChatMessage, ServerInfo, ToolCallParseError
+from qwenloop.domain.model import (
+    CODING_TOOL_NAMES,
+    Backend,
+    ChatMessage,
+    ServerInfo,
+    ToolCallParseError,
+)
 from qwenloop.infrastructure.inference import (
+    _CODING_TOOLS,
     LlamaCppServer,
     OpenAICompatServer,
     OpenAIServer,
@@ -68,12 +75,7 @@ async def test_openai_health_and_chat(monkeypatch: pytest.MonkeyPatch, tmp_path:
             },
             {"role": "tool", "content": "ok", "tool_call_id": "call-1"},
         ]
-        assert {tool["function"]["name"] for tool in body["tools"]} == {
-            "read_file",
-            "write_file",
-            "edit_file",
-            "shell",
-        }
+        assert [tool["function"]["name"] for tool in body["tools"]] == list(CODING_TOOL_NAMES)
         return UrlResponse(json.dumps(payload).encode())
 
     monkeypatch.setattr("urllib.request.urlopen", urlopen)
@@ -809,3 +811,30 @@ async def test_other_server_errors_are_not_retryable(
         async for _ in LlamaCppServer().chat_stream(info, [ChatMessage("user", "x")]):
             pass
     assert not isinstance(caught.value, ToolCallParseError)
+
+
+def test_the_tool_schema_advertises_exactly_the_tools_the_dispatcher_runs() -> None:
+    # The model is told every tool it can call, so it stops guessing names that fail
+    # (`search`, `find`, `open_file`: 431 unknown-tool calls across 82 storm runs).
+    functions = {tool["function"]["name"]: tool["function"] for tool in _CODING_TOOLS}
+    assert tuple(functions) == CODING_TOOL_NAMES
+    for function in functions.values():
+        assert function["description"]
+        assert function["parameters"]["additionalProperties"] is False
+    search = functions["search"]["parameters"]
+    assert search["required"] == ["query"]
+    assert set(search["properties"]) == {
+        "query",
+        "path",
+        "glob",
+        "regex",
+        "ignore_case",
+        "max_results",
+    }
+    find = functions["find"]["parameters"]
+    assert find["required"] == ["pattern"]
+    assert set(find["properties"]) == {"pattern", "path", "max_results"}
+    for name in ("read_file", "open_file"):
+        read = functions[name]["parameters"]
+        assert read["required"] == ["path"]
+        assert set(read["properties"]) == {"path", "line_start", "line_end"}
