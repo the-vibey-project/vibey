@@ -281,8 +281,9 @@ worker fails every job read once 0015 commits. Every worker from a build before 
 be drained or replaced before 0015 runs.** "Runs next" holds once every worker runs this
 release. The next change that removes a column should expand then contract: stop reading
 it in one release, drop it in a later one. `tests/meta/test_migration_drops.py` fails any
-migration that drops a column unless an ADR names that migration and says what must be
-drained first.
+migration that takes something from a running reader -- a column, a table, view or
+sequence, a type, or an enum value -- unless an ADR paragraph names that migration in a
+sentence saying which workers to drain before it runs.
 
 Anything that rewrites the claim statement must keep `bump_seq ASC NULLS LAST` at the head
 of its order and the known-phase filter. The repository tests pin the claim's order against
