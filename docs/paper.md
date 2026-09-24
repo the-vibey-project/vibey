@@ -21,7 +21,14 @@ model and deadline fixed, successful throughput stayed between 0.99 and 2.00
 generations per minute while offered concurrency rose sixteen-fold. The regularity
 yields a zero-shortfall time-to-completion as a testable prediction. We state what
 would falsify it and what it does not cover, and we argue from the same records that
-the scarce inputs were governance and correct judgment, not production.
+the scarce inputs were governance and correct judgment, not production. For the 3.0.0
+release we add the database's own enforcement of the ledger invariant, with what it
+does not cover; a priority lane, derived rather than remembered, that orders both
+queues without preempting or admitting past any gate; an engine environment built from
+an allow-list; and a local reviewer that refuses a verdict on a prompt it did not read
+in full. We also report an audit of a local storm in which one model slot took 96.7%
+of lane time and no lane reached the integration branch without a human step, and in
+which adversarial verifiers refuted 16 of the audit's 18 leading claims.
 
 *Artifacts.* This paper is typeset from `docs/paper.md` and published as
 [PDF](https://the-vibey-project.github.io/vibey/main/paper.pdf),
@@ -67,9 +74,10 @@ merging and release; `vibey-skills`, a retrieval engine over a skill library; an
 own paper. This paper consolidates them. [Fig. 1](#fig:family-tree) shows the family as
 one distribution, with the Python floor each tenant keeps. Its contributions are:
 
-- the ledger invariant, the no-loss handoff gate, the queue semantics and the gated six-phase machine, with their soundness arguments;
-- a session-runner core shared by six engines, whose capacity taxonomy never gives a credit balance a clock and whose completion rule a capacity verdict outranks;
-- the exact-head release calculus, with a termination bound and a recorded production counterexample;
+- the ledger invariant, the no-loss handoff gate, the queue semantics and the gated six-phase machine, with their soundness arguments, and the database's enforcement of the first, stated with what it does not cover;
+- a priority lane shared by both queues whose contents are derived rather than remembered, which orders work without preempting it or admitting it past any gate, and reapers that decide a hang by measurement;
+- a session-runner core shared by six engines, whose capacity taxonomy never gives a credit balance a clock and whose completion rule a capacity verdict outranks, and an environment every engine starts from by allow-list;
+- the exact-head release calculus, with a termination bound and a recorded production counterexample, and its extension from the revision a verdict evaluated to the input the evaluating model actually read;
 - Convergence-Driven Development (CDD), an enclosing loop above Specification-Driven
   Development and Test-Driven Development that measures convergence at nested delivery
   scopes, models project atoms and chemical structures, and recognizes a suite of
@@ -77,7 +85,8 @@ one distribution, with the Python floor each tenant keeps. Its contributions are
 - deterministic, fail-closed retrieval and bootstrap components built on the same append-before-act discipline;
 - Biodigitology, a name for the study of digital life, with operational criteria
   that distinguish software organisms from biological organisms or sentient minds;
-- a measured production-rate regularity, its modulators, the time-to-completion prediction it enables, and the observations that would falsify it.
+- a measured production-rate regularity, its modulators, the time-to-completion prediction it enables, and the observations that would falsify it;
+- an audit of a local storm that locates its binding constraint, its conversion losses and its unenforced controls, and a factual account of merges that ran ahead of review, both read as evidence that the scarce input is judgment.
 
 ```latex
 \begin{figure*}[!t]
@@ -3294,9 +3303,27 @@ claims are validated separately, by the stress record and the evidence script ab
 the local Qwen pilot is reported as an operational reliability observation with its
 own cutoff and does not enlarge the throughput claim.
 
+The 3.0.0 additions are validated the same three ways, and each also went through an
+independent adversarial review whose probes are review records rather than tracked
+tests. At the property level, a Hypothesis state machine drives the priority lane
+through random, overlapping bumps, un-bumps and job endings and checks the derivation
+after every step (#1095, #1103), and the sovereign reviewer's refusals are pinned by a
+stub server that answers the way the real one was seen to answer: the half-window
+count, the HTTP 400 in the server's words, and a reply that echoes only one check code
+(#1101). At the chaos level, the whole orchestrator suite now runs as the restricted
+application role, so any query that needs an undeclared privilege fails as
+`permission denied` (#1100); five workers claim concurrently against a bumped queue
+and take exactly the front five in order (#1091); and a hung test is dumped at 240 s
+and failed by name at 300 s (#1105). At the cluster level, a new cluster-smoke step
+checks that, as the worker's role, an update, a delete and a truncation of the ledger
+are refused for want of privilege and disabling a trigger is refused as not the owner,
+and that, as the owner, all three are refused by the triggers (#1100). The full suite
+at #1105's head passed 3,627 tests, with 18 skipped and 1 expected failure, and the
+four per-layer branch-coverage floors at 100% (#1105).
+
 ```latex
 \begin{plainwords}
-We check the system three ways. Tests that walk every branch of the important code. A chaos test where helpers crash on purpose while a real database is running, to prove that no job is lost and no job is done twice. And a live run of a whole project on two different robot helpers, including a forced switch from one to the other in the middle.
+We check the system three ways. Tests that walk every branch of the important code. A chaos test where helpers crash on purpose while a real database is running, to prove that no job is lost and no job is done twice. And a live run of a whole project on two different robot helpers, including a forced switch from one to the other in the middle. The newest parts were also attacked on purpose by separate reviewers, who tried to break them before we wrote about them here.
 \end{plainwords}
 ```
 
@@ -3319,7 +3346,10 @@ refuse rather than by mean time between failures. The retrieval engine is lexica
 over SQLite FTS5; dense retrieval would reintroduce the nondeterminism the
 reviewability invariant forbids. The upward drift of the throughput band is the
 continuous batching of Orca, and the coordination cost that the six-material postulate
-treats as a coupling is the one Brooks described for human teams.
+treats as a coupling is the one Brooks described for human teams. The bound on what
+more lanes sharing one model slot could buy is Amdahl's. The ledger guard uses
+PostgreSQL's own trigger and privilege machinery rather than rules, whose documented
+behaviour on partitions and `TRUNCATE` is what left the earlier guard open.
 
 ## Conclusion
 
@@ -3329,9 +3359,16 @@ human authority is a structural property of the state machine rather than a
 prompt-engineering hope. The same discipline, binding every claim to the state it
 describes, governs the runners beneath the orchestrator and the release calculus above
 it. In the project's controlled record, production kept to a band set by its
-substrate, and the inputs that stopped work were decisions and judgments. The
-engineering that remains is less about producing faster than about deciding well and
-cheaply.
+substrate, and the inputs that stopped work were decisions and judgments. The 3.0.0
+record says the same from three more directions. A local storm was bound by one model
+slot and converted no lane without a person; the audit that found this was mostly wrong
+until it was verified; and on the day the release's fixes landed, the step that
+limited delivery was independent review, which merging outran and then had to repay.
+The guarantees added in this release, a ledger the database refuses to rewrite, a queue
+order that cannot be moved from outside, an engine that cannot see the worker's
+secrets, and a reviewer that will not grade what it did not read, are each stated here
+with the limits they do not cross. The engineering that remains is less about producing
+faster than about deciding well and cheaply.
 
 ```latex
 \begin{plainwords}
@@ -3356,6 +3393,8 @@ Put the notebook, not the robot, at the centre. Then any robot can be swapped ou
 - PyPI, *Trusted Publishers*, `https://docs.pypi.org/trusted-publishers/`, 2023.
 - GitHub, *About protected branches and rulesets*, GitHub Docs, 2024.
 - SQLite, *FTS5 Extension*, `https://www.sqlite.org/fts5.html`.
+- G. M. Amdahl, "Validity of the Single Processor Approach to Achieving Large Scale Computing Capabilities," *Proceedings of the AFIPS Spring Joint Computer Conference*, 1967, pp. 483–485. doi:10.1145/1465482.1465560.
+- PostgreSQL Global Development Group, *The Rule System* and *CREATE TRIGGER* (rules and row-level triggers on partitioned tables; `TRUNCATE` triggers). PostgreSQL documentation, `https://www.postgresql.org/docs/current/`.
 - The vibey repository: the sovereignty stress record, `src/vibey_tools/gh/docs/sovereignty-stress-2026-08-30.md`; the evidence script, `scripts/paper_evidence.py`; the architecture decision records, `docs/architecture/decisions/`; `https://github.com/the-vibey-project/vibey`, 2026.
 
 ## A call to FOSS developers
