@@ -381,6 +381,20 @@ def test_a_calibration_resumes_from_its_checkpoint(tmp_path: Path) -> None:
     assert "1: taken from the checkpoint" in err.getvalue()
 
 
+def test_the_machine_declared_lock_is_taken_when_no_flag_names_one(tmp_path: Path) -> None:
+    taken: list[Path] = []
+
+    @contextmanager
+    def lock(path: Path, log: Any) -> Any:
+        taken.append(path)
+        yield
+
+    made, _, _ = commands(tmp_path, server_factory=Server, lock_factory=lock)
+    made._environ = {"VIBEY_OLLAMA_LOCK": str(tmp_path / "shared.lock")}
+    assert made.calibrate(calibrate_args(a_corpus(tmp_path), max_runs=1)) == 0
+    assert taken == [tmp_path / "shared.lock"]
+
+
 def test_calibrate_on_another_runtime_records_nothing_for_this_device(tmp_path: Path) -> None:
     def elsewhere(*a: Any, **k: Any) -> Server:
         return Server(*a, runtime="0.32.15", **k)

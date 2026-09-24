@@ -103,4 +103,4 @@ Append to `tests/domain/test_config.py` (import `ApiConfig`, `parse_api` and
   GEMINI.md and the agent-surface trees. Do not push; commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

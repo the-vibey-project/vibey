@@ -100,7 +100,7 @@ The ADR also makes `tenacity>=8.0` a declared root dependency. It is already in 
 - **Shares a file with:** the root `pyproject.toml` (R03 → T07 → T28 also edit it; keep their lines) and `uv.lock`.
 - **Must keep passing unchanged:** `test/retry/*` and the whole vibey-bootstrap suite; the root suite; all protected root tests.
 - **Standing constraints (every vibey-bootstrap surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first.
+  - Read `STORM/EDITING-RULES.md` first.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from a sibling.
   - No `monkeypatch.setattr`, `mock.patch`, `MagicMock` or `AsyncMock`: `sleep` is injected.
   - The default run needs no service.
@@ -109,4 +109,4 @@ The ADR also makes `tenacity>=8.0` a declared root dependency. It is already in 
     with an instant sleep, as a `functools.partial`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

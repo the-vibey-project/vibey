@@ -91,4 +91,4 @@ Commit as `feat(ledger): a gate answer that releases a parked job is a ledger ev
 - **Depends on:** `gap-ledger-job-events-2`, `orm-human-gate`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

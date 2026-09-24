@@ -606,6 +606,7 @@ def throwaway_storm(tmp_path: Path, queue: str) -> tuple[Path, dict[str, str]]:
         "storm_queue.py",
         "storm-priority.py",
         "lane_environment.py",
+        "storm_durability.py",
     ):
         shutil.copy2(TOOLS / name, tools / name)
     (tools / "storm_trust.py").write_text(STUB_TRUST)
@@ -618,6 +619,8 @@ def throwaway_storm(tmp_path: Path, queue: str) -> tuple[Path, dict[str, str]]:
     (tools / "lane-setup.sh").chmod(0o755)
     (root / "scratch").mkdir()
     (root / "hooks").mkdir()
+    # A test's tmp_path is volatile by construction; the storm says it is throwaway, and why,
+    # or the runner's durability gate refuses it like any other (10.h, ADR-0057).
     # vibey-gh is stubbed too: `slots allowed` answers $SLOTS_ANSWER (unset: nothing, which
     # the runner must read as one), and every other call is the real interpreter.
     python = tmp_path / "python"
@@ -629,6 +632,7 @@ def throwaway_storm(tmp_path: Path, queue: str) -> tuple[Path, dict[str, str]]:
     python.chmod(0o755)
     (root / "storm.toml").write_text(
         f'[paths]\nrepo = "{root}"\nslug = "owner/repo"\npython = "{python}"\n'
+        '[durability]\ndisposable = "a test fixture: built and discarded by one test"\n'
     )
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -642,6 +646,8 @@ def throwaway_storm(tmp_path: Path, queue: str) -> tuple[Path, dict[str, str]]:
         "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
         "VIBEY_GH_SLOTS_DIR": str(tmp_path / "slots"),
         "STORM_POLL_SECONDS": "1",
+        # Never the machine's real storm home: the throwaway storm is its own.
+        "VIBEY_STORM_HOME": str(root),
     }
     return root, env
 

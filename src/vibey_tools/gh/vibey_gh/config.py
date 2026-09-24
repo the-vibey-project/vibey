@@ -512,6 +512,12 @@ class PrAutomationFallbackConfig:
     base_url: str = "http://127.0.0.1:11434"
     trusted_only: bool = True
     max_diff_chars: int = 60000
+    # The most characters of `context_paths` documents a WHOLE review is shown, whatever
+    # the window would allow. Its own key, never `max_diff_chars`: tied to the diff's
+    # 60,000, this repository's two pages already took 59,607 of it, and a few hundred more
+    # characters of README cut a page and turned every gate red. 120,000 is about twice what
+    # those two pages hold today; the window, not this, is what usually binds.
+    max_document_chars: int = 120000
     timeout_seconds: int = 600
     heartbeat_ref: str = "refs/vibey-gh/sovereign-heartbeat"
     heartbeat_max_age_minutes: int = 15
@@ -569,6 +575,10 @@ class PrAutomationFallbackConfig:
                 raise ValueError(f"pr_automation.fallback.{name} must not be empty")
         if self.max_diff_chars < 1000:
             raise ValueError("pr_automation.fallback.max_diff_chars must be at least 1000")
+        if type(self.max_document_chars) is not int or self.max_document_chars < 1000:
+            raise ValueError(
+                "pr_automation.fallback.max_document_chars must be a whole number, at least 1000"
+            )
         if not 30 <= self.timeout_seconds <= 3600:
             raise ValueError("pr_automation.fallback.timeout_seconds must be between 30 and 3600")
         if not self.heartbeat_ref.startswith("refs/"):
@@ -2224,6 +2234,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             base_url=fallback.get("base_url", "http://127.0.0.1:11434"),
             trusted_only=fallback.get("trusted_only", True),
             max_diff_chars=fallback.get("max_diff_chars", 60000),
+            max_document_chars=fallback.get("max_document_chars", 120000),
             timeout_seconds=fallback.get("timeout_seconds", 600),
             heartbeat_ref=fallback.get("heartbeat_ref", "refs/vibey-gh/sovereign-heartbeat"),
             heartbeat_max_age_minutes=fallback.get("heartbeat_max_age_minutes", 15),

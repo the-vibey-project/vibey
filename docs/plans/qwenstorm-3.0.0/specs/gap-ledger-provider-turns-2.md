@@ -112,4 +112,4 @@ Commit as `feat(ledger): direct local-model calls are ledgered turns with tokens
 - **Depends on:** `gap-ledger-provider-turns-1`, `fakes-ledger`, `fakes-projects`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

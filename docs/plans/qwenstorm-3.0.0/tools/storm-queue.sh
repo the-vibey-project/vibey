@@ -30,6 +30,10 @@ Q="$(cd "$(dirname "$0")/.." && pwd)"
 PY="$(python3 "$Q/tools/storm_paths.py" python)"
 SLUG="$(python3 "$Q/tools/storm_paths.py" slug)"
 MAIN="$(python3 "$Q/tools/storm_paths.py" repo)"
+# Nothing is written until the storm is known to be on storage a reboot keeps (10.h,
+# ADR-0057). On 2026-09-24 a reboot emptied /private/tmp and took the whole storm with it.
+# The gate prints what is volatile and the key that moves it, and exits 78.
+"$PY" "$Q/tools/storm_durability.py" check || exit $?
 touch "$Q/integrated.txt" "$Q/abandoned.txt"
 # The outer loop: refresh, repair, publish, merge-train, every ten minutes. Started here so it
 # is on whenever a storm is, and --detached makes it stop when this runner does -- an outer
@@ -86,9 +90,9 @@ run_lane() {
   rm -f "$L/.qwenstorm/running"
 }
 # The storm is idle: the one window a calibration of this device can run without measuring
-# contention with a lane. Only when `slots allowed` asked for one, under the model lock the
-# operator's measurements share, from this storm's own lanes (or, when none survive, its
-# committed specs). A failure is logged and leaves the storm at one; it never blocks it.
+# contention with a lane. Only when `slots allowed` asked for one, under the model lock this
+# machine declares ($VIBEY_OLLAMA_LOCK, else [local_models] lock), from this storm's own lanes
+# (or, when none survive, its committed specs). A failure is logged and leaves the storm at one; it never blocks it.
 calibrate_if_requested() {
   local dir="${VIBEY_GH_SLOTS_DIR:-$HOME/.local/state/vibey-gh/slots}"
   [ -n "$(find "$dir" -maxdepth 1 -name '*.request.json' 2>/dev/null)" ] || return 0
@@ -102,7 +106,7 @@ calibrate_if_requested() {
         --out "$Q/scratch/slot-corpus.json")
     fi
     (cd "$MAIN" && "$PY" -m vibey_gh slots calibrate --if-requested \
-      --corpus "$Q/scratch/slot-corpus.json" --lock "$(dirname "$Q")/.ollama-lock")
+      --corpus "$Q/scratch/slot-corpus.json")
   } >> "$Q/scratch/slots-calibrate.log" 2>&1 \
     || echo "$(date -u +%FT%TZ) calibration did not finish; see scratch/slots-calibrate.log" | tee -a "$Q/progress.log"
 }

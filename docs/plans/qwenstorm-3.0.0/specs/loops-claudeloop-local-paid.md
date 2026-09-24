@@ -82,7 +82,7 @@ Commit with the Title as the subject and this footer:
 `BREAKING CHANGE: claudeloop-local is paid-side and declared-only. VIBEY_FEATURE_CLAUDELOOP_LOCAL and [features] claudeloop_local no longer switch it on (the variable logs a warning; the key is reported as a legacy spelling); name it in [engines].enabled or the VibeyProject engines list. Its tier is PAID, so it never shares sovereignloop's rotation.`
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first. Every file below is
+Read `STORM/EDITING-RULES.md` first. Every file below is
 over 100 lines: `edit_file` only. Lanes `engines-pool`, `loops-config-engine-names` and
 possibly `loops-vibey-local-engine-names` edited some of these lines first: anchor on the quoted
 text and function names, and re-read each file before editing it.
@@ -338,4 +338,4 @@ First run `uv run ruff format src/vibey tests/infrastructure/engines tests/domai
 **Depends on:** `loops-config-engine-names`, `engines-pool`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

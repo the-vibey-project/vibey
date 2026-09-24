@@ -93,7 +93,7 @@ implementations are lanes `loops-client` (`LoopClient` satisfies `LoopRoutingPor
    `test_fakes_are_not_stubs`, `test_every_application_port_is_accounted_for`) pass.
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first.
+Read `STORM/EDITING-RULES.md` first.
 - `src/vibey/application/interfaces/loop_routing.py` (from lane `loops-loop-selector`): append the
   two Protocols (behaviour 1) and extend its imports. It is under 100 lines, but still use
   `edit_file` (append after the last line of `LoopSelectorInterface`).
@@ -169,4 +169,4 @@ First run `uv run ruff format src/vibey/application/interfaces tests/fakes`.
 **Depends on:** `loops-loop-selector`, `loops-run-protocol-messages`, `fakes-registry`, `fakes-engines`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

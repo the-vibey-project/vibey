@@ -35,7 +35,7 @@ Work on **macOS** (the operator's laptop) and, where an Arch Linux host is avail
 **Arch Linux** too (8.h). Record for each OS: `uname -a`, the editor version
 (`codium --version` or `code --version`), and the extension version.
 
-1. **Evidence folder.** Create `/private/tmp/claude-501/storm/qwenstorm-3.0.0/evidence/vscode/`.
+1. **Evidence folder.** Create `STORM/evidence/vscode/`.
    Every command below is run through `script`/`tee` so its full transcript lands there as
    `<item>-<os>.log` (for example `v-vs1-macos.log`). Redact any credential with
    `[REDACTED:<kind>]` and say so in the log's first line (7.c: record every redaction).
@@ -94,13 +94,13 @@ Work on **macOS** (the operator's laptop) and, where an Arch Linux host is avail
    contacts (same capture method as step 5), in `v-cc1-hosts-<os>.txt`. This confirms or
    refutes the ADR §9 flag that claudeloop-local is paid-side because the tool is not FOSS.
 8. **Record in the ADR draft.** Append this section to the end of
-   `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md` (append only; never
+   `STORM/specs/ADR-two-loops.md` (append only; never
    edit earlier text):
    ```
    ## Verification recorded (V-VS1..V-VS5, V-CC1)
 
    Recorded <YYYY-MM-DD> by <who>, on <macOS version/arch> and <Arch Linux kernel/arch or "not available">.
-   Evidence: /private/tmp/claude-501/storm/qwenstorm-3.0.0/evidence/vscode/.
+   Evidence: STORM/evidence/vscode/.
 
    - V-VS1 (headless session): <PASS|FAIL>. Command: `<exact command>`. Exit <n>, <seconds> s. Evidence: <files>.
    - V-VS2 (extension): <PASS|FAIL>. <id> <version>, <SPDX>, Open VSX <url>, account needed: <no|yes>.
@@ -128,9 +128,9 @@ Work on **macOS** (the operator's laptop) and, where an Arch Linux host is avail
     `V-VS CONFORMANCE: PASS` for both OSes.
 
 ## Where to change
-- New: `/private/tmp/claude-501/storm/qwenstorm-3.0.0/evidence/vscode/` and the files named above.
-- Append-only: `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md`.
-- Nothing in the repository (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/integration`).
+- New: `STORM/evidence/vscode/` and the files named above.
+- Append-only: `STORM/specs/ADR-two-loops.md`.
+- Nothing in the repository (`STORM/integration`).
 
 ## Acceptance criteria
 - [ ] `grep -c "^- V-VS[1-5] " specs/ADR-two-loops.md` is 5 and `grep -c "^- V-CC1 " specs/ADR-two-loops.md` is 1.
@@ -138,7 +138,7 @@ Work on **macOS** (the operator's laptop) and, where an Arch Linux host is avail
 - [ ] Every PASS names at least one evidence file, and each named file exists in `evidence/vscode/`.
 - [ ] `settings-local.json` exists and names only a loopback provider.
 - [ ] Every log whose content was redacted says so on its first line.
-- [ ] `git -C /private/tmp/claude-501/storm/qwenstorm-3.0.0/integration status --porcelain` shows nothing this lane wrote.
+- [ ] `git -C STORM/integration status --porcelain` shows nothing this lane wrote.
 
 ## Tests to write first (TDD)
 None: this lane is research. Its checks are the greps above. The executable tests for each
@@ -147,7 +147,7 @@ V-item are owed by the lanes it gates: `loops-vscodeloop-oss-driver` (V-VS1, V-V
 loopback-only provider rule).
 
 ## Checks the lane must run (all must pass)
-    cd /private/tmp/claude-501/storm/qwenstorm-3.0.0
+    cd STORM
     test "$(grep -c '^- V-VS[1-5] ' specs/ADR-two-loops.md)" = 5
     test "$(grep -c '^- V-CC1 ' specs/ADR-two-loops.md)" = 1
     test "$(grep -cE '^V-VS VERDICT: (FEASIBLE|INFEASIBLE — .+)$' specs/ADR-two-loops.md)" = 1
@@ -167,4 +167,4 @@ loopback-only provider rule).
 **Depends on:** nothing.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

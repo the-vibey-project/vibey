@@ -98,4 +98,4 @@ Do not push. Commit locally with the Title as the subject.
   - This is the largest tenant lane. The ordered list in behaviour 3 is its split, and a follow-up lane can finish the list from the baseline.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

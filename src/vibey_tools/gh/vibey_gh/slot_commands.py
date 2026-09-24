@@ -49,6 +49,8 @@ from vibey_gh.slots import (
 )
 
 OLLAMA_URL_ENV = "VIBEY_OLLAMA_URL"
+#: The `mkdir` lock every user of this machine's model shares, when the machine declares one.
+LOCK_ENV = "VIBEY_OLLAMA_LOCK"
 
 
 class SlotCommands(SlotCommandsInterface):
@@ -239,7 +241,7 @@ class SlotCommands(SlotCommandsInterface):
         corpus_path = Path(args.corpus)
         corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
         segments = CorpusSampler.resolve(corpus)
-        lock_path = args.lock or self._cfg.lock
+        lock_path = args.lock or self._environ.get(LOCK_ENV) or self._cfg.lock
         lock = self._lock_factory(Path(lock_path), log=self._say) if lock_path else nullcontext()
         bounds = self.bounds()
         method = self.method(args, context)

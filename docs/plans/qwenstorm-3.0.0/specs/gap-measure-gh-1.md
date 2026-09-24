@@ -98,4 +98,4 @@ Commit as `feat(vibey-gh): an append-only, digest-chained measurement log in the
 - **Must keep passing unchanged:** every vibey-gh test and the protected root tests.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

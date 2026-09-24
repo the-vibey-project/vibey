@@ -102,4 +102,4 @@ body in behaviour 3. Do not push.
 - **Ratified by:** the operator's merge only (Article II.3).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

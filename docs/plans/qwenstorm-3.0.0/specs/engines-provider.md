@@ -46,4 +46,4 @@ docs. Do not push. Commit as `feat(cli)!: ...` with a `BREAKING CHANGE:` footer:
 --provider, DESIGN and DECOMPOSE use qwenloop on local Ollama instead of the scripted provider".
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

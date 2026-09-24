@@ -197,4 +197,4 @@ PostgreSQL 17 reachable. If `ruff check` reports only import order (`I001`), run
   `HostServiceRunner`, `tests/fakes/host.py` and the docker end-to-end tests to copy.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -4,7 +4,7 @@ feat(loop-service): ServiceEngineAdapter starts and tails a run over the bus ins
 ADR-0046 lane L57a (slug `loops-service-adapter-run`).
 
 ## Why
-Draft ADR-0046 §3, "Flow for a BUILD job" (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:169-179`),
+Draft ADR-0046 §3, "Flow for a BUILD job" (`STORM/specs/ADR-two-loops.md:169-179`),
 step 4: "It returns an adapter bound to that engine" -- "Because of this order, `EngineAdapter.descriptor`
 is known before `start`, exactly as `build_implement_handler.py:185` needs today." §10
 (`:304`) places `infrastructure/loop_service/adapter.py` beside `client.py`. Lane

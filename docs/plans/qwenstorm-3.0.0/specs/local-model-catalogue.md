@@ -82,4 +82,4 @@ own suite at its 100% floor.
 Downloading models in CI. Changing the storm's own runtime (handled separately).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

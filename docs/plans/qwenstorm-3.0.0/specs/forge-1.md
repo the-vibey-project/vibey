@@ -319,9 +319,9 @@ never alternate between them.
 `forge_github.py`, `forge_forgejo.py` and `forge_gitlab.py` grow with every Wave-1 part.
 Each adapter class is the **last statement** of its module, so add new methods by
 appending to the end of the file: write the four-space-indented methods with `write_file` to
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py` (a concrete path outside the
+`STORM/scratch/append.py` (a concrete path outside the
 clone — `write_file` expands nothing), append them in one command
-(`cat /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py >> vibey_gh/forge_github.py`),
+(`cat STORM/scratch/append.py >> vibey_gh/forge_github.py`),
 delete the scratch file, then run black once.
 Read only the slices you need (`sed -n '120,200p' file`). Do not rewrite a whole module.
 

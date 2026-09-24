@@ -36,6 +36,9 @@ anyone actually has; "is it still getting anything done" is.
             only lane.log while a gap between lanes writes only progress.log.
   disk      the lanes are full clones and the models are large; running out stops everything
             in a way that looks like a hundred unrelated failures.
+  durable   the storm home and this storm root, resolved through symlinks, are not on storage
+            the OS empties (10.h, ADR-0057). A storm under /tmp is healthy right up to the
+            reboot that deletes it, so this is TROUBLE, not a footnote.
   thrash    lanes *ending* far faster than a lane takes to run. A dead model backend does not
             make the storm go quiet -- it makes every lane fail in seconds, which keeps every
             heartbeat above looking perfectly fresh while the queue burns down producing
@@ -48,11 +51,14 @@ down, and guessing between those two is exactly what this file refuses to do.
 
 import argparse
 import json
+import os
 import shutil
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+import storm_durability
 
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
 # resolve but lanes/ and integration/ exist only in the runtime root.
@@ -116,6 +122,19 @@ def check_disk(args: argparse.Namespace) -> tuple[str, str]:
     return OK, f"{free:.0f}G free"
 
 
+def check_durable(_: argparse.Namespace) -> tuple[str, str]:
+    """The home and this storm root are on storage a reboot keeps (10.h)."""
+    home, source = storm_durability.StormHome(os.environ, STORM).resolve()
+    gate = storm_durability.DurabilityGate(
+        storm_durability.VolatileLocations(os.environ), disposable_root=STORM
+    )
+    hits = gate.inspect({"home": home, "storm root": STORM})
+    if hits:
+        where = "; ".join(f"{hit.name} under {hit.location}" for hit in hits)
+        return TROUBLE, f"VOLATILE: {where}, lost at reboot; move with {storm_durability.MOVE_IT}"
+    return OK, f"durable: home {home} ({source})"
+
+
 def check_cycle(args: argparse.Namespace) -> tuple[str, str]:
     age = minutes_since(STORM / "scratch/storm-cycle.log")
     if age is None:
@@ -158,6 +177,7 @@ def check_backend(_: argparse.Namespace) -> tuple[str, str]:
 CHECKS = (
     ("finished", check_finished),
     ("disk", check_disk),
+    ("durable", check_durable),
     ("cycle", check_cycle),
     ("runner", check_runner),
     ("backend", check_backend),

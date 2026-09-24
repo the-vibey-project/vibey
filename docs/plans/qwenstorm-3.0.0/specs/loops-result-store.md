@@ -3,7 +3,7 @@ feat(loop-service): a run's result is persisted atomically, and a loop records i
 ADR-0046 lane L22 (slug `loops-result-store`).
 
 ## Why
-Draft ADR-0046 (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md`) runs each run request in a loop's **seat host**, and its idempotency table (§3, "a run") says a redelivered request whose result was already persisted is answered from that result, never run again. The superseded R21 (`specs/rmq-r21-local-run-executor.md`, behaviour 1; its closing note `issue-audit/updates/368.md`) specified that store: `<cwd>/.vibey/diagnostics/<run_id>.result.json`, written atomically before the request is acknowledged, beside the diagnostics `LoopProcessAdapter` already writes (`src/vibey/infrastructure/engines/loop_process_adapter.py:365-368` at integration `d3b4a388`). This lane carries it into the new package `infrastructure/loop_service/` (ADR-0046 §10).
+Draft ADR-0046 (`STORM/specs/ADR-two-loops.md`) runs each run request in a loop's **seat host**, and its idempotency table (§3, "a run") says a redelivered request whose result was already persisted is answered from that result, never run again. The superseded R21 (`specs/rmq-r21-local-run-executor.md`, behaviour 1; its closing note `issue-audit/updates/368.md`) specified that store: `<cwd>/.vibey/diagnostics/<run_id>.result.json`, written atomically before the request is acknowledged, beside the diagnostics `LoopProcessAdapter` already writes (`src/vibey/infrastructure/engines/loop_process_adapter.py:365-368` at integration `d3b4a388`). This lane carries it into the new package `infrastructure/loop_service/` (ADR-0046 §10).
 
 Sub-doctrine 8.g (`src/vibey_tools/gh/docs/doctrines.md:316-324`) says every loop and queue records latency, depth, waiting time and outcome. The design sheet's decision D9 gives everything the caller never sees (switches, probes, rejections, dead letters, forwards) one sink: the loop's own append-only `measurements.jsonl` in its state directory, plus a structlog event `loop_measured`. This lane builds that sink, `LoopMeasurementLog`, so every later loop-service lane records into it. The loop is database-free by design (ADR-0046 §2; `issue-audit/updates/374.md`), and this lane adds the test that keeps the whole package so.
 
@@ -226,4 +226,4 @@ Tests that need PostgreSQL are marked `integration` (lane `fakes-harness-decoupl
 - `loops-routing-ports`: creates `tests/fakes/loops.py`; with it, `fakes-registry` (`tests/fakes/registry.py`, the patching ratchet).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -63,6 +63,10 @@ procedures live in `.agent/rules/`
   at-least-once, de-duplicated by identity. An unreadable source is reported
   and the watermark left unmoved, never stepped over. A figure computed over an
   unknown subset is not evidence. ADR-0048; sub-doctrine 10.g.
+- Work outlives the machine: work in progress lives on durable storage (the
+  storm home, never `/tmp` or `$TMPDIR`; the storm tools refuse volatile paths)
+  and is committed and pushed to a draft PR at least every 30–45 minutes.
+  ADR-0057; sub-doctrine 10.h.
 - Code lives in classes, each with an interface beside it
   (`services/x.py` → `services/interfaces/x_interface.py`). Module-level
   functions are last resort with a written reason. Interfaces declare, never
@@ -182,7 +186,7 @@ automation has no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (57 ADRs: 0001–0056, 0058) |
+| ADRs | `docs/architecture/decisions/` (58 ADRs: 0001–0058) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

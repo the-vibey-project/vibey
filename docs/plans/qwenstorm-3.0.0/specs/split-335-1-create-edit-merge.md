@@ -660,4 +660,4 @@ black once, read only slices, never rewrite a module.
 - split-334-3-wait-for-checks: the adapter files at their latest state (the `sleep` field is the last Forgejo/GitLab field).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

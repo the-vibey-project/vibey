@@ -154,4 +154,4 @@ None new. `tests/meta` (including `gap-sd01-carriage`'s test) is the check.
 Commit as `docs(agents): CLAUDE.md, AGENTS.md and GEMINI.md state 3.0.0's law`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

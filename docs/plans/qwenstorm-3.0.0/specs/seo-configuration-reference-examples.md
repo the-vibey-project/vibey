@@ -149,4 +149,4 @@ Commit as `docs(reference): add a fenced TOML example to every [section] in conf
 Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
