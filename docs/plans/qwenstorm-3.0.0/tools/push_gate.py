@@ -481,6 +481,7 @@ class Proc:
     command: str
     started_at: float | None = None
     uid: int | None = None
+    state: str = ""
 
 
 @dataclass(frozen=True)
@@ -528,7 +529,9 @@ class ProcessTable:
     """
 
     # `lstart` is five words in the C locale on both macOS and procps: "Wed Sep 24 07:26:12 2026".
-    PS = ("ps", "-A", "-o", "pid=,ppid=,pgid=,lstart=,time=,command=")
+    # `uid` so a trace never names another user's push (#1107-2); `stat` so a group holding
+    # nothing but zombies is seen as the finished group it is.
+    PS = ("ps", "-A", "-o", "pid=,ppid=,pgid=,uid=,stat=,lstart=,time=,command=")
     LISTING = ("ps", "-A", "-o", "pid,ppid,pgid,stat,time,etime,command")
 
     def alive(self, pid: int) -> bool:
@@ -541,12 +544,29 @@ class ProcessTable:
         return True
 
     def group_alive(self, pgid: int) -> bool:
+        """Whether anything of group `pgid` still runs.
+
+        A group left holding only zombies has finished: macOS answers `kill 0` on one with
+        EPERM, and Linux with success, so each answer is checked against the table, and a
+        table that cannot be read leaves the answer at "alive".
+        """
         try:
             os.killpg(pgid, 0)
         except ProcessLookupError:
             return False
         except PermissionError:
+            pass
+        members = self.members(pgid)
+        if members is None:
             return True
+        return any(not p.state.startswith("Z") for p in members)
+
+    def group_ours(self, pgid: int) -> bool:
+        """Whether this uid may signal group `pgid`: EPERM means it is not ours (#1105-3)."""
+        try:
+            os.killpg(pgid, 0)
+        except (ProcessLookupError, PermissionError):
+            return False
         return True
 
     def members(self, pgid: int) -> list[Proc] | None:
@@ -604,19 +624,21 @@ class ProcessTable:
             return None
         rows: list[Proc] = []
         for line in out.splitlines():
-            parts = line.split(None, 9)
-            if len(parts) < 9:
+            parts = line.split(None, 11)
+            if len(parts) < 11:
                 continue
             try:
-                started = time.mktime(time.strptime(" ".join(parts[4:8]), "%b %d %H:%M:%S %Y"))
+                started = time.mktime(time.strptime(" ".join(parts[6:10]), "%b %d %H:%M:%S %Y"))
                 rows.append(
                     Proc(
                         pid=int(parts[0]),
                         ppid=int(parts[1]),
                         pgid=int(parts[2]),
-                        cpu_seconds=self.cpu_seconds(parts[8]),
-                        command=parts[9] if len(parts) > 9 else "",
+                        cpu_seconds=self.cpu_seconds(parts[10]),
+                        command=parts[11] if len(parts) > 11 else "",
                         started_at=started,
+                        uid=int(parts[3]),
+                        state=parts[4],
                     )
                 )
             except ValueError:
@@ -641,15 +663,21 @@ class ProcessTable:
 
 
 class Signaller:
-    """The only thing here that sends a signal. A group that is already gone is not an error."""
+    """The only thing here that sends a signal. Each says whether it was delivered."""
 
-    def send_group(self, pgid: int, sig: int) -> None:
-        with contextlib.suppress(ProcessLookupError, PermissionError):
+    def send_group(self, pgid: int, sig: int) -> bool:
+        try:
             os.killpg(pgid, sig)
+        except (ProcessLookupError, PermissionError):
+            return False
+        return True
 
-    def send_process(self, pid: int, sig: int) -> None:
-        with contextlib.suppress(ProcessLookupError, PermissionError):
+    def send_process(self, pid: int, sig: int) -> bool:
+        try:
             os.kill(pid, sig)
+        except (ProcessLookupError, PermissionError):
+            return False
+        return True
 
 
 # --- The lock ---------------------------------------------------------------------------
@@ -849,36 +877,45 @@ class GroupKiller:
         self._clock = clock
 
     def signallable(self, pgid: int, require_session: bool = True) -> bool:
-        """Never 0, 1 or our own group; by default only a group leading its own session.
+        """Never 0, 1 or our own group; only a group this uid may signal (EPERM means not
+        ours, never "alive"); by default only one still leading its own session.
 
         `require_session=False` is for a push traced behind a bare-mkdir lock, whose group
-        `OwnerlessHolder` has just proven holds nothing but the push recipe; the group must
-        still exist.
+        `OwnerlessHolder` has just proven holds nothing but the push recipe.
         """
         if pgid <= 1 or pgid in {os.getpid(), os.getpgrp()}:
             return False
-        if not require_session:
-            return self._table.group_alive(pgid)
-        return self._table.session_leader(pgid)
+        if not self._table.group_ours(pgid):
+            return False
+        return self._table.session_leader(pgid) if require_session else True
 
     def stop(self, pgid: int, require_session: bool = True) -> str:
-        """`refused`, `gone` (already exited), `terminated`, or `killed` (needed SIGKILL)."""
-        if not self.signallable(pgid, require_session):
-            if not require_session and pgid > 1 and not self._table.group_alive(pgid):
-                return "gone"
+        """What was OBSERVED (#1105-3): `terminated` or `killed` only once the group is seen
+        gone; `gone` if it went before any signal; `refused` if it is not ours to signal;
+        `survived` if it outlived SIGKILL too."""
+        if pgid <= 1 or pgid in {os.getpid(), os.getpgrp()}:
             return "refused"
         if not self._table.group_alive(pgid):
             return "gone"
-        self._signaller.send_group(pgid, signal.SIGTERM)
+        if not self.signallable(pgid, require_session):
+            return "refused"
+        if not self._signaller.send_group(pgid, signal.SIGTERM):
+            return "refused" if self._table.group_alive(pgid) else "gone"
+        if self._gone_within(pgid):
+            return "terminated"
+        if not self._table.group_ours(pgid):
+            return "refused" if self._table.group_alive(pgid) else "terminated"
+        self._signaller.send_group(pgid, signal.SIGKILL)
+        return "killed" if self._gone_within(pgid) else "survived"
+
+    def _gone_within(self, pgid: int) -> bool:
         deadline = self._clock.now() + self._config.grace_seconds
-        while self._clock.now() < deadline:
+        while True:
             if not self._table.group_alive(pgid):
-                return "terminated"
+                return True
+            if self._clock.now() >= deadline:
+                return False
             self._clock.sleep(min(0.1, self._config.grace_seconds))
-        if self._table.group_alive(pgid) and self.signallable(pgid, require_session):
-            self._signaller.send_group(pgid, signal.SIGKILL)
-            return "killed"
-        return "terminated"
 
 
 class PushLog:
@@ -1384,13 +1421,27 @@ class Reaper:
                 measured,
                 owner,
             )
-        for p in members or []:
-            hit = next((name for name in self._config.protected if name in p.command), None)
-            if hit:
+        if members is None:
+            # Membership unknown means "protected or not" is unknown, and unknown is never a
+            # licence: at the ceiling this used to skip the check and kill an `ollama serve`
+            # (#1105-4, probe P11).
+            return Decision(
+                "refused",
+                condition,
+                f"{detail}; but the group's members cannot be read here, so whether it holds a "
+                "protected program is unknown, and nothing is killed",
+                measured,
+                owner,
+            )
+        for p in members:
+            # The program, not the command line: a branch named `fix/ollama-url` made a push
+            # unkillable for ever when this matched substrings (#1105-4, probe P2).
+            program = Path(p.command.split(" ", 1)[0]).name if p.command else ""
+            if program in self._config.protected:
                 return Decision(
                     "refused",
                     condition,
-                    f"{detail}; but pid {p.pid} in the group matches protected '{hit}', "
+                    f"{detail}; but pid {p.pid} in the group is protected '{program}', "
                     "so nothing is killed",
                     measured,
                     owner,
@@ -1437,17 +1488,35 @@ class Reaper:
                     folder,
                 )
             stopped = self._killer.stop(owner.pgid, require_session=not ownerless)
-            # Removed while still held: the recipe's own `rmdir` died with its shell, and a
-            # dedicated owner's wrapper finds its lock gone and its verdict waiting.
-            held.remove()
-            released = True
+            if stopped in {"terminated", "killed"}:
+                # Removed while still held: the recipe's own `rmdir` died with its shell,
+                # and a dedicated owner's wrapper finds its lock gone and its verdict waiting.
+                held.remove()
         decision = dataclasses.replace(decision, evidence=folder)
-        self._record(
+        # The action is what was observed, never what was attempted (#1105-3).
+        if stopped in {"terminated", "killed"}:
+            self._record(decision, {"group": stopped, "lock": "released"}, ownerless=ownerless)
+            return decision
+        self._verdicts.discard(owner.token)
+        if stopped == "gone":
+            return dataclasses.replace(
+                decision,
+                action="none",
+                detail=f"{detail}; but the push ended before it was signalled",
+            )
+        if stopped == "refused":
+            return dataclasses.replace(
+                decision,
+                action="refused",
+                detail=f"{detail}; but group {owner.pgid} is not ours to signal",
+            )
+        failed = dataclasses.replace(
             decision,
-            {"group": stopped, "lock": "released" if released else "already changed hands"},
-            ownerless=ownerless,
+            action="failed",
+            detail=f"{detail}; but group {owner.pgid} outlived SIGTERM and SIGKILL",
         )
-        return decision
+        self._record(failed, {"group": stopped, "lock": "kept"}, ownerless=ownerless)
+        return failed
 
     def _changed(self, state: LockState, owner: Owner, made_at: float | None) -> str | None:
         """What changed since the judgement, if anything, read under the lock's mutex."""
@@ -1658,7 +1727,9 @@ class PushRunner:
             finally:
                 self._lock.release(token, uid)
         verdict = Verdicts(self._config).read(token)
-        if verdict is not None and returncode != 0:
+        # Only a push that died by a signal was reaped; one that failed by itself failed,
+        # whatever a verdict file says (#1105-3).
+        if verdict is not None and returncode < 0:
             print(Verdicts.say(verdict), flush=True)
             return REAPED_EXIT
         if self._timed_out:
@@ -2120,7 +2191,7 @@ def main(argv: list[str] | None = None) -> int:
     print(decision.line(), flush=True)
     if decision.action in {"released", "killed", "would-release", "would-kill"}:
         return 1
-    return 2 if decision.action in {"unknown", "refused"} else 0
+    return 2 if decision.action in {"unknown", "refused", "failed"} else 0
 
 
 if __name__ == "__main__":

@@ -442,19 +442,32 @@ def test_1105_3_a_group_that_ends_during_evidence_is_not_recorded_as_killed(tmp_
 
 def test_1105_3_a_group_of_another_uid_is_refused_not_killed(tmp_path: Path, monkeypatch) -> None:
     """Probe P4: EPERM from kill(0) means "not ours", never "alive and signalled"."""
+    other = subprocess.Popen(["sleep", "30"], start_new_session=True)  # stands in for a stranger's
+    real_killpg = os.killpg
     attempted: list[int] = []
 
     def eperm(pgid: int, sig: int) -> None:
+        if pgid != other.pid:
+            return real_killpg(pgid, sig)
         attempted.append(sig)
         raise PermissionError(1, "Operation not permitted")
 
-    monkeypatch.setattr(push_gate.os, "killpg", eperm)
-    cfg = config(tmp_path, grace_seconds=0.3)
-    killer = push_gate.GroupKiller(
-        cfg, push_gate.ProcessTable(), push_gate.Signaller(), push_gate.Clock()
-    )
-    assert killer.stop(424_242, require_session=False) == "refused"
-    assert signal.SIGTERM not in attempted and signal.SIGKILL not in attempted
+    try:
+        monkeypatch.setattr(push_gate.os, "killpg", eperm)
+        cfg = config(tmp_path, grace_seconds=0.3)
+        table = push_gate.ProcessTable()
+        killer = push_gate.GroupKiller(cfg, table, push_gate.Signaller(), push_gate.Clock())
+        result = killer.stop(other.pid, require_session=False)
+        if table.members(other.pid) is None:
+            assert result in {"refused", "gone"}  # no `ps` here: never "killed", never signalled
+        else:
+            assert result == "refused"
+        assert signal.SIGTERM not in attempted and signal.SIGKILL not in attempted
+        assert other.poll() is None
+    finally:
+        monkeypatch.undo()
+        other.kill()
+        other.wait()
 
 
 def test_1105_3_killed_is_claimed_only_once_the_group_is_seen_gone(tmp_path: Path) -> None:
@@ -977,12 +990,6 @@ def test_1107_8_the_shell_scan_sees_a_bare_push() -> None:
 #: Findings whose fix lands in a later commit of this pull request. Each is a strict xfail:
 #: it must fail until its fix lands, and the commit that fixes it deletes its line here.
 PENDING = {
-    "test_1105_3_a_group_that_ends_during_evidence_is_not_recorded_as_killed",
-    "test_1105_3_a_group_of_another_uid_is_refused_not_killed",
-    "test_1105_3_killed_is_claimed_only_once_the_group_is_seen_gone",
-    "test_1105_3_run_honours_a_verdict_only_when_its_push_was_killed",
-    "test_1105_4_a_branch_named_after_a_protected_program_is_not_protected",
-    "test_1105_4_unknown_membership_at_the_ceiling_refuses",
     "test_1105_5_laptop_sleep_does_not_count_toward_the_ceiling",
     "test_1105_5_an_idle_window_that_spans_a_sleep_is_not_idle",
     "test_1105_5_samples_from_another_boot_are_dropped",
@@ -993,7 +1000,6 @@ PENDING = {
     "test_1105_8_the_docs_say_the_schedule_reaps_what_the_cycle_cannot",
     "test_1105_9_a_failed_py_spy_falls_back_to_sigusr1",
     "test_1107_2_another_users_push_is_never_the_holder",
-    "test_1107_2_ps_reports_the_uid_column",
     "test_1107_3_a_symlinked_worktree_root_matches",
     "test_1107_3_a_relative_dash_c_is_read_from_the_cwd",
     "test_1107_4_status_reports_the_last_exit_and_how_old_the_log_is",

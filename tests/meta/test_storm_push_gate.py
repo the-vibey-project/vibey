@@ -93,6 +93,9 @@ class FakeTable:
     def group_alive(self, pgid: int) -> bool:
         return bool(self.groups.get(pgid))
 
+    def group_ours(self, pgid: int) -> bool:
+        return bool(self.groups.get(pgid))
+
     def members(self, pgid: int) -> list | None:
         if not self.readable:
             return None
@@ -135,16 +138,19 @@ class FakeSignaller:
     sent: list[tuple[str, int, int]] = field(default_factory=list)
     before_kill: object = None
 
-    def send_group(self, pgid: int, sig: int) -> None:
+    def send_group(self, pgid: int, sig: int) -> bool:
         if sig in (signal.SIGTERM, signal.SIGKILL) and self.before_kill:
             self.before_kill()  # type: ignore[operator]
             self.before_kill = None
         self.sent.append(("group", pgid, sig))
+        delivered = bool(self.table.groups.get(pgid))
         if sig in self.lethal:
             self.table.groups.pop(pgid, None)
+        return delivered
 
-    def send_process(self, pid: int, sig: int) -> None:
+    def send_process(self, pid: int, sig: int) -> bool:
         self.sent.append(("process", pid, sig))
+        return True
 
 
 def config(tmp_path: Path, **overrides: object) -> PushGateConfig:
@@ -804,6 +810,10 @@ def test_a_real_sleeping_push_under_the_lock_is_reaped_as_idle(tmp_path: Path) -
     assert "time.sleep(120)" in (Path(record["evidence"]) / "process-tree.txt").read_text()
 
 
+@pytest.mark.skipif(
+    push_gate.ProcessTable().members(os.getpgrp()) is None,
+    reason="`ps` cannot be run here, and a kill needs the group's members read (#1105-4)",
+)
 def test_a_real_push_past_the_wall_ceiling_is_reaped(tmp_path: Path) -> None:
     root = _storm(tmp_path, wall_ceiling_seconds=1, kill_grace_seconds=2)
     cfg = PushGateConfig.declared(root)
