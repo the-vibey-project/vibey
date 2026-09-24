@@ -3,6 +3,7 @@
 
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
+from typing import Final
 from uuid import UUID
 
 import pytest
@@ -476,6 +477,62 @@ def test_a_sweep_skips_a_job_in_an_unknown_phase() -> None:
     assert plan.swept == () and plan.skipped == (_id(1),)
 
 
+def _through_an_unknown_state() -> Mapping[UUID, QueuedJob]:
+    """a (3) named needs c (2), which needs d (1); both pulled. c is now in a state a
+    newer vibey wrote. x (4) is a plain job."""
+    return _index(
+        _job(1, bump_seq=1, named=False),
+        _job(2, bump_seq=2, named=False, deps=(1,), state=UnrecognizedJobState("future")),
+        _job(3, bump_seq=3, deps=(2,)),
+        _job(4),
+    )
+
+
+def test_the_lane_runs_through_a_dependency_in_an_unknown_state() -> None:
+    plan = BUMP_PLANNER.plan(_id(4), _through_an_unknown_state())
+    assert plan.moved == (_id(4),) and plan.swept == () and plan.skipped == ()
+
+
+def test_an_unbump_is_refused_while_a_named_job_needs_it_through_an_unknown_state() -> None:
+    with pytest.raises(DependentsStillBumped) as refused:
+        UNBUMP_PLANNER.plan(_id(1), _through_an_unknown_state())
+    # a, named; and c itself, which this vibey cannot write and which still needs d.
+    assert refused.value.dependents == (_id(2), _id(3))
+
+
+def test_an_orphan_in_an_unknown_state_is_left_in_the_lane_and_named() -> None:
+    jobs = dict(_orphaned())
+    jobs[_id(1)] = _job(1, bump_seq=1, named=False, state=UnrecognizedJobState("future"))
+    plan = BUMP_PLANNER.plan(_id(3), jobs)
+    assert plan.swept == () and plan.skipped == (_id(1),)
+
+
+def _skipped_needing_a_known_job() -> Mapping[UUID, QueuedJob]:
+    """a (3), named, needed u (2), which needs d (1); a was then cancelled, so u and d are
+    orphans. u is in a phase this vibey does not know. x (4) is a plain job."""
+    return _index(
+        _job(1, bump_seq=1, named=False),
+        _job(2, bump_seq=2, named=False, deps=(1,), phase_known=False),
+        _job(3, bump_seq=3, deps=(2,), state=JobState.CANCELLED),
+        _job(4),
+    )
+
+
+def test_a_sweep_leaves_what_a_skipped_job_still_needs() -> None:
+    plan = BUMP_PLANNER.plan(_id(4), _skipped_needing_a_known_job())
+    assert plan.swept == () and plan.skipped == (_id(1), _id(2))
+    unbump = UNBUMP_PLANNER.plan(_id(4), _skipped_needing_a_known_job())
+    assert unbump.swept == () and unbump.skipped == (_id(1), _id(2))
+
+
+def test_an_unbump_is_refused_while_a_job_it_cannot_write_needs_it() -> None:
+    jobs = dict(_skipped_needing_a_known_job())
+    jobs[_id(1)] = _job(1, bump_seq=1)  # d itself named: un-bumping it would strand u
+    with pytest.raises(DependentsStillBumped) as refused:
+        UNBUMP_PLANNER.plan(_id(1), jobs)
+    assert refused.value.dependents == (_id(2),)
+
+
 # -- the records a change leaves behind -------------------------------------------------------
 
 
@@ -578,6 +635,17 @@ def test_a_bump_then_an_unbump_leaves_the_queue_as_it_was(
     assert lane.bumped() == set()
 
 
+_FUTURE: Final = UnrecognizedJobState("future")
+
+
+def _live(job: QueuedJob) -> bool:
+    return job.state not in FINISHED_STATES
+
+
+def _writable(job: QueuedJob) -> bool:
+    return job.phase_known and isinstance(job.state, JobState)
+
+
 def _unbumped(job: QueuedJob) -> QueuedJob:
     return QueuedJob(
         id=job.id,
@@ -596,7 +664,13 @@ class _Lane:
         self.seq = 0
 
     def _set(
-        self, job_id: UUID, *, seq: int | None, named: bool, state: JobState | None = None
+        self,
+        job_id: UUID,
+        *,
+        seq: int | None,
+        named: bool,
+        state: JobState | UnrecognizedJobState | None = None,
+        phase_known: bool | None = None,
     ) -> None:
         job = self.jobs[job_id]
         self.jobs[job_id] = QueuedJob(
@@ -607,6 +681,7 @@ class _Lane:
             bump_seq=seq,
             depends_on=job.depends_on,
             bump_named=named,
+            phase_known=job.phase_known if phase_known is None else phase_known,
         )
 
     def bump(self, target: UUID) -> tuple[UUID, ...]:
@@ -643,6 +718,18 @@ class _Lane:
         self._set(job_id, seq=job.bump_seq, named=job.bump_named, state=state)
         return True
 
+    def drift(self, job_id: UUID, *, state: bool) -> bool:
+        """A newer vibey moves an unfinished job into a state -- or a phase -- this one has
+        no member for. Its lane membership is whatever it was."""
+        job = self.jobs[job_id]
+        if not _live(job):
+            return False
+        if state:
+            self._set(job_id, seq=job.bump_seq, named=job.bump_named, state=_FUTURE)
+        else:
+            self._set(job_id, seq=job.bump_seq, named=job.bump_named, phase_known=False)
+        return True
+
     def finish(self, job_id: UUID) -> bool:
         """Run a job to success, as a worker would -- only once its dependencies have."""
         job = self.jobs[job_id]
@@ -652,20 +739,36 @@ class _Lane:
         return True
 
     def bumped(self) -> set[UUID]:
-        """The lane as it stands: every unfinished job holding a place."""
-        return {job.id for job in self.jobs.values() if job.bumped and job.movable}
+        """The lane as it stands: every unfinished job holding a place -- one in a state
+        this vibey does not know is not finished, so it counts."""
+        return {job.id for job in self.jobs.values() if job.bumped and _live(job)}
 
-    def derived(self) -> set[UUID]:
-        """The lane by definition: the unfinished named set plus every unfinished
-        transitive dependency of it."""
+    def _closure(self, roots: set[UUID]) -> set[UUID]:
+        """`roots` and every unfinished job they depend on, transitively."""
         lane: set[UUID] = set()
-        stack = [job.id for job in self.jobs.values() if job.named and job.movable]
+        stack = list(roots)
         while stack:
             job_id = stack.pop()
             if job_id not in lane:
                 lane.add(job_id)
-                stack.extend(d for d in self.jobs[job_id].depends_on if self.jobs[d].movable)
+                stack.extend(d for d in self.jobs[job_id].depends_on if _live(self.jobs[d]))
         return lane
+
+    def derived(self) -> set[UUID]:
+        """The lane by definition: the unfinished named set plus every unfinished
+        transitive dependency of it."""
+        return self._closure({job.id for job in self.jobs.values() if job.named and _live(job)})
+
+    def stuck(self) -> set[UUID]:
+        """What no request may clear: every lane member this vibey cannot write, and
+        everything such a member still needs."""
+        return self._closure(
+            {
+                job.id
+                for job in self.jobs.values()
+                if job.bumped and _live(job) and not _writable(job)
+            }
+        )
 
 
 # -- the lane is its derivation, over any sequence of bumps and un-bumps (items 3, 6) ------
@@ -716,6 +819,17 @@ class QueueMachine(RuleBasedStateMachine):
 
     @rule(
         pick=st.integers(min_value=0, max_value=100),
+        then=st.integers(min_value=0, max_value=100),
+        state=st.booleans(),
+    )
+    def drift(self, pick: int, then: int, state: bool) -> None:
+        """A job moved into a state or phase a newer vibey wrote; then the next request,
+        a bump of any job (the drifted one would be refused, and so sweep nothing)."""
+        if self.lane.drift(self._pick(pick), state=state):
+            self.lane.bump(self._pick(then))
+
+    @rule(
+        pick=st.integers(min_value=0, max_value=100),
         state=st.sampled_from([JobState.CANCELLED, JobState.FAILED]),
     )
     def end(self, pick: int, state: JobState) -> None:
@@ -728,14 +842,18 @@ class QueueMachine(RuleBasedStateMachine):
 
     @invariant()
     def the_lane_is_its_derivation(self) -> None:
-        assert self.lane.bumped() == self.lane.derived()
+        """Exactly the derivation, but for what no request may clear -- a member this vibey
+        cannot write and what it needs -- which stays, and is named in `skipped`."""
+        bumped, derived = self.lane.bumped(), self.lane.derived()
+        assert derived <= bumped, f"derived but not in the lane: {derived - bumped}"
+        assert bumped - derived <= self.lane.stuck(), f"orphans: {bumped - derived}"
 
     @invariant()
     def every_dependency_of_a_bumped_job_is_bumped(self) -> None:
         for job in self.lane.jobs.values():
-            if job.bumped and job.movable:
+            if job.bumped and _live(job):
                 for dep in job.depends_on:
-                    if self.lane.jobs[dep].movable:
+                    if _live(self.lane.jobs[dep]):
                         assert self.lane.jobs[dep].bumped, f"{job.id} bumped, {dep} not"
 
     @invariant()
@@ -747,9 +865,9 @@ class QueueMachine(RuleBasedStateMachine):
             for job in sorted(self.lane.jobs.values(), key=lambda j: j.id):
                 if job.named and job.movable and self.lane.unbump(job.id) is not None:
                     progress = True
-        left = self.lane.bumped()
+        left, stuck = self.lane.bumped(), self.lane.stuck()
         self.lane.jobs = saved
-        assert left == set(), f"still bumped after every named job went back: {left}"
+        assert left <= stuck, f"still bumped after every named job went back: {left - stuck}"
 
 
 TestQueueMachine = QueueMachine.TestCase

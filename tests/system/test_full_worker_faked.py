@@ -588,3 +588,29 @@ async def test_full_worker_survives_a_forced_wind_down_rotation(tmp_path: Path) 
         assert follow_up["assigned_engine"] != handoff["from_engine"]
         excluded = _json.loads(follow_up["requirement"])["excluded_engine_ids"]
         assert excluded == [handoff["from_engine"]]
+
+
+async def test_a_project_that_declares_vibeys_dsn_for_its_engines_gets_no_worker(
+    tmp_path: Path,
+) -> None:
+    """The engine environment is read from the project's own record when the worker is
+    built, and a declaration that would hand an engine session the queue and ledger DSN
+    stops it there -- before any session could start with it."""
+    repo = _make_repo(tmp_path)
+
+    async with build_app() as resources:
+        project = await resources.projects.create(
+            "engine-env-refused",
+            repo,
+            max_cycles=1,
+            config={"engine_environment": {"engines": {"claudeloop": ["VIBEY_PG_URL"]}}},
+        )
+        with pytest.raises(ValueError, match="VIBEY_PG_URL can never be passed"):
+            build_full_worker(
+                resources=resources,
+                project=project,
+                design_provider=ScriptedDesignProvider(),
+                visual_provider=ScriptedVisualProvider(),
+                decomposer=ScriptedWorkPlanProducer(),
+                owner="engine-env-worker",
+            )

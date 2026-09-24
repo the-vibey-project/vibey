@@ -12,13 +12,18 @@ from vibey.domain.config import (
     parse_config,
     parse_toml_string,
 )
+from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
+from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.local_engines import LOCAL_ENGINE_SWITCHES
 from vibey.infrastructure.interfaces.class_contracts import (
     EnvironmentConfigLoaderInterface,
     QueueConfigLoaderInterface,
 )
 
-RUNTIME_CONFIG_KEYS = ("notifications", "telemetry")
+# The tables `vibey new` copies from vibey.toml into the project record. `gates` and
+# `engine_environment` decide what a gate command and an engine session may see of the
+# worker's environment; they are declared here, never hand-edited into the record.
+RUNTIME_CONFIG_KEYS = ("notifications", "telemetry", "gates", "engine_environment")
 
 # Every operational surface's environment overlay: (table, key, variable,
 # cast). An empty variable counts as unset, the way the Ollama client treats
@@ -162,6 +167,11 @@ def load_runtime_config_from_path(path: Path) -> dict[str, object]:
         # narrow loader validate only the runtime tables; the CLI supplies the
         # real project record separately.
         parse_config({"project": {"name": "runtime-config"}, **runtime})
+        # The child-environment tables are the worker's own objects, validated by the
+        # parsers the worker builds them with -- so a forbidden declaration (a VIBEY_*
+        # name, libpq's PG*, a DSN) is refused here, before anything is stored.
+        SubprocessGateRunner.from_config(runtime)
+        EngineEnvironmentPolicy.from_config(runtime)
     return runtime
 
 
