@@ -977,3 +977,222 @@ def test_the_runner_waits_out_an_unreadable_priority_log_and_says_why(tmp_path: 
     finally:
         os.killpg(runner.pid, signal.SIGTERM)
         runner.wait(timeout=30)
+
+
+# --- the review of #1092 (head 13bdf0b7) -------------------------------------------------
+
+
+def witness(root: Path) -> Path:
+    log = storm_paths.priority_log(root)
+    return log.with_name("." + log.name + ".witness")
+
+
+def test_the_witness_is_not_matched_by_a_priority_log_glob(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    desk(root).bump("e", None)
+    assert witness(root).is_file()
+    assert witness(root) not in set(root.glob("priority.log*"))
+    assert json.loads(witness(root).read_text())["length"] == (
+        storm_paths.priority_log(root).stat().st_size
+    )
+
+
+def test_a_refusal_never_recreates_a_lost_log(tmp_path: Path) -> None:
+    """The reviewer's probe 1: bump, lose the log, then an operator typo."""
+    root = storm(tmp_path)
+    desk(root).bump("c", None)
+    log = storm_paths.priority_log(root)
+    log.unlink()
+    with pytest.raises(storm_queue.Unreadable, match="missing"):
+        desk(root).bump("c d", None)
+    assert not log.exists()
+    assert "order unknown" in progress(root)[-1]
+    with pytest.raises(storm_queue.Unreadable):
+        storm_queue.Resolver.at(root).plan()
+
+
+def test_a_lane_refusal_never_recreates_a_lost_log(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    desk(root).bump("c", None)
+    storm_paths.priority_log(root).unlink()
+    inside = storm_queue.Authority(root, sources=(), environ={"VIBEY_STORM_LANE": "x"})
+    with pytest.raises(storm_queue.Unreadable):
+        storm_queue.PriorityDesk.at(root, authority=inside).bump("a", None)
+    assert not storm_paths.priority_log(root).exists()
+
+
+@pytest.mark.parametrize("keep", [0, 10])
+def test_a_truncated_log_is_an_unknown_order(tmp_path: Path, keep: int) -> None:
+    """The reviewer's probe 2: a log shorter than the witness recorded."""
+    root = storm(tmp_path)
+    desk(root).bump("c", None)
+    log = storm_paths.priority_log(root)
+    log.write_bytes(log.read_bytes()[:keep])
+    with pytest.raises(storm_queue.Unreadable, match="truncated|not JSON"):
+        storm_queue.Resolver.at(root).plan()
+
+
+def test_a_request_meeting_an_unreadable_log_says_so_and_raises(tmp_path: Path) -> None:
+    root = storm(tmp_path)
+    storm_paths.priority_log(root).write_text("not json\n")
+    with pytest.raises(storm_queue.Unreadable):
+        desk(root).bump("c", None)
+    assert "order unknown" in progress(root)[-1]
+
+
+def test_a_typo_after_a_lost_log_still_exits_3_and_the_runner_waits(tmp_path: Path) -> None:
+    """The reviewer's end-to-end probe."""
+    import signal
+    import time
+
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\nc 3\n")
+    assert priority_cli(root, env, "bump", "c").returncode == 0
+    storm_paths.priority_log(root).unlink()
+    assert priority_cli(root, env, "list").returncode == 3
+    assert priority_cli(root, env, "bump", "c d").returncode == 3
+    assert priority_cli(root, env, "list").returncode == 3
+    runner = subprocess.Popen(
+        ["bash", str(root / "tools/storm-queue.sh")],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        env=env,
+        start_new_session=True,
+    )
+    try:
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline and "resolver exit 3" not in "\n".join(progress(root)):
+            time.sleep(0.2)
+        assert "resolver exit 3" in "\n".join(progress(root))
+        assert runner.poll() is None
+        assert not (root / "ran.txt").exists()
+    finally:
+        os.killpg(runner.pid, signal.SIGTERM)
+        runner.wait(timeout=30)
+
+
+# --- un-bump: the derived invariant (ADR-0054 item 6, both queues) ---------------------
+
+
+def test_the_reviewers_orphan_sequence_returns_to_file_order(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="x 1\nd 2\na 3 d\nb 4 d\n")
+    priority = desk(root)
+    priority.bump("a", None)
+    priority.bump("b", None)
+    priority.unbump("a", None)
+    priority.unbump("b", None)
+    assert storm_queue.PriorityLog(storm_paths.priority_log(root)).replay() == []
+    assert order(root) == ["x", "d", "a", "b"]
+
+
+def test_unbumping_a_pulled_dependency_a_named_item_needs_is_refused(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="x 1\nd 2\na 3 d\n")
+    priority = desk(root)
+    priority.bump("a", None)
+    with pytest.raises(storm_queue.Invalid, match="a"):
+        priority.unbump("d", None)
+
+
+@pytest.mark.parametrize("seed", range(40))
+def test_unbumping_every_named_item_empties_the_lane(tmp_path: Path, seed: int) -> None:
+    """Property: whatever was bumped, un-bumping every named item leaves no orphan."""
+    import random
+
+    rng = random.Random(seed)
+    slugs = [f"s{i}" for i in range(8)]
+    lines = []
+    for i, slug in enumerate(slugs):
+        deps = sorted(rng.sample(slugs[:i], k=min(i, rng.randint(0, 2))))
+        lines.append(f"{slug} {i + 1}" + (f" {','.join(deps)}" if deps else ""))
+    root = storm(tmp_path, queue="\n".join(lines) + "\n")
+    priority = desk(root)
+    for slug in rng.sample(slugs, k=rng.randint(1, 5)):
+        priority.bump(slug, None)
+    named = {e["slug"] for e in log_lines(root) if e["action"] == "bump"}
+    while named:
+        for slug in sorted(named):
+            try:
+                priority.unbump(slug, None)
+            except storm_queue.Invalid:
+                continue
+            named.discard(slug)
+            break
+        else:
+            pytest.fail(f"no named item could be un-bumped: {sorted(named)}")
+    assert storm_queue.PriorityLog(storm_paths.priority_log(root)).replay() == []
+
+
+# --- authorise before the lock; a refusal that cannot be written is still exit 1 -------
+
+
+def test_another_uid_without_write_access_is_refused_not_crashed(tmp_path: Path) -> None:
+    """The reviewer's probe 3, with a real non-writable storm."""
+    root = storm(tmp_path)
+    desk(root).bump("c", None)
+    log = storm_paths.priority_log(root)
+    frozen = [log, log.with_name(log.name + ".lock"), witness(root), root / "progress.log"]
+    for path in frozen:
+        path.chmod(0o444)
+    root.chmod(0o555)
+    try:
+        stranger = storm_queue.Authority(root, sources=(), uid=os.getuid() + 1)
+        with pytest.raises(storm_queue.Unauthorised) as refused:
+            storm_queue.PriorityDesk.at(root, authority=stranger).bump("a", None)
+        assert refused.value.recorded is False
+    finally:
+        root.chmod(0o755)
+        for path in frozen:
+            path.chmod(0o644)
+    assert log_lines(root)[-1]["action"] == "bump"  # nothing was written
+
+
+def test_the_cli_reports_an_unrecorded_refusal_with_exit_1(tmp_path: Path) -> None:
+    cli = _load("storm_priority_unrecorded", "storm-priority.py")
+    root = storm(tmp_path)
+    root.chmod(0o555)
+    try:
+        code = cli.PriorityCli(root).run(["bump", "a", "--source", "nobody"])
+    finally:
+        root.chmod(0o755)
+    assert code == 1
+
+
+# --- the small ones ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("issue", ["٣", "²", "12٣"])
+def test_an_issue_that_is_not_ascii_digits_is_refused(tmp_path: Path, issue: str) -> None:
+    root = storm(tmp_path)
+    with pytest.raises(storm_queue.Invalid, match="issue"):
+        desk(root).push("z", issue, (), None)
+    assert "z " not in (root / "queue.txt").read_text()
+
+
+def test_a_queue_line_whose_issue_is_not_ascii_digits_is_skipped(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="z ٣\na 1\n")
+    assert [row.entry.slug for row in storm_queue.Resolver.at(root).plan().rows] == ["a"]
+
+
+def test_bumping_a_settled_lane_queue_txt_no_longer_carries_is_a_no_op(tmp_path: Path) -> None:
+    root = storm(tmp_path, queue="a 1\nb 2\n")
+    settle(root, "c")
+    report = desk(root).bump("c", None)
+    assert log_lines(root)[-1]["noop"]
+    assert any("nothing to do" in line for line in report)
+
+
+@pytest.mark.parametrize("filename", ["storm_queue.py", "storm-priority.py"])
+def test_the_priority_tools_cannot_reach_the_forge(filename: str) -> None:
+    import ast
+
+    tree = ast.parse((TOOLS / filename).read_text())
+    imported = {
+        alias.name.split(".")[0]
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    } | {
+        (node.module or "").split(".")[0]
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+    }
+    assert not imported & {"subprocess", "urllib", "storm_forge", "http", "socket"}, imported

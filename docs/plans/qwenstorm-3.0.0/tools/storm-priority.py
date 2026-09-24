@@ -14,7 +14,9 @@ format and the one resolver `storm-queue.sh` also asks are in `storm_queue.py`.
 Every request is recorded, whatever its outcome. Exit:
 
     0  done (including a request that moved nothing)
-    1  refused: the caller may not change the priority lane
+    1  refused: the caller may not change the priority lane. A caller without write access
+       to the storm (another uid) is refused all the same, and told the refusal "could not
+       be recorded (no write access)" -- ADR-0054 records the same case
     2  refused: the request cannot be carried out (a bad name, an unknown or abandoned
        dependency, a lane another prioritised lane still needs, ...)
     3  the priority order is unknown: the log cannot be replayed, or it is missing after it
@@ -71,12 +73,12 @@ class PriorityCli:
                 report = desk.bump(args.slug, args.source)
             else:
                 report = desk.unbump(args.slug, args.source)
-        except Unauthorised as refused:
-            print(f"refused, and recorded: {refused}", file=sys.stderr)
-            return 1
-        except Invalid as invalid:
-            print(f"not done: {invalid}", file=sys.stderr)
-            return 2
+        except (Unauthorised, Invalid) as refused:
+            recorded = (
+                "and recorded" if refused.recorded else ("could not be recorded (no write access)")
+            )
+            print(f"refused; {recorded}: {refused}", file=sys.stderr)
+            return 1 if isinstance(refused, Unauthorised) else 2
         except Unreadable as unreadable:
             print(f"the priority order is unknown: {unreadable}", file=sys.stderr)
             return 3

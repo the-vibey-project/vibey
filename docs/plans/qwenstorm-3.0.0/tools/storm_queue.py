@@ -26,9 +26,13 @@ of it." ADR-0054 is the contract, and vibey's PostgreSQL job queue keeps the sam
    a plain-words line in `progress.log`. Authorisation runs before any lookup. The lane order
    is the log's replay; nothing is edited in place. `storm-evidence.py` consumes the log by
    byte offset like the other ledgers (10.g).
-6. UN-BUMP UNDOES EXACTLY WHAT THE BUMP MOVED: the item, plus the dependencies its own push or
-   bump pulled forward that no other still-bumped item needs. An item bumped by name keeps its
-   place. Un-bumping an item a bumped item depends on is refused, naming the dependents.
+6. UN-BUMP UNDOES EXACTLY WHAT THE BUMP MOVED, by derivation. The priority lane is exactly:
+   the items pushed or bumped BY NAME and not since un-bumped, plus all their unfinished
+   transitive dependencies, ordered first-in first by when each entered the lane. Un-bumping
+   X removes X from the named set, and is refused, naming them, while another named item
+   depends on X. Every lane no remaining named item requires leaves with X -- so no orphan
+   can remain -- and the `unbump` line records that resulting `removed` list, so replay is
+   exact. An item bumped by name keeps its place.
 7. AN ITEM CAN BE ENQUEUED ALREADY PRIORITISED IN ONE STEP: `push` appends a new slug to
    `queue.txt` with its dependencies and prioritises it. Doing so for a finished item -- one
    settled in either ledger, or one that has run and awaits review -- is a recorded no-op.
@@ -73,12 +77,22 @@ never guessed at as "no priority" (10.f). What it does NOT guarantee is AUTHENTI
 process running as the storm's owner can append a well-formed line, and replay cannot tell
 it from one this module wrote. See `Authority` for why, and for the spec that fixes it.
 
-A MISSING LOG IS NOT AN EMPTY ONE
----------------------------------
-The first change writes the log's creation into its lock file, and the lock file is never
-removed; the evidence watermark also records how far it has read the log. If either says the
-log existed and the log is gone, the order is unknown (`Unreadable`), and `next` waits and
-says so rather than running `queue.txt` in file order as though nothing had been pushed.
+A MISSING OR SHORTENED LOG IS NOT AN EMPTY ONE
+----------------------------------------------
+After every append a witness beside the log (`.<log name>.witness`, which a `priority.log*`
+glob does not match) records the log's length; the evidence watermark records how far it
+has read. If either says the log existed and it is gone, or the log is shorter than recorded,
+the order is unknown (`Unreadable`): `next` exits 3 and the runner waits and says so, rather
+than running `queue.txt` in file order as though nothing had been pushed. No request -- not
+even a refusal that must be recorded -- re-creates a lost log: it says so in progress.log and
+exits 3. Both witnesses are files the storm's own uid can rewrite (see `Authority`).
+
+A CALLER WHO CANNOT WRITE
+-------------------------
+Authority is checked before the lock is taken, so another uid is refused (exit 1) rather than
+crashing on a lock file it cannot open. If the refusal itself cannot be written -- no write
+access to the log or progress.log -- it is still a refusal, reported on stderr as "could not
+be recorded (no write access)"; ADR-0054 records the same case for vibey's queue.
 
 Classes, each declared in `interfaces/storm_queue_interface.py` (ADR-0016, 9.b). The one bare
 function is `main`, the entry point a script run by path must have.
@@ -111,19 +125,32 @@ import storm_paths
 from lane_environment import LaneEnvironment
 
 VERSION = 1
+# ASCII digits only: `str.isdigit()` also accepts "\u0663" and "\u00b2", which no forge numbers
+# an issue with and `storm_trust.py admit` would then refuse far from where it entered.
+ISSUE = re.compile(r"[0-9]+")
 VERBS = ("push", "bump", "unbump")
 ACTIONS = frozenset({*VERBS, "refused"})
 
 
-class Invalid(Exception):
+class Refusal(Exception):
+    """A request refused. `recorded` is False only when the refusal could not be written --
+    a caller without write access to the storm -- which is still a refusal (exit 1 or 2),
+    reported as unrecorded, never a crash."""
+
+    recorded = True
+
+
+class Invalid(Refusal):
     """The request cannot be carried out as asked. Recorded as a refusal; nothing changed."""
 
 
 class Unreadable(Exception):
     """The priority log cannot be replayed, so the priority order is unknown."""
 
+    reported = False  # set once progress.log has been told, so it is told once
 
-class Unauthorised(Exception):
+
+class Unauthorised(Refusal):
     """The caller may not change the priority lane. Recorded as a refusal."""
 
     def __init__(self, principal: str, reason: str) -> None:
@@ -229,7 +256,7 @@ class QueueFile:
     def _fault(slug: str, issue: str, deps: tuple[str, ...]) -> str | None:
         if not NAMES.valid(slug):
             return "the slug is outside the allow-list"
-        if not issue.isdigit():
+        if ISSUE.fullmatch(issue) is None:
             return "the issue is not a number"
         if not all(NAMES.valid(dep) for dep in deps):
             return "a dependency is outside the allow-list"
@@ -297,13 +324,25 @@ class Ledger:
 class PriorityLog:
     """The append-only priority log, and the lane order its replay gives.
 
-    `watermark` and `key` name the evidence job's record of how far it read this log, a
-    second witness that the log existed; both are optional.
+    THE WITNESS. After every append, `.<log name>.witness` beside the log records that the
+    log exists and how long it is. It is a dotfile so a `priority.log*` glob -- the obvious
+    way to clear the log away -- does not take the witness with it. With it:
+
+    * a log that is missing while the witness says it existed is an unknown order, and so is
+      one SHORTER than the witness recorded (truncated): both are `Unreadable`;
+    * `append` never creates the log when the witness says it existed, so a refused request
+      meeting a lost log cannot quietly start a fresh, empty one -- which is what #1092 did.
+
+    A log LONGER than recorded is accepted: that is a crash between the append and the
+    witness update, and re-reading it is safe. `watermark` and `key` name the evidence job's
+    record of how far it read this log, a second witness; both are optional. None of this
+    stops the same uid from rewriting the log AND the witness together (see `Authority`).
     """
 
     def __init__(self, path: Path, watermark: Path | None = None, key: str | None = None):
         self.path = path
         self.lock = path.with_name(path.name + ".lock")
+        self.witness = path.with_name("." + path.name + ".witness")
         self.watermark = watermark
         self.key = key
 
@@ -311,17 +350,24 @@ class PriorityLog:
         if not self.path.is_file():
             if self.existed():
                 raise Unreadable(
-                    f"{self.path} is missing, but it existed (its lock file or the evidence "
+                    f"{self.path} is missing, but it existed (its witness or the evidence "
                     "watermark says so): the priority order is unknown until it is restored"
                 )
             return []
         try:
-            with self.path.open("r", encoding="utf-8") as handle:
+            with self.path.open("rb") as handle:
                 # Shared lock: a line being appended is never read half-written.
                 fcntl.flock(handle, fcntl.LOCK_SH)
-                raw = handle.read()
+                data = handle.read()
+            raw = data.decode("utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             raise Unreadable(f"{self.path}: {exc}") from exc
+        recorded = self.recorded_length()
+        if len(data) < recorded:
+            raise Unreadable(
+                f"{self.path} is truncated: {len(data)} bytes, but {recorded} were recorded; "
+                "the priority order is unknown until it is restored"
+            )
         events = []
         for number, line in enumerate(raw.splitlines(), 1):
             if not line.strip():
@@ -349,32 +395,61 @@ class PriorityLog:
                         lane.remove(slug)
         return lane
 
+    def named(self) -> list[str]:
+        """The items pushed or bumped BY NAME and not since un-bumped, first named first. A
+        recorded no-op names nothing: it asked for an item with nothing left to run."""
+        named: list[str] = []
+        for event in self.events():
+            if event["action"] in ("push", "bump") and "noop" not in event:
+                if event["slug"] not in named:
+                    named.append(event["slug"])
+            elif event["action"] == "unbump" and event["slug"] in named:
+                named.remove(event["slug"])
+        return named
+
     def append(self, event: dict[str, Any]) -> None:
+        """Append one line and record the new length. Never creates a log that existed."""
+        if not self.path.is_file() and self.existed():
+            raise Unreadable(
+                f"{self.path} is missing, but it existed: nothing is appended to a fresh one, "
+                "so the order stays unknown until the log is restored"
+            )
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as handle:
-            # Exclusive for the write alone, against `events()`' shared lock.
+            # Exclusive for the write and the witness, against `events()`' shared lock.
             fcntl.flock(handle, fcntl.LOCK_EX)
             handle.write(json.dumps({"v": VERSION, **event}, sort_keys=True) + "\n")
             handle.flush()
             os.fsync(handle.fileno())
-        if self.lock.is_file() and self.lock.stat().st_size == 0:
-            # The witness: the lock file is never removed, and from now on it says the log
-            # was written, so a log that disappears later reads as lost, not as empty.
-            self.lock.write_text(f"{self.path.name} first written at {event.get('at')}\n")
+            length = os.fstat(handle.fileno()).st_size
+            pending = self.witness.with_name(self.witness.name + ".new")
+            pending.write_text(
+                json.dumps({"log": self.path.name, "length": length, "at": event.get("at")})
+            )
+            pending.replace(self.witness)
+
+    def recorded_length(self) -> int:
+        """The longest length a witness records for the log: its own file, or the evidence
+        watermark's offset. 0 when neither has recorded anything."""
+        lengths = [0]
+        try:
+            lengths.append(int(json.loads(self.witness.read_text())["length"]))
+        except FileNotFoundError:
+            pass
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise Unreadable(f"{self.witness} could not be read: {exc}") from exc
+        if self.watermark is not None and self.key is not None and self.watermark.is_file():
+            try:
+                offsets = json.loads(self.watermark.read_text()).get("offsets", {})
+                lengths.append(int(offsets.get(self.key, 0)))
+            except (OSError, ValueError, AttributeError, TypeError):
+                # The evidence job reports its own unreadable watermark (10.g).
+                pass
+        return max(lengths)
 
     def existed(self) -> bool:
-        """True when the lock file or the evidence watermark says the log was written."""
-        if self.lock.is_file() and self.lock.stat().st_size > 0:
-            return True
-        if self.watermark is None or self.key is None or not self.watermark.is_file():
-            return False
-        try:
-            offsets = json.loads(self.watermark.read_text()).get("offsets", {})
-            return int(offsets.get(self.key, 0)) > 0
-        except (OSError, ValueError, AttributeError, TypeError):
-            # The evidence job reports its own unreadable watermark; the lock file still
-            # stands as a witness here.
-            return False
+        """True when the witness or the evidence watermark says the log was written."""
+        return self.witness.is_file() or self.recorded_length() > 0
 
     @contextmanager
     def locked(self) -> Iterator[None]:
@@ -658,7 +733,7 @@ class PriorityDesk:
         """Prioritise `slug`, appending it to `queue.txt` first when it is new."""
 
         def shape() -> None:
-            if not issue.isdigit():
+            if ISSUE.fullmatch(issue) is None:
                 raise Invalid(f"the issue must be a number, not {NAMES.quote(issue)}")
             for dep in deps:
                 NAMES.check(dep, "dependency")
@@ -685,9 +760,12 @@ class PriorityDesk:
         shape: Callable[[], None],
         act: Callable[[str], list[str]],
     ) -> list[str]:
-        with self.log.locked():
-            authorised = False
-            by = self.authority.describe(source)
+        """Shape, then authority -- both before the lock, so a caller who may not write the
+        storm is refused rather than crashing on a lock it cannot open -- then, under the
+        lock, the lookups and the record. Every outcome is recorded where it can be."""
+        authorised = False
+        by = self.authority.describe(source)
+        try:
             try:
                 NAMES.check(slug, "slug")
                 if source is not None:
@@ -695,13 +773,24 @@ class PriorityDesk:
                 shape()
                 by = self.authority.authorise(source)
                 authorised = True
-                return act(by)
-            except Unauthorised as refused:
-                self._refuse(verb, slug, refused.principal, False, str(refused))
+            except Refusal as refused:
+                if isinstance(refused, Unauthorised):
+                    by = refused.principal
+                self._refuse(verb, slug, by, authorised, refused)
                 raise
-            except Invalid as invalid:
-                self._refuse(verb, slug, by, authorised, str(invalid))
-                raise
+            with self.log.locked():
+                try:
+                    return act(by)
+                except Invalid as invalid:
+                    self._refuse(verb, slug, by, True, invalid)
+                    raise
+        except Unreadable as unknown:
+            if not unknown.reported:
+                self._say(
+                    f"priority: a {verb} of {NAMES.quote(slug)} from {by} was not carried out, "
+                    f"order unknown: {unknown}"
+                )
+            raise
 
     def _push(self, slug: str, issue: str, deps: Sequence[str], by: str) -> list[str]:
         lane = self.log.replay()
@@ -733,84 +822,100 @@ class PriorityDesk:
     def _bump(self, slug: str, by: str) -> list[str]:
         lane = self.log.replay()
         known = {entry.slug: entry for entry in self.queue.entries()}
-        if slug not in known:
-            raise Invalid(f"{slug} is not in queue.txt; push it with its issue number")
+        entry = known.get(slug, QueueEntry(slug, ""))
+        # Finished first: a settled lane `queue.txt` no longer carries is still a no-op.
         finished = self._finished(slug)
         if finished is not None:
-            return self._record("bump", known[slug], by, [], [], [], lane, None, finished)
-        moved, already, notes = self._pull(known[slug], known, lane)
-        return self._record("bump", known[slug], by, moved, already, notes, lane, None)
+            return self._record("bump", entry, by, [], [], [], lane, None, finished)
+        if slug not in known:
+            raise Invalid(f"{slug} is not in queue.txt; push it with its issue number")
+        moved, already, notes = self._pull(entry, known, lane)
+        return self._record("bump", entry, by, moved, already, notes, lane, None)
 
     def _unbump(self, slug: str, by: str) -> list[str]:
-        events = self.log.events()
+        """The derived rule, shared with vibey's job queue (ADR-0054 item 6): the priority
+        lane is exactly the items pushed or bumped BY NAME and not since un-bumped, plus all
+        their unfinished transitive dependencies. Un-bumping removes `slug` from the named
+        set -- refused, naming them, while another named item depends on it -- and every
+        lane no remaining named item requires leaves with it, so no orphan remains. The
+        resulting `removed` list is recorded, so replay stays exact."""
         lane = self.log.replay()
-        if slug not in lane:
+        named = self.log.named()
+        if slug not in lane and slug not in named:
             raise Invalid(f"{slug} is not prioritised; there is nothing to un-bump")
         known = {entry.slug: entry for entry in self.queue.entries()}
         integrated = self.ledger.integrated()
-        others = [s for s in lane if s != slug]
-        dependents = [s for s in others if slug in self._needs(s, known, integrated)]
+        remaining = [n for n in named if n != slug and self._finished(n) is None]
+        dependents = [n for n in remaining if slug in self._needs(n, known, integrated)]
         if dependents:
             raise Invalid(
-                f"{slug} is needed by prioritised {', '.join(dependents)}; un-bump "
+                f"{slug} is needed by {', '.join(dependents)}, bumped by name; un-bump "
                 f"{'them' if len(dependents) > 1 else 'it'} first"
             )
-        # What this lane's own pushes and bumps moved, since it last entered the lane, and
-        # which lanes were asked for in their own right.
-        moved: list[str] = []
-        targets: set[str] = set()
-        for event in events:
-            if event["action"] in ("push", "bump"):
-                targets.add(event["slug"])
-                if event["slug"] == slug:
-                    moved.extend(s for s in event["moved"] if s not in moved)
-            elif event["action"] == "unbump":
-                removed = event.get("removed", [event["slug"]])
-                targets.difference_update(removed)
-                if slug in removed:
-                    moved = []
-        removed_set = {slug} | {s for s in moved if s in lane and s not in targets - {slug}}
-        # A dependency stays while any lane left in the priority lane still needs it.
-        while True:
-            kept = [s for s in lane if s not in removed_set]
-            needed = {d for s in kept for d in self._needs(s, known, integrated)} & removed_set
-            needed.discard(slug)
-            if not needed:
-                break
-            removed_set -= needed
-        removed = [s for s in lane if s in removed_set]
+        required = set(remaining)
+        for item in remaining:
+            required |= self._needs(item, known, integrated)
+        removed = [s for s in lane if s not in required]
         self.log.append(
             {"action": "unbump", "slug": slug, "removed": removed, "by": by, "at": self._now()}
         )
         self.ledger.say(
             f"priority: {by} un-bumped {slug}; returned to their queue.txt places: "
-            f"{', '.join(removed)}"
+            f"{', '.join(removed) or 'nothing'}"
         )
         report = [
-            f"unbumped {slug} by {by}; returned to their queue.txt places: {', '.join(removed)}"
+            f"unbumped {slug} by {by}; returned to their queue.txt places: "
+            f"{', '.join(removed) or 'nothing'}"
         ]
-        left = [s for s in moved if s in lane and s not in removed_set]
-        if left:
+        kept = [s for s in lane if s in required]
+        if kept:
             report.append(
-                f"still prioritised (pushed in their own right, or needed by another "
-                f"prioritised lane): {', '.join(left)}"
+                f"still prioritised (bumped by name, or needed by an item that is): "
+                f"{', '.join(kept)}"
             )
         return report
 
-    def _refuse(self, verb: str, slug: str, by: str, authorised: bool, reason: str) -> None:
-        """Every refusal is recorded: the request as JSON in the log, escaped in progress."""
-        self.log.append(
-            {
-                "action": "refused",
-                "requested": verb,
-                "slug": slug[: Names.LONGEST * 4],
-                "by": by,
-                "authorised": authorised,
-                "reason": reason,
-                "at": self._now(),
-            }
-        )
-        self.ledger.say(f"priority: refused a {verb} of {NAMES.quote(slug)} from {by}: {reason}")
+    def _refuse(self, verb: str, slug: str, by: str, authorised: bool, refused: Refusal) -> None:
+        """Record a refusal: the request as JSON in the log, escaped in progress.log.
+
+        Two things can stop the record. A log that is lost (see `PriorityLog`) is never
+        re-created: the refusal is said in progress.log and `Unreadable` raised (exit 3). A
+        caller without write access -- another uid, a read-only storm -- cannot record
+        anything: the refusal stands, marked `recorded = False` (exit 1 or 2, "could not be
+        recorded"), rather than surfacing as a crash."""
+        reason = str(refused)
+        try:
+            self.log.append(
+                {
+                    "action": "refused",
+                    "requested": verb,
+                    "slug": slug[: Names.LONGEST * 4],
+                    "by": by,
+                    "authorised": authorised,
+                    "reason": reason,
+                    "at": self._now(),
+                }
+            )
+        except Unreadable as unknown:
+            self._say(
+                f"priority: refused a {verb} of {NAMES.quote(slug)} from {by}: {reason}; not "
+                f"recorded, order unknown: {unknown}"
+            )
+            unknown.reported = True
+            raise unknown from refused
+        except OSError:
+            refused.recorded = False
+            self._say(f"priority: refused a {verb} of {NAMES.quote(slug)} from {by}: {reason}")
+            return
+        self._say(f"priority: refused a {verb} of {NAMES.quote(slug)} from {by}: {reason}")
+
+    def _say(self, message: str) -> None:
+        """`Ledger.say`, where progress.log can be written; a caller that cannot write it is
+        still answered on stderr by the CLI."""
+        try:
+            self.ledger.say(message)
+        except OSError:
+            print(NAMES.printable(message), file=sys.stderr)
 
     def _pull(
         self, entry: QueueEntry, known: dict[str, QueueEntry], lane: list[str]
@@ -902,19 +1007,18 @@ class PriorityDesk:
         if appended is not None:
             event["appended"] = appended
         done = "pushed" if verb == "push" else "bumped"
+        label = f" (#{entry.issue})" if entry.issue else ""
         if noop is not None:
             event["noop"] = noop
             self.log.append(event)
-            self.ledger.say(
-                f"priority: {by} {done} {entry.slug} (#{entry.issue}); nothing to do: {noop}"
-            )
-            return [f"{done} {entry.slug} (#{entry.issue}) by {by}: nothing to do, {noop}"]
+            self.ledger.say(f"priority: {by} {done} {entry.slug}{label}; nothing to do: {noop}")
+            return [f"{done} {entry.slug}{label} by {by}: nothing to do, {noop}"]
         self.log.append(event)
         self.ledger.say(
-            f"priority: {by} {done} {entry.slug} (#{entry.issue}); moved to the front: "
+            f"priority: {by} {done} {entry.slug}{label}; moved to the front: "
             f"{', '.join(moved) or 'nothing new'}"
         )
-        report = [f"{done} {entry.slug} (#{entry.issue}) by {by}"]
+        report = [f"{done} {entry.slug}{label} by {by}"]
         if appended:
             report.append(f"appended to queue.txt: {entry.line()}")
         if moved:

@@ -103,8 +103,16 @@ class PriorityLogInterface(Protocol):
         """Append one event, durably, never editing an earlier line."""
         ...
 
+    def named(self) -> list[str]:
+        """The items pushed or bumped by name and not since un-bumped, first named first."""
+        ...
+
+    def recorded_length(self) -> int:
+        """The longest length the witness or the evidence watermark recorded for the log."""
+        ...
+
     def existed(self) -> bool:
-        """True when the lock file or the evidence watermark says the log was written."""
+        """True when the witness or the evidence watermark says the log was written."""
         ...
 
     def locked(self) -> AbstractContextManager[None] | Iterator[None]:

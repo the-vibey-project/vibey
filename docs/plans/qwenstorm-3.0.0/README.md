@@ -64,10 +64,13 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
         `priority.log` beside the ledgers) and one line in `progress.log`, with outside text
         escaped. Authorisation runs before any lookup. The order is always the log's replay;
         nothing is edited in place.
-     6. `unbump` undoes exactly what the push or bump moved: the lane, plus each dependency
-        it pulled forward that no other prioritised lane needs. A lane pushed or bumped by
-        name keeps its place. Un-bumping a lane another prioritised lane depends on is
-        refused, naming the dependents.
+     6. `unbump` undoes exactly what the push or bump moved, by derivation: the priority lane
+        is exactly the lanes pushed or bumped by name and not since un-bumped, plus all their
+        unfinished transitive dependencies, first in first. Un-bumping a lane removes it from
+        that named set, and every lane nothing named still requires leaves with it, so no
+        orphan remains. It is refused, naming them, while another named lane depends on it.
+        The `unbump` line records its resulting `removed` list, so replay is exact. A lane
+        bumped by name keeps its place.
      7. `push` enqueues a new lane already prioritised, in one step. Pushing or bumping a
         finished lane (settled, or run and awaiting review) is a recorded no-op.
 
@@ -82,8 +85,14 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
      - Slugs, dependencies and source names must match `[A-Za-z0-9][A-Za-z0-9._-]*` with no
        `..`. A `queue.txt` line outside that is skipped, never run, and said in
        `progress.log`.
-     - Replay refuses a malformed entry, which checks shape, not who wrote it. A log that is
-       gone after it existed is an unknown order: the storm waits and says so.
+     - Replay refuses a malformed entry, which checks shape, not who wrote it. After every
+       append a witness (`.priority.log.witness`, which a `priority.log*` glob does not
+       match) records the log's length. A log that is gone after it existed, or shorter
+       than recorded, is an unknown order: the storm waits and says so, and no request,
+       not even a refusal, re-creates it (exit 3).
+     - Authority is checked before the lock, so a caller without write access to the storm
+       is refused (exit 1), not crashed; if the refusal cannot be written it says "could not
+       be recorded (no write access)".
        `storm-evidence.py` consumes the log by byte offset with the other ledgers, and
        counts lane starts and ends only from `progress.log`.
      - Exit codes: 0 done, 1 refused (not authorised), 2 refused (cannot be carried out),
