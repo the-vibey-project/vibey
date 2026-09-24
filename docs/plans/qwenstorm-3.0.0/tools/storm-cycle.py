@@ -7,6 +7,12 @@
 The inner loop is storm-queue.sh, which turns issues into lane worktrees. This is the outer
 one, and it is seven steps, each already its own script and each gated on evidence:
 
+  push-gate push_gate.py reap -- first, before anything that can take long: release the
+            shared push lock from a holder that is gone, and reap a push whose own process
+            group sat idle for the declared window or passed the declared wall ceiling,
+            with evidence first and a line in the reap log (12.d, 12.e). One sample per
+            pass, kept on disk, so idleness is measured across passes, never from one
+            snapshot
   resolve   lane-resolve.py  -- settle the conflicts decidable from the tree, refuse the rest
   refresh   lane-refresh.py  -- carry what merged into develop into every idle lane
   repair    lane-repair.py   -- fix only what a formatter or a delete can fix
@@ -94,6 +100,17 @@ def step(name: str, argv: list[str], keep: int = 6) -> None:
 def cycle(dry: bool) -> None:
     python = sys.executable
     say("pass starting" + (" (dry run)" if dry else ""))
+
+    # FIRST, and not only because it is cheap. Every later step can take long -- publish
+    # alone runs the full pre-push gates once per lane -- and a pass stuck behind a hung
+    # push must not be the thing that stops the reaper from seeing it. This is the storm's
+    # one scheduler doing the reaping; there is no second loop (push_gate.py says why each
+    # condition, and only those, may act unattended).
+    step(
+        "push-gate",
+        [python, str(TOOLS / "push_gate.py"), "reap", *(["--dry-run"] if dry else [])],
+        keep=4,
+    )
 
     if not dry:
         # Idempotent and cheap, and it must reach lanes created since the last pass: rerere

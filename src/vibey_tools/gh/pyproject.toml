@@ -31,7 +31,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4", "pytest-cov>=4.1",
+    "pytest>=7.4", "pytest-cov>=4.1", "pytest-timeout>=2.3",
     "ruff>=0.5", "black>=24.0", "isort>=5.12", "mypy>=1.8",
     "pyyaml>=6.0",   # test/test_templates.py parses the shipped workflow templates
 ]
@@ -69,6 +69,12 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-fail-under=100",
 ]
+# No single test may hang the suite: a stack dump at `faulthandler_timeout`, a named failure
+# at `timeout` (pytest-timeout), both overridable per run. Pinned by vibey's
+# tests/meta/test_a_hung_test_names_itself.py.
+timeout = 300
+timeout_method = "signal"
+faulthandler_timeout = 240
 markers = [
     # The ONE way this suite designates a test that leaves the machine. A marked test is
     # SKIPPED unless VIBEY_GH_NETWORK_TESTS=1 -- test/conftest.py does the skipping, so the
