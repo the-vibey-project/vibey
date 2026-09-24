@@ -40,7 +40,12 @@ def load(name: str, filename: str) -> types.ModuleType:
 # Imported by name, not loaded by path: the tools import it as `storm_forge`, and a second
 # copy of the module would carry a second `Unreadable` their `except` clauses never catch.
 import storm_forge  # noqa: E402
-from interfaces.storm_forge_interface import StormForgeInterface  # noqa: E402
+
+# The declaration, loaded by path exactly as the tool loads it, and separately from the
+# tool's own copy: conformance is structural, so it must hold against the file itself.
+StormForgeInterface = load(
+    "storm_forge_interface_declared", "interfaces/storm_forge_interface.py"
+).StormForgeInterface
 
 lane_publish = load("lane_publish_ledger", "lane-publish.py")
 lane_reap = load("lane_reap_ledger", "lane-reap.py")
@@ -107,6 +112,37 @@ def test_the_class_declares_every_method_the_interface_names() -> None:
     for name, signature in declared.items():
         implemented = inspect.signature(getattr(storm_forge.StormForge, name))
         assert list(implemented.parameters) == list(signature.parameters), name
+
+
+def test_an_interfaces_package_earlier_on_the_path_cannot_shadow_the_declaration(
+    tmp_path: Path,
+) -> None:
+    """The interface is loaded by file path, so no `interfaces` package can stand in for it.
+
+    Imported as `interfaces.storm_forge_interface`, `tools/interfaces/` is a namespace
+    package, and a regular package of that name anywhere on `sys.path` outranks it. This
+    plants one first on the path -- whose module would raise if it were ever imported -- and
+    imports the tool in a fresh interpreter.
+    """
+    impostor = tmp_path / "interfaces"
+    impostor.mkdir()
+    (impostor / "__init__.py").write_text("", encoding="utf-8")
+    (impostor / "storm_forge_interface.py").write_text(
+        "raise RuntimeError('the impostor interface was imported')\n", encoding="utf-8"
+    )
+    probe = (
+        "import sys; sys.path[:0] = [sys.argv[1], sys.argv[2]]; "
+        "import storm_forge; "
+        "print(storm_forge._INTERFACE.__file__)"
+    )
+    done = subprocess.run(
+        [sys.executable, "-c", probe, str(tmp_path), str(TOOLS)],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert done.returncode == 0, done.stderr
+    assert Path(done.stdout.strip()) == (TOOLS / "interfaces/storm_forge_interface.py").absolute()
 
 
 def test_the_interface_declares_and_never_consumes() -> None:
@@ -333,7 +369,7 @@ def test_report_mode_writes_nothing(storm: Path, monkeypatch) -> None:
     """The regression: a pass with no flags rewrote every lane's verify.json."""
     ran = no_branch(monkeypatch)
     fake = types.SimpleNamespace(verify=lambda lane: {"files": ["x.py"], "problems": []})
-    monkeypatch.setattr(lane_publish, "verifier", lambda: fake)
+    monkeypatch.setattr(lane_publish, "VERIFIER", fake)
     before = tree(storm)
     lane_publish.sweep(dry=True, only=None, forge=ForgeDouble())
     assert tree(storm) == before
@@ -344,7 +380,7 @@ def test_a_verifier_crash_holds_the_lane_not_the_sweep(storm: Path, monkeypatch)
     def crash(lane):
         raise RuntimeError("no such module")
 
-    monkeypatch.setattr(lane_publish, "verifier", lambda: types.SimpleNamespace(verify=crash))
+    monkeypatch.setattr(lane_publish, "VERIFIER", types.SimpleNamespace(verify=crash))
     ok, why = lane_publish.verify("gap-ci-arch-gates", record=False)
     assert not ok and "no such module" in why[0]
 

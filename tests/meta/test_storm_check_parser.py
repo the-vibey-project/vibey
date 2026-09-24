@@ -22,6 +22,7 @@ in the same commit that deletes them.
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import sys
 from pathlib import Path
 
@@ -323,6 +324,63 @@ def test_run_removes_what_the_check_unsets(tmp_path: Path, monkeypatch) -> None:
         drop=("STORM_GONE",),
     )
     assert (code, out) == (0, "absent")
+
+
+# --- the declared seam (ADR-0016) -------------------------------------------------------
+
+# The parser as the publisher loaded it: `lane-publish.py` imports it by name from beside
+# itself, and the declaration is loaded by path, as every storm interface is.
+check_parser = sys.modules["check_parser"]
+_DECLARED = importlib.util.spec_from_file_location(
+    "check_parser_interface_declared", TOOL.parent / "interfaces/check_parser_interface.py"
+)
+assert _DECLARED and _DECLARED.loader, "the parser's declaration is missing"
+check_parser_interface = importlib.util.module_from_spec(_DECLARED)
+_DECLARED.loader.exec_module(check_parser_interface)
+
+
+def test_the_parser_honours_the_interface_declared_beside_it() -> None:
+    """Held method by method and parameter by parameter, so the two cannot drift."""
+    parser = check_parser.CheckParser()
+    interface = check_parser_interface.CheckParserInterface
+    assert isinstance(parser, interface)
+    declared = [
+        name
+        for name, member in vars(interface).items()
+        if callable(member) and not name.startswith("_")
+    ]
+    assert declared, "the interface declares nothing"
+    for name in declared:
+        want = list(inspect.signature(getattr(interface, name)).parameters)
+        have = ["self", *inspect.signature(getattr(parser, name)).parameters]
+        assert have == want, f"CheckParser.{name}: {have} != {want}"
+
+
+def test_the_parser_module_has_no_bare_functions() -> None:
+    """ADR-0016: everything it does lives on the class its interface describes."""
+    bare = [
+        name
+        for name, member in vars(check_parser).items()
+        if inspect.isfunction(member) and member.__module__ == check_parser.__name__
+    ]
+    assert bare == []
+
+
+def test_the_publisher_and_the_linter_share_the_one_parser() -> None:
+    """10.e: `lint-specs.py` reads `parse_checks` and `block_of` through lane-publish."""
+    assert lane_publish.parse_checks.__self__ is lane_publish.PARSER
+    assert lane_publish.block_of.__self__ is lane_publish.PARSER
+    assert isinstance(lane_publish.PARSER, check_parser_interface.CheckParserInterface)
+
+
+def test_the_parser_interface_declares_and_never_consumes() -> None:
+    source = (TOOL.parent / "interfaces/check_parser_interface.py").read_text(encoding="utf-8")
+    imported = {
+        line.split()[1].split(".")[0]
+        for line in source.splitlines()
+        if line.startswith(("import ", "from "))
+    }
+    assert imported <= set(sys.stdlib_module_names) | {"__future__"}, imported
 
 
 # --- why_failed: the reason a person is shown -----------------------------------------

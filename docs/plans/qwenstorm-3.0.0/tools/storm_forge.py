@@ -56,6 +56,7 @@ interface, and a test hands them a double instead of patching `subprocess`.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 import subprocess
@@ -64,7 +65,23 @@ from pathlib import Path
 from typing import Any
 
 import storm_paths
-from interfaces.storm_forge_interface import PullRequest, StormForgeInterface, Unreadable
+
+# The declaration, loaded by its FILE PATH -- the way `lane_environment.py`'s and
+# `storm_trust.py`'s are -- and never imported as `interfaces.storm_forge_interface`. That
+# name resolves through `sys.path`, where `tools/interfaces/` is only a namespace package:
+# any regular top-level `interfaces` package anywhere on the path outranks it, and the tools
+# would then read some other project's `PullRequest` without a word. A path cannot be
+# shadowed. Loaded here, once, so the two value types the contract speaks in are one class
+# each for every caller, and an `except Unreadable` catches what this raises.
+_DECLARED = importlib.util.spec_from_file_location(
+    "storm_forge_interface",
+    Path(__file__).absolute().parent / "interfaces" / "storm_forge_interface.py",
+)
+_INTERFACE = importlib.util.module_from_spec(_DECLARED)  # type: ignore[arg-type]
+_DECLARED.loader.exec_module(_INTERFACE)  # type: ignore[union-attr]
+PullRequest = _INTERFACE.PullRequest
+StormForgeInterface = _INTERFACE.StormForgeInterface
+Unreadable = _INTERFACE.Unreadable
 
 __all__ = ["PullRequest", "StormForge", "StormForgeInterface", "Unreadable"]
 
