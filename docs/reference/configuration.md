@@ -17,6 +17,7 @@ tables. The other schema tables remain documented inputs for future wiring.
 | `./vibey.toml`, key `[features].qwenloop` | `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`) | Whether `qwenloop` is added to the health sweep. The file is read from the current directory with `parse_toml_string`; a missing or malformed file counts as `qwenloop = false`. |
 | `./vibey.toml`, `[notifications]` and `[telemetry]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels and the telemetry switch into the stored project config. |
 | `<repo>/vibey.toml`, `[queue.priority] sources` — the project's own repository root, never the current directory | `vibey queue bump` / `unbump`, `vibey design resume --priority`, via `QueuePriorityService` (`infrastructure/queue_priority_grant.py` `ProjectPriorityGrantReader`) | Which automations besides the operator may reorder the project's queue ([`[queue.priority]`](#queuepriority)); the file's owner is the operator. Read fresh on every request; only the `[queue]` table is parsed. A missing file declares none; a malformed one refuses every request, recorded. |
+| `./vibey.toml`, `[queue.reap]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)) and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed value fails the start. |
 | The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, notification delivery, telemetry, and (in principle) `features.qwenloop` — see below. |
 | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the qwenloop switch, the sovereign DESIGN provider's evidence directory. |
 
@@ -133,6 +134,7 @@ An empty or whitespace-only value counts as unset.
 | `VIBEY_BUS_URL` | `[bus].url` | RabbitMQ Management URL |
 | `VIBEY_BUS_USERNAME` | `[bus].username` | RabbitMQ username |
 | `VIBEY_BUS_PASSWORD` | `[bus].password` | RabbitMQ password |
+| `VIBEY_BUS_VHOST` | `[bus].vhost` | RabbitMQ vhost the bus and the reaper are scoped to |
 | `VIBEY_BLOB_URL` | `[blob].url` | Garage S3 URL |
 | `VIBEY_BLOB_ACCESS_KEY` | `[blob].access_key` | Garage S3 access key |
 | `VIBEY_BLOB_SECRET_KEY` | `[blob].secret_key` | Garage S3 secret key |
@@ -141,6 +143,25 @@ An empty or whitespace-only value counts as unset.
 | `VIBEY_SIEM_USERNAME` | `[siem].username` | Wazuh indexer username |
 | `VIBEY_SIEM_PASSWORD` | `[siem].password` | Wazuh indexer password |
 | `VIBEY_SIEM_INDEX` | `[siem].index` | Wazuh index name |
+
+The queue reaper's keys have the same overlay, and the same precedence
+([`[queue.reap]`](#queuereap)). A boolean takes `1`, `true`, `yes` or `on` and `0`, `false`,
+`no` or `off`, in any case; anything else fails the start, naming the variable.
+
+| Variable | Target Table & Key |
+|---|---|
+| `VIBEY_QUEUE_REAP_ENABLED` | `[queue.reap].enabled` |
+| `VIBEY_QUEUE_REAP_INTERVAL_SECONDS` | `[queue.reap].interval_seconds` |
+| `VIBEY_QUEUE_REAP_LEASE_GRACE_SECONDS` | `[queue.reap].lease_grace_seconds` |
+| `VIBEY_QUEUE_REAP_STALE_READY_SECONDS` | `[queue.reap].stale_ready_seconds` |
+| `VIBEY_QUEUE_REAP_DEAD_LETTER_MIN_DEPTH` | `[queue.reap].dead_letter_min_depth` |
+| `VIBEY_QUEUE_REAP_DEAD_LETTER_PEEK_LIMIT` | `[queue.reap].dead_letter_peek_limit` |
+| `VIBEY_QUEUE_REAP_OWNED_QUEUE_PATTERN` | `[queue.reap].owned_queue_pattern` |
+| `VIBEY_QUEUE_REAP_DEAD_LETTER_QUEUE_PATTERN` | `[queue.reap].dead_letter_queue_pattern` |
+| `VIBEY_QUEUE_REAP_POLICY_NAME` | `[queue.reap].policy_name` |
+| `VIBEY_QUEUE_REAP_POLICY_PRIORITY` | `[queue.reap].policy_priority` |
+| `VIBEY_QUEUE_REAP_CONSUMER_TIMEOUT_SECONDS` | `[queue.reap].consumer_timeout_seconds` |
+| `VIBEY_QUEUE_REAP_DELIVERY_LIMIT` | `[queue.reap].delivery_limit` |
 
 ## Schema semantics
 
@@ -365,6 +386,43 @@ everyone who can reach it.
 sources = ["storm"]
 ```
 
+## `[queue.reap]` { #queuereap }
+
+When queued or held work counts as stuck, and what bounds it
+([ADR-0056](../architecture/decisions/0056-everything-a-queue-guards-is-reaped-by-measurement.md)).
+The same thresholds judge the PostgreSQL job queue and every queue on the broker, so both
+backends reap identically. The worker runs the reaper when idle; `vibey queue reap` runs it
+on demand ([CLI reference](cli.md#vibey-queue)). Every key must have the type of its
+default -- `true` is not a number -- and an unknown key is refused.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `enabled` | bool | `true` | Whether the worker runs the reaper on its own. `vibey queue reap` runs regardless, and the lease reap -- `JobRepository.reap()`, in every idle worker iteration -- is always bounded. |
+| `interval_seconds` | int ≥ 1 | `60` | The most often one worker runs a pass beyond the lease reap. |
+| `lease_grace_seconds` | int ≥ 0 | `0` | How far past `lease_expires_at` a lease may run before it is reaped. The lease is already the heartbeat's bound (renewed every third of it), so the default adds nothing. Condition (a)/(b) on PostgreSQL. |
+| `stale_ready_seconds` | int ≥ 1 | `900` | How long ready work may wait with nobody taking it before it is surfaced: the oldest claimable job's age on PostgreSQL, the head message's age on a queue with no consumer on the broker. Condition (d). A message without a `timestamp` property is not measured and never reported as old. |
+| `dead_letter_min_depth` | int ≥ 1 | `1` | Dead letters on a dead-letter queue before it is acted on. Condition (e). |
+| `dead_letter_peek_limit` | int ≥ 1 | `100` | The most dead letters one pass reads off one queue. Reading returns each to its place and the reaper removes none, so any past the limit are counted and surfaced every pass, never assumed parked. |
+| `owned_queue_pattern` | regex | `^vibey\.` | Queues vibey owns. Only an owned dead-letter queue's messages are parked, and only owned queues get the policy below; every other queue on the broker -- Plane's Celery queues -- is measured and surfaced, never touched. |
+| `dead_letter_queue_pattern` | regex | `(\.dlq\|\.dead)$` | Which queues are dead-letter queues: the bus port's `<queue>.dlq` and ADR-0044's `vibey.jobs.dead` / `vibey.runs.<engine>.dead`. |
+| `policy_name` | string | `vibey-reap` | The broker policy the reaper reconciles onto owned queues, then reads back. |
+| `policy_priority` | int | `0` | That policy's priority, against any other policy matching the same queues. |
+| `consumer_timeout_seconds` | int ≥ 1 | `21600` | The policy's `consumer-timeout`: how long a consumer may hold a delivery from an owned queue before the broker closes its channel and requeues. Six hours: at least the longest job lease (two hours for BUILD), with room. Condition (a). The broker-wide value for everything else is the chart's `surfaces.rabbitmq.consumerTimeoutMs`. |
+| `delivery_limit` | int ≥ 1 | `20` | The policy's `delivery-limit`: deliveries of one message on an owned **quorum** queue before the broker dead-letters it (condition (c)). Twenty, not three, because a draining worker's requeues count too (ADR-0044 §11). Classic queues ignore it. |
+
+A reap is a gate a number crossed, never a judgement (12.d): every verdict is recorded as
+a `QueueReaped` ledger event with the object, the condition, the measured value, the
+threshold and the action. What each condition does is set out in ADR-0056: an expired
+lease is requeued while attempts remain and parked with a `delivery_exhausted` gate once
+they are spent; a dead letter on an owned queue becomes a parked `bus.dead_letter` job and
+a `bus_dead_lettered` gate, and is never deleted.
+
+```toml
+[queue.reap]
+stale_ready_seconds = 600
+dead_letter_peek_limit = 200
+```
+
 ## Operational surfaces (sovereign defaults, declared-only paid relays)
 
 Each table is optional: an omitted table (or an omitted key) leaves the
@@ -456,6 +514,11 @@ for that surface is present, otherwise the in-memory default.
 | `url` | string | unset | Base URL of the RabbitMQ Management API, e.g. `http://localhost:15672`. |
 | `username` | string | unset | RabbitMQ management username. |
 | `password` | string | unset | RabbitMQ management password. |
+| `vhost` | string | `/` | The vhost the bus declares its queues in and the queue reaper reads ([`[queue.reap]`](#queuereap)). |
+
+The bus port consumes at most once: its `consume` acknowledges on take, so no delivery is
+ever held -- and one whose consumer dies after `consume` returns is lost. The job queue's
+transport is ADR-0044's AMQP client, not this port.
 
 ## `[blob]` (sovereign default: Garage, S3 API)
 
@@ -583,4 +646,7 @@ idle_timeout_seconds = 600
 
 [queue.priority]
 sources = ["storm"]
+
+[queue.reap]
+stale_ready_seconds = 900
 ```

@@ -33,6 +33,10 @@ from vibey.infrastructure.db.interfaces.project_repository_interface import (
     PhaseTransitionedDraftBuilderInterface,
     ProjectRowMapperInterface,
 )
+from vibey.infrastructure.db.interfaces.queue_reap_store_interface import (
+    PostgresQueueReapStoreInterface,
+    ReapEventDraftBuilderInterface,
+)
 from vibey.infrastructure.db.interfaces.rotation_cursor_repository_interface import (
     RotationCursorRowMapperInterface,
 )
@@ -52,6 +56,8 @@ __all__ = [
     "LedgerSearchCompilerInterface",
     "MigratorInterface",
     "PostgresOrmInterface",
+    "PostgresQueueReapStoreInterface",
+    "ReapEventDraftBuilderInterface",
     "PhaseTransitionedDraftBuilderInterface",
     "PriorityEventDraftBuilderInterface",
     "ProjectRowMapperInterface",

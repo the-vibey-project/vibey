@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.parse
+import uuid
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -22,6 +23,7 @@ from vibey.application.interfaces import (
     FilesPort,
     IssueTrackerPort,
     MessagingPort,
+    QueueReaperInterface,
     SecretsPort,
     SiemPort,
     SmsPort,
@@ -667,6 +669,7 @@ async def test_build_app_defaults_to_in_memory_surfaces() -> None:
             assert isinstance(resources.bus, InMemoryBus)
             assert isinstance(resources.blob, InMemoryBlob)
             assert isinstance(resources.siem, InMemorySiem)
+            assert isinstance(resources.queue_reaper, QueueReaperInterface)
 
 
 @pytest.mark.asyncio
@@ -731,6 +734,31 @@ async def test_build_app_wires_concrete_adapters_from_config() -> None:
             assert isinstance(resources.bus, RabbitMqBusAdapter)
             assert isinstance(resources.blob, GarageBlobAdapter)
             assert isinstance(resources.siem, WazuhSiemAdapter)
+            assert isinstance(resources.queue_reaper, QueueReaperInterface)
+
+
+@pytest.mark.asyncio
+async def test_build_app_composes_the_bus_and_the_reaper_from_the_environment_alone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A cluster pod has no vibey.toml: its working directory is the worktrees volume.
+    The chart renders the bus into the environment, and that alone must compose it --
+    and the reaper's thresholds with it (ADR-0056)."""
+    monkeypatch.setenv("VIBEY_BUS_URL", "http://bus:15672")
+    monkeypatch.setenv("VIBEY_BUS_USERNAME", "u")
+    monkeypatch.setenv("VIBEY_BUS_PASSWORD", "p")
+    migrator = MagicMock()
+    migrator.apply = AsyncMock()
+    with (
+        patch("asyncpg.create_pool", new=AsyncMock(return_value=_mock_pool())),
+        patch("vibey.bootstrap.PostgresMigrator") as migrator_cls,
+        patch("vibey.bootstrap.database_url", return_value="postgresql://x"),
+        patch("vibey.bootstrap.Path.is_file", return_value=False),
+    ):
+        migrator_cls.from_environ.return_value = migrator
+        async with build_app() as resources:
+            assert isinstance(resources.bus, RabbitMqBusAdapter)
+            assert isinstance(resources.queue_reaper, QueueReaperInterface)
 
 
 # ----------------------------------------------------
@@ -1199,7 +1227,12 @@ async def test_rabbitmq_adapter_publish_and_consume() -> None:
         return _mock_response(b"")
 
     adapter = RabbitMqBusAdapter(
-        url="http://bus:15672", username="u", password="p", opener=_fake_opener
+        url="http://bus:15672",
+        username="u",
+        password="p",
+        opener=_fake_opener,
+        message_ids=lambda: uuid.UUID(int=7),
+        epoch_seconds=lambda: 1_790_000_000.9,
     )
     await adapter.publish("jobs", {"item": "1"})
     published = [r for r in seen if r.full_url.endswith("//publish")]
@@ -1207,7 +1240,13 @@ async def test_rabbitmq_adapter_publish_and_consume() -> None:
     body = json.loads(published[0].data.decode("utf-8"))
     assert body["routing_key"] == "jobs"
     assert json.loads(body["payload"]) == {"item": "1"}
-    assert body["properties"] == {"delivery_mode": 2}
+    # The id makes a dead letter's identity its own; the timestamp lets the reaper
+    # measure how long the head message has waited (ADR-0056).
+    assert body["properties"] == {
+        "delivery_mode": 2,
+        "message_id": uuid.UUID(int=7).hex,
+        "timestamp": 1_790_000_000,
+    }
 
 
 @pytest.mark.asyncio
