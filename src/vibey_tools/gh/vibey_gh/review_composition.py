@@ -28,6 +28,13 @@ is a separate answer: repair is a paid agent editing the branch, and it acts on 
 lane's findings only. A local model's finding is a lead for a human to verify -- the gate
 already said so when that model was only a fallback -- so a failure carried by the
 sovereign lane alone is never `repairable`.
+
+With no paid review declared (sub-doctrine 8.b, `[pr_automation] paid_review = false`)
+there is no paid answer at all: `NO_PAID`. The sovereign lane then answers the whole schema,
+and its verdict is composed alone under the strictest reading of both halves -- its own
+`pass`, every judgment exactly `true`, and no findings -- and only when the verdict says it
+answered both halves. A diff-only verdict's documentation judgments are placeholders, and
+reading them as answers is the one thing this module must never do.
 """
 
 from __future__ import annotations
@@ -47,9 +54,13 @@ PAID_LANE = "paid"
 # only shape there is when no sovereign lane carried the diff half.
 FULL = "full"
 
+# No paid reviewer was asked anything, because no paid review is declared (8.b): the
+# sovereign lane's verdict is the whole review.
+NO_PAID = "none"
+
 # What the paid reviewer can have been asked. Never the diff half alone: under Option A the
 # sovereign lane goes first, so a paid reviewer answering only the diff half has no job.
-PAID_HALVES = (FULL, REQUIRES_WIDER_CONTEXT)
+PAID_HALVES = (FULL, REQUIRES_WIDER_CONTEXT, NO_PAID)
 
 
 def _count(value: object) -> int:
@@ -93,7 +104,7 @@ class ReviewComposer:
 
     def compose(
         self,
-        paid: Mapping[str, Any],
+        paid: Mapping[str, Any] | None,
         *,
         half: str,
         sovereign: Mapping[str, Any] | None = None,
@@ -109,6 +120,24 @@ class ReviewComposer:
         - `findings`: the findings across every lane.
         - `repairable`: whether automated repair may act on this outcome.
         """
+        if half == NO_PAID:
+            if paid:
+                raise ValueError(
+                    "no paid review is declared, so there is no paid answer to compose; the"
+                    " sovereign lane's verdict is the whole review"
+                )
+            if sovereign is None:
+                raise ValueError(
+                    "no paid review is declared, so the sovereign lane's whole-review verdict"
+                    " is needed"
+                )
+            if not isinstance(sovereign, Mapping):
+                raise TypeError(
+                    f"the sovereign verdict must be a JSON object, not {type(sovereign).__name__}"
+                )
+            return self._sovereign_whole(sovereign, head_sha)
+        if paid is None and half in (FULL, REQUIRES_WIDER_CONTEXT):
+            raise ValueError(f"the paid lane returned no answer to compose for the {half} review")
         if not isinstance(paid, Mapping):
             raise TypeError(f"the paid answer must be a JSON object, not {type(paid).__name__}")
         if half == FULL:
@@ -205,6 +234,46 @@ class ReviewComposer:
             },
             "findings": diff_findings + wider_findings,
             "repairable": not wider_passed,
+        }
+
+    def _sovereign_whole(self, sovereign: Mapping[str, Any], head_sha: str) -> dict[str, Any]:
+        answered = sovereign.get(self.contract.scope_field)
+        both = {DIFF_GROUNDABLE, REQUIRES_WIDER_CONTEXT}
+        if not isinstance(answered, list) or set(answered) != both:
+            # The one refusal this path exists for: a diff-only verdict carries `true` for
+            # every documentation judgment as a SHAPE placeholder, and read as a whole review
+            # it would pass sixteen judgments nobody made.
+            raise ValueError(
+                "the sovereign verdict did not answer both halves (its"
+                f" {self.contract.scope_field!r} is {answered!r}), so it cannot stand for the"
+                " whole review: a diff-only verdict's documentation judgments are placeholders,"
+                " not answers"
+            )
+        passed = sovereign.get(self.verdict_field) is True and self._holds(
+            sovereign, self.findings_field
+        )
+        findings = _count(sovereign.get(self.findings_field))
+        # Every field in the schema's own key order; one the reviewer left out stays out.
+        verdict = {
+            name: sovereign[name]
+            for name in self.contract.field_schemas
+            if name in self.contract.fields and name in sovereign
+        }
+        verdict[self.verdict_field] = passed
+        verdict["head_sha"] = head_sha
+        carried = {name: SOVEREIGN_LANE for name in self.contract.fields}
+        verdict["carried"] = carried
+        # Repair is a paid agent, and none is declared; a local finding is a lead for a
+        # human besides. So a sovereign-only failure is never handed to repair.
+        verdict["repairable"] = False
+        return {
+            "half": NO_PAID,
+            "verdict": verdict,
+            "structured": verdict,
+            "carried": carried,
+            "halves": {FULL: {"lane": SOVEREIGN_LANE, "passed": passed, "findings": findings}},
+            "findings": findings,
+            "repairable": False,
         }
 
 

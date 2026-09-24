@@ -150,6 +150,60 @@ a gate change wearing a dependency's clothes.
 | `normalise_commit_subjects` | boolean / `true` | Whether `Conventional Commits` REWRITES a nonconforming subject or only reports it. The automatic form is `chore: <the original subject>`, which conforms without choosing a type — so a fix normalised this way is filed as a chore. Set it `false` where the author should pick the type; the check still runs and still fails the pull request. |
 | `plugin_marketplaces` | string list / empty | Claude Code plugin marketplaces loaded by the review, repair, and conflict-resolution jobs. Each entry is an `https://` Git URL, or a repository-relative path resolved inside the trusted checkout of the default branch (never the pull request's own tree). Empty by default: a marketplace that cannot be cloned fails the review outright. |
 | `plugins` | string list / empty | Plugins those jobs install, each `<plugin>@<marketplace>`. Requires at least one `plugin_marketplaces` entry. |
+| `paid_review` | boolean / `false` | The declaration [sub-doctrine 8.b](doctrines.md) asks for before the exact-head review reaches a paid model: may the `review` job call `anthropics/claude-code-action` with `[ai] auth_secret` (by default `ANTHROPIC_API_KEY`)? **False by default**, because 8.b makes a paid counterparty declared-only — undeclared means sovereign only. See [the paid-review declaration](#the-paid-review-declaration-paid_review) below. Must be a TOML boolean; a string or a number is refused when the file is loaded. |
+
+### The paid-review declaration (`paid_review`)
+
+Every pull request needs one automated verdict on its exact head before the merge train
+will take it: that is the `PR review / gate` check. Who gives that verdict is this key's
+whole question.
+
+**Undeclared (`false`, the default).** No paid model is asked anything. The
+[sovereign lane](#pr_automationfallback) — a local model on a runner you own — answers the
+**whole** review: the verdict on the diff (`pass`, `summary`, `findings`) *and* the sixteen
+documentation-contract judgments. It is offered for exactly one kind of pull request: a
+**trusted author** (the owner or `[merge_train] trusted_authors`) whose head is **in this
+repository**, while the lane is switched on and its heartbeat is fresh. The local model is
+handed the diff and the pages listed in `[pr_automation.fallback] context_paths`, fetched
+read-only at the exact head, and its verdict says so: its summary begins
+`[SOVEREIGN LANE — <model> — whole review]` and names the documents it judged against,
+because this is a judgment of the change, not a repository-wide audit. The paid `review`
+job is skipped before GitHub schedules it, so nothing on that path reads the API secret.
+
+Every other pull request gets **no automated pass**. The gate fails and says why, in these
+words:
+
+| The pull request | What `PR review / gate` says |
+|---|---|
+| comes from a fork | `needs a human review: the head is in a fork (<owner/name>), which never reaches the self-hosted sovereign runner (no paid review is declared, 8.b).` |
+| has an author who is not trusted | `needs a human review: the author is not a trusted author of this repository, and the sovereign lane reviews trusted authors only (no paid review is declared, 8.b).` |
+| arrives while the lane is off | `needs a human review: the sovereign lane is switched off ([pr_automation.fallback] enabled = false) (no paid review is declared, 8.b).` |
+| arrives while the runner is down | `needs a human review: the sovereign lane is not ready: <the heartbeat probe's own reason> (no paid review is declared, 8.b).` |
+| was reviewed, but the model gave no verdict | `needs a human review: the sovereign lane produced no verdict: <its reason — an unreachable model, an unusable answer, a diff or page that could not be fetched> (no paid review is declared, 8.b).` |
+
+The last two are titled `PR review: review incomplete (needs a human review)`, so the
+scheduled recovery sweep re-probes them once the runner beats again; the others are titled
+`PR review: needs a human review`. A whole review that fails reports its findings (or, with
+none, that it returned `pass=false` without one) and is **never** handed to automated repair:
+a local model's finding is a lead for a person to check, and repair is itself a paid agent.
+The merge train already holds any pull request from an author outside `trusted_authors` for a
+human merge (ADR-0053), so this is the same rule seen from the review side.
+
+**Declared (`true`).** The two-lane review, exactly as before this key existed: the
+sovereign lane carries the diff half for a trusted author and the paid reviewer answers the
+documentation-contract half; for anyone else the paid reviewer answers the whole review and
+the local verdict is held in reserve (see [`[pr_automation.fallback]`](#pr_automationfallback)).
+
+**A refused paid call is named as one.** When the API refuses a paid call — an exhausted
+credit balance, a revoked key — `claude-code-action` still ends with `Result subtype:
+success`, which is false. The review, repair and conflict-resolution jobs read the
+execution record instead: when it carries `is_error`, the step fails with `the paid
+<review|repair|conflict resolution> was refused by the API: <the API's text, or "no reason
+given">`, and the gate repeats that sentence rather than a bare job result.
+
+**Scope.** This key declares the *review*. The repair and conflict-resolution jobs, which
+also call the paid model when a pull request's scans fail or it conflicts with its base,
+are not governed by it.
 
 ### `[pr_automation.observability]`
 
@@ -165,7 +219,10 @@ fails closed when repository visibility is not private.
 
 ### `[pr_automation.fallback]`
 
-The sovereign review lane: a local model on the operator's own runner that reviews the
+The sovereign review lane: a local model on the operator's own runner. With no paid review
+declared (`paid_review = false`, the default) it answers the **whole** review for a trusted
+author, as [described above](#the-paid-review-declaration-paid_review). The rest of this
+section describes the declared path (`paid_review = true`), where it reviews the
 **diff-groundable half** of every pull request's exact-head review (`pass`, `summary`,
 `findings`) FIRST, whenever its heartbeat is fresh (sub-doctrine 8.a, #133). The table keeps
 its original name because it began as a fallback, and it still is one: the same verdict is
@@ -186,13 +243,14 @@ the lane while `trusted_only` is on.
 |---|---|---|
 | `enabled` | boolean / `true` | Whether the sovereign fallback job (`review-sovereign`) can run at all. **On by default, per sub-doctrine 8.a:** the sovereign path is the preference, so it is not the one that has to be opted into. That costs an adopter nothing until they stand a runner up, because the **heartbeat** gates scheduling rather than this flag — a repository with no fresh `heartbeat_ref` never offers the lane. Once a runner does exist, keep `trusted_only` true: GitHub says self-hosted runners should "almost never be used for public repositories". |
 | `runner_label` | string / `"vibey-local"` | Label the sovereign job targets, alongside `self-hosted`. |
-| `model` | string / `"qwen2.5-coder:14b"` | Model tag served by the Ollama-compatible endpoint. |
+| `model` | string / `"gpt-oss:20b"` | Model tag served by the Ollama-compatible endpoint. |
 | `base_url` | string / `"http://127.0.0.1:11434"` | Where the local model listens. |
 | `trusted_only` | boolean / `true` | Never run the sovereign lane for a fork pull request. |
 | `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the workflow reads back, so "is the local lane alive?" is answered by something the lane itself had to write. |
 | `heartbeat_max_age_minutes` | integer / `15` | How stale that heartbeat may be before the local lane is treated as down. A ref that stopped moving is indistinguishable from a runner that stopped, which is the point — both mean do not route work there. |
 | `max_diff_chars` | integer / `60000` | Diff is truncated past this, and the model is told it was. |
 | `timeout_seconds` | integer / `600` | Bound on one review. |
+| `context_paths` | string list / `["README.md", "docs/index.md"]` | With no paid review declared, the pages the whole review judges the documentation contract against — fetched read-only through the contents API at the exact head, never checked out, and handed to the model beside the diff. A page absent at that head is skipped and the verdict names the pages it did see; any other fetch failure stops the review. Each entry must be a plain repository-relative path: no leading `/` or `~`, no `..`, no whitespace, no glob or query characters. Their text shares the `max_diff_chars` budget, and the model is told when it was cut. |
 
 It never overrides a judgment the paid lane made: when the local verdict carries the diff
 half, the paid reviewer is not asked that half at all, and when it is held in reserve it is
