@@ -639,6 +639,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   re-readied, so a job that kills its worker on every attempt is no longer claimed forever;
   one attempt is refunded, so each answer buys exactly one more delivery. Every reap is now
   recorded on the ledger in the same transaction as the row it moves.
+* **queue:** the post-merge review of #1108 (ADR-0056, amended). The answer to a queue gate
+  (`attempts_exhausted`, `delivery_exhausted`) is no longer read as the job's own gate answer,
+  so a reaped REVIEW job is no longer finished as "declined". The broker policy is two
+  policies (`vibey-reap` on quorum queues, `vibey-reap-classic` on classic), and "verified"
+  now means every owned queue carries its policy. A surfaced condition is recorded once for the
+  fleet, not once per process, and recorded cleared when it ends; broker sightings are
+  untrusted. Claimable, unclaimed work is measured in every project, and a bump no longer
+  resets its age. One broken lease row no longer blocks the rest, and a failing reap no longer
+  kills the worker. A dead letter is parked once whichever project reads it, past the first
+  100, and replay is offered only into a queue vibey owns. `[queue.reap]` refuses an owned
+  pattern that matches everything or a foreign queue, and an out-of-range grace, peek limit,
+  priority or consumer timeout; a malformed `[queue.reap]` fails startup instead of being
+  skipped. `[bus] url` refuses embedded credentials, and broker errors no longer carry the
+  password.
 
 * **qwenloop:** a model request waits `idle_timeout_seconds` (default 900; 0 waits
   indefinitely) instead of a hard-coded 300 s ([#345](https://github.com/the-vibey-project/vibey/issues/345))
