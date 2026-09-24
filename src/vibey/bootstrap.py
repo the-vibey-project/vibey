@@ -19,6 +19,7 @@ from vibey.application.build_verify_handler import (
     VerifyIndependencePolicy,
     VerifyRepairPolicy,
 )
+from vibey.application.bus_dead_letter_handler import BUS_DEAD_LETTER_KIND, BusDeadLetterHandler
 from vibey.application.deploy_acceptance_handler import DeployAcceptanceHandler
 from vibey.application.deploy_design_bridge import DeployDesignBridgeHandler
 from vibey.application.deploy_design_handler import (
@@ -45,6 +46,7 @@ from vibey.application.engine_selector import EngineSelector
 from vibey.application.interfaces import (
     AzureClientPort,
     BlobPort,
+    BusInspectorPort,
     BusPort,
     CachePort,
     Clock,
@@ -59,6 +61,7 @@ from vibey.application.interfaces import (
     JobHandler,
     MessagingPort,
     QueuePriorityServiceInterface,
+    QueueReaperInterface,
     SecretsPort,
     SiemPort,
     SmsPort,
@@ -68,6 +71,7 @@ from vibey.application.interfaces import (
 from vibey.application.job_dispatcher import JobDispatcher
 from vibey.application.preflight import ConductorPreflight
 from vibey.application.queue_priority import QueuePriorityService
+from vibey.application.queue_reaper import QueueReaper
 from vibey.application.review_collect_handler import ReviewCollectHandler
 from vibey.application.review_demo_handler import ReviewDemoHandler
 from vibey.application.review_deployment_choice_handler import ReviewDeploymentChoiceHandler
@@ -83,6 +87,7 @@ from vibey.domain.phase import Phase
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
+from vibey.infrastructure.config_loader import ENVIRONMENT_CONFIG
 from vibey.infrastructure.db.advisory_lock import PostgresAdvisoryLock
 from vibey.infrastructure.db.build_ledger import PostgresBuildLedger
 from vibey.infrastructure.db.database_setup import SchemaPreparer
@@ -103,6 +108,7 @@ from vibey.infrastructure.db.ledger_guard import (
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
+from vibey.infrastructure.db.queue_reap_store import PostgresQueueReapStore
 from vibey.infrastructure.db.review_ledger import PostgresReviewLedger
 from vibey.infrastructure.db.rotation_cursor_repository import PostgresRotationCursorRepository
 from vibey.infrastructure.db.visual_inventory_repository import FileVisualInventoryRepository
@@ -182,6 +188,9 @@ class AppResources:
     # Queue priority (ADR-0054). Only the service: the store it wraps is built here and
     # handed to nothing else, so no entry point can reorder the queue past the grant.
     queue_priority: QueuePriorityServiceInterface
+    # The queue reaper (ADR-0056): the worker's idle loop runs it when due, and
+    # `vibey queue reap` on demand.
+    queue_reaper: QueueReaperInterface
     integration_lock: PostgresAdvisoryLock | None = None
     # Whether the role this process connects as could rewrite the ledger (ADR-0055).
     # `vibey worker` logs it at every start when it could; `vibey doctor` fails on it.
@@ -627,6 +636,8 @@ def build_full_worker(
             consent_provider=deploy_state.load_consent,
         ),
     }
+    # A dead letter the queue reaper parked (ADR-0056), settled by its gate's answer.
+    handlers[BUS_DEAD_LETTER_KIND] = BusDeadLetterHandler(gates=resources.gates, bus=resources.bus)
     # Alias kinds sharing a handler (the handlers themselves guard on both).
     handlers["build.plan"] = handlers["build.decompose"]
     handlers["deploy.accept"] = handlers["deploy.spec"]
@@ -891,18 +902,28 @@ async def build_app(
 
             cache_port = InMemoryCache()
 
-        if (
-            resolved_config
-            and resolved_config.bus.url
-            and resolved_config.bus.username
-            and resolved_config.bus.password
-        ):
+        # With no vibey.toml -- a cluster pod, whose working directory is the worktrees
+        # volume -- the bus and the reaper's thresholds come from the environment alone,
+        # which is where the chart renders them (ADR-0056). A malformed value raises.
+        declared = resolved_config if resolved_config is not None else ENVIRONMENT_CONFIG.load()
+        bus_settings = declared.bus
+        reap_settings = declared.queue.reap
+        bus_inspector: BusInspectorPort | None = None
+        if bus_settings.url and bus_settings.username and bus_settings.password:
             from vibey.infrastructure.bus.rabbitmq import RabbitMqBusAdapter
+            from vibey.infrastructure.bus.rabbitmq_inspector import RabbitMqBusInspector
 
             bus_port: BusPort = RabbitMqBusAdapter(
-                url=resolved_config.bus.url,
-                username=resolved_config.bus.username,
-                password=resolved_config.bus.password,
+                url=bus_settings.url,
+                username=bus_settings.username,
+                password=bus_settings.password,
+                vhost=bus_settings.vhost,
+            )
+            bus_inspector = RabbitMqBusInspector(
+                url=bus_settings.url,
+                username=bus_settings.username,
+                password=bus_settings.password,
+                vhost=bus_settings.vhost,
             )
         else:
             from vibey.infrastructure.bus.in_memory import InMemoryBus
@@ -941,8 +962,15 @@ async def build_app(
 
             siem_port = InMemorySiem()
 
-        jobs = PostgresJobRepository(pool)
+        jobs = PostgresJobRepository(pool, reap_thresholds=reap_settings.thresholds())
         clock = SystemClock()
+        queue_reaper = QueueReaper(
+            store=PostgresQueueReapStore(pool, thresholds=reap_settings.thresholds()),
+            bus=bus_inspector,
+            config=reap_settings,
+            clock=clock,
+            logger=StructlogAppLogger(owner="queue-reaper"),
+        )
         yield AppResources(
             projects=projects,
             jobs=jobs,
@@ -988,6 +1016,7 @@ async def build_app(
             ),
             integration_lock=PostgresAdvisoryLock(pool),
             ledger_guard=guard,
+            queue_reaper=queue_reaper,
         )
     finally:
         await pool.close()

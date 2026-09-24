@@ -14,6 +14,7 @@ from vibey.domain.effort import Effort
 from vibey.domain.engine import EngineId, IsolationLevel, StoredEngineId
 from vibey.domain.job import FailureClass, StoredJobState
 from vibey.domain.phase import Phase, StoredPhase
+from vibey.domain.queue_reap import PolicyOutcome, ReapVerdict
 
 
 @dataclass(frozen=True, slots=True)
@@ -259,3 +260,40 @@ class RotationCursor:
     engine_id: StoredEngineId
     current: int
     order: int
+
+
+@dataclass(frozen=True, slots=True)
+class QueueReapReport:
+    """What one reaper pass measured and did (ADR-0056).
+
+    ``acted`` holds the reaps the pass performed and recorded, or -- in a dry run -- the
+    reaps it would have performed. ``surfaced`` holds the stuck conditions that move
+    nothing. ``unreadable`` names every source the pass could not read: nothing is
+    concluded from those, and a pass with any of them is not ``ok`` (10.f, 12.e).
+    """
+
+    project_id: UUID
+    dry_run: bool
+    acted: tuple[ReapVerdict, ...] = ()
+    surfaced: tuple[ReapVerdict, ...] = ()
+    policy: PolicyOutcome | None = None
+    notes: tuple[str, ...] = ()
+    unreadable: tuple[str, ...] = ()
+
+    @property
+    def ok(self) -> bool:
+        """Every source was read, and the broker policy -- where one was reconciled -- was
+        read back as written."""
+        return not self.unreadable and (self.policy is None or self.policy.verified)
+
+    def joined(self, other: "QueueReapReport") -> "QueueReapReport":
+        """This part of a pass followed by `other`: every finding of both, in order."""
+        return QueueReapReport(
+            project_id=self.project_id,
+            dry_run=self.dry_run,
+            acted=self.acted + other.acted,
+            surfaced=self.surfaced + other.surfaced,
+            policy=other.policy if other.policy is not None else self.policy,
+            notes=self.notes + other.notes,
+            unreadable=self.unreadable + other.unreadable,
+        )
