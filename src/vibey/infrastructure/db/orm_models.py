@@ -243,9 +243,7 @@ class JobOrm(VibeyOrmModel, table=True):
             name="job_lease_consistent",
         ),
         CheckConstraint("bump_seq IS NULL OR bump_seq > 0", name="job_bump_seq_positive"),
-        CheckConstraint(
-            "(bump_seq IS NULL) = (bump_origin IS NULL)", name="job_bump_origin_with_seq"
-        ),
+        CheckConstraint("NOT bump_named OR bump_seq IS NOT NULL", name="job_bump_named_in_lane"),
         Index(
             "job_claim",
             "project_id",
@@ -322,7 +320,10 @@ class JobOrm(VibeyOrmModel, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=False, server_default=text("now()")),
     )
     bump_seq: int | None = Field(default=None, sa_column=Column(BigInteger))
-    bump_origin: UUID | None = Field(default=None, sa_column=Column(PostgresUUID(as_uuid=True)))
+    bump_named: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, nullable=False, server_default=text("false")),
+    )
 
 
 class JobDependencyOrm(VibeyOrmModel, table=True):

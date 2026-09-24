@@ -50,8 +50,10 @@ class JobPriorityStore(Protocol):
     async def unbump(
         self, job_id: UUID, *, context: PriorityContext, at: datetime
     ) -> PriorityChange:
-        """Undoes exactly what the job's bump moved. Raises `DependentsStillBumped` while
-        a bumped job needs it, and the other `ReorderRefused`s as `bump` does."""
+        """Takes the job out of the named set and re-derives the lane, clearing every
+        pulled job the remaining named jobs no longer need. Raises `DependentsStillBumped`
+        while another named job depends on it, and the other `ReorderRefused`s as `bump`
+        does."""
         ...
 
     async def refuse(self, refusal: PriorityRefusal, *, at: datetime) -> None:

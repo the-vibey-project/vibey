@@ -67,24 +67,24 @@ a position, not a weight.
    item, real or not, is refused and recorded without learning anything about it. The
    record is append-only; the queue can be shown in the order it will run, with every
    priority item marked.
-6. **Reversible, exactly.** An un-bump removes the item plus each dependency that the
-   item's own bumps pulled forward; that set resets when the item is un-bumped. A
-   dependency stays if a still-prioritised item needs it (transitively, while unfinished),
-   or if it was bumped **by name** and not since un-bumped. A dependency that stays for
-   another item belongs thereafter to that item's bump by name, so un-bumping every item
-   bumped by name leaves nothing prioritised. **Un-bumping an item that a prioritised item
-   depends on is refused, naming the dependents** — un-bump them first. The un-bump's
-   record lists what it `removed`.
+6. **Reversible, by derivation.** "The priority lane is exactly: the set of items bumped
+   (or enqueued prioritised) BY NAME and not since un-bumped, plus all their unfinished
+   transitive dependencies, ordered FIFO by when each item first entered the lane.
+   Un-bumping X removes X from the named set; it is refused (naming them) while another
+   named item depends on X. Everything else follows by derivation, so no orphan can
+   remain." The un-bump's record lists exactly the items it `removed` from the lane.
 7. **A new item can be enqueued already prioritised, in one step,** through the same grant.
-   Re-enqueueing an item that has already finished is a recorded no-op, as a plain
-   re-enqueue of a finished item is.
+   Bumping or re-enqueueing an item that has already finished is a recorded no-op: nothing
+   moves, the record says why, and the request succeeds, as a plain re-enqueue of a
+   finished item does.
 
 ## Decision: vibey's mechanism
 
-**Ordering: a column, a sequence, and where each bump came from.** `job.bump_seq bigint`
-is NULL for a job in normal order; a bump sets it from `nextval('job_bump_seq')`.
-`job.bump_origin uuid` is the job whose bump moved it: itself when bumped by name, the named
-job when pulled forward. The claim becomes
+**Ordering: a column, a sequence, and a flag for the named set.** `job.bump_seq bigint` is
+NULL for a job outside the lane; a job entering it takes `nextval('job_bump_seq')`, and
+keeps it for as long as it stays. `job.bump_named boolean` is true for a job in the named
+set -- bumped or enqueued prioritised by name, not since un-bumped -- and false for one
+pulled in as a dependency. The claim becomes
 
 ```sql
 WHERE ... AND j.phase::text = ANY($known_phases)
@@ -101,12 +101,18 @@ every enqueued job. A sequence and not a
 timestamp: one bump moves a job and its dependencies in one transaction, where `now()` is
 the same instant for all of them (10.g). Not a large `priority`: first-in-first-out would
 need a counter disguised as a weight, and an un-bump would have to remember what it
-overwrote. `bump_origin` is what lets an un-bump undo exactly what its bump did (item 6): the
-un-bump clears the jobs whose origin is the target and that nothing else needs, and
-re-points the origin of those another bump still needs at the bump by name that holds
-them. A property test drives random, overlapping bumps and un-bumps and checks after every
-step that every dependency of a bumped job is bumped and every pulled job belongs to a
-bump by name that needs it, and that un-bumping every job bumped by name clears the queue.
+overwrote.
+
+**The lane is derived (item 6).** `bump_named` replaced 0014's `bump_origin` in
+`migrations/0015_job_bump_named.sql`, which also clears any pulled job the per-bump rule had
+left in the lane with nothing named needing it. An un-bump takes the target out of the named set and, in
+the same transaction, clears `bump_seq` on every pulled job the remaining named jobs no
+longer need -- wherever it came from -- so the lane afterwards is exactly its derivation.
+A job pulled in and later bumped by name keeps its number and joins the named set. A
+property test (a Hypothesis state machine) drives random, overlapping bumps and un-bumps,
+including the sequence that exposed the orphan in the per-bump rule (x, d, a needing d, b
+needing d: bump a, bump b, un-bump a, un-bump b), and asserts after every step that the
+lane equals the derivation, and that un-bumping every named job clears it.
 
 **The claim stays strict.** The claim selects only jobs in a phase this vibey knows, and
 every `PostgresJobRepository` read maps `phase` and `state` strictly, as it always did: a

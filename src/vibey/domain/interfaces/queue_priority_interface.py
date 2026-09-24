@@ -101,8 +101,8 @@ class QueuedJobInterface(Protocol):
     def depends_on(self) -> tuple[UUID, ...]: ...
 
     @property
-    def bump_origin(self) -> UUID | None:
-        """The job whose bump moved this one."""
+    def bump_named(self) -> bool:
+        """Bumped by name and not since un-bumped."""
         ...
 
     @property
@@ -147,12 +147,6 @@ class UnbumpPlanInterface(Protocol):
     @property
     def moved(self) -> tuple[UUID, ...]: ...
 
-    @property
-    def reattributed(self) -> tuple[tuple[UUID, UUID], ...]:
-        """`(dependency, new origin)` for what the target pulled forward and another
-        bump still needs."""
-        ...
-
 
 @runtime_checkable
 class MovedJobInterface(Protocol):
@@ -190,9 +184,6 @@ class PriorityChangeInterface(Protocol):
 
     @property
     def note(self) -> str: ...
-
-    @property
-    def reattributed(self) -> tuple[tuple[UUID, UUID], ...]: ...
 
     @property
     def changed(self) -> bool:
@@ -262,10 +253,12 @@ class BumpPlannerInterface(Protocol):
 
 @runtime_checkable
 class UnbumpPlannerInterface(Protocol):
-    """Decides what an un-bump moves: exactly what the target's bump moved."""
+    """Decides what an un-bump clears: the target, and whatever the lane no longer
+    derives once the target leaves the named set."""
 
     def plan(self, target: UUID, jobs: Mapping[UUID, QueuedJob]) -> UnbumpPlan:
         """`jobs` holds the target and every unfinished job of its project. Raises
         `NotReorderable` for a finished or unknown target, `DependentsStillBumped` while
-        a bumped job needs it, and `LookupError` for a target the snapshot lacks."""
+        another named job depends on it, and `LookupError` for a target the snapshot
+        lacks."""
         ...

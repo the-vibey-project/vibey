@@ -83,9 +83,9 @@ class JobRecord:
     bump_seq: int | None = None
     """The job's place among bumped jobs (ADR-0054), or None in normal order. Last,
     with a default, so a record built before the column existed still builds."""
-    bump_origin: UUID | None = None
-    """The job whose bump moved this one: itself when bumped by name, the named job
-    when it was pulled forward as a dependency."""
+    bump_named: bool = False
+    """True when bumped (or enqueued prioritised) by name and not since un-bumped; false
+    for a job pulled into the lane as a named job's dependency (ADR-0054)."""
 
 
 @dataclass(frozen=True, slots=True)
