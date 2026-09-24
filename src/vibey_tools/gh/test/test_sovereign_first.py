@@ -600,10 +600,21 @@ if argv[:1] == ["local-review"]:
         def __exit__(self, *exc):
             return None
 
-    body = json.dumps(
-        {{"message": {{"content": verdict}}, "done_reason": "stop", "prompt_eval_count": 10}}
-    ).encode()
-    local_review.urllib.request.urlopen = lambda request, timeout=None: _Response(body)
+    import re
+
+    def _open(request, timeout=None):
+        # A model that read the whole prompt: it echoes both of the request's check codes.
+        sent = json.loads(request.data)
+        text = "".join(message["content"] for message in sent["messages"])
+        codes = re.findall(r"(?:The first is|the second check code is) ([0-9a-f]+)", text)
+        answer = json.loads(verdict)
+        if isinstance(answer, dict):
+            answer = {{local_review.CANARY_FIELD: " ".join(codes), **answer}}
+        body = {{"message": {{"content": json.dumps(answer)}}, "done_reason": "stop",
+                "prompt_eval_count": 10}}
+        return _Response(json.dumps(body).encode())
+
+    local_review.urllib.request.urlopen = _open
 from vibey_gh.cli import main
 raise SystemExit(main(argv))
 """
@@ -1934,6 +1945,10 @@ def test_the_sovereign_models_window_is_declared_not_compiled_in(tmp_path):
     assert default.context_window == fit.DEFAULT_CONTEXT_CEILING_TOKENS == 65536
     assert default.reasoning_reserve_tokens == fit.DEFAULT_CONTEXT_RESERVE_TOKENS == 8192
     assert default.chars_per_token == fit.DEFAULT_CHARS_PER_TOKEN == 3
+    # The configuration's bound on it is the sizer's own.
+    PrAutomationFallbackConfig(chars_per_token=fit.MAX_CHARS_PER_TOKEN)
+    with pytest.raises(ValueError, match="chars_per_token"):
+        PrAutomationFallbackConfig(chars_per_token=fit.MAX_CHARS_PER_TOKEN + 1)
     assert default.think == ""  # the model's own default: fidelity is not traded blind
     (tmp_path / ".vibey-gh.toml").write_text(
         "[pr_automation.fallback]\ncontext_window = 131072\nreasoning_reserve_tokens = 4096\n"
@@ -1952,6 +1967,9 @@ def test_the_sovereign_models_window_is_declared_not_compiled_in(tmp_path):
         ({"reasoning_reserve_tokens": 512}, "reasoning_reserve_tokens"),
         ({"reasoning_reserve_tokens": 65536}, "reasoning_reserve_tokens"),
         ({"chars_per_token": 0}, "chars_per_token"),
+        ({"chars_per_token": 9}, "chars_per_token"),
+        ({"chars_per_token": 2.5}, "chars_per_token"),
+        ({"chars_per_token": float("nan")}, "chars_per_token"),
         ({"think": "max"}, "think"),
     ],
 )

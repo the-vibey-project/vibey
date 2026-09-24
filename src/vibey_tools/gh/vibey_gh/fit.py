@@ -51,6 +51,7 @@ __all__ = [
     "DEFAULT_OLLAMA_URL",
     "DEFER",
     "FLOOR",
+    "MAX_CHARS_PER_TOKEN",
     "OLLAMA_URL_ENV",
     "ContextSizer",
     "DarwinMemorySampler",
@@ -131,10 +132,18 @@ DEFAULT_OLLAMA_TIMEOUT_S = 10
 DEFAULT_CONTEXT_FLOOR_TOKENS = 4096
 # The window this host's tuning chose for gpt-oss:20b: the smallest power of two covering
 # every turn ever recorded (docs/plans/qwenstorm-3.0.0/bench/host-tuning.toml). It was 32768,
-# which silently truncated the #1090 whole review to 31,765 of its ~41,000 prompt tokens.
+# and #1090's whole review (~124,000 characters, 31,765 prompt tokens as the model counted
+# them) read its whole prompt and then ran out of room to answer in the 1,004 tokens left.
 DEFAULT_CONTEXT_CEILING_TOKENS = 65536
-# Pessimistic on purpose: the #1090 whole review measured 3.95 characters per gpt-oss token.
+# Pessimistic for prose and code: the #1090 whole review measured 3.95 characters per gpt-oss
+# token. It is NOT pessimistic for everything -- lockfiles tokenize at about 2.1, hex at 1.9,
+# base64 at 1.5, CJK at 1.4, emoji at 0.7 -- which is why a request is also sent with
+# truncation switched off and carries a canary (`vibey_gh.local_review.SizedChat`): the
+# estimate decides what to trim, never whether the model read everything.
 DEFAULT_CHARS_PER_TOKEN = 3
+# An estimate above this is not an estimate of any tokenizer this module has met; it would
+# let a prompt many times the window through the sizer. Configured values are held to it.
+MAX_CHARS_PER_TOKEN = 8
 # Room left for the model's reasoning AND its answer. gpt-oss reasons before it answers:
 # the #1090 whole review spent 3,676 tokens doing both at default reasoning, and ran out of
 # room mid-answer under the old 2048. More than twice the measurement.
@@ -654,12 +663,20 @@ class ContextSizer(ContextSizerInterface):
     3 characters per token. Capped because an enormous request should fail visibly rather
     than exhaust the host.
 
-    A cap is also a promise the caller must keep. Ollama does not refuse a prompt larger
-    than `num_ctx`: it drops the excess and the model answers about the part it read --
-    observed on #1090, where a whole review read 31,765 of ~41,000 prompt tokens. So the
-    caller sizes from EVERYTHING it sends (system prompt, user prompt, schema), asks
-    `fits` before sending, and trims or refuses with `room_chars` when the answer is no;
-    `reserve` is room for the model's reasoning and its answer, not a rounding margin.
+    A cap is also a promise the caller must keep. By default Ollama does not refuse a
+    prompt larger than `num_ctx`: its context shift (`llm/llama_server.go`) cuts the prompt
+    to about `num_ctx - (num_ctx - num_keep) / 2` tokens -- roughly HALF the window -- and
+    the model answers about the part it kept, with no error. Reproduced on this host
+    (Ollama 0.34.2, gpt-oss:20b, `num_ctx` 32768): a 36,798-token request came back with
+    `prompt_eval_count` 16,386. A cut prompt therefore reads as about half the window, not
+    as the whole of it, and no count of what was read can tell it from a short prompt.
+
+    So this is only the first of three guards. The caller sizes from EVERYTHING it sends
+    (system prompt, user prompt, schema), asks `fits` before sending, and trims or refuses
+    with `room_chars` when the answer is no; `reserve` is room for the model's reasoning
+    and its answer, not a rounding margin. But `tokens` is an estimate, and optimistic for
+    dense text (a lockfile, hex, base64, CJK, emoji), so the request itself also switches
+    truncation off and carries a canary -- see `vibey_gh.local_review.SizedChat`.
 
     Each of those numbers is a keyword with that value as its default (ADR-0018); the
     defaults reproduce the rule `local_review` shipped with exactly.
@@ -673,10 +690,16 @@ class ContextSizer(ContextSizerInterface):
         chars_per_token: int = DEFAULT_CHARS_PER_TOKEN,
         reserve_tokens: int = DEFAULT_CONTEXT_RESERVE_TOKENS,
     ) -> None:
-        if chars_per_token < 1:
-            raise ValueError("chars_per_token must be at least 1")
+        # `type(...) is int`, not `isinstance`: a bool is an int, and a float (nan among
+        # them) is a configuration mistake the comparisons below would wave through.
+        if type(chars_per_token) is not int or not 1 <= chars_per_token <= MAX_CHARS_PER_TOKEN:
+            raise ValueError(
+                f"chars_per_token must be a whole number from 1 to {MAX_CHARS_PER_TOKEN}"
+            )
         if floor_tokens > ceiling_tokens:
             raise ValueError("floor_tokens must not exceed ceiling_tokens")
+        if type(reserve_tokens) is not int or reserve_tokens < 0:
+            raise ValueError("reserve_tokens must be a whole number, never negative")
         if reserve_tokens >= ceiling_tokens:
             raise ValueError("reserve_tokens must leave room for a prompt under ceiling_tokens")
         self._floor = floor_tokens

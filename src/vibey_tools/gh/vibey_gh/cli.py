@@ -1240,6 +1240,7 @@ def _local_review(args) -> int:
         ("--role", args.role),
         ("--scope", args.scope),
         ("--context-dir", args.context_dir),
+        ("--context-paths", args.context_paths),
         ("--context-window", args.context_window),
         ("--reasoning-reserve", args.reasoning_reserve),
         ("--chars-per-token", args.chars_per_token),
@@ -1699,6 +1700,13 @@ def main(argv: list[str] | None = None) -> int:
     local.add_argument(
         "--context-dir",
         help="documents a whole review judges the documentation contract against",
+    )
+    local.add_argument(
+        "--context-paths",
+        help=(
+            "override [pr_automation.fallback] context_paths, space-separated: the order the"
+            " documents give way in, the last first"
+        ),
     )
     local.add_argument(
         "--context-window",
