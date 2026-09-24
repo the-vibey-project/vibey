@@ -74,6 +74,11 @@ class EventKind(StrEnum):
     JOB_PRIORITY_BUMPED = "JobPriorityBumped"
     JOB_PRIORITY_UNBUMPED = "JobPriorityUnbumped"
     JOB_PRIORITY_REFUSED = "JobPriorityRefused"
+    # Queue reaping (ADR-0056): one event per reap -- the object, the condition, the
+    # measured value, the threshold and the action. A lease reap and a dead-letter park
+    # are written in the same transaction as the rows they change; a surfaced condition
+    # changes nothing and is recorded once per sighting.
+    QUEUE_REAPED = "QueueReaped"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)

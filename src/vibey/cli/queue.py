@@ -5,7 +5,9 @@
 -- behind every job bumped before it and ahead of everything else, and pulls its
 unfinished dependencies forward with it. `unbump` takes it out of the named set; the lane
 is re-derived, so nothing it pulled in is left behind unless another named job needs it.
-`list` shows what will run, in the order it will run.
+`list` shows what will run, in the order it will run. `reap` runs the queue reaper once,
+on demand -- the same pass the worker runs when idle (ADR-0056) -- and `--dry-run` judges
+everything and changes nothing.
 
 Who may reorder is decided by the project's own reviewed configuration, never by
 anything on this command line: the operator is the account that owns
@@ -24,7 +26,7 @@ from uuid import UUID
 
 import typer
 
-from vibey.application.dto import JobRecord, QueueEntry
+from vibey.application.dto import JobRecord, QueueEntry, QueueReapReport
 from vibey.bootstrap import AppResources, build_app
 from vibey.cli.errors import guard
 from vibey.cli.interfaces.queue_interface import QueueCommandInterface, QueuePresenterInterface
@@ -32,6 +34,7 @@ from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInter
 from vibey.domain.job import JobState
 from vibey.domain.phase import Phase
 from vibey.domain.queue_priority import PriorityAction
+from vibey.domain.queue_reap import ReapVerdict
 
 
 class QueuePresenter:
@@ -168,6 +171,60 @@ class QueuePresenter:
             indent=2,
         )
 
+    def reap(self, report: QueueReapReport) -> list[str]:
+        """What the pass did, what is stuck, and what it could not read -- in that order,
+        so the last lines are the ones that need a person."""
+        verb = "would" if report.dry_run else "did"
+        lines = [
+            f"queue reap for project {report.project_id}"
+            + (" (dry run: nothing was changed)" if report.dry_run else "")
+        ]
+        if report.acted:
+            lines.append(f"reaped ({verb}):")
+            lines.extend(f"  {self._verdict(v)}" for v in report.acted)
+        else:
+            lines.append("reaped: nothing")
+        if report.surfaced:
+            lines.append("stuck, surfaced, nothing moved:")
+            lines.extend(f"  {self._verdict(v)}" for v in report.surfaced)
+        if report.policy is not None:
+            mark = "verified" if report.policy.verified else "NOT VERIFIED"
+            lines.append(f"broker policy {report.policy.policy!r}: {mark} ({report.policy.detail})")
+        lines.extend(f"note: {note}" for note in report.notes)
+        lines.extend(f"UNREAD: {source}" for source in report.unreadable)
+        return lines
+
+    def reap_json(self, report: QueueReapReport) -> str:
+        return json.dumps(
+            {
+                "project_id": str(report.project_id),
+                "dry_run": report.dry_run,
+                "ok": report.ok,
+                "acted": [v.payload() for v in report.acted],
+                "surfaced": [v.payload() for v in report.surfaced],
+                "policy": (
+                    None
+                    if report.policy is None
+                    else {
+                        "name": report.policy.policy,
+                        "verified": report.policy.verified,
+                        "detail": report.policy.detail,
+                    }
+                ),
+                "notes": list(report.notes),
+                "unreadable": list(report.unreadable),
+            },
+            indent=2,
+        )
+
+    @staticmethod
+    def _verdict(verdict: ReapVerdict) -> str:
+        return (
+            f"{verdict.action.value:<11} {verdict.condition.value:<14} {verdict.subject} "
+            f"on {verdict.queue}: {verdict.measured:g} {verdict.unit} "
+            f"(threshold {verdict.threshold:g})"
+        )
+
 
 QUEUE_PRESENTER: Final[QueuePresenterInterface] = QueuePresenter()
 
@@ -208,6 +265,19 @@ class QueueCommand:
             typer.echo(self._presenter.entries_json(target, entries))
         else:
             typer.echo("\n".join(self._presenter.entries(entries)))
+
+    async def reap(self, project_id: UUID | None, *, dry_run: bool, as_json: bool) -> None:
+        """Exits 1 when the pass could not read a source or verify the broker policy: a
+        reaper never reports success it did not observe (12.e)."""
+        async with self._open_app() as resources:
+            target = await self._project(resources, project_id)
+            report = await resources.queue_reaper.run(target, dry_run=dry_run)
+        if as_json:
+            typer.echo(self._presenter.reap_json(report))
+        else:
+            typer.echo("\n".join(self._presenter.reap(report)))
+        if not report.ok:
+            raise typer.Exit(1)
 
     def _print_change(self, change: PriorityChangeInterface, *, as_json: bool) -> None:
         if as_json:
@@ -302,3 +372,22 @@ def queue_list(
     """Show every unfinished job: running work first, then waiting work in claim order."""
     with guard():
         asyncio.run(QUEUE.list(project_id, as_json=as_json))
+
+
+@queue_app.command("reap")
+def queue_reap(
+    project_id: ProjectOption = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            help="Judge every lease, queue and dead letter and change nothing: no requeue, "
+            "no park, no ledger event, no broker policy write.",
+        ),
+    ] = False,
+    as_json: JsonOption = False,
+) -> None:
+    """Reap stuck work once: expired leases, ready work nobody takes, and -- with a broker
+    configured -- its queues and dead letters. Exits 1 if a source could not be read."""
+    with guard():
+        asyncio.run(QUEUE.reap(project_id, dry_run=dry_run, as_json=as_json))
