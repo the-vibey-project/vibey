@@ -1,5 +1,15 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""Process/JSON integration with the independently versioned vibey-skills CLI."""
+"""Process/JSON integration with the independently versioned vibey-skills CLI.
+
+The CLI is a child process like any other vibey starts, and it gets no more of the
+worker than any other: it starts from the system basics (`SYSTEM_ENVIRONMENT`), never a
+copy of the worker's environment, in a working directory vibey controls (the index's
+parent), and the default command runs Python isolated (`-I`: no current directory or
+script directory on `sys.path`, no `PYTHON*` variables, no user site-packages).
+Without that, `python -m vibey_skills.cli` put the worker's working directory first on
+`sys.path`, so a `vibey_skills/` package any same-user process planted there ran in
+place of the real CLI -- with `VIBEY_PG_URL` and every other `VIBEY_*` variable.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +22,13 @@ from typing import Any
 
 from vibey.application.dto import JobRecord
 from vibey.application.interfaces import SkillsContextResult
-from vibey.infrastructure.process import DEFAULT_KILL_GRACE_SECONDS, ProcessReaper
+from vibey.infrastructure.process import (
+    DEFAULT_KILL_GRACE_SECONDS,
+    SYSTEM_ENVIRONMENT,
+    ChildEnvironment,
+    ProcessReaper,
+)
+from vibey.infrastructure.process.interfaces import ChildEnvironmentInterface
 
 _MODES = frozenset({"off", "shadow", "inject"})
 _DEFAULT_BUDGET = 6_000
@@ -32,6 +48,7 @@ class VibeySkillsContextCompiler:
         command: Sequence[str] | None = None,
         timeout_seconds: float = 120.0,
         kill_grace_seconds: float = DEFAULT_KILL_GRACE_SECONDS,
+        environment: ChildEnvironmentInterface | None = None,
     ) -> None:
         if mode not in _MODES - {"off"}:
             raise ValueError("skills context mode must be 'shadow' or 'inject'")
@@ -44,7 +61,12 @@ class VibeySkillsContextCompiler:
         self._mode = mode
         self._index_path = index_path
         self._budget = budget
-        self._command = tuple(command or (sys.executable, "-m", "vibey_skills.cli"))
+        # `-I`: the CLI is imported from vibey's own installation, never from whatever
+        # directory the worker happens to be running in.
+        self._command = tuple(command or (sys.executable, "-I", "-m", "vibey_skills.cli"))
+        self._environment = (
+            ChildEnvironment(SYSTEM_ENVIRONMENT) if environment is None else environment
+        )
         if not self._command or any(not part for part in self._command):
             raise ValueError("skills context command must not be empty")
         self._timeout_seconds = timeout_seconds
@@ -53,6 +75,11 @@ class VibeySkillsContextCompiler:
             grace_seconds=kill_grace_seconds, event="skills_context_process_not_reaped"
         )
         self._index_lock = asyncio.Lock()
+
+    @property
+    def command(self) -> tuple[str, ...]:
+        """The CLI's argv prefix, before its subcommand."""
+        return self._command
 
     async def compile(self, *, job: object, worktree_path: Path) -> SkillsContextResult:
         if not isinstance(job, JobRecord):
@@ -137,10 +164,15 @@ class VibeySkillsContextCompiler:
         # The CLI leads a process group of its own, so the kill below reaches anything
         # it started. The reap is bounded too. Killing the CLI alone and then waiting
         # with no bound meant waiting as long as any descendant held the pipes (#283).
+        # A directory vibey controls, never the worker's working directory.
+        workdir = self._index_path.parent
+        workdir.mkdir(parents=True, exist_ok=True)
         process = await asyncio.create_subprocess_exec(
             *argv,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            cwd=workdir,
+            env=self._environment.build(),
             start_new_session=True,
         )
         try:

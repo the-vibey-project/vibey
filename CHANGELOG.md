@@ -107,9 +107,50 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   merge" with GitHub's reason and the pass continues. `vibey-gh merge-train --admin-fallback`
   restores the retry for one run; no configuration key can (sub-doctrine 12.d). `vibey-gh
   promote --wait` gets the same rule, with `--admin-fallback` (only with `--wait`)
+* **engines:** an engine session no longer inherits the worker's environment. Every engine
+  process (the BUILD and DEPLOY_EXECUTE run, its `--version`/`doctor`/`--help` probes, and the
+  claudeloop and opencode DESIGN/DECOMPOSE sessions) and every gate command used to start from a
+  copy of it with only the Python variables removed. So `VIBEY_PG_URL` (the queue and ledger
+  DSN), vibey's other `VIBEY_*` tokens and passwords, `GH_TOKEN`/`GITHUB_TOKEN` and any cloud
+  credential reached processes that run model-chosen shell commands unattended. Each is now
+  built from an allow-list: the system basics (`PATH`, `HOME`, locale, `TERM`, CA bundle,
+  proxy, `XDG_*`), plus, for an engine, the variables its descriptor declares
+  (`env_passthrough`, for example `CLAUDELOOP_*` and `ANTHROPIC_*`) and its own API credential.
+  Anything else is declared in `vibey.toml`: `[engine_environment]` `allow` (every engine) and
+  `[engine_environment.engines]` `<engine> = [...]` (one engine), and `[gates]` `env_allow`
+  (gate commands). `vibey new` copies both tables into the project record; the `VibeyProject`
+  spec declares the same objects as `engineEnvironment` and `gates`. Nobody edits the
+  record's JSON by hand. `VIBEY_*` and libpq's `PG*` can never be declared, for gates or
+  engines, and an engine can never be given a name containing `DSN`, `DATABASE_URL`,
+  `PASSWORD` or `PASSWD`. A declaration that tries is refused by `vibey new` and the operator
+  before the project exists, and stops the worker when it is built; a descriptor's own
+  `env_passthrough` is checked when its adapter is built. What now needs declaring: agyloop's
+  Vertex credentials (`GOOGLE_ACCESS_TOKEN`, `CLOUDSDK_AUTH_ACCESS_TOKEN`,
+  `GOOGLE_APPLICATION_CREDENTIALS`, and `CLOUDSDK_CONFIG` when its gcloud configuration is not
+  in the default place), a provider key OpenCode reads from the environment, a `GH_TOKEN` for
+  claudeloop's GitHub issue import, and any toolchain variable a gate needs (`JAVA_HOME`,
+  `GOPATH`, ...). See `docs/reference/configuration.md#engine_environment` and `#gates`
+* **git:** vibey's own git calls (the BUILD worktree's `git worktree add`, the integration
+  `git merge`) start from the system basics plus `GIT_CONFIG_NOSYSTEM=1`, never the worker's
+  environment, and run with `-c core.hooksPath=/dev/null -c core.fsmonitor=false`; the merge
+  also passes `--no-verify`. An engine working in a linked worktree could plant a hook in the
+  repository's common directory, or set `core.hooksPath`, `core.fsmonitor`, a filter or a merge
+  driver in its shared config, and vibey's next git call ran it with `VIBEY_PG_URL` in its
+  environment. A repository whose own config (`local` or `worktree` scope, or a file they
+  include) declares a filter driver (`filter.<x>.clean|smudge|process`) or a merge driver
+  (`merge.<x>.driver`) is now refused before vibey checks out or merges in it, failing the
+  job; declare a driver you need, such as Git LFS's, in your global git config. `vibey worker
+  --azure az` runs `az` through an executor of its own, with the system basics plus the Azure
+  CLI's configuration variables (`AZURE_CONFIG_DIR`, `AZURE_CORE_*`, ...)
 
 ### Added
 
+* **cli:** `vibey doctor` prints a `db-passwordless` line: `WARN` when the app DSN's database
+  accepts a login with no password (trust or peer authentication) as the DSN's role or the OS
+  user doctor runs as, on the DSN's host or a local socket. Any process running as that user,
+  an engine session included, could then open the queue and the ledger without
+  `VIBEY_PG_URL`. It never fails the command; SECURITY.md §5 now states this limit, and that
+  the unwired container boundary does not address same-user access
 * **storm:** the push-gate reaper no longer depends on the storm, or on everyone having
   moved off the old push recipe. `push_gate.py install-schedule` installs one reaper pass
   every `[push_gate] schedule_seconds` (90) as a launchd agent on macOS or a systemd user
@@ -170,8 +211,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   takes it out of the lane, which is always the jobs bumped by name plus their unfinished
   dependencies, so nothing is left behind; it is refused while another named job needs it.
   A named job that ends cancelled or failed is swept out with what it alone pulled in by
-  the project's next bump or un-bump, recorded; a job in a phase this vibey does not know
-  is left in place and named rather than refusing the request.
+  the project's next admitted bump or un-bump, recorded (a refused request changes
+  nothing); a job this vibey cannot write -- an unknown phase or state -- is left in place
+  with everything it still needs, and named, rather than refusing the request. The lane is
+  derived through a dependency in an unknown state, so a job a live named job needs is
+  never swept past it. `tests/meta/test_migration_drops.py` reads SQL as PostgreSQL lexes
+  it -- comments, strings, `DO` bodies and `EXECUTE` strings -- and also catches renamed
+  and retyped columns and tables taken away; the ADR sentence must name the workers to drain.
   `vibey queue list [PROJECT]` shows the queue in claim order with every bump marked;
   `vibey design resume PROJECT --priority` enqueues the interview bumped. The claim orders
   `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so the order among
@@ -210,6 +256,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **notify:** a desktop notification's title and message reach `osascript` as arguments of a
+  fixed `on run argv` script, never as AppleScript source. Only `"` was escaped before, so a
+  model- or gate-written message ending `\" & (do shell script ...) --` ran a shell command.
+  `notify-send` gets its text after `--`, and the notifier starts from the system basics
+* **engines:** the worker's startup preflight and `vibey doctor --record` probe each engine
+  with the project's `engine_environment`, so a credential the project declares for opencode
+  or agyloop reaches the auth check and the conformance run, not only the session
 * **queue:** the lease reaper is bounded (ADR-0056, closing ADR-0044 §8's latent gap). An
   expired lease whose attempts are spent is parked with a `delivery_exhausted` gate instead of
   re-readied, so a job that kills its worker on every attempt is no longer claimed forever;

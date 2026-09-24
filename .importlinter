@@ -118,6 +118,9 @@ source_modules =
     vibey.infrastructure.engines.interfaces
     vibey.infrastructure.ledger.interfaces
     vibey.infrastructure.process.interfaces
+    vibey.infrastructure.git.interfaces
+    vibey.infrastructure.azure.interfaces
+    vibey.infrastructure.notify.interfaces
     vibey.infrastructure.blob.interfaces
     vibey.infrastructure.bus.interfaces
     vibey.infrastructure.cache.interfaces

@@ -111,24 +111,37 @@ named jobs no longer need -- wherever it came from -- so the lane afterwards is 
 derivation. A job pulled in and later bumped by name keeps its number and joins the named
 set. A named job that ends cancelled or failed leaves the named set by derivation (only an
 unfinished named job is live), so the pulled jobs it alone needed are orphans until
-something clears them: every bump and every un-bump -- an un-bump of a job that is not
+something clears them: every admitted bump and un-bump -- an un-bump of a job that is not
 bumped included -- sweeps each lane member that is no longer derived, lists it in the
-event's `removed`, and says so in its output. A job the sweep or an un-bump would clear
-but that sits in a phase this vibey does not know is left in the lane, unwritten, and named
-in the event's `skipped` with a note; it does not refuse the request. A property test (a
-Hypothesis state machine) drives random, overlapping bumps and un-bumps and cancels or
-fails named jobs, including the sequence that exposed the orphan in the per-bump rule (x,
-d, a needing d, b needing d: bump a, bump b, un-bump a, un-bump b), and asserts after every
-step -- a cancel or failure followed by the next request -- that the lane equals the
-derivation, and that un-bumping every named job clears it.
+event's `removed`, and says so in its output. A refused request sweeps nothing: a refusal
+changes nothing but its own record, and an un-bump of a finished job stays a refusal
+because asking to un-bump what has already run is an error worth reporting; the next
+admitted request of the project does the sweep. The derivation walks through every
+dependency that is not finished -- one in a state a newer vibey wrote included, since it is
+not finished -- where what a bump may move stops at such a job and refuses the bump. A job
+the sweep or an un-bump would clear but that this vibey cannot write -- its phase or its
+state is one a newer vibey wrote -- is left in the lane, unwritten, together with every job
+it still needs (clearing those would leave it ahead of work it waits on), and all of them
+are named in the event's `skipped` with a note; it does not refuse the request. An un-bump
+is refused while such a job needs the target, as it is while a named job does. A property
+test (a Hypothesis state machine) drives random, overlapping bumps and un-bumps, cancels or
+fails named jobs, and moves jobs into states and phases a newer vibey wrote, including the
+sequence that exposed the orphan in the per-bump rule (x, d, a needing d, b needing d:
+bump a, bump b, un-bump a, un-bump b), and asserts after every step -- each change followed
+by the next request -- that the lane equals the derivation but for what this vibey cannot
+write and what that still needs, and that un-bumping every named job clears the rest.
 
 **Known gap: 0015's clearing is not on the ledger.** The orphans 0015 clears change
 priority state without a `JobPriorityUnbumped` event, so a replay of the ledger over a
 database that held such an orphan puts it back in the lane where the table has it out. A
 migration cannot write the correcting event faithfully: the event's digest over its
 canonical JSON, its delivery correlation id and its redaction are computed by vibey's
-writer, not by SQL, and once 0015 has run nothing records which rows it cleared, so the
-events cannot be reconstructed afterwards either. 0015 is merged and may already have been
+writer, not by SQL. The rows are not reconstructed afterwards either, though they could
+be: replaying a project's 0014-era `JobPriorityBumped` and `JobPriorityUnbumped` events
+gives the lane those events imply, and every unfinished job in it that the table has out
+is one 0015 cleared; a repair step in Python could append a correcting
+`JobPriorityUnbumped` for each through vibey's own event writer. That step is future work,
+not part of this change. 0015 is merged and may already have been
 applied (a push to `develop` publishes `vibey-dev`), and editing an applied migration forks
 the schema history, so the gap is recorded here rather than closed. It is bounded: it
 touches only orphans the 0014 rule left before 0015 ran, and from 0015 on every lane
@@ -152,7 +165,10 @@ state only once the locks are held. A bump's closure stops at finished rows: it 
 finished dependency (to know it succeeded, or that it never will) but never walks or locks
 past it. The claim takes its row `FOR UPDATE SKIP LOCKED`, so it passes over a row a reorder
 holds; a reorder that meets a row a claim holds waits for the claim to commit, then sees the
-job running and moves it without touching the lease. Should the database still break a lock
+job running and moves it without touching the lease. Because a bump may sweep any lane
+member, it briefly locks every unfinished lane member of its project, not only its own
+closure, so a claim running in that moment skips those rows and may take un-bumped work
+first; the next claim after the bump commits takes the lane in order. Should the database still break a lock
 cycle by aborting a reorder, it becomes `ReorderConflict` — a recorded refusal naming the
 job and saying a retry is safe — never a traceback. Five workers claiming at once take
 exactly the first five in order (`tests/infrastructure/db/test_job_priority_repository.py`,

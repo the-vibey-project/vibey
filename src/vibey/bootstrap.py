@@ -117,6 +117,7 @@ from vibey.infrastructure.docs.in_memory import InMemoryDocs
 from vibey.infrastructure.email.forward_email import ForwardEmailAdapter
 from vibey.infrastructure.email.in_memory import InMemoryEmail
 from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCRIPTORS
+from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.local_engines import (
     LocalEndpointEnvironment,
     LocalEngineSettings,
@@ -393,6 +394,14 @@ def build_full_worker(
     local = LocalEngineSettings(environ=os.environ, config=project.config)
     for engine_id, local_adapter in local.adapters(LocalEndpointEnvironment(os.environ)).items():
         adapters.setdefault(engine_id, local_adapter)
+    # What each engine session may see of this worker's environment: an allow-list,
+    # widened only by the project's `engine_environment` object and never onto vibey's
+    # own DSN. Built here, from the project record, so a malformed or forbidden
+    # declaration stops the worker before any session starts (12.h).
+    engine_environment = EngineEnvironmentPolicy.from_config(project.config)
+    adapters = {
+        engine_id: engine_environment.applied_to(adapter) for engine_id, adapter in adapters.items()
+    }
     azure = azure_client if azure_client is not None else InMemoryAzureClientAdapter()
     clock = resources.clock
     notifications = getattr(resources, "notifications", None)
