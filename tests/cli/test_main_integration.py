@@ -377,6 +377,56 @@ def test_new_project_stores_runtime_observability_tables(tmp_path: Path) -> None
     assert config["telemetry"] == {"enabled": False}
 
 
+def test_new_project_stores_the_declared_gate_and_engine_environments(tmp_path: Path) -> None:
+    """`[gates]` and `[engine_environment]` are declared in vibey.toml and reach the
+    project record, so nobody hand-edits the record's JSON to give a gate its toolchain
+    or an engine its credential."""
+    (tmp_path / "vibey.toml").write_text(
+        '[gates]\ntimeout_seconds = 600\nenv_allow = ["JAVA_HOME", "GRADLE_*"]\n\n'
+        '[engine_environment]\nallow = ["JAVA_HOME"]\n\n'
+        "[engine_environment.engines]\n"
+        'opencode = ["OPENROUTER_API_KEY"]\n'
+        'agyloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]\n'
+    )
+
+    result = runner.invoke(app, ["new", "declared-env-proj", "--repo", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+
+    async def load():  # type: ignore[no-untyped-def]
+        async with build_app() as resources:
+            project = await resources.projects.get_latest()
+            assert project is not None
+            return project.config
+
+    config = asyncio.run(load())
+    assert config["gates"] == {"timeout_seconds": 600, "env_allow": ["JAVA_HOME", "GRADLE_*"]}
+    assert config["engine_environment"] == {
+        "allow": ["JAVA_HOME"],
+        "engines": {
+            "opencode": ["OPENROUTER_API_KEY"],
+            "agyloop": ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"],
+        },
+    }
+
+
+def test_new_project_refuses_a_forbidden_declaration_before_creating_anything(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "vibey.toml").write_text('[engine_environment]\nallow = ["VIBEY_PG_URL"]\n')
+
+    result = runner.invoke(app, ["new", "forbidden-env-proj", "--repo", str(tmp_path)])
+
+    assert result.exit_code != 0
+    assert "VIBEY_PG_URL can never be passed" in result.output
+
+    async def latest():  # type: ignore[no-untyped-def]
+        async with build_app() as resources:
+            return await resources.projects.get_latest()
+
+    assert asyncio.run(latest()) is None
+
+
 def test_new_project_rejects_unknown_skills_context_mode(tmp_path: Path) -> None:
     result = runner.invoke(
         app,

@@ -57,10 +57,17 @@ An engine session never inherits the worker's environment: every spawn (the run,
 (`infrastructure/engines/engine_environment.py`) over the one builder,
 `infrastructure/process/child_environment.py::ChildEnvironment`. It is an
 allow-list: the system basics, the descriptor's `env_passthrough` and `auth_env`,
-and the project record's `engine_environment` additions. `VIBEY_*`, `PG*` and
-anything DSN- or password-shaped can never be on it, so `VIBEY_PG_URL` never
-reaches a model-driven process. A new engine declares what its runner and vendor
-CLI read in `env_passthrough`; do not add a spawn path that passes `env=` itself.
+and the project's `engine_environment` additions, declared in vibey.toml's
+`[engine_environment]` (copied into the record by `vibey new`) or the
+`VibeyProject` spec's `engineEnvironment` — never hand-edited into the record.
+`VIBEY_*`, `PG*` and anything DSN- or password-shaped can never be on it, so
+`VIBEY_PG_URL` never reaches a model-driven process; a descriptor or overlay that
+tries is refused when the adapter is built. The worker's startup preflight and
+`vibey doctor --record` probe with the project's policy, so a declared credential
+reaches the auth check too. A new engine declares what its runner and vendor CLI
+read in `env_passthrough`; do not add a spawn path that passes `env=` itself.
+vibey's own git calls (`infrastructure/git/clean_env.py`) and the `az` adapter
+build their environments the same way, never from a copy.
 `LoopProcessAdapter.env_overlay` is laid over that last (run and preflight alike) —
 how qwenloop gets `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` from the one setting
 `VIBEY_OLLAMA_URL` (`local_engines.py::LocalEndpointEnvironment`).

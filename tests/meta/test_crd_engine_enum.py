@@ -22,3 +22,12 @@ def test_the_crd_engine_enum_is_every_engine_id() -> None:
     assert match is not None, f"no spec.engines enum found in {CRD.name}"
     declared = [name.strip() for name in match.group(1).split(",") if name.strip()]
     assert sorted(declared) == sorted(engine.value for engine in EngineId)
+
+
+def test_the_crd_declares_the_child_environment_objects_the_handler_copies() -> None:
+    """`spec.gates` and `spec.engineEnvironment` are copied into the project record by
+    `infrastructure/operator/handlers.py`; a field the CRD does not declare is pruned by
+    the API server before the operator ever sees it."""
+    text = CRD.read_text(encoding="utf-8")
+    for field in ("gates:", "engineEnvironment:", "env_allow:", "isolate_python_env:"):
+        assert re.search(rf"^\s+{field}\n", text, re.MULTILINE), field

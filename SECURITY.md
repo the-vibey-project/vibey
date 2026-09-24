@@ -9,7 +9,7 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
 ## Threat Model & Security Boundaries
 
 ### 1. Worktree & Container Isolation Runtime (ADR-0008, Task 9.1)
-- **Worktree Sandboxing**: Every job and phase executes inside an isolated ephemeral git worktree branched from base or integration heads. This is the only isolation boundary active today.
+- **Worktree Sandboxing**: Every job and phase executes inside an isolated ephemeral git worktree branched from base or integration heads. This is the only isolation boundary active today, and it is a boundary for git history, not for the operating system: every engine session, gate command and hook runs as the worker's OS user, with that user's files, sockets and processes within reach (see §5).
 - **OCI Container Hardening — implemented and unit-tested, not yet an active runtime path**: `ContainerConfig` and `OciContainerExecutor`
   (`src/vibey/infrastructure/container/config.py`, `runtime.py`) implement the
   hardening described below, but nothing outside their own test file
@@ -19,7 +19,10 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
   [the configuration reference](docs/reference/configuration.md#isolation))
   reaches this code. Every job runs in a plain worktree regardless of what
   `[isolation]` says. Do not rely on the controls below until this adapter is
-  wired into the composition root:
+  wired into the composition root. In particular, **§5's same-user exposure is not
+  addressed by anything here today**: an unwired container runs nothing, so a model-driven
+  process shares the worker's OS user in every deployment that exists.
+  What the adapter would provide, once wired:
   - **Read-Only Root Filesystem**: Containers run with `--read-only`.
   - **Dropped Capabilities**: All Linux kernel capabilities are dropped (`--cap-drop=ALL`).
   - **Privilege Escalation Prevention**: Containers run with `--security-opt=no-new-privileges:true`.
@@ -90,22 +93,68 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
     runner's and vendor CLI's own, for example `CLAUDELOOP_*`, `CLAUDE_CODE_*`, `ANTHROPIC_*`)
     and its own API credential (`auth_env`); the full per-engine table is in
     [the configuration reference](docs/reference/configuration.md#engine_environment).
-  - **Anything else** reaches an engine only when the project's config record declares it
-    (`engine_environment.allow`, or `engine_environment.engines.<engine>` for one engine), and a
-    gate only through `gates.env_allow`. A GitHub token or a cloud credential is on no default
-    list: it reaches only the engine it is declared for.
+  - **Anything else** reaches an engine only when the project declares it, in `vibey.toml`'s
+    `[engine_environment]` (`allow`, or `engines.<engine>` for one engine) or the
+    `VibeyProject` spec's `engineEnvironment`, and a gate only through `[gates]` `env_allow`
+    (`spec.gates`). A GitHub token or a cloud credential is on no default list: it reaches
+    only the engine it is declared for.
   - **Never, whoever declares it**: vibey's own `VIBEY_*` variables — `VIBEY_PG_URL`, the queue
     and ledger DSN, among them — and libpq's `PG*`; for gates also `GIT_*`; for engines also
     any name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`. A declaration that tries
-    is refused when the worker is built.
-  - **The limit of this control**: an engine session runs as the same OS user as the worker.
-    It cannot read the worker's environment through its own, but same-user access to the
-    worker's process (`/proc/<pid>/environ` on Linux) or to files the worker can read is not
-    closed by this; the worktree and container boundary (§1) is what addresses that. The
-    ledger's append-only rule is enforced in the database by `DO INSTEAD NOTHING` rules on
+    is refused by `vibey new` and the operator before the project exists, and when the worker
+    is built; an engine descriptor's own passthrough is checked when its adapter is built.
+- **The limits of this control — read these before relying on it.** It keeps the DSN out of a
+  child's *environment*. It is not a boundary between the worker and the processes it starts,
+  because they are the same OS user:
+  - **(a) A local PostgreSQL with `trust` or `peer` authentication needs no DSN at all.** Any
+    process running as the OS user the database trusts connects with no password: `psql -d
+    vibey`, as that user, over the local socket or localhost. Review did exactly that on a
+    development machine, connecting as the operator's own user with no password. An engine
+    session or a gate command is such a process, so on that machine the allow-list does not
+    stop it reaching the queue and the ledger. `vibey doctor` checks for this: its
+    `db-passwordless` line **warns** when the app DSN's database accepts a password-less login
+    as the DSN's role or as the worker's OS user, on the DSN's host or (when that host is
+    local) a local socket. Require `scram-sha-256` in `pg_hba.conf` for those connections, or
+    run the worker as an OS user nothing else runs as.
+  - **Same-user reach beyond the database.** A process running as the worker's user can read
+    the worker's own environment through the OS (`/proc/<pid>/environ` on Linux), any file the
+    worker can read (a `~/.pgpass`, a shell profile that exports `VIBEY_PG_URL`, a launchd
+    plist), and can write the user's global git config and home directory.
+  - **(b) The container boundary in §1 does not address any of this today.** It is
+    implemented but not wired in; nothing runs in a container, so nothing is isolated from the
+    worker's user. Until it is wired (and runs sessions as a different user or with no access
+    to the database's socket), same-user access is open.
+  - The ledger's append-only rule is enforced in the database by `DO INSTEAD NOTHING` rules on
     the `event` parent table, which the role that owns the table can bypass — see
     [the data model](docs/plans/data-model.md).
-- Subprocess execution strips sensitive git and shell environment variables (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, etc.) using `CleanGitEnvSubprocessExecutor`.
+- **(c) vibey's own git calls — what is and is not covered.** vibey runs git on repositories an
+  engine writes to from its linked worktree, so a planted hook or config entry would otherwise
+  run inside vibey's git calls. `CleanGitEnvSubprocessExecutor`
+  (`src/vibey/infrastructure/git/clean_env.py`) runs every one of them (the BUILD worktree's
+  `git worktree add`, the integration `git merge`, prune, config and listing calls):
+  - **with the system basics only**, plus `GIT_CONFIG_NOSYSTEM=1`: no `VIBEY_*`, no `PG*`, no
+    credential, and no `GIT_*` inherited from a surrounding hook;
+  - **with no hook**: `-c core.hooksPath=/dev/null` outranks every config file, so a hook
+    planted in the common `hooks/` directory or behind any `core.hooksPath` does not run; the
+    integration merge also passes `--no-verify` (switching off repository-planted hooks in
+    vibey's own merge plumbing — vibey's gates run separately, before integration, and are
+    not skipped);
+  - **with no file-system monitor**: `-c core.fsmonitor=false`;
+  - **and it refuses a repository whose own config declares a filter or merge driver.**
+    Drivers are named by the repository and cannot be switched off generically, so before a
+    checkout or a merge `RepositoryConfigGuard` reads the config git will use and fails the
+    job when the `local` or `worktree` scope (or a file they include) declares
+    `filter.<x>.clean|smudge|process` or `merge.<x>.driver`.
+
+  **Not covered:** a filter or merge driver in the operator's *global* git config (Git LFS
+  installs one there) still runs — without vibey's secrets in its environment, but as the
+  operator, and an engine running as the same user can write that file. `git diff HEAD` in
+  BUILD verify runs through the gate runner with the gate environment and honours the
+  repository's config like any gate command. The scratch repository `vibey doctor
+  --conformance` creates is driven by the application layer with the doctor's environment.
+  The `az` CLI runs through its own executor with the system basics plus the Azure CLI's
+  configuration variables; the desktop notifier runs `osascript`/`notify-send` with the
+  system basics and passes the notification's text as arguments, never as script.
 - All ledger and telemetry records run through redaction masks (`redact.py`) to prevent leakage of credentials, tokens, or private keys.
 
 ### 6. Webhook Payload Integrity — implemented, unit-tested, and active when configured

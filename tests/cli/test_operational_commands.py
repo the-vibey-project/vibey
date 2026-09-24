@@ -2327,3 +2327,216 @@ def test_recover_with_project(tmp_path: Path) -> None:
     result = runner.invoke(app, ["recover", "--project", pid])
     assert result.exit_code == 0
     assert "Recovered 0 stuck job(s)." in result.stdout
+
+
+# ── a project's declared engine environment reaches the probes ────────────────
+#
+# `engine_environment` in the project record is how a project hands an engine the
+# credential its own configuration reads -- opencode's provider key, agyloop's Vertex
+# credentials. `build_full_worker` applied it, but the startup preflight sweep and
+# `vibey doctor --conformance --record --project X` still probed with the DEFAULT
+# policy, so the auth check and the conformance run could not see the credential the
+# real session would get: the engine read "auth FAIL" and never became eligible.
+
+_DECLARED_CREDENTIALS = [
+    (EngineId.OPENCODE, "OPENROUTER_API_KEY"),
+    (EngineId.AGYLOOP, "GOOGLE_APPLICATION_CREDENTIALS"),
+]
+
+
+def _probe_recorder(seen: dict[str, dict[str, str]]):  # type: ignore[no-untyped-def]
+    """A stand-in `LoopProcessAdapter.preflight` that records the environment the real
+    `--version`/`doctor` probes would have been started with."""
+    from vibey.application.dto import PreflightResult
+
+    async def preflight(self):  # type: ignore[no-untyped-def]
+        seen[self.descriptor.engine_id.value] = self._engine_environment()
+        return PreflightResult(installed=True, version="1.0.0", auth_ok=True)
+
+    return preflight
+
+
+@pytest.mark.parametrize(("engine", "credential"), _DECLARED_CREDENTIALS)
+def test_the_startup_preflight_probes_with_the_projects_declared_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: EngineId, credential: str
+) -> None:
+    from unittest.mock import AsyncMock, patch
+
+    monkeypatch.setenv(credential, "declared-secret")
+
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create(
+                "declared-env-proj",
+                tmp_path,
+                max_cycles=1,
+                config={"engine_environment": {"engines": {engine.value: [credential]}}},
+            )
+
+    asyncio.run(seed())
+    seen: dict[str, dict[str, str]] = {}
+    with (
+        patch(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            new=_probe_recorder(seen),
+        ),
+        patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as notifier_cls,
+    ):
+        notifier_cls.return_value = AsyncMock()
+        res = runner.invoke(app, ["worker", "--once"])
+
+    assert res.exit_code == 0, res.output
+    assert seen[engine.value].get(credential) == "declared-secret"
+    assert "VIBEY_PG_URL" not in seen[engine.value]
+    # Declared for one engine, it reaches that engine only.
+    others = [e for e in seen if e != engine.value]
+    assert others and all(credential not in seen[e] for e in others)
+
+
+@pytest.mark.parametrize(("engine", "credential"), _DECLARED_CREDENTIALS)
+def test_doctor_record_probes_and_conforms_with_the_target_projects_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, engine: EngineId, credential: str
+) -> None:
+    from unittest.mock import patch
+
+    from vibey.application.dto import ConformanceCheckResult, ConformanceReport
+
+    monkeypatch.setenv(credential, "declared-secret")
+
+    async def seed() -> UUID:
+        async with build_app() as resources:
+            project = await resources.projects.create(
+                "doctor-env-proj",
+                tmp_path,
+                max_cycles=1,
+                config={"engine_environment": {"engines": {engine.value: [credential]}}},
+            )
+            # A newer project without the declaration: --project must pick the older.
+            await resources.projects.create("other-proj", tmp_path / "o", max_cycles=1, config={})
+            return project.project_id
+
+    project_id = asyncio.run(seed())
+    probed: dict[str, dict[str, str]] = {}
+    conformed: dict[str, dict[str, str]] = {}
+
+    async def conformance(adapter, **kwargs):  # type: ignore[no-untyped-def]
+        conformed[adapter.descriptor.engine_id.value] = adapter._engine_environment()
+        return ConformanceReport(
+            engine_id=adapter.descriptor.engine_id,
+            checks=(ConformanceCheckResult(name="binary", ok=True),),
+        )
+
+    with (
+        patch(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            new=_probe_recorder(probed),
+        ),
+        patch("vibey.application.conformance.run_conformance", new=conformance),
+    ):
+        res = runner.invoke(
+            app,
+            [
+                "doctor",
+                "--conformance",
+                "--record",
+                "--engine",
+                engine.value,
+                "--project",
+                str(project_id),
+            ],
+        )
+
+    assert res.exit_code == 0, res.output
+    assert probed[engine.value].get(credential) == "declared-secret"
+    assert conformed[engine.value].get(credential) == "declared-secret"
+    assert "VIBEY_PG_URL" not in probed[engine.value]
+
+
+def test_doctor_without_record_probes_with_the_default_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No --record, no target project: nothing declares anything, so nothing extra."""
+    from unittest.mock import patch
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "undeclared-secret")
+    probed: dict[str, dict[str, str]] = {}
+    with patch(
+        "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+        new=_probe_recorder(probed),
+    ):
+        res = runner.invoke(app, ["doctor", "--engine", "opencode"])
+
+    assert res.exit_code == 0, res.output
+    assert "OPENROUTER_API_KEY" not in probed["opencode"]
+
+
+def test_doctor_record_refuses_a_project_whose_engine_environment_is_forbidden(
+    tmp_path: Path,
+) -> None:
+    async def seed() -> None:
+        async with build_app() as resources:
+            await resources.projects.create(
+                "forbidden-env-proj",
+                tmp_path,
+                max_cycles=1,
+                config={"engine_environment": {"allow": ["VIBEY_PG_URL"]}},
+            )
+
+    asyncio.run(seed())
+    res = runner.invoke(app, ["doctor", "--record", "--engine", "opencode"])
+
+    assert res.exit_code != 0
+    assert "VIBEY_PG_URL" in res.output
+
+
+# ── doctor: is the app database reachable with no password at all? ──────────────
+
+
+def test_doctor_warns_when_the_app_database_admits_a_passwordless_login(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from unittest.mock import AsyncMock, patch
+
+    from vibey.application.dto import PreflightResult
+    from vibey.infrastructure.db.passwordless_reach import (
+        PasswordlessReachFinding,
+        ReachVerdict,
+    )
+
+    seen: list[str] = []
+
+    async def probe(self, dsn):  # type: ignore[no-untyped-def]
+        seen.append(dsn)
+        return PasswordlessReachFinding(ReachVerdict.WARN, "accepts a password-less login")
+
+    with (
+        patch(
+            "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+            new=AsyncMock(return_value=PreflightResult(installed=True, version="1", auth_ok=True)),
+        ),
+        patch("vibey.infrastructure.db.passwordless_reach.PasswordlessReachProbe.probe", probe),
+    ):
+        res = runner.invoke(app, ["doctor", "--engine", "claudeloop"])
+
+    # A warning, not a failure: a trusted local database is a choice, said out loud.
+    assert res.exit_code == 0, res.output
+    assert "WARN db-passwordless" in res.output
+    assert "accepts a password-less login" in res.output
+    assert seen == [os.environ["VIBEY_PG_URL"]]
+
+
+def test_doctor_says_it_could_not_check_without_a_dsn(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import AsyncMock, patch
+
+    from vibey.application.dto import PreflightResult
+
+    monkeypatch.delenv("VIBEY_PG_URL", raising=False)
+    with patch(
+        "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
+        new=AsyncMock(return_value=PreflightResult(installed=True, version="1", auth_ok=True)),
+    ):
+        res = runner.invoke(app, ["doctor", "--engine", "claudeloop"])
+
+    assert res.exit_code == 0, res.output
+    assert "UNKNOWN db-passwordless" in res.output
+    assert "VIBEY_PG_URL is not set" in res.output

@@ -219,7 +219,13 @@ def new_project(
                 "must be off, shadow, or inject", param_hint="--skills-context-mode"
             )
         config: dict[str, object] = {"project": {"name": name, "repo": str(repo)}}
-        config.update(load_runtime_config_from_path(repo.resolve() / "vibey.toml"))
+        try:
+            config.update(load_runtime_config_from_path(repo.resolve() / "vibey.toml"))
+        except ValueError as exc:
+            # A forbidden [gates] or [engine_environment] entry is refused here, before
+            # a project exists that the worker would then refuse to build.
+            typer.echo(f"vibey.toml: {exc}")
+            raise typer.Exit(EXIT_USAGE) from exc
         if max_cycle_dollars is not None:
             config["max_cycle_dollars"] = max_cycle_dollars
         if max_cycle_turns is not None:
@@ -278,6 +284,25 @@ def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
     own reading of the working directory -- nothing else reads config from there.
     """
     return LocalEngineSettings.from_toml((root or Path.cwd()) / "vibey.toml", environ=os.environ)
+
+
+async def _passwordless_reach_section() -> None:
+    """`vibey doctor`'s password-less-access line for the app DSN's database: WARN, PASS
+    or UNKNOWN, never a failure (SECURITY.md §5).
+
+    A module-level function because it is `doctor`'s own step, shared by nothing else,
+    like `_postgres_status_line` beside it; the check itself is
+    `PasswordlessReachProbe`.
+    """
+    from vibey.infrastructure.db.passwordless_reach import PasswordlessReachProbe
+
+    name = "db-passwordless"
+    dsn = os.environ.get("VIBEY_PG_URL", "").strip()
+    if not dsn:
+        typer.echo(f"UNKNOWN {name:<20} VIBEY_PG_URL is not set; nothing to check")
+        return
+    finding = await PasswordlessReachProbe().probe(dsn)
+    typer.echo(f"{finding.verdict.mark} {name:<20} {finding.detail}")
 
 
 def _postgres_status_line(status: PostgresStatus) -> str:
@@ -1296,6 +1321,12 @@ def doctor(
         all_ok = True
 
         record_project_id: UUID | None = None
+        # What the probes may see of this environment. With nothing recorded there is no
+        # project to declare anything, so the defaults; with --record, the target
+        # project's `engine_environment`, because the health written to that project must
+        # be measured with what its sessions will receive -- a credential it declares
+        # for opencode or agyloop included.
+        engine_environment = EngineEnvironmentPolicy()
         if record:
             async with build_app() as resources:
                 if record_project is not None:
@@ -1306,9 +1337,14 @@ def doctor(
                 typer.echo("no projects found; create one with `vibey new` first")
                 raise typer.Exit(1)
             record_project_id = target.project_id
+            try:
+                engine_environment = EngineEnvironmentPolicy.from_config(target.config)
+            except ValueError as exc:
+                typer.echo(f"project {record_project_id}: {exc}")
+                raise typer.Exit(EXIT_USAGE) from exc
 
         for eid in eids:
-            adapter = local.adapter(eid, endpoint)
+            adapter = engine_environment.applied_to(local.adapter(eid, endpoint))
             desc = adapter.descriptor
             preflight = await adapter.preflight()
 
@@ -1361,6 +1397,9 @@ def doctor(
         if install_postgres and not local_postgres_status.ready:
             typer.echo(f"  detail: {local_postgres_status.detail}")
             raise typer.Exit(1)
+        # The database section. Keeping VIBEY_PG_URL out of every model-driven process
+        # protects nothing if the database lets the worker's OS user in without it.
+        await _passwordless_reach_section()
         if conformance and not all_ok:
             raise typer.Exit(1)
 
@@ -1668,6 +1707,16 @@ def worker(
             endpoint = LocalEndpointEnvironment(os.environ, model=ollama_model)
             for engine_id, local_adapter in local.adapters(endpoint).items():
                 adapters.setdefault(engine_id, local_adapter)
+            # The sweep probes each engine's auth, so it must probe with what the engine's
+            # sessions will actually receive: the project's `engine_environment` on top of
+            # the defaults. Without it a credential the project declares (opencode's
+            # provider key, agyloop's Vertex credentials) was invisible to the auth check,
+            # and the engine read "auth FAIL" although its sessions would authenticate.
+            engine_environment = EngineEnvironmentPolicy.from_config(project.config)
+            adapters = {
+                engine_id: engine_environment.applied_to(adapter)
+                for engine_id, adapter in adapters.items()
+            }
             if allow_list is not None:
                 allowed = {eid: a for eid, a in adapters.items() if eid in allow_list}
                 # An allow-list matching nothing used to start a worker with zero
