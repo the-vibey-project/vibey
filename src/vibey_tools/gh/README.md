@@ -96,9 +96,10 @@ and every transition between them to be reproducible and policy checked.
 
 - Python 3.12 or newer, Git, and the GitHub CLI (`gh`).
 - A GitHub repository with Actions enabled and Pages configured for Actions deployments.
-- `ANTHROPIC_API_KEY` for AI repair, conflict resolution, and documentation upkeep — and for
-  the exact-head review only when `[pr_automation] paid_review = true` declares a paid one.
-  By default none is (sub-doctrine 8.b), and a self-hosted sovereign runner reviews instead.
+- `ANTHROPIC_API_KEY` for documentation upkeep — and for PR review, repair, and conflict
+  resolution only when `[pr_automation] paid_review`, `paid_repair`, or
+  `paid_conflict_resolution` declares that paid use. By default none is (sub-doctrine 8.b):
+  a self-hosted sovereign runner reviews, and failing scans or conflicts go to a person.
 - `AUTOMERGE_TOKEN` when the default Actions token cannot merge or manage repository settings.
 - PyPI and TestPyPI trusted-publishing environments when Python publication is enabled.
 

@@ -870,20 +870,31 @@ class PrAutomationConfig:
     # it was: the sovereign lane carries the diff half for a trusted author and the paid
     # reviewer the rest, or the whole review for anyone else.
     #
-    # Scope: this declares the REVIEW. The repair and conflict-resolution jobs are not
-    # governed by it.
+    # One key per paid use, like `review_untrusted_authors` / `repair_untrusted_authors`
+    # beside it: whether the review may be paid is a different question from whether an
+    # agent may edit the branch, and a repository may well answer them differently.
     paid_review: bool = False
+    # May the repair job hand failing scans (or the paid review's findings) to the paid
+    # model to edit the branch? False by default (8.b). Undeclared, the job is never
+    # scheduled and the gate says a human is needed for the failing scans.
+    paid_repair: bool = False
+    # May the conflict-resolution job hand a merge conflict to the paid model? False by
+    # default (8.b). Undeclared, the job is never scheduled and the run says a human is
+    # needed to resolve the conflict.
+    paid_conflict_resolution: bool = False
     observability: PrAutomationObservabilityConfig = PrAutomationObservabilityConfig()
     fallback: PrAutomationFallbackConfig = PrAutomationFallbackConfig()
 
     def __post_init__(self) -> None:
-        if not isinstance(self.paid_review, bool):
-            # A declaration is a human writing `true`. A string or a number read as truthy
-            # would reach for a paid counterparty on a typo. ValueError, like every other
-            # refusal of a configuration value here, because callers handle one class.
-            raise ValueError(  # noqa: TRY004
-                f"pr_automation.paid_review must be true or false, not {self.paid_review!r}"
-            )
+        for key in ("paid_review", "paid_repair", "paid_conflict_resolution"):
+            value = getattr(self, key)
+            if not isinstance(value, bool):
+                # A declaration is a human writing `true`. A string or a number read as
+                # truthy would reach for a paid counterparty on a typo. ValueError, like
+                # every other refusal of a configuration value here: callers handle one.
+                raise ValueError(  # noqa: TRY004
+                    f"pr_automation.{key} must be true or false, not {value!r}"
+                )
         _unique_nonempty("pr_automation.scan_workflows", self.scan_workflows)
         _unique_nonempty("pr_automation.ignored_checks", self.ignored_checks)
         _unique_nonempty("pr_automation.plugin_marketplaces", self.plugin_marketplaces)
@@ -2081,6 +2092,8 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         retain_schedule_backstop=auto.get("retain_schedule_backstop", True),
         normalise_commit_subjects=auto.get("normalise_commit_subjects", True),
         paid_review=auto.get("paid_review", False),
+        paid_repair=auto.get("paid_repair", False),
+        paid_conflict_resolution=auto.get("paid_conflict_resolution", False),
         plugin_marketplaces=tuple(auto.get("plugin_marketplaces", ())),
         plugins=tuple(auto.get("plugins", ())),
         observability=PrAutomationObservabilityConfig(

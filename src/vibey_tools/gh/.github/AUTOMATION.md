@@ -166,9 +166,10 @@ private-repository diagnostic.
 
 ## Credentials and settings
 
-- `ANTHROPIC_API_KEY` must be a repository secret for AI repair, conflict resolution,
-  autonomous issue solutions, documentation upkeep, and release repair — and for the review
-  only where `[pr_automation] paid_review = true` declares a paid one. A call the API refuses
+- `ANTHROPIC_API_KEY` must be a repository secret for autonomous issue solutions,
+  documentation upkeep, and release repair — and for PR review, repair and conflict
+  resolution only where `[pr_automation] paid_review`, `paid_repair` or
+  `paid_conflict_resolution` declares that paid use (8.b; each is `false` by default). A call the API refuses
   is reported as `the paid <review|repair|conflict resolution> was refused by the API:
   <reason>`, never as the action's closing "Result subtype: success".
 - `AUTOMERGE_TOKEN` is needed when the default `GITHUB_TOKEN` cannot merge through the

@@ -221,9 +221,12 @@ normalise_commit_subjects = true
 # an outside author, a fork, or one arriving while the sovereign runner has no fresh
 # heartbeat -- gets no automated pass and is told plainly that it needs a human review.
 # Setting it true is the declaration: the two-lane review returns exactly as it was.
-# Scope: the review only. Repair and conflict resolution still call the paid model when
-# their state arises; they are not governed by this key.
 paid_review = false
+# Repair and conflict resolution call the paid model too, so they are declared the same way,
+# and by the same instruction are not: undeclared, neither job is scheduled, and a failing
+# scan or a merge conflict is reported as needing a human.
+paid_repair = false
+paid_conflict_resolution = false
 
 # The delivery forecast is a repository-owned, append-only projection.  The workflow
 # refreshes it on integration changes, issue/PR changes and a schedule; these paths and

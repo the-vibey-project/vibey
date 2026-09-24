@@ -1,8 +1,9 @@
 # Operations
 
-`ANTHROPIC_API_KEY` is required for repair, conflict resolution and the other AI jobs, and
-for the review only where `[pr_automation] paid_review = true` declares a paid one (by
-default none is, and the sovereign lane reviews). Add `AUTOMERGE_TOKEN` only when the default
+`ANTHROPIC_API_KEY` is required for the issue, documentation and release-repair AI jobs, and
+for PR review, repair and conflict resolution only where `[pr_automation] paid_review`,
+`paid_repair` or `paid_conflict_resolution` declares that use (by default none is: the
+sovereign lane reviews, and failing scans or conflicts are left to a person). Add `AUTOMERGE_TOKEN` only when the default
 `GITHUB_TOKEN` cannot satisfy branch rulesets or repository-settings writes; PyPI/TestPyPI
 use trusted publishing environments.
 

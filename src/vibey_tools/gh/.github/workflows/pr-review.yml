@@ -277,6 +277,25 @@ jobs:
             echo "needs a human review: ${human_reason} (no paid review is declared, 8.b)"
           fi
 
+      # A merge conflict used to go to the paid model. With no paid conflict resolution
+      # declared (`[pr_automation] paid_conflict_resolution`, 8.b) that job is never
+      # scheduled, and the gate publishes nothing for a conflict -- so it is said here, in
+      # the run's summary, rather than left as silence.
+      - name: Say what needs a human
+        if: steps.resolve.outputs.pr != ''
+        id: unpaid
+        env:
+          STATE: ${{ steps.evaluate.outputs.state }}
+          PAID_CONFLICT_RESOLUTION: false
+        run: |
+          set -euo pipefail
+          if [ "$STATE" = conflict ] && [ "$PAID_CONFLICT_RESOLUTION" != true ]; then
+            said="needs a human: automated conflict resolution needs a paid model, and none is declared (8.b)"
+            echo "$said"
+            echo "::warning::${said}"
+            echo "### ${said}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   review-sovereign:
     name: Sovereign diff review
     needs: evaluate
@@ -959,14 +978,20 @@ jobs:
     # `repairable` is `false` only when every failing half was carried by the sovereign
     # lane: a local model's finding is a lead for a human and never starts a repair. A
     # review the paid lane answered whole is repairable exactly when it failed, as before.
+    #
+    # Mirroring exists so a PAID repair or conflict resolution can work on the fork's
+    # change, so it runs only where the job it serves is declared (8.b); with neither, it
+    # would replace a contributor's pull request for nothing.
     if: >-
       always() && inputs.dry_run != true && needs.evaluate.outputs.fork == 'true' &&
-      (needs.evaluate.outputs.state == 'repair' ||
-       needs.evaluate.outputs.state == 'conflict' ||
-       ((needs.evaluate.outputs.state == 'ready' ||
-         needs.evaluate.outputs.state == 'review') &&
-        needs.review.outputs.passed == 'false' &&
-        needs.review.outputs.repairable == 'true'))
+      ((false &&
+        (needs.evaluate.outputs.state == 'repair' ||
+         ((needs.evaluate.outputs.state == 'ready' ||
+           needs.evaluate.outputs.state == 'review') &&
+          needs.review.outputs.passed == 'false' &&
+          needs.review.outputs.repairable == 'true'))) ||
+       (false &&
+        needs.evaluate.outputs.state == 'conflict'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -989,7 +1014,11 @@ jobs:
     name: Repair failed scans or review findings
     needs: [evaluate, review]
     # See `mirror-fork`: a failure carried by the sovereign lane alone is never repaired.
+    # And only where a paid repair is DECLARED (`[pr_automation] paid_repair`, 8.b): the
+    # literal at the head of the condition keeps an undeclared repository's workflow from
+    # ever scheduling this job, or reading the API secret it holds.
     if: >-
+      false &&
       always() && inputs.dry_run != true && needs.evaluate.outputs.fork != 'true' &&
       (needs.evaluate.outputs.state == 'repair' ||
        ((needs.evaluate.outputs.state == 'ready' ||
@@ -1346,7 +1375,10 @@ jobs:
   resolve-conflict:
     name: Resolve merge conflicts
     needs: evaluate
+    # Only where a paid conflict resolution is DECLARED
+    # (`[pr_automation] paid_conflict_resolution`, 8.b), for the same reason as `repair`.
     if: >-
+      false &&
       needs.evaluate.outputs.state == 'conflict' &&
       needs.evaluate.outputs.fork != 'true' && inputs.dry_run != true
     runs-on: ubuntu-latest
@@ -1671,6 +1703,7 @@ jobs:
           REVIEW_REFUSAL: ${{ needs.review.outputs.refusal }}
           REPAIR_REFUSAL: ${{ needs.repair.outputs.refusal }}
           PAID_REVIEW: false
+          PAID_REPAIR: false
           SOVEREIGN_WHOLE: ${{ needs.evaluate.outputs.sovereign_whole }}
           HUMAN_REASON: ${{ needs.evaluate.outputs.human_reason }}
           HUMAN_RETRY: ${{ needs.evaluate.outputs.human_retry }}
@@ -1687,6 +1720,19 @@ jobs:
           [ -z "$REVIEW_REFUSAL" ] || review_said="$REVIEW_REFUSAL"
           if [ "$STATE" = repair ] && [ -n "$REPAIR_REFUSAL" ]; then
             summary="${summary} ${REPAIR_REFUSAL}."
+          fi
+          # What happens to actionable findings next: a bounded paid repair where one is
+          # declared (8.b), and otherwise a person -- said so, never promised.
+          no_paid_repair="needs a human: automated repair needs a paid model, and none is declared (8.b)"
+          repair_next="bounded repair addresses them and rescans"
+          Repair_next="Bounded repair addresses them and rescans"
+          if [ "$PAID_REPAIR" != true ]; then
+            repair_next="$no_paid_repair"
+            Repair_next="$no_paid_repair"
+            if [ "$STATE" = repair ]; then
+              title="PR review: needs a human (failing scans)"
+              summary="${summary} ${no_paid_repair}."
+            fi
           fi
           # `$REASON` comes from the evaluation, which only ever describes the SCANS. Once
           # scans are green it reads "all scans and applicable reviews passed" — true of
@@ -1745,7 +1791,7 @@ jobs:
             if [ "$wider_passed" = true ]; then
               wider_said="certified every documentation-contract judgment with no actionable finding"
             else
-              wider_said="returned actionable findings; bounded repair addresses them and rescans, and they are in the review job log and the PR automation state comment"
+              wider_said="returned actionable findings; ${repair_next}, and they are in the review job log and the PR automation state comment"
             fi
             summary="Scans passed for this exact head, and the review was split by lane. The diff-groundable half (pass, summary, findings) was carried by the SOVEREIGN lane, a local model (${SOVEREIGN_MODEL}) on the operator's own runner, which ${diff_said}. The requires-wider-context half (the documentation-contract judgments) was carried by the PAID lane (${PAID_MODEL}), which read the whole proposed repository and ${wider_said}."
             if [ "$REVIEW_PASSED" = true ]; then
@@ -1770,7 +1816,7 @@ jobs:
                 ;;
               false)
                 title="PR review: review findings"
-                summary="Scans passed for this exact head, but the exact-head review returned actionable findings. Bounded repair addresses them and rescans; the findings are in the review job log and the PR automation state comment."
+                summary="Scans passed for this exact head, but the exact-head review returned actionable findings. ${Repair_next}; the findings are in the review job log and the PR automation state comment."
                 ;;
               *)
                 # No verdict from the paid path. If a local fallback reviewed the diff and

@@ -256,12 +256,16 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace(
         "__VIBEY_GH_FALLBACK_TRUSTED_ONLY__", "true" if fallback.trusted_only else "false"
     )
-    # The paid-review declaration (8.b), a literal `true`/`false`: at the head of the paid
-    # review job's `if:`, so an undeclared repository's workflow never schedules the paid
-    # call at all, and in the steps that decide what the sovereign lane answers.
-    wanted = wanted.replace(
-        "__VIBEY_GH_PAID_REVIEW__", "true" if cfg.pr_automation.paid_review else "false"
-    )
+    # The paid declarations (8.b), each a literal `true`/`false`: at the head of its paid
+    # job's `if:` -- review, repair, conflict resolution -- so an undeclared repository's
+    # workflow never schedules the paid call at all, and in the steps that report what
+    # that leaves to a person.
+    for marker, declared in (
+        ("__VIBEY_GH_PAID_REVIEW__", cfg.pr_automation.paid_review),
+        ("__VIBEY_GH_PAID_REPAIR__", cfg.pr_automation.paid_repair),
+        ("__VIBEY_GH_PAID_CONFLICT_RESOLUTION__", cfg.pr_automation.paid_conflict_resolution),
+    ):
+        wanted = wanted.replace(marker, "true" if declared else "false")
     # One quoted scalar: the step word-splits it, and config has already refused any entry
     # that is not a plain repository-relative path.
     wanted = wanted.replace(
