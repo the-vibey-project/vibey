@@ -17,9 +17,11 @@ from vibey.application.dto import RunSpec
 from vibey.application.worker import CapacityDeferred
 from vibey.infrastructure.engines.argv import build_argv
 from vibey.infrastructure.engines.descriptors import OPENCODE
+from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.plan_writer import write_plan
 from vibey.infrastructure.interfaces import CommandExecutor
 from vibey.infrastructure.process import ProcessReaper
+from vibey.infrastructure.process.interfaces import ChildEnvironmentInterface
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,12 +32,26 @@ class CommandResult:
 
 
 class AsyncSubprocessExecutor:
+    """Runs one bounded opencode DESIGN/DECOMPOSE session. Satisfies
+    `infrastructure/interfaces.CommandExecutor`.
+
+    The session runs model-chosen shell commands, so it starts from opencode's
+    allow-listed environment (`EngineEnvironmentPolicy`), never the worker's copy --
+    by default the defaults; the CLI passes the project's policy.
+    """
+
+    def __init__(self, environment: ChildEnvironmentInterface | None = None) -> None:
+        self._environment = (
+            EngineEnvironmentPolicy().environment(OPENCODE) if environment is None else environment
+        )
+
     async def execute(self, argv: tuple[str, ...]) -> CommandResult:
         process = await asyncio.create_subprocess_exec(
             *argv,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             start_new_session=True,
+            env=self._environment.build(),
         )
         try:
             stdout, stderr = await process.communicate()

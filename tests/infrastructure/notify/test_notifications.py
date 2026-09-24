@@ -75,8 +75,7 @@ async def test_desktop_notifier_command_construction() -> None:
     assert result is True
     assert len(calls) == 1
     assert calls[0][0] == "osascript"
-    assert "Phase Transitioned" in calls[0][2]
-    assert 'sound name "Ping"' in calls[0][2]
+    assert calls[0][-3:] == ["vibey: Phase Transitioned", "Moved to REVIEW phase", "Ping"]
 
 
 @pytest.mark.asyncio

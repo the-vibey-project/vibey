@@ -378,3 +378,77 @@ def test_the_constructor_rejects_a_bound_that_is_not_one(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         SubprocessGateRunner(**kwargs)
+
+
+# ── a gate's environment is allow-listed too ──────────────────────────────────────
+#
+# A gate command is decomposer-produced argv running engine-written code (a test file,
+# a build script) in the worktree. It used to inherit the worker's whole environment
+# minus GIT_*, so the queue and ledger DSN was one `os.environ` read away from code a
+# model wrote.
+
+_SECRET_PROBE = (
+    "/bin/sh",
+    "-c",
+    'printf "%s\\n" "${VIBEY_PG_URL-unset}" "${PGPASSWORD-unset}" "${GH_TOKEN-unset}" '
+    '"${AWS_SECRET_ACCESS_KEY-unset}" "${PROJECT_TEST_DSN-unset}" "${HOME-unset}"',
+)
+
+
+def _worker_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VIBEY_PG_URL", "postgresql://vibey:secret@db/vibey")
+    monkeypatch.setenv("PGPASSWORD", "secret")
+    monkeypatch.setenv("GH_TOKEN", "ghp_secret")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "aws-secret")
+    monkeypatch.setenv("PROJECT_TEST_DSN", "postgresql://tests@localhost/tests")
+    monkeypatch.setenv("HOME", "/home/worker")
+
+
+async def test_a_gate_never_sees_the_queue_dsn_or_a_credential(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _worker_secrets(monkeypatch)
+
+    result = await SubprocessGateRunner().run(_SECRET_PROBE, cwd=tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == ["unset"] * 5 + ["/home/worker"]
+
+
+async def test_a_gate_is_given_what_the_project_declares_and_still_not_the_dsn(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _worker_secrets(monkeypatch)
+    runner = SubprocessGateRunner.from_config({"gates": {"env_allow": ["PROJECT_TEST_*"]}})
+
+    result = await runner.run(_SECRET_PROBE, cwd=tmp_path)
+
+    assert result.stdout.splitlines() == ["unset"] * 4 + [
+        "postgresql://tests@localhost/tests",
+        "/home/worker",
+    ]
+
+
+def test_from_config_reads_the_gate_allow_list() -> None:
+    runner = SubprocessGateRunner.from_config({"gates": {"env_allow": ["JAVA_HOME", "GRADLE_*"]}})
+
+    assert runner.allow_list.admits("JAVA_HOME")
+    assert runner.allow_list.admits("GRADLE_USER_HOME")
+    assert runner.allow_list.admits("PATH")
+    assert not runner.allow_list.admits("VIBEY_PG_URL")
+
+
+@pytest.mark.parametrize(
+    ("gates", "message"),
+    [
+        ({"env_allow": "JAVA_HOME"}, "gates.env_allow must be a list of strings"),
+        ({"env_allow": ["VIBEY_PG_URL"]}, "gates.env_allow.*can never be passed"),
+        ({"env_allow": ["PG*"]}, "can never be passed"),
+        ({"env_allow": ["GIT_DIR"]}, "can never be passed"),
+    ],
+)
+def test_from_config_refuses_a_gate_allow_list_that_names_vibeys_own(
+    gates: object, message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        SubprocessGateRunner.from_config({"gates": gates})

@@ -291,11 +291,15 @@ def test_macos_and_linux_get_their_own_command() -> None:
     assert linux[0] == "notify-send"
 
 
-def test_quotes_in_the_message_are_escaped_for_applescript() -> None:
-    """The message is interpolated into an AppleScript string literal, so an
-    unescaped quote would end the string and change the script."""
-    cmd = DesktopNotifier(platform_override="darwin")._build_command(_event())
-    assert '\\"decision\\"' in cmd[2]
+def test_quotes_in_the_message_reach_applescript_as_data_not_source() -> None:
+    """The message used to be interpolated into an AppleScript string literal with only
+    its quotes escaped; it is an argument of a fixed script now, passed verbatim
+    (test_desktop_injection.py has the attack)."""
+    event = _event()
+    cmd = DesktopNotifier(platform_override="darwin")._build_command(event)
+    assert '"decision"' in event.message
+    assert cmd[cmd.index("--") + 2] == event.message
+    assert not any(event.message in part for part in cmd[: cmd.index("--")])
 
 
 def test_an_unsupported_platform_is_a_no_op_not_a_crash() -> None:

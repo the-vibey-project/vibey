@@ -96,6 +96,46 @@ spec:
                     kill_grace_seconds:
                       type: number
                       exclusiveMinimum: 0
+                gates:
+                  type: object
+                  description: >-
+                    How gate commands run, stored as the project record's `gates`
+                    object (vibey.toml's [gates]). A gate command starts from the
+                    system basics plus env_allow, never the worker's environment;
+                    VIBEY_*, PG* and GIT_* can never be declared.
+                  properties:
+                    timeout_seconds:
+                      type: number
+                      exclusiveMinimum: 0
+                    kill_grace_seconds:
+                      type: number
+                      exclusiveMinimum: 0
+                    isolate_python_env:
+                      type: boolean
+                    env_allow:
+                      type: array
+                      items:
+                        type: string
+                engineEnvironment:
+                  type: object
+                  description: >-
+                    What an engine session may see of the worker's environment beyond
+                    the system basics and its descriptor's own variables, stored as the
+                    project record's `engine_environment` object (vibey.toml's
+                    [engine_environment]). A trailing `*` names a prefix. VIBEY_*, PG*
+                    and any name containing DSN, DATABASE_URL, PASSWORD or PASSWD can
+                    never be declared.
+                  properties:
+                    allow:
+                      type: array
+                      items:
+                        type: string
+                    engines:
+                      type: object
+                      additionalProperties:
+                        type: array
+                        items:
+                          type: string
                 answers:
                   type: object
                   description: >-

@@ -89,8 +89,8 @@ uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines c
   do **not** see vibey's venv: its `bin`, `VIRTUAL_ENV`, `PYTHONPATH` and
   `PYTHONHOME` are stripped from them, so a gate's `python` is whichever one
   the rest of `PATH` provides, never vibey's. A project whose gates need tools
-  installed beside vibey sets `gates.isolate_python_env` to `false` in its
-  config record ([Gate commands](../reference/configuration.md#gates)).
+  installed beside vibey sets `isolate_python_env = false` under `[gates]` in its
+  `vibey.toml` before `vibey new` ([`[gates]`](../reference/configuration.md#gates)).
 
 The worker LISTENs on `vibey_job_ready`, so answers you give in another
 terminal wake it immediately.

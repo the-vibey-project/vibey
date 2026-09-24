@@ -17,6 +17,8 @@ from pathlib import Path
 from vibey.domain.errors import VibeyError
 from vibey.domain.worktree import branch_name, worktree_subpath
 from vibey.infrastructure.git.clean_env import CleanGitEnvSubprocessExecutor
+from vibey.infrastructure.git.interfaces import RepositoryConfigGuardInterface
+from vibey.infrastructure.git.repository_config_guard import RepositoryConfigGuard
 from vibey.infrastructure.interfaces import CommandExecutor
 
 
@@ -34,10 +36,14 @@ class GitWorktreeManager:
         *,
         cycle: int,
         executor: CommandExecutor | None = None,
+        guard: RepositoryConfigGuardInterface | None = None,
     ) -> None:
         self._repo_root = repo_root
         self._cycle = cycle
         self._executor = executor or CleanGitEnvSubprocessExecutor()
+        # A checkout runs the filter drivers the repository's config names; an engine
+        # can write that config from its linked worktree (clean_env.py).
+        self._guard = guard if guard is not None else RepositoryConfigGuard(self._executor)
 
     def path_for(self, item_id: str) -> Path:
         """No I/O, no mutation: where this item's worktree lives (or would
@@ -54,6 +60,7 @@ class GitWorktreeManager:
         await self._prune()
 
         path.parent.mkdir(parents=True, exist_ok=True)
+        await self._guard.check(self._repo_root)
         if await self._branch_exists(branch):
             await self._git("worktree", "add", str(path), branch)
         else:

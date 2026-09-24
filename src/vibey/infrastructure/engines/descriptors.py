@@ -39,6 +39,8 @@ from vibey.domain.engine import (
     IsolationLevel,
 )
 
+_CLAUDELOOP_ENV = ("CLAUDELOOP_*", "CLAUDE_CODE_*", "CLAUDE_CONFIG_DIR", "ANTHROPIC_*")
+
 CLAUDELOOP = EngineDescriptor(
     engine_id=EngineId.CLAUDELOOP,
     binary="claudeloop",
@@ -46,6 +48,9 @@ CLAUDELOOP = EngineDescriptor(
     state_dir=".claudeloop",
     done_marker="CLAUDELOOP_TASK_FULLY_COMPLETE",
     auth_env=("ANTHROPIC_API_KEY",),
+    # claudeloop's own settings, and Claude Code's: its config directory, its
+    # CLAUDE_CODE_* switches and the ANTHROPIC_* endpoint, model and credential names.
+    env_passthrough=_CLAUDELOOP_ENV,
     capabilities=frozenset(
         {
             Capability.SAVEPOINTS,
@@ -99,6 +104,16 @@ CODEXLOOP = EngineDescriptor(
     state_dir=".codexloop",
     done_marker="CODEXLOOP_TASK_FULLY_COMPLETE",
     auth_env=("OPENAI_API_KEY",),
+    # codexloop's settings and the Codex CLI's (CODEX_HOME, CODEX_API_KEY), the OpenAI
+    # endpoint names, and the Azure OpenAI pair codexloop's Azure lane authenticates
+    # with -- a model endpoint key, not a cloud-control credential.
+    env_passthrough=(
+        "CODEXLOOP_*",
+        "CODEX_*",
+        "OPENAI_*",
+        "AZURE_OPENAI_API_KEY",
+        "AZURE_OPENAI_ENDPOINT",
+    ),
     capabilities=frozenset(
         {
             Capability.SAVEPOINTS,
@@ -159,6 +174,7 @@ CURSORLOOP = EngineDescriptor(
     state_dir=".cursorloop",
     done_marker="CURSORLOOP_TASK_FULLY_COMPLETE",
     auth_env=("CURSOR_API_KEY",),
+    env_passthrough=("CURSORLOOP_*", "CURSOR_*"),
     capabilities=frozenset(
         {
             Capability.SAVEPOINTS,
@@ -204,6 +220,19 @@ AGYLOOP = EngineDescriptor(
     state_dir=".agyloop",
     done_marker="AGYLOOP_TASK_FULLY_COMPLETE",
     auth_env=("GOOGLE_API_KEY",),
+    # agyloop's and Antigravity's settings, and the Gemini developer-lane key. The
+    # Vertex lane's cloud credentials (GOOGLE_ACCESS_TOKEN, CLOUDSDK_AUTH_ACCESS_TOKEN,
+    # GOOGLE_APPLICATION_CREDENTIALS) are deliberately NOT here: a project that runs
+    # agyloop on Vertex declares them under `engine_environment.engines.agyloop`.
+    env_passthrough=(
+        "AGYLOOP_*",
+        "ANTIGRAVITY_*",
+        "GEMINI_API_KEY",
+        "GOOGLE_GENAI_USE_VERTEXAI",
+        "GOOGLE_GENAI_USE_ENTERPRISE",
+        "GOOGLE_CLOUD_PROJECT",
+        "GOOGLE_CLOUD_LOCATION",
+    ),
     capabilities=frozenset(
         {
             Capability.UNWIND,
@@ -249,6 +278,10 @@ OPENCODE = EngineDescriptor(
     # installed OpenCode CLI and must not be guessed from a provider-specific
     # environment variable here. `opencodeloop doctor` checks the CLI contract.
     auth_env=(),
+    # Its own settings only. A provider key the operator's OpenCode configuration reads
+    # from the environment (ANTHROPIC_API_KEY, OPENROUTER_API_KEY, ...) is declared
+    # under `engine_environment.engines.opencode`, never guessed here.
+    env_passthrough=("OPENCODELOOP_*", "OPENCODE_*"),
     capabilities=frozenset({Capability.STRUCTURED_VERDICT, Capability.SNAPSHOT}),
     # The OpenCode CLI accepts provider-specific model settings rather than a
     # portable effort flag. Empty argv is therefore intentional; the achieved
@@ -294,6 +327,9 @@ QWENLOOP = EngineDescriptor(
     state_dir=".qwenloop",
     done_marker="QWENLOOP_TASK_FULLY_COMPLETE",
     auth_env=(),
+    # QWENLOOP_BASE_URL and QWENLOOP_MODEL also arrive through the adapter's overlay,
+    # derived from VIBEY_OLLAMA_URL -- which itself never reaches the session.
+    env_passthrough=("QWENLOOP_*",),
     capabilities=frozenset(Capability),
     effort_projection={
         Effort.TRIVIAL: EngineInvocation(("--max-turns", "8"), achieved=Effort.TRIVIAL),
@@ -377,6 +413,8 @@ class ClaudeloopLocalDescriptors:
             state_dir=CLAUDELOOP.state_dir,
             done_marker=CLAUDELOOP.done_marker,
             auth_env=(),
+            # The same binary reads the same variables; the profile scrubs the paid key.
+            env_passthrough=CLAUDELOOP.env_passthrough,
             capabilities=frozenset(capabilities),
             effort_projection={
                 effort: EngineInvocation(
