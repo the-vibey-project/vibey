@@ -64,12 +64,13 @@ from vibey.infrastructure.engines.tailer import LedgerEventDraft
 
 type _Connection = asyncpg.pool.PoolConnectionProxy | asyncpg.Connection
 
-_FINISHED: Final = "('succeeded', 'failed', 'cancelled')"
+# Every statement below is a constant with no interpolation: the finished states and the
+# locked columns are spelled out in each, so nothing is ever built from a string.
 
 # The target, scoped to the project the request named, and every job it depends on,
 # transitively -- expanding only through unfinished rows: a finished dependency is read
 # (the planner must know it succeeded, or that it never will) but not walked past.
-_DEPENDENCY_CLOSURE: Final = f"""
+_DEPENDENCY_CLOSURE: Final = """
 WITH RECURSIVE closure(id) AS (
     SELECT j.id FROM job j WHERE j.id = $1 AND j.project_id = $2
   UNION
@@ -77,30 +78,28 @@ WITH RECURSIVE closure(id) AS (
     FROM closure c
     JOIN job cj ON cj.id = c.id
     JOIN job_dependency d ON d.job_id = c.id
-    WHERE cj.state NOT IN {_FINISHED}
+    WHERE cj.state NOT IN ('succeeded', 'failed', 'cancelled')
 )
 SELECT id FROM closure
 """
 
-_COLUMNS: Final = "id, phase, state, priority, run_after, bump_seq, bump_origin"
-
 # Locked in id order, so overlapping reorders take their locks in the same order.
-_LOCK_CLOSURE: Final = f"""
-SELECT {_COLUMNS} FROM job WHERE id = ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE
+_LOCK_CLOSURE: Final = """
+SELECT id, phase, state, priority, run_after, bump_seq, bump_origin FROM job WHERE id = ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE
 """
 
 # An un-bump writes only the target and bumped jobs, so only those are locked.
-_LOCK_BUMPED: Final = f"""
-SELECT {_COLUMNS} FROM job
+_LOCK_BUMPED: Final = """
+SELECT id, phase, state, priority, run_after, bump_seq, bump_origin FROM job
 WHERE project_id = $2
-  AND (id = $1 OR (bump_seq IS NOT NULL AND state NOT IN {_FINISHED}))
+  AND (id = $1 OR (bump_seq IS NOT NULL AND state NOT IN ('succeeded', 'failed', 'cancelled')))
 ORDER BY id
 FOR NO KEY UPDATE
 """
 
-_UNFINISHED: Final = f"""
-SELECT {_COLUMNS} FROM job
-WHERE project_id = $1 AND state NOT IN {_FINISHED} AND NOT (id = ANY($2::uuid[]))
+_UNFINISHED: Final = """
+SELECT id, phase, state, priority, run_after, bump_seq, bump_origin FROM job
+WHERE project_id = $1 AND state NOT IN ('succeeded', 'failed', 'cancelled') AND NOT (id = ANY($2::uuid[]))
 """
 
 _EDGES: Final = """
@@ -112,7 +111,7 @@ WHERE job_id = ANY($1::uuid[]) AND depends_on_job_id = ANY($1::uuid[])
 # `bump_seq ASC NULLS LAST, priority DESC, run_after ASC, id ASC` too
 # (job_repository.py); a job still waiting on a dependency is listed where it will stand
 # once the dependency succeeds, with what it waits on beside it.
-_QUEUE: Final = f"""
+_QUEUE: Final = """
 SELECT j.*,
        ARRAY(
            SELECT d.depends_on_job_id FROM job_dependency d
@@ -121,7 +120,7 @@ SELECT j.*,
            ORDER BY d.depends_on_job_id
        ) AS waiting_on
 FROM job j
-WHERE j.project_id = $1 AND j.state NOT IN {_FINISHED}
+WHERE j.project_id = $1 AND j.state NOT IN ('succeeded', 'failed', 'cancelled')
 ORDER BY (j.state = 'leased') DESC, j.bump_seq ASC NULLS LAST, j.priority DESC,
          j.run_after ASC, j.id ASC
 """
