@@ -46,6 +46,7 @@ from vibey_gh.config import (
     PrAutomationObservabilityConfig,
     RealignConfig,
     RepositoryProfileConfig,
+    RunnersConfig,
     SocialSignalsConfig,
     TidyConfig,
     UnattendedApprovalConfig,
@@ -90,6 +91,7 @@ _SECTION_KEYS: dict[str, set[str] | None] = {
     "social_signals": _fields(SocialSignalsConfig) | {"entries"},
     "tidy": _fields(TidyConfig),
     "platform": _fields(PlatformConfig),
+    "runners": _fields(RunnersConfig),
     "workflow_names": _fields(WorkflowNamesConfig),
     # `requirements` is one table per stage, and stage names are adopter-defined; the
     # loader and `vibey_gh.feasibility` validate what is inside it, loudly.

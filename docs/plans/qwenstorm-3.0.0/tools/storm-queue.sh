@@ -12,6 +12,10 @@
 # lane no longer holds the storm. Every lane whose dependencies are integrated runs, and finished
 # lanes wait for a batch review; integrating a batch unlocks the lanes that depend on it.
 # The queue is re-read on every pass, so lanes can be appended or reordered while this runs.
+# PRIORITY (ADR-0054): `tools/storm-priority.py push|bump|unbump` puts a lane at the front,
+# first pushed first, with its unintegrated dependencies pulled forward ahead of it. It runs
+# next after the lane running now -- never instead of it -- and admission below still judges
+# its issue. Only the operator or a source declared in storm.toml [priority] sources may.
 # Declared in storm.toml, derived from the tree when it is silent -- never a literal here
 # (12.h). A shell script cannot read TOML, so it asks the one resolver the Python tools use
 # rather than keeping a second copy that agrees until the day it does not.
@@ -44,41 +48,34 @@ if ! ps -Ao args= | grep -q '[s]torm-cycle.py'; then
   echo "$(date -u +%FT%TZ) outer cycle started (10 min: refresh, repair, publish, merge-train)" \
     | tee -a "$Q/progress.log"
 fi
-settled() { grep -qx "$1" "$Q/integrated.txt" "$Q/abandoned.txt"; }
 said=""
 say_once() { [ "$said" = "$1" ] || { echo "$(date -u +%FT%TZ) $1" | tee -a "$Q/progress.log"; said="$1"; }; }
 while true; do
+  # "Next" means next after whatever is running (ADR-0054): the host-wide wait comes first,
+  # so a lane is never interrupted -- a push made meanwhile only changes what starts after it.
   while pgrep -f "qwenstorm-3.0.0/tools/qwenlane.py" >/dev/null; do sleep 30; done
-  unreviewed=""; pending=0; next=""
-  while read -r slug issue deps; do
-    [ -z "$slug" ] && continue
-    # The ledger decides, not the scratch directory. A lane in integrated.txt or abandoned.txt
-    # is done however little of lanes/ survives: /tmp is wiped between sessions, and keying
-    # "done" off result.json re-ran every already-integrated lane on top of work the
-    # integration branch already carries.
-    settled "$slug" && continue
-    if [ -f "$Q/lanes/$slug/.qwenstorm/result.json" ]; then
-      unreviewed="$unreviewed $slug"; continue
-    fi
-    pending=$((pending + 1))
-    [ -n "$next" ] && continue
-    ok=1
-    for d in ${deps//,/ }; do
-      if grep -qx "$d" "$Q/abandoned.txt"; then
-        mkdir -p "$Q/lanes/$slug/.qwenstorm"
-        echo "{\"completed\": false, \"blocked_on\": \"$d\"}" > "$Q/lanes/$slug/.qwenstorm/result.json"
-        echo "$(date -u +%FT%TZ) blocked $slug #$issue: dependency $d was abandoned" | tee -a "$Q/progress.log"
-        ok=0; break
-      fi
-      grep -qx "$d" "$Q/integrated.txt" || { ok=0; break; }
-    done
-    [ "$ok" = 1 ] && next="$slug $issue"
-  done < "$Q/queue.txt"
-  if [ "$pending" = 0 ] && [ -z "$unreviewed" ]; then say_once "queue empty"; exit 0; fi
-  if [ -n "$unreviewed" ] && [ ! -f "$Q/UNATTENDED" ]; then say_once "waiting for review:$unreviewed"; sleep 60; continue; fi
-  if [ -z "$next" ]; then say_once "waiting: no pending lane has all dependencies integrated (awaiting batch review:${unreviewed:- none})"; sleep 60; continue; fi
+  # What runs next is decided in ONE place, storm_queue.py, which storm-priority.py lists
+  # from too, so the runner and the operator's view cannot disagree. It keeps this loop's old
+  # rules exactly: the ledger (not lanes/) decides what is settled, a finished lane awaits
+  # review and holds the storm unless UNATTENDED, a lane met before the next one whose
+  # dependency was abandoned is marked blocked -- and the priority lane goes first.
+  # It answers: run SLUG ISSUE | review SLUG.. | wait [SLUG..] | empty. A resolver that cannot
+  # answer (an unreadable priority log) is waited out and said, never read as "empty".
+  if ! decision="$("$PY" "$Q/tools/storm_queue.py" next)"; then
+    say_once "waiting: cannot decide what runs next: ${decision:-the resolver did not answer}"
+    sleep 60; continue
+  fi
+  set -- $decision
+  verdict="$1"; shift
+  case "$verdict" in
+    empty) say_once "queue empty"; exit 0 ;;
+    review) say_once "waiting for review: $*"; sleep 60; continue ;;
+    wait) say_once "waiting: no pending lane has all dependencies integrated (awaiting batch review: ${*:-none})"; sleep 60; continue ;;
+    run) ;;
+    *) say_once "waiting: the resolver answered '$decision', which this runner does not know"; sleep 60; continue ;;
+  esac
   said=""
-  set -- $next; L="$Q/lanes/$1"
+  L="$Q/lanes/$1"
   if [ ! -d "$L" ]; then
     "$Q/tools/lane-setup.sh" "$1" integration >> "$Q/progress.log" 2>&1 \
       || { echo "$(date -u +%FT%TZ) setup failed $1" | tee -a "$Q/progress.log"; mkdir -p "$L/.qwenstorm"; echo '{"completed": false, "setup_failed": true}' > "$L/.qwenstorm/result.json"; continue; }

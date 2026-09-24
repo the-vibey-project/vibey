@@ -35,6 +35,27 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
    - `review-followups.md` lists the reconciliations made between waves.
 6. `tools/`: the storm machinery.
    - `storm-queue.sh` runs one lane at a time (unattended mode via an `UNATTENDED` file).
+     It asks `storm_queue.py next` what to run, so the runner and the priority CLI share one
+     resolver and cannot disagree.
+   - `storm-priority.py` is the priority lane (ADR-0054). `push SLUG ISSUE [--deps a,b]`
+     prioritises a lane, first appending it to `queue.txt` if it is new; `bump SLUG`
+     prioritises a queued lane; `unbump SLUG` returns it to its `queue.txt` place; `list`
+     prints the order the storm will run, with blocked and settled lanes marked.
+     - A prioritised lane runs next after the lane running now. It never interrupts it.
+     - Prioritised lanes run first pushed first, ahead of every other `queue.txt` line.
+     - A push also prioritises every dependency that is not yet integrated, transitively and
+       in dependency order, and says what it moved. A lane still starts only once all its
+       dependencies are in `integrated.txt`.
+     - Only the operator may change the lane: the account that owns the storm, running the
+       CLI locally. Automation may too if it passes `--source NAME` and `storm.toml` lists
+       NAME under `[priority] sources`. Anything else is refused, recorded and reported
+       (sub-doctrine 12.j). Nothing reads a label or an issue to decide priority.
+     - Admission still applies: `storm_trust.py` judges a pushed lane's issue when it
+       starts, and `lane-verify.py` still refuses forbidden paths.
+     - Every push, bump, un-bump and refusal is one JSON line appended to the priority log
+       (`[priority] log` in `storm.toml`, else `priority.log` beside the ledgers) and a
+       plain line in `progress.log`. The order is always the log's replay; nothing is edited
+       in place. `storm-evidence.py` consumes the log by byte offset with the other ledgers.
    - `lane-setup.sh` and `qwenlane.py` set up and drive a lane.
    - `lane_environment.py` gives a lane's commands its own `.venv` and nothing that points
      outside it, and refuses a lane whose `python` resolves elsewhere.

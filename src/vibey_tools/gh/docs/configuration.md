@@ -294,6 +294,33 @@ never be used for public repositories" because any user can open a pull request 
 them; excluding forks is what removes that. Leave it on, register the runner as ephemeral
 so it takes one job and exits, and run it in a container rather than on the host.
 
+## `[runners]`
+
+The machine that serves the sovereign lane, declared rather than hand-made (sub-doctrine
+12.c). `vibey-gh runner install` renders the runner's LaunchAgent, supervisor, Dockerfile and
+container entrypoint from this table and the templates in `vibey_gh/templates/runner/`;
+`vibey-gh runner check` reconciles the host against them; `vibey-gh runner cleanup` finds
+agents under `unit_prefix` that the tree no longer declares. The runner label is
+`[pr_automation.fallback] runner_label` and the host-side model URL is its `base_url`; neither
+is declared twice. The supervisor is macOS-only (launchd, `caffeinate`, `pmset`). The
+operator's steps are in the vibey repository's `docs/runbooks/sovereign-review-runner.md`.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `repository` | string / `""` | `owner/name` the runner registers with. Empty derives it from `[platform] repository`. `[platform] kind` must be `github`: this is a GitHub Actions runner. |
+| `unit_prefix` | string / `"org.vibey.runner"` | The LaunchAgent label is `<unit_prefix>-<repository name>`. Every agent under the prefix that is not that label is what `runner cleanup` lists. |
+| `install_dir` | path / `"~/.local/share/vibey-runner"` | Where the supervisor, Dockerfile and entrypoint are installed. Retired agents are moved into its `retired-units/`. |
+| `launch_agents_dir` | path / `"~/Library/LaunchAgents"` | Where the LaunchAgent plist is written. |
+| `log_dir` | path / `"~/Library/Logs"` | The supervisor logs to `<log_dir>/<label>.log`. |
+| `gh_config_dir` | path / `"~/.config/gh-runner"` | The runner's **own** gh login, set as `GH_CONFIG_DIR` in the LaunchAgent. It must be a file-based login (`gh auth login --with-token --insecure-storage`) holding a fine-grained token for `repository` only, with **Administration: Read and write**. gh's default directory (`$XDG_CONFIG_HOME/gh` or `~/.config/gh`) is refused however it is spelled, compared after resolving `~`, `..` and symlinks, both when the configuration loads and by the supervisor: its token is in the macOS keyring, which launchd cannot read. The supervisor refuses to start on a missing, keyring-held, unreadable-to-launchd or group/world-readable login, clears `GH_TOKEN` and `GITHUB_TOKEN`, and never falls back to another credential. |
+| `image` | string / `"vibey-runner:latest"` | The runner image the supervisor starts one container of per job. |
+| `runner_version` | `X.Y.Z` / `"2.337.0"` | The actions/runner release the image is built from (`--build-arg RUNNER_VERSION`); the Dockerfile carries no default. |
+| `container_model_url` | URL / `"http://host.docker.internal:11434"` | The model endpoint as the container sees it. |
+| `require_ac` | boolean / `true` | Stay down on battery rather than hold a laptop awake to idle-poll. |
+| `throttle_seconds` | integer 10–3600 / `120` | launchd's `ThrottleInterval` between restarts. |
+| `max_failures` | integer 1–100 / `5` | Consecutive runner failures before the supervisor stops rather than spins. |
+| `path` | string / Homebrew then system paths | The `PATH` launchd gives the supervisor; `docker` and `gh` must be on it. |
+
 ## `[conversation]`
 
 Answers a mention in a comment on an issue or pull request. Comments are the least guarded

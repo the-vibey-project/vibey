@@ -53,6 +53,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **vibey_gh:** `vibey-gh runner install|check|cleanup|uninstall` stands the sovereign review
+  runner up from a new `[runners]` table instead of hand-written LaunchAgents (12.c). Its gh
+  credential is a dedicated, file-based login in `~/.config/gh-runner` holding a fine-grained
+  token with Administration read/write on this repository only; the supervisor refuses any
+  other credential. Operator steps: `docs/runbooks/sovereign-review-runner.md`.
+
 * **vibey_gh:** `vibey-gh approve-check PR [--head SHA] [--approve]` enforces the delegated approver's grant
   by code (sub-doctrines 12.f, 12.j): it exits 0 only when every `[unattended_approval]`
   condition holds — live switch, author allowlist (`@codeowners` expanded), branch globs,
