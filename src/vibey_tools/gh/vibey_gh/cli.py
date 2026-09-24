@@ -695,6 +695,27 @@ def _marketplace(args, renderer: MarketplaceRendererInterface | None = None) -> 
     return 0
 
 
+def _push_scope(args) -> int:
+    """Judge the refs a pre-push hook was handed: does this push carry code at all?
+
+    Reads git's pre-push standard input. Prints `NO_CODE` on stdout and exits 0 only when
+    every ref is outside `refs/heads/` and `refs/tags/` and every commit is an empty tree
+    with no parents; the reason goes to stderr so the person pushing sees why the heavy
+    stage did not run. Any other push prints nothing and exits 1, and the gate runs in full.
+    """
+    from vibey_gh.push_scope import NO_CODE, PushScope
+
+    verdict = PushScope().judge(sys.stdin.read())
+    if verdict.carries_code:
+        return 1
+    print(
+        f"vibey-gh push-scope: {verdict.reason}; nothing for the pre-push gate to judge",
+        file=sys.stderr,
+    )
+    print(NO_CODE)
+    return 0
+
+
 def _sovereign(args) -> int:
     """Publish or read the sovereign heartbeat (doctrine 8.a).
 
@@ -1831,6 +1852,12 @@ def main(argv: list[str] | None = None) -> int:
         "--check", action="store_true", help="fail loudly when the root manifest drifts"
     )
     mk.set_defaults(func=_marketplace)
+
+    ps = sub.add_parser(
+        "push-scope",
+        help="read pre-push refs on stdin; print carries-no-code when none of it is code",
+    )
+    ps.set_defaults(func=_push_scope)
 
     sv = sub.add_parser(
         "sovereign",
