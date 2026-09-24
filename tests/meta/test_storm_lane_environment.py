@@ -318,6 +318,23 @@ def drive(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, lane: Path, seen: Pat
     monkeypatch.setattr(qwenlane, "_tracked_repository_context", lambda _lane: "")
     body = lane / "issue.md"
     body.write_text("an issue\n", encoding="utf-8")
+    # main() runs only issue text that was admitted (storm_trust, 12.j): the record binds this
+    # exact title and these exact bytes, as `IssueGate.admit` writes it.
+    (lane / ".qwenstorm").mkdir(parents=True, exist_ok=True)
+    (lane / ".qwenstorm" / "provenance.json").write_text(
+        json.dumps(
+            {
+                "issue": 1,
+                "admitted": True,
+                "title": "a title",
+                "author": "operator",
+                "source": "owner/repo#1",
+                "fetched_at": "2026-09-23T00:00:00Z",
+                "sha256": qwenlane.Admission().digest("a title", body.read_bytes()),
+            }
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(
         sys, "argv", ["qwenlane.py", str(lane), "1", "a title", str(body), "--max-attempts", "1"]
     )
