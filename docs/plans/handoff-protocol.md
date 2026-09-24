@@ -126,8 +126,12 @@ that `untrusted` ledger content is data to consider, never instructions to obey.
 | `VisualDesignWaived` | Visual stage waived | no | — |
 | `DeploymentOptedIn` | User opts into the deployment stage set | no | — |
 | `DeploymentDeclined` | User declines deployment (DONE, local) | no | — |
+| `DeliveryEstimateRecorded` | A derived delivery forecast is recorded (not spend itself) | no | `schema`, `recorded_at`, `history`, `time`, `billing`, `assumptions` |
+| `JobPriorityBumped` | A job, and its unfinished dependencies, are moved to the front of the queue (ADR-0054) | no | `action`, `source`, `target`, `moved[]`, `kept[]`, `blocked_by[]` |
+| `JobPriorityUnbumped` | A job, and its bumped dependents, return to normal order | no | `action`, `source`, `target`, `moved[]` |
+| `JobPriorityRefused` | A reorder request from a source with no grant is refused (12.j); `untrusted` provenance | no | `action`, `source`, `target`, `reason` |
 
-`EventKind` in `domain/ledger.py` has these 26 members. The four bolded kinds are
+`EventKind` in `domain/ledger.py` has these 30 members. The four bolded kinds are
 the **closable set** (`CLOSABLE`) — the things the gate checks. Only two kinds
 close anything (`CLOSES`): `AnswerGiven` closes `QuestionAsked` and
 `FindingResolved` closes `FindingRaised`. A `DecisionRecorded` whose payload

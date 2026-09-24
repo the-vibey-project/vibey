@@ -9,7 +9,8 @@ complete (for example, `vibey work --help` does not list `qwenloop`).
 
 Top-level commands, in `vibey --help` order: `new`, `answer`, `work`,
 `watch`, `recover`, `status`, `engines`, `cost`, `install`, `doctor`,
-`operator`, `worker`, and the command groups `design`, `visual`, `deploy`, `ledger`.
+`operator`, `worker`, and the command groups `design`, `visual`, `deploy`, `ledger`,
+`queue`.
 Bare `vibey`, and each bare command group, prints help.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
@@ -50,9 +51,9 @@ with payloads.
 
 ### Guarded and unguarded commands
 
-Seven commands run inside `vibey.cli.errors.guard()`: `new`,
+Ten commands run inside `vibey.cli.errors.guard()`: `new`,
 `design resume`, `design accept`, `work`, `visual accept`, `visual waive`,
-and `worker`. For these, any `VibeyError` — an unknown project or provider,
+`queue bump`, `queue unbump`, `queue list`, and `worker`. For these, any `VibeyError` — an unknown project or provider,
 a wrong phase, an invalid spec, no eligible engine, a rejected handoff, an
 unset `VIBEY_PG_URL` — becomes the one-line `Error:` message and exit 3.
 Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
@@ -168,7 +169,7 @@ Bare `vibey design` prints help. Subcommands:
 
 | Subcommand | What it does |
 |---|---|
-| `design resume PROJECT_ID` | Enqueue or resume the project's DESIGN interview. Prints `design job <id>`. |
+| `design resume PROJECT_ID [--priority]` | Enqueue or resume the project's DESIGN interview. Prints `design job <id>`. `--priority` enqueues it bumped, so it runs next after whatever is running — the same grant and ledger record as [`vibey queue bump`](#vibey-queue). |
 | `design accept PROJECT_ID [--spec-json PATH] [--visual/--no-visual]` | Accept the synthesized spec (optionally importing JSON first) and choose whether to enter the VISUAL_DESIGN interstitial. Defaults to `--no-visual`; the choice is never implicit. Prints `accepted design for <id>; entered <phase>; context under <repo_path>`. |
 
 `--spec-json` expects a JSON object with:
@@ -273,6 +274,36 @@ Bare `vibey ledger` prints help. Subcommand:
 Prints one line per event, oldest first:
 `#<seq> <YYYY-MM-DD HH:MM:SS> [<PHASE>] <kind> [<engine>]`. Filters apply
 before `--limit`. Defaults to the most recently created project.
+
+## `vibey queue`
+
+See the job queue in claim order, and move a job to the front of it
+([ADR-0054](../architecture/decisions/0054-a-bumped-job-runs-next.md)). Bare
+`vibey queue` prints help.
+
+| Subcommand | Option | Default | What it does |
+|---|---|---|---|
+| `queue list [PROJECT_ID]` | `--json` | off | Every unfinished job: running work first (`running`), then waiting work numbered in the order the claim will take it. A bumped job is marked `bumped #N`; a job still waiting on unfinished dependencies says how many. Defaults to the latest project; an unknown id prints `unknown project <id>` and exits 1. |
+| `queue bump JOB_ID` | `--source NAME` | `operator` | Run the job next: after whatever is running, ahead of every un-bumped waiting job, behind anything bumped before it. Its unfinished dependencies move forward with it, dependencies first. Prints every job moved with its new place, any already ahead, and any dependency that blocks it and cannot be moved (failed or cancelled). |
+| | `--config PATH` | `vibey.toml` | The file declaring `[queue.priority] sources`. A missing file declares none; a malformed one is an error. |
+| | `--json` | off | Print the change as JSON. |
+| `queue unbump JOB_ID` | `--source`, `--config`, `--json` | as `bump` | Return the job to normal order, and every bumped job that depends on it. |
+
+A bump changes order only. It never interrupts the running job or touches its
+lease, never makes a job claimable before its dependencies succeed, and never
+shortens a `run_after` a capacity deferral set; phases and human gates apply as
+before. A job that is running can be bumped: it keeps its place if the attempt
+returns it to the queue. Bumping a job already bumped, or un-bumping one that
+is not, prints `nothing moved`, changes nothing and records nothing.
+
+Whoever runs the command is the operator. `--source NAME` is how a declared
+automation names itself; a name that `[queue.priority] sources` does not declare
+is refused (sub-doctrine 12.j): nothing moves, `JobPriorityRefused` is appended
+to the ledger, and the command exits 3 with the reason. Every bump and un-bump
+appends `JobPriorityBumped` or `JobPriorityUnbumped` in the same transaction as
+the change; `vibey ledger search --kind JobPriorityBumped` finds them. A job that
+has finished, or is in a state or phase this vibey does not know, cannot be
+moved (exit 3).
 
 ## `vibey deploy`
 

@@ -59,6 +59,18 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   token with Administration read/write on this repository only; the supervisor refuses any
   other credential. Operator steps: `docs/runbooks/sovereign-review-runner.md`.
 
+* **queue:** a job can be bumped to run next (ADR-0054). `vibey queue bump JOB` puts it
+  after whatever is running — never interrupting it — behind anything bumped before it
+  and ahead of all un-bumped waiting work, and pulls its unfinished dependencies forward
+  with it; `vibey queue unbump JOB` returns it, and every bumped job that needs it, to
+  normal order; `vibey queue list [PROJECT]` shows the queue in claim order with every
+  bump marked; `vibey design resume PROJECT --priority` enqueues the interview bumped.
+  The claim orders `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so
+  the order among un-bumped work is unchanged. Only the operator, and the sources named
+  in `[queue.priority] sources`, may bump; anyone else is refused, and the refusal is
+  recorded (sub-doctrine 12.j). Every bump, un-bump and refusal appends
+  `JobPriorityBumped`, `JobPriorityUnbumped` or `JobPriorityRefused` to the ledger in the
+  same transaction as the change.
 * **vibey_gh:** `vibey-gh approve-check PR [--head SHA] [--approve]` enforces the delegated approver's grant
   by code (sub-doctrines 12.f, 12.j): it exits 0 only when every `[unattended_approval]`
   condition holds — live switch, author allowlist (`@codeowners` expanded), branch globs,
