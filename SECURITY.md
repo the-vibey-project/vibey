@@ -93,14 +93,27 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
 - **Triggers refuse every rewrite.** Migration 0016 puts a `BEFORE UPDATE OR DELETE` row
   trigger and a `BEFORE TRUNCATE` trigger on `event`. They cover every partition: the row
   trigger is cloned onto each, and `ledger_guard_partitions()` attaches the `TRUNCATE`
-  guard on every migration run. They refuse the owner too, with `the ledger is
-  append-only`.
+  guard on every migration run. They refuse the owner's DML too, with `the ledger is
+  append-only`. Both functions pin `search_path = pg_catalog, pg_temp` (migration 0017).
+- **The triggers do not refuse the owner's DDL.** The owner can still `DROP` a partition,
+  `DETACH` one and then `DELETE` from it (a detached table has no clone of the row
+  trigger), `TRUNCATE` a partition created since the last `vibey migrate` (it gets the
+  `TRUNCATE` guard at the next one), or disable a trigger. What stands against those is
+  that nothing but `vibey migrate` holds the owner's DSN. DDL-refusing event triggers
+  (`ddl_command_start`, `sql_drop`) are future work: they need a superuser to install.
 - **The application cannot rewrite the ledger.** Every workload connects with
   `VIBEY_PG_URL` as an application role that owns nothing. On `event` it holds `SELECT`
   and `INSERT` only. It holds no `DELETE` or `TRUNCATE` anywhere, and it cannot disable a
-  trigger. Migrations and grants run with the owner's DSN, `VIBEY_PG_MIGRATE_URL` (`vibey
-  migrate`, and the chart's `migrate` init container, the only place that DSN is mounted).
-  The grants are declared in `APP_ROLE_GRANTS` and reconciled on every migration run.
+  trigger. It may not `CREATE` in `public` or in the database, owns no object, and may call
+  no `SECURITY DEFINER` function that runs as the owner or a superuser: `ledger-guard`
+  fails on each (review of #1100 — a role that could create in `public` planted an
+  operator the owner's SQL resolved to, and wiped the ledger). Migrations and grants run
+  with the owner's DSN, `VIBEY_PG_MIGRATE_URL`, read by `vibey migrate` alone: never
+  export it. In the Helm chart it is mounted only into the `migrate` init container; each
+  surface database (Plane, Infisical) is owned by a login role of its own, so no surface
+  pod holds the owner's credentials. The grants are declared in `APP_ROLE_GRANTS` and
+  reconciled on every migration run, under the migration lock, with the owner's session
+  pinned to `search_path = pg_catalog, pg_temp`.
 - **An install still on one role is reported, never silently accepted.** `vibey doctor`
   and `vibey doctor --cluster` fail `ledger-guard`, `vibey migrate` exits 1, and `vibey
   worker` says so on stderr at every start. The upgrade path is in

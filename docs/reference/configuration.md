@@ -91,8 +91,8 @@ until the roles are split:
 
 With the Helm chart this is `postgres.appRole` (default `vibey_app`) and, for an external
 database, `dsn.existingSecretKey` (the application's DSN) with
-`dsn.existingSecretMigrateKey` (the owner's). An empty `existingSecretMigrateKey` is a
-single-DSN install.
+`dsn.existingSecretMigrateKey` (the owner's). `existingSecretMigrateKey` is empty by
+default, which is a single-DSN install.
 
 ### Operational surface environment variable overlay
 
