@@ -1,2 +1,14 @@
 opencodeloop-parity-p1
 opencodeloop-parity-p2
+engines-pool
+gap-cdd-build-trajectory
+gap-cdd-distance
+gap-ci-arch-gates
+gap-ci-macos-gates
+gap-ci-tenants-arch-macos-1
+rmq-r01-queue-config
+rmq-r06-job-dispatch-envelope
+rmq-r08-dispatch-migration
+split-351-1-amqp-contract
+split-367-1-run-dir
+surfaces-env
