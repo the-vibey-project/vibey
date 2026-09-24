@@ -1,0 +1,8 @@
+{"event_type": "run.started", "payload": {"run_id": "c1"}, "at": "2026-09-24T19:00:00Z"}
+{"event_type": "turn.starting", "payload": {"turn": 1}}
+{"event_type": "chatter.prompt", "payload": {"text": "the plan"}}
+{"event_type": "chatter.assistant", "payload": {"text": "Reading the file."}}
+{"event_type": "chatter.tool", "payload": {"tool": "Read", "input": {"file_path": "README.md"}}, "turn": 1}
+{"event_type": "turn.completed", "payload": {"turn": 1, "input_tokens": 12000, "output_tokens": 800, "cost_usd": 0.048}}
+{"event_type": "savepoint", "payload": {"name": "s1"}}
+{"event_type": "finished", "payload": {"success": true}}
