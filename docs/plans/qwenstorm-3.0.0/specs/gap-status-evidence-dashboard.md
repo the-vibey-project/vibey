@@ -110,4 +110,4 @@ Commit as `feat(tui): the dashboard state carries an evidence claim`. Do not pus
 - **Kind:** one source file plus its interface, one test file.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

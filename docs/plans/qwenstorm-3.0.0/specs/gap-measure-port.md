@@ -112,4 +112,4 @@ Commit as `feat(measure): MeasurementPort and MeasurementSource, a fan-out over 
 - **Must keep passing unchanged:** `tests/fakes/test_port_parity.py`, the protected tests.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -1,6 +1,6 @@
 # Brief for every split-spec writer (QwenStorm 3.0.0 issue audit)
 
-STORM = /private/tmp/claude-501/storm/qwenstorm-3.0.0
+STORM = the storm root, $VIBEY_STORM_HOME/qwenstorm-3.0.0 (on macOS by default ~/git/vibey-storm/qwenstorm-3.0.0)
 
 You write lane specs only. Do NOT edit code, do NOT edit anything under STORM/integration, do NOT
 edit STORM/issue-audit/ or any existing spec, do NOT file issues, push, or run git commands that
@@ -41,7 +41,7 @@ Then these sections, with these exact headings, in this order:
 - `**Depends on:** <slug>, <slug>` (the exact slugs assigned to you below, or `none`), followed by
   one short line per slug saying what the lane uses from it
 - last: `## Hard repository rules (always)` then the line
-  `See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.`
+  `See STORM/SPEC-TEMPLATE.md.`
 
 ## Self-contained, always
 - Inline every verb/method signature, dataclass, constant, exact message text, convention (e.g. the

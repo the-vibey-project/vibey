@@ -94,4 +94,4 @@ Commit as `feat(cli): --engines paid-ide resolves to vscode-paid, and the worker
   `tests/infrastructure/test_cluster_preflight.py`, every protected test.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -37,9 +37,22 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
     a project's ledger.
   - **Two roles.** The application connects as a role (`VIBEY_PG_URL`) that holds exactly
     the declared grants: `SELECT` and `INSERT` on the ledger, no `DELETE` or `TRUNCATE`
-    anywhere, and no ownership. Migrations run as the owner, `VIBEY_PG_MIGRATE_URL`, through
-    the new `vibey migrate` or the Helm chart's new `migrate` init container. The chart
-    gains `postgres.appRole` (default `vibey_app`) and `dsn.existingSecretMigrateKey`.
+    anywhere, and no ownership. Migrations run as the owner, `VIBEY_PG_MIGRATE_URL`, read by
+    the new `vibey migrate` alone (given for that one command, never exported) or the Helm
+    chart's new `migrate` init container. The chart gains `postgres.appRole` (default
+    `vibey_app`), `dsn.existingSecretMigrateKey` (empty by default, so an existing-Secret
+    install is unchanged until it names an owner key), and
+    `postgres.additionalDatabasePasswords`: Plane and Infisical each connect as a role of
+    their own, which the postgres container creates and hands its database on every start,
+    instead of as the owner.
+  - **Hardened after review.** Migration 0017 pins the guard functions to
+    `search_path = pg_catalog, pg_temp`. `vibey migrate` takes `CREATE` on `public` away
+    from every role but its owner and reconciles under the migration lock. `ledger-guard`
+    also fails when the application role may create objects, owns any, may call a
+    `SECURITY DEFINER` function running as the owner, may set `session_replication_role`,
+    or when a guard trigger is replica-only, re-pointed, re-evented or its function
+    changed. The triggers refuse the owner's DML, not its DDL (`DROP` or `DETACH` of a
+    partition), which is why only `vibey migrate` holds the owner's DSN.
   - **Checks.** `vibey doctor` gains `ledger-guard` and `local-auth` checks. A single-DSN
     install keeps running, but `vibey doctor` fails until its roles are split, `vibey
     worker` says so on stderr at every start, and `vibey migrate` exits 1. `local-auth`
@@ -243,6 +256,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **vibey_gh:** a whole sovereign review's documents are bounded by their own
+  `[pr_automation.fallback] max_document_chars` (default 120,000) and the window, no longer by
+  the diff's `max_diff_chars`. This repository's two pages already took 59,607 of the diff's
+  60,000, so a small README edit cut one, the review claimed the diff half alone, and every
+  gate asked a human. Documents trimmed to the window are also no longer refused once the
+  request's check codes are added, and a refusal whose body breaks off mid-read is still reported
 * **notify:** a desktop notification's title and message reach `osascript` as arguments of a
   fixed `on run argv` script, never as AppleScript source. Only `"` was escaped before, so a
   model- or gate-written message ending `\" & (do shell script ...) --` ran a shell command.

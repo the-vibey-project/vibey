@@ -108,4 +108,4 @@ BREAKING CHANGE note for the commit body: the local verdict's summary now names 
   substitution only at declared seams; never raise the ratchet.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

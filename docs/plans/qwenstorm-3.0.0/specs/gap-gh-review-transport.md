@@ -121,4 +121,4 @@ Commit as `refactor(gh): local review and triage ask through a declared transpor
   declared seam; `monkeypatch.setenv`/`delenv` stay allowed. Never raise the ratchet.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

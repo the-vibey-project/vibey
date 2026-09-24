@@ -73,11 +73,11 @@ The backticks in 2 and 3 are literal characters in the message.
 - **Shares a file with:** `src/vibey/domain/errors.py` (R06, R19, T03, T15 each append one exception; append after whatever is last).
 - **Must keep passing unchanged:** `tests/domain/test_errors.py`, `tests/domain/test_domain_purity.py`, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file. Change existing files with `edit_file` or a checked replacement; add tests by appending or in a new file.
+  - Read `STORM/EDITING-RULES.md` before changing a file. Change existing files with `edit_file` or a checked replacement; add tests by appending or in a new file.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from line 1 of a sibling file.
   - Substitute only at a declared seam; never `monkeypatch.setattr`, `mock.patch`, `MagicMock` or `AsyncMock`.
   - The default run needs no service.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

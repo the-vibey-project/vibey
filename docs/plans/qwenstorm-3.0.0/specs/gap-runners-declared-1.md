@@ -87,4 +87,4 @@ Append to `src/vibey_tools/gh/test/test_config.py`:
 Commit as `feat(gh): declare the sovereign review runner's registration in [runners]`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

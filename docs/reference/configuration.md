@@ -50,7 +50,7 @@ stored `features.qwenloop` is always false for projects created today:
 | Variable | Read by | Effect |
 |---|---|---|
 | `VIBEY_PG_URL` | `bootstrap.database_url()` (every command that opens the queue) | The application role's PostgreSQL DSN ([database roles](#database-roles)). Required; there is no default — `vibey` exits with `DatabaseNotConfigured` if it is unset. |
-| `VIBEY_PG_MIGRATE_URL` | `vibey migrate`; `bootstrap.build_app()` when set | The owner's DSN: migrations run on it, and the application role's grants are reconciled from it ([database roles](#database-roles)). Unset makes a single-DSN install. |
+| `VIBEY_PG_MIGRATE_URL` | `vibey migrate` only | The owner's DSN: migrations run on it, and the application role's grants are reconciled from it ([database roles](#database-roles)). Give it to that one command (`VIBEY_PG_MIGRATE_URL=… vibey migrate`); never export it, and nothing else reads it. |
 | `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` | `bootstrap.build_app()` via `PostgresMigrator.from_environ` (every command that opens the queue) | How long a start waits for another process's migration before failing with `MigrationLockTimeout`, which names the backend pid holding the lock. Seconds, fractions allowed and rounded up to the next millisecond; default `300`; `0` waits indefinitely. Unset or blank means the default; anything that is not a number from `0` to `2147483.647` fails the start with `InvalidMigrationLockTimeout` before the pool opens, rather than falling back. See [the migration lock](../plans/data-model.md#71-the-migration-lock). |
 | `VIBEY_FEATURE_QWENLOOP` | `vibey worker` (`bootstrap.qwenloop_enabled`), `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`), and `load_config_from_path` | Overrides `features.qwenloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other value disables. When set it wins over both the stored project record and `./vibey.toml`. Only `load_config_from_path` rejects a non-boolean value. For the worker, enabling it adds a qwenloop adapter and makes qwenloop the standby engine for BUILD rotation. |
 | `VIBEY_EVIDENCE_DIR` | `vibey work --provider qwenloop`, `vibey worker --provider qwenloop` | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source, and the phase stops there. |
@@ -65,35 +65,37 @@ anyway. There are two roles and two DSNs:
 
 | Role | DSN | Holds |
 |---|---|---|
-| The owner | `VIBEY_PG_MIGRATE_URL` | Every table. Runs migrations and reconciles grants, nothing else: `vibey migrate`, the chart's `migrate` init container, or `build_app()` when the variable is set. |
+| The owner | `VIBEY_PG_MIGRATE_URL` | Every table. Runs migrations and reconciles grants, nothing else: `vibey migrate`, run by hand or as the chart's `migrate` init container. No other command reads this variable, so no worker, engine session or gate command ever holds the owner's DSN. |
 | The application role | `VIBEY_PG_URL` | Exactly `APP_ROLE_GRANTS` (`infrastructure/db/ledger_guard.py`). On `event` that is `SELECT` and `INSERT`. It holds no `DELETE` or `TRUNCATE` anywhere, owns nothing, and is not a superuser. Every worker, CLI command, operator and KEDA scaler connects as it. |
 
-`build_app()` picks its path by what it is given:
+`build_app()` never reads the owner's DSN:
 
-- With `VIBEY_PG_MIGRATE_URL`, it migrates on an owner connection and reconciles the grants.
-- Without it, when the application's role may migrate (a superuser, or a member of the
-  migration catalog's owner), it migrates as that role. This is a single-DSN install.
+- When the application's role may migrate (a superuser, or a member of the migration
+  catalog's owner), it migrates as that role. This is a single-DSN install.
 - Otherwise it only verifies the schema, and refuses to start while migrations are pending
-  (`SchemaNotMigrated`).
+  (`SchemaNotMigrated`): run `vibey migrate` first.
 
 **Upgrading a single-DSN install.** Existing installs connect as one role, usually a
 superuser. They keep running, but `vibey doctor` fails `ledger-guard`, `vibey worker`
 prints `error: ledger guard NOT in force` on every start, and `vibey migrate` exits 1,
 until the roles are split:
 
-1. Set `VIBEY_PG_MIGRATE_URL` to the DSN you use today (the owner).
-2. Set `VIBEY_PG_URL` to the same server with a new role and password, for example
+1. Set `VIBEY_PG_URL` to the same server with a new role and password, for example
    `postgresql://vibey_app:<password>@host:5432/vibey`.
-3. Run `vibey migrate`. It creates `vibey_app` (from the DSN's password) if it does not
-   exist, grants it exactly the declared privileges, and prints `ledger guard in force`.
+2. Run `VIBEY_PG_MIGRATE_URL=<the DSN you use today> vibey migrate`, giving the owner's DSN
+   to that one command rather than exporting it. It creates `vibey_app` (from the DSN's
+   password) if it does not exist, grants it exactly the declared privileges, and prints
+   `ledger guard in force`.
+3. Remove the owner's DSN from every other environment: a worker, an engine session or a
+   gate command that holds it can disable the triggers.
 4. Run `vibey doctor`, and require a password for the owner and every superuser. The split
    protects the ledger only once `local-auth` passes; `SECURITY.md` §7 gives the
    `pg_hba.conf` lines.
 
 With the Helm chart this is `postgres.appRole` (default `vibey_app`) and, for an external
 database, `dsn.existingSecretKey` (the application's DSN) with
-`dsn.existingSecretMigrateKey` (the owner's). An empty `existingSecretMigrateKey` is a
-single-DSN install.
+`dsn.existingSecretMigrateKey` (the owner's). `existingSecretMigrateKey` is empty by
+default, which is a single-DSN install.
 
 ### Operational surface environment variable overlay
 

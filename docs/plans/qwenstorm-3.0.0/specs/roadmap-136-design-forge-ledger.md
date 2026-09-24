@@ -32,7 +32,7 @@ stdlib-only (`src/vibey_tools/gh/pyproject.toml:30`), new migrations take the ne
 
 ## Required behaviour
 The lane writes exactly one file, the draft ADR at the absolute path
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-136-forge-ledger.md`, with
+`STORM/specs/ADR-roadmap-136-forge-ledger.md`, with
 `write_file`. It changes no file in its clone and commits nothing.
 
 Before writing, read every file:line listed below in the integration clone (your working
@@ -61,7 +61,7 @@ is now. Evidence to read and cite:
   published shard), `src/vibey/infrastructure/ledger/static_export.py:199`;
   `src/vibey/cli/main.py:86-90` (`vibey ledger search|export|site`);
   `tests/fakes/test_port_parity.py:25-30` (the port table).
-- The two issue rewrites `/private/tmp/claude-501/storm/qwenstorm-3.0.0/issue-audit/updates/136.md`
+- The two issue rewrites `STORM/issue-audit/updates/136.md`
   and `…/114.md`; the storm drafts `…/specs/ADR-orm.md` and
   `…/specs/ADR-test-harness-fakes-amendment.md`; and the capture specs
   `…/specs/roadmap-136-capture-repo-metadata.md` (declared `redact` paths, the `[REDACTED]`
@@ -148,7 +148,7 @@ The ADR carries these parts, in this order, each heading exactly as written:
     PostgreSQL 17 (integration tier); the canonical form test staying green.
 
 ## Where to change
-- Create only `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-136-forge-ledger.md`
+- Create only `STORM/specs/ADR-roadmap-136-forge-ledger.md`
   (outside the clone). Its first line is the title above; ADR drafts carry no provenance header.
 - No file in the clone changes. Nothing is committed.
 
@@ -173,7 +173,7 @@ None in the clone. The check script below is the test; write the ADR until it pa
 ```bash
 python3 -c '
 from pathlib import Path
-adr = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-136-forge-ledger.md")
+adr = Path("STORM/specs/ADR-roadmap-136-forge-ledger.md")
 assert adr.is_file(), "the ADR file does not exist"
 text = adr.read_text(encoding="utf-8")
 lines = text.splitlines()
@@ -200,7 +200,7 @@ question = "**Public or private?** Captured comments include people\x27s text. T
 assert question in flat, "#136 question 3 is not quoted verbatim"
 print("ADR structure OK")
 '
-test "$(grep -cE '[A-Za-z0-9_./-]+\.(py|sql|md|toml):[0-9]+' /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-136-forge-ledger.md)" -ge 20
+test "$(grep -cE '[A-Za-z0-9_./-]+\.(py|sql|md|toml):[0-9]+' STORM/specs/ADR-roadmap-136-forge-ledger.md)" -ge 20
 test -z "$(git status --porcelain)"
 ```
 
@@ -212,4 +212,4 @@ test -z "$(git status --porcelain)"
 - Do not push, do not commit.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

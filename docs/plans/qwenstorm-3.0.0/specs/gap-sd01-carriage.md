@@ -154,4 +154,4 @@ Commit as `docs(agents): SD-01 is carried verbatim in every agent router and rul
   in `.cursor/rules/`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

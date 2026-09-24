@@ -112,4 +112,4 @@ Commit as `ci(release): mirror the tested image digest to a declared sovereign r
 - **Depends on:** `gap-release-image-publish`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -2,7 +2,7 @@
 
 Design: `specs/ADR-test-harness-queue.md` (ADR-0045 draft). It implements sub-doctrine 8.e,
 which is drafted for ratification. Evidence cutoff: `develop` at `702b1490`, read
-2026-09-22 (checkout `/private/tmp/claude-501/storm/qwenstorm-3.0.0/integration`). Every
+2026-09-22 (checkout `STORM/integration`). Every
 `file:line` below is at that commit. ADR-0044's lanes R01–R34
 (`specs/rabbitmq-lanes.md`) are specifications, not code: when a T-lane needs one, its
 card says so under **Depends on**, and it must not start before that R-lane has merged.
@@ -271,7 +271,7 @@ stdlib and do no I/O.
 Do not push or change remotes. Commit locally with the Title as the subject.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -395,7 +395,7 @@ The decision is pure: `now` is an argument.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -560,7 +560,7 @@ digests of those values.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -705,7 +705,7 @@ records are not the ledger.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -889,7 +889,7 @@ which every later infrastructure lane adds to.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -994,7 +994,7 @@ can say whom they are waiting for.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1152,7 +1152,7 @@ like this:
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1271,7 +1271,7 @@ changed the tree it tested.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1363,7 +1363,7 @@ stops matching once the database is back.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1500,7 +1500,7 @@ if the name is taken, so no reader ever sees a half-written file.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1626,7 +1626,7 @@ not a new one (10.e). The machine lock's descriptor is passed to the child
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1715,7 +1715,7 @@ If the gates ran outside the harness, a cached answer would leave them reading w
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1889,7 +1889,7 @@ Each is a test using the real `FileTestRunStore`, `MachineLock`, `CoverageDataKe
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2016,7 +2016,7 @@ own:
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2204,7 +2204,7 @@ added. The composition lives in `bootstrap.py`, the sole composition root (CLAUD
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2302,7 +2302,7 @@ pattern: "every bounded ladder parks with a grant".
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2390,7 +2390,7 @@ answered from its record.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2489,7 +2489,7 @@ build(hooks): a push runs the suite once, as one harness request with its four c
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2586,7 +2586,7 @@ hold no vibey, and each row is a machine of its own.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2605,7 +2605,7 @@ See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
 - **Shares a file with:** none.
 - **Must keep passing unchanged:**
   - the whole qwenloop suite, `(cd src/vibey_runners/qwen && uv run python -m pytest -q)`. Its addopts carry `--cov-fail-under=100` (`src/vibey_runners/qwen/pyproject.toml:68`)
-  - the storm driver's call, `_run_plan(server, profile, lane, run_id, text, max_turns, startup_timeout_seconds=..., desktop_notifications=True)` (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/qwenlane.py:90-100`). The new parameter must be keyword-only with a default
+  - the storm driver's call, `_run_plan(server, profile, lane, run_id, text, max_turns, startup_timeout_seconds=..., desktop_notifications=True)` (`STORM/qwenlane.py:90-100`). The new parameter must be keyword-only with a default
   - all protected tests
 - **Standing constraints:** see the header list. This lane changes a runner tenant, and runs that tenant's own gates (ADR-0022).
 
@@ -2669,7 +2669,7 @@ that an operator can let a lane wait for its run.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2743,7 +2743,7 @@ says a capability gap is closed by teaching the family, not by a private copy in
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2846,7 +2846,7 @@ ADR-0044's lane R12.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2971,7 +2971,7 @@ All with `InMemoryAmqpClient`, a real `tmp_path` store and a fake instance:
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3073,7 +3073,7 @@ With `InMemoryAmqpClient`, and a stub responder that consumes the request queue 
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3198,7 +3198,7 @@ worker (`cli/main.py:1519-1540`: `add_signal_handler` at `:1525`, the latch rele
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3296,7 +3296,7 @@ After R28, every engine adapter is built by `SubprocessAdapterFactory` or
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3414,7 +3414,7 @@ runs go to it.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3507,4 +3507,4 @@ ratified (ADR-0045, non-negotiable 7).
 Do not push. Commit locally as `feat(test-harness)!: …` with the `BREAKING CHANGE:` footer.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

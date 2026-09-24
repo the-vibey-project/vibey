@@ -354,4 +354,4 @@ PostgreSQL 17 reachable. If `ruff check` reports only import order (`I001`), run
 - split-330-4-az-scope-guard: `ScopeProviderMismatchError` in `vibey.application.azure_port`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

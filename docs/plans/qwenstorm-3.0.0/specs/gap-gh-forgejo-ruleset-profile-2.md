@@ -71,4 +71,4 @@ Append to `test/test_forge_branch_rules.py`:
 Commit as `feat(gh): Forgejo branch rules apply the declared profile`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

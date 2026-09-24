@@ -41,7 +41,7 @@ lane.
 6. `opencodeloop` is not edited (lane `loops-remove-opencode-tenant` deletes it later).
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first. Line 1 of every new
+Read `STORM/EDITING-RULES.md` first. Line 1 of every new
 file is the provenance comment copied byte for byte from line 1 of
 `src/vibey_runners/common/src/vibey_runners/common/__init__.py`. The package directory is
 `src/vibey_runners/common/src/vibey_runners/common/` (call it PKG below); the tenant directory is
@@ -193,4 +193,4 @@ First run `uv run ruff format src/vibey_runners/common`.
 **Depends on:** none.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

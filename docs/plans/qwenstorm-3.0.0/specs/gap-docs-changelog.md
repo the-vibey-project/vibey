@@ -21,7 +21,7 @@ warning leads the section.
 ## Required behaviour
 1. **2.1.0.** If `grep -c '^## \[2.1.0\]' CHANGELOG.md` prints 1, leave that section as it is.
    Otherwise get the operator's text with `git show d47c196d:CHANGELOG.md` (if that object is
-   missing, `git -C /private/tmp/claude-501/storm/changelog-2.1.0 show d47c196d:CHANGELOG.md`;
+   missing, `git show d47c196d:CHANGELOG.md` (from any clone);
    if both fail, STOP and report BLOCKED). In it, the block from the line `## [Unreleased]`
    up to, not including, the line `## [2.0.0] (2026-09-21)` is the replacement. Replace the
    same block in `CHANGELOG.md` (from `## [Unreleased]` to just before `## [2.0.0]`) with it,
@@ -118,4 +118,4 @@ None. The acceptance commands are the checks; the changelog has no meta-test.
 Commit as `docs(changelog): the 2.1.0 and 3.0.0 sections, with every breaking change and the Forgejo data-loss warning`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
