@@ -22,6 +22,7 @@ in the same commit that deletes them.
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import sys
 from pathlib import Path
 
@@ -202,6 +203,184 @@ def test_a_console_script_the_lane_does_not_have_is_left_alone(tmp_path: Path) -
     lane = lane_with(tmp_path, "isort --check-only .")
     argv = lane_publish.checks_of(lane)[0].argv
     assert lane_publish.resolve(lane, argv) == ["isort", "--check-only", "."]
+
+
+# --- subshells, and the lines nobody could classify --------------------------------------
+
+
+def parsed(tmp_path: Path, block: str) -> tuple[list, list[tuple[str, str]]]:
+    lane = lane_with(tmp_path, block)
+    return lane_publish.parse_checks((lane / ".qwenstorm/issue.md").read_text(), lane)
+
+
+def test_a_subshell_line_is_a_check_scoped_to_its_own_directory(tmp_path: Path) -> None:
+    """The regression: 80 `(cd tenant && ...)` lines in 28 specs were skipped in silence.
+
+    harness-T20a and T20c were reported READY having run `ruff` and nothing else; their
+    tenant pytest, mypy, lint-imports and bandit were subshell lines and never ran.
+    """
+    lane = lane_with(tmp_path, "(cd src/vibey_tools/gh && python -m pytest -q)\nruff check .")
+    checks = lane_publish.checks_of(lane)
+    assert [c.argv for c in checks] == [["python", "-m", "pytest", "-q"], ["ruff", "check", "."]]
+    assert checks[0].cwd == (lane / "src/vibey_tools/gh").resolve()
+    assert checks[1].cwd == lane.resolve(), "a subshell's `cd` must not outlive its line"
+
+
+def test_an_export_inside_a_subshell_ends_with_it(tmp_path: Path) -> None:
+    checks, _ = parsed(tmp_path, "(export A=1 && ruff check .)\nmypy src")
+    assert [c.env for c in checks] == [{"A": "1"}, {}]
+
+
+def test_a_subshell_keeps_a_parenthesis_that_was_quoted(tmp_path: Path) -> None:
+    lane = lane_with(tmp_path, '(cd src/vibey_tools/gh && python -c "print(1)")')
+    assert [c.argv for c in lane_publish.checks_of(lane)] == [["python", "-c", "print(1)"]]
+
+
+def test_a_subshell_with_no_cd_is_still_a_check(tmp_path: Path) -> None:
+    checks, dropped = parsed(tmp_path, "(ruff check .)")
+    assert [c.argv for c in checks] == [["ruff", "check", "."]] and dropped == []
+
+
+def test_an_unclosed_subshell_is_reported_not_guessed(tmp_path: Path) -> None:
+    checks, dropped = parsed(tmp_path, "(cd src/vibey_tools/gh && ruff check .")
+    assert checks == []
+    assert len(dropped) == 1 and "shell" in dropped[0][1]
+
+
+def test_a_parenthesis_mid_line_needs_a_shell(tmp_path: Path) -> None:
+    checks, dropped = parsed(tmp_path, "ruff check . (optional)")
+    assert checks == [] and len(dropped) == 1
+
+
+def test_a_list_item_in_a_check_block_is_reported(tmp_path: Path) -> None:
+    """A line the parser cannot classify is a check that never runs; it must say so."""
+    checks, dropped = parsed(tmp_path, "- run the tenant suite\n* and mypy\nruff check .")
+    assert [c.argv for c in checks] == [["ruff", "check", "."]]
+    assert [line for line, _ in dropped] == ["- run the tenant suite", "* and mypy"]
+
+
+def test_a_comment_line_is_classified_and_not_reported(tmp_path: Path) -> None:
+    checks, dropped = parsed(tmp_path, "# the whole suite\nruff check .")
+    assert len(checks) == 1 and dropped == []
+
+
+def test_prose_after_an_indented_block_is_not_a_check(tmp_path: Path) -> None:
+    """The misparse that held orm-bootstrap-async-engine on a check its spec never wrote.
+
+    An unfenced block is Markdown's indented code block, so an unindented line after it is
+    prose. Read as a command, "pytest `addopts`, so a partial run..." became a pytest run.
+    """
+    lane = tmp_path / "lane"
+    (lane / ".qwenstorm").mkdir(parents=True)
+    (lane / "src/vibey_tools/gh").mkdir(parents=True)
+    spec = (
+        "# a lane\n\n## Checks the lane must run (all must pass)\n"
+        "    uv run ruff check .\n"
+        "    (cd src/vibey_tools/gh && uv run python -m pytest -q)\n"
+        "The second command is the whole suite: the floor is enforced by the tenant's own\n"
+        "pytest `addopts`, so a partial run needs `--no-cov`.\n\n## Out of scope\n- nothing\n"
+    )
+    checks, dropped = lane_publish.parse_checks(spec, lane)
+    assert [c.argv for c in checks] == [
+        ["uv", "run", "ruff", "check", "."],
+        ["uv", "run", "python", "-m", "pytest", "-q"],
+    ]
+    assert dropped == []
+
+
+def test_a_defaulted_parameter_in_an_assignment_is_expanded(tmp_path: Path, monkeypatch) -> None:
+    """`${NAME:-default}` reached the test as a literal string, pointing it at no database."""
+    monkeypatch.delenv("STORM_TEST_URL", raising=False)
+    monkeypatch.setenv("USER", "someone")
+    checks, _ = parsed(tmp_path, "STORM_TEST_URL=${STORM_TEST_URL:-pg://$USER@h/db} ruff check .")
+    assert checks[0].env == {"STORM_TEST_URL": "pg://someone@h/db"}
+
+
+def test_an_assignment_left_unexpanded_is_reported(tmp_path: Path) -> None:
+    checks, dropped = parsed(tmp_path, "X=${Y:?unset} ruff check .")
+    assert checks == [] and len(dropped) == 1
+
+
+def test_env_unsets_and_assigns_for_one_command(tmp_path: Path) -> None:
+    """fakes-harness-decouple's own suite line was dropped because it began with `env`."""
+    checks, dropped = parsed(tmp_path, "A=1 env -u B C=2 uv run pytest -q")
+    assert dropped == []
+    assert checks[0].argv == ["uv", "run", "pytest", "-q"]
+    assert checks[0].env == {"A": "1", "C": "2"}
+    assert checks[0].unset == ("B",)
+
+
+def test_bandit_is_a_runnable_check(tmp_path: Path) -> None:
+    """CI runs it as a gate; a spec that names it bare must not have it dropped."""
+    checks, dropped = parsed(tmp_path, "bandit -q -r src/vibey")
+    assert [c.argv[0] for c in checks] == ["bandit"] and dropped == []
+
+
+def test_run_removes_what_the_check_unsets(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("STORM_GONE", "present")
+    code, out = lane_publish.run(
+        [sys.executable, "-c", "import os; print(os.environ.get('STORM_GONE', 'absent'))"],
+        tmp_path,
+        drop=("STORM_GONE",),
+    )
+    assert (code, out) == (0, "absent")
+
+
+# --- the declared seam (ADR-0016) -------------------------------------------------------
+
+# The parser as the publisher loaded it: `lane-publish.py` imports it by name from beside
+# itself, and the declaration is loaded by path, as every storm interface is.
+check_parser = sys.modules["check_parser"]
+_DECLARED = importlib.util.spec_from_file_location(
+    "check_parser_interface_declared", TOOL.parent / "interfaces/check_parser_interface.py"
+)
+assert _DECLARED and _DECLARED.loader, "the parser's declaration is missing"
+check_parser_interface = importlib.util.module_from_spec(_DECLARED)
+_DECLARED.loader.exec_module(check_parser_interface)
+
+
+def test_the_parser_honours_the_interface_declared_beside_it() -> None:
+    """Held method by method and parameter by parameter, so the two cannot drift."""
+    parser = check_parser.CheckParser()
+    interface = check_parser_interface.CheckParserInterface
+    assert isinstance(parser, interface)
+    declared = [
+        name
+        for name, member in vars(interface).items()
+        if callable(member) and not name.startswith("_")
+    ]
+    assert declared, "the interface declares nothing"
+    for name in declared:
+        want = list(inspect.signature(getattr(interface, name)).parameters)
+        have = ["self", *inspect.signature(getattr(parser, name)).parameters]
+        assert have == want, f"CheckParser.{name}: {have} != {want}"
+
+
+def test_the_parser_module_has_no_bare_functions() -> None:
+    """ADR-0016: everything it does lives on the class its interface describes."""
+    bare = [
+        name
+        for name, member in vars(check_parser).items()
+        if inspect.isfunction(member) and member.__module__ == check_parser.__name__
+    ]
+    assert bare == []
+
+
+def test_the_publisher_and_the_linter_share_the_one_parser() -> None:
+    """10.e: `lint-specs.py` reads `parse_checks` and `block_of` through lane-publish."""
+    assert lane_publish.parse_checks.__self__ is lane_publish.PARSER
+    assert lane_publish.block_of.__self__ is lane_publish.PARSER
+    assert isinstance(lane_publish.PARSER, check_parser_interface.CheckParserInterface)
+
+
+def test_the_parser_interface_declares_and_never_consumes() -> None:
+    source = (TOOL.parent / "interfaces/check_parser_interface.py").read_text(encoding="utf-8")
+    imported = {
+        line.split()[1].split(".")[0]
+        for line in source.splitlines()
+        if line.startswith(("import ", "from "))
+    }
+    assert imported <= set(sys.stdlib_module_names) | {"__future__"}, imported
 
 
 # --- why_failed: the reason a person is shown -----------------------------------------

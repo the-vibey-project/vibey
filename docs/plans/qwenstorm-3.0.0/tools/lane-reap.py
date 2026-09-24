@@ -74,10 +74,20 @@ further whether or not its files remain. Disk is cheap; the invisibility was exp
 nothing uncommitted, so no state in it exists only there.
 
 It does not touch a lane a runner is inside, a lane already settled, a lane with an OPEN
-pull request, or a `completed: true` lane with no pull request yet -- that last one is the
-publish backlog and belongs to `lane-publish.py`. It reports a lane with no verdict at all
-and leaves it alone: that is a lane killed mid-run, and whether its work is worth keeping is
-a question for a person.
+pull request (its own branch's, or any whose body closes its issue), or a `completed: true`
+lane with no pull request yet -- that last one is the publish backlog and belongs to
+`lane-publish.py`. It reports a lane with no verdict at all and leaves it alone: that is a
+lane killed mid-run, and whether its work is worth keeping is a question for a person.
+
+It does not reap a REFUSED lane -- one whose `result.json` carries a `refused` reason because
+its issue failed the provenance check (12.j) and the runner declined to start it. Nothing
+gave up, so "abandoned" would be false; and an issue the storm declined to trust is not one
+to comment on. It is reported in its own bucket, left unsettled, and its queued dependants
+are named on every pass, so they are held visibly rather than skipped in silence.
+
+It does NOT confirm that `lane-publish.py` evaluated a lane in the same pass before reaping
+it. `storm-cycle.py` runs publish first and reap second, and that ordering is the whole of
+the guarantee: a pass in which publish failed or was skipped is not detected here.
 """
 
 import argparse
@@ -90,6 +100,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import storm_paths
+from storm_forge import PullRequest, StormForge, StormForgeInterface, Unreadable
 
 # The storm root is the one location that cannot come from configuration -- it is where the
 # configuration lives. `storm_paths.storm` derives it, spelling out the `.absolute()` that
@@ -162,67 +173,39 @@ def verdict(lane: Path) -> dict | None:
     return found if isinstance(found, dict) else None
 
 
-def forge() -> dict[str, tuple[int, str]] | None:
-    """Each lane slug's pull request, newest first, or None if the forge cannot be reached.
+def forge(source: StormForgeInterface) -> list[PullRequest] | None:
+    """Every pull request on the forge, newest first, or None if it cannot be read whole.
 
     One call for every lane rather than one per lane: a query per lane over thirty lanes is
     thirty round trips to answer a question one round trip answers, which is the machinery
-    wasting its own time as surely as anybody else's (12.g).
+    wasting its own time as surely as anybody else's (12.g). `source` is the declared seam
+    (`interfaces/storm_forge_interface.py`), shared with `lane-publish.py`, so both tools
+    agree on what a pull request closes (10.e).
 
-    None, not {}, when the call fails. An empty mapping and an unreachable forge would
+    None, not [], when the read fails -- or comes back exactly as long as its limit, or in a
+    shape that is not a list of pull requests. An empty list and an unreachable forge would
     otherwise be the same value and opposite facts -- the first says "nothing was ever
     published", the second says "I could not find out" -- and acting on the second would
     abandon lanes whose work is sitting merged in `develop` (10.f).
     """
     try:
-        done = subprocess.run(
-            [
-                "gh",
-                "pr",
-                "list",
-                "--state",
-                "all",
-                "--limit",
-                "400",
-                "--json",
-                "number,state,headRefName",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=MAIN,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        # A missing `gh` raises FileNotFoundError and a slow forge raises TimeoutExpired,
-        # and either would escape as a traceback -- past the caller's explicit refusal and
-        # out of the process. The docstring above promises None for "could not find out",
-        # and a promise the happy path keeps and the failure path breaks is worse than none:
-        # the whole point of returning None here is that the caller then settles nothing.
+        return source.pull_requests()
+    except Unreadable as exc:
+        print(f"  forge: {exc}")
         return None
-    if done.returncode != 0:
-        return None
-    try:
-        rows = json.loads(done.stdout or "[]")
-    except json.JSONDecodeError:
-        return None
-    out: dict[str, tuple[int, str]] = {}
-    for row in rows:
-        head = row.get("headRefName", "")
-        # Keyed by the WHOLE head ref, not by lane slug. Keying on the slug meant the map
-        # held only `lane/*` branches, so the worktree pass could not find a pull request for
-        # `docs/...` or `fix/...` and kept all eighteen of them as "never published" -- a
-        # right answer to a question about a map that had never been asked to hold them.
-        # `gh pr list` returns newest first, so the first one seen is the live one: a branch
-        # republished after a closed attempt is judged on the new request.
-        if head and head not in out:
-            out[head] = (row["number"], row["state"])
-    return out
 
 
 def survey(
-    grace_seconds: float, prs: dict[str, tuple[int, str]]
+    grace_seconds: float, prs: list[PullRequest], source: StormForgeInterface
 ) -> dict[str, list[tuple[str, str]]]:
-    """Every lane on disk, sorted into what may be done about it and why."""
+    """Every lane on disk, sorted into what may be done about it and why.
+
+    A lane's own `lane/<slug>` branch is not the only road to `develop`: rmq-r03 merged as
+    `feat/amqp-dependency` (#1040), and #396 carried eight wave-1 lanes at once. So a pull
+    request whose body CLOSES the lane's issue counts too, under any branch name -- merged,
+    the lane is integrated; open, it is in flight. What says a pull request delivered an
+    issue is the closing reference the forge itself acts on, and `source` reads exactly that.
+    """
     if not LANES.is_dir():
         raise SystemExit(f"no lanes directory at {LANES} -- run this from the runtime root")
 
@@ -241,6 +224,7 @@ def survey(
 
     done, live = settled(), STOP.lane_in_flight(table)
     now = time.time()
+    branches, issues = source.heads(prs), issue_of()
     out: dict[str, list[tuple[str, str]]] = {
         "integrate": [],
         "reap": [],
@@ -250,10 +234,15 @@ def survey(
         "publishable": [],
         "unfinished": [],
         "young": [],
+        "refused": [],
     }
     for lane in sorted(p for p in LANES.iterdir() if p.is_dir()):
         slug = lane.name
-        pr = prs.get(LANE_BRANCH + slug)
+        pr = branches.get(LANE_BRANCH + slug)
+        number = issues.get(slug, "")
+        claims = source.closing(prs, int(number) if number.isdigit() else None)
+        merged = next((c for c in claims if c.state == "MERGED"), None)
+        opened = next((c for c in claims if c.state == "OPEN"), None)
         found = verdict(lane)
         if slug == live:
             out["live"].append((slug, "a runner is inside it"))
@@ -263,12 +252,36 @@ def survey(
             # The forge outranks the runner's note about itself. This is the branch that
             # `split-332-1-transport-seams` needed and the first draft did not have.
             out["integrate"].append((slug, f"#{pr[0]} is merged, so its work is in develop"))
+        elif merged:
+            out["integrate"].append(
+                (
+                    slug,
+                    f"#{merged.number} ({merged.head}) is merged and closes #{issues[slug]}, "
+                    "so its work is in develop",
+                )
+            )
         elif pr and pr[1] == "OPEN":
             out["in-flight"].append((slug, f"#{pr[0]} is open; the merge train decides it"))
+        elif opened:
+            out["in-flight"].append(
+                (
+                    slug,
+                    f"#{opened.number} ({opened.head}) is open and closes #{issues[slug]}; "
+                    "the merge train decides it",
+                )
+            )
         elif found is None:
             out["unfinished"].append(
                 (slug, "no readable verdict -- killed mid-run, or still being written")
             )
+        elif "refused" in found:
+            # The runner declined to START this lane -- its issue failed the provenance check
+            # (12.j) -- so nothing was attempted and nothing gave up. Reaping it would write a
+            # false "gave up after 0 attempt(s)" into the ledger (10.f), cascade that into
+            # every dependant as a dead dependency, and post a comment on an issue the storm
+            # has just declined to trust. Whether the issue is sound is a person's call; the
+            # lane stays unsettled until one makes it, and its dependants are named below.
+            out["refused"].append((slug, f"refused to start: {found['refused']}"))
         elif found.get("completed") is True and not pr:
             out["publishable"].append((slug, "the runner completed it; lane-publish.py owns it"))
         elif found.get("completed") is True:
@@ -498,7 +511,8 @@ def record(name: str, verb: str, rows: list[tuple[str, str]]) -> None:
             log.write(f"{stamp} {verb} {slug}: {why}\n")
 
 
-def main() -> int:
+def main(source: StormForgeInterface | None = None) -> int:
+    """The entry point, and where the forge is composed. `source` is the seam for a test."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--reap", action="store_true", help="record the dead; without it, only report"
@@ -531,14 +545,15 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    prs = forge()
+    source = source or StormForge.declared(STORM, MAIN, None)
+    prs = forge(source)
     if prs is None:
         raise SystemExit(
             "cannot reach the forge, so cannot tell which lanes landed -- refusing to "
             "settle anything. Nothing was changed."
         )
 
-    found = survey(args.grace * 60, prs)
+    found = survey(args.grace * 60, prs, source)
     waiting = queue()
     dead = {slug for slug, _ in found["reap"]}
     landed = {slug for slug, _ in found["integrate"]}
@@ -554,6 +569,11 @@ def main() -> int:
         and not set(deps) <= set(lines_of("integrated.txt"))
     }
     frees = blocked_by(dead | set(lines_of("abandoned.txt")), waiting) - dead
+    # A refused lane is left unsettled, so storm-queue.sh -- which names a lane blocked only
+    # when its dependency is in abandoned.txt -- would skip its dependants in silence. They
+    # are named here instead, every pass, until a person settles the refusal.
+    refused = {slug for slug, _ in found["refused"]}
+    held_back = sorted(blocked_by(refused, waiting) - refused)
 
     for bucket, label in (
         ("live", "left alone -- a runner is inside"),
@@ -561,6 +581,7 @@ def main() -> int:
         ("young", "left alone -- within the repair grace period"),
         ("publishable", "left alone -- the publisher's, not this tool's"),
         ("unfinished", "REPORTED, not settled -- needs a person"),
+        ("refused", "REFUSED, not settled and not reaped -- needs a person"),
     ):
         for slug, why in found[bucket]:
             print(f"  {slug:44s} {label}: {why}")
@@ -583,13 +604,20 @@ def main() -> int:
         if found["reap"]:
             record("abandoned.txt", "reaped", found["reap"])
 
-    gone, held = worktrees(prs, args.reap_worktrees)
+    gone, held = worktrees(source.heads(prs), args.reap_worktrees)
 
     print(
         f"\n{len(found['integrate'])} landed, {len(found['reap'])} dead, "
         f"{len(found['publishable'])} awaiting publish, {len(found['in-flight'])} in flight, "
-        f"{len(found['unfinished'])} unfinished, {len(found['settled'])} already settled"
+        f"{len(found['unfinished'])} unfinished, {len(found['refused'])} refused, "
+        f"{len(found['settled'])} already settled"
     )
+    if refused:
+        print(
+            f"{len(held_back)} queued lane(s) wait on a refused lane and cannot start until a "
+            f"person settles it: {', '.join(held_back[:12]) or 'none'}"
+            + (f" and {len(held_back) - 12} more" if len(held_back) > 12 else "")
+        )
     if landed:
         print(
             f"{len(eligible)} queued lane(s) {'are now' if args.reap else 'would become'} eligible to start -- "
