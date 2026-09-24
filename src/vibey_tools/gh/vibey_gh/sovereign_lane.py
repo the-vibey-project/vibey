@@ -25,7 +25,7 @@ from dataclasses import dataclass
 
 from vibey_gh.config import PrAutomationFallbackConfig
 from vibey_gh.interfaces.model_sampler_interface import ModelSamplerInterface
-from vibey_gh.interfaces.sovereign_interface import LaneReadinessInterface
+from vibey_gh.interfaces.sovereign_lane_interface import LaneReadinessInterface
 from vibey_gh.interfaces.sovereign_runner_interface import SovereignRunnerInterface
 
 __all__ = ["LaneState", "SovereignLaneReadiness"]

@@ -2,13 +2,17 @@
 """The pre-push gate recognises, by its own rule, a push that carries no code.
 
 The rule, and every way around it that must NOT work: a push passes the gate without the
-heavy stage only when EVERY ref it updates is outside `refs/heads/` and `refs/tags/` and
-EVERY commit it sends is an empty tree with no parents. A branch, a tag, a tree with
-anything in it, a commit with a parent, a deletion, an annotated tag object, a line git
-never writes, an unreadable object, or no refs at all -- each of those runs the full gate.
+heavy stage only when EVERY ref it updates is the declared heartbeat ref and EVERY commit it
+sends is an empty tree with no parents that brings nothing else along. A branch, a tag, any
+other ref, a tree with anything in it, a commit with a parent, a deletion, an annotated tag
+object, a replacement standing in for the object the push sends, a graft handing the pack a
+parent, a line git never writes, an unreadable object, or no refs at all -- each of those
+runs the full gate.
 
-These run against real git objects in a scratch repository, never a table of canned
-answers: the rule is about what git holds, so git is what answers.
+These run against real git objects in a scratch repository under pytest's `tmp_path`, never
+a table of canned answers and never the repository the suite runs in: the rule is about what
+git holds, so git is what answers, and a replacement or a graft changes history for every
+worktree that shares the repository it is written into.
 """
 
 from __future__ import annotations
@@ -21,7 +25,7 @@ import pytest
 
 from vibey_gh.cli import main
 from vibey_gh.interfaces.push_scope_interface import PushScopeInterface, PushVerdictInterface
-from vibey_gh.push_scope import NO_CODE, PushScope, PushVerdict
+from vibey_gh.push_scope import NO_CODE, NO_REPLACE_OBJECTS, PushScope, PushVerdict
 
 ZERO = "0" * 40
 HEARTBEAT = "refs/vibey-gh/sovereign-heartbeat"
@@ -73,6 +77,9 @@ class Objects:
         _git(root, "tag", "-a", "v1", "-m", "annotated", self.heartbeat)
         self.tag_object = _git(root, "rev-parse", "refs/tags/v1")
 
+    def git_dir(self) -> Path:
+        return self.root / _git(self.root, "rev-parse", "--git-dir")
+
 
 @pytest.fixture
 def objects(tmp_path: Path) -> Objects:
@@ -83,12 +90,16 @@ def _line(sha: str, remote_ref: str, *, local: str | None = None, old: str = ZER
     return f"{local or sha} {sha} {remote_ref} {old}"
 
 
+def _scope(objects: Objects, *refs: str) -> PushScope:
+    return PushScope(refs=refs or (HEARTBEAT,), cwd=objects.root)
+
+
 def _judge(objects: Objects, *lines: str) -> PushVerdict:
-    return PushScope(cwd=objects.root).judge("\n".join(lines) + "\n")
+    return _scope(objects).judge("\n".join(lines) + "\n")
 
 
 def test_the_scope_check_and_its_verdict_honour_their_interfaces(objects):
-    scope = PushScope(cwd=objects.root)
+    scope = _scope(objects)
     assert isinstance(scope, PushScopeInterface)
     assert isinstance(scope.judge(""), PushVerdictInterface)
 
@@ -97,6 +108,7 @@ def test_a_heartbeat_push_carries_no_code(objects):
     verdict = _judge(objects, _line(objects.heartbeat, HEARTBEAT))
     assert verdict.carries_code is False
     assert HEARTBEAT in verdict.reason and "no code" in verdict.reason
+    assert "the declared heartbeat" in verdict.reason
 
 
 def test_replacing_an_earlier_heartbeat_still_carries_no_code(objects):
@@ -106,11 +118,23 @@ def test_replacing_an_earlier_heartbeat_still_carries_no_code(objects):
     assert verdict.carries_code is False
 
 
-def test_several_heartbeat_refs_in_one_push_carry_no_code(objects):
-    verdict = _judge(
-        objects, _line(objects.heartbeat, HEARTBEAT), _line(objects.heartbeat, "refs/vibey/pulse")
+def test_only_the_declared_refs_are_ever_exempt(objects):
+    """12.c: the exemption is exactly as wide as the declaration. A ref outside
+    refs/heads/ and refs/tags/ that nobody declared is judged in full, heartbeat or not;
+    two declared refs in one push are both exempt."""
+    pulse = "refs/vibey/pulse"
+    verdict = _judge(objects, _line(objects.heartbeat, pulse))
+    assert verdict.carries_code is True
+    assert f"{pulse} is not the declared heartbeat ref ({HEARTBEAT})" in verdict.reason
+    both = _scope(objects, HEARTBEAT, pulse).judge(
+        f"{_line(objects.heartbeat, HEARTBEAT)}\n{_line(objects.heartbeat, pulse)}\n"
     )
-    assert verdict.carries_code is False and "2 refs" in verdict.reason
+    assert both.carries_code is False and HEARTBEAT in both.reason and pulse in both.reason
+
+
+def test_nothing_is_exempt_when_nothing_is_declared(objects):
+    verdict = PushScope(cwd=objects.root).judge(_line(objects.heartbeat, HEARTBEAT))
+    assert verdict.carries_code is True and "none is declared" in verdict.reason
 
 
 @pytest.mark.parametrize(
@@ -120,8 +144,8 @@ def test_several_heartbeat_refs_in_one_push_carry_no_code(objects):
         (lambda o: [_line(o.heartbeat, "refs/heads/main")], "refs/heads/main is a branch"),
         # A tag, lightweight or annotated.
         (lambda o: [_line(o.heartbeat, "refs/tags/v2")], "refs/tags/v2 is a tag"),
-        (lambda o: [_line(o.tag_object, "refs/vibey/tagged")], "is not a commit"),
-        # A tree with something in it, on a ref that is not a branch.
+        (lambda o: [_line(o.tag_object, HEARTBEAT)], "is not a commit"),
+        # A tree with something in it, on the declared ref.
         (lambda o: [_line(o.rooted_code, HEARTBEAT)], "carries a tree"),
         (lambda o: [_line(o.code, HEARTBEAT)], "carries a tree"),
         # A commit with a parent, even with an empty tree.
@@ -158,38 +182,109 @@ def test_a_heartbeat_cannot_carry_a_branch_past_the_gate(objects):
 
 @pytest.mark.parametrize("stdin", ["", "\n", "   \n\n"])
 def test_no_refs_at_all_is_not_proof_of_no_code(objects, stdin):
-    verdict = PushScope(cwd=objects.root).judge(stdin)
+    verdict = _scope(objects).judge(stdin)
     assert verdict.carries_code is True and "no refs" in verdict.reason
+
+
+# --- judged as the push sends it: replacements ignored, the whole object set walked --------
+
+
+def test_a_replacement_cannot_dress_code_as_a_heartbeat(objects):
+    """`git replace <code> <heartbeat>` makes every reading command describe the empty root
+    when asked about the code commit, while the pack sends the code commit itself
+    (git-replace(1): pack transfer does not follow replacements). Read without
+    replacements, the code is what is judged."""
+    _git(objects.root, "replace", objects.code, objects.heartbeat)
+    assert _git(objects.root, "cat-file", "commit", objects.code).startswith(
+        f"tree {objects.empty_tree}"
+    ), "the replacement is in force for an ordinary read"
+    verdict = _judge(objects, _line(objects.code, HEARTBEAT))
+    assert verdict.carries_code is True and "carries a tree" in verdict.reason
+    assert objects.code in verdict.reason
+
+
+def test_a_heartbeat_replaced_by_code_is_still_judged_as_the_heartbeat_it_sends(objects):
+    """The other direction: the object sent is the empty root, whatever a replacement says,
+    so it carries no code -- the verdict follows the push, not the display."""
+    _git(objects.root, "replace", objects.heartbeat, objects.code)
+    verdict = _judge(objects, _line(objects.heartbeat, HEARTBEAT))
+    assert verdict.carries_code is False, verdict.reason
+
+
+def test_a_graft_that_would_hand_the_pack_a_parent_runs_the_full_gate(objects):
+    """A graft gives the empty root a parent its own bytes never name. The raw commit
+    still reads as parentless with an empty tree, but the pack walks the graft and would
+    carry the parent's code; so does `rev-list --objects`, which is what is judged."""
+    grafts = objects.git_dir() / "info" / "grafts"
+    grafts.parent.mkdir(parents=True, exist_ok=True)
+    grafts.write_text(f"{objects.heartbeat} {objects.code}\n", encoding="utf-8")
+    raw = _git(objects.root, "cat-file", "commit", objects.heartbeat)
+    assert "parent " not in raw, "the graft does not change the commit's own bytes"
+    verdict = _judge(objects, _line(objects.heartbeat, HEARTBEAT))
+    assert verdict.carries_code is True
+    assert "would carry" in verdict.reason and "graft" in verdict.reason
+    ok, why = _scope(objects).is_empty_root(objects.heartbeat)
+    assert not ok and "would carry" in why
+
+
+def test_every_git_argv_the_scope_builds_refuses_replacements(objects):
+    """In the argv itself, not only in the default runner: an injected runner -- the
+    heartbeat's own lease check is one -- is handed the same refusal."""
+    asked: list[tuple[str, ...]] = []
+    real = _scope(objects)
+
+    def git(args):
+        asked.append(tuple(args))
+        return real._git(args)
+
+    PushScope(refs=(HEARTBEAT,), git=git).judge(_line(objects.heartbeat, HEARTBEAT))
+    assert asked and all(argv[0] == NO_REPLACE_OBJECTS for argv in asked)
+    subcommands = {argv[1] for argv in asked}
+    assert {"hash-object", "cat-file", "rev-list"} <= subcommands
 
 
 def test_the_empty_tree_is_asked_of_git_not_compiled_in(objects):
     """The empty tree's id depends on the repository's object format (SHA-1 or SHA-256),
     so it is computed by the repository, never written down."""
     asked: list[tuple[str, ...]] = []
-    real = PushScope(cwd=objects.root)
+    real = _scope(objects)
 
     def git(args):
         asked.append(tuple(args))
         return real._git(args)
 
-    PushScope(git=git).judge(_line(objects.heartbeat, HEARTBEAT))
-    assert ("hash-object", "-t", "tree", "/dev/null") in asked
+    PushScope(refs=(HEARTBEAT,), git=git).judge(_line(objects.heartbeat, HEARTBEAT))
+    assert (NO_REPLACE_OBJECTS, "hash-object", "-t", "tree", "/dev/null") in asked
 
 
 def test_a_git_that_cannot_answer_runs_the_full_gate(objects):
-    verdict = PushScope(git=lambda args: (1, "")).judge(_line(objects.heartbeat, HEARTBEAT))
+    scope = PushScope(refs=(HEARTBEAT,), git=lambda args: (1, ""))
+    verdict = scope.judge(_line(objects.heartbeat, HEARTBEAT))
     assert verdict.carries_code is True and "empty tree" in verdict.reason
+    assert scope.is_empty_root(objects.heartbeat) == (
+        False,
+        "git could not compute the empty tree to compare against",
+    )
 
 
 def test_an_object_git_names_but_cannot_print_runs_the_full_gate(objects):
-    real = PushScope(cwd=objects.root)
+    real = _scope(objects)
 
     def git(args):
-        return (128, "") if args[:2] == ("cat-file", "commit") else real._git(args)
+        return (128, "") if args[1:3] == ("cat-file", "commit") else real._git(args)
 
-    verdict = PushScope(git=git).judge(_line(objects.heartbeat, HEARTBEAT))
+    verdict = PushScope(refs=(HEARTBEAT,), git=git).judge(_line(objects.heartbeat, HEARTBEAT))
     assert verdict.carries_code is True and "could not read" in verdict.reason
-    assert PushScope(git=lambda args: (1, "")).is_empty_root(objects.heartbeat)[0] is False
+
+
+def test_an_object_set_git_cannot_list_runs_the_full_gate(objects):
+    real = _scope(objects)
+
+    def git(args):
+        return (128, "") if args[1] == "rev-list" else real._git(args)
+
+    verdict = PushScope(refs=(HEARTBEAT,), git=git).judge(_line(objects.heartbeat, HEARTBEAT))
+    assert verdict.carries_code is True and "could not list the objects" in verdict.reason
 
 
 def test_a_missing_git_is_an_answer_of_its_own(tmp_path, monkeypatch):
@@ -198,7 +293,7 @@ def test_a_missing_git_is_an_answer_of_its_own(tmp_path, monkeypatch):
 
 
 def test_is_empty_root_says_why_a_commit_is_not_a_heartbeat(objects):
-    scope = PushScope(cwd=objects.root)
+    scope = _scope(objects)
     assert scope.is_empty_root(objects.heartbeat) == (True, "")
     ok, why = scope.is_empty_root(objects.parented_empty)
     assert not ok and "has a parent" in why
@@ -214,7 +309,8 @@ def test_the_command_prints_the_token_only_when_there_is_nothing_to_judge(
 ):
     """The hook skips the heavy stage only on the exact token on stdout AND a zero exit.
     Anything else -- an older vibey-gh without this command, a crash, a stub that exits 0
-    for everything -- prints no token, and the full gate runs."""
+    for everything -- prints no token, and the full gate runs. The declared ref is the
+    configuration's own default here, `[pr_automation.fallback] heartbeat_ref`."""
     monkeypatch.chdir(objects.root)
     monkeypatch.setattr("sys.stdin", _Stdin(_line(objects.heartbeat, HEARTBEAT) + "\n"))
     assert main(["push-scope"]) == 0
@@ -226,6 +322,28 @@ def test_the_command_prints_the_token_only_when_there_is_nothing_to_judge(
     assert main(["push-scope"]) == 1
     out, err = capsys.readouterr()
     assert out == "" and err == ""
+
+
+def test_the_command_exempts_the_ref_the_configuration_declares(objects, monkeypatch, capsys):
+    (objects.root / ".vibey-gh.toml").write_text(
+        '[pr_automation.fallback]\nheartbeat_ref = "refs/vibey/pulse"\n', encoding="utf-8"
+    )
+    monkeypatch.chdir(objects.root)
+    monkeypatch.setattr("sys.stdin", _Stdin(_line(objects.heartbeat, HEARTBEAT) + "\n"))
+    assert main(["push-scope"]) == 1
+    assert capsys.readouterr().out == ""
+    monkeypatch.setattr("sys.stdin", _Stdin(_line(objects.heartbeat, "refs/vibey/pulse") + "\n"))
+    assert main(["push-scope"]) == 0
+    assert capsys.readouterr().out.strip() == NO_CODE
+
+
+def test_a_configuration_that_cannot_be_read_exempts_nothing(objects, monkeypatch, capsys):
+    (objects.root / ".vibey-gh.toml").write_text("[pr_automation.fallback\n", encoding="utf-8")
+    monkeypatch.chdir(objects.root)
+    monkeypatch.setattr("sys.stdin", _Stdin(_line(objects.heartbeat, HEARTBEAT) + "\n"))
+    assert main(["push-scope"]) == 1
+    out, err = capsys.readouterr()
+    assert out == "" and "no heartbeat ref could be read" in err
 
 
 class _Stdin:

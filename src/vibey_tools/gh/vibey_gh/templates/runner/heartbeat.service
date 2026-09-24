@@ -4,15 +4,15 @@
 # One sovereign heartbeat, started by the timer beside this unit. `sovereign --beat` pushes
 # nothing unless the runner is registered and online and the model endpoint answers, and
 # records what it did in the record file named below, which `vibey-gh heartbeat status`
-# reads. The push goes through the checkout's own pre-push gate; nothing here skips it.
+# reads. It pushes from the repository the timer owns (vibey ADR-0059), through that
+# clone's own pre-push gate; nothing here skips it. No network-online.target: a user
+# manager has none, and a beat with no network withholds itself and says so.
 [Unit]
 Description=vibey sovereign heartbeat for __REPOSITORY__
-Wants=network-online.target
-After=network-online.target
 
 [Service]
 Type=oneshot
-WorkingDirectory=__CHECKOUT__
+WorkingDirectory=__CLONE__
 Environment=__PATH_ASSIGNMENT__
 Environment=PYTHONSAFEPATH=1
 ExecStart=__EXEC_START__

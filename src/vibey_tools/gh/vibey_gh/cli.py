@@ -700,13 +700,20 @@ def _push_scope(args) -> int:
     """Judge the refs a pre-push hook was handed: does this push carry code at all?
 
     Reads git's pre-push standard input. Prints `NO_CODE` on stdout and exits 0 only when
-    every ref is outside `refs/heads/` and `refs/tags/` and every commit is an empty tree
-    with no parents; the reason goes to stderr so the person pushing sees why the heavy
-    stage did not run. Any other push prints nothing and exits 1, and the gate runs in full.
+    every ref is the declared `[pr_automation.fallback] heartbeat_ref` and every commit is
+    an empty tree with no parents that brings nothing else; the reason goes to stderr so the
+    person pushing sees why the heavy stage did not run. Any other push -- or a
+    configuration that cannot be read, so that nothing is declared -- prints nothing on
+    stdout and exits 1, and the gate runs in full.
     """
     from vibey_gh.push_scope import NO_CODE, PushScope
 
-    verdict = PushScope().judge(sys.stdin.read())
+    try:
+        declared = load_config().pr_automation.fallback.heartbeat_ref
+    except (OSError, ValueError) as exc:
+        print(f"vibey-gh push-scope: no heartbeat ref could be read ({exc})", file=sys.stderr)
+        return 1
+    verdict = PushScope(refs=(declared,)).judge(sys.stdin.read())
     if verdict.carries_code:
         return 1
     print(
@@ -738,19 +745,26 @@ def _sovereign(args) -> int:
 
     `--beat` is what the heartbeat timer runs (`vibey-gh heartbeat install`); the bare form
     is what a workflow runs to decide whether it may schedule the sovereign lane at all.
-    `--beat` publishes only when the lane can serve -- the runner registered and online, the
-    model endpoint answering -- and with `--record` writes what it did for `heartbeat status`.
-    The probe prints its verdict and, under Actions, writes `ready=` to `$GITHUB_OUTPUT` so a
-    job `if:` can consume it.
+    `--beat` pushes from the timer's own clone, through that clone's gate, and only when the
+    lane can serve -- the runner registered and online, the model endpoint answering -- and
+    with `--record` writes what it did for `heartbeat status`. The probe prints its verdict
+    and, under Actions, writes `ready=` to `$GITHUB_OUTPUT` so a job `if:` can consume it.
     """
     from vibey_gh import sovereign
 
     cfg = load_config()
     fallback = cfg.pr_automation.fallback
     if args.beat:
-        result = sovereign.beat(
-            fallback.heartbeat_ref, readiness=_lane_readiness(cfg), remote=args.remote
-        )
+        clone, problem = _heartbeat_timer(cfg).clone_dir()
+        if clone is None:
+            result = sovereign.Readiness(False, f"heartbeat withheld: {problem}")
+        else:
+            result = sovereign.beat(
+                fallback.heartbeat_ref,
+                readiness=_lane_readiness(cfg),
+                remote=args.remote,
+                cwd=str(clone),
+            )
         if args.record:
             from vibey_gh.heartbeat_timer import BeatRecord
 
@@ -776,12 +790,18 @@ def _sovereign(args) -> int:
 
 
 def _heartbeat_timer(cfg, service=None):
+    """The heartbeat timer as this machine runs it. A module function because argparse
+    dispatches to functions, and `heartbeat`, `runner` and `sovereign --beat` all build the
+    timer the same way."""
     from vibey_gh.heartbeat_timer import HeartbeatTimer
 
     return HeartbeatTimer(cfg, home=Path.home(), uid=os.getuid(), service=service)
 
 
 def _install_heartbeat(timer, *, load: bool) -> int:
+    """Render and install the heartbeat timer, printing each act; 0 only when it is in place
+    (and loaded, with `load`). A module function: `heartbeat install` and `runner install`
+    share it, and argparse dispatches to functions."""
     plan, problem = timer.render()
     if plan is None:
         print(f"vibey-gh heartbeat: {problem}", file=sys.stderr)
@@ -857,8 +877,21 @@ def _runner(args, launchctl=None) -> int:
             )
             for number, step in enumerate(runner.next_steps(plan), start=1):
                 print(f"  {number}. {step}")
+        # The runner is finished above whatever happens here; a heartbeat that cannot be
+        # installed is reported on its own, with what to do next, and the exit status says
+        # the lane will not be offered yet (10.f).
         print("the heartbeat timer:")
-        return _install_heartbeat(_heartbeat_timer(cfg, launchctl), load=args.load)
+        if _install_heartbeat(_heartbeat_timer(cfg, launchctl), load=args.load) == 0:
+            return 0
+        done = "installed and loaded" if args.load else "installed"
+        print(
+            f"vibey-gh runner: the runner is {done}, but its heartbeat timer is not, so the"
+            " gate will not offer the sovereign lane yet. Fix what is named above, then run"
+            f" `vibey-gh heartbeat install{' --load' if args.load else ''}`"
+            " (docs/runbooks/sovereign-review-runner.md).",
+            file=sys.stderr,
+        )
+        return 1
     if args.action == "cleanup":
         lines = runner.remove(runner.strays(plan), apply=args.apply)
     else:
@@ -1944,7 +1977,7 @@ def main(argv: list[str] | None = None) -> int:
 
     ps = sub.add_parser(
         "push-scope",
-        help="read pre-push refs on stdin; print carries-no-code when none of it is code",
+        help="read pre-push refs on stdin; print carries-no-code only for the declared heartbeat",
     )
     ps.set_defaults(func=_push_scope)
 
@@ -1967,16 +2000,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     hb_sub = hb.add_subparsers(dest="action", required=True)
     hb_install = hb_sub.add_parser(
-        "install", help="render the launchd agent or systemd timer; print the next commands"
+        "install",
+        help="create the timer's clone and gate, test the gate, render the launchd agent or"
+        " systemd timer, and print the next commands",
     )
     hb_install.add_argument(
         "--load", action="store_true", help="also (re)load it with launchctl or systemctl"
     )
     hb_sub.add_parser(
-        "status", help="installed, current, loaded, and the last beat's age and result"
+        "status",
+        help="installed, current, the clone's gate, loaded, and the last beat's age and result",
     )
     hb_uninstall = hb_sub.add_parser(
-        "uninstall", help="unload the timer and move its units aside (dry run by default)"
+        "uninstall",
+        help="unload the timer and move its units and clone aside (dry run by default)",
     )
     hb_uninstall.add_argument("--apply", action="store_true", help="do it, rather than list it")
     hb.set_defaults(func=_heartbeat, load=False, apply=False)

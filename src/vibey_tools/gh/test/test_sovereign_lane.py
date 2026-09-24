@@ -9,7 +9,10 @@ import pytest
 
 from vibey_gh.config import PrAutomationFallbackConfig
 from vibey_gh.fit import Model
-from vibey_gh.interfaces.sovereign_interface import LaneReadinessInterface, LaneStateInterface
+from vibey_gh.interfaces.sovereign_lane_interface import (
+    LaneReadinessInterface,
+    LaneStateInterface,
+)
 from vibey_gh.sovereign_lane import LaneState, SovereignLaneReadiness
 from vibey_gh.sovereign_runner import RegisteredRunner, RunnerPlan
 

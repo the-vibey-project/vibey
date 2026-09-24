@@ -38,6 +38,7 @@ from xml.sax.saxutils import escape
 from vibey_gh.config import GhConfig
 
 __all__ = [
+    "AMBIENT_TOKENS",
     "PAT_PERMISSION",
     "RETIRED_DIR",
     "TEMPLATES",
@@ -66,7 +67,7 @@ _STORED_TOKEN = re.compile(r"^[ \t]+oauth_token:[ \t]*\S", re.MULTILINE)
 
 # The environment variables gh prefers over any stored login. Stripped from every gh call
 # made on the runner's behalf, so the answer is about the dedicated login and nothing else.
-_AMBIENT_TOKENS = ("GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN")
+AMBIENT_TOKENS = ("GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN")
 
 Launchctl = Callable[[tuple[str, ...]], tuple[int, str]]
 GhStatus = Callable[[tuple[str, ...], dict[str, str]], int]
@@ -290,7 +291,7 @@ class SovereignRunner:
         if hosts.stat().st_mode & (stat.S_IRGRP | stat.S_IROTH):
             return [f"{hosts} is readable by other users; run: chmod 600 {hosts}"]
         host = self._host(plan)
-        env = {k: v for k, v in os.environ.items() if k not in _AMBIENT_TOKENS}
+        env = {k: v for k, v in os.environ.items() if k not in AMBIENT_TOKENS}
         env["GH_CONFIG_DIR"] = str(directory)
         if self._gh(("gh", "auth", "status", "--hostname", host), env) != 0:
             rejected = (
@@ -301,7 +302,7 @@ class SovereignRunner:
         return []
 
     def _runner_env(self) -> dict[str, str]:
-        env = {k: v for k, v in os.environ.items() if k not in _AMBIENT_TOKENS}
+        env = {k: v for k, v in os.environ.items() if k not in AMBIENT_TOKENS}
         env["GH_CONFIG_DIR"] = str(self._gh_dir)
         return env
 

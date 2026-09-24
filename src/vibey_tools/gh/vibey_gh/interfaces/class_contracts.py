@@ -429,6 +429,9 @@ class RunnersConfigInterface(_ConfigRecordInterface, Protocol):
     def heartbeat_log_dir(self) -> str: ...
 
     @property
+    def heartbeat_clone_dir(self) -> str: ...
+
+    @property
     def systemd_user_dir(self) -> str: ...
 
     def resolved_gh_config_dir(self, home: Path) -> Path:

@@ -21,10 +21,11 @@ class PushVerdictInterface(Protocol):
 class PushScopeInterface(Protocol):
     """Judges the refs git hands a pre-push hook, by the gate's own rule.
 
-    A push carries no code only when every ref it updates is outside `refs/heads/` and
-    `refs/tags/` and every commit it sends is the empty tree with no parents. Every other
-    push -- and every push whose objects cannot be read -- carries code, and the full gate
-    judges it.
+    A push carries no code only when every ref it updates is the declared heartbeat ref and
+    every commit it sends is the empty tree with no parents, bringing no other object with
+    it. Objects are read as the push sends them -- replacement refs ignored, the whole
+    object set walked -- and every other push, including every push whose objects cannot be
+    read, carries code and the full gate judges it.
     """
 
     def judge(self, pre_push_input: str) -> PushVerdictInterface:
@@ -33,6 +34,6 @@ class PushScopeInterface(Protocol):
         ...
 
     def is_empty_root(self, commit: str) -> tuple[bool, str]:
-        """Whether `commit` is a commit whose tree is empty and which has no parents; when
-        it is not, the reason names what it carries instead."""
+        """Whether `commit` is a commit whose tree is empty, which has no parents, and which
+        brings no other object with it; when it is not, the reason names what it carries."""
         ...

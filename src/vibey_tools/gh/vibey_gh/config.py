@@ -588,6 +588,12 @@ class PrAutomationFallbackConfig:
                 "pr_automation.fallback.heartbeat_ref must not be a branch — a heartbeat"
                 " under refs/heads/ becomes a branch every tidy pass has to reason about"
             )
+        if self.heartbeat_ref.startswith("refs/tags/"):
+            raise ValueError(
+                "pr_automation.fallback.heartbeat_ref must not be a tag — every clone fetches"
+                " tags, a release is cut from them, and the pre-push gate judges every tag in"
+                " full, so a heartbeat there could never be published through it"
+            )
         if not 1 <= self.heartbeat_max_age_minutes <= 1440:
             raise ValueError(
                 "pr_automation.fallback.heartbeat_max_age_minutes must be between 1 and 1440"
@@ -669,13 +675,20 @@ class RunnersConfig:
     # heartbeat_max_age_minutes`; anything over half is refused at install, so one missed
     # beat never stales the lane.
     heartbeat_interval_minutes: int = 0
-    # The interpreter the timer runs `python -m vibey_gh.cli` with. Empty is the one running
-    # the install. Either way it, and the vibey_gh it imports, must live outside any
-    # temporary directory and any git work tree.
-    heartbeat_python: str = ""
+    # The interpreter the timer runs `python -m vibey_gh.cli` with, and the one the clone's
+    # pre-push hook asks for its scope decision. The default is where `uv tool install vibey`
+    # puts it on macOS and Linux alike; empty is the one running the install. Either way it,
+    # and the vibey_gh it imports, must live outside any temporary directory and any git work
+    # tree -- which is why `uv run` inside a checkout cannot be it.
+    heartbeat_python: str = "~/.local/share/uv/tools/vibey/bin/python"
     # Where the timer logs and records each beat. Empty is `log_dir` under launchd and
     # `~/.local/state/vibey-gh` under systemd.
     heartbeat_log_dir: str = ""
+    # The repository the heartbeat timer owns and pushes from: a clone with no working tree,
+    # the repository's remote, the runner's own credential and a pre-push gate rendered by
+    # the timer's own vibey-gh. Empty is `<install_dir>/heartbeat-<repository name>`, durable
+    # beside the runner's files. Refused under a temporary directory or inside a checkout.
+    heartbeat_clone_dir: str = ""
     # Where the systemd user units are written.
     systemd_user_dir: str = "~/.config/systemd/user"
 
@@ -697,7 +710,7 @@ class RunnersConfig:
             value = getattr(self, name)
             if not value.startswith(("/", "~/")):
                 raise ValueError(f"runners.{name} must be absolute or start with ~/: {value!r}")
-        for name in ("heartbeat_python", "heartbeat_log_dir"):
+        for name in ("heartbeat_python", "heartbeat_log_dir", "heartbeat_clone_dir"):
             value = getattr(self, name)
             if value and not value.startswith(("/", "~/")):
                 raise ValueError(

@@ -34,6 +34,11 @@ the heartbeat goes stale on its own and the gate falls back honestly. The old pu
 "up" whenever its supervisor had a live process, which included the thirty seconds of every
 failing restart cycle.
 
+**And it is only ever pushed through a gate.** `beat()` pushes from the repository it is
+given -- the timer's own clone (`vibey_gh.heartbeat_clone`) -- and withholds, saying why,
+when that repository or its pre-push gate is missing. A refused push is reported with the
+tail of what git said, credentials scrubbed, so the record carries its own evidence.
+
 The failure direction is deliberate throughout: anything unreadable, unparseable, or stale
 reports **not ready**. A missing heartbeat costs a sovereign review; a false positive costs
 every gate in the repository.
@@ -41,19 +46,35 @@ every gate in the repository.
 
 from __future__ import annotations
 
+import os
+import re
 import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from vibey_gh.interfaces.push_scope_interface import PushScopeInterface
 from vibey_gh.interfaces.sovereign_interface import (
     LaneReadinessInterface,
+    LaneStateInterface,
     SovereignHeartbeatInterface,
 )
-from vibey_gh.push_scope import PushScope
+from vibey_gh.push_scope import NO_REPLACE_OBJECTS, PushScope
 
-__all__ = ["Readiness", "SovereignHeartbeat", "beat", "probe"]
+__all__ = ["TIMED_OUT", "Readiness", "SovereignHeartbeat", "beat", "probe"]
+
+# The exit status `_run` reports for a git that did not finish in time, as timeout(1) does:
+# distinct from every status git itself exits with, so a hung push reads as one.
+TIMED_OUT = 124
+# How long any one git command may take before it is abandoned.
+_TIMEOUT_SECONDS = 60
+
+# Credentials a git error line could echo back: a URL's userinfo, and the shapes GitHub
+# gives its tokens. Scrubbed before any of it reaches a reason or a record.
+_URL_USERINFO = re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://)[^/\s@]+@")
+_TOKEN = re.compile(r"\b(?:gh[opusr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{16,})\b")
+_COLOUR = re.compile(r"\x1b\[[0-9;]*m")
 
 
 @dataclass(frozen=True)
@@ -68,23 +89,33 @@ class Readiness:
 GitSeam = Callable[..., tuple[int, str]]
 
 
-def _run(*cmd: str, cwd: str | None = None) -> tuple[int, str]:
-    # A module function rather than a method: it is the one place this module starts a
-    # process, and the seam its tests have always replaced. The class calls it by name at
-    # call time, so replacing it here reaches every instance.
+def _run(*cmd: str, cwd: str | None = None, stderr: bool = False) -> tuple[int, str]:
+    """(exit status, stripped standard output -- or, with `stderr`, standard error).
+
+    A module function rather than a method: it is the one place this module starts a
+    process, and the seam its tests have always replaced. The class calls it by name at
+    call time, so replacing it here reaches every instance. `stderr` is how a push is run:
+    git says why it refused a push on standard error and nowhere else. A git that did not
+    finish in time is `TIMED_OUT`; one that could not be started is 127.
+    """
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False, cwd=cwd)
-    except (OSError, subprocess.TimeoutExpired):
-        return 1, ""
-    return proc.returncode, proc.stdout.strip()
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=_TIMEOUT_SECONDS, check=False, cwd=cwd
+        )
+    except subprocess.TimeoutExpired:
+        return TIMED_OUT, ""
+    except OSError:
+        return 127, ""
+    return proc.returncode, (proc.stderr if stderr else proc.stdout).strip()
 
 
 class SovereignHeartbeat(SovereignHeartbeatInterface):
     """Publishes and reads the heartbeat on one ref of one remote.
 
-    `git` is the seam: it takes the arguments after `git` and returns the exit status and
-    the stripped standard output. `scope` judges whether the value the ref already holds is
-    itself a heartbeat; by default it asks through the same seam.
+    `cwd` is the repository the heartbeat is pushed from: the timer's own clone. `git` is
+    the seam: it takes the arguments after `git` (and `stderr=True` for the push) and
+    returns the exit status and the stripped output. `scope` judges whether the value the
+    ref already holds is itself a heartbeat; by default it asks through the same seam.
     """
 
     def __init__(
@@ -104,10 +135,10 @@ class SovereignHeartbeat(SovereignHeartbeatInterface):
         self._scope = scope or PushScope(git=lambda args: self._git(*args))
         self._clock = clock
 
-    def _git(self, *args: str) -> tuple[int, str]:
+    def _git(self, *args: str, stderr: bool = False) -> tuple[int, str]:
         if self._git_seam is not None:
-            return self._git_seam(*args)
-        return _run("git", *args, cwd=self._cwd)
+            return self._git_seam(*args, stderr=stderr)
+        return _run("git", *args, cwd=self._cwd, stderr=stderr)
 
     def _now(self) -> float:
         return self._clock() if self._clock is not None else time.time()
@@ -115,29 +146,44 @@ class SovereignHeartbeat(SovereignHeartbeatInterface):
     # --- publishing -----------------------------------------------------------------------
 
     def beat(self, readiness: LaneReadinessInterface) -> Readiness:
-        """Publish a heartbeat, but only when the sovereign lane can actually serve.
+        """Publish a heartbeat, but only through a gate and only when the lane can serve.
 
-        `readiness` is asked first, and a lane that cannot serve publishes nothing: the
-        refusal comes back with its reason and no git command runs. That is the whole point
-        of the heartbeat — the gate schedules the sovereign review on its word, so a word
-        given when no runner can take the job queues that job forever.
+        The repository it is pushed from is checked first: it must exist and hold an
+        executable pre-push hook where git will run one, or nothing is pushed and the
+        reason says which is missing. Then `readiness` is asked, and a lane that cannot
+        serve publishes nothing: the refusal comes back with its reason. That is the whole
+        point of the heartbeat -- the gate schedules the sovereign review on its word, so a
+        word given when no runner can take the job queues that job forever. A readiness
+        that raises is a refusal too: this never raises.
 
         The heartbeat itself is an empty commit on a ref outside `refs/heads/`, so it is
         never a branch a human or a tidy pass has to reason about. It replaces the previous
         one with a **compare-and-swap**, not a bare force: the ref's current value is read,
-        confirmed to be a heartbeat (the empty tree, no parents), and named as the lease
-        (`--force-with-lease=<ref>:<value>`). Only that exact value is ever replaced — a
+        confirmed to be a heartbeat (the empty tree, no parents, nothing else carried, read
+        as the push would send it), and named as the lease
+        (`--force-with-lease=<ref>:<value>`). Only that exact value is ever replaced -- a
         concurrent write, or anything on the ref that is not a heartbeat, is refused and
         left as it was. Sub-doctrine 12.d allows no unattended act that cannot be undone;
         replacing a commit that carries nothing, and only the one that was read, is not one.
 
-        There is no `--no-verify`. The push goes through the checkout's own pre-push gate,
-        and the gate lets it through by its own rule (`vibey_gh.push_scope`): every ref
-        outside `refs/heads/` and `refs/tags/`, every commit the empty tree with no parents.
-        The gate is applying its scope, not being skipped — a heartbeat that carried a single
-        file, or rode beside a branch, would be judged in full.
+        There is no `--no-verify`. The push goes through the repository's own pre-push gate,
+        and the gate lets it through by its own rule (`vibey_gh.push_scope`): the declared
+        heartbeat ref, the empty tree with no parents, nothing else. The gate is applying
+        its scope, not being skipped -- a heartbeat that carried a single file, or rode
+        beside a branch, would be judged in full. A push the gate or the remote refuses
+        comes back with the tail of what git said, credentials scrubbed out of it.
         """
-        state = readiness.assess()
+        problem = self._gate_problem()
+        if problem:
+            return Readiness(False, f"heartbeat withheld: {problem}")
+        try:
+            state: LaneStateInterface = readiness.assess()
+        except Exception as exc:  # noqa: BLE001 - a readiness that raises is a refusal
+            return Readiness(
+                False,
+                "heartbeat withheld: the lane's readiness could not be read"
+                f" ({type(exc).__name__}: {self._evidence(str(exc))})",
+            )
         if not state.serving:
             return Readiness(False, f"heartbeat withheld: {state.reason}")
         code, tree = self._git("hash-object", "-t", "tree", "/dev/null")
@@ -152,16 +198,64 @@ class SovereignHeartbeat(SovereignHeartbeatInterface):
         lease, problem = self._lease()
         if problem:
             return Readiness(False, problem)
-        code, _ = self._git(
-            "push", f"--force-with-lease={self._ref}:{lease}", self._remote, f"{commit}:{self._ref}"
+        code, said = self._git(
+            "push",
+            f"--force-with-lease={self._ref}:{lease}",
+            self._remote,
+            f"{commit}:{self._ref}",
+            stderr=True,
         )
         if code != 0:
-            return Readiness(
-                False,
-                f"could not push the heartbeat to {self._remote} {self._ref}"
-                " (the remote, the lease or the pre-push gate refused it)",
-            )
+            return Readiness(False, self._push_refused(code, said))
         return Readiness(True, f"heartbeat published to {self._ref} at {stamp}: {state.reason}", 0)
+
+    def _gate_problem(self) -> str:
+        """Why no heartbeat may be pushed from this repository, or "": it must exist, and git
+        must find an executable pre-push hook for it (`core.hooksPath` honoured)."""
+        where = self._cwd or "the current directory"
+        if self._cwd is not None and not Path(self._cwd).is_dir():
+            return (
+                f"the repository the heartbeat is pushed from, {self._cwd}, does not exist"
+                " (vibey-gh heartbeat install creates it)"
+            )
+        code, hook = self._git(
+            "rev-parse", "--path-format=absolute", "--git-path", "hooks/pre-push"
+        )
+        if code != 0 or not hook:
+            return (
+                f"{where} is not a git repository the heartbeat can be pushed from"
+                " (vibey-gh heartbeat install creates one)"
+            )
+        if not Path(hook).is_file() or not os.access(hook, os.X_OK):
+            return (
+                f"{where} has no executable pre-push gate at {hook}, and a heartbeat is only"
+                " ever pushed through one (vibey-gh heartbeat install writes it)"
+            )
+        return ""
+
+    def _push_refused(self, code: int, said: str) -> str:
+        if code == TIMED_OUT:
+            return (
+                f"the push to {self._remote} {self._ref} timed out after {_TIMEOUT_SECONDS}s"
+                f" (exit {TIMED_OUT}); whether it landed is unknown until the next beat reads"
+                " the ref"
+            )
+        heard = self._evidence(said)
+        return (
+            f"could not push the heartbeat to {self._remote} {self._ref} (exit {code}: the"
+            f" remote, the lease or the pre-push gate refused it){': ' + heard if heard else ''}"
+        )
+
+    @staticmethod
+    def _evidence(text: str, *, lines: int = 4, limit: int = 500) -> str:
+        """The last few lines of what a command said, on one line, colour codes dropped and
+        any URL userinfo or GitHub token scrubbed: evidence for a record, never a secret."""
+        kept = [
+            line for line in (_COLOUR.sub("", raw).strip() for raw in text.splitlines()) if line
+        ]
+        tail = " | ".join(kept[-lines:])
+        tail = _TOKEN.sub("[token]", _URL_USERINFO.sub(r"\1", tail))
+        return tail[-limit:]
 
     def _lease(self) -> tuple[str, str]:
         """(the value the push may replace, problem). An empty value leases on absence:
@@ -179,7 +273,7 @@ class SovereignHeartbeat(SovereignHeartbeatInterface):
                 current = value.strip()
         if not current:
             return "", ""
-        if self._git("cat-file", "-e", current)[0] != 0:
+        if self._git(NO_REPLACE_OBJECTS, "cat-file", "-e", current)[0] != 0:
             code, _ = self._git(
                 "fetch", "--no-tags", "--no-write-fetch-head", self._remote, self._ref
             )
@@ -240,7 +334,8 @@ def beat(
     remote: str = "origin",
     cwd: str | None = None,
 ) -> Readiness:
-    """`SovereignHeartbeat(...).beat(readiness)`: publish only when the lane can serve."""
+    """`SovereignHeartbeat(...).beat(readiness)`: publish only through the gate of the
+    repository at `cwd`, and only when the lane can serve."""
     return SovereignHeartbeat(ref, remote=remote, cwd=cwd).beat(readiness)
 
 

@@ -4,9 +4,11 @@
 A real `git push` to a local bare remote, through the hook `vibey-gh install` renders, with
 a `pre-push.local` beside it standing in for the heavy stage (the pre-commit framework in
 an adopting repository). Each test says whether that stage ran. A heartbeat -- an empty tree
-with no parents on a ref outside refs/heads/ -- pushes without it and without
-`--no-verify`; a branch, a tag, a tree with something in it, a commit with a parent, or a
-heartbeat riding alongside a branch all run it, with every ref git wrote handed on.
+with no parents on the declared heartbeat ref -- pushes without it and without
+`--no-verify`; a branch, a tag, another ref, a tree with something in it, a commit with a
+parent, a replacement or a graft standing in for code, or a heartbeat riding alongside a
+branch all run it, with every ref git wrote handed on. Everything happens in pytest's
+`tmp_path`, never in the repository the suite runs in.
 
 The subprocesses run with every `GIT_*` variable scrubbed and the global and system git
 configs ignored, as `test_githooks_in_a_worktree` explains.
@@ -29,13 +31,15 @@ TENANT = Path(__file__).resolve().parent.parent
 HEARTBEAT = "refs/vibey-gh/sovereign-heartbeat"
 
 # Answers the provenance commands the hook asks for, and hands `push-scope` to the real CLI:
-# that command is what is under test.
-STUB_VIBEY_GH = f"""#!/bin/sh
+# that command is what is under test. Each call to it is logged, so a test can show the hook
+# asked -- a pass that never consulted the rule would prove nothing.
+STUB_VIBEY_GH = """#!/bin/sh
 case "$1" in
   trailer-key) echo "Made-With"; exit 0 ;;
   trailer) echo "Made-With: the stub in test_push_scope_hook"; exit 0 ;;
   check) exit 0 ;;
-  push-scope) PYTHONPATH="{TENANT}" exec "{sys.executable}" -m vibey_gh.cli "$@" ;;
+  push-scope) echo "push-scope" >> "{scope_log}"
+    PYTHONPATH="{tenant}" exec "{python}" -m vibey_gh.cli "$@" ;;
 esac
 exit 0
 """
@@ -50,7 +54,9 @@ class Repo:
     def __init__(self, tmp_path: Path) -> None:
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
-        (bin_dir / "vibey-gh").write_text(STUB_VIBEY_GH)
+        self.scope_log = tmp_path / "scope.log"
+        stub = STUB_VIBEY_GH.format(scope_log=self.scope_log, tenant=TENANT, python=sys.executable)
+        (bin_dir / "vibey-gh").write_text(stub)
         (bin_dir / "vibey-gh").chmod(0o755)
         self.env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
         self.env.pop("_VIBEY_GH_SELF", None)
@@ -102,6 +108,12 @@ class Repo:
     def heavy_stage(self) -> list[str]:
         return self.log.read_text().splitlines() if self.log.exists() else []
 
+    def scope_calls(self) -> int:
+        return len(self.scope_log.read_text().splitlines()) if self.scope_log.exists() else 0
+
+    def code(self) -> str:
+        return self.git_ok("rev-parse", "HEAD")
+
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Repo:
@@ -112,6 +124,7 @@ def test_a_heartbeat_pushes_without_the_heavy_stage_and_without_no_verify(repo):
     pushed = repo.git("push", "origin", f"{repo.heartbeat()}:{HEARTBEAT}")
     assert pushed.returncode == 0, pushed.stderr
     assert repo.heavy_stage() == []
+    assert repo.scope_calls() == 1, "the hook asked the scope rule, once"
     assert "nothing for the pre-push gate to judge" in pushed.stderr
     assert repo.git_ok("ls-remote", "origin", HEARTBEAT, cwd=repo.root)
 
@@ -134,6 +147,7 @@ def test_a_branch_push_runs_the_heavy_stage_with_its_refs(repo):
         ),
         (lambda r: f"{r.heartbeat(r.heartbeat())}:{HEARTBEAT}", "a commit with a parent"),
         (lambda r: f"HEAD:{HEARTBEAT}", "code on a non-branch ref"),
+        (lambda r: f"{r.heartbeat()}:refs/vibey/other", "a ref nobody declared"),
     ],
 )
 def test_anything_but_a_heartbeat_runs_the_heavy_stage(repo, refspec, why):
@@ -158,6 +172,31 @@ def test_a_refusing_heavy_stage_still_refuses_the_push(repo):
     refused = repo.git("push", "origin", "main")
     assert refused.returncode != 0
     assert not repo.git_ok("ls-remote", "origin", "refs/heads/main")
+
+
+def test_a_replacement_cannot_carry_code_past_the_hook(repo):
+    """`git replace <code> <heartbeat>`: every reading command now describes the empty
+    root when asked about the code commit, but the pack sends the code commit itself. The
+    hook's rule reads what is sent, so the heavy stage judges it -- and the remote shows
+    that code, not an empty tree, is what arrived."""
+    code, beat = repo.code(), repo.heartbeat()
+    repo.git_ok("replace", code, beat)
+    assert repo.git("push", "origin", f"{code}:{HEARTBEAT}").returncode == 0
+    assert repo.heavy_stage()[:1] == ["heavy stage ran"]
+    arrived = repo.git_ok("--git-dir", str(repo.remote), "cat-file", "-p", HEARTBEAT)
+    assert arrived.splitlines()[0] != f"tree {repo.empty_tree}"
+
+
+def test_a_graft_cannot_carry_code_past_the_hook(repo):
+    """A graft gives the empty root the code commit as a parent its bytes never name: the
+    pack follows it, so the push would carry the code, and the heavy stage judges it."""
+    code, beat = repo.code(), repo.heartbeat()
+    grafts = repo.root / ".git" / "info" / "grafts"
+    grafts.parent.mkdir(parents=True, exist_ok=True)
+    grafts.write_text(f"{beat} {code}\n")
+    assert repo.git("push", "origin", f"{beat}:{HEARTBEAT}").returncode == 0
+    assert repo.heavy_stage()[:1] == ["heavy stage ran"]
+    assert repo.scope_calls() == 1
 
 
 def test_the_hook_and_the_command_agree_on_the_token():

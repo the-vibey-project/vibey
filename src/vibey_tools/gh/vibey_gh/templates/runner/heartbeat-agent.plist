@@ -11,8 +11,9 @@
   machine that cannot serve the lane lets the heartbeat go stale on its own. Each run
   records what it did in the record file below, which `heartbeat status` reads.
 
-  The push goes through the repository's own pre-push gate, which recognises a push that
-  carries no code by its own rule. Nothing here skips it.
+  It pushes from the repository the timer owns (vibey ADR-0059), never from a checkout:
+  a clone with no working tree, whose own pre-push gate asks this same interpreter whether a
+  push carries code and refuses anything that is not a heartbeat. Nothing here skips it.
 -->
 <plist version="1.0">
 <dict>
@@ -30,14 +31,14 @@
     <string>__RECORD__</string>
   </array>
 
-  <!-- The checkout the heartbeat is pushed from: its remote and its pre-push gate. -->
+  <!-- The timer's own clone: its remote, its credential, its gate and its configuration. -->
   <key>WorkingDirectory</key>
-  <string>__CHECKOUT__</string>
+  <string>__CLONE__</string>
 
   <!--
     launchd starts jobs with a near-empty PATH; git and gh must be reachable from it.
-    PYTHONSAFEPATH keeps the checkout itself off sys.path, so the interpreter runs the
-    vibey_gh it was installed with and never a package the working tree happens to hold.
+    PYTHONSAFEPATH keeps the working directory off sys.path, so the interpreter runs the
+    vibey_gh it was installed with and never a package a directory happens to hold.
   -->
   <key>EnvironmentVariables</key>
   <dict>
