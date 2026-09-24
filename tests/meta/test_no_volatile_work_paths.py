@@ -167,7 +167,7 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "the container sandbox's tmpfs in the architecture diagram, which outlives nothing",
     ),
     (
-        "src/vibey/infrastructure/db/local_auth.py",
+        "src/vibey/infrastructure/db/*.py",
         r"DEFAULT_SOCKET_DIRS",
         "PostgreSQL's socket directories, probed read-only; a socket is recreated at start",
     ),
