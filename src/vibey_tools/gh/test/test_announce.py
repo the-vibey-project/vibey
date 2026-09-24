@@ -11,8 +11,10 @@ from __future__ import annotations
 import dataclasses
 import http.server
 import json
+import random
 import re
 import threading
+import unicodedata
 from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Any, Self
@@ -33,10 +35,12 @@ from vibey_gh.announce import (
     CommitRange,
     CommitRecord,
     DiscordWebhook,
+    Position,
     ReleaseHistory,
     Surface,
 )
-from vibey_gh.config import AnnounceConfig, GhConfig, load_config
+from vibey_gh.announce_records import KNOWN, REANCHORED, UNKNOWN
+from vibey_gh.config import AnnounceConfig, GhConfig, GithubReleaseConfig, load_config
 from vibey_gh.install import TEMPLATES, render_workflow
 from vibey_gh.interfaces.announce_interface import (
     AnnouncerInterface,
@@ -78,12 +82,15 @@ def _units(text: str) -> int:
     return len(text.encode("utf-16-le")) // 2
 
 
+FIRST_EVER = Position(None, "no earlier announcement is recorded", structural=True)
+
+
 class ScriptedHistory:
     """A `ReleaseHistoryInterface` that answers from a script and records what it was asked."""
 
     def __init__(
         self,
-        position: tuple[str | None, str] = (None, "no earlier announcement is recorded"),
+        position: Position = FIRST_EVER,
         ranges: dict[tuple[str, str], tuple[CommitRange | None, str]] | None = None,
         commits: dict[str, CommitRecord] | None = None,
     ) -> None:
@@ -92,7 +99,7 @@ class ScriptedHistory:
         self.commits = commits or {}
         self.asked: list[tuple[str, ...]] = []
 
-    def previous_position(self, branch: str, head: str) -> tuple[str | None, str]:
+    def previous_position(self, branch: str, head: str) -> Position:
         self.asked.append(("position", branch, head))
         return self.position
 
@@ -471,7 +478,7 @@ def test_the_previous_position_is_the_last_accepted_run_for_the_branch():
             f"{_API}/actions/runs/4/jobs?per_page=100": (_jobs("success"), ""),
         }
     )
-    assert history.previous_position("develop", HEAD) == (BASE, "")
+    assert history.previous_position("develop", HEAD) == Position(BASE)
     # The branch filter is never trusted: a workflow_run run belongs to the default branch.
     assert all("branch=" not in path for path in transport.asked)
 
@@ -484,7 +491,7 @@ def test_a_dispatched_run_is_resolved_through_the_release_run_it_named():
             f"{_API}/actions/runs/12345": ({"head_sha": BASE}, ""),
         }
     )
-    assert history.previous_position("develop", HEAD) == (BASE, "")
+    assert history.previous_position("develop", HEAD) == Position(BASE)
 
 
 def test_a_dispatched_run_that_names_no_commit_is_unknown():
@@ -495,23 +502,24 @@ def test_a_dispatched_run_that_names_no_commit_is_unknown():
             f"{_API}/actions/runs/12345": ({"head_sha": "not-a-sha"}, ""),
         }
     )
-    sha, why = history.previous_position("develop", HEAD)
-    assert sha is None and "release run 12345 names no commit" in why
+    position = history.previous_position("develop", HEAD)
+    assert position.sha is None and not position.structural
+    assert "release run 12345 names no commit" in position.reason
 
 
 def test_the_first_ever_run_finds_no_earlier_announcement():
     history, _ = _history({_LIST: (_runs(), "")})
-    assert history.previous_position("develop", HEAD) == (
-        None,
-        "no earlier announcement is recorded for develop",
+    assert history.previous_position("develop", HEAD) == Position(
+        None, "no earlier announcement is recorded for develop", structural=True
     )
 
 
 def test_a_full_page_of_other_runs_reads_the_next_page_up_to_the_limit():
     other = [{"id": n, "display_title": _title("main", "d" * 40)} for n in range(100)]
     history, transport = _history({_LIST: (_runs(*other), "")}, pages=1)
-    sha, why = history.previous_position("develop", HEAD)
-    assert sha is None and why == "no announcement for develop in the last 100 runs"
+    assert history.previous_position("develop", HEAD) == Position(
+        None, "no accepted announcement for develop in the last 100 runs", structural=True
+    )
     assert transport.asked.count(_LIST) == 1
 
 
@@ -522,7 +530,7 @@ def test_a_full_page_of_other_runs_reads_the_next_page_up_to_the_limit():
         ({f"{_API}/actions/runs/99": ([], "boom")}, "99", "did not name this workflow (boom)"),
         ({f"{_API}/actions/runs/99": ({}, "")}, "99", "did not name this workflow (no id)"),
         ({_LIST: ([], "down")}, "99", "did not list earlier runs (down)"),
-        ({_LIST: ([], "")}, "99", "no earlier announcement is recorded"),
+        ({_LIST: ([], "")}, "99", "did not list earlier runs (malformed)"),
         (
             {
                 _LIST: (_runs({"id": 3, "display_title": _title("develop", BASE)}), ""),
@@ -537,14 +545,17 @@ def test_a_full_page_of_other_runs_reads_the_next_page_up_to_the_limit():
                 f"{_API}/actions/runs/3/jobs?per_page=100": ([], ""),
             },
             "99",
-            "no earlier announcement is recorded",
+            "did not list run 3's jobs (malformed)",
         ),
     ],
 )
-def test_an_unestablished_position_says_why(answers, run_id, expected):
+def test_an_unreadable_history_is_unknown_and_says_why(answers, run_id, expected):
+    """Every one of these is a source that could not be READ: never structural, so the
+    announcement is `position=unknown` and the watermark does not move (10.g)."""
     history, _ = _history(answers, run_id=run_id)
-    sha, why = history.previous_position("develop", HEAD)
-    assert sha is None and expected in why
+    position = history.previous_position("develop", HEAD)
+    assert position.sha is None and not position.structural
+    assert expected in position.reason
 
 
 def test_a_range_is_read_page_by_page_and_counts_what_it_could_not_read():
@@ -584,7 +595,7 @@ def test_a_range_stops_at_the_page_limit():
 
 def test_a_range_that_cannot_be_read_says_why():
     history, _ = _history({})
-    assert history.compare("../x", HEAD)[1].endswith("is not a range of plain references")
+    assert history.compare("../x", HEAD)[1].endswith("is not a range of git references")
     found, why = history.compare(BASE, HEAD)
     assert found is None and why.startswith("the compare API did not answer")
 
@@ -607,19 +618,19 @@ def _announce(tmp_path: Path, history: ScriptedHistory, **request: Any) -> str:
 
 def test_a_known_previous_position_announces_the_range_since_it(tmp_path):
     rng = CommitRange("ahead", 3, tuple(_commit(m) for m in _RANGE[:2]), "https://cmp")
-    history = ScriptedHistory(position=(BASE, ""), ranges={(BASE, HEAD): (rng, "")})
+    history = ScriptedHistory(position=Position(BASE), ranges={(BASE, HEAD): (rng, "")})
     content = _announce(tmp_path, history)
     assert content.startswith(f"**octo/widgets** published `develop` from `{HEAD[:12]}`")
     assert f"changes since `{BASE[:12]}`:" in content.splitlines()[0]
     assert "…and 1 more · [compare bbbbbbb…ccccccc](<https://cmp>)" in content
 
 
-def test_an_unknown_position_says_so_and_announces_this_commit_alone(tmp_path):
+def test_the_first_announcement_re_anchors_and_says_so(tmp_path):
     history = ScriptedHistory(commits={HEAD: _commit("fix(x): mend (#8)", HEAD)})
-    content = _announce(tmp_path, history)
-    assert "changes since: unknown (no earlier announcement is recorded) — this commit only:" in (
-        content
-    )
+    announcement = Announcer(GhConfig(root=tmp_path), history).compose(_request(tmp_path))
+    content = announcement.content
+    assert announcement.position == REANCHORED
+    assert "re-anchored here (no earlier announcement is recorded) — this commit only:" in (content)
     assert "- Fix · x: mend" in content
     assert f"[this commit](<{SERVER}/{REPO}/commit/{HEAD}>)" in content
     assert ("compare", BASE, HEAD) not in history.asked
@@ -630,22 +641,47 @@ def test_an_unreadable_single_commit_is_still_counted(tmp_path):
     assert "…and 1 more" in content
 
 
-def test_nothing_new_since_the_last_announcement_says_so(tmp_path):
-    content = _announce(tmp_path, ScriptedHistory(position=(HEAD, "")))
-    assert content.splitlines()[0].endswith("· no new commits since the last announcement")
+def test_an_unreadable_history_is_unknown_and_not_recorded(tmp_path):
+    history = ScriptedHistory(
+        position=Position(None, "HTTP 502 from the Actions API"),
+        commits={HEAD: _commit("fix(x): mend (#8)", HEAD)},
+    )
+    announcement = Announcer(GhConfig(root=tmp_path), history).compose(_request(tmp_path))
+    assert announcement.position == UNKNOWN
+    assert announcement.content.splitlines()[0].endswith(
+        "changes since: unknown (HTTP 502 from the Actions API) — this commit only; "
+        "the next announcement covers the span again:"
+    )
+
+
+def test_a_commit_already_announced_is_a_duplicate(tmp_path):
+    announcer = Announcer(GhConfig(root=tmp_path), ScriptedHistory(position=Position(HEAD)))
+    announcement = announcer.compose(_request(tmp_path))
+    assert announcement.duplicate and announcement.position == KNOWN
+    assert announcement.content.splitlines()[0].endswith("· already announced")
 
 
 @pytest.mark.parametrize(
-    "answer, reason",
+    "answer, reason, position",
     [
-        ((None, "the compare API did not answer"), "the compare API did not answer"),
-        ((CommitRange("diverged", 0, (), ""), ""), "is not behind this commit \\(diverged\\)"),
+        ((None, "the compare API did not answer"), "changes since: unknown (the compare", UNKNOWN),
+        (
+            (CommitRange("diverged", 0, (), ""), ""),
+            (
+                "re-anchored here (the last announced commit bbbbbbbbbbbb is not behind this one "
+                "(diverged; history was rewritten))"
+            ),
+            REANCHORED,
+        ),
     ],
 )
-def test_a_position_that_cannot_be_compared_is_unknown(tmp_path, answer, reason):
-    history = ScriptedHistory(position=(BASE, ""), ranges={(BASE, HEAD): answer})
-    content = _announce(tmp_path, history)
-    assert "changes since: unknown (" in content and reason in content
+def test_a_position_that_cannot_be_compared(tmp_path, answer, reason, position):
+    """A compare that did not answer is unreadable: unknown, not recorded. One that answered
+    `diverged` (a force-push under the last position) is structural: re-anchored, said."""
+    history = ScriptedHistory(position=Position(BASE), ranges={(BASE, HEAD): answer})
+    announcement = Announcer(GhConfig(root=tmp_path), history).compose(_request(tmp_path))
+    assert reason in ComposerEscape.plain(announcement.content)
+    assert announcement.position == position
 
 
 def test_the_surfaces_this_deploy_produced_follow_the_changelog(tmp_path):
@@ -653,7 +689,7 @@ def test_the_surfaces_this_deploy_produced_follow_the_changelog(tmp_path):
     (site / "paper").mkdir(parents=True)
     (site / "paper" / "index.html").write_text("x")
     (site / "book.epub").write_text("x")
-    content = _announce(tmp_path, ScriptedHistory(position=(HEAD, "")))
+    content = _announce(tmp_path, ScriptedHistory(position=Position(HEAD)))
     root = "https://octo.github.io/widgets/develop/"
     assert content.splitlines()[-1] == (
         f"Read: [site](<{root}>) · [paper HTML](<{root}paper/>) · [book EPUB](<{root}book.epub>)"
@@ -718,9 +754,7 @@ def test_a_release_with_no_changelog_section_is_unknown_and_this_commit_only(tmp
     cfg = _release_repo(tmp_path, changelog=None)
     history = ScriptedHistory(commits={HEAD: _commit("chore(release): 2.1.0", HEAD)})
     content = _release(tmp_path, cfg, history)
-    assert "changes since: unknown (no CHANGELOG.md section for 2.1.0)" in ComposerEscape.plain(
-        content
-    )
+    assert "re-anchored here (no CHANGELOG.md section for 2.1.0)" in ComposerEscape.plain(content)
     assert "+1 maintenance commit" in content
 
 
@@ -765,7 +799,7 @@ def _run(tmp_path, **kwargs: Any) -> tuple[list[str], RecordingPoster, int, str]
 def test_no_secret_is_said_and_passes(tmp_path):
     out, poster, code, output = _run(tmp_path, url="")
     assert out == ["announce: no DISCORD_WEBHOOK_URL secret is set; nothing posted"]
-    assert (code, poster.sent, output) == (0, [], "posted=false\n")
+    assert (code, poster.sent, output) == (0, [], "posted=false\nposition=unknown\n")
 
 
 def test_switched_off_is_said_and_passes(tmp_path):
@@ -778,22 +812,22 @@ def test_switched_off_is_said_and_passes(tmp_path):
 def test_a_dry_run_prints_the_message_and_posts_nothing(tmp_path):
     out, poster, code, output = _run(tmp_path, url="", dry_run=True)
     assert out[0].startswith("**octo/widgets** published") and poster.sent == []
-    assert (code, output) == (0, "posted=false\n")
+    assert (code, output) == (0, "posted=false\nposition=reanchored\n")
 
 
 def test_an_accepted_post_is_reported_and_recorded(tmp_path):
     out, poster, code, output = _run(tmp_path)
     assert out == [
-        "announce: posted 1 change and 1 surface link to Discord (HTTP 204)",
+        "announce: posted 1 change and 1 surface link to Discord (HTTP 204); position reanchored",
     ]
-    assert (code, output) == (0, "posted=true\n")
+    assert (code, output) == (0, "posted=true\nposition=reanchored\n")
     assert poster.sent[0][0] == _HOOK
 
 
 def test_a_failed_post_is_a_warning_and_never_names_the_webhook(tmp_path):
     poster = RecordingPoster((False, f"URLError: refused by {_HOOK}"))
     out, _, code, output = _run(tmp_path, poster=poster)
-    assert code == 0 and output == "posted=false\n"
+    assert code == 0 and output == "posted=false\nposition=reanchored\n"
     assert out == [
         (
             "::warning::announce: the Discord webhook post failed and the deploy stands: "
@@ -888,7 +922,7 @@ def test_the_command_posts_through_the_cli(tmp_path, monkeypatch, capsys, stub):
     printed = capsys.readouterr().out
     assert printed.startswith("announce: posted 1 change") and server.url not in printed
     assert "old: not this release" in ComposerEscape.plain(server.received[0]["content"])
-    assert output.read_text() == "posted=true\n"
+    assert output.read_text() == "posted=true\nposition=known\n"
 
 
 def test_the_command_passes_with_no_secret(tmp_path, monkeypatch, capsys):
@@ -906,7 +940,14 @@ def test_the_command_passes_with_no_secret(tmp_path, monkeypatch, capsys):
         ("repository", "no-slash", "--repository must be owner/name"),
         ("repository", "a/b/c", "--repository must be owner/name"),
         ("channel", "../x", "--channel is not a plain name"),
-        ("branch", "a b", "--branch is not a plain name"),
+        ("branch", "a b", "--branch is not a git branch name"),
+        ("branch", "release/../x", "--branch is not a git branch name"),
+        ("branch", "-x", "--branch is not a git branch name"),
+        ("branch", "a.lock", "--branch is not a git branch name"),
+        ("branch", "a/.b", "--branch is not a git branch name"),
+        ("branch", "a.lock/b", "--branch is not a git branch name"),
+        ("branch", "@", "--branch is not a git branch name"),
+        ("branch", "", "--branch is not a git branch name"),
     ],
 )
 def test_a_request_refuses_anything_that_is_not_a_plain_name(tmp_path, field, value, message):
@@ -949,7 +990,7 @@ def test_the_golden_announcement(tmp_path):
         repository="the-vibey-project/vibey",
         site_dir=site,
     )
-    history = ScriptedHistory(position=(base, ""), ranges={(base, head): (rng, "")})
+    history = ScriptedHistory(position=Position(base), ranges={(base, head): (rng, "")})
     content = Announcer(GhConfig(root=tmp_path), history).compose(request).content
     golden = (GOLDEN / "announce-develop.txt").read_text(encoding="utf-8")
     assert content == golden.rstrip("\n")
@@ -984,8 +1025,10 @@ def test_the_position_marker_runs_only_when_the_post_was_accepted(tmp_path):
     marker = steps[names.index(ANNOUNCED_STEP)]
     assert names.index(ANNOUNCED_STEP) == names.index("Announce the published surfaces") + 1
     assert announce["id"] == "announce"
-    assert marker["if"] == "steps.announce.outputs.posted == 'true'"
-    assert '"posted=false" >> "$GITHUB_OUTPUT"' in announce["run"]
+    assert marker["if"] == (
+        "steps.announce.outputs.posted == 'true' && steps.announce.outputs.position != 'unknown'"
+    )
+    assert "printf 'posted=false\\nposition=unknown\\n' >> \"$GITHUB_OUTPUT\"" in announce["run"]
     docs = _rendered_workflow(tmp_path)["jobs"]["docs"]
     assert docs["permissions"]["actions"] == "read"
 
@@ -1035,7 +1078,23 @@ def test_the_announce_table_is_read_from_the_config_file(tmp_path):
         ({"max_changes": "8"}, ValueError),
         ({"max_message_chars": 2001}, ValueError),
         ({"max_subject_chars": 10}, ValueError),
-        ({"max_history_pages": 51}, ValueError),
+        ({"max_history_pages": 11}, ValueError),
+        ({"max_history_candidates": 0}, ValueError),
+        ({"max_history_candidates": 101}, ValueError),
+        ({"webhook_secret": "GITHUB_TOKEN"}, ValueError),
+        ({"webhook_secret": "github_hook"}, ValueError),
+        ({"username": "Discord Bot"}, ValueError),
+        ({"username": "clyde"}, ValueError),
+        ({"username": "a@b"}, ValueError),
+        ({"username": "a#b"}, ValueError),
+        ({"username": "a:b"}, ValueError),
+        ({"username": "x```"}, ValueError),
+        ({"username": "everyone"}, ValueError),
+        ({"username": " Here "}, ValueError),
+        ({"breaking_group": 3}, TypeError),
+        ({"groups": ((5, ("feat",)),)}, TypeError),
+        ({"changelog_path": "CHANGES>).md"}, ValueError),
+        ({"changelog_path": "docs/change log.md"}, ValueError),
         ({"other_group": "Breaking"}, ValueError),
         ({"breaking_group": " "}, ValueError),
         ({"groups": (("Added", ()),)}, ValueError),
@@ -1073,3 +1132,336 @@ def test_a_bad_announce_table_is_refused(table, message):
 def test_config_records_are_frozen():
     with pytest.raises(dataclasses.FrozenInstanceError):
         AnnounceConfig().max_changes = 3  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------------------
+# Review of #1115, turned into tests: the reviewer's probes (r1115-probes/*.py), case by case.
+
+
+def _run_history(tmp_path: Path, answers: dict[str, tuple[Any, str]], sha: str = HEAD):
+    """`Announcer.run` over a scripted Actions API: what it posted and what it wrote for the
+    workflow's marker step."""
+    output = tmp_path / "github_output"
+    output.unlink(missing_ok=True)
+    history, _ = _history(answers)
+    poster = RecordingPoster()
+    Announcer(GhConfig(root=tmp_path), history, poster=poster, out=lambda _: None).run(
+        _request(tmp_path, sha=sha), "https://127.0.0.1:9/hook", github_output=str(output)
+    )
+    return poster.sent[0][1]["content"].splitlines()[0], output.read_text()
+
+
+def test_probe_range_a_an_unreadable_actions_api_leaves_the_watermark_unmoved(tmp_path):
+    """The Actions API answers 502: the post goes out, says unknown, and `position=unknown`
+    keeps the marker step from recording it, so the next run starts where the last recorded
+    one did and the unread span is announced then (10.g)."""
+    head, output = _run_history(
+        tmp_path,
+        {
+            f"{_API}/actions/runs/99": (None, "HTTP 502 from the Actions API"),
+            f"{_API}/commits/{HEAD}": ({"commit": {"message": "feat: new"}}, ""),
+        },
+    )
+    assert "changes since: unknown (" in head and "HTTP 502" in ComposerEscape.plain(head)
+    assert output == "posted=true\nposition=unknown\n"
+
+
+@pytest.mark.parametrize(
+    "failing",
+    [
+        {f"{_API}/actions/runs/4/jobs?per_page=100": (None, "HTTP 502")},
+        {f"{_API}/compare/{BASE}...{HEAD}?per_page=100&page=1": (None, "HTTP 502")},
+    ],
+    ids=["jobs-listing", "compare"],
+)
+def test_a_failed_jobs_listing_or_compare_is_unknown_too(tmp_path, failing):
+    answers = {
+        _LIST: (_runs({"id": 4, "display_title": _title("develop", BASE)}), ""),
+        f"{_API}/actions/runs/4/jobs?per_page=100": (_jobs("success"), ""),
+        f"{_API}/commits/{HEAD}": ({"commit": {"message": "fix: head"}}, ""),
+    } | failing
+    _, output = _run_history(tmp_path, answers)
+    assert output == "posted=true\nposition=unknown\n"
+
+
+def test_probe_range_b_the_next_run_reads_from_the_last_recorded_position(tmp_path):
+    """The run after an unknown one: its history has no accepted run at the unknown commit
+    (the marker did not run there), so it starts from the last recorded one."""
+    rng = {
+        "status": "ahead",
+        "total_commits": 2,
+        "html_url": "u",
+        "commits": [
+            {"sha": "1" * 40, "commit": {"message": "feat: the span the unknown run skipped"}},
+            {"sha": HEAD, "commit": {"message": "fix: head"}},
+        ],
+    }
+    head, output = _run_history(
+        tmp_path,
+        {
+            _LIST: (
+                _runs(
+                    {"id": 2, "display_title": _title("develop", "e" * 40)},
+                    {"id": 1, "display_title": _title("develop", BASE)},
+                ),
+                "",
+            ),
+            f"{_API}/actions/runs/2/jobs?per_page=100": (_jobs("skipped"), ""),
+            f"{_API}/actions/runs/1/jobs?per_page=100": (_jobs("success"), ""),
+            f"{_API}/compare/{BASE}...{HEAD}?per_page=100&page=1": (rng, ""),
+        },
+    )
+    assert f"changes since `{BASE[:12]}`" in head
+    assert output == "posted=true\nposition=known\n"
+
+
+def test_probe_range_c_a_force_push_re_anchors_and_says_so(tmp_path):
+    diverged = {"status": "diverged", "total_commits": 3, "html_url": "u", "commits": []}
+    head, output = _run_history(
+        tmp_path,
+        {
+            _LIST: (_runs({"id": 1, "display_title": _title("develop", BASE)}), ""),
+            f"{_API}/actions/runs/1/jobs?per_page=100": (_jobs("success"), ""),
+            f"{_API}/compare/{BASE}...{HEAD}?per_page=100&page=1": (diverged, ""),
+            f"{_API}/commits/{HEAD}": ({"commit": {"message": "fix: head"}}, ""),
+        },
+    )
+    assert "re-anchored here (" in head and "history was rewritten" in head
+    assert output == "posted=true\nposition=reanchored\n"
+
+
+def test_probe_range_d_the_api_window_is_structural_and_named(tmp_path):
+    """A status-filtered run listing stops at its 1000th result; ten full pages with nothing
+    accepted re-anchor, naming the window rather than claiming there was no announcement."""
+    other = [{"id": n, "display_title": _title("main", "d" * 40)} for n in range(100)]
+    pages = {
+        f"{_API}/actions/workflows/7/runs?status=success&per_page=100&page={page}": (
+            _runs(*other),
+            "",
+        )
+        for page in range(1, 11)
+    }
+    history, transport = _history(pages, pages=50)
+    position = history.previous_position("develop", HEAD)
+    assert position.structural and position.reason == (
+        "no accepted announcement for develop in the last 1000 runs (the API's window)"
+    )
+    assert len([path for path in transport.asked if "workflows/7/runs" in path]) == 10
+
+
+def test_a_long_run_of_unaccepted_runs_stops_early_and_re_anchors():
+    """Each unaccepted run costs a jobs call; after `candidates` of them the history is
+    structural. Staying unknown instead would never recover: every later run would find
+    the same backlog and record nothing."""
+    runs = [{"id": n, "display_title": _title("develop", f"{n:040x}")} for n in range(1, 6)]
+    answers = {_LIST: (_runs(*runs), "")} | {
+        f"{_API}/actions/runs/{n}/jobs?per_page=100": (_jobs("skipped"), "") for n in range(1, 6)
+    }
+    base = {f"{_API}/actions/runs/99": ({"workflow_id": 7}, "")}
+    transport = ScriptedTransport(base | answers)
+    history = ReleaseHistory(REPO, "99", transport=transport, candidates=3)
+    position = history.previous_position("develop", HEAD)
+    assert position == Position(
+        None, "3 runs for develop since the last accepted announcement", structural=True
+    )
+    assert len([path for path in transport.asked if path.endswith("/jobs?per_page=100")]) == 3
+
+
+def test_a_re_run_of_an_announced_commit_is_not_posted_again(tmp_path):
+    out: list[str] = []
+    poster = RecordingPoster()
+    output = tmp_path / "github_output"
+    Announcer(
+        GhConfig(root=tmp_path),
+        ScriptedHistory(position=Position(HEAD)),
+        poster=poster,
+        out=out.append,
+    ).run(_request(tmp_path), _HOOK, github_output=str(output))
+    assert poster.sent == []
+    assert out == [f"announce: {HEAD[:12]} was already announced for develop; nothing posted"]
+    assert output.read_text() == "posted=false\nposition=known\n"
+
+
+def test_probe_leak_a_webhook_with_a_space_never_prints_its_token(tmp_path, capsys):
+    """`http.client.InvalidURL` is not a URLError; it escaped `post` and its traceback
+    printed the webhook's path. GitHub's masking misses a fragment of the secret."""
+    url = "https://127.0.0.1:9/api/webhooks/123456/SECRET TOKEN-VALUE"
+    history = ScriptedHistory(commits={HEAD: _commit("fix: probe", HEAD)})
+    code = Announcer(GhConfig(root=tmp_path), history).run(_request(tmp_path), url)
+    printed = capsys.readouterr()
+    assert code == 0
+    assert "::warning::announce: the Discord webhook post failed" in printed.out
+    for fragment in ("TOKEN-VALUE", "SECRET", "123456"):
+        assert fragment not in printed.out + printed.err
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        (
+            "InvalidURL: URL can't contain control characters. '/api/webhooks/1/SECRET TOKEN' "
+            "(found at least ' ')"
+        ),
+        "error at /api/webhooks/77/elsewhere-token",
+        "quoted /api/webhooks/1/SECRET%20TOKEN",
+    ],
+)
+def test_redaction_removes_the_path_and_any_webhook_fragment(message):
+    url = "https://discord.example/api/webhooks/1/SECRET TOKEN"
+    redacted = DiscordWebhook.redact(message, url)
+    assert "SECRET" not in redacted and "TOKEN" not in redacted.replace("<webhook>", "")
+    assert "elsewhere-token" not in redacted
+    assert DiscordWebhook.redact("x", "http://[bad") == "x"
+
+
+def test_a_slashed_branch_and_tag_prefix_are_announced(tmp_path):
+    """`release/next` is a branch git accepts (12.c); refs are URL-encoded into the path."""
+    request = _request(tmp_path, branch="release/next")
+    assert request.branch == "release/next"
+    path = f"{_API}/compare/v%2F2.0.0...{HEAD}?per_page=100&page=1"
+    history, transport = _history(
+        {path: ({"status": "ahead", "total_commits": 0, "commits": []}, "")}
+    )
+    found, why = history.compare("v/2.0.0", HEAD)
+    assert why == "" and found is not None and transport.asked[-1] == path
+    cfg = dataclasses.replace(
+        _release_repo(tmp_path), github_release=GithubReleaseConfig(tag_prefix="rel/")
+    )
+    content = _release(
+        tmp_path,
+        cfg,
+        ScriptedHistory(
+            ranges={("rel/2.0.0", HEAD): (CommitRange("ahead", 4, (), "https://cmp"), "")}
+        ),
+    )
+    assert "4 commits since `rel/2.0.0`" in content
+
+
+_PROBE_SUBJECTS = [
+    "feat: @everyone ping",
+    "feat: @\u200deveryone zwj",
+    "fix: <@&123456789012345678> role",
+    "fix: <#123> <t:1700000000:R> </cmd:1>",
+    "fix: [x](javascript:alert(1)) masked",
+    "fix: [x](<https://evil.example>) masked-angle",
+    "fix: ***bold*** __u__ ~~s~~ ||spoiler|| `code` ```fence```",
+    "fix: # heading -# subtext > quote",
+    "fix: bidi \u202eRTL\u202c and \u2066iso\u2069 and ALM\u061cmark",
+    "fix: tag chars \U000e0041\U000e0042 and vs\ufe0f and soft\u00adhyphen hangul\u3164fill",
+    "fix: fillers \u115f\u1160\uffa0 and vs256 \U000e0100",
+    "fix: :smile: <:custom:123> <a:anim:456>",
+    "fix: close wrapper >) ](<https://evil>) (#12)",
+    "fix: line\nbreak\r  \x85 NEL",
+    "fix: trailing backslash \\",
+    "fix: arabic-indic digits (#\u0661\u0662\u0663)",
+]
+
+
+def test_probe_escape_no_invisible_or_format_character_survives():
+    composer = _composer(max_changes=50, max_subject_chars=400)
+    records = [CommitRecord(f"{n:040x}", subject) for n, subject in enumerate(_PROBE_SUBJECTS)]
+    content = composer.render("HEADER", composer.from_commits(records)).content
+    blanks = {0x115F, 0x1160, 0x3164, 0xFFA0}
+    for char in content:
+        category = unicodedata.category(char)
+        assert category not in ("Cc", "Cf") or char == "\n", f"U+{ord(char):04X}"
+        assert ord(char) not in blanks and not 0xFE00 <= ord(char) <= 0xFE0F
+        assert not 0xE0100 <= ord(char) <= 0xE01EF
+    assert not re.search(r"(?<!\\)@everyone|(?<!\\)<[@#:ta/]", content)
+
+
+def test_probe_escape_only_ascii_digits_make_a_pull_request_link():
+    changes = _composer().from_commits([_commit("fix: digits (#\u0661\u0662\u0663)")])
+    assert changes.changes[0].reference == "aaaaaaa"  # the commit, not a bogus link
+    notes = _composer().from_changelog("## [1.0.0]\n\n### Fixed\n\n* x #\u0661\u0662\n", "1.0.0")
+    assert notes is not None and notes.changes.changes[0].reference == ""
+
+
+def test_probe_bound_random_inputs_stay_within_the_limit_quickly():
+    rng = random.Random(7)
+    alphabet = ["\U0001f4a9", "e\u0302\u0303", "*", "@", "<", "`", "|", "_", "\u202e", "a", " "]
+    surfaces = [Surface(f"s{n}", f"https://o.github.io/r/develop/{n}.pdf") for n in range(7)]
+    for _ in range(150):
+        count = rng.choice([0, 1, 5, 50, 300])
+        breaking = rng.randint(0, count)
+        cfg = AnnounceConfig(
+            max_message_chars=rng.choice([200, 500, 1999, 2000]),
+            max_subject_chars=rng.choice([20, 40, 100, 400]),
+            max_changes=rng.choice([1, 8, 50]),
+        )
+        composer = ChangelogComposer(cfg, "o/r", "https://github.com")
+        records = [
+            CommitRecord(
+                f"{n:040x}",
+                f"feat{'!' if n < breaking else ''}(s{n}): "
+                + "".join(rng.choice(alphabet) for _ in range(rng.randint(1, 600)))
+                + f" (#{n})",
+            )
+            for n in range(count)
+        ]
+        message = composer.render(
+            "H" * rng.choice([10, 150, 600]),
+            composer.from_commits(records, unread=rng.randint(0, 5)),
+            more_url="https://github.com/o/r/compare/a...b",
+            more_label="compare",
+            surfaces=surfaces,
+        )
+        assert _units(message.content) <= cfg.max_message_chars
+        assert not any(0xD800 <= ord(char) <= 0xDFFF for char in message.content)
+
+
+def test_probe_bound_five_thousand_breaking_changes_render_in_linear_time():
+    """Measured in work, not seconds, so the check holds on a loaded machine: the old loop
+    re-rendered every line for every line it dropped (quadratic; 5000 took 40 s). Now each
+    change's line is rendered once per length level, plus the lines finally shown."""
+
+    class Counting(ChangelogComposer):
+        lines = 0
+
+        def _line(self, change: Change, limit: int) -> str:
+            Counting.lines += 1
+            return super()._line(change, limit)
+
+    composer = Counting(AnnounceConfig(), REPO, SERVER)
+    records = [CommitRecord(f"{n:040x}", f"feat!: {'x' * 90} (#{n})") for n in range(5000)]
+    message = composer.render("H", composer.from_commits(records))
+    assert Counting.lines <= 3 * 5000 + message.listed
+    assert _units(message.content) <= 2000
+    assert f"**+{5000 - message.listed} more breaking changes**" in message.content
+
+
+def test_the_surface_count_is_what_the_message_carries():
+    composer = _composer()
+    surfaces = [Surface("site", "https://s")]
+    assert composer.render("h", ChangeSet(), surfaces=surfaces).surfaces == 1
+    assert _composer(link_surfaces=False).render("h", ChangeSet(), surfaces=surfaces).surfaces == 0
+
+
+def test_the_install_runs_apart_from_the_secrets(tmp_path):
+    """The install step's build backend never runs beside the webhook or the token, and an
+    old release without `announce` is upgraded rather than left in place."""
+    steps = _rendered_workflow(tmp_path)["jobs"]["docs"]["steps"]
+    names = [step.get("name") for step in steps]
+    install = steps[names.index("Install the announcer")]
+    announce = steps[names.index("Announce the published surfaces")]
+    assert names.index("Install the announcer") + 1 == names.index(
+        "Announce the published surfaces"
+    )
+    assert install["env"] == {"PIP_UPGRADE": "true"}
+    assert "pip install" in install["run"] and "pip install" not in announce["run"]
+    assert "DISCORD_WEBHOOK_URL" in announce["env"] and "GH_TOKEN" in announce["env"]
+
+
+def test_breaking_changes_that_fit_once_shortened_are_all_listed():
+    composer = _composer(link_pull_requests=False)
+    records = [CommitRecord(f"{n:040x}", f"feat!: {'y' * 100} (#{n})") for n in range(20)]
+    message = composer.render("h", composer.from_commits(records))
+    assert message.listed == 20 and "more breaking" not in message.content
+    lines = [line for line in message.content.splitlines() if line.startswith("- ")]
+    assert all(len(line.split(" (#")[0]) < 70 for line in lines)
+    assert _units(message.content) <= 2000
+
+
+def test_a_control_character_becomes_a_space_and_a_format_character_nothing():
+    text = "a" + chr(0x09) + "b" + chr(0x07) + "c" + chr(0x85) + "d" + chr(0x200D) + "e"
+    assert ChangelogComposer.escape(text) == "a b c de"

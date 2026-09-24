@@ -7,8 +7,8 @@ few lines is pure text; delivering those lines is one HTTP request; and deciding
 them a deploy says is the announcer's. A test hands the announcer a scripted history and a
 recording poster and reads the message it would have sent: no network, no clock.
 
-The records they speak in (`CommitRecord`, `CommitRange`, `ChangeSet`, `ReleaseNotes`,
-`Surface`, `AnnounceRequest`, `Announcement`) are frozen data from `vibey_gh.announce_records`,
+The records they speak in (`CommitRecord`, `CommitRange`, `Position`, `ChangeSet`,
+`ReleaseNotes`, `Surface`, `AnnounceRequest`, `Announcement`) are frozen data from `vibey_gh.announce_records`,
 imported for typing only: naming the shape a seam speaks in is declaring, not consuming.
 """
 
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         ChangeSet,
         CommitRange,
         CommitRecord,
+        Position,
         ReleaseNotes,
         Surface,
     )
@@ -38,11 +39,12 @@ class ReleaseHistoryInterface(Protocol):
     reported as "nothing there".
     """
 
-    def previous_position(self, branch: str, head: str) -> tuple[str | None, str]:
+    def previous_position(self, branch: str, head: str) -> Position:
         """The release commit the last accepted announcement for `branch` covered.
 
-        `None` with a sentence saying why when it cannot be established: no earlier
-        announcement recorded, the Actions API not answering, a record naming no commit.
+        When it cannot be established, `Position.sha` is `None` with a sentence saying why,
+        and `structural` separates a history that could not be READ (the watermark must not
+        move) from one that was read and holds no usable position (re-anchor, and say so).
         """
         ...
 
@@ -120,7 +122,9 @@ class AnnouncerInterface(Protocol):
         """Post the announcement; the exit status, which is 0 whatever the webhook did.
 
         With no webhook it says so and passes; a webhook failure is a `::warning::`; the URL
-        is printed nowhere. With `github_output`, `posted=true|false` is appended to that
-        file, which is what the workflow's position-marker step reads.
+        is printed nowhere; a commit already announced for its branch is not posted again.
+        With `github_output`, `posted=true|false` and `position=known|unknown|reanchored`
+        are appended to that file: the workflow's marker step records this run only when it
+        posted and the position is not `unknown`.
         """
         ...

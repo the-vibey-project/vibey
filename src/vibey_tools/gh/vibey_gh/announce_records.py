@@ -13,9 +13,19 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-# A commit or tag named in an API path, or a channel or branch: nothing that could step out.
+# A channel, or one path segment of a repository name: a plain name, nothing that steps out.
 PLAIN_REF = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 HEX_SHA = re.compile(r"^[0-9a-f]{7,40}$")
+
+# What an announcement means for the watermark (sub-doctrine 10.g), written to `position=`
+# for the workflow's marker step: KNOWN and REANCHORED are recorded, UNKNOWN never is.
+KNOWN = "known"
+UNKNOWN = "unknown"
+REANCHORED = "reanchored"
+
+# `git check-ref-format`'s refusals inside a name: a control character or space,
+# `~ ^ : ? * [ \`, `..`, `@{`, and an empty component.
+_REFNAME_FORBIDDEN = re.compile(r"[\x00-\x20\x7f~^:?*\[\\]|\.\.|@\{|//")
 
 
 @dataclass(frozen=True)
@@ -35,6 +45,22 @@ class CommitRange:
     total: int
     commits: tuple[CommitRecord, ...]
     html_url: str
+
+
+@dataclass(frozen=True)
+class Position:
+    """Where the previous accepted announcement stopped, as a commit (10.g).
+
+    `sha` is set exactly when the position is known. Otherwise `reason` says why, and
+    `structural` says which kind of not-knowing it is. True: the history ANSWERED and holds
+    no usable position (the first announcement ever, nothing accepted inside what the API
+    will page through), so this run re-anchors, says so, and is recorded. False: the history
+    could not be read, so nothing is recorded and the next run reads the same span again.
+    """
+
+    sha: str | None
+    reason: str = ""
+    structural: bool = False
 
 
 @dataclass(frozen=True)
@@ -87,22 +113,43 @@ class AnnounceRequest:
     site_dir: Path = Path("channel-site")
     version: str = ""
 
+    @staticmethod
+    def refname(value: str) -> bool:
+        """Whether git would accept `value` as a branch or tag name (12.c): `release/next`
+        and `v/2.0.0` are names; a space, `..`, `:`, or a leading `-` or `/` is not."""
+        return bool(
+            value
+            and not value.startswith(("-", "/", "."))
+            and not value.endswith(("/", ".", ".lock"))
+            and "/." not in value
+            and ".lock/" not in value
+            and value != "@"
+            and not _REFNAME_FORBIDDEN.search(value)
+        )
+
     def __post_init__(self) -> None:
         if not HEX_SHA.fullmatch(self.sha):
             raise ValueError(f"announce: --sha must be a hex commit id, not {self.sha!r}")
         parts = self.repository.split("/")
         if len(parts) != 2 or not all(PLAIN_REF.fullmatch(part) for part in parts):
             raise ValueError(f"announce: --repository must be owner/name: {self.repository!r}")
-        for name in ("channel", "branch"):
-            value = getattr(self, name)
-            if not PLAIN_REF.fullmatch(value):
-                raise ValueError(f"announce: --{name} is not a plain name: {value!r}")
+        if not PLAIN_REF.fullmatch(self.channel):
+            raise ValueError(f"announce: --channel is not a plain name: {self.channel!r}")
+        if not self.refname(self.branch):
+            raise ValueError(f"announce: --branch is not a git branch name: {self.branch!r}")
 
 
 @dataclass(frozen=True)
 class Announcement:
-    """The message, and how much of it there is, for the log line that reports the post."""
+    """The message, how much of it there is, and what it means for the watermark.
+
+    `position` is KNOWN, UNKNOWN or REANCHORED (see `Position`). `duplicate` is set when this
+    exact commit was already announced for this branch: identity, not time, makes a re-run
+    or a replay a repeat, and a repeat is not posted again.
+    """
 
     content: str
     listed: int = 0
     surfaces: int = 0
+    position: str = KNOWN
+    duplicate: bool = False

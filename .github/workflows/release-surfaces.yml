@@ -1338,6 +1338,27 @@ jobs:
       # the last accepted announcement covered, read from this workflow's own runs -- their
       # `run-name` records branch and commit, and the step below records acceptance. The
       # Actions API is read with this job's `actions: read`, through GH_TOKEN.
+      # Installed in a step of its own, with no secret and no token in its environment, so
+      # the install's build backend never runs beside the webhook or GH_TOKEN. PIP_UPGRADE
+      # upgrades a release already present that predates `announce` (pip honours it for the
+      # line below exactly as `--upgrade`); with `[install] pin_version` the line is pinned.
+      - name: Install the announcer
+        if: success()
+        env:
+          PIP_UPGRADE: "true"
+        run: |
+          set -euo pipefail
+          if ! python -c 'import vibey_gh.announce' 2>/dev/null; then
+            (
+              self="src/vibey_tools/gh"
+              grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
+              if [ -n "$self" ]; then
+                python -m pip install --quiet -e "$self"
+              else
+                python -m pip install --quiet "vibey==2.1.0"
+              fi
+            ) || echo "::warning::announce: vibey-gh could not be installed and the deploy stands"
+          fi
       - name: Announce the published surfaces
         id: announce
         if: success()
@@ -1351,36 +1372,28 @@ jobs:
           set -euo pipefail
           if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
             echo "announce: no DISCORD_WEBHOOK_URL secret is set; nothing posted"
-            echo "posted=false" >> "$GITHUB_OUTPUT"
+            printf 'posted=false\nposition=unknown\n' >> "$GITHUB_OUTPUT"
             exit 0
-          fi
-          # The announcer lives in vibey-gh. Self-hosting installs it from the DECLARED
-          # `[install] self_source`, verified before use; adopters install the release.
-          if ! python -c 'import vibey_gh.announce' 2>/dev/null; then
-            (
-              self="src/vibey_tools/gh"
-              grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
-              if [ -n "$self" ]; then
-                python -m pip install --quiet -e "$self"
-              else
-                python -m pip install --quiet "vibey==2.1.0"
-              fi
-            ) || echo "::warning::announce: vibey-gh could not be installed and the deploy stands"
           fi
           if ! vibey-gh announce --channel "$CHANNEL" --branch "$BRANCH" --sha "$RELEASE_SHA" \
               --site-dir channel-site; then
             echo "::warning::announce: vibey-gh announce did not complete and the deploy stands"
           fi
       # The durable record that this run's release commit WAS announced: it runs only when
-      # the webhook accepted the post, and the next announcement reads its success back from
-      # the Actions API as where to start. Renaming it breaks that read; vibey_gh.announce
-      # names it as ANNOUNCED_STEP and test_announce.py holds the two together.
+      # the webhook accepted the post AND the announcement knew where it started (or
+      # re-anchored, and said so). An announcement whose history could not be read is
+      # `position=unknown` and is never recorded, so the next one reads the same span again
+      # instead of starting past commits nobody announced (10.g). The next announcement reads
+      # this step's success back from the Actions API as where to start. Renaming it breaks
+      # that read; vibey_gh.announce names it ANNOUNCED_STEP and test_announce.py holds the
+      # two together.
       - name: Record the announced position
-        if: steps.announce.outputs.posted == 'true'
+        if: steps.announce.outputs.posted == 'true' && steps.announce.outputs.position != 'unknown'
         env:
           BRANCH: ${{ needs.context.outputs.branch }}
           RELEASE_SHA: ${{ needs.context.outputs.sha }}
-        run: echo "announced ${BRANCH} at ${RELEASE_SHA}"
+          POSITION: ${{ steps.announce.outputs.position }}
+        run: echo "announced ${BRANCH} at ${RELEASE_SHA} (${POSITION})"
 
   attach:
     # The paper and the book as assets on the GitHub Release for this exact version: a

@@ -11,9 +11,12 @@ Three rules it holds and does not let configuration loosen:
   announces the commits since the release commit the previous accepted announcement
   covered. That commit is read back from the Actions API: every run of the release-surfaces
   workflow is titled `<name> · <branch> · <release commit or release run id>`
-  (`RUN_TITLE`), and only a run whose `ANNOUNCED_STEP` succeeded (the step that runs only
-  after the webhook accepted the post) counts. When that cannot be established the message
-  says `changes since: unknown` and falls back to the one commit being published. A release
+  (`RUN_TITLE`), and only a run whose `ANNOUNCED_STEP` succeeded counts: the step runs
+  only when the webhook accepted the post AND the position was not `unknown`. A history
+  that could not be READ makes the announcement `unknown`, which is never recorded, so the
+  next one covers the span again; a history that was read and holds no usable position
+  (the first announcement, a force-push, an exhausted window) re-anchors, is recorded, and
+  says so. A commit already announced for its branch is not posted again. A release
   announces its own notes, the version's section of the changelog, with the tag range when
   one resolves.
 - **Commit subjects are data.** Every one passes through `ChangelogComposer.escape`, and the
@@ -33,11 +36,14 @@ commit the run actually published.
 from __future__ import annotations
 
 import argparse
+import dataclasses
+import http.client
 import json
 import os
 import re
 import unicodedata
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
@@ -46,13 +52,15 @@ from typing import Any
 from vibey_gh import fingerprints
 from vibey_gh.announce_records import (
     HEX_SHA,
-    PLAIN_REF,
+    REANCHORED,
+    UNKNOWN,
     Announcement,
     AnnounceRequest,
     Change,
     ChangeSet,
     CommitRange,
     CommitRecord,
+    Position,
     ReleaseNotes,
     Surface,
 )
@@ -81,6 +89,7 @@ __all__ = [
     "CommitRange",
     "CommitRecord",
     "DiscordWebhook",
+    "Position",
     "ReleaseHistory",
     "ReleaseNotes",
     "Surface",
@@ -103,33 +112,26 @@ WEBHOOK_ENV = "DISCORD_WEBHOOK_URL"
 # Discord's message `flags` bit that suppresses link previews.
 _SUPPRESS_EMBEDS = 1 << 2
 
-# A commit or tag this module names in an API path: nothing that could step out of it.
-_REF = PLAIN_REF
 _SHA = HEX_SHA
+
+# The Actions API serves a status-filtered run listing only up to its 1000th result: pages
+# past the tenth come back empty, however many runs there are. `max_history_pages` is capped
+# at this, so an empty tenth page is never mistaken for the end of the history.
+API_RUN_WINDOW = 1000
 
 _SUBJECT = re.compile(
     r"^(?P<type>[a-z][a-z0-9-]*)(?:\((?P<scope>[^)]*)\))?(?P<bang>!)?: (?P<description>.+)$"
 )
-_TRAILING_PR = re.compile(r"\s*\(#(?P<number>\d+)\)\s*$")
-_PR_REFERENCE = re.compile(r"(?<![\w/&])#(?P<number>\d+)\b")
+# ASCII digits only: `(#١٢٣)` is Arabic-Indic text, not a pull request, and must not be linked.
+_TRAILING_PR = re.compile(r"\s*\(#(?P<number>[0-9]+)\)\s*$", re.ASCII)
+_PR_REFERENCE = re.compile(r"(?<![\w/&])#(?P<number>[0-9]+)\b", re.ASCII)
 
-# Characters a subject could use to reorder or hide text: the C0 and C1 controls, the
-# zero-width characters, the bidirectional overrides and isolates, and the byte-order mark.
-# Built from code points so the source carries no invisible character of its own.
-_INVISIBLE = re.compile(
-    "["
-    + "".join(
-        f"{re.escape(chr(low))}-{re.escape(chr(high))}"
-        for low, high in (
-            (0x00, 0x1F),
-            (0x7F, 0x9F),
-            (0x200B, 0x200F),
-            (0x202A, 0x202E),
-            (0x2060, 0x2069),
-            (0xFEFF, 0xFEFF),
-        )
-    )
-    + "]"
+# Characters that draw nothing but can hide, reorder or pad text, removed outright on top of
+# every Unicode control (Cc, which becomes a space) and format character (Cf: zero-width
+# joiners, bidirectional marks and overrides, U+061C, the soft hyphen, the tag characters):
+# the Hangul fillers, which render as blank, and the variation selectors.
+_BLANK = frozenset(
+    [0x115F, 0x1160, 0x3164, 0xFFA0, *range(0xFE00, 0xFE10), *range(0xE0100, 0xE01F0)]
 )
 # Every character Discord's markdown, mention or link syntax is built from. `:` breaks both a
 # bare `https://` link and a custom emoji; `@` and `<` break every mention form.
@@ -185,7 +187,16 @@ def _plural(count: int, noun: str) -> str:
 
 
 class ReleaseHistory(ReleaseHistoryInterface):
-    """Implements `ReleaseHistoryInterface` over the GitHub REST API through `gh api`."""
+    """Implements `ReleaseHistoryInterface` over the GitHub REST API through `gh api`.
+
+    A position is either KNOWN, or not known for one of two reasons, and they are kept apart
+    because they call for opposite things (10.g). A source that could not be READ (the API
+    erred, answered something malformed, a run's jobs or its commit could not be listed)
+    leaves the watermark where it was: nothing this run does may be recorded. A history that
+    was read and holds no usable position (no earlier accepted announcement, none within the
+    API's window, more unaccepted runs than `candidates` in a row) is structural: this run
+    re-anchors on its own commit and says so, since reading again would find the same thing.
+    """
 
     def __init__(
         self,
@@ -194,48 +205,76 @@ class ReleaseHistory(ReleaseHistoryInterface):
         *,
         transport: GhTransportInterface | None = None,
         pages: int = 10,
+        candidates: int = 20,
     ) -> None:
         self._repository = repository
         self._run_id = run_id
         self._transport = transport or GhTransport()
-        self._pages = pages
+        self._pages = min(pages, API_RUN_WINDOW // 100)
+        self._candidates = candidates
 
     def _api(self, path: str) -> tuple[Any, str]:
         return self._transport.survey(["api", f"repos/{self._repository}/{path}"])
 
-    def previous_position(self, branch: str, head: str) -> tuple[str | None, str]:
+    @staticmethod
+    def _unread(reason: str) -> Position:
+        return Position(None, reason, structural=False)
+
+    def previous_position(self, branch: str, head: str) -> Position:
         if not self._run_id.isdigit():
-            return None, "this run's id is unknown, so its workflow cannot be asked"
+            return self._unread("this run's id is unknown, so its workflow cannot be asked")
         run, problem = self._api(f"actions/runs/{self._run_id}")
         workflow = run.get("workflow_id") if isinstance(run, dict) else None
         if problem or not isinstance(workflow, int):
-            return None, f"the Actions API did not name this workflow ({problem or 'no id'})"
+            return self._unread(
+                f"the Actions API did not name this workflow ({problem or 'no id'})"
+            )
+        unaccepted = 0
         for page in range(1, self._pages + 1):
             data, problem = self._api(
                 f"actions/workflows/{workflow}/runs?status=success&per_page=100&page={page}"
             )
-            if problem:
-                return None, f"the Actions API did not list earlier runs ({problem})"
-            runs = data.get("workflow_runs", []) if isinstance(data, dict) else []
+            runs = data.get("workflow_runs") if isinstance(data, dict) else None
+            if problem or not isinstance(runs, list):
+                return self._unread(
+                    f"the Actions API did not list earlier runs ({problem or 'malformed'})"
+                )
             for candidate in runs:
                 match = RUN_TITLE.search(str(candidate.get("display_title", "")))
                 if match is None or match["branch"] != branch:
                     continue
                 announced, why = self._announced(candidate.get("id"))
                 if why:
-                    return None, why
+                    return self._unread(why)
                 if announced:
                     return self._resolve(match["ref"])
+                unaccepted += 1
+                if unaccepted >= self._candidates:
+                    return Position(
+                        None,
+                        f"{unaccepted} runs for {branch} since the last accepted announcement",
+                        structural=True,
+                    )
             if len(runs) < 100:
-                return None, f"no earlier announcement is recorded for {branch}"
-        return None, f"no announcement for {branch} in the last {self._pages * 100} runs"
+                return Position(
+                    None, f"no earlier announcement is recorded for {branch}", structural=True
+                )
+        window = self._pages * 100
+        beyond = " (the API's window)" if window == API_RUN_WINDOW else ""
+        return Position(
+            None,
+            f"no accepted announcement for {branch} in the last {window} runs{beyond}",
+            structural=True,
+        )
 
     def _announced(self, run_id: object) -> tuple[bool, str]:
         """Whether run `run_id`'s announcement was accepted, or why that cannot be read."""
         data, problem = self._api(f"actions/runs/{run_id}/jobs?per_page=100")
-        if problem:
-            return False, f"the Actions API did not list run {run_id}'s jobs ({problem})"
-        jobs = data.get("jobs", []) if isinstance(data, dict) else []
+        jobs = data.get("jobs") if isinstance(data, dict) else None
+        if problem or not isinstance(jobs, list):
+            return False, (
+                f"the Actions API did not list run {run_id}'s jobs ({problem or 'malformed'})"
+            )
         accepted = any(
             step.get("name") == ANNOUNCED_STEP and step.get("conclusion") == "success"
             for job in jobs
@@ -243,23 +282,25 @@ class ReleaseHistory(ReleaseHistoryInterface):
         )
         return accepted, ""
 
-    def _resolve(self, ref: str) -> tuple[str | None, str]:
+    def _resolve(self, ref: str) -> Position:
         """A run title's reference as a commit: a commit already, or a release run's."""
         if len(ref) == 40 and not ref.isdigit():
-            return ref, ""
+            return Position(ref)
         run, problem = self._api(f"actions/runs/{ref}")
         sha = run.get("head_sha") if isinstance(run, dict) else None
         if problem or not isinstance(sha, str) or not _SHA.fullmatch(sha):
-            return None, f"release run {ref} names no commit ({problem or 'no head_sha'})"
-        return sha, ""
+            return self._unread(f"release run {ref} names no commit ({problem or 'no head_sha'})")
+        return Position(sha)
 
     def compare(self, base: str, head: str) -> tuple[CommitRange | None, str]:
-        if not (_REF.fullmatch(base) and _REF.fullmatch(head)):
-            return None, f"{base!r}...{head!r} is not a range of plain references"
+        if not (AnnounceRequest.refname(base) and AnnounceRequest.refname(head)):
+            return None, f"{base!r}...{head!r} is not a range of git references"
+        # A branch or tag may hold `/`; encoded, it stays one path segment of the API's URL.
+        spec = f"{urllib.parse.quote(base, safe='')}...{urllib.parse.quote(head, safe='')}"
         status, total, html_url = "", 0, ""
         commits: list[CommitRecord] = []
         for page in range(1, self._pages + 1):
-            data, problem = self._api(f"compare/{base}...{head}?per_page=100&page={page}")
+            data, problem = self._api(f"compare/{spec}?per_page=100&page={page}")
             if problem or not isinstance(data, dict):
                 return None, f"the compare API did not answer for {base}...{head} ({problem})"
             if page == 1:
@@ -298,8 +339,20 @@ class ChangelogComposer(ChangelogComposerInterface):
 
     @staticmethod
     def escape(text: str) -> str:
-        text = _INVISIBLE.sub(" ", unicodedata.normalize("NFC", text))
-        return _MARKDOWN.sub(r"\\\1", " ".join(text.split()))
+        visible = "".join(
+            ChangelogComposer._visible(char) for char in unicodedata.normalize("NFC", text)
+        )
+        return _MARKDOWN.sub(r"\\\1", " ".join(visible.split()))
+
+    @staticmethod
+    def _visible(char: str) -> str:
+        """A control character as a space; a format character or a blank filler as nothing."""
+        category = unicodedata.category(char)
+        if category == "Cc":
+            return " "
+        if category == "Cf" or ord(char) in _BLANK:
+            return ""
+        return char
 
     def _change(self, kind: str, scope: str, text: str, reference: str, breaking: bool) -> Change:
         group = (
@@ -438,56 +491,132 @@ class ChangelogComposer(ChangelogComposerInterface):
             hidden = sum(change.group == cfg.other_group for change in rest)
             rest = [change for change in rest if change.group != cfg.other_group]
         listed = rest[: cfg.max_changes]
-        cut = len(rest) - len(listed)
-        cut_breaking = 0
-        limit = cfg.max_subject_chars
         surface_line = ""
         if cfg.link_surfaces and surfaces:
             surface_line = "Read: " + " · ".join(
                 f"[{self.escape(surface.label)}](<{surface.url}>)" for surface in surfaces
             )
-        while True:
-            more = cut + hidden + changes.unread
-            tail = []
-            if cut_breaking:
-                tail.append(f"**+{_plural(cut_breaking, 'more breaking change')}**")
-            if more:
-                tail.append(f"…and {more} more")
-            if changes.noise:
-                tail.append(f"+{_plural(changes.noise, 'maintenance commit')}")
-            if more_url and cfg.link_compare:
-                tail.append(f"[{self.escape(more_label or 'full list')}](<{more_url}>)")
-            body = [header]
-            group = ""
-            for change in [*breaking, *listed]:
-                if change.group != group:
-                    group = change.group
-                    body.append(f"**{self.escape(group)}**")
-                body.append(self._line(change, limit))
-            if tail:
-                body.append(" · ".join(tail))
-            if surface_line:
-                body.append(surface_line)
-            content = "\n".join(body)
-            if _units(content) <= cfg.max_message_chars:
-                break
-            # Over the limit: give up the least important thing first. Listed changes go
-            # from the end; then breaking lines get shorter; then, only when breaking
-            # changes alone cannot fit, the last of them are counted, as breaking.
-            if listed:
-                listed.pop()
-                cut += 1
-            elif breaking and limit > 40:
-                limit = max(40, limit // 2)
-            elif breaking:
-                breaking.pop()
-                cut_breaking += 1
-            elif surface_line:
-                surface_line = ""
-            else:
-                content = self._hard_cut(content, cfg.max_message_chars)
-                break
-        return Announcement(content, listed=len(breaking) + len(listed), surfaces=len(surfaces))
+        link = ""
+        if more_url and cfg.link_compare:
+            link = f"[{self.escape(more_label or 'full list')}](<{more_url}>)"
+        # Give up the least important thing first, deciding each count in one pass over
+        # prefix sums rather than by re-rendering: listed changes go from the end; then
+        # breaking lines get shorter; then, only when breaking changes alone cannot fit, the
+        # last of them are counted, by name, as breaking; then the surface line.
+        full = cfg.max_subject_chars
+        levels = list(dict.fromkeys((full, max(min(full, 40), full // 2), min(full, 40))))
+        listed_units = self._prefix(listed, full)
+        breaking_units = {limit: self._prefix(breaking, limit) for limit in levels}
+        others = len(rest) + hidden
+        for surface in dict.fromkeys((surface_line, "")):
+            fixed = (header, surface)
+            # Every breaking change at full length, and as many listed changes as fit.
+            count = self._fit(
+                [
+                    self._size(
+                        fixed,
+                        breaking_units[full][-1] + listed_units[n],
+                        self._tail(changes, 0, others - n, link),
+                    )
+                    for n in range(len(listed) + 1)
+                ]
+            )
+            if count is not None:
+                tail = self._tail(changes, 0, others - count, link)
+                return self._assemble(
+                    header, breaking, listed[:count], full, surface, tail, len(surfaces)
+                )
+            # No listed change; every breaking change, shorter and shorter.
+            for limit in levels[1:]:
+                tail = self._tail(changes, 0, others, link)
+                if self._size(fixed, breaking_units[limit][-1], tail) <= cfg.max_message_chars:
+                    return self._assemble(header, breaking, [], limit, surface, tail, len(surfaces))
+            # As many breaking changes as fit at the shortest, the rest counted as breaking.
+            shortest = levels[-1]
+            count = self._fit(
+                [
+                    self._size(
+                        fixed,
+                        breaking_units[shortest][n],
+                        self._tail(changes, len(breaking) - n, others, link),
+                    )
+                    for n in range(len(breaking) + 1)
+                ]
+            )
+            if count is not None:
+                tail = self._tail(changes, len(breaking) - count, others, link)
+                return self._assemble(
+                    header, breaking[:count], [], shortest, surface, tail, len(surfaces)
+                )
+        tail = self._tail(changes, len(breaking), others, link)
+        cut = self._assemble(header, [], [], full, "", tail)
+        return Announcement(self._hard_cut(cut.content, cfg.max_message_chars))
+
+    def _prefix(self, shown: Sequence[Change], limit: int) -> list[int]:
+        """`units[n]`: what the first `n` changes cost, lines and group headings, each with
+        the newline before it."""
+        units = [0]
+        group = ""
+        for change in shown:
+            cost = _units(self._line(change, limit)) + 1
+            if change.group != group:
+                group = change.group
+                cost += _units(f"**{self.escape(group)}**") + 1
+            units.append(units[-1] + cost)
+        return units
+
+    def _tail(self, changes: ChangeSet, cut_breaking: int, cut: int, link: str) -> str:
+        """The line after the list: what was left out, counted, and where to read it all."""
+        more = cut + changes.unread
+        tail = []
+        if cut_breaking:
+            tail.append(f"**+{_plural(cut_breaking, 'more breaking change')}**")
+        if more:
+            tail.append(f"…and {more} more")
+        if changes.noise:
+            tail.append(f"+{_plural(changes.noise, 'maintenance commit')}")
+        if link:
+            tail.append(link)
+        return " · ".join(tail)
+
+    @staticmethod
+    def _size(fixed: Sequence[str], lines: int, tail: str) -> int:
+        """The rendered length, in units, without rendering it: the header and the optional
+        lines, each after a newline but the first, plus the listed lines' prefix cost."""
+        parts = [part for part in (*fixed, tail) if part]
+        return sum(_units(part) for part in parts) + len(parts) - 1 + lines
+
+    def _fit(self, sizes: Sequence[int]) -> int | None:
+        """The largest `n` whose message, `sizes[n]` units long, fits; None when none does.
+        Each size is arithmetic on prefix sums, so the whole choice is linear."""
+        for count in range(len(sizes) - 1, -1, -1):
+            if sizes[count] <= self._cfg.max_message_chars:
+                return count
+        return None
+
+    def _assemble(
+        self,
+        header: str,
+        breaking: Sequence[Change],
+        listed: Sequence[Change],
+        limit: int,
+        surface: str,
+        tail: str,
+        links: int = 0,
+    ) -> Announcement:
+        body = [header]
+        group = ""
+        for change in [*breaking, *listed]:
+            if change.group != group:
+                group = change.group
+                body.append(f"**{self.escape(group)}**")
+            body.append(self._line(change, limit))
+        body.extend(part for part in (tail, surface) if part)
+        return Announcement(
+            "\n".join(body),
+            listed=len(breaking) + len(listed),
+            surfaces=links if surface else 0,
+        )
 
     @staticmethod
     def _hard_cut(content: str, limit: int) -> str:
@@ -505,9 +634,30 @@ class DiscordWebhook(WebhookPosterInterface):
 
     @staticmethod
     def redact(text: str, url: str) -> str:
-        """`text` with the webhook, and any other URL, removed: the URL IS the credential."""
+        """`text` with the webhook, and any other URL, removed: the URL IS the credential.
+
+        Removed whole, then by its path, its path quoted, and each long piece of it, because
+        a client error quotes whichever of those it choked on (http.client names the PATH
+        when it holds a space), and GitHub's log masking only matches the secret's full
+        value, never a fragment of it.
+        """
         if url:
-            text = text.replace(url, "<webhook>")
+            pieces = [url]
+            try:
+                path = urllib.parse.urlsplit(url).path
+            except ValueError:
+                path = ""
+            if len(path) > 1:
+                pieces += [path, urllib.parse.quote(path)]
+                # Each long segment of the path on its own: the id and the token.
+                pieces += [
+                    part
+                    for part in re.split(r"[/\s?#&=]", path)
+                    if len(part) >= 6 and part not in ("webhooks", "<webhook>")
+                ]
+            for piece in sorted(pieces, key=len, reverse=True):
+                text = text.replace(piece, "<webhook>")
+        text = re.sub(r"/api/webhooks/\S+", "/api/webhooks/<webhook>", text)
         return re.sub(r"[A-Za-z][A-Za-z0-9+.-]*://\S+", "<url>", text)
 
     def post(self, url: str, payload: Mapping[str, Any]) -> tuple[bool, str]:
@@ -525,7 +675,9 @@ class DiscordWebhook(WebhookPosterInterface):
                 return True, f"HTTP {response.status}"
         except urllib.error.HTTPError as exc:
             return False, f"HTTP {exc.code}"
-        except (urllib.error.URLError, OSError, ValueError) as exc:
+        except (urllib.error.URLError, http.client.HTTPException, OSError, ValueError) as exc:
+            # `http.client.InvalidURL` (a space or control character inside the secret) is an
+            # HTTPException, not a URLError: uncaught, its traceback printed the webhook's path.
             return False, self.redact(f"{type(exc).__name__}: {exc}", url)
 
 
@@ -563,11 +715,6 @@ class Announcer(AnnouncerInterface):
                 found.append(Surface(label, root + path.removesuffix("index.html")))
         return tuple(found)
 
-    def _single(self, request: AnnounceRequest, composer: ChangelogComposerInterface) -> ChangeSet:
-        """The fallback when the range is unknown: the one commit being published."""
-        record, _problem = self._history.commit(request.sha)
-        return composer.from_commits([record]) if record is not None else ChangeSet(unread=1)
-
     def compose(self, request: AnnounceRequest) -> Announcement:
         composer = self._composer_for(request)
         surfaces = self.surfaces(request)
@@ -576,13 +723,14 @@ class Announcer(AnnouncerInterface):
         if request.branch == self._cfg.release_branch:
             return self._release(request, composer, repo, link, surfaces)
         lead = f"{repo} published `{request.channel}` from `{request.sha[:12]}`"
-        base, why = self._history.previous_position(request.branch, request.sha)
+        position = self._history.previous_position(request.branch, request.sha)
+        why, structural = position.reason, position.structural
+        base = position.sha
         if base is not None and base.startswith(request.sha):
-            return composer.render(
-                f"{lead} · no new commits since the last announcement",
-                ChangeSet(),
-                surfaces=surfaces,
+            announcement = composer.render(
+                f"{lead} · already announced", ChangeSet(), surfaces=surfaces
             )
+            return dataclasses.replace(announcement, duplicate=True)
         if base is not None:
             found, problem = self._history.compare(base, request.sha)
             if found is not None and found.status in ("ahead", "identical"):
@@ -593,15 +741,48 @@ class Announcer(AnnouncerInterface):
                     more_label=f"compare {base[:7]}…{request.sha[:7]}",
                     surfaces=surfaces,
                 )
-            status = found.status if found is not None else ""
-            why = problem or f"{base[:12]} is not behind this commit ({status})"
-        return composer.render(
-            f"{lead} · changes since: unknown ({composer.escape(why[:160])}) — this commit only:",
-            self._single(request, composer),
+            # A compare that answered "diverged" or "behind" is structural (history was
+            # rewritten under the last position); one that did not answer is not.
+            structural = found is not None
+            why = problem or (
+                f"the last announced commit {base[:12]} is not behind this one "
+                f"({found.status if found is not None else ''}; history was rewritten)"
+            )
+        return self._one_commit(request, composer, lead, link, surfaces, why, structural)
+
+    def _one_commit(
+        self,
+        request: AnnounceRequest,
+        composer: ChangelogComposerInterface,
+        lead: str,
+        link: str,
+        surfaces: Sequence[Surface],
+        why: str,
+        structural: bool,
+    ) -> Announcement:
+        """The fallback when the range is not known: this commit, and what that means.
+
+        Structural: re-anchored here, recorded, and said. Otherwise: said to be unknown, and
+        NOT recorded, so the next announcement reads the same span again (10.g).
+        """
+        reason = composer.escape(why[:160])
+        if structural:
+            header = f"{lead} · re-anchored here ({reason}) — this commit only:"
+        else:
+            header = (
+                f"{lead} · changes since: unknown ({reason}) — this commit only; "
+                "the next announcement covers the span again:"
+            )
+        record, _problem = self._history.commit(request.sha)
+        changes = composer.from_commits([record]) if record is not None else ChangeSet(unread=1)
+        announcement = composer.render(
+            header,
+            changes,
             more_url=f"{link}/commit/{request.sha}",
             more_label="this commit",
             surfaces=surfaces,
         )
+        return dataclasses.replace(announcement, position=REANCHORED if structural else UNKNOWN)
 
     def _release(
         self,
@@ -649,14 +830,10 @@ class Announcer(AnnouncerInterface):
                 more_label=more_label,
                 surfaces=surfaces,
             )
+        # A release is not ranged by the Actions history, so this is the one case that is
+        # neither: the release has no notes to announce, which reading again will not change.
         missing = f"no {cfg.announce.changelog_path} section for {version or 'this version'}"
-        return composer.render(
-            f"{lead} · changes since: unknown ({composer.escape(missing)}) — this commit only:",
-            self._single(request, composer),
-            more_url=f"{link}/commit/{request.sha}",
-            more_label="this commit",
-            surfaces=surfaces,
-        )
+        return self._one_commit(request, composer, lead, link, surfaces, missing, True)
 
     def payload(self, announcement: Announcement) -> dict[str, Any]:
         """The webhook body: the message, and the switches that keep it inert."""
@@ -679,20 +856,30 @@ class Announcer(AnnouncerInterface):
     ) -> int:
         settings = self._cfg.announce
         posted = False
+        position = UNKNOWN
         if not settings.enabled:
             self._out("announce: [announce] enabled = false; nothing posted")
         elif not webhook_url and not dry_run:
             self._out(f"announce: no {settings.webhook_secret} secret is set; nothing posted")
         else:
             announcement = self.compose(request)
+            position = announcement.position
             if dry_run:
                 self._out(announcement.content)
+            elif announcement.duplicate:
+                # De-duplicated by identity: this commit's announcement was already accepted
+                # for this branch (a re-run, or a replayed deploy), so it is not posted twice.
+                self._out(
+                    f"announce: {request.sha[:12]} was already announced for {request.branch}; "
+                    "nothing posted"
+                )
             else:
                 posted, detail = self._poster.post(webhook_url, self.payload(announcement))
                 if posted:
                     self._out(
                         f"announce: posted {_plural(announcement.listed, 'change')} and "
-                        f"{_plural(announcement.surfaces, 'surface link')} to Discord ({detail})"
+                        f"{_plural(announcement.surfaces, 'surface link')} to Discord "
+                        f"({detail}); position {position}"
                     )
                 else:
                     self._out(
@@ -701,7 +888,7 @@ class Announcer(AnnouncerInterface):
                     )
         if github_output:
             with open(github_output, "a", encoding="utf-8") as handle:
-                handle.write(f"posted={'true' if posted else 'false'}\n")
+                handle.write(f"posted={'true' if posted else 'false'}\nposition={position}\n")
         return 0
 
     @staticmethod
@@ -750,7 +937,10 @@ class Announcer(AnnouncerInterface):
             version=args.version,
         )
         history = ReleaseHistory(
-            request.repository, args.run_id, pages=cfg.announce.max_history_pages
+            request.repository,
+            args.run_id,
+            pages=cfg.announce.max_history_pages,
+            candidates=cfg.announce.max_history_candidates,
         )
         return cls(cfg, history).run(
             request,

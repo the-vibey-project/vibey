@@ -1262,7 +1262,13 @@ _ANNOUNCE_SCALARS = (
     "suppress_embeds",
     "changelog_path",
     "max_history_pages",
+    "max_history_candidates",
 )
+
+# Substrings Discord refuses in a webhook's username, which it answers with HTTP 400: the
+# announcement would fail on every deploy, so the value is refused here instead.
+_DISCORD_USERNAME_FORBIDDEN = ("discord", "clyde", "@", "#", ":", "```")
+_CHANGELOG_PATH = re.compile(r"^[A-Za-z0-9._/-]+$")
 
 
 @dataclass(frozen=True)
@@ -1288,8 +1294,14 @@ class AnnounceConfig:
     - `changelog_path` (CHANGELOG.md): a release announces this file's section for its
       version, the release's own notes.
     - `max_history_pages` (10): how many pages of 100 runs, and of 100 compared commits,
-      are read looking for the previous announcement and the commits since it. What lies
-      beyond is reported as unknown or counted, never skipped silently (10.g).
+      are read looking for the previous announcement and the commits since it; 10 is also
+      the most, because the Actions API serves a status-filtered run listing only to its
+      1000th result. Commits beyond are counted; a history with no accepted announcement
+      inside the window re-anchors, and says so (10.g).
+    - `max_history_candidates` (20): how many runs for the branch whose announcement was
+      NOT accepted are read (one jobs call each) before the history is called structural
+      and the announcement re-anchors, saying so, rather than paging on or staying unknown
+      on every run from then on.
     """
 
     enabled: bool = True
@@ -1310,6 +1322,7 @@ class AnnounceConfig:
     suppress_embeds: bool = True
     changelog_path: str = "CHANGELOG.md"
     max_history_pages: int = 10
+    max_history_candidates: int = 20
 
     def __post_init__(self) -> None:
         for name in (
@@ -1322,8 +1335,11 @@ class AnnounceConfig:
         ):
             if not isinstance(getattr(self, name), bool):
                 raise TypeError(f"announce.{name} must be true or false")
-        if not isinstance(self.webhook_secret, str) or not SECRET_NAME_PATTERN.fullmatch(
-            self.webhook_secret
+        if (
+            not isinstance(self.webhook_secret, str)
+            or not SECRET_NAME_PATTERN.fullmatch(self.webhook_secret)
+            # GitHub reserves the prefix: no repository secret can be named GITHUB_*.
+            or self.webhook_secret.upper().startswith("GITHUB_")
         ):
             raise ValueError(
                 f"announce.webhook_secret is not a valid secret name: {self.webhook_secret!r}"
@@ -1332,17 +1348,28 @@ class AnnounceConfig:
             raise ValueError("announce.username must be 1 to 80 characters")
         if len(self.username) > 80:
             raise ValueError("announce.username must be 1 to 80 characters")
+        lowered = self.username.lower()
+        if lowered.strip() in ("everyone", "here") or any(
+            word in lowered for word in _DISCORD_USERNAME_FORBIDDEN
+        ):
+            raise ValueError(
+                f"announce.username {self.username!r} is one Discord refuses: no"
+                f" {', '.join(_DISCORD_USERNAME_FORBIDDEN)}, 'everyone' or 'here'"
+            )
         for name, low, high in (
             ("max_changes", 1, 50),
             ("max_subject_chars", 20, 400),
             ("max_message_chars", 200, DISCORD_CONTENT_LIMIT),
-            ("max_history_pages", 1, 50),
+            ("max_history_pages", 1, 10),
+            ("max_history_candidates", 1, 100),
         ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
                 raise ValueError(f"announce.{name} must be an integer from {low} to {high}")
         labels = [self.breaking_group, self.other_group, *(label for label, _ in self.groups)]
-        if any(not str(label).strip() for label in labels) or len(set(labels)) != len(labels):
+        if not all(isinstance(label, str) for label in labels):
+            raise TypeError("announce group labels, breaking_group and other_group are text")
+        if any(not label.strip() for label in labels) or len(set(labels)) != len(labels):
             raise ValueError(
                 "announce group labels, breaking_group and other_group must be non-empty"
                 " and distinct"
@@ -1366,8 +1393,17 @@ class AnnounceConfig:
             except re.error as exc:
                 raise ValueError(f"announce.noise_patterns: {pattern!r}: {exc}") from exc
         path = PurePosixPath(self.changelog_path)
-        if not self.changelog_path or path.is_absolute() or ".." in path.parts:
-            raise ValueError("announce.changelog_path must be a repository-relative path")
+        # It is also written, raw, into a link the message carries: nothing that could close
+        # the link's `(<…>)` or start another is allowed in it.
+        if (
+            not _CHANGELOG_PATH.fullmatch(self.changelog_path)
+            or path.is_absolute()
+            or ".." in path.parts
+        ):
+            raise ValueError(
+                "announce.changelog_path must be a repository-relative path of letters,"
+                " digits and . _ / -"
+            )
 
     @classmethod
     def from_table(cls, section: dict) -> AnnounceConfig:
