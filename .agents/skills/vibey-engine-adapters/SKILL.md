@@ -51,10 +51,19 @@ it's short):
 - `def attribute(exit_code: int, tail: str) -> FailureClass` — attributes a dead
   process to a `FailureClass` (`capacity`, `engine`, `work`, `vibey`)
 
-`LoopProcessAdapter.env_overlay` layers per-engine variables over the spawned
-process's environment (run and preflight alike) after the orchestrator's venv is
-stripped — how qwenloop gets `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` from the one
-setting `VIBEY_OLLAMA_URL` (`local_engines.py::LocalEndpointEnvironment`).
+An engine session never inherits the worker's environment: every spawn (the run,
+`--version`, `doctor`, `--help`) builds it through
+`LoopProcessAdapter.environment`, an `EngineEnvironmentPolicy`
+(`infrastructure/engines/engine_environment.py`) over the one builder,
+`infrastructure/process/child_environment.py::ChildEnvironment`. It is an
+allow-list: the system basics, the descriptor's `env_passthrough` and `auth_env`,
+and the project record's `engine_environment` additions. `VIBEY_*`, `PG*` and
+anything DSN- or password-shaped can never be on it, so `VIBEY_PG_URL` never
+reaches a model-driven process. A new engine declares what its runner and vendor
+CLI read in `env_passthrough`; do not add a spawn path that passes `env=` itself.
+`LoopProcessAdapter.env_overlay` is laid over that last (run and preflight alike) —
+how qwenloop gets `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` from the one setting
+`VIBEY_OLLAMA_URL` (`local_engines.py::LocalEndpointEnvironment`).
 Preflight runs `<binary> doctor` plus `descriptor.doctor_args`
 (claudeloop-local: `--profile NAME`).
 
@@ -116,6 +125,9 @@ Each descriptor (`domain/engine.py::EngineDescriptor`) declares:
 - `effort_projection` — how vibey's 5-level ladder (`TRIVIAL, LOW, STANDARD, HIGH, MAX`)
   maps to the engine's native flags
 - `auth_env` — environment variables that must be set (empty for qwenloop)
+- `env_passthrough` — the variables the engine's runner and vendor CLI read, passed
+  to its sessions (a trailing `*` names a prefix); nothing else reaches a session
+  unless the project declares it
 - `session_verb`, `isolation_flags` (per `IsolationLevel`)
 - `cost_per_mtok_in`/`cost_per_mtok_out`, `context_window`, `base_weight` (rotation weight)
 - `tier` (`EngineTier.PAID` default, `LOCAL` for qwenloop and claudeloop-local) and

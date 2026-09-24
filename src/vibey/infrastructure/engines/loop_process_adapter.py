@@ -13,7 +13,6 @@ descriptors, not four separate classes.
 
 import asyncio
 import json
-import os
 import re
 import shutil
 import subprocess  # nosec B404 - fixed argv, never shell=True
@@ -41,9 +40,14 @@ from vibey.domain.job import FailureClass
 from vibey.domain.ledger import EventKind
 from vibey.infrastructure.engines.argv import build_argv
 from vibey.infrastructure.engines.classify import attribute_failure, classify_capacity
+from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
+from vibey.infrastructure.engines.interfaces.engine_environment_interface import (
+    EngineEnvironmentPolicyInterface,
+)
 from vibey.infrastructure.engines.loop_events import translate_event_type
 from vibey.infrastructure.process import (
     DEFAULT_KILL_GRACE_SECONDS,
+    ChildEnvironment,
     OrchestratorPythonEnv,
     ProcessReaper,
 )
@@ -84,31 +88,9 @@ class ProcessError(VibeyError):
     pass
 
 
-def isolate_python_env(
-    env: Mapping[str, str], *, venv_prefixes: tuple[str | None, ...]
-) -> dict[str, str]:
-    """A copy of ``env`` with the orchestrator's Python environment removed.
-
-    Engine sessions inheriting vibey's environment mutated it live, twice:
-    with VIRTUAL_ENV set and vibey's .venv/bin first on PATH, a session's
-    `pip install -e .` landed editable installs INSIDE vibey's own venv
-    (shadowing modules for every later gate run and even downgrading
-    vibey's dev tools), and its bare `pytest`/`python` resolved to vibey's
-    interpreter. The engine keeps everything else -- auth vars, HOME, the
-    rest of PATH -- and provisions its own tooling like any fresh shell.
-    """
-    isolated = dict(env)
-    for key in ("VIRTUAL_ENV", "VIRTUAL_ENV_PROMPT", "PYTHONHOME", "PYTHONPATH"):
-        isolated.pop(key, None)
-    prefixes = tuple(prefix for prefix in venv_prefixes if prefix)
-    path = isolated.get("PATH")
-    if prefixes and path:
-        isolated["PATH"] = os.pathsep.join(
-            part
-            for part in path.split(os.pathsep)
-            if not any(part == prefix or part.startswith(prefix + os.sep) for prefix in prefixes)
-        )
-    return isolated
+# Kept importable under its old name: stripping vibey's own Python environment is now
+# one step of ChildEnvironment.build(), the one builder every engine spawn goes through.
+isolate_python_env = ChildEnvironment.without_python_env
 
 
 @dataclass(slots=True, frozen=True)
@@ -126,12 +108,20 @@ class LoopProcessAdapter:
     the old hardcoded 30s meant every real claudeloop preflight timed out
     into the env-var fallback, which cannot see CLI-credential auth."""
     env_overlay: Mapping[str, str] = field(default_factory=dict)
-    """Variables this engine's processes get on top of the environment they would
-    otherwise inherit -- applied last, after the orchestrator's Python environment
-    is stripped, to the run and to its preflight alike, so the doctor probes the
-    same backend the run will use. How qwenloop learns the one local endpoint
-    (`QWENLOOP_BASE_URL` from `VIBEY_OLLAMA_URL`, ADR-0038); empty for every
-    engine whose configuration lives in its own files."""
+    """Values vibey sets for this engine's processes -- laid over the allow-listed
+    environment last, after the orchestrator's Python environment is stripped, to the
+    run and to its preflight alike, so the doctor probes the same backend the run will
+    use. How qwenloop learns the one local endpoint (`QWENLOOP_BASE_URL` from
+    `VIBEY_OLLAMA_URL`, ADR-0038); empty for every engine whose configuration lives in
+    its own files. It can never carry one of vibey's own variables."""
+    environment: EngineEnvironmentPolicyInterface = field(
+        default_factory=EngineEnvironmentPolicy, compare=False, repr=False
+    )
+    """What this engine's sessions may see of the worker's environment: an allow-list,
+    never a copy. The default is the system basics plus the descriptor's own declared
+    variables and credential; `build_full_worker` swaps in the project's policy
+    (`engine_environment` in its config record). Every spawn -- the run, the
+    `--version` and `doctor` probes, the `--help` fetch -- builds through it."""
     kill_grace_seconds: float = DEFAULT_KILL_GRACE_SECONDS
     """How long a killed preflight probe (`--version`, `doctor`) may take to be
     reaped before the adapter gives up on it and logs `engine_process_not_reaped`
@@ -158,36 +148,33 @@ class LoopProcessAdapter:
         )
 
     def _engine_environment(self) -> dict[str, str]:
-        """Return the environment shared by probes and the engine process."""
-        environment = isolate_python_env(os.environ, venv_prefixes=self.python_env.venv_prefixes())
-        environment.update(self.env_overlay)
-        return environment
+        """The environment every process of this engine starts with: the probes and
+        the session alike, built by the engine's environment policy."""
+        return self.environment.environment(
+            self.descriptor, overlay=self.env_overlay, python_env=self.python_env
+        ).build()
 
     async def _spawn(
         self,
         *argv: str,
-        env: Mapping[str, str] | None = None,
         stdout: int | TextIO,
         stderr: int | TextIO,
         cwd: Path | None = None,
         start_new_session: bool = False,
     ) -> asyncio.subprocess.Process:
-        """`asyncio.create_subprocess_exec`, with `env_overlay` layered over `env` last.
+        """`asyncio.create_subprocess_exec` with the engine's allow-listed environment.
 
-        `env=None` means "inherit", exactly as for the stdlib call; with no overlay
-        the call is unchanged, so an engine without one behaves as it always has.
+        There is no way to pass another environment, and no way to inherit the
+        worker's: a spawn that could would be the one that leaks it.
         `start_new_session=True` makes the child lead a process group of its own, which
         `_communicate`'s kill needs to reach everything the child started.
         """
-        merged: dict[str, str] | None = None
-        if env is not None or self.env_overlay:
-            merged = {**(os.environ if env is None else env), **self.env_overlay}
         return await asyncio.create_subprocess_exec(
             *argv,
             stdout=stdout,
             stderr=stderr,
             cwd=cwd,
-            env=merged,
+            env=self._engine_environment(),
             start_new_session=start_new_session,
         )
 
@@ -282,7 +269,6 @@ class LoopProcessAdapter:
                 "--version",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env=self._engine_environment(),
                 start_new_session=True,
             )
             stdout, stderr = await self._communicate(proc, timeout=10.0)
@@ -306,7 +292,6 @@ class LoopProcessAdapter:
                 *self.descriptor.doctor_args,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env=self._engine_environment(),
                 start_new_session=True,
             )
             stdout, stderr = await self._communicate(proc, timeout=self.doctor_timeout)
@@ -379,10 +364,6 @@ class LoopProcessAdapter:
                 stdout=stdout_file,
                 stderr=stderr_file,
                 cwd=spec.worktree_path,
-                # The interpreter's prefix counts as vibey's only when it is a venv.
-                # On a system Python it is `/usr`, and stripping it took /usr/bin
-                # from every engine session (#283).
-                env=isolate_python_env(os.environ, venv_prefixes=self.python_env.venv_prefixes()),
             )
         except Exception as e:
             stdout_file.close()

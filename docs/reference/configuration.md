@@ -16,7 +16,7 @@ tables. The other schema tables remain documented inputs for future wiring.
 |---|---|---|
 | `./vibey.toml`, key `[features].qwenloop` | `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`) | Whether `qwenloop` is added to the health sweep. The file is read from the current directory with `parse_toml_string`; a missing or malformed file counts as `qwenloop = false`. |
 | `./vibey.toml`, `[notifications]` and `[telemetry]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels and the telemetry switch into the stored project config. |
-| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, notification delivery, telemetry, and (in principle) `features.qwenloop` — see below. |
+| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) `features.qwenloop` — see below. |
 | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the qwenloop switch, the sovereign DESIGN provider's evidence directory. |
 
 The project record is written once, at creation, by one of two paths:
@@ -455,6 +455,75 @@ vibey's own `bandit -q -r src/vibey` is enforced for real as gate 6 of
 A malformed `review` object (not an object, a command list that is not a list
 of non-empty string arrays) raises when the worker is built, rather than
 silently running nothing.
+
+## Gate commands (project config record — not a `vibey.toml` table) { #gates }
+
+`SubprocessGateRunner.from_config` (`infrastructure/build/gate_runner.py`) reads the
+record's `gates` object when `bootstrap.build_full_worker` builds the worker. One
+runner runs build.verify's gates, build.integrate's gates and REVIEW's automated
+checks. Neither `vibey new` nor the operator's `VibeyProject` spec writes this object
+today; the record is written directly.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `timeout_seconds` | number | `1800` | Per command; one that overruns is killed and fails as exit 124. Must be finite and positive. |
+| `kill_grace_seconds` | number | `5` | How long a killed command's reap may take before it is abandoned and logged. |
+| `isolate_python_env` | bool | `true` | `false` passes vibey's own Python environment (`VIRTUAL_ENV`, `PYTHONPATH`, its venv on `PATH`) to gates that rely on tools installed beside vibey. |
+| `env_allow` | array of strings | `[]` | Environment variables a gate command may receive beyond the system basics listed under [`engine_environment`](#engine_environment). A trailing `*` names a prefix (`GRADLE_*`). A gate command is decomposer-produced argv running engine-written code, so nothing else in the worker's environment reaches it. `VIBEY_*`, `PG*` and `GIT_*` can never be declared. A project's own test database can be (`TEST_DATABASE_URL`). |
+
+A malformed or forbidden `gates` object raises when the worker is built.
+
+## Engine session environment (project config record — not a `vibey.toml` table) { #engine_environment }
+
+An engine session runs model-chosen shell commands, unattended in BUILD and
+DEPLOY_EXECUTE. It never inherits the worker's environment. Every engine process (the
+run, its `--version`, `doctor` and `--help` probes, and the claudeloop and opencode
+DESIGN/DECOMPOSE sessions) starts from an allow-list built by
+`EngineEnvironmentPolicy` (`infrastructure/engines/engine_environment.py`). The
+allow-list has three parts:
+
+1. **The system basics, for every engine and every gate command:** `PATH` (with vibey's
+   own venv removed), `HOME`, `USER`, `LOGNAME`, `SHELL`, `TMPDIR`, `TMP`, `TEMP`, `LANG`,
+   `LANGUAGE`, `LC_*`, `TZ`, `TERM`, `COLORTERM`, `NO_COLOR`, `COLUMNS`, `LINES`,
+   `SSL_CERT_FILE`, `SSL_CERT_DIR`, `REQUESTS_CA_BUNDLE`, `CURL_CA_BUNDLE`,
+   `NODE_EXTRA_CA_CERTS`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, `ALL_PROXY` (and their
+   lower-case forms), `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_DATA_HOME`,
+   `XDG_STATE_HOME`, `XDG_RUNTIME_DIR`, and `__CF_USER_TEXT_ENCODING` (macOS).
+2. **What the engine's descriptor declares.** This is its `env_passthrough` and its API
+   credential, `auth_env`:
+
+   | Engine | Declared |
+   |---|---|
+   | `claudeloop` | `ANTHROPIC_API_KEY`, `CLAUDELOOP_*`, `CLAUDE_CODE_*`, `CLAUDE_CONFIG_DIR`, `ANTHROPIC_*` |
+   | `claudeloop-local` | `CLAUDELOOP_*`, `CLAUDE_CODE_*`, `CLAUDE_CONFIG_DIR`, `ANTHROPIC_*` |
+   | `codexloop` | `OPENAI_API_KEY`, `CODEXLOOP_*`, `CODEX_*`, `OPENAI_*`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
+   | `cursorloop` | `CURSOR_API_KEY`, `CURSORLOOP_*`, `CURSOR_*` |
+   | `agyloop` | `GOOGLE_API_KEY`, `GEMINI_API_KEY`, `AGYLOOP_*`, `ANTIGRAVITY_*`, `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_GENAI_USE_ENTERPRISE`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` |
+   | `opencode` | `OPENCODELOOP_*`, `OPENCODE_*` |
+   | `qwenloop` | `QWENLOOP_*` (plus the `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` vibey derives from `VIBEY_OLLAMA_URL`) |
+
+3. **What the project declares.** This is the record's `engine_environment` object:
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `allow` | array of strings | `[]` | Added for every engine. A trailing `*` names a prefix. |
+| `engines` | object of engine id → array of strings | `{}` | Added for one engine only, for example `{"agyloop": ["GOOGLE_ACCESS_TOKEN"]}` or `{"claudeloop": ["GH_TOKEN"]}`. Keys must be known engine ids. |
+
+A GitHub token or a cloud credential is on no default list. It reaches only the
+engine it is declared for. Some things need declaring:
+
+- agyloop's Vertex lane needs `GOOGLE_ACCESS_TOKEN` or `CLOUDSDK_AUTH_ACCESS_TOKEN`,
+  and optionally `GOOGLE_APPLICATION_CREDENTIALS`.
+- OpenCode needs any provider key its own configuration reads from the environment.
+- claudeloop's GitHub issue import needs `GH_TOKEN` or `GITHUB_TOKEN` for a private
+  repository.
+
+Some names can never be declared, by anyone. For every engine: vibey's own `VIBEY_*`
+variables (`VIBEY_PG_URL`, the queue and ledger DSN, among them), libpq's `PG*`, and
+any name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`. A malformed object,
+an unknown key or engine, or a forbidden entry raises when the worker is built.
+`vibey doctor` probes each engine with the defaults, because it reads no project
+record.
 
 ## Full example
 

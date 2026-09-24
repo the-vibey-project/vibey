@@ -76,6 +76,35 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
   - Audits for common injection heuristics (`is_suspicious_injection`).
 
 ### 5. Secret Redaction & Environment Hygiene
+- **What a model-driven process may see — implemented, tested, and active.** Engine sessions
+  (every engine, every phase, and the `--version`/`doctor`/`--help` probes) and gate commands
+  never inherit the worker's environment. Each starts from an allow-list built by
+  `ChildEnvironment` (`src/vibey/infrastructure/process/child_environment.py`):
+  - **Every child**: the system basics only — `PATH` (with vibey's own venv removed), `HOME`,
+    `USER`, `LOGNAME`, `SHELL`, the temp directory, locale (`LANG`, `LANGUAGE`, `LC_*`), `TZ`,
+    the terminal (`TERM`, `COLORTERM`, `NO_COLOR`, `COLUMNS`, `LINES`), the CA bundle
+    (`SSL_CERT_FILE`, `SSL_CERT_DIR`, `REQUESTS_CA_BUNDLE`, `CURL_CA_BUNDLE`,
+    `NODE_EXTRA_CA_CERTS`), the proxy (`HTTP(S)_PROXY`, `NO_PROXY`, `ALL_PROXY`, either case)
+    and `XDG_*_HOME`/`XDG_RUNTIME_DIR`.
+  - **An engine session** adds the variables its descriptor declares (`env_passthrough`: its
+    runner's and vendor CLI's own, for example `CLAUDELOOP_*`, `CLAUDE_CODE_*`, `ANTHROPIC_*`)
+    and its own API credential (`auth_env`); the full per-engine table is in
+    [the configuration reference](docs/reference/configuration.md#engine_environment).
+  - **Anything else** reaches an engine only when the project's config record declares it
+    (`engine_environment.allow`, or `engine_environment.engines.<engine>` for one engine), and a
+    gate only through `gates.env_allow`. A GitHub token or a cloud credential is on no default
+    list: it reaches only the engine it is declared for.
+  - **Never, whoever declares it**: vibey's own `VIBEY_*` variables — `VIBEY_PG_URL`, the queue
+    and ledger DSN, among them — and libpq's `PG*`; for gates also `GIT_*`; for engines also
+    any name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`. A declaration that tries
+    is refused when the worker is built.
+  - **The limit of this control**: an engine session runs as the same OS user as the worker.
+    It cannot read the worker's environment through its own, but same-user access to the
+    worker's process (`/proc/<pid>/environ` on Linux) or to files the worker can read is not
+    closed by this; the worktree and container boundary (§1) is what addresses that. The
+    ledger's append-only rule is enforced in the database by `DO INSTEAD NOTHING` rules on
+    the `event` parent table, which the role that owns the table can bypass — see
+    [the data model](docs/plans/data-model.md).
 - Subprocess execution strips sensitive git and shell environment variables (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, etc.) using `CleanGitEnvSubprocessExecutor`.
 - All ledger and telemetry records run through redaction masks (`redact.py`) to prevent leakage of credentials, tokens, or private keys.
 

@@ -63,6 +63,8 @@ from vibey.infrastructure.engines.claudeloop_process import (
     ClaudeLoopProcess,
     SpendRecorder,
 )
+from vibey.infrastructure.engines.descriptors import CLAUDELOOP, OPENCODE
+from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.local_engines import LocalEngineSettings
 from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_MODEL,
@@ -427,7 +429,9 @@ async def _work_once(
             design_provider = ScriptedDesignProvider()
         elif provider == "claudeloop":
             claude_process = ClaudeLoopProcess(
-                executor=AsyncSubprocessExecutor(),
+                executor=AsyncSubprocessExecutor(
+                    EngineEnvironmentPolicy.from_config(project.config).environment(CLAUDELOOP)
+                ),
                 max_turns=max_turns,
                 max_dollars=max_dollars,
                 spend_recorder=_build_spend_recorder(
@@ -454,7 +458,9 @@ async def _work_once(
             from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopProcess
 
             opencode_process = OpenCodeLoopProcess(
-                executor=AsyncSubprocessExecutor(),
+                executor=AsyncSubprocessExecutor(
+                    EngineEnvironmentPolicy.from_config(project.config).environment(OPENCODE)
+                ),
                 max_turns=max_turns,
                 max_dollars=max_dollars,
                 spend_recorder=_build_spend_recorder(
@@ -1575,7 +1581,9 @@ def worker(
             decomposer: WorkPlanProducer
             if provider == "claudeloop":
                 claude_process = ClaudeLoopProcess(
-                    executor=AsyncSubprocessExecutor(),
+                    executor=AsyncSubprocessExecutor(
+                        EngineEnvironmentPolicy.from_config(project.config).environment(CLAUDELOOP)
+                    ),
                     max_turns=max_turns,
                     max_dollars=max_dollars,
                     spend_recorder=_build_spend_recorder(
@@ -1614,7 +1622,9 @@ def worker(
                 from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopProcess
 
                 opencode_process = OpenCodeLoopProcess(
-                    executor=AsyncSubprocessExecutor(),
+                    executor=AsyncSubprocessExecutor(
+                        EngineEnvironmentPolicy.from_config(project.config).environment(OPENCODE)
+                    ),
                     max_turns=max_turns,
                     max_dollars=max_dollars,
                     spend_recorder=_build_spend_recorder(

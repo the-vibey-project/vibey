@@ -50,6 +50,24 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   merge" with GitHub's reason and the pass continues. `vibey-gh merge-train --admin-fallback`
   restores the retry for one run; no configuration key can (sub-doctrine 12.d). `vibey-gh
   promote --wait` gets the same rule, with `--admin-fallback` (only with `--wait`)
+* **engines:** an engine session no longer inherits the worker's environment. Every engine
+  process (the BUILD and DEPLOY_EXECUTE run, its `--version`/`doctor`/`--help` probes, and the
+  claudeloop and opencode DESIGN/DECOMPOSE sessions) and every gate command used to start from a
+  copy of it with only the Python variables removed. So `VIBEY_PG_URL` (the queue and ledger
+  DSN), vibey's other `VIBEY_*` tokens and passwords, `GH_TOKEN`/`GITHUB_TOKEN` and any cloud
+  credential reached processes that run model-chosen shell commands unattended. Each is now
+  built from an allow-list: the system basics (`PATH`, `HOME`, locale, `TERM`, CA bundle,
+  proxy, `XDG_*`), plus, for an engine, the variables its descriptor declares
+  (`env_passthrough`, for example `CLAUDELOOP_*` and `ANTHROPIC_*`) and its own API credential.
+  Anything else must be declared in the project's config record: `engine_environment.allow`
+  (every engine), `engine_environment.engines.<engine>` (one engine) or `gates.env_allow`
+  (gate commands). `VIBEY_*` and libpq's `PG*` can never be declared, for gates or engines, and
+  an engine can never be given a name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`.
+  A declaration that tries stops the worker when it is built. What now needs declaring:
+  agyloop's Vertex credentials (`GOOGLE_ACCESS_TOKEN`, `CLOUDSDK_AUTH_ACCESS_TOKEN`,
+  `GOOGLE_APPLICATION_CREDENTIALS`), a provider key OpenCode reads from the environment, a
+  `GH_TOKEN` for claudeloop's GitHub issue import, and any toolchain variable a gate needs
+  (`JAVA_HOME`, `GOPATH`, ...)
 
 ### Added
 

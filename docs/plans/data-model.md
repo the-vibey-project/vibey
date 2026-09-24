@@ -294,6 +294,17 @@ CREATE RULE event_no_delete AS ON DELETE TO event DO INSTEAD NOTHING;
 The `RULE`s make `UPDATE` and `DELETE` silent no-ops rather than errors: a stray
 write affects zero rows.
 
+What they do not stop, checked against the migrated schema on 2026-09-24 as the role
+vibey connects with (the table's owner): an `UPDATE` or `DELETE` addressed to a
+partition (`event_partitioned_0013_default`) rather than to `event` changes rows,
+because a rule on a partitioned parent does not fire for its partitions; `TRUNCATE
+event` empties the ledger, because rules never fire on `TRUNCATE`; and the owner can
+`ALTER TABLE event DISABLE RULE` or drop the rules outright. So append-only is enforced
+against the application's own queries, not against a holder of the application's DSN.
+That DSN is kept out of every engine session and gate command (see
+[SECURITY.md](../../SECURITY.md), §5); a database-level guard that binds the owner too
+is a recorded follow-up.
+
 **`kind` is open text, read forward-compatibly (vibey#275).** The column has no
 constraint and no enum type, so a newer vibey writes a kind an older one has never
 heard of. During a rolling upgrade (KEDA-scaled workers on mixed versions) and

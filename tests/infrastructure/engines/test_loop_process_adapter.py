@@ -872,7 +872,7 @@ async def test_preflight_installed_doctor_fails_reports_detail(
             min_version="0.1.0",
             state_dir=".test",
             done_marker="TEST_DONE",
-            auth_env=("VIBEY_TEST_FAKE_AUTH_KEY",),
+            auth_env=("ENGINE_TEST_FAKE_AUTH_KEY",),
             capabilities=frozenset(),
             effort_projection=CLAUDELOOP.effort_projection,
             session_verb="sessions",
@@ -960,9 +960,9 @@ async def test_preflight_doctor_exception_falls_back_to_env(tmp_path: Path) -> N
     doctor_path.chmod(0o755)
 
     old_path = os.environ.get("PATH", "")
-    old_env = os.environ.get("VIBEY_TEST_FAKE_AUTH", None)
+    old_env = os.environ.get("ENGINE_TEST_FAKE_AUTH", None)
     os.environ["PATH"] = f"{bin_dir}:{old_path}"
-    os.environ["VIBEY_TEST_FAKE_AUTH"] = "valid-key"
+    os.environ["ENGINE_TEST_FAKE_AUTH"] = "valid-key"
     try:
         import asyncio
         from unittest.mock import patch
@@ -973,7 +973,7 @@ async def test_preflight_doctor_exception_falls_back_to_env(tmp_path: Path) -> N
             min_version="0.1.0",
             state_dir=".test",
             done_marker="TEST_DONE",
-            auth_env=("VIBEY_TEST_FAKE_AUTH",),
+            auth_env=("ENGINE_TEST_FAKE_AUTH",),
             capabilities=frozenset(),
             effort_projection=CLAUDELOOP.effort_projection,
             session_verb="sessions",
@@ -1003,9 +1003,9 @@ async def test_preflight_doctor_exception_falls_back_to_env(tmp_path: Path) -> N
     finally:
         os.environ["PATH"] = old_path
         if old_env is None:
-            os.environ.pop("VIBEY_TEST_FAKE_AUTH", None)
+            os.environ.pop("ENGINE_TEST_FAKE_AUTH", None)
         else:
-            os.environ["VIBEY_TEST_FAKE_AUTH"] = old_env
+            os.environ["ENGINE_TEST_FAKE_AUTH"] = old_env
 
 
 async def test_start_writes_plan_and_returns_handle(tmp_path: Path) -> None:
@@ -1138,7 +1138,7 @@ async def test_preflight_doctor_exception_no_env_reports_detail(tmp_path: Path) 
 
     old_path = os.environ.get("PATH", "")
     os.environ["PATH"] = f"{bin_dir}:{old_path}"
-    os.environ.pop("VIBEY_TEST_MISSING_KEY_XYZ", None)
+    os.environ.pop("ENGINE_TEST_MISSING_KEY_XYZ", None)
     try:
         import asyncio
         from unittest.mock import patch
@@ -1149,7 +1149,7 @@ async def test_preflight_doctor_exception_no_env_reports_detail(tmp_path: Path) 
             min_version="0.1.0",
             state_dir=".test",
             done_marker="TEST_DONE",
-            auth_env=("VIBEY_TEST_MISSING_KEY_XYZ",),
+            auth_env=("ENGINE_TEST_MISSING_KEY_XYZ",),
             capabilities=frozenset(),
             effort_projection=CLAUDELOOP.effort_projection,
             session_verb="sessions",
@@ -1175,7 +1175,7 @@ async def test_preflight_doctor_exception_no_env_reports_detail(tmp_path: Path) 
 
         assert result.installed is True
         assert result.auth_ok is False
-        assert "VIBEY_TEST_MISSING_KEY_XYZ" in result.detail
+        assert "ENGINE_TEST_MISSING_KEY_XYZ" in result.detail
     finally:
         os.environ["PATH"] = old_path
 
@@ -1734,7 +1734,7 @@ async def test_preflight_passes_the_descriptors_doctor_args_and_the_overlay(
     assert record.read_text().strip() == "doctor --profile local|http://h:1/v1"
 
 
-async def test_preflight_without_an_overlay_inherits_the_environment_unchanged(
+async def test_preflight_without_an_overlay_adds_nothing_to_the_environment(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from dataclasses import replace
@@ -1811,7 +1811,7 @@ def test_claudeloop_local_classifies_through_claudeloops_own_vocabulary() -> Non
 def _loop_descriptor(binary: str):  # type: ignore[no-untyped-def]
     from dataclasses import replace
 
-    return replace(CLAUDELOOP, binary=binary, auth_env=("VIBEY_TEST_REAP_MISSING_KEY",))
+    return replace(CLAUDELOOP, binary=binary, auth_env=("ENGINE_TEST_REAP_MISSING_KEY",))
 
 
 async def test_a_timed_out_doctor_dies_with_its_whole_group(
@@ -1835,7 +1835,7 @@ async def test_a_timed_out_doctor_dies_with_its_whole_group(
         f"{background_script(pidfile)}",
     )
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
-    monkeypatch.delenv("VIBEY_TEST_REAP_MISSING_KEY", raising=False)
+    monkeypatch.delenv("ENGINE_TEST_REAP_MISSING_KEY", raising=False)
     adapter = LoopProcessAdapter(descriptor=_loop_descriptor("reaploop"), doctor_timeout=1.0)
     loop = asyncio.get_running_loop()
 
@@ -1875,7 +1875,7 @@ async def test_a_doctor_whose_escaped_child_holds_the_pipes_is_abandoned_after_t
         f'if [ "$1" = "--version" ]; then echo "escapeloop 1.0.0"; exit 0; fi\nexec {command}',
     )
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
-    monkeypatch.delenv("VIBEY_TEST_REAP_MISSING_KEY", raising=False)
+    monkeypatch.delenv("ENGINE_TEST_REAP_MISSING_KEY", raising=False)
     adapter = LoopProcessAdapter(
         descriptor=_loop_descriptor("escapeloop"), doctor_timeout=1.0, kill_grace_seconds=0.2
     )
@@ -1969,3 +1969,144 @@ async def test_start_from_a_venv_interpreter_strips_that_venv(
     env = captured["env"]
     assert isinstance(env, dict)
     assert env["PATH"] == _SYSTEM_PATH
+
+
+# ── the engine environment is allow-listed, never copied (engine-env fix) ─────────
+#
+# Every engine session used to receive a copy of the worker's environment with only the
+# Python variables removed, so `VIBEY_PG_URL` -- the queue and ledger DSN -- reached
+# processes that run model-chosen shell commands unattended. With it, a session could
+# UPDATE or DELETE queue rows directly and nothing would record it.
+
+_WORKER_SECRETS = {
+    "VIBEY_PG_URL": "postgresql://vibey:secret@db/vibey",
+    "VIBEY_SECRETS_TOKEN": "openbao-secret",
+    "PGPASSWORD": "secret",
+    "DATABASE_URL": "postgresql://app:secret@db/app",
+    "GH_TOKEN": "ghp_secret",
+    "GITHUB_TOKEN": "ghs_secret",
+    "AWS_SECRET_ACCESS_KEY": "aws-secret",
+    "AZURE_CLIENT_SECRET": "azure-secret",
+    "GOOGLE_APPLICATION_CREDENTIALS": "/keys/sa.json",
+}
+
+
+def _worker_with_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name, value in _WORKER_SECRETS.items():
+        monkeypatch.setenv(name, value)
+
+
+@pytest.mark.parametrize(
+    "descriptor",
+    __import__("vibey.infrastructure.engines.descriptors", fromlist=["x"]).ALL_DESCRIPTORS,
+    ids=lambda d: d.engine_id.value,
+)
+async def test_every_spawn_of_every_engine_goes_through_the_one_builder(
+    descriptor: object, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The run, the `--version` probe, the `doctor` probe and the `--help` fetch each get
+    exactly what the engine's environment policy builds -- never the worker's copy."""
+    import subprocess
+    from unittest.mock import AsyncMock, patch
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import EngineDescriptor, IsolationLevel
+    from vibey.infrastructure.engines import loop_process_adapter as module
+
+    assert isinstance(descriptor, EngineDescriptor)
+    _worker_with_secrets(monkeypatch)
+    captured: list[dict[str, str]] = []
+
+    async def fake_exec(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured.append(kwargs["env"])
+        process = AsyncMock()
+        process.pid = 4244
+        process.returncode = 0
+        process.communicate = AsyncMock(return_value=(b"engine 9.9.9", b""))
+        return process
+
+    fake_binary = str(tmp_path / f"{descriptor.binary}-{descriptor.engine_id.value}")
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_exec)
+    monkeypatch.setattr(module.shutil, "which", lambda _: fake_binary)
+    module._help_text_cache.pop(fake_binary, None)
+    adapter = LoopProcessAdapter(descriptor=descriptor, env_overlay={"QWENLOOP_MODEL": "q"})
+
+    handle = await adapter.start(
+        RunSpec(
+            run_id=uuid4(),
+            worktree_path=tmp_path,
+            prompt="do the thing",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+    )
+    _active_processes.pop(handle.run_id, None)
+    files = _diagnostic_files.pop(handle.run_id)
+    for f in files:
+        f.close()
+    await adapter.preflight()
+    completed = subprocess.CompletedProcess(args=[], returncode=0, stdout="usage", stderr="")
+    with patch("subprocess.run", return_value=completed) as run:
+        assert adapter.help_text == "usage"
+    module._help_text_cache.pop(fake_binary, None)
+
+    expected = adapter.environment.environment(
+        descriptor, overlay={"QWENLOOP_MODEL": "q"}, python_env=adapter.python_env
+    ).build()
+    assert len(captured) == 3  # run, --version, doctor
+    assert captured == [expected, expected, expected]
+    help_env = run.call_args.kwargs["env"]
+    assert help_env == {**expected, "COLUMNS": "250", "LINES": "50", "NO_COLOR": "1"}
+    for env in (*captured, help_env):
+        for name in _WORKER_SECRETS:
+            assert name not in env
+
+
+async def test_a_real_engine_process_never_sees_the_queue_dsn(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """End to end: a fake engine binary records the NAMES of every variable it was
+    started with (never the values, so a failure cannot print a secret), and the
+    worker's DSN and credentials are not among them."""
+    import asyncio
+    import os
+    from dataclasses import replace
+
+    from vibey.application.dto import RunSpec
+    from vibey.domain.effort import Effort
+    from vibey.domain.engine import IsolationLevel
+
+    record = tmp_path / "env.names"
+    bin_dir = _make_fake_binary(
+        tmp_path,
+        "envprobeloop",
+        f'env | cut -d= -f1 | sort > "{record}.tmp"; mv "{record}.tmp" "{record}"',
+    )
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    _worker_with_secrets(monkeypatch)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "the engine's own credential")
+
+    adapter = LoopProcessAdapter(descriptor=replace(CLAUDELOOP, binary="envprobeloop"))
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    handle = await adapter.start(
+        RunSpec(
+            run_id=uuid4(),
+            worktree_path=worktree,
+            prompt="print your environment",
+            effort=Effort.LOW,
+            isolation=IsolationLevel.WORKTREE,
+        )
+    )
+    process = _active_processes.pop(handle.run_id)
+    await asyncio.wait_for(process.wait(), timeout=10.0)
+    for f in _diagnostic_files.pop(handle.run_id):
+        f.close()
+
+    names = set(record.read_text().split())
+    assert "PATH" in names
+    assert "ANTHROPIC_API_KEY" in names
+    leaked = names & set(_WORKER_SECRETS)
+    assert leaked == set(), f"leaked into the engine session: {sorted(leaked)}"
+    assert not any(name.startswith("VIBEY_") for name in names)
