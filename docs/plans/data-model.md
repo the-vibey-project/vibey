@@ -12,8 +12,8 @@
 > PostgreSQL 14+. CI exercises majors 14–18; the chart default is PostgreSQL 17.
 > All timestamps `timestamptz`. All ids `uuid` except `event.seq`
 > (gapless bigint per project) and human-facing item ids (short prefixed strings).
-> Migrations are forward-only. They run as the schema's owner: `vibey migrate`, or
-> `build_app()` (`src/vibey/bootstrap.py`) when `VIBEY_PG_MIGRATE_URL` is set or the
+> Migrations are forward-only. They run as the schema's owner: `vibey migrate` (the only
+> reader of `VIBEY_PG_MIGRATE_URL`), or `build_app()` (`src/vibey/bootstrap.py`) when the
 > application's own role may migrate (a single-DSN install); see §7 and ADR-0055.
 
 The live schema also has a Pydantic-backed SQLAlchemy projection in
@@ -306,6 +306,17 @@ SQLSTATE `42501`, for every role, the owner included.
 - **The application role.** It holds `SELECT` and `INSERT` on `event` and nothing more
   (`APP_ROLE_GRANTS`), so it cannot disable a trigger either. See
   [the configuration reference](../reference/configuration.md#database-roles).
+
+What they do not stop, checked against the migrated schema on 2026-09-24 as the role
+vibey connects with (the table's owner): an `UPDATE` or `DELETE` addressed to a
+partition (`event_partitioned_0013_default`) rather than to `event` changes rows,
+because a rule on a partitioned parent does not fire for its partitions; `TRUNCATE
+event` empties the ledger, because rules never fire on `TRUNCATE`; and the owner can
+`ALTER TABLE event DISABLE RULE` or drop the rules outright. So append-only is enforced
+against the application's own queries, not against a holder of the application's DSN.
+That DSN is kept out of every engine session and gate command (see
+[SECURITY.md](../../SECURITY.md), §5); a database-level guard that binds the owner too
+is a recorded follow-up.
 
 **`kind` is open text, read forward-compatibly (vibey#275).** The column has no
 constraint and no enum type, so a newer vibey writes a kind an older one has never
@@ -691,7 +702,8 @@ one transaction, where `now()` is one instant for all of them (sub-doctrine 10.g
 not since un-bumped. The lane is derived from it -- the named jobs plus all their
 unfinished transitive dependencies -- so an un-bump clears the target and every pulled job
 the remaining named jobs no longer need, and every bump or un-bump sweeps (and records) any
-pulled job a cancelled or failed named job left behind, so no orphan outlives the next request.
+pulled job a cancelled or failed named job left behind, so no orphan outlives the next admitted
+bump or un-bump (a refused request changes nothing).
 
 `PostgresJobPriorityStore` (`src/vibey/infrastructure/db/job_priority_repository.py`)
 is reached only through `QueuePriorityService`, which checks the grant first. Each
@@ -1041,8 +1053,7 @@ Migrations run as the schema's owner (ADR-0055), in one of three ways:
 - **`vibey migrate`** applies them on `VIBEY_PG_MIGRATE_URL`, then reconciles the
   application role's grants.
 - **`build_app()`** in `src/vibey/bootstrap.py` (`SchemaPreparer`), every time it opens
-  the pool:
-  - on an owner connection when `VIBEY_PG_MIGRATE_URL` is set, then reconciling grants;
+  the pool. It never reads the owner's DSN:
   - on the application's own connection when that role may migrate (a single-DSN
     install);
   - otherwise it only verifies (`PostgresMigrator.pending`, no DDL, no lock) and refuses

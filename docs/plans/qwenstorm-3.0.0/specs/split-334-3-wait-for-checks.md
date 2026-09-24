@@ -317,4 +317,4 @@ module.
 - split-334-2-open-branches: the adapter and protocol files at their post-listing state (the new block goes after its `# --- Change-request listings ---` block). #335's lanes depend on this lane.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

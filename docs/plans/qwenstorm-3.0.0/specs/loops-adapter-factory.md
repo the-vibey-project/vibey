@@ -8,7 +8,7 @@ At integration `d3b4a388`, subprocess mode's `adapters` mapping (`Mapping[Engine
 EngineAdapter]`) is built once, in `bootstrap.py`'s composition of `build_full_worker`, one
 `LoopProcessAdapter` per descriptor in the project's pool (`engines-pool`'s own evidence:
 "src/vibey/bootstrap.py:735-738 builds an adapter for every `DEFAULT_DESCRIPTORS` engine"). Draft
-ADR-0046 §10 (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:304`) keeps
+ADR-0046 §10 (`STORM/specs/ADR-two-loops.md:304`) keeps
 this shape for service mode too: `infrastructure/loop_service/adapter_factory.py` is not named in
 the ADR's own table by that exact path, but §10's composition principle -- "one adapter per
 engine, at composition time, never per job" -- is unchanged; only what each adapter's `start`

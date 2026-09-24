@@ -144,6 +144,13 @@ class EngineDescriptor:
     # passes its profile, so the health check probes the local backend the
     # run will use rather than the Anthropic login a profile never touches.
     doctor_args: tuple[str, ...] = ()
+    # The environment variables the engine's own process reads -- its runner's
+    # configuration and its vendor CLI's -- passed through to its sessions on top of
+    # the system basics. A trailing `*` names a prefix (`CLAUDELOOP_*`); `auth_env`
+    # always passes too. Nothing else in the worker's environment reaches a session
+    # unless the project declares it, and vibey's own variables never can
+    # (infrastructure/engines/engine_environment.py).
+    env_passthrough: tuple[str, ...] = ()
 
     def invoke(self, effort: Effort) -> EngineInvocation:
         try:

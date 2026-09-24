@@ -370,4 +370,4 @@ installed. `vibey_gh.cli` imports `operation_estimate`, which imports `fit`; a t
 - none: the probe is new, and vibey-gh's samplers are on integration today.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

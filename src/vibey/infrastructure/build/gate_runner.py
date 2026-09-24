@@ -7,17 +7,20 @@ command string.
 
 Three things hold for every command this runner executes (#212).
 
-**It does not run in vibey's environment.** GIT_* is stripped unconditionally,
-not just for the `git diff` call -- infrastructure/git/clean_env.py's docstring
-explains why (GIT_DIR et al. leak in from a `git commit` hook and override
-`-C`/`cwd` entirely), and a gate command can invoke git indirectly (a test that
-shells out, a pre-commit hook inside the worktree). By default the
-orchestrator's own Python environment goes too, through the same
-`isolate_python_env` the engine spawn uses: left in place, a gate's bare
-`pip install -e .` lands inside vibey's venv and its bare `python` or `pytest`
-resolves to vibey's interpreter -- the venv-isolation leak from the greeter
-campaign. `gates.isolate_python_env = false` opts out, for a project whose
-gates really do rely on tools installed beside vibey.
+**It does not run in vibey's environment.** A gate command is decomposer-produced
+argv running engine-written code, so it starts from an allow-list, never a copy of
+the worker's environment: the system basics (`SYSTEM_ENVIRONMENT`) plus whatever the
+project declares in `gates.env_allow` (a trailing `*` names a prefix). vibey's own
+variables -- `VIBEY_PG_URL`, the queue and ledger DSN, among them -- libpq's `PG*`
+and git's `GIT_*` can never be declared: GIT_DIR et al. leak in from a `git commit`
+hook and override `-C`/`cwd` entirely (infrastructure/git/clean_env.py), and a gate
+command can invoke git indirectly. A project's own test database is another matter:
+a gate may be given one, by declaring it. By default the orchestrator's own Python
+environment is stripped too, through the same `ChildEnvironment` the engine spawn
+uses: left in place, a gate's bare `pip install -e .` lands inside vibey's venv and
+its bare `python` or `pytest` resolves to vibey's interpreter -- the venv-isolation
+leak from the greeter campaign. `gates.isolate_python_env = false` opts out, for a
+project whose gates really do rely on tools installed beside vibey.
 
 **It is bounded.** Each command gets `gates.timeout_seconds` (30 minutes by
 default). One that overruns is killed and reported as a failing gate, exit 124
@@ -36,16 +39,17 @@ stdin."""
 
 import asyncio
 import math
-import os
 import shlex
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 from vibey.application.build_verify_handler import GateResult
-from vibey.infrastructure.engines.loop_process_adapter import isolate_python_env
 from vibey.infrastructure.process import (
     DEFAULT_KILL_GRACE_SECONDS,
-    OrchestratorPythonEnv,
+    GATE_FORBIDDEN,
+    SYSTEM_ENVIRONMENT,
+    ChildEnvironment,
+    EnvironmentAllowList,
     ProcessReaper,
 )
 
@@ -65,6 +69,7 @@ class SubprocessGateRunner:
         timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
         kill_grace_seconds: float = DEFAULT_KILL_GRACE_SECONDS,
         isolate_python_env: bool = True,
+        env_allow: Iterable[str] = (),
     ) -> None:
         self._timeout_seconds = self._positive("timeout_seconds", timeout_seconds)
         self._kill_grace_seconds = self._positive("kill_grace_seconds", kill_grace_seconds)
@@ -72,17 +77,20 @@ class SubprocessGateRunner:
         self._reaper = ProcessReaper(
             grace_seconds=self._kill_grace_seconds, event="gate_process_not_reaped"
         )
-        self._python_env = OrchestratorPythonEnv()
+        self._allow = SYSTEM_ENVIRONMENT.extended(
+            env_allow, forbidden=GATE_FORBIDDEN, where="gates.env_allow"
+        )
+        self._environment = ChildEnvironment(self._allow, isolate_python_env=isolate_python_env)
 
     @classmethod
     def from_config(cls, config: Mapping[str, object]) -> "SubprocessGateRunner":
         """Build a runner from the project's stored config record.
 
         Read off the record's `gates` object the same way `review`,
-        `max_cycle_dollars` and `skills_context` are. `vibey.toml` is never
-        loaded at runtime, so it is not a route for this. A malformed object
-        raises when the worker is built rather than silently running gates
-        with defaults nobody asked for.
+        `max_cycle_dollars` and `skills_context` are. The object is declared in
+        vibey.toml's `[gates]` table (copied into the record by `vibey new`) or the
+        `VibeyProject` spec's `gates`. A malformed object raises when the worker is
+        built rather than silently running gates with defaults nobody asked for.
         """
         raw = config.get("gates")
         if raw is None:
@@ -92,11 +100,20 @@ class SubprocessGateRunner:
         isolate = raw.get("isolate_python_env", True)
         if not isinstance(isolate, bool):
             raise ValueError("gates.isolate_python_env must be a boolean")
+        env_allow = EnvironmentAllowList.parse(
+            raw.get("env_allow", []), where="gates.env_allow", forbidden=GATE_FORBIDDEN
+        )
         return cls(
             timeout_seconds=cls._seconds(raw, "timeout_seconds", _DEFAULT_TIMEOUT_SECONDS),
             kill_grace_seconds=cls._seconds(raw, "kill_grace_seconds", DEFAULT_KILL_GRACE_SECONDS),
             isolate_python_env=isolate,
+            env_allow=env_allow.entries(),
         )
+
+    @property
+    def allow_list(self) -> EnvironmentAllowList:
+        """Exactly what a gate command may receive of the worker's environment."""
+        return self._allow
 
     @classmethod
     def _seconds(cls, raw: Mapping[str, object], key: str, default: float) -> float:
@@ -123,7 +140,7 @@ class SubprocessGateRunner:
                 stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env=self._environment(),
+                env=self._environment.build(),
                 start_new_session=True,
             )
         except (FileNotFoundError, NotADirectoryError, PermissionError) as exc:
@@ -156,9 +173,3 @@ class SubprocessGateRunner:
             stdout.decode(errors="replace"),
             stderr.decode(errors="replace"),
         )
-
-    def _environment(self) -> dict[str, str]:
-        env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
-        if not self._isolate_python_env:
-            return env
-        return isolate_python_env(env, venv_prefixes=self._python_env.venv_prefixes())

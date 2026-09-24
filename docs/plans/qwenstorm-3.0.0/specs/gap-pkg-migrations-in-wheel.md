@@ -95,4 +95,4 @@ Commit as `fix(packaging): ship the migrations in the wheel and resolve them the
 - **Depends on:** none.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

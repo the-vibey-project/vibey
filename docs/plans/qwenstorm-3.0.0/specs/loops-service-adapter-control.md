@@ -8,7 +8,7 @@ Lane `loops-service-adapter-run` implemented `ServiceEngineAdapter.start`/`tail`
 `release_diagnostics` -- the three methods a BUILD job's happy path needs -- and left every other
 `EngineAdapter` method for this lane, because a run's mid-flight controls (a prompt, a stop, wind
 down) are a different conversation over the bus: `vibey.run.control/1`
-(`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:167`), consumed by
+(`STORM/specs/ADR-two-loops.md:167`), consumed by
 `loops-control-and-dead-letters`' `ControlConsumer` and answered by whichever `SeatHost` actually
 holds the run (`SeatHost.control`, lane `loops-seat-host-drain`). §3's queue table
 (`:152`): "`vibey.runs.control` | topic exchange | each loop binds `<loop>` and `all`". ADR-0044's

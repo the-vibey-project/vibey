@@ -77,11 +77,14 @@ no grant can stop it.
      the guard. It exits 1 when the guard is not in force.
 3. **Where each DSN goes.**
    - In the Helm chart, the owner's DSN is mounted only into a `migrate` init container
-     (worker and operator). The workloads get the application's DSN.
-   - `build_app()` migrates only on an owner connection when `VIBEY_PG_MIGRATE_URL` is set.
-   - Without the owner's DSN, `build_app()` migrates on the application's connection only
-     when that role may migrate: a superuser or a member of the migration catalog's owner.
-     That is a single-DSN install.
+     (worker and operator). The workloads get the application's DSN, and each surface
+     database has a role of its own.
+   - Only `vibey migrate` reads `VIBEY_PG_MIGRATE_URL`. `build_app()` never does, so no
+     process that runs engine sessions or gate commands holds the owner's DSN (amended
+     after the review of #1100, which found the first version read it there).
+   - `build_app()` migrates on the application's connection only when that role may
+     migrate: a superuser or a member of the migration catalog's owner. That is a
+     single-DSN install.
    - Otherwise it verifies the schema without DDL and refuses to start on a stale one
      (`SchemaNotMigrated`).
    - The test harness runs the whole suite this way. `VIBEY_PG_URL` names a restricted
@@ -95,9 +98,9 @@ no grant can stop it.
    - `vibey worker` says so on stderr at every start;
    - `vibey migrate` exits 1.
 
-   The path: set `VIBEY_PG_MIGRATE_URL` to the current (owner) DSN, give `VIBEY_PG_URL` a
-   new role name and password, and run `vibey migrate`, which creates that role and grants
-   it.
+   The path: give `VIBEY_PG_URL` a new role name and password, then run
+   `VIBEY_PG_MIGRATE_URL=<the current DSN> vibey migrate` (never exported), which creates
+   that role and grants it.
 5. **Password-less access is checked too.** The split protects the ledger only once the
    owner and every superuser need a password to connect. `LocalAuthProbe` finds out two
    ways:
@@ -126,11 +129,59 @@ every role, so the application role can create tables there. That cannot touch t
 and `may_migrate` does not mistake it for the owner.
 
 **Not closed.**
-- The owner can still disable the triggers. The owner's DSN is the thing to guard: it
-  reaches only the `migrate` step.
+- The triggers refuse the owner's DML, not its DDL. The owner can still disable a trigger,
+  `DROP` a partition, `DETACH` one and `DELETE` from it, or `TRUNCATE` a partition created
+  since the last `vibey migrate`. The owner's DSN is the thing to guard: only `vibey
+  migrate` reads it, and in the chart only the `migrate` init container holds it.
+  DDL-refusing event triggers (`ddl_command_start`, `sql_drop`) are future work; they need
+  a superuser to install.
 - A superuser can do anything; hence item 5.
+- The application role can `INSERT` directly into `event`, so it can forge `provenance`,
+  `seq` or `produced_at`, and it can `UPDATE` `event_seq`. It cannot rewrite what is
+  there. A `SECURITY DEFINER` `append_event`, with `EXECUTE` the only privilege on the
+  ledger, would close this; it is the next step (see *Alternatives*).
+- qwenloop's `ShellEnvironment` is hygiene, not a boundary. A process running as the same
+  OS user can still read `~/.pgpass`, a login shell's profile, `/proc/$PPID/environ`, or
+  connect through a trusting socket; item 5 reports the last.
 - The `job` and `project` tables are mutable by design. Their integrity rests on the
   queue's own semantics and the ledger, not on this record.
+
+## Amendment: the review of #1100 (2026-09-24)
+
+An independent review of the merged record found the design sound and five things wrong
+with its first implementation, fixed in a follow-up:
+
+1. **The owner could be hijacked through `public`.** Where the application role may
+   `CREATE` in `public` (PostgreSQL 14's default, and any database upgraded from it), it
+   planted an operator on `(oid, regnamespace)`. The reconcile's unqualified catalog query
+   resolved to it and ran it as the owner, which planted a `SECURITY DEFINER` backdoor and
+   wiped the ledger while `vibey migrate` printed "in force". The fixes:
+   - The owner's session and both guard functions (migration 0017) pin
+     `search_path = pg_catalog, pg_temp`, and every catalog operator is named by schema.
+   - `vibey migrate` revokes `CREATE` on `public` from `PUBLIC` before any migration runs.
+   - The reconcile revokes `CREATE` on `public` and on the database from the application
+     role.
+   - `ledger-guard` fails when the application role may create, owns any object, or may
+     call a `SECURITY DEFINER` function that runs as the owner or a superuser.
+2. **The owner's DSN reached model-driven processes.** `build_app()` read
+   `VIBEY_PG_MIGRATE_URL`, and the README exported it. Only `vibey migrate` reads it now,
+   given for that one command.
+3. **The chart gave the owner's credentials to Plane and Infisical.** Each surface
+   database now has a login role of its own, created and handed its database by the
+   postgres container on every start.
+4. **An existing-Secret install could be stranded on upgrade.**
+   `dsn.existingSecretMigrateKey` defaults to empty, so such an install is unchanged until
+   it names an owner key.
+5. **Concurrent reconciles failed with "tuple concurrently updated".** The reconcile takes
+   the migration lock.
+
+The inspector also now requires each trigger enabled for every session, calling the right
+function with the right events, and the function's body unchanged (by sha256). The
+reconcile refuses a role with `CREATEROLE`, checks membership against the ledger's owner,
+resets default privileges and `PUBLIC`'s grants, revokes `SET` on
+`session_replication_role`, and creates a missing role from a SCRAM verifier, never the
+plaintext. `local-auth` reads percent-encoded socket hosts and `+group`, `/regex` and
+`@file` pg_hba specs.
 
 ## Alternatives rejected
 

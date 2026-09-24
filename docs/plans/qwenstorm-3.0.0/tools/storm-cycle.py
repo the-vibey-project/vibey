@@ -53,12 +53,14 @@ hold a lock on a repository the operator had finished with.
 
 import argparse
 import fcntl
+import os
 import subprocess
 import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+import storm_durability
 import storm_paths
 
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
@@ -205,6 +207,14 @@ def main() -> int:
         help="only run while a storm is running, and exit when it stops",
     )
     args = parser.parse_args()
+
+    if args.run:
+        # A pass writes logs, evidence and lane commits into the storm root. Not on storage
+        # a reboot empties (10.h, ADR-0057): the gate names the key to move it, and exits 78.
+        home, _ = storm_durability.StormHome(os.environ, STORM).resolve()
+        storm_durability.DurabilityGate(
+            storm_durability.VolatileLocations(os.environ), disposable_root=STORM
+        ).enforce({"storm home": home, "storm root": STORM}, storm_durability.MOVE_IT)
 
     if not args.every:
         cycle(dry=not args.run)

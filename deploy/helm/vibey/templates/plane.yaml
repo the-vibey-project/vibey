@@ -17,7 +17,8 @@ type: Opaque
 stringData:
   secret-key: {{ .Values.surfaces.plane.secretKey }}
   amqp-url: {{ $amqpUrl | quote }}
-  database-url: "postgres://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ $fullName }}-postgres:5432/plane?sslmode=disable"
+  # Plane's own role, owner of the `plane` database and nothing else (ADR-0055).
+  database-url: "postgres://plane:{{ include "vibey.surfaceDbPassword" (dict "root" . "name" "plane") }}@{{ $fullName }}-postgres:5432/plane?sslmode=disable"
   redis-url: "redis://{{ $fullName }}-redis:6379/1"
 ---
 apiVersion: v1

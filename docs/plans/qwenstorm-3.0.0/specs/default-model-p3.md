@@ -24,4 +24,4 @@ The config default test and the fit CLI default test in src/vibey_tools/gh/test/
 vibey core and qwenloop (parts 1-2), docs. Commit as `feat(gh)!: ...` with a `BREAKING CHANGE:` footer.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

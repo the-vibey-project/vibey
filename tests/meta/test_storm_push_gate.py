@@ -346,11 +346,12 @@ def test_the_lock_is_keyed_by_a_declared_path(tmp_path: Path) -> None:
     assert PushGateConfig.declared(root, lock=tmp_path / "x").lock == tmp_path / "x"
 
 
-def test_every_threshold_has_a_sane_default(tmp_path: Path) -> None:
+def test_every_threshold_has_a_sane_default(tmp_path: Path, monkeypatch) -> None:
     root = tmp_path / "storm"
     root.mkdir()
+    monkeypatch.setenv("VIBEY_STORM_HOME", str(tmp_path))
     silent = PushGateConfig.declared(root)
-    # Beside the storm root, where the lanes and the storm share one parent directory.
+    # In the storm home, where the lanes and the storm share one durable directory (10.h).
     assert silent.lock == tmp_path / ".push-lock"
     assert silent.idle_cpu_seconds == push_gate.IDLE_CPU_SECONDS == 2.0
     assert silent.idle_window_seconds == push_gate.IDLE_WINDOW_SECONDS == 600.0

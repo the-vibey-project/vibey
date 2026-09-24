@@ -59,4 +59,4 @@ Append to `tests/application/test_engine_selector.py`:
 Commit as `feat(rotation): selection uses measured evidence`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

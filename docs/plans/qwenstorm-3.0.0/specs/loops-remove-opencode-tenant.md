@@ -19,7 +19,7 @@ and the console-script contract (`:827`), and forbidden to shared code
 
 ## Required behaviour
 0. **Gate (ADR-0046 §9: live conformance first).** Unless
-   `grep "V-VS CONFORMANCE: PASS" /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`
+   `grep "V-VS CONFORMANCE: PASS" STORM/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`
    prints a line naming Arch Linux and a line naming macOS, change nothing and report
    `gated: vscode has not passed live conformance on both OSes`.
 1. `git rm -r src/vibey_runners/opencode`.
@@ -96,4 +96,4 @@ and the console-script contract (`:827`), and forbidden to shared code
 **Depends on:** `loops-retire-opencode-id`, `loops-vscodeloop-scaffold`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

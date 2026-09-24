@@ -614,3 +614,60 @@ async def test_a_free_run_is_not_reported_to_the_recorder(tmp_path: Path) -> Non
     await process.run(spec(tmp_path))
 
     assert seen == []
+
+
+async def test_the_design_session_is_spawned_with_claudeloops_environment_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """DESIGN and DECOMPOSE run claudeloop too, and it runs shell commands the model
+    chose. It gets claudeloop's allow-listed environment, not the worker's copy."""
+    from vibey.infrastructure.engines.descriptors import CLAUDELOOP
+    from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
+
+    monkeypatch.setenv("VIBEY_PG_URL", "postgresql://vibey:secret@db/vibey")
+    monkeypatch.setenv("GH_TOKEN", "ghp_secret")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "own-credential")
+    captured: dict[str, object] = {}
+
+    class _Done:
+        returncode = 0
+
+        async def communicate(self) -> tuple[bytes, bytes]:
+            return b"", b""
+
+    async def fake_create(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        return _Done()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create)
+    await AsyncSubprocessExecutor().execute(("claudeloop", "run"))
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env == EngineEnvironmentPolicy().environment(CLAUDELOOP).build()
+    assert env["ANTHROPIC_API_KEY"] == "own-credential"
+    assert "VIBEY_PG_URL" not in env
+    assert "GH_TOKEN" not in env
+
+
+async def test_an_injected_environment_is_the_one_used(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    class _Done:
+        returncode = 0
+
+        async def communicate(self) -> tuple[bytes, bytes]:
+            return b"", b""
+
+    class _Fixed:
+        def build(self) -> dict[str, str]:
+            return {"ONLY": "this"}
+
+    async def fake_create(*argv, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        return _Done()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create)
+    await AsyncSubprocessExecutor(environment=_Fixed()).execute(("claudeloop", "run"))
+
+    assert captured["env"] == {"ONLY": "this"}

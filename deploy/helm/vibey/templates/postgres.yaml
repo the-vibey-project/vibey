@@ -7,15 +7,59 @@ metadata:
   name: {{ $fullName }}-postgres-init
   labels: {{- include "vibey.labels" . | nindent 4 }}
 data:
+  # Each additional database is owned by a login role of its own, never by the owner
+  # (ADR-0055): a surface pod holds its own database's credentials and nothing that
+  # reaches vibey's ledger. The image's initdb sources this on first boot; the
+  # container's postStart runs it with --wait on every start, so an existing install
+  # has its databases -- and everything already in them -- handed over on upgrade.
   01-init-additional-databases.sh: |
     #!/bin/sh
-    set -e
+    vibey_surface_roles() {
     {{- range .Values.postgres.additionalDatabases }}
-    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-        SELECT 'CREATE DATABASE {{ . }}' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{{ . }}')\gexec
-        GRANT ALL PRIVILEGES ON DATABASE {{ . }} TO $POSTGRES_USER;
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+        -v role={{ . | quote }} -v pw="${{ include "vibey.surfaceDbPasswordEnv" . }}" <<'EOSQL' || return 1
+    SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role')\gexec
+    SELECT format('ALTER ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD %L', :'role', :'pw')\gexec
+    SELECT format('CREATE DATABASE %I OWNER %I', :'role', :'role') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'role')\gexec
+    SELECT format('ALTER DATABASE %I OWNER TO %I', :'role', :'role')\gexec
+    EOSQL
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname {{ . | quote }} -v role={{ . | quote }} <<'EOSQL' || return 1
+    SELECT format('ALTER SCHEMA public OWNER TO %I', :'role')\gexec
+    SELECT format('ALTER TABLE %s OWNER TO %I', c.oid::regclass, :'role')
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public'
+       AND (c.relkind IN ('r', 'p', 'v', 'm', 'f')
+            OR (c.relkind = 'S' AND NOT EXISTS (
+                SELECT 1 FROM pg_depend d WHERE d.objid = c.oid AND d.deptype IN ('a', 'i'))))
+       AND c.relowner <> (SELECT oid FROM pg_roles WHERE rolname = :'role')
+       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = c.oid AND d.deptype = 'e')\gexec
+    SELECT format('ALTER ROUTINE %s OWNER TO %I', p.oid::regprocedure, :'role')
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'public' AND p.prokind IN ('f', 'p')
+       AND p.proowner <> (SELECT oid FROM pg_roles WHERE rolname = :'role')
+       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')\gexec
+    SELECT format('ALTER %s %s OWNER TO %I', CASE t.typtype WHEN 'd' THEN 'DOMAIN' ELSE 'TYPE' END, t.oid::regtype, :'role')
+      FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+     WHERE n.nspname = 'public' AND t.typtype IN ('e', 'd', 'c')
+       AND NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.reltype = t.oid AND c.relkind <> 'c')
+       AND t.typowner <> (SELECT oid FROM pg_roles WHERE rolname = :'role')
+       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = t.oid AND d.deptype = 'e')\gexec
     EOSQL
     {{- end }}
+    }
+    if [ "${1:-}" = "--wait" ]; then
+      attempt=0
+      while [ "$attempt" -lt 90 ]; do
+        if pg_isready -q -h /var/run/postgresql -U "$POSTGRES_USER" -d "$POSTGRES_DB" && vibey_surface_roles; then
+          exit 0
+        fi
+        attempt=$((attempt + 1))
+        sleep 2
+      done
+      echo "could not give each surface database a role of its own" >&2
+      exit 1
+    fi
+    vibey_surface_roles
 ---
 {{- end }}
 apiVersion: v1
@@ -43,6 +87,9 @@ stringData:
   dsn: postgresql://{{ .Values.postgres.appRole.name }}:{{ .Values.postgres.appRole.password }}@{{ $fullName }}-postgres.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:5432/{{ .Values.postgres.database }}
   migrate-dsn: postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ $fullName }}-postgres.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}:5432/{{ .Values.postgres.database }}
   password: {{ .Values.postgres.password | quote }}
+  {{- range .Values.postgres.additionalDatabases }}
+  db-password-{{ . }}: {{ include "vibey.surfaceDbPassword" (dict "root" $ "name" .) | quote }}
+  {{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -95,6 +142,13 @@ spec:
                 secretKeyRef:
                   name: {{ $fullName }}-dsn
                   key: password
+            {{- range .Values.postgres.additionalDatabases }}
+            - name: {{ include "vibey.surfaceDbPasswordEnv" . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $fullName }}-dsn
+                  key: db-password-{{ . }}
+            {{- end }}
             # The default mount point is the volume root; initdb refuses a
             # non-empty directory, and a PVC arrives with lost+found.
             - name: PGDATA
@@ -106,6 +160,15 @@ spec:
             - name: init-scripts
               mountPath: /docker-entrypoint-initdb.d
             {{- end }}
+          {{- if .Values.postgres.additionalDatabases }}
+          # Every start, not only the first: an install from before each surface had a
+          # role of its own gets them here (ADR-0055). The container is not Running,
+          # and so not Ready, until this returns.
+          lifecycle:
+            postStart:
+              exec:
+                command: ["sh", "/docker-entrypoint-initdb.d/01-init-additional-databases.sh", "--wait"]
+          {{- end }}
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "{{ .Values.postgres.user }}", "-d", "{{ .Values.postgres.database }}"]

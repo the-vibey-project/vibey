@@ -464,6 +464,7 @@ jobs:
                 --model 'gpt-oss:20b' \
                 --base-url "${VIBEY_OLLAMA_URL:-http://127.0.0.1:11434}" \
                 --max-chars 60000 \
+                --max-document-chars 120000 \
                 --timeout 1800 \
                 --context-window 65536 \
                 --reasoning-reserve 8192 \

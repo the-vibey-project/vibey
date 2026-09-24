@@ -101,7 +101,6 @@ from vibey.infrastructure.db.job_priority_repository import PostgresJobPriorityS
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
 from vibey.infrastructure.db.ledger_guard import (
     DatabaseEndpoints,
-    DatabaseRoleReconciler,
     LedgerGuardInspector,
     LedgerGuardStatus,
 )
@@ -118,6 +117,7 @@ from vibey.infrastructure.docs.in_memory import InMemoryDocs
 from vibey.infrastructure.email.forward_email import ForwardEmailAdapter
 from vibey.infrastructure.email.in_memory import InMemoryEmail
 from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCRIPTORS
+from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.local_engines import (
     LocalEndpointEnvironment,
     LocalEngineSettings,
@@ -394,6 +394,14 @@ def build_full_worker(
     local = LocalEngineSettings(environ=os.environ, config=project.config)
     for engine_id, local_adapter in local.adapters(LocalEndpointEnvironment(os.environ)).items():
         adapters.setdefault(engine_id, local_adapter)
+    # What each engine session may see of this worker's environment: an allow-list,
+    # widened only by the project's `engine_environment` object and never onto vibey's
+    # own DSN. Built here, from the project record, so a malformed or forbidden
+    # declaration stops the worker before any session starts (12.h).
+    engine_environment = EngineEnvironmentPolicy.from_config(project.config)
+    adapters = {
+        engine_id: engine_environment.applied_to(adapter) for engine_id, adapter in adapters.items()
+    }
     azure = azure_client if azure_client is not None else InMemoryAzureClientAdapter()
     clock = resources.clock
     notifications = getattr(resources, "notifications", None)
@@ -725,7 +733,8 @@ async def build_app(
     # Read before the pool opens, so a bad VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS
     # fails the start before anything touches the database.
     migrator: MigratorInterface = PostgresMigrator.from_environ(os.environ)
-    endpoints = DatabaseEndpoints.from_environ(os.environ, app_url=url or database_url())
+    # The application role's DSN only: build_app never reads the owner's (ADR-0055).
+    endpoints = DatabaseEndpoints(app_url=url or database_url())
     pool = await asyncpg.create_pool(endpoints.app_url, min_size=1, max_size=10)
     if pool is None:
         raise RuntimeError("asyncpg did not create a pool")
@@ -735,15 +744,12 @@ async def build_app(
             server_version = parse_postgres_server_version(server_version_num)
             if server_version is None or not server_version.supported:
                 raise UnsupportedPostgresVersion(server_version_num)
-            # Migrate with the role allowed to (the owner's DSN when the roles are
-            # split), then ask, as the application, whether it could rewrite the
+            # Migrate when this role may (a single-DSN install), else verify; then ask, as the application, whether it could rewrite the
             # ledger (ADR-0055). A single-DSN install still starts -- an upgrade never
             # strands one -- but the worker says so at every start (not every CLI
             # command, whose stdout may be JSON), and `vibey doctor` fails on it.
             preparer: SchemaPreparerInterface = SchemaPreparer(
-                migrator=migrator,
-                reconciler=DatabaseRoleReconciler(),
-                inspector=LedgerGuardInspector(),
+                migrator=migrator, inspector=LedgerGuardInspector()
             )
             guard = await preparer.prepare(conn, endpoints, discover_migrations(migrations_dir()))
 
