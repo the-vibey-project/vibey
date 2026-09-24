@@ -757,7 +757,12 @@ def test_run_hands_the_declared_empty_reply_bound_to_the_runner(
     isolated_settings: Path,
     recording_runner: list[dict[str, object]],
 ) -> None:
-    isolated_settings.write_text("max_empty_reply_retries = 5\n", encoding="utf-8")
+    isolated_settings.write_text(
+        "max_empty_reply_retries = 5\n"
+        "max_recorded_argument_chars = 64\n"
+        "empty_reply_reasoning_excerpt_chars = 32\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
     plan = tmp_path / "plan.md"
     plan.write_text("do it")
@@ -765,7 +770,12 @@ def test_run_hands_the_declared_empty_reply_bound_to_the_runner(
         app, ["run", str(plan), "--cwd", str(tmp_path), "--backend", "openai-compat"]
     )
     assert result.exit_code == 0, result.output
-    assert recording_runner[0]["max_empty_reply_retries"] == 5
+    call = recording_runner[0]
+    assert (
+        call["max_empty_reply_retries"],
+        call["max_recorded_argument_chars"],
+        call["empty_reply_reasoning_excerpt_chars"],
+    ) == (5, 64, 32)
 
 
 def test_storm_hands_the_declared_empty_reply_bound_to_every_run(
@@ -775,7 +785,11 @@ def test_storm_hands_the_declared_empty_reply_bound_to_every_run(
     recording_runner: list[dict[str, object]],
 ) -> None:
     (tmp_path / "a" / ".git").mkdir(parents=True)
-    isolated_settings.write_text("max_empty_reply_retries = 0\n", encoding="utf-8")
+    isolated_settings.write_text(
+        "max_empty_reply_retries = 0\nmax_recorded_argument_chars = 7\n"
+        "empty_reply_reasoning_excerpt_chars = 0\n",
+        encoding="utf-8",
+    )
     monkeypatch.setenv("QWENLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
     monkeypatch.setattr("urllib.request.urlopen", FakeHttp())
     _no_managed_servers(monkeypatch)
@@ -783,7 +797,14 @@ def test_storm_hands_the_declared_empty_reply_bound_to_every_run(
     monkeypatch.setattr("qwenloop.cli.app.list_open_pull_requests", lambda _owner, _repo: None)
     result = runner.invoke(app, ["run", "--storm", "--repos-root", str(tmp_path), "--repo", "a"])
     assert result.exit_code == 0, result.output
-    assert [call["max_empty_reply_retries"] for call in recording_runner] == [0]
+    assert [
+        (
+            call["max_empty_reply_retries"],
+            call["max_recorded_argument_chars"],
+            call["empty_reply_reasoning_excerpt_chars"],
+        )
+        for call in recording_runner
+    ] == [(0, 7, 0)]
 
 
 def test_run_fails_loudly_when_the_endpoint_lacks_the_model(

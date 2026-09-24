@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from qwenloop.application.interfaces import AutonomousRunnerInterface
 from qwenloop.application.runner import (
     _EMPTY_REPLY_PROMPT,
     AutonomousRunner,
@@ -1000,7 +1001,12 @@ def _empty(**kwargs: object) -> list[ChatChunk]:
 async def test_an_empty_reply_is_recorded_and_retried_with_a_nudge(tmp_path: Path) -> None:
     server = ScriptedServer(
         [
-            _empty(input_tokens=900, output_tokens=11, finish_reason="stop", reasoning_chars=37),
+            _empty(
+                input_tokens=900,
+                output_tokens=11,
+                finish_reason="stop",
+                reasoning="The user wants me to act.",
+            ),
             [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "x"}})],
             [ChatChunk(text=_DONE)],
         ]
@@ -1021,7 +1027,7 @@ async def test_an_empty_reply_is_recorded_and_retried_with_a_nudge(tmp_path: Pat
     events = _events(tmp_path, "nudge")
     empty = [event for event in events if event["type"] == "turn.empty"]
     # what the empty turn actually contained: how it ended, what it cost, whether the
-    # model reasoned; the reasoning's length only, never its content
+    # model reasoned, and how its reasoning began (a capped excerpt, recorded as data)
     assert empty == [
         {
             "type": "turn.empty",
@@ -1030,7 +1036,9 @@ async def test_an_empty_reply_is_recorded_and_retried_with_a_nudge(tmp_path: Pat
             "input_tokens": 900,
             "output_tokens": 11,
             "reasoning_present": True,
-            "reasoning_chars": 37,
+            "reasoning_chars": len("The user wants me to act."),
+            "reasoning_excerpt": "The user wants me to act.",
+            "reasoning_excerpt_truncated": False,
             "empty_replies": 1,
             "max_empty_reply_retries": 2,
             "retrying": True,
@@ -1057,11 +1065,13 @@ async def test_an_empty_reply_without_finish_reason_or_reasoning_says_so(tmp_pat
         run_id="bare", plan="do it", cwd=tmp_path, profile=PORTABLE, server_info=info, max_turns=2
     )
     empty = next(event for event in _events(tmp_path, "bare") if event["type"] == "turn.empty")
-    assert (empty["finish_reason"], empty["reasoning_present"], empty["reasoning_chars"]) == (
-        None,
-        False,
-        0,
-    )
+    assert (
+        empty["finish_reason"],
+        empty["reasoning_present"],
+        empty["reasoning_chars"],
+        empty["reasoning_excerpt"],
+        empty["reasoning_excerpt_truncated"],
+    ) == (None, False, 0, None, False)
 
 
 @pytest.mark.asyncio
@@ -1214,3 +1224,160 @@ async def test_the_runner_defaults_to_the_declared_empty_reply_bound(tmp_path: P
     )
     meta = json.loads((tmp_path / ".qwenloop" / "runs" / "dflt" / "meta.json").read_text())
     assert meta["max_empty_reply_retries"] == QwenConfig().max_empty_reply_retries
+    assert meta["max_recorded_argument_chars"] == QwenConfig().max_recorded_argument_chars
+    assert (
+        meta["empty_reply_reasoning_excerpt_chars"]
+        == QwenConfig().empty_reply_reasoning_excerpt_chars
+    )
+
+
+def test_the_runner_conforms_to_its_declared_contract(tmp_path: Path) -> None:
+    runner = AutonomousRunner(
+        ScriptedServer([]), FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    )
+    assert isinstance(runner, AutonomousRunnerInterface)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("cap", "excerpt", "truncated"),
+    [(10, "We need t", True), (400, "We need to call read_file.", False), (0, None, False)],
+)
+async def test_an_empty_turn_records_a_capped_excerpt_of_its_reasoning(
+    tmp_path: Path, cap: int, excerpt: str | None, truncated: bool
+) -> None:
+    reasoning = "We need to call read_file."
+    expected = reasoning[:cap] if excerpt is not None else None
+    server = ScriptedServer([_empty(reasoning=reasoning), [ChatChunk(text=_DONE)]])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="excerpt",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=2,
+        empty_reply_reasoning_excerpt_chars=cap,
+    )
+    empty = next(e for e in _events(tmp_path, "excerpt") if e["type"] == "turn.empty")
+    # the excerpt is taken from the start and says when it was cut; the length is always kept
+    assert (empty["reasoning_excerpt"], empty["reasoning_excerpt_truncated"]) == (
+        expected,
+        truncated,
+    )
+    assert empty["reasoning_chars"] == len(reasoning)
+    # model output recorded as data only: it never goes back to the model
+    assert all(reasoning not in message.content for message in server.seen[1])
+
+
+@pytest.mark.asyncio
+async def test_every_tool_call_records_its_name_and_capped_arguments(tmp_path: Path) -> None:
+    body = "x" * 500
+    server = ScriptedServer(
+        [
+            [
+                ChatChunk(
+                    tool_call={
+                        "id": "call-7",
+                        "name": "write_file",
+                        "arguments": {"path": "a.txt", "content": body},
+                    }
+                ),
+                ChatChunk(tool_call={"name": "shell", "arguments": {"argv": ["echo", "hi"]}}),
+                ChatChunk(tool_call={"name": "shell", "arguments": {"argv": ["echo", body]}}),
+            ],
+            [ChatChunk(text=_DONE)],
+        ]
+    )
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="calls",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=3,
+        max_recorded_argument_chars=20,
+    )
+    events = _events(tmp_path, "calls")
+    calls = [event for event in events if event["type"] == "tool.call"]
+    assert calls == [
+        {
+            "type": "tool.call",
+            "turn": 1,
+            "id": "call-7",
+            "name": "write_file",
+            # argument names are always kept; file content never beyond the cap
+            "arguments": {"path": "a.txt", "content": "x" * 20 + "...[truncated 480 characters]"},
+        },
+        {
+            "type": "tool.call",
+            "turn": 1,
+            "id": "qwenloop-turn-1-call-1",
+            "name": "shell",
+            "arguments": {"argv": ["echo", "hi"]},
+        },
+        {
+            "type": "tool.call",
+            "turn": 1,
+            "id": "qwenloop-turn-1-call-2",
+            "name": "shell",
+            # a value that is not a string is capped on its JSON form
+            "arguments": {"argv": '["echo", "xxxxxxxxxx...[truncated 492 characters]'},
+        },
+    ]
+    # the call is recorded before its result, so a crashing tool still leaves the evidence
+    kinds = [event["type"] for event in events if event["type"] in {"tool.call", "tool_result"}]
+    assert kinds[:2] == ["tool.call", "tool_result"]
+    assert body not in json.dumps(calls)
+
+
+@pytest.mark.asyncio
+async def test_a_zero_argument_cap_records_argument_names_only(tmp_path: Path) -> None:
+    server = ScriptedServer(
+        [
+            [ChatChunk(tool_call={"name": "read_file", "arguments": {"path": "secret.txt"}})],
+            [ChatChunk(text=_DONE)],
+        ]
+    )
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="names",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=2,
+        max_recorded_argument_chars=0,
+    )
+    call = next(e for e in _events(tmp_path, "names") if e["type"] == "tool.call")
+    assert call["arguments"] == {"path": "...[truncated 10 characters]"}
+
+
+@pytest.mark.asyncio
+async def test_meta_records_the_recording_caps(tmp_path: Path) -> None:
+    server = ScriptedServer([[ChatChunk(text=_DONE)]])
+    info = ServerInfo(Backend.OPENAI_COMPAT, PORTABLE.name, "http://127.0.0.1", False, True)
+    await AutonomousRunner(
+        server, FileRunStore(tmp_path), SandboxTools(tmp_path), clock=FakeClock()
+    ).run(
+        run_id="recaps",
+        plan="do it",
+        cwd=tmp_path,
+        profile=PORTABLE,
+        server_info=info,
+        max_turns=1,
+        max_recorded_argument_chars=64,
+        empty_reply_reasoning_excerpt_chars=32,
+    )
+    meta = json.loads((tmp_path / ".qwenloop" / "runs" / "recaps" / "meta.json").read_text())
+    assert (meta["max_recorded_argument_chars"], meta["empty_reply_reasoning_excerpt_chars"]) == (
+        64,
+        32,
+    )

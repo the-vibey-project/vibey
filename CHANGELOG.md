@@ -52,10 +52,15 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   retried with a neutral nudge up to `max_empty_reply_retries` consecutive times (default 2,
   `0` restores the old behaviour); each retry is a new model call that spends a turn of
   `max_turns`. Every empty turn writes a `turn.empty` event with its `finish_reason`, token
-  counts and whether the reply carried a reasoning field (its length, never its content). The
+  counts, whether the reply carried a reasoning field, the reasoning's length, and an excerpt
+  of its start capped at `empty_reply_reasoning_excerpt_chars` (default 400, `0` records none),
+  marked when truncated and recorded as data only. Every tool call writes a `tool.call` event
+  with its name and arguments before the tool runs; each argument value is capped at
+  `max_recorded_argument_chars` (default 200), so file content is never recorded whole. The
   `failed` event now names one reason — `empty_response`, `turn_limit` or
   `invalid_completion_claims` — with the run's `turn` and `max_turns`, and `meta.json` records
-  `max_turns` and `max_empty_reply_retries`
+  `max_turns` and every recording cap. `ChatChunk` gains a `ChatChunkInterface` seam, which
+  the runner and the `InferenceServer` port now depend on (ADR-0016)
 
 ## [2.0.0] (2026-09-21)
 

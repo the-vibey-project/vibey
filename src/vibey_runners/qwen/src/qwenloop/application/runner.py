@@ -14,10 +14,14 @@ from qwenloop.application.interfaces import (
     RunStore,
     ToolExecutor,
 )
-from qwenloop.domain.config import DEFAULT_MAX_EMPTY_REPLY_RETRIES
+from qwenloop.domain.config import (
+    DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
+    DEFAULT_MAX_EMPTY_REPLY_RETRIES,
+    DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+)
+from qwenloop.domain.interfaces import ChatChunkInterface
 from qwenloop.domain.model import (
     DONE_MARKER,
-    ChatChunk,
     ChatMessage,
     ModelProfile,
     RunState,
@@ -161,7 +165,7 @@ class AutonomousRunner:
 
     async def _chat(
         self, run_id: str, turn: int, server_info: ServerInfo, state: RunState
-    ) -> AsyncIterator[ChatChunk]:
+    ) -> AsyncIterator[ChatChunkInterface]:
         """One model call for this turn, retried when the server cannot parse the model's
         tool call (#386). The server answers before it yields anything, so a retry never
         repeats a chunk or a tool call; each one is recorded as `turn.retried`."""
@@ -199,6 +203,30 @@ class AutonomousRunner:
         return moment.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
     @staticmethod
+    def _capped(text: str, limit: int) -> str:
+        """`text` cut to `limit` characters, saying how much was cut when anything was."""
+        if len(text) <= limit:
+            return text
+        return f"{text[:limit]}...[truncated {len(text) - limit} characters]"
+
+    @classmethod
+    def _recorded_arguments(cls, arguments: dict[str, object], limit: int) -> dict[str, object]:
+        """A tool call's arguments as `events.jsonl` may keep them.
+
+        Every argument name is kept, so what the model tried to send is never a guess. A
+        value is cut to `limit`: a string directly, anything else on its JSON form, so a
+        write_file body or a long argv never lands in the run's evidence whole.
+        """
+        recorded: dict[str, object] = {}
+        for key, value in arguments.items():
+            if isinstance(value, str):
+                recorded[key] = cls._capped(value, limit)
+                continue
+            encoded = json.dumps(value, default=str)
+            recorded[key] = value if len(encoded) <= limit else cls._capped(encoded, limit)
+        return recorded
+
+    @staticmethod
     def _server_settings(info: ServerInfo) -> dict[str, object]:
         """What the model server was running with: the argv qwenloop started it with, or,
         for an endpoint somebody else runs, where it is."""
@@ -224,6 +252,8 @@ class AutonomousRunner:
         server_info: ServerInfo,
         max_turns: int,
         max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES,
+        max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+        empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
     ) -> RunState:
         state = RunState(run_id=run_id, status=RunStatus.RUNNING)
         # Consecutive turns with no tool call and no text. Each retry is its own model call
@@ -259,6 +289,8 @@ class AutonomousRunner:
                 # The bounds this run was held to, so a failure can be attributed to them.
                 "max_turns": max_turns,
                 "max_empty_reply_retries": max_empty_reply_retries,
+                "max_recorded_argument_chars": max_recorded_argument_chars,
+                "empty_reply_reasoning_excerpt_chars": empty_reply_reasoning_excerpt_chars,
             },
         )
         await self._notify("Qwen run started", f"Run {run_id} started.")
@@ -283,7 +315,7 @@ class AutonomousRunner:
             answered: float | None = None
             server_timings: dict[str, float] | None = None
             finish_reason: str | None = None
-            reasoning_chars: int | None = None
+            reasoning: str | None = None
             async for chunk in self._chat(run_id, turn, server_info, state):
                 if answered is None:
                     answered = self._clock.monotonic()
@@ -291,8 +323,8 @@ class AutonomousRunner:
                     server_timings = dict(chunk.timings)
                 if chunk.finish_reason is not None:
                     finish_reason = chunk.finish_reason
-                if chunk.reasoning_chars is not None:
-                    reasoning_chars = chunk.reasoning_chars
+                if chunk.reasoning is not None:
+                    reasoning = chunk.reasoning
                 state.input_tokens += chunk.input_tokens
                 state.output_tokens += chunk.output_tokens
                 if chunk.text:
@@ -329,6 +361,20 @@ class AutonomousRunner:
                                 "arguments": json.dumps(arguments, separators=(",", ":")),
                             },
                         }
+                    )
+                    # What the model asked for, before the tool runs: a tool that crashes or
+                    # hangs still leaves the call it was given in the run's evidence.
+                    self._store.append_event(
+                        run_id,
+                        {
+                            "type": "tool.call",
+                            "turn": turn,
+                            "id": call_id,
+                            "name": name,
+                            "arguments": self._recorded_arguments(
+                                arguments, max_recorded_argument_chars
+                            ),
+                        },
                     )
                     result = await self._tools.execute(name, arguments)
                     self._store.append_event(
@@ -402,6 +448,13 @@ class AutonomousRunner:
             if empty:
                 empty_replies += 1
                 retrying = empty_replies <= max_empty_reply_retries
+                # The start of the model's reasoning, as data: it is written to the event
+                # log for a person to read and is never interpreted or sent back to the model.
+                excerpt = (
+                    reasoning[:empty_reply_reasoning_excerpt_chars]
+                    if reasoning is not None and empty_reply_reasoning_excerpt_chars > 0
+                    else None
+                )
                 # What the empty turn actually was, so an empty reply is evidence rather
                 # than a mystery: how the model stopped, what it cost, whether it reasoned.
                 self._store.append_event(
@@ -412,8 +465,11 @@ class AutonomousRunner:
                         "finish_reason": finish_reason,
                         "input_tokens": state.input_tokens - input_before,
                         "output_tokens": state.output_tokens - output_before,
-                        "reasoning_present": reasoning_chars is not None,
-                        "reasoning_chars": reasoning_chars or 0,
+                        "reasoning_present": reasoning is not None,
+                        "reasoning_chars": len(reasoning or ""),
+                        "reasoning_excerpt": excerpt,
+                        "reasoning_excerpt_truncated": excerpt is not None
+                        and len(excerpt) < len(reasoning or ""),
                         "empty_replies": empty_replies,
                         "max_empty_reply_retries": max_empty_reply_retries,
                         "retrying": retrying,

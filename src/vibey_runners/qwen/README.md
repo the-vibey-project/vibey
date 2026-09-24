@@ -122,6 +122,8 @@ model, not qwenloop.
 | Backend | `--backend` | — | `backend` | `auto` |
 | Turn limit | `--max-turns` | — | `max_turns` | `40` |
 | Consecutive empty replies retried before a run fails | — | — | `max_empty_reply_retries` | `2` |
+| Characters of each tool-call argument value recorded in `events.jsonl` | — | — | `max_recorded_argument_chars` | `200` |
+| Characters of an empty reply's reasoning recorded as an excerpt | — | — | `empty_reply_reasoning_excerpt_chars` | `400` |
 | Server startup wait (seconds) | — | — | `startup_timeout_seconds` | `180` |
 | Context window (tokens) | — | — | `context_window` | `32768` |
 

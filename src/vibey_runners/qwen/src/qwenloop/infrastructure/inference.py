@@ -206,7 +206,7 @@ class OpenAIServer:
             output_tokens=int(usage.get("completion_tokens", 0)),
             timings=self._server_timings(data.get("timings")),
             finish_reason=self._finish_reason(choice.get("finish_reason")),
-            reasoning_chars=self._reasoning_chars(message),
+            reasoning=self._reasoning(message),
         )
 
     async def stop(self, info: ServerInfo) -> None:
@@ -262,18 +262,18 @@ class OpenAIServer:
         return value if isinstance(value, str) and value else None
 
     @staticmethod
-    def _reasoning_chars(message: dict[str, object]) -> int | None:
-        """How long the reply's separate reasoning was, or None when it carried none.
+    def _reasoning(message: dict[str, object]) -> str | None:
+        """The reply's separate reasoning text, or None when it carried none.
 
         Reasoning models answer with it beside `content`: Ollama's OpenAI API names it
         `reasoning`, vLLM and DeepSeek-style servers `reasoning_content`, Ollama's native
-        API `thinking`. Only its length leaves this adapter; the text is the model's
-        scratch work, not something a run records or feeds back to it.
+        API `thinking`. It is passed on untouched; how much of it a run records is the
+        runner's declared cap, and it never re-enters the transcript.
         """
         for key in _REASONING_KEYS:
             value = message.get(key)
             if isinstance(value, str):
-                return len(value)
+                return value
         return None
 
     @staticmethod

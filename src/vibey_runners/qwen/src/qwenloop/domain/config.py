@@ -19,6 +19,13 @@ DEFAULT_ENDPOINT_MODEL = "gpt-oss:20b"
 #: ended on the first one. Each retry is a new model call and spends a turn of `max_turns`,
 #: so the turn cap still bounds the run. 0 restores fail-on-first-empty.
 DEFAULT_MAX_EMPTY_REPLY_RETRIES = 2
+#: How many characters of each tool-call argument value `events.jsonl` keeps. Argument names
+#: are always recorded; a value longer than this (a write_file body, a long argv) is cut to
+#: it and marked, so a run's evidence never carries a whole file. 0 keeps names only.
+DEFAULT_MAX_RECORDED_ARGUMENT_CHARS = 200
+#: How many characters from the start of an empty reply's reasoning a `turn.empty` event
+#: keeps, beside the reasoning's full length. 0 records no excerpt at all.
+DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS = 400
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,6 +38,8 @@ class QwenConfig:
     context_window: int = 32_768
     max_turns: int = 40
     max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES
+    max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS
+    empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS
     # The OpenAI-compatible base URL to attach to, `/v1` included. Empty means none is
     # configured, and `auto` selection then never picks the openai-compat backend.
     base_url: str = ""
@@ -79,8 +88,16 @@ class QwenConfigParser:
             ),
             context_window=int(data.get("context_window", defaults.context_window)),
             max_turns=int(data.get("max_turns", defaults.max_turns)),
-            max_empty_reply_retries=int(
-                data.get("max_empty_reply_retries", defaults.max_empty_reply_retries)
+            max_empty_reply_retries=self._bound(
+                data, "max_empty_reply_retries", defaults.max_empty_reply_retries
+            ),
+            max_recorded_argument_chars=self._bound(
+                data, "max_recorded_argument_chars", defaults.max_recorded_argument_chars
+            ),
+            empty_reply_reasoning_excerpt_chars=self._bound(
+                data,
+                "empty_reply_reasoning_excerpt_chars",
+                defaults.empty_reply_reasoning_excerpt_chars,
             ),
             base_url=self._base_url(str(data.get("base_url", defaults.base_url))),
             model=str(data.get("model", defaults.model)).strip(),
@@ -90,8 +107,6 @@ class QwenConfigParser:
         )
         if config.idle_timeout_seconds < 0:
             raise ValueError("idle_timeout_seconds must be non-negative")
-        if config.max_empty_reply_retries < 0:
-            raise ValueError("max_empty_reply_retries must be non-negative")
         if (
             config.startup_timeout_seconds <= 0
             or config.context_window <= 0
@@ -102,6 +117,19 @@ class QwenConfigParser:
         if not config.model:
             raise ValueError("model must name the model the endpoint serves")
         return config
+
+    @staticmethod
+    def _bound(data: Mapping[str, Any], key: str, default: int) -> int:
+        """A count or cap: a finite, non-negative integer, or ValueError naming the key.
+
+        Strict on purpose. TOML can spell `inf`, `nan` and `1.5`, and `int()` would turn the
+        first into an OverflowError and quietly floor the last; `true` is an int to Python.
+        None of those is a bound anybody meant to set.
+        """
+        value = data.get(key, default)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{key} must be a non-negative integer, got {value!r}")
+        return value
 
     @staticmethod
     def _base_url(value: str) -> str:

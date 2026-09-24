@@ -107,9 +107,10 @@ class ChatChunk:
     timings: Mapping[str, float] | None = None
     # Why the model stopped (`stop`, `length`, `tool_calls`, ...); None when not reported.
     finish_reason: str | None = None
-    # Length of the reply's separate reasoning field (gpt-oss on Ollama sends one), in
-    # characters; None when the server sent no reasoning at all. Never its content.
-    reasoning_chars: int | None = None
+    # The reply's separate reasoning text (gpt-oss on Ollama sends one); None when the
+    # server sent none. Model output: the runner records a capped excerpt of it as data and
+    # never feeds it back to the model. Kept out of repr, which could otherwise be huge.
+    reasoning: str | None = field(default=None, repr=False)
 
 
 class ToolCallParseError(RuntimeError):
