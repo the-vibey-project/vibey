@@ -1442,3 +1442,93 @@ def test_the_witness_is_fsynced_with_its_directory(
     desk(root).bump("c", None)
     # the log line, the pending witness, then the directory holding the rename
     assert synced.count("file") >= 2 and "dir" in synced
+
+
+# --- the review of #1092 at bb5df834: a refusal never re-witnesses a shortened log --------
+
+REVIEWED = "a 1\nb 2\nc 3\nd 4\n"
+
+
+def _truncate_to_empty(log: Path) -> None:
+    log.write_bytes(b"")
+
+
+def _truncate_to_first_line(log: Path) -> None:
+    log.write_bytes(log.read_bytes().splitlines(keepends=True)[0])
+
+
+def _refuse_a_bad_name(root: Path) -> None:
+    desk(root).bump("x y", None)
+
+
+def _refuse_a_lane(root: Path) -> None:
+    inside = storm_queue.Authority(root, sources=(), environ={"VIBEY_STORM_LANE": "l"})
+    storm_queue.PriorityDesk.at(root, authority=inside).bump("a", None)
+
+
+@pytest.mark.parametrize(
+    "damage", [_truncate_to_empty, _truncate_to_first_line], ids=["to-empty", "to-first-line"]
+)
+@pytest.mark.parametrize(
+    "refusal", [_refuse_a_bad_name, _refuse_a_lane], ids=["invalid-name", "lane-marker"]
+)
+def test_a_refusal_never_appends_to_a_truncated_log(
+    tmp_path: Path, damage: object, refusal: object
+) -> None:
+    """The reviewer's probe7: a refusal met a shortened log, appended, and rewrote the
+    witness to the new length -- so the resolver ran `a` (or lost d's bump) instead of
+    exiting 3. Nothing may be written: not the log, not the witness."""
+    root = storm(tmp_path, queue=REVIEWED)
+    desk(root).bump("c", None)
+    desk(root).bump("d", None)
+    log = storm_paths.priority_log(root)
+    damage(log)  # type: ignore[operator]
+    with pytest.raises(storm_queue.Unreadable, match="truncated"):
+        storm_queue.Resolver.at(root).plan()
+    log_before, witness_before = log.read_bytes(), witness(root).read_bytes()
+    with pytest.raises(storm_queue.Unreadable, match="truncated"):
+        refusal(root)  # type: ignore[operator]
+    assert "not recorded, order unknown" in progress(root)[-1]
+    assert log.read_bytes() == log_before
+    assert witness(root).read_bytes() == witness_before
+    with pytest.raises(storm_queue.Unreadable, match="truncated"):
+        storm_queue.Resolver.at(root).next()
+
+
+@pytest.mark.parametrize("content", ["", "{not json", '{"length": "many"}'])
+def test_a_refusal_never_rewrites_an_unreadable_witness(tmp_path: Path, content: str) -> None:
+    root = storm(tmp_path, queue=REVIEWED)
+    desk(root).bump("c", None)
+    witness(root).write_text(content)
+    log = storm_paths.priority_log(root)
+    log_before = log.read_bytes()
+    for refusal in (_refuse_a_bad_name, _refuse_a_lane):
+        with pytest.raises(storm_queue.Unreadable):
+            refusal(root)
+        assert log.read_bytes() == log_before
+        assert witness(root).read_text() == content
+    with pytest.raises(storm_queue.Unreadable):
+        storm_queue.Resolver.at(root).plan()
+
+
+def test_the_cli_exits_3_for_a_refusal_meeting_a_truncated_log(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, REVIEWED)
+    assert priority_cli(root, env, "bump", "c").returncode == 0
+    assert priority_cli(root, env, "bump", "d").returncode == 0
+    _truncate_to_first_line(storm_paths.priority_log(root))
+    before = witness(root).read_bytes()
+    assert priority_cli(root, env, "bump", "x y").returncode == 3
+    assert priority_cli(root, env, "list").returncode == 3
+    assert witness(root).read_bytes() == before
+
+
+def test_a_lane_refusal_of_reset_on_a_lost_log_says_the_log_is_lost(tmp_path: Path) -> None:
+    """Not "no write access": the lane can write; the log is lost, so nothing is recorded."""
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\n")
+    assert priority_cli(root, env, "bump", "b").returncode == 0
+    storm_paths.priority_log(root).unlink()
+    done = reset_cli(root, {**env, "VIBEY_STORM_LANE": "x"})
+    assert done.returncode == 1
+    assert "no write access" not in done.stderr
+    assert "could not be recorded" in done.stderr and "lost" in done.stderr
+    assert not storm_paths.priority_log(root).exists()

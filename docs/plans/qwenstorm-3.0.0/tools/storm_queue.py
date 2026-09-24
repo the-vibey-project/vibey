@@ -84,8 +84,8 @@ glob does not match) records the log's length; the evidence watermark records ho
 has read. If either says the log existed and it is gone, or the log is shorter than recorded,
 the order is unknown (`Unreadable`): `next` exits 3 and the runner waits and says so, rather
 than running `queue.txt` in file order as though nothing had been pushed. No request -- not
-even a refusal that must be recorded -- re-creates a lost log: it says so in progress.log and
-exits 3. Both witnesses are files the storm's own uid can rewrite (see `Authority`).
+even a refusal that must be recorded -- re-creates a lost log, appends to a shortened one, or
+rewrites an unreadable witness: it says so in progress.log and exits 3. Both witnesses are files the storm's own uid can rewrite (see `Authority`).
 
 A CALLER WHO CANNOT WRITE
 -------------------------
@@ -141,9 +141,11 @@ RECOVER = (
 class Refusal(Exception):
     """A request refused. `recorded` is False only when the refusal could not be written --
     a caller without write access to the storm -- which is still a refusal (exit 1 or 2),
-    reported as unrecorded, never a crash."""
+    reported as unrecorded, never a crash. `unrecorded` says why it could not be written: no
+    write access, or -- for a refused reset -- a log that is lost or unreadable."""
 
     recorded = True
+    unrecorded = "no write access"
 
 
 class Invalid(Refusal):
@@ -340,7 +342,9 @@ class PriorityLog:
       one SHORTER than recorded (truncated), and so is an unreadable or empty witness: each
       is `Unreadable`, and each message names the way out (`RECOVER`);
     * `append` never creates the log when the witness says it existed, so a refused request
-      meeting a lost log cannot quietly start a fresh, empty one.
+      meeting a lost log cannot quietly start a fresh, empty one; and, under the exclusive
+      lock, it never appends to a log shorter than recorded or beside an unreadable witness,
+      so a refusal cannot re-witness a truncated log as whole. It writes nothing then.
 
     The witness is read inside the same shared lock as the log, against the log's size under
     that lock, so a read racing an append never sees a false truncation. A log LONGER than
@@ -436,7 +440,9 @@ class PriorityLog:
         return named
 
     def append(self, event: dict[str, Any]) -> None:
-        """Append one line and record the new length. Never creates a log that existed."""
+        """Append one line and record the new length. Never creates a log that existed, and
+        never appends to one shorter than recorded or whose witness cannot be read: either
+        would re-witness the damaged log as whole. In those cases nothing is written."""
         if not self.path.is_file() and self.existed() and not self.path.is_file():
             raise Unreadable(
                 f"{self.path} is missing, but it existed: nothing is appended to a fresh one, "
@@ -444,8 +450,16 @@ class PriorityLog:
             )
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a", encoding="utf-8") as handle:
-            # Exclusive for the write and the witness, against `events()`' shared lock.
+            # Exclusive for the check, the write and the witness, against `events()`' shared
+            # lock. `recorded_length` raises `Unreadable` for an empty or corrupt witness.
             fcntl.flock(handle, fcntl.LOCK_EX)
+            size = os.fstat(handle.fileno()).st_size
+            recorded = self.recorded_length()
+            if size < recorded:
+                raise Unreadable(
+                    f"{self.path} is truncated: {size} bytes, but {recorded} were recorded; "
+                    f"nothing is appended to it, so the order stays unknown; {RECOVER}"
+                )
             handle.write(json.dumps({"v": VERSION, **event}, sort_keys=True) + "\n")
             handle.flush()
             os.fsync(handle.fileno())
@@ -1079,6 +1093,7 @@ class PriorityDesk:
             if lost_ok:
                 # A refused reset meets a lost log by its nature: still a refusal (1 or 2).
                 refused.recorded = False
+                refused.unrecorded = "the priority log is lost or unreadable, order unknown"
                 return
             unknown.reported = True
             raise unknown from refused
