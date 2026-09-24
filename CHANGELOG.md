@@ -97,6 +97,18 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **vibey_gh:** the Discord announcement after a docs deploy now says what changed: `vibey-gh
+  announce` posts one line per merged change, grouped Breaking / Added / Fixed / Other, capped
+  at `[announce] max_changes` (default 8) with `…and N more` and a compare link, merge and
+  release chores counted rather than listed, and the surface links last. The message is under
+  Discord's 2000-character limit by construction and escapes every mention, link and markdown
+  character a commit subject carries, and the payload sets `allowed_mentions: {"parse": []}`.
+  The range is a position (sub-doctrine 10.g). Each `Release surfaces` run records its branch
+  and release commit in its `run-name`, and a `Record the announced position` step records
+  that Discord accepted the post. The next announcement starts from there, or says `changes
+  since: unknown` and lists the one commit. A release announces its `CHANGELOG.md` section
+  with the tag range. Configured by the new `[announce]` table; the inline heredoc is gone.
+
 * **storm:** a hung push gate can no longer hold every other push hostage. After one push's
   pytest sat at 0% CPU for 39 minutes holding the storm's shared push lock, three layers stand
   in the way. No single test can hang either suite: `timeout = 300` (pytest-timeout, now in

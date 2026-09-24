@@ -5,6 +5,19 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** `vibey-gh announce` posts a concise changelog with every documentation deploy,
+  replacing the release-surfaces workflow's inline announcement. It lists one line per merged
+  change (its Conventional Commit subject, the type turned into a word, the PR linked), grouped
+  Breaking / Added / Fixed / Other with breaking changes first and never dropped, and caps the
+  list at `[announce] max_changes` with `…and N more`. Merge and release chores are counted, not
+  listed, and the surface links follow. The message fits Discord's 2000 characters by
+  construction, and a hostile subject can neither ping nor format it. The range is the
+  commits since the previous accepted announcement, read from the Actions API through each
+  run's `run-name` and the `Record the announced position` marker step. When that is unknown
+  it says so and announces the one commit; a release announces its `CHANGELOG.md` section. No
+  webhook is a notice and a failed post a `::warning::`. The deploy never fails and the URL is
+  never printed. New `[announce]` table; see configuration.md and operations.md.
+
 - **Fix:** a local review never returns a verdict on a prompt the model did not read in full,
   and says when the model ran out of room (#1090). What #1090 was: its whole review sent about
   124,000 characters, which the model counted as 31,765 prompt tokens (about 3.95 characters

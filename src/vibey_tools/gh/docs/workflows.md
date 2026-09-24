@@ -361,11 +361,17 @@ for the same commit, and uploads `paper.pdf`, `book.epub`, `book.pdf` and
 from the Releases page after the site has been rebuilt or moved. A Release that never
 appears is a warning, not a failed documentation deploy.
 
-Once the Pages deploy has succeeded, the `docs` job announces what it published: the
-channel, the revision, and a link to each surface the deploy actually produced, posted
-through the optional repository secret `DISCORD_WEBHOOK_URL` (see
-[operations](operations.md)). With no secret set the step says so and passes, so a
-missing announcement is a line in the log rather than a silence.
+Once the Pages deploy has succeeded, the `docs` job runs `vibey-gh announce`. It posts a
+concise changelog of what changed since the previous accepted announcement, then a link to
+each surface the deploy actually produced, through the optional repository secret
+`DISCORD_WEBHOOK_URL` (see [operations](operations.md#discord_webhook_url-optional) for the
+message format and [configuration](configuration.md#announce) for its keys). With no secret
+set the step says so and passes, so a missing announcement is a line in the log rather than
+a silence. Nothing the step does can fail the deploy: a webhook, install or tool failure is a
+`::warning::`. The job reads its own earlier runs from the Actions API (`actions: read`), so
+every run carries a `run-name` recording its branch and release commit. The step that
+follows, `Record the announced position`, runs only when the post was accepted, and its
+success is what the next announcement starts from.
 
 With `documentation.governance_source` set, the `docs` job also publishes the governance
 corpus — the Constitution, the doctrines, the commandments, the bill of rights and every
