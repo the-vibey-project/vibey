@@ -90,7 +90,9 @@ export class SettingsResolver implements SettingsResolverInterface {
     const [ollamaRoot, ollamaSource] = this.layered(raw.ollamaUrl, 'VIBEY_OLLAMA_URL', OllamaEndpoint.DEFAULT_ROOT, 'vibey.ollamaUrl');
     const [model, modelSource] = this.layered(raw.model, 'VIBEY_OLLAMA_MODEL', Defaults.MODEL, 'vibey.model');
     const stormHome = new StormHome(raw.stormHome, this.environ, this.platform).resolve();
-    const lock = raw.modelLockPath.trim();
+    // The setting, else the lock this computer declares for every user of its model
+    // (VIBEY_OLLAMA_LOCK, which vibey-gh's slots and storm tooling share), else the storm home's.
+    const lock = raw.modelLockPath.trim() || (this.environ.VIBEY_OLLAMA_LOCK?.trim() ?? '');
     const maxTurns = SettingsResolver.atLeast(raw, 'maxTurns');
     return {
       raw,

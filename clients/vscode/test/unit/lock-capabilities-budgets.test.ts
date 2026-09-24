@@ -73,16 +73,17 @@ describe('ModelSlotLock', () => {
     });
   });
 
-  it('treats a lock with no owner as a crash mid-take only once it is old', () => {
+  it("never breaks another tool's bare mkdir lock, or one whose owner it cannot read, however old", () => {
     const root = scratch();
     const clock = new FakeClock();
-    fs.mkdirSync(path.join(root, 'fresh'));
-    clock.wall = Date.now();
-    expect(new ModelSlotLock(path.join(root, 'fresh'), clock, new Host()).tryAcquire('me')).toEqual({ acquired: false });
-    fs.mkdirSync(path.join(root, 'old'));
-    fs.writeFileSync(path.join(root, 'old', 'owner.json'), '{"pid": "not a number"}');
-    clock.wall = Date.now() + 120_000;
-    expect(new ModelSlotLock(path.join(root, 'old'), clock, new Host()).tryAcquire('me')).toEqual({ acquired: true });
+    // vibey-gh's DirectoryLock and storm shell tooling hold an empty directory while they run.
+    fs.mkdirSync(path.join(root, 'bare'));
+    clock.wall = Date.now() + 48 * 3_600_000;
+    expect(new ModelSlotLock(path.join(root, 'bare'), clock, new Host()).tryAcquire('me')).toEqual({ acquired: false });
+    expect(fs.existsSync(path.join(root, 'bare'))).toBe(true);
+    fs.mkdirSync(path.join(root, 'unreadable'));
+    fs.writeFileSync(path.join(root, 'unreadable', 'owner.json'), '{"pid": "not a number"}');
+    expect(new ModelSlotLock(path.join(root, 'unreadable'), clock, new Host()).tryAcquire('me')).toEqual({ acquired: false });
   });
 
   it('waits its turn, saying who holds the slot, and can be stopped while it waits', async () => {
