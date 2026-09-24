@@ -45,6 +45,11 @@ parent creates and hands it by descriptor (`QWENLANE_REPORT_FD`); the descriptor
 non-inheritable in the child, so no command it starts can write to it. The verdict travels
 the same way, so nothing the lane can write decides how an attempt ended.
 
+The attempt's spec -- which carries the plan the child runs -- is written under the storm's
+state directory, outside the lane's worktree, and bound by digest: the parent hands the
+child the sha256 of the exact bytes it wrote (`QWENLANE_SPEC_SHA256`), and a child that
+reads anything else reports `crashed` and runs nothing.
+
 Even so, every pid is checked before it is signalled (`AttemptWatchdog.signallable`): never
 pid 1 or below, never this process or its own group, and only while it still leads a
 session of its own -- or, once that leader has exited, while the group it left still
@@ -71,6 +76,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import math
 import os
@@ -79,7 +85,7 @@ import subprocess
 import threading
 import time
 import uuid
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -115,6 +121,12 @@ GRACE_SECONDS = 30
 
 #: Names the descriptor of the attempt's private report channel in the child's environment.
 REPORT_FD_ENV = "QWENLANE_REPORT_FD"
+#: Names the sha256 of the exact spec bytes the parent wrote, in the child's environment.
+#: An environment variable rather than a second descriptor: the child's own environment is
+#: fixed when the parent starts it and no other process can change it, the digest needs no
+#: secrecy (only integrity), and the child pops it before any command runs, so it rides in
+#: the same place as REPORT_FD_ENV with no second pipe to open, pass, drain and close.
+SPEC_SHA256_ENV = "QWENLANE_SPEC_SHA256"
 
 #: Event types that end a run in qwenloop's own vocabulary.
 TERMINAL_EVENTS = frozenset({"completed", "failed"})
@@ -216,7 +228,13 @@ class AttemptWatchdog:
         self._verdict: dict[str, Any] | None = None
 
     def watch(
-        self, argv: list[str], *, cwd: Path, events: Path, budget_seconds: float
+        self,
+        argv: list[str],
+        *,
+        cwd: Path,
+        events: Path,
+        budget_seconds: float,
+        extra_env: Mapping[str, str] | None = None,
     ) -> AttemptOutcome:
         self._groups, self._pending, self._verdict = set(), b"", None
         started = time.monotonic()
@@ -232,7 +250,7 @@ class AttemptWatchdog:
                     cwd=cwd,
                     start_new_session=True,
                     pass_fds=(write_end,),
-                    env={**os.environ, REPORT_FD_ENV: str(write_end)},
+                    env={**os.environ, **(extra_env or {}), REPORT_FD_ENV: str(write_end)},
                 )
                 os.close(write_end)
                 write_end = -1
@@ -429,6 +447,7 @@ class LaneAttempts:
         max_attempts: int,
         limits: LaneLimits,
         progress_log: Path,
+        state_dir: Path,
         child_argv: Callable[[Path], list[str]],
     ) -> None:
         self._lane = lane
@@ -437,6 +456,7 @@ class LaneAttempts:
         self._max = max_attempts
         self._limits = limits
         self._progress = progress_log
+        self._state = state_dir
         self._child_argv = child_argv
         self._deadline = time.monotonic() + limits.lane_seconds
 
@@ -451,11 +471,13 @@ class LaneAttempts:
             )
             return None
         run_id = str(uuid.uuid4())
-        state = self._lane / ".qwenstorm" / "attempts"
+        # The spec carries the plan the child runs, so it is written outside the lane's
+        # worktree -- which the model writes -- and bound by digest as well (see run_attempt).
+        state = self._state / self._slug
         state.mkdir(parents=True, exist_ok=True)
         events = self._lane / ".qwenloop" / "runs" / run_id / "events.jsonl"
         spec = state / f"{attempt}.json"
-        spec.write_text(
+        body = (
             json.dumps(
                 {
                     "lane": str(self._lane),
@@ -466,15 +488,17 @@ class LaneAttempts:
                     "poll_seconds": self._limits.poll_seconds,
                 },
                 indent=2,
-            ),
-            encoding="utf-8",
-        )
+            )
+        ).encode("utf-8")
+        spec.write_bytes(body)
+        digest = hashlib.sha256(body).hexdigest()
         by_lane = remaining < self._limits.attempt_seconds
         outcome = AttemptWatchdog(self._limits).watch(
             self._child_argv(spec),
             cwd=self._lane,
             events=events,
             budget_seconds=remaining if by_lane else self._limits.attempt_seconds,
+            extra_env={SPEC_SHA256_ENV: digest},
         )
         record: dict[str, Any] = {"attempt": attempt, "run_id": run_id}
         if outcome.reason == "exited":
@@ -588,14 +612,13 @@ class ChildGuard:
     reported the moment it exists. Only those: a subprocess in the child's own group is
     already reached by the group kill. `report` sends the attempt's verdict the same way.
 
-    `die_with(parent_pid)` covers the case the watchdog cannot: the lane itself killed with
+    `die_with(parent_pid, poll_seconds)` covers the case the watchdog cannot: the lane itself killed with
     SIGKILL. The child is in a session of its own, so it would otherwise run on unwatched,
     and `storm-queue.sh` would wait on it for as long as it hung.
     """
 
-    def __init__(self, fd: int, poll_seconds: float) -> None:
+    def __init__(self, fd: int) -> None:
         self._fd = fd
-        self._poll = poll_seconds
         self._started: list[int] = []
         os.set_inheritable(fd, False)
 
@@ -614,17 +637,17 @@ class ChildGuard:
     def report(self, verdict: dict[str, Any]) -> None:
         self._send("result " + json.dumps(verdict))
 
-    def die_with(self, parent_pid: int) -> None:
-        threading.Thread(target=self._watch, args=(parent_pid,), daemon=True).start()
+    def die_with(self, parent_pid: int, poll_seconds: float) -> None:
+        threading.Thread(target=self._watch, args=(parent_pid, poll_seconds), daemon=True).start()
 
     def _send(self, line: str) -> None:
         # A parent that has gone has nobody to tell; die_with deals with that case.
         with contextlib.suppress(OSError):
             os.write(self._fd, (line + "\n").encode("utf-8"))
 
-    def _watch(self, parent_pid: int) -> None:
+    def _watch(self, parent_pid: int, poll_seconds: float) -> None:
         while os.getppid() == parent_pid:
-            time.sleep(self._poll)
+            time.sleep(poll_seconds)
         for group in self._started:
             with contextlib.suppress(OSError):
                 if group > 1 and os.getsid(group) == group:

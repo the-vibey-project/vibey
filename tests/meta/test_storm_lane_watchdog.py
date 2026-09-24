@@ -117,6 +117,7 @@ def runner(tmp_path: Path, argv_body: str, limits: LaneLimits = FAST, max_attemp
         max_attempts=max_attempts,
         limits=limits,
         progress_log=tmp_path / "progress.log",
+        state_dir=tmp_path / "state",
         child_argv=lambda spec: [*argv, str(spec)],
     )
 
@@ -407,11 +408,12 @@ def test_every_class_honours_the_interface_declared_beside_it(tmp_path: Path) ->
         max_attempts=1,
         limits=limits,
         progress_log=tmp_path / "progress.log",
+        state_dir=tmp_path / "state",
         child_argv=lambda spec: [],
     )
     read_end, write_end = os.pipe()
     try:
-        guard = lane_watchdog.ChildGuard(write_end, 1.0)
+        guard = lane_watchdog.ChildGuard(write_end)
         pairs = [
             (limits, declared.LaneLimitsInterface),
             (outcome, declared.AttemptOutcomeInterface),
@@ -542,18 +544,7 @@ def test_the_attempt_child_runs_the_plan_and_records_escaping_pids(
     monkeypatch.setattr(qwenlane, "_server_for", lambda config: (None, None))
     read_end, write_end = os.pipe()
     monkeypatch.setenv(lane_watchdog.REPORT_FD_ENV, str(write_end))
-    spec = tmp_path / "spec.json"
-    spec.write_text(
-        json.dumps(
-            {
-                "lane": str(lane),
-                "run_id": "run-1",
-                "plan": "the plan",
-                "events": str(lane / ".qwenloop/runs/run-1/events.jsonl"),
-                "poll_seconds": 60,
-            }
-        )
-    )
+    spec = write_spec(tmp_path, lane, monkeypatch)
     original = asyncio.create_subprocess_exec
     try:
         assert qwenlane.run_attempt(spec) == 0
@@ -567,4 +558,105 @@ def test_the_attempt_child_runs_the_plan_and_records_escaping_pids(
     # The channel is the child's alone: nothing it started in a new session inherits it,
     # and nothing about it is left in the environment those commands see.
     assert lane_watchdog.REPORT_FD_ENV not in os.environ
+    assert lane_watchdog.SPEC_SHA256_ENV not in os.environ
     assert not list(lane.rglob("*.pids"))
+
+
+def write_spec(tmp_path: Path, lane: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A spec as the parent writes it, with its digest handed over out of band."""
+    import hashlib
+
+    spec = tmp_path / "spec.json"
+    spec.write_text(
+        json.dumps(
+            {
+                "lane": str(lane),
+                "run_id": "run-1",
+                "plan": "the plan",
+                "events": str(lane / ".qwenloop/runs/run-1/events.jsonl"),
+                "poll_seconds": 60,
+            }
+        )
+    )
+    monkeypatch.setenv(lane_watchdog.SPEC_SHA256_ENV, hashlib.sha256(spec.read_bytes()).hexdigest())
+    return spec
+
+
+def test_a_spec_rewritten_after_the_parent_wrote_it_is_refused(
+    tmp_path: Path, qwenlane, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The spec carries the plan the child runs. A process that escaped an earlier attempt
+    could rewrite it between the parent's write and the child's read; the child checks the
+    bytes against the digest the parent handed it out of band, and runs nothing on a
+    mismatch."""
+    lane = tmp_path / "lane"
+    lane.mkdir()
+    ran: list[object] = []
+
+    async def fake_run_plan(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        ran.append(args)
+
+    monkeypatch.setattr(qwenlane, "_run_plan", fake_run_plan)
+    monkeypatch.setattr(qwenlane, "_server_for", lambda config: (None, None))
+    read_end, write_end = os.pipe()
+    monkeypatch.setenv(lane_watchdog.REPORT_FD_ENV, str(write_end))
+    spec = write_spec(tmp_path, lane, monkeypatch)
+    spec.write_text(spec.read_text().replace("the plan", "rm the world"))
+    assert qwenlane.run_attempt(spec) != 0
+    os.close(write_end)
+    with os.fdopen(read_end) as stream:
+        (line,) = stream.read().splitlines()
+    kind, _, verdict = line.partition(" ")
+    assert kind == "result"
+    found = json.loads(verdict)
+    assert found["status"] == "crashed"
+    assert "does not match" in found["error"]
+    assert ran == []
+    assert lane_watchdog.SPEC_SHA256_ENV not in os.environ
+
+
+def test_a_spec_with_no_digest_is_refused(
+    tmp_path: Path, qwenlane, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lane = tmp_path / "lane"
+    lane.mkdir()
+    read_end, write_end = os.pipe()
+    monkeypatch.setenv(lane_watchdog.REPORT_FD_ENV, str(write_end))
+    spec = write_spec(tmp_path, lane, monkeypatch)
+    monkeypatch.delenv(lane_watchdog.SPEC_SHA256_ENV)
+    assert qwenlane.run_attempt(spec) != 0
+    os.close(write_end)
+    with os.fdopen(read_end) as stream:
+        assert '"status": "crashed"' in stream.read()
+
+
+def test_the_spec_is_written_outside_the_lane_and_bound_end_to_end(tmp_path: Path) -> None:
+    """Through the real `qwenlane.py --attempt`: the spec lives in the storm's state dir, not
+    the lane's worktree, and one rewritten after the parent wrote it is refused before
+    qwenloop runs -- the attempt ends `crashed`, saying why."""
+    lane = tmp_path / "lanes" / "a-lane"
+    lane.mkdir(parents=True)
+    written: list[Path] = []
+
+    def tamper_then_start(spec: Path) -> list[str]:
+        written.append(spec)
+        spec.write_text(spec.read_text().replace('"plan"', '"plan", "x": 1, "_"', 1))
+        return [sys.executable, str(TOOLS / "qwenlane.py"), "--attempt", str(spec)]
+
+    attempts = lane_watchdog.LaneAttempts(
+        lane,
+        slug="a-lane",
+        issue=504,
+        max_attempts=1,
+        limits=PATIENT,
+        progress_log=tmp_path / "progress.log",
+        state_dir=tmp_path / "state",
+        child_argv=tamper_then_start,
+    )
+    record = attempts.run(1, "plan")
+    assert record["status"] == "crashed"
+    assert "does not match" in record["error"]
+    (spec,) = written
+    assert spec.is_relative_to(tmp_path / "state")
+    assert not spec.is_relative_to(lane)
+    assert not (lane / ".qwenstorm" / "attempts").exists()

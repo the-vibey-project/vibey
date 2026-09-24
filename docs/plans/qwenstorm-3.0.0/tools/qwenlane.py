@@ -15,6 +15,7 @@ storm.toml `[lane]`, so one hung attempt can no longer hang the storm.
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
 import sys
@@ -25,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "integration/src/vibey_runners/qwen/src"))
 
 import storm_paths
-from lane_watchdog import REPORT_FD_ENV, ChildGuard, LaneAttempts, LaneLimits
+from lane_watchdog import REPORT_FD_ENV, SPEC_SHA256_ENV, ChildGuard, LaneAttempts, LaneLimits
 from qwenloop.application.storm import build_plan
 from qwenloop.cli.app import _load_config, _run_plan, _server_for, _tracked_repository_context
 from qwenloop.domain.model import RepoItem, RunStatus
@@ -84,13 +85,28 @@ def run_attempt(spec_path: Path) -> int:
     In-process qwenloop could not be bounded -- a model call blocks on a worker thread no
     one can cancel -- so an attempt is a process of its own that the parent can stop.
     """
-    spec = json.loads(spec_path.read_text(encoding="utf-8"))
     # Popped, not read: the commands this attempt starts inherit its environment, and the
-    # report channel is for the attempt alone.
-    guard = ChildGuard(int(os.environ.pop(REPORT_FD_ENV)), float(spec["poll_seconds"]))
+    # report channel and the spec's digest are for the attempt alone.
+    guard = ChildGuard(int(os.environ.pop(REPORT_FD_ENV)))
+    expected = os.environ.pop(SPEC_SHA256_ENV, "")
+    # The spec carries the plan this process is about to run. Read once, as bytes, and
+    # checked against the digest the parent handed over out of band: a spec rewritten
+    # between the parent's write and this read -- by a process that escaped an earlier
+    # attempt, say -- runs nothing.
+    body = spec_path.read_bytes()
+    if not expected or hashlib.sha256(body).hexdigest() != expected:
+        guard.report(
+            {
+                "status": "crashed",
+                "error": f"attempt spec {spec_path} does not match the digest its lane wrote; "
+                "refusing to run it",
+            }
+        )
+        return 2
+    spec = json.loads(body)
     guard.record_escaping_subprocesses()
     if "parent_pid" in spec:
-        guard.die_with(int(spec["parent_pid"]))
+        guard.die_with(int(spec["parent_pid"]), float(spec["poll_seconds"]))
     config = _load_config()
     server, profile = _server_for(config)
     try:
@@ -155,6 +171,8 @@ def main() -> None:
         max_attempts=args.max_attempts,
         limits=LaneLimits.declared(STORM),
         progress_log=STORM / "progress.log",
+        # Outside the lane's worktree: the spec carries the plan, and the lane is the model's.
+        state_dir=STORM / "state" / "attempts",
         child_argv=attempt_argv,
     )
     attempts: list[dict[str, object]] = []

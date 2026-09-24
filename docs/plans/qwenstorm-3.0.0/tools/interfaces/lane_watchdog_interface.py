@@ -7,6 +7,7 @@ Protocol, so the declaration cannot drift from the class it describes.
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
@@ -39,7 +40,13 @@ class AttemptWatchdogInterface(Protocol):
     """Runs one attempt in a session of its own and ends it when a limit is crossed."""
 
     def watch(
-        self, argv: list[str], *, cwd: Path, events: Path, budget_seconds: float
+        self,
+        argv: list[str],
+        *,
+        cwd: Path,
+        events: Path,
+        budget_seconds: float,
+        extra_env: Mapping[str, str] | None = None,
     ) -> AttemptOutcomeInterface:
         """Run `argv` to its end or to a limit; its tree never outlives the call."""
         ...
@@ -74,6 +81,6 @@ class ChildGuardInterface(Protocol):
         """Send the attempt's verdict to the parent."""
         ...
 
-    def die_with(self, parent_pid: int) -> None:
+    def die_with(self, parent_pid: int, poll_seconds: float) -> None:
         """Stop the attempt if the lane that started it disappears."""
         ...
