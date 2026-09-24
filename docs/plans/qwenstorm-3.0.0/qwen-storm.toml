@@ -21,3 +21,10 @@ context_window = 65536
 # flailing should still stop, and every extra turn is trimmed transcript against the 131k
 # window.
 max_turns = 60
+# One empty model reply (no tool call, no text) no longer ends a run (2026-09-23). Across the
+# 82 runs on disk, 27 of 60 failed runs (45%) ended on the first such turn (23 of the 27 after
+# 11-12 output tokens), and the only retry was a whole new attempt. Each retry here is a new model
+# call that spends a turn of max_turns, so a lane that only ever answers with nothing still
+# stops. The turn.empty event records what each empty reply was (finish_reason, tokens, the
+# reasoning's length and an excerpt of its start); raise this only against that evidence.
+max_empty_reply_retries = 2

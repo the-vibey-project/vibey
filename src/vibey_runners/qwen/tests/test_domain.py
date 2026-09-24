@@ -4,17 +4,25 @@ import pytest
 from qwenloop.application.backend_selection import BackendChoice, BackendSelector, Hardware
 from qwenloop.application.interfaces import BackendSelectorInterface
 from qwenloop.domain.config import (
+    DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
     DEFAULT_ENDPOINT_BASE_URL,
     DEFAULT_ENDPOINT_MODEL,
+    DEFAULT_MAX_EMPTY_REPLY_RETRIES,
+    DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
     DEFAULT_SKIP_DIRS,
     QwenConfig,
     QwenConfigParser,
     ToolLimits,
 )
-from qwenloop.domain.interfaces import QwenConfigInterface, QwenConfigParserInterface
+from qwenloop.domain.interfaces import (
+    ChatChunkInterface,
+    QwenConfigInterface,
+    QwenConfigParserInterface,
+)
 from qwenloop.domain.model import (
     Backend,
     CapacityKind,
+    ChatChunk,
     RunStatus,
     ServerInfo,
     terminal_status,
@@ -230,3 +238,54 @@ def test_a_running_local_ollama_is_the_default_backend_when_nothing_is_configure
         ).backend
         is Backend.VLLM
     )
+
+
+def test_empty_reply_retries_are_declared_configuration() -> None:
+    # declared, not compiled in: the default lives on QwenConfig and a file can change it
+    assert QwenConfig().max_empty_reply_retries == DEFAULT_MAX_EMPTY_REPLY_RETRIES == 2
+    assert parser.parse({"max_empty_reply_retries": 5}).max_empty_reply_retries == 5
+    # zero is meaningful: the first empty reply fails the run, as it did before
+    assert parser.parse({"max_empty_reply_retries": 0}).max_empty_reply_retries == 0
+    with pytest.raises(ValueError, match="max_empty_reply_retries must be a non-negative integer"):
+        parser.parse({"max_empty_reply_retries": -1})
+
+
+def test_changed_value_objects_conform_to_their_declared_contracts() -> None:
+    # ADR-0016: every class this change touched has its seam beside it, and meets it
+    assert isinstance(QwenConfig(), QwenConfigInterface)
+    chunk = ChatChunk(finish_reason="stop", reasoning="thinking")
+    assert isinstance(chunk, ChatChunkInterface)
+    assert (chunk.finish_reason, chunk.reasoning) == ("stop", "thinking")
+
+
+def test_recording_caps_are_declared_configuration() -> None:
+    config = QwenConfig()
+    assert config.max_recorded_argument_chars == DEFAULT_MAX_RECORDED_ARGUMENT_CHARS == 200
+    assert (
+        config.empty_reply_reasoning_excerpt_chars
+        == DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS
+        == 400
+    )
+    parsed = parser.parse(
+        {"max_recorded_argument_chars": 0, "empty_reply_reasoning_excerpt_chars": 0}
+    )
+    # zero is meaningful for both: record no argument values, and no excerpt at all
+    assert (parsed.max_recorded_argument_chars, parsed.empty_reply_reasoning_excerpt_chars) == (
+        0,
+        0,
+    )
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "max_empty_reply_retries",
+        "max_recorded_argument_chars",
+        "empty_reply_reasoning_excerpt_chars",
+    ],
+)
+@pytest.mark.parametrize("value", [-1, float("inf"), float("nan"), 1.5, True, "many"])
+def test_recording_bounds_must_be_finite_non_negative_integers(key: str, value: object) -> None:
+    # a TOML file can say `inf` or `nan`; a bound either of those is no bound at all
+    with pytest.raises(ValueError, match=f"{key} must be a non-negative integer"):
+        parser.parse({key: value})

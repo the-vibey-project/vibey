@@ -21,7 +21,14 @@ from qwenloop.application.backend_selection import BackendSelector, Hardware
 from qwenloop.application.interfaces import InferenceServer, OllamaProbeInterface
 from qwenloop.application.runner import AutonomousRunner
 from qwenloop.application.storm import build_item_plans
-from qwenloop.domain.config import DEFAULT_ENDPOINT_MODEL, QwenConfig, ToolLimits
+from qwenloop.domain.config import (
+    DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
+    DEFAULT_ENDPOINT_MODEL,
+    DEFAULT_MAX_EMPTY_REPLY_RETRIES,
+    DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+    QwenConfig,
+    ToolLimits,
+)
 from qwenloop.domain.model import (
     EXIT_CODE_WIND_DOWN,
     Backend,
@@ -269,6 +276,9 @@ def _run_single(
                 startup_timeout_seconds=config.startup_timeout_seconds,
                 desktop_notifications=desktop_notifications,
                 tool_limits=config.tools,
+                max_empty_reply_retries=config.max_empty_reply_retries,
+                max_recorded_argument_chars=config.max_recorded_argument_chars,
+                empty_reply_reasoning_excerpt_chars=config.empty_reply_reasoning_excerpt_chars,
             )
         )
     except (OSError, RuntimeError) as exc:
@@ -291,6 +301,9 @@ async def _run_plan(
     startup_timeout_seconds: int,
     desktop_notifications: bool = True,
     tool_limits: ToolLimits | None = None,
+    max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES,
+    max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+    empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
 ) -> RunState:
     """Start (or, for an attached endpoint, check) the server if it is not healthy, then
     drive one AutonomousRunner run to a verdict."""
@@ -312,6 +325,9 @@ async def _run_plan(
         profile=profile,
         server_info=info,
         max_turns=max_turns,
+        max_empty_reply_retries=max_empty_reply_retries,
+        max_recorded_argument_chars=max_recorded_argument_chars,
+        empty_reply_reasoning_excerpt_chars=empty_reply_reasoning_excerpt_chars,
     )
 
 
@@ -436,6 +452,11 @@ def _run_storm(
                             startup_timeout_seconds=config.startup_timeout_seconds,
                             desktop_notifications=desktop_notifications,
                             tool_limits=config.tools,
+                            max_empty_reply_retries=config.max_empty_reply_retries,
+                            max_recorded_argument_chars=config.max_recorded_argument_chars,
+                            empty_reply_reasoning_excerpt_chars=(
+                                config.empty_reply_reasoning_excerpt_chars
+                            ),
                         )
                     )
                 except (OSError, RuntimeError) as exc:

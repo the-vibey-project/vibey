@@ -81,3 +81,53 @@ def test_the_storm_config_tools_table_reaches_every_lane_run(
         os.close(read_end)
     assert len(calls) == 1
     assert calls[0]["tool_limits"] == ToolLimits(max_search_matches=7, skip_dirs=("vendor",))
+
+
+def test_the_storm_config_recording_bounds_reach_every_lane_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The empty-reply retry bound and the two recording caps are declared in the storm's
+    # config; the child's `_run_plan` call must carry them, not fall back to the defaults.
+    config = tmp_path / "qwen-storm.toml"
+    config.write_text(
+        "max_empty_reply_retries = 4\n"
+        "max_recorded_argument_chars = 64\n"
+        "empty_reply_reasoning_excerpt_chars = 32\n"
+    )
+    monkeypatch.setenv("QWENLOOP_CONFIG", str(config))
+    lane = tmp_path / "lane"
+    (lane / ".qwenstorm").mkdir(parents=True)
+    calls: list[dict[str, object]] = []
+
+    async def run_plan(*args: object, **kwargs: object) -> RunState:
+        calls.append(kwargs)
+        return RunState("run", status=RunStatus.FAILED, turns=1)
+
+    monkeypatch.setattr(qwenlane, "_run_plan", run_plan)
+    monkeypatch.setattr(qwenlane, "_server_for", lambda _config: (object(), object()))
+    spec = tmp_path / "spec.json"
+    spec.write_text(
+        json.dumps(
+            {
+                "lane": str(lane),
+                "run_id": "run-1",
+                "plan": "the plan",
+                "events": str(lane / ".qwenloop/runs/run-1/events.jsonl"),
+                "poll_seconds": 60,
+            }
+        )
+    )
+    monkeypatch.setenv(qwenlane.SPEC_SHA256_ENV, hashlib.sha256(spec.read_bytes()).hexdigest())
+    read_end, write_end = os.pipe()
+    monkeypatch.setenv(qwenlane.REPORT_FD_ENV, str(write_end))
+    try:
+        assert qwenlane.run_attempt(spec) == 0
+    finally:
+        os.close(write_end)
+        os.close(read_end)
+    assert len(calls) == 1
+    assert (
+        calls[0]["max_empty_reply_retries"],
+        calls[0]["max_recorded_argument_chars"],
+        calls[0]["empty_reply_reasoning_excerpt_chars"],
+    ) == (4, 64, 32)

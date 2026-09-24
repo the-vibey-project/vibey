@@ -119,6 +119,12 @@ class ChatChunk:
     # llama-server's own per-request timings (prompt_n, cache_n, prompt_ms, predicted_n,
     # predicted_ms, predicted_per_second); None when the server sent none.
     timings: Mapping[str, float] | None = None
+    # Why the model stopped (`stop`, `length`, `tool_calls`, ...); None when not reported.
+    finish_reason: str | None = None
+    # The reply's separate reasoning text (gpt-oss on Ollama sends one); None when the
+    # server sent none. Model output: the runner records a capped excerpt of it as data and
+    # never feeds it back to the model. Kept out of repr, which could otherwise be huge.
+    reasoning: str | None = field(default=None, repr=False)
 
 
 class ToolCallParseError(RuntimeError):

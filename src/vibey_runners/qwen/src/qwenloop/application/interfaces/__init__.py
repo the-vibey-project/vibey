@@ -16,7 +16,8 @@ from qwenloop.application.interfaces.class_contracts import AutonomousRunnerInte
 from qwenloop.application.interfaces.clock_interface import ClockInterface
 from qwenloop.application.interfaces.desktop_notifier_interface import DesktopNotifierInterface
 from qwenloop.application.interfaces.ollama_probe_interface import OllamaProbeInterface
-from qwenloop.domain.model import ChatChunk, ChatMessage, ModelProfile, ServerInfo
+from qwenloop.domain.interfaces import ChatChunkInterface
+from qwenloop.domain.model import ChatMessage, ModelProfile, ServerInfo
 
 __all__ = [
     "AutonomousRunnerInterface",
@@ -37,7 +38,7 @@ class InferenceServer(Protocol):
     async def health(self, info: ServerInfo) -> bool: ...
     def chat_stream(
         self, info: ServerInfo, messages: Sequence[ChatMessage]
-    ) -> AsyncIterator[ChatChunk]: ...
+    ) -> AsyncIterator[ChatChunkInterface]: ...
     async def stop(self, info: ServerInfo) -> None: ...
 
 
