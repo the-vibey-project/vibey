@@ -91,7 +91,8 @@ export class TaskRun implements TaskRunInterface {
   private lastActivity = 0;
   private hinted = false;
   private stderrTail = '';
-  private settle: (record: RunRecord) => void = () => undefined;
+  /** Resolves `result`; assigned in the constructor, by the promise's executor. */
+  private settle!: (record: RunRecord) => void;
   private readonly runDirectory: string;
   private readonly startedAt: Date;
   private readonly startedMono: number;
@@ -487,7 +488,8 @@ export class TaskRun implements TaskRunInterface {
     const { clock, settings, processes } = this.services;
     const child = processes.spawn(invocation.command, invocation.args, { cwd, env: environment });
     this.child = child;
-    this.move(this.stopAt === undefined ? 'running' : 'stopping');
+    // A stop asked before this point aborted the run, so it never reaches a process.
+    this.move('running');
     child.onStderr((text) => {
       this.stderrTail = `${this.stderrTail}${text}`.slice(-TaskRun.STDERR_TAIL);
     });

@@ -5,3 +5,5 @@ out/
 coverage/
 .vscode-test/
 *.vsix
+# Scratch space on durable storage for tests of code that refuses volatile storage (10.h).
+.test-scratch/
