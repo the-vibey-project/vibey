@@ -114,6 +114,13 @@ describe('VibeyCli', () => {
     expect(runner.calls.at(-1)?.args).toEqual(['cost', 'p']);
   });
 
+  it('reads a turn cap as a number, and a dollar cap that is not set as null', async () => {
+    const runner = new FakeProcessRunner().on(['budget'], {
+      stdout: JSON.stringify([{ project_id: 'p', name: 'n', caps: { max_cycle_dollars: null, max_cycle_turns: 60 }, spend: { dollars: 0, turns: 12 } }]),
+    });
+    expect((await cli(runner).budgets())[0]).toMatchObject({ caps: { max_cycle_dollars: null, max_cycle_turns: 60 }, spend: { turns: 12 } });
+  });
+
   it('fills a budget entry that is missing parts', async () => {
     const runner = new FakeProcessRunner().on(['budget'], { stdout: JSON.stringify([{ project_id: 'p', caps: 'none', history: 'none' }, { name: 'no id' }]) });
     expect(await cli(runner).budgets()).toEqual([

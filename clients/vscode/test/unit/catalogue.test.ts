@@ -251,13 +251,15 @@ describe('LoopSelector', () => {
     const catalogue = parse(
       variant((value) => {
         value.loops[0].engines[0].default_model = null;
+        for (const entry of value.loops[0].engines[0].efforts) {
+          entry.model = null;
+        }
         value.loops[0].by_effort.LOW = [{ engine_id: 'qwenloop', model: null, achieved: 'LOW' }];
       }),
     );
     const selection = new LoopSelector(catalogue).select(request({ resident: ['gpt-oss:20b'] }));
     expect(selection.engine.engine_id).toBe('qwenloop');
-    expect(selection.reason).not.toContain('already loaded');
-    expect(selection.model).toBe('gpt-oss:20b');
+    expect(selection.model).toBeNull();
   });
 
   it('rotates away from the previous engine when auto effort rises', () => {

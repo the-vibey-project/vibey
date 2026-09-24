@@ -72,7 +72,8 @@ describe('TaskNaming', () => {
     expect(naming.shortId('1A2B3C4D-5e6f-7a8b-9c0d-0123456789ab')).toBe('1a2b3c4d');
     expect(naming.branch('add-readme', '1a2b3c4d')).toBe('vibey/add-readme-1a2b3c4d');
     expect(naming.worktreeName('/Users/me/git/Vibey', 'add-readme', '1a2b3c4d')).toBe('vscode-vibey-add-readme-1a2b3c4d');
-    expect(naming.worktreeName('/', 'x', '1')).toBe('vscode-task-x-1');
+    expect(naming.worktreeName('/', 'x', '1')).toBe('vscode-repo-x-1');
+    expect(naming.slug('???', 'repo')).toBe('repo');
     expect(naming.worktreeName('/', 'x', '1')).toMatch(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
   });
 

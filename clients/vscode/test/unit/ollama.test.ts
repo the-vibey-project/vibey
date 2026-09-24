@@ -84,6 +84,8 @@ describe('OllamaProbe', () => {
     expect((await new OllamaProbe(odd, endpoint).version()).error).toBe(`${root}/api/version answered HTTP 500`);
     const nameless = new FakeHttp().route('GET', `${root}/api/version`, { status: 200, body: 'not json' });
     expect((await new OllamaProbe(nameless, endpoint).version()).version).toBe('unknown');
+    const listy = new FakeHttp().route('GET', `${root}/api/version`, { status: 200, body: '["0.12.0"]' });
+    expect((await new OllamaProbe(listy, endpoint).version()).version).toBe('unknown');
   });
 
   it('treats a failing or odd /api/ps as nothing loaded', async () => {

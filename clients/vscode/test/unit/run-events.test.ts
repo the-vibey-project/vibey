@@ -165,6 +165,8 @@ describe('RunTranscript, event by event', () => {
     expect(text(one({ type: 'turn.retried' }))).toContain('retry ?');
     expect(text(one({ type: 'turn.empty', turn: 3, retrying: true }))).toContain('asked again');
     expect(one({ type: 'turn.empty' }).items()[0]).toMatchObject({ level: 'error' });
+    expect(text(one({ type: 'turn.empty', retrying: true }))).toBe('Turn ?: the model sent an empty reply, so qwenloop asked again.');
+    expect(text(one({ type: 'turn.empty', turn: 4, retrying: false }))).toBe('Turn 4: the model sent an empty reply again; qwenloop gave up.');
   });
 
   it('shows a follow-up the engine received', () => {

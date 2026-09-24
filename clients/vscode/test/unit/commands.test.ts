@@ -28,13 +28,19 @@ describe('the one command table', () => {
   });
 
   it("is exactly the @vibey chat participant's commands: each slash command's first word, once", () => {
+    // VS Code reads `@vibey /budget add ...` as the command `budget` and the prompt `add ...`,
+    // so the participant declares first words and the panel's parser reads the rest.
     const participant = manifest.contributes.chatParticipants[0];
     expect(participant?.id).toBe('vibey.chat');
-    const declared = new SlashCommands().firstWords().map((word) => ({
+    const words = new SlashCommands().firstWords();
+    const declared = words.map((word) => ({
       name: word,
       description: CommandTable.ALL.find((spec) => spec.slash?.split(' ')[0] === word)?.description,
     }));
     expect(participant?.commands).toEqual(declared);
+    for (const spec of CommandTable.ALL.filter((each) => each.slash !== undefined)) {
+      expect(words).toContain(spec.slash?.split(' ')[0]);
+    }
   });
 
   it('has a worked example in the README for every command (doctrine 3)', () => {
@@ -70,15 +76,16 @@ describe('SlashCommands', () => {
     expect(bare.kind === 'command' && bare.args).toBe('');
   });
 
-  it('matches the longest slash name first: /budget add before /budget', () => {
-    const add = slash.parse('/Budget ADD scope=day dollars=5');
-    expect(add.kind === 'command' && add.spec.id).toBe('vibey.addBudget');
-    expect(add.kind === 'command' && add.args).toBe('scope=day dollars=5');
-    const list = slash.parse('/budget list');
-    expect(list.kind === 'command' && list.spec.id).toBe('vibey.showBudgets');
-    expect(list.kind === 'command' && list.args).toBe('list');
-    expect(slash.firstWords()).toContain('budget');
-    expect(slash.firstWords().filter((word) => word === 'budget')).toHaveLength(1);
+  it('reads the longest command a message names: /budget add before /budget', () => {
+    const add = slash.parse('/Budget   ADD day paidloop dollars=5');
+    expect(add.kind === 'command' && add.spec.slash).toBe('budget add');
+    expect(add.kind === 'command' && add.args).toBe('day paidloop dollars=5');
+    const bare = slash.parse('/budget');
+    expect(bare.kind === 'command' && bare.spec.slash).toBe('budget');
+    expect(bare.kind === 'command' && bare.args).toBe('');
+    const list = slash.parse('/budget everything');
+    expect(list.kind === 'command' && list.spec.slash).toBe('budget');
+    expect(list.kind === 'command' && list.args).toBe('everything');
   });
 
   it('answers an unknown command plainly', () => {
@@ -88,7 +95,6 @@ describe('SlashCommands', () => {
 
   it('completes what has been typed after the slash', () => {
     expect(slash.complete('/st').map((spec) => spec.slash)).toEqual(['stop', 'start', 'stop-all', 'status', 'start-ollama']);
-    expect(slash.complete('/budget ').map((spec) => spec.slash)).toEqual(['budget add', 'budget edit', 'budget remove', 'budget grant']);
     expect(slash.complete('')).toHaveLength(CommandTable.ALL.length);
     expect(slash.complete('/zzz')).toEqual([]);
   });

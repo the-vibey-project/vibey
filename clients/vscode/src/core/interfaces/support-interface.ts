@@ -27,7 +27,8 @@ export interface HtmlTextInterface {
 }
 
 export interface TaskNamingInterface {
-  slug(text: string): string;
+  /** Lower-case ASCII words joined by `-`; `fallback` (default `task`) when nothing is left. */
+  slug(text: string, fallback?: string): string;
   shortId(runId: string): string;
   branch(slug: string, shortId: string): string;
   worktreeName(repository: string, slug: string, shortId: string): string;

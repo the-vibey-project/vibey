@@ -81,8 +81,11 @@ export class TaskNaming implements TaskNamingInterface {
 
   constructor(private readonly maxSlug = 40) {}
 
-  /** Lower-case ASCII words joined by `-`: `Add a README line!` becomes `add-a-readme-line`. */
-  slug(text: string): string {
+  /**
+   * Lower-case ASCII words joined by `-`: `Add a README line!` becomes `add-a-readme-line`.
+   * Text with no letters or digits at all becomes `fallback`.
+   */
+  slug(text: string, fallback = 'task'): string {
     const words = text
       .normalize('NFKD')
       .replace(/[̀-ͯ]/g, '')
@@ -97,7 +100,7 @@ export class TaskNaming implements TaskNamingInterface {
       }
       slug = next;
     }
-    return slug || words.slice(0, this.maxSlug).replace(/-+$/, '') || 'task';
+    return slug || words.slice(0, this.maxSlug).replace(/-+$/, '') || fallback;
   }
 
   shortId(runId: string): string {
@@ -110,7 +113,7 @@ export class TaskNaming implements TaskNamingInterface {
 
   /** One path component the storm's own WORKTREE_NAME pattern accepts: `^[A-Za-z0-9][A-Za-z0-9._-]*$`. */
   worktreeName(repository: string, slug: string, shortId: string): string {
-    const repo = this.slug(path.basename(repository)) || 'repo';
+    const repo = this.slug(path.basename(repository), 'repo');
     return `${TaskNaming.WORKTREE_PREFIX}-${repo}-${slug}-${shortId}`;
   }
 
