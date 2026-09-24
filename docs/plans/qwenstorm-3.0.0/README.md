@@ -36,6 +36,16 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
 6. `tools/`: the storm machinery.
    - `storm-queue.sh` runs one lane at a time (unattended mode via an `UNATTENDED` file).
    - `lane-setup.sh` and `qwenlane.py` set up and drive a lane.
+   - `lane_watchdog.py` bounds each lane attempt. It enforces a per-attempt and a per-lane
+     wall clock and a stall watchdog, declared in `storm.toml` `[lane]`. A hung attempt
+     cannot hold up the one-at-a-time queue.
+   - `storm_trust.py` contains forge text where it enters (sub-doctrine 12.j, ADR-0053).
+     A lane starts only when every account that opened, edited or renamed its issue is in
+     `[unattended_approval] authors`. That list is read from the integration branch's
+     reviewed history, never the working tree. The issue then reaches the model only
+     inside a fenced block that states its provenance. `lane-verify.py` refuses a lane that
+     touches any `forbidden_paths` entry from the same grant. The classes are declared in
+     `interfaces/storm_trust_interface.py`.
    - `file-suite.py` files the suite as issues. It is resumable and paced.
    - `lint-specs.py` is the check run before filing.
 7. `bench/`: the 2026-09-22 benchmark. gpt-oss:20b on Ollama finished a 10-turn session in
