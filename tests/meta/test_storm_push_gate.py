@@ -76,6 +76,12 @@ class FakeClock:
     def sleep(self, seconds: float) -> None:
         self.t += seconds
 
+    def awake(self) -> float:
+        return self.t  # this clock's machine never sleeps
+
+    def boot_id(self) -> str:
+        return "boot-1"
+
 
 @dataclass
 class FakeTable:
@@ -120,6 +126,9 @@ class FakeTable:
 
     def cwd(self, pid: int) -> str | None:
         return self.cwds.get(pid)
+
+    def started(self, pid: int) -> float | None:
+        return None
 
     def burn(self, pgid: int, seconds: float) -> None:
         """Every member of `pgid` spends `seconds` of CPU, shared out evenly."""
@@ -955,6 +964,8 @@ def test_a_bare_mkdir_lock_past_the_ceiling_is_reaped(tmp_path: Path) -> None:
     r = rig(tmp_path)
     made = bare_lock(r)
     legacy_push(r, tmp_path, made)
+    # Counted from the first pass that saw it, in awake time: the mtime may span a sleep.
+    assert r.reaper.tick().action == "none"
     r.clock.sleep(3601)
     decision = r.reaper.tick()
     assert (decision.action, decision.condition) == ("killed", "ceiling"), decision

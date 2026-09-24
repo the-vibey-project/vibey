@@ -186,6 +186,13 @@ SCHEDULE_PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 #: Shells the legacy recipe runs in; the only ancestors a traced push's group may contain.
 SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh"})
 
+#: A lock whose holder pid lives on while its push group has been gone this many passes is
+#: stale: the pid was reused, or the holder will never release (#1105-7).
+GONE_PASSES = 2
+#: Wall time running this far ahead of awake time between two samples means the machine
+#: slept between them; a window containing that is not evidence of a hang (#1105-5).
+SLEEP_GAP_SECONDS = 60.0
+
 OWNER_FILE = "owner.json"
 #: `run` exits with this when the reaper ended its push: a hang, not a test failure.
 REAPED_EXIT = 124
@@ -408,6 +415,10 @@ class Owner:
     #: When the holder process started, so a reused pid is told from the holder (and, for a
     #: push traced behind a bare-mkdir lock, the push itself is told from a successor).
     holder_started: float | None = None
+    #: `Clock.awake()` when the lock was taken, and the boot it belongs to: the ceiling is
+    #: measured in time the machine was awake, never across a sleep (#1105-5).
+    started_awake: float | None = None
+    boot_id: str | None = None
 
     def to_json(self) -> dict[str, Any]:
         return {**dataclasses.asdict(self), "started": _iso(self.started_at)}
@@ -444,6 +455,8 @@ class Owner:
             "log": lambda v: v is None or isinstance(v, str),
             "stacks": lambda v: v is None or isinstance(v, str),
             "holder_started": lambda v: v is None or number(v),
+            "started_awake": lambda v: v is None or number(v),
+            "boot_id": lambda v: v is None or isinstance(v, str),
         }
         required = {"token", "pid", "pgid", "dedicated", "uid", "branch", "worktree", "started_at"}
         missing = required - found.keys()
@@ -510,13 +523,54 @@ class Decision:
 
 
 class Clock:
-    """Wall-clock time. A seam so the tests can drive an hour in a millisecond."""
+    """Wall time, awake time, and which boot this is. A seam so tests drive an hour at once.
+
+    `awake()` stops while the machine sleeps -- CLOCK_UPTIME_RAW on macOS, CLOCK_MONOTONIC
+    on Linux (Ubuntu 26.04 LTS is first-class, #1116) -- so a laptop shut overnight is not
+    a push that ran all night: launchd runs a missed job on wake, and on wall time that pass
+    killed an in-flight push as past its ceiling (#1105-5). Awake times mean something only
+    within one boot, so `boot_id()` names it: /proc/sys/kernel/random/boot_id on Linux,
+    `sysctl kern.bootsessionuuid` on macOS.
+    """
+
+    def __init__(
+        self,
+        platform: str = sys.platform,
+        read: Callable[[Path], str] | None = None,
+        run: Callable[[list[str]], tuple[int, str]] | None = None,
+    ) -> None:
+        self._platform = platform
+        self._read = read or (lambda path: path.read_text(encoding="utf-8"))
+        self._run = run
+        self._boot: str | None = None
 
     def now(self) -> float:
         return time.time()
 
     def sleep(self, seconds: float) -> None:
         time.sleep(seconds)
+
+    def awake(self) -> float:
+        name = "CLOCK_UPTIME_RAW" if self._platform == "darwin" else "CLOCK_MONOTONIC"
+        clock = getattr(time, name, None)
+        return time.clock_gettime(clock) if clock is not None else time.monotonic()
+
+    def boot_id(self) -> str:
+        if self._boot is None:
+            self._boot = self._find_boot_id()
+        return self._boot
+
+    def _find_boot_id(self) -> str:
+        if self._platform.startswith("linux"):
+            with contextlib.suppress(OSError):
+                return self._read(Path("/proc/sys/kernel/random/boot_id")).strip()
+            return "unknown"
+        run = self._run or EvidenceCollector._subprocess
+        code, out = run(["sysctl", "-n", "kern.bootsessionuuid"])
+        if code == 0 and out.strip():
+            return out.strip()
+        code, out = run(["sysctl", "-n", "kern.boottime"])
+        return out.strip() if code == 0 and out.strip() else "unknown"
 
 
 class ProcessTable:
@@ -532,6 +586,14 @@ class ProcessTable:
     # `uid` so a trace never names another user's push (#1107-2); `stat` so a group holding
     # nothing but zombies is seen as the finished group it is.
     PS = ("ps", "-A", "-o", "pid=,ppid=,pgid=,uid=,stat=,lstart=,time=,command=")
+
+    def __init__(self, platform: str = sys.platform, proc: Path = Path("/proc")) -> None:
+        self._linux = platform.startswith("linux")
+        self._proc = proc
+        self._ticks_per_second = (
+            os.sysconf("SC_CLK_TCK") if hasattr(os, "sysconf") and self._linux else 100
+        )
+
     LISTING = ("ps", "-A", "-o", "pid,ppid,pgid,stat,time,etime,command")
 
     def alive(self, pid: int) -> bool:
@@ -581,13 +643,42 @@ class ProcessTable:
 
     def cwd(self, pid: int) -> str | None:
         """Where `pid` is standing: /proc on Linux, `lsof` on macOS; None when unknowable."""
-        with contextlib.suppress(OSError):
-            return os.readlink(f"/proc/{pid}/cwd")
+        if self._linux:
+            with contextlib.suppress(OSError):
+                return os.readlink(self._proc / str(pid) / "cwd")
+            return None
         out = self._ps(("lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"))
         for line in (out or "").splitlines():
             if line.startswith("n/"):
                 return line[1:]
         return None
+
+    def started(self, pid: int) -> float | None:
+        """When `pid` started, in wall seconds; None when unknowable.
+
+        Linux reads /proc/<pid>/stat's starttime (clock ticks after boot, field 22) against
+        /proc/stat's `btime`; macOS asks `ps -o lstart`. Used to tell a holder from a later
+        process that inherited its pid (#1105-7).
+        """
+        if self._linux:
+            try:
+                raw = (self._proc / str(pid) / "stat").read_text(encoding="utf-8")
+                ticks = int(raw.rsplit(")", 1)[1].split()[19])
+                boot = next(
+                    int(line.split()[1])
+                    for line in (self._proc / "stat").read_text(encoding="utf-8").splitlines()
+                    if line.startswith("btime ")
+                )
+            except (OSError, ValueError, IndexError, StopIteration):
+                return None
+            return boot + ticks / self._ticks_per_second
+        out = self._ps(("ps", "-o", "lstart=", "-p", str(pid)))
+        if not out:
+            return None
+        try:
+            return time.mktime(time.strptime(" ".join(out.split()[1:5]), "%b %d %H:%M:%S %Y"))
+        except ValueError:
+            return None
 
     def listing(self) -> str | None:
         out = self._ps(self.LISTING)
@@ -1249,23 +1340,24 @@ class Reaper:
             return self._ownerless(state, dry_run)
         owner = state.owner
         self._forget_samples(keep=owner.token)
-        now = self._clock.now()
 
-        stale = self._stale(owner)
+        memo = self._memo(owner.token)
+        stale = self._stale(owner, memo)
+        self._save_memo(owner.token, memo)
         if stale:
             return self._release_stale(owner, stale, dry_run)
         if owner.pgid is None:
             return Decision("none", None, "the push has not started yet", {}, owner)
 
         members = self._table.members(owner.pgid)
-        held = now - owner.started_at
+        held = self._held(owner)
         if held >= self._config.wall_ceiling_seconds:
             measured = {
                 "held_seconds": held,
                 "ceiling_seconds": self._config.wall_ceiling_seconds,
             }
             detail = (
-                f"held the push lock for {_span(held)}, past the "
+                f"held the push lock for {_span(held)} awake, past the "
                 f"{_span(self._config.wall_ceiling_seconds)} ceiling"
             )
             return self._kill(owner, members, "ceiling", detail, measured, dry_run)
@@ -1278,7 +1370,7 @@ class Reaper:
                 {"held_seconds": held},
                 owner,
             )
-        idle = self._idle(owner, members, now)
+        idle = self._idle(owner.token, members)
         if idle is None:
             return Decision(
                 "none",
@@ -1308,16 +1400,20 @@ class Reaper:
             )
         owner, members = traced.owner, traced.members
         self._forget_samples(keep=owner.token)
-        now = self._clock.now()
-        held = now - made
+        # The lock's mtime is wall time, which may span a sleep; its ceiling is counted in
+        # awake time from the first pass that saw it, which can only under-count (#1105-5).
+        memo = self._memo(owner.token)
+        memo.setdefault("first_awake", self._clock.awake())
+        self._save_memo(owner.token, memo)
+        held = self._clock.awake() - float(memo["first_awake"])
         if held >= self._config.wall_ceiling_seconds:
             detail = (
-                f"bare-mkdir lock held {_span(held)} by {traced.detail}, past the "
+                f"bare-mkdir lock held {_span(held)} awake by {traced.detail}, past the "
                 f"{_span(self._config.wall_ceiling_seconds)} ceiling"
             )
             measured = {"held_seconds": held, "ceiling_seconds": self._config.wall_ceiling_seconds}
             return self._kill(owner, members, "ceiling", detail, measured, dry_run, made)
-        idle = self._idle(owner, members, now)
+        idle = self._idle(owner.token, members)
         if idle is None:
             return Decision(
                 "none",
@@ -1335,7 +1431,17 @@ class Reaper:
 
     # -- the conditions --
 
-    def _stale(self, owner: Owner) -> str | None:
+    def _held(self, owner: Owner) -> float:
+        """How long the lock has been held, in time the machine was awake (#1105-5).
+
+        A record from this boot carries `started_awake`; one without it (written by an older
+        gate) falls back to wall time, the old behaviour, rather than to no ceiling at all.
+        """
+        if owner.started_awake is not None and owner.boot_id == self._clock.boot_id():
+            return self._clock.awake() - owner.started_awake
+        return self._clock.now() - owner.started_at
+
+    def _stale(self, owner: Owner, memo: dict[str, Any]) -> str | None:
         """Why the lock is stale, in words that claim only what was checked; else None."""
         if not owner.dedicated and owner.pgid is not None:
             # `acquire`: the holder is the calling shell's whole group, never one pid. The
@@ -1343,32 +1449,63 @@ class Reaper:
             if self._table.group_alive(owner.pgid):
                 return None
             return f"the holder's process group {owner.pgid} has exited"
-        if self._table.alive(owner.pid):
-            return None
+        holder = self._table.alive(owner.pid) and not self._reused(owner)
+        if not holder:
+            if owner.dedicated and owner.pgid is not None:
+                # The holder is gone; its push may not be. A group still running is a push
+                # in flight, and releasing under it would start a second gate run beside it.
+                if self._table.group_alive(owner.pgid):
+                    return None
+                return f"holder pid {owner.pid} is gone, and its push group {owner.pgid} has exited"
+            return f"holder pid {owner.pid} is gone"
         if owner.dedicated and owner.pgid is not None:
-            # The holder is gone; its push may not be. A group still running is a push in
-            # flight, and releasing under it would start a second gate run beside it.
+            # A live pid whose push group is long gone: the pid was reused, or the wrapper
+            # will never release. Two passes, so a push that just ended is not raced (#1105-7).
             if self._table.group_alive(owner.pgid):
+                memo["gone"] = 0
                 return None
-            return f"holder pid {owner.pid} is gone, and its push group {owner.pgid} has exited"
-        return f"holder pid {owner.pid} is gone"
+            memo["gone"] = int(memo.get("gone", 0)) + 1
+            if memo["gone"] >= GONE_PASSES:
+                return (
+                    f"push group {owner.pgid} has been gone for {memo['gone']} passes while "
+                    f"pid {owner.pid} lives on: a reused pid, or a holder that will never release"
+                )
+        return None
 
-    def _idle(self, owner: Owner, members: list[Proc], now: float) -> dict[str, Any] | None:
-        samples = self._samples(owner.token)
+    def _reused(self, owner: Owner) -> bool:
+        """Whether `owner.pid` now names a different process from the one that took the lock."""
+        if owner.holder_started is None:
+            return False
+        now = self._table.started(owner.pid)
+        return now is not None and abs(now - owner.holder_started) > 2.0
+
+    def _idle(self, token: str, members: list[Proc]) -> dict[str, Any] | None:
+        """Idle over the window, measured in awake time and never across a sleep (#1105-5)."""
+        memo = self._memo(token)
+        wall, awake = self._clock.now(), self._clock.awake()
         current = {str(p.pid): p.cpu_seconds for p in members}
-        samples.append({"t": now, "cpu": current})
         window = self._config.idle_window_seconds
-        samples = [s for s in samples if now - s["t"] <= 3 * window][-500:]
-        self._save_samples(owner.token, samples)
+        samples = [
+            s for s in memo.get("samples", []) if "a" in s and awake - float(s["a"]) <= 3 * window
+        ]
+        samples.append({"t": wall, "a": awake, "cpu": current})
+        memo["samples"] = samples[-500:]
+        self._save_memo(token, memo)
+        samples = memo["samples"]
         if not current:
             return None
         base = None
         for index, sample in enumerate(samples):
-            if now - sample["t"] >= window:
+            if awake - float(sample["a"]) >= window:
                 base = index
         if base is None:
             return None
         span = samples[base:]
+        for earlier, later in zip(span, span[1:], strict=False):
+            slept = (later["t"] - earlier["t"]) - (later["a"] - earlier["a"])
+            if slept > SLEEP_GAP_SECONDS:
+                # The machine slept inside the window; the tree was frozen, not hung.
+                return None
         pids = set(span[0]["cpu"])
         # A process appearing or vanishing inside the window is activity: a test forking
         # short-lived children spends CPU the survivors never show.
@@ -1379,7 +1516,7 @@ class Reaper:
             return None
         return {
             "cpu_seconds": round(used, 3),
-            "window_seconds": now - span[0]["t"],
+            "window_seconds": awake - float(span[0]["a"]),
             "processes": len(pids),
             "samples": len(span),
         }
@@ -1566,19 +1703,26 @@ class Reaper:
     def _sample_path(self, token: str) -> Path:
         return self._config.state_dir / "samples" / f"{token}.json"
 
-    def _samples(self, token: str) -> list[dict[str, Any]]:
+    def _memo(self, token: str) -> dict[str, Any]:
+        """What earlier passes learned about this owner: samples, first sighting, gone count.
+
+        Awake times mean nothing across a reboot, so a memo from another boot is dropped.
+        """
         text = _read_private(self._sample_path(token))
         try:
-            found = json.loads(text) if text is not None else []
+            found = json.loads(text) if text is not None else {}
         except ValueError:
-            return []
-        return [s for s in found if isinstance(s, dict)] if isinstance(found, list) else []
+            found = {}
+        boot = self._clock.boot_id()
+        if not isinstance(found, dict) or found.get("boot") != boot:
+            return {"boot": boot}
+        return found
 
-    def _save_samples(self, token: str, samples: list[dict[str, Any]]) -> None:
+    def _save_memo(self, token: str, memo: dict[str, Any]) -> None:
         path = self._sample_path(token)
         _private_dir(self._config.state_dir)
         _private_dir(path.parent)
-        _write_private(path, json.dumps(samples))
+        _write_private(path, json.dumps(memo))
 
     def _forget_samples(self, keep: str | None) -> None:
         folder = self._config.state_dir / "samples"
@@ -1752,6 +1896,7 @@ class PushRunner:
     ) -> Owner | None:
         announced: str | None = None
         waited_total = 0.0
+        holder_started = ProcessTable().started(os.getpid())
         while self._stopped is None:
             owner = Owner(
                 token=token,
@@ -1762,6 +1907,9 @@ class PushRunner:
                 branch=branch,
                 worktree=worktree,
                 started_at=self._clock.now(),
+                started_awake=self._clock.awake(),
+                boot_id=self._clock.boot_id(),
+                holder_started=holder_started,
                 command=list(argv),
                 log=str(logs / f"{token}.log"),
                 stacks=str(stacks),
@@ -2130,9 +2278,14 @@ def main(argv: list[str] | None = None) -> int:
             branch=branch,
             worktree=worktree,
             started_at=clock.now(),
+            started_awake=clock.awake(),
+            boot_id=clock.boot_id(),
+            holder_started=table.started(args.pid or group),
             command=["acquire"],
         )
-        while not lock.acquire(dataclasses.replace(owner, started_at=clock.now())):
+        while not lock.acquire(
+            dataclasses.replace(owner, started_at=clock.now(), started_awake=clock.awake())
+        ):
             if not args.wait:
                 print(Status(config, lock, table, clock).render(), file=sys.stderr)
                 return HELD_EXIT

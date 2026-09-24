@@ -552,8 +552,8 @@ def test_1105_5_an_idle_window_that_spans_a_sleep_is_not_idle(tmp_path: Path) ->
     r.clock.sleep(200)
     r.clock.suspend(3600)
     r.reaper.tick()
-    r.clock.sleep(r.cfg.idle_window_seconds)
-    # The window from the first sample spans the sleep; from the second it is not yet whole.
+    r.clock.sleep(r.cfg.idle_window_seconds - 1)
+    # The only whole window starts at the first sample, and it spans the sleep.
     assert r.reaper.tick().action == "none"
 
 
@@ -565,6 +565,36 @@ def test_1105_5_samples_from_another_boot_are_dropped(tmp_path: Path) -> None:
     r.clock.boot, r.clock.a = "boot-2", 10.0  # a reboot: awake time starts again
     r.clock.t += r.cfg.idle_window_seconds
     assert r.reaper.tick().action == "none"
+
+
+def test_1105_5_the_boot_id_is_read_on_linux_and_on_macos(tmp_path: Path) -> None:
+    """Ubuntu 26.04 LTS is first-class (#1116): both platforms' paths, with fakes."""
+    linux = push_gate.Clock(platform="linux", read=lambda path: "3f2a-boot\n")
+    assert linux.boot_id() == "3f2a-boot"
+    asked: list[list[str]] = []
+
+    def sysctl(argv: list[str]) -> tuple[int, str]:
+        asked.append(argv)
+        return 0, "8C1D-SESSION\n"
+
+    mac = push_gate.Clock(platform="darwin", run=sysctl)
+    assert mac.boot_id() == "8C1D-SESSION"
+    assert asked == [["sysctl", "-n", "kern.bootsessionuuid"]]
+    assert isinstance(linux.awake(), float) and isinstance(mac.awake(), float)
+
+
+def test_1105_7_linux_reads_start_times_and_cwds_from_proc(tmp_path: Path) -> None:
+    proc = tmp_path / "proc"
+    (proc / "42").mkdir(parents=True)
+    (proc / "stat").write_text("cpu  1 2 3\nbtime 1790000000\nprocesses 9\n")
+    fields = ["S", "1", "42", "42", "0", "-1", "0"] + ["0"] * 12 + ["12345"] + ["0"] * 20
+    (proc / "42" / "stat").write_text("42 (git push) " + " ".join(fields) + "\n")
+    (proc / "42" / "cwd").symlink_to(tmp_path)
+    table = push_gate.ProcessTable(platform="linux", proc=proc)
+    ticks = os.sysconf("SC_CLK_TCK")
+    assert table.started(42) == pytest.approx(1790000000 + 12345 / ticks)
+    assert table.cwd(42) == str(tmp_path)
+    assert table.started(43) is None and table.cwd(43) is None
 
 
 # --- #1105-6: two state_dirs on one lock -----------------------------------------------------
@@ -990,12 +1020,7 @@ def test_1107_8_the_shell_scan_sees_a_bare_push() -> None:
 #: Findings whose fix lands in a later commit of this pull request. Each is a strict xfail:
 #: it must fail until its fix lands, and the commit that fixes it deletes its line here.
 PENDING = {
-    "test_1105_5_laptop_sleep_does_not_count_toward_the_ceiling",
-    "test_1105_5_an_idle_window_that_spans_a_sleep_is_not_idle",
-    "test_1105_5_samples_from_another_boot_are_dropped",
     "test_1105_6_two_state_dirs_on_one_lock_share_the_mutex_and_the_reap_lock",
-    "test_1105_7_a_live_holder_pid_whose_group_is_long_gone_becomes_stale",
-    "test_1105_7_a_holder_pid_with_a_different_start_time_is_a_reuse",
     "test_1105_8_a_push_timeout_writes_evidence_and_a_reap_log_line",
     "test_1105_8_the_docs_say_the_schedule_reaps_what_the_cycle_cannot",
     "test_1105_9_a_failed_py_spy_falls_back_to_sigusr1",
