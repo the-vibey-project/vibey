@@ -216,7 +216,13 @@ def new_project(
                 "must be off, shadow, or inject", param_hint="--skills-context-mode"
             )
         config: dict[str, object] = {"project": {"name": name, "repo": str(repo)}}
-        config.update(load_runtime_config_from_path(repo.resolve() / "vibey.toml"))
+        try:
+            config.update(load_runtime_config_from_path(repo.resolve() / "vibey.toml"))
+        except ValueError as exc:
+            # A forbidden [gates] or [engine_environment] entry is refused here, before
+            # a project exists that the worker would then refuse to build.
+            typer.echo(f"vibey.toml: {exc}")
+            raise typer.Exit(EXIT_USAGE) from exc
         if max_cycle_dollars is not None:
             config["max_cycle_dollars"] = max_cycle_dollars
         if max_cycle_turns is not None:

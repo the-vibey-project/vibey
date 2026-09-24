@@ -351,7 +351,13 @@ interview gates.
 
 The CR also accepts `maxCycleTurns` and
 `skillsContext: {mode, budget, timeout_seconds}` (`mode` is `off`,
-`shadow`, or `inject`; `budget` is 1,000–32,000, default 6,000).
+`shadow`, or `inject`; `budget` is 1,000–32,000, default 6,000). `gates`
+(`{timeout_seconds, kill_grace_seconds, isolate_python_env, env_allow}`) and
+`engineEnvironment` (`{allow, engines: {<engine id>: [...]}}`) declare what a gate
+command and an engine session may see of the worker's environment, the same objects
+as `vibey.toml`'s [`[gates]`](../reference/configuration.md#gates) and
+[`[engine_environment]`](../reference/configuration.md#engine_environment); a
+forbidden entry (`VIBEY_*`, `PG*`, a DSN) is refused before the project is created.
 `spec.engines` is restricted by the CRD schema to the four paid engines,
 so `qwenloop` cannot be named in a CR today. The worker accepts
 `--provider qwenloop` (chart value `worker.provider`) for the sovereign

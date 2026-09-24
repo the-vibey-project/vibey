@@ -87,10 +87,10 @@ class SubprocessGateRunner:
         """Build a runner from the project's stored config record.
 
         Read off the record's `gates` object the same way `review`,
-        `max_cycle_dollars` and `skills_context` are. `vibey.toml` is never
-        loaded at runtime, so it is not a route for this. A malformed object
-        raises when the worker is built rather than silently running gates
-        with defaults nobody asked for.
+        `max_cycle_dollars` and `skills_context` are. The object is declared in
+        vibey.toml's `[gates]` table (copied into the record by `vibey new`) or the
+        `VibeyProject` spec's `gates`. A malformed object raises when the worker is
+        built rather than silently running gates with defaults nobody asked for.
         """
         raw = config.get("gates")
         if raw is None:
