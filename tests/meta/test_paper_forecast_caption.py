@@ -10,21 +10,35 @@ in the data, and the storm is named only when open issues rose at the same recor
 
 from __future__ import annotations
 
-import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "paper_figures.py"
-# Running a script puts its own directory on `sys.path`; importing one by path does not, and
-# paper_figures.py imports its siblings (`interfaces`, `paper_evidence`).
-if str(SCRIPT.parent) not in sys.path:
-    sys.path.insert(0, str(SCRIPT.parent))
-SPEC = importlib.util.spec_from_file_location("paper_figures_under_test", SCRIPT)
-assert SPEC and SPEC.loader, f"the figure generator is missing: {SCRIPT}"
-paper_figures = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(paper_figures)
-largest_rise = paper_figures.PaperFigureAtlas._largest_rise
+# The probe runs in its own interpreter. paper_figures.py imports its siblings as the
+# top-level packages `interfaces` and `paper_evidence`, and the storm tools under
+# docs/plans have an `interfaces` package of their own: loaded into this process, the first
+# one imported is cached under that name and the other's imports then fail, depending only
+# on the order the tests are collected in. A child process shares no module cache.
+PROBE = (
+    "import json, sys\n"
+    "sys.path.insert(0, sys.argv[1])\n"
+    "import paper_figures\n"
+    "print(paper_figures.PaperFigureAtlas._largest_rise(json.load(sys.stdin)))\n"
+)
+
+
+def largest_rise(records: list[dict[str, Any]]) -> str:
+    result = subprocess.run(
+        [sys.executable, "-c", PROBE, str(SCRIPT.parent)],
+        input=json.dumps(records),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.rstrip("\n")
 
 
 def record(at: str, remaining: float, open_issues: int) -> dict[str, Any]:
