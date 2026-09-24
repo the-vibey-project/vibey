@@ -7,6 +7,9 @@ from vibey.infrastructure.engines.interfaces.descriptors_interface import (
 from vibey.infrastructure.engines.interfaces.design_json_interface import (
     WorkPlanDecoderInterface,
 )
+from vibey.infrastructure.engines.interfaces.engine_environment_interface import (
+    EngineEnvironmentPolicyInterface,
+)
 from vibey.infrastructure.engines.interfaces.local_engines_interface import (
     LocalEndpointEnvironmentInterface,
     LocalEngineSettingsInterface,
@@ -24,6 +27,7 @@ from vibey.infrastructure.engines.interfaces.qwenloop_design_interface import (
 
 __all__ = [
     "ClaudeloopLocalDescriptorsInterface",
+    "EngineEnvironmentPolicyInterface",
     "LocalEndpointEnvironmentInterface",
     "LocalEngineSettingsInterface",
     "OllamaChatClientInterface",

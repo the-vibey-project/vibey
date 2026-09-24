@@ -31,6 +31,8 @@ from vibey.application.operator_projection import (
 )
 from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.bootstrap import AppResources, build_app
+from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
+from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 
 GROUP = "vibey.dev"
 VERSION = "v1alpha1"
@@ -65,6 +67,17 @@ def _project_config(name: str, spec: Mapping[str, Any]) -> dict[str, object]:
         if not isinstance(context, Mapping):
             raise ValueError("spec.skillsContext must be an object")
         config["skills_context"] = dict(context)
+    # What a gate command and an engine session may see of the worker's environment:
+    # the same objects `vibey new` reads from vibey.toml's [gates] and
+    # [engine_environment], validated by the parsers the worker builds them with.
+    for field, key in (("gates", "gates"), ("engineEnvironment", "engine_environment")):
+        if spec.get(field) is not None:
+            declared = spec[field]
+            if not isinstance(declared, Mapping):
+                raise ValueError(f"spec.{field} must be an object")
+            config[key] = dict(declared)
+    SubprocessGateRunner.from_config(config)
+    EngineEnvironmentPolicy.from_config(config)
     return config
 
 
