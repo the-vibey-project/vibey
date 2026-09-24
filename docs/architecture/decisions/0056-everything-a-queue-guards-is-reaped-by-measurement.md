@@ -1,6 +1,6 @@
 # 0056 — Everything a queue guards is reaped by measurement: five conditions, each a declared threshold, both backends judged alike, and no dead letter ever deleted
 
-**Status:** proposed · **Date:** 2026-09-24 · **Cites:** the CLAUDE.md non-negotiables "Never block a worker on a human", "Every job is idempotent under replay" and "The ledger is append-only"; sub-doctrines 12.c, 12.d, 12.e, 10.f, 10.g, 9.b, 8.c; SD-01 §4 · **Related:** ADR-0002, ADR-0016, ADR-0017, ADR-0024, ADR-0025, ADR-0042, ADR-0044, ADR-0054, ADR-0055 · **Evidence:** `develop` at `b6444000`, read 2026-09-24; the Helm chart at the same commit; the storm's lane ledger (`docs/plans/qwenstorm-3.0.0/rmq-lanes.json`, `integrated.txt`) at the same commit
+**Status:** proposed · **Date:** 2026-09-24 · **Cites:** the CLAUDE.md non-negotiables "Never block a worker on a human", "Every job is idempotent under replay" and "The ledger is append-only"; sub-doctrines 12.c, 12.d, 12.e, 10.f, 10.g, 9.b, 8.c; SD-01 §4 · **Related:** ADR-0002, ADR-0016, ADR-0017, ADR-0024, ADR-0025, ADR-0042, ADR-0044, ADR-0054, ADR-0055 · **Evidence:** `develop` at `b6444000`, read 2026-09-24, rebased onto `600f3db2`; the Helm chart at the same commit; the storm's lane ledger (`docs/plans/qwenstorm-3.0.0/rmq-lanes.json`, `integrated.txt`) at the same commit
 
 **Owes:**
 
@@ -163,9 +163,12 @@ As code (12.c):
 | `cli/` | `vibey queue reap`; the drive loop's call |
 
 Every class has its interface beside it (9.b, ADR-0016). The names are `Reap*` and
-`QueueReap*`, not `BusReap*`. The storm's push-lock reaper, on `feat/push-gate-reaper`, is
-another reaper over another lock. If the two converge, `ReapCondition` is the vocabulary
-to converge on.
+`QueueReap*`, not `BusReap*`. The storm's push-lock reaper
+(`docs/plans/qwenstorm-3.0.0/tools/push_gate.py`, #1105) is another reaper over another
+lock. Its conditions -- the holder is gone; the holder is alive but idle under a CPU
+floor; past a ceiling -- line up with `HolderState.GONE`, `HUNG_HANDLER` and a deadline.
+If the two converge, `ReapCondition` is the vocabulary to converge on. This record keeps
+its own and does not touch that tool.
 
 ## How each non-negotiable still holds
 

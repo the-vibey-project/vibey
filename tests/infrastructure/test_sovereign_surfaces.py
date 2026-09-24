@@ -752,6 +752,7 @@ async def test_build_app_composes_the_bus_and_the_reaper_from_the_environment_al
     with (
         patch("asyncpg.create_pool", new=AsyncMock(return_value=_mock_pool())),
         patch("vibey.bootstrap.PostgresMigrator") as migrator_cls,
+        patch("vibey.bootstrap.SchemaPreparer", new=_InForcePreparer),
         patch("vibey.bootstrap.database_url", return_value="postgresql://x"),
         patch("vibey.bootstrap.Path.is_file", return_value=False),
     ):

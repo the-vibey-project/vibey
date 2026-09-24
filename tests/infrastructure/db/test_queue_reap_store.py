@@ -204,10 +204,12 @@ async def test_two_reapers_at_once_reap_each_lease_exactly_once(
 
 
 async def test_a_lease_in_a_phase_this_vibey_does_not_know_is_left_for_a_newer_one(
-    migrated_pool: asyncpg.Pool, project_id: UUID
+    migrated_pool: asyncpg.Pool, project_id: UUID, owner_pool: asyncpg.Pool
 ) -> None:
-    async with migrated_pool.acquire() as conn:
+    # Widening an enum is the owner's act (ADR-0055); the rows are the application's.
+    async with owner_pool.acquire() as conn:
         await conn.execute("ALTER TYPE phase ADD VALUE IF NOT EXISTS 'hyperdrive'")
+    async with migrated_pool.acquire() as conn:
         job_id = await conn.fetchval(
             """
             INSERT INTO job (project_id, cycle, phase, kind, state, idempotency_key,
