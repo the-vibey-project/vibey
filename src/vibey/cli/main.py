@@ -36,8 +36,7 @@ from vibey.bootstrap import (
 from vibey.cli.errors import EXIT_USAGE, guard
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
-from vibey.cli.queue import DEFAULT_CONFIG as QUEUE_CONFIG_PATH
-from vibey.cli.queue import QUEUE, queue_app
+from vibey.cli.queue import queue_app
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
     InvalidAnswer,
@@ -128,9 +127,7 @@ def main(
     configure_logging(plan, log_file=log_file)
 
 
-async def _enqueue_design(
-    project_id: UUID, *, priority: bool = False, config: Path = QUEUE_CONFIG_PATH
-) -> str:
+async def _enqueue_design(project_id: UUID, *, priority: bool = False) -> str:
     # The transition-and-enqueue logic lives in the application layer so the
     # Kubernetes operator starts projects through the same path this does.
     async with build_app() as resources:
@@ -138,7 +135,7 @@ async def _enqueue_design(
             projects=resources.projects,
             jobs=resources.jobs,
             project_id=project_id,
-            priority=QUEUE.service(resources, config) if priority else None,
+            priority=resources.queue_priority if priority else None,
         )
         return str(job_id)
 

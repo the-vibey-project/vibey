@@ -12,31 +12,23 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from datetime import datetime
-    from uuid import UUID
 
-    from vibey.domain.phase import Phase
-    from vibey.domain.queue_priority import PriorityChange, PriorityRefusal
+    from vibey.domain.queue_priority import PriorityChange, PriorityContext, PriorityRefusal
     from vibey.infrastructure.engines.tailer import LedgerEventDraft
 
 
 @runtime_checkable
 class PriorityEventDraftBuilderInterface(Protocol):
-    """Builds the ledger drafts queue priority appends (ADR-0054)."""
+    """Builds the ledger drafts queue priority appends (ADR-0054): one per request."""
 
     def changed(
-        self,
-        change: PriorityChange,
-        *,
-        project_id: UUID,
-        cycle: int,
-        phase: Phase,
-        at: datetime,
+        self, change: PriorityChange, *, context: PriorityContext, at: datetime
     ) -> LedgerEventDraft:
-        """`JobPriorityBumped` or `JobPriorityUnbumped`, filed under the target job's
-        project, cycle and phase, listing every job the change moved."""
+        """`JobPriorityBumped` or `JobPriorityUnbumped` -- moved something or nothing --
+        filed under the project's current cycle and phase, naming who asked."""
         ...
 
     def refused(self, refusal: PriorityRefusal, *, at: datetime) -> LedgerEventDraft:
-        """`JobPriorityRefused`, with the source and the reason. `untrusted`: the
-        request came from outside the grant, so its text is data (12.j)."""
+        """`JobPriorityRefused`, with who asked and why. `untrusted`: the request came
+        from outside the grant, so its text is data (12.j)."""
         ...

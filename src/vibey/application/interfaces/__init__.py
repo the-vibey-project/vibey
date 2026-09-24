@@ -140,7 +140,9 @@ from vibey.application.interfaces.queue import (
     Success,
 )
 from vibey.application.interfaces.queue_priority import (
+    CallerIdentity,
     JobPriorityStore,
+    PriorityGrantReader,
     QueuePriorityServiceInterface,
 )
 from vibey.application.interfaces.review import (
@@ -217,7 +219,9 @@ __all__ = [
     "JobHandler",
     "JobHandlerFactory",
     "JobRecordInterface",
+    "CallerIdentity",
     "JobPriorityStore",
+    "PriorityGrantReader",
     "JobReadyNotifier",
     "JobRepository",
     "QueuePriorityServiceInterface",

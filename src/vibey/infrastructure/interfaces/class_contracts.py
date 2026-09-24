@@ -13,6 +13,7 @@ from typing import Protocol, runtime_checkable
 
 from vibey.application.interfaces import (
     BuildLedger,
+    CallerIdentity,
     DesignProvider,
     EngineAdapter,
     EngineHealthRepository,
@@ -22,6 +23,7 @@ from vibey.application.interfaces import (
     LedgerShardStore,
     LedgerSiteWriter,
     PhaseLedger,
+    PriorityGrantReader,
     ProjectStore,
     RotationCursorRepository,
     RunFeasibilityEvaluatorInterface,
@@ -74,6 +76,16 @@ class PostgresJobRepositoryInterface(JobRepository, Protocol):
 @runtime_checkable
 class PostgresJobPriorityStoreInterface(JobPriorityStore, Protocol):
     """The Postgres implementation of the queue-priority store (ADR-0054)."""
+
+
+@runtime_checkable
+class ProjectPriorityGrantReaderInterface(PriorityGrantReader, Protocol):
+    """Reads a project's grant from `<repo_path>/vibey.toml`, and nowhere else."""
+
+
+@runtime_checkable
+class ProcessCallerInterface(CallerIdentity, Protocol):
+    """The account this process runs as: uid from the OS, name from pwd."""
 
 
 @runtime_checkable

@@ -21,9 +21,59 @@ if TYPE_CHECKING:
         BumpPlan,
         MovedJob,
         PriorityAction,
+        PriorityContext,
+        PriorityDecision,
         QueuedJob,
         UnbumpPlan,
     )
+
+
+@runtime_checkable
+class CallerInterface(Protocol):
+    """The account a request runs as."""
+
+    @property
+    def uid(self) -> int: ...
+
+    @property
+    def name(self) -> str:
+        """From the password database, never the environment."""
+        ...
+
+
+@runtime_checkable
+class PriorityDecisionInterface(Protocol):
+    @property
+    def admitted(self) -> bool: ...
+
+    @property
+    def principal(self) -> str:
+        """`operator:NAME`, `source:NAME` or `account:NAME`: who asked."""
+        ...
+
+    @property
+    def reason(self) -> str:
+        """Why it was refused; empty when admitted."""
+        ...
+
+
+@runtime_checkable
+class PriorityGrantInterface(Protocol):
+    """Who may reorder a project's queue: the account owning its reviewed
+    configuration, and the sources that configuration declares, run by that account."""
+
+    @property
+    def declared(self) -> frozenset[str]: ...
+
+    @property
+    def anchor(self) -> str:
+        """The reviewed configuration whose owner is the operator, as a path."""
+        ...
+
+    def decide(self, source: str | None, caller: CallerInterface) -> PriorityDecision:
+        """No source: admitted only when `caller` owns the anchor. A source: admitted
+        only when declared AND `caller` owns the anchor."""
+        ...
 
 
 @runtime_checkable
@@ -51,11 +101,24 @@ class QueuedJobInterface(Protocol):
     def depends_on(self) -> tuple[UUID, ...]: ...
 
     @property
+    def bump_origin(self) -> UUID | None:
+        """The job whose bump moved this one."""
+        ...
+
+    @property
+    def phase_known(self) -> bool: ...
+
+    @property
     def bumped(self) -> bool: ...
 
     @property
     def movable(self) -> bool:
         """True while the job can still be claimed, now or after a retry or an answer."""
+        ...
+
+    @property
+    def named(self) -> bool:
+        """Bumped by name, rather than pulled forward for another job."""
         ...
 
 
@@ -73,7 +136,7 @@ class BumpPlanInterface(Protocol):
     def kept(self) -> tuple[UUID, ...]: ...
 
     @property
-    def blocked_by(self) -> tuple[UUID, ...]: ...
+    def named(self) -> bool: ...
 
 
 @runtime_checkable
@@ -105,7 +168,7 @@ class PriorityChangeInterface(Protocol):
     def action(self) -> PriorityAction: ...
 
     @property
-    def source(self) -> str: ...
+    def requested_by(self) -> str: ...
 
     @property
     def target(self) -> UUID: ...
@@ -117,18 +180,19 @@ class PriorityChangeInterface(Protocol):
     def kept(self) -> tuple[UUID, ...]: ...
 
     @property
-    def blocked_by(self) -> tuple[UUID, ...]: ...
+    def named(self) -> bool: ...
+
+    @property
+    def note(self) -> str: ...
 
     @property
     def changed(self) -> bool:
-        """False for a no-op, which is recorded nowhere."""
+        """False for a request that moved nothing. It is recorded all the same."""
         ...
 
 
 @runtime_checkable
-class PriorityRefusalInterface(Protocol):
-    """A reorder request from a source with no grant, as the ledger records it."""
-
+class PriorityContextInterface(Protocol):
     @property
     def project_id(self) -> UUID: ...
 
@@ -139,35 +203,24 @@ class PriorityRefusalInterface(Protocol):
     def phase(self) -> Phase: ...
 
     @property
+    def requested_by(self) -> str: ...
+
+
+@runtime_checkable
+class PriorityRefusalInterface(Protocol):
+    """A refused reorder request, as the ledger records it."""
+
+    @property
+    def context(self) -> PriorityContext: ...
+
+    @property
     def job_id(self) -> UUID | None: ...
 
     @property
     def action(self) -> PriorityAction: ...
 
     @property
-    def source(self) -> str: ...
-
-    @property
     def reason(self) -> str: ...
-
-
-@runtime_checkable
-class PriorityGrantInterface(Protocol):
-    """Who may move a job ahead: the operator, and the sources declared in config."""
-
-    @property
-    def declared(self) -> frozenset[str]:
-        """The sources `[queue.priority] sources` declares. Never includes the operator,
-        who needs no declaration."""
-        ...
-
-    def admits(self, source: str) -> bool:
-        """True for the operator and for a declared source, matched exactly."""
-        ...
-
-    def refusal(self, source: str) -> str:
-        """Why `source` was refused, in words an operator can act on."""
-        ...
 
 
 @runtime_checkable
@@ -187,19 +240,23 @@ class ClaimOrderInterface(Protocol):
 class BumpPlannerInterface(Protocol):
     """Decides what a bump moves: the target and every unfinished dependency."""
 
-    def plan(self, target: UUID, jobs: Mapping[UUID, QueuedJob]) -> BumpPlan:
-        """`jobs` holds the target and its dependencies, transitively. Raises
-        `NotReorderable` for a target that is finished or in an unknown state,
+    def plan(
+        self, target: UUID, jobs: Mapping[UUID, QueuedJob], *, finished_ok: bool = False
+    ) -> BumpPlan:
+        """`jobs` holds the target and its unfinished dependencies, transitively, with
+        the finished ones they name. Raises `NotReorderable` for a finished or unknown
+        target (unless `finished_ok`, which makes a finished target a no-op),
+        `DependencyCannotFinish` for a failed, cancelled or unknown dependency,
         `DependencyCycle` for a ring, and `LookupError` for a job the snapshot lacks."""
         ...
 
 
 @runtime_checkable
 class UnbumpPlannerInterface(Protocol):
-    """Decides what an un-bump moves: the target and every bumped job needing it."""
+    """Decides what an un-bump moves: exactly what the target's bump moved."""
 
     def plan(self, target: UUID, jobs: Mapping[UUID, QueuedJob]) -> UnbumpPlan:
-        """`jobs` holds the target and every job depending on it, transitively.
-        Raises `NotReorderable` for a finished or unknown target and `LookupError`
-        for a target the snapshot lacks."""
+        """`jobs` holds the target and every unfinished job of its project. Raises
+        `NotReorderable` for a finished or unknown target, `DependentsStillBumped` while
+        a bumped job needs it, and `LookupError` for a target the snapshot lacks."""
         ...

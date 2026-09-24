@@ -134,8 +134,8 @@ def load_runtime_config_from_path(path: Path) -> dict[str, object]:
 class QueueConfigLoader:
     """Reads `[queue]` from a vibey.toml, and only `[queue]` (ADR-0054).
 
-    `vibey queue` needs the queue policy and nothing else, so it does not demand the
-    `[project]` table a whole-document parse requires. A missing file declares no
+    The queue-priority grant reader needs the queue policy and nothing else, so it does
+    not demand the `[project]` table a whole-document parse requires. A missing file declares no
     source: the operator alone may reorder the queue, which is the default the
     absence of a grant means (12.f, 12.j). A malformed file raises -- a declaration
     that cannot be read is not the same fact as no declaration (10.f).
@@ -152,4 +152,4 @@ class QueueConfigLoader:
 
 
 QUEUE_CONFIG: Final[QueueConfigLoaderInterface] = QueueConfigLoader()
-"""The loader `vibey queue` reads its grant through. Stateless, so one instance serves."""
+"""The loader the queue-priority grant is read through. Stateless, so one instance serves."""

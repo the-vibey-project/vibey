@@ -1,43 +1,35 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """`vibey queue`: see the queue in claim order, and move a job to the front (ADR-0054).
 
-`bump` puts a job next in line -- after whatever is running, which is never
-interrupted -- behind every job bumped before it and ahead of everything else, and
-pulls its unfinished dependencies forward with it. `unbump` returns it to normal
-order. `list` shows what will run, in the order it will run.
+`bump` puts a job next in line -- after whatever is running, which is never interrupted
+-- behind every job bumped before it and ahead of everything else, and pulls its
+unfinished dependencies forward with it. `unbump` undoes exactly what that bump moved.
+`list` shows what will run, in the order it will run.
 
-Whoever runs this command is the operator. `--source NAME` lets a declared
-automation name itself instead; a name `[queue.priority] sources` does not declare is
-refused, the refusal is recorded on the ledger, and the command exits non-zero with
-the reason (12.j). The human reading comes first; `--json` is the same result for a
-program, second (doctrine 7).
+Who may reorder is decided by the project's own reviewed configuration, never by
+anything on this command line: the operator is the account that owns
+`<repo>/vibey.toml`, and `--source NAME` is honoured only for a name that file declares,
+run by that same account. Anyone else is refused, the refusal is recorded, and the
+command exits 3 with the reason (12.j). Every request is recorded on the ledger.
+The human reading comes first; `--json` is the same result for a program (doctrine 7).
 """
 
 import asyncio
 import json
 from collections.abc import Callable, Sequence
 from contextlib import AbstractAsyncContextManager
-from pathlib import Path
 from typing import Annotated, Final
 from uuid import UUID
 
 import typer
 
 from vibey.application.dto import QueueEntry
-from vibey.application.interfaces import QueuePriorityServiceInterface
-from vibey.application.queue_priority import QueuePriorityService
 from vibey.bootstrap import AppResources, build_app
 from vibey.cli.errors import guard
 from vibey.cli.interfaces.queue_interface import QueueCommandInterface, QueuePresenterInterface
 from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInterface
 from vibey.domain.job import JobState
-from vibey.domain.queue_priority import OPERATOR_SOURCE, PriorityAction, PriorityGrant
-from vibey.infrastructure.config_loader import QUEUE_CONFIG
-from vibey.infrastructure.interfaces import QueueConfigLoaderInterface
-
-DEFAULT_CONFIG: Final = Path("vibey.toml")
-"""Where the grant is declared unless `--config` says otherwise: the current
-directory's vibey.toml, the file `vibey doctor` reads too."""
+from vibey.domain.queue_priority import PriorityAction
 
 
 class QueuePresenter:
@@ -57,13 +49,16 @@ class QueuePresenter:
                 place = str(position)
             mark = f"bumped #{job.bump_seq}" if job.bump_seq is not None else ""
             item = f" {job.work_item_id}" if job.work_item_id is not None else ""
+            pulled = ""
+            if job.bump_origin is not None and job.bump_origin != job.id:
+                pulled = f"  (pulled forward for {job.bump_origin})"
             waits = ""
             if entry.waiting_on:
                 count = len(entry.waiting_on)
                 waits = f"  (waits on {count} job{'' if count == 1 else 's'})"
             lines.append(
                 f"{place:>7}  {mark:<12} {job.state.value:<17} {job.kind} "
-                f"[{job.phase.value}] {job.id}{item}{waits}"
+                f"[{job.phase.value}] {job.id}{item}{pulled}{waits}"
             )
         bumped = sum(1 for entry in entries if entry.job.bump_seq is not None)
         lines.append(
@@ -90,6 +85,7 @@ class QueuePresenter:
                     "phase": job.phase.value,
                     "work_item_id": job.work_item_id,
                     "bump_seq": job.bump_seq,
+                    "bump_origin": str(job.bump_origin) if job.bump_origin is not None else None,
                     "priority": job.priority,
                     "run_after": job.run_after.isoformat(),
                     "waiting_on": [str(dep) for dep in entry.waiting_on],
@@ -98,38 +94,36 @@ class QueuePresenter:
         return json.dumps({"project_id": str(project_id), "jobs": jobs}, indent=2)
 
     def change(self, change: PriorityChangeInterface) -> list[str]:
-        verb = "un-bumped" if change.action is PriorityAction.UNBUMP else "bumped"
         if not change.changed:
-            state = (
-                "is not bumped" if change.action is PriorityAction.UNBUMP else "is already bumped"
+            return [f"job {change.target}: {change.note} (recorded; by {change.requested_by})"]
+        verb = "un-bumped" if change.action is PriorityAction.UNBUMP else "bumped"
+        lines = [f"{verb} job {change.target} (by {change.requested_by})"]
+        if change.named:
+            lines.append(
+                "  it was already bumped for another job; it keeps its place and is now "
+                "bumped by name"
             )
-            return [f"job {change.target} {state}; nothing moved"]
-        lines = [f"{verb} job {change.target} (source: {change.source})"]
         for moved in change.moved:
             place = f"#{moved.bump_seq}" if moved.bump_seq is not None else f"was #{moved.previous}"
             lines.append(f"  moved    {place:<9} {moved.job_id}")
         for kept in change.kept:
             lines.append(f"  ahead    {'':<9} {kept}  (already bumped; keeps its place)")
-        for blocked in change.blocked_by:
-            lines.append(
-                f"  waits on {'':<9} {blocked}  (cannot run and cannot be moved: "
-                "the job will not run until someone resolves it)"
-            )
         return lines
 
     def change_json(self, change: PriorityChangeInterface) -> str:
         return json.dumps(
             {
                 "action": change.action.value,
-                "source": change.source,
+                "by": change.requested_by,
                 "target": str(change.target),
                 "changed": change.changed,
+                "named": change.named,
+                "note": change.note,
                 "moved": [
                     {"job_id": str(m.job_id), "bump_seq": m.bump_seq, "previous": m.previous}
                     for m in change.moved
                 ],
                 "kept": [str(job_id) for job_id in change.kept],
-                "blocked_by": [str(job_id) for job_id in change.blocked_by],
             },
             indent=2,
         )
@@ -139,39 +133,37 @@ QUEUE_PRESENTER: Final[QueuePresenterInterface] = QueuePresenter()
 
 
 class QueueCommand:
-    """Reads the grant, opens the app, has the service move or list, prints."""
+    """Opens the app, asks the one priority service to move or list, prints."""
 
     def __init__(
         self,
         *,
         presenter: QueuePresenterInterface = QUEUE_PRESENTER,
-        config: QueueConfigLoaderInterface = QUEUE_CONFIG,
         open_app: Callable[[], AbstractAsyncContextManager[AppResources]] = build_app,
     ) -> None:
         self._presenter = presenter
-        self._config = config
         self._open_app = open_app
 
-    def service(self, resources: AppResources, config: Path) -> QueuePriorityServiceInterface:
-        grant = PriorityGrant(self._config.load(config).priority.sources)
-        return QueuePriorityService(
-            jobs=resources.jobs, store=resources.job_priority, grant=grant, clock=resources.clock
-        )
-
-    async def bump(self, job_id: UUID, *, source: str, config: Path, as_json: bool) -> None:
+    async def bump(
+        self, job_id: UUID, *, project_id: UUID | None, source: str | None, as_json: bool
+    ) -> None:
         async with self._open_app() as resources:
-            change = await self.service(resources, config).bump(job_id, source=source)
+            project = await self._project(resources, project_id)
+            change = await resources.queue_priority.bump(project, job_id, source=source)
         self._print_change(change, as_json=as_json)
 
-    async def unbump(self, job_id: UUID, *, source: str, config: Path, as_json: bool) -> None:
+    async def unbump(
+        self, job_id: UUID, *, project_id: UUID | None, source: str | None, as_json: bool
+    ) -> None:
         async with self._open_app() as resources:
-            change = await self.service(resources, config).unbump(job_id, source=source)
+            project = await self._project(resources, project_id)
+            change = await resources.queue_priority.unbump(project, job_id, source=source)
         self._print_change(change, as_json=as_json)
 
     async def list(self, project_id: UUID | None, *, as_json: bool) -> None:
         async with self._open_app() as resources:
             target = await self._project(resources, project_id)
-            entries = await resources.job_priority.queue(target)
+            entries = await resources.queue_priority.queue(target)
         if as_json:
             typer.echo(self._presenter.entries_json(target, entries))
         else:
@@ -203,18 +195,23 @@ checks the class against its declared seam."""
 
 queue_app = typer.Typer(name="queue", invoke_without_command=True)
 
-SourceOption = Annotated[
-    str,
+ProjectOption = Annotated[
+    UUID | None,
     typer.Option(
-        "--source",
-        help="Who is asking. Defaults to the operator, who needs no declaration; any "
-        "other name must be declared in `[queue.priority] sources`, or the request is "
-        "refused and the refusal recorded on the ledger.",
+        "--project",
+        help="The project whose queue this is; defaults to the latest. The grant is read "
+        "from this project's own vibey.toml, and the request is recorded on its ledger.",
     ),
 ]
-ConfigOption = Annotated[
-    Path,
-    typer.Option("--config", help="The vibey.toml that declares `[queue.priority] sources`."),
+SourceOption = Annotated[
+    str | None,
+    typer.Option(
+        "--source",
+        help="An automation naming itself. Omitted, the caller must be the operator: the "
+        "account that owns the project's vibey.toml. Given, the name must be declared in "
+        "that file's `[queue.priority] sources` and the caller must still be that account. "
+        "Anything else is refused and the refusal recorded.",
+    ),
 ]
 JsonOption = Annotated[bool, typer.Option("--json", help="Print JSON instead of lines.")]
 
@@ -232,26 +229,27 @@ def queue(ctx: typer.Context) -> None:
 @queue_app.command("bump")
 def queue_bump(
     job_id: Annotated[UUID, typer.Argument(help="The job to run next.")],
-    source: SourceOption = OPERATOR_SOURCE,
-    config: ConfigOption = DEFAULT_CONFIG,
+    project_id: ProjectOption = None,
+    source: SourceOption = None,
     as_json: JsonOption = False,
 ) -> None:
     """Run a job next: after whatever is running, ahead of all un-bumped work, behind
     anything bumped before it. Its unfinished dependencies move forward with it."""
     with guard():
-        asyncio.run(QUEUE.bump(job_id, source=source, config=config, as_json=as_json))
+        asyncio.run(QUEUE.bump(job_id, project_id=project_id, source=source, as_json=as_json))
 
 
 @queue_app.command("unbump")
 def queue_unbump(
     job_id: Annotated[UUID, typer.Argument(help="The job to return to normal order.")],
-    source: SourceOption = OPERATOR_SOURCE,
-    config: ConfigOption = DEFAULT_CONFIG,
+    project_id: ProjectOption = None,
+    source: SourceOption = None,
     as_json: JsonOption = False,
 ) -> None:
-    """Return a bumped job to normal order, and every bumped job that depends on it."""
+    """Undo exactly what a bump moved: the job, and the dependencies it pulled forward
+    that no other bumped job needs. Refused while a bumped job still needs this one."""
     with guard():
-        asyncio.run(QUEUE.unbump(job_id, source=source, config=config, as_json=as_json))
+        asyncio.run(QUEUE.unbump(job_id, project_id=project_id, source=source, as_json=as_json))
 
 
 @queue_app.command("list")

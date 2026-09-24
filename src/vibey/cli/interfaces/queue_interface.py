@@ -11,12 +11,9 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from pathlib import Path
     from uuid import UUID
 
     from vibey.application.dto import QueueEntry
-    from vibey.application.interfaces import QueuePriorityServiceInterface
-    from vibey.bootstrap import AppResources
     from vibey.domain.interfaces.queue_priority_interface import PriorityChangeInterface
 
 
@@ -32,7 +29,7 @@ class QueuePresenterInterface(Protocol):
     def entries_json(self, project_id: UUID, entries: Sequence[QueueEntry]) -> str: ...
 
     def change(self, change: PriorityChangeInterface) -> list[str]:
-        """What moved, what was already ahead, and what the job still waits on."""
+        """What moved and what was already ahead -- or, when nothing moved, why."""
         ...
 
     def change_json(self, change: PriorityChangeInterface) -> str: ...
@@ -40,15 +37,17 @@ class QueuePresenterInterface(Protocol):
 
 @runtime_checkable
 class QueueCommandInterface(Protocol):
-    """Runs `vibey queue bump`, `unbump` and `list`."""
+    """Runs `vibey queue bump`, `unbump` and `list` through the one priority service."""
 
-    def service(self, resources: AppResources, config: Path) -> QueuePriorityServiceInterface:
-        """The priority service, its grant read from `[queue.priority]` in `config`."""
+    async def bump(
+        self, job_id: UUID, *, project_id: UUID | None, source: str | None, as_json: bool
+    ) -> None:
+        """`project_id`, or the latest project."""
         ...
 
-    async def bump(self, job_id: UUID, *, source: str, config: Path, as_json: bool) -> None: ...
-
-    async def unbump(self, job_id: UUID, *, source: str, config: Path, as_json: bool) -> None: ...
+    async def unbump(
+        self, job_id: UUID, *, project_id: UUID | None, source: str | None, as_json: bool
+    ) -> None: ...
 
     async def list(self, project_id: UUID | None, *, as_json: bool) -> None:
         """`project_id`, or the latest project."""

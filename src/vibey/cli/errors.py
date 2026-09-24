@@ -75,8 +75,9 @@ _NEXT_STEP: dict[type[BaseException], str] = {
     PriorityRefused: (
         "Nothing moved, and the refusal is on the ledger:\n"
         "  vibey ledger search --kind JobPriorityRefused\n"
-        "An automation that should be able to reorder the queue is admitted by naming\n"
-        "it in `[queue.priority] sources` in vibey.toml, in a reviewed change (ADR-0054)."
+        "The operator is the account that owns the project's own vibey.toml. An\n"
+        "automation is admitted by naming it in that file's `[queue.priority] sources`,\n"
+        "in a reviewed change, and running it as that account (ADR-0054)."
     ),
     NotReorderable: "Nothing moved. `vibey queue list` shows the jobs that can still be moved.",
 }

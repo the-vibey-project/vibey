@@ -1,20 +1,31 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Postgres-backed queue priority (ADR-0054): bump, un-bump, refuse, and list.
 
-Every write is one transaction that (1) finds the closure the change can reach --
-the target's dependencies for a bump, its dependents for an un-bump -- (2) locks
-those rows `FOR UPDATE` in id order and reads their state only after the locks are
-held, (3) asks the pure domain planner what to move, (4) writes `job.bump_seq`, and
-(5) appends the ledger event on the same connection. A worker's claim takes its row
-`FOR UPDATE SKIP LOCKED`, so while a bump holds a row the claim passes over it and
-takes the next; a bump that meets a row a claim holds waits for the claim to commit,
-then sees the job running and moves it without touching the lease.
+Every change is one transaction that:
 
-Dependencies are written once, at enqueue, and never change, so the closure found
-before the locks is the closure that holds once they are taken.
+1. takes a transaction-scoped advisory lock on the project, so two reorders of one
+   project never interleave -- an un-bump's "does any other bumped job still need this?"
+   is then a question about a queue nobody else is reordering;
+2. finds the rows the change can reach -- a bump's dependency closure, which stops at
+   finished rows; an un-bump's bumped jobs -- and locks them `FOR NO KEY UPDATE` in id
+   order. `NO KEY` because only `bump_seq` and `bump_origin` change: an enqueue naming one
+   of these jobs as a dependency takes `KEY SHARE` on it, which this lock never blocks;
+3. reads each row's state only once its lock is held, so a row that finished while the
+   closure was being found is judged as finished;
+4. asks the pure planner what to move, writes it, and appends the request's event on
+   the same connection -- whether it moved something or nothing.
+
+A worker's claim takes its row `FOR UPDATE SKIP LOCKED`, which conflicts with these locks,
+so the claim passes over a row a reorder holds and takes the next. A reorder that meets a
+row a claim holds waits for the claim to commit, then sees the job running and moves it
+without touching the lease. Should the database still abort a reorder to break a lock
+cycle -- with the reaper's multi-row update, say -- it surfaces as `ReorderConflict`, a
+clean refusal the caller records, never a traceback: nothing moved, and a retry is safe.
 """
 
-from collections.abc import Mapping
+import hashlib
+from collections.abc import AsyncIterator, Mapping, Sequence
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Final
 from uuid import UUID
@@ -23,21 +34,22 @@ import asyncpg
 
 from vibey.application.dto import QueueEntry
 from vibey.domain.correlation import DELIVERY_CORRELATION
-from vibey.domain.errors import NotReorderable, UnknownJob
+from vibey.domain.errors import ReorderConflict, UnknownJob
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
 from vibey.domain.interfaces.queue_priority_interface import (
     BumpPlannerInterface,
     UnbumpPlannerInterface,
 )
-from vibey.domain.interfaces.stored_value_interface import StoredValueParserInterface
 from vibey.domain.ledger import EventKind, Provenance, digest_event
-from vibey.domain.phase import PHASE_PARSER, Phase, UnrecognizedPhase
+from vibey.domain.phase import Phase
 from vibey.domain.queue_priority import (
     BUMP_PLANNER,
+    FINISHED_STATES,
     UNBUMP_PLANNER,
     MovedJob,
     PriorityAction,
     PriorityChange,
+    PriorityContext,
     PriorityRefusal,
     QueuedJob,
 )
@@ -52,42 +64,55 @@ from vibey.infrastructure.engines.tailer import LedgerEventDraft
 
 type _Connection = asyncpg.pool.PoolConnectionProxy | asyncpg.Connection
 
-_DEPENDENCY_CLOSURE: Final = """
+_FINISHED: Final = "('succeeded', 'failed', 'cancelled')"
+
+# The target, scoped to the project the request named, and every job it depends on,
+# transitively -- expanding only through unfinished rows: a finished dependency is read
+# (the planner must know it succeeded, or that it never will) but not walked past.
+_DEPENDENCY_CLOSURE: Final = f"""
 WITH RECURSIVE closure(id) AS (
-    SELECT $1::uuid
+    SELECT j.id FROM job j WHERE j.id = $1 AND j.project_id = $2
   UNION
-    SELECT d.depends_on_job_id FROM job_dependency d JOIN closure c ON d.job_id = c.id
+    SELECT d.depends_on_job_id
+    FROM closure c
+    JOIN job cj ON cj.id = c.id
+    JOIN job_dependency d ON d.job_id = c.id
+    WHERE cj.state NOT IN {_FINISHED}
 )
 SELECT id FROM closure
 """
 
-_DEPENDENT_CLOSURE: Final = """
-WITH RECURSIVE closure(id) AS (
-    SELECT $1::uuid
-  UNION
-    SELECT d.job_id FROM job_dependency d JOIN closure c ON d.depends_on_job_id = c.id
-)
-SELECT id FROM closure
+_COLUMNS: Final = "id, phase, state, priority, run_after, bump_seq, bump_origin"
+
+# Locked in id order, so overlapping reorders take their locks in the same order.
+_LOCK_CLOSURE: Final = f"""
+SELECT {_COLUMNS} FROM job WHERE id = ANY($1::uuid[]) ORDER BY id FOR NO KEY UPDATE
 """
 
-# Locked in id order, so two changes over overlapping closures take their locks in
-# the same order and one waits for the other instead of deadlocking.
-_LOCK: Final = """
-SELECT id, project_id, cycle, phase, state, priority, run_after, bump_seq
-FROM job WHERE id = ANY($1::uuid[])
+# An un-bump writes only the target and bumped jobs, so only those are locked.
+_LOCK_BUMPED: Final = f"""
+SELECT {_COLUMNS} FROM job
+WHERE project_id = $2
+  AND (id = $1 OR (bump_seq IS NOT NULL AND state NOT IN {_FINISHED}))
 ORDER BY id
-FOR UPDATE
+FOR NO KEY UPDATE
+"""
+
+_UNFINISHED: Final = f"""
+SELECT {_COLUMNS} FROM job
+WHERE project_id = $1 AND state NOT IN {_FINISHED} AND NOT (id = ANY($2::uuid[]))
 """
 
 _EDGES: Final = """
-SELECT job_id, depends_on_job_id FROM job_dependency WHERE job_id = ANY($1::uuid[])
+SELECT job_id, depends_on_job_id FROM job_dependency
+WHERE job_id = ANY($1::uuid[]) AND depends_on_job_id = ANY($1::uuid[])
 """
 
 # Running work first, then waiting work in the claim's own order. The claim reads
 # `bump_seq ASC NULLS LAST, priority DESC, run_after ASC, id ASC` too
-# (job_repository.py); a job still waiting on a dependency is listed where it will
-# stand once the dependency succeeds, with what it waits on beside it.
-_QUEUE: Final = """
+# (job_repository.py); a job still waiting on a dependency is listed where it will stand
+# once the dependency succeeds, with what it waits on beside it.
+_QUEUE: Final = f"""
 SELECT j.*,
        ARRAY(
            SELECT d.depends_on_job_id FROM job_dependency d
@@ -96,32 +121,27 @@ SELECT j.*,
            ORDER BY d.depends_on_job_id
        ) AS waiting_on
 FROM job j
-WHERE j.project_id = $1 AND j.state NOT IN ('succeeded', 'failed', 'cancelled')
+WHERE j.project_id = $1 AND j.state NOT IN {_FINISHED}
 ORDER BY (j.state = 'leased') DESC, j.bump_seq ASC NULLS LAST, j.priority DESC,
          j.run_after ASC, j.id ASC
 """
 
 
 class PriorityEventDraftBuilder:
-    """Turns a queue-priority change or refusal into its ledger draft.
+    """Turns a reorder request's outcome into its ledger draft.
 
-    The actor is the source that asked, carried in the payload; `engine_id` is None
-    because no engine acted. A change the grant admitted is `trusted`; a refusal is
-    `untrusted`, because the request came from outside the grant and everything in it
-    is data to record, never instruction to follow (12.j, SD-01 §4).
+    Every request is filed under the project's current cycle and phase, with who asked
+    in the payload (`by`) and the job it named as the event's `job_id`. `engine_id` is
+    None because no engine acted. An admitted request is `trusted`; a refused one is
+    `untrusted`, because what it carried came from outside the grant and is data to
+    record, never instruction to follow (12.j, SD-01 §4).
     """
 
     def __init__(self, correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION) -> None:
         self._correlation = correlation
 
     def changed(
-        self,
-        change: PriorityChange,
-        *,
-        project_id: UUID,
-        cycle: int,
-        phase: Phase,
-        at: datetime,
+        self, change: PriorityChange, *, context: PriorityContext, at: datetime
     ) -> LedgerEventDraft:
         kind = (
             EventKind.JOB_PRIORITY_UNBUMPED
@@ -130,30 +150,27 @@ class PriorityEventDraftBuilder:
         )
         payload: dict[str, object] = {
             "action": change.action.value,
-            "source": change.source,
+            "by": change.requested_by,
             "target": str(change.target),
             "moved": [
                 {"job_id": str(m.job_id), "bump_seq": m.bump_seq, "previous": m.previous}
                 for m in change.moved
             ],
             "kept": [str(job_id) for job_id in change.kept],
-            "blocked_by": [str(job_id) for job_id in change.blocked_by],
+            "named": change.named,
+            "note": change.note,
         }
-        return self._draft(
-            project_id, cycle, phase, kind, change.target, Provenance.TRUSTED, at, payload
-        )
+        return self._draft(context, kind, change.target, Provenance.TRUSTED, at, payload)
 
     def refused(self, refusal: PriorityRefusal, *, at: datetime) -> LedgerEventDraft:
         payload: dict[str, object] = {
             "action": refusal.action.value,
-            "source": refusal.source,
+            "by": refusal.context.requested_by,
             "target": str(refusal.job_id) if refusal.job_id is not None else None,
             "reason": refusal.reason,
         }
         return self._draft(
-            refusal.project_id,
-            refusal.cycle,
-            refusal.phase,
+            refusal.context,
             EventKind.JOB_PRIORITY_REFUSED,
             refusal.job_id,
             Provenance.UNTRUSTED,
@@ -163,9 +180,7 @@ class PriorityEventDraftBuilder:
 
     def _draft(
         self,
-        project_id: UUID,
-        cycle: int,
-        phase: Phase,
+        context: PriorityContext,
         kind: EventKind,
         job_id: UUID | None,
         provenance: Provenance,
@@ -173,14 +188,14 @@ class PriorityEventDraftBuilder:
         payload: dict[str, object],
     ) -> LedgerEventDraft:
         return LedgerEventDraft(
-            project_id=project_id,
-            cycle=cycle,
-            phase=phase,
+            project_id=context.project_id,
+            cycle=context.cycle,
+            phase=context.phase,
             kind=kind,
             engine_id=None,
             job_id=job_id,
             causation_id=None,
-            correlation_id=self._correlation.for_project(project_id).value,
+            correlation_id=self._correlation.for_project(context.project_id).value,
             provenance=provenance,
             produced_at=at,
             payload=payload,
@@ -193,7 +208,13 @@ PRIORITY_EVENT_DRAFTS: Final[PriorityEventDraftBuilderInterface] = PriorityEvent
 
 
 class PostgresJobPriorityStore:
-    """Reorders a project's queue atomically with its ledger record (ADR-0054)."""
+    """Reorders a project's queue atomically with its ledger record (ADR-0054). Built
+    only inside `bootstrap.build_app`, and handed only to the priority service."""
+
+    LOCK_NAMESPACE: Final = "vibey.queue_priority"
+    """Folded into the advisory-lock key so it can never collide with another use.
+    Not `advisory_lock.PostgresAdvisoryLock`: that holds a session-scoped try-lock on a
+    (project, cycle) integration branch; this needs a transaction-scoped lock that waits."""
 
     def __init__(
         self,
@@ -204,7 +225,6 @@ class PostgresJobPriorityStore:
         drafts: PriorityEventDraftBuilderInterface = PRIORITY_EVENT_DRAFTS,
         appender: EventAppenderInterface = DEFAULT_EVENT_APPENDER,
         rows: JobRowMapperInterface = JOB_ROWS,
-        phases: StoredValueParserInterface[Phase, UnrecognizedPhase] = PHASE_PARSER,
     ) -> None:
         self._pool = pool
         self._bumps = bumps
@@ -212,58 +232,81 @@ class PostgresJobPriorityStore:
         self._drafts = drafts
         self._appender = appender
         self._rows = rows
-        self._phases = phases
 
     async def bump(
         self,
         job_id: UUID,
         *,
-        source: str,
+        context: PriorityContext,
         at: datetime,
         action: PriorityAction = PriorityAction.BUMP,
     ) -> PriorityChange:
-        async with self._pool.acquire() as conn, conn.transaction():
-            snapshot, locked = await self._lock(conn, _DEPENDENCY_CLOSURE, job_id)
-            phase = self._phase(job_id, locked[job_id])
-            plan = self._bumps.plan(job_id, snapshot)
+        async with self._reordering(job_id, context.project_id) as conn:
+            ids = [
+                row["id"]
+                for row in await conn.fetch(_DEPENDENCY_CLOSURE, job_id, context.project_id)
+            ]
+            snapshot = await self._snapshot(conn, job_id, await conn.fetch(_LOCK_CLOSURE, ids))
+            target = snapshot[job_id]
+            plan = self._bumps.plan(job_id, snapshot, finished_ok=action is PriorityAction.ENQUEUE)
             moved: list[MovedJob] = []
             for moving in plan.moved:
                 seq = await conn.fetchval(
-                    """UPDATE job SET bump_seq = nextval('job_bump_seq'), updated_at = now()
+                    """UPDATE job SET bump_seq = nextval('job_bump_seq'), bump_origin = $2,
+                              updated_at = now()
                        WHERE id = $1 RETURNING bump_seq""",
                     moving,
+                    job_id,
                 )
                 moved.append(MovedJob(job_id=moving, bump_seq=seq, previous=None))
+            if plan.named:
+                await conn.execute(
+                    "UPDATE job SET bump_origin = id, updated_at = now() WHERE id = $1", job_id
+                )
+            note = ""
+            if not moved and not plan.named:
+                note = (
+                    f"it is {target.state.value}; nothing to move"
+                    if target.state in FINISHED_STATES
+                    else "it is already bumped; nothing moved"
+                )
             change = PriorityChange(
                 action=action,
-                source=source,
+                requested_by=context.requested_by,
                 target=job_id,
                 moved=tuple(moved),
                 kept=plan.kept,
-                blocked_by=plan.blocked_by,
+                named=plan.named,
+                note=note,
             )
-            await self._record(conn, change, locked[job_id], phase, at)
+            await self._appender.append(conn, self._drafts.changed(change, context=context, at=at))
             return change
 
-    async def unbump(self, job_id: UUID, *, source: str, at: datetime) -> PriorityChange:
-        async with self._pool.acquire() as conn, conn.transaction():
-            snapshot, locked = await self._lock(conn, _DEPENDENT_CLOSURE, job_id)
-            phase = self._phase(job_id, locked[job_id])
+    async def unbump(
+        self, job_id: UUID, *, context: PriorityContext, at: datetime
+    ) -> PriorityChange:
+        async with self._reordering(job_id, context.project_id) as conn:
+            locked = await conn.fetch(_LOCK_BUMPED, job_id, context.project_id)
+            held = [row["id"] for row in locked]
+            rest = await conn.fetch(_UNFINISHED, context.project_id, held)
+            snapshot = await self._snapshot(conn, job_id, [*locked, *rest])
             plan = self._unbumps.plan(job_id, snapshot)
             await conn.execute(
-                "UPDATE job SET bump_seq = NULL, updated_at = now() WHERE id = ANY($1::uuid[])",
+                """UPDATE job SET bump_seq = NULL, bump_origin = NULL, updated_at = now()
+                   WHERE id = ANY($1::uuid[])""",
                 list(plan.moved),
             )
             change = PriorityChange(
                 action=PriorityAction.UNBUMP,
-                source=source,
+                requested_by=context.requested_by,
                 target=job_id,
                 moved=tuple(
                     MovedJob(job_id=moving, bump_seq=None, previous=snapshot[moving].bump_seq)
                     for moving in plan.moved
                 ),
+                note="" if plan.moved else "it is not bumped; nothing moved",
             )
-            await self._record(conn, change, locked[job_id], phase, at)
+            await self._appender.append(conn, self._drafts.changed(change, context=context, at=at))
             return change
 
     async def refuse(self, refusal: PriorityRefusal, *, at: datetime) -> None:
@@ -278,19 +321,33 @@ class PostgresJobPriorityStore:
             for row in rows
         )
 
-    async def _lock(
-        self, conn: _Connection, closure: str, job_id: UUID
-    ) -> tuple[Mapping[UUID, QueuedJob], Mapping[UUID, asyncpg.Record]]:
-        """Lock the closure and read it, target first to fail. Returns the planner's
-        snapshot and the locked rows by id."""
-        ids = [row["id"] for row in await conn.fetch(closure, job_id)]
-        locked = {row["id"]: row for row in await conn.fetch(_LOCK, ids)}
-        if job_id not in locked:
+    @asynccontextmanager
+    async def _reordering(self, job_id: UUID, project_id: UUID) -> AsyncIterator[_Connection]:
+        """One reorder's transaction, serialised per project, with a lock cycle the
+        database broke by aborting this request turned into `ReorderConflict`."""
+        try:
+            async with self._pool.acquire() as conn, conn.transaction():
+                await conn.execute("SELECT pg_advisory_xact_lock($1)", self._key(project_id))
+                yield conn
+        except asyncpg.exceptions.DeadlockDetectedError as deadlock:
+            raise ReorderConflict(job_id) from deadlock
+
+    def _key(self, project_id: UUID) -> int:
+        digest = hashlib.sha256(f"{self.LOCK_NAMESPACE}:{project_id}".encode()).digest()
+        return int.from_bytes(digest[:8], "big", signed=True)
+
+    async def _snapshot(
+        self, conn: _Connection, job_id: UUID, rows: Sequence[asyncpg.Record]
+    ) -> Mapping[UUID, QueuedJob]:
+        """The planner's view of `rows`, read after their locks were taken. A target the
+        rows lack is not in the project the request named."""
+        by_id = {row["id"]: row for row in rows}
+        if job_id not in by_id:
             raise UnknownJob(job_id)
         edges: dict[UUID, list[UUID]] = {}
-        for edge in await conn.fetch(_EDGES, ids):
+        for edge in await conn.fetch(_EDGES, list(by_id)):
             edges.setdefault(edge["job_id"], []).append(edge["depends_on_job_id"])
-        snapshot = {
+        return {
             row_id: QueuedJob(
                 id=row_id,
                 state=self._rows.state(row["state"]),
@@ -298,38 +355,8 @@ class PostgresJobPriorityStore:
                 run_after=row["run_after"],
                 bump_seq=row["bump_seq"],
                 depends_on=tuple(sorted(edges.get(row_id, ()))),
+                bump_origin=row["bump_origin"],
+                phase_known=isinstance(self._rows.phase(row["phase"]), Phase),
             )
-            for row_id, row in locked.items()
+            for row_id, row in by_id.items()
         }
-        return snapshot, locked
-
-    def _phase(self, job_id: UUID, row: asyncpg.Record) -> Phase:
-        """The phase the event is filed under. Writers stay strict (vibey#287): a job
-        in a phase this vibey does not know is one it will not reorder or ledger."""
-        phase = self._phases.parse(row["phase"])
-        if not isinstance(phase, Phase):
-            raise NotReorderable(
-                job_id, f"its phase {phase.value!r} is one this vibey does not know"
-            )
-        return phase
-
-    async def _record(
-        self,
-        conn: _Connection,
-        change: PriorityChange,
-        target: asyncpg.Record,
-        phase: Phase,
-        at: datetime,
-    ) -> None:
-        """Append the change's event -- only when something moved. A replay that
-        moved nothing is not a second bump, and the ledger does not say it was."""
-        if not change.changed:
-            return
-        draft = self._drafts.changed(
-            change,
-            project_id=target["project_id"],
-            cycle=target["cycle"],
-            phase=phase,
-            at=at,
-        )
-        await self._appender.append(conn, draft)
