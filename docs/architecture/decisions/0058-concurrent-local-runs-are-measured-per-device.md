@@ -90,8 +90,60 @@ which it loads one.
 
 ## Results
 
-RESULTS PENDING — the sweep is running; this section is filled from the evidence file, step by
-step.
+Measured on the operator's Mac17,2 (Apple M5, 24 GiB, Apple M5 GPU with 10 cores, macOS
+26.6.2), Ollama 0.34.4, `gpt-oss:20b` (digest `17052f91a42e`) at 65,536 tokens per slot —
+fingerprint `f99b07f610204948` — between 13:39 and 15:42 UTC on 2026-09-24, 60 turns per step.
+The replayed prompts measured 5,243 to 43,215 tokens (p50 24,862); 19 of the 55 served at one
+slot were longer than 32,768. They carried 0.75 of the pool's characters ÷ 3 estimate, so the
+estimate was conservative as intended, and the deepest turns replayed were about 43k tokens,
+not the 64k a lane can reach.
+
+| step | slots × ctx | served | turns/h | out tok/s | p50 s | p95 s | peak wired | free min | swap-out | fidelity (structural / exact) | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| N=1 | 1 × 65,536 | 55/60 | 98.2 | 3.02 | 16.5 | 112.6 | 18.42 GB | 3% | 25.1 GB/min | — | floor; memory warned |
+| N=1 again | 1 × 65,536 | 55/60 | 112.7 | 3.47 | 12.9 | 102.8 | 18.07 GB | 4% | 17.4 GB/min | 1.0 / 1.0 against the first | baseline |
+| N=2 | 2 × 65,536 | 57/60 | 111.9 | 3.28 | 29.8 | 189.9 | 20.17 GB | 0% | 30.8 GB/min | **0.818** / 0.745 | **breaks fidelity** |
+| claim | 2 × 32,768 | 36/60 | 172.7 | 5.74 | 20.6 | 129.3 | 18.16 GB | 2% | 22.8 GB/min | 0.889 / 0.778 | refuses 24 turns |
+
+**The ideal on this device is one.** The sweep stopped at N=2 on fidelity: at temperature 0 with
+a fixed seed, one slot gave the same answer twice for every one of 55 turns, and two concurrent
+slots changed the tool calls or their argument names on 10 of 55 (18%), and the exact answer on
+14. 8.j refuses a configuration whole when fidelity moves, whatever it saves — and it saved
+nothing here: 111.9 turns/h at two slots sits between the two one-slot runs (98.2 and 112.7),
+whose own difference, 14.8%, is this machine's noise; two slots nearly doubled median latency.
+
+**The claim about two 32k slots is half right.** Their KV cache costs what one 65k slot's does —
+the same 65,536 non-sliding cells in the runner's log, and peak wired memory within 0.1 GB — but
+they refused, with an HTTP 400 and never silently, every turn longer than 32,768 tokens: 24 of
+60 here, the shortest refused at 32,786. The 172.7 turns/h counts only the 36 turns it served,
+and its answers moved too (structural 0.889).
+
+**One slot already strains this machine.** Loading the model at a 65,536-token window took wired
+memory from 3.4 GB at rest to 18.1 GB and free memory from 69% to 11%; during every step the
+free share fell to 0–4% and the machine swapped 17–31 GB a minute each way, the whole time (the
+per-second timeline is in the evidence). That is recorded as a floor warning, not a refusal —
+one is 8.c's floor — and it is the operator's workload beside the model as much as the model:
+the reading is the machine as it was used. Peak wired stayed under the 20.62 GB ceiling at every
+step; at two slots it came within 0.45 GB of it.
+
+**What else happened.** The same five turns failed at both one-slot runs with the runner's
+`error parsing tool call` (HTTP 500): the model's own malformed tool calls, which qwenloop
+retries (#386); two of them succeeded at two slots, and no turn that one slot served failed at
+two. No step saw a truncation, a context shift, a Metal device failure, a model reload, or a
+model resident on the production runner, so no reading was discarded. Not everything was
+idle beside the first N=1 step: four local commits (one installing pre-commit's environments),
+the formatters, a type check and a five-second unit-test run at nice 19 took a few minutes of
+CPU on the machine while the model served from the GPU. That step is also the slower of the two
+one-slot runs, so the 14.8% noise figure may include it. No push, and no test suite, ran beside
+any other step.
+
+**Confidence.** Sixty turns per step, from 1,096 storm-shaped turns in 40 runs; one sweep; one
+device. Throughput differences under about 15% are noise on this machine at these swap rates.
+The fidelity result does not rest on throughput: it is a count of answers that changed, against
+a baseline that changed none. **Not measured:** other models, windows and devices; tool
+execution between turns (idle runner time favours more slots than this replay does); whole-lane
+prefix reuse (segments are three turns); thermals and power; stability over a night; turns
+deeper than about 43k tokens; and the storm's own payloads, which were not recorded durably.
 
 ## Decision
 
