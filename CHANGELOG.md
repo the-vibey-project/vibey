@@ -145,6 +145,21 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **vscode:** a VS Code extension, under `clients/vscode`, that drives vibey and a model on your
+  own computer from the editor, with no account and no cloud
+  ([ADR-0059](docs/architecture/decisions/0059-the-editor-drives-the-familys-own-loops.md),
+  #290). A task runs on a copy of the folder (a worktree on a branch of its own, in the durable
+  storm home), through qwenloop on gpt-oss:20b by default, and a person Reviews, Applies or
+  Discards it. The loops, efforts, engines and capabilities all come from `vibey loops --json`.
+  Views show the model, tasks, every lane on the computer, vibey projects, gates and budgets. A
+  task panel streams each task and takes follow-ups; Force stop opens only after a fair wait,
+  and is journaled. One command table serves the palette, the menus, the panel's `/` commands
+  and `@vibey`. `vibey-vscode batch` runs a folder of task files one at a time, resumably, from
+  a terminal, and a task file's `paths:` keeps its commit to its scope. No `VIBEY_*`, `PG*`,
+  credential or `postgres://` value reaches a model. The core is tested to 100% of lines,
+  branches, functions and statements; a smoke test runs it in a real VS Code. Its CI job is not
+  a required check yet, and Open VSX publishing is declared only, waiting on the operator's
+  `OVSX_PAT`.
 * **cli:** finding a project or an open gate no longer takes SQL. `vibey projects` lists every
   project, newest first, with its id, phase, cycle and open-gate count; `vibey gates
   [PROJECT_ID]` lists every open gate, oldest first, with its project, kind and prompt, and
@@ -325,6 +340,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **qwenloop:** a follow-up sent with `qwenloop prompt` now reaches the model: the runner takes
+  it at the next turn boundary, once and in the order sent, records `prompt.received`, and moves
+  it to `control/ack`. It was written to the control inbox and never read, and control files are
+  now named by the time they were sent, so they are read in order (#290).
 * **ci:** the delivery estimate refreshes once an hour, and by hand, instead of on every push,
   pull request and issue event. Its pull request now runs every CI gate: the `[skip ci]` that
   let #1125 merge a ledger record, and break develop's paper-figure check with no check run,

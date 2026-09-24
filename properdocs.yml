@@ -41,6 +41,7 @@ validation:
 nav:
   - Home: index.md
   - Guides:
+      - VS Code extension: guides/vscode-extension.md
       - Kubernetes: guides/kubernetes.md
       - Greeter live demo: guides/greeter-live-demo.md
       - Local models on Ollama: guides/local-models-ollama.md
@@ -112,4 +113,5 @@ nav:
           - "0056 — Everything a queue guards is reaped by measurement": architecture/decisions/0056-everything-a-queue-guards-is-reaped-by-measurement.md
           - "0057 — Storm work lives on durable storage, is committed and pushed often, and a tool refuses volatile paths": architecture/decisions/0057-the-work-outlives-the-machine.md
           - "0058 — Concurrent runs of a local model are measured on each device, and unmeasured or stale means one": architecture/decisions/0058-concurrent-local-runs-are-measured-per-device.md
+          - "0059 — The editor drives the family's own loops, on a copy, and adds no loop of its own": architecture/decisions/0059-the-editor-drives-the-familys-own-loops.md
   - Research paper: paper.md
