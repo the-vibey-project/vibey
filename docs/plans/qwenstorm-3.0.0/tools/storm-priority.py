@@ -11,8 +11,15 @@ owns the storm. Anything else is refused, recorded in the priority log and progr
 reported here with exit 1 (sub-doctrine 12.j). The contract is ADR-0054; the rules, the log
 format and the one resolver `storm-queue.sh` also asks are in `storm_queue.py`.
 
-Exit: 0 done, 1 refused, 2 the request cannot be carried out, 3 the priority log cannot be
-replayed.
+Every request is recorded, whatever its outcome. Exit:
+
+    0  done (including a request that moved nothing)
+    1  refused: the caller may not change the priority lane
+    2  refused: the request cannot be carried out (a bad name, an unknown or abandoned
+       dependency, a lane another prioritised lane still needs, ...)
+    3  the priority order is unknown: the log cannot be replayed, or it is missing after it
+       existed
+    4  crashed: an OSError, a malformed storm.toml, anything unexpected -- not a refusal
 """
 
 from __future__ import annotations
@@ -26,7 +33,8 @@ from storm_queue import Invalid, PriorityDesk, Resolver, Unauthorised, Unreadabl
 
 
 class PriorityCli:
-    """The operator's commands, each a thin call into `storm_queue`."""
+    """The operator's commands, each a thin call into `storm_queue`. Declared in
+    `interfaces/storm_queue_interface.py` (ADR-0016)."""
 
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -72,6 +80,9 @@ class PriorityCli:
         except Unreadable as unreadable:
             print(f"the priority order is unknown: {unreadable}", file=sys.stderr)
             return 3
+        except (Exception, SystemExit) as crash:  # storm_paths raises SystemExit on bad TOML
+            print(f"crashed: {type(crash).__name__}: {crash}", file=sys.stderr)
+            return 4
         print("\n".join(report))
         return 0
 
@@ -92,6 +103,8 @@ class PriorityCli:
             print(f"{number}. {row.entry.slug} #{row.entry.issue}{mark}  {row.status}")
         if plan.stray:
             print("prioritised but not in queue.txt (ignored): " + ", ".join(plan.stray))
+        for warning in plan.warnings:
+            print(warning)
         return 0
 
 

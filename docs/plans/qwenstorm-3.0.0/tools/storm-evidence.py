@@ -88,6 +88,26 @@ STREAMS = (
 )
 
 
+# What a lane start and a lane end look like in progress.log, exactly as storm-queue.sh
+# writes them -- the stamp, then the word, then `<slug> #<issue>` -- and counted ONLY from
+# progress.log. Matching " start " anywhere in any stream let a quoted request, or a line
+# forged into another log, count as a lane start (the review of #1089).
+START = re.compile(r"^\S+Z start \S+ #\d+ ")
+END = re.compile(r"^\S+Z end +\S+ #\d+ ")
+
+
+def lane_lines(rows: list[dict], pattern: re.Pattern[str]) -> list[str]:
+    """progress.log lines matching `pattern`. A function beside the others here: this
+    module has no classes, and one would not change how it is read."""
+    return [
+        r["line"]
+        for r in rows
+        if r.get("kind") == "stream"
+        and r.get("source") == "progress.log"
+        and pattern.match(r.get("line", ""))
+    ]
+
+
 def digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()[:16]
 
@@ -247,8 +267,8 @@ def ledger_rows() -> list[dict]:
 
 def summarise(rows: list[dict]) -> dict:
     lanes = {r["lane"]: r for r in rows if r.get("kind") == "lane_result"}
-    starts = [r for r in rows if r.get("kind") == "stream" and " start " in r.get("line", "")]
-    ends = [r for r in rows if r.get("kind") == "stream" and " end " in r.get("line", "")]
+    starts = lane_lines(rows, START)
+    ends = lane_lines(rows, END)
     integrated = {r["line"] for r in rows if r.get("source") == "integrated.txt"}
     abandoned = {r["line"] for r in rows if r.get("source") == "abandoned.txt"}
     turns = []
@@ -331,8 +351,8 @@ def report(records: list[dict], when: str, gaps: list[str]) -> str:
         return f"# Evidence delta\n\nNothing new since the last run ({when}).\n"
     streams = [r for r in records if r.get("kind") == "stream"]
     lanes = [r for r in records if r.get("kind") == "lane_result"]
-    started = [r["line"] for r in streams if " start " in r.get("line", "")]
-    ended = [r["line"] for r in streams if " end " in r.get("line", "")]
+    started = lane_lines(streams, START)
+    ended = lane_lines(streams, END)
     settled = [r["line"] for r in streams if r.get("source") in ("integrated.txt", "abandoned.txt")]
     lines = [
         "# Evidence delta",

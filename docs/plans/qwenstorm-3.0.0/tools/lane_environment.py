@@ -94,6 +94,11 @@ class LaneEnvironment:
     CONDA_FAMILY = "CONDA_"
     # It labels whichever venv VIRTUAL_ENV used to name; left behind, it would lie.
     DROPPED = frozenset({"VIRTUAL_ENV_PROMPT"})
+    # Exported into every command a lane runs, so the storm's own tools can tell a lane's
+    # process from the operator's: `storm_queue.Authority` refuses a priority change from
+    # one. Defence in depth, not containment -- a process running as the operator's uid can
+    # unset it; `specs/storm-lane-os-user.md` is the fix that does not depend on it.
+    MARKER = "VIBEY_STORM_LANE"
     # The tools a lane runs besides python, and whether each runs in the environment it is
     # installed in (a console script: follow its symlink) or not (a native binary).
     TOOLS = {"pip": True, "pip3": True, "pytest": True, "uv": False}
@@ -147,6 +152,7 @@ class LaneEnvironment:
             kept.append(entry)
         env["PATH"] = os.pathsep.join([str(self.bin), *kept])
         env["VIRTUAL_ENV"] = str(self.venv)
+        env[self.MARKER] = self.lane.name
         return env
 
     def verify(self, env: Mapping[str, str]) -> Path:
