@@ -1,0 +1,1024 @@
+{
+  "efforts": [
+    "TRIVIAL",
+    "LOW",
+    "STANDARD",
+    "HIGH",
+    "MAX"
+  ],
+  "default_loop": "sovereignloop",
+  "paid_default_engine": "claudeloop",
+  "paid_default": "claudeloop",
+  "ladder": {
+    "phase_base": {
+      "DESIGN": "HIGH",
+      "VISUAL_DESIGN": "HIGH",
+      "BUILD": "LOW",
+      "REVIEW": "HIGH",
+      "DEPLOY_DESIGN": "HIGH",
+      "DEPLOY_EXECUTE": "LOW",
+      "DEPLOY_REVIEW": "HIGH",
+      "DEPLOY": "LOW"
+    },
+    "build_attempts": [
+      "LOW",
+      "LOW",
+      "STANDARD",
+      "STANDARD",
+      "HIGH",
+      "HIGH"
+    ],
+    "exhausted_after": 6,
+    "rotates_when_effort_rises": true
+  },
+  "loops": [
+    {
+      "loop": "sovereignloop",
+      "tier": "local",
+      "default": true,
+      "declared_only": false,
+      "engines": [
+        {
+          "engine_id": "qwenloop",
+          "binary": "qwenloop",
+          "state_dir": ".qwenloop",
+          "enabled": true,
+          "switch": "VIBEY_FEATURE_QWENLOOP",
+          "cost_per_mtok_in": 0.0,
+          "cost_per_mtok_out": 0.0,
+          "default_model": "gpt-oss:20b",
+          "efforts": [
+            {
+              "effort": "TRIVIAL",
+              "argv": [
+                "--max-turns",
+                "8"
+              ],
+              "achieved": "TRIVIAL",
+              "model": "gpt-oss:20b",
+              "notes": ""
+            },
+            {
+              "effort": "LOW",
+              "argv": [
+                "--max-turns",
+                "16"
+              ],
+              "achieved": "LOW",
+              "model": "gpt-oss:20b",
+              "notes": ""
+            },
+            {
+              "effort": "STANDARD",
+              "argv": [
+                "--max-turns",
+                "40"
+              ],
+              "achieved": "STANDARD",
+              "model": "gpt-oss:20b",
+              "notes": ""
+            },
+            {
+              "effort": "HIGH",
+              "argv": [
+                "--max-turns",
+                "64"
+              ],
+              "achieved": "HIGH",
+              "model": "gpt-oss:20b",
+              "notes": ""
+            },
+            {
+              "effort": "MAX",
+              "argv": [
+                "--max-turns",
+                "96"
+              ],
+              "achieved": "MAX",
+              "model": "gpt-oss:20b",
+              "notes": ""
+            }
+          ],
+          "capabilities": {
+            "images": false,
+            "files": true,
+            "paste_text": true,
+            "paste_images": false,
+            "plugins": "skills-context",
+            "mcp": null,
+            "evidence": {
+              "images": "qwenloop's tools are read_file, search, write_file, edit_file and shell; a plan is text"
+            }
+          },
+          "done_marker": "QWENLOOP_TASK_FULLY_COMPLETE",
+          "plan_flag": null,
+          "supports_cwd_flag": true,
+          "base_weight": 1,
+          "run": [
+            "{binary}",
+            "run",
+            "{plan_flag?}",
+            "{plan}",
+            "--run-id",
+            "{run_id}",
+            "{effort_argv...}",
+            "--cwd",
+            "{cwd}"
+          ],
+          "controls": {
+            "stop": [
+              "stop",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
+            "wind_down": [
+              "wind-down",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
+            "prompt": [
+              "prompt",
+              "{run_id}",
+              "{text}",
+              "--cwd",
+              "{cwd}"
+            ]
+          },
+          "events": {
+            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
+            "envelope": "type"
+          },
+          "env": {
+            "auth": [],
+            "passthrough": [
+              "QWENLOOP_*"
+            ]
+          }
+        },
+        {
+          "engine_id": "claudeloop-local",
+          "binary": "claudeloop",
+          "state_dir": ".claudeloop",
+          "enabled": false,
+          "switch": "VIBEY_FEATURE_CLAUDELOOP_LOCAL",
+          "cost_per_mtok_in": 0.0,
+          "cost_per_mtok_out": 0.0,
+          "default_model": null,
+          "efforts": [
+            {
+              "effort": "TRIVIAL",
+              "argv": [
+                "--profile",
+                "local",
+                "--preset",
+                "low"
+              ],
+              "achieved": "TRIVIAL",
+              "model": null,
+              "notes": "the local profile's model_low"
+            },
+            {
+              "effort": "LOW",
+              "argv": [
+                "--profile",
+                "local",
+                "--preset",
+                "low"
+              ],
+              "achieved": "LOW",
+              "model": null,
+              "notes": "the local profile's model_low"
+            },
+            {
+              "effort": "STANDARD",
+              "argv": [
+                "--profile",
+                "local",
+                "--preset",
+                "medium"
+              ],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "the local profile's model_medium"
+            },
+            {
+              "effort": "HIGH",
+              "argv": [
+                "--profile",
+                "local",
+                "--preset",
+                "high"
+              ],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "the local profile's model_high; a local model's ceiling is STANDARD"
+            },
+            {
+              "effort": "MAX",
+              "argv": [
+                "--profile",
+                "local",
+                "--preset",
+                "high"
+              ],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "the local profile's model_high; a local model's ceiling is STANDARD"
+            }
+          ],
+          "capabilities": {
+            "images": null,
+            "files": true,
+            "paste_text": true,
+            "paste_images": null,
+            "plugins": "claude-plugins",
+            "mcp": null,
+            "evidence": {}
+          },
+          "done_marker": "CLAUDELOOP_TASK_FULLY_COMPLETE",
+          "plan_flag": null,
+          "supports_cwd_flag": true,
+          "base_weight": 1,
+          "run": [
+            "{binary}",
+            "run",
+            "{plan_flag?}",
+            "{plan}",
+            "--run-id",
+            "{run_id}",
+            "{effort_argv...}",
+            "--cwd",
+            "{cwd}"
+          ],
+          "controls": {
+            "stop": [
+              "stop",
+              "--run-id",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
+            "wind_down": null,
+            "prompt": null
+          },
+          "events": {
+            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
+            "envelope": "event_type+payload"
+          },
+          "env": {
+            "auth": [],
+            "passthrough": [
+              "CLAUDELOOP_*",
+              "CLAUDE_CODE_*",
+              "CLAUDE_CONFIG_DIR"
+            ]
+          }
+        },
+        {
+          "engine_id": "opencode",
+          "binary": "opencodeloop",
+          "state_dir": ".opencodeloop",
+          "enabled": false,
+          "switch": null,
+          "cost_per_mtok_in": 0.0,
+          "cost_per_mtok_out": 0.0,
+          "default_model": null,
+          "efforts": [
+            {
+              "effort": "TRIVIAL",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "OpenCode has no portable effort flag"
+            },
+            {
+              "effort": "LOW",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "OpenCode has no portable effort flag"
+            },
+            {
+              "effort": "STANDARD",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": ""
+            },
+            {
+              "effort": "HIGH",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "OpenCode has no portable effort flag"
+            },
+            {
+              "effort": "MAX",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "OpenCode has no portable effort flag"
+            }
+          ],
+          "capabilities": {
+            "images": null,
+            "files": true,
+            "paste_text": true,
+            "paste_images": null,
+            "plugins": null,
+            "mcp": null,
+            "evidence": {}
+          },
+          "done_marker": "OPENCODELOOP_TASK_FULLY_COMPLETE",
+          "plan_flag": null,
+          "supports_cwd_flag": true,
+          "base_weight": 1,
+          "run": [
+            "{binary}",
+            "run",
+            "{plan_flag?}",
+            "{plan}",
+            "--run-id",
+            "{run_id}",
+            "{effort_argv...}",
+            "--cwd",
+            "{cwd}"
+          ],
+          "controls": {
+            "stop": null,
+            "wind_down": null,
+            "prompt": null
+          },
+          "events": {
+            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
+            "envelope": "type"
+          },
+          "env": {
+            "auth": [],
+            "passthrough": [
+              "OPENCODELOOP_*",
+              "OPENCODE_*"
+            ]
+          },
+          "notes": "the descriptor says tier LOCAL; canon 8.b repeals OpenCode from both loops"
+        }
+      ],
+      "by_effort": {
+        "TRIVIAL": [
+          {
+            "engine_id": "claudeloop-local",
+            "model": null,
+            "achieved": "TRIVIAL"
+          },
+          {
+            "engine_id": "qwenloop",
+            "model": "gpt-oss:20b",
+            "achieved": "TRIVIAL"
+          },
+          {
+            "engine_id": "opencode",
+            "model": null,
+            "achieved": "STANDARD"
+          }
+        ],
+        "LOW": [
+          {
+            "engine_id": "claudeloop-local",
+            "model": null,
+            "achieved": "LOW"
+          },
+          {
+            "engine_id": "qwenloop",
+            "model": "gpt-oss:20b",
+            "achieved": "LOW"
+          },
+          {
+            "engine_id": "opencode",
+            "model": null,
+            "achieved": "STANDARD"
+          }
+        ],
+        "STANDARD": [
+          {
+            "engine_id": "claudeloop-local",
+            "model": null,
+            "achieved": "STANDARD"
+          },
+          {
+            "engine_id": "opencode",
+            "model": null,
+            "achieved": "STANDARD"
+          },
+          {
+            "engine_id": "qwenloop",
+            "model": "gpt-oss:20b",
+            "achieved": "STANDARD"
+          }
+        ],
+        "HIGH": [
+          {
+            "engine_id": "qwenloop",
+            "model": "gpt-oss:20b",
+            "achieved": "HIGH"
+          },
+          {
+            "engine_id": "claudeloop-local",
+            "model": null,
+            "achieved": "STANDARD"
+          },
+          {
+            "engine_id": "opencode",
+            "model": null,
+            "achieved": "STANDARD"
+          }
+        ],
+        "MAX": [
+          {
+            "engine_id": "qwenloop",
+            "model": "gpt-oss:20b",
+            "achieved": "MAX"
+          },
+          {
+            "engine_id": "claudeloop-local",
+            "model": null,
+            "achieved": "STANDARD"
+          },
+          {
+            "engine_id": "opencode",
+            "model": null,
+            "achieved": "STANDARD"
+          }
+        ]
+      }
+    },
+    {
+      "loop": "paidloop",
+      "tier": "paid",
+      "default": false,
+      "declared_only": true,
+      "engines": [
+        {
+          "engine_id": "claudeloop",
+          "binary": "claudeloop",
+          "state_dir": ".claudeloop",
+          "enabled": true,
+          "switch": null,
+          "cost_per_mtok_in": 3.0,
+          "cost_per_mtok_out": 15.0,
+          "default_model": null,
+          "efforts": [
+            {
+              "effort": "TRIVIAL",
+              "argv": [
+                "--preset",
+                "low",
+                "--effort",
+                "low"
+              ],
+              "achieved": "TRIVIAL",
+              "model": null,
+              "notes": "claudeloop preset low"
+            },
+            {
+              "effort": "LOW",
+              "argv": [
+                "--preset",
+                "low",
+                "--effort",
+                "medium"
+              ],
+              "achieved": "LOW",
+              "model": null,
+              "notes": "claudeloop preset low"
+            },
+            {
+              "effort": "STANDARD",
+              "argv": [
+                "--preset",
+                "medium",
+                "--effort",
+                "high"
+              ],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "claudeloop preset medium"
+            },
+            {
+              "effort": "HIGH",
+              "argv": [
+                "--preset",
+                "high",
+                "--effort",
+                "high"
+              ],
+              "achieved": "HIGH",
+              "model": null,
+              "notes": "claudeloop preset high"
+            },
+            {
+              "effort": "MAX",
+              "argv": [
+                "--preset",
+                "high",
+                "--effort",
+                "max"
+              ],
+              "achieved": "MAX",
+              "model": null,
+              "notes": "claudeloop preset high"
+            }
+          ],
+          "capabilities": {
+            "images": null,
+            "files": true,
+            "paste_text": true,
+            "paste_images": null,
+            "plugins": "claude-plugins",
+            "mcp": null,
+            "evidence": {}
+          },
+          "done_marker": "CLAUDELOOP_TASK_FULLY_COMPLETE",
+          "plan_flag": null,
+          "supports_cwd_flag": true,
+          "base_weight": 3,
+          "run": [
+            "{binary}",
+            "run",
+            "{plan_flag?}",
+            "{plan}",
+            "--run-id",
+            "{run_id}",
+            "{effort_argv...}",
+            "--cwd",
+            "{cwd}"
+          ],
+          "controls": {
+            "stop": [
+              "stop",
+              "--run-id",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
+            "wind_down": null,
+            "prompt": null
+          },
+          "events": {
+            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
+            "envelope": "event_type+payload"
+          },
+          "env": {
+            "auth": [
+              "ANTHROPIC_API_KEY"
+            ],
+            "passthrough": [
+              "CLAUDELOOP_*",
+              "CLAUDE_CODE_*",
+              "CLAUDE_CONFIG_DIR",
+              "ANTHROPIC_*"
+            ]
+          }
+        },
+        {
+          "engine_id": "codexloop",
+          "binary": "codexloop",
+          "state_dir": ".codexloop",
+          "enabled": true,
+          "switch": null,
+          "cost_per_mtok_in": 2.0,
+          "cost_per_mtok_out": 8.0,
+          "default_model": null,
+          "efforts": [
+            {
+              "effort": "TRIVIAL",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": ""
+            },
+            {
+              "effort": "LOW",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": ""
+            },
+            {
+              "effort": "STANDARD",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": ""
+            },
+            {
+              "effort": "HIGH",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": ""
+            },
+            {
+              "effort": "MAX",
+              "argv": [],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "codexloop has no CLI-level effort control"
+            }
+          ],
+          "capabilities": {
+            "images": null,
+            "files": true,
+            "paste_text": true,
+            "paste_images": null,
+            "plugins": "skills-context",
+            "mcp": null,
+            "evidence": {}
+          },
+          "done_marker": "CODEXLOOP_TASK_FULLY_COMPLETE",
+          "plan_flag": null,
+          "supports_cwd_flag": false,
+          "base_weight": 2,
+          "run": [
+            "{binary}",
+            "run",
+            "{plan_flag?}",
+            "{plan}",
+            "--run-id",
+            "{run_id}",
+            "{effort_argv...}"
+          ],
+          "controls": {
+            "stop": null,
+            "wind_down": null,
+            "prompt": null
+          },
+          "events": {
+            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
+            "envelope": "type"
+          },
+          "env": {
+            "auth": [
+              "OPENAI_API_KEY"
+            ],
+            "passthrough": [
+              "CODEXLOOP_*",
+              "CODEX_*",
+              "OPENAI_*",
+              "AZURE_OPENAI_API_KEY",
+              "AZURE_OPENAI_ENDPOINT"
+            ]
+          }
+        },
+        {
+          "engine_id": "cursorloop",
+          "binary": "cursorloop",
+          "state_dir": ".cursorloop",
+          "enabled": true,
+          "switch": null,
+          "cost_per_mtok_in": 2.5,
+          "cost_per_mtok_out": 10.0,
+          "default_model": null,
+          "efforts": [
+            {
+              "effort": "TRIVIAL",
+              "argv": [
+                "--model",
+                "composer-fast"
+              ],
+              "achieved": "TRIVIAL",
+              "model": "composer-fast",
+              "notes": ""
+            },
+            {
+              "effort": "LOW",
+              "argv": [
+                "--model",
+                "composer"
+              ],
+              "achieved": "LOW",
+              "model": "composer",
+              "notes": ""
+            },
+            {
+              "effort": "STANDARD",
+              "argv": [
+                "--model",
+                "grok-4.5"
+              ],
+              "achieved": "STANDARD",
+              "model": "grok-4.5",
+              "notes": ""
+            },
+            {
+              "effort": "HIGH",
+              "argv": [
+                "--model",
+                "grok"
+              ],
+              "achieved": "HIGH",
+              "model": "grok",
+              "notes": ""
+            },
+            {
+              "effort": "MAX",
+              "argv": [
+                "--model",
+                "grok-xhigh"
+              ],
+              "achieved": "MAX",
+              "model": "grok-xhigh",
+              "notes": ""
+            }
+          ],
+          "capabilities": {
+            "images": null,
+            "files": true,
+            "paste_text": true,
+            "paste_images": null,
+            "plugins": "skills-context",
+            "mcp": null,
+            "evidence": {}
+          },
+          "done_marker": "CURSORLOOP_TASK_FULLY_COMPLETE",
+          "plan_flag": "--plan",
+          "supports_cwd_flag": true,
+          "base_weight": 2,
+          "run": [
+            "{binary}",
+            "run",
+            "{plan_flag?}",
+            "{plan}",
+            "--run-id",
+            "{run_id}",
+            "{effort_argv...}",
+            "--cwd",
+            "{cwd}"
+          ],
+          "controls": {
+            "stop": [
+              "stop",
+              "--run-id",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
+            "wind_down": null,
+            "prompt": null
+          },
+          "events": {
+            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
+            "envelope": "event_type+payload"
+          },
+          "env": {
+            "auth": [
+              "CURSOR_API_KEY"
+            ],
+            "passthrough": [
+              "CURSORLOOP_*",
+              "CURSOR_*"
+            ]
+          }
+        },
+        {
+          "engine_id": "agyloop",
+          "binary": "agyloop",
+          "state_dir": ".agyloop",
+          "enabled": true,
+          "switch": null,
+          "cost_per_mtok_in": 0.5,
+          "cost_per_mtok_out": 2.0,
+          "default_model": null,
+          "efforts": [
+            {
+              "effort": "TRIVIAL",
+              "argv": [
+                "--preset",
+                "low",
+                "--effort",
+                "low"
+              ],
+              "achieved": "TRIVIAL",
+              "model": null,
+              "notes": "agyloop preset low"
+            },
+            {
+              "effort": "LOW",
+              "argv": [
+                "--preset",
+                "low",
+                "--effort",
+                "medium"
+              ],
+              "achieved": "LOW",
+              "model": null,
+              "notes": "agyloop preset low"
+            },
+            {
+              "effort": "STANDARD",
+              "argv": [
+                "--preset",
+                "medium",
+                "--effort",
+                "high"
+              ],
+              "achieved": "STANDARD",
+              "model": null,
+              "notes": "agyloop preset medium"
+            },
+            {
+              "effort": "HIGH",
+              "argv": [
+                "--preset",
+                "high",
+                "--effort",
+                "high"
+              ],
+              "achieved": "HIGH",
+              "model": null,
+              "notes": "agyloop preset high"
+            },
+            {
+              "effort": "MAX",
+              "argv": [
+                "--preset",
+                "high",
+                "--effort",
+                "max"
+              ],
+              "achieved": "MAX",
+              "model": null,
+              "notes": "agyloop preset high"
+            }
+          ],
+          "capabilities": {
+            "images": null,
+            "files": true,
+            "paste_text": true,
+            "paste_images": null,
+            "plugins": "skills-context",
+            "mcp": null,
+            "evidence": {}
+          },
+          "done_marker": "AGYLOOP_TASK_FULLY_COMPLETE",
+          "plan_flag": null,
+          "supports_cwd_flag": true,
+          "base_weight": 1,
+          "run": [
+            "{binary}",
+            "run",
+            "{plan_flag?}",
+            "{plan}",
+            "--run-id",
+            "{run_id}",
+            "{effort_argv...}",
+            "--cwd",
+            "{cwd}"
+          ],
+          "controls": {
+            "stop": [
+              "stop",
+              "--run-id",
+              "{run_id}",
+              "--cwd",
+              "{cwd}"
+            ],
+            "wind_down": null,
+            "prompt": null
+          },
+          "events": {
+            "path": "{cwd}/{state_dir}/runs/{run_id}/events.jsonl",
+            "envelope": "event_type+payload"
+          },
+          "env": {
+            "auth": [
+              "GOOGLE_API_KEY"
+            ],
+            "passthrough": [
+              "AGYLOOP_*",
+              "ANTIGRAVITY_*",
+              "GEMINI_API_KEY",
+              "GOOGLE_GENAI_USE_VERTEXAI",
+              "GOOGLE_GENAI_USE_ENTERPRISE",
+              "GOOGLE_CLOUD_PROJECT",
+              "GOOGLE_CLOUD_LOCATION"
+            ]
+          }
+        }
+      ],
+      "by_effort": {
+        "TRIVIAL": [
+          {
+            "engine_id": "agyloop",
+            "model": null,
+            "achieved": "TRIVIAL"
+          },
+          {
+            "engine_id": "cursorloop",
+            "model": "composer-fast",
+            "achieved": "TRIVIAL"
+          },
+          {
+            "engine_id": "claudeloop",
+            "model": null,
+            "achieved": "TRIVIAL"
+          },
+          {
+            "engine_id": "codexloop",
+            "model": null,
+            "achieved": "STANDARD"
+          }
+        ],
+        "LOW": [
+          {
+            "engine_id": "agyloop",
+            "model": null,
+            "achieved": "LOW"
+          },
+          {
+            "engine_id": "cursorloop",
+            "model": "composer",
+            "achieved": "LOW"
+          },
+          {
+            "engine_id": "claudeloop",
+            "model": null,
+            "achieved": "LOW"
+          },
+          {
+            "engine_id": "codexloop",
+            "model": null,
+            "achieved": "STANDARD"
+          }
+        ],
+        "STANDARD": [
+          {
+            "engine_id": "agyloop",
+            "model": null,
+            "achieved": "STANDARD"
+          },
+          {
+            "engine_id": "codexloop",
+            "model": null,
+            "achieved": "STANDARD"
+          },
+          {
+            "engine_id": "cursorloop",
+            "model": "grok-4.5",
+            "achieved": "STANDARD"
+          },
+          {
+            "engine_id": "claudeloop",
+            "model": null,
+            "achieved": "STANDARD"
+          }
+        ],
+        "HIGH": [
+          {
+            "engine_id": "agyloop",
+            "model": null,
+            "achieved": "HIGH"
+          },
+          {
+            "engine_id": "cursorloop",
+            "model": "grok",
+            "achieved": "HIGH"
+          },
+          {
+            "engine_id": "claudeloop",
+            "model": null,
+            "achieved": "HIGH"
+          },
+          {
+            "engine_id": "codexloop",
+            "model": null,
+            "achieved": "STANDARD"
+          }
+        ],
+        "MAX": [
+          {
+            "engine_id": "agyloop",
+            "model": null,
+            "achieved": "MAX"
+          },
+          {
+            "engine_id": "cursorloop",
+            "model": "grok-xhigh",
+            "achieved": "MAX"
+          },
+          {
+            "engine_id": "claudeloop",
+            "model": null,
+            "achieved": "MAX"
+          },
+          {
+            "engine_id": "codexloop",
+            "model": null,
+            "achieved": "STANDARD"
+          }
+        ]
+      }
+    }
+  ]
+}

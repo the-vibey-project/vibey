@@ -1270,12 +1270,41 @@ class PaperFigureAtlas(PaperFigureAtlasInterface):
         last = records[-1]
         caption = (
             f"The delivery-estimate ledger, one forecast per record. (a) Remaining and completed work units as the tracker "
-            f"held them: remaining jumped from {records[-3]['remaining']:.0f} to {records[-2]['remaining']:.0f} when the "
-            f"storm filed its lanes as issues. (b) The zero-shortfall time to completion the forecast derives from the "
+            f"held them: {self._largest_rise(records)}. (b) The zero-shortfall time to completion the forecast derives from the "
             f"observed merge rate, {last['days_low']:.0f}--{last['days_high']:.0f} active days at the last record, "
             f"with every material coordinate unmeasured and so at $\\phi_i = 1$."
         )
         return self._fence("figure*", "fig:forecast", caption, body)
+
+    @staticmethod
+    def _largest_rise(records: list[dict[str, Any]]) -> str:
+        """The caption's account of the forecast's largest rise in remaining work.
+
+        Found in the data, never at a fixed position: the caption once read the step from
+        records[-3] to records[-2], which was true only until the next record was appended
+        and then described a different step in the same words. The storm is named as the
+        cause only when open issues rose at the same record, which is the evidence for it.
+        """
+        rises = [
+            (records[i]["remaining"] - records[i - 1]["remaining"], i)
+            for i in range(1, len(records))
+        ]
+        rise, at = max(rises, default=(0.0, 0))
+        if rise <= 0:
+            return "remaining never rose from one record to the next"
+        before, after = records[at - 1], records[at]
+        when = datetime.fromisoformat(after["recorded_at"].replace("Z", "+00:00")).strftime(
+            "%b %-d"
+        )
+        text = (
+            f"remaining jumped from {before['remaining']:.0f} to {after['remaining']:.0f} on {when}"
+        )
+        if after["open_issues"] - before["open_issues"] > 0:
+            text += (
+                f", as open issues rose from {before['open_issues']} to {after['open_issues']}"
+                " when the storm filed its lanes as issues"
+            )
+        return text
 
     def governance_time(self) -> str:
         t = self._data("test_time")

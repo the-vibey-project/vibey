@@ -26,3 +26,9 @@
 **/.coverage
 **/coverage.xml
 **/*.egg-info
+# The VS Code extension (clients/vscode) never enters the image, which carries no Node at
+# all (the image job's "no node/npm" contract). Its dependency and build trees are large,
+# so they stay out of the build context too.
+**/node_modules
+clients/vscode/out
+clients/vscode/.vscode-test

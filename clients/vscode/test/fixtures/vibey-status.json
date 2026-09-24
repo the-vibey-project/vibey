@@ -1,0 +1,15 @@
+{
+  "project_id": "7d1c9b2e-3a4f-4e5d-8c6b-1a2b3c4d5e6f",
+  "name": "greeter",
+  "phase": "build",
+  "cycle": 1,
+  "max_cycles": 3,
+  "repo_path": "/Users/me/git/greeter",
+  "visual_decision": null,
+  "deployment_decision": null,
+  "queue_depth": {"ready": 2, "leased": 1, "succeeded": 7},
+  "circuits": [
+    {"engine_id": "qwenloop", "installed": true, "version": "0.2.0", "conformance_ok": true, "circuit": "closed", "capacity_state": null, "consecutive_fail": 0, "cost_usd_cycle": 0.0, "selected_count": 5}
+  ],
+  "active_worktrees": ["/Users/me/git/greeter/.vibey/worktrees/1"]
+}
