@@ -59,36 +59,36 @@
   {
    "anchor": "8 — Local authority",
    "document": "docs/doctrines.md",
-   "sha256": "5c118174249ca292b2ee58bb424b48cb9cb6f73ceb46bc472edfde2954129212",
+   "sha256": "45b19d64b73b7179b9c09edf472861b9f8302e55d28c691017d678023571774f",
    "start_line": 113,
-   "text_lines": 282
+   "text_lines": 289
   },
   {
    "anchor": "9 — The vibe",
    "document": "docs/doctrines.md",
    "sha256": "378d77001355614b73f9dd01d0c1f50e6e440d7a90539f13adafdc9ae150c3ef",
-   "start_line": 395,
+   "start_line": 402,
    "text_lines": 31
   },
   {
    "anchor": "10 — No guarantees",
    "document": "docs/doctrines.md",
    "sha256": "d5a7bba553208f024bbd9a38059fc2687596a9f528611e898a545c1f8ea4b2b9",
-   "start_line": 426,
+   "start_line": 433,
    "text_lines": 67
   },
   {
    "anchor": "11 — The living roadmap",
    "document": "docs/doctrines.md",
    "sha256": "2b7af17bfc318721c526df138ff45715828a18d9f4892ca8a80d194c4328548d",
-   "start_line": 493,
+   "start_line": 500,
    "text_lines": 7
   },
   {
    "anchor": "12 — Humans first",
    "document": "docs/doctrines.md",
    "sha256": "736ca54a88442dcc86c465569ffa847416cd97fd1b89922ed5dde2b28b123c58",
-   "start_line": 500,
+   "start_line": 507,
    "text_lines": 210
   },
   {
@@ -232,7 +232,7 @@
    "text_lines": 4
   }
  ],
- "corpus_sha256": "65ddd311af4eb318c15465d5b06f87a7c9f64c3bef3be84a00504400a3c39722",
+ "corpus_sha256": "04b4aff5f96d329c1a1aa8f06d7e166ba4576ca344bf30f9befeb2b4907abcf2",
  "documents": [
   "docs/doctrines.md",
   "docs/constitution.md",
