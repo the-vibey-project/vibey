@@ -507,6 +507,22 @@ def test_qwenlane_counts_every_stalled_attempt_against_max_attempts(
     )
     body = tmp_path / "issue.md"
     body.write_text("fix it\n")
+    # The lane runs only text the admission seam vouched for (storm_trust, 12.j): the
+    # record binds this exact title and these exact bytes, as `IssueGate.admit` writes it.
+    (lane / ".qwenstorm").mkdir(exist_ok=True)
+    (lane / ".qwenstorm" / "provenance.json").write_text(
+        json.dumps(
+            {
+                "issue": 504,
+                "admitted": True,
+                "title": "a title",
+                "author": "operator",
+                "source": "owner/repo#504",
+                "fetched_at": "2026-09-23T00:00:00Z",
+                "sha256": qwenlane.Admission().digest("a title", body.read_bytes()),
+            }
+        )
+    )
     argv = child(tmp_path, "event('turn.completed', turn=1)\ntime.sleep(600)\n")
     monkeypatch.setattr(qwenlane, "attempt_argv", lambda spec: [*argv, str(spec)])
     monkeypatch.setattr(
