@@ -232,8 +232,10 @@ async def test_the_closure_stops_at_finished_rows_and_never_locks_past_them(
 
     async with migrated_pool.acquire() as holder, holder.transaction():
         await holder.execute("SELECT 1 FROM job WHERE id = $1 FOR UPDATE", beyond)
+        # A bump that locked `beyond` would wait for as long as the holder lives, so any
+        # finite bound proves it did not; 5s tripped under a loaded pre-push run.
         change = await asyncio.wait_for(
-            store.bump(target, context=_context(project_id), at=AT), timeout=5
+            store.bump(target, context=_context(project_id), at=AT), timeout=60
         )
 
     assert [m.job_id for m in change.moved] == [target]
