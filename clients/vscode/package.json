@@ -1,0 +1,355 @@
+{
+  "name": "vibey",
+  "displayName": "Vibey",
+  "description": "Drive vibey and a local gpt-oss model from your editor. Runs on your own computer; no account and no cloud.",
+  "version": "0.1.0",
+  "publisher": "the-vibey-project",
+  "license": "MIT",
+  "author": {
+    "name": "Adam Matthew Steinberger"
+  },
+  "homepage": "https://the-vibey-project.github.io/vibey/main/guides/vscode-extension/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/the-vibey-project/vibey.git",
+    "directory": "clients/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/the-vibey-project/vibey/issues"
+  },
+  "keywords": [
+    "vibey",
+    "ollama",
+    "gpt-oss",
+    "local model",
+    "offline",
+    "sovereign"
+  ],
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./out/extension/extension.js",
+  "bin": {
+    "vibey-vscode": "out/cli.js"
+  },
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vibey",
+          "title": "Vibey",
+          "icon": "media/vibey.svg"
+        }
+      ]
+    },
+    "views": {
+      "vibey": [
+        {
+          "id": "vibey.model",
+          "name": "Model"
+        },
+        {
+          "id": "vibey.runs",
+          "name": "Tasks"
+        },
+        {
+          "id": "vibey.projects",
+          "name": "Projects"
+        },
+        {
+          "id": "vibey.gates",
+          "name": "Gates"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "vibey.runs",
+        "contents": "Ask the local model to do something in this folder. It works on a copy, so nothing changes until you choose Apply.\n[Ask gpt-oss](command:vibey.ask)\n[Run a folder of tasks](command:vibey.runBatch)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "vibey.ask",
+        "title": "Ask gpt-oss to do a task",
+        "category": "Vibey",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "vibey.runBatch",
+        "title": "Run a folder of tasks",
+        "category": "Vibey",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "vibey.stopRun",
+        "title": "Stop a running task",
+        "category": "Vibey",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "vibey.refresh",
+        "title": "Refresh",
+        "category": "Vibey",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vibey.answerGate",
+        "title": "Answer a parked gate",
+        "category": "Vibey",
+        "icon": "$(question)"
+      },
+      {
+        "command": "vibey.doctor",
+        "title": "Check my setup (doctor)",
+        "category": "Vibey",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "vibey.startOllama",
+        "title": "Start Ollama",
+        "category": "Vibey",
+        "icon": "$(play)"
+      },
+      {
+        "command": "vibey.pullModel",
+        "title": "Download the model",
+        "category": "Vibey",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "vibey.openRunLog",
+        "title": "Open a run's log",
+        "category": "Vibey",
+        "icon": "$(output)"
+      },
+      {
+        "command": "vibey.reviewRun",
+        "title": "Review a finished run's changes",
+        "category": "Vibey",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "vibey.applyRun",
+        "title": "Apply a finished run to my branch",
+        "category": "Vibey",
+        "icon": "$(check)"
+      },
+      {
+        "command": "vibey.discardRun",
+        "title": "Discard a finished run",
+        "category": "Vibey",
+        "icon": "$(trash)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "vibey.refresh",
+          "when": "view == vibey.model || view == vibey.projects || view == vibey.gates || view == vibey.runs",
+          "group": "navigation@9"
+        },
+        {
+          "command": "vibey.startOllama",
+          "when": "view == vibey.model",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vibey.pullModel",
+          "when": "view == vibey.model",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vibey.doctor",
+          "when": "view == vibey.model",
+          "group": "navigation@3"
+        },
+        {
+          "command": "vibey.ask",
+          "when": "view == vibey.runs",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vibey.runBatch",
+          "when": "view == vibey.runs",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vibey.answerGate",
+          "when": "view == vibey.gates",
+          "group": "navigation@1"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vibey.stopRun",
+          "when": "view == vibey.runs && viewItem == vibey.run.running",
+          "group": "inline@1"
+        },
+        {
+          "command": "vibey.openRunLog",
+          "when": "view == vibey.runs && viewItem =~ /^vibey\\.run\\./",
+          "group": "inline@2"
+        },
+        {
+          "command": "vibey.reviewRun",
+          "when": "view == vibey.runs && viewItem == vibey.run.finished",
+          "group": "inline@3"
+        },
+        {
+          "command": "vibey.applyRun",
+          "when": "view == vibey.runs && viewItem == vibey.run.finished",
+          "group": "inline@4"
+        },
+        {
+          "command": "vibey.discardRun",
+          "when": "view == vibey.runs && viewItem == vibey.run.finished",
+          "group": "inline@5"
+        },
+        {
+          "command": "vibey.answerGate",
+          "when": "view == vibey.gates && viewItem == vibey.gate",
+          "group": "inline@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Vibey",
+      "properties": {
+        "vibey.cliPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `vibey` program to run. Empty: the first `vibey` on your PATH. **Vibey: Check my setup** prints the one it found and its version."
+        },
+        "vibey.qwenloopPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `qwenloop` program that runs a task on the local model. Empty: the first `qwenloop` on your PATH."
+        },
+        "vibey.ollamaPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `ollama` program, used only to start a server with `ollama serve` and to show a download command. Empty: the first `ollama` on your PATH."
+        },
+        "vibey.gitPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The `git` program. Empty: the first `git` on your PATH."
+        },
+        "vibey.ollamaUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Where Ollama listens, in root form without `/v1`. Empty: `$VIBEY_OLLAMA_URL`, else `http://127.0.0.1:11434`."
+        },
+        "vibey.ollamaAppPath": {
+          "type": "string",
+          "default": "/Applications/Ollama.app",
+          "markdownDescription": "macOS only: the Ollama app **Start Ollama** opens when it exists. Otherwise `ollama serve` is started."
+        },
+        "vibey.model": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The model tasks run on. Empty: `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`."
+        },
+        "vibey.maxTurns": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0,
+          "markdownDescription": "The most model turns one task may take (`qwenloop run --max-turns`). `0`: qwenloop's own setting, else 40."
+        },
+        "vibey.effort": {
+          "type": "string",
+          "default": "standard",
+          "markdownDescription": "Passed to `qwenloop run --effort`. qwenloop 0.2.0 accepts the flag and does not use it yet."
+        },
+        "vibey.contextWindow": {
+          "type": "integer",
+          "default": 32768,
+          "minimum": 1024,
+          "markdownDescription": "The context window, in tokens, qwenloop assumes (its own `context_window`, default 32768). **Check my setup** warns when Ollama loaded the model with a smaller one, because Ollama then drops the start of long tasks without saying so."
+        },
+        "vibey.runInPlace": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Run tasks directly in the open folder instead of in a separate copy (a git worktree on its own branch). **Off is safer**: with it on, the model edits your files as it goes and there is no Apply or Discard."
+        },
+        "vibey.baseRef": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The git branch or commit a task's copy starts from. Empty: whatever you have checked out (`HEAD`)."
+        },
+        "vibey.stormHome": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Where task copies, plans and records are kept. Empty: `$VIBEY_STORM_HOME`, else `~/git/vibey-storm` on macOS and `$XDG_DATA_HOME/vibey/storm` (or `~/.local/share/vibey/storm`) on Linux. A folder your computer empties at restart is refused (sub-doctrine 10.h)."
+        },
+        "vibey.modelLockPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "A lock directory that keeps runs on the same computer from sharing the model at once, including runs started from a terminal with `vibey-vscode`. Empty: `.ollama-lock` in the storm home."
+        },
+        "vibey.maxConcurrentRuns": {
+          "type": "integer",
+          "default": 1,
+          "minimum": 1,
+          "markdownDescription": "How many tasks may use one model at the same time. Further tasks wait in line. `1` is the measured best on a 24 GB Mac: at two, answers drifted from what one run gives (structural fidelity 0.82, under the 0.95 floor; #1114, sub-doctrine 8.c)."
+        },
+        "vibey.refreshSeconds": {
+          "type": "integer",
+          "default": 30,
+          "minimum": 5,
+          "markdownDescription": "How often the Model, Projects and Gates views refresh themselves."
+        },
+        "vibey.pollMilliseconds": {
+          "type": "integer",
+          "default": 500,
+          "minimum": 100,
+          "markdownDescription": "How often a running task's event log is read for new lines."
+        },
+        "vibey.stuckHintMinutes": {
+          "type": "integer",
+          "default": 5,
+          "minimum": 5,
+          "markdownDescription": "After this many minutes without a new event, a running task shows a hint. Nothing is ever stopped for being slow: on a 24 GB Mac one turn of gpt-oss:20b took 16.5 s typically and 112.6 s at the 95th percentile."
+        },
+        "vibey.desktopNotifications": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Let qwenloop send its own desktop notification at every turn. Off: the editor shows progress instead."
+        },
+        "vibey.environment.allow": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Extra environment variables (a name, or a prefix ending in `*`) passed to qwenloop and the commands the model runs. vibey's own variables (`VIBEY_*`), PostgreSQL's (`PG*`) and anything named like a database credential are never passed, whatever this says."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "smoke": "node test/smoke/run.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/vscode": "1.90.0",
+    "@vitest/coverage-v8": "5.0.1",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
+    "ovsx": "1.2.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.1"
+  }
+}
