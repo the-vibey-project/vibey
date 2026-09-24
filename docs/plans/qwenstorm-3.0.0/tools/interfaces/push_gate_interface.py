@@ -26,6 +26,11 @@ class PushGateConfigInterface(Protocol):
     log_tail_lines: int
     stack_wait_seconds: float
     protected: tuple[str, ...]
+    ownerless_match_seconds: float
+    worktree_roots: tuple[Path, ...]
+    schedule_seconds: float
+    schedule_label: str
+    schedule_path: str
 
 
 @runtime_checkable
@@ -86,6 +91,14 @@ class ProcessTableInterface(Protocol):
         """Whether `pgid` is still the group a push started in a session of its own."""
         ...
 
+    def processes(self) -> Any:
+        """Every process with its start time; None when the table is unreadable."""
+        ...
+
+    def cwd(self, pid: int) -> str | None:
+        """Where `pid` stands; None when that cannot be read."""
+        ...
+
 
 @runtime_checkable
 class SignallerInterface(Protocol):
@@ -124,17 +137,51 @@ class PushLockInterface(Protocol):
         """The reaper's release: only if the lock still carries `token`."""
         ...
 
+    def evict_ownerless(self, made_at: float) -> bool:
+        """Remove a bare-mkdir lock, only if it is still the one judged (same mtime)."""
+        ...
+
 
 @runtime_checkable
 class GroupKillerInterface(Protocol):
     """Stops one process group: SIGTERM, the grace, SIGKILL."""
 
-    def signallable(self, pgid: int) -> bool:
+    def signallable(self, pgid: int, require_session: bool = True) -> bool:
         """Whether `pgid` may be signalled as a push's own group."""
         ...
 
-    def stop(self, pgid: int) -> str:
+    def stop(self, pgid: int, require_session: bool = True) -> str:
         """refused, gone, terminated or killed."""
+        ...
+
+
+@runtime_checkable
+class OwnerlessHolderInterface(Protocol):
+    """Names the push behind a bare-mkdir lock by process, or says it cannot."""
+
+    def identify(self, made_at: float) -> Any:
+        """The traced owner and its group, or None with the reason."""
+        ...
+
+
+@runtime_checkable
+class ScheduleInterface(Protocol):
+    """The reaper's own schedule: launchd, systemd, or a printed cron line."""
+
+    def files(self) -> dict[Path, str]:
+        """Every unit file, rendered, keyed by where it is installed."""
+        ...
+
+    def install(self, dry_run: bool = False) -> list[str]:
+        """Write and load the schedule; what was done, line by line."""
+        ...
+
+    def uninstall(self, dry_run: bool = False) -> list[str]:
+        """Unload and remove it."""
+        ...
+
+    def status(self) -> str:
+        """Installed, loaded, and how often."""
         ...
 
 
@@ -186,6 +233,12 @@ class StatusInterface(Protocol):
 class PushRunnerInterface(Protocol):
     """Wait for the lock, run the push in a session of its own, always release."""
 
-    def run(self, argv: list[str], wait: bool = True) -> int:
+    def run(
+        self,
+        argv: list[str],
+        wait: bool = True,
+        wait_timeout: float | None = None,
+        push_timeout: float | None = None,
+    ) -> int:
         """The push's exit status; 124 when the reaper ended it."""
         ...
