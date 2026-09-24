@@ -164,6 +164,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   evidence says so, and calibrates itself when its queue empties and a calibration was
   requested, from its own lane records or, when none survive, its committed specs
   (`storm_turn_pool.py`).
+* **vibey_gh:** the Discord announcement after a docs deploy now says what changed: `vibey-gh
+  announce` posts one line per merged change, grouped Breaking / Added / Fixed / Other, capped
+  at `[announce] max_changes` (default 8) with `…and N more` and a compare link, merge and
+  release chores counted rather than listed, and the surface links last. The message is under
+  Discord's 2000-character limit by construction and escapes every mention, link and markdown
+  character a commit subject carries, and the payload sets `allowed_mentions: {"parse": []}`.
+  The range is a position (sub-doctrine 10.g). Each `Release surfaces` run records its branch
+  and release commit in its `run-name`, and a `Record the announced position` step records
+  that Discord accepted the post and the position was read. The next announcement starts
+  from there. A history that could not be read is announced as `unknown` and never recorded,
+  so nothing is skipped; the first announcement, a force-push, or an exhausted window
+  re-anchors and says so. A release announces its `CHANGELOG.md` section with the tag range. Configured by the new `[announce]` table; the inline heredoc is gone.
+
 * **cli:** `vibey doctor` prints a `db-passwordless` line: `WARN` when the app DSN's database
   accepts a login with no password (trust or peer authentication) as the DSN's role or the OS
   user doctor runs as, on the DSN's host or a local socket. Any process running as that user,
@@ -235,8 +248,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   with everything it still needs, and named, rather than refusing the request. The lane is
   derived through a dependency in an unknown state, so a job a live named job needs is
   never swept past it. `tests/meta/test_migration_drops.py` reads SQL as PostgreSQL lexes
-  it -- comments, strings, `DO` bodies and `EXECUTE` strings -- and also catches renamed
-  and retyped columns and tables taken away; the ADR sentence must name the workers to drain.
+  it -- comments, strings (`E''`, `U&''`, and literals joined by `||`), quoted names
+  (`U&""` too), `DO` bodies and `EXECUTE` strings -- and catches every step that takes
+  something from a running reader: a column dropped, renamed or retyped; a table, view or
+  sequence dropped, renamed away or moved by `SET SCHEMA`; a table replaced under its own
+  name without a column it had (known by replaying the migrations in order); and a type
+  dropped or renamed, or an enum value renamed (`ALTER TYPE ... RENAME VALUE`), which fails
+  an older worker's strict `phase` or `state` read. The ADR sentence must name the workers
+  to drain against this migration or an `N.N.N` release, and not negate the drain.
   `vibey queue list [PROJECT]` shows the queue in claim order with every bump marked;
   `vibey design resume PROJECT --priority` enqueues the interview bumped. The claim orders
   `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so the order among
@@ -274,6 +293,33 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   train requires both.
 
 ### Fixed
+
+* **storm:** the push-gate reaper, now on an unattended schedule, acts only on what it has
+  checked (the independent review of #1105 and #1107).
+  - **Kill safety.** The lock and the traced push are read again under the lock's mutex before
+    any signal, so a push that ends while the evidence is written is never followed by a kill
+    of the recipe's next command. `acquire` is judged by the caller's process group
+    (`--pid $$`), not by the `$(...)` subshell that exits at once and got the lock released
+    mid-push.
+  - **Trust.** The owner record is checked field by field. A lock or record that is a
+    symlink, another uid's, or malformed is untrusted and never acted on. The state directory
+    is 0700, nothing is written or read through a link, and a push log is read only from the
+    gate's own logs.
+  - **Observed kills.** A kill is recorded only once the group is seen gone. EPERM means
+    "not ours". `protected` matches the program, not the command line, and a group whose
+    members cannot be read is never killed.
+  - **Awake time.** Holds and idle windows are counted in awake time (CLOCK_UPTIME_RAW on
+    macOS, CLOCK_MONOTONIC on Linux), with the boot id, so a laptop's sleep is never a hang.
+    A reused holder pid is told apart by its start time.
+  - **Shared locks.** The mutex and the reap lock sit beside the lock.
+  - **Schedule health.** `schedule-status` reports the last exit, from `launchctl print` or
+    `systemctl --user show`, and flags a stale `reaper.log`. `install-schedule` refuses a
+    temporary directory, a linked worktree, a Python older than 3.11, or a value systemd
+    cannot quote.
+  - **Pushes around the gate.** `run --push-timeout` records its kill as a reap.
+    `scripts/fleet/land.sh` now pushes through the gate, and an AST scan finds any push that
+    goes around it.
+  - **Ubuntu 26.04 LTS.** Its systemd and /proc paths are first-class (#1116).
 
 * **vibey_gh:** a whole sovereign review's documents are bounded by their own
   `[pr_automation.fallback] max_document_chars` (default 120,000) and the window, no longer by
