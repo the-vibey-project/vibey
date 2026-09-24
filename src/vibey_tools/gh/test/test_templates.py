@@ -504,7 +504,7 @@ def test_social_signals_are_injected_into_the_built_site_not_before_it(
         return artifact and step.get("with", {}).get("path") == "channel-site/"
 
     inject = index(lambda s: "social_signals import inject" in s.get("run", ""))
-    build = index(lambda s: "--site-dir channel-site" in s.get("run", ""))
+    build = index(lambda s: "properdocs build --strict" in s.get("run", ""))
     upload = index(uploads_the_site)
     restore = index(lambda s: s.get("name") == "Restore the other release channel")
     assert build < inject < upload < restore
@@ -997,11 +997,11 @@ def test_the_site_publishes_its_own_book_and_paper_when_enabled(tmp_path):
 
 
 def test_the_docs_deploy_announces_itself_only_through_a_secret(tmp_path):
-    """A community learns of a new paper or book revision from the pipeline that published
-    it, never from someone remembering to post (sub-doctrine 12.e). The webhook is a
-    repository secret: the rendered workflow names it and never carries its value, and a
-    deploy with no secret says out loud that nothing was posted rather than failing or
-    staying silent."""
+    """A community learns what changed from the pipeline that published it, never from
+    someone remembering to post (sub-doctrine 12.e). The webhook is a repository secret: the
+    rendered workflow names it and never carries its value, and a deploy with no secret says
+    out loud that nothing was posted rather than failing or staying silent. The message
+    itself is `vibey-gh announce` (test_announce.py); the workflow only calls it."""
     from vibey_gh.config import GhConfig
     from vibey_gh.install import render_workflow
 
@@ -1009,17 +1009,36 @@ def test_the_docs_deploy_announces_itself_only_through_a_secret(tmp_path):
     assert "- name: Announce the published surfaces" in on
     assert "DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}" in on
     assert "announce: no DISCORD_WEBHOOK_URL secret is set; nothing posted" in on
-    # Only after the Pages deploy has succeeded, and only what this deploy produced.
+    # Only after the Pages deploy has succeeded, and before the release attachments.
     assert on.index("id: deploy") < on.index("- name: Announce the published surfaces")
     assert on.index("- name: Announce the published surfaces") < on.index("\n  attach:")
-    assert '("paper.pdf", "paper, PDF")' in on
-    assert '("book.epub", "book, EPUB")' in on
-    assert "if (site / path).is_file()" in on
-    # A webhook that fails does not fail a deploy that already published the site.
-    assert "except (urllib.error.URLError, OSError, ValueError) as exc:" in on
-    assert "::warning::announce: the Discord webhook post failed and the deploy stands" in on
+    # Code, not an inline script: the announcer is vibey-gh's, and nothing it does can fail
+    # a deploy that already published the site.
+    assert 'vibey-gh announce --channel "$CHANNEL" --branch "$BRANCH" --sha "$RELEASE_SHA"' in on
+    step = next(
+        step
+        for step in yaml.safe_load(on)["jobs"]["docs"]["steps"]
+        if step.get("name") == "Announce the published surfaces"
+    )
+    assert "<<'PY'" not in step["run"] and "urllib" not in step["run"]
+    assert "::warning::announce: vibey-gh announce did not complete and the deploy stands" in on
+    assert "::warning::announce: vibey-gh could not be installed and the deploy stands" in on
+    # It reads the Actions API with the job's own token and permission.
+    assert "GH_TOKEN: ${{ github.token }}" in on
     # The secret's value never appears in a rendered workflow, whatever the configuration.
     assert "discord.com/api/" + "webhooks/" not in on
+
+
+def test_the_announcement_webhook_secret_is_configurable(tmp_path):
+    """`[announce] webhook_secret` names the secret, in the expression and the log line."""
+    from vibey_gh.config import AnnounceConfig, GhConfig
+    from vibey_gh.install import render_workflow
+
+    cfg = GhConfig(root=tmp_path, announce=AnnounceConfig(webhook_secret="COMMUNITY_HOOK"))
+    on = render_workflow(WORKFLOWS / "release-surfaces.yml", cfg)
+    assert "DISCORD_WEBHOOK_URL: ${{ secrets.COMMUNITY_HOOK }}" in on
+    assert "announce: no COMMUNITY_HOOK secret is set; nothing posted" in on
+    assert "__VIBEY_GH_ANNOUNCE" not in on
 
 
 def test_the_papers_author_fields_are_quoted_for_the_shell(tmp_path):

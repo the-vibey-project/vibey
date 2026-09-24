@@ -82,6 +82,12 @@ STATES_THE_RULE = re.compile(
 #: (file glob, what the line contains, why it may stay). Category (b) only.
 ALLOWED: tuple[tuple[str, str, str], ...] = (
     (
+        "src/vibey/infrastructure/db/local_auth.py",
+        r"`/tmp`",
+        "the Postgres unix socket directory, as a DSN's libpq host names it: where the server"
+        " listens, not where work is kept",
+    ),
+    (
         ".claude/settings.json",
         r"\.s\.PGSQL\.5432",
         "the Postgres unix socket: a rendezvous point the server recreates at start",
@@ -100,6 +106,11 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
         "src/vibey_tools/gh/vibey_gh/templates/workflows/*.yml",
         r"/tmp/",
         "a CI runner's scratch, as above (the template vibey-gh renders)",
+    ),
+    (
+        "src/vibey/infrastructure/db/local_auth.py",
+        r"`/tmp`, which `urlsplit\(\)\.hostname`",
+        "the Postgres unix-socket directory a DSN names, explained in a docstring; no work kept",
     ),
     (
         "deploy/docker/Dockerfile",

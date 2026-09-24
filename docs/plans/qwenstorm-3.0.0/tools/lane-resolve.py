@@ -142,6 +142,7 @@ def operation(repo: Path) -> str:
 
 def back_out(repo: Path) -> None:
     """Abandon whatever is in progress, with the command that operation actually answers to."""
+    # push-gate: not a push (operation() names merge, cherry-pick or rebase)
     run(["git", f"{operation(repo)}", "--abort"], repo)
 
 

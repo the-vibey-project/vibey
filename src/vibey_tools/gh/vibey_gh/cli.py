@@ -30,6 +30,7 @@ from vibey_gh import (
     surfaces,
     versioning,
 )
+from vibey_gh.announce import Announcer
 from vibey_gh.approval_check import ApprovalCheck
 from vibey_gh.config import load_config
 from vibey_gh.fallback_pin import FallbackPinResolver
@@ -2282,6 +2283,14 @@ def main(argv: list[str] | None = None) -> int:
         help="exit 0 only if every [unattended_approval] condition holds for a pull request",
     )
     ApprovalCheck.declare(ac).set_defaults(func=ApprovalCheck.dispatch)
+
+    # The release-surfaces workflow's announcement after a docs deploy: a concise changelog
+    # since the previous accepted announcement, grouped and capped, then the surface links.
+    an = sub.add_parser(
+        "announce",
+        help="post a published docs channel's concise changelog to the Discord webhook",
+    )
+    Announcer.declare(an).set_defaults(func=Announcer.dispatch)
 
     for surface in ("api", "mcp", "sdk", "webhook"):
         adapter = sub.add_parser(surface, help=f"invoke a capability through the {surface} adapter")

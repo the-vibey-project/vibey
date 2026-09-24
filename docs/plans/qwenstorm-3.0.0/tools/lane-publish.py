@@ -460,6 +460,10 @@ def publish(slug: str, dry: bool) -> str:
     last = (out.strip().splitlines() or ["?"])[-1][:140]
     if code == 124:
         return f"push reaped as a hang, not a test failure: {last}"
+    if code == 125:
+        return (
+            f"push stopped after its 30-minute limit (evidence in the push gate's reap log): {last}"
+        )
     if code == 3:
         return f"push not attempted: the push lock stayed busy for 30 minutes: {last}"
     if code:

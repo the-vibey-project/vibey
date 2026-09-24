@@ -328,6 +328,7 @@ class CommitSeries(FigureSourceInterface):
         self._zone = ZoneInfo(tz)
 
     def _git(self, *args: str) -> str:
+        # push-gate: not a push (reads history for the paper's figures)
         return subprocess.run(
             ["git", *args], cwd=self._repo, check=True, capture_output=True, text=True
         ).stdout

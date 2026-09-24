@@ -1256,6 +1256,230 @@ class GithubReleaseConfig:
             )
 
 
+# Discord's own ceiling on a message's `content`, and the reason `max_message_chars` may be
+# set lower but never higher: a longer body is refused by the API, not truncated.
+DISCORD_CONTENT_LIMIT = 2000
+
+# Which Conventional Commit types land in which named group, in the order the groups are
+# shown. A type named nowhere lands in `other_group`; a breaking change of ANY type lands in
+# `breaking_group`, which always leads.
+DEFAULT_ANNOUNCE_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("Added", ("feat",)),
+    ("Fixed", ("fix",)),
+)
+
+# The word a type prefix becomes on the announced line: `fix(paper): x` reads `Fix · paper: x`.
+DEFAULT_ANNOUNCE_TYPE_WORDS: tuple[tuple[str, str], ...] = (
+    ("feat", "Feature"),
+    ("fix", "Fix"),
+    ("docs", "Docs"),
+    ("perf", "Performance"),
+    ("refactor", "Refactor"),
+    ("test", "Tests"),
+    ("build", "Build"),
+    ("ci", "CI"),
+    ("chore", "Chore"),
+    ("style", "Style"),
+    ("revert", "Revert"),
+)
+
+# Subjects that are bookkeeping rather than change: hidden from the list, but COUNTED on the
+# line after it, so a reader can see that something was left out and how much.
+DEFAULT_ANNOUNCE_NOISE: tuple[str, ...] = (
+    r"^Merge (pull request|branch|remote-tracking branch) ",
+    r"^chore\(merge\)",
+    r"^chore\(release\)",
+    r"^chore\(heartbeat\)",
+    r"^chore: (resolve merge conflicts|sync with |merge )",
+)
+
+_ANNOUNCE_TYPE = re.compile(r"^[a-z][a-z0-9-]*$")
+
+# The keys of `[announce]` that are plain scalars, read as given; the three structured ones
+# are frozen by `AnnounceConfig.from_table` itself.
+_ANNOUNCE_SCALARS = (
+    "enabled",
+    "webhook_secret",
+    "username",
+    "max_changes",
+    "max_subject_chars",
+    "max_message_chars",
+    "include_other",
+    "breaking_group",
+    "other_group",
+    "link_pull_requests",
+    "link_compare",
+    "link_surfaces",
+    "suppress_embeds",
+    "changelog_path",
+    "max_history_pages",
+    "max_history_candidates",
+)
+
+# Substrings Discord refuses in a webhook's username, which it answers with HTTP 400: the
+# announcement would fail on every deploy, so the value is refused here instead.
+_DISCORD_USERNAME_FORBIDDEN = ("discord", "clyde", "@", "#", ":", "```")
+_CHANGELOG_PATH = re.compile(r"^[A-Za-z0-9._/-]+$")
+
+
+@dataclass(frozen=True)
+class AnnounceConfig:
+    """`[announce]`: the changelog `vibey-gh announce` posts after a docs deploy (12.e).
+
+    The webhook is a repository secret named by `webhook_secret`, never a value in this
+    file. Every key has a default that is a working announcement, so an adopter writes only
+    what differs (ADR-0018):
+
+    - `max_changes` (8): lines listed before `…and N more`. A breaking change is never
+      counted against it and never dropped: it is listed first, and only when breaking
+      changes alone overflow the message are the rest counted, by name, as breaking.
+    - `max_subject_chars` (100): a longer description is cut with an ellipsis.
+    - `max_message_chars` (2000): Discord's content limit, and the ceiling of this key.
+    - `include_other` (true): whether types in no named group are listed under
+      `other_group` or only counted.
+    - `groups`: `[announce.groups]` maps a group's label to its types, in display order.
+    - `type_words`: `[announce.type_words]` overrides the word a type prefix becomes.
+    - `noise_patterns`: regular expressions over the subject; a match is hidden and counted.
+    - `link_pull_requests`, `link_compare`, `link_surfaces`: which links the message carries.
+    - `suppress_embeds` (true): post with Discord's no-link-preview flag.
+    - `changelog_path` (CHANGELOG.md): a release announces this file's section for its
+      version, the release's own notes.
+    - `max_history_pages` (10): how many pages of 100 runs, and of 100 compared commits,
+      are read looking for the previous announcement and the commits since it; 10 is also
+      the most, because the Actions API serves a status-filtered run listing only to its
+      1000th result. Commits beyond are counted; a history with no accepted announcement
+      inside the window re-anchors, and says so (10.g).
+    - `max_history_candidates` (20): how many runs for the branch whose announcement was
+      NOT accepted are read (one jobs call each) before the history is called structural
+      and the announcement re-anchors, saying so, rather than paging on or staying unknown
+      on every run from then on.
+    """
+
+    enabled: bool = True
+    webhook_secret: str = "DISCORD_WEBHOOK_URL"
+    username: str = "vibey"
+    max_changes: int = 8
+    max_subject_chars: int = 100
+    max_message_chars: int = DISCORD_CONTENT_LIMIT
+    include_other: bool = True
+    breaking_group: str = "Breaking"
+    other_group: str = "Other"
+    groups: tuple[tuple[str, tuple[str, ...]], ...] = DEFAULT_ANNOUNCE_GROUPS
+    type_words: tuple[tuple[str, str], ...] = DEFAULT_ANNOUNCE_TYPE_WORDS
+    noise_patterns: tuple[str, ...] = DEFAULT_ANNOUNCE_NOISE
+    link_pull_requests: bool = True
+    link_compare: bool = True
+    link_surfaces: bool = True
+    suppress_embeds: bool = True
+    changelog_path: str = "CHANGELOG.md"
+    max_history_pages: int = 10
+    max_history_candidates: int = 20
+
+    def __post_init__(self) -> None:
+        for name in (
+            "enabled",
+            "include_other",
+            "link_pull_requests",
+            "link_compare",
+            "link_surfaces",
+            "suppress_embeds",
+        ):
+            if not isinstance(getattr(self, name), bool):
+                raise TypeError(f"announce.{name} must be true or false")
+        if (
+            not isinstance(self.webhook_secret, str)
+            or not SECRET_NAME_PATTERN.fullmatch(self.webhook_secret)
+            # GitHub reserves the prefix: no repository secret can be named GITHUB_*.
+            or self.webhook_secret.upper().startswith("GITHUB_")
+        ):
+            raise ValueError(
+                f"announce.webhook_secret is not a valid secret name: {self.webhook_secret!r}"
+            )
+        if not isinstance(self.username, str) or not self.username.strip():
+            raise ValueError("announce.username must be 1 to 80 characters")
+        if len(self.username) > 80:
+            raise ValueError("announce.username must be 1 to 80 characters")
+        lowered = self.username.lower()
+        if lowered.strip() in ("everyone", "here") or any(
+            word in lowered for word in _DISCORD_USERNAME_FORBIDDEN
+        ):
+            raise ValueError(
+                f"announce.username {self.username!r} is one Discord refuses: no"
+                f" {', '.join(_DISCORD_USERNAME_FORBIDDEN)}, 'everyone' or 'here'"
+            )
+        for name, low, high in (
+            ("max_changes", 1, 50),
+            ("max_subject_chars", 20, 400),
+            ("max_message_chars", 200, DISCORD_CONTENT_LIMIT),
+            ("max_history_pages", 1, 10),
+            ("max_history_candidates", 1, 100),
+        ):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
+                raise ValueError(f"announce.{name} must be an integer from {low} to {high}")
+        labels = [self.breaking_group, self.other_group, *(label for label, _ in self.groups)]
+        if not all(isinstance(label, str) for label in labels):
+            raise TypeError("announce group labels, breaking_group and other_group are text")
+        if any(not label.strip() for label in labels) or len(set(labels)) != len(labels):
+            raise ValueError(
+                "announce group labels, breaking_group and other_group must be non-empty"
+                " and distinct"
+            )
+        seen: set[str] = set()
+        for label, types in self.groups:
+            if not types:
+                raise ValueError(f"announce.groups.{label} names no type")
+            for kind in types:
+                if not _ANNOUNCE_TYPE.fullmatch(kind):
+                    raise ValueError(f"announce.groups.{label}: {kind!r} is not a commit type")
+                if kind in seen:
+                    raise ValueError(f"announce.groups: {kind!r} is in more than one group")
+                seen.add(kind)
+        for kind, word in self.type_words:
+            if not _ANNOUNCE_TYPE.fullmatch(kind) or not word.strip():
+                raise ValueError(f"announce.type_words: {kind!r} = {word!r} is not usable")
+        for pattern in self.noise_patterns:
+            try:
+                re.compile(pattern)
+            except re.error as exc:
+                raise ValueError(f"announce.noise_patterns: {pattern!r}: {exc}") from exc
+        path = PurePosixPath(self.changelog_path)
+        # It is also written, raw, into a link the message carries: nothing that could close
+        # the link's `(<…>)` or start another is allowed in it.
+        if (
+            not _CHANGELOG_PATH.fullmatch(self.changelog_path)
+            or path.is_absolute()
+            or ".." in path.parts
+        ):
+            raise ValueError(
+                "announce.changelog_path must be a repository-relative path of letters,"
+                " digits and . _ / -"
+            )
+
+    @classmethod
+    def from_table(cls, section: dict) -> AnnounceConfig:
+        """`[announce]` as TOML hands it over, with its structured keys frozen in order."""
+        groups = section.get("groups", {label: list(types) for label, types in cls.groups})
+        words = section.get("type_words", {})
+        noise = section.get("noise_patterns", list(cls.noise_patterns))
+        if not isinstance(groups, dict) or not all(isinstance(v, list) for v in groups.values()):
+            raise ValueError('announce.groups must be a table of label = ["type", ...]')
+        if not isinstance(words, dict) or not all(isinstance(v, str) for v in words.values()):
+            raise ValueError('announce.type_words must be a table of type = "Word"')
+        if not isinstance(noise, list) or not all(isinstance(v, str) for v in noise):
+            raise ValueError("announce.noise_patterns must be a list of strings")
+        # An override replaces one word and keeps the rest, so naming `docs = "Guide"` does
+        # not silently turn every other type back into its bare prefix.
+        merged = dict(cls.type_words) | words
+        scalars = {name: section[name] for name in _ANNOUNCE_SCALARS if name in section}
+        return cls(
+            **scalars,
+            groups=tuple((str(label), tuple(types)) for label, types in groups.items()),
+            type_words=tuple(merged.items()),
+            noise_patterns=tuple(noise),
+        )
+
+
 @dataclass(frozen=True)
 class YankConfig:
     """Report which releases an index holds below the one just published.
@@ -1923,6 +2147,7 @@ class GhConfig:
     branch_sync: BranchSyncConfig = BranchSyncConfig()
     conversation: ConversationConfig = ConversationConfig()
     github_release: GithubReleaseConfig = GithubReleaseConfig()
+    announce: AnnounceConfig = AnnounceConfig()
     yank: YankConfig = YankConfig()
     social_signals: SocialSignalsConfig = SocialSignalsConfig()
     tidy: TidyConfig = TidyConfig()
@@ -2289,6 +2514,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             notify_contributor_branches=realigning.get("notify_contributor_branches", True),
         ),
         social_signals=_social_signals(data.get("social_signals", {})),
+        announce=AnnounceConfig.from_table(data.get("announce", {})),
         estimate=EstimateConfig.from_table(data.get("estimate", {})),
         runners=_runners(data.get("runners", {})),
         workflow_names=_workflow_names(data.get("workflow_names", {})),
