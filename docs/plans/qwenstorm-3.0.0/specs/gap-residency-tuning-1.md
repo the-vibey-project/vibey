@@ -74,4 +74,4 @@ This lane is the pure rule. `-2` wires it into ADR-0046's `ResidencySchedule`.
 Commit as `feat(domain): residency bounds from measured load and run times`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

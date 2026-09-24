@@ -81,7 +81,7 @@ are not currently delivered and unsettled; RabbitMQ counts only those against `x
 - **Shares a file with:** `memory.py` (T21, L21, `surfaces-amqp-publish-modes`); keep their additions.
 - **Must keep passing unchanged:** every existing test under `src/vibey_tools/bootstrap/test/amqp/`; the whole vibey-bootstrap suite; all protected root tests.
 - **Standing constraints (every vibey-bootstrap surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first. `memory.py`
+  - Read `STORM/EDITING-RULES.md` first. `memory.py`
     is long: change it with `edit_file` only.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from a sibling.
   - No `monkeypatch.setattr`, `mock.patch`, `MagicMock` or `AsyncMock`.
@@ -90,4 +90,4 @@ are not currently delivered and unsettled; RabbitMQ counts only those against `x
     registered; add nothing else.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

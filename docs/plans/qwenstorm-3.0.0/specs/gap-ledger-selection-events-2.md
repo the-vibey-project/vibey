@@ -137,4 +137,4 @@ Commit as `feat(ledger): engine health and circuit transitions are ledger events
 - **Depends on:** `orm-engine-health`, `orm-ledger`, `fakes-engines`, `fakes-ledger`, `fakes-projects`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

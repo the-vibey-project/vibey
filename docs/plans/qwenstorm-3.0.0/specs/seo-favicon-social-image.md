@@ -139,4 +139,4 @@ Create `tests/meta/test_social_preview_image.py` (provenance header copied from
 Commit as `feat(docs): add a declared favicon and social-preview image`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

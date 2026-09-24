@@ -21,7 +21,7 @@ This is a design spike: the deliverable is one draft ADR. No code changes.
 runner skips `roadmap-*-design-*`.**
 
 ## Required behaviour
-1. Write exactly one file: `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-301-fairness.md`.
+1. Write exactly one file: `STORM/specs/ADR-roadmap-301-fairness.md`.
    Change no file in the lane's clone; commit nothing.
 2. **Model both disciplines precisely**, citing code and specs: (a) today's PostgreSQL claim
    (`job_repository.py:160-210`, the lease and reaper); (b) the post-ADR-0044 path — how a job
@@ -65,11 +65,11 @@ runner skips `roadmap-*-design-*`.**
 None (a design spike). The check script below is the test.
 
 ## Checks the lane must run (all must pass)
-    python3 -c 'import re; from pathlib import Path; p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-301-fairness.md"); assert p.is_file(), "the ADR draft was not written"; text = p.read_text(encoding="utf-8"); assert text.startswith("# Starvation, aging and fairness of the claim order"), "wrong title line"; required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context", "## Model: PostgreSQL claim", "## Model: RabbitMQ dispatch", "## Starvation analysis", "## Options considered", "## Decision", "## Consequences", "## Lanes this unblocks", "## Open decisions for the operator", "## Verification owed", "Paper cutoff versus substrate churn", "job_repository.py:198", "0003_job.sql:32"]; missing = [h for h in required if h not in text]; assert not missing, f"missing: {missing}"; anchors = re.findall(r"[\w./-]+\.(?:py|sql|md|toml):\d+", text); assert len(anchors) >= 10, f"only {len(anchors)} path:line anchors"; placeholders = [w for w in ("TBD", "lorem") if w in text]; assert not placeholders, f"placeholders left in the draft: {placeholders}"; print("ADR draft complete")'
+    python3 -c 'import re; from pathlib import Path; p = Path("STORM/specs/ADR-roadmap-301-fairness.md"); assert p.is_file(), "the ADR draft was not written"; text = p.read_text(encoding="utf-8"); assert text.startswith("# Starvation, aging and fairness of the claim order"), "wrong title line"; required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context", "## Model: PostgreSQL claim", "## Model: RabbitMQ dispatch", "## Starvation analysis", "## Options considered", "## Decision", "## Consequences", "## Lanes this unblocks", "## Open decisions for the operator", "## Verification owed", "Paper cutoff versus substrate churn", "job_repository.py:198", "0003_job.sql:32"]; missing = [h for h in required if h not in text]; assert not missing, f"missing: {missing}"; anchors = re.findall(r"[\w./-]+\.(?:py|sql|md|toml):\d+", text); assert len(anchors) >= 10, f"only {len(anchors)} path:line anchors"; placeholders = [w for w in ("TBD", "lorem") if w in text]; assert not placeholders, f"placeholders left in the draft: {placeholders}"; print("ADR draft complete")'
     git status --porcelain   # must print nothing: the clone is unchanged
 
 ## Out of scope
 - Any code, the simulator itself, and the paper text (docs wave). Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

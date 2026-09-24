@@ -134,4 +134,4 @@ Commit as `feat(aws): AWS credentials come from SecretsPort through a credential
 - **Must keep passing unchanged:** `tests/infrastructure/secrets`, `tests/meta/test_import_contracts_bind.py`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

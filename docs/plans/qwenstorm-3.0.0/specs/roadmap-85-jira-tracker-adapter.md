@@ -99,4 +99,4 @@ made here; the authentication scheme is declared by the caller (12.c).
 - Docs, runbook 01's status note (docs wave), CHANGELOG. Do not push; commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

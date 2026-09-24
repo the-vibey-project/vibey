@@ -138,4 +138,4 @@ Commit as `feat(cli)!: vibey deploy plan, cancel and rollback queue real work`. 
 - **Must keep passing unchanged:** every other test in `tests/cli/`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

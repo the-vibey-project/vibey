@@ -61,7 +61,7 @@ Append to `tests/infrastructure/test_chart_surface_lanes_golden.py`:
 - **Must keep passing unchanged:** `tests/infrastructure/test_operator_surface_handlers.py`, `tests/infrastructure/db/test_keda_scaler_query.py`, all protected tests.
 - **Standing constraints (every surfaces chart lane):**
   - `helm` must be v4.2.4, the version the `chart` job pins. If it is not on `PATH`, stop and report.
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file; `surfaces.yaml` is long: `edit_file` only.
+  - Read `STORM/EDITING-RULES.md` before changing a file; `surfaces.yaml` is long: `edit_file` only.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

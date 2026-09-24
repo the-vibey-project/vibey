@@ -153,4 +153,4 @@ Commit as `feat(domain): one pure catalogue of 8.b's four paid defaults`. Do not
 - **Must keep passing unchanged:** `tests/domain/test_domain_purity.py`, `tests/domain/test_config.py`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

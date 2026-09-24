@@ -23,7 +23,7 @@ tree green.
 
 ## Required behaviour
 0. **Gate (ADR-0046 §9: live conformance first).** Before any edit run
-   `grep -c "V-VS CONFORMANCE: PASS" /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
+   `grep -c "V-VS CONFORMANCE: PASS" STORM/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
    Unless the lines for **both** Arch Linux and macOS are present (`grep "V-VS CONFORMANCE: PASS" … | grep -ci arch` and `… | grep -ci macos` each ≥ 1), change nothing and report
    `gated: vscode has not passed live conformance on both OSes`.
 1. **Config** (`src/vibey/domain/config.py`): `"opencode"` leaves `KNOWN_ENGINES`. An
@@ -112,4 +112,4 @@ need PostgreSQL today (`VIBEY_TEST_DATABASE_URL`); run them where it is availabl
 **Depends on:** `loops-vscode-vibey-wiring`, `loops-invocation-cli`, `loops-paidloop-keyword`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

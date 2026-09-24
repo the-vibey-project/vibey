@@ -95,4 +95,4 @@ Commit as `feat(qwenloop): every storm plan carries the lane editing rules`. Do 
   import `vibey`; provenance line 1 on every file touched.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

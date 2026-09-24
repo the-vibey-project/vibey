@@ -144,4 +144,4 @@ Commit as `build(packaging): declare the release channels in packaging/channels.
 - **Depends on:** `gap-gh-release-channels-1` (the loader and the format).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

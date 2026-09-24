@@ -36,7 +36,7 @@ The deliverable is one draft ADR. No code changes.
 
 ## Required behaviour
 1. Write exactly one file:
-   `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-134-phi-gradient.md`.
+   `STORM/specs/ADR-roadmap-134-phi-gradient.md`.
    Change no file in the lane's clone; commit nothing.
 2. Read end to end, and cite with verified `path:line` anchors: the φ note and `MEASURED_BY`
    (`feasibility.py:26-36`, `:93-119`), `DEFAULT_STAGES` (`:253-321`); `PhiConfig`,
@@ -124,7 +124,7 @@ The deliverable is one draft ADR. No code changes.
 None (a design spike). The check script below is the test.
 
 ## Checks the lane must run (all must pass)
-    python3 -c 'import re; from pathlib import Path; p = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-134-phi-gradient.md"); assert p.is_file(), "the ADR draft was not written"; text = p.read_text(encoding="utf-8"); assert text.startswith("# Fitting the duration dilation phi and emitting the repair gradient"), "wrong title line"; required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context", "## Options considered", "## Decision", "### The regression", "### When the fit is trusted, and how N is recorded", "### How T(o) and the repair ranking are emitted and shown", "### No gradient yet", "## Data this needs", "## Consequences", "## Lanes this unblocks", "## Open decisions for the operator", "## Verification owed", "feasibility.py:31", "delivery_estimate.py:534", "estimation.py:151", "estimate_report.py:46", "fitloop.py:77", "doctrines.md:316", "doctrines.md:419", "doctrines.md:417", "doctrines.md:455"]; missing = [h for h in required if h not in text]; assert not missing, f"missing: {missing}"; anchors = re.findall(r"[\w./-]+\.(?:py|sql|toml|md):\d+", text); assert len(anchors) >= 12, f"only {len(anchors)} path:line anchors"; options = [o for o in ("(A)", "(B)", "(C)", "(D)", "(E)") if o not in text]; assert not options, f"options not weighed: {options}"; questions = [q for q in ("**\"Billing\" in the title:**", "**Agency probes need network and credentials**", "**Which endpoints define \"network\" for each stage**") if q not in text]; assert not questions, f"open questions not quoted verbatim: {questions}"; placeholders = [w for w in ("TBD", "lorem", "TODO") if w in text]; assert not placeholders, f"placeholders left in the draft: {placeholders}"; print("ADR draft complete")'
+    python3 -c 'import re; from pathlib import Path; p = Path("STORM/specs/ADR-roadmap-134-phi-gradient.md"); assert p.is_file(), "the ADR draft was not written"; text = p.read_text(encoding="utf-8"); assert text.startswith("# Fitting the duration dilation phi and emitting the repair gradient"), "wrong title line"; required = ["**Status:** proposed", "**Date:**", "**Cites:**", "## Context", "## Options considered", "## Decision", "### The regression", "### When the fit is trusted, and how N is recorded", "### How T(o) and the repair ranking are emitted and shown", "### No gradient yet", "## Data this needs", "## Consequences", "## Lanes this unblocks", "## Open decisions for the operator", "## Verification owed", "feasibility.py:31", "delivery_estimate.py:534", "estimation.py:151", "estimate_report.py:46", "fitloop.py:77", "doctrines.md:316", "doctrines.md:419", "doctrines.md:417", "doctrines.md:455"]; missing = [h for h in required if h not in text]; assert not missing, f"missing: {missing}"; anchors = re.findall(r"[\w./-]+\.(?:py|sql|toml|md):\d+", text); assert len(anchors) >= 12, f"only {len(anchors)} path:line anchors"; options = [o for o in ("(A)", "(B)", "(C)", "(D)", "(E)") if o not in text]; assert not options, f"options not weighed: {options}"; questions = [q for q in ("**\"Billing\" in the title:**", "**Agency probes need network and credentials**", "**Which endpoints define \"network\" for each stage**") if q not in text]; assert not questions, f"open questions not quoted verbatim: {questions}"; placeholders = [w for w in ("TBD", "lorem", "TODO") if w in text]; assert not placeholders, f"placeholders left in the draft: {placeholders}"; print("ADR draft complete")'
     git status --porcelain   # must print nothing: the clone is unchanged
 
 ## Out of scope
@@ -134,4 +134,4 @@ None (a design spike). The check script below is the test.
 - The tree's `docs/` and ADR directories. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

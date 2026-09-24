@@ -92,4 +92,4 @@ heartbeat would stale the lane out during every long review.
 Commit as `fix(gh): publish the sovereign heartbeat only for a registered, online runner`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -324,10 +324,10 @@ never alternate between them.
 Each adapter class is the **last statement** of its module, so add new methods by appending
 them to the end of the file: write the new methods (four-space indented) with the
 `write_file` tool to the concrete absolute path
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py` — that directory exists and
+`STORM/scratch/append.py` — that directory exists and
 is outside every lane clone, so the clone's `git status` stays clean — then append and clean
 up in one command,
-`cat /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py >> vibey_gh/forge_github.py && rm /private/tmp/claude-501/storm/qwenstorm-3.0.0/scratch/append.py`,
+`cat STORM/scratch/append.py >> vibey_gh/forge_github.py && rm STORM/scratch/append.py`,
 then run black once.
 Read only the slices you need (`sed -n '120,200p' file`). Do not rewrite a whole module.
 

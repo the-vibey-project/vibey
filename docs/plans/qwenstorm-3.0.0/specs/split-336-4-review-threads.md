@@ -133,4 +133,4 @@ Nothing here is platform-specific: the same commands prove the change on macOS (
 - split-336-3-review-comment: `ForgejoForge._review_comments`, and the adapter, protocol and facts files as it leaves them (this lane appends after its methods). Through it and children 1-2: the `# --- Issues ---` block and every wave-1 helper (`repository_name`, `_pages`, `RoutedTransport`).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

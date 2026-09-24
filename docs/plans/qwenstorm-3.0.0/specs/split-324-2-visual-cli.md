@@ -404,4 +404,4 @@ never this lane's only proof: the default-tier selection file proves the rule an
   (#321) if it has landed: both edit the `worker` command in `cli/main.py`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

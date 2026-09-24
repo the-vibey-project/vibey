@@ -110,11 +110,11 @@ In `src/vibey/domain/config.py`:
 - **Shares a file with:** `src/vibey/domain/config.py` (R01 → T05 → R34 → T28, ADR-0046's loop configuration). Keep every field they added; add yours last.
 - **Must keep passing unchanged:** `tests/domain/test_config.py`, `tests/infrastructure/test_config_loader.py`, `tests/domain/test_domain_purity.py`, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file. `config.py` is long: `edit_file` only.
+  - Read `STORM/EDITING-RULES.md` before changing a file. `config.py` is long: `edit_file` only.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from a sibling file.
   - The default run needs no service; never `monkeypatch.setattr`, `mock.patch`, `MagicMock` or `AsyncMock`.
   - `[surfaces] transport` stays `direct` by default until `surfaces-default-flip`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

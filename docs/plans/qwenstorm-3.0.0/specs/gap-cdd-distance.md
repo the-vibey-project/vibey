@@ -117,4 +117,4 @@ vibey's domain represents D(R), and the BUILD loop records no trajectory
 Commit as `feat(domain): the CDD distance and trajectory classifier`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -105,4 +105,4 @@ Nothing here is platform-specific: the same commands prove the change on macOS (
 - split-332-4-selector-resolve: `ForgeSelector().resolve(forge, cfg)` and `RecordingForge`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

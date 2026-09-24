@@ -422,4 +422,4 @@ If black or isort reports a file you touched, run `python -m black --line-length
   `test/test_forge_foundation.py`, and the adapters' reshaped tails this lane appends to.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -425,4 +425,4 @@ continuations. If the two formatters fight over a line, restructure the line; ne
 - split-336-4-review-threads: nothing called here; it lands first for the same reason.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

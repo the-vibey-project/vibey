@@ -92,4 +92,4 @@ Append to `tests/test_bootstrap_surfaces.py`:
 - **Standing constraints:** the flip is reversible with one key; never write the operator's decision; never hand-edit a golden; `helm` v4.2.4.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

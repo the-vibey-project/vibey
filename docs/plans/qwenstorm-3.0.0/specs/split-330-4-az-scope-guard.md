@@ -187,4 +187,4 @@ commands need nothing else and can run with `--noconftest -n 0` added.
   `openstack`, and this check would stop every Azure deploy.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

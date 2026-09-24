@@ -141,4 +141,4 @@ Commit as `feat(deploy): CloudPlanPreviewPort, the cloud protocol's read-only pr
   substitute at declared seams only; never raise a `tests/meta/patching_baseline.json` count.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

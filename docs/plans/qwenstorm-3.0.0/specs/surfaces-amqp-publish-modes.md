@@ -104,7 +104,7 @@ partial run needs `--no-cov`. Formatting is the root `ruff format`; do not run b
 - **Must keep passing unchanged:** every R04, R04-child-2 and T21 test; the whole
   vibey-bootstrap suite; the root suite; all protected tests.
 - **Standing constraints (every vibey-bootstrap surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first. Change
+  - Read `STORM/EDITING-RULES.md` first. Change
     existing files with `edit_file` or a checked replacement; append tests, never rewrite a
     test file.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from a sibling.
@@ -117,4 +117,4 @@ partial run needs `--no-cov`. Formatting is the root `ruff format`; do not run b
     register every new in-memory class there; otherwise do nothing about a registry.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

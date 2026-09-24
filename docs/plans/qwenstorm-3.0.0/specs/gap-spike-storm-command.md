@@ -26,7 +26,7 @@ This is EPIC-sized and its home is a real decision, so this lane writes a draft 
 **Implementer: a large model or the operator (design, not code); the storm runner skips gap-spike-*.**
 
 ## Deliverable
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-storm-command.md`, a draft ADR in
+`STORM/specs/ADR-gap-storm-command.md`, a draft ADR in
 the shape of `specs/ADR-two-loops.md`: a header line with **Status** (proposed), **Date**,
 **Amends/Cites** and **Evidence** (the integration commit and every `file:line` read), then
 **Context**, **Decision**, **How each non-negotiable still holds**, **Consequences** (Good/Bad),
@@ -113,8 +113,8 @@ Owed after the ADR is ratified (list each in **Lanes** with files and deps):
 None: a design lane. Its verification owed is written into the ADR.
 
 ## Checks the lane must run (all must pass)
-    test -s /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-storm-command.md
-    grep -c "^## " /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-storm-command.md
+    test -s STORM/specs/ADR-gap-storm-command.md
+    grep -c "^## " STORM/specs/ADR-gap-storm-command.md
 
 ## Out of scope
 - Implementing any child. Ratifying anything (the operator's merge does, Article II.3).
@@ -126,4 +126,4 @@ operator moves it into `docs/architecture/decisions/`.
 Commit as `docs(adr): lane storms become a family command` (only at that move). Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

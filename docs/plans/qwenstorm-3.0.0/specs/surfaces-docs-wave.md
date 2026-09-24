@@ -85,4 +85,4 @@ evidence section asks for. This is ADR-0047 lane S34, owned by the docs wave, no
 - **Standing constraints:** evidence is bounded (10.f): no number that a run did not produce; the four agent trees change together.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

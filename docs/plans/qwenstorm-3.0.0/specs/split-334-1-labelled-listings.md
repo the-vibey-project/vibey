@@ -416,4 +416,4 @@ slices, never rewrite a module.
 - split-333-3-change-request-text: nothing directly; the last lane before this one to append to the same adapter files.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

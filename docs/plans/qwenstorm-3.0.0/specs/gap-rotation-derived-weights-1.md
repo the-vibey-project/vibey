@@ -112,4 +112,4 @@ Append to `tests/domain/test_rotation.py`: `test_evidence_factor_scales_effectiv
 Commit as `feat(rotation): a measured-evidence factor in effective weight`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

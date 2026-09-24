@@ -176,4 +176,4 @@ Commit as `ci(release): publish the contract-tested runnable image on every rele
 - **Depends on:** `gap-pkg-channels`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

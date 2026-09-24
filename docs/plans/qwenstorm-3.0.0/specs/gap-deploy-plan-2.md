@@ -157,4 +157,4 @@ Commit as `feat(deploy): a deploy.plan job evaluates and records the deployment 
 - **Must keep passing unchanged:** `tests/system/test_delivery_stage_set.py` and every deploy handler test.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

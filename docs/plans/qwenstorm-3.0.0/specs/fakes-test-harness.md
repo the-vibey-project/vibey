@@ -126,4 +126,4 @@ Do not push. Commit locally with the Title as the subject.
     - use hermetic commands (`sys.executable`), and no test waits longer than 5 s.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -4,7 +4,7 @@ feat(loop-service): LoopClient, the caller-side RPC over the bus that routes a j
 ADR-0046 lane L56 (slug `loops-client`).
 
 ## Why
-Draft ADR-0046 §3 (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:140-191`)
+Draft ADR-0046 §3 (`STORM/specs/ADR-two-loops.md:140-191`)
 puts the whole outer-layer conversation over AMQP: "It publishes a route request to `<loop>` and
 awaits `RunRouted`, bounded by `route_wait_seconds`" (the *Flow for a BUILD job*, step 2), and
 "The handler's `start` publishes the run request to `<loop>`" (step 5), replying on `reply_to`

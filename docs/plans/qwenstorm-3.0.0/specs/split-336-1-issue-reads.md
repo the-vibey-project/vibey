@@ -143,4 +143,4 @@ Nothing here is platform-specific: the same commands prove the change on macOS (
 - split-335-3-labels: the adapter files as it leaves them; the wave's first half is sequential.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

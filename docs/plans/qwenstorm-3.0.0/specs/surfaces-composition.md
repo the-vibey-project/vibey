@@ -114,7 +114,7 @@ ADR-0047 lanes S26–S27 (composition).
 - **Shares a file with:** `src/vibey/bootstrap.py`, `src/vibey/bootstrap_interface.py` (the chain in `surfaces-app-records`'s card). Keep everything earlier lanes added.
 - **Must keep passing unchanged:** `tests/test_bootstrap.py`, `tests/cli/*`, `tests/system/*`, `tests/infrastructure/test_sovereign_surfaces.py`, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file. `bootstrap.py` is long: `edit_file` only.
+  - Read `STORM/EDITING-RULES.md` before changing a file. `bootstrap.py` is long: `edit_file` only.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from line 1 of a sibling file.
   - Every new class has a `@runtime_checkable` Protocol beside it (`bootstrap_interface.py` for the composition root).
@@ -122,4 +122,4 @@ ADR-0047 lanes S26–S27 (composition).
   - The default run needs no service; `[surfaces] transport` stays `direct` by default.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

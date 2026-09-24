@@ -73,4 +73,4 @@ workflow (`issue-audit/gaps.md` L9, lines 596-606). The publish jobs are in `.gi
 Commit as `ci(release): report superseded releases and open the Article V.4 checklist`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

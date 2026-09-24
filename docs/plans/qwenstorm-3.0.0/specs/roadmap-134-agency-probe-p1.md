@@ -242,4 +242,4 @@ longest lines are the ones to watch).
 - Do not push, open PRs or change remotes. Commit locally with the Title as the subject.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -162,4 +162,4 @@ Commit as `feat(docs): inject OG/Twitter/JSON-LD meta into the built docs site`.
   lane ships a plain static file with no template change) — no collision.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

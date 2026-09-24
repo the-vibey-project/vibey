@@ -7,7 +7,7 @@ feat(qwenloop): `qwenloop model bench <entry>` runs the bench and appends dated 
 reproducible from the repository. The measurement behind the GPT-OSS 20B default (85.6 s for
 ten turns at 17,122 context tokens on Ollama, against 212–220 s for Qwen2.5-Coder-14B on
 llama.cpp, measured 2026-09-22) exists only in
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/bench/results.jsonl` (`issue-audit/gaps.md` D3).
+`STORM/bench/results.jsonl` (`issue-audit/gaps.md` D3).
 
 `gap-models-bench-1` added `ModelBench`. This lane adds:
 - the command;
@@ -119,4 +119,4 @@ Paths are qwenloop's. If `loops-rename` landed first, use the renamed tenant.
 Commit as `feat(qwenloop): model bench command and in-tree model evidence`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

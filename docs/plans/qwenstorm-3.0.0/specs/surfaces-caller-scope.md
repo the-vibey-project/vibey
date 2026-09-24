@@ -97,7 +97,7 @@ surface-lane module lives in (draft ADR-0047 §12, `specs/ADR-surface-lanes.md`)
 - **Shares a file with:** `.importlinter` (R03, R12, R21, T05, `fakes-sockets` append lines), `tests/fakes/registry.py`.
 - **Must keep passing unchanged:** `tests/meta/test_import_contracts_bind.py`, the fakes parity test, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file. Change existing files with `edit_file` or a checked replacement.
+  - Read `STORM/EDITING-RULES.md` before changing a file. Change existing files with `edit_file` or a checked replacement.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from line 1 of a sibling file.
   - Every new class has a `@runtime_checkable` Protocol in `surface_lanes/interfaces/`; interfaces declare and never import the code that consumes them.
@@ -105,4 +105,4 @@ surface-lane module lives in (draft ADR-0047 §12, `specs/ADR-surface-lanes.md`)
   - The default run needs no service.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

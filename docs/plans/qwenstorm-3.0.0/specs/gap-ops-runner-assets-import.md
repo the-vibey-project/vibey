@@ -60,4 +60,4 @@ None in this lane. `gap-runners-declared-3` adds a meta-test over `deploy/runner
 Do not push until the PR is reviewed.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

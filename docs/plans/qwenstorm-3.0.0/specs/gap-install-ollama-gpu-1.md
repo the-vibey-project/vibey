@@ -69,4 +69,4 @@ This lane is the pure rule. `-2` detects the GPU, and `-3` wires both into the i
 Commit as `feat(domain): the Arch Ollama package follows the GPU`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

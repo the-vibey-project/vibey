@@ -4,7 +4,7 @@ feat(loop-service): the router forwards a run request to its stored route's seat
 ADR-0046 lane L30b (slug `loops-router-forwarding`).
 
 ## Why
-Draft ADR-0046 §3, "Flow for a BUILD job" (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:169-179`),
+Draft ADR-0046 §3, "Flow for a BUILD job" (`STORM/specs/ADR-two-loops.md:169-179`),
 steps 5-6: "The handler's `start` publishes the run request to `<loop>`. The loop's router looks
 up the stored route and forwards the request, unchanged, to `<loop>.<seat>`." The idempotency
 table (`:188`): "a forward (inner layer) | `run_id` = `message_id` | The router forwards a run

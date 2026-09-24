@@ -21,7 +21,7 @@ Non-negotiable 3: a capacity rejection outranks a completion claim.
 
 ## Required behaviour
 0. **Gate (ADR-0046 §8, CDD bounded divergence).** Before any edit run
-   `grep -n "V-VS VERDICT: FEASIBLE" /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
+   `grep -n "V-VS VERDICT: FEASIBLE" STORM/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
    If nothing matches, change nothing and report `gated: V-VS verdict is not FEASIBLE`.
 1. **The port** — `vscodeloop/application/interfaces/editor_driver.py`:
    ```python
@@ -160,4 +160,4 @@ on `tmp_path`, a `_Clock` object passed as `clock=lambda: c.now`, `poll_seconds=
 **Depends on:** `loops-vscodeloop-run-store`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

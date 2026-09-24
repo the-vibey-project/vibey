@@ -63,6 +63,36 @@ differ each set `VIBEY_TEST_TEMPLATE_DB` to a template name of their own. The
 default suite needs no engine binaries and no paid accounts: tests marked
 `paid` are deselected unless you ask for them (ADR-0030).
 
+### Where your work lives, and how often it is saved
+
+Keep every clone and worktree on storage a reboot keeps. Never put one under `/tmp`,
+`/private/tmp`, `/var/tmp`, `/var/folders`, `/dev/shm`, `/run/user` or `$TMPDIR`: the
+operating system empties those at boot, by age or at logout. On 2026-09-24 a reboot emptied
+`/private/tmp` in the middle of a storm and took every worktree there with it, along with
+about 1.5 hours of measurements, a paper draft and three lanes of fixes. Only committed work
+survived. Sub-doctrine 10.h is the rule and ADR-0057 is the record.
+
+Parallel worktrees live in the storm home. It is `VIBEY_STORM_HOME` when set, else the
+platform's default: `~/git/vibey-storm` on macOS, and `$XDG_DATA_HOME/vibey/storm` (falling
+back to `~/.local/share/vibey/storm`) on Linux. The storm tools print and check it:
+
+```bash
+python3 docs/plans/qwenstorm-3.0.0/tools/storm_durability.py status   # durable or not
+git worktree add "$(python3 docs/plans/qwenstorm-3.0.0/tools/storm_durability.py worktree fix-x)" \
+  -b fix/x origin/develop
+```
+
+The storm tools refuse, with exit 78 and the key to change, to place work on volatile storage.
+
+Durable storage alone is not enough. A disk fails and a laptop goes missing, so:
+
+- Commit as soon as a change is coherent, not when it is finished.
+- Push work in progress to a draft pull request (`gh pr create --draft`) at least every 30–45
+  minutes. The merge train never merges a draft. Every push still runs the pre-push gates, so
+  push when they pass. A commit on durable storage is the checkpoint in between.
+- A long measurement writes each step as it finishes and resumes from the last one:
+  `StepJournal` in `docs/plans/qwenstorm-3.0.0/tools/storm_checkpoint.py`.
+
 ## The branch model
 
 ```
@@ -162,10 +192,11 @@ waited on. There is one recipe:
 python3 <storm>/tools/push_gate.py run -- git push origin HEAD:<branch>
 ```
 
-`<storm>` is the storm root, the directory that holds `storm.toml` (on the operator's machine,
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0`). From a checkout with no storm, use the
-tracked copy and name the machine's shared lock:
-`VIBEY_PUSH_LOCK=<dir> python3 docs/plans/qwenstorm-3.0.0/tools/push_gate.py run -- git push …`.
+`<storm>` is the storm root, the directory that holds `storm.toml`: `<home>/qwenstorm-3.0.0`
+under the storm home (see [Where your work lives](#where-your-work-lives-and-how-often-it-is-saved);
+on the operator's Mac, `~/git/vibey-storm/qwenstorm-3.0.0`). From a checkout with no storm, use
+the tracked copy and name the machine's shared lock, `<home>/.push-lock`:
+`VIBEY_PUSH_LOCK=<home>/.push-lock python3 docs/plans/qwenstorm-3.0.0/tools/push_gate.py run -- git push …`.
 Run from a checkout without a named lock, the tool refuses. A lock derived there would be
 private to that checkout and would exclude nobody.
 

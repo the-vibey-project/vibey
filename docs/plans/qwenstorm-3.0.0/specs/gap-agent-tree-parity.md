@@ -129,4 +129,4 @@ Commit as `test(meta): the agent-surface trees carry the same skills with the sa
   `gap-vscode-agent-tree` appends one `SkillTree` to `AGENT_SURFACE_TREES`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

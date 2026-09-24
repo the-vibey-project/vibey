@@ -248,4 +248,4 @@ wrong; `_attach(config)` builds one for `config.endpoint_url` (default `http://1
 - split-383-4-ram-tier-selection: `_model_selection(config, profile)`, `config.model_reason` set by `_load_config`, the `qwenloop.domain.catalogue` import in `cli/app.py`, and the conftest's `QWENLOOP_MODEL_BY_MEMORY=0`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

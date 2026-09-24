@@ -410,4 +410,4 @@ keep a developer's machine out of every test.
 - split-383-3-memory-probe: `MemoryProbe` and `MemoryProbeInterface` in `vibey_runners.common.infrastructure`, and the family package's CI rows.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

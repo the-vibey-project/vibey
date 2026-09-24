@@ -120,4 +120,4 @@ Commit as `feat(ledger): every expired lease the reaper takes back is a ledger e
 - **Must keep passing unchanged:** the protected tests, R09's tests.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

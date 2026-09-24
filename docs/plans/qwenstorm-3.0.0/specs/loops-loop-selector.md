@@ -66,7 +66,7 @@ after it (`loops-subprocess-fallback-declared`, `loops-selecting-loop-provider`)
    `LoopSelectorInterface: ExemptReason.PURE_POLICY` (no I/O: the tests use the real class).
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first. Line 1 of every new
+Read `STORM/EDITING-RULES.md` first. Line 1 of every new
 file is the provenance comment copied byte for byte from line 1 of
 `src/vibey/application/engine_selector.py`.
 
@@ -267,4 +267,4 @@ First run `uv run ruff format src/vibey/application tests/application/test_loop_
 **Depends on:** `loops-weighted-candidates`, `loops-domain-loop-id`, `fakes-registry`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

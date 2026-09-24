@@ -5,7 +5,7 @@ ADR-0046 lane L62 (slug `loops-service-process`).
 
 ## Why
 Draft ADR-0046 §10's file table
-(`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:304`) lists `router.py`,
+(`STORM/specs/ADR-two-loops.md:304`) lists `router.py`,
 `seat_host.py`, `resident_schedule.py`, `control.py` as siblings inside
 `infrastructure/loop_service/`, but nothing yet turns them into one runnable process.
 `loops-router-routing`'s own Why cites "decision D5: all three [forwarding, dead letters, probes]

@@ -124,4 +124,4 @@ Append to `src/vibey_tools/gh/test/test_templates.py`:
 Commit as `fix(gh): each link of the delivery chain dispatches the next explicitly`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -135,4 +135,4 @@ Commit as `feat(ledger): every engine selection is a ledger event`. Do not push.
 - **Depends on:** `fakes-ledger`, `fakes-engines`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -102,7 +102,7 @@ can land in separate lanes without breaking either (ADR-0047 lane S07, part 2).
 - **Shares a file with:** the two `__init__.py` files (exports only; R04, T21, L21 add others).
 - **Must keep passing unchanged:** every existing vibey-bootstrap test; all protected root tests.
 - **Standing constraints (every vibey-bootstrap surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first.
+  - Read `STORM/EDITING-RULES.md` first.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from a sibling.
   - No `monkeypatch.setattr`, `mock.patch`, `MagicMock` or `AsyncMock`.
   - The default run needs no broker.
@@ -110,4 +110,4 @@ can land in separate lanes without breaking either (ADR-0047 lane S07, part 2).
     `AmqpLeasesInterface → InMemoryAmqpLeases` there.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

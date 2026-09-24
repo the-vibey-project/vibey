@@ -104,4 +104,4 @@ Commit as `feat(ledger): the RabbitMQ nack, defer and reap are ledger events`. D
 - **Must keep passing unchanged:** the protected tests.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

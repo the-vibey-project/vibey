@@ -70,8 +70,8 @@ unchanged. ADR-0047 lane S29.
 - **Must keep passing unchanged:** every golden, `tests/infrastructure/db/test_keda_scaler_query.py`, `tests/infrastructure/test_chart_broker_golden.py`, all protected tests.
 - **Standing constraints (every surfaces chart lane):**
   - `helm` must be v4.2.4, the version the `chart` job pins. If it is not on `PATH`, stop and report.
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file; `worker.yaml` is long: `edit_file` or a checked replacement only.
+  - Read `STORM/EDITING-RULES.md` before changing a file; `worker.yaml` is long: `edit_file` or a checked replacement only.
   - Never hand-edit a golden. Line 1 of every new Python file is the provenance comment.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

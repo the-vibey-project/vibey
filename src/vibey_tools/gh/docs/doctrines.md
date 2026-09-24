@@ -484,6 +484,12 @@ A timestamp is not a watermark. Records sharing the cutoff instant, and records 
 
 A source that cannot be read is a failure to report, never a gap to step over. The run says which source, for what span, and leaves its watermark where it was, so the next run covers the same ground. And anything derived from a read that cannot account for its own span is not evidence and is not published as such — this is 10.f's rule applied to the input rather than the claim: a total, a rate or a figure computed over an unknown subset states a precision it does not have, and is more misleading than no figure at all.
 
+**10.h — the work outlives the machine** *(ratified by the merge that carried this entry)*: work in progress lives on durable storage and is committed and pushed often; volatile storage holds only what can be regenerated. The developer's laptop is one of the things this doctrine never assumes (10): it reboots, it loses power, it is wiped, it is lost, and whatever existed only in a temporary directory or only in memory goes with it, silently and all at once. So every worktree, run state, queue, ledger, lock with an owner record, measurement and draft — anything a person or an agent would be sorry to lose — is kept where the operating system does not empty it, in a place that is declared rather than compiled in (12.c, 12.h).
+
+A tool that would put such work on volatile storage refuses, and says which key moves it. It does not decide on the work's behalf that the work was disposable; only a declaration that gives its reason may say so, and saying so is part of putting it there. What may live on volatile storage is what can be regenerated exactly: a cache, a pipe, a socket, a test's throwaway directory, a render compared and discarded.
+
+Durable storage is necessary and not sufficient, because one disk is one failure away from nothing. Work is committed as soon as it is coherent rather than when it is finished, and pushed to where others can see it often enough that an unrecoverable machine costs minutes of work and never hours — a draft is fine; an hour of work that exists nowhere else is not. A long measurement records each step as it finishes and resumes from the last one, so an interruption costs a step and never the run.
+
 ## 11 — The living roadmap
 
 Every project keeps an active, living roadmap until its goal is achieved and its

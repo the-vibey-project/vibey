@@ -88,10 +88,10 @@ it over aio-pika (ADR-0047 lane S07, part 3; sub-doctrine 10.e).
 - **Depends on:** `surfaces-amqp-lease-memory` (the interface), `rmq-r03-amqp-dependency` (aio-pika locked), `split-351-2-amqp-client` (#351 child 2: `AmqpSettings` in use, `AmqpError` exported).
 - **Must keep passing unchanged:** every existing vibey-bootstrap test; all protected root tests.
 - **Standing constraints (every vibey-bootstrap surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first.
+  - Read `STORM/EDITING-RULES.md` first.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from a sibling.
   - No `monkeypatch.setattr`, `mock.patch`, `MagicMock` or `AsyncMock`: the connector is injected.
   - The default run needs no broker.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

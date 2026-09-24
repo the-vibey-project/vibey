@@ -49,4 +49,4 @@ Append to `tests/meta/test_tools_matrix_covers_every_package.py`:
 Commit as `ci: every tenant's floor row runs on macOS`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -107,9 +107,9 @@ not a credential — because the worker's notifications name the room they post 
 - **Must keep passing unchanged:** `tests/infrastructure/db/test_keda_scaler_query.py`, `tests/infrastructure/test_chart_broker_golden.py`, all protected tests.
 - **Standing constraints (every surfaces chart lane):**
   - `helm` must be v4.2.4, the version the `chart` job pins. If it is not on `PATH`, stop and report.
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file; `values.yaml` and `worker.yaml` are long: `edit_file` only.
+  - Read `STORM/EDITING-RULES.md` before changing a file; `values.yaml` and `worker.yaml` are long: `edit_file` only.
   - Line 1 of every new Python file is the provenance comment, copied byte-for-byte from a sibling.
   - `surfaceLanes.transport` stays `direct` by default until `surfaces-default-flip`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

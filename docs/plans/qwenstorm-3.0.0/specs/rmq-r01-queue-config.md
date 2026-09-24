@@ -126,7 +126,7 @@ R28 do.
 Do not push or change remotes. Commit locally with the Title as the subject.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 

@@ -4,7 +4,7 @@ This issue is split into two ordered parts. **Part 1 must be merged before Part 
 Each part is a separate lane with its own commit. Each part restates what it needs, so a
 lane given only one part has enough to implement it.
 
-Evidence cutoff: `develop` at `d47c196d` (checkout `/private/tmp/claude-501/storm/changelog-2.1.0`),
+Evidence cutoff: `develop` at `d47c196d` (read in the storm worktree `changelog-2.1.0`, since lost to the 2026-09-24 reboot; the commit is the evidence),
 read on 2026-09-22. The OpenCode event and config shapes were read from `sst/opencode`
 branch `dev` on the same date (files named in Part 2).
 

@@ -120,4 +120,4 @@ Do not push. Commit locally with the Title as the subject.
     existing test file (`EDITING-RULES.md`).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -95,4 +95,4 @@ Commit as `docs(readme): add a table of contents`. Do not push.
   racing it).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

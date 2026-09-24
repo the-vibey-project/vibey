@@ -104,7 +104,7 @@ Append to `tests/domain/test_surfaces_config.py`:
 - **Shares a file with:** `src/vibey/domain/config.py`, `src/vibey/bootstrap.py`, `src/vibey/infrastructure/notify/service.py`, `tests/fakes/registry.py`.
 - **Must keep passing unchanged:** `tests/infrastructure/notify/test_notifications.py`, `tests/infrastructure/notify/test_publishers.py`, `tests/domain/test_config.py`, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file. `config.py` and `bootstrap.py` are long: `edit_file` only.
+  - Read `STORM/EDITING-RULES.md` before changing a file. `config.py` and `bootstrap.py` are long: `edit_file` only.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from line 1 of a sibling file.
   - Every new class has a `@runtime_checkable` Protocol beside it.
@@ -112,4 +112,4 @@ Append to `tests/domain/test_surfaces_config.py`:
   - Never block a worker on a human; a notification is never a failure path.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

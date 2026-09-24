@@ -666,4 +666,4 @@ If black or isort reports a file you touched, run `python -m black --line-length
   `repository_name`, `RoutedTransport` and the `CheckResult`-free adapters this lane reshapes.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

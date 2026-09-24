@@ -111,4 +111,4 @@ Commit as `feat(config): declare the sovereign notification channels`. Do not pu
   `tests/infrastructure/test_config_loader.py`, `tests/infrastructure/notify/test_notifications.py`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

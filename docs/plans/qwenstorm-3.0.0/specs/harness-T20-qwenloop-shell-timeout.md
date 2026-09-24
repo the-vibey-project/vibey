@@ -13,7 +13,7 @@ harness-T20a–c made `shell_timeout_seconds` a key (file and `QWENLOOP_SHELL_TI
 taught `SandboxTools` to take it. This lane passes the configured value from the command to the
 sandbox, through `_run_plan`, which builds the sandbox today with no timeout argument
 (`src/vibey_runners/qwen/src/qwenloop/cli/app.py:302`, `SandboxTools(cwd)`). The storm driver calls
-`_run_plan` with keywords it already passes (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/qwenlane.py:102-110`),
+`_run_plan` with keywords it already passes (`STORM/qwenlane.py:102-110`),
 so the new parameter is keyword-only with today's default.
 
 ## Required behaviour
@@ -81,4 +81,4 @@ Do not push, open a pull request or change remotes. Commit locally with the Titl
   - Edit existing files with `edit_file`, never rewrite a test file (`EDITING-RULES.md`).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

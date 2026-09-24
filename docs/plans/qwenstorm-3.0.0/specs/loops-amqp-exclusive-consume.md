@@ -61,7 +61,7 @@ layout (`specs/test-harness-lanes.md`, "Lane T21").
    every test under `src/vibey_tools/bootstrap/test/amqp/` passes unedited.
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first; `memory.py` and
+Read `STORM/EDITING-RULES.md` first; `memory.py` and
 `client.py` are long, so `edit_file` only. Source paths are under
 `src/vibey_tools/bootstrap/vibey_bootstrap/amqp/`, test paths under
 `src/vibey_tools/bootstrap/test/amqp/`.
@@ -162,4 +162,4 @@ git diff --stat
 **Depends on:** `loops-amqp-queue-depth`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

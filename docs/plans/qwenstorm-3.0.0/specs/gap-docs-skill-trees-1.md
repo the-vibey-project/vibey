@@ -143,4 +143,4 @@ None new: `gap-agent-tree-parity`'s and `gap-sd01-carriage`'s meta-tests hold th
 Commit as `docs(skills): the vibey-testing skill teaches the fakes-first tiers and the harness queue`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

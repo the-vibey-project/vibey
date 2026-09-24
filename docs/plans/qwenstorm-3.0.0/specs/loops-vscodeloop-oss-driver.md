@@ -19,10 +19,10 @@ line of the recording to copy.
 
 ## Required behaviour
 0. **Gate (ADR-0046 §8, CDD bounded divergence).** Before any edit run
-   `grep -n "V-VS VERDICT: FEASIBLE" /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
+   `grep -n "V-VS VERDICT: FEASIBLE" STORM/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
    If nothing matches, change nothing and report `gated: V-VS verdict is not FEASIBLE`.
    Then read the section `## Verification recorded (V-VS1..V-VS5, V-CC1)` of that file and the
-   evidence files it names under `/private/tmp/claude-501/storm/qwenstorm-3.0.0/evidence/vscode/`.
+   evidence files it names under `STORM/evidence/vscode/`.
    Copy into your commit body: the V-VS1 command line, the V-VS2 extension id and version, the
    `settings-local.json` shape, the V-VS4 event source and mapping. If the "Driver contract for
    lane L20h" line is missing or names an event source other than the three below, stop and report.
@@ -116,4 +116,4 @@ On the operator's machines (evidence, recorded in the commit body; not a CI gate
 **Depends on:** `loops-vscodeloop-editor-settings`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

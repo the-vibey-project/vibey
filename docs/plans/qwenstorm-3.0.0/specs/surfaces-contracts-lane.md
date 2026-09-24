@@ -74,11 +74,11 @@ suite is the evidence the flip lane (`surfaces-default-flip`) asks for.
 - **Shares a file with:** `tests/contracts/test_surface_contracts.py` (the `surfaces-adapter-*` lanes appended to it), `tests/fakes/surface_lanes.py`.
 - **Must keep passing unchanged:** every contract on `memory` and `real`, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file.
+  - Read `STORM/EDITING-RULES.md` before changing a file.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from line 1 of a sibling file.
   - A fake never imports `unittest.mock`; substitute only at declared seams.
   - The default run needs no service.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

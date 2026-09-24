@@ -93,4 +93,4 @@ None new: the tree-parity and SD-01 carriage meta-tests hold the four trees.
 Commit as `docs(skills): the vibey-architecture skill teaches the ORM seam, the queue port, the harness, surface lanes and measurement`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

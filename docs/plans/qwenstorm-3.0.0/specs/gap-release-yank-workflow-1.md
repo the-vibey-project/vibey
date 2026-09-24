@@ -72,4 +72,4 @@ Append to `src/vibey_tools/gh/test/test_yank.py`:
 Commit as `feat(gh): report-superseded writes the Article V.4 yank checklist`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

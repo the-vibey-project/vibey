@@ -99,4 +99,4 @@ Commit as `feat(azure): the az client previews a deployment plan with ARM what-i
 - **Must keep passing unchanged:** every existing test in `tests/infrastructure/azure/`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

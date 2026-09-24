@@ -34,7 +34,7 @@ vocabulary: it names no directions, no declaration keys and no conflict rule. So
 
 **Implementer: a large model or the operator (design, not code); the storm runner skips
 gap-spike-\*.** The deliverable is the draft ADR
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-relay.md`, in the shape of
+`STORM/specs/ADR-gap-relay.md`, in the shape of
 `specs/ADR-two-loops.md`. Evidence comes from the integration clone at `d3b4a388` or later
 (stated), never from `/Users/adam/git/vibey`.
 
@@ -92,7 +92,7 @@ The ADR must decide:
 
 ## Where to change
 Nothing in the repository. Write only
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-relay.md`.
+`STORM/specs/ADR-gap-relay.md`.
 
 Required ADR sections, in order: the header line (**Status:** proposed · **Date** ·
 **Cites:** 8.b, 8.f, 8.g, 7.c, 10.a, 10.e, 10.f, 12.c, SD-01 · **Related:** ADR-0042, ADR-0043,
@@ -135,11 +135,11 @@ file (split `-1`, `-2` where needed), with dependencies:
 None: this is a design lane. Its tests are the checks below and a reviewer's reading.
 
 ## Checks the lane must run (all must pass)
-    F=/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-relay.md
+    F=STORM/specs/ADR-gap-relay.md
     test -f "$F"
     for s in "## Context" "## Decision" "## Child lanes" "## How each non-negotiable still holds" "## Security impact" "## Migration" "## Consequences" "## Alternatives rejected" "## Verification owed at implementation"; do grep -qx "$s" "$F" || echo "MISSING: $s"; done
     for p in Jira Linear Asana Confluence Notion GitBook LastPass 1Password Proton Drive iCloud Gmail "Apple Mail" "Google Messages" iMessage Signal Discord Slack Zoom WhatsApp Telegram Messenger Instagram TikTok AWS GCP Azure GitHub GitLab; do grep -q "$p" "$F" || echo "UNMENTIONED: $p"; done
-    cd /private/tmp/claude-501/storm/qwenstorm-3.0.0/integration && git log -1 --format=%H
+    cd STORM/integration && git log -1 --format=%H
 
 ## Out of scope
 - Code of any kind; the paid-default catalogue (`gap-paid-defaults`); the AWS adapter
@@ -157,4 +157,4 @@ operator moves the draft into the repository; otherwise nothing is committed. Do
 - **Operator ruling owed:** behaviour 6 (via `gap-ops-canon-rulings`).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

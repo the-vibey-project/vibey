@@ -132,4 +132,4 @@ Commit as `feat(domain): DeploymentSpecCodec, a deployment spec as a ledger payl
 - **Must keep passing unchanged:** `tests/domain/test_deployment_domain.py`, `tests/domain/test_domain_purity.py`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

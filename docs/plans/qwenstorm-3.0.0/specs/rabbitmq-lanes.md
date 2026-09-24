@@ -1,7 +1,7 @@
 # RabbitMQ queue and loop services: implementation lanes (R01–R35)
 
 Design: `specs/ADR-rabbitmq-queue.md` (ADR-0044 draft). Evidence cutoff: `develop` at
-`d47c196d` (checkout `/private/tmp/claude-501/storm/changelog-2.1.0`), read 2026-09-22.
+`d47c196d` (read in the storm worktree `changelog-2.1.0`, since lost to the 2026-09-24 reboot; the commit is the evidence), read 2026-09-22.
 Every `file:line` below is at that commit.
 
 ## How to file these
@@ -252,7 +252,7 @@ R28 do.
 Do not push or change remotes. Commit locally with the Title as the subject.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -352,7 +352,7 @@ This lane moves that choice into `bootstrap.py` and changes no behaviour.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -446,7 +446,7 @@ declares and locks it.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -612,7 +612,7 @@ written capability-gap reason.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -717,7 +717,7 @@ exactly as it is.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -847,7 +847,7 @@ They are pure, so the domain owns them and the 100% domain floor covers them
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -941,7 +941,7 @@ property-tested function. `now` is an argument, never a clock (domain purity).
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1050,7 +1050,7 @@ have an ORM model (`tests/infrastructure/db/test_orm.py:50-53`, `:86-104`).
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1145,7 +1145,7 @@ limit. This lane gives the PostgreSQL backend the same bound under the same gate
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1271,7 +1271,7 @@ dispatch-writing steps. The PostgreSQL backend class is not modified.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1430,7 +1430,7 @@ Add to `tests/infrastructure/db/test_dispatch_records.py`:
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1541,7 +1541,7 @@ ADR says it owes (the pinned `rabbitmq:4-management-alpine`, `values.yaml:434-44
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1645,7 +1645,7 @@ publisher confirms. The relay is what gives at-least-once publish:
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1744,7 +1744,7 @@ while its job runs. Four things follow:
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1823,7 +1823,7 @@ Add to `tests/infrastructure/db/test_human_gate_repository.py`:
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -1957,7 +1957,7 @@ point of the port.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2084,7 +2084,7 @@ The worker learns its prefetch from `-j` only after `build_app` has run
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2180,7 +2180,7 @@ enable the other parameters.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2295,7 +2295,7 @@ policy is pure too.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2414,7 +2414,7 @@ behaviour does not change**.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2531,7 +2531,7 @@ arguments `RunArgsPolicy` allows (R19). This is the security boundary the ADR na
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2669,7 +2669,7 @@ host owns four of the invariants the ADR calls the riskiest:
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2758,7 +2758,7 @@ ADR-0044 §13 gives the service three more consumers:
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2853,7 +2853,7 @@ single client all of those callers share, so sub-doctrine 10.e holds inside vibe
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -2990,7 +2990,7 @@ of the new fields, stop and report.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3071,7 +3071,7 @@ as well. A service-backed `CommandExecutor` keeps both providers unchanged.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3191,7 +3191,7 @@ The service needs no database. Only the broker and the filesystem are required.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3294,7 +3294,7 @@ in service mode needs a worktree the service can reach.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3429,7 +3429,7 @@ defaults stay `postgres` and `subprocess` until R34.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3541,7 +3541,7 @@ qwenloop service takes the Ollama wiring the worker has today (`worker.yaml:93-1
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3646,7 +3646,7 @@ something no worker will claim.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3734,7 +3734,7 @@ The cluster must also prove three things against the pinned broker image
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3829,7 +3829,7 @@ looks healthy.
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -3925,7 +3925,7 @@ completely. That is CDD's bounded divergence (sub-doctrine 9.c).
 Do not push. Commit locally as `feat(queue)!: …` with the `BREAKING CHANGE:` footer.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -4012,4 +4012,4 @@ counts that disagree, fails `tests/meta/test_adr_counts.py`.
 - The canon amendment (the operator's).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

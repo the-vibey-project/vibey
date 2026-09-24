@@ -172,4 +172,4 @@ Nothing here is platform-specific: the same commands prove the change on macOS (
 - split-336-4-review-threads: `review_thread_page` on all three adapters and `forge_github.REVIEW_THREADS_QUERY`/`REVIEW_THREADS_PER_PAGE`, which replace flatten's constants.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -136,4 +136,4 @@ Do not push. Commit locally with the Title as the subject.
   - The recording run needs PostgreSQL. It is the only step in any fakes lane that does, and it is the integration tier's job by definition.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -285,4 +285,4 @@ If black or isort reports a file you touched, run `python -m black --line-length
   passing `host` and `test/forge_doubles.py` with `RoutedTransport`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

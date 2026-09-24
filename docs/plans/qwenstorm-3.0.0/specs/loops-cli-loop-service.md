@@ -5,7 +5,7 @@ ADR-0046 lane L64 (slug `loops-cli-loop-service`).
 
 ## Why
 The storm's settled CLI shape (`STORM-CONTEXT.md`, confirmed against ADR-0046 §11's Deployment
-model, `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:314-323`):
+model, `STORM/specs/ADR-two-loops.md:314-323`):
 `vibey loop-service --loop L [--role all|router|seat] [--seat N]... [--capacity N]` exits 0 after
 a clean drain, 2 on bad usage or no AMQP URL, and 78 when the broker refuses a second consumer for
 the same seat, with the exit message naming sub-doctrine 8.c ("a single instance per model").

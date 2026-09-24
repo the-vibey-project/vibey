@@ -99,4 +99,4 @@ Commit as `feat(measure): every local-model call records the model's tokens per 
   `tests/cli/test_sovereign_provider_options.py`, the protected tests.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

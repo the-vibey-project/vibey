@@ -121,4 +121,4 @@ Windows classifier, and no Python version classifier above 3.12 until `gates` te
 Commit as `feat(pypi): declare keywords and classifiers in pyproject.toml`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

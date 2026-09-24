@@ -23,6 +23,10 @@ Q="$(cd "$(dirname "$0")/.." && pwd)"
 PY="$(python3 "$Q/tools/storm_paths.py" python)"
 SLUG="$(python3 "$Q/tools/storm_paths.py" slug)"
 MAIN="$(python3 "$Q/tools/storm_paths.py" repo)"
+# Nothing is written until the storm is known to be on storage a reboot keeps (10.h,
+# ADR-0057). On 2026-09-24 a reboot emptied /private/tmp and took the whole storm with it.
+# The gate prints what is volatile and the key that moves it, and exits 78.
+"$PY" "$Q/tools/storm_durability.py" check || exit $?
 touch "$Q/integrated.txt" "$Q/abandoned.txt"
 # The outer loop: refresh, repair, publish, merge-train, every ten minutes. Started here so it
 # is on whenever a storm is, and --detached makes it stop when this runner does -- an outer

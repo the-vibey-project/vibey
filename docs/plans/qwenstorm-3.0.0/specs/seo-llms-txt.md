@@ -123,4 +123,4 @@ would be a second thing to keep in sync with the same content for no discovery b
 Commit as `feat(docs): generate docs/llms.txt from properdocs.yml's nav`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

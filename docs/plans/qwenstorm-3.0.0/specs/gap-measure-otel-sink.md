@@ -126,4 +126,4 @@ Commit as `feat(measure): measurements also reach the family's telemetry, compos
   and the protected tests. Substitution is by constructor keyword only (9.b).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

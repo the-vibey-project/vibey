@@ -273,4 +273,4 @@ the file says, stop and report the difference instead of renaming anything.
 - split-358-1-fenced-claim: `claim_dispatched` (used by the tests), the fake's `dispatched_at` dict, and the same files in their child-1 state.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

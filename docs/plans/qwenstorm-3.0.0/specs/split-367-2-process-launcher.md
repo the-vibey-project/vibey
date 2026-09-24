@@ -4,7 +4,7 @@
 refactor(engines): the engine process launcher, with injected spawner and executable-resolver seams
 
 ## Why
-ADR-0044 §14's code table (`docs/architecture/decisions/0044-job-queue-port-and-loop-services.md:541`) names `infrastructure/engines/process_launcher.py` (`EngineProcessLauncher`), extracted from `LoopProcessAdapter` with no behaviour change; lane T26 of draft ADR-0045 (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/test-harness-lanes.md:3273`) already reads its `environment()`. Child lane 1 (`split-367-1-run-dir`) extracted the run-directory classes. This lane extracts the other half: the engine environment (`_engine_environment`, `src/vibey/infrastructure/engines/loop_process_adapter.py:160-164` at integration `4317cff6`), the spawn (`_spawn`, `:166-192`) and the binary resolution in `start` (`:357-359`).
+ADR-0044 §14's code table (`docs/architecture/decisions/0044-job-queue-port-and-loop-services.md:541`) names `infrastructure/engines/process_launcher.py` (`EngineProcessLauncher`), extracted from `LoopProcessAdapter` with no behaviour change; lane T26 of draft ADR-0045 (`STORM/specs/test-harness-lanes.md:3273`) already reads its `environment()`. Child lane 1 (`split-367-1-run-dir`) extracted the run-directory classes. This lane extracts the other half: the engine environment (`_engine_environment`, `src/vibey/infrastructure/engines/loop_process_adapter.py:160-164` at integration `4317cff6`), the spawn (`_spawn`, `:166-192`) and the binary resolution in `start` (`:357-359`).
 
 The original R20 kept module-attribute patching (`monkeypatch.setattr(module.asyncio, "create_subprocess_exec", ...)`) as the test seam. Sub-doctrine 9.b (`src/vibey_tools/gh/docs/doctrines.md:349`: "Substitution happens at the declared seam, never by patching an import") forbids that for new tests, so the launcher takes two **injected seams**, `ProcessSpawnerInterface` and `ExecutableResolverInterface`. Their production defaults call `asyncio.create_subprocess_exec` and `shutil.which` **at call time**, through the module attribute, which is why the unedited legacy tests that still patch those globals (`tests/infrastructure/engines/test_loop_process_adapter.py:1565-1566`, `:1607-1608`, `:1679`, `:1922`) keep passing.
 
@@ -177,4 +177,4 @@ git diff --stat HEAD~1 -- tests/infrastructure/engines/test_loop_process_adapter
 - split-367-1-run-dir: the same file, `loop_process_adapter.py`, with its tail, inbox and stop-summary bodies already extracted; this lane runs after it so the two edits never conflict.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

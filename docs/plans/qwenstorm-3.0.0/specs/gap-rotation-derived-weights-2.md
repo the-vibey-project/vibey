@@ -63,4 +63,4 @@ evidence"; the band bounds how far evidence may move a weight.
 Commit as `feat(config): declare the rotation evidence band`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

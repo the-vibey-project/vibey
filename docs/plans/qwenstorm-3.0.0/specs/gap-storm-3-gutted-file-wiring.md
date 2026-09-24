@@ -87,4 +87,4 @@ Commit as `feat(qwenloop): the storm restores gutted files and never counts a gu
   `loops-rename`, stop and report.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

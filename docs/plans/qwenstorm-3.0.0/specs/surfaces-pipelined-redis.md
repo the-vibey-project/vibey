@@ -117,7 +117,7 @@ connector, so the pipelined client is tested with no server. ADR-0047 lane S13. 
 - **Shares a file with:** `tests/fakes/sockets.py` (extend `InMemoryRedis`; keep `connector()` working), `tests/fakes/registry.py` (append).
 - **Must keep passing unchanged:** `tests/fakes/test_fake_sockets.py`, the Redis tests in `tests/infrastructure/test_sovereign_surfaces.py`, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file. Change existing files with `edit_file` or a checked replacement; add tests in new files.
+  - Read `STORM/EDITING-RULES.md` before changing a file. Change existing files with `edit_file` or a checked replacement; add tests in new files.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from line 1 of a sibling file.
   - Every new class has a `@runtime_checkable` Protocol beside it.
@@ -125,4 +125,4 @@ connector, so the pipelined client is tested with no server. ADR-0047 lane S13. 
   - The default run needs no service: no Valkey, no loopback port.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

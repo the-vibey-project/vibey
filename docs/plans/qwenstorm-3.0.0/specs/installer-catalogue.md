@@ -158,4 +158,4 @@ list of keys. Assert membership and relative order.
 Commit as `feat(domain): ...`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

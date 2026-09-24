@@ -251,6 +251,29 @@ in there would widen the explicitly-scoped per-layer runs back out to the whole 
 -- so for them a bare `pytest` runs the tests but enforces no floor. Use the commands
 above, which are their own.
 
+## Where work lives, and how often it is saved
+
+Keep every clone and worktree on storage a reboot keeps (sub-doctrine 10.h, ADR-0057). Never
+use `/tmp`, `/private/tmp`, `/var/tmp`, `/var/folders`, `/dev/shm`, `/run/user` or `$TMPDIR`:
+the OS empties them. On 2026-09-24 a reboot emptied `/private/tmp` mid-storm and took every
+uncommitted worktree, measurement and draft with it. Worktrees go in the storm home:
+`VIBEY_STORM_HOME`, else `~/git/vibey-storm` on macOS, `$XDG_DATA_HOME/vibey/storm` (else
+`~/.local/share/vibey/storm`) on Linux.
+
+```bash
+python3 docs/plans/qwenstorm-3.0.0/tools/storm_durability.py status   # durable or not
+git worktree add "$(python3 docs/plans/qwenstorm-3.0.0/tools/storm_durability.py worktree fix-x)" \
+  -b fix/x origin/develop
+```
+
+- Commit as soon as a change is coherent, not when it is finished.
+- Push work in progress to a draft PR (`gh pr create --draft`) at least every 30–45 minutes;
+  the merge train never merges a draft, and the pre-push gates still run.
+- A long measurement writes each step as it finishes and resumes (`StepJournal` in
+  `docs/plans/qwenstorm-3.0.0/tools/storm_checkpoint.py`).
+- The storm tools refuse volatile storage with exit 78 and name the key to change.
+  CONTRIBUTING.md, "Where your work lives", has the rest.
+
 ## What each gate catches
 
 | Gate | Catches |

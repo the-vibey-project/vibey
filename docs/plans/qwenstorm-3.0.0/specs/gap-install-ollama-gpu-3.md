@@ -75,4 +75,4 @@ Append to the composition test file:
 Commit as `feat(install): Arch installs the Ollama build that matches the GPU`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

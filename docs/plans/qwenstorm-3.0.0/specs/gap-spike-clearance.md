@@ -30,7 +30,7 @@ names and fields depend on the answers below.
 
 **Implementer: a large model or the operator (design, not code); the storm runner skips
 gap-spike-\*.** Deliverable: the draft ADR
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-clearance.md`, in the shape of
+`STORM/specs/ADR-gap-clearance.md`, in the shape of
 `specs/ADR-two-loops.md`. Evidence comes from the integration clone at `4317cff6` or later
 (stated), never from `/Users/adam/git/vibey`.
 
@@ -114,11 +114,11 @@ and one probe lane per criterion that #134's children do not already cover.
 None: a design lane. The checks below and a reviewer's reading are its tests.
 
 ## Checks the lane must run (all must pass)
-    F=/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-clearance.md
+    F=STORM/specs/ADR-gap-clearance.md
     test -f "$F"
     for s in "## Context" "## Decision" "## Child lanes" "## How each non-negotiable still holds" "## Security impact" "## Migration" "## Consequences" "## Alternatives rejected" "## Verification owed at implementation"; do grep -qx "$s" "$F" || echo "MISSING: $s"; done
     for c in availability reliability redundancy elasticity durability observability recoverability "fault tolerance" security scalability; do grep -qi "$c" "$F" || echo "UNMENTIONED: $c"; done
-    cd /private/tmp/claude-501/storm/qwenstorm-3.0.0/integration && git log -1 --format=%H
+    cd STORM/integration && git log -1 --format=%H
 
 ## Out of scope
 - Code of any kind. #134's probes and cost integral (its own children). Filing issues.
@@ -133,4 +133,4 @@ into the repository; otherwise nothing is committed. Do not push.
 - **Kind:** design spike. The storm runner skips it.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

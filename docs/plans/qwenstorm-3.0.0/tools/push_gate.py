@@ -25,8 +25,9 @@ other. Inside it, `owner.json` records who holds it: the holder's pid, the proce
 push runs in, the branch, the worktree, the start time, the uid, the command, and where the
 push's output is being logged. `release` removes the lock only for the token that took it, and
 only for the uid that took it. The lock path is declared (`[push_gate] lock` in storm.toml,
-or `--lock`), never typed into the tool (12.c, 12.h); absent, it is `.push-lock` in the
-directory holding the storm root, which is where the storm and every lane worktree live.
+or `--lock`), never typed into the tool (12.c, 12.h); absent, it is `.push-lock` in the storm
+home (`VIBEY_STORM_HOME`, else `[paths] home`, else ~/git/vibey-storm: storm_durability.py),
+which is where the storm and every lane worktree live, on storage a reboot keeps (10.h).
 
 `run` is the form to use. It starts the push in a session of its own, so the push and
 everything it starts -- git, the hook, pre-commit, pytest, the xdist workers -- are one
@@ -91,8 +92,8 @@ THE THRESHOLDS ARE DECLARED
 In storm.toml, section `[push_gate]`; an absent key is the default below.
 
     [push_gate]
-    lock = "../.push-lock"          # relative paths are read from the storm root
-    state_dir = "../.push-lock.gate"
+    lock = "../.push-lock"          # relative paths are read from the storm root;
+    state_dir = "../.push-lock.gate"  # absent, both are in the storm home
     idle_cpu_seconds = 2
     idle_window_seconds = 600
     wall_ceiling_seconds = 3600
@@ -103,6 +104,7 @@ In storm.toml, section `[push_gate]`; an absent key is the default below.
     protected = ["ollama", "vibey-runner", "Runner.Listener", "Runner.Worker"]
     ownerless_match_seconds = 5
     worktree_roots = [".."]         # where a bare-mkdir push may stand; default: the lock's dir
+                                    # and the storm home
     schedule_seconds = 90
     schedule_label = "org.vibey.push-gate-reaper"
 
@@ -142,6 +144,7 @@ from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape
 
+import storm_durability
 import storm_paths
 
 # --- The declared defaults ---------------------------------------------------------------
@@ -289,14 +292,19 @@ class PushGateConfig:
     def declared(cls, root: Path, lock: Path | None = None) -> PushGateConfig:
         """What `root/storm.toml` declares; `lock` (from `--lock`) outranks it for one run."""
         section = _section(root)
-        lock_path = lock or _path(root, section.get("lock"), root.parent / ".push-lock")
+        # Absent a declaration, the machine's shared lock in the storm home (10.h, ADR-0057).
+        home = storm_durability.StormHome(os.environ, root)
+        lock_path = lock or _path(root, section.get("lock"), home.push_lock())
         state = _path(root, section.get("state_dir"), lock_path.parent / f"{lock_path.name}.gate")
         protected = section.get("protected", PROTECTED)
         if not isinstance(protected, list | tuple) or not all(
             isinstance(p, str) and p for p in protected
         ):
             raise SystemExit(f"[push_gate] protected must be a list of names, not {protected!r}")
-        roots = section.get("worktree_roots", [str(lock_path.parent)])
+        # Absent a declaration: the lock's own directory, and the storm home, where the lanes'
+        # worktrees live (10.h) even while a legacy lock is still taken somewhere else.
+        homes = dict.fromkeys([str(lock_path.parent), str(home.resolve()[0])])
+        roots = section.get("worktree_roots", list(homes))
         if not isinstance(roots, list) or not all(isinstance(r, str) and r for r in roots):
             raise SystemExit(f"[push_gate] worktree_roots must be a list of paths, not {roots!r}")
         label = section.get("schedule_label", SCHEDULE_LABEL)

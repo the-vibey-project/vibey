@@ -16,7 +16,7 @@ failure does), so this spike decides them in one record.
 
 **Implementer: a large model or the operator (design, not code); the storm runner skips
 gap-spike-\*.** The deliverable is the draft ADR
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-surface-consumers.md`, in the shape
+`STORM/specs/ADR-gap-surface-consumers.md`, in the shape
 of `specs/ADR-two-loops.md` and `specs/ADR-surface-lanes.md`. Evidence is read from the
 integration clone at `d3b4a388` (or later, stated); never from `/Users/adam/git/vibey`.
 
@@ -94,7 +94,7 @@ in-memory adapter (10.f, `:419`).
 
 ## Where to change
 Nothing in the repository. Write only
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-surface-consumers.md`.
+`STORM/specs/ADR-gap-surface-consumers.md`.
 
 Required ADR sections, in order: the header line (**Status:** proposed · **Date** ·
 **Cites:** 8.b, 8.f, 8.g, 7.c, 9.b, 10.e, 10.f, 12.c, SD-01 §1 · **Related:** ADR-0042,
@@ -127,11 +127,11 @@ depends on the relevant `orm-*` lane; any lane that measures depends on `gap-mea
 None: this is a design lane. Its tests are the checks below and a reviewer's reading.
 
 ## Checks the lane must run (all must pass)
-    F=/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-surface-consumers.md
+    F=STORM/specs/ADR-gap-surface-consumers.md
     test -f "$F"
     for s in "## Context" "## Decision" "## Child lanes" "## How each non-negotiable still holds" "## Security impact" "## Migration" "## Consequences" "## Alternatives rejected" "## Verification owed at implementation"; do grep -qx "$s" "$F" || echo "MISSING: $s"; done
     grep -c "gap-surface-\|gap-guards-wired" "$F"
-    cd /private/tmp/claude-501/storm/qwenstorm-3.0.0/integration && git log -1 --format=%H
+    cd STORM/integration && git log -1 --format=%H
 
 ## Out of scope
 - Code of any kind; the three notification lanes (already specified); ADR-0047's lanes S01–S34
@@ -147,4 +147,4 @@ moves the draft into the repository; otherwise nothing is committed. Do not push
 - **Implementer:** a large model or the operator; the storm runner skips `gap-spike-*`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

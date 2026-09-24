@@ -91,4 +91,4 @@ Commit as `feat(measure): RabbitMQ queue depth is sampled from the broker for th
 - **Must keep passing unchanged:** R17's composition tests and the protected tests.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

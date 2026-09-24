@@ -71,7 +71,7 @@ completely. That is CDD's bounded divergence (sub-doctrine 9.c).
 Do not push. Commit locally as `feat(queue)!: …` with the `BREAKING CHANGE:` footer.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 
@@ -158,7 +158,7 @@ counts that disagree, fails `tests/meta/test_adr_counts.py`.
 - The canon amendment (the operator's).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ## Lane card
 - **Depends on:** R01–R33, all merged.

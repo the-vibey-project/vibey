@@ -80,4 +80,4 @@ Commit locally as `feat(engines)!: ...` with a `BREAKING CHANGE:` footer stating
 engines now run only when declared and qwenloop can no longer be switched off.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

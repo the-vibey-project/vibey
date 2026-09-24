@@ -63,4 +63,4 @@ The four tests above: `test_exactly_one_root_workflow_builds_the_book_and_the_pa
 - The paper's comprehensiveness (#301). CHANGELOG. Do not push; commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -16,9 +16,9 @@ tests inject a scripted editor instead of patching `subprocess` (sub-doctrine 9.
 
 ## Required behaviour
 0. **Gate (ADR-0046 §8, CDD bounded divergence).** Before any edit run
-   `grep -n "V-VS VERDICT: FEASIBLE" /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
+   `grep -n "V-VS VERDICT: FEASIBLE" STORM/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
    If nothing matches, change nothing and report `gated: V-VS verdict is not FEASIBLE`.
-   Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/evidence/vscode/settings-local.json` and
+   Read `STORM/evidence/vscode/settings-local.json` and
    copy it into the tenant as `src/vibey_runners/vscode/tests/data/settings-local.json`
    (the test fixture). If it is missing, stop and report.
 1. **`vscodeloop/infrastructure/editor_settings.py`** (+ `infrastructure/interfaces/editor_settings_interface.py`,
@@ -89,4 +89,4 @@ tests inject a scripted editor instead of patching `subprocess` (sub-doctrine 9.
 **Depends on:** `loops-vscodeloop-cli`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

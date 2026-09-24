@@ -214,4 +214,4 @@ One coverage run at a time. Until lane `fakes-harness-decouple` lands, `tests/co
   OpenStack spec carry `iac_provider = "heat"` by default; these tests build their own specs.)
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

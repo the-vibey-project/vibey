@@ -91,7 +91,7 @@ In the new `src/vibey/infrastructure/surface_lanes/requeue.py`:
 - **Shares a file with:** `tests/fakes/registry.py`.
 - **Must keep passing unchanged:** everything under `tests/infrastructure/surface_lanes/`, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file.
+  - Read `STORM/EDITING-RULES.md` before changing a file.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from line 1 of a sibling file.
   - Every new class has a `@runtime_checkable` Protocol in `surface_lanes/interfaces/`.
@@ -99,4 +99,4 @@ In the new `src/vibey/infrastructure/surface_lanes/requeue.py`:
   - Substitute only at a declared seam; never `monkeypatch.setattr`, `mock.patch`, `MagicMock` or `AsyncMock`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -4,7 +4,7 @@
 refactor(engines): extract the run-directory tailer, the inbox writer and the stop-summary reader from LoopProcessAdapter
 
 ## Why
-ADR-0044 §13–§14 (`docs/architecture/decisions/0044-job-queue-port-and-loop-services.md:434`, `:449`, `:541`) extracts the run-directory machinery from `LoopProcessAdapter` into `infrastructure/engines/run_dir.py`, with no behaviour change. Draft ADR-0046 (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md`) replaces ADR-0044's one-service-per-engine design but keeps this extraction: "The inbox and tailer are R20's extracted classes" (line 339). Their consumers will be ADR-0046's **seat host**, which writes control commands into a running runner's inbox, and its caller-side **adapter** (`infrastructure/loop_service/adapter.py`, §10 line 304), which tails `events.jsonl` on the shared volume. Those lanes are not written yet; this lane only prepares the classes they will use.
+ADR-0044 §13–§14 (`docs/architecture/decisions/0044-job-queue-port-and-loop-services.md:434`, `:449`, `:541`) extracts the run-directory machinery from `LoopProcessAdapter` into `infrastructure/engines/run_dir.py`, with no behaviour change. Draft ADR-0046 (`STORM/specs/ADR-two-loops.md`) replaces ADR-0044's one-service-per-engine design but keeps this extraction: "The inbox and tailer are R20's extracted classes" (line 339). Their consumers will be ADR-0046's **seat host**, which writes control commands into a running runner's inbox, and its caller-side **adapter** (`infrastructure/loop_service/adapter.py`, §10 line 304), which tails `events.jsonl` on the shared volume. Those lanes are not written yet; this lane only prepares the classes they will use.
 
 The machinery lives today in `src/vibey/infrastructure/engines/loop_process_adapter.py` (738 lines; every anchor below verified at the storm integration branch `4317cff6`, unchanged since the audit at `739536ea`):
 - tailing `events.jsonl` into `EngineEvent`s: `tail`, `:418-589` (body `:425-589`), including the "process exited without a terminal status" check at `:567-580`;
@@ -140,4 +140,4 @@ git diff --stat HEAD~1 -- tests/infrastructure/engines/test_loop_process_adapter
 - none: it edits only code that is on the integration branch today.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

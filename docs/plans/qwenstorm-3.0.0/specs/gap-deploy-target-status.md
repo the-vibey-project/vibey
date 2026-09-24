@@ -109,4 +109,4 @@ Commit as `feat(cli): vibey deploy status names the deploy target and any paid d
 - **Must keep passing unchanged:** every existing test in `tests/cli/`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

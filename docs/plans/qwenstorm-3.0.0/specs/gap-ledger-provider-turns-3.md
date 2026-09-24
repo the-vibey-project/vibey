@@ -88,4 +88,4 @@ Commit as `feat(cli): every local-model client ledgers its turns`. Do not push.
 - **Depends on:** `gap-ledger-provider-turns-2`, `split-324-2-visual-cli`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

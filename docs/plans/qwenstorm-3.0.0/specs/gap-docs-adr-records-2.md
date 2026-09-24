@@ -114,4 +114,4 @@ None new: `tests/meta/test_adr_counts.py` and `tests/meta/test_adr_status_follow
 Commit as `docs(adr): decision records for 8.d (the default model) and 8.h (Arch Linux and macOS)`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

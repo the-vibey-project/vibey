@@ -103,4 +103,4 @@ Commit as `feat(qwenloop): a checked guard restores files a storm attempt gutted
   import `vibey`; a fake is a plain class; substitution only at declared seams.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

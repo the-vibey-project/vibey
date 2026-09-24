@@ -84,11 +84,11 @@ Append to `tests/contracts/test_surface_contracts.py`:
 - **Shares a file with:** `tests/contracts/test_surface_contracts.py`, `tests/fakes/smtp.py`.
 - **Must keep passing unchanged:** `tests/fakes/test_fake_smtp.py`, `tests/infrastructure/test_sovereign_surfaces.py`, the contract suite, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file. Change existing files with `edit_file` or a checked replacement; add tests by appending or in a new file.
+  - Read `STORM/EDITING-RULES.md` before changing a file. Change existing files with `edit_file` or a checked replacement; add tests by appending or in a new file.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from line 1 of a sibling file.
   - Substitute only at a declared seam (`smtp=`); never `monkeypatch.setattr`, `mock.patch`, `MagicMock` or `AsyncMock`.
   - The default run needs no service.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

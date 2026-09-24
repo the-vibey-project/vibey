@@ -306,4 +306,4 @@ CONSTRUCTED_QWEN3_INLINE_MESSAGE: dict[str, object] = {
 - split-383-1-model-catalogue: its `gpt-oss-20b` entry names the artifacts the recorded replies come from (Ollama tag `gpt-oss:20b`, GGUF `gpt-oss-20b-MXFP4.gguf`); no code from it is used.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

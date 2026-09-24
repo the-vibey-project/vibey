@@ -41,4 +41,4 @@ tests/test_runner.py (retry-then-success, retry bound, event recorded).
 Server settings, telemetry (#382), timeouts (#345). Do not push. Commit as `fix(qwenloop): ...`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -76,4 +76,4 @@ Commit as `docs(agents): a fifth agent-surface tree for the VS Code adapter`. Do
 - **Kind:** a docs lane: the named tree files plus one meta-test edit.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

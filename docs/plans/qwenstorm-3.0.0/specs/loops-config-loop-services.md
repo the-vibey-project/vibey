@@ -510,4 +510,4 @@ The full `--cov` run needs PostgreSQL until lane `fakes-harness-decouple` lands.
 **Depends on:** `rmq-r01-queue-config`, `loops-residency-policy`, `loops-domain-loop-id`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

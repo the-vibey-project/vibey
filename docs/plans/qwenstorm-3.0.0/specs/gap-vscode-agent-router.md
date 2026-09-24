@@ -83,4 +83,4 @@ Commit as `feat(provision): a router file for the VS Code adapter's agent extens
   `tests/infrastructure/db/test_build_implement_end_to_end.py`, every protected test.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

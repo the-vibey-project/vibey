@@ -173,4 +173,4 @@ print nothing. `test_keda_scaler_query.py` needs PostgreSQL (it is `integration`
 **Depends on:** `loops-vibey-local-engine-names`, `rmq-r30-chart-loop-services`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

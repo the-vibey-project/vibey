@@ -114,4 +114,4 @@ Commit as `feat(config): a [measure] table declares where measurements go and ho
 - **Must keep passing unchanged:** every existing test in the two test files.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

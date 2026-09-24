@@ -106,4 +106,4 @@ Commit as `feat(ledger): the ledger search port can search every project a deplo
 - **Depends on:** `orm-ledger-search`, `fakes-ledger-publication`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

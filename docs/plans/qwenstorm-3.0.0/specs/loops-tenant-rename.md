@@ -297,4 +297,4 @@ The two `git grep` lines must print nothing, and `git status --short` must not l
 **Depends on:** `loops-engine-id-sovereignloop`, `fakes-tenant-qwen-2`, `default-model-p3`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

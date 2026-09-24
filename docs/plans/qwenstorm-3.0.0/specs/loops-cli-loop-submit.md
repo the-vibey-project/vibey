@@ -6,7 +6,7 @@ ADR-0046 lane L65 (slug `loops-cli-loop-submit`).
 ## Why
 The storm's settled CLI shape (`STORM-CONTEXT.md`, confirmed against ADR-0046 §3's "Pinned runs
 send one message" and §5's capacity table,
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:181`, `:226-236`):
+`STORM/specs/ADR-two-loops.md:181`, `:226-236`):
 `vibey loop submit` sends one pinned run: exits 75 on saturation, 69 when the run is unroutable.
 Exit 75 (`EX_TEMPFAIL`, the family's existing convention for "try again, this is not your fault")
 matches §5's own classification of queue saturation: "busy is not 'cannot carry' (8.a)" -- a

@@ -187,9 +187,10 @@ RULES = (
     .split("## Hard repository rules (always)", 1)[1]
     .strip()
 )
-TEMPLATE_POINTER = re.compile(r"See /private/tmp/\S*SPEC-TEMPLATE\.md\.?")
+# Any spelling of the storm root: `STORM/`, as the specs write it, or an absolute path to one.
+TEMPLATE_POINTER = re.compile(r"See \S*SPEC-TEMPLATE\.md\.?")
 SPEC_POINTER = re.compile(
-    r"(?:/private/tmp/claude-501/storm/qwenstorm-3\.0\.0/|STORM/)?specs/([a-z0-9][a-z0-9-]*)\.md"
+    r"(?:STORM/|(?<![\w./-])/\S*/qwenstorm-3\.0\.0/)?specs/([a-z0-9][a-z0-9-]*)\.md"
 )
 
 

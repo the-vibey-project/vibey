@@ -86,7 +86,7 @@ ADR says it owes (the pinned `rabbitmq:4-management-alpine`, `values.yaml:434-44
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 

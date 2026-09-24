@@ -85,4 +85,4 @@ Commit as `ci(release): publish the Arch Linux image variant`. Do not push.
 - **Depends on:** `gap-image-arch`, `gap-release-image-publish`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

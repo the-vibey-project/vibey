@@ -94,4 +94,4 @@ Commit as `feat(engines): a chat client that asks through the sovereign-chat por
   `tests/cli/test_sovereign_provider_options.py`, every protected test.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

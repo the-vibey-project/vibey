@@ -1064,6 +1064,6 @@ Every item here is a named follow-up, not an omission.
   `feat(engines): choose the local context window from measured host memory`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 **Depends on:** none

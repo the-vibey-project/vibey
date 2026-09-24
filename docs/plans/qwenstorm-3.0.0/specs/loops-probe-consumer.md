@@ -5,7 +5,7 @@ ADR-0046 lane L32 (slug `loops-probe-consumer`).
 
 ## Why
 Draft ADR-0046 §3's queue table
-(`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:149`) declares
+(`STORM/specs/ADR-two-loops.md:149`) declares
 `vibey.runs.<loop>.probe`, a classic queue, for "preflight probes". §4, "Probes never thrash"
 (`:216-220`): "A probe that would load a model runs only when that model is resident. An example
 is `claudeloop doctor --profile`'s tool-call check. Otherwise the probe is answered from its last

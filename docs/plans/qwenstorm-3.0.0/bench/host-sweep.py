@@ -2,6 +2,13 @@
 
     python3 host-sweep.py                 # the whole matrix
     python3 host-sweep.py --only C        # one configuration
+    python3 host-sweep.py --journal FILE  # keep the rows somewhere else (default: beside this)
+
+Each configuration's row is journalled the moment it is measured (tools/storm_checkpoint.py),
+and a restart measures only the configurations the journal does not yet hold. A reboot, a kill
+or a crash costs the configuration in progress, never the ones already measured: on 2026-09-24
+a reboot cost a whole sweep that kept its rows in memory until the end (10.h, ADR-0057). To
+measure a configuration again, start a new journal; the old one is the record of the old run.
 
 Sub-doctrine 8.g: always measured. Every number this prints is read from the running machine,
 never estimated. The method is the part that transfers to another host; the numbers are not.
@@ -28,10 +35,19 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
+# The storm's tools sit beside bench/; the journal and the durability gate live there.
+HERE = Path(__file__).absolute().parent
+sys.path.insert(0, str(HERE.parent / "tools"))
+import storm_checkpoint  # noqa: E402 - after the path it is found on
+import storm_durability  # noqa: E402 - after the path it is found on
+
+DEFAULT_JOURNAL = HERE / "host-sweep.jsonl"
 OLLAMA = "http://127.0.0.1:11434"
 MODEL = "gpt-oss:20b"
 REPEATS = 8
@@ -168,8 +184,18 @@ def measure(name: str) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--only", action="append", choices=sorted(MATRIX))
+    parser.add_argument("--journal", type=Path, default=DEFAULT_JOURNAL, metavar="FILE")
     args = parser.parse_args()
     wanted = args.only or sorted(MATRIX)
+    # A journal on storage a reboot empties saves nothing (10.h): refused, exit 78.
+    storm_durability.DurabilityGate(storm_durability.VolatileLocations(os.environ)).enforce(
+        {"journal": args.journal}, "--journal"
+    )
+    journal = storm_checkpoint.StepJournal(args.journal)
+    recorded = journal.done()
+    todo = set(journal.pending(wanted))
+    if journal.torn():
+        print(f"journal {args.journal}: {journal.torn()} torn line(s) from an interrupted write")
     cache = os.environ.get("OLLAMA_KV_CACHE_TYPE", "f16")
     print(f"server KV cache type: {cache}   (restart ollama to change it)")
     print(
@@ -177,12 +203,18 @@ def main() -> int:
     )
     rows = []
     for name in wanted:
+        if name not in todo:
+            row = recorded[name]
+            print(f"{name:4}   -- recorded {row['recorded_at']} in {args.journal}; not re-measured")
+            rows.append(row)
+            continue
         if MATRIX[name][1] != cache:
             print(
                 f"{name:4}{MATRIX[name][0]:>8}{MATRIX[name][1]:>7}   -- needs OLLAMA_KV_CACHE_TYPE={MATRIX[name][1]}"
             )
             continue
         row = measure(name)
+        journal.record(name, row)
         rows.append(row)
         print(
             f"{row['config']:4}{row['context']:>8}{row['kv_cache']:>7}"

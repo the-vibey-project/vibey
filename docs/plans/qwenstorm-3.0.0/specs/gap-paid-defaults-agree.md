@@ -63,4 +63,4 @@ Commit as `test(meta): vibey's paid defaults and vibey-gh's paid forge default a
 - **Must keep passing unchanged:** every other `tests/meta` test.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

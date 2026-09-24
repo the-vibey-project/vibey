@@ -309,4 +309,4 @@ the file says, stop and report the difference instead of renaming anything.
 - split-358-1-fenced-claim: `DISPATCH_SQL.mark_dispatched` (the sweep's stamp at generation ≥ 1), `claim_dispatched` (used by the park test), and the fake's `dispatched_at` dict.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

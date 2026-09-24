@@ -129,4 +129,4 @@ None in code. The reviewer checks the acceptance criteria against the issue's co
 Commit as `ops: record the operator's open rulings` (only if a file in the tree records them). Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

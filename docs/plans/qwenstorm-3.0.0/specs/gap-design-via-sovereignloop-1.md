@@ -115,4 +115,4 @@ Commit as `feat(application): a consumer-side port for pinned sovereign chat run
 - **Must keep passing unchanged:** `tests/fakes/test_port_parity.py`, every protected test.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

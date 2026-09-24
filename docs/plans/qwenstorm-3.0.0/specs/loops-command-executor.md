@@ -4,7 +4,7 @@ feat(loop-service): LoopCommandExecutor runs a one-shot pinned command through a
 ADR-0046 lane L58 (slug `loops-command-executor`).
 
 ## Why
-Draft ADR-0046 §10 (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:304`)
+Draft ADR-0046 §10 (`STORM/specs/ADR-two-loops.md:304`)
 names `infrastructure/loop_service/command_executor.py` directly, beside `client.py` and
 `adapter.py`. §3, "Pinned runs send one message" (`:181`): "These are DESIGN and DECOMPOSE through
 the command executor, and `vibey loop submit --engine`. The router routes the run request itself,

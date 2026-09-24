@@ -99,7 +99,7 @@ are the only module-level functions, holding no logic, as `cli/ledger_search.py:
 - **Shares a file with:** `src/vibey/cli/main.py` (T15, R02, R17, R27, R28, R33 edit other parts; add only the registration lines), `src/vibey/cli/interfaces/__init__.py`.
 - **Must keep passing unchanged:** `tests/cli/*`, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file. `main.py` is long: `edit_file` only; keep `SIGTERM_LATCH.arm()` first.
+  - Read `STORM/EDITING-RULES.md` before changing a file. `main.py` is long: `edit_file` only; keep `SIGTERM_LATCH.arm()` first.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from line 1 of a sibling file.
   - Every new class has a `@runtime_checkable` Protocol in `cli/interfaces/`; the typer functions hold no logic and say why they are module-level.
@@ -107,4 +107,4 @@ are the only module-level functions, holding no logic, as `cli/ledger_search.py:
   - The default run needs no service.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

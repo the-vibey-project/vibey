@@ -328,4 +328,4 @@ continuations. If the two formatters fight over a line, restructure the line; ne
 - split-335-3-labels: `add_label(number, label)`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -67,4 +67,4 @@ never the host's `/sys` (9.b; the fakes standard).
 Commit as `feat(install): a sysfs GPU vendor probe`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

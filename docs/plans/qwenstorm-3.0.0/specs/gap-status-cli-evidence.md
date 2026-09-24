@@ -86,4 +86,4 @@ Commit as `feat(cli): vibey status and watch name the object, source and cutoff 
 - **Kind:** one source file, one test file.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

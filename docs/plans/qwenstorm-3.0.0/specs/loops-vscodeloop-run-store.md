@@ -19,7 +19,7 @@ The closest existing store is `src/vibey_runners/opencode/src/opencodeloop/infra
 
 ## Required behaviour
 0. **Gate (ADR-0046 §8, CDD bounded divergence).** Before any edit run
-   `grep -n "V-VS VERDICT: FEASIBLE" /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
+   `grep -n "V-VS VERDICT: FEASIBLE" STORM/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
    If nothing matches, change nothing and report `gated: V-VS verdict is not FEASIBLE`.
 1. **`vscodeloop/application/interfaces/store_interface.py`** (new; plus `application/__init__.py`
    and `application/interfaces/__init__.py`): `@runtime_checkable class RunStoreInterface(Protocol)`
@@ -110,4 +110,4 @@ The closest existing store is `src/vibey_runners/opencode/src/opencodeloop/infra
 **Depends on:** `loops-vscodeloop-scaffold`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
