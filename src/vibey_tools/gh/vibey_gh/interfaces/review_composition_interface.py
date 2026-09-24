@@ -20,7 +20,7 @@ class ReviewComposerPort(Protocol):
 
     def compose(
         self,
-        paid: Mapping[str, Any],
+        paid: Mapping[str, Any] | None,
         *,
         half: str,
         sovereign: Mapping[str, Any] | None = None,
@@ -28,13 +28,16 @@ class ReviewComposerPort(Protocol):
     ) -> dict[str, Any]:
         """The composed review for one exact head.
 
-        `half` names what the PAID reviewer answered: the full schema, or only the
+        `half` names what the PAID reviewer answered: the full schema; only the
         requires-wider-context half, in which case `sovereign` must be the sovereign lane's
-        verdict for the diff-groundable half. Returns the envelope the workflow reads:
-        the verdict to persist, what repair is handed, the field-to-lane map, each unit's
-        outcome, the findings count and whether automated repair may act on the result.
-        Raises `ValueError` for an unknown half or a missing sovereign verdict, and
-        `TypeError` for an answer that is not a JSON object.
+        verdict for the diff-groundable half; or nothing at all, because no paid review is
+        declared (8.b), in which case `paid` is empty and `sovereign` must be a verdict that
+        answered both halves. Returns the envelope the workflow reads: the verdict to
+        persist, what repair is handed, the field-to-lane map, each unit's outcome, the
+        findings count and whether automated repair may act on the result. Raises
+        `ValueError` for an unknown half, a missing answer, or a sovereign verdict that
+        cannot stand for the review asked of it, and `TypeError` for an answer that is not
+        a JSON object.
         """
 
 
@@ -44,7 +47,7 @@ class ReviewComposerInterface(ReviewComposerPort, Protocol):
 
     def compose(
         self,
-        paid: Mapping[str, Any],
+        paid: Mapping[str, Any] | None,
         *,
         half: str,
         sovereign: Mapping[str, Any] | None = None,

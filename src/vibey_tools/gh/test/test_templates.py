@@ -2677,10 +2677,11 @@ def test_pr_automation_never_assumes_the_adopting_repos_own_package_is_vibey_gh(
     text = (WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8")
     assert "pip install --quiet ./automation" not in text
     checks = re.findall(r'self="automation/__VIBEY_GH_SELF_SOURCE__"', text)
-    assert len(checks) == 5  # review, repair, resolve-conflict, escalate, review-fallback
+    # review, repair, resolve-conflict, escalate, review-fallback, record-sovereign
+    assert len(checks) == 6
     lines = text.splitlines(keepends=True)
     installs = [line for line in lines if line.endswith(FALLBACK_INSTALL)]
-    assert len(installs) == 6  # the five guarded installs above plus the evaluate job's own
+    assert len(installs) == 7  # the six guarded installs above plus the evaluate job's own
 
 
 def test_promotion_checks_provenance_without_rewriting_or_reauditing_history():
@@ -3387,8 +3388,19 @@ def test_both_review_lanes_write_every_output_they_declare():
     behind each half has the same fact from each."""
     jobs = yaml.safe_load((WORKFLOWS / "pr-review.yml").read_text(encoding="utf-8"))["jobs"]
     declared_by_lane = {
-        "review": {"passed", "findings", "structured", "half", "carried", "halves", "repairable"},
-        "review-sovereign": {"passed", "findings", "verdict", "model"},
+        "review": {
+            "passed",
+            "findings",
+            "structured",
+            "half",
+            "carried",
+            "halves",
+            "repairable",
+            "refusal",
+        },
+        "review-sovereign": {"passed", "findings", "verdict", "model", "reason"},
+        # The sovereign whole review's record, when no paid review is declared (8.b).
+        "record-sovereign": {"passed", "findings", "structured", "carried", "halves", "repairable"},
     }
     for name, expected in declared_by_lane.items():
         outputs = jobs[name]["outputs"]

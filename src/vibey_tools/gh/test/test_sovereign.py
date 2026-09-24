@@ -129,10 +129,18 @@ def test_the_probe_publishes_its_verdict_to_the_job_output(monkeypatch, tmp_path
     assert main(["sovereign"]) == 0
     assert "ready=true" in out.read_text(encoding="utf-8")
 
+    assert "reason=sovereign runner heartbeat is 100s old" in out.read_text(encoding="utf-8")
+
     _fake(monkeypatch, {"fetch": (1, "")})
     assert main(["sovereign"]) == 0  # not available is not an error
     assert "ready=false" in out.read_text(encoding="utf-8")
     assert "no sovereign heartbeat" in capsys.readouterr().out
+    # The reason travels too: with no paid review declared (8.b), "needs a human review"
+    # has to say WHY the sovereign lane was not offered, in the gate a person reads.
+    assert out.read_text(encoding="utf-8").splitlines()[-1] == (
+        "reason=no sovereign heartbeat at refs/vibey-gh/sovereign-heartbeat"
+        " — the local lane is not offered"
+    )
 
 
 def test_the_probe_runs_outside_actions_without_a_job_output(monkeypatch, tmp_path, capsys):

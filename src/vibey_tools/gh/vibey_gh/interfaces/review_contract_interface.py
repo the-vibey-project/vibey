@@ -71,6 +71,21 @@ class ReviewContractPort(Protocol):
         Report fields rather than judgments: in neither half, never placeholdered.
         """
 
+    @property
+    def field_questions(self) -> Mapping[str, str]:
+        """What each documentation judgment asks, by judgment name."""
+
+    @property
+    def scope_field(self) -> str:
+        """Where a local verdict names the halves it actually answered. Never a review field."""
+
+    def questions(self) -> list[tuple[str, str]]:
+        """Each documentation judgment with its question, in the contract's order.
+
+        Raises `KeyError` for a judgment with no declared question, as `json_schema` does
+        for a field with no declared type.
+        """
+
     def json_schema(self, halves: Iterable[str] | None = None) -> dict[str, object]:
         """The JSON Schema a reviewer answering `halves` is held to; `None` means both.
 

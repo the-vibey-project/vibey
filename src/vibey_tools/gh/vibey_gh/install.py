@@ -256,6 +256,17 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace(
         "__VIBEY_GH_FALLBACK_TRUSTED_ONLY__", "true" if fallback.trusted_only else "false"
     )
+    # The paid-review declaration (8.b), a literal `true`/`false`: at the head of the paid
+    # review job's `if:`, so an undeclared repository's workflow never schedules the paid
+    # call at all, and in the steps that decide what the sovereign lane answers.
+    wanted = wanted.replace(
+        "__VIBEY_GH_PAID_REVIEW__", "true" if cfg.pr_automation.paid_review else "false"
+    )
+    # One quoted scalar: the step word-splits it, and config has already refused any entry
+    # that is not a plain repository-relative path.
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_CONTEXT_PATHS__", json.dumps(" ".join(fallback.context_paths))
+    )
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_RUNNER_LABEL__", fallback.runner_label)
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_MODEL__", fallback.model)
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_BASE_URL__", fallback.base_url)

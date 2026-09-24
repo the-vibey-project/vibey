@@ -90,6 +90,14 @@ maintainability, architecture-boundary, and test-quality review. Forks are inspe
 never mutated with privileged credentials; required edits use a linked repository-owned
 replacement PR that preserves the contributor and exact head.
 
+Whether the review reaches a paid model at all is a declaration, `[pr_automation]
+paid_review`, and it is `false` by default (sub-doctrine 8.b: a paid counterparty is
+declared-only). Undeclared, the `review` job never runs: the sovereign lane below answers the
+**whole** review — the diff and the documentation-contract judgments — for a trusted author
+whose head is in this repository, and every other pull request (an outside author, a fork,
+or one arriving while the runner is down) fails the gate with `needs a human review: <why>
+(no paid review is declared, 8.b)`. What follows describes the declared path.
+
 With `[pr_automation.fallback].enabled = true` (the default) and a self-hosted runner
 labelled `vibey-local-gh` whose heartbeat is fresh, the review's diff half runs on that
 runner FIRST (sub-doctrine 8.a): a `review-sovereign` job sends the diff to a local
@@ -158,8 +166,11 @@ private-repository diagnostic.
 
 ## Credentials and settings
 
-- `ANTHROPIC_API_KEY` must be a repository secret for AI review, repair, conflict
-  resolution, autonomous issue solutions, documentation upkeep, and release repair.
+- `ANTHROPIC_API_KEY` must be a repository secret for AI repair, conflict resolution,
+  autonomous issue solutions, documentation upkeep, and release repair — and for the review
+  only where `[pr_automation] paid_review = true` declares a paid one. A call the API refuses
+  is reported as `the paid <review|repair|conflict resolution> was refused by the API:
+  <reason>`, never as the action's closing "Result subtype: success".
 - `AUTOMERGE_TOKEN` is needed when the default `GITHUB_TOKEN` cannot merge through the
   ruleset, manage settings, create PRs, or reconcile the repository profile and rulesets.
 - PyPI and TestPyPI use trusted publishing through the `pypi` and `testpypi` environments;

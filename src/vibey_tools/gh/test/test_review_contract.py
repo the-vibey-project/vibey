@@ -505,3 +505,58 @@ def test_an_untyped_report_field_raises_like_any_other():
     assert contract.json_schema()["required"] == ["pass", "house_style"]
     with pytest.raises(KeyError, match="wider_summary, wider_findings"):
         contract.json_schema([REQUIRES_WIDER_CONTEXT])
+
+
+# --------------------------------------------------------------------------------------
+# The whole review, answered by one sovereign reviewer (sub-doctrine 8.b)
+# --------------------------------------------------------------------------------------
+
+
+def test_every_documentation_judgment_carries_the_question_a_reviewer_is_asked():
+    """With no paid review declared, the sovereign lane answers the documentation contract
+    too, and a local model asked for sixteen bare field names guesses at what each means.
+    Each judgment's question lives beside its type, in the one table, so the prompt a
+    reviewer is handed cannot list a judgment the schema lacks or skip one it has."""
+    asked = REVIEW_CONTRACT.questions()
+
+    assert [name for name, _ in asked] == list(REVIEW_CONTRACT.requires_wider_context)
+    for name, question in asked:
+        assert question.strip() and question == REVIEW_CONTRACT.field_questions[name]
+    # A seam reader gets the same table.
+    port: ReviewContractPort = REVIEW_CONTRACT
+    assert port.questions() == asked
+
+
+def test_a_judgment_with_no_question_raises_rather_than_being_asked_blind():
+    """The same rule as a field with no type: a reviewer asked a question nobody wrote down
+    is asked a different question than the one the gate reads."""
+    contract = ReviewContract(
+        diff_groundable=("pass",),
+        requires_wider_context=("house_style", "tone"),
+        field_questions={"tone": "the prose is kind"},
+    )
+
+    with pytest.raises(KeyError, match="no question declared for review field.*house_style"):
+        contract.questions()
+
+
+def test_a_verdict_names_the_halves_it_actually_answered():
+    """A diff-only verdict writes `true` into every judgment it did NOT evaluate, to keep
+    its shape. Read as a whole review, those placeholders would pass sixteen judgments
+    nobody made -- so every local verdict says which halves it answered, under a key that
+    is neither a judgment nor a report field."""
+    assert REVIEW_CONTRACT.scope_field == "scope"
+    assert REVIEW_CONTRACT.scope_field not in REVIEW_CONTRACT.fields
+    assert REVIEW_CONTRACT.scope_field not in REVIEW_CONTRACT.wider_report_fields
+    port: ReviewContractPort = REVIEW_CONTRACT
+    assert port.scope_field == "scope"
+
+
+@pytest.mark.parametrize("name", ["pass", "house_style", "wider_summary"])
+def test_the_scope_field_cannot_be_a_field_a_lane_writes(name: str):
+    with pytest.raises(ValueError, match=f"scope field cannot be a review field: {name}"):
+        ReviewContract(
+            diff_groundable=("pass",),
+            requires_wider_context=("house_style",),
+            scope_field=name,
+        )

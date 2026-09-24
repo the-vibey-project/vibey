@@ -5,6 +5,22 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Breaking:** `[pr_automation] paid_review` (default `false`) is the declaration sub-doctrine
+  8.b asks for before the exact-head review reaches a paid model. Undeclared, the paid
+  `review` job is skipped before it is scheduled and the sovereign lane answers the whole
+  review (`vibey-gh local-review --scope full --context-dir DIR`, judged against the new
+  `[pr_automation.fallback] context_paths`, default `["README.md", "docs/index.md"]`), recorded
+  by the new `Record the sovereign whole review` job through `vibey-gh pr-automation combine
+  --half none`, which refuses any verdict that did not answer both halves. An outside author,
+  a fork, a lane switched off, a runner with no fresh heartbeat or a local model with no
+  verdict each fail the gate with `needs a human review: <why> (no paid review is declared,
+  8.b)`. `true` keeps the two-lane review exactly as it was. Every local verdict now names
+  the halves it answered under `scope`, and `vibey-gh sovereign` writes its `reason=` to the
+  job output beside `ready=`. The review, repair and conflict-resolution jobs report an
+  `is_error` execution record as `the paid <job> was refused by the API: <reason or "no
+  reason given">`, and the gate repeats it; the facts line no longer reads `is_error: false`
+  as `unknown`.
+
 - `approve-check PR [--head SHA] [--approve] [--body TEXT]`: the delegated approver's grant,
   enforced by code; `--approve` submits one approval pinned to `--head`, only after every
   condition held. `python -m vibey_gh.approval_check` is the same command without the CLI,

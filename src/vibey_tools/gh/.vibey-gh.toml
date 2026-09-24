@@ -30,6 +30,11 @@ review_untrusted_authors = true
 repair_untrusted_authors = true
 replace_fork_prs = true
 retain_schedule_backstop = true
+# No paid review is declared (sub-doctrine 8.b: a paid counterparty is declared-only). The
+# operator's instruction, 2026-09-24: "Wire this up so that it uses the sovereign lanes
+# instead of ANTHROPIC_API_KEY", and "make this honest". So the sovereign lane answers the
+# whole review, and a pull request it cannot review is told it needs a human.
+paid_review = false
 
 [pr_automation.observability]
 sanitized_progress = true

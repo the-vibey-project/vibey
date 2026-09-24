@@ -469,6 +469,13 @@ class SocialSignalsConfig:
             raise ValueError("social_signals.enabled with no entries renders nothing honest")
 
 
+def _unique_nonempty(name: str, values: tuple[str, ...]) -> None:
+    if any(not value.strip() for value in values):
+        raise ValueError(f"{name} entries must be non-empty")
+    if len(set(values)) != len(values):
+        raise ValueError(f"{name} entries must be unique")
+
+
 @dataclass(frozen=True)
 class PrAutomationObservabilityConfig:
     sanitized_progress: bool = True
@@ -506,8 +513,29 @@ class PrAutomationFallbackConfig:
     timeout_seconds: int = 600
     heartbeat_ref: str = "refs/vibey-gh/sovereign-heartbeat"
     heartbeat_max_age_minutes: int = 15
+    # The documents the sovereign lane judges the documentation contract against when it
+    # answers the WHOLE review because no paid review is declared (8.b). Fetched read-only
+    # from the exact head through the contents API -- never a checkout -- and handed to the
+    # model beside the diff, so the opening and onboarding judgments are made on the pages
+    # they are about. A path absent at that head is skipped and the verdict says which
+    # documents it saw.
+    context_paths: tuple[str, ...] = ("README.md", "docs/index.md")
 
     def __post_init__(self) -> None:
+        _unique_nonempty("pr_automation.fallback.context_paths", self.context_paths)
+        for entry in self.context_paths:
+            # Word-split in the workflow's shell loop and spliced into a contents-API URL,
+            # so the shape is held tight: repository-relative, never climbing, no glob, no
+            # whitespace, no query.
+            if (
+                entry.startswith(("/", "~"))
+                or ".." in Path(entry).parts
+                or any(char.isspace() or char in "*?[]#&=" for char in entry)
+            ):
+                raise ValueError(
+                    "pr_automation.fallback.context_paths entries must be plain"
+                    f" repository-relative paths: {entry!r}"
+                )
         if not self.enabled:
             return
         for name, value in (
@@ -712,10 +740,31 @@ class PrAutomationConfig:
     # missing one. Set it false where the author should pick the type themselves; the
     # check still runs and still fails, just without rewriting anybody's history.
     normalise_commit_subjects: bool = True
+    # The declaration sub-doctrine 8.b asks for before a paid counterparty is reached: may
+    # the exact-head review call the paid model (`anthropics/claude-code-action`, holding
+    # `[ai] auth_secret`)? FALSE by default, because 8.b makes paid declared-only --
+    # undeclared means sovereign only. False, the sovereign lane answers the WHOLE review
+    # (both halves of `vibey_gh.review_contract`) for a trusted author whose head is in
+    # this repository, the paid `review` job never runs, and every other pull request --
+    # an outside author, a fork, or one arriving while the sovereign runner is down -- is
+    # told plainly that it needs a human review. True keeps the two-lane review exactly as
+    # it was: the sovereign lane carries the diff half for a trusted author and the paid
+    # reviewer the rest, or the whole review for anyone else.
+    #
+    # Scope: this declares the REVIEW. The repair and conflict-resolution jobs are not
+    # governed by it.
+    paid_review: bool = False
     observability: PrAutomationObservabilityConfig = PrAutomationObservabilityConfig()
     fallback: PrAutomationFallbackConfig = PrAutomationFallbackConfig()
 
     def __post_init__(self) -> None:
+        if not isinstance(self.paid_review, bool):
+            # A declaration is a human writing `true`. A string or a number read as truthy
+            # would reach for a paid counterparty on a typo. ValueError, like every other
+            # refusal of a configuration value here, because callers handle one class.
+            raise ValueError(  # noqa: TRY004
+                f"pr_automation.paid_review must be true or false, not {self.paid_review!r}"
+            )
         _unique_nonempty("pr_automation.scan_workflows", self.scan_workflows)
         _unique_nonempty("pr_automation.ignored_checks", self.ignored_checks)
         _unique_nonempty("pr_automation.plugin_marketplaces", self.plugin_marketplaces)
@@ -750,13 +799,6 @@ class PrAutomationConfig:
             raise ValueError("pr_automation.max_repair_attempts must be between 1 and 10")
         if not self.model.strip():
             raise ValueError("pr_automation.model must not be empty")
-
-
-def _unique_nonempty(name: str, values: tuple[str, ...]) -> None:
-    if any(not value.strip() for value in values):
-        raise ValueError(f"{name} entries must be non-empty")
-    if len(set(values)) != len(values):
-        raise ValueError(f"{name} entries must be unique")
 
 
 def _merge_queue(section: dict, default_merge_method: str) -> MergeQueueConfig:
@@ -1903,6 +1945,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         replace_fork_prs=auto.get("replace_fork_prs", True),
         retain_schedule_backstop=auto.get("retain_schedule_backstop", True),
         normalise_commit_subjects=auto.get("normalise_commit_subjects", True),
+        paid_review=auto.get("paid_review", False),
         plugin_marketplaces=tuple(auto.get("plugin_marketplaces", ())),
         plugins=tuple(auto.get("plugins", ())),
         observability=PrAutomationObservabilityConfig(
@@ -1920,6 +1963,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
             timeout_seconds=fallback.get("timeout_seconds", 600),
             heartbeat_ref=fallback.get("heartbeat_ref", "refs/vibey-gh/sovereign-heartbeat"),
             heartbeat_max_age_minutes=fallback.get("heartbeat_max_age_minutes", 15),
+            context_paths=tuple(fallback.get("context_paths", ("README.md", "docs/index.md"))),
         ),
     )
     return GhConfig(

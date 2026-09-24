@@ -1,6 +1,8 @@
 # Operations
 
-`ANTHROPIC_API_KEY` is required. Add `AUTOMERGE_TOKEN` only when the default
+`ANTHROPIC_API_KEY` is required for repair, conflict resolution and the other AI jobs, and
+for the review only where `[pr_automation] paid_review = true` declares a paid one (by
+default none is, and the sovereign lane reviews). Add `AUTOMERGE_TOKEN` only when the default
 `GITHUB_TOKEN` cannot satisfy branch rulesets or repository-settings writes; PyPI/TestPyPI
 use trusted publishing environments.
 
@@ -62,9 +64,19 @@ that carries one.
 
 ## Recovering from a review with no verdict
 
-`PR review: review incomplete` (behind a green `PR evaluate / gate` scan gate) means the primary exact-head review returned no verdict
+With no paid review declared (`[pr_automation] paid_review = false`, the default), the
+sovereign lane is the only reviewer, and a gate that could not get its verdict says so:
+`PR review: review incomplete (needs a human review)` when the runner was down or the local
+model gave none — the summary names the reason, and the recovery sweep re-probes once the
+runner beats again — and `PR review: needs a human review` for an outside author or a fork,
+which only a person can clear. See
+[the paid-review declaration](configuration.md#the-paid-review-declaration-paid_review).
+
+With a paid review declared: `PR review: review incomplete` (behind a green `PR evaluate / gate` scan gate) means the primary exact-head review returned no verdict
 at all — check API credit balance, the `ANTHROPIC_API_KEY` secret, and model availability,
-then rerun the review; this is never a defect in the pull request. If
+then rerun the review; this is never a defect in the pull request. When the API refused
+the call the summary says so in the API's own words:
+`the paid review was refused by the API: Credit balance is too low`. If
 `[pr_automation.fallback].enabled` is set and a self-hosted runner carrying the
 `[pr_automation.fallback] runner_label` label (default `vibey-local`) is registered, the
 same no-verdict condition instead dispatches a local Ollama model against
