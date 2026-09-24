@@ -294,6 +294,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **tests:** a killed test run no longer leaves its databases behind for good. Each session
+  now holds an advisory lock on its database for as long as it lives, and marks the database.
+  Every run drops, in the background, the test databases that no live session holds
+  (`tests/db_reaper.py`; `uv run python -m tests.db_reaper --dry-run` shows what would go).
+  An unmarked database from an older harness is dropped only when no other test session is
+  running, and a database with an open connection is always kept. On the first run, 1,141
+  leaked databases, about 15 GB, were dropped from one machine.
 * **storm:** the push-gate reaper, now on an unattended schedule, acts only on what it has
   checked (the independent review of #1105 and #1107).
   - **Kill safety.** The lock and the traced push are read again under the lock's mutex before
