@@ -238,3 +238,33 @@ def test_a_non_http_endpoint_is_refused_by_the_same_rule_design_uses() -> None:
 
     with pytest.raises(ConfigError, match="VIBEY_OLLAMA_URL"):
         endpoint.overlay_for(EngineId.QWENLOOP)
+
+
+# -- the model `vibey loops` reports for qwenloop --------------------------------------------
+
+
+def test_only_qwenloops_model_is_one_vibey_chooses() -> None:
+    endpoint = LocalEndpointEnvironment({"VIBEY_OLLAMA_MODEL": "qwen3-coder"})
+    for engine_id in EngineId:
+        if engine_id is not EngineId.QWENLOOP:
+            assert endpoint.model_for(engine_id) is None, engine_id
+
+
+def test_qwenloops_model_defaults_to_the_one_the_sovereign_providers_use() -> None:
+    assert LocalEndpointEnvironment({}).model_for(EngineId.QWENLOOP) == "gpt-oss:20b"
+
+
+def test_qwenloops_model_follows_vibey_ollama_model_and_ollama_model() -> None:
+    environ = {"VIBEY_OLLAMA_MODEL": "qwen3-coder"}
+    assert LocalEndpointEnvironment(environ).model_for(EngineId.QWENLOOP) == "qwen3-coder"
+    chosen = LocalEndpointEnvironment(environ, model="gemma3:27b")
+    assert chosen.model_for(EngineId.QWENLOOP) == "gemma3:27b"
+
+
+def test_a_model_the_operator_gave_qwenloop_itself_wins() -> None:
+    """QWENLOOP_MODEL reaches qwenloop through its own passthrough, and the overlay never
+    replaces it, so it is the model qwenloop runs."""
+    environ = {"QWENLOOP_MODEL": "llama3.3", "VIBEY_OLLAMA_MODEL": "qwen3-coder"}
+    assert LocalEndpointEnvironment(environ).model_for(EngineId.QWENLOOP) == "llama3.3"
+    blank = {"QWENLOOP_MODEL": "  ", "VIBEY_OLLAMA_MODEL": "qwen3-coder"}
+    assert LocalEndpointEnvironment(blank).model_for(EngineId.QWENLOOP) == "qwen3-coder"

@@ -12,7 +12,14 @@ from uuid import UUID
 from vibey.domain.budget import BudgetLedger
 from vibey.domain.circuit import StoredCircuitState
 from vibey.domain.effort import Effort
-from vibey.domain.engine import EngineId, IsolationLevel, StoredEngineId
+from vibey.domain.engine import (
+    EngineDescriptor,
+    EngineId,
+    EngineTier,
+    IsolationLevel,
+    Loop,
+    StoredEngineId,
+)
 from vibey.domain.interfaces.budget_caps_interface import (
     CapChangeInterface,
     CapHistoryEntryInterface,
@@ -349,3 +356,87 @@ class BudgetChange:
     by: str
     changes: tuple[CapChangeInterface, ...] = ()
     parked: tuple[HumanGateRecord, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class EngineContext:
+    """One engine as vibey's own resolvers see it right now: its descriptor, whether it
+    would run, the variable that switches it (a local engine has one), the model it runs
+    when vibey chooses that model itself (qwenloop's `VIBEY_OLLAMA_MODEL`), and the argv
+    template its `run` is built from (infrastructure/engines/argv.py)."""
+
+    descriptor: EngineDescriptor
+    enabled: bool
+    run: tuple[str, ...]
+    switch: str | None = None
+    model: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class EffortRun:
+    """One engine at one requested effort: the argv it passes, the effort it really
+    achieves, the model when anything in vibey names it, and why when nothing does."""
+
+    effort: Effort
+    argv: tuple[str, ...]
+    achieved: Effort
+    model: str | None
+    chosen_by: str | None
+    notes: str
+
+
+@dataclass(frozen=True, slots=True)
+class EffortChoice:
+    """One engine as a candidate for one effort, in a loop's by-effort view."""
+
+    engine_id: EngineId
+    model: str | None
+    achieved: Effort
+
+
+@dataclass(frozen=True, slots=True)
+class LoopEngine:
+    """One engine as `vibey loops` reports it: its descriptor, how it stands right now,
+    every effort it can be asked for, and the argv template of its `run`."""
+
+    descriptor: EngineDescriptor
+    enabled: bool
+    switch: str | None
+    default_model: str | None
+    efforts: tuple[EffortRun, ...]
+    run: tuple[str, ...]
+    notes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class LoopView:
+    """One of the two loops (8.c) and every engine its tier holds."""
+
+    loop: Loop
+    tier: EngineTier
+    default: bool
+    declared_only: bool
+    engines: tuple[LoopEngine, ...]
+    by_effort: Mapping[Effort, tuple[EffortChoice, ...]]
+
+
+@dataclass(frozen=True, slots=True)
+class EffortLadder:
+    """Where each phase starts and how BUILD climbs (domain/effort.py)."""
+
+    phase_base: Mapping[Phase, Effort]
+    build_attempts: tuple[Effort, ...]
+    exhausted_after: int
+    rotates_when_effort_rises: bool
+
+
+@dataclass(frozen=True, slots=True)
+class LoopsReport:
+    """Everything `vibey loops` says: the efforts, the default loop and paid engine, the
+    ladder, and both loops."""
+
+    efforts: tuple[Effort, ...]
+    default_loop: Loop
+    paid_default_engine: EngineId
+    ladder: EffortLadder
+    loops: tuple[LoopView, ...]

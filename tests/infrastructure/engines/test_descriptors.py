@@ -1,8 +1,11 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+import importlib
+
 import pytest
+import typer
 
 from vibey.domain.effort import Effort
-from vibey.domain.engine import EngineId
+from vibey.domain.engine import EngineControls, EngineId, EventEnvelope, EventLog, PluginSystem
 from vibey.infrastructure.engines.descriptors import (
     AGYLOOP,
     ALL_DESCRIPTORS,
@@ -10,6 +13,8 @@ from vibey.infrastructure.engines.descriptors import (
     CLAUDELOOP,
     CODEXLOOP,
     CURSORLOOP,
+    OPENCODE,
+    QWENLOOP,
 )
 
 ALL_EFFORTS = list(Effort)
@@ -171,3 +176,132 @@ def test_the_local_descriptors_are_exactly_the_local_tier() -> None:
 
     assert {d.tier for d in LOCAL_DESCRIPTORS} == {EngineTier.LOCAL}
     assert {d.tier for d in DEFAULT_DESCRIPTORS} == {EngineTier.PAID, EngineTier.LOCAL}
+
+
+# -- what `vibey loops` reports about each engine ---------------------------------------------
+#
+# Every value below was read from the runner's own code in this tree. The tests hold the
+# descriptors to it: a declared control must be a verb the runner's CLI defines, with the
+# options and positionals the template uses, and a capability that is set must name its proof.
+
+AFFORDANCE_FIELDS = ("images", "files", "paste_text", "paste_images", "plugins", "mcp")
+RUNNER_CLI = {
+    EngineId.CLAUDELOOP: "claudeloop.cli.app",
+    EngineId.CLAUDELOOP_LOCAL: "claudeloop.cli.app",
+    EngineId.CODEXLOOP: "codexloop.cli.app",
+    EngineId.CURSORLOOP: "cursorloop.cli.app",
+    EngineId.AGYLOOP: "agyloop.cli.app",
+    EngineId.OPENCODE: "opencodeloop.cli.app",
+    EngineId.QWENLOOP: "qwenloop.cli.app",
+}
+VERBS = {"stop": "stop", "wind_down": "wind-down", "prompt": "prompt"}
+
+
+def _runner_commands(engine_id: EngineId) -> dict[str, object]:
+    """The runner's own verbs, read from its Typer app. Typer carries its own click, so
+    the parameters are told apart by `param_type_name`, not by class."""
+    app = importlib.import_module(RUNNER_CLI[engine_id]).app
+    return dict(typer.main.get_command(app).commands)  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize("descriptor", ALL_DESCRIPTORS, ids=lambda d: d.engine_id.value)
+def test_every_capability_that_is_set_names_its_proof(descriptor) -> None:  # type: ignore[no-untyped-def]
+    affordances = descriptor.affordances
+    for name in AFFORDANCE_FIELDS:
+        if getattr(affordances, name) is None:
+            assert name not in affordances.evidence, f"{descriptor.engine_id}: {name}"
+        else:
+            assert affordances.evidence.get(name, "").strip(), f"{descriptor.engine_id}: {name}"
+    assert set(affordances.evidence) <= set(AFFORDANCE_FIELDS)
+
+
+def test_the_capabilities_each_runner_shows() -> None:
+    shown = {
+        d.engine_id.value: tuple(getattr(d.affordances, name) for name in AFFORDANCE_FIELDS)
+        for d in ALL_DESCRIPTORS
+    }
+    claude = (None, True, True, None, PluginSystem.CLAUDE_PLUGINS, True)
+    skills = PluginSystem.SKILLS_CONTEXT
+    assert shown == {
+        "claudeloop": claude,
+        "codexloop": (None, True, True, None, skills, None),
+        "cursorloop": (None, True, True, None, skills, None),
+        "agyloop": (None, True, True, None, skills, False),
+        "opencode": (None, True, True, None, skills, None),
+        "qwenloop": (False, True, True, False, skills, False),
+        "claudeloop-local": claude,
+    }
+
+
+@pytest.mark.parametrize("descriptor", ALL_DESCRIPTORS, ids=lambda d: d.engine_id.value)
+def test_every_declared_control_is_a_verb_the_runner_defines_as_the_template_uses_it(
+    descriptor,  # type: ignore[no-untyped-def]
+) -> None:
+    commands = _runner_commands(descriptor.engine_id)
+    for field, verb in VERBS.items():
+        template = getattr(descriptor.controls, field)
+        if template is None:
+            continue
+        assert template[0] == verb
+        command = commands[verb]
+        params = command.params  # type: ignore[attr-defined]
+        options = {opt for p in params if p.param_type_name == "option" for opt in p.opts}
+        arguments = [p for p in params if p.param_type_name == "argument"]
+        words = template[1:]
+        values = {i + 1 for i, word in enumerate(words) if word.startswith("--")}
+        flags = [word for word in words if word.startswith("--")]
+        positionals = [w for i, w in enumerate(words) if not w.startswith("--") and i not in values]
+        assert set(flags) <= options, f"{descriptor.engine_id} {verb}: {flags} vs {options}"
+        assert len(positionals) == len(arguments), f"{descriptor.engine_id} {verb}"
+
+
+def test_a_control_left_undeclared_is_one_the_runner_cannot_take() -> None:
+    """agyloop has no wind-down verb; opencodeloop has no control verb at all. qwenloop's
+    prompt is the one verb that exists and is still not declared: its runner never reads the
+    control that verb writes (qwenloop application/runner.py)."""
+    assert "wind-down" not in _runner_commands(EngineId.AGYLOOP)
+    assert not {"stop", "wind-down", "prompt"} & set(_runner_commands(EngineId.OPENCODE))
+    assert QWENLOOP.controls.prompt is None
+    assert AGYLOOP.controls.wind_down is None
+    assert OPENCODE.controls == EngineControls()
+
+
+def test_the_controls_each_runner_defines() -> None:
+    assert CLAUDELOOP.controls == EngineControls(
+        stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+        wind_down=("wind-down", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+        prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    )
+    assert CODEXLOOP.controls == EngineControls(
+        stop=("stop", "--run-id", "{run_id}"),
+        wind_down=("wind-down", "--run-id", "{run_id}"),
+        prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}"),
+    )
+    assert CURSORLOOP.controls == EngineControls(
+        stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+        wind_down=("wind-down", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+        prompt=("prompt", "{text}", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    )
+    assert AGYLOOP.controls == EngineControls(
+        stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+        prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    )
+    assert QWENLOOP.controls == EngineControls(
+        stop=("stop", "{run_id}", "--cwd", "{cwd}"),
+        wind_down=("wind-down", "{run_id}", "--cwd", "{cwd}"),
+    )
+    assert BY_ENGINE_ID[EngineId.CLAUDELOOP_LOCAL].controls == CLAUDELOOP.controls
+
+
+def test_every_runner_writes_its_events_in_its_own_run_directory() -> None:
+    path = "{cwd}/{state_dir}/runs/{run_id}/events.jsonl"
+    envelopes = {d.engine_id.value: d.events for d in ALL_DESCRIPTORS}
+    assert envelopes == {
+        "claudeloop": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
+        "codexloop": EventLog(path, EventEnvelope.TYPE),
+        "cursorloop": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
+        "agyloop": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
+        "opencode": EventLog(path, EventEnvelope.EVENT_TYPE),
+        "qwenloop": EventLog(path, EventEnvelope.TYPE),
+        "claudeloop-local": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
+    }

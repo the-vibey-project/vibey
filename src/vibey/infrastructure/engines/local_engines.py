@@ -177,6 +177,22 @@ class LocalEndpointEnvironment:
         self._environ = environ
         self._model = model
 
+    def model_for(self, engine_id: EngineId) -> str | None:
+        """The model vibey reports for an engine whose model it chooses itself: qwenloop's.
+
+        `QWENLOOP_MODEL` as the operator set it, which qwenloop reads and the overlay never
+        replaces; else the model the overlay would hand it -- `--ollama-model`, else
+        `VIBEY_OLLAMA_MODEL`, else the default, read through the same client. None for every
+        other engine: a model named in its argv, or chosen by its own configuration, is not
+        vibey's to report here.
+        """
+        if engine_id is not EngineId.QWENLOOP:
+            return None
+        named = (self._environ.get(QWENLOOP_MODEL_ENV) or "").strip()
+        if named:
+            return named
+        return OllamaChatClient.from_environment(self._environ, model=self._model).model
+
     def overlay_for(self, engine_id: EngineId) -> dict[str, str]:
         if engine_id is not EngineId.QWENLOOP or not self._environ.get(OLLAMA_URL_ENV):
             return {}
