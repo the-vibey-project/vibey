@@ -97,6 +97,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **storm:** the push-gate reaper no longer depends on the storm, or on everyone having
+  moved off the old push recipe. `push_gate.py install-schedule` installs one reaper pass
+  every `[push_gate] schedule_seconds` (90) as a launchd agent on macOS or a systemd user
+  timer on Linux, rendered from tracked templates. `schedule-status` and
+  `uninstall-schedule` go with it, and `--target cron` prints a cron line instead. A
+  non-blocking reap lock makes overlapping passes safe. A bare-`mkdir` lock with no owner
+  record is traced to its `git push` by process (the only push started within 5 s of the
+  lock's mtime, in a declared worktree root, whose group holds only the push recipe) and
+  judged by the same idle and ceiling rules, evidence first. Anything less certain is
+  `unknown` and is never killed. `lane-publish.py` and `storm-snapshot.py` now push through
+  `push_gate.py run` (new `--wait-timeout` and `--push-timeout`), a meta test fails any storm
+  tool that pushes around the gate, and CONTRIBUTING.md gains "Pushing in this repository":
+  the one recipe, `push_gate.py run -- git push …`
+
 * **storm:** a hung push gate can no longer hold every other push hostage. After one push's
   pytest sat at 0% CPU for 39 minutes holding the storm's shared push lock, three layers stand
   in the way. No single test can hang either suite: `timeout = 300` (pytest-timeout, now in
@@ -113,6 +127,22 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   SIGUSR1 stacks) before it SIGTERMs, then SIGKILLs, that group and nothing else. Each reap is
   one line in an append-only reap log, and the push reports `reaped: hang` (exit 124), never
   a test failure. `--dry-run` reports without acting (sub-doctrines 12.d, 12.e)
+* **queue:** everything a queue guards is reaped by measurement (ADR-0056). Five conditions,
+  each against a declared `[queue.reap]` threshold (rendered by the chart from
+  `worker.queueReap`): (a) a hung handler -- the broker-wide `consumer_timeout` is now
+  declared by the chart (`surfaces.rabbitmq.consumerTimeoutMs`, the image default of 30
+  minutes) and vibey's own queues get a `consumer-timeout` of six hours by policy; (b) held
+  work with nobody holding it, surfaced; (c) a poison job, parked with a `delivery_exhausted`
+  gate once its attempts are spent, and a `delivery-limit` of 20 on vibey's quorum queues;
+  (d) ready work nobody has taken for `stale_ready_seconds` (900), surfaced; (e) a dead letter
+  on a queue vibey owns becomes a parked `bus.dead_letter` job with a `bus_dead_lettered`
+  gate -- answer `--choice replay` or `--choice dismiss` -- and is never deleted; a queue
+  vibey does not own, such as Plane's, is only surfaced. Every reap is a `QueueReaped` ledger
+  event carrying the object, condition, measured value, threshold and action. The worker
+  runs the reaper when idle, at most once per `interval_seconds` (60); `vibey queue reap
+  [--dry-run] [--json]` runs it on demand and exits 1 when it could not read a source or
+  verify the broker policy. In a cluster the bus is now composed from the chart's
+  `VIBEY_BUS_*` environment even with no `vibey.toml`, so the reaper sees the broker at all.
 
 * **vibey_gh:** `vibey-gh runner install|check|cleanup|uninstall` stands the sovereign review
   runner up from a new `[runners]` table instead of hand-written LaunchAgents (12.c). Its gh
@@ -166,6 +196,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   train requires both.
 
 ### Fixed
+
+* **queue:** the lease reaper is bounded (ADR-0056, closing ADR-0044 §8's latent gap). An
+  expired lease whose attempts are spent is parked with a `delivery_exhausted` gate instead of
+  re-readied, so a job that kills its worker on every attempt is no longer claimed forever;
+  one attempt is refunded, so each answer buys exactly one more delivery. Every reap is now
+  recorded on the ledger in the same transaction as the row it moves.
 
 * **qwenloop:** a model request waits `idle_timeout_seconds` (default 900; 0 waits
   indefinitely) instead of a hard-coded 300 s ([#345](https://github.com/the-vibey-project/vibey/issues/345))
