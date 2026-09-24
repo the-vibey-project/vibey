@@ -1,4 +1,4 @@
-# 0058 — The heartbeat tells the truth, and passes the gate by the gate's own rule
+# 0059 — The heartbeat tells the truth, and passes the gate by the gate's own rule
 
 **Status:** proposed · **Date:** 2026-09-24 · **Cites:** the CLAUDE.md non-negotiables "Unattended authority is bounded by a gate, never by judgement" (12.d), "Everything-as-code" (12.c), "Toil that can be fully automated is" (12.e), "Status is evidence-bounded" (10.f) and "Code lives in classes" (9.b); doctrine 8.a · **Related:** ADR-0016, ADR-0018, ADR-0042, ADR-0046, ADR-0047, ADR-0050 · **Evidence:** `develop` at `e89818ce`, read 2026-09-24; pre-commit 4.6.2 `commands/hook_impl.py::_pre_push_ns`; git's pre-push stdin as observed against a local bare remote
 

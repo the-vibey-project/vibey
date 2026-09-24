@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""The sovereign heartbeat's timer, stood up from the tree (sub-doctrine 12.c, ADR-0058).
+"""The sovereign heartbeat's timer, stood up from the tree (sub-doctrine 12.c, ADR-0059).
 
 The heartbeat used to be published by `vibey-local-authority`, a LaunchAgent that lived in one
 operator's home directory, written by hand and recorded nowhere: nothing in the repository

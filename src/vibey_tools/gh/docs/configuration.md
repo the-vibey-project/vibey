@@ -307,7 +307,7 @@ container entrypoint from this table and the templates in `vibey_gh/templates/ru
 `vibey-gh runner check` reconciles the host against them; `vibey-gh runner cleanup` finds
 agents under `unit_prefix` that the tree no longer declares. `runner install` also installs
 the heartbeat timer that tells the gate the runner is there (`vibey-gh heartbeat`, vibey
-ADR-0058): each beat publishes only while a runner with the label is registered and online
+ADR-0059): each beat publishes only while a runner with the label is registered and online
 and the model endpoint answers, and goes through the pre-push gate like any other push. The
 runner label is
 `[pr_automation.fallback] runner_label` and the host-side model URL is its `base_url`; neither

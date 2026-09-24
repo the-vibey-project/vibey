@@ -202,7 +202,7 @@ ALLOWED: tuple[tuple[str, str, str], ...] = (
     (
         "src/vibey_tools/gh/vibey_gh/heartbeat_timer.py",
         r'^\s+"(?:/private)?/(?:tmp|var/tmp|var/folders|dev/shm|run/user)",$',
-        "the directories the heartbeat timer refuses to run from (ADR-0058): named to forbid them",
+        "the directories the heartbeat timer refuses to run from (ADR-0059): named to forbid them",
     ),
     (
         "docs/architecture/decisions/0055-*.md",

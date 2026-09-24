@@ -355,7 +355,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   with the project's `engine_environment`, so a credential the project declares for opencode
   or agyloop reaches the auth check and the conformance run, not only the session
 * **vibey_gh:** the sovereign heartbeat is honest and no longer skips the pre-push gate
-  (ADR-0058). `vibey-gh sovereign --beat` publishes only while GitHub lists a runner with the
+  (ADR-0059). `vibey-gh sovereign --beat` publishes only while GitHub lists a runner with the
   lane's label as online (read with the runner's own login) and the model endpoint answers;
   otherwise it pushes nothing, says why, and the heartbeat goes stale so the gate falls back
   honestly. It no longer pushes with `--no-verify` or a bare `--force`: the pre-push hook now

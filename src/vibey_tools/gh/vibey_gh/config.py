@@ -661,7 +661,7 @@ class RunnersConfig:
     # launchd starts a job with a near-empty PATH; docker and gh must be reachable from it.
     # The heartbeat timer runs with the same PATH, and git must be reachable from it too.
     path: str = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-    # The heartbeat timer (`vibey-gh heartbeat install`, ADR-0058). Which service manager
+    # The heartbeat timer (`vibey-gh heartbeat install`, ADR-0059). Which service manager
     # runs it: "launchd", "systemd", or empty to pick by platform (macOS launchd, Linux
     # systemd).
     heartbeat_scheduler: str = ""
