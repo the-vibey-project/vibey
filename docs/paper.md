@@ -2768,21 +2768,21 @@ in the delivery-estimate ledger, shown in [Fig. 34](#fig:forecast).
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.7cm},vibeyaxis,width=7.9cm,height=4.6cm,
-  xmin=0.5,xmax=7.5,xtick={1,2,3,4,5,6,7},xticklabels={Sep 19,Sep 19,Sep 19,Sep 20,Sep 21,Sep 23,Sep 23},x tick label style={rotate=30,anchor=north east},xlabel={forecast record}]
-\nextgroupplot[title={a. Work units in the tracker},ylabel={units},ymin=0,ymax=885,legend pos=north west]
-\addplot[vibeyred,line width=1pt,mark=*,mark size=1.3pt] coordinates {(1,0) (2,24) (3,24) (4,24) (5,25) (6,708) (7,706)};
+  xmin=0.5,xmax=8.5,xtick={1,2,3,4,5,6,7,8},xticklabels={Sep 19,Sep 19,Sep 19,Sep 20,Sep 21,Sep 23,Sep 23,Sep 24},x tick label style={rotate=30,anchor=north east},xlabel={forecast record}]
+\nextgroupplot[title={a. Work units in the tracker},ylabel={units},ymin=0,ymax=886,legend pos=north west]
+\addplot[vibeyred,line width=1pt,mark=*,mark size=1.3pt] coordinates {(1,0) (2,24) (3,24) (4,24) (5,25) (6,708) (7,706) (8,709)};
 \addlegendentry{remaining}
-\addplot[vibeygreen,line width=1pt,mark=square*,mark size=1.2pt] coordinates {(1,235) (2,235) (3,235) (4,238) (5,247) (6,264) (7,279)};
+\addplot[vibeygreen,line width=1pt,mark=square*,mark size=1.2pt] coordinates {(1,235) (2,235) (3,235) (4,238) (5,247) (6,264) (7,279) (8,340)};
 \addlegendentry{completed}
 \nextgroupplot[title={b. Forecast active days to completion},ylabel={active days},ymin=0,legend pos=north west]
-\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (7,70.60) (6,78.67) (5,3.12) (4,3.00) (3,3.00) (2,3.00) (1,0.00)} -- cycle;
-\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20)};
+\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (8,50.05) (8,67.52) (7,70.60) (6,78.67) (5,3.12) (4,3.00) (3,3.00) (2,3.00) (1,0.00)} -- cycle;
+\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (8,50.05)};
 \addlegendentry{$W/r_{\max}$}
-\addplot[vibeyblue!60,line width=1pt,mark=o,mark size=1.2pt] coordinates {(1,0.00) (2,3.00) (3,3.00) (4,3.00) (5,3.12) (6,78.67) (7,70.60)};
+\addplot[vibeyblue!60,line width=1pt,mark=o,mark size=1.2pt] coordinates {(1,0.00) (2,3.00) (3,3.00) (4,3.00) (5,3.12) (6,78.67) (7,70.60) (8,67.52)};
 \addlegendentry{$W/r_{\min}$}
 \end{groupplot}
 \end{tikzpicture}
-\caption{The delivery-estimate ledger, one forecast per record. (a) Remaining and completed work units as the tracker held them: remaining jumped from 25 to 708 when the storm filed its lanes as issues. (b) The zero-shortfall time to completion the forecast derives from the observed merge rate, 58--71 active days at the last record, with every material coordinate unmeasured and so at $\phi_i = 1$.}
+\caption{The delivery-estimate ledger, one forecast per record. (a) Remaining and completed work units as the tracker held them: remaining jumped from 25 to 708 on Sep 23, as open issues rose from 23 to 706 when the storm filed its lanes as issues. (b) The zero-shortfall time to completion the forecast derives from the observed merge rate, 50--68 active days at the last record, with every material coordinate unmeasured and so at $\phi_i = 1$.}
 \label{fig:forecast}
 \end{figure*}
 ```
