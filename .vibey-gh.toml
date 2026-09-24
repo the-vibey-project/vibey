@@ -367,6 +367,36 @@ forbidden_paths = [
   "src/vibey_tools/gh/vibey_gh/config.py",
   "src/vibey_tools/gh/vibey_gh/fingerprints.py",
 
+  # The approver's own enforcement: everything that can execute when the approver runs
+  # `python -m vibey_gh.approval_check` -- the check and the TRANSITIVE closure of the
+  # vibey_gh modules it imports, interfaces and package `__init__`s included. A change to
+  # any of them could make the check say yes to what this grant refuses, then weaken every
+  # check after it. test_approve_check.py computes that closure from the entry point and
+  # fails if any module in it is not forbidden here, so this list cannot drift. (config.py,
+  # merge_train.py, review_contract.py and fingerprints.py are in the closure too, and are
+  # listed above.) `cli.py` is deliberately NOT here: the approver never runs through it,
+  # and the closure test also asserts the entry point does not reach it.
+  "src/vibey_tools/gh/vibey_gh/__init__.py",
+  "src/vibey_tools/gh/vibey_gh/approval_check.py",
+  "src/vibey_tools/gh/vibey_gh/automation_bootstrap.py",
+  "src/vibey_tools/gh/vibey_gh/debugging.py",
+  "src/vibey_tools/gh/vibey_gh/dependabot.py",
+  "src/vibey_tools/gh/vibey_gh/estimation.py",
+  "src/vibey_tools/gh/vibey_gh/fallback_pin.py",
+  "src/vibey_tools/gh/vibey_gh/feasibility.py",
+  "src/vibey_tools/gh/vibey_gh/fit.py",
+  "src/vibey_tools/gh/vibey_gh/flatten.py",
+  "src/vibey_tools/gh/vibey_gh/forge.py",
+  "src/vibey_tools/gh/vibey_gh/gh_transport.py",
+  "src/vibey_tools/gh/vibey_gh/github_state.py",
+  "src/vibey_tools/gh/vibey_gh/install.py",
+  "src/vibey_tools/gh/vibey_gh/issue_automation.py",
+  "src/vibey_tools/gh/vibey_gh/pr_automation.py",
+  "src/vibey_tools/gh/vibey_gh/protected_paths.py",
+  "src/vibey_tools/gh/vibey_gh/reconcile.py",
+  "src/vibey_tools/gh/vibey_gh/versioning.py",
+  "src/vibey_tools/gh/vibey_gh/interfaces/**",
+
   # The local gates, and the hooks that invoke them.
   ".pre-commit-config.yaml",
   ".githooks/**",
