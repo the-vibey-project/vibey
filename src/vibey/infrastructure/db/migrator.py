@@ -2,9 +2,10 @@
 """Forward-only SQL migrations, applied in lexical order and tracked in
 schema_migration(version, applied_at, checksum).
 
-`build_app()` runs them every time it opens the database -- every worker start
-and every CLI command that touches the queue -- and there is no `vibey migrate`
-command. Every run also re-verifies the checksum of each applied migration: an
+They run as the schema's owner (ADR-0055): `vibey migrate`, or `build_app()` on every
+start when it holds the owner's DSN (`VIBEY_PG_MIGRATE_URL`) or its own role may
+migrate; otherwise `build_app()` only verifies, with `pending`. Every run also
+re-verifies the checksum of each applied migration: an
 edited, already-applied migration is a bug, not a convenience, and it fails the
 start with `MigrationChecksumError`.
 
@@ -124,6 +125,22 @@ ORDER BY pid
 """
 
 
+_MAY_MIGRATE = """
+SELECT r.rolsuper
+    OR CASE
+           WHEN to_regclass('schema_migration') IS NULL
+               THEN has_schema_privilege('public', 'CREATE')
+           ELSE pg_has_role(
+               current_user,
+               (SELECT relowner FROM pg_class WHERE oid = to_regclass('schema_migration')),
+               'MEMBER'
+           )
+       END
+FROM pg_roles r
+WHERE r.rolname = current_user
+"""
+
+
 class PostgresMigrator:
     """Applies pending migrations under the migration advisory lock.
 
@@ -218,6 +235,34 @@ class PostgresMigrator:
             # took the lock with it: Postgres drops a session's locks when the
             # session ends, and a pool reset unlocks all of them too.
             await conn.execute("SELECT pg_advisory_unlock($1)", self.LOCK_KEY)
+
+    async def may_migrate(self, conn: OwnedConnection) -> bool:
+        """Whether `conn`'s role may apply migrations: a superuser, a member of the role
+        that owns `schema_migration`, or -- on a database never migrated -- a role that
+        may create in `public`. The application role of a split install is none of
+        these (ADR-0055), even on PostgreSQL 14, where `public` still grants CREATE to
+        every role by default."""
+        return bool(await conn.fetchval(_MAY_MIGRATE))
+
+    async def pending(
+        self, conn: OwnedConnection, migrations: tuple[Migration, ...]
+    ) -> tuple[str, ...]:
+        """The versions not yet applied, read without DDL and without the lock, so a
+        role that may not migrate can still tell a migrated schema from a stale one.
+        An applied migration whose file has changed raises MigrationChecksumError, as
+        `apply` does."""
+        applied: dict[str, str] = {}
+        if await conn.fetchval("SELECT to_regclass('schema_migration') IS NOT NULL"):
+            rows = await conn.fetch("SELECT version, checksum FROM schema_migration")
+            applied = {row["version"]: row["checksum"] for row in rows}
+        pending: list[str] = []
+        for migration in migrations:
+            checksum = applied.get(migration.version)
+            if checksum is None:
+                pending.append(migration.version)
+            elif checksum != migration.checksum:
+                raise MigrationChecksumError(migration.version)
+        return tuple(pending)
 
     async def _acquire(self, conn: OwnedConnection) -> None:
         try:

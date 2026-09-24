@@ -89,6 +89,46 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
   `[notifications] enabled = true` before relying on desktop or webhook alerts.
   See the README's [Notifications](README.md#notifications) section.
 
+### 7. The ledger is append-only by the database (ADR-0055) — implemented, tested, and active
+- **Triggers refuse every rewrite.** Migration 0015 puts a `BEFORE UPDATE OR DELETE` row
+  trigger and a `BEFORE TRUNCATE` trigger on `event`. They cover every partition: the row
+  trigger is cloned onto each, and `ledger_guard_partitions()` attaches the `TRUNCATE`
+  guard on every migration run. They refuse the owner too, with `the ledger is
+  append-only`.
+- **The application cannot rewrite the ledger.** Every workload connects with
+  `VIBEY_PG_URL` as an application role that owns nothing. On `event` it holds `SELECT`
+  and `INSERT` only. It holds no `DELETE` or `TRUNCATE` anywhere, and it cannot disable a
+  trigger. Migrations and grants run with the owner's DSN, `VIBEY_PG_MIGRATE_URL` (`vibey
+  migrate`, and the chart's `migrate` init container, the only place that DSN is mounted).
+  The grants are declared in `APP_ROLE_GRANTS` and reconciled on every migration run.
+- **An install still on one role is reported, never silently accepted.** `vibey doctor`
+  and `vibey doctor --cluster` fail `ledger-guard`, `vibey migrate` exits 1, and `vibey
+  worker` says so on stderr at every start. The upgrade path is in
+  [the configuration reference](docs/reference/configuration.md#database-roles).
+- **The split protects the ledger only once local authentication requires a password for
+  the owner and every superuser.** A server that trusts its socket (the common default for
+  a local PostgreSQL) lets any process running as the right OS user connect as a superuser
+  without a DSN or a password, and no grant stops that. `vibey doctor` checks it as
+  `local-auth`:
+  - It fails when a password-less connection as the owner or a superuser is let in, or
+    when `pg_hba.conf` has a `trust`, `peer` or `ident` rule that can match them.
+  - It reports `UNKNOWN`, never a pass, when it could neither get in nor read
+    `pg_hba_file_rules`.
+
+  vibey does not edit `pg_hba.conf`: the lines below are the operator's to set. Put them
+  above any broader rule and reload (`SELECT pg_reload_conf();`):
+
+  ```
+  # TYPE  DATABASE  USER        ADDRESS         METHOD
+  local   all       all                         scram-sha-256
+  host    all       all         127.0.0.1/32    scram-sha-256
+  host    all       all         ::1/128         scram-sha-256
+  ```
+
+  `local-auth` keeps failing while any `trust`, `peer` or `ident` rule can match the owner
+  or a superuser. If you keep one for administration, the failure stays until you remove
+  it, and you carry that risk knowingly.
+
 ---
 
 ## Reporting a Vulnerability

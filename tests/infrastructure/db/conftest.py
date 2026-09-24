@@ -9,6 +9,7 @@ import asyncpg
 import pytest
 import pytest_asyncio
 
+from tests.db_roles import TestDatabaseRoles
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "migrations"
@@ -60,11 +61,31 @@ async def pg_pool(database_url: str) -> AsyncIterator[asyncpg.Pool]:
 
 
 @pytest_asyncio.fixture
-async def migrated_pool(pg_pool: asyncpg.Pool) -> asyncpg.Pool:
+async def owner_pool(pg_pool: asyncpg.Pool) -> asyncpg.Pool:
+    """The migrated schema, as its owner: for setting up or inspecting state the
+    application itself never touches."""
     async with pg_pool.acquire() as conn:
         migrations = discover_migrations(MIGRATIONS_DIR)
         await apply_migrations(conn, migrations)
+        await TestDatabaseRoles.from_environ(os.environ).grant(conn)
     return pg_pool
+
+
+@pytest_asyncio.fixture
+async def migrated_pool(owner_pool: asyncpg.Pool, database_url: str) -> AsyncIterator[asyncpg.Pool]:
+    """The migrated schema, as the application role -- the grants production runs
+    under (ADR-0055) -- so a repository query that needs an undeclared privilege
+    fails here."""
+    roles = TestDatabaseRoles.from_environ(os.environ)
+    if not roles.split:
+        yield owner_pool
+        return
+    pool = await asyncpg.create_pool(roles.app_dsn(database_url), min_size=1, max_size=10)
+    assert pool is not None
+    try:
+        yield pool
+    finally:
+        await pool.close()
 
 
 @pytest_asyncio.fixture
