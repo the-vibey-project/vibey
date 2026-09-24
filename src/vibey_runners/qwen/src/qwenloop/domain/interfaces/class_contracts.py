@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from collections.abc import Mapping
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -65,6 +66,15 @@ class QwenConfigInterface(Protocol):
     def max_turns(self) -> int: ...
 
     @property
+    def max_empty_reply_retries(self) -> int: ...
+
+    @property
+    def max_recorded_argument_chars(self) -> int: ...
+
+    @property
+    def empty_reply_reasoning_excerpt_chars(self) -> int: ...
+
+    @property
     def base_url(self) -> str: ...
 
     @property
@@ -81,6 +91,32 @@ class QwenConfigInterface(Protocol):
 
     @property
     def endpoint_url(self) -> str: ...
+
+
+@runtime_checkable
+class ChatChunkInterface(Protocol):
+    """One piece of a model reply, as every inference adapter hands it to the runner."""
+
+    @property
+    def text(self) -> str: ...
+
+    @property
+    def tool_call(self) -> dict[str, Any] | None: ...
+
+    @property
+    def input_tokens(self) -> int: ...
+
+    @property
+    def output_tokens(self) -> int: ...
+
+    @property
+    def timings(self) -> Mapping[str, float] | None: ...
+
+    @property
+    def finish_reason(self) -> str | None: ...
+
+    @property
+    def reasoning(self) -> str | None: ...
 
 
 @runtime_checkable

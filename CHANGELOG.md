@@ -65,6 +65,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   indefinitely) instead of a hard-coded 300 s ([#345](https://github.com/the-vibey-project/vibey/issues/345))
 * **qwenloop:** an HTTP 500 "error parsing tool call" no longer ends a run: the turn is retried
   up to three times with a correction, each retry recorded as `turn.retried` ([#386](https://github.com/the-vibey-project/vibey/issues/386))
+* **qwenloop:** one empty model reply (no tool call, no text) no longer ends a run. It is
+  retried with a neutral nudge up to `max_empty_reply_retries` consecutive times (default 2,
+  `0` restores the old behaviour); each retry is a new model call that spends a turn of
+  `max_turns`. Every empty turn writes a `turn.empty` event with its `finish_reason`, token
+  counts, whether the reply carried a reasoning field, the reasoning's length, and an excerpt
+  of its start capped at `empty_reply_reasoning_excerpt_chars` (default 400, `0` records none),
+  marked when truncated and recorded as data only. Every tool call writes a `tool.call` event
+  with its name and arguments before the tool runs; each argument value is capped at
+  `max_recorded_argument_chars` (default 200), so file content is never recorded whole. The
+  `failed` event now names one reason — `empty_response`, `turn_limit` or
+  `invalid_completion_claims` — with the run's `turn` and `max_turns`, and `meta.json` records
+  `max_turns` and every recording cap. `ChatChunk` gains a `ChatChunkInterface` seam, which
+  the runner and the `InferenceServer` port now depend on (ADR-0016)
 
 ## [2.0.0] (2026-09-21)
 

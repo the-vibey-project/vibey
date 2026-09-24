@@ -14,10 +14,15 @@ from qwenloop.application.interfaces import (
     RunStore,
     ToolExecutor,
 )
+from qwenloop.domain.config import (
+    DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
+    DEFAULT_MAX_EMPTY_REPLY_RETRIES,
+    DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+)
+from qwenloop.domain.interfaces import ChatChunkInterface
 from qwenloop.domain.model import (
     CODING_TOOL_NAMES,
     DONE_MARKER,
-    ChatChunk,
     ChatMessage,
     ModelProfile,
     RunState,
@@ -38,6 +43,12 @@ _TOOL_NAMES = ", ".join(CODING_TOOL_NAMES)
 _TOOL_CALL_RETRY_PROMPT = (
     f"Your last reply was not a valid tool call. Call exactly one of the tools {_TOOL_NAMES}, "
     "with JSON arguments, and no other text."
+)
+#: What a retried empty turn is told: that it sent nothing, and the two ways forward. Neutral
+#: on purpose; it neither scolds nor steers the model towards one tool.
+_EMPTY_REPLY_PROMPT = (
+    "Your last reply was empty: it contained no tool call and no text. Either call one of "
+    "the tools read_file, write_file, edit_file or shell, or answer in plain text."
 )
 _CONTINUE_PROMPT = (
     "Continue the plan and call one of the available coding tools to make progress. "
@@ -156,7 +167,7 @@ class AutonomousRunner:
 
     async def _chat(
         self, run_id: str, turn: int, server_info: ServerInfo, state: RunState
-    ) -> AsyncIterator[ChatChunk]:
+    ) -> AsyncIterator[ChatChunkInterface]:
         """One model call for this turn, retried when the server cannot parse the model's
         tool call (#386). The server answers before it yields anything, so a retry never
         repeats a chunk or a tool call; each one is recorded as `turn.retried`."""
@@ -194,6 +205,30 @@ class AutonomousRunner:
         return moment.astimezone(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
     @staticmethod
+    def _capped(text: str, limit: int) -> str:
+        """`text` cut to `limit` characters, saying how much was cut when anything was."""
+        if len(text) <= limit:
+            return text
+        return f"{text[:limit]}...[truncated {len(text) - limit} characters]"
+
+    @classmethod
+    def _recorded_arguments(cls, arguments: dict[str, object], limit: int) -> dict[str, object]:
+        """A tool call's arguments as `events.jsonl` may keep them.
+
+        Every argument name is kept, so what the model tried to send is never a guess. A
+        value is cut to `limit`: a string directly, anything else on its JSON form, so a
+        write_file body or a long argv never lands in the run's evidence whole.
+        """
+        recorded: dict[str, object] = {}
+        for key, value in arguments.items():
+            if isinstance(value, str):
+                recorded[key] = cls._capped(value, limit)
+                continue
+            encoded = json.dumps(value, default=str)
+            recorded[key] = value if len(encoded) <= limit else cls._capped(encoded, limit)
+        return recorded
+
+    @staticmethod
     def _server_settings(info: ServerInfo) -> dict[str, object]:
         """What the model server was running with: the argv qwenloop started it with, or,
         for an endpoint somebody else runs, where it is."""
@@ -218,8 +253,16 @@ class AutonomousRunner:
         profile: ModelProfile,
         server_info: ServerInfo,
         max_turns: int,
+        max_empty_reply_retries: int = DEFAULT_MAX_EMPTY_REPLY_RETRIES,
+        max_recorded_argument_chars: int = DEFAULT_MAX_RECORDED_ARGUMENT_CHARS,
+        empty_reply_reasoning_excerpt_chars: int = DEFAULT_EMPTY_REPLY_REASONING_EXCERPT_CHARS,
     ) -> RunState:
         state = RunState(run_id=run_id, status=RunStatus.RUNNING)
+        # Consecutive turns with no tool call and no text. Each retry is its own model call
+        # inside the `max_turns` loop, so the turn cap bounds retries as well as this does.
+        empty_replies = 0
+        # Why the run failed, when something other than the turn cap ended it.
+        failure: dict[str, object] | None = None
         any_tool_called = False
         progress_tool_called = False
         saw_verdict = False
@@ -245,6 +288,11 @@ class AutonomousRunner:
                 "context_window": profile.context_window,
                 "cwd": str(cwd),
                 "server_settings": self._server_settings(server_info),
+                # The bounds this run was held to, so a failure can be attributed to them.
+                "max_turns": max_turns,
+                "max_empty_reply_retries": max_empty_reply_retries,
+                "max_recorded_argument_chars": max_recorded_argument_chars,
+                "empty_reply_reasoning_excerpt_chars": empty_reply_reasoning_excerpt_chars,
             },
         )
         await self._notify("Qwen run started", f"Run {run_id} started.")
@@ -268,11 +316,17 @@ class AutonomousRunner:
             # are tuned by different settings, so one duration would hide which one moved.
             answered: float | None = None
             server_timings: dict[str, float] | None = None
+            finish_reason: str | None = None
+            reasoning: str | None = None
             async for chunk in self._chat(run_id, turn, server_info, state):
                 if answered is None:
                     answered = self._clock.monotonic()
                 if chunk.timings is not None:
                     server_timings = dict(chunk.timings)
+                if chunk.finish_reason is not None:
+                    finish_reason = chunk.finish_reason
+                if chunk.reasoning is not None:
+                    reasoning = chunk.reasoning
                 state.input_tokens += chunk.input_tokens
                 state.output_tokens += chunk.output_tokens
                 if chunk.text:
@@ -310,6 +364,20 @@ class AutonomousRunner:
                             },
                         }
                     )
+                    # What the model asked for, before the tool runs: a tool that crashes or
+                    # hangs still leaves the call it was given in the run's evidence.
+                    self._store.append_event(
+                        run_id,
+                        {
+                            "type": "tool.call",
+                            "turn": turn,
+                            "id": call_id,
+                            "name": name,
+                            "arguments": self._recorded_arguments(
+                                arguments, max_recorded_argument_chars
+                            ),
+                        },
+                    )
                     result = await self._tools.execute(name, arguments)
                     self._store.append_event(
                         run_id, {"type": "tool_result", "name": name, "result": result}
@@ -344,6 +412,9 @@ class AutonomousRunner:
                 f"Run {run_id} completed model turn {turn}.",
             )
             answer = "".join(text_parts)
+            empty = not tool_called and not answer
+            if not empty:
+                empty_replies = 0
             current_verdict = f"```{_VERDICT_TOOL_NAME}" in answer
             saw_verdict = saw_verdict or current_verdict
             if tool_calls:
@@ -372,18 +443,65 @@ class AutonomousRunner:
                 invalid_completion_claims += 1
                 if invalid_completion_claims >= _MAX_INVALID_COMPLETION_CLAIMS:
                     state.status = RunStatus.FAILED
+                    failure = {"reason": "invalid_completion_claims"}
                     break
                 state.transcript.append(ChatMessage("user", _INVALID_COMPLETION_PROMPT))
                 continue
-            if not tool_called and not answer:
-                state.status = RunStatus.FAILED
-                break
+            if empty:
+                empty_replies += 1
+                retrying = empty_replies <= max_empty_reply_retries
+                # The start of the model's reasoning, as data: it is written to the event
+                # log for a person to read and is never interpreted or sent back to the model.
+                excerpt = (
+                    reasoning[:empty_reply_reasoning_excerpt_chars]
+                    if reasoning is not None and empty_reply_reasoning_excerpt_chars > 0
+                    else None
+                )
+                # What the empty turn actually was, so an empty reply is evidence rather
+                # than a mystery: how the model stopped, what it cost, whether it reasoned.
+                self._store.append_event(
+                    run_id,
+                    {
+                        "type": "turn.empty",
+                        "turn": turn,
+                        "finish_reason": finish_reason,
+                        "input_tokens": state.input_tokens - input_before,
+                        "output_tokens": state.output_tokens - output_before,
+                        "reasoning_present": reasoning is not None,
+                        "reasoning_chars": len(reasoning or ""),
+                        "reasoning_excerpt": excerpt,
+                        "reasoning_excerpt_truncated": excerpt is not None
+                        and len(excerpt) < len(reasoning or ""),
+                        "empty_replies": empty_replies,
+                        "max_empty_reply_retries": max_empty_reply_retries,
+                        "retrying": retrying,
+                    },
+                )
+                if not retrying:
+                    state.status = RunStatus.FAILED
+                    failure = {
+                        "reason": "empty_response",
+                        "empty_replies": empty_replies,
+                        "max_empty_reply_retries": max_empty_reply_retries,
+                    }
+                    break
+                state.transcript.append(ChatMessage("user", _EMPTY_REPLY_PROMPT))
+                continue
             if state.transcript[-1].role == "assistant":
                 state.transcript.append(ChatMessage("user", _CONTINUE_PROMPT))
         if state.status is RunStatus.RUNNING:
             state.status = RunStatus.FAILED
+        # The turn cap is the reason only when nothing else ended the run first.
+        failure = failure or {"reason": "turn_limit"}
         self._store.append_event(
-            run_id, {"type": "failed", "reason": "turn limit or empty response"}
+            run_id,
+            {
+                "type": "failed",
+                "reason": failure["reason"],
+                "turn": state.turns,
+                "max_turns": max_turns,
+                **{key: value for key, value in failure.items() if key != "reason"},
+            },
         )
         await self._notify("Qwen run failed", f"Run {run_id} failed after {state.turns} turns.")
         self._store.write_snapshot(run_id, _snapshot(state))

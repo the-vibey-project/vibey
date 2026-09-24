@@ -25,7 +25,13 @@ from qwenloop.infrastructure.inference import (
     _parse_text_tool_calls,
     _pid_alive,
 )
-from qwenloop.infrastructure.interfaces import AttachedServerInterface, ManagedServerInterface
+from qwenloop.infrastructure.interfaces import (
+    AttachedServerInterface,
+    ManagedServerInterface,
+    OpenAICompatServerInterface,
+    OpenAIServerInterface,
+    VllmServerInterface,
+)
 from qwenloop.infrastructure.profiles import NVIDIA_BF16, PORTABLE
 
 
@@ -838,3 +844,48 @@ def test_the_tool_schema_advertises_exactly_the_tools_the_dispatcher_runs() -> N
         read = functions[name]["parameters"]
         assert read["required"] == ["path"]
         assert set(read["properties"]) == {"path", "line_start", "line_end"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field", ["reasoning", "reasoning_content", "thinking"])
+async def test_chat_stream_reports_how_the_reply_ended_and_its_reasoning(
+    monkeypatch: pytest.MonkeyPatch, field: str
+) -> None:
+    # gpt-oss on Ollama answers with a separate reasoning field; an "empty" turn may have
+    # spent its tokens there. The runner decides how much of it a run records.
+    reply = {
+        "choices": [
+            {
+                "finish_reason": "stop",
+                "message": {"content": "", field: "I should read the file."},
+            }
+        ],
+        "usage": {"prompt_tokens": 20, "completion_tokens": 11},
+    }
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"completions": reply}))
+    info = ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:11434/v1", False, True)
+    chunks = [chunk async for chunk in ollama().chat_stream(info, [ChatMessage("user", "hi")])]
+    assert (chunks[-1].text, chunks[-1].finish_reason, chunks[-1].reasoning) == (
+        "",
+        "stop",
+        "I should read the file.",
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("message", [{"content": None}, {"content": "", "reasoning": None}])
+async def test_chat_stream_invents_no_finish_reason_or_reasoning(
+    monkeypatch: pytest.MonkeyPatch, message: dict[str, object]
+) -> None:
+    reply = {"choices": [{"message": message}], "usage": {}}
+    monkeypatch.setattr("urllib.request.urlopen", Recorder({"completions": reply}))
+    info = ServerInfo(Backend.OPENAI_COMPAT, "p", "http://127.0.0.1:11434/v1", False, True)
+    chunks = [chunk async for chunk in ollama().chat_stream(info, [ChatMessage("user", "hi")])]
+    assert (chunks[-1].finish_reason, chunks[-1].reasoning) == (None, None)
+
+
+def test_the_openai_adapters_conform_to_their_declared_contracts() -> None:
+    # ADR-0016: the adapters this change touched are checked against their seams
+    assert isinstance(LlamaCppServer(), OpenAIServerInterface)
+    assert isinstance(VllmServer(), VllmServerInterface)
+    assert isinstance(ollama(), OpenAICompatServerInterface)
