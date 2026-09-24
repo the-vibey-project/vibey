@@ -273,7 +273,7 @@ export class DegradedCatalogue {
   static readonly TURNS_FLAG = '--max-turns';
 
   static sovereign(model: string, notice: string): Catalogue {
-    const note = 'vibey loops is not available, so qwenloop decides its own turn limit';
+    const note = 'vibey loops is not available: the turn limit is the task\'s max_turns or vibey.maxTurns when set, else qwenloop\'s own';
     const qwenloop: CatalogueEngine = {
       engine_id: 'qwenloop',
       binary: 'qwenloop',

@@ -153,14 +153,21 @@ export class Presenter implements PresenterInterface {
     return codes[outcome];
   }
 
+  /**
+   * 0 only when every task this run started ended completed: a batch that ran to its end
+   * with a failed task, or a commit a hook refused, says so to a script as well as in words.
+   */
   batchExitCode(summary: BatchSummary): number {
-    if (summary.halted === undefined) {
-      return 0;
+    if (summary.halted !== undefined) {
+      if (summary.halted.startsWith('the run was stopped')) {
+        return 75;
+      }
+      return summary.halted.startsWith('a budget') ? 3 : 1;
     }
-    if (summary.halted.startsWith('the run was stopped')) {
-      return 75;
+    if ((summary.outcomes.failed ?? 0) > 0) {
+      return 1;
     }
-    return summary.halted.startsWith('a budget') ? 3 : 1;
+    return (summary.outcomes['completed-commit-refused'] ?? 0) > 0 ? 4 : 0;
   }
 
   /** The exit code for an error that ended the command before or outside a run. */

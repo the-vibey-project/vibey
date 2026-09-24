@@ -139,10 +139,14 @@ describe('Presenter', () => {
     expect(presenter.batch(summary())).toContain('(1 completed, 1 failed)');
     expect(presenter.batch(summary())).toContain('done.');
     expect(presenter.batch(summary({ outcomes: {}, halted: 'the run was stopped', remaining: 2 }))).toContain('halted: the run was stopped');
-    expect(presenter.batchExitCode(summary())).toBe(0);
+    expect(presenter.batchExitCode(summary())).toBe(1);
     expect(presenter.batchExitCode(summary({ halted: 'the run was stopped' }))).toBe(75);
     expect(presenter.batchExitCode(summary({ halted: 'a budget is used up: x' }))).toBe(3);
     expect(presenter.batchExitCode(summary({ halted: 'an infrastructure error' }))).toBe(1);
+    // A batch that ran to its end says whether every task it ran completed.
+    expect(presenter.batchExitCode(summary({ outcomes: { completed: 1, failed: 1, 'completed-commit-refused': 1 } }))).toBe(1);
+    expect(presenter.batchExitCode(summary({ outcomes: { completed: 1, 'completed-commit-refused': 1 } }))).toBe(4);
+    expect(presenter.batchExitCode(summary({ outcomes: { 'completed-no-change': 2 } }))).toBe(0);
   });
 
   it('maps every outcome to an exit code', () => {
