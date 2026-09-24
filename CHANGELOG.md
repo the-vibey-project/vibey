@@ -16,7 +16,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 * **db:** the ledger is append-only by the database, not by convention
   ([ADR-0055](docs/architecture/decisions/0055-the-ledger-is-append-only-by-the-database.md)).
-  - **Triggers.** Migration 0015 replaces the `DO INSTEAD NOTHING` rules with triggers that
+  - **Triggers.** Migration 0016 replaces the `DO INSTEAD NOTHING` rules with triggers that
     refuse every `UPDATE`, `DELETE` and `TRUNCATE` of `event` and of each of its partitions,
     for every role, the owner included, with `the ledger is append-only`. The rules did not
     fire for a partition or for `TRUNCATE`, and the owner could disable them. A rewrite is

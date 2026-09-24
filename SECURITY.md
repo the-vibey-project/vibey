@@ -90,7 +90,7 @@ Vibey is a queue-based conductor for autonomous software delivery. Because Vibey
   See the README's [Notifications](README.md#notifications) section.
 
 ### 7. The ledger is append-only by the database (ADR-0055) — implemented, tested, and active
-- **Triggers refuse every rewrite.** Migration 0015 puts a `BEFORE UPDATE OR DELETE` row
+- **Triggers refuse every rewrite.** Migration 0016 puts a `BEFORE UPDATE OR DELETE` row
   trigger and a `BEFORE TRUNCATE` trigger on `event`. They cover every partition: the row
   trigger is cloned onto each, and `ledger_guard_partitions()` attaches the `TRUNCATE`
   guard on every migration run. They refuse the owner too, with `the ledger is

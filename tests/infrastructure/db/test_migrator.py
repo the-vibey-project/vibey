@@ -113,7 +113,7 @@ async def test_event_partition_migration_preserves_append_only_live_schema(
         await pg_conn.fetchval("SELECT count(*) FROM event WHERE project_id = $1", project_id) == 2
     )
 
-    # Append-only survives the swap: since 0015 by triggers that refuse, loudly.
+    # Append-only survives the swap: since 0016 by triggers that refuse, loudly.
     with pytest.raises(asyncpg.InsufficientPrivilegeError, match="append-only"):
         await pg_conn.execute(
             "UPDATE event SET digest = 'changed' WHERE project_id = $1", project_id

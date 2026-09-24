@@ -9,7 +9,7 @@ Two roles, two DSNs:
   operator and KEDA scaler connects as. It holds exactly `APP_ROLE_GRANTS` -- the
   privileges the application's own queries need, and on the ledger only `SELECT` and
   `INSERT` -- and owns nothing, so it can neither rewrite the ledger nor disable the
-  triggers (migration 0015) that refuse a rewrite.
+  triggers (migration 0016) that refuse a rewrite.
 
 `DatabaseRoleReconciler` makes the application role's privileges exactly the declared
 ones, on every migration run. `LedgerGuardInspector` answers, from the application's own
@@ -206,7 +206,7 @@ class LedgerGuardInspector:
     Declared by `interfaces/ledger_guard_interface.py`. Reads catalogs only, so any role
     can run it. The guard is in force when the connecting role is not a superuser, does
     not own the ledger (directly or through membership), holds none of UPDATE, DELETE
-    or TRUNCATE on it or on any of its partitions, and the triggers of migration 0015
+    or TRUNCATE on it or on any of its partitions, and the triggers of migration 0016
     are present and enabled on every one of them.
     """
 

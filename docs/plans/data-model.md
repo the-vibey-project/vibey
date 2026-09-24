@@ -286,7 +286,7 @@ CREATE INDEX event_kind          ON event (project_id, kind, seq);
 CREATE INDEX event_correlation   ON event (correlation_id, seq);
 CREATE INDEX event_payload_gin   ON event USING gin (payload jsonb_path_ops);
 
--- Append-only: no UPDATE, no DELETE, no TRUNCATE -- by the database (0015, ADR-0055).
+-- Append-only: no UPDATE, no DELETE, no TRUNCATE -- by the database (0016, ADR-0055).
 CREATE TRIGGER event_append_only BEFORE UPDATE OR DELETE ON event
     FOR EACH ROW EXECUTE FUNCTION ledger_refuse_rewrite();
 CREATE TRIGGER event_no_truncate BEFORE TRUNCATE ON event
@@ -302,7 +302,7 @@ SQLSTATE `42501`, for every role, the owner included.
 - **The earlier rules.** Migrations 0002 and 0013 used `DO INSTEAD NOTHING` rules, which
   made a stray write a silent no-op. They did not fire for a statement addressed to a
   partition or for `TRUNCATE`, and the owner (whom the worker connected as) could disable
-  them. 0015 drops them.
+  them. 0016 drops them.
 - **The application role.** It holds `SELECT` and `INSERT` on `event` and nothing more
   (`APP_ROLE_GRANTS`), so it cannot disable a trigger either. See
   [the configuration reference](../reference/configuration.md#database-roles).

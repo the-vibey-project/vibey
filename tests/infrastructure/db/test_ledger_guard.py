@@ -498,7 +498,7 @@ def test_identifiers_are_quoted_and_an_unusable_one_is_refused() -> None:
 
 
 def test_the_errors_say_what_to_do() -> None:
-    assert "VIBEY_PG_MIGRATE_URL" in str(SchemaNotMigrated(("0015",)))
+    assert "VIBEY_PG_MIGRATE_URL" in str(SchemaNotMigrated(("0016",)))
     assert "CREATE ROLE app" in str(AppRoleMissing("app"))
     assert LedgerGuardStatus("r").in_force
 

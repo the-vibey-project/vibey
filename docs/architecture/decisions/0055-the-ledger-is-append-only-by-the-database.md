@@ -45,7 +45,7 @@ no grant can stop it.
 
 ## Decision
 
-1. **Triggers replace the rules** (migration 0015).
+1. **Triggers replace the rules** (migration 0016).
    - A `BEFORE UPDATE OR DELETE` row trigger and a `BEFORE TRUNCATE` statement trigger on
      `event` call `ledger_refuse_rewrite()`. It raises `the ledger is append-only: <op> on
      <table> is refused` (SQLSTATE `42501`), with a hint naming this record.
