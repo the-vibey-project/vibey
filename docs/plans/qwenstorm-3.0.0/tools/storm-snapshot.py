@@ -38,6 +38,7 @@ import argparse
 import os
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -336,7 +337,16 @@ def publish(text: str, commit: bool, push: bool) -> list[str]:
         notes.append("more than the snapshot is on this branch; running the full gate")
     # A refusal here is ordinary and is reported as itself rather than smoothed into success.
     # The commit is safe either way.
-    code, out = run(["git", "push"], PLANS, env=env)
+    # Through the push gate like every push here, even when the heavy hook is skipped: the
+    # gate serialises pre-push runs, and when more than the snapshot is on the branch this
+    # push runs the full one. `STORM / "tools"` is where push_gate.py resolves the storm's
+    # shared lock; the planning tree it resolves into would derive a private one.
+    code, out = run(
+        [sys.executable, str(STORM / "tools" / "push_gate.py"), "run", "--wait-timeout", "1800"]
+        + ["--", "git", "push"],
+        PLANS,
+        env=env,
+    )
     notes.append("pushed" if not code else f"PUSH REFUSED: {(out.splitlines() or ['?'])[-1][:80]}")
     return notes
 

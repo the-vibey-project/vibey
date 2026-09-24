@@ -1,0 +1,13 @@
+# Rendered by `push_gate.py install-schedule` (docs/plans/qwenstorm-3.0.0/tools).
+# One reaper pass; push-gate-reaper.timer starts it every $interval seconds.
+[Unit]
+Description=vibey push-gate reaper: one pass over the shared push lock
+
+[Service]
+Type=oneshot
+ExecStart="$python" "$tool" --root "$root" --lock "$lock" reap
+Environment="PATH=$path"
+StandardOutput=append:$log
+StandardError=append:$log
+# 1: it reaped; 2: a person should look. Neither is a failure of the unit.
+SuccessExitStatus=1 2

@@ -122,6 +122,14 @@ The seven gates are split across git hook stages so commits stay fast
 
 **Commit-msg stage**: Conventional Commits enforcement.
 
+**Pushing**: push through the push gate, never with a bare `git push`. Run
+`python3 <storm>/tools/push_gate.py run -- git push origin HEAD:<branch>`, or from a
+checkout with no storm, set `VIBEY_PUSH_LOCK=<dir>` and run the tracked
+`docs/plans/qwenstorm-3.0.0/tools/push_gate.py`. It lets one pre-push run happen at a time
+across every lane on the machine. Exit 124 (`reaped: hang`) means the reaper stopped a hung
+gate run; it is not a test failure. CONTRIBUTING.md, "Pushing in this repository", has the
+rest.
+
 Install all three hook types once, then the provenance hooks. The order matters,
 because `pre-commit install` refuses to run while `core.hooksPath` is set:
 

@@ -12,16 +12,17 @@ issue or a PR fixing it.
 3. [Conventional Commits](#conventional-commits)
 4. [Provenance](#provenance)
 5. [Quality gates](#quality-gates)
-6. [The workspace tenants](#the-workspace-tenants)
-7. [The onion architecture import rule](#the-onion-architecture-import-rule)
-8. [Protected tests](#protected-tests)
-9. [Agent surfaces](#agent-surfaces)
-10. [Decisions and governing rules](#decisions-and-governing-rules)
-11. [The paper and the book](#the-paper-and-the-book)
-12. [PR checklist](#pr-checklist)
-13. [Getting help](#getting-help)
-14. [Code of Conduct](#code-of-conduct)
-15. [License of contributions](#license-of-contributions)
+6. [Pushing in this repository](#pushing-in-this-repository)
+7. [The workspace tenants](#the-workspace-tenants)
+8. [The onion architecture import rule](#the-onion-architecture-import-rule)
+9. [Protected tests](#protected-tests)
+10. [Agent surfaces](#agent-surfaces)
+11. [Decisions and governing rules](#decisions-and-governing-rules)
+12. [The paper and the book](#the-paper-and-the-book)
+13. [PR checklist](#pr-checklist)
+14. [Getting help](#getting-help)
+15. [Code of Conduct](#code-of-conduct)
+16. [License of contributions](#license-of-contributions)
 
 ## Environment setup
 
@@ -149,6 +150,43 @@ CI also runs a multi-arch container build, with one `Image contract - …` step
 for each claim the Dockerfile makes, and a Helm install on minikube with four
 cluster contracts
 ([Kubernetes guide](docs/guides/kubernetes.md), ADR-0025).
+
+## Pushing in this repository
+
+Every push goes through the push gate. Parallel lanes, agents and people share one
+machine-wide push lock, so only one pre-push gate run (the whole suite, the coverage floors,
+bandit, pip-audit) happens at a time, and a hung gate run is reaped by rule rather than
+waited on. There is one recipe:
+
+```bash
+python3 <storm>/tools/push_gate.py run -- git push origin HEAD:<branch>
+```
+
+`<storm>` is the storm root, the directory that holds `storm.toml` (on the operator's machine,
+`/private/tmp/claude-501/storm/qwenstorm-3.0.0`). From a checkout with no storm, use the
+tracked copy and name the machine's shared lock:
+`VIBEY_PUSH_LOCK=<dir> python3 docs/plans/qwenstorm-3.0.0/tools/push_gate.py run -- git push …`.
+Run from a checkout without a named lock, the tool refuses. A lock derived there would be
+private to that checkout and would exclude nobody.
+
+`run` waits for the lock and runs the push in a process group of its own. It keeps a log and
+releases the lock however the push ends. Its exit code is the push's own, except for these:
+
+| Exit code | Meaning |
+|---|---|
+| 124 | `reaped: hang`. The reaper judged the gate run hung and stopped it. This is not a test failure. |
+| 125 | The push ran past `--push-timeout`. |
+| 3 | The lock stayed busy past `--wait-timeout`. |
+
+`push_gate.py status` says who holds the lock and what that push is doing.
+
+The reaper also runs on a schedule of its own: a launchd agent on macOS, or a systemd user
+timer on Linux, running `reap` every `[push_gate] schedule_seconds` (default 90). The
+operator installs it once with `python3 <storm>/tools/push_gate.py install-schedule` and can
+check it with `schedule-status`. Where neither launchd nor systemd exists,
+`install-schedule --target cron` prints a cron line instead. There is no Kubernetes CronJob:
+nothing pushes from inside the cluster, and a reaper can only see the processes on its own
+machine. The rules the reaper acts on are in `docs/plans/qwenstorm-3.0.0/README.md`.
 
 ## The workspace tenants
 

@@ -142,6 +142,36 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
      failure. An unreadable process table (the sandbox refuses `ps`) is reported as unknown
      and is never taken for idle. The classes are declared in
      `interfaces/push_gate_interface.py`.
+
+     A lock taken the old way, with a bare `mkdir` and no owner record, is traced to its
+     push by process. The push must meet all of these conditions:
+     - it is the only `git push` that started within `ownerless_match_seconds` (5) of the
+       lock's mtime;
+     - it stands in one of `worktree_roots`, or `git -C` points it there (the default root is
+       the lock's own directory);
+     - its process group holds nothing but that push, its descendants, and the shells above
+       it.
+
+     A push that meets them is judged by the same idle and ceiling rules. It is killed with
+     evidence first, and the reaper removes the lock that the dead shell's `rmdir` never
+     reached. A push that does not meet them is reported as unknown and never killed.
+
+     The reaper also runs on a schedule of its own, whether or not a storm is running. The
+     unit files are the tracked templates in `templates/`:
+     - `push_gate.py install-schedule` installs a launchd agent on macOS, or a systemd user
+       timer on Linux, and runs `reap` every `schedule_seconds` (90);
+     - `uninstall-schedule` removes it, and `schedule-status` reports its state;
+     - `--target cron` only prints a cron line.
+
+     The storm cycle's own step stays in place. A non-blocking reap lock makes two
+     overlapping passes safe: the second one stands aside.
+   - **Pushing in this repository.** Every push, by a lane, a tool or a person, uses one
+     recipe:
+     `python3 <storm>/tools/push_gate.py run -- git push origin HEAD:<branch>`.
+     `lane-publish.py` and `storm-snapshot.py` push this way too, and a meta test fails any
+     storm tool that builds a bare `["git", "push", ...]`. From a checkout with no storm, set
+     `VIBEY_PUSH_LOCK` to the machine's shared lock. Without it the tool refuses rather than
+     derive a private lock. See CONTRIBUTING.md.
    - `storm_trust.py` contains forge text where it enters (sub-doctrine 12.j, ADR-0053).
      A lane starts only when every account that opened, edited or renamed its issue is in
      `[unattended_approval] authors`. That list is read from the integration branch's

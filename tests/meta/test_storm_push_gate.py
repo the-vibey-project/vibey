@@ -22,9 +22,12 @@ scripts, not a package. Delete this in the same commit that deletes them.
 
 from __future__ import annotations
 
+import contextlib
+import dataclasses
 import importlib.util
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -82,6 +85,7 @@ class FakeTable:
     groups: dict[int, list] = field(default_factory=dict)
     leaders: set[int] = field(default_factory=lambda: {GROUP})
     readable: bool = True
+    cwds: dict[int, str] = field(default_factory=dict)
 
     def alive(self, pid: int) -> bool:
         return pid in self.alive_pids
@@ -106,12 +110,19 @@ class FakeTable:
     def session_leader(self, pgid: int) -> bool:
         return pgid in self.leaders
 
+    def processes(self) -> list | None:
+        if not self.readable:
+            return None
+        return [p for group in self.groups.values() for p in group]
+
+    def cwd(self, pid: int) -> str | None:
+        return self.cwds.get(pid)
+
     def burn(self, pgid: int, seconds: float) -> None:
         """Every member of `pgid` spends `seconds` of CPU, shared out evenly."""
         group = self.groups[pgid]
         self.groups[pgid] = [
-            Proc(p.pid, p.ppid, p.pgid, p.cpu_seconds + seconds / len(group), p.command)
-            for p in group
+            dataclasses.replace(p, cpu_seconds=p.cpu_seconds + seconds / len(group)) for p in group
         ]
 
 
@@ -149,6 +160,8 @@ def config(tmp_path: Path, **overrides: object) -> PushGateConfig:
         "log_tail_lines": 50,
         "stack_wait_seconds": 0.0,
         "protected": ("ollama", "vibey-runner"),
+        "ownerless_match_seconds": 5.0,
+        "worktree_roots": (tmp_path,),
     }
     values.update(overrides)
     return PushGateConfig(**values)  # type: ignore[arg-type]
@@ -668,6 +681,11 @@ def test_every_class_honours_the_interface_declared_beside_it(tmp_path: Path) ->
         (push_gate.Verdicts(r.cfg), declared.VerdictsInterface),
         (push_gate.Status(r.cfg, r.lock, table, clock), declared.StatusInterface),
         (push_gate.PushRunner(r.cfg, r.lock, clock), declared.PushRunnerInterface),
+        (push_gate.OwnerlessHolder(r.cfg, table), declared.OwnerlessHolderInterface),
+        (
+            push_gate.Schedule(r.cfg, tmp_path, TOOLS / "push_gate.py", "python3"),
+            declared.ScheduleInterface,
+        ),
         # And the fakes above stand in for exactly those seams.
         (r.clock, declared.ClockInterface),
         (r.table, declared.ProcessTableInterface),
@@ -860,3 +878,385 @@ def test_the_shell_recipe_acquires_and_releases_by_token(tmp_path: Path) -> None
     done = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=60)
     assert done.returncode == 0, done.stdout + done.stderr
     assert not cfg.lock.exists()
+
+
+# --- a bare `mkdir` lock: find the push that holds it, by process ---------------------------
+
+SHELL = 900  # the legacy recipe's shell: `until mkdir ...; do sleep 20; done; git push ...`
+PUSH = 901  # the `git push` it started a second after it took the lock
+
+
+def bare_lock(r: Rig) -> float:
+    """Take the lock the old way, dated on the fake clock so the ceiling is measurable."""
+    r.cfg.lock.mkdir()
+    made = r.clock.now()
+    os.utime(r.cfg.lock, (made, made))
+    return made
+
+
+def legacy_push(r: Rig, tmp_path: Path, made: float, **push: object) -> None:
+    """The legacy recipe's process group: its shell, git push, the hook, pytest, workers."""
+    lane = str(tmp_path / "lane")
+    git = Proc(PUSH, SHELL, SHELL, 0.1, "git push origin HEAD:feat/old-recipe", started_at=made + 1)
+    git = dataclasses.replace(git, **push)
+    r.table.groups[SHELL] = [
+        Proc(SHELL, 800, SHELL, 0.0, "/bin/bash -c until mkdir x; do sleep 20; done", made - 40),
+        git,
+        Proc(PUSH + 1, PUSH, SHELL, 0.2, "/bin/sh .git/hooks/pre-push origin", made + 2),
+        Proc(
+            PUSH + 2, PUSH + 1, SHELL, 50.0, "/x/.venv/bin/python3 /x/.venv/bin/pytest -q", made + 3
+        ),
+        Proc(
+            PUSH + 3,
+            PUSH + 2,
+            SHELL,
+            50.0,
+            "/x/.venv/bin/python3 -u -c import sys;exec(eval(sys.stdin.readline()))",
+            made + 4,
+        ),
+    ]
+    # The agent that started the shell: another group, never a candidate, never touched.
+    r.table.groups[800] = [Proc(800, 1, 800, 900.0, "node claude", made - 3600)]
+    r.table.cwds[PUSH] = lane
+
+
+def test_a_bare_mkdir_lock_is_traced_to_its_push_and_reaped_when_idle(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made)
+    assert r.reaper.tick().action == "none"
+    r.clock.sleep(600)
+    decision = r.reaper.tick()
+    assert (decision.action, decision.condition) == ("killed", "idle"), decision
+    assert {pgid for kind, pgid, _ in r.signaller.sent if kind == "group"} == {SHELL}
+    assert 800 in r.table.groups  # the agent's own group is untouched
+    assert not r.cfg.lock.exists()  # the shell that would have removed it is gone
+    [record] = reap_log(r)
+    assert record["ownerless"] is True
+    assert record["owner"]["pid"] == PUSH and record["owner"]["pgid"] == SHELL
+    assert "git push" in (Path(record["evidence"]) / "process-tree.txt").read_text()
+
+
+def test_a_bare_mkdir_lock_past_the_ceiling_is_reaped(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made)
+    r.clock.sleep(3601)
+    decision = r.reaper.tick()
+    assert (decision.action, decision.condition) == ("killed", "ceiling"), decision
+
+
+def test_a_busy_bare_mkdir_push_is_left_alone(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made)
+    for _ in range(5):
+        assert r.reaper.tick().action == "none"
+        r.clock.sleep(600)
+        r.table.burn(SHELL, 40.0)
+    assert r.signaller.sent == [] and r.cfg.lock.is_dir()
+
+
+def _never_killed(r: Rig, reason: str) -> None:
+    r.reaper.tick()
+    r.clock.sleep(3601)
+    decision = r.reaper.tick()
+    assert decision.action == "unknown", decision
+    assert reason in decision.detail, decision.detail
+    assert r.signaller.sent == [] and r.cfg.lock.is_dir()
+    assert reap_log(r) == []
+
+
+def test_two_candidate_pushes_are_unknown_and_never_killed(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made)
+    r.table.groups[1200] = [Proc(1200, 1, 1200, 0.0, "git push origin HEAD:other", made + 2)]
+    r.table.cwds[1200] = str(tmp_path / "other-lane")
+    _never_killed(r, "2 pushes")
+
+
+def test_a_push_that_started_well_after_the_lock_is_not_its_holder(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made, started_at=made + 30)
+    _never_killed(r, "no push")
+
+
+def test_a_push_outside_the_declared_worktrees_is_not_its_holder(tmp_path: Path) -> None:
+    r = rig(tmp_path, worktree_roots=(tmp_path / "somewhere-else",))
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made)
+    _never_killed(r, "no push")
+
+
+def test_a_push_whose_cwd_is_unreadable_is_not_its_holder(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made)
+    r.table.cwds.clear()
+    _never_killed(r, "no push")
+
+
+def test_git_dash_c_names_the_worktree_when_the_cwd_cannot_be_read(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made, command=f"git -C {tmp_path / 'lane'} push origin HEAD:x")
+    r.table.cwds.clear()
+    r.reaper.tick()
+    r.clock.sleep(600)
+    assert r.reaper.tick().action == "killed"
+
+
+def test_a_group_holding_anything_but_the_push_recipe_is_never_killed(tmp_path: Path) -> None:
+    """A shell's group can hold whatever that shell started; only the recipe is ours."""
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made)
+    r.table.groups[SHELL].append(Proc(990, SHELL, SHELL, 0.0, "node some-editor-server", made))
+    _never_killed(r, "outside the push")
+
+
+def test_a_bare_mkdir_lock_with_an_unreadable_table_is_unknown(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made)
+    r.table.readable = False
+    _never_killed(r, "cannot be read")
+
+
+def test_a_bare_mkdir_lock_under_dry_run_changes_nothing(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made)
+    r.reaper.tick(dry_run=True)
+    r.clock.sleep(600)
+    assert r.reaper.tick(dry_run=True).action == "would-kill"
+    assert r.signaller.sent == [] and r.cfg.lock.is_dir() and reap_log(r) == []
+
+
+def test_status_names_the_push_behind_a_bare_mkdir_lock(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    made = bare_lock(r)
+    legacy_push(r, tmp_path, made)
+    text = push_gate.Status(r.cfg, r.lock, r.table, r.clock).render()
+    assert "no owner record" in text
+    assert f"pid {PUSH}" in text and "git push origin HEAD:feat/old-recipe" in text
+
+
+@pytest.mark.parametrize(
+    ("command", "is_push"),
+    [
+        ("git push origin HEAD:x", True),
+        ("/usr/bin/git push -u origin b", True),
+        ("git -C /a/b push", True),
+        ("git -c core.x=1 push", True),
+        ("git pack-objects --stdout", False),
+        ("/bin/sh .git/hooks/pre-push origin", False),
+        ("git status push", False),
+        ("python3 push.py", False),
+    ],
+)
+def test_only_a_git_push_is_ever_a_candidate(command: str, is_push: bool) -> None:
+    assert push_gate.OwnerlessHolder.is_git_push(command) is is_push
+
+
+# --- overlapping passes -----------------------------------------------------------------------
+
+
+def test_two_overlapping_reap_passes_never_act_twice(tmp_path: Path) -> None:
+    r = rig(tmp_path)
+    held(r, tmp_path)
+    r.table.groups[GROUP] = pytest_tree()
+    r.reaper.tick()
+    r.clock.sleep(600)
+    import fcntl
+
+    r.cfg.state_dir.mkdir(parents=True, exist_ok=True)
+    with (r.cfg.state_dir / push_gate.REAP_LOCK).open("a") as other:
+        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)  # a second pass, mid-flight
+        decision = r.reaper.tick()
+        assert decision.action == "none" and "another reap pass" in decision.detail
+        assert r.signaller.sent == []
+    assert r.reaper.tick().action == "killed"
+    assert r.reaper.tick().action == "none"  # and again: nothing left to do
+    assert len(reap_log(r)) == 1
+
+
+# --- the schedule, declared as code ------------------------------------------------------------
+
+
+@dataclass
+class Commands:
+    ran: list[list[str]] = field(default_factory=list)
+    answers: dict[str, int] = field(default_factory=dict)
+
+    def __call__(self, argv: list[str]) -> tuple[int, str]:
+        self.ran.append(argv)
+        return self.answers.get(argv[0], 0), ""
+
+
+def schedule(tmp_path: Path, target: str, **overrides: object):  # noqa: ANN201 - a Schedule
+    cfg = config(tmp_path, **overrides)
+    commands = Commands()
+    made = push_gate.Schedule(
+        cfg,
+        root=tmp_path / "storm",
+        tool=TOOLS / "push_gate.py",
+        python="/usr/bin/python3",
+        target=target,
+        home=tmp_path / "home",
+        run=commands,
+    )
+    return made, commands, cfg
+
+
+def test_the_default_schedule_runs_the_reaper_every_minute_or_two(tmp_path: Path) -> None:
+    root = tmp_path / "storm"
+    root.mkdir()
+    assert 60 <= PushGateConfig.declared(root).schedule_seconds <= 120
+    (root / "storm.toml").write_text("[push_gate]\nschedule_seconds = 75\n")
+    assert PushGateConfig.declared(root).schedule_seconds == 75
+
+
+def test_install_schedule_on_macos_writes_a_launch_agent_and_bootstraps_it(tmp_path: Path) -> None:
+    import plistlib
+
+    made, commands, cfg = schedule(tmp_path, "launchd")
+    made.install()
+    [plist] = (tmp_path / "home/Library/LaunchAgents").glob("*.plist")
+    agent = plistlib.loads(plist.read_bytes())
+    assert agent["Label"] == cfg.schedule_label
+    assert agent["StartInterval"] == int(cfg.schedule_seconds)
+    assert agent["ProgramArguments"][-1] == "reap"
+    assert str(cfg.lock) in agent["ProgramArguments"]  # the lock the installer resolved
+    assert agent["ProgramArguments"][:2] == ["/usr/bin/python3", str(TOOLS / "push_gate.py")]
+    assert ["launchctl", "bootstrap", f"gui/{UID}", str(plist)] in commands.ran
+
+
+def test_install_schedule_on_linux_writes_a_systemd_user_timer(tmp_path: Path) -> None:
+    made, commands, cfg = schedule(tmp_path, "systemd")
+    made.install()
+    units = tmp_path / "home/.config/systemd/user"
+    service = (units / f"{cfg.schedule_label}.service").read_text()
+    timer = (units / f"{cfg.schedule_label}.timer").read_text()
+    assert "reap" in service and "Type=oneshot" in service
+    assert f"OnUnitActiveSec={int(cfg.schedule_seconds)}" in timer
+    assert ["systemctl", "--user", "enable", "--now", f"{cfg.schedule_label}.timer"] in commands.ran
+
+
+def test_install_schedule_dry_run_writes_and_runs_nothing(tmp_path: Path) -> None:
+    made, commands, _ = schedule(tmp_path, "launchd")
+    lines = made.install(dry_run=True)
+    assert not (tmp_path / "home").exists() and commands.ran == []
+    assert any("launchctl bootstrap" in line for line in lines)
+
+
+def test_uninstall_schedule_removes_what_install_wrote(tmp_path: Path) -> None:
+    for target in ("launchd", "systemd"):
+        made, commands, _ = schedule(tmp_path / target, target)
+        made.install()
+        made.uninstall()
+        assert not [p for p in (tmp_path / target / "home").rglob("*") if p.is_file()]
+
+
+def test_schedule_status_says_installed_or_not(tmp_path: Path) -> None:
+    made, commands, _ = schedule(tmp_path, "launchd")
+    assert "not installed" in made.status()
+    made.install()
+    assert "installed" in made.status() and "not installed" not in made.status()
+    commands.answers["launchctl"] = 113
+    assert "not loaded" in made.status()
+
+
+def test_the_cron_target_prints_a_line_and_touches_no_crontab(tmp_path: Path) -> None:
+    made, commands, cfg = schedule(tmp_path, "cron")
+    lines = made.install()
+    assert commands.ran == []
+    [line] = [line for line in lines if line.startswith("* * * * *")]
+    assert "reap" in line and str(cfg.lock) in line
+
+
+def test_the_schedule_templates_are_files_in_the_repository() -> None:
+    """Everything-as-code (12.c): the units are tracked templates, not strings in a program."""
+    templates = TOOLS / "templates"
+    for name in ("push-gate-reaper.plist", "push-gate-reaper.service", "push-gate-reaper.timer"):
+        assert (templates / name).is_file(), name
+
+
+# --- every storm tool that pushes, pushes through the gate -------------------------------------
+
+
+def test_no_storm_tool_pushes_around_the_gate() -> None:
+    """A raw `git push` in a storm tool is a gate run the push lock never sees."""
+    offenders = []
+    for tool in sorted(TOOLS.glob("*.py")):
+        if tool.name == "push_gate.py":
+            continue
+        text = tool.read_text(encoding="utf-8")
+        if re.search(r"""\[\s*["']git["']\s*,\s*["']push["']""", text):
+            offenders.append(tool.name)
+    assert offenders == []
+    for tool in ("lane-publish.py", "storm-snapshot.py"):
+        text = (TOOLS / tool).read_text(encoding="utf-8")
+        assert '"push_gate.py"' in text and '"run"' in text, tool
+
+
+# --- which lock: declared, never guessed ---------------------------------------------------
+
+
+def test_a_checkout_copy_with_no_declared_lock_refuses_rather_than_lock_alone(
+    tmp_path: Path,
+) -> None:
+    """Run from a repository checkout, the derived lock would be private to that checkout."""
+    checkout = tmp_path / "checkout"
+    (checkout / "plans").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(checkout)], check=True)
+    tool = [sys.executable, str(TOOLS / "push_gate.py"), "--root", str(checkout / "plans")]
+    env = {k: v for k, v in os.environ.items() if k != "VIBEY_PUSH_LOCK"}
+    done = subprocess.run([*tool, "status"], capture_output=True, text=True, env=env, timeout=60)
+    assert done.returncode == 2 and "VIBEY_PUSH_LOCK" in done.stderr
+    env["VIBEY_PUSH_LOCK"] = str(tmp_path / "shared-lock")
+    done = subprocess.run([*tool, "status"], capture_output=True, text=True, env=env, timeout=60)
+    assert done.returncode == 0 and str(tmp_path / "shared-lock") in done.stdout
+
+
+# --- a real legacy push, traced by process ---------------------------------------------------
+
+
+@pytest.mark.skipif(
+    push_gate.ProcessTable().processes() is None
+    or push_gate.ProcessTable().cwd(os.getpid()) is None,
+    reason="`ps` or the cwd probe cannot be run here (the sandbox refuses them)",
+)
+def test_a_real_bare_mkdir_push_is_traced_and_reaped(tmp_path: Path) -> None:
+    lane = tmp_path / "lane"
+    remote = tmp_path / "remote.git"
+    git = ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"]
+    subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-q", str(lane)], check=True)
+    subprocess.run([*git, "-C", str(lane), "commit", "-q", "--allow-empty", "-m", "x"], check=True)
+    subprocess.run(["git", "-C", str(lane), "remote", "add", "origin", str(remote)], check=True)
+    hook = lane / ".git/hooks/pre-push"
+    hook.write_text("#!/bin/sh\nsleep 120\n")
+    hook.chmod(0o755)
+    root = _storm(
+        tmp_path,
+        idle_cpu_seconds=0.5,
+        idle_window_seconds=1.5,
+        kill_grace_seconds=2,
+        worktree_roots=f'["{tmp_path}"]',
+    )
+    cfg = PushGateConfig.declared(root)
+    recipe = f"mkdir {cfg.lock} && git push origin HEAD:main; rmdir {cfg.lock}"
+    shell = subprocess.Popen(["bash", "-c", recipe], cwd=lane, start_new_session=True)
+    try:
+        decision = _reap_until_acted(cfg)
+        assert (decision.action, decision.condition) == ("killed", "idle"), decision
+        shell.wait(timeout=30)
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(shell.pid, signal.SIGKILL)
+    assert not cfg.lock.exists()
+    [record] = [json.loads(line) for line in cfg.reap_log.read_text().splitlines()]
+    assert record["ownerless"] is True

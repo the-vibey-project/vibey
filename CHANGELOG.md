@@ -97,6 +97,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **storm:** the push-gate reaper no longer depends on the storm, or on everyone having
+  moved off the old push recipe. `push_gate.py install-schedule` installs one reaper pass
+  every `[push_gate] schedule_seconds` (90) as a launchd agent on macOS or a systemd user
+  timer on Linux, rendered from tracked templates. `schedule-status` and
+  `uninstall-schedule` go with it, and `--target cron` prints a cron line instead. A
+  non-blocking reap lock makes overlapping passes safe. A bare-`mkdir` lock with no owner
+  record is traced to its `git push` by process (the only push started within 5 s of the
+  lock's mtime, in a declared worktree root, whose group holds only the push recipe) and
+  judged by the same idle and ceiling rules, evidence first. Anything less certain is
+  `unknown` and is never killed. `lane-publish.py` and `storm-snapshot.py` now push through
+  `push_gate.py run` (new `--wait-timeout` and `--push-timeout`), a meta test fails any storm
+  tool that pushes around the gate, and CONTRIBUTING.md gains "Pushing in this repository":
+  the one recipe, `push_gate.py run -- git push …`
+
 * **storm:** a hung push gate can no longer hold every other push hostage. After one push's
   pytest sat at 0% CPU for 39 minutes holding the storm's shared push lock, three layers stand
   in the way. No single test can hang either suite: `timeout = 300` (pytest-timeout, now in

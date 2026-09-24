@@ -1,0 +1,12 @@
+# Rendered by `push_gate.py install-schedule` (docs/plans/qwenstorm-3.0.0/tools).
+[Unit]
+Description=Run the vibey push-gate reaper every $interval seconds
+
+[Timer]
+OnBootSec=$interval
+OnUnitActiveSec=$interval
+AccuracySec=5s
+Unit=$label.service
+
+[Install]
+WantedBy=timers.target
