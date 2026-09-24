@@ -348,6 +348,9 @@ class Owner:
     command: list[str] = field(default_factory=list)
     log: str | None = None
     stacks: str | None = None
+    #: When the holder process started, so a reused pid is told from the holder (and, for a
+    #: push traced behind a bare-mkdir lock, the push itself is told from a successor).
+    holder_started: float | None = None
 
     def to_json(self) -> dict[str, Any]:
         return {**dataclasses.asdict(self), "started": _iso(self.started_at)}
@@ -379,6 +382,7 @@ class Proc:
     cpu_seconds: float
     command: str
     started_at: float | None = None
+    uid: int | None = None
 
 
 @dataclass(frozen=True)
@@ -610,6 +614,16 @@ class PushLock:
             self._remove()
             return True
 
+    @contextlib.contextmanager
+    def guard(self) -> Iterator[Guarded]:
+        """The lock as it is now, held still: nothing takes, releases or evicts it meanwhile.
+
+        The reaper re-checks what it judged under this, and signals under it, so the lock
+        and the push it named cannot change between the last look and the kill (#1107-1).
+        """
+        with self._mutex():
+            yield Guarded(self._read(), self._remove)
+
     def evict_ownerless(self, made_at: float) -> bool:
         """Remove a bare-mkdir lock, only if it is still the one judged: no record, same mtime."""
         with self._mutex():
@@ -659,6 +673,14 @@ class PushLock:
         self.path.rmdir()
 
 
+@dataclass(frozen=True)
+class Guarded:
+    """The lock's state read under its mutex, and the way to remove it while still held."""
+
+    state: LockState
+    remove: Callable[[], None]
+
+
 class Verdicts:
     """What the reaper tells the pushing lane: one small file per reaped token."""
 
@@ -670,6 +692,11 @@ class Verdicts:
         temporary = self._dir / f".{token}.tmp"
         temporary.write_text(json.dumps(verdict, indent=2) + "\n", encoding="utf-8")
         os.replace(temporary, self._dir / f"{token}.json")
+
+    def discard(self, token: str) -> None:
+        """Withdraw a verdict whose kill did not happen."""
+        if TOKEN.match(token):
+            (self._dir / f"{token}.json").unlink(missing_ok=True)
 
     def read(self, token: str) -> dict[str, Any] | None:
         if not TOKEN.match(token):
@@ -952,6 +979,7 @@ class OwnerlessHolder:
             worktree=self._table.cwd(push.pid) or "",
             started_at=made_at,
             command=push.command.split(),
+            holder_started=push.started_at,
         )
         return Traced(owner, members, f"pid {push.pid} ({push.command[:80]})")
 
@@ -1239,13 +1267,28 @@ class Reaper:
                 "time": _iso(self._clock.now()),
             },
         )
-        stopped = self._killer.stop(owner.pgid, require_session=not ownerless)
-        if ownerless_made_at is not None:
-            # The recipe's own `rmdir` died with its shell; the lock is removed here, and
-            # only if it is still the bare lock that was judged.
-            released = self._lock.evict_ownerless(ownerless_made_at)
-        else:
-            released = self._lock.evict(owner.token)
+        # Evidence takes seconds (py-spy, the SIGUSR1 wait), and the push may finish in them:
+        # the lock released, even re-taken, and a bare-mkdir recipe's shell moved on to its
+        # next command. So the judgement is re-checked under the lock's mutex, and the signal
+        # is sent under it, or nothing is signalled at all (#1107-1).
+        with self._lock.guard() as held:
+            changed = self._changed(held.state, owner, ownerless_made_at)
+            if changed:
+                self._verdicts.discard(owner.token)
+                return Decision(
+                    "none",
+                    condition,
+                    f"{detail}; but {changed} while the evidence was written, so nothing "
+                    "was signalled",
+                    measured,
+                    owner,
+                    folder,
+                )
+            stopped = self._killer.stop(owner.pgid, require_session=not ownerless)
+            # Removed while still held: the recipe's own `rmdir` died with its shell, and a
+            # dedicated owner's wrapper finds its lock gone and its verdict waiting.
+            held.remove()
+            released = True
         decision = dataclasses.replace(decision, evidence=folder)
         self._record(
             decision,
@@ -1253,6 +1296,24 @@ class Reaper:
             ownerless=ownerless,
         )
         return decision
+
+    def _changed(self, state: LockState, owner: Owner, made_at: float | None) -> str | None:
+        """What changed since the judgement, if anything, read under the lock's mutex."""
+        if made_at is None:
+            if state.owner is None or state.owner.token != owner.token:
+                return "the lock changed hands"
+            return None
+        if state.kind != "ownerless" or state.made_at != made_at:
+            return "the bare-mkdir lock was released or re-taken"
+        again = self._holder.identify(made_at)
+        if (
+            again.owner is None
+            or again.owner.pid != owner.pid
+            or again.owner.pgid != owner.pgid
+            or again.owner.holder_started != owner.holder_started
+        ):
+            return "the traced push is no longer the one judged"
+        return None
 
     def _record(self, decision: Decision, outcome: dict[str, Any], ownerless: bool = False) -> None:
         """One JSON line, appended and flushed: the reap log is never rewritten."""
