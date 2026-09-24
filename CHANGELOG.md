@@ -167,6 +167,12 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **vibey_gh:** a whole sovereign review's documents are bounded by their own
+  `[pr_automation.fallback] max_document_chars` (default 120,000) and the window, no longer by
+  the diff's `max_diff_chars`. This repository's two pages already took 59,607 of the diff's
+  60,000, so a small README edit cut one, the review claimed the diff half alone, and every
+  gate asked a human. Documents trimmed to the window are also no longer refused once the
+  request's check codes are added, and a refusal whose body breaks off mid-read is still reported
 * **qwenloop:** a model request waits `idle_timeout_seconds` (default 900; 0 waits
   indefinitely) instead of a hard-coded 300 s ([#345](https://github.com/the-vibey-project/vibey/issues/345))
 * **qwenloop:** an HTTP 500 "error parsing tool call" no longer ends a run: the turn is retried

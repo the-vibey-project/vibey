@@ -464,6 +464,7 @@ jobs:
                 --model '__VIBEY_GH_FALLBACK_MODEL__' \
                 --base-url "${VIBEY_OLLAMA_URL:-__VIBEY_GH_FALLBACK_BASE_URL__}" \
                 --max-chars __VIBEY_GH_FALLBACK_MAX_DIFF_CHARS__ \
+                --max-document-chars __VIBEY_GH_FALLBACK_MAX_DOCUMENT_CHARS__ \
                 --timeout __VIBEY_GH_FALLBACK_TIMEOUT_SECONDS__ \
                 --context-window __VIBEY_GH_FALLBACK_CONTEXT_WINDOW__ \
                 --reasoning-reserve __VIBEY_GH_FALLBACK_REASONING_RESERVE__ \
