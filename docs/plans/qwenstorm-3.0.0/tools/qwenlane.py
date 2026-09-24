@@ -30,6 +30,7 @@ from lane_watchdog import REPORT_FD_ENV, SPEC_SHA256_ENV, ChildGuard, LaneAttemp
 from qwenloop.application.storm import build_plan
 from qwenloop.cli.app import _load_config, _run_plan, _server_for, _tracked_repository_context
 from qwenloop.domain.model import RepoItem, RunStatus
+from storm_trust import NEUTRAL_TITLE, Admission, PromptFence, Refused
 
 # The storm root, for storm.toml's `[lane]` limits and progress.log. .absolute(), never
 # .resolve(): tools/ is a symlink, and storm_paths explains what resolving it costs.
@@ -136,6 +137,26 @@ def run_attempt(spec_path: Path) -> int:
     return 0
 
 
+def lane_item(lane: Path, issue: int, title: str, body_file: Path, rules: str) -> RepoItem:
+    """The one backlog item a lane works: the harness's rules, then the issue as quoted data.
+
+    Sub-doctrine 12.j, ADR-0053. The issue is forge text, and it used to be concatenated with
+    the rules straight after it -- nothing marked where the operator's harness ended and a
+    stranger's edit could begin. Now the text must carry the admission `IssueGate.admit`
+    wrote for exactly this title and these bytes (else `Refused`), the rules come first, and
+    the title and body travel only inside a fenced block that names their source, author and
+    fetch time, under a per-run random tag the quoted text cannot close. The forge title
+    never sits on a harness line: the item carries a neutral label, and the real title is
+    inside the fence.
+    """
+    body = body_file.read_bytes()
+    record = Admission().check(lane / ".qwenstorm", issue, title, body)
+    text = body.decode("utf-8")
+    fence = PromptFence()
+    quoted = fence.contain(record, title, text, fence.nonce(title, text))
+    return RepoItem(number=issue, title=NEUTRAL_TITLE, body=f"{rules.rstrip()}\n\n---\n\n{quoted}")
+
+
 def main() -> None:
     import os
 
@@ -154,7 +175,16 @@ def main() -> None:
 
     lane = args.lane_dir.resolve()
     rules = (Path(__file__).parent.parent / "EDITING-RULES.md").read_text()
-    item = RepoItem(number=args.issue, title=args.title, body=args.body_file.read_text() + rules)
+    try:
+        item = lane_item(lane, args.issue, args.title, args.body_file, rules)
+    except Refused as refused:
+        # Visible, in the file that marks a lane blocked -- never a silent skip (12.d).
+        (lane / ".qwenstorm").mkdir(exist_ok=True)
+        (lane / ".qwenstorm" / "result.json").write_text(
+            json.dumps({"issue": args.issue, "completed": False, "refused": str(refused)}, indent=2)
+        )
+        print(f"issue#{args.issue}\trefused\t{refused}", flush=True)
+        sys.exit(1)
     plan_text = build_plan(
         repo="vibey",
         issues=[item],
