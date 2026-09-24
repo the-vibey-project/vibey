@@ -88,13 +88,33 @@ STREAMS = (
 )
 
 
+# What a lane start and a lane end look like in progress.log, exactly as storm-queue.sh
+# writes them -- the stamp, then the word, then `<slug> #<issue>` -- and counted ONLY from
+# progress.log. Matching " start " anywhere in any stream let a quoted request, or a line
+# forged into another log, count as a lane start (the review of #1089).
+START = re.compile(r"^\S+Z start \S+ #\d+ ")
+END = re.compile(r"^\S+Z end +\S+ #\d+ ")
+
+
+def lane_lines(rows: list[dict], pattern: re.Pattern[str]) -> list[str]:
+    """progress.log lines matching `pattern`. A function beside the others here: this
+    module has no classes, and one would not change how it is read."""
+    return [
+        r["line"]
+        for r in rows
+        if r.get("kind") == "stream"
+        and r.get("source") == "progress.log"
+        and pattern.match(r.get("line", ""))
+    ]
+
+
 def digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()[:16]
 
 
 def load_watermark() -> dict:
     if not WATERMARK.is_file():
-        return {"offsets": {}, "seen": []}
+        return {"offsets": {}, "seen": [], "resets": {}}
     try:
         mark = json.loads(WATERMARK.read_text())
     except (OSError, ValueError):
@@ -104,6 +124,7 @@ def load_watermark() -> dict:
         return {"offsets": {}, "seen": [], "unreadable": True}
     mark.setdefault("offsets", {})
     mark.setdefault("seen", [])
+    mark.setdefault("resets", {})
     return mark
 
 
@@ -140,6 +161,24 @@ def read_stream(name: str, offset: int) -> tuple[list[tuple[int, str]], int, str
             out.append((position, line))
         position += len(chunk)
     return out, size, None
+
+
+def reset_head(name: str) -> dict | None:
+    """The stream's first line, when it is a priority-log `reset` event; else None.
+
+    A reset (`storm-priority.py reset`) starts the log again after it was lost. The offset
+    held for the old log then points into a different file, so the stream is re-based to
+    its start -- once per reset, known by its stamp and the length it abandoned -- and the
+    discontinuity is reported as a gap, never hidden (10.g). A function beside the others:
+    this module has no classes, and one would not change how it is read.
+    """
+    path = STORM / name
+    try:
+        with path.open("rb") as handle:
+            first = json.loads(handle.readline())
+    except (OSError, ValueError):
+        return None
+    return first if isinstance(first, dict) and first.get("action") == "reset" else None
 
 
 def lane_records(seen: set[str]) -> list[dict]:
@@ -194,8 +233,22 @@ def collect(mark: dict) -> tuple[list[dict], dict, list[str]]:
     if mark.get("unreadable"):
         gaps.append("watermark.json was unreadable; the span before this run is unknown")
 
+    resets = dict(mark.get("resets", {}))
     for name in STREAMS:
-        lines, new_offset, gap = read_stream(name, int(offsets.get(name, 0)))
+        offset = int(offsets.get(name, 0))
+        head = reset_head(name)
+        if head is not None:
+            ident = f"{head.get('at')}|{head.get('abandons')}"
+            if resets.get(name) != ident:
+                gaps.append(
+                    f"{name}: reset at {head.get('at')} by {head.get('by')} (reason: "
+                    f"{json.dumps(head.get('reason'))}); the log was started again, abandoning "
+                    f"{head.get('abandons')} recorded byte(s), and is read from its new start "
+                    f"(the old offset {offset} is discarded)"
+                )
+                offset = 0
+                resets[name] = ident
+        lines, new_offset, gap = read_stream(name, offset)
         if gap:
             gaps.append(gap)
         for position, line in lines:
@@ -211,7 +264,7 @@ def collect(mark: dict) -> tuple[list[dict], dict, list[str]]:
     # The watermark carries offsets only. An ever-growing `seen` list would duplicate what the
     # ledger already holds and grow without bound, and the ledger is what de-duplication
     # actually consults.
-    return records, {"offsets": offsets}, gaps
+    return records, {"offsets": offsets, "resets": resets}, gaps
 
 
 def append(records: list[dict], when: str) -> None:
@@ -247,8 +300,8 @@ def ledger_rows() -> list[dict]:
 
 def summarise(rows: list[dict]) -> dict:
     lanes = {r["lane"]: r for r in rows if r.get("kind") == "lane_result"}
-    starts = [r for r in rows if r.get("kind") == "stream" and " start " in r.get("line", "")]
-    ends = [r for r in rows if r.get("kind") == "stream" and " end " in r.get("line", "")]
+    starts = lane_lines(rows, START)
+    ends = lane_lines(rows, END)
     integrated = {r["line"] for r in rows if r.get("source") == "integrated.txt"}
     abandoned = {r["line"] for r in rows if r.get("source") == "abandoned.txt"}
     turns = []
@@ -331,8 +384,8 @@ def report(records: list[dict], when: str, gaps: list[str]) -> str:
         return f"# Evidence delta\n\nNothing new since the last run ({when}).\n"
     streams = [r for r in records if r.get("kind") == "stream"]
     lanes = [r for r in records if r.get("kind") == "lane_result"]
-    started = [r["line"] for r in streams if " start " in r.get("line", "")]
-    ended = [r["line"] for r in streams if " end " in r.get("line", "")]
+    started = lane_lines(streams, START)
+    ended = lane_lines(streams, END)
     settled = [r["line"] for r in streams if r.get("source") in ("integrated.txt", "abandoned.txt")]
     lines = [
         "# Evidence delta",
