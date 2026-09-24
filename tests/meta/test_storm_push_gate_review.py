@@ -392,7 +392,17 @@ def test_1105_2_a_symlinked_lock_directory_is_refused(tmp_path: Path) -> None:
 def test_1105_2_a_lock_owned_by_another_uid_is_untrusted(tmp_path: Path, monkeypatch) -> None:
     r = rig(tmp_path)
     assert r.lock.acquire(owner(r))
-    monkeypatch.setattr(push_gate.os, "getuid", lambda: UID + 1)
+    real_lstat = os.lstat
+
+    def as_a_stranger(path, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003, ANN202
+        found = real_lstat(path, *args, **kwargs)
+        if Path(path) != r.cfg.lock:
+            return found
+        fields = list(found[:10])
+        fields[4] = UID + 1  # st_uid: the lock directory is somebody else's
+        return os.stat_result(fields)
+
+    monkeypatch.setattr(push_gate.os, "lstat", as_a_stranger)
     assert r.lock.state().kind == "untrusted"
     r.table.groups[GROUP] = gate_tree()
     assert r.reaper.tick().action == "unknown"
@@ -1020,7 +1030,6 @@ def test_1107_8_the_shell_scan_sees_a_bare_push() -> None:
 #: Findings whose fix lands in a later commit of this pull request. Each is a strict xfail:
 #: it must fail until its fix lands, and the commit that fixes it deletes its line here.
 PENDING = {
-    "test_1105_6_two_state_dirs_on_one_lock_share_the_mutex_and_the_reap_lock",
     "test_1105_8_a_push_timeout_writes_evidence_and_a_reap_log_line",
     "test_1105_8_the_docs_say_the_schedule_reaps_what_the_cycle_cannot",
     "test_1105_9_a_failed_py_spy_falls_back_to_sigusr1",
@@ -1032,7 +1041,6 @@ PENDING = {
     "test_1107_4_install_refuses_volatile_paths_worktrees_and_old_pythons",
     "test_1107_4_contributing_names_no_volatile_storm_root",
     "test_1107_5_values_systemd_cannot_quote_are_refused",
-    "test_1107_6_a_pass_that_stands_aside_has_its_own_action_and_exit",
     "test_1107_7_lane_publish_reports_a_push_timeout_as_one",
     "test_1107_8_no_storm_tool_or_script_pushes_around_the_gate",
 }

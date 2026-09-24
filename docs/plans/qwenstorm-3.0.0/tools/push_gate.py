@@ -112,8 +112,10 @@ A copy of this tool outside a storm root (the tracked one, in a checkout) has no
 ask, so it takes the lock from `--lock` or `VIBEY_PUSH_LOCK`, and refuses without one.
 
 Exit codes. `run`: the push's own, 124 when reaped, 125 past `--push-timeout`, 3 when
-`--no-wait` or `--wait-timeout` gave up on the lock, 128+N when signalled. `reap`: 0 nothing to do, 1 reaped (or would have, under --dry-run), 2 a
-person should look (unknown, or refused). `release`: 0 released, 1 not the owner, 124 reaped.
+`--no-wait` or `--wait-timeout` gave up on the lock, 128+N when signalled. `reap`: 0 nothing
+to do, 1 reaped (or would have, under --dry-run), 2 a person should look (unknown, refused, or
+a kill that failed), 3 stood aside for another pass. `release`: 0 released, 1 not the owner or
+nothing held, 124 reaped.
 
 Underscored, not hyphenated: the tests import it.
 """
@@ -204,8 +206,6 @@ PUSH_TIMEOUT_EXIT = 125
 STACKS_ENV = "VIBEY_PYTEST_STACKS_DIR"
 #: The machine's shared push lock, for a copy of this tool that is not in a storm root.
 LOCK_ENV = "VIBEY_PUSH_LOCK"
-#: Held (non-blocking) for the whole of one reaper pass, so two passes never both act.
-REAP_LOCK = "reap.lock"
 #: Tokens become file names; anything else is refused rather than escaped.
 TOKEN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
@@ -309,6 +309,17 @@ def _write_private(path: Path, text: str) -> None:
     except BaseException:
         temporary.unlink(missing_ok=True)
         raise
+
+
+@contextlib.contextmanager
+def _lock_file(path: Path) -> Iterator[int]:
+    """An open descriptor on `path` to `flock`, created 0600 and never through a symlink."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+    try:
+        yield descriptor
+    finally:
+        os.close(descriptor)
 
 
 def _read_private(path: Path, limit: int = 1 << 20) -> str | None:
@@ -511,6 +522,14 @@ class Decision:
     measurements: dict[str, Any]
     owner: Owner | None = None
     evidence: Path | None = None
+
+    def exit_code(self) -> int:
+        """0 nothing to do; 1 reaped (or would have); 2 a person should look; 3 stood aside."""
+        if self.action in {"released", "killed", "would-release", "would-kill"}:
+            return 1
+        if self.action in {"unknown", "refused", "failed"}:
+            return 2
+        return 3 if self.action == "busy" else 0
 
     def line(self) -> str:
         who = f" {self.owner.branch} (pid {self.owner.pid})" if self.owner else ""
@@ -852,10 +871,19 @@ class PushLock:
             self._remove()
             return True
 
+    @staticmethod
+    def mutex_path(config: PushGateConfig) -> Path:
+        """Beside the lock, not in a state directory: every gate sharing the lock shares it.
+
+        Two configs naming one lock with different state directories used to take different
+        mutexes, and so did not exclude each other at all (#1105-6, probe P8).
+        """
+        return config.lock.parent / f".{config.lock.name}.mutex"
+
     @contextlib.contextmanager
     def _mutex(self) -> Iterator[None]:
         _private_dir(self._config.state_dir)
-        with (self._config.state_dir / "lock.mutex").open("a") as handle:
+        with _lock_file(self.mutex_path(self._config)) as handle:
             fcntl.flock(handle, fcntl.LOCK_EX)
             try:
                 yield
@@ -1310,18 +1338,25 @@ class Reaper:
         stands aside; every action is keyed to the token (or the mtime) it judged, so a pass
         that runs after another has acted finds nothing left to do.
         """
-        self._config.state_dir.mkdir(parents=True, exist_ok=True)
-        with (self._config.state_dir / REAP_LOCK).open("a") as handle:
+        _private_dir(self._config.state_dir)
+        with _lock_file(self.reap_lock_path(self._config)) as handle:
             try:
                 fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError:
+                # Its own action and exit code, so a scheduler can tell "stood aside" from
+                # "looked and found nothing" (#1107-6).
                 return Decision(
-                    "none", None, "another reap pass is running; this one stands aside", {}
+                    "busy", None, "another reap pass is running; this one stands aside", {}
                 )
             try:
                 return self._pass(dry_run)
             finally:
                 fcntl.flock(handle, fcntl.LOCK_UN)
+
+    @staticmethod
+    def reap_lock_path(config: PushGateConfig) -> Path:
+        """Keyed to the lock, like its mutex, so every reaper of one lock excludes the rest."""
+        return config.lock.parent / f".{config.lock.name}.reap"
 
     def _pass(self, dry_run: bool) -> Decision:
         state = self._lock.state()
@@ -2342,9 +2377,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     decision = reaper.tick(dry_run=args.dry_run)
     print(decision.line(), flush=True)
-    if decision.action in {"released", "killed", "would-release", "would-kill"}:
-        return 1
-    return 2 if decision.action in {"unknown", "refused", "failed"} else 0
+    return decision.exit_code()
 
 
 if __name__ == "__main__":

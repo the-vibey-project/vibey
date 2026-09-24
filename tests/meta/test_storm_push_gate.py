@@ -1097,11 +1097,12 @@ def test_two_overlapping_reap_passes_never_act_twice(tmp_path: Path) -> None:
     r.clock.sleep(600)
     import fcntl
 
-    r.cfg.state_dir.mkdir(parents=True, exist_ok=True)
-    with (r.cfg.state_dir / push_gate.REAP_LOCK).open("a") as other:
+    path = push_gate.Reaper.reap_lock_path(r.cfg)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as other:
         fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)  # a second pass, mid-flight
         decision = r.reaper.tick()
-        assert decision.action == "none" and "another reap pass" in decision.detail
+        assert decision.action == "busy" and "another reap pass" in decision.detail
         assert r.signaller.sent == []
     assert r.reaper.tick().action == "killed"
     assert r.reaper.tick().action == "none"  # and again: nothing left to do
