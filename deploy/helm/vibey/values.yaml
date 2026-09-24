@@ -40,6 +40,26 @@ worker:
   worktrees:
     size: 5Gi
     storageClass: ""
+  # The queue reaper (ADR-0056). The worker runs it when idle, at most once per
+  # intervalSeconds: expired leases are requeued, or parked with a gate once their
+  # attempts are spent; ready work nobody takes is surfaced; on the broker, vibey's
+  # policy is reconciled onto the queues it owns and each dead letter on one becomes
+  # a parked job. Rendered into VIBEY_QUEUE_REAP_*; see [queue.reap] in
+  # docs/reference/configuration.md for what each key means.
+  queueReap:
+    enabled: true
+    intervalSeconds: 60
+    leaseGraceSeconds: 0
+    staleReadySeconds: 900
+    deadLetterMinDepth: 1
+    deadLetterPeekLimit: 100
+    ownedQueuePattern: "^vibey\\."
+    deadLetterQueuePattern: "(\\.dlq|\\.dead)$"
+    policyName: vibey-reap
+    policyPriority: 0
+    # At least the longest job lease (two hours for BUILD), with room.
+    consumerTimeoutSeconds: 21600
+    deliveryLimit: 20
   # Additional environment for the worker container, as Kubernetes EnvVar
   # objects -- for instance VIBEY_OLLAMA_TIMEOUT, VIBEY_EVIDENCE_DIR, or an
   # external Ollama endpoint when ollama.enabled is false. Appended after
@@ -470,6 +490,13 @@ surfaces:
       digest: "sha256:b839b492a91788a1d9406ef3ec0e1d8a8448032c48148a54a9e0c68ed66cde9b"
     username: vibey
     password: rabbitmqpassword
+    # How long any consumer on this broker -- vibey's or Plane's Celery workers -- may
+    # hold an unacknowledged delivery before the broker closes its channel and
+    # requeues everything on it (ADR-0056, condition (a)). Declared here rather than
+    # left to the image's default, and set to that default (30 minutes) so Plane keeps
+    # the behaviour it was built against. vibey's own queues get their own, longer
+    # bound through the reaper's policy (worker.queueReap.consumerTimeoutSeconds).
+    consumerTimeoutMs: 1800000
     storage:
       size: 2Gi
       storageClass: ""

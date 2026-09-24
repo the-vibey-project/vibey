@@ -433,9 +433,37 @@ def publish(slug: str, dry: bool) -> str:
     code, out = run(["uv", "sync", "-q", "--extra", "dev"], tree, timeout=900)
     if code:
         return f"could not build the tree's venv, so the gates never ran: {out.strip()[-140:]}"
-    code, out = run(["git", "push", "-u", "origin", branch], tree, timeout=1800)
+    # Through the push gate, never around it (push_gate.py): the pre-push gate runs one at a
+    # time across every lane and every agent on this machine, and a hung one is reaped by
+    # rule. The two limits are the gate's own, so this never has to kill the wrapper -- which
+    # would leave its lock behind -- to stop waiting: half an hour for the lock, half an hour
+    # for the push, as the bare push had.
+    code, out = run(
+        [
+            sys.executable,
+            str(STORM / "tools" / "push_gate.py"),
+            "run",
+            "--wait-timeout",
+            "1800",
+            "--push-timeout",
+            "1800",
+            "--",
+            "git",
+            "push",
+            "-u",
+            "origin",
+            branch,
+        ],
+        tree,
+        timeout=3900,
+    )
+    last = (out.strip().splitlines() or ["?"])[-1][:140]
+    if code == 124:
+        return f"push reaped as a hang, not a test failure: {last}"
+    if code == 3:
+        return f"push not attempted: the push lock stayed busy for 30 minutes: {last}"
     if code:
-        return f"push refused (the gates run on push): {out.strip().splitlines()[-1][:140]}"
+        return f"push refused (the gates run on push): {last}"
     body = (
         f"Closes #{issue}.\n\nWritten by a sovereign lane (gpt-oss:20b) and gated at review by "
         f"`tools/lane-verify.py` plus the lane's own check block, both run again immediately "

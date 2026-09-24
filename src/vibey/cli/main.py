@@ -1857,6 +1857,9 @@ def worker(
                         typer.echo("no ready job")
                         return
                     await resources.jobs.reap()
+                    # Stale ready work and the broker, at most once per interval across
+                    # every drive loop (ADR-0056); the lease reap just ran above.
+                    await resources.queue_reaper.run_if_due(project.project_id)
                     typer.echo(
                         f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True
                     )

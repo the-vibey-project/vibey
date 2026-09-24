@@ -636,9 +636,21 @@ UPDATE job SET state = 'ready', updated_at = now()
 WHERE id = $1 AND state = 'awaiting_human';
 
 -- REAP (each idle worker-loop iteration, before the 5 s LISTEN wait; no separate supervisor)
-UPDATE job SET
-    state='ready', lease_owner=NULL, lease_expires_at=NULL, updated_at=now()
-WHERE state='leased' AND lease_expires_at < now();
+-- One transaction (PostgresQueueReapStore.reap_leases, ADR-0056): lock the expired
+-- leases, judge each with domain/queue_reap.py's QueueReapPolicy, move it, and append
+-- its QueueReaped event on the same connection.
+SELECT id, project_id, cycle, phase, kind, attempts, max_attempts, lease_expires_at
+FROM job
+WHERE state = 'leased' AND lease_expires_at < now() AND phase::text = ANY($known_phases)
+ORDER BY lease_expires_at, id
+FOR UPDATE SKIP LOCKED;
+-- attempts remain: requeue (the claim already counted the attempt)
+UPDATE job SET state = 'ready', lease_owner = NULL, lease_expires_at = NULL, updated_at = now()
+WHERE id = $1;
+-- attempts spent: park, refunding one, with a delivery_exhausted human_gate row
+UPDATE job SET state = 'awaiting_human', lease_owner = NULL, lease_expires_at = NULL,
+               attempts = greatest(attempts - 1, 0), updated_at = now()
+WHERE id = $1;
 ```
 
 All of these live in `PostgresJobRepository`
@@ -657,6 +669,14 @@ idempotent (non-negotiable #6): a reaped job *will* be executed again. `vibey
 worker`'s drive loop (`cli/main.py`) calls `reap()` only after a `run_once` that
 found no claimable job, so a worker busy on long jobs does not reap; another idle
 worker, or the next idle iteration, does.
+
+The reap is **bounded** (ADR-0056, closing ADR-0044 §8's gap). A job that kills its
+worker on every attempt never reaches `WorkerLoop`'s failure path, so before this it
+was re-readied forever; now an expired lease whose `attempts` has reached `max_attempts`
+parks with a `delivery_exhausted` gate, refunding one attempt so each answer buys one
+more delivery. `SKIP LOCKED` lets two reapers split the expired rows, so a replayed reap
+never moves a row twice. A row in a phase this vibey does not know is left for a newer
+vibey, as the claim leaves it.
 
 #### Queue priority: bump and un-bump (ADR-0054)
 
