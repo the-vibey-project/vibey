@@ -37,9 +37,22 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
     a project's ledger.
   - **Two roles.** The application connects as a role (`VIBEY_PG_URL`) that holds exactly
     the declared grants: `SELECT` and `INSERT` on the ledger, no `DELETE` or `TRUNCATE`
-    anywhere, and no ownership. Migrations run as the owner, `VIBEY_PG_MIGRATE_URL`, through
-    the new `vibey migrate` or the Helm chart's new `migrate` init container. The chart
-    gains `postgres.appRole` (default `vibey_app`) and `dsn.existingSecretMigrateKey`.
+    anywhere, and no ownership. Migrations run as the owner, `VIBEY_PG_MIGRATE_URL`, read by
+    the new `vibey migrate` alone (given for that one command, never exported) or the Helm
+    chart's new `migrate` init container. The chart gains `postgres.appRole` (default
+    `vibey_app`), `dsn.existingSecretMigrateKey` (empty by default, so an existing-Secret
+    install is unchanged until it names an owner key), and
+    `postgres.additionalDatabasePasswords`: Plane and Infisical each connect as a role of
+    their own, which the postgres container creates and hands its database on every start,
+    instead of as the owner.
+  - **Hardened after review.** Migration 0017 pins the guard functions to
+    `search_path = pg_catalog, pg_temp`. `vibey migrate` takes `CREATE` on `public` away
+    from every role but its owner and reconciles under the migration lock. `ledger-guard`
+    also fails when the application role may create objects, owns any, may call a
+    `SECURITY DEFINER` function running as the owner, may set `session_replication_role`,
+    or when a guard trigger is replica-only, re-pointed, re-evented or its function
+    changed. The triggers refuse the owner's DML, not its DDL (`DROP` or `DETACH` of a
+    partition), which is why only `vibey migrate` holds the owner's DSN.
   - **Checks.** `vibey doctor` gains `ledger-guard` and `local-auth` checks. A single-DSN
     install keeps running, but `vibey doctor` fails until its roles are split, `vibey
     worker` says so on stderr at every start, and `vibey migrate` exits 1. `local-auth`
@@ -94,8 +107,126 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   merge" with GitHub's reason and the pass continues. `vibey-gh merge-train --admin-fallback`
   restores the retry for one run; no configuration key can (sub-doctrine 12.d). `vibey-gh
   promote --wait` gets the same rule, with `--admin-fallback` (only with `--wait`)
+* **engines:** an engine session no longer inherits the worker's environment. Every engine
+  process (the BUILD and DEPLOY_EXECUTE run, its `--version`/`doctor`/`--help` probes, and the
+  claudeloop and opencode DESIGN/DECOMPOSE sessions) and every gate command used to start from a
+  copy of it with only the Python variables removed. So `VIBEY_PG_URL` (the queue and ledger
+  DSN), vibey's other `VIBEY_*` tokens and passwords, `GH_TOKEN`/`GITHUB_TOKEN` and any cloud
+  credential reached processes that run model-chosen shell commands unattended. Each is now
+  built from an allow-list: the system basics (`PATH`, `HOME`, locale, `TERM`, CA bundle,
+  proxy, `XDG_*`), plus, for an engine, the variables its descriptor declares
+  (`env_passthrough`, for example `CLAUDELOOP_*` and `ANTHROPIC_*`) and its own API credential.
+  Anything else is declared in `vibey.toml`: `[engine_environment]` `allow` (every engine) and
+  `[engine_environment.engines]` `<engine> = [...]` (one engine), and `[gates]` `env_allow`
+  (gate commands). `vibey new` copies both tables into the project record; the `VibeyProject`
+  spec declares the same objects as `engineEnvironment` and `gates`. Nobody edits the
+  record's JSON by hand. `VIBEY_*` and libpq's `PG*` can never be declared, for gates or
+  engines, and an engine can never be given a name containing `DSN`, `DATABASE_URL`,
+  `PASSWORD` or `PASSWD`. A declaration that tries is refused by `vibey new` and the operator
+  before the project exists, and stops the worker when it is built; a descriptor's own
+  `env_passthrough` is checked when its adapter is built. What now needs declaring: agyloop's
+  Vertex credentials (`GOOGLE_ACCESS_TOKEN`, `CLOUDSDK_AUTH_ACCESS_TOKEN`,
+  `GOOGLE_APPLICATION_CREDENTIALS`, and `CLOUDSDK_CONFIG` when its gcloud configuration is not
+  in the default place), a provider key OpenCode reads from the environment, a `GH_TOKEN` for
+  claudeloop's GitHub issue import, and any toolchain variable a gate needs (`JAVA_HOME`,
+  `GOPATH`, ...). See `docs/reference/configuration.md#engine_environment` and `#gates`
+* **git:** vibey's own git calls (the BUILD worktree's `git worktree add`, the integration
+  `git merge`) start from the system basics plus `GIT_CONFIG_NOSYSTEM=1`, never the worker's
+  environment, and run with `-c core.hooksPath=/dev/null -c core.fsmonitor=false`; the merge
+  also passes `--no-verify`. An engine working in a linked worktree could plant a hook in the
+  repository's common directory, or set `core.hooksPath`, `core.fsmonitor`, a filter or a merge
+  driver in its shared config, and vibey's next git call ran it with `VIBEY_PG_URL` in its
+  environment. A repository whose own config (`local` or `worktree` scope, or a file they
+  include) declares a filter driver (`filter.<x>.clean|smudge|process`) or a merge driver
+  (`merge.<x>.driver`) is now refused before vibey checks out or merges in it, failing the
+  job; declare a driver you need, such as Git LFS's, in your global git config. `vibey worker
+  --azure az` runs `az` through an executor of its own, with the system basics plus the Azure
+  CLI's configuration variables (`AZURE_CONFIG_DIR`, `AZURE_CORE_*`, ...)
 
 ### Added
+
+* **cli:** finding a project or an open gate no longer takes SQL. `vibey projects` lists every
+  project, newest first, with its id, phase, cycle and open-gate count; `vibey gates
+  [PROJECT_ID]` lists every open gate, oldest first, with its project, kind and prompt, and
+  `answer with:` -- the exact `vibey answer` command that answers it. Both take `--json`
+  (a projects array; `{"gates": [...]}`), the contract the VS Code extension reads, and both
+  exit 0 on an empty list. How each gate kind is answered is declared once, in
+  `vibey.cli.gate_answers`: a verdict or choice from the gate's own options, `--defaults` for
+  the interview, `--raw '{"max_dollars": N}'` and the other grants with the number left to
+  the person, `--raw '{}'` where any answer retries, and `--raw '<json>'` for the rest; a
+  test fails when a gate kind is raised without an entry there. The repositories gain
+  `list_all()` and `open_all()`, and the next-step hints, the README, the CLI reference and
+  the greeter runbook point at `vibey gates` instead of a `human_gate` query
+
+* **vibey_gh:** `vibey-gh slots corpus|calibrate|allowed` measure how many runs of one local
+  model fit on a device at once, and `[local_models] concurrent_runs` declares it (sub-doctrines
+  8.c and 8.j, ADR-0058). `calibrate` replays storm-shaped turns (`truncate: false`, so a prompt
+  a slot cannot hold is refused, never silently cut) at N = 1, 2, 3, ... on a runner of its own
+  beside an idle production runner. It samples wired memory, swap-ins and swap-outs, and
+  residency every second, compares every answer with the one-slot answers, and stops at a
+  broken bound or a plateau. Every completed step is checkpointed, so a sweep a reboot
+  interrupts resumes. The evidence is keyed to a device fingerprint (hardware, memory,
+  accelerator, OS, runner version, model digest, context window). `allowed` prints the number
+  a queue may run here: the default `1` probes nothing, `"measured"` takes what this device's
+  evidence supports, and a larger number is refused unless the device measured it inside every
+  bound. Missing or stale evidence means one, said out loud, with a calibration requested. A
+  step taken while another runner held a model is discarded, and a 200 with no `done_reason`
+  counts as a failure, not an answer.
+* **cli:** a project's budget can be added to, changed and removed after the project exists;
+  until now nothing could change the caps `vibey new` set. `vibey budget [PROJECT_ID]` shows
+  the caps, this cycle's spend against them and every change to them; `--all` shows every
+  project, newest first; `--json` is the object the VS Code extension reads (`project_id`,
+  `name`, `cycle`, `caps`, `spend`, `exhausted`, `history`). `vibey budget set
+  [--max-cycle-dollars F] [--max-cycle-turns N]` and `vibey budget clear (--dollars | --turns
+  | --all)` change `max_cycle_dollars` / `max_cycle_turns` in the project's config, the one
+  place the brake reads them, and append one `BudgetCapChanged` event per changed cap
+  (`field`, `old`, `new`, `by`, `account`) in the same transaction; a change that changes
+  nothing records nothing. `--by NAME` lets a tool name itself, a label for the record with
+  the account recorded beside it. A cap at or below the cycle's spend is allowed and the
+  command says the next BUILD session will park a `budget_exhausted` gate, and it names any
+  job already parked on one with the `vibey answer` that resumes it. The brake now reads the
+  caps at every BUILD session instead of once when the worker starts, so a change binds a
+  running worker's next session and an uncapped project can be capped without a restart.
+  `vibey cost` reads through the same service, its output unchanged. The publication policy
+  now names every kind it withholds (`WITHHELD_KINDS`) and a test fails on a kind classified
+  nowhere; `BudgetCapChanged` is withheld from the public and the billing shard
+* **storm:** `storm-queue.sh` asks `vibey-gh slots allowed` how many lanes may run at once,
+  instead of the host-wide `pgrep` it hard-coded. It runs more than one only when this device's
+  evidence says so, and calibrates itself when its queue empties and a calibration was
+  requested, from its own lane records or, when none survive, its committed specs
+  (`storm_turn_pool.py`).
+* **vibey_gh:** the Discord announcement after a docs deploy now says what changed: `vibey-gh
+  announce` posts one line per merged change, grouped Breaking / Added / Fixed / Other, capped
+  at `[announce] max_changes` (default 8) with `…and N more` and a compare link, merge and
+  release chores counted rather than listed, and the surface links last. The message is under
+  Discord's 2000-character limit by construction and escapes every mention, link and markdown
+  character a commit subject carries, and the payload sets `allowed_mentions: {"parse": []}`.
+  The range is a position (sub-doctrine 10.g). Each `Release surfaces` run records its branch
+  and release commit in its `run-name`, and a `Record the announced position` step records
+  that Discord accepted the post and the position was read. The next announcement starts
+  from there. A history that could not be read is announced as `unknown` and never recorded,
+  so nothing is skipped; the first announcement, a force-push, or an exhausted window
+  re-anchors and says so. A release announces its `CHANGELOG.md` section with the tag range. Configured by the new `[announce]` table; the inline heredoc is gone.
+
+* **cli:** `vibey doctor` prints a `db-passwordless` line: `WARN` when the app DSN's database
+  accepts a login with no password (trust or peer authentication) as the DSN's role or the OS
+  user doctor runs as, on the DSN's host or a local socket. Any process running as that user,
+  an engine session included, could then open the queue and the ledger without
+  `VIBEY_PG_URL`. It never fails the command; SECURITY.md §5 now states this limit, and that
+  the unwired container boundary does not address same-user access
+* **storm:** the push-gate reaper no longer depends on the storm, or on everyone having
+  moved off the old push recipe. `push_gate.py install-schedule` installs one reaper pass
+  every `[push_gate] schedule_seconds` (90) as a launchd agent on macOS or a systemd user
+  timer on Linux, rendered from tracked templates. `schedule-status` and
+  `uninstall-schedule` go with it, and `--target cron` prints a cron line instead. A
+  non-blocking reap lock makes overlapping passes safe. A bare-`mkdir` lock with no owner
+  record is traced to its `git push` by process (the only push started within 5 s of the
+  lock's mtime, in a declared worktree root, whose group holds only the push recipe) and
+  judged by the same idle and ceiling rules, evidence first. Anything less certain is
+  `unknown` and is never killed. `lane-publish.py` and `storm-snapshot.py` now push through
+  `push_gate.py run` (new `--wait-timeout` and `--push-timeout`), a meta test fails any storm
+  tool that pushes around the gate, and CONTRIBUTING.md gains "Pushing in this repository":
+  the one recipe, `push_gate.py run -- git push …`
 
 * **storm:** a hung push gate can no longer hold every other push hostage. After one push's
   pytest sat at 0% CPU for 39 minutes holding the storm's shared push lock, three layers stand
@@ -113,6 +244,22 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   SIGUSR1 stacks) before it SIGTERMs, then SIGKILLs, that group and nothing else. Each reap is
   one line in an append-only reap log, and the push reports `reaped: hang` (exit 124), never
   a test failure. `--dry-run` reports without acting (sub-doctrines 12.d, 12.e)
+* **queue:** everything a queue guards is reaped by measurement (ADR-0056). Five conditions,
+  each against a declared `[queue.reap]` threshold (rendered by the chart from
+  `worker.queueReap`): (a) a hung handler -- the broker-wide `consumer_timeout` is now
+  declared by the chart (`surfaces.rabbitmq.consumerTimeoutMs`, the image default of 30
+  minutes) and vibey's own queues get a `consumer-timeout` of six hours by policy; (b) held
+  work with nobody holding it, surfaced; (c) a poison job, parked with a `delivery_exhausted`
+  gate once its attempts are spent, and a `delivery-limit` of 20 on vibey's quorum queues;
+  (d) ready work nobody has taken for `stale_ready_seconds` (900), surfaced; (e) a dead letter
+  on a queue vibey owns becomes a parked `bus.dead_letter` job with a `bus_dead_lettered`
+  gate -- answer `--choice replay` or `--choice dismiss` -- and is never deleted; a queue
+  vibey does not own, such as Plane's, is only surfaced. Every reap is a `QueueReaped` ledger
+  event carrying the object, condition, measured value, threshold and action. The worker
+  runs the reaper when idle, at most once per `interval_seconds` (60); `vibey queue reap
+  [--dry-run] [--json]` runs it on demand and exits 1 when it could not read a source or
+  verify the broker policy. In a cluster the bus is now composed from the chart's
+  `VIBEY_BUS_*` environment even with no `vibey.toml`, so the reaper sees the broker at all.
 
 * **vibey_gh:** `vibey-gh runner install|check|cleanup|uninstall` stands the sovereign review
   runner up from a new `[runners]` table instead of hand-written LaunchAgents (12.c). Its gh
@@ -127,8 +274,19 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   takes it out of the lane, which is always the jobs bumped by name plus their unfinished
   dependencies, so nothing is left behind; it is refused while another named job needs it.
   A named job that ends cancelled or failed is swept out with what it alone pulled in by
-  the project's next bump or un-bump, recorded; a job in a phase this vibey does not know
-  is left in place and named rather than refusing the request.
+  the project's next admitted bump or un-bump, recorded (a refused request changes
+  nothing); a job this vibey cannot write -- an unknown phase or state -- is left in place
+  with everything it still needs, and named, rather than refusing the request. The lane is
+  derived through a dependency in an unknown state, so a job a live named job needs is
+  never swept past it. `tests/meta/test_migration_drops.py` reads SQL as PostgreSQL lexes
+  it -- comments, strings (`E''`, `U&''`, and literals joined by `||`), quoted names
+  (`U&""` too), `DO` bodies and `EXECUTE` strings -- and catches every step that takes
+  something from a running reader: a column dropped, renamed or retyped; a table, view or
+  sequence dropped, renamed away or moved by `SET SCHEMA`; a table replaced under its own
+  name without a column it had (known by replaying the migrations in order); and a type
+  dropped or renamed, or an enum value renamed (`ALTER TYPE ... RENAME VALUE`), which fails
+  an older worker's strict `phase` or `state` read. The ADR sentence must name the workers
+  to drain against this migration or an `N.N.N` release, and not negate the drain.
   `vibey queue list [PROJECT]` shows the queue in claim order with every bump marked;
   `vibey design resume PROJECT --priority` enqueues the interview bumped. The claim orders
   `bump_seq ASC NULLS LAST` first (`migrations/0014_job_bump.sql`), so the order among
@@ -166,6 +324,63 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   train requires both.
 
 ### Fixed
+
+* **ci:** the delivery estimate refreshes once an hour, and by hand, instead of on every push,
+  pull request and issue event. Its pull request now runs every CI gate: the `[skip ci]` that
+  let #1125 merge a ledger record, and break develop's paper-figure check with no check run,
+  is gone.
+* **tests:** a killed test run no longer leaves its databases behind for good. Each session
+  now holds an advisory lock on its database for as long as it lives, and marks the database.
+  Every run drops, in the background, the test databases that no live session holds
+  (`tests/db_reaper.py`; `uv run python -m tests.db_reaper --dry-run` shows what would go).
+  An unmarked database from an older harness is dropped only when no other test session is
+  running, and a database with an open connection is always kept. On the first run, 1,141
+  leaked databases, about 15 GB, were dropped from one machine.
+* **storm:** the push-gate reaper, now on an unattended schedule, acts only on what it has
+  checked (the independent review of #1105 and #1107).
+  - **Kill safety.** The lock and the traced push are read again under the lock's mutex before
+    any signal, so a push that ends while the evidence is written is never followed by a kill
+    of the recipe's next command. `acquire` is judged by the caller's process group
+    (`--pid $$`), not by the `$(...)` subshell that exits at once and got the lock released
+    mid-push.
+  - **Trust.** The owner record is checked field by field. A lock or record that is a
+    symlink, another uid's, or malformed is untrusted and never acted on. The state directory
+    is 0700, nothing is written or read through a link, and a push log is read only from the
+    gate's own logs.
+  - **Observed kills.** A kill is recorded only once the group is seen gone. EPERM means
+    "not ours". `protected` matches the program, not the command line, and a group whose
+    members cannot be read is never killed.
+  - **Awake time.** Holds and idle windows are counted in awake time (CLOCK_UPTIME_RAW on
+    macOS, CLOCK_MONOTONIC on Linux), with the boot id, so a laptop's sleep is never a hang.
+    A reused holder pid is told apart by its start time.
+  - **Shared locks.** The mutex and the reap lock sit beside the lock.
+  - **Schedule health.** `schedule-status` reports the last exit, from `launchctl print` or
+    `systemctl --user show`, and flags a stale `reaper.log`. `install-schedule` refuses a
+    temporary directory, a linked worktree, a Python older than 3.11, or a value systemd
+    cannot quote.
+  - **Pushes around the gate.** `run --push-timeout` records its kill as a reap.
+    `scripts/fleet/land.sh` now pushes through the gate, and an AST scan finds any push that
+    goes around it.
+  - **Ubuntu 26.04 LTS.** Its systemd and /proc paths are first-class (#1116).
+
+* **vibey_gh:** a whole sovereign review's documents are bounded by their own
+  `[pr_automation.fallback] max_document_chars` (default 120,000) and the window, no longer by
+  the diff's `max_diff_chars`. This repository's two pages already took 59,607 of the diff's
+  60,000, so a small README edit cut one, the review claimed the diff half alone, and every
+  gate asked a human. Documents trimmed to the window are also no longer refused once the
+  request's check codes are added, and a refusal whose body breaks off mid-read is still reported
+* **notify:** a desktop notification's title and message reach `osascript` as arguments of a
+  fixed `on run argv` script, never as AppleScript source. Only `"` was escaped before, so a
+  model- or gate-written message ending `\" & (do shell script ...) --` ran a shell command.
+  `notify-send` gets its text after `--`, and the notifier starts from the system basics
+* **engines:** the worker's startup preflight and `vibey doctor --record` probe each engine
+  with the project's `engine_environment`, so a credential the project declares for opencode
+  or agyloop reaches the auth check and the conformance run, not only the session
+* **queue:** the lease reaper is bounded (ADR-0056, closing ADR-0044 §8's latent gap). An
+  expired lease whose attempts are spent is parked with a `delivery_exhausted` gate instead of
+  re-readied, so a job that kills its worker on every attempt is no longer claimed forever;
+  one attempt is refunded, so each answer buys exactly one more delivery. Every reap is now
+  recorded on the ledger in the same transaction as the row it moves.
 
 * **qwenloop:** a model request waits `idle_timeout_seconds` (default 900; 0 waits
   indefinitely) instead of a hard-coded 300 s ([#345](https://github.com/the-vibey-project/vibey/issues/345))

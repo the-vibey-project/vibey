@@ -80,9 +80,10 @@ needs separately is its own vendor CLI and credentials — which is what
 ```bash
 uv tool install vibey          # or: pipx install vibey / pip install vibey
 vibey install --postgres       # install/start local PostgreSQL 18 when needed
-export VIBEY_PG_MIGRATE_URL=postgresql://user@localhost:5432/vibey        # the owner
 export VIBEY_PG_URL=postgresql://vibey_app:change-me@localhost:5432/vibey # the application
-vibey migrate                  # migrate as the owner; create and grant vibey_app
+# The owner's DSN is given to `vibey migrate` alone, for that one command -- never exported,
+# so no worker, engine session or gate command ever holds it:
+VIBEY_PG_MIGRATE_URL=postgresql://user@localhost:5432/vibey vibey migrate
 vibey doctor                   # pre-flight: engines, and whether the ledger is guarded
 ```
 
@@ -149,6 +150,7 @@ vibey worker --provider claudeloop \
   --engines claudeloop,agyloop -j 2          # live DESIGN provider; unattended build across the pool
 
 # When vibey parks for your input (design gates, review, budget grants):
+vibey gates                                  # each open gate, its prompt, and the command that answers it
 vibey answer <gate-id> --defaults            # accept the interview defaults, or:
 vibey answer <gate-id> --raw '{"max_dollars": 25}'   # raise a tripped budget cap
 vibey design accept <project-id> --no-visual
@@ -160,13 +162,11 @@ vibey answer <gate-id> --choice local_only   # decline deployment → DONE (loca
 `vibey new`. `vibey worker` defaults to `--provider scripted`, a test double —
 or to `--provider qwenloop` when a local engine is switched on; pass
 `--provider claudeloop` for a live, paid DESIGN interview and BUILD
-decomposition, or `--provider qwenloop` for the same on a local model. No
-command prints open gate ids yet; read them from the `human_gate` table:
-
-```bash
-psql "$VIBEY_PG_URL" -c "SELECT gate_id, kind, prompt FROM human_gate
-  WHERE project_id = '<project-id>' AND answered_at IS NULL ORDER BY raised_at"
-```
+decomposition, or `--provider qwenloop` for the same on a local model.
+`vibey gates` lists every open gate with its id, its prompt, and the exact
+`vibey answer` command that answers it (`vibey gates <project-id>` for one
+project); `vibey projects` lists your projects, their ids, and how many gates
+each is waiting on. Both take `--json`.
 
 The [greeter live-demo runbook](docs/guides/greeter-live-demo.md) walks a full
 paid run end to end, including the zero-touch contracts.
@@ -186,6 +186,7 @@ Every command's flags and defaults are in the
 | `vibey design resume/accept` / `vibey visual accept/waive` | Resume or accept DESIGN; accept or waive VISUAL_DESIGN. |
 | `vibey watch` / `vibey status` | Live dashboard, or one-shot status (`--json` for scripting). |
 | `vibey engines` / `vibey cost` / `vibey ledger show` | Engine health, budget spend, and event-ledger inspection. |
+| `vibey budget` / `budget set` / `budget clear` | A project's per-cycle caps and spend, and changing the caps after creation (`--json` for scripting). |
 | `vibey deploy status/inspect/plan/cancel/rollback` | Inspect and control Phases ④–⑥. |
 | `vibey recover` | Recover jobs stuck under a dead worker's lease. |
 | `vibey operator` | Run the Kubernetes operator (`pip install 'vibey[operator]'`; ADR-0025). |
@@ -212,7 +213,10 @@ What does configure a project today is a handful of `vibey new` CLI flags
 (`--max-cycles`, `--max-cycle-dollars`, `--max-cycle-turns`,
 `--skills-context-mode`, `--skills-context-budget`) recorded directly into
 that project's stored config at creation time — see the
-[CLI reference](docs/reference/cli.md).
+[CLI reference](docs/reference/cli.md). The two caps can be changed after that:
+`vibey budget set` and `vibey budget clear` rewrite them in the stored config,
+record each change on the ledger, and bind the next BUILD session of a worker
+already running.
 
 ## Notifications
 
@@ -317,7 +321,7 @@ things those runners deliberately do not do:
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](docs/architecture/decisions/) | Why each hard call was made (55 ADRs) |
+| [Decision records](docs/architecture/decisions/) | Why each hard call was made (58 ADRs) |
 
 ## Status
 
@@ -343,7 +347,7 @@ test — the no-loss handoff gate is deterministic code, not a model's opinion.
 | `VIBEY_PG_URL is not set` | No database connection string in the environment. | `export VIBEY_PG_URL=postgresql://user@localhost:5432/vibey`, pointing at a database you own. |
 | `vibey doctor` reports `auth FAIL` | The engine's own vendor credentials aren't configured. | Run that engine's own login/auth flow, then re-run `vibey doctor --conformance`. |
 | `vibey worker` logs `no recorded conformance for ...` | `vibey doctor --conformance --record` has never passed for that engine on this project. | Run it before starting the worker; engine-driven jobs won't select an unrecorded engine. |
-| A project is parked and nothing progresses | A human gate (interview, review verdict, budget cap) is waiting. | `vibey status <project-id>` shows an `AWAITING_HUMAN` count in the queue depth, but no command prints the gate id or prompt yet. Read them with `psql "$VIBEY_PG_URL" -c "SELECT gate_id, kind, prompt FROM human_gate WHERE project_id = '<project-id>' AND answered_at IS NULL ORDER BY raised_at"`, then `vibey answer <gate-id> ...`. |
+| A project is parked and nothing progresses | A human gate (interview, review verdict, budget cap) is waiting. | `vibey gates` (or `vibey gates <project-id>`) prints each open gate's id, its prompt, and the exact `vibey answer` command that answers it. Run that command, putting your value where it shows `N` or `<json>`. |
 | Jobs sit `leased` after a worker crash | The lease hasn't expired yet, or nothing has reclaimed it. | `vibey recover --project <id>` (or `--all`) sets them back to `ready`. |
 | Budget cap trips mid-cycle | The project's `max_cycle_dollars` / `max_cycle_turns` cap (set by `vibey new --max-cycle-dollars` / `--max-cycle-turns`) was exceeded — by design. | `vibey answer <gate-id> --raw '{"max_dollars": 25}'` (or `{"max_turns": N}`) to grant more, or accept the park. |
 | Kubernetes-specific issues | — | See the [Kubernetes guide's Troubleshooting section](docs/guides/kubernetes.md#troubleshooting). |

@@ -74,6 +74,16 @@ class EventKind(StrEnum):
     JOB_PRIORITY_BUMPED = "JobPriorityBumped"
     JOB_PRIORITY_UNBUMPED = "JobPriorityUnbumped"
     JOB_PRIORITY_REFUSED = "JobPriorityRefused"
+    # Queue reaping (ADR-0056): one event per reap -- the object, the condition, the
+    # measured value, the threshold and the action. A lease reap and a dead-letter park
+    # are written in the same transaction as the rows they change; a surfaced condition
+    # changes nothing and is recorded once per sighting.
+    QUEUE_REAPED = "QueueReaped"
+    # A project's cycle cap changed (`vibey budget set` / `clear`): the field, its old and
+    # new value, who named themselves and which account ran the command. Written in the
+    # same transaction as the project config it describes, so the config is the cap the
+    # brake enforces and these events are its history. Not spend: nothing counts it.
+    BUDGET_CAP_CHANGED = "BudgetCapChanged"
 
 
 _KNOWN_KIND_VALUES: Final = frozenset(kind.value for kind in EventKind)

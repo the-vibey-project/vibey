@@ -26,4 +26,4 @@ The selector's tests (find them: search the tenant's tests for BackendSelector) 
 Default model constants (part 1), vibey-gh (part 3), docs. Commit as `feat(qwenloop)!: ...` with a `BREAKING CHANGE:` footer: "with nothing configured and Ollama running, qwenloop attaches to it instead of starting its own llama.cpp server".
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

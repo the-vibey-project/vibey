@@ -7,15 +7,18 @@ and the code disagree, the code wins. `vibey <command> --help` prints the
 code's own help text, which is shorter than this page and in places less
 complete (for example, `vibey work --help` does not list `qwenloop`).
 
-Top-level commands, in `vibey --help` order: `new`, `answer`, `work`,
-`watch`, `recover`, `status`, `engines`, `cost`, `install`, `doctor`,
-`operator`, `worker`, and the command groups `design`, `visual`, `deploy`, `ledger`,
-`queue`.
+Top-level commands, in `vibey --help` order: `new`, `projects`, `gates`,
+`answer`, `work`, `watch`, `recover`, `status`, `engines`, `cost`, `install`,
+`doctor`, `migrate`, `operator`, `worker`, and the command groups `design`,
+`visual`, `deploy`, `ledger`, `queue`.
 Bare `vibey`, and each bare command group, prints help.
 
 Commands that read or write project state need `VIBEY_PG_URL` (see
 [Environment variables](#environment-variables)). `doctor` needs it only
 with `--record` or `--cluster`.
+
+[`vibey budget`](#vibey-budget-project_id) is a command group too, and the one whose
+bare form does not print help: bare `vibey budget` shows the latest project's budget.
 
 ## Global options
 
@@ -44,20 +47,24 @@ with payloads.
 | Code | Meaning |
 |---|---|
 | `0` | Success. Also a guarded command whose reader closed the pipe early. |
-| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
-| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`. |
+| `1` | Nothing to act on, or a check failed: no project exists (``no projects found; create one with `vibey new` first``); an explicit `PROJECT_ID` is unknown in `watch`, `cost`, `gates` (said on stderr), or `deploy *`; `recover` without `--project` or `--all`; `doctor --engine` with an unknown name; `doctor --conformance` with a failing engine; `doctor --install-postgres` or `install --postgres` could not install/start a supported server; `doctor --cluster` with a failing check; `operator` without the `operator` extra; `worker --azure az` without a logged-in Azure CLI. |
+| `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
 
 ### Guarded and unguarded commands
 
-Ten commands run inside `vibey.cli.errors.guard()`: `new`,
-`design resume`, `design accept`, `work`, `visual accept`, `visual waive`,
-`queue bump`, `queue unbump`, `queue list`, and `worker`. For these, any `VibeyError` — an unknown project or provider,
+Thirteen commands run inside `vibey.cli.errors.guard()`: `new`, `projects`,
+`gates`, `design resume`, `design accept`, `work`, `visual accept`,
+`visual waive`, `queue bump`, `queue unbump`, `queue list`, `queue reap`, and
+`worker`. For these, any `VibeyError` — an unknown project or provider,
 a wrong phase, an invalid spec, no eligible engine, a rejected handoff, an
 unset `VIBEY_PG_URL` — becomes the one-line `Error:` message and exit 3.
 Ctrl-C exits 130 and a closed pipe exits 0. Exceptions that are not
 `VibeyError` keep their Python traceback.
+
+`budget`, `budget show`, `budget set` and `budget clear` run inside `guard()` as
+well.
 
 The other commands (`answer`, `watch`, `recover`, `status`, `engines`,
 `cost`, `ledger show`, every `deploy` subcommand, `doctor`, `operator`) are
@@ -91,9 +98,9 @@ exists, and a test asserts it (`tests/cli/test_errors_and_logging.py`).
 | Error | Hint printed | Notes |
 |---|---|---|
 | `NoEligibleEngine` | Every engine is excluded, circuit-open, or missing a capability; run `vibey engines` or `vibey doctor`. | |
-| `BudgetExceeded` | A tripped cap parks a `budget_exhausted` gate; raise it with `vibey answer GATE_ID --raw '{"max_dollars": 25}'` (or `"max_turns"`), and `vibey cost` shows where the spend went. Ends with the [gate query](#finding-a-gate-id). | Nothing in `src/vibey` raises this error today, and no runtime code reads `[budget]` from `vibey.toml` — which is why the hint names neither. |
-| `EscalationExhausted` | The work item failed at every rung of the effort ladder and parked a human gate; `vibey answer GATE_ID` it. Ends with the [gate query](#finding-a-gate-id). | |
-| `HandoffRejected` | The no-loss gate refused the handoff and parked a human gate whose `prompt` says what could not be carried over; `vibey answer GATE_ID` it. Ends with the [gate query](#finding-a-gate-id). | |
+| `BudgetExceeded` | A tripped cap parks a `budget_exhausted` gate; raise it with `vibey answer GATE_ID --raw '{"max_dollars": 25}'` (or `"max_turns"`), and `vibey cost` shows where the spend went. Ends by naming [`vibey gates`](#vibey-gates-project_id), which lists the gate. | Nothing in `src/vibey` raises this error today, and no runtime code reads `[budget]` from `vibey.toml` — which is why the hint names neither. |
+| `EscalationExhausted` | The work item failed at every rung of the effort ladder and parked a human gate; `vibey answer GATE_ID` it. Ends by naming [`vibey gates`](#vibey-gates-project_id). | |
+| `HandoffRejected` | The no-loss gate refused the handoff and parked a human gate whose `prompt` says what could not be carried over; `vibey answer GATE_ID` it. Ends by naming [`vibey gates`](#vibey-gates-project_id). | |
 | `IllegalTransitionError` | The project is not in a phase this command applies to; `vibey status` shows the phase. | |
 | `InvalidSpecError` | Run `vibey design` to finish the spec before building. | |
 | `InvalidPhaseError` | Likely a bug in vibey rather than the project. | |
@@ -112,7 +119,134 @@ Create a project and enqueue its first DESIGN interview.
 | `--skills-context-budget N` | `6000` | Token budget for skills retrieval (1,000–32,000). Stored only when the mode is not `off`. |
 
 Prints `project <id>` and `design job <id>`. The project id is the
-`PROJECT_ID` the other commands take.
+`PROJECT_ID` the other commands take; [`vibey projects`](#vibey-projects)
+prints it again later.
+
+## `vibey projects`
+
+List every project, newest first (by creation time, then id), with its phase,
+its cycle, and how many gates are waiting for your answer.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--json` | off | Print a JSON array instead of the table. |
+
+The table has one row per project — `NAME`, `PHASE`, `CYCLE`
+(`cycle/max_cycles`), `OPEN GATES`, `CREATED (UTC)`, `PROJECT ID` — then a
+line counting them that, when any gate is open, points at `vibey gates`.
+`PHASE` is the phase's name, such as `BUILD`. A phase a newer vibey wrote,
+which this one has no name for (vibey#287), is shown as its stored text; it
+never fails the listing.
+
+`--json` prints an array, newest first, of one object per project with exactly
+these keys:
+
+```json
+[
+  {
+    "project_id": "0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10",
+    "name": "greeter",
+    "phase": "BUILD",
+    "cycle": 1,
+    "max_cycles": 3,
+    "repo_path": "/Users/me/src/greeter",
+    "created_at": "2026-09-24T09:00:00.123456+00:00",
+    "open_gates": 2
+  }
+]
+```
+
+`phase` follows the table's rule, `created_at` is ISO-8601 with its offset,
+and `open_gates` counts the project's unanswered gates. With no projects both
+forms exit 0: the table form prints
+``no projects yet; create one with `vibey new <name> --repo <path>` `` and
+`--json` prints `[]`. An empty list is an answer, not an error — unlike
+`vibey status`, which needs a project to report on and exits 1 without one.
+
+## `vibey gates [PROJECT_ID]`
+
+List every open gate — a job parked until a person answers it (ADR-0009) —
+oldest first (by raise time, then gate id), across every project or only
+`PROJECT_ID`'s. Each gate shows its project's name, its kind, its prompt as
+one wrapped paragraph, and the exact command that answers it:
+
+```text
+1 open gate, oldest first -- each is a job waiting for your answer:
+
+1. greeter: approval gate, raised 2026-09-24 12:03 UTC
+   Review artifacts ready for cycle 1. Accept, request changes, or ask
+   questions.
+   answer with: vibey answer 5e1f0c7a-8b2d-4e5f-9a61-2c3d4e5f6a7b --verdict accept
+```
+
+| Argument / option | Default | What it does |
+|---|---|---|
+| `PROJECT_ID` | every project | Only this project's open gates. An unknown id exits 1 with `unknown project <id>` on stderr and nothing on stdout. |
+| `--json` | off | Print `{"gates": [...]}` instead. |
+
+`--json` prints one object whose `gates` array holds, oldest first, one object
+per gate with exactly these keys:
+
+```json
+{
+  "gates": [
+    {
+      "gate_id": "5e1f0c7a-8b2d-4e5f-9a61-2c3d4e5f6a7b",
+      "project_id": "0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10",
+      "project_name": "greeter",
+      "job_id": "9d2a7b1c-3e4f-4a5b-8c6d-7e8f9a0b1c2d",
+      "kind": "approval",
+      "prompt": "Review artifacts ready for cycle 1. Accept, request changes, or ask questions.",
+      "options": ["accept", "changes", "cancel"],
+      "default_answer": null,
+      "raised_at": "2026-09-24T12:03:04.567890+00:00",
+      "timeout_at": null,
+      "answer_with": "vibey answer 5e1f0c7a-8b2d-4e5f-9a61-2c3d4e5f6a7b --verdict accept"
+    }
+  ]
+}
+```
+
+`job_id`, `default_answer` and `timeout_at` are `null` when the gate has none;
+`prompt` is the gate's own text, line breaks included. With nothing waiting,
+both forms exit 0: the text form prints
+`no open gates: nothing is waiting for your answer` and `--json` prints
+`{"gates": []}`.
+
+### How each kind of gate is answered
+
+`answer_with` is one line a shell runs as printed: every word is quoted as the
+shell needs it. Its form depends on the gate's kind, declared once in
+`src/vibey/cli/gate_answers.py`; a test fails when a gate kind is raised
+anywhere in `src/vibey` without an entry there.
+
+| Kind | `answer_with` (`ID` is the gate id) | Raised by |
+|---|---|---|
+| `question` | `vibey answer ID --defaults` | The DESIGN interview. Accepts every question's default. |
+| `approval` | `vibey answer ID --verdict accept` | REVIEW. Its other options are `changes` and `cancel`. |
+| `deploy_demo_review` | `vibey answer ID --verdict approve` | The Phase ⑥ demo. Or `request_changes`. |
+| `choice` | `vibey answer ID --choice local_only` | The deployment opt-in after REVIEW. `deploy` opts in. |
+| `deploy_interview` | `vibey answer ID --choice accept_defaults` | The Phase ④ interview. |
+| `deploy_acceptance` | `vibey answer ID --choice reject` | Phase ④ spec consent; see below. |
+| `deploy_failure_triage` | `vibey answer ID --choice LOOP_DEPLOY_DESIGN` | The Phase ⑥ triage. Or `RETRY_DEPLOY_EXECUTE`, `ABORT_DEPLOYMENT`. |
+| `bus_dead_lettered` | `vibey answer ID --choice replay`, or `dismiss` when the message cannot be replayed | A dead-lettered bus message. |
+| `budget_exhausted` | `vibey answer ID --raw '{"max_dollars": N}'` | The budget brake. |
+| `escalation_exhausted`, `attempts_exhausted` | `vibey answer ID --raw '{"max_attempts": N}'` | A spent effort ladder; a job out of attempts. |
+| `verify_repair_exhausted`, `integrate_repair_exhausted` | `vibey answer ID --raw '{"max_rounds": N}'` | BUILD's verify and integrate repair loops. |
+| `delivery_exhausted`, `research_evidence`, `engine_misconfigured` | `vibey answer ID --raw '{}'` | Any answer retries, once the cause outside vibey is fixed. |
+| `handoff_gate_failed`, `too_many_wind_downs`, and any kind not listed | `vibey answer ID --raw '<json>'` | Nothing reads a particular answer; you write it. |
+
+A verdict or choice uses the gate's declared default, else its first option;
+`options` in `--json` lists the rest. `N` and `<json>` are placeholders, and
+the text form says what to put there. Neither is valid JSON, so a command
+pasted without filling it in is refused by `vibey answer` (exit 2), never
+sent. How much more money or how many more tries to grant is a person's
+decision, so no number is suggested; the gate's prompt usually proposes one.
+
+`deploy_acceptance` prints its declared default, `reject`. Accepting the
+deployment spec also takes explicit consent to change real infrastructure,
+which no flag sends and `answer_with` never suggests:
+`vibey answer ID --raw '{"verdict": "accept", "explicit_mutation_authorized": true}'`.
 
 ## `vibey answer GATE_ID [QUESTION_ID=ANSWER ...]`
 
@@ -127,6 +261,9 @@ Answer a parked human gate. Exactly one of the following modes is required
 | `--verdict VALUE` | Review gates: sends `{"verdict": VALUE}` — `accept`, `changes`, `cancel`, `approve`, or `request_changes`. |
 | `--raw JSON` | Any other gate shape, e.g. raising a tripped budget cap: `--raw '{"max_dollars": 25}'` or `--raw '{"max_turns": 50}'`. |
 
+[`vibey gates`](#vibey-gates-project_id) prints, beside each open gate, the
+form that answers it.
+
 Prints `answered <gate_id>`. These exit 2 with a one-line message:
 combining `--defaults` with `--choice`, `--verdict`, or `--raw`; giving no
 mode or more than one; `--raw` that is not valid JSON or not a JSON object.
@@ -136,16 +273,11 @@ guarded.
 
 ### Finding a gate id
 
-No `vibey` command lists open gates today. Gates live in the `human_gate`
-table; the worker also sends `NOTIFY vibey_gate_raised` with the gate id when
-one is raised. To list open gates:
-
-```sql
-SELECT gate_id, project_id, kind, prompt, options, default_answer, raised_at
-FROM human_gate
-WHERE answered_at IS NULL
-ORDER BY raised_at;
-```
+[`vibey gates`](#vibey-gates-project_id) lists every open gate with its id,
+its prompt, and the `vibey answer` command that answers it;
+`vibey gates PROJECT_ID` lists one project's. The worker also sends
+`NOTIFY vibey_gate_raised` with the gate id when one is raised, for a program
+that would rather listen than poll.
 
 ## `vibey work PROJECT_ID`
 
@@ -246,18 +378,121 @@ project.
 
 ## `vibey cost [PROJECT_ID]`
 
-Show per-engine spend for the current cycle, read from `engine_health`, with
-a total and two budget caps. The `(N turns)` figure after each engine is its
-selection count, not a turn count. Defaults to the most recently created
-project.
+Show the current cycle's spend against the caps the budget brake enforces, then
+each engine's metered BUILD spend. Defaults to the most recently created project;
+an unknown id prints `unknown project <id>` and exits 1.
 
-The caps come from a `budget` table in the project's stored config
-(`max_dollars_per_cycle`, `max_dollars_total`), with fallbacks of $40.00 and
-$250.00. No code path writes that table today — not `vibey new`, not the
-Kubernetes operator, and no runtime code reads `[budget]` from `vibey.toml` — so the command
-prints the $40.00 / $250.00 placeholders. The cap that is enforced is
-`--max-cycle-dollars` / `--max-cycle-turns` from `vibey new`, applied by the
-worker's budget brake; `vibey cost` does not print it.
+- `Cycle spend:` is the ledger sum the brake checks before every BUILD session:
+  `TurnCompleted` cost and `BudgetSpent` dollars, and one turn per `TurnCompleted`
+  plus `BudgetSpent` turns. DESIGN's spend is in it.
+- `Cycle dollar cap:` and `Cycle turn cap:` are the project's stored
+  `max_cycle_dollars` and `max_cycle_turns`, read through the brake's own parser,
+  or `none (uncapped)` and `none`. A reached cap adds
+  `Cap reached: the next BUILD session parks a budget_exhausted gate.`
+- `Per-engine (BUILD sessions, all cycles):` is each engine's metered spend from
+  `engine_health`, which accumulates across cycles, and how often rotation
+  selected it. That count is not a turn count.
+
+The spend and caps are the budget [`vibey budget`](#vibey-budget-project_id)
+shows. That command also changes the caps.
+
+## `vibey budget [PROJECT_ID]`
+
+Show a project's per-cycle caps and this cycle's spend against them. Add,
+change or remove the caps after the project exists. The caps are
+`max_cycle_dollars` and `max_cycle_turns` in the project's stored config, the
+one place the budget brake reads them. The spend is the same ledger sum
+`vibey cost` and the worker use. Bare `vibey budget`, or `vibey budget show`,
+shows the most recently created project.
+
+| Subcommand | Option | Default | What it does |
+|---|---|---|---|
+| `budget [show] [PROJECT_ID]` | `--json` | off | Print the budget as JSON (below). |
+| | `--all` | off | Every project, newest first (by creation time, then id). With `--json`, an array. Not together with `PROJECT_ID` (exit 2). |
+| `budget set [PROJECT_ID]` | `--max-cycle-dollars F` | unset | Set the dollar cap: a finite number above zero. |
+| | `--max-cycle-turns N` | unset | Set the turn cap: a whole number above zero. At least one of the two is required. |
+| | `--by NAME` | the account running it | The name the change is recorded under. A tool that runs the command names itself; the VS Code extension says `vibey-vscode`. |
+| `budget clear [PROJECT_ID]` | `--dollars`, `--turns`, `--all` | — | Remove the dollar cap, the turn cap, or both. At least one is required. The project is then uncapped for it, as if it had never been set. |
+| | `--by NAME` | the account running it | As for `set`. |
+
+The text form is one short block per project:
+
+```text
+greeter (0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10), cycle 2
+  dollars: $3.21 spent this cycle; cap $15.00
+  turns:   41 spent this cycle; no cap
+  last change: dollar cap none -> $15.00, by adam, 2026-09-24 19:02 UTC (1 change in all)
+```
+
+When a cap is reached, the block says so plainly:
+`The dollar cap is reached: the next BUILD session will park a budget_exhausted gate.`
+
+`--json` prints one object with exactly these keys. With `--all` it prints an
+array of them, newest project first:
+
+```json
+{
+  "project_id": "0b5c9a4e-1d4c-4c47-9a2a-3c1d2b8f9e10",
+  "name": "greeter",
+  "cycle": 2,
+  "caps": {"max_cycle_dollars": 15.0, "max_cycle_turns": null},
+  "spend": {"dollars": 3.21, "turns": 41},
+  "exhausted": false,
+  "history": [
+    {"at": "2026-09-24T19:02:11.482113+00:00", "by": "adam", "field": "max_cycle_dollars", "old": null, "new": 15.0}
+  ]
+}
+```
+
+- A cap of `null` is no cap. The dollar cap is a number and the turn cap an
+  integer.
+- `spend.dollars` is the ledger sum, not rounded. `spend.turns` is the brake's
+  count: one per `TurnCompleted`, plus `BudgetSpent` turns.
+- `exhausted` is true when a cap is reached.
+- `history` lists every change `budget set` or `budget clear` recorded, oldest
+  first. Each entry has `at` (ISO-8601 with its offset), `by`, `field`, `old` and
+  `new`, where `null` is uncapped. A cap set at creation (by `vibey new` or the
+  Kubernetes operator) is not a change, so it has no entry.
+
+With no projects, bare `vibey budget` prints
+``no projects found; create one with `vibey new` first`` and exits 1. `--all`
+exits 0, printing `[]` with `--json`.
+
+**Changing a cap.** `set` and `clear` print what changed, then the budget block:
+
+```text
+Changed by adam:
+  dollar cap: none -> $15.00
+```
+
+A request that leaves every cap as it is prints
+`Nothing changed: the caps were already as asked.`, and writes and records
+nothing, so running it again is harmless. A cap at or below this cycle's spend
+is allowed. The block then says the next BUILD session will park a
+`budget_exhausted` gate.
+
+Each change writes the new caps into the project's config and appends one
+`BudgetCapChanged` event per changed cap to the ledger, in one transaction.
+The event carries `field`, `old`, `new`, `by` and `account`. `vibey ledger search
+--kind BudgetCapChanged` lists them, and `vibey ledger export` withholds them
+([What gets published](../guides/ledger-publication.md)). `--by` is a label for
+the record, not a permission. `account` is recorded beside it: the account the
+command ran as, from the password database, never `$USER`.
+
+The brake reads the caps at every BUILD session, so a worker that is already
+running applies a change to its next session. No restart is needed. A job
+already parked on a `budget_exhausted` gate stays parked until the gate is
+answered. The command lists each such gate with the answer that resumes the job
+under the stored caps, `vibey answer GATE_ID --raw '{}'`. Answering
+`--raw '{"max_dollars": N}'` still raises the cap for that job alone, as before.
+
+Exit codes: `0` on success, including an empty `--all`. `1` when there is no
+project or `PROJECT_ID` names none. `2` for a usage error, which writes nothing:
+a value that is not a cap, nothing to set or clear, a `--by` label that is empty,
+longer than 200 characters or holds control or formatting characters, or
+`PROJECT_ID` with `--all`. `3` for a change to a project in a phase this vibey
+does not know, because nothing can be recorded under it. Showing that project
+still works.
 
 ## `vibey ledger`
 
@@ -277,9 +512,10 @@ before `--limit`. Defaults to the most recently created project.
 
 ## `vibey queue`
 
-See the job queue in claim order, and move a job to the front of it
-([ADR-0054](../architecture/decisions/0054-a-bumped-job-runs-next.md)). Bare
-`vibey queue` prints help.
+See the job queue in claim order, move a job to the front of it
+([ADR-0054](../architecture/decisions/0054-a-bumped-job-runs-next.md)), and reap what is
+stuck ([ADR-0056](../architecture/decisions/0056-everything-a-queue-guards-is-reaped-by-measurement.md)).
+Bare `vibey queue` prints help.
 
 | Subcommand | Option | Default | What it does |
 |---|---|---|---|
@@ -287,6 +523,9 @@ See the job queue in claim order, and move a job to the front of it
 | `queue bump JOB_ID` | `--project PROJECT_ID` | latest project | Run the job next: after whatever is running, ahead of every un-bumped waiting job, behind anything bumped before it. Its unfinished dependencies move forward with it, dependencies first. Prints every job moved with its new place and any already ahead. |
 | | `--source NAME` | unset | An automation naming itself (see below). |
 | | `--json` | off | Print the change as JSON. |
+| `queue reap` | `--project PROJECT_ID` | latest project | One pass of the queue reaper: every expired lease (requeued while attempts remain, parked with a `delivery_exhausted` gate once they are spent), ready work nobody has taken for `[queue.reap] stale_ready_seconds`, and -- with a broker configured -- vibey's policy reconciled onto the queues it owns and read back, every queue measured, and each dead letter on an owned queue parked as a `bus.dead_letter` job. Ready work and broker verdicts are recorded under this project; a lease under its own job's project. |
+| | `--dry-run` | off | Judge everything and change nothing: no requeue, no park, no ledger event, no policy write. Prints what it would do. |
+| | `--json` | off | Print the report as JSON: `ok`, `acted`, `surfaced` (each with `object`, `queue`, `condition`, `measured`, `threshold`, `unit`, `action`), `policy`, `notes`, `unreadable`. |
 | `queue unbump JOB_ID` | `--project`, `--source`, `--json` | as `bump` | Take the job out of the lane. The lane is always the jobs bumped by name plus their unfinished dependencies, so every pulled-in job no remaining named job needs leaves with it; the output and the ledger list exactly what was removed. Refused while another named job depends on this one. |
 
 A bump changes order only. It never interrupts the running job or touches its lease,
@@ -318,6 +557,31 @@ JobPriorityRefused` lists the refusals. Refused with exit 3, and recorded:
   the message names it;
 - an un-bump of a job that another named job still depends on — the message names them;
 - a request the database aborted to break a lock cycle (retry it).
+
+**`queue reap`** prints what it reaped (`reaped:`), what is stuck and was only surfaced
+(`stuck, surfaced, nothing moved:`), the broker policy's read-back (`verified` or
+`NOT VERIFIED`), notes, and every source it could not read (`UNREAD:`). Each verdict line
+names the action, the condition, the object, the queue, the measured value and the
+threshold. It exits 0 when every source was read and the broker policy, where one was
+reconciled, read back as written; otherwise 1 -- a reaper never reports success it did not
+observe. It never deletes a dead letter: answer the parked job's gate with `vibey answer
+GATE_ID --choice replay` (publish it back to the queue it died on, at least once) or
+`--choice dismiss`; the broker's copy stays on the dead-letter queue either way. Its
+thresholds are [`[queue.reap]`](configuration.md#queuereap).
+
+## `vibey-gh slots`
+
+How many runs of one local model may run at once on this device, measured per device
+([ADR-0058](../architecture/decisions/0058-concurrent-local-runs-are-measured-per-device.md)).
+This is a `vibey-gh` command, part of the same distribution:
+
+| Subcommand | What it does |
+|---|---|
+| `vibey-gh slots corpus --pool FILE --out FILE` | Draw a stratified corpus of turn segments from a turn pool (the storm builds one with `storm_turn_pool.py`). |
+| `vibey-gh slots calibrate --corpus FILE` | Sweep N = 1, 2, 3, ... on this device beside an idle production runner. Stops at a broken bound or a plateau, checkpoints every step, and records the evidence keyed to the device's fingerprint. |
+| `vibey-gh slots allowed` | Print the number a queue may run at once here, with the reason on stderr. Missing or stale evidence prints `1` and requests a calibration. |
+
+Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/cli.md).
 
 ## `vibey deploy`
 
@@ -363,13 +627,26 @@ missing ones print `NOT INSTALLED` — and adds `qwenloop` when
 Each engine line shows install state, version, and auth. Auth is the exit
 status of `<binary> doctor`; if that command cannot run, doctor falls back
 to the engine's API-key variable (see
-[Environment variables](#environment-variables)).
+[Environment variables](#environment-variables)). Each probe starts from the
+engine's allow-listed environment, never doctor's own: the defaults, or with
+`--record` the target project's `engine_environment`, so a credential that project
+declares reaches the auth check and the conformance run as it reaches a session. A
+forbidden declaration in that project exits 2.
 
 The final `postgresql` line shows `READY`, `NOT READY`, `UNSUPPORTED`, or
 `NOT INSTALLED`. `READY` means a local PostgreSQL server at port 5432 accepts
 connections and is at least version 14. `--install-postgres` exits 1 if the
 package manager or service start fails, or if verification still does not reach
 that state.
+
+The `db-passwordless` line after it asks whether the app DSN's database admits a
+login with no password at all: as the DSN's role and as the OS user doctor runs as,
+on the DSN's host and, when that host is local, on each local socket directory. It
+prints `WARN` when one is let in (trust or peer authentication: any process running
+as that user, an engine session included, can open the database without
+`VIBEY_PG_URL`; see [SECURITY.md](https://github.com/the-vibey-project/vibey/blob/main/SECURITY.md) §5),
+`PASS` when every attempt was refused, and `UNKNOWN` when none reached the server or
+`VIBEY_PG_URL` is unset. It never changes the exit code.
 
 With `--conformance`, the command exits 1 if any engine fails a check. The
 worker does not select an engine for engine-driven jobs until a
@@ -472,6 +749,12 @@ read `[features] qwenloop` from `vibey.toml`; it falls back to a `features`
 table in the project's stored config, which no creation path writes today.
 In practice the environment variable is the only switch for the worker.
 
+The queue reaper (ADR-0056) runs in the same idle iterations: after the lease reap, at
+most once per `[queue.reap] interval_seconds` across all of the worker's loops, the
+worker surfaces stale ready work and -- with a broker configured -- reaps the broker, as
+`vibey queue reap` does. Its findings go to the ledger (`QueueReaped`) and to stderr
+(`queue.reaped`, `queue.stuck`, `queue.reap_unreadable`).
+
 Shutdown (ADR-0026): SIGTERM drains the worker — it finishes the job in
 hand, claims no more, and exits. A SIGTERM that arrives during startup,
 before the handler is installed, is latched at import time and honoured as
@@ -486,7 +769,7 @@ Variables read by code under `src/vibey`:
 | Variable | Read by | Effect |
 |---|---|---|
 | `VIBEY_PG_URL` | every command that opens the database; `recover`; `doctor`; `migrate` | The application role's PostgreSQL 14+ DSN ([database roles](configuration.md#database-roles)). There is no default: when unset, vibey refuses with `VIBEY_PG_URL is not set. vibey will not guess a database.` (exit 3 from guarded commands, a traceback from the others). `vibey install --postgres` installs the server but does not set this variable for the parent shell. |
-| `VIBEY_PG_MIGRATE_URL` | `migrate`; every command that opens the database, when set | The owner's DSN. Migrations run on it and the application role's grants are reconciled from it. Unset on a single-DSN install. |
+| `VIBEY_PG_MIGRATE_URL` | `migrate` only | The owner's DSN. Migrations run on it and the application role's grants are reconciled from it. Give it to that one command (`VIBEY_PG_MIGRATE_URL=… vibey migrate`); never export it. |
 | `VIBEY_EVIDENCE_DIR` | `work --provider qwenloop`, `worker --provider qwenloop` | Directory of reading material for the qwenloop DESIGN provider's research stage. Unset means research refuses and DESIGN stops there. |
 | `VIBEY_FEATURE_QWENLOOP` | `doctor`, `worker` | `1`, `true`, `yes`, or `on` (case-insensitive) enables qwenloop; any other set value disables it. When set it overrides config. When unset, `doctor` falls back to `[features] qwenloop` in `./vibey.toml` and `worker` falls back to the project's stored config. |
 | `ANTHROPIC_API_KEY` | `doctor` auth fallback; `doctor --cluster` (which also accepts `ANTHROPIC_AUTH_TOKEN`) | claudeloop credentials. |

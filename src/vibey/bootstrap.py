@@ -19,6 +19,7 @@ from vibey.application.build_verify_handler import (
     VerifyIndependencePolicy,
     VerifyRepairPolicy,
 )
+from vibey.application.bus_dead_letter_handler import BUS_DEAD_LETTER_KIND, BusDeadLetterHandler
 from vibey.application.deploy_acceptance_handler import DeployAcceptanceHandler
 from vibey.application.deploy_design_bridge import DeployDesignBridgeHandler
 from vibey.application.deploy_design_handler import (
@@ -45,6 +46,7 @@ from vibey.application.engine_selector import EngineSelector
 from vibey.application.interfaces import (
     AzureClientPort,
     BlobPort,
+    BusInspectorPort,
     BusPort,
     CachePort,
     Clock,
@@ -58,7 +60,9 @@ from vibey.application.interfaces import (
     IssueTrackerPort,
     JobHandler,
     MessagingPort,
+    ProjectBudgetServiceInterface,
     QueuePriorityServiceInterface,
+    QueueReaperInterface,
     SecretsPort,
     SiemPort,
     SmsPort,
@@ -67,7 +71,9 @@ from vibey.application.interfaces import (
 )
 from vibey.application.job_dispatcher import JobDispatcher
 from vibey.application.preflight import ConductorPreflight
+from vibey.application.project_budget import ProjectBudgetService
 from vibey.application.queue_priority import QueuePriorityService
+from vibey.application.queue_reaper import QueueReaper
 from vibey.application.review_collect_handler import ReviewCollectHandler
 from vibey.application.review_demo_handler import ReviewDemoHandler
 from vibey.application.review_deployment_choice_handler import ReviewDeploymentChoiceHandler
@@ -83,6 +89,7 @@ from vibey.domain.phase import Phase
 from vibey.infrastructure.azure.adapter import InMemoryAzureClientAdapter
 from vibey.infrastructure.build.automated_review_runner import SubprocessAutomatedReviewRunner
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
+from vibey.infrastructure.config_loader import ENVIRONMENT_CONFIG
 from vibey.infrastructure.db.advisory_lock import PostgresAdvisoryLock
 from vibey.infrastructure.db.build_ledger import PostgresBuildLedger
 from vibey.infrastructure.db.database_setup import SchemaPreparer
@@ -96,13 +103,14 @@ from vibey.infrastructure.db.job_priority_repository import PostgresJobPriorityS
 from vibey.infrastructure.db.job_repository import PostgresJobRepository
 from vibey.infrastructure.db.ledger_guard import (
     DatabaseEndpoints,
-    DatabaseRoleReconciler,
     LedgerGuardInspector,
     LedgerGuardStatus,
 )
 from vibey.infrastructure.db.ledger_repository import PostgresLedgerRepository
 from vibey.infrastructure.db.migrator import PostgresMigrator, discover_migrations
+from vibey.infrastructure.db.project_budget_store import PostgresProjectBudgetStore
 from vibey.infrastructure.db.project_repository import PostgresProjectRepository
+from vibey.infrastructure.db.queue_reap_store import PostgresQueueReapStore
 from vibey.infrastructure.db.review_ledger import PostgresReviewLedger
 from vibey.infrastructure.db.rotation_cursor_repository import PostgresRotationCursorRepository
 from vibey.infrastructure.db.visual_inventory_repository import FileVisualInventoryRepository
@@ -112,6 +120,7 @@ from vibey.infrastructure.docs.in_memory import InMemoryDocs
 from vibey.infrastructure.email.forward_email import ForwardEmailAdapter
 from vibey.infrastructure.email.in_memory import InMemoryEmail
 from vibey.infrastructure.engines.descriptors import BY_ENGINE_ID, DEFAULT_DESCRIPTORS
+from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.local_engines import (
     LocalEndpointEnvironment,
     LocalEngineSettings,
@@ -182,6 +191,12 @@ class AppResources:
     # Queue priority (ADR-0054). Only the service: the store it wraps is built here and
     # handed to nothing else, so no entry point can reorder the queue past the grant.
     queue_priority: QueuePriorityServiceInterface
+    # The queue reaper (ADR-0056): the worker's idle loop runs it when due, and
+    # `vibey queue reap` on demand.
+    queue_reaper: QueueReaperInterface
+    # Project budgets (`vibey budget`). Only the service: the store that writes a
+    # project's caps and their ledger events is built here and handed to nothing else.
+    project_budgets: ProjectBudgetServiceInterface
     integration_lock: PostgresAdvisoryLock | None = None
     # Whether the role this process connects as could rewrite the ledger (ADR-0055).
     # `vibey worker` logs it at every start when it could; `vibey doctor` fails on it.
@@ -385,6 +400,14 @@ def build_full_worker(
     local = LocalEngineSettings(environ=os.environ, config=project.config)
     for engine_id, local_adapter in local.adapters(LocalEndpointEnvironment(os.environ)).items():
         adapters.setdefault(engine_id, local_adapter)
+    # What each engine session may see of this worker's environment: an allow-list,
+    # widened only by the project's `engine_environment` object and never onto vibey's
+    # own DSN. Built here, from the project record, so a malformed or forbidden
+    # declaration stops the worker before any session starts (12.h).
+    engine_environment = EngineEnvironmentPolicy.from_config(project.config)
+    adapters = {
+        engine_id: engine_environment.applied_to(adapter) for engine_id, adapter in adapters.items()
+    }
     azure = azure_client if azure_client is not None else InMemoryAzureClientAdapter()
     clock = resources.clock
     notifications = getattr(resources, "notifications", None)
@@ -407,16 +430,14 @@ def build_full_worker(
         metrics=metrics,
     )
     # The runaway brake: caps come from the project's own config
-    # (max_cycle_dollars / max_cycle_turns, set at `vibey new`). Without
-    # either, spend stays uncapped -- opting in is explicit, never a
-    # silent default that would surprise existing projects. The parse is
-    # LedgerBudgetSource's own, the same one `vibey cost` reports from.
-    max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
-    budget_source: LedgerBudgetSource | None = None
-    if max_dollars is not None or max_turns is not None:
-        budget_source = LedgerBudgetSource(
-            resources.ledger, max_dollars=max_dollars, max_turns=max_turns
-        )
+    # (max_cycle_dollars / max_cycle_turns, set at `vibey new` and changed by
+    # `vibey budget`). Without either, spend stays uncapped -- opting in is
+    # explicit, never a silent default that would surprise existing projects.
+    # The caps are read at every BUILD session through LedgerBudgetSource's own
+    # parser, the one `vibey cost` and `vibey budget` report from -- not once,
+    # here -- so a cap changed while this worker runs binds the next session,
+    # and a project started uncapped can be capped without a restart.
+    budget_source = LedgerBudgetSource(resources.ledger, projects=resources.projects)
     wind_down = WindDownOrchestrator(
         ledger=resources.ledger,
         # The pool, like the provider's own selection: a wind-down must hand off to an
@@ -627,6 +648,8 @@ def build_full_worker(
             consent_provider=deploy_state.load_consent,
         ),
     }
+    # A dead letter the queue reaper parked (ADR-0056), settled by its gate's answer.
+    handlers[BUS_DEAD_LETTER_KIND] = BusDeadLetterHandler(gates=resources.gates, bus=resources.bus)
     # Alias kinds sharing a handler (the handlers themselves guard on both).
     handlers["build.plan"] = handlers["build.decompose"]
     handlers["deploy.accept"] = handlers["deploy.spec"]
@@ -714,7 +737,8 @@ async def build_app(
     # Read before the pool opens, so a bad VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS
     # fails the start before anything touches the database.
     migrator: MigratorInterface = PostgresMigrator.from_environ(os.environ)
-    endpoints = DatabaseEndpoints.from_environ(os.environ, app_url=url or database_url())
+    # The application role's DSN only: build_app never reads the owner's (ADR-0055).
+    endpoints = DatabaseEndpoints(app_url=url or database_url())
     pool = await asyncpg.create_pool(endpoints.app_url, min_size=1, max_size=10)
     if pool is None:
         raise RuntimeError("asyncpg did not create a pool")
@@ -724,15 +748,12 @@ async def build_app(
             server_version = parse_postgres_server_version(server_version_num)
             if server_version is None or not server_version.supported:
                 raise UnsupportedPostgresVersion(server_version_num)
-            # Migrate with the role allowed to (the owner's DSN when the roles are
-            # split), then ask, as the application, whether it could rewrite the
+            # Migrate when this role may (a single-DSN install), else verify; then ask, as the application, whether it could rewrite the
             # ledger (ADR-0055). A single-DSN install still starts -- an upgrade never
             # strands one -- but the worker says so at every start (not every CLI
             # command, whose stdout may be JSON), and `vibey doctor` fails on it.
             preparer: SchemaPreparerInterface = SchemaPreparer(
-                migrator=migrator,
-                reconciler=DatabaseRoleReconciler(),
-                inspector=LedgerGuardInspector(),
+                migrator=migrator, inspector=LedgerGuardInspector()
             )
             guard = await preparer.prepare(conn, endpoints, discover_migrations(migrations_dir()))
 
@@ -891,18 +912,28 @@ async def build_app(
 
             cache_port = InMemoryCache()
 
-        if (
-            resolved_config
-            and resolved_config.bus.url
-            and resolved_config.bus.username
-            and resolved_config.bus.password
-        ):
+        # With no vibey.toml -- a cluster pod, whose working directory is the worktrees
+        # volume -- the bus and the reaper's thresholds come from the environment alone,
+        # which is where the chart renders them (ADR-0056). A malformed value raises.
+        declared = resolved_config if resolved_config is not None else ENVIRONMENT_CONFIG.load()
+        bus_settings = declared.bus
+        reap_settings = declared.queue.reap
+        bus_inspector: BusInspectorPort | None = None
+        if bus_settings.url and bus_settings.username and bus_settings.password:
             from vibey.infrastructure.bus.rabbitmq import RabbitMqBusAdapter
+            from vibey.infrastructure.bus.rabbitmq_inspector import RabbitMqBusInspector
 
             bus_port: BusPort = RabbitMqBusAdapter(
-                url=resolved_config.bus.url,
-                username=resolved_config.bus.username,
-                password=resolved_config.bus.password,
+                url=bus_settings.url,
+                username=bus_settings.username,
+                password=bus_settings.password,
+                vhost=bus_settings.vhost,
+            )
+            bus_inspector = RabbitMqBusInspector(
+                url=bus_settings.url,
+                username=bus_settings.username,
+                password=bus_settings.password,
+                vhost=bus_settings.vhost,
             )
         else:
             from vibey.infrastructure.bus.in_memory import InMemoryBus
@@ -941,12 +972,20 @@ async def build_app(
 
             siem_port = InMemorySiem()
 
-        jobs = PostgresJobRepository(pool)
+        jobs = PostgresJobRepository(pool, reap_thresholds=reap_settings.thresholds())
         clock = SystemClock()
+        queue_reaper = QueueReaper(
+            store=PostgresQueueReapStore(pool, thresholds=reap_settings.thresholds()),
+            bus=bus_inspector,
+            config=reap_settings,
+            clock=clock,
+            logger=StructlogAppLogger(owner="queue-reaper"),
+        )
+        gates = PostgresHumanGateRepository(pool)
         yield AppResources(
             projects=projects,
             jobs=jobs,
-            gates=PostgresHumanGateRepository(pool),
+            gates=gates,
             ledger=ledger,
             design_ledger=PostgresDesignLedger(ledger),
             design_specs=FileDesignSpecRepository(projects),
@@ -986,8 +1025,17 @@ async def build_app(
                 caller=ProcessCaller(),
                 clock=clock,
             ),
+            project_budgets=ProjectBudgetService(
+                projects=projects,
+                ledger=ledger,
+                store=PostgresProjectBudgetStore(pool),
+                gates=gates,
+                caller=ProcessCaller(),
+                clock=clock,
+            ),
             integration_lock=PostgresAdvisoryLock(pool),
             ledger_guard=guard,
+            queue_reaper=queue_reaper,
         )
     finally:
         await pool.close()

@@ -18,7 +18,7 @@ editor answers `--version`; `run` checks neither rule.
 
 ## Required behaviour
 0. **Gate (ADR-0046 §8, CDD bounded divergence).** Before any edit run
-   `grep -n "V-VS VERDICT: FEASIBLE" /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
+   `grep -n "V-VS VERDICT: FEASIBLE" STORM/specs/ADR-two-loops.md docs/architecture/decisions/0046-*.md`.
    If nothing matches, change nothing and report `gated: V-VS verdict is not FEASIBLE`.
    Copy the recorded V-VS5 rule (its fields and values) and the `product.json` paths per OS into
    the commit body.
@@ -94,4 +94,4 @@ editor answers `--version`; `run` checks neither rule.
 **Depends on:** `loops-vscodeloop-oss-driver`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

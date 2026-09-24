@@ -227,4 +227,4 @@ domain commands need nothing and can run with `--noconftest -n 0` added.
 - Nothing unmerged: every file named here is as it stands on the integration branch.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

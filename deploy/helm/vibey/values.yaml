@@ -40,6 +40,26 @@ worker:
   worktrees:
     size: 5Gi
     storageClass: ""
+  # The queue reaper (ADR-0056). The worker runs it when idle, at most once per
+  # intervalSeconds: expired leases are requeued, or parked with a gate once their
+  # attempts are spent; ready work nobody takes is surfaced; on the broker, vibey's
+  # policy is reconciled onto the queues it owns and each dead letter on one becomes
+  # a parked job. Rendered into VIBEY_QUEUE_REAP_*; see [queue.reap] in
+  # docs/reference/configuration.md for what each key means.
+  queueReap:
+    enabled: true
+    intervalSeconds: 60
+    leaseGraceSeconds: 0
+    staleReadySeconds: 900
+    deadLetterMinDepth: 1
+    deadLetterPeekLimit: 100
+    ownedQueuePattern: "^vibey\\."
+    deadLetterQueuePattern: "(\\.dlq|\\.dead)$"
+    policyName: vibey-reap
+    policyPriority: 0
+    # At least the longest job lease (two hours for BUILD), with room.
+    consumerTimeoutSeconds: 21600
+    deliveryLimit: 20
   # Additional environment for the worker container, as Kubernetes EnvVar
   # objects -- for instance VIBEY_OLLAMA_TIMEOUT, VIBEY_EVIDENCE_DIR, or an
   # external Ollama endpoint when ollama.enabled is false. Appended after
@@ -73,6 +93,14 @@ postgres:
   additionalDatabases:
     - plane
     - infisical
+  # Each additional database is owned by a login role of the same name, never by the
+  # owner above (ADR-0055): a surface pod holds its own database's credentials and
+  # nothing that could reach vibey's ledger. The postgres container creates the roles
+  # on first boot and on every start after, and hands an existing database (and what
+  # is in it) over to its role. Dev-only defaults; set real ones per install.
+  additionalDatabasePasswords:
+    plane: plane-dev-password
+    infisical: infisical-dev-password
 
 # Suffix for fully-qualified in-cluster DNS names. Only ever needs
 # changing on a cluster built with a non-default domain (kubeadm's
@@ -90,7 +118,11 @@ dsn:
   # only. Empty makes a single-DSN install, where the worker migrates as the one
   # role and `vibey doctor` fails the ledger-guard check until the roles are
   # split (docs/reference/configuration.md#database-roles).
-  existingSecretMigrateKey: migrate-dsn
+  #
+  # Empty by default, so an existing-Secret install is unchanged by upgrading: no
+  # `migrate` init container, and no reference to a key the Secret may not have.
+  # Name the owner's key here to opt in.
+  existingSecretMigrateKey: ""
 
 engineAuth:
   # Interactive subscription login does not exist in a cluster, so engines
@@ -458,6 +490,13 @@ surfaces:
       digest: "sha256:b839b492a91788a1d9406ef3ec0e1d8a8448032c48148a54a9e0c68ed66cde9b"
     username: vibey
     password: rabbitmqpassword
+    # How long any consumer on this broker -- vibey's or Plane's Celery workers -- may
+    # hold an unacknowledged delivery before the broker closes its channel and
+    # requeues everything on it (ADR-0056, condition (a)). Declared here rather than
+    # left to the image's default, and set to that default (30 minutes) so Plane keeps
+    # the behaviour it was built against. vibey's own queues get their own, longer
+    # bound through the reaper's policy (worker.queueReap.consumerTimeoutSeconds).
+    consumerTimeoutMs: 1800000
     storage:
       size: 2Gi
       storageClass: ""

@@ -1,5 +1,10 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 name: __VIBEY_GH_WF_RELEASE_SURFACES__
+# `<name> · <branch> · <release commit>` (a dispatch: the release RUN id), so every run records
+# which commit it published. `vibey-gh announce` reads this back to find where the previous
+# announcement stopped; a `workflow_run` run is attributed to the default branch whatever
+# branch released, so the run's own branch and head_sha cannot say it (vibey_gh.announce).
+run-name: "__VIBEY_GH_WF_RELEASE_SURFACES__ · ${{ github.event.workflow_run.head_branch || inputs.branch }} · ${{ github.event.workflow_run.head_sha || inputs.run_id }}"
 
 # The package registries remain authoritative for Python installation. This workflow adds
 # two companion surfaces after that release has succeeded: branch-specific ProperDocs
@@ -1320,66 +1325,75 @@ jobs:
           path: pages
       - id: deploy
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
-      # A community hears about a new paper or book revision from the pipeline that
-      # published it, never from someone remembering to post. The webhook is the
-      # repository secret DISCORD_WEBHOOK_URL and is never written down here; with no
-      # secret set the step says so and passes, so the omission is visible in the log
-      # rather than silent (sub-doctrine 12.e). It runs only once the deploy succeeded,
-      # and it links only the surfaces this deploy actually produced.
-      - name: Announce the published surfaces
+      # A community hears what changed from the pipeline that published it, never from
+      # someone remembering to post (sub-doctrine 12.e): `vibey-gh announce` posts a concise
+      # changelog -- one line per merged change, Breaking / Added / Fixed / Other, capped,
+      # the rest counted and linked -- then the surfaces this deploy produced. The webhook is
+      # the repository secret `[announce] webhook_secret` and is never written down here;
+      # with no secret set the step says so and passes, so the omission is visible in the log
+      # rather than silent. It runs only once the deploy succeeded, and nothing it does can
+      # fail the deploy: a webhook or tool failure is a ::warning::.
+      #
+      # The range is a POSITION (sub-doctrine 10.g): the commits since the release commit
+      # the last accepted announcement covered, read from this workflow's own runs -- their
+      # `run-name` records branch and commit, and the step below records acceptance. The
+      # Actions API is read with this job's `actions: read`, through GH_TOKEN.
+      # Installed in a step of its own, with no secret and no token in its environment, so
+      # the install's build backend never runs beside the webhook or GH_TOKEN. PIP_UPGRADE
+      # upgrades a release already present that predates `announce` (pip honours it for the
+      # line below exactly as `--upgrade`); with `[install] pin_version` the line is pinned.
+      - name: Install the announcer
         if: success()
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          PIP_UPGRADE: "true"
+        run: |
+          set -euo pipefail
+          if ! python -c 'import vibey_gh.announce' 2>/dev/null; then
+            (
+              self="__VIBEY_GH_SELF_SOURCE__"
+              grep -qE '^name = "vibey-gh"' "$self/pyproject.toml" 2>/dev/null || self=""
+              if [ -n "$self" ]; then
+                python -m pip install --quiet -e "$self"
+              else
+                python -m pip install --quiet vibey
+              fi
+            ) || echo "::warning::announce: vibey-gh could not be installed and the deploy stands"
+          fi
+      - name: Announce the published surfaces
+        id: announce
+        if: success()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.__VIBEY_GH_ANNOUNCE_WEBHOOK_SECRET__ }}
           CHANNEL: ${{ needs.context.outputs.channel }}
+          BRANCH: ${{ needs.context.outputs.branch }}
           RELEASE_SHA: ${{ needs.context.outputs.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if [ -z "${DISCORD_WEBHOOK_URL:-}" ]; then
-            echo "announce: no DISCORD_WEBHOOK_URL secret is set; nothing posted"
+            echo "announce: no __VIBEY_GH_ANNOUNCE_WEBHOOK_SECRET__ secret is set; nothing posted"
+            printf 'posted=false\nposition=unknown\n' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          python - <<'PY'
-          import json
-          import os
-          import pathlib
-          import urllib.error
-          import urllib.request
-
-          channel = os.environ["CHANNEL"]
-          repository = os.environ["GITHUB_REPOSITORY"]
-          owner, name = repository.split("/", 1)
-          root = f"https://{owner}.github.io/{name}/{channel}/"
-          site = pathlib.Path("channel-site")
-          surfaces = (
-              ("paper.pdf", "paper, PDF"),
-              ("paper.docx", "paper, DOCX"),
-              ("paper/index.html", "paper, HTML"),
-              ("book.pdf", "book, PDF"),
-              ("book.epub", "book, EPUB"),
-              ("book-print.html", "book, print HTML"),
-          )
-          lines = [
-              f"**{repository}** published its `{channel}` documentation "
-              f"from `{os.environ['RELEASE_SHA'][:12]}`: {root}"
-          ]
-          for path, label in surfaces:
-              if (site / path).is_file():
-                  link = root + (path[: -len("index.html")] if path.endswith("index.html") else path)
-                  lines.append(f"- {label}: {link}")
-          # The site is already published when this runs, and `attach` needs this job:
-          # a webhook that times out or answers with an error is a warning in the log,
-          # never a failed deploy (sub-doctrine 12.e: say it out loud, do not mask it).
-          try:
-              request = urllib.request.Request(
-                  os.environ["DISCORD_WEBHOOK_URL"],
-                  data=json.dumps({"username": "vibey", "content": "\n".join(lines)}).encode(),
-                  headers={"Content-Type": "application/json", "User-Agent": "vibey-gh release-surfaces"},
-              )
-              with urllib.request.urlopen(request, timeout=30) as response:
-                  print(f"announce: posted {len(lines) - 1} surface links to Discord ({response.status})")
-          except (urllib.error.URLError, OSError, ValueError) as exc:
-              print(f"::warning::announce: the Discord webhook post failed and the deploy stands: {exc}")
-          PY
+          if ! vibey-gh announce --channel "$CHANNEL" --branch "$BRANCH" --sha "$RELEASE_SHA" \
+              --site-dir channel-site; then
+            echo "::warning::announce: vibey-gh announce did not complete and the deploy stands"
+          fi
+      # The durable record that this run's release commit WAS announced: it runs only when
+      # the webhook accepted the post AND the announcement knew where it started (or
+      # re-anchored, and said so). An announcement whose history could not be read is
+      # `position=unknown` and is never recorded, so the next one reads the same span again
+      # instead of starting past commits nobody announced (10.g). The next announcement reads
+      # this step's success back from the Actions API as where to start. Renaming it breaks
+      # that read; vibey_gh.announce names it ANNOUNCED_STEP and test_announce.py holds the
+      # two together.
+      - name: Record the announced position
+        if: steps.announce.outputs.posted == 'true' && steps.announce.outputs.position != 'unknown'
+        env:
+          BRANCH: ${{ needs.context.outputs.branch }}
+          RELEASE_SHA: ${{ needs.context.outputs.sha }}
+          POSITION: ${{ steps.announce.outputs.position }}
+        run: echo "announced ${BRANCH} at ${RELEASE_SHA} (${POSITION})"
 
   attach:
     # The paper and the book as assets on the GitHub Release for this exact version: a

@@ -53,7 +53,7 @@ Migration table: "`--engines qwenloop` … normalized with a deprecation warning
    keeps today's `Invalid engine: …` and exit 2. Nothing else in `worker` changes.
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first.
+Read `STORM/EDITING-RULES.md` first.
 - `src/vibey/domain/engine_names.py` (created by lane `loops-config-engine-names`; use
   `edit_file`): the constant of behaviour 1 after the imports, with the imports it needs
   (`from types import MappingProxyType`, `from typing import Final`,
@@ -171,4 +171,4 @@ First run `uv run ruff format src/vibey/domain/engine_names.py src/vibey/cli/mai
 **Depends on:** `loops-claudeloop-local-paid`, `loops-domain-loop-id`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

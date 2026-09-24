@@ -273,4 +273,4 @@ the file says, stop and report the difference instead of renaming anything.
 - rmq-r07-dispatch-miss-policy: `DispatchSnapshot` (what `snapshot` returns) and `DispatchMissPolicy` (what the snapshot test feeds).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

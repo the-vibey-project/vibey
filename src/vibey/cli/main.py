@@ -33,15 +33,19 @@ from vibey.bootstrap import (
     build_design_worker,
     build_visual_worker,
 )
+from vibey.cli.budget import budget_app
 from vibey.cli.errors import EXIT_USAGE, guard
+from vibey.cli.gates import GATES
 from vibey.cli.ledger_publication import ledger_export, ledger_site
 from vibey.cli.ledger_search import PRESENTER, ledger_search
+from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
     InvalidAnswer,
     UnknownProject,
     UnknownProvider,
+    VibeyError,
     WrongPhase,
 )
 from vibey.domain.job import JobState
@@ -64,6 +68,8 @@ from vibey.infrastructure.engines.claudeloop_process import (
     ClaudeLoopProcess,
     SpendRecorder,
 )
+from vibey.infrastructure.engines.descriptors import CLAUDELOOP, OPENCODE
+from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.local_engines import LocalEngineSettings
 from vibey.infrastructure.engines.ollama_chat import (
     DEFAULT_OLLAMA_MODEL,
@@ -90,6 +96,7 @@ ledger_app.command("search")(ledger_search)
 ledger_app.command("export")(ledger_export)
 ledger_app.command("site")(ledger_site)
 app.add_typer(queue_app, name="queue")
+app.add_typer(budget_app, name="budget")
 
 
 def _version_callback(value: bool) -> None:
@@ -217,7 +224,13 @@ def new_project(
                 "must be off, shadow, or inject", param_hint="--skills-context-mode"
             )
         config: dict[str, object] = {"project": {"name": name, "repo": str(repo)}}
-        config.update(load_runtime_config_from_path(repo.resolve() / "vibey.toml"))
+        try:
+            config.update(load_runtime_config_from_path(repo.resolve() / "vibey.toml"))
+        except ValueError as exc:
+            # A forbidden [gates] or [engine_environment] entry is refused here, before
+            # a project exists that the worker would then refuse to build.
+            typer.echo(f"vibey.toml: {exc}")
+            raise typer.Exit(EXIT_USAGE) from exc
         if max_cycle_dollars is not None:
             config["max_cycle_dollars"] = max_cycle_dollars
         if max_cycle_turns is not None:
@@ -239,6 +252,40 @@ def new_project(
     with guard():
         project_id, job_id = asyncio.run(create())
     typer.echo(f"project {project_id}\ndesign job {job_id}")
+
+
+@app.command("projects")
+def list_projects(
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Print a JSON array instead: one object per project, newest first.",
+        ),
+    ] = False,
+) -> None:
+    """List every project, newest first: its id, phase, cycle, and open gates."""
+    with guard():
+        asyncio.run(PROJECTS.run(as_json=as_json))
+
+
+@app.command("gates")
+def list_gates(
+    project_id: Annotated[
+        UUID | None,
+        typer.Argument(help="Only this project's gates; defaults to every project's."),
+    ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help='Print JSON instead: {"gates": [...]}, oldest first.',
+        ),
+    ] = False,
+) -> None:
+    """List open gates, oldest first, each with the `vibey answer` command that answers it."""
+    with guard():
+        asyncio.run(GATES.run(project_id, as_json=as_json))
 
 
 @design_app.callback(invoke_without_command=True)
@@ -276,6 +323,25 @@ def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
     own reading of the working directory -- nothing else reads config from there.
     """
     return LocalEngineSettings.from_toml((root or Path.cwd()) / "vibey.toml", environ=os.environ)
+
+
+async def _passwordless_reach_section() -> None:
+    """`vibey doctor`'s password-less-access line for the app DSN's database: WARN, PASS
+    or UNKNOWN, never a failure (SECURITY.md §5).
+
+    A module-level function because it is `doctor`'s own step, shared by nothing else,
+    like `_postgres_status_line` beside it; the check itself is
+    `PasswordlessReachProbe`.
+    """
+    from vibey.infrastructure.db.passwordless_reach import PasswordlessReachProbe
+
+    name = "db-passwordless"
+    dsn = os.environ.get("VIBEY_PG_URL", "").strip()
+    if not dsn:
+        typer.echo(f"UNKNOWN {name:<20} VIBEY_PG_URL is not set; nothing to check")
+        return
+    finding = await PasswordlessReachProbe().probe(dsn)
+    typer.echo(f"{finding.verdict.mark} {name:<20} {finding.detail}")
 
 
 def _postgres_status_line(status: PostgresStatus) -> str:
@@ -440,7 +506,9 @@ async def _work_once(
             design_provider = ScriptedDesignProvider()
         elif provider == "claudeloop":
             claude_process = ClaudeLoopProcess(
-                executor=AsyncSubprocessExecutor(),
+                executor=AsyncSubprocessExecutor(
+                    EngineEnvironmentPolicy.from_config(project.config).environment(CLAUDELOOP)
+                ),
                 max_turns=max_turns,
                 max_dollars=max_dollars,
                 spend_recorder=_build_spend_recorder(
@@ -467,7 +535,9 @@ async def _work_once(
             from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopProcess
 
             opencode_process = OpenCodeLoopProcess(
-                executor=AsyncSubprocessExecutor(),
+                executor=AsyncSubprocessExecutor(
+                    EngineEnvironmentPolicy.from_config(project.config).environment(OPENCODE)
+                ),
                 max_turns=max_turns,
                 max_dollars=max_dollars,
                 spend_recorder=_build_spend_recorder(
@@ -847,8 +917,6 @@ def cost(
     project_id: Annotated[UUID | None, typer.Argument(help="Optional project ID")] = None,
 ) -> None:
     """Show the cycle's spend against the caps the budget brake enforces."""
-    from vibey.application.budget_source import LedgerBudgetSource
-    from vibey.application.interfaces import LedgerBudgetSourceInterface
     from vibey.infrastructure.db.engine_health_repository import PostgresEngineHealthRepository
 
     async def show_cost() -> None:
@@ -870,13 +938,10 @@ def cost(
             # The brake's own numbers, not a second opinion (issue #210): the
             # caps through the one parser the worker uses, and the spend from
             # the ledger sum the worker checks before every BUILD session --
-            # which also carries DESIGN's spend, unlike engine_health. Typed as
-            # its interface so mypy holds the class to the declared seam.
-            max_dollars, max_turns = LedgerBudgetSource.caps_from_config(project.config)
-            source: LedgerBudgetSourceInterface = LedgerBudgetSource(
-                resources.ledger, max_dollars=max_dollars, max_turns=max_turns
-            )
-            budget = await source.current(project.project_id, project.cycle)
+            # which also carries DESIGN's spend, unlike engine_health. Read
+            # through the one budget reader `vibey budget` shows, too.
+            budget = (await resources.project_budgets.show(project.project_id)).budget
+            max_dollars, max_turns = budget.max_dollars, budget.max_turns
             dollar_cap = f"${max_dollars:.2f}" if max_dollars is not None else "none (uncapped)"
             turn_cap = str(max_turns) if max_turns is not None else "none"
 
@@ -1290,6 +1355,12 @@ def doctor(
         all_ok = True
 
         record_project_id: UUID | None = None
+        # What the probes may see of this environment. With nothing recorded there is no
+        # project to declare anything, so the defaults; with --record, the target
+        # project's `engine_environment`, because the health written to that project must
+        # be measured with what its sessions will receive -- a credential it declares
+        # for opencode or agyloop included.
+        engine_environment = EngineEnvironmentPolicy()
         if record:
             async with build_app() as resources:
                 if record_project is not None:
@@ -1300,9 +1371,14 @@ def doctor(
                 typer.echo("no projects found; create one with `vibey new` first")
                 raise typer.Exit(1)
             record_project_id = target.project_id
+            try:
+                engine_environment = EngineEnvironmentPolicy.from_config(target.config)
+            except ValueError as exc:
+                typer.echo(f"project {record_project_id}: {exc}")
+                raise typer.Exit(EXIT_USAGE) from exc
 
         for eid in eids:
-            adapter = local.adapter(eid, endpoint)
+            adapter = engine_environment.applied_to(local.adapter(eid, endpoint))
             desc = adapter.descriptor
             preflight = await adapter.preflight()
 
@@ -1355,10 +1431,15 @@ def doctor(
         if install_postgres and not local_postgres_status.ready:
             typer.echo(f"  detail: {local_postgres_status.detail}")
             raise typer.Exit(1)
-        # ADR-0055: whenever there is a database to ask, ask whether the application's
-        # role could rewrite the ledger -- a single-DSN install fails here until the
-        # roles are split, so the step cannot be forgotten silently (12.e).
+        # The database section. ADR-0055: whenever there is a database to ask, ask
+        # whether the application's role could rewrite the ledger -- a single-DSN install
+        # fails here until the roles are split, so the step cannot be forgotten silently
+        # (12.e). Beside it: keeping VIBEY_PG_URL out of every model-driven process
+        # protects nothing if the database lets the worker's OS user in without it.
         database_ok = await _database_security_section()
+        # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above), which
+        # FAILS for the owner and superusers; reviewers to decide whether to consolidate.
+        await _passwordless_reach_section()
         if (conformance and not all_ok) or not database_ok:
             raise typer.Exit(1)
 
@@ -1466,13 +1547,19 @@ def migrate() -> None:
         reconciler=DatabaseRoleReconciler(),
         inspector=LedgerGuardInspector(),
     )
-    report = asyncio.run(
-        runner.run(
-            owner_url=owner_url,
-            app=DatabaseEndpoints(app_url=app_url) if app_url else None,
-            migrations=discover_migrations(migrations_dir()),
+    try:
+        report = asyncio.run(
+            runner.run(
+                owner_url=owner_url,
+                app=DatabaseEndpoints(app_url=app_url) if app_url else None,
+                migrations=discover_migrations(migrations_dir()),
+            )
         )
-    )
+    except VibeyError as exc:
+        # A refusal (a missing role the owner may not create, an application role that
+        # cannot be guarded) is the answer, said plainly -- not a traceback.
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(1) from None
     typer.echo(
         f"applied {len(report.applied)} migration(s)"
         + (f": {', '.join(report.applied)}" if report.applied else "")
@@ -1684,7 +1771,9 @@ def worker(
             decomposer: WorkPlanProducer
             if provider == "claudeloop":
                 claude_process = ClaudeLoopProcess(
-                    executor=AsyncSubprocessExecutor(),
+                    executor=AsyncSubprocessExecutor(
+                        EngineEnvironmentPolicy.from_config(project.config).environment(CLAUDELOOP)
+                    ),
                     max_turns=max_turns,
                     max_dollars=max_dollars,
                     spend_recorder=_build_spend_recorder(
@@ -1723,7 +1812,9 @@ def worker(
                 from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopProcess
 
                 opencode_process = OpenCodeLoopProcess(
-                    executor=AsyncSubprocessExecutor(),
+                    executor=AsyncSubprocessExecutor(
+                        EngineEnvironmentPolicy.from_config(project.config).environment(OPENCODE)
+                    ),
                     max_turns=max_turns,
                     max_dollars=max_dollars,
                     spend_recorder=_build_spend_recorder(
@@ -1754,6 +1845,16 @@ def worker(
             endpoint = LocalEndpointEnvironment(os.environ, model=ollama_model)
             for engine_id, local_adapter in local.adapters(endpoint).items():
                 adapters.setdefault(engine_id, local_adapter)
+            # The sweep probes each engine's auth, so it must probe with what the engine's
+            # sessions will actually receive: the project's `engine_environment` on top of
+            # the defaults. Without it a credential the project declares (opencode's
+            # provider key, agyloop's Vertex credentials) was invisible to the auth check,
+            # and the engine read "auth FAIL" although its sessions would authenticate.
+            engine_environment = EngineEnvironmentPolicy.from_config(project.config)
+            adapters = {
+                engine_id: engine_environment.applied_to(adapter)
+                for engine_id, adapter in adapters.items()
+            }
             if allow_list is not None:
                 allowed = {eid: a for eid, a in adapters.items() if eid in allow_list}
                 # An allow-list matching nothing used to start a worker with zero
@@ -1850,6 +1951,9 @@ def worker(
                         typer.echo("no ready job")
                         return
                     await resources.jobs.reap()
+                    # Stale ready work and the broker, at most once per interval across
+                    # every drive loop (ADR-0056); the lease reap just ran above.
+                    await resources.queue_reaper.run_if_due(project.project_id)
                     typer.echo(
                         f"drive[{idx}] iter={iteration} reap done, waiting for notify", err=True
                     )

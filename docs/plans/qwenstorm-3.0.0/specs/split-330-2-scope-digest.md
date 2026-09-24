@@ -203,4 +203,4 @@ editing another file; the whole-suite gate is the rule.
 - Nothing unmerged: `deployment.py` is as #319 (c67495e4) left it on the integration branch.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

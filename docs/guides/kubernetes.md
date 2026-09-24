@@ -131,18 +131,23 @@ with two keys
 
 - `dsn` (or the key named by `dsn.existingSecretKey`) is the application role's DSN. The
   chart injects it as `VIBEY_PG_URL` into the worker and, when enabled, the operator.
-- `migrate-dsn` (or `dsn.existingSecretMigrateKey`) is the owner's DSN. It is mounted
+- The owner's DSN, under the key `dsn.existingSecretMigrateKey` names. It is mounted
   only into the `migrate` init container, which runs `vibey migrate`: it applies
   migrations, creates the application role if it is missing, grants it exactly the
   declared privileges, and fails the pod if that role could still rewrite the ledger.
 
-An empty `dsn.existingSecretMigrateKey` makes a single-DSN install. The worker then
+`dsn.existingSecretMigrateKey` is empty by default, which makes a single-DSN install, so
+an existing Secret keeps working after an upgrade until you name an owner key. The worker then
 migrates as the one role, and `vibey doctor --cluster` fails `ledger-guard` until the roles
 are split ([database roles](../reference/configuration.md#database-roles)). Use a fully
 qualified host or an IP address: KEDA reads the application's DSN from another namespace.
 
 The built-in Postgres (`postgres.enabled: true`) does this for you: `postgres.user` is the
-owner and `postgres.appRole` (default `vibey_app`) the application role.
+owner and `postgres.appRole` (default `vibey_app`) the application role. Each surface
+database (`postgres.additionalDatabases`) is owned by a login role of the same name whose
+password is `postgres.additionalDatabasePasswords.<name>`; the postgres container creates
+it and hands it its database on every start, so an existing install is converted on
+upgrade and no surface pod holds the owner's credentials.
 
 The `wait-for-postgres` init container is rendered only for the built-in
 Postgres. Against a managed instance the worker connects directly at
@@ -364,7 +369,13 @@ interview gates.
 
 The CR also accepts `maxCycleTurns` and
 `skillsContext: {mode, budget, timeout_seconds}` (`mode` is `off`,
-`shadow`, or `inject`; `budget` is 1,000–32,000, default 6,000).
+`shadow`, or `inject`; `budget` is 1,000–32,000, default 6,000). `gates`
+(`{timeout_seconds, kill_grace_seconds, isolate_python_env, env_allow}`) and
+`engineEnvironment` (`{allow, engines: {<engine id>: [...]}}`) declare what a gate
+command and an engine session may see of the worker's environment, the same objects
+as `vibey.toml`'s [`[gates]`](../reference/configuration.md#gates) and
+[`[engine_environment]`](../reference/configuration.md#engine_environment); a
+forbidden entry (`VIBEY_*`, `PG*`, a DSN) is refused before the project is created.
 `spec.engines` is restricted by the CRD schema to the four paid engines,
 so `qwenloop` cannot be named in a CR today. The worker accepts
 `--provider qwenloop` (chart value `worker.provider`) for the sovereign

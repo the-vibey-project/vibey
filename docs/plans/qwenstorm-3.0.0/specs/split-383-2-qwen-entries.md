@@ -217,4 +217,4 @@ The follow-up commit writes the machine, the date and a one-line result into the
 - split-383-1-model-catalogue: `ModelEntry`, `OllamaArtifact`, `CATALOGUE`, `ModelCatalogue` in `domain/catalogue.py`, `CATALOGUE_PROFILES` in `infrastructure/profiles.py`, and `tests/test_catalogue.py` to append to.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

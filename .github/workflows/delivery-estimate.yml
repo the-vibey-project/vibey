@@ -1,13 +1,12 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 name: Delivery estimate
 
+# Once an hour, and by hand -- never per event (the operator, 2026-09-24). Every push, pull
+# request and issue event used to start a run, and each publish opened or updated the
+# estimate pull request, so the ledger moved many times an hour while each move went
+# unchecked behind `[skip ci]`. Now the estimate refreshes hourly, and its pull request runs
+# every CI gate, like any other change to develop.
 on:
-  push:
-    branches: [develop]
-  pull_request:
-    types: [opened, closed, reopened, synchronize, labeled, unlabeled]
-  issues:
-    types: [opened, closed, reopened, labeled, unlabeled, milestoned, demilestoned]
   schedule:
     - cron: "17 * * * *"
   workflow_dispatch:
@@ -17,32 +16,14 @@ permissions:
   issues: read
   pull-requests: read
 
-# One repository-wide group was the right mutex for the wrong set of runs. Every event
-# shared it, so a pull request's estimate check cancelled an unrelated pull request's, and
-# either one cancelled the integration branch's ledger refresh. Measured over the hundred
-# runs before this was written: 72 cancelled, 50 of them `pull_request` -- fifty pull
-# requests whose estimate was computed far enough to spend a runner and never far enough
-# to report (sub-doctrine 12.g, ADR-0050).
-#
-# What the two lanes actually contend for is different, so they are keyed differently:
-#
-#   - A `pull_request` run checks out that pull request's head and runs `forecast
-#     --no-record --no-report`. It writes nothing and shares nothing, so it contends only
-#     with its own older run, which a newer commit should still supersede.
-#   - Every other event refreshes the published ledger on the integration branch and the
-#     `publish` job commits it. Those genuinely must not overlap, so they keep the single
-#     repository-wide group they always had, unchanged.
-#
-# `cancel-in-progress` stays true for both: an estimate is a whole-state recompute, so the
-# newer run subsumes the older rather than continuing it, and nothing is lost by stopping.
+# One run at a time, keyed on the repository: the publish job commits the ledger, so two
+# refreshes must never overlap. With only the hourly schedule and manual dispatch left, no
+# unrelated lane shares the slot any more (the pull-request lane of ADR-0050 is gone).
 concurrency:
-  # 12.g-whole-state: every event here recomputes the estimate from the whole tracker
-  # rather than advancing a cursor, so a cancelled run leaves no gap -- the next one
-  # derives the same answer from scratch. That is why `cancel-in-progress` is true for
-  # the ledger lane as well as the read-only one.
-  # Written on one line on purpose: a folded scalar keeps the newlines of its
-  # more-indented lines, which would put literal newlines inside the group name.
-  group: delivery-estimate-${{ github.repository }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'ledger' }}
+  # 12.g-whole-state: every run recomputes the estimate from the whole tracker rather than
+  # advancing a cursor, so a cancelled run leaves no gap -- the next one derives the same
+  # answer from scratch. That is why `cancel-in-progress` is true.
+  group: delivery-estimate-${{ github.repository }}-ledger
   cancel-in-progress: true
 
 jobs:
@@ -53,10 +34,7 @@ jobs:
       - name: Check out the integration branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          # PR validation must execute the exact proposed head.  Every other
-          # event refreshes the integration branch's continuously published
-          # estimate.
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'develop' }}
+          ref: develop
           fetch-depth: 0
 
       - name: Set up Python
@@ -71,14 +49,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          if [ "$EVENT_NAME" = pull_request ]; then
-            vibey-gh forecast --no-record --no-report
-          else
-            vibey-gh forecast
-          fi
+          vibey-gh forecast
 
   publish:
     name: Publish changed estimate ledger and report
@@ -86,7 +59,6 @@ jobs:
     # an issue can be opened by anyone, so an `issues` event may refresh a read-only
     # estimate but must never reach the commit-and-push job.
     if: >-
-      github.event_name == 'push' ||
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch'
     needs: refresh
@@ -117,10 +89,20 @@ jobs:
         run: |
           set -euo pipefail
           vibey-gh forecast
+          # The paper's forecast figure is generated from the ledger `forecast` just
+          # appended to, so the pull request carries both or neither (sub-doctrine 12.e).
+          # Without this, #1125 merged a new record and every branch's pre-push failed
+          # tests/meta/test_paper_figures.py on develop. The history figures stay pinned
+          # to the revision in the paper's markers; only the forecast block moves.
+          python scripts/paper_figures.py
 
       - name: Publish the changed estimate ledger and report
+        # The Actions token may not open pull requests here ("GitHub Actions is not
+        # permitted to create or approve pull requests"), so the pull request is opened
+        # with the same token every other workflow uses for that, falling back to the
+        # Actions token where the secret is not set (a fork) so the push still lands.
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || github.token }}
           GH_REPO: ${{ github.repository }}
           ESTIMATE_BRANCH: automation/delivery-estimate
         run: |
@@ -132,12 +114,12 @@ jobs:
           git switch --force-create "$ESTIMATE_BRANCH" origin/develop
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .vibey/delivery-estimates.jsonl docs/estimate.md
+          git add .vibey/delivery-estimates.jsonl docs/estimate.md docs/paper.md
           if git diff --cached --quiet; then
             echo "delivery estimate is unchanged"
             exit 0
           fi
-          git commit -m "chore(estimate): refresh delivery forecast [skip ci]" \
+          git commit -m "chore(estimate): refresh delivery forecast" \
             -m "Made-With: Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/))."
           git push --force-with-lease="refs/heads/$ESTIMATE_BRANCH" origin "HEAD:$ESTIMATE_BRANCH"
           pr_number="$(gh pr list --repo "$GH_REPO" --head "$ESTIMATE_BRANCH" --base develop --state open --json number --jq '.[0].number')"

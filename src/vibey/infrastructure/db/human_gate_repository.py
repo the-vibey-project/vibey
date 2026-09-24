@@ -6,6 +6,7 @@ from uuid import UUID
 import asyncpg
 
 from vibey.application.dto import HumanGateRecord, HumanGateRequest
+from vibey.domain.job import QUEUE_GATE_KINDS
 
 
 def _require(row: asyncpg.Record | None, *, context: str) -> asyncpg.Record:
@@ -102,15 +103,30 @@ class PostgresHumanGateRepository:
             )
             return tuple(_row_to_record(r) for r in rows)
 
-    async def latest_for_job(self, job_id: UUID) -> HumanGateRecord | None:
+    async def open_all(self) -> tuple[HumanGateRecord, ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT * FROM human_gate
+                WHERE answered_at IS NULL
+                ORDER BY raised_at ASC, gate_id ASC
+                """
+            )
+            return tuple(_row_to_record(r) for r in rows)
+
+    async def latest_for_job(
+        self, job_id: UUID, *, include_queue_gates: bool = False
+    ) -> HumanGateRecord | None:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
                 """
                 SELECT * FROM human_gate
-                WHERE job_id = $1
+                WHERE job_id = $1 AND ($2 OR kind <> ALL($3::text[]))
                 ORDER BY raised_at DESC, gate_id DESC
                 LIMIT 1
                 """,
                 job_id,
+                include_queue_gates,
+                sorted(QUEUE_GATE_KINDS),
             )
             return _row_to_record(row) if row is not None else None

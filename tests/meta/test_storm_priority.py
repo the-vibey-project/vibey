@@ -189,11 +189,14 @@ def test_a_push_never_touches_a_running_lane(tmp_path: Path) -> None:
 
 
 def test_the_runner_waits_for_the_running_lane_before_it_asks_what_is_next() -> None:
-    """The host-wide wait (8.c) comes first in every pass; the resolver is asked after it."""
+    """The wait (8.c, as many as this device measured) comes first in every pass; the
+    resolver is asked after it, and how many is asked of vibey-gh before either."""
     script = (TOOLS / "storm-queue.sh").read_text()
-    wait = script.index('while pgrep -f "qwenstorm-3.0.0/tools/qwenlane.py"')
+    slots = script.index('SLOTS="$(slots)"')
+    wait = script.index('while [ "$(running)" -ge "$SLOTS" ]')
     ask = script.index('"$PY" "$Q/tools/storm_queue.py" next')
-    assert wait < ask
+    assert slots < wait < ask
+    assert "-m vibey_gh slots allowed" in script
 
 
 # --- 4. who may push: the operator, or a declared source (12.j) ------------------------
@@ -298,8 +301,9 @@ def test_admission_still_judges_a_pushed_lane_when_it_starts() -> None:
     script = (TOOLS / "storm-queue.sh").read_text()
     ask = script.index('"$PY" "$Q/tools/storm_queue.py" next')
     admit = script.index('"$PY" "$Q/tools/storm_trust.py" admit')
-    run = script.index('"$PY" "$Q/tools/qwenlane.py"')
-    assert ask < admit < run
+    # The lane itself is launched by `run_lane`, after admission, whatever the concurrency.
+    run = script.index('touch "$L/.qwenstorm/running"')
+    assert ask < admit < run < script.index('run_lane "$1" "$2"', run)
 
 
 # --- 5. recorded, append-only, and replayable ------------------------------------------
@@ -490,6 +494,21 @@ def test_nothing_eligible_waits(tmp_path: Path) -> None:
     assert storm_queue.Resolver.at(root).plan().decision == "wait"
 
 
+def test_a_running_lane_is_never_chosen_again_and_keeps_the_storm_alive(tmp_path: Path) -> None:
+    """With more than one lane at once (ADR-0058), the lane already running is skipped --
+    never started twice -- and still counts as pending, so the storm is not "empty" while
+    it runs beside the runner."""
+    root = storm(tmp_path, queue="a 1\nb 2\n")
+    (root / "lanes/a/.qwenstorm").mkdir(parents=True)
+    (root / "lanes/a/.qwenstorm/running").touch()
+    resolver = storm_queue.Resolver.at(root)
+    assert resolver.ledger.running("a") and not resolver.ledger.running("b")
+    assert resolver.plan().decision == "run b 2"
+    assert [row.state for row in resolver.plan().rows][0] == "running"
+    settle(root, "b")
+    assert storm_queue.Resolver.at(root).plan().decision == "wait"
+
+
 # --- the shape: classes, each with its interface beside it (ADR-0016, 9.b) --------------
 
 
@@ -587,6 +606,7 @@ def throwaway_storm(tmp_path: Path, queue: str) -> tuple[Path, dict[str, str]]:
         "storm_queue.py",
         "storm-priority.py",
         "lane_environment.py",
+        "storm_durability.py",
     ):
         shutil.copy2(TOOLS / name, tools / name)
     (tools / "storm_trust.py").write_text(STUB_TRUST)
@@ -599,8 +619,20 @@ def throwaway_storm(tmp_path: Path, queue: str) -> tuple[Path, dict[str, str]]:
     (tools / "lane-setup.sh").chmod(0o755)
     (root / "scratch").mkdir()
     (root / "hooks").mkdir()
+    # A test's tmp_path is volatile by construction; the storm says it is throwaway, and why,
+    # or the runner's durability gate refuses it like any other (10.h, ADR-0057).
+    # vibey-gh is stubbed too: `slots allowed` answers $SLOTS_ANSWER (unset: nothing, which
+    # the runner must read as one), and every other call is the real interpreter.
+    python = tmp_path / "python"
+    python.write_text(
+        '#!/bin/bash\nif [ "$1 $2 $3" = "-m vibey_gh slots" ]; then\n'
+        '  [ -n "$SLOTS_ANSWER" ] && echo "$SLOTS_ANSWER"; echo "stub vibey-gh" >&2; exit 0\nfi\n'
+        f'exec "{sys.executable}" "$@"\n'
+    )
+    python.chmod(0o755)
     (root / "storm.toml").write_text(
-        f'[paths]\nrepo = "{root}"\nslug = "owner/repo"\npython = "{sys.executable}"\n'
+        f'[paths]\nrepo = "{root}"\nslug = "owner/repo"\npython = "{python}"\n'
+        '[durability]\ndisposable = "a test fixture: built and discarded by one test"\n'
     )
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -609,7 +641,14 @@ def throwaway_storm(tmp_path: Path, queue: str) -> tuple[Path, dict[str, str]]:
     for name, body in (("pgrep", "exit 1"), ("ps", "exit 0"), ("gh", gh)):
         (bin_dir / name).write_text(f"#!/bin/bash\n{body}\n")
         (bin_dir / name).chmod(0o755)
-    env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
+    env = {
+        **os.environ,
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+        "VIBEY_GH_SLOTS_DIR": str(tmp_path / "slots"),
+        "STORM_POLL_SECONDS": "1",
+        # Never the machine's real storm home: the throwaway storm is its own.
+        "VIBEY_STORM_HOME": str(root),
+    }
     return root, env
 
 
@@ -659,6 +698,42 @@ def test_a_push_mid_lane_runs_next_after_it_and_never_interrupts_it(tmp_path: Pa
     assert ran == ["a", "c", "z", "b", "d"]
     assert ran.count("a") == 1  # never restarted, never interrupted
     assert json.loads((root / "lanes/a/.qwenstorm/result.json").read_text())["completed"]
+
+
+def test_one_lane_at_a_time_unless_vibey_gh_answers_more(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\n")
+    assert run_storm(root, env) == ["a", "b"]
+    assert "concurrent lanes: 1" in (root / "progress.log").read_text()
+    assert not list((root / "lanes").rglob("running"))
+
+
+def test_two_lanes_run_at_once_when_this_device_measured_two(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\nb 2\n")
+    # Lane a finishes only once lane b has started: with one slot that never happens and
+    # a records that it ran alone.
+    (root / "hooks" / "a").write_text(
+        f'for i in $(seq 100); do grep -qx b "{root}/ran.txt" && exit 0; sleep 0.1; done\n'
+        f'touch "{root}/alone"\n'
+    )
+    ran = run_storm(root, {**env, "SLOTS_ANSWER": "2"})
+    assert sorted(ran) == ["a", "b"] and not (root / "alone").exists()
+    assert "concurrent lanes: 2" in (root / "progress.log").read_text()
+    assert not list((root / "lanes").rglob("running"))
+
+
+def test_a_requested_calibration_runs_when_the_queue_empties(tmp_path: Path) -> None:
+    root, env = throwaway_storm(tmp_path, "a 1\n")
+    (tmp_path / "slots").mkdir()
+    (tmp_path / "slots" / "abc.request.json").write_text("{}")
+    # The stubbed vibey-gh answers every `slots` call; the pool builder is the real tool,
+    # which finds no lane records here and falls back to the storm's specs -- stubbed too.
+    (root / "tools" / "storm_turn_pool.py").write_text(
+        "import sys\nopen(sys.argv[sys.argv.index('--out') + 1], 'w').write('{}\\n')\n"
+    )
+    run_storm(root, env)
+    log = (root / "progress.log").read_text()
+    assert "calibrating concurrent lanes for this device (requested)" in log
+    assert "calibration did not finish" not in log
 
 
 def test_a_pushed_lane_whose_issue_admission_refuses_never_runs(tmp_path: Path) -> None:

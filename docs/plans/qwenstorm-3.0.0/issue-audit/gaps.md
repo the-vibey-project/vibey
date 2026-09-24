@@ -1,7 +1,7 @@
 # Issue-suite gap audit: vibey law and decisions vs. open issues and queued specs
 
 **Evidence cutoff (10.f).**
-- Code: `/private/tmp/claude-501/storm/qwenstorm-3.0.0/integration`, branch `storm/integration` at `cce648ef` (develop with #392 ratified, plus the integrated storm lanes). Every `file:line` below is at that commit.
+- Code: `STORM/integration`, branch `storm/integration` at `cce648ef` (develop with #392 ratified, plus the integrated storm lanes). Every `file:line` below is at that commit.
 - Open issues: `gh issue list --state open` at 2026-09-22 ~15:10Z (88 open), cross-checked against `issue-audit/open-issues.tsv`.
 - Queued specs: `specs/` as listed at 2026-09-22T15:20Z. The installer, ORM and fakes spec sets were still being written at that time (see Appendix B).
 - CI: `gh run list` on 2026-09-22 ~15:10Z.
@@ -128,7 +128,7 @@ Also recorded: stale issues that ratified law now contradicts (Appendix A), spec
 - **Source:** 8.c (storms put work on the loop's queue); 10.e ("a project that ships delivery tooling it does not itself run"); 12.c (declared in the repository).
 - **Requirement:** Lane storms are a family command that submits runs to sovereignloop. They are not ad-hoc scripts that spawn qwenloop in-process.
 - **Evidence:**
-  - `/private/tmp/claude-501/storm/qwenstorm-3.0.0/{qwenlane.py,storm-queue.sh,lane-setup.sh,file-issue.py,EDITING-RULES.md}`.
+  - `STORM/{qwenlane.py,storm-queue.sh,lane-setup.sh,file-issue.py,EDITING-RULES.md}`.
   - `qwenlane.py:19-26` imports qwenloop internals (`_run_plan`, `_server_for`).
   - Lane clones have no pre-commit hooks (memory, 10:00 EDT).
   - In-tree, only `qwenloop run --storm` exists: `src/vibey_runners/qwen/src/qwenloop/application/storm.py`.
@@ -282,7 +282,7 @@ Also recorded: stale issues that ratified law now contradicts (Appendix A), spec
 ### D3. The benchmark behind the 8.d default is not in the tree
 - **Source:** 8.d ("the catalogue names, for each choice, the evidence behind it and the date"); 8.g; 10.f; 12.c.
 - **Requirement:** The measurement that chose GPT-OSS 20B is reproducible from the repository, and re-running it appends evidence to the catalogue.
-- **Evidence:** it lives only in `/private/tmp/claude-501/storm/qwenstorm-3.0.0/bench/` (`bench.py`, `results.jsonl`). Nothing in `src/`.
+- **Evidence:** it lives only in `STORM/bench/` (`bench.py`, `results.jsonl`). Nothing in `src/`.
 - **Coverage:** partial. #383 pins the catalogue data but not the method.
 - **Proposed:** 20B. `feat(models): vibey models bench runs the recorded ten-turn session and appends dated evidence to the model catalogue`. Also gives 8.d's "living standard" a repeatable check.
 

@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from vibey.domain.queue_reap import BrokerPolicy, ReapThresholds
 
 
 @runtime_checkable
@@ -47,8 +50,29 @@ class QueuePriorityConfigInterface(Protocol):
 
 
 @runtime_checkable
+class QueueReapConfigInterface(Protocol):
+    """`[queue.reap]` (ADR-0056)."""
+
+    @property
+    def enabled(self) -> bool: ...
+
+    @property
+    def interval_seconds(self) -> int: ...
+
+    @property
+    def dead_letter_peek_limit(self) -> int: ...
+
+    def thresholds(self) -> ReapThresholds: ...
+
+    def broker_policy(self) -> BrokerPolicy: ...
+
+
+@runtime_checkable
 class QueueConfigInterface(Protocol):
     """`[queue]`."""
 
     @property
     def priority(self) -> QueuePriorityConfigInterface: ...
+
+    @property
+    def reap(self) -> QueueReapConfigInterface: ...

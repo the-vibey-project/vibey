@@ -455,3 +455,27 @@ async def test_find_reusable_skips_unstructured_response(tmp_path: Path) -> None
     process = OpenCodeLoopProcess(executor=executor, max_turns=1, max_dollars=0.1)
     await process.run(spec(tmp_path))
     assert len(executor.calls) == 1
+
+
+async def test_the_design_session_is_spawned_with_opencodes_environment_only(
+    monkeypatch,  # type: ignore[no-untyped-def]
+) -> None:
+    from vibey.infrastructure.engines.descriptors import OPENCODE
+    from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
+
+    monkeypatch.setenv("VIBEY_PG_URL", "postgresql://vibey:secret@db/vibey")
+    monkeypatch.setenv("OPENCODE_CONFIG", "/cfg/opencode.json")
+    captured: dict[str, object] = {}
+
+    async def fake_create(*args, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        return MockProcess(0, b"", b"")
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_create)
+    await AsyncSubprocessExecutor().execute(("opencodeloop", "run"))
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env == EngineEnvironmentPolicy().environment(OPENCODE).build()
+    assert env["OPENCODE_CONFIG"] == "/cfg/opencode.json"
+    assert "VIBEY_PG_URL" not in env

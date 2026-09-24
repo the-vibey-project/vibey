@@ -110,6 +110,20 @@ stringData:
   username: {{ .Values.surfaces.rabbitmq.username }}
   password: {{ .Values.surfaces.rabbitmq.password }}
 ---
+{{- /* Broker configuration declared as code (ADR-0056). A conf.d snippet, so the image's
+       own 10-defaults.conf still loads beside it. */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullName }}-rabbitmq-conf
+  labels: {{- include "vibey.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rabbitmq
+data:
+  20-vibey-reap.conf: |
+    # How long a consumer may hold an unacknowledged delivery before the broker
+    # closes its channel and requeues everything on it (ADR-0056, condition (a)).
+    consumer_timeout = {{ .Values.surfaces.rabbitmq.consumerTimeoutMs | int }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -166,6 +180,9 @@ spec:
     metadata:
       labels: {{- include "vibey.labels" . | nindent 8 }}
         app.kubernetes.io/component: rabbitmq
+      annotations:
+        # A changed consumer_timeout reaches the broker by restarting it.
+        checksum/rabbitmq-conf: {{ .Values.surfaces.rabbitmq.consumerTimeoutMs | int | toString | sha256sum }}
     spec:
       containers:
         - name: rabbitmq
@@ -198,10 +215,17 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/rabbitmq
+            - name: conf
+              mountPath: /etc/rabbitmq/conf.d/20-vibey-reap.conf
+              subPath: 20-vibey-reap.conf
+              readOnly: true
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: {{ $fullName }}-rabbitmq-data
+        - name: conf
+          configMap:
+            name: {{ $fullName }}-rabbitmq-conf
 ---
 apiVersion: vibey.dev/v1alpha1
 kind: VibeySurface
@@ -604,7 +628,8 @@ spec:
             - name: PORT
               value: "8080"
             - name: DB_CONNECTION_URI
-              value: "postgres://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ $fullName }}-postgres:5432/infisical?sslmode=disable"
+              # Infisical's own role, owner of the `infisical` database only (ADR-0055).
+              value: "postgres://infisical:{{ include "vibey.surfaceDbPassword" (dict "root" . "name" "infisical") }}@{{ $fullName }}-postgres:5432/infisical?sslmode=disable"
             - name: REDIS_URL
               value: "redis://{{ $fullName }}-redis:6379/2"
             - name: ENCRYPTION_KEY

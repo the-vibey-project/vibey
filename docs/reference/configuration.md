@@ -5,19 +5,21 @@ and unit-tested in
 [`src/vibey/domain/config.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/domain/config.py)
 (`VibeyConfig`, `parse_config`, `parse_toml_string`) and
 [`src/vibey/infrastructure/config_loader.py`](https://github.com/the-vibey-project/vibey/blob/main/src/vibey/infrastructure/config_loader.py)
-(`load_config_from_path`). `vibey new` reads the `[notifications]` and
-`[telemetry]` tables from the repository's `vibey.toml` and stores them in the
-project record; the worker and lifecycle repository consume those stored
-tables. The other schema tables remain documented inputs for future wiring.
+(`load_config_from_path`). `vibey new` reads the `[notifications]`,
+`[telemetry]`, [`[gates]`](#gates) and [`[engine_environment]`](#engine_environment)
+tables from the repository's `vibey.toml` and stores them in the project record; the
+worker and lifecycle repository consume those stored tables. The other schema tables
+remain documented inputs for future wiring.
 
 ## What is read at runtime today
 
 | Input | Read by | What it controls |
 |---|---|---|
 | `./vibey.toml`, key `[features].qwenloop` | `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`) | Whether `qwenloop` is added to the health sweep. The file is read from the current directory with `parse_toml_string`; a missing or malformed file counts as `qwenloop = false`. |
-| `./vibey.toml`, `[notifications]` and `[telemetry]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels and the telemetry switch into the stored project config. |
+| `./vibey.toml`, `[notifications]`, `[telemetry]`, `[gates]` and `[engine_environment]` | `vibey new` (`infrastructure/config_loader.py`) | Copies project notification channels, the telemetry switch, how gate commands run and what an engine session may see of the environment into the stored project config. `[gates]` and `[engine_environment]` are validated first: a forbidden entry stops `vibey new` before a project exists. |
 | `<repo>/vibey.toml`, `[queue.priority] sources` — the project's own repository root, never the current directory | `vibey queue bump` / `unbump`, `vibey design resume --priority`, via `QueuePriorityService` (`infrastructure/queue_priority_grant.py` `ProjectPriorityGrantReader`) | Which automations besides the operator may reorder the project's queue ([`[queue.priority]`](#queuepriority)); the file's owner is the operator. Read fresh on every request; only the `[queue]` table is parsed. A missing file declares none; a malformed one refuses every request, recorded. |
-| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, notification delivery, telemetry, and (in principle) `features.qwenloop` — see below. |
+| `./vibey.toml`, `[queue.reap]` and `[bus]` -- or, with no `./vibey.toml`, the environment alone (`VIBEY_QUEUE_REAP_*`, `VIBEY_BUS_*`) | `bootstrap.build_app` (every command that opens the queue), via `load_config_from_path` or `EnvironmentConfigLoader` | The queue reaper's thresholds and broker policy ([`[queue.reap]`](#queuereap)) and the bus it inspects. A cluster pod has no `vibey.toml` in its working directory, so the chart's environment is what composes both there (ADR-0056). A malformed environment value fails the start; a `./vibey.toml` that does not parse is skipped, as `build_app` has always skipped it, and the environment alone is read. |
+| The project's stored record (the `project` row: `max_cycles` column and `config` JSON) | `vibey worker`, lifecycle repository, and job handlers | Cycle cap, per-cycle spend and turn caps, skills-context policy, [gate commands](#gates), [what an engine session may see of the environment](#engine_environment), notification delivery, telemetry, and (in principle) `features.qwenloop` — see below. |
 | Environment variables | See [Environment variables](#environment-variables) | Database DSN, the migration-lock wait, the qwenloop switch, the sovereign DESIGN provider's evidence directory. |
 
 The project record is written once, at creation, by one of two paths:
@@ -27,16 +29,47 @@ The project record is written once, at creation, by one of two paths:
   `--max-cycle-turns`, `--skills-context-mode` and `--skills-context-budget`
   are stored in the `config` JSON as `max_cycle_dollars`, `max_cycle_turns`
   and `skills_context` (the last only when the mode is not `off`). When the repo
-  contains `vibey.toml`, its `[notifications]` and `[telemetry]` tables are
-  copied into that same JSON record.
+  contains `vibey.toml`, its `[notifications]`, `[telemetry]`, `[gates]` and
+  `[engine_environment]` tables are copied into that same JSON record.
 - **The Kubernetes operator** ([ADR-0025](../architecture/decisions/0025-kubernetes-operator-crd-keda.md)):
   a `VibeyProject` spec's `maxCycles` sets the column (default `10`);
   `repo`, `maxCycleDollars`, `maxCycleTurns` and `skillsContext` are stored in
-  the `config` JSON. `spec.engines` is stored as a flat `engines` list that
-  nothing reads back yet.
+  the `config` JSON, and `gates` and `engineEnvironment` as its `gates` and
+  `engine_environment` objects (validated the same way). `spec.engines` is stored as
+  a flat `engines` list that nothing reads back yet.
 
-Neither path passes through `parse_config`. No command updates these values on
-an existing project.
+Neither path passes through `parse_config`. One command updates any of these values
+on an existing project, and only two of them: `vibey budget set` and
+`vibey budget clear` rewrite `max_cycle_dollars` and `max_cycle_turns` (see
+[Per-cycle caps](#per-cycle-caps-max_cycle_dollars-max_cycle_turns)). No command
+changes the rest after creation. The operator applies its spec at creation only,
+so later edits to a `VibeyProject`'s `maxCycleDollars` or `maxCycleTurns` change
+nothing; use `vibey budget`.
+
+### Per-cycle caps: `max_cycle_dollars`, `max_cycle_turns`
+
+The budget brake's caps. They are top-level keys of the project's stored
+`config`, and that is the only place the brake reads them
+(`LedgerBudgetSource.caps_from_config`).
+
+| Key | Type | Unset means | Set by |
+|---|---|---|---|
+| `max_cycle_dollars` | number above zero | no dollar cap | `vibey new --max-cycle-dollars`, the operator's `spec.maxCycleDollars`, `vibey budget set --max-cycle-dollars` |
+| `max_cycle_turns` | integer above zero | no turn cap | `vibey new --max-cycle-turns`, the operator's `spec.maxCycleTurns`, `vibey budget set --max-cycle-turns` |
+
+- **Read at every BUILD session**, not once when a worker starts. A cap changed
+  while a worker runs binds its next BUILD session. A project created uncapped
+  can be capped without a restart.
+- **Uncapped is absence.** `vibey budget clear` removes the key, leaving the config
+  as if the cap had never been set. A key that is not a number, or a `true` or
+  `false`, is also no cap. It is never a default.
+- **Every change is on the ledger.** Each `set` or `clear` that changes a cap
+  appends one `BudgetCapChanged` event (`field`, `old`, `new`, `by`, `account`)
+  in the same transaction as the config write. `vibey budget --json` reads its
+  `history` back from those events. A value set at creation has no event.
+- **A grant is not a cap change.** Answering a `budget_exhausted` gate with
+  `--raw '{"max_dollars": N}'` raises the cap for that one job and leaves the
+  stored cap as it is.
 
 Neither path writes a `features` key either, so the worker's check of the
 stored `features.qwenloop` is always false for projects created today:
@@ -47,7 +80,7 @@ stored `features.qwenloop` is always false for projects created today:
 | Variable | Read by | Effect |
 |---|---|---|
 | `VIBEY_PG_URL` | `bootstrap.database_url()` (every command that opens the queue) | The application role's PostgreSQL DSN ([database roles](#database-roles)). Required; there is no default — `vibey` exits with `DatabaseNotConfigured` if it is unset. |
-| `VIBEY_PG_MIGRATE_URL` | `vibey migrate`; `bootstrap.build_app()` when set | The owner's DSN: migrations run on it, and the application role's grants are reconciled from it ([database roles](#database-roles)). Unset makes a single-DSN install. |
+| `VIBEY_PG_MIGRATE_URL` | `vibey migrate` only | The owner's DSN: migrations run on it, and the application role's grants are reconciled from it ([database roles](#database-roles)). Give it to that one command (`VIBEY_PG_MIGRATE_URL=… vibey migrate`); never export it, and nothing else reads it. |
 | `VIBEY_MIGRATION_LOCK_TIMEOUT_SECONDS` | `bootstrap.build_app()` via `PostgresMigrator.from_environ` (every command that opens the queue) | How long a start waits for another process's migration before failing with `MigrationLockTimeout`, which names the backend pid holding the lock. Seconds, fractions allowed and rounded up to the next millisecond; default `300`; `0` waits indefinitely. Unset or blank means the default; anything that is not a number from `0` to `2147483.647` fails the start with `InvalidMigrationLockTimeout` before the pool opens, rather than falling back. See [the migration lock](../plans/data-model.md#71-the-migration-lock). |
 | `VIBEY_FEATURE_QWENLOOP` | `vibey worker` (`bootstrap.qwenloop_enabled`), `vibey doctor` (`cli/main.py` `_qwenloop_feature_enabled`), and `load_config_from_path` | Overrides `features.qwenloop`. `1`, `true`, `yes`, `on` (case-insensitive, surrounding whitespace ignored) enable; any other value disables. When set it wins over both the stored project record and `./vibey.toml`. Only `load_config_from_path` rejects a non-boolean value. For the worker, enabling it adds a qwenloop adapter and makes qwenloop the standby engine for BUILD rotation. |
 | `VIBEY_EVIDENCE_DIR` | `vibey work --provider qwenloop`, `vibey worker --provider qwenloop` | Directory of reading that the sovereign DESIGN provider's research stage draws from ([ADR-0027](../architecture/decisions/0027-sovereign-design-provider.md)). Unset, research refuses rather than inventing a source, and the phase stops there. |
@@ -62,35 +95,37 @@ anyway. There are two roles and two DSNs:
 
 | Role | DSN | Holds |
 |---|---|---|
-| The owner | `VIBEY_PG_MIGRATE_URL` | Every table. Runs migrations and reconciles grants, nothing else: `vibey migrate`, the chart's `migrate` init container, or `build_app()` when the variable is set. |
+| The owner | `VIBEY_PG_MIGRATE_URL` | Every table. Runs migrations and reconciles grants, nothing else: `vibey migrate`, run by hand or as the chart's `migrate` init container. No other command reads this variable, so no worker, engine session or gate command ever holds the owner's DSN. |
 | The application role | `VIBEY_PG_URL` | Exactly `APP_ROLE_GRANTS` (`infrastructure/db/ledger_guard.py`). On `event` that is `SELECT` and `INSERT`. It holds no `DELETE` or `TRUNCATE` anywhere, owns nothing, and is not a superuser. Every worker, CLI command, operator and KEDA scaler connects as it. |
 
-`build_app()` picks its path by what it is given:
+`build_app()` never reads the owner's DSN:
 
-- With `VIBEY_PG_MIGRATE_URL`, it migrates on an owner connection and reconciles the grants.
-- Without it, when the application's role may migrate (a superuser, or a member of the
-  migration catalog's owner), it migrates as that role. This is a single-DSN install.
+- When the application's role may migrate (a superuser, or a member of the migration
+  catalog's owner), it migrates as that role. This is a single-DSN install.
 - Otherwise it only verifies the schema, and refuses to start while migrations are pending
-  (`SchemaNotMigrated`).
+  (`SchemaNotMigrated`): run `vibey migrate` first.
 
 **Upgrading a single-DSN install.** Existing installs connect as one role, usually a
 superuser. They keep running, but `vibey doctor` fails `ledger-guard`, `vibey worker`
 prints `error: ledger guard NOT in force` on every start, and `vibey migrate` exits 1,
 until the roles are split:
 
-1. Set `VIBEY_PG_MIGRATE_URL` to the DSN you use today (the owner).
-2. Set `VIBEY_PG_URL` to the same server with a new role and password, for example
+1. Set `VIBEY_PG_URL` to the same server with a new role and password, for example
    `postgresql://vibey_app:<password>@host:5432/vibey`.
-3. Run `vibey migrate`. It creates `vibey_app` (from the DSN's password) if it does not
-   exist, grants it exactly the declared privileges, and prints `ledger guard in force`.
+2. Run `VIBEY_PG_MIGRATE_URL=<the DSN you use today> vibey migrate`, giving the owner's DSN
+   to that one command rather than exporting it. It creates `vibey_app` (from the DSN's
+   password) if it does not exist, grants it exactly the declared privileges, and prints
+   `ledger guard in force`.
+3. Remove the owner's DSN from every other environment: a worker, an engine session or a
+   gate command that holds it can disable the triggers.
 4. Run `vibey doctor`, and require a password for the owner and every superuser. The split
    protects the ledger only once `local-auth` passes; `SECURITY.md` §7 gives the
    `pg_hba.conf` lines.
 
 With the Helm chart this is `postgres.appRole` (default `vibey_app`) and, for an external
 database, `dsn.existingSecretKey` (the application's DSN) with
-`dsn.existingSecretMigrateKey` (the owner's). An empty `existingSecretMigrateKey` is a
-single-DSN install.
+`dsn.existingSecretMigrateKey` (the owner's). `existingSecretMigrateKey` is empty by
+default, which is a single-DSN install.
 
 ### Operational surface environment variable overlay
 
@@ -133,6 +168,7 @@ An empty or whitespace-only value counts as unset.
 | `VIBEY_BUS_URL` | `[bus].url` | RabbitMQ Management URL |
 | `VIBEY_BUS_USERNAME` | `[bus].username` | RabbitMQ username |
 | `VIBEY_BUS_PASSWORD` | `[bus].password` | RabbitMQ password |
+| `VIBEY_BUS_VHOST` | `[bus].vhost` | RabbitMQ vhost the bus and the reaper are scoped to |
 | `VIBEY_BLOB_URL` | `[blob].url` | Garage S3 URL |
 | `VIBEY_BLOB_ACCESS_KEY` | `[blob].access_key` | Garage S3 access key |
 | `VIBEY_BLOB_SECRET_KEY` | `[blob].secret_key` | Garage S3 secret key |
@@ -141,6 +177,25 @@ An empty or whitespace-only value counts as unset.
 | `VIBEY_SIEM_USERNAME` | `[siem].username` | Wazuh indexer username |
 | `VIBEY_SIEM_PASSWORD` | `[siem].password` | Wazuh indexer password |
 | `VIBEY_SIEM_INDEX` | `[siem].index` | Wazuh index name |
+
+The queue reaper's keys have the same overlay, and the same precedence
+([`[queue.reap]`](#queuereap)). A boolean takes `1`, `true`, `yes` or `on` and `0`, `false`,
+`no` or `off`, in any case; anything else fails the start, naming the variable.
+
+| Variable | Target Table & Key |
+|---|---|
+| `VIBEY_QUEUE_REAP_ENABLED` | `[queue.reap].enabled` |
+| `VIBEY_QUEUE_REAP_INTERVAL_SECONDS` | `[queue.reap].interval_seconds` |
+| `VIBEY_QUEUE_REAP_LEASE_GRACE_SECONDS` | `[queue.reap].lease_grace_seconds` |
+| `VIBEY_QUEUE_REAP_STALE_READY_SECONDS` | `[queue.reap].stale_ready_seconds` |
+| `VIBEY_QUEUE_REAP_DEAD_LETTER_MIN_DEPTH` | `[queue.reap].dead_letter_min_depth` |
+| `VIBEY_QUEUE_REAP_DEAD_LETTER_PEEK_LIMIT` | `[queue.reap].dead_letter_peek_limit` |
+| `VIBEY_QUEUE_REAP_OWNED_QUEUE_PATTERN` | `[queue.reap].owned_queue_pattern` |
+| `VIBEY_QUEUE_REAP_DEAD_LETTER_QUEUE_PATTERN` | `[queue.reap].dead_letter_queue_pattern` |
+| `VIBEY_QUEUE_REAP_POLICY_NAME` | `[queue.reap].policy_name` |
+| `VIBEY_QUEUE_REAP_POLICY_PRIORITY` | `[queue.reap].policy_priority` |
+| `VIBEY_QUEUE_REAP_CONSUMER_TIMEOUT_SECONDS` | `[queue.reap].consumer_timeout_seconds` |
+| `VIBEY_QUEUE_REAP_DELIVERY_LIMIT` | `[queue.reap].delivery_limit` |
 
 ## Schema semantics
 
@@ -208,16 +263,16 @@ for the same disclosure.
 
 None of these keys is read at runtime. The live brake is the project's stored
 `max_cycle_dollars` / `max_cycle_turns` (set by `vibey new --max-cycle-dollars`
-/ `--max-cycle-turns`, or the operator's `spec.maxCycleDollars` /
-`spec.maxCycleTurns`). `LedgerBudgetSource` sums them live from the current
-cycle's `TurnCompleted` and `BudgetSpent` ledger events — never estimated
-ahead of time — and tripping either parks a `budget_exhausted` gate. With
-neither set, spend is uncapped.
+/ `--max-cycle-turns` or the operator's `spec.maxCycleDollars` /
+`spec.maxCycleTurns`, and changed afterwards by `vibey budget set` / `clear`; see
+[Per-cycle caps](#per-cycle-caps-max_cycle_dollars-max_cycle_turns)).
+`LedgerBudgetSource` reads the caps at every BUILD session and sums the spend
+live from the current cycle's `TurnCompleted` and `BudgetSpent` ledger events,
+never estimating it ahead of time. Tripping either cap parks a
+`budget_exhausted` gate. With neither set, spend is uncapped.
 
-`vibey cost` prints caps from a `budget` key in the stored project config
-(`max_dollars_per_cycle`, `max_dollars_total`) that nothing writes, so it
-currently shows the fallbacks $40.00 (cycle) and $250.00 (total) rather than
-the real cap.
+`vibey cost` and `vibey budget` show those stored caps and that ledger sum. A
+`budget` key in the stored project config is not read by either.
 
 ## `[verify]`
 
@@ -365,6 +420,66 @@ everyone who can reach it.
 sources = ["storm"]
 ```
 
+## `[queue.reap]` { #queuereap }
+
+When queued or held work counts as stuck, and what bounds it
+([ADR-0056](../architecture/decisions/0056-everything-a-queue-guards-is-reaped-by-measurement.md)).
+The same thresholds judge the PostgreSQL job queue and every queue on the broker, so both
+backends reap identically. The worker runs the reaper when idle; `vibey queue reap` runs it
+on demand ([CLI reference](cli.md#vibey-queue)). Every key must have the type of its
+default -- `true` is not a number -- and an unknown key is refused.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `enabled` | bool | `true` | Whether the worker runs the reaper on its own. `vibey queue reap` runs regardless, and the lease reap -- `JobRepository.reap()`, in every idle worker iteration -- is always bounded. |
+| `interval_seconds` | int ≥ 1 | `60` | The most often one worker runs a pass beyond the lease reap. |
+| `lease_grace_seconds` | int ≥ 0 | `0` | How far past `lease_expires_at` a lease may run before it is reaped. The lease is already the heartbeat's bound (renewed every third of it), so the default adds nothing. Condition (a)/(b) on PostgreSQL. |
+| `stale_ready_seconds` | int ≥ 1 | `900` | How long ready work may wait with nobody taking it before it is surfaced: the oldest claimable job's age on PostgreSQL, the head message's age on a queue with no consumer on the broker. Condition (d). A message without a `timestamp` property is not measured and never reported as old. |
+| `dead_letter_min_depth` | int ≥ 1 | `1` | Dead letters on a dead-letter queue before it is acted on. Condition (e). |
+| `dead_letter_peek_limit` | int ≥ 1 | `100` | The most dead letters one pass reads off one queue. Reading returns each to its place and the reaper removes none, so any past the limit are counted and surfaced every pass, never assumed parked. |
+| `owned_queue_pattern` | regex | `^vibey\.` | Queues vibey owns. Only an owned dead-letter queue's messages are parked, and only owned queues get the policy below; every other queue on the broker -- Plane's Celery queues -- is measured and surfaced, never touched. |
+| `dead_letter_queue_pattern` | regex | `(\.dlq\|\.dead)$` | Which queues are dead-letter queues: the bus port's `<queue>.dlq` and ADR-0044's `vibey.jobs.dead` / `vibey.runs.<engine>.dead`. |
+| `policy_name` | string | `vibey-reap` | The broker policy the reaper reconciles onto owned queues, then reads back. |
+| `policy_priority` | int | `0` | That policy's priority, against any other policy matching the same queues. |
+| `consumer_timeout_seconds` | int ≥ 1 | `21600` | The policy's `consumer-timeout`: how long a consumer may hold a delivery from an owned queue before the broker closes its channel and requeues. Six hours: at least the longest job lease (two hours for BUILD), with room. Condition (a). The broker-wide value for everything else is the chart's `surfaces.rabbitmq.consumerTimeoutMs`. |
+| `delivery_limit` | int ≥ 1 | `20` | The policy's `delivery-limit`: deliveries of one message on an owned **quorum** queue before the broker dead-letters it (condition (c)). Twenty, not three, because a draining worker's requeues count too (ADR-0044 §11). Classic queues ignore it. |
+
+A reap is a gate a number crossed, never a judgement (12.d): every verdict is recorded as
+a `QueueReaped` ledger event with the object, the condition, the measured value, the
+threshold and the action. What each condition does is set out in ADR-0056: an expired
+lease is requeued while attempts remain and parked with a `delivery_exhausted` gate once
+they are spent; a dead letter on an owned queue becomes a parked `bus.dead_letter` job and
+a `bus_dead_lettered` gate, and is never deleted.
+
+```toml
+[queue.reap]
+stale_ready_seconds = 600
+dead_letter_peek_limit = 200
+```
+
+## Concurrent local runs: `[local_models]` in `.vibey-gh.toml` { #local_models }
+
+How many runs of one local model run at once on a device is not a `vibey.toml` key. It
+is declared once per repository in `.vibey-gh.toml` `[local_models] concurrent_runs`,
+and checked against **that device's own calibration evidence**
+([ADR-0058](../architecture/decisions/0058-concurrent-local-runs-are-measured-per-device.md),
+sub-doctrines 8.c and 8.j). The default, `1`, is 8.c as written and needs no evidence.
+`"measured"` takes what the device's evidence supports. A number above one runs only if
+the device measured that number inside every bound. Missing or stale evidence (another
+runner version, model digest, memory or context window) means one, and a calibration is
+requested. The storm runner reads the answer from `vibey-gh slots allowed`, and the queue
+runs one lane at a time until it says more. Every key, the bounds and the calibration
+are documented in the vibey-gh
+[configuration reference](https://github.com/the-vibey-project/vibey/blob/main/src/vibey_tools/gh/docs/configuration.md#local_models-and-vibey-gh-slots).
+
+```toml
+# .vibey-gh.toml
+[local_models]
+concurrent_runs = 1
+model = "gpt-oss:20b"
+context_window = 65536
+```
+
 ## Operational surfaces (sovereign defaults, declared-only paid relays)
 
 Each table is optional: an omitted table (or an omitted key) leaves the
@@ -456,6 +571,11 @@ for that surface is present, otherwise the in-memory default.
 | `url` | string | unset | Base URL of the RabbitMQ Management API, e.g. `http://localhost:15672`. |
 | `username` | string | unset | RabbitMQ management username. |
 | `password` | string | unset | RabbitMQ management password. |
+| `vhost` | string | `/` | The vhost the bus declares its queues in and the queue reaper reads ([`[queue.reap]`](#queuereap)). |
+
+The bus port consumes at most once: its `consume` acknowledges on take, so no delivery is
+ever held -- and one whose consumer dies after `consume` returns is lost. The job queue's
+transport is ADR-0044's AMQP client, not this port.
 
 ## `[blob]` (sovereign default: Garage, S3 API)
 
@@ -524,11 +644,111 @@ A malformed `review` object (not an object, a command list that is not a list
 of non-empty string arrays) raises when the worker is built, rather than
 silently running nothing.
 
+## `[gates]` { #gates }
+
+`SubprocessGateRunner.from_config` (`infrastructure/build/gate_runner.py`) reads the
+record's `gates` object when `bootstrap.build_full_worker` builds the worker. One
+runner runs build.verify's gates, build.integrate's gates and REVIEW's automated
+checks. Declare it in `vibey.toml`'s `[gates]` table, which `vibey new` copies into the
+record, or in the `VibeyProject` spec's `gates` object; do not edit the record's JSON
+by hand (sub-doctrines 12.c and 12.h).
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `timeout_seconds` | number | `1800` | Per command; one that overruns is killed and fails as exit 124. Must be finite and positive. |
+| `kill_grace_seconds` | number | `5` | How long a killed command's reap may take before it is abandoned and logged. |
+| `isolate_python_env` | bool | `true` | `false` passes vibey's own Python environment (`VIRTUAL_ENV`, `PYTHONPATH`, its venv on `PATH`) to gates that rely on tools installed beside vibey. |
+| `env_allow` | array of strings | `[]` | Environment variables a gate command may receive beyond the system basics listed under [`engine_environment`](#engine_environment). A trailing `*` names a prefix (`GRADLE_*`). A gate command is decomposer-produced argv running engine-written code, so nothing else in the worker's environment reaches it. `VIBEY_*`, `PG*` and `GIT_*` can never be declared. A project's own test database can be (`TEST_DATABASE_URL`). |
+
+A malformed or forbidden `gates` object is refused by `vibey new` and by the operator
+before the project is created, and raises when the worker is built.
+
+```toml
+[gates]
+timeout_seconds = 1800
+env_allow = ["JAVA_HOME", "GRADLE_*", "TEST_DATABASE_URL"]
+```
+
+## `[engine_environment]` { #engine_environment }
+
+An engine session runs model-chosen shell commands, unattended in BUILD and
+DEPLOY_EXECUTE. It never inherits the worker's environment. Every engine process (the
+run, its `--version`, `doctor` and `--help` probes, and the claudeloop and opencode
+DESIGN/DECOMPOSE sessions) starts from an allow-list built by
+`EngineEnvironmentPolicy` (`infrastructure/engines/engine_environment.py`). The
+allow-list has three parts:
+
+1. **The system basics, for every engine and every gate command:** `PATH` (with vibey's
+   own venv removed), `HOME`, `USER`, `LOGNAME`, `SHELL`, `TMPDIR`, `TMP`, `TEMP`, `LANG`,
+   `LANGUAGE`, `LC_*`, `TZ`, `TERM`, `COLORTERM`, `NO_COLOR`, `COLUMNS`, `LINES`,
+   `SSL_CERT_FILE`, `SSL_CERT_DIR`, `REQUESTS_CA_BUNDLE`, `CURL_CA_BUNDLE`,
+   `NODE_EXTRA_CA_CERTS`, `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, `ALL_PROXY` (and their
+   lower-case forms), `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_DATA_HOME`,
+   `XDG_STATE_HOME`, `XDG_RUNTIME_DIR`, and `__CF_USER_TEXT_ENCODING` (macOS).
+2. **What the engine's descriptor declares.** This is its `env_passthrough` and its API
+   credential, `auth_env`:
+
+   | Engine | Declared |
+   |---|---|
+   | `claudeloop` | `ANTHROPIC_API_KEY`, `CLAUDELOOP_*`, `CLAUDE_CODE_*`, `CLAUDE_CONFIG_DIR`, `ANTHROPIC_*` |
+   | `claudeloop-local` | `CLAUDELOOP_*`, `CLAUDE_CODE_*`, `CLAUDE_CONFIG_DIR`, `ANTHROPIC_*` |
+   | `codexloop` | `OPENAI_API_KEY`, `CODEXLOOP_*`, `CODEX_*`, `OPENAI_*`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
+   | `cursorloop` | `CURSOR_API_KEY`, `CURSORLOOP_*`, `CURSOR_*` |
+   | `agyloop` | `GOOGLE_API_KEY`, `GEMINI_API_KEY`, `AGYLOOP_*`, `ANTIGRAVITY_*`, `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_GENAI_USE_ENTERPRISE`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` |
+   | `opencode` | `OPENCODELOOP_*`, `OPENCODE_*` |
+   | `qwenloop` | `QWENLOOP_*` (plus the `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` vibey derives from `VIBEY_OLLAMA_URL`) |
+
+3. **What the project declares.** This is the record's `engine_environment` object,
+   declared in `vibey.toml`'s `[engine_environment]` table (copied into the record by
+   `vibey new`) or the `VibeyProject` spec's `engineEnvironment` object:
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `allow` | array of strings | `[]` | Added for every engine. A trailing `*` names a prefix. |
+| `engines` | object of engine id → array of strings | `{}` | Added for one engine only, for example `{"agyloop": ["GOOGLE_ACCESS_TOKEN"]}` or `{"claudeloop": ["GH_TOKEN"]}`. Keys must be known engine ids. |
+
+A GitHub token or a cloud credential is on no default list. It reaches only the
+engine it is declared for. Some things need declaring:
+
+- agyloop's Vertex lane needs `GOOGLE_ACCESS_TOKEN` or `CLOUDSDK_AUTH_ACCESS_TOKEN`,
+  and optionally `GOOGLE_APPLICATION_CREDENTIALS`. agyloop also finds application
+  default credentials under `CLOUDSDK_CONFIG` when the gcloud configuration lives
+  somewhere other than `~/.config/gcloud`; declare `CLOUDSDK_CONFIG` too in that
+  case.
+- OpenCode needs any provider key its own configuration reads from the environment.
+- claudeloop's GitHub issue import needs `GH_TOKEN` or `GITHUB_TOKEN` for a private
+  repository.
+
+Some names can never be declared, by anyone. For every engine: vibey's own `VIBEY_*`
+variables (`VIBEY_PG_URL`, the queue and ledger DSN, among them), libpq's `PG*`, and
+any name containing `DSN`, `DATABASE_URL`, `PASSWORD` or `PASSWD`. A malformed object,
+an unknown key or engine, or a forbidden entry is refused by `vibey new` and the
+operator before the project is created, and raises when the worker is built. A
+descriptor's own `env_passthrough` is held to the same rule when its adapter is built.
+
+The worker's startup preflight probes each engine with the project's policy, so a
+declared credential reaches the auth check the same way it reaches a session.
+`vibey doctor` probes with the defaults, because it reads no project record, unless
+`--record` names one (`--project`, default the latest): then it probes and runs
+conformance with that project's policy, since the health it records is that
+project's.
+
+```toml
+[engine_environment]
+allow = ["JAVA_HOME"]
+
+[engine_environment.engines]
+opencode = ["OPENROUTER_API_KEY"]
+agyloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]
+"claudeloop-local" = ["GH_TOKEN"]
+```
+
 ## Full example
 
 This is a valid file exercising most of the schema that `parse_config`
-validates. `vibey new` also copies its `[notifications]` and `[telemetry]`
-tables into the project's stored config (see the top of this page).
+validates. `vibey new` also copies its `[notifications]`, `[telemetry]`,
+`[gates]` and `[engine_environment]` tables into the project's stored config (see
+the top of this page).
 
 ```toml
 [project]
@@ -583,4 +803,13 @@ idle_timeout_seconds = 600
 
 [queue.priority]
 sources = ["storm"]
+
+[gates]
+env_allow = ["JAVA_HOME"]
+
+[engine_environment.engines]
+opencode = ["OPENROUTER_API_KEY"]
+
+[queue.reap]
+stale_ready_seconds = 900
 ```

@@ -5,7 +5,7 @@ ADR-0046 lane L31 (slug `loops-control-and-dead-letters`).
 
 ## Why
 Draft ADR-0046 §3's idempotency table
-(`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:191`), the "dead letters"
+(`STORM/specs/ADR-two-loops.md:191`), the "dead letters"
 row: "`x-delivery-limit` at each layer | Dead queues are answered `DEAD_LETTERED`; the caller
 fails the attempt, and ADR-0024 parks." A message the broker dead-letters (its own
 `x-delivery-limit` exhausted, ADR-0046 §3's queue table, `:147-151`) never reaches a seat host or

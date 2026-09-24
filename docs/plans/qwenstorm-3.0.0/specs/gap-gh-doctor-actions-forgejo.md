@@ -71,4 +71,4 @@ Append to `src/vibey_tools/gh/test/test_doctor.py`:
 Commit as `feat(gh): doctor warns when GitHub Actions runs with the forgejo default`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

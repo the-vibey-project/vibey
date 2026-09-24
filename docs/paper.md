@@ -232,10 +232,10 @@ split. The owner's DSN runs migrations and nothing else; the application role, w
 every worker, command, operator and scaler connects as, owns nothing and holds on
 `event` only `SELECT` and `INSERT`, with no `DELETE` or `TRUNCATE` anywhere. The grants
 are declared in code, derived from the application's own queries, and reconciled on
-every migration run, so a grant added by hand does not survive the next start. An
+every migration run, so a grant added by hand does not survive the next migration run. An
 install still on one role is reported rather than stranded: `vibey doctor` fails its
 `ledger-guard` check, the worker says so on every start, and `vibey migrate` exits 1.
-The whole test suite now runs as a restricted application role; its first run so found
+The whole test suite now runs as a restricted application role; its first run found
 35 failures, none a missing grant in application code: all were test setup doing
 owner-only work, or tests that had asserted the old silent no-op (#1100).
 
@@ -244,30 +244,51 @@ As the application role, the independent review of #1100 tried updates, deletes 
 truncations of the parent and of partitions, disabling, re-enabling as replica and
 dropping the triggers, detaching and attaching partitions, and switching the session
 to replica mode, and every one was refused (review probes of 2026-09-24; the merged
-tests pin the same refusals). The owner can still disable a trigger, so the triggers
-bind the owner's rewrites but not the owner's schema changes, and the owner's DSN is
-the thing to guard. A superuser can do anything. And the split protects the ledger only
-once the owner and every superuser need a password: a local PostgreSQL that trusts its
-socket, the common developer default, lets any process running as the right operating
-system user connect as a superuser with no DSN at all. The review found exactly that on
-the operator's machine, so `vibey doctor` gained a `local-auth` check that fails when
-such a connection is let in, passes only when every attempt is refused and the
-authentication rules read clean, and otherwise reports unknown, never a pass; changing
-the server's authentication rules is left to the operator (`SECURITY.md` §7). Same
-user, same authority: no grant separates processes of one operating-system account.
+tests pin the same refusals). The triggers refuse the owner's rewrites of rows, not
+the owner's schema changes: the owner can still disable a trigger, drop a partition,
+detach one and delete from it, or truncate a partition created since the last
+`vibey migrate`, so the owner's DSN is the thing to guard. Event triggers that would
+refuse such schema changes are future work, because installing them needs a
+superuser. A superuser can do anything. The application role cannot rewrite what is
+there, but it can still insert into `event` directly, so it can forge an event's
+provenance, sequence number or production time, and it can update the sequence
+counter `event_seq`; an append function running with the owner's rights, as the only
+write path, would close that, and it is the next step, not a done one (ADR-0055,
+*Not closed*). And the split protects the ledger only once the owner and every
+superuser need a password: a local PostgreSQL that trusts its socket, the common
+developer default, lets any process running as the right operating-system user
+connect as a superuser with no DSN at all. ADR-0055 records exactly that on the
+operator's machine, and #1100 shipped with a `local-auth` check in `vibey doctor`
+that fails when such a connection is let in, passes only when every attempt is
+refused and the authentication rules read clean, and otherwise reports unknown,
+never a pass; changing the server's authentication rules is left to the operator
+(`SECURITY.md` §7). Same user, same authority: no grant separates processes of one
+operating-system account.
 
-The same review left findings open on `develop` at the cutoff (2026-09-24 12:22Z), of
-which two were rated high. Where the application role may create objects in the
-`public` schema, the PostgreSQL 14 default, it could plant an operator that the owner's
-unqualified catalog query resolved during `vibey migrate`, run code as the owner, and
-leave a backdoor that erased the ledger while `migrate` reported the guard in force;
-ADR-0055, as merged, had judged that privilege harmless to the ledger. And the owner's
-DSN reached any worker whose shell exported it, where an engine session could read it.
-Both were being fixed on a follow-up branch at the cutoff, which adds a migration 0017
-with `search_path` pinned rather than editing 0016: a migration that may already have
-been applied is never rewritten.
-
-<!-- TODO(3.0.0-pending: fix/ledger-guard-review) replace the paragraph above with the merged fix: its PR number, migration 0017 and the revoked CREATE on public, the owner DSN read only by vibey migrate, the other review findings it closes, and the review verdict on the result -->
+The same review found the design sound and five defects in its first implementation,
+two of them rated high, and #1100 had merged while it said *not yet* (#1112's
+description). #1112 closed all five and merged at 15:18Z on 2026-09-24 (ADR-0055, its
+amendment; `CHANGELOG.md`). The worst: where the application role may create objects in
+the `public` schema, the PostgreSQL 14 default and that of any database upgraded from
+it, it could plant an operator that the owner's unqualified catalog query resolved
+during `vibey migrate`, run code as the owner, and leave a backdoor that erased the
+ledger while `migrate` reported the guard in force; ADR-0055, as first merged, had
+judged that privilege harmless to the ledger. Now migration 0017 pins both guard
+functions to `search_path = pg_catalog, pg_temp`, the owner's session is pinned the
+same way and names every catalog operator by schema, `vibey migrate` takes `CREATE` on
+`public` away from every role but its owner before any migration runs, and
+`ledger-guard` fails when the application role may create objects, owns any, may call
+a `SECURITY DEFINER` function that runs as the owner or a superuser, or may set
+`session_replication_role`. The second: the owner's DSN reached any process whose
+shell exported it, because `build_app()` read it and the README exported it; now only
+`vibey migrate` reads it, given for that one command. The other three: the Helm chart
+gave the owner's credentials to Plane and Infisical, which now connect as roles of
+their own; an install with an existing Secret could be stranded on upgrade, and is now
+unchanged until it names an owner key; and concurrent reconciles failed, and now take
+the migration lock. Migration 0017 is new rather than an edit of 0016, because a
+migration that may already have been applied is never rewritten. #1112's description
+promised an independent re-review before the operator's merge; no verdict on the
+merged result is recorded in a tracked source, so we report the fix, not a review of it.
 
 Crash recovery and engine handoff follow as corollaries: a successor engine
 re-derives context from the ledger alone, so a credit exhaustion on $e_i$ between
@@ -275,7 +296,7 @@ turns of an item reschedules the item onto $e_j$ with the open-question set inta
 
 ```latex
 \begin{plainwords}
-The ledger is a diary written in pen. You can add a page, but you can never tear one out or rub anything out. If you made a mistake, you write a new page that says so. Because the diary is the only source of truth, any helper can read it and know exactly what is going on, even a helper that has never seen the project before. For a long time the promise that pages could not be torn out was kept by good manners: anyone holding the main key could still tear them out. Now the database itself refuses, the helpers are given a key that can only read and add pages, and the one key that could switch the refusal off is kept away from them. It is still not magic: someone logged in as the owner of the computer can do almost anything, and the paper says so.
+The ledger is a diary written in pen. You can add a page, but you can never tear one out or rub anything out. If you made a mistake, you write a new page that says so. Because the diary is the only source of truth, any helper can read it and know exactly what is going on, even a helper that has never seen the project before. For a long time the promise that pages could not be torn out was kept by good manners: anyone holding the main key could still tear them out. Now the database itself refuses, the helpers are given a key that can only read and add pages, and the one key that could switch the refusal off is kept away from them. A helper holding the add-only key can still add a page that lies about who wrote it, and closing that is the next job. It is still not magic: someone logged in as the owner of the computer can do almost anything, and the paper says so.
 \end{plainwords}
 ```
 
@@ -392,18 +413,21 @@ $\min(|Q|, |\mathrm{workers}|)$).
 Within a project, claims exclude items whose dependencies have not succeeded, and are
 ordered first by the priority lane described below, then by the earliest permitted run
 time, then by id. (A `priority` column keeps its place in the order, but since 3.0.0
-no request can set it, so it is zero for every job and orders nothing.) An item can
-be bypassed only while it is held, and every hold is bounded by a lease: a claim sets
-the lease expiry to $\mathrm{now} + L$, a live worker renews it, and a reaper returns
-any expired lease to the ready state. A crashed worker therefore costs at most $L$ of
-delay and never a lost item. Because workers die and leases expire, every job is
+no request can set it, so it is zero for every job and orders nothing; ADR-0054.) An
+item can be bypassed only while it is held, and every hold is bounded by a lease: a
+claim sets the lease expiry to $\mathrm{now} + L$, a live worker renews it, and a reaper
+returns an expired lease to the ready state while the item's attempts remain, and parks
+it for a person once they are spent (ADR-0056). A crashed worker therefore costs at most
+$L$ of delay and never a lost item, and an item that crashes every worker it reaches is
+bounded rather than retried forever. Because workers die and leases expire, every job is
 idempotent under replay.
 
 **The priority lane.** The operator asked that an item pushed into the queue run next
 rather than wait behind the work in front of it, and that both of the family's queues
-do so: vibey's PostgreSQL job queue and the storm's lane queue. ADR-0054 states one
-contract for both (#1089 and #1092 for the storm, #1091 and #1095 for the job queue,
-with follow-ups #1102 and #1103). *Next* means next after whatever is running: a bump
+do so: vibey's PostgreSQL job queue and the storm's lane queue
+(`docs/plans/qwenstorm-3.0.0/tools/storm_queue.py`). ADR-0054 states one contract for
+both (#1089 and #1092 for the storm, #1091 and #1095 for the job queue, with follow-ups
+#1102, #1103, #1111 and #1122). *Next* means next after whatever is running: a bump
 never preempts a claimed or leased item and never touches its lease, as 8.c requires. It
 never admits either. Phases, human gates, admission, a capacity deferral, the budget
 brake and the handoff gate still decide whether an item may run; a bump decides only
@@ -412,24 +436,32 @@ dependencies finish. The lane's contents are not remembered but derived.
 
 ```latex
 \begin{invariant}[Derived priority lane]
-Let $B$ be the items bumped, or enqueued prioritised, by name and not since un-bumped.
-The lane is exactly $B$ together with every unfinished transitive dependency of a
-member of $B$, ordered first-in-first-out by when each item first entered the lane.
+Let $B$ be the unfinished items bumped, or enqueued prioritised, by name and not since
+un-bumped. The lane is exactly $B$ together with every unfinished transitive dependency
+of a member of $B$, ordered first-in-first-out by when each item first entered the lane.
 Un-bumping $x$ removes $x$ from $B$, and is refused, naming them, while another member
 of $B$ depends on $x$.
 \end{invariant}
 ```
 
+A named item that ends cancelled or failed therefore leaves $B$ by the derivation
+itself, since only an unfinished named item is live. The one exception to the
+invariant is a job this vibey cannot write, because a newer vibey wrote its phase or its
+state: it is left in the lane unwritten, together with every job it still needs, and
+named in the request's record rather than cleared, and an un-bump is refused while such
+a job needs its target, as it is while a named item does (ADR-0054, item 6).
+
 The derived form replaced a first rule, *un-bump undoes what that bump moved*, after an
 independent review of #1091 found it could leave an orphan: with $x$, $d$, and $a$ and
 $b$ both needing $d$, bumping $a$ and $b$ and then un-bumping both left $d$ in the lane
-with nothing needing it. Under the invariant nothing can remain that no named item
-needs, and every request re-derives the lane and sweeps what is no longer derived,
-including what a named job left behind when it was cancelled or failed (#1103). In the
-job queue the lane is a column set from a sequence drawn at the bump, not a timestamp,
-because one bump moves several rows in one transaction and `now()` is a single instant
-for all of them (10.g), and not a large priority value, because first-in-first-out
-would then need a counter disguised as a weight.
+with nothing needing it. Under the invariant nothing this vibey can write remains that
+no named item needs: every admitted request re-derives the lane and sweeps what is no
+longer derived, including what a named job left behind when it was cancelled or failed
+(#1103), while a refused request changes nothing but its own record. In the job queue
+the lane is a column set from a sequence drawn at the bump, not a timestamp, because one
+bump moves several rows in one transaction and `now()` is a single instant for all of
+them (10.g), and not a large priority value, because first-in-first-out would then need
+a counter disguised as a weight.
 
 Only two callers may bump or un-bump: the operator, meaning the operating-system
 account that owns the queue's reviewed declaration, checked by the process's user id
@@ -437,57 +469,95 @@ against that file's owner rather than by a name typed on a command line; and an
 automation that names itself with a source the reviewed declaration lists, running as
 that same account, since a declared name is not a credential. Nothing reads the forge
 to decide priority, so no label, issue or comment from anyone can move work forward
-(12.j). Every request is recorded whatever became of it, whether it moved something,
-moved nothing or was refused, and authorisation comes before any lookup, so a stranger
-asking about any item, real or not, is refused and recorded without learning anything
-about it. In vibey the record is a ledger event written in the same transaction as the
-row change. In the storm it is an append-only priority log whose replay is the lane
-order, and after its post-merge review (#1092, #1102) that log is loss-evident: a
-witness outside the log records its length, and a log found shorter than its witness,
-or a witness that is empty or corrupt, makes the order *unknown* rather than silently
-falling back to no priority. A refused request can no longer append to such a log and
-re-witness the loss as normal, and a deliberate reset keeps the old file under an
-abandoned name rather than deleting it.
+(12.j). The grant separates operating-system accounts, not the processes of the
+operator's own account, and ADR-0054 says so: a process running as that account
+reaches the queue below the grant whenever it can reach the database. Since #1093 an
+engine's own environment no longer carries the means, but a process of that account can
+still reach a local server that trusts its socket (see *What an engine may see*). Every
+request is recorded whatever became of it, whether it moved something, moved nothing or
+was refused, and authorisation comes before any lookup, so a stranger asking about any
+item, real or not, is refused and recorded without learning anything about it. In vibey
+the record is a ledger event written in the same transaction as the row change. In the
+storm it is an append-only priority log whose replay is the lane order, and after its
+post-merge review (#1092, #1102) that log is loss-evident, not tamper-evident
+(`storm_queue.py`, lines 343--376): a witness outside the log records its length, and a
+log found shorter than its witness, or a witness that is empty or corrupt, makes the
+order *unknown* rather than silently falling back to no priority. A refused request can
+no longer append to such a log and re-witness the loss as normal, and a deliberate reset
+keeps the old file under an abandoned name rather than deleting it. The same account can
+still rewrite the log and its witness together, and the code says so.
 
 The rule was tested adversarially as well as by unit tests. A Hypothesis state machine
 runs random, overlapping bumps and un-bumps with jobs finishing, failing or being
-cancelled part-way, and asserts after every step that the stored lane equals the
-derivation and that un-bumping every named job clears it; breaking the derivation on
-purpose makes it fail (#1095, #1103). In the job queue, five workers claiming at once
-under `SKIP LOCKED` take exactly the first five in order (the merged repository
-tests). The reviewers' own probes, which are review records rather than tracked tests,
-found no double claim with five workers claiming while three reorderers made 450
-random bumps and un-bumps against a real database (review of #1095), and no false
-*order unknown* in more than 9,000 concurrent reads of the storm's log (review of
-#1102).
+cancelled part-way, and moved into phases and states a newer vibey wrote, and asserts
+after every step that the stored lane equals the derivation, except the jobs this vibey
+cannot write and what they still need, and that un-bumping every named job clears the
+rest; breaking the derivation on purpose makes it fail (#1095, #1103). In the job queue,
+five workers claiming at once under `SKIP LOCKED` take exactly the first five in order
+(the merged repository tests). The reviewers' own probes, which are review records
+rather than tracked tests, found no double claim with five workers claiming while three
+reorderers made 450 random bumps and un-bumps against a real database (review of
+#1095), and no false *order unknown* in more than 9,000 concurrent reads of the storm's
+log (review of #1102).
 
 **Reapers by measured rule.** The lease reaper is the queue's oldest reaper; 3.0.0
 extends the idea on the rule that a hang is decided by measurement and that evidence
 is kept before anything is killed. The motivating incident: one pre-push test run of
-the storm (eight test workers) sat at 0% CPU for 39 minutes, every worker asleep, while
-it held the storm's shared push lock, and every other push queued behind it; a
-human-approved kill released it, and nothing recorded which test had hung (#1105). The
-push-gate reaper now acts only on one of three measured conditions: the lock's holder
-and its process group are gone; the holder's own process group used less than a
-declared number of CPU-seconds over a declared window, measured from samples kept
-across passes and never from a single snapshot, with an unreadable process table
-reported as unknown rather than idle; or the push has held the lock past a declared
-wall-clock ceiling. Before it signals anything it writes the owner record, the
-decision, the process tree, the log's tail and the stacks to an evidence directory,
-signals only the push's own process group, and appends one line per reap to an
-append-only log. Inside the suite, `pytest-timeout` with a `faulthandler` dump makes a
-hung test dump every thread's stack and then fail by name, so the next such hang names
-itself. Wall time alone is not the rule, because a slow test that is still computing is
-not a hung one. At the cutoff two extensions were open: a schedule of its own for the
-push-gate reaper and a safe trace of locks taken without an owner record (#1107), and
-reapers for every item the RabbitMQ bus guards, brought to the same semantics as the
-PostgreSQL job queue (#1108, ADR-0056).
+the storm sat at 0% CPU for 39 minutes, every worker asleep, while it held the storm's
+shared push lock, and every other push queued behind it; a human-approved kill released
+it, and nothing recorded which test had hung (#1105; `CHANGELOG.md`). The push-gate
+reaper now acts only on one of three measured conditions: the lock's holder and its
+process group are gone; the holder's own process group used less than a declared number
+of CPU-seconds over a declared window, measured from samples kept across passes and
+never from a single snapshot, with an unreadable process table reported as unknown
+rather than idle; or the push has held the lock past a declared ceiling. Holds and idle
+windows are counted in awake time, with the boot identifier, so a laptop's sleep is
+never taken for a hang (#1120). Before it signals anything it writes the owner record,
+the decision, the process tree, the log's tail and the stacks to an evidence directory,
+and it appends one line per reap to an append-only log. It is designed to signal only
+the push's own process group, but that is not yet what it guarantees: for a lock taken
+without an owner record, which #1107 traces to its push by process, the independent
+re-review of #1120 found that a reap can signal processes other than the push. Inside
+the suite, `pytest-timeout` with a `faulthandler` dump makes a hung test dump every
+thread's stack and then fail by name, so the next such hang names itself. Wall time
+alone is not the rule, because a slow test that is still computing is not a hung one.
+The reaper's own schedule and the trace of locks without an owner record (#1107) and
+the fixes from its first independent review (#1120) are merged. The re-review of #1120
+then found seven more defects, the ownerless-lock signal the worst, and at the cutoff
+their fixes were saved on a branch and not merged
+(`docs/architecture/evidence/release-gate-2026-09-24.md`).
 
-<!-- TODO(3.0.0-pending: feat/bus-reapers) describe the merged bus reapers (#1108, ADR-0056): the inventory of what the bus guards, each measured condition and its declared threshold (hung handler, held with no consumer, poison, stale ready, dead letters), dead letters parked behind a human gate and never deleted, every reap a QueueReaped ledger event, the at-most-once finding, and the review verdict; and #1107 once merged -->
+The same rule now covers everything a queue guards (#1108, with the post-merge review
+fixes of #1119; ADR-0056, whose status is *proposed*). ADR-0056 began with an inventory
+at its commit. The bus port was wired but idle, and it acknowledges a message as it is
+taken, so a consumer that dies after taking one loses it; no reaper can recover that,
+and the record states it rather than fixing it. Plane's task broker on the same RabbitMQ
+was live. The RabbitMQ job-queue dispatch and loop-service queues of ADR-0044 were
+declared and not wired. And the PostgreSQL job queue was live, with a reaper that
+re-readied an expired lease forever. Five conditions are each a measurement against a
+declared threshold, judged alike for both backends: a hung handler, meaning a delivery
+held past the broker's consumer timeout (30 minutes broker-wide, six hours by policy on
+vibey's own queues) or a lease past its expiry, which is requeued; work held with
+nobody holding it, which is surfaced; a poison item, handed out as often as its limit
+allows (by default seven attempts in PostgreSQL, and a delivery limit of 20 set by
+policy on the broker), which is parked behind a person's gate with one attempt
+refunded; ready work nobody has taken for 900 s, which is surfaced; and a dead letter on
+a queue vibey owns, which becomes a parked job and a gate whose answer replays or
+dismisses it, and is never deleted, while one on a queue vibey does not own is only
+surfaced. Every reap is a `QueueReaped` ledger event, and a lease reap writes it in the
+same transaction as the row it moves. The requirement behind this, that everything a
+queue holds has a reaper, is conduct, so ADR-0056 owes a sub-doctrine; the text it
+proposes had not been ratified at the cutoff. Nor had the second independent review of
+#1108 and #1119 been answered. At the cutoff its findings were open: one bad lease row
+halts every reap, and the broker policy is reported as verified when it is not in force,
+both rated high; the reaper also ignores `enabled = false`, a gate lookup breaks the
+BUILD budget loop, and a password can reach a log (the review record, not tracked;
+`docs/architecture/evidence/release-gate-2026-09-24.md`). No commit after #1119 changed
+the reaper's code on `develop` up to `6c38daf9`.
 
 ```latex
 \begin{plainwords}
-Jobs wait in a line inside a database. A helper takes the job at the front and gets a timer with it, like a library book with a due date. A working helper keeps renewing the timer. If a helper crashes, the timer runs out and the job goes back into the line, so it is never lost. Helpers never wait for each other, so adding helpers makes the line move faster. The owner can now also say ``do this one next''. That job goes to the front, together with anything it needs done first, but it never pulls a job out of a helper's hands and never skips a checkpoint, and only the owner, or a helper the owner has named in writing, may ask. Every such request is written down, even the refused ones. And when a job seems stuck, a caretaker measures whether it is really doing nothing before stepping in, and writes down what it saw first.
+Jobs wait in a line inside a database. A helper takes the job at the front and gets a timer with it, like a library book with a due date. A working helper keeps renewing the timer. If a helper crashes, the timer runs out and the job goes back into the line, so it is never lost, and a job that has crashed its helpers too many times goes to a person instead of round and round. Helpers never wait for each other, so adding helpers makes the line move faster. The owner can now also say ``do this one next''. That job goes to the front, together with anything it needs done first, but it never pulls a job out of a helper's hands and never skips a checkpoint, and only the owner, or a helper the owner has named in writing, may ask. Every such request is written down, even the refused ones. And when a job seems stuck, a caretaker measures whether it is really doing nothing before stepping in, and writes down what it saw first. Some of those caretakers still have known faults, and this paper lists them.
 \end{plainwords}
 ```
 
@@ -1262,12 +1332,60 @@ read. The container boundary that would separate them is implemented but not wir
 Running sessions as a separate low-privilege user is the containment that would close
 this, and it is not in 3.0.0.
 
-At the cutoff (2026-09-24 12:22Z) #1093 was open: all six first-round findings were
-fixed and verified, and a re-review had found one more blocking gap, the skills helper
-running with the full environment and loading code from the working directory, whose
-fix was being pushed (the 3.0.0 release-gate record).
+#1093 merged at 14:37Z on 2026-09-24 (`351c10c4`). Its independent review had found
+six defects, among them vibey's own git calls running programs planted in the
+repository with the DSN in hand (rated critical), the notifier's command injection, and
+engine credentials a project declared never reaching the startup preflight, and each
+was reproduced in a test before it was fixed (#1093's description). A re-review then
+found the skills helper running with the full environment and loading code from the
+working directory; the merged change starts that helper from the system basics as well,
+with Python isolated so that the working directory is not on its import path
+(`src/vibey/infrastructure/skills_context.py`). No verdict on the merged result is
+recorded in a tracked source.
 
-<!-- TODO(3.0.0-pending: fix/engine-env-no-db-credentials) replace the paragraph above with #1093's merge commit and date, the final review verdict, and any change to what the allow-list covers -->
+Two allow-lists sit beside it. qwenloop's own `shell` tool, which runs the commands the
+model chooses, has run since #1100 with the system basics only, and never with
+`VIBEY_*`, `PG*`, or a name containing `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `PASSWD`,
+`CREDENTIAL`, `DSN` or `DATABASE_URL`. Before, it passed everything but names
+containing `KEY` and `TOKEN`, so `VIBEY_PG_URL` and `PGPASSWORD` reached commands a
+model chose (`CHANGELOG.md`). ADR-0055 calls this hygiene rather than a boundary, for
+the reason given above. And what a project adds is declared in reviewed configuration:
+`vibey.toml`'s `[engine_environment]` `allow` for every engine and
+`[engine_environment.engines]` for one, and `[gates]` `env_allow` for gate commands,
+which `vibey new` copies into the project record and the `VibeyProject` spec declares
+as `engineEnvironment` and `gates`; nobody edits the record by hand. 3.0.0 therefore
+asks a project to declare what it used to inherit: agyloop's Vertex credentials, a
+provider key OpenCode reads from the environment, a GitHub token for claudeloop's issue
+import, and any toolchain variable a gate needs (`CHANGELOG.md`).
+
+### The sovereign driver, in progress
+
+The operator asked for an editor that drives the local model directly (#290), with
+`gpt-oss:20b` as the main driver. At the cutoff this was in progress, not delivered.
+Its core merged as #1127, marked as work in progress, and the extension as #1133 at
+22:25Z on 2026-09-24, but it had not been released, #290 was open, and the release-gate
+record lists a follow-up pull request still to come and each of the operator's
+additions still to be verified against the merged code
+(`docs/architecture/evidence/release-gate-2026-09-24.md`). What the merged code does
+(`clients/vscode/`): it runs a task through qwenloop on the local model, by default in
+a separate git worktree on a branch of its own, and it reads projects and open gates
+through `vibey projects --json` and `vibey gates --json`, a contract those commands
+declare for it (#1128; `CHANGELOG.md`), so it needs no SQL. It keeps one queue per
+model and by default lets one run use a model at a time, citing the measurement in
+*How many runs at once, per device* (`src/core/run-queue.ts`), and across processes it
+takes the same directory lock the family's other tools take, so a run started from a
+terminal waits in the same line (`src/core/model-lock.ts`). It never passes
+`VIBEY_*`, `PG*` or a name like a database credential to the model's commands, whatever
+its settings say.
+
+Two of its defaults disagree with evidence in this paper, and we say so rather than
+settle them here. Its `vibey.contextWindow` setting defaults to 32,768 tokens, while
+this host was calibrated at 65,536 tokens per slot, and a 32,768-token window refused
+24 of the 60 storm-shaped turns in that calibration (ADR-0058). And its settings text
+says that Ollama drops the start of a long prompt it cannot fit, while the one tracked
+canary result echoed the code placed at the start and not the one at the end
+(`src/vibey_tools/gh/vibey_gh/local_review.py`); which end the server cuts remains
+disputed, as the exact-head section records.
 
 ### Windows versus credits
 
@@ -1479,7 +1597,7 @@ every handoff has a well-defined ledger range $\rho$, shown in [Fig. 13](#fig:en
 
 ```latex
 \begin{plainwords}
-A runner is a program that lets one robot helper work by itself, safely. Every run has limits: how many turns, how much money, how much time. The runners never sit waiting for a person to type. They also know the difference between ``come back in ten minutes'' and ``you have no money left'', and they never mistake one for the other. A fair rotation shares jobs among the helpers, and a helper that says ``I am out'' is never believed when it also says ``I finished''.
+A runner is a program that lets one robot helper work by itself, safely. Every run has limits: how many turns, how much money, how much time. The runners never sit waiting for a person to type. They also know the difference between ``come back in ten minutes'' and ``you have no money left'', and they never mistake one for the other. A fair rotation shares jobs among the helpers, and a helper that says ``I am out'' is never believed when it also says ``I finished''. Each helper is also handed only the keys its job needs, never the whole key ring, although a helper running as the same computer user could still go looking, and the paper says so.
 \end{plainwords}
 ```
 
@@ -3020,8 +3138,8 @@ migration that may have been applied is never edited; its correction is a new
 migration or a recorded gap.
 
 The same day supplied a second governance fact, about where work is kept. At about
-09:09 US Eastern time the host rebooted. Everything held only under `/private/tmp`, a
-directory the operating system clears at boot, was lost: the storm's local run logs and
+09:09 US Eastern time the host rebooted. Everything held only in the operating system's
+temporary directory, which macOS empties at boot, was lost: the storm's local run logs and
 progress log, from which the audit above was computed, and every worktree kept there,
 with its uncommitted edits, among them the first draft of this very update of the
 paper. What survived is what had been committed and pushed, or tracked: the evidence
@@ -3193,21 +3311,21 @@ in the delivery-estimate ledger, shown in [Fig. 34](#fig:forecast).
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.7cm},vibeyaxis,width=7.9cm,height=4.6cm,
-  xmin=0.5,xmax=7.5,xtick={1,2,3,4,5,6,7},xticklabels={Sep 19,Sep 19,Sep 19,Sep 20,Sep 21,Sep 23,Sep 23},x tick label style={rotate=30,anchor=north east},xlabel={forecast record}]
-\nextgroupplot[title={a. Work units in the tracker},ylabel={units},ymin=0,ymax=885,legend pos=north west]
-\addplot[vibeyred,line width=1pt,mark=*,mark size=1.3pt] coordinates {(1,0) (2,24) (3,24) (4,24) (5,25) (6,708) (7,706)};
+  xmin=0.5,xmax=10.5,xtick={1,2,3,4,5,6,7,8,9,10},xticklabels={Sep 19,Sep 19,Sep 19,Sep 20,Sep 21,Sep 23,Sep 23,Sep 24,Sep 24,Sep 24},x tick label style={rotate=30,anchor=north east},xlabel={forecast record}]
+\nextgroupplot[title={a. Work units in the tracker},ylabel={units},ymin=0,ymax=889,legend pos=north west]
+\addplot[vibeyred,line width=1pt,mark=*,mark size=1.3pt] coordinates {(1,0) (2,24) (3,24) (4,24) (5,25) (6,708) (7,706) (8,709) (9,710) (10,711)};
 \addlegendentry{remaining}
-\addplot[vibeygreen,line width=1pt,mark=square*,mark size=1.2pt] coordinates {(1,235) (2,235) (3,235) (4,238) (5,247) (6,264) (7,279)};
+\addplot[vibeygreen,line width=1pt,mark=square*,mark size=1.2pt] coordinates {(1,235) (2,235) (3,235) (4,238) (5,247) (6,264) (7,279) (8,340) (9,342) (10,349)};
 \addlegendentry{completed}
 \nextgroupplot[title={b. Forecast active days to completion},ylabel={active days},ymin=0,legend pos=north west]
-\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (7,70.60) (6,78.67) (5,3.12) (4,3.00) (3,3.00) (2,3.00) (1,0.00)} -- cycle;
-\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20)};
+\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (8,50.05) (9,49.82) (10,48.89) (10,67.71) (9,67.62) (8,67.52) (7,70.60) (6,78.67) (5,3.12) (4,3.00) (3,3.00) (2,3.00) (1,0.00)} -- cycle;
+\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (8,50.05) (9,49.82) (10,48.89)};
 \addlegendentry{$W/r_{\max}$}
-\addplot[vibeyblue!60,line width=1pt,mark=o,mark size=1.2pt] coordinates {(1,0.00) (2,3.00) (3,3.00) (4,3.00) (5,3.12) (6,78.67) (7,70.60)};
+\addplot[vibeyblue!60,line width=1pt,mark=o,mark size=1.2pt] coordinates {(1,0.00) (2,3.00) (3,3.00) (4,3.00) (5,3.12) (6,78.67) (7,70.60) (8,67.52) (9,67.62) (10,67.71)};
 \addlegendentry{$W/r_{\min}$}
 \end{groupplot}
 \end{tikzpicture}
-\caption{The delivery-estimate ledger, one forecast per record. (a) Remaining and completed work units as the tracker held them: remaining jumped from 25 to 708 when the storm filed its lanes as issues. (b) The zero-shortfall time to completion the forecast derives from the observed merge rate, 58--71 active days at the last record, with every material coordinate unmeasured and so at $\phi_i = 1$.}
+\caption{The delivery-estimate ledger, one forecast per record. (a) Remaining and completed work units as the tracker held them: remaining jumped from 25 to 708 on Sep 23, as open issues rose from 23 to 706 when the storm filed its lanes as issues. (b) The zero-shortfall time to completion the forecast derives from the observed merge rate, 49--68 active days at the last record, with every material coordinate unmeasured and so at $\phi_i = 1$.}
 \label{fig:forecast}
 \end{figure*}
 ```

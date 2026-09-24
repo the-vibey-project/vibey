@@ -61,4 +61,4 @@ channel), stop and report BLOCKED, naming the missing seam.
 Commit as `feat(surfaces): lanes retune read capacity from measured latency`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

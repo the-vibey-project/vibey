@@ -175,4 +175,4 @@ Commit as `build(release): a PyInstaller recipe for the single-file vibey`. Do n
 - **Depends on:** `gap-ops-canon-rulings` (item 9, the tool), `gap-release-single-file-1`, `gap-pkg-migrations-in-wheel`, `gap-pkg-channels`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -89,8 +89,8 @@ uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines c
   do **not** see vibey's venv: its `bin`, `VIRTUAL_ENV`, `PYTHONPATH` and
   `PYTHONHOME` are stripped from them, so a gate's `python` is whichever one
   the rest of `PATH` provides, never vibey's. A project whose gates need tools
-  installed beside vibey sets `gates.isolate_python_env` to `false` in its
-  config record ([Gate commands](../reference/configuration.md#gates)).
+  installed beside vibey sets `isolate_python_env = false` under `[gates]` in its
+  `vibey.toml` before `vibey new` ([`[gates]`](../reference/configuration.md#gates)).
 
 The worker LISTENs on `vibey_job_ready`, so answers you give in another
 terminal wake it immediately.
@@ -101,15 +101,15 @@ The interview parks on human gates. In a second terminal:
 
 ```bash
 vibey status               # AWAITING_HUMAN: 1 under Queue Depth means a gate is parked
-psql "$VIBEY_PG_URL" -c "SELECT gate_id, kind, prompt FROM human_gate WHERE answered_at IS NULL ORDER BY raised_at DESC LIMIT 1;"
+vibey gates                # the parked gate's id, its questions, and the command that answers it
 vibey answer <gate-id> system_description="a CLI that greets the user by name" --defaults
 vibey answer <gate-id> --defaults          # later stages: take every default
 ```
 
 `vibey status` shows only queue depth per job state, never a gate id or its
-questions. The parked gate's id and prompt live in the `human_gate` table
-(`answered_at IS NULL`); no CLI command lists them yet, so read them with
-`psql`.
+questions. `vibey gates` lists every open gate, oldest first, with its id, its
+prompt, and `answer with:` — the exact `vibey answer` command for it, here
+`vibey answer <gate-id> --defaults` ([`vibey gates`](../reference/cli.md#vibey-gates-project_id)).
 
 Question keys are minted by the model and vary per run — read them from the
 gate prompt when you want to answer one explicitly. `--defaults` accepts

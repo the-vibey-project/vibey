@@ -15,7 +15,7 @@ item 5: OpenTofu, CloudFormation or the AWS CDK), and every AWS code lane depend
 Implementer: a large model or the operator (design, not code); the storm runner skips gap-spike-*.
 
 ## Deliverable
-One file, `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-gap-aws-iac.md`: a draft ADR
+One file, `STORM/specs/ADR-gap-aws-iac.md`: a draft ADR
 (number assigned at ratification), written like `specs/ADR-two-loops.md`. Nothing else is written.
 
 ## Questions the ADR must decide (each with a stated answer, or "operator ruling: <item>")
@@ -135,7 +135,7 @@ Each is one source file plus its interface and one test file, per `STORM/SPEC-TE
 None: a design lane. The reviewer checks the acceptance criteria.
 
 ## Checks the lane must run (all must pass)
-None in code. `git -C /private/tmp/claude-501/storm/qwenstorm-3.0.0/integration status --short`
+None in code. `git -C STORM/integration status --short`
 stays empty (the spike never touches the integration clone).
 
 ## Out of scope
@@ -146,4 +146,4 @@ stays empty (the spike never touches the integration clone).
 Commit as `docs(adr): draft the AWS cloud adapter ADR` (only when the operator moves the draft into the tree; the spike itself commits nothing). Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

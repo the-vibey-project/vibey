@@ -238,4 +238,4 @@ failure (no network) means `gguf=None`, as behaviour 2 says.
 - default-model-p1: `DEFAULT_ENDPOINT_MODEL == "gpt-oss:20b"` in `domain/config.py:16` (integrated as #387 at `ddf2bf05`), which behaviour 5's test ties the catalogue to.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

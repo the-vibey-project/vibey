@@ -142,6 +142,50 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
      failure. An unreadable process table (the sandbox refuses `ps`) is reported as unknown
      and is never taken for idle. The classes are declared in
      `interfaces/push_gate_interface.py`.
+
+     A lock taken the old way, with a bare `mkdir` and no owner record, is traced to its
+     push by process. The push must meet all of these conditions:
+     - it is the only `git push` that started within `ownerless_match_seconds` (5) of the
+       lock's mtime;
+     - it stands in one of `worktree_roots`, or `git -C` points it there (the default root is
+       the lock's own directory);
+     - its process group holds nothing but that push, its descendants, and the shells above
+       it.
+
+     A push that meets them is judged by the same idle and ceiling rules. It is killed with
+     evidence first, and the reaper removes the lock that the dead shell's `rmdir` never
+     reached. A push that does not meet them is reported as unknown and never killed.
+
+     The reaper also runs on a schedule of its own, whether or not a storm is running. The
+     unit files are the tracked templates in `templates/`:
+     - `push_gate.py install-schedule` installs a launchd agent on macOS, or a systemd user
+       timer on Linux, and runs `reap` every `schedule_seconds` (90);
+     - `uninstall-schedule` removes it, and `schedule-status` reports its state;
+     - `--target cron` only prints a cron line.
+
+     The storm cycle's own step stays in place, but it cannot reap a hang in its own
+     publish step: only the schedule can. A non-blocking reap lock, kept beside the lock,
+     makes two overlapping passes safe: the second stands aside (exit 3).
+
+     What the reaper believes, and what it records, is bounded (the review of #1105 and
+     #1107):
+     - the owner record is checked field by field, and a lock or record that is a symlink or
+       another uid's is untrusted and never acted on; the state directory is 0700, and no
+       file is written or read through a link;
+     - holds and idle windows are counted in awake time (CLOCK_UPTIME_RAW on macOS,
+       CLOCK_MONOTONIC on Linux), so a laptop's sleep is never a hang;
+     - a kill is recorded only once the group is seen gone, only this uid's groups are
+       signalled, `protected` matches the program (argv[0]), and a group whose members cannot
+       be read is never killed;
+     - before any signal the lock and the traced push are read again under the lock's mutex;
+     - `run --push-timeout` records its own kill as a reap, with evidence.
+   - **Pushing in this repository.** Every push, by a lane, a tool or a person, uses one
+     recipe:
+     `python3 <storm>/tools/push_gate.py run -- git push origin HEAD:<branch>`.
+     `lane-publish.py` and `storm-snapshot.py` push this way too, and a meta test fails any
+     storm tool that builds a bare `["git", "push", ...]`. From a checkout with no storm, set
+     `VIBEY_PUSH_LOCK` to the machine's shared lock. Without it the tool refuses rather than
+     derive a private lock. See CONTRIBUTING.md.
    - `storm_trust.py` contains forge text where it enters (sub-doctrine 12.j, ADR-0053).
      A lane starts only when every account that opened, edited or renamed its issue is in
      `[unattended_approval] authors`. That list is read from the integration branch's
@@ -151,8 +195,74 @@ becomes a pull request. The first verified wave is `feat/qwenstorm-3.0.0-wave-1`
      `interfaces/storm_trust_interface.py`.
    - `file-suite.py` files the suite as issues. It is resumable and paced.
    - `lint-specs.py` is the check run before filing.
+   - `storm_durability.py` is the durability gate (sub-doctrine 10.h, ADR-0057). It resolves
+     the storm home, and `check` refuses with exit 78 when the home, the storm root or a
+     named path lies on storage the operating system empties. `status` reports each one,
+     `worktree NAME` prints where a worktree goes, and `storm-watch.py` reports it as the
+     `durable` check. The classes are declared in `interfaces/storm_durability_interface.py`.
+   - `storm_checkpoint.py` holds `StepJournal`, the per-step results file a long measurement
+     resumes from. It is declared in `interfaces/storm_checkpoint_interface.py`.
 7. `bench/`: the 2026-09-22 benchmark. gpt-oss:20b on Ollama finished a 10-turn session in
-   86 s, against 215 s for Qwen2.5-Coder-14B on llama.cpp.
+   86 s, against 215 s for Qwen2.5-Coder-14B on llama.cpp. Both benchmarks resume:
+   `bench-run.sh` skips every label whose session is already in `results.jsonl`, and
+   `host-sweep.py` journals each configuration as it finishes and measures only the rest.
 
-The paths inside these files point at the machine that ran the storm
-(`/private/tmp/claude-501/storm/qwenstorm-3.0.0/`). Read them as relative to this folder.
+## Where storm work lives, and how often it is saved
+
+On 2026-09-24 at about 09:09 EDT the operator's Mac rebooted in the middle of the storm. macOS
+empties `/private/tmp` at boot, and the storm root, every lane worktree, the push lock, the
+benchmark evidence and the scratch probes were all under `/private/tmp/claude-501/storm/`.
+Everything not yet committed was lost: about 1.5 hours of concurrency-sweep measurements, a
+paper draft and three lanes of fixes. Only committed work survived. Sub-doctrine 10.h and
+ADR-0057 are the rule and the record.
+
+**One declared home.** All storm work on a machine lives under the storm home:
+`VIBEY_STORM_HOME`, else `[paths] home` in the storm root's `storm.toml`, else the platform's
+default. On macOS that is `~/git/vibey-storm`. On Linux (Ubuntu LTS, Arch) it is
+`$XDG_DATA_HOME/vibey/storm`, falling back to `~/.local/share/vibey/storm`. Windows is not
+supported yet (#1097): the gate refuses there rather than guess. The worktrees are
+`<home>/<name>`. The shared push lock and its state are
+`<home>/.push-lock` and `<home>/.push-lock.gate`. A storm root is `<home>/<storm>`, for example
+`<home>/qwenstorm-3.0.0`, and holds `storm.toml`, the queue, the ledgers, `lanes/`,
+`integration/` and `scratch/`.
+
+```bash
+python3 tools/storm_durability.py status          # the home and the storm root: durable or not
+git worktree add "$(python3 tools/storm_durability.py worktree fix-x)" -b fix/x origin/develop
+```
+
+**A gate, not a judgement.** `storm-queue.sh`, `lane-setup.sh`, `storm-cycle.py --run` and both
+benchmarks refuse to start, with exit 78 and the key to change, when anything they would write
+resolves under a volatile location. Symlinks are followed, so `/tmp` is caught as
+`/private/tmp`. On macOS the volatile locations are `/tmp`, `/var/tmp` and `/var/folders`. On
+Linux they are `/tmp`, `/var/tmp` (systemd-tmpfiles), `/dev/shm` and `/run/user/<uid>`. On
+both, `$TMPDIR` and `$XDG_RUNTIME_DIR` count too. One class per platform decides both lists
+(`PlatformStorage` in `storm_durability.py`). A test's throwaway storm passes only by
+declaring itself so in its own `storm.toml`, with a reason: `[durability] disposable = "..."`.
+
+**Moving a storm that is on volatile storage.** Stop it (`storm-stop.py --stop`). Commit and
+push what can be pushed. Recreate the storm root under the home, and link `tools/` into it
+again. `git worktree prune` in the main clone clears the worktrees a reboot already took. The
+durable record, `integrated.txt`, `abandoned.txt` and the priority log, is what matters: copy
+it across before starting.
+
+**Commit early, push often.**
+- Commit as soon as a change is coherent, not when it is finished.
+- Push work in progress to a draft pull request at least every 30–45 minutes.
+- A long measurement writes each step to a `StepJournal` as it finishes, and resumes.
+- Lanes resume at lane granularity already: a lane without `.qwenstorm/result.json` runs
+  again.
+
+A reboot, a crash or a lost disk then costs minutes of work, not hours. CONTRIBUTING.md has
+the same rule for every contributor.
+
+Lane clones have no remote by design (lane-setup.sh), so a lane's work reaches a remote only
+when `lane-publish.py` publishes it. An automatic "checkpoint" that pushes a lane's
+work-in-progress as a `wip:` commit is not built. It would need a remote the lane is
+deliberately denied. Each push also runs the full pre-push gate (minutes, one at a time under
+the machine's push lock), and a red WIP cannot pass it. Nothing may skip that gate (12.d).
+What protects a lane's uncommitted work instead is that it now lives on durable storage.
+
+The specs and audit notes here write the storm root as `STORM/`, as `STORM-CONTEXT.md`
+defines it. Older copies named a directory under `/private/tmp`, which the reboot emptied. Read
+those paths as relative to this folder.

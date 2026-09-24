@@ -31,7 +31,7 @@ GitHub's dialect; Forgejo, the default forge, has no GraphQL API and no Discussi
 
 ## Required behaviour
 The lane writes exactly one file, the draft ADR at the absolute path
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-145-graphql-reads.md`, with
+`STORM/specs/ADR-roadmap-145-graphql-reads.md`, with
 `write_file`. It changes no file in its clone and commits nothing.
 
 Before writing, read every file:line below in the integration clone (your working directory)
@@ -47,8 +47,8 @@ verbs; none is GraphQL); `src/vibey_tools/gh/vibey_gh/flatten.py:127-132`, `:152
 GitHub reader); `src/vibey_tools/gh/docs/forge-snapshot.md:284`, `:294-295`, `:312`;
 `src/vibey_tools/gh/docs/adr/0001-forge-neutral-nouns.md` and
 `src/vibey_tools/gh/docs/adr/0002-forgejo-is-the-sovereign-default-forge.md`; the doctrine
-lines above; and `/private/tmp/claude-501/storm/qwenstorm-3.0.0/issue-audit/updates/145.md`.
-Also read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/fakes-tenant-gh-1.md` (its
+lines above; and `STORM/issue-audit/updates/145.md`.
+Also read `STORM/specs/fakes-tenant-gh-1.md` (its
 `ScriptedGhTransport`, the fake every GraphQL test will use).
 
 The ADR carries these parts, in this order, each heading exactly as written:
@@ -116,7 +116,7 @@ The ADR carries these parts, in this order, each heading exactly as written:
     measured (8.g, `doctrines.md:316`).
 
 ## Where to change
-- Create only `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-145-graphql-reads.md`
+- Create only `STORM/specs/ADR-roadmap-145-graphql-reads.md`
   (outside the clone). Its first line is the title above; ADR drafts carry no provenance header.
 - No file in the clone changes. Nothing is committed.
 
@@ -140,7 +140,7 @@ None in the clone. The check script below is the test; write the ADR until it pa
 ```bash
 python3 -c '
 from pathlib import Path
-adr = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-145-graphql-reads.md")
+adr = Path("STORM/specs/ADR-roadmap-145-graphql-reads.md")
 assert adr.is_file(), "the ADR file does not exist"
 text = adr.read_text(encoding="utf-8")
 lines = text.splitlines()
@@ -169,7 +169,7 @@ question = "**Discussions and Projects** exist differently per forge. Forgejo ha
 assert question in flat, "#145 question 3 is not quoted verbatim"
 print("ADR structure OK")
 '
-test "$(grep -cE '[A-Za-z0-9_./-]+\.(py|sql|md|toml):[0-9]+' /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-145-graphql-reads.md)" -ge 15
+test "$(grep -cE '[A-Za-z0-9_./-]+\.(py|sql|md|toml):[0-9]+' STORM/specs/ADR-roadmap-145-graphql-reads.md)" -ge 15
 test -z "$(git status --porcelain)"
 ```
 
@@ -182,4 +182,4 @@ test -z "$(git status --porcelain)"
 - Do not push, do not commit.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

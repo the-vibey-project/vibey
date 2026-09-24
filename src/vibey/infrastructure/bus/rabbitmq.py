@@ -6,7 +6,13 @@ no AMQP client dependency. Queues are durable; with `dead_letter` (the
 default) each queue gets a fanout dead-letter exchange and a bound
 `<queue>.dlq`, so rejected and expired messages park for inspection instead
 of vanishing. Consuming uses basic.get semantics: one acknowledged message
-per call, None when the queue is empty.
+per call, None when the queue is empty. That is at-most-once: no delivery is
+ever held, so none can hang, be orphaned or be redelivered -- and a consumer
+that dies after `consume` returns has lost the message (ADR-0056 records this).
+
+Every publish carries a `message_id` and a `timestamp` (ADR-0056): the id makes a
+dead letter's identity its own, so parking it is idempotent, and the timestamp
+lets the reaper measure how long the oldest ready message has waited.
 """
 
 from __future__ import annotations
@@ -14,12 +20,14 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
-import urllib.error
-import urllib.parse
+import time
 import urllib.request
+import uuid
+from collections.abc import Callable
 from typing import Any
 
 from vibey.application.interfaces.bus import BusPort
+from vibey.infrastructure.bus.management import RabbitMqManagementApi
 
 
 class RabbitMqBusAdapter(BusPort):
@@ -31,27 +39,18 @@ class RabbitMqBusAdapter(BusPort):
         password: str,
         vhost: str = "/",
         opener: Any = urllib.request.urlopen,
+        message_ids: Callable[[], uuid.UUID] = uuid.uuid4,
+        epoch_seconds: Callable[[], float] = time.time,
     ) -> None:
-        self._url = url.strip().rstrip("/")
-        credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
-        self._auth = {"Authorization": f"Basic {credentials}"}
-        self._vhost = urllib.parse.quote(vhost, safe="")
-        self._opener = opener
+        self._api = RabbitMqManagementApi(
+            url=url, username=username, password=password, vhost=vhost, opener=opener
+        )
+        self._vhost = self._api.vhost
+        self._message_ids = message_ids
+        self._epoch_seconds = epoch_seconds
 
     def _request(self, method: str, path: str, payload: dict[str, object] | None = None) -> Any:
-        body = json.dumps(payload).encode("utf-8") if payload is not None else None
-        headers = dict(self._auth)
-        if body is not None:
-            headers["Content-Type"] = "application/json"
-        req = urllib.request.Request(  # nosec B310 - https-only endpoints are config
-            f"{self._url}/api/{path}", data=body, headers=headers, method=method
-        )
-        try:
-            with self._opener(req) as resp:
-                raw = resp.read().decode("utf-8")
-        except urllib.error.HTTPError as exc:
-            raise RuntimeError(f"RabbitMQ API error {exc.code}: {exc.reason}") from exc
-        return json.loads(raw) if raw.strip() else None
+        return self._api.request(method, path, payload)
 
     async def declare_queue(self, queue: str, *, dead_letter: bool = True) -> None:
         await asyncio.to_thread(self._declare_sync, queue, dead_letter)
@@ -87,7 +86,11 @@ class RabbitMqBusAdapter(BusPort):
                 "routing_key": queue,
                 "payload": json.dumps(payload),
                 "payload_encoding": "string",
-                "properties": {"delivery_mode": 2},
+                "properties": {
+                    "delivery_mode": 2,
+                    "message_id": self._message_ids().hex,
+                    "timestamp": int(self._epoch_seconds()),
+                },
             },
         )
         if not isinstance(result, dict) or not result.get("routed"):

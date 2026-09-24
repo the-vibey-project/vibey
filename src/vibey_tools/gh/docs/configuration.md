@@ -253,13 +253,14 @@ the lane while `trusted_only` is on.
 | `trusted_only` | boolean / `true` | Never run the sovereign lane for a fork pull request. |
 | `heartbeat_ref` | string / `"refs/vibey-gh/sovereign-heartbeat"` | The git ref `vibey-gh sovereign --beat` publishes to and the workflow reads back, so "is the local lane alive?" is answered by something the lane itself had to write. |
 | `heartbeat_max_age_minutes` | integer / `15` | How stale that heartbeat may be before the local lane is treated as down. A ref that stopped moving is indistinguishable from a runner that stopped, which is the point — both mean do not route work there. |
-| `max_diff_chars` | integer / `60000` | For the diff half, a diff longer than this is **refused**, never cut: a verdict on part of a diff would pass the rest unread, so the gate asks a human. A **whole** review (no paid review declared) never cuts the diff either: it is shown the whole diff or refused; there this bounds the documents instead. |
+| `max_diff_chars` | integer / `60000` | For the diff half, a diff longer than this is **refused**, never cut: a verdict on part of a diff would pass the rest unread, so the gate asks a human. A **whole** review (no paid review declared) never cuts the diff either: it is shown the whole diff or refused. It never bounds the documents; `max_document_chars` does. |
+| `max_document_chars` | integer / `120000` (at least 1000) | The most characters of `context_paths` documents a whole review is shown, whatever the window would allow. The documents' own limit, never the diff's: when they shared `max_diff_chars`, this repository's two pages already took 59,607 of its 60,000, and a few hundred more characters of README cut a page, so every pull request's review claimed the diff half alone and its gate asked a human. The default is about twice what those pages hold today; the window is what usually binds. |
 | `context_window` | integer / `65536` (4096–1048576) | The model's context window in tokens, **as your host measured it**: every local request is sized from everything it sends (system prompt, user prompt, schema) and must fit inside it beside `reasoning_reserve_tokens`. A request that does not fit is **never sent**. Left to its defaults Ollama does not refuse an oversized prompt: it cuts it to about half the window and the model answers about the rest, with no error (measured on Ollama 0.34.2 with `gpt-oss:20b` at a 32,768 window: a 36,798-token request was read as 16,386 tokens). So every request is also sent with `truncate: false` and `shift: false`, which makes Ollama 0.34 refuse it with HTTP 400 — reported as `the model server refused the request (HTTP 400): …`, never as an unreachable model — and carries two random check codes, one at each end of the prompt, that the answer must echo; a reply that does not echo both is refused. A whole review first leaves out optional documents (the last in `context_paths` first, and the verdict names them); if the diff alone does not fit, the lane refuses with `the diff (~N tokens) exceeds the sovereign model's window (M tokens) once its ~S tokens of instructions and the R-token reasoning reserve are counted`, and the gate asks for a human. The default is what this repository's host tuning chose for `gpt-oss:20b`. |
 | `reasoning_reserve_tokens` | integer / `8192` | Tokens kept free for the model's reasoning **and** its answer; at least 1024 and under half of `context_window`. A reasoning model thinks before it answers: on #1090's whole review `gpt-oss:20b` spent 3,676 tokens doing both at its default effort. After each call the lane also reads Ollama's own `prompt_eval_count`, and refuses the reply if the model read more than the request was sized for — an estimate that let too much through — and reads `done_reason`, so a model that ran out of room is reported as `the model ran out of room (done_reason=length, N reasoning chars, M answer chars)`, never as a JSON error. |
 | `chars_per_token` | integer / `3` (1–8) | Characters per token when estimating a prompt. Pessimistic for prose and code (#1090 measured 3.95 for `gpt-oss:20b`), but optimistic for dense text — a lockfile tokenizes at about 2.1, hex 1.9, base64 1.5, CJK 1.4, emoji 0.7 — which is why the estimate only decides what to trim, and the request itself refuses truncation. |
 | `think` | string / empty | The reasoning effort sent to the model as Ollama's `think`: `low`, `medium` or `high`, or empty to send nothing and keep the model's default. Empty by default. On #1090's whole review `low` returned the same verdict in 471 tokens (default: 3,676) and 103s (243s) — one sample, not a fidelity study. |
 | `timeout_seconds` | integer / `600` | Bound on one review. |
-| `context_paths` | string list / `["README.md", "docs/index.md"]` | With no paid review declared, the pages the whole review judges the documentation contract against — fetched read-only through the contents API at the exact head, never checked out, and handed to the model beside the diff. A page absent at that head is skipped and the verdict names the pages it did see; any other fetch failure stops the review. Each entry must be a plain repository-relative path: no leading `/` or `~`, no `..`, no whitespace, no glob or query characters. Their text shares the `max_diff_chars` budget, and the **last declared gives way first** (the workflow passes this order as `--context-paths`). The model is told, by name, which were cut short or left out — and because the documentation judgments were then made against less than you declared, the verdict claims the diff half alone and the gate asks a human. |
+| `context_paths` | string list / `["README.md", "docs/index.md"]` | With no paid review declared, the pages the whole review judges the documentation contract against — fetched read-only through the contents API at the exact head, never checked out, and handed to the model beside the diff. A page absent at that head is skipped and the verdict names the pages it did see; any other fetch failure stops the review. Each entry must be a plain repository-relative path: no leading `/` or `~`, no `..`, no whitespace, no glob or query characters. Their text is bounded by `max_document_chars` and by what the window leaves beside the diff, and the **last declared gives way first** (the workflow passes this order as `--context-paths`). The model is told, by name, which were cut short or left out — and because the documentation judgments were then made against less than you declared, the verdict claims the diff half alone and the gate asks a human. |
 
 It never overrides a judgment the paid lane made: when the local verdict carries the diff
 half, the paid reviewer is not asked that half at all, and when it is held in reserve it is
@@ -281,7 +282,7 @@ would otherwise never be reviewable at all. When the API refuses, the job recons
 same merge-base diff locally instead: it fetches the base and head refs, deepening a shallow
 trusted checkout until their histories connect, and diffs one against the other. That
 reconstruction is read-only and executes no repository code, so the guarantee above holds
-either way, and `max_diff_chars` still caps what actually reaches the model.
+either way, and a diff past `max_diff_chars` is still refused rather than cut.
 
 The verdict is deliberately narrower than the primary review's. Ollama constrains decoding
 to the schema, so the output *shape* is guaranteed; the *judgments* are not, and a 14B model
@@ -579,6 +580,108 @@ stability or reliability shortfall should dilate duration through φ rather than
 the work impossible, and φ is not measured yet. **Paid credit counts as agency**:
 spending is a form of permission to act.
 
+## `[local_models]` and `vibey-gh slots`
+
+How many runs of one local model may run at once on a device is **measured on that
+device, never assumed** (sub-doctrines 8.c and 8.j, ADR-0058). A second run of a model
+already resident can double throughput, or it can overflow the machine's wired memory,
+swap it into the ground, or refuse the deep prompts the first run served. Which of these
+happens depends on the model, its context window, the runner and the hardware, so the
+answer is a calibration recorded per device, and a declaration is checked against it.
+
+```bash
+# A pool of storm-shaped turns: from a storm's own lane records, or its committed specs ...
+python docs/plans/qwenstorm-3.0.0/tools/storm_turn_pool.py specs --out pool.jsonl
+vibey-gh slots corpus --pool pool.jsonl --out corpus.json --segments 20 --min-per-stratum 5
+# ... swept at N = 1, 2, 3, ... beside an idle production runner.
+vibey-gh slots calibrate --corpus corpus.json --lock /path/to/.ollama-lock --out evidence.json
+# What a queue reads: the number on stdout, the reason on stderr.
+vibey-gh slots allowed
+```
+
+**The declaration.** `concurrent_runs` is `1` by default: 8.c as written, one run at a
+time, which needs no evidence and probes nothing. `"measured"` takes whatever this
+device's evidence supports. A number above one runs only if this device's evidence
+measured that number inside every bound and faster than one; otherwise **one runs**, and
+the refusal names what is missing (`--strict` exits `2` on a refusal).
+
+**The device.** Evidence is keyed to a fingerprint of the hardware model, processor,
+memory, accelerator, operating system, runner version, model digest and context window.
+Evidence for a device this no longer is (a runner upgrade, another model digest, more
+memory) is **stale**, and so is evidence older than `max_evidence_age_days`. Missing or
+stale evidence means one, said on stderr, and `slots allowed` writes a calibration
+request beside the evidence. `slots calibrate --if-requested` acts on exactly those
+requests, so an idle window closes the gap without anyone remembering it: the storm
+runner does this itself when its queue empties (`storm-queue.sh`).
+
+**The sweep.** `calibrate` starts its own `ollama serve` on `calibration_port`, with
+`OLLAMA_NUM_PARALLEL=N` and `OLLAMA_NOPRUNE`, beside the production runner, which it
+never restarts or reconfigures. It waits until the production runner has nothing
+resident, and a step during which production loads a model is discarded and measured
+again: two resident models bidding for one accelerator is the contention 8.c forbids, so
+a reading taken beside one measures the wrong thing. It replays the corpus with N
+closed-loop workers through `/api/chat` with `truncate: false` and `shift: false`, so a
+prompt the slot cannot hold is a recorded refusal, never a silent loss of its front
+half, and a `200` with no `done_reason` (what the runner answers when its decode fails
+underneath it) is a failure, not an answer. It samples the host every second: wired
+memory (on macOS, `vm_stat`'s wired pages; on Linux, `Unevictable` plus what an NVIDIA
+accelerator holds), the free share, swap-ins and swap-outs, and what both runners hold
+resident. It reads the runner's own log for slots, context per slot, KV cache sizes,
+model loads, truncations, context shifts and device failures. One slot is measured
+twice, so fidelity is judged against the model's agreement with itself. The sweep stops
+when a bound breaks, or after two consecutive steps without a significant gain. The
+**ideal N** is the smallest that reaches the best throughput inside every bound. At one
+slot the memory bounds are reported as *floor warnings* and never refuse: one is 8.c's
+floor.
+
+**Resumable.** Each completed step is written under `<evidence_dir>/progress/<sweep>`
+the moment it finishes, keyed by the device fingerprint, the corpus hash and the replay
+method; `--out` gets the evidence so far after every step. An interrupted sweep, run
+again with the same arguments, takes the steps it already has and measures the rest, and
+`--max-runs` can walk it one step at a time.
+
+**The runner must match.** The evidence records the runner version of every step. A
+calibration that ran on a different binary from the production runner's (Homebrew's
+`ollama` on `PATH` beside the macOS app's, say) is **not recorded** for this device. Pass
+`--binary` or set `ollama_binary`. Running N lanes also needs the production runner
+started with `OLLAMA_NUM_PARALLEL` of at least N **and** the calibrated context per slot:
+a runner that sizes every slot to its own `OLLAMA_CONTEXT_LENGTH` is not the runner that
+was measured.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `concurrent_runs` | integer ≥ 1 or `"measured"` / `1` | How many runs of the model run at once on this device, checked against this device's evidence as above. |
+| `model` | string / empty | The model calibrated and gated. Empty means `[pr_automation.fallback] model`. |
+| `context_window` | integer / `65536` | The context every slot is calibrated at: the window the loop declares, so every turn fits one slot. Part of the fingerprint. |
+| `evidence_dir` | string / empty | Where evidence, requests and checkpoints live. Empty means `$VIBEY_GH_SLOTS_DIR`, else `~/.local/state/vibey-gh/slots`, on the device the evidence describes. |
+| `max_runs` | integer / `8` | The sweep's upper limit. It normally stops earlier. |
+| `calibration_port` | integer / `11435` | Where the calibration runner listens, beside production. |
+| `ollama_binary` | string / empty | The runner binary. Empty means `ollama` on `PATH`, else the macOS app's bundled runner. |
+| `lock` | string / empty | A `mkdir` lock held for the whole calibration, shared with anything else that must not use the model meanwhile. `--lock`, then `$VIBEY_OLLAMA_LOCK` (a machine's own convention), then this; empty takes none. |
+| `wired_ceiling_fraction` | float / `0.80` | Peak wired memory, as a share of physical memory, that a step above one may reach. |
+| `swap_growth_factor` | float / `2.0` | Swap-outs above one may reach this multiple of the one-slot rate ... |
+| `swap_floor_mb_per_minute` | float / `64.0` | ... and are never judged below this rate. |
+| `fidelity_tolerance` | float / `0.05` | How far structural agreement with the one-slot answers may fall below one slot's agreement with itself. |
+| `min_throughput_gain` | float / `0.10` | What counts as a significant gain, for the plateau rule, the ideal N, and a declared number. |
+| `max_evidence_age_days` | float / `30` | Evidence older than this is stale. |
+
+The bounds are read when a decision is made, not frozen into the evidence, so tightening
+one takes effect at once: the gate re-judges the stored measurements against what this
+file says now.
+
+```toml
+[local_models]
+concurrent_runs = 1        # 8.c as written; "measured" once the operator chooses it (ADR-0058)
+model = "gpt-oss:20b"
+context_window = 65536
+```
+
+**On a cluster.** Every node that serves a model is its own device. Run the calibration
+as a Job pinned to the node (`nodeSelector`), inside the model runner's pod network, with
+`VIBEY_GH_SLOTS_DIR` on a volume that outlives the Job, and give the workers the same
+directory. A node without evidence, or with stale evidence, runs one. The chart does not
+yet template this Job (ADR-0058 records it as owed).
+
 ## `[tidy]`
 
 The clean repo (**sub-doctrine 9.a**): every repository is kept technically clean at
@@ -767,6 +870,43 @@ The handoff is lossless because the seats share one working tree and the
 | `tag_prefix` | string / `v` | Nonempty, whitespace-free tag prefix. |
 | `generate_notes` | boolean / `true` | Ask GitHub to generate release notes. |
 | `require_new_version` | boolean / `false` | Fail instead of silently doing nothing when a release-branch push does not carry a new version (the tag it would need already exists at a different commit). Leave off for a repository where a docs-only or tooling-only promotion is a normal, frequent, versionless push. |
+
+## `[announce]`
+
+The changelog `vibey-gh announce` posts to Discord after each documentation deploy (see
+[operations](operations.md#discord_webhook_url-optional)). Every key is optional.
+
+| Field | Type / default | Meaning |
+|---|---|---|
+| `enabled` | boolean / `true` | Post at all. Off, the step says so and passes. |
+| `webhook_secret` | string / `DISCORD_WEBHOOK_URL` | The repository secret holding the webhook. A secret NAME, rendered into `${{ secrets.… }}`; never the URL. `GITHUB_*` is refused: GitHub reserves the prefix. |
+| `username` | string / `vibey` | The name the message is posted under (1–80 characters). Refused where Discord would refuse it: containing `discord`, `clyde`, `@`, `#`, `:` or ` ``` `, or being `everyone` or `here`. |
+| `max_changes` | integer / `8` | Lines listed before `…and N more` (1–50). Breaking changes are never counted against it. |
+| `max_subject_chars` | integer / `100` | A longer description is cut with `…` (20–400). |
+| `max_message_chars` | integer / `2000` | The message's ceiling in UTF-16 units (200–2000, Discord's limit). The message fits by construction: listed lines go first, then breaking lines shorten, then overflowing breaking changes are counted by name. |
+| `include_other` | boolean / `true` | List types in no named group under `other_group`; off, they are only counted. |
+| `breaking_group` | string / `Breaking` | The heading for any `!` or `BREAKING CHANGE` commit. It always leads. |
+| `other_group` | string / `Other` | The heading for types no group names. |
+| `groups` | table / `Added = ["feat"]`, `Fixed = ["fix"]` | `[announce.groups]`: label = commit types, in display order. A type may be in one group only. |
+| `type_words` | table / `feat = "Feature"`, `fix = "Fix"`, `docs = "Docs"`, `perf = "Performance"`, … | `[announce.type_words]`: the word a type prefix becomes. Keys given here override; the rest keep their defaults. |
+| `noise_patterns` | list of regex / merge commits, `chore(merge)`, `chore(release)`, `chore(heartbeat)`, merge-conflict chores | Subjects hidden from the list and counted as `+N maintenance commits`. A breaking change is never noise. |
+| `link_pull_requests` | boolean / `true` | Link each line's `#N` (or short commit) to the forge. |
+| `link_compare` | boolean / `true` | Link the compare view, or the changelog, after the list. |
+| `link_surfaces` | boolean / `true` | End with the channel site and the surfaces this deploy produced. |
+| `suppress_embeds` | boolean / `true` | Post with Discord's no-link-preview flag. |
+| `changelog_path` | string / `CHANGELOG.md` | A release announces this file's section for its version. Repository-relative; letters, digits and `. _ / -` only, since it is also written into a link. |
+| `max_history_pages` | integer / `10` | Pages of 100 runs, and of 100 compared commits, read for the previous position and the range (1–10: the Actions API serves a status-filtered run listing only to its 1000th result). Commits beyond are counted; no accepted announcement inside the window re-anchors, and says so. |
+| `max_history_candidates` | integer / `20` | Runs for the branch whose announcement was not accepted that are read, one jobs call each, before the announcement re-anchors and says so (1–100). Staying unknown instead would never recover from a long outage. |
+
+```toml
+[announce]
+max_changes = 6
+include_other = false
+
+[announce.groups]
+Added = ["feat"]
+Fixed = ["fix", "perf"]
+```
 
 ## `[rulesets]`
 

@@ -5,6 +5,31 @@ This file follows Keep a Changelog and semantic versioning conventions.
 
 ## Unreleased
 
+- **Feature:** `vibey-gh announce` posts a concise changelog with every documentation deploy,
+  replacing the release-surfaces workflow's inline announcement. It lists one line per merged
+  change (its Conventional Commit subject, the type turned into a word, the PR linked), grouped
+  Breaking / Added / Fixed / Other with breaking changes first and never dropped, and caps the
+  list at `[announce] max_changes` with `…and N more`. Merge and release chores are counted, not
+  listed, and the surface links follow. The message fits Discord's 2000 characters by
+  construction, and a hostile subject can neither ping nor format it. The range is the
+  commits since the previous accepted announcement, read from the Actions API through each
+  run's `run-name` and the `Record the announced position` marker step. A history that could
+  not be read is announced as unknown and never recorded, so the next announcement covers the
+  span again. The first announcement, a force-push, and an exhausted window re-anchor, and say
+  so. A re-run of an announced commit posts nothing. A release announces its `CHANGELOG.md`
+  section. Branches and tag prefixes may contain `/`. No
+  webhook is a notice and a failed post a `::warning::`. The deploy never fails and the URL is
+  never printed. New `[announce]` table; see configuration.md and operations.md.
+- **Fix:** a whole review's documents have a limit of their own, `[pr_automation.fallback]
+  max_document_chars` (default 120,000, at least 1000; `--max-document-chars`, passed by the
+  workflow), instead of sharing `max_diff_chars`. Tied to the diff's 60,000, this repository's
+  own README.md and docs/index.md already took 59,607 of it; 394 more characters of README cut
+  docs/index.md, the verdict claimed the diff half alone, and with no paid review declared every
+  pull request's gate went red for a human. The documents are now also budgeted from the request
+  as sent, check codes included, so documents trimmed to the window are never then refused for
+  not fitting it. A model-server error whose body breaks off mid-read (`IncompleteRead`) is
+  still a clean refusal in the status line's words.
+
 - **Fix:** a local review never returns a verdict on a prompt the model did not read in full,
   and says when the model ran out of room (#1090). What #1090 was: its whole review sent about
   124,000 characters, which the model counted as 31,765 prompt tokens (about 3.95 characters

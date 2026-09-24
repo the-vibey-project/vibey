@@ -8,9 +8,11 @@ without making application code depend on a concrete implementation.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
+from vibey.application.dto import ProjectRecord
 from vibey.application.interfaces import (
     BuildLedger,
     CallerIdentity,
@@ -31,6 +33,9 @@ from vibey.application.interfaces import (
     WorkPlanProducer,
 )
 from vibey.domain.interfaces.config_interface import QueueConfigInterface
+
+if TYPE_CHECKING:
+    from vibey.domain.config import VibeyConfig
 from vibey.infrastructure.build.interfaces import (
     ConfigurableAutomatedReviewRunnerInterface,
     ConfigurableGateRunnerInterface,
@@ -86,6 +91,15 @@ class ProjectPriorityGrantReaderInterface(PriorityGrantReader, Protocol):
 @runtime_checkable
 class ProcessCallerInterface(CallerIdentity, Protocol):
     """The account this process runs as: uid from the OS, name from pwd."""
+
+
+@runtime_checkable
+class EnvironmentConfigLoaderInterface(Protocol):
+    """What the environment alone declares, for a process with no vibey.toml."""
+
+    def load(self, environ: Mapping[str, str] = ...) -> VibeyConfig:
+        """The environment overlay parsed on its own; raises on a malformed value."""
+        ...
 
 
 @runtime_checkable
@@ -151,6 +165,11 @@ class PostgresProjectRepositoryInterface(ProjectStore, Protocol):
     async def create(self, *args: object, **kwargs: object) -> object: ...
 
     async def get_latest(self) -> object: ...
+
+    async def list_all(self) -> tuple[ProjectRecord, ...]:
+        """Every project, newest first: `created_at` descending, then id, so the order
+        is the same on every read. What `vibey projects` lists."""
+        ...
 
 
 @runtime_checkable

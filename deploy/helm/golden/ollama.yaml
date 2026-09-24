@@ -65,7 +65,8 @@ type: Opaque
 stringData:
   secret-key: plane-insecure-secret-key-change-in-prod
   amqp-url: "amqp://vibey:rabbitmqpassword@vibey-vibey-rabbitmq:5672//"
-  database-url: "postgres://vibey:vibey@vibey-vibey-postgres:5432/plane?sslmode=disable"
+  # Plane's own role, owner of the `plane` database and nothing else (ADR-0055).
+  database-url: "postgres://plane:plane-dev-password@vibey-vibey-postgres:5432/plane?sslmode=disable"
   redis-url: "redis://vibey-vibey-redis:6379/1"
 
 ---
@@ -100,6 +101,8 @@ stringData:
   dsn: postgresql://vibey_app:vibey_app@vibey-vibey-postgres.vibey.svc.cluster.local:5432/vibey
   migrate-dsn: postgresql://vibey:vibey@vibey-vibey-postgres.vibey.svc.cluster.local:5432/vibey
   password: "vibey"
+  db-password-plane: "plane-dev-password"
+  db-password-infisical: "infisical-dev-password"
 
 ---
 # Source: vibey/templates/surfaces.yaml
@@ -364,17 +367,105 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: vibey-0.3.0
 data:
+  # Each additional database is owned by a login role of its own, never by the owner
+  # (ADR-0055): a surface pod holds its own database's credentials and nothing that
+  # reaches vibey's ledger. The image's initdb sources this on first boot; the
+  # container's postStart runs it with --wait on every start, so an existing install
+  # has its databases -- and everything already in them -- handed over on upgrade.
   01-init-additional-databases.sh: |
     #!/bin/sh
-    set -e
-    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-        SELECT 'CREATE DATABASE plane' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'plane')\gexec
-        GRANT ALL PRIVILEGES ON DATABASE plane TO $POSTGRES_USER;
+    vibey_surface_roles() {
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+        -v role="plane" -v pw="$VIBEY_DB_PASSWORD_PLANE" <<'EOSQL' || return 1
+    SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role')\gexec
+    SELECT format('ALTER ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD %L', :'role', :'pw')\gexec
+    SELECT format('CREATE DATABASE %I OWNER %I', :'role', :'role') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'role')\gexec
+    SELECT format('ALTER DATABASE %I OWNER TO %I', :'role', :'role')\gexec
     EOSQL
-    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-        SELECT 'CREATE DATABASE infisical' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'infisical')\gexec
-        GRANT ALL PRIVILEGES ON DATABASE infisical TO $POSTGRES_USER;
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "plane" -v role="plane" <<'EOSQL' || return 1
+    SELECT format('ALTER SCHEMA public OWNER TO %I', :'role')\gexec
+    SELECT format('ALTER TABLE %s OWNER TO %I', c.oid::regclass, :'role')
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public'
+       AND (c.relkind IN ('r', 'p', 'v', 'm', 'f')
+            OR (c.relkind = 'S' AND NOT EXISTS (
+                SELECT 1 FROM pg_depend d WHERE d.objid = c.oid AND d.deptype IN ('a', 'i'))))
+       AND c.relowner <> (SELECT oid FROM pg_roles WHERE rolname = :'role')
+       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = c.oid AND d.deptype = 'e')\gexec
+    SELECT format('ALTER ROUTINE %s OWNER TO %I', p.oid::regprocedure, :'role')
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'public' AND p.prokind IN ('f', 'p')
+       AND p.proowner <> (SELECT oid FROM pg_roles WHERE rolname = :'role')
+       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')\gexec
+    SELECT format('ALTER %s %s OWNER TO %I', CASE t.typtype WHEN 'd' THEN 'DOMAIN' ELSE 'TYPE' END, t.oid::regtype, :'role')
+      FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+     WHERE n.nspname = 'public' AND t.typtype IN ('e', 'd', 'c')
+       AND NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.reltype = t.oid AND c.relkind <> 'c')
+       AND t.typowner <> (SELECT oid FROM pg_roles WHERE rolname = :'role')
+       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = t.oid AND d.deptype = 'e')\gexec
     EOSQL
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+        -v role="infisical" -v pw="$VIBEY_DB_PASSWORD_INFISICAL" <<'EOSQL' || return 1
+    SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role')\gexec
+    SELECT format('ALTER ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD %L', :'role', :'pw')\gexec
+    SELECT format('CREATE DATABASE %I OWNER %I', :'role', :'role') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'role')\gexec
+    SELECT format('ALTER DATABASE %I OWNER TO %I', :'role', :'role')\gexec
+    EOSQL
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "infisical" -v role="infisical" <<'EOSQL' || return 1
+    SELECT format('ALTER SCHEMA public OWNER TO %I', :'role')\gexec
+    SELECT format('ALTER TABLE %s OWNER TO %I', c.oid::regclass, :'role')
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public'
+       AND (c.relkind IN ('r', 'p', 'v', 'm', 'f')
+            OR (c.relkind = 'S' AND NOT EXISTS (
+                SELECT 1 FROM pg_depend d WHERE d.objid = c.oid AND d.deptype IN ('a', 'i'))))
+       AND c.relowner <> (SELECT oid FROM pg_roles WHERE rolname = :'role')
+       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = c.oid AND d.deptype = 'e')\gexec
+    SELECT format('ALTER ROUTINE %s OWNER TO %I', p.oid::regprocedure, :'role')
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'public' AND p.prokind IN ('f', 'p')
+       AND p.proowner <> (SELECT oid FROM pg_roles WHERE rolname = :'role')
+       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')\gexec
+    SELECT format('ALTER %s %s OWNER TO %I', CASE t.typtype WHEN 'd' THEN 'DOMAIN' ELSE 'TYPE' END, t.oid::regtype, :'role')
+      FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+     WHERE n.nspname = 'public' AND t.typtype IN ('e', 'd', 'c')
+       AND NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.reltype = t.oid AND c.relkind <> 'c')
+       AND t.typowner <> (SELECT oid FROM pg_roles WHERE rolname = :'role')
+       AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = t.oid AND d.deptype = 'e')\gexec
+    EOSQL
+    }
+    if [ "${1:-}" = "--wait" ]; then
+      attempt=0
+      while [ "$attempt" -lt 90 ]; do
+        if pg_isready -q -h /var/run/postgresql -U "$POSTGRES_USER" -d "$POSTGRES_DB" && vibey_surface_roles; then
+          exit 0
+        fi
+        attempt=$((attempt + 1))
+        sleep 2
+      done
+      echo "could not give each surface database a role of its own" >&2
+      exit 1
+    fi
+    vibey_surface_roles
+
+---
+# Source: vibey/templates/surfaces.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-rabbitmq-conf
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+    app.kubernetes.io/component: rabbitmq
+data:
+  20-vibey-reap.conf: |
+    # How long a consumer may hold an unacknowledged delivery before the broker
+    # closes its channel and requeues everything on it (ADR-0056, condition (a)).
+    consumer_timeout = 1800000
 
 ---
 # Source: vibey/templates/surfaces.yaml
@@ -2398,6 +2489,9 @@ spec:
         app.kubernetes.io/managed-by: Helm
         helm.sh/chart: vibey-0.3.0
         app.kubernetes.io/component: rabbitmq
+      annotations:
+        # A changed consumer_timeout reaches the broker by restarting it.
+        checksum/rabbitmq-conf: 37bf94938358f1fd6031153af84471b3d8340245e0bc61606ecc70ce65381aa8
     spec:
       containers:
         - name: rabbitmq
@@ -2435,10 +2529,17 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/rabbitmq
+            - name: conf
+              mountPath: /etc/rabbitmq/conf.d/20-vibey-reap.conf
+              subPath: 20-vibey-reap.conf
+              readOnly: true
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: vibey-vibey-rabbitmq-data
+        - name: conf
+          configMap:
+            name: vibey-vibey-rabbitmq-conf
 
 ---
 # Source: vibey/templates/surfaces.yaml
@@ -2687,7 +2788,8 @@ spec:
             - name: PORT
               value: "8080"
             - name: DB_CONNECTION_URI
-              value: "postgres://vibey:vibey@vibey-vibey-postgres:5432/infisical?sslmode=disable"
+              # Infisical's own role, owner of the `infisical` database only (ADR-0055).
+              value: "postgres://infisical:infisical-dev-password@vibey-vibey-postgres:5432/infisical?sslmode=disable"
             - name: REDIS_URL
               value: "redis://vibey-vibey-redis:6379/2"
             - name: ENCRYPTION_KEY
@@ -3656,6 +3758,30 @@ spec:
                 secretKeyRef:
                   name: vibey-vibey-rabbitmq
                   key: password
+            - name: VIBEY_QUEUE_REAP_ENABLED
+              value: "true"
+            - name: VIBEY_QUEUE_REAP_INTERVAL_SECONDS
+              value: "60"
+            - name: VIBEY_QUEUE_REAP_LEASE_GRACE_SECONDS
+              value: "0"
+            - name: VIBEY_QUEUE_REAP_STALE_READY_SECONDS
+              value: "900"
+            - name: VIBEY_QUEUE_REAP_DEAD_LETTER_MIN_DEPTH
+              value: "1"
+            - name: VIBEY_QUEUE_REAP_DEAD_LETTER_PEEK_LIMIT
+              value: "100"
+            - name: VIBEY_QUEUE_REAP_OWNED_QUEUE_PATTERN
+              value: "^vibey\\."
+            - name: VIBEY_QUEUE_REAP_DEAD_LETTER_QUEUE_PATTERN
+              value: "(\\.dlq|\\.dead)$"
+            - name: VIBEY_QUEUE_REAP_POLICY_NAME
+              value: "vibey-reap"
+            - name: VIBEY_QUEUE_REAP_POLICY_PRIORITY
+              value: "0"
+            - name: VIBEY_QUEUE_REAP_CONSUMER_TIMEOUT_SECONDS
+              value: "21600"
+            - name: VIBEY_QUEUE_REAP_DELIVERY_LIMIT
+              value: "20"
             - name: VIBEY_BLOB_URL
               value: "http://vibey-vibey-garage.vibey.svc.cluster.local:3900"
             - name: VIBEY_BLOB_ACCESS_KEY
@@ -3741,6 +3867,16 @@ spec:
                 secretKeyRef:
                   name: vibey-vibey-dsn
                   key: password
+            - name: VIBEY_DB_PASSWORD_PLANE
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-dsn
+                  key: db-password-plane
+            - name: VIBEY_DB_PASSWORD_INFISICAL
+              valueFrom:
+                secretKeyRef:
+                  name: vibey-vibey-dsn
+                  key: db-password-infisical
             # The default mount point is the volume root; initdb refuses a
             # non-empty directory, and a PVC arrives with lost+found.
             - name: PGDATA
@@ -3750,6 +3886,13 @@ spec:
               mountPath: /var/lib/postgresql/data
             - name: init-scripts
               mountPath: /docker-entrypoint-initdb.d
+          # Every start, not only the first: an install from before each surface had a
+          # role of its own gets them here (ADR-0055). The container is not Running,
+          # and so not Ready, until this returns.
+          lifecycle:
+            postStart:
+              exec:
+                command: ["sh", "/docker-entrypoint-initdb.d/01-init-additional-databases.sh", "--wait"]
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "vibey", "-d", "vibey"]

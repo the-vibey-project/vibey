@@ -290,4 +290,4 @@ The tenant's `pytest` carries its 100% floor. The last command may print only th
 **Depends on:** `loops-tenant-rename`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

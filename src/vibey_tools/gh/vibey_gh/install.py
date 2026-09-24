@@ -275,6 +275,9 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_MODEL__", fallback.model)
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_BASE_URL__", fallback.base_url)
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_MAX_DIFF_CHARS__", str(fallback.max_diff_chars))
+    wanted = wanted.replace(
+        "__VIBEY_GH_FALLBACK_MAX_DOCUMENT_CHARS__", str(fallback.max_document_chars)
+    )
     wanted = wanted.replace("__VIBEY_GH_FALLBACK_TIMEOUT_SECONDS__", str(fallback.timeout_seconds))
     # The model's declared window (#1090): what a local request is sized to fit, and refused
     # over, rather than a number compiled into the sizer.
@@ -444,6 +447,10 @@ def render_workflow(source: Path, cfg: GhConfig, *, fallback_pin: FallbackPin | 
     ):
         wanted = wanted.replace(marker, "true" if enabled else "false")
     wanted = wanted.replace("__VIBEY_GH_RELEASE_TAG_PREFIX__", cfg.github_release.tag_prefix)
+    # The announcement webhook's secret NAME, rendered inside `${{ secrets.… }}` and in the
+    # step's own "no secret" line. `AnnounceConfig` has refused anything that is not a bare
+    # secret identifier, so this can neither close the expression nor extend the command.
+    wanted = wanted.replace("__VIBEY_GH_ANNOUNCE_WEBHOOK_SECRET__", cfg.announce.webhook_secret)
     wanted = wanted.replace("__VIBEY_GH_SELF_SOURCE__", cfg.self_source)
     # The workflow templates spell the DEFAULT distribution literally rather than
     # carrying a placeholder, so the shipped YAML stays readable and greppable and the

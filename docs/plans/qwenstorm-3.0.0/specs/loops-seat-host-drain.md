@@ -3,7 +3,7 @@ feat(loop-service): the seat host streams progress, takes control commands and d
 ADR-0046 lane L28c (slug `loops-seat-host-drain`).
 
 ## Why
-Draft ADR-0046 §3 (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:158-167`) keeps ADR-0044's `vibey.run.progress/1` reply ("as in ADR-0044"), and the superseded host's behaviour 3h and 5 (`specs/rmq-r22-loop-service-host.md`; closing note `issue-audit/updates/369.md`) specify it: one `RunProgress` per new `events.jsonl` line when `publish_progress` is on and there is a run directory, polled every 0.5 s, `seq` from 1; and a drain that "cancels the consumer and lets active runs finish for up to `grace_seconds`. It then stops the runs still going; each one's result is `ABANDONED`, written, published and completed." ADR-0046 §11 runs each loop Deployment with `strategy: Recreate`, so this drain is what a rollout or a SIGTERM runs (the CLI lane exits 0 after it, decision D3).
+Draft ADR-0046 §3 (`STORM/specs/ADR-two-loops.md:158-167`) keeps ADR-0044's `vibey.run.progress/1` reply ("as in ADR-0044"), and the superseded host's behaviour 3h and 5 (`specs/rmq-r22-loop-service-host.md`; closing note `issue-audit/updates/369.md`) specify it: one `RunProgress` per new `events.jsonl` line when `publish_progress` is on and there is a run directory, polled every 0.5 s, `seq` from 1; and a drain that "cancels the consumer and lets active runs finish for up to `grace_seconds`. It then stops the runs still going; each one's result is `ABANDONED`, written, published and completed." ADR-0046 §11 runs each loop Deployment with `strategy: Recreate`, so this drain is what a rollout or a SIGTERM runs (the CLI lane exits 0 after it, decision D3).
 
 The other loop-service parts need handles on a running seat host: the control consumer (lane `loops-control-and-dead-letters`) routes stop, wind-down and prompts to the host holding a run, and the `SUPERSEDE` broadcast to every host ("The router also honours a `SUPERSEDE` control broadcast by stopping any lower attempt it holds", §6); the resident schedule (lane `loops-resident-schedule`, §4) switches models only between runs, so it needs `busy` and a callback when a run has ended. Lanes `loops-seat-host-core` and `loops-seat-host-fence` wrote `seat_host.py`; this lane edits it at the anchors below. 8.g (`src/vibey_tools/gh/docs/doctrines.md:316-324`): an abandoned run is measured like any run (subject RUN, outcome `abandoned:<code>`).
 
@@ -312,4 +312,4 @@ Nothing here is OS-specific (8.h: Arch Linux and macOS alike).
 - `loops-seat-host-fence`: the `seat_host.py` text this lane anchors on (core plus fence).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

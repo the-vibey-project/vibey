@@ -38,6 +38,7 @@ import argparse
 import os
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -128,8 +129,9 @@ def render(state: dict, notes: list[str] | None = None) -> str:
 Snapshot {state["when"]}, written by `tools/storm-snapshot.py`.
 
 The runner's durable record is `integrated.txt` and `abandoned.txt`: a lane in neither is
-unsettled, whatever exists under `lanes/`. `lanes/` lives in /tmp and is wiped between
-sessions, so nothing here depends on it surviving.
+unsettled, whatever exists under `lanes/`. `lanes/` lives in the storm root, on durable
+storage under the storm home (sub-doctrine 10.h), but it is working material rather than the
+record, so nothing here depends on it surviving.
 
 - queue: **{state["queue"]} lanes** · integrated: **{len(state["integrated"])}** · abandoned: **{len(state["abandoned"])}**
 - lane worktrees: **{len(state["lanes"])}** · finished awaiting review: **{len(state["finished"])}** · unsettled: **{len(state["unsettled"])}**
@@ -306,7 +308,8 @@ def publish(text: str, commit: bool, push: bool) -> list[str]:
         return notes
     # Every artifact the run produces, not only RUN-STATE.md: the evidence ledger, its
     # watermark, the delta report and the paper's regenerated block are all written by this
-    # pass and would otherwise be left uncommitted on a machine whose /tmp is wiped.
+    # pass and would otherwise be left uncommitted, and uncommitted work is one reboot or one
+    # lost disk from gone (10.h).
     if waiting:
         return notes + [
             "REFUSED to commit: "
@@ -336,7 +339,16 @@ def publish(text: str, commit: bool, push: bool) -> list[str]:
         notes.append("more than the snapshot is on this branch; running the full gate")
     # A refusal here is ordinary and is reported as itself rather than smoothed into success.
     # The commit is safe either way.
-    code, out = run(["git", "push"], PLANS, env=env)
+    # Through the push gate like every push here, even when the heavy hook is skipped: the
+    # gate serialises pre-push runs, and when more than the snapshot is on the branch this
+    # push runs the full one. `STORM / "tools"` is where push_gate.py resolves the storm's
+    # shared lock; the planning tree it resolves into would derive a private one.
+    code, out = run(
+        [sys.executable, str(STORM / "tools" / "push_gate.py"), "run", "--wait-timeout", "1800"]
+        + ["--", "git", "push"],
+        PLANS,
+        env=env,
+    )
     notes.append("pushed" if not code else f"PUSH REFUSED: {(out.splitlines() or ['?'])[-1][:80]}")
     return notes
 

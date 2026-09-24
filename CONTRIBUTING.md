@@ -12,16 +12,17 @@ issue or a PR fixing it.
 3. [Conventional Commits](#conventional-commits)
 4. [Provenance](#provenance)
 5. [Quality gates](#quality-gates)
-6. [The workspace tenants](#the-workspace-tenants)
-7. [The onion architecture import rule](#the-onion-architecture-import-rule)
-8. [Protected tests](#protected-tests)
-9. [Agent surfaces](#agent-surfaces)
-10. [Decisions and governing rules](#decisions-and-governing-rules)
-11. [The paper and the book](#the-paper-and-the-book)
-12. [PR checklist](#pr-checklist)
-13. [Getting help](#getting-help)
-14. [Code of Conduct](#code-of-conduct)
-15. [License of contributions](#license-of-contributions)
+6. [Pushing in this repository](#pushing-in-this-repository)
+7. [The workspace tenants](#the-workspace-tenants)
+8. [The onion architecture import rule](#the-onion-architecture-import-rule)
+9. [Protected tests](#protected-tests)
+10. [Agent surfaces](#agent-surfaces)
+11. [Decisions and governing rules](#decisions-and-governing-rules)
+12. [The paper and the book](#the-paper-and-the-book)
+13. [PR checklist](#pr-checklist)
+14. [Getting help](#getting-help)
+15. [Code of Conduct](#code-of-conduct)
+16. [License of contributions](#license-of-contributions)
 
 ## Environment setup
 
@@ -61,6 +62,43 @@ because the session builds a migrated `vibey_test_template` and clones one
 differ each set `VIBEY_TEST_TEMPLATE_DB` to a template name of their own. The
 default suite needs no engine binaries and no paid accounts: tests marked
 `paid` are deselected unless you ask for them (ADR-0030).
+
+A killed test run cannot drop its databases, so the harness reaps them. Each session holds a
+lock on its database for as long as it lives, and marks the database. At the start of every
+run, the harness drops, in the background, the test databases no live session holds
+(`tests/db_reaper.py`). `uv run python -m tests.db_reaper --dry-run` shows what it would drop.
+`VIBEY_TEST_REAP=0` turns the automatic reap off, and `VIBEY_TEST_REAP_LIMIT` (default 200)
+caps one run's drops.
+
+### Where your work lives, and how often it is saved
+
+Keep every clone and worktree on storage a reboot keeps. Never put one under `/tmp`,
+`/private/tmp`, `/var/tmp`, `/var/folders`, `/dev/shm`, `/run/user` or `$TMPDIR`: the
+operating system empties those at boot, by age or at logout. On 2026-09-24 a reboot emptied
+`/private/tmp` in the middle of a storm and took every worktree there with it, along with
+about 1.5 hours of measurements, a paper draft and three lanes of fixes. Only committed work
+survived. Sub-doctrine 10.h is the rule and ADR-0057 is the record.
+
+Parallel worktrees live in the storm home. It is `VIBEY_STORM_HOME` when set, else the
+platform's default: `~/git/vibey-storm` on macOS, and `$XDG_DATA_HOME/vibey/storm` (falling
+back to `~/.local/share/vibey/storm`) on Linux. The storm tools print and check it:
+
+```bash
+python3 docs/plans/qwenstorm-3.0.0/tools/storm_durability.py status   # durable or not
+git worktree add "$(python3 docs/plans/qwenstorm-3.0.0/tools/storm_durability.py worktree fix-x)" \
+  -b fix/x origin/develop
+```
+
+The storm tools refuse, with exit 78 and the key to change, to place work on volatile storage.
+
+Durable storage alone is not enough. A disk fails and a laptop goes missing, so:
+
+- Commit as soon as a change is coherent, not when it is finished.
+- Push work in progress to a draft pull request (`gh pr create --draft`) at least every 30–45
+  minutes. The merge train never merges a draft. Every push still runs the pre-push gates, so
+  push when they pass. A commit on durable storage is the checkpoint in between.
+- A long measurement writes each step as it finishes and resumes from the last one:
+  `StepJournal` in `docs/plans/qwenstorm-3.0.0/tools/storm_checkpoint.py`.
 
 ## The branch model
 
@@ -149,6 +187,46 @@ CI also runs a multi-arch container build, with one `Image contract - …` step
 for each claim the Dockerfile makes, and a Helm install on minikube with four
 cluster contracts
 ([Kubernetes guide](docs/guides/kubernetes.md), ADR-0025).
+
+## Pushing in this repository
+
+Every push goes through the push gate. Parallel lanes, agents and people share one
+machine-wide push lock, so only one pre-push gate run (the whole suite, the coverage floors,
+bandit, pip-audit) happens at a time, and a hung gate run is reaped by rule rather than
+waited on. There is one recipe:
+
+```bash
+python3 <storm>/tools/push_gate.py run -- git push origin HEAD:<branch>
+```
+
+`<storm>` is the storm root, the directory that holds `storm.toml`: `<home>/qwenstorm-3.0.0`
+under the storm home (see [Where your work lives](#where-your-work-lives-and-how-often-it-is-saved);
+on the operator's Mac, `~/git/vibey-storm/qwenstorm-3.0.0`). It must be on a durable path, never
+under a temporary directory such as `/tmp` or `/private/tmp`: a reboot wipes those, and on
+2026-09-24 one took the storm's lock and state with it. From a checkout with no storm, use the
+tracked copy and name the machine's shared lock, `<home>/.push-lock`:
+`VIBEY_PUSH_LOCK=<home>/.push-lock python3 docs/plans/qwenstorm-3.0.0/tools/push_gate.py run -- git push …`.
+Run from a checkout without a named lock, the tool refuses. A lock derived there would be
+private to that checkout and would exclude nobody.
+
+`run` waits for the lock and runs the push in a process group of its own. It keeps a log and
+releases the lock however the push ends. Its exit code is the push's own, except for these:
+
+| Exit code | Meaning |
+|---|---|
+| 124 | `reaped: hang`. The reaper judged the gate run hung and stopped it. This is not a test failure. |
+| 125 | The push ran past `--push-timeout`. |
+| 3 | The lock stayed busy past `--wait-timeout`. |
+
+`push_gate.py status` says who holds the lock and what that push is doing.
+
+The reaper also runs on a schedule of its own: a launchd agent on macOS, or a systemd user
+timer on Linux, running `reap` every `[push_gate] schedule_seconds` (default 90). The
+operator installs it once with `python3 <storm>/tools/push_gate.py install-schedule` and can
+check it with `schedule-status`. Where neither launchd nor systemd exists,
+`install-schedule --target cron` prints a cron line instead. There is no Kubernetes CronJob:
+nothing pushes from inside the cluster, and a reaper can only see the processes on its own
+machine. The rules the reaper acts on are in `docs/plans/qwenstorm-3.0.0/README.md`.
 
 ## The workspace tenants
 

@@ -12,7 +12,10 @@ one, and it is seven steps, each already its own script and each gated on eviden
             group sat idle for the declared window or passed the declared wall ceiling,
             with evidence first and a line in the reap log (12.d, 12.e). One sample per
             pass, kept on disk, so idleness is measured across passes, never from one
-            snapshot
+            snapshot. It cannot reap a hang in this pass's own publish step: a pass stuck
+            there never reaches the next pass. The reaper's own schedule
+            (`push_gate.py install-schedule`) can, and publish's `--push-timeout` records
+            its own kill as a reap
   resolve   lane-resolve.py  -- settle the conflicts decidable from the tree, refuse the rest
   refresh   lane-refresh.py  -- carry what merged into develop into every idle lane
   repair    lane-repair.py   -- fix only what a formatter or a delete can fix
@@ -50,12 +53,14 @@ hold a lock on a repository the operator had finished with.
 
 import argparse
 import fcntl
+import os
 import subprocess
 import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+import storm_durability
 import storm_paths
 
 # .absolute(), never .resolve(): tools/ is a symlink into the planning worktree, where specs/
@@ -202,6 +207,14 @@ def main() -> int:
         help="only run while a storm is running, and exit when it stops",
     )
     args = parser.parse_args()
+
+    if args.run:
+        # A pass writes logs, evidence and lane commits into the storm root. Not on storage
+        # a reboot empties (10.h, ADR-0057): the gate names the key to move it, and exits 78.
+        home, _ = storm_durability.StormHome(os.environ, STORM).resolve()
+        storm_durability.DurabilityGate(
+            storm_durability.VolatileLocations(os.environ), disposable_root=STORM
+        ).enforce({"storm home": home, "storm root": STORM}, storm_durability.MOVE_IT)
 
     if not args.every:
         cycle(dry=not args.run)

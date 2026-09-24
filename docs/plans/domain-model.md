@@ -520,6 +520,10 @@ class EventKind(StrEnum):
     JOB_PRIORITY_BUMPED = "JobPriorityBumped"
     JOB_PRIORITY_UNBUMPED = "JobPriorityUnbumped"
     JOB_PRIORITY_REFUSED = "JobPriorityRefused"
+    # Queue reaping (ADR-0056): object, condition, measured value, threshold, action
+    QUEUE_REAPED = "QueueReaped"
+    # `vibey budget set`/`clear`: field, old, new, by, account; with the config write
+    BUDGET_CAP_CHANGED = "BudgetCapChanged"
 
 
 CLOSABLE: frozenset[EventKind] = frozenset({

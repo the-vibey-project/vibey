@@ -152,4 +152,4 @@ saying that `AppResources` fields are now typed by ports.
     existing test file (`EDITING-RULES.md`).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

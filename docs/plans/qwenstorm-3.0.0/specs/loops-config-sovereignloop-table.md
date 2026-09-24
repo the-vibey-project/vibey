@@ -154,4 +154,4 @@ The last command must print nothing. The full `--cov` run needs PostgreSQL until
 **Depends on:** `loops-config-engine-names`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

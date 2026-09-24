@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 
 from vibey.application.dto import EnqueueRequest, HumanGateRecord, HumanGateRequest, JobRecord
 from vibey.domain.engine import EngineId
-from vibey.domain.job import JobState
+from vibey.domain.job import QUEUE_GATE_KINDS, JobState
 from vibey.domain.phase import Phase
 
 
@@ -261,8 +261,15 @@ class FakeHumanGateRepository:
         self.raised = [answered if r.gate_id == gate_id else r for r in self.raised]
         return answered
 
-    async def latest_for_job(self, job_id: UUID) -> HumanGateRecord | None:
-        matching = [record for record in self.raised if record.job_id == job_id]
+    async def latest_for_job(
+        self, job_id: UUID, *, include_queue_gates: bool = False
+    ) -> HumanGateRecord | None:
+        matching = [
+            record
+            for record in self.raised
+            if record.job_id == job_id
+            and (include_queue_gates or record.kind not in QUEUE_GATE_KINDS)
+        ]
         return matching[-1] if matching else None
 
     async def open_for_project(self, project_id: UUID) -> tuple[HumanGateRecord, ...]:
@@ -270,6 +277,14 @@ class FakeHumanGateRepository:
             record
             for record in self.raised
             if record.project_id == project_id and record.answered_at is None
+        )
+
+    async def open_all(self) -> tuple[HumanGateRecord, ...]:
+        return tuple(
+            sorted(
+                (record for record in self.raised if record.answered_at is None),
+                key=lambda record: (record.raised_at, record.gate_id),
+            )
         )
 
 
