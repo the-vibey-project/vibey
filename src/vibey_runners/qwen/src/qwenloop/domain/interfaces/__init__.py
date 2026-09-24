@@ -7,6 +7,7 @@ from qwenloop.domain.interfaces.class_contracts import (
     HardwareInterface,
     QwenConfigInterface,
     ServerInfoInterface,
+    ToolLimitsInterface,
 )
 from qwenloop.domain.interfaces.config_interface import QwenConfigParserInterface
 
@@ -17,4 +18,5 @@ __all__ = [
     "QwenConfigInterface",
     "QwenConfigParserInterface",
     "ServerInfoInterface",
+    "ToolLimitsInterface",
 ]

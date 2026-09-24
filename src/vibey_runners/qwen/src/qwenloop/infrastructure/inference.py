@@ -501,18 +501,29 @@ def _pid_alive(pid: int) -> bool:
     return True
 
 
-_CODING_TOOLS = [
+# read_file and open_file take the same arguments: open_file is the name gpt-oss reaches
+# for (its trained `repo_browser.open_file`), read_file the one qwenloop always had.
+_READ_PARAMETERS: dict[str, object] = {
+    "type": "object",
+    "properties": {
+        "path": {"type": "string"},
+        "line_start": {"type": "integer", "description": "First line to return, from 1."},
+        "line_end": {"type": "integer", "description": "Last line to return, inclusive."},
+    },
+    "required": ["path"],
+    "additionalProperties": False,
+}
+
+_CODING_TOOLS: list[dict[str, object]] = [
     {
         "type": "function",
         "function": {
             "name": "read_file",
-            "description": "Read a UTF-8 text file inside the assigned worktree.",
-            "parameters": {
-                "type": "object",
-                "properties": {"path": {"type": "string"}},
-                "required": ["path"],
-                "additionalProperties": False,
-            },
+            "description": (
+                "Read a UTF-8 text file inside the assigned worktree: the whole file, or only "
+                "lines line_start..line_end (1-based, inclusive) when either is given."
+            ),
+            "parameters": _READ_PARAMETERS,
         },
     },
     {
@@ -569,6 +580,68 @@ _CODING_TOOLS = [
                 "required": ["argv"],
                 "additionalProperties": False,
             },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search",
+            "description": (
+                "Search file contents inside the assigned worktree and return matching lines "
+                "as path:line: text. The query is literal text unless regex is true. Use this "
+                "to locate a symbol or string before reading or editing a file."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Text (or regex) to find."},
+                    "path": {
+                        "type": "string",
+                        "description": "File or directory to search; default the worktree.",
+                    },
+                    "glob": {
+                        "type": "string",
+                        "description": "Only files whose name or path matches, e.g. *.py.",
+                    },
+                    "regex": {"type": "boolean"},
+                    "ignore_case": {"type": "boolean"},
+                    "max_results": {"type": "integer"},
+                },
+                "required": ["query"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "find",
+            "description": (
+                "Find files by name inside the assigned worktree. The pattern is a glob "
+                "(e.g. *.py, src/*/test_*.py) or else a case-insensitive part of the path; "
+                "an empty pattern lists every file."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pattern": {"type": "string"},
+                    "path": {
+                        "type": "string",
+                        "description": "Directory to look under; default the worktree.",
+                    },
+                    "max_results": {"type": "integer"},
+                },
+                "required": ["pattern"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "open_file",
+            "description": "Another name for read_file, with the same optional line range.",
+            "parameters": _READ_PARAMETERS,
         },
     },
 ]

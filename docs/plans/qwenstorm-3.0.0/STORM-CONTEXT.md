@@ -15,9 +15,9 @@ Updated 2026-09-22 11:45 EDT. Everything here is settled. Where a spec contradic
 
 ## Who implements a spec
 A local **gpt-oss:20b** served by Ollama, with a 131k context and about 40 turns. Its tools are
-`read_file`, `write_file`, `edit_file` and `shell`. It succeeds on narrow, exact lanes and fails on
-broad ones. So each lane is **one source file plus its interface, and one test file**. Name exact
-files, classes, signatures, messages and file:line anchors, and write the whole check block out.
+`read_file`, `write_file`, `edit_file`, `shell`, `search`, `find` and `open_file`. It succeeds on
+narrow, exact lanes and fails on broad ones. So each lane is **one source file plus its
+interface, and one test file**. Name exact files, classes, signatures, messages and file:line anchors, and write the whole check block out.
 A reviewer verifies every result against the spec and the diff. A lane's claim that it is
 complete is never evidence by itself (9.c).
 

@@ -1,11 +1,16 @@
 
 
-## Your tools (there are exactly four)
+## Your tools (there are exactly seven)
 
-`read_file`, `write_file`, `edit_file`, `shell`. **Nothing else exists.** There is no `search`,
-`find`, `grep`, `ls`, `glob` or `codebase_search` tool: calling one spends a turn and returns
-`unknown tool`. Turns are capped, and a lane that spends them on tools that do not exist
-finishes nothing.
+`read_file`, `write_file`, `edit_file`, `shell`, `search`, `find`, `open_file`. **Nothing else
+exists.** There is no `grep`, `ls`, `glob`, `print_tree` or `codebase_search` tool: calling one
+spends a turn and returns `unknown tool`. Turns are capped, and a lane that spends them on tools
+that do not exist finishes nothing.
+
+`search` finds text in file contents (`query`; literal unless `regex` is true; optional `path`
+and `glob`) and answers `path:line: text`. `find` finds files by name (`pattern`, a glob such as
+`*.py` or part of a path). `open_file` is `read_file` under another name; both take an optional
+`line_start` and `line_end`. Locate code with `search` before reading whole files.
 
 `shell` takes `argv`, an array of strings, and runs that program directly — **there is no
 shell**. So no `&&`, no `|`, no `>`, no `*` globs, no `$VAR` expansion, no heredoc. One program

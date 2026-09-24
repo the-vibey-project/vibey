@@ -1,6 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """Pure qwenloop configuration parsing."""
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass, fields
 from typing import Any
@@ -14,6 +15,53 @@ DEFAULT_ENDPOINT_BASE_URL = "http://127.0.0.1:11434/v1"
 #: This era's default free model (sub-doctrine 8.d): GPT-OSS 20B, under the name Ollama
 #: gives it. The pinned llama.cpp profiles are a separate choice and keep their own model.
 DEFAULT_ENDPOINT_MODEL = "gpt-oss:20b"
+
+
+#: Directories no search or find descends into unless the operator says otherwise:
+#: version-control internals, virtual environments, dependency trees, tool caches, and
+#: qwenloop's own run records.
+DEFAULT_SKIP_DIRS: tuple[str, ...] = (
+    ".git",
+    ".hg",
+    ".svn",
+    ".venv",
+    "venv",
+    "node_modules",
+    "__pycache__",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".tox",
+    ".qwenloop",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class ToolLimits:
+    """How much any one tool call may read or return. Declared here with defaults and
+    overridable from the config file's `[tools]` table (sub-doctrine 12.h). A limit the
+    model passes in a call may narrow these, never widen them."""
+
+    # read_file / open_file: characters of file content one call returns.
+    max_read_chars: int = 200_000
+    # search: matching lines one call returns.
+    max_search_matches: int = 100
+    # find: file paths one call returns.
+    max_find_results: int = 200
+    # search: characters kept of any one matching line.
+    max_line_chars: int = 240
+    # search: a file larger than this is skipped rather than read.
+    max_file_bytes: int = 2_000_000
+    # search: skipped files named in an answer; the answer always counts all of them.
+    max_skipped_examples: int = 5
+    # search with regex=true: wall-clock seconds the isolated matcher may run before it is
+    # killed. A model-supplied pattern can backtrack catastrophically; this bounds one call.
+    search_timeout_seconds: float = 10.0
+    # search / find: directory names never descended into.
+    skip_dirs: tuple[str, ...] = DEFAULT_SKIP_DIRS
+
+
+_TOOL_LIMIT_KEYS = frozenset(item.name for item in fields(ToolLimits))
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +80,8 @@ class QwenConfig:
     model: str = DEFAULT_ENDPOINT_MODEL
     # How long doctor, health, and start wait for an endpoint's model list.
     endpoint_timeout_seconds: int = 5
+    # What one tool call may read or return: the config file's `[tools]` table.
+    tools: ToolLimits = ToolLimits()
 
     @property
     def endpoint_configured(self) -> bool:
@@ -78,6 +128,7 @@ class QwenConfigParser:
             endpoint_timeout_seconds=int(
                 data.get("endpoint_timeout_seconds", defaults.endpoint_timeout_seconds)
             ),
+            tools=self._tool_limits(data.get("tools", {})),
         )
         if config.idle_timeout_seconds < 0:
             raise ValueError("idle_timeout_seconds must be non-negative")
@@ -91,6 +142,40 @@ class QwenConfigParser:
         if not config.model:
             raise ValueError("model must name the model the endpoint serves")
         return config
+
+    @staticmethod
+    def _tool_limits(data: object) -> ToolLimits:
+        """The `[tools]` table: every bound a positive integer, `skip_dirs` a list of names.
+        An unknown key is refused for the same reason as at the top level."""
+        if not isinstance(data, Mapping):
+            raise ValueError("tools must be a table of tool limits")
+        unknown = sorted(set(data) - _TOOL_LIMIT_KEYS)
+        if unknown:
+            raise ValueError(f"unknown qwenloop tools key(s): {', '.join(unknown)}")
+        defaults = ToolLimits()
+        bounds = {
+            item.name: int(data.get(item.name, getattr(defaults, item.name)))
+            for item in fields(ToolLimits)
+            if item.name not in {"skip_dirs", "search_timeout_seconds"}
+        }
+        for name, value in bounds.items():
+            if value <= 0:
+                raise ValueError(f"tools.{name} must be positive")
+        skip_dirs = data.get("skip_dirs", defaults.skip_dirs)
+        if not isinstance(skip_dirs, list | tuple) or not all(
+            isinstance(item, str) and item for item in skip_dirs
+        ):
+            raise ValueError("tools.skip_dirs must be a list of directory names")
+        timeout = data.get("search_timeout_seconds", defaults.search_timeout_seconds)
+        try:
+            seconds = float(timeout)
+        except (TypeError, ValueError):
+            seconds = math.nan
+        if not math.isfinite(seconds) or seconds <= 0:
+            raise ValueError(
+                "tools.search_timeout_seconds must be a positive, finite number of seconds"
+            )
+        return ToolLimits(**bounds, search_timeout_seconds=seconds, skip_dirs=tuple(skip_dirs))
 
     @staticmethod
     def _base_url(value: str) -> str:
