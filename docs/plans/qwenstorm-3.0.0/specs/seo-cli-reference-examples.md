@@ -133,4 +133,4 @@ made once the file is in its final state.
 Commit as `docs(reference): add a fenced example to every vibey command in cli.md`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

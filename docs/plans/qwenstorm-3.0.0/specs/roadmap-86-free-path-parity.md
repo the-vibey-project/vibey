@@ -85,4 +85,4 @@ The five tests of Required behaviour are the deliverable:
 - Surface wiring (gaps.md §K2). Docs, CHANGELOG. Do not push; commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

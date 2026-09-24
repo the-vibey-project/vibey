@@ -8,7 +8,7 @@ and the date". 8.g (`:316-325`) chooses defaults "from live evidence, never from
 10.f and 12.c require that the evidence be reproducible from the tree.
 
 The measurement that chose the default lives only outside the repository:
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/bench/bench.py` and `results.jsonl`
+`STORM/bench/bench.py` and `results.jsonl`
 (`issue-audit/gaps.md` D3, lines 282-287). That script also bypasses the loop, posting raw
 requests. This lane moves the method into qwenloop's application layer, driven through the
 same `InferenceServer.chat_stream` a run uses (10.e). A bench then measures what a lane
@@ -114,4 +114,4 @@ change under `src/vibey_runners/sovereign/src/sovereignloop/`.
 Commit as `feat(qwenloop): a model bench that replays a fixed session through the chat client`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

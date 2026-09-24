@@ -108,4 +108,4 @@ and readers already tolerate kinds they do not know (`tests/domain/test_forward_
   CHANGELOG. Do not push; commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -131,4 +131,4 @@ no longer runs the integration tier; pass `-m integration` with `VIBEY_TEST_DATA
     existing test file (`EDITING-RULES.md`).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

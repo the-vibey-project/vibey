@@ -190,3 +190,55 @@ async def test_against_the_real_server_it_is_never_a_silent_pass(
 
 def test_the_probe_satisfies_its_declared_interface() -> None:
     assert isinstance(LocalAuthProbe(), LocalAuthProbeInterface)
+
+
+# ── review of #1100, finding 10 ─────────────────────────────────────────────────
+
+
+def test_a_percent_encoded_socket_directory_is_a_local_socket() -> None:
+    probe = LocalAuthProbe(socket_dirs=("/var/run/postgresql",))
+
+    assert probe.endpoints("postgresql://app@%2Ftmp:5433/v") == (
+        ("/tmp", 5433),  # nosec B108 - a socket directory name
+        ("/var/run/postgresql", 5433),
+    )
+    assert probe.endpoints("postgresql://app@/v?host=/tmp") == (
+        ("/tmp", 5432),  # nosec B108 - a socket directory name
+        ("/var/run/postgresql", 5432),
+    )
+    assert probe.endpoints("postgresql://app@[::1]:6000/v")[0] == ("::1", 6000)
+
+
+class _Memberships(_App):
+    """pg_has_role answered from a fixed membership table."""
+
+    def __init__(self, roles: list[str], hba: list[dict[str, Any]], members: dict[str, set[str]]):
+        super().__init__(roles, hba)
+        self._members = members
+
+    async def fetchval(self, sql: str, *args: object) -> object:
+        if "pg_has_role" in sql:
+            role, group = str(args[0]), str(args[1])
+            return role in self._members.get(group, set())
+        return await super().fetchval(sql, *args)
+
+
+@pytest.mark.parametrize(
+    ("users", "verdict"),
+    [
+        (["+admins"], AuthVerdict.FAIL),  # the owner is in the group
+        (["+readers"], AuthVerdict.PASS),  # nobody probed is
+        (["/^own"], AuthVerdict.FAIL),  # a regex that matches the owner
+        (["/^nobody$"], AuthVerdict.PASS),
+        (["@admins.txt"], AuthVerdict.UNKNOWN),  # a file we cannot read
+    ],
+)
+def test_group_regex_and_file_user_specs_are_matched(
+    users: list[str], verdict: AuthVerdict
+) -> None:
+    refused = _Knocks(asyncpg.InvalidPasswordError("password authentication failed"))
+    app = _Memberships(["owner"], hba=[_rule(users)], members={"admins": {"owner"}})
+
+    finding = asyncio.run(_probe(refused).probe(app, "postgresql://app@localhost/v"))  # type: ignore[arg-type]
+
+    assert finding.verdict is verdict, finding.detail

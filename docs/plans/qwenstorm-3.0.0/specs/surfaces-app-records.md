@@ -68,11 +68,11 @@ Append to `tests/test_bootstrap.py` (integration: it builds the app against Post
 - **Shares a file with:** `src/vibey/bootstrap.py`, `src/vibey/bootstrap_interface.py` (R02 → T15 → R17 → T25 → R27 → R28 → T26 and the ORM and fakes lanes), `tests/fakes/app.py`. Keep every field they added.
 - **Must keep passing unchanged:** `tests/test_bootstrap.py`, `tests/cli/*`, `tests/system/*`, all protected tests.
 - **Standing constraints (every surfaces lane):**
-  - Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` before changing a file. `bootstrap.py` is long: `edit_file` only.
+  - Read `STORM/EDITING-RULES.md` before changing a file. `bootstrap.py` is long: `edit_file` only.
   - Protected tests are never edited: `tests/domain/test_noloss*.py`, `tests/domain/test_briefing.py`, `tests/infrastructure/db/test_chaos.py`, `tests/system/test_delivery_stage_set.py`, `tests/live/**`.
   - Line 1 of every new file is the provenance comment, copied byte-for-byte from line 1 of a sibling file.
   - Production code reaches PostgreSQL only through `PostgresOrmInterface`.
   - Substitute only at a declared seam (`build_app(resources_factory=...)`); never `monkeypatch.setattr`, `mock.patch`, `MagicMock` or `AsyncMock`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

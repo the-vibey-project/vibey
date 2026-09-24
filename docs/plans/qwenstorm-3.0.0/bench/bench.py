@@ -14,7 +14,9 @@ import time
 import urllib.request
 from pathlib import Path
 
-ROOT = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0")
+# The storm root, derived from this file's own place (bench/ sits in it) and never a literal
+# (12.h). .absolute(), never .resolve(), for the reason tools/storm_paths.py gives.
+ROOT = Path(__file__).absolute().parent.parent
 REPO = ROOT / "integration"
 PLAN = (ROOT / "specs/engines-pool.md").read_text()
 FILES = [

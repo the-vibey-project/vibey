@@ -65,7 +65,7 @@ exception, `CapacityDeferred` (`:46-57`, caught at `:159-165` as `Defer(capacity
 new fields, stop and report its path and line: do not edit it.
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first. All three files are
+Read `STORM/EDITING-RULES.md` first. All three files are
 over 100 lines: `edit_file` only.
 - `src/vibey/application/dto.py`: the two fields after the unique line
   `    session_id: str | None = None  # set to resume a warm session`.
@@ -141,4 +141,4 @@ First run `uv run ruff format src/vibey/application tests/application/test_queue
 **Depends on:** `fakes-build`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

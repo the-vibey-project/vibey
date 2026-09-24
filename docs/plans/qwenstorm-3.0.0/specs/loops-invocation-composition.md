@@ -5,7 +5,7 @@ ADR-0046 lane L60 (slug `loops-invocation-composition`).
 
 ## Why
 Draft ADR-0046 §2's closing paragraph
-(`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:138`): "Subprocess
+(`STORM/specs/ADR-two-loops.md:138`): "Subprocess
 invocation (kept, 12.c). The same two layers run in process: `preferred_tier` then `select`,
 unchanged, plus the fallback declaration. There are no queues and no residency. The 'both layers
 on queues' rule binds service mode, and service mode becomes the default when R34 flips it."

@@ -118,4 +118,4 @@ Commit as `feat(deploy): DeploymentControlRequests enqueues plan, cancel and rol
 - **Must keep passing unchanged:** every test in `tests/application/`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

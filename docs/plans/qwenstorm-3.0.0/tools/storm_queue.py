@@ -741,7 +741,7 @@ class Resolver:
         chosen: QueueEntry | None = None
         for entry, prioritised in self.order():
             slug = entry.slug
-            # The ledger decides, not the scratch directory: /tmp is wiped between sessions.
+            # The ledger decides, not lanes/: that is working material a machine can lose (10.h).
             if slug in integrated or slug in abandoned:
                 which = "integrated" if slug in integrated else "abandoned"
                 rows.append(Row(entry, prioritised, "settled", f"settled: {which}"))

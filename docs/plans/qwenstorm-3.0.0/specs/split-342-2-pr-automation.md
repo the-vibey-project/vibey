@@ -562,4 +562,4 @@ continuations. If the two formatters fight over a line, restructure the line; ne
 - split-335-3-labels: `remove_label(number, label)` and `create_label(name, *, colour, description, update_existing)`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

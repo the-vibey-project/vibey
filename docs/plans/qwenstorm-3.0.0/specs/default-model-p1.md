@@ -30,4 +30,4 @@ tests/infrastructure/engines/ (ollama_chat and qwenloop_design tests): the recor
 Backend selection (part 2), vibey-gh (part 3), llama.cpp profiles (#383), docs. Commit as `feat(models)!: ...` with a `BREAKING CHANGE:` footer: "the default local model is gpt-oss:20b; set VIBEY_OLLAMA_MODEL=qwen2.5-coder:14b to keep the old one".
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

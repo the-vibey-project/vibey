@@ -102,4 +102,4 @@ None new: the ADR meta-tests hold it.
 Commit as `docs(adr): decision records for 7.a (the searchable ledger) and the forward-compatible reader rule`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -3,7 +3,7 @@ feat(loop-service): a loop stores each route once, and its round-robin cursors, 
 ADR-0046 lane L27 (slug `loops-state-stores`).
 
 ## Why
-Draft ADR-0046 §3's idempotency table (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-two-loops.md:183-191`) keys the outer layer by `route_id`: "`RouteStore` creates the record once. A redelivered route re-sends the stored `RunRouted` and never advances SWRR twice", and "the router forwards a run only to the seat of its stored route, so a redelivered intake message lands in the same seat queue". §2 (lines 129–136) moves the inner round robin's cursors out of PostgreSQL in service mode: "The loop's cursors persist, per project, in its own state directory (§10). In service mode, `rotation_cursor` no longer holds the inner state", which keeps the loop database-free ("The loop needs only the broker and the shared volume"). Decision D14 of the design sheet puts `LoopCursorStore` inside `route_store.py`.
+Draft ADR-0046 §3's idempotency table (`STORM/specs/ADR-two-loops.md:183-191`) keys the outer layer by `route_id`: "`RouteStore` creates the record once. A redelivered route re-sends the stored `RunRouted` and never advances SWRR twice", and "the router forwards a run only to the seat of its stored route, so a redelivered intake message lands in the same seat queue". §2 (lines 129–136) moves the inner round robin's cursors out of PostgreSQL in service mode: "The loop's cursors persist, per project, in its own state directory (§10). In service mode, `rotation_cursor` no longer holds the inner state", which keeps the loop database-free ("The loop needs only the broker and the shared volume"). Decision D14 of the design sheet puts `LoopCursorStore` inside `route_store.py`.
 
 Both stores live on the loop's state directory and must survive a crash at any instant: a route is created with its content already in it (a temporary file linked into place, as the worktree fence does), and the cursor file is replaced atomically (temporary file plus `os.replace`, as `RunResultStore` does).
 
@@ -155,4 +155,4 @@ git status --short
 - `loops-seat-chooser`: `SeatCursor` (`domain/seat_choice.py`).
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

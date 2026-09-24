@@ -68,7 +68,7 @@ lane adds the service-mode provider beside it. Composition picks it only in serv
    ids and weights (the codec of lane `loops-run-codec` refuses anything else).
 
 ## Where to change
-Read `/private/tmp/claude-501/storm/qwenstorm-3.0.0/EDITING-RULES.md` first.
+Read `STORM/EDITING-RULES.md` first.
 - New `src/vibey/application/loop_provider.py` (line 1: the provenance comment copied from
   `src/vibey/application/engine_selection.py`):
   ```python
@@ -280,4 +280,4 @@ First run `uv run ruff format src/vibey/application/loop_provider.py tests/appli
 **Depends on:** `loops-routing-ports`, `loops-queue-saturated`, `loops-subprocess-fallback-declared`, `orm-job-settle`.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

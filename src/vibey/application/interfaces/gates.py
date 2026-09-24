@@ -23,7 +23,17 @@ class HumanGateRepository(Protocol):
         self, gate_id: UUID, *, answer: Mapping[str, object], answered_by: str
     ) -> HumanGateRecord: ...
 
-    async def latest_for_job(self, job_id: UUID) -> HumanGateRecord | None: ...
+    async def latest_for_job(
+        self, job_id: UUID, *, include_queue_gates: bool = False
+    ) -> HumanGateRecord | None:
+        """The job's most recent gate -- of the job's own asking.
+
+        A gate the queue raised on the job's behalf (`domain.job.QUEUE_GATE_KINDS`: attempts
+        or deliveries exhausted) is skipped unless `include_queue_gates`: answering one
+        buys the job another delivery and answers nothing its handler asked (#1108 review,
+        P7). Only the worker, which raised those gates, asks for them.
+        """
+        ...
 
     async def open_for_project(self, project_id: UUID) -> tuple[HumanGateRecord, ...]:
         """Gates raised for this project and not yet answered, oldest first.

@@ -81,7 +81,7 @@ have an ORM model (`tests/infrastructure/db/test_orm.py:50-53`, `:86-104`).
 Do not push. Commit locally with the Title.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.
 
 ---
 

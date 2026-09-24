@@ -428,4 +428,4 @@ read only slices, never rewrite a module.
 - split-335-1-create-edit-merge: the reshaped `# --- Mutations ---` block, `ForgeKind`/`NotSupported` imported in `forge_gitlab.py`, and `test/test_forge_adapters.py` already free of the old update/merge assertions.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

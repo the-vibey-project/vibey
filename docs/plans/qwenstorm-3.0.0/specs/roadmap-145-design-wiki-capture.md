@@ -19,7 +19,7 @@ not override it) changes." The gap, verified at integration `4317cff6`:
   (`vibey_gh/install.py:325-339`), so changing the default would switch wikis on in every
   adopter's repository.
 - vibey-gh has no git seam yet; `fakes-tenant-gh-1` adds `GitRunnerInterface` and
-  `ScriptedGitRunner` (`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/fakes-tenant-gh-1.md`).
+  `ScriptedGitRunner` (`STORM/specs/fakes-tenant-gh-1.md`).
 
 Ratified law: 7.c, what the ledger does not hold is a gap (`src/vibey_tools/gh/docs/doctrines.md:82-91`);
 8.b, documentation defaults to BookStack and the codebase's own docs, "never to a hosted or
@@ -29,7 +29,7 @@ paid wiki" (`doctrines.md:143-146`); 8.h, anything on the host works on Arch Lin
 
 ## Required behaviour
 The lane writes exactly one file, the draft ADR at the absolute path
-`/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-145-wiki-capture.md`, with
+`STORM/specs/ADR-roadmap-145-wiki-capture.md`, with
 `write_file`. It changes no file in its clone and commits nothing.
 
 This lane runs after `roadmap-136-snapshot-verify` and `roadmap-136-capture-repo-metadata`.
@@ -44,7 +44,7 @@ and cite the lines it prints. Also read: `forge_snapshot.py:158-159`;
 (the manifest), `:300-301`; `src/vibey_tools/gh/vibey_gh/config.py:1034-1047`, `:1877`;
 `.vibey-gh.toml:116-122`; `src/vibey_tools/gh/.vibey-gh.toml:107-114`;
 `src/vibey_tools/gh/vibey_gh/install.py:325-339`; `src/vibey_tools/gh/pyproject.toml:30`; the
-doctrine lines above; `/private/tmp/claude-501/storm/qwenstorm-3.0.0/issue-audit/updates/145.md`
+doctrine lines above; `STORM/issue-audit/updates/145.md`
 and `…/136.md`; `…/specs/fakes-tenant-gh-1.md`.
 
 The ADR carries these parts, in this order, each heading exactly as written:
@@ -107,7 +107,7 @@ The ADR carries these parts, in this order, each heading exactly as written:
     git call; the network proof on both operating systems.
 
 ## Where to change
-- Create only `/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-145-wiki-capture.md`
+- Create only `STORM/specs/ADR-roadmap-145-wiki-capture.md`
   (outside the clone). Its first line is the title above; ADR drafts carry no provenance header.
 - No file in the clone changes. Nothing is committed.
 
@@ -133,7 +133,7 @@ None in the clone. The check script below is the test; write the ADR until it pa
 ```bash
 python3 -c '
 from pathlib import Path
-adr = Path("/private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-145-wiki-capture.md")
+adr = Path("STORM/specs/ADR-roadmap-145-wiki-capture.md")
 assert adr.is_file(), "the ADR file does not exist"
 text = adr.read_text(encoding="utf-8")
 lines = text.splitlines()
@@ -164,7 +164,7 @@ question = "**Public or private?** Captured comments include people\x27s text. T
 assert question in flat, "#136 question 3 is not quoted verbatim"
 print("ADR structure OK")
 '
-test "$(grep -cE '[A-Za-z0-9_./-]+\.(py|sql|md|toml):[0-9]+' /private/tmp/claude-501/storm/qwenstorm-3.0.0/specs/ADR-roadmap-145-wiki-capture.md)" -ge 12
+test "$(grep -cE '[A-Za-z0-9_./-]+\.(py|sql|md|toml):[0-9]+' STORM/specs/ADR-roadmap-145-wiki-capture.md)" -ge 12
 test -z "$(git status --porcelain)"
 ```
 
@@ -177,4 +177,4 @@ test -z "$(git status --porcelain)"
 - Do not push, do not commit.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

@@ -326,4 +326,4 @@ module.
 - split-334-1-labelled-listings: the `# --- Change-request listings ---` block in the protocol, which this lane extends, and the same adapter files at their post-listing state.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

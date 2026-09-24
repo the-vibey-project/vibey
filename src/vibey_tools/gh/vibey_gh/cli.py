@@ -1241,6 +1241,7 @@ def _local_review(args) -> int:
         ("--role", args.role),
         ("--scope", args.scope),
         ("--context-dir", args.context_dir),
+        ("--max-document-chars", args.max_document_chars),
         ("--context-paths", args.context_paths),
         ("--context-window", args.context_window),
         ("--reasoning-reserve", args.reasoning_reserve),
@@ -1701,6 +1702,14 @@ def main(argv: list[str] | None = None) -> int:
     local.add_argument(
         "--context-dir",
         help="documents a whole review judges the documentation contract against",
+    )
+    local.add_argument(
+        "--max-document-chars",
+        type=int,
+        help=(
+            "override [pr_automation.fallback] max_document_chars: the most characters of"
+            " documents a whole review is shown"
+        ),
     )
     local.add_argument(
         "--context-paths",

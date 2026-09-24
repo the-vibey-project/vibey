@@ -178,4 +178,4 @@ All tests go in `tests/infrastructure/test_host_packages.py` and use `FakeComman
 Commit as `feat(install): ...`. Do not push.
 
 ## Hard repository rules (always)
-See /private/tmp/claude-501/storm/qwenstorm-3.0.0/SPEC-TEMPLATE.md.
+See STORM/SPEC-TEMPLATE.md.

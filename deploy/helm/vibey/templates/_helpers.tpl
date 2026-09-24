@@ -45,9 +45,10 @@ dsn
 
 {{/*
 The owner's DSN (ADR-0055): the role that runs migrations and owns the tables.
-Empty means a single-DSN install -- an existing Secret with no owner key -- where
-the worker migrates as the one role and `vibey doctor` reports the ledger guard
-as not in force.
+Empty means a single-DSN install -- an existing Secret whose owner key is not
+named (`dsn.existingSecretMigrateKey`, empty by default) -- where the worker
+migrates as the one role and `vibey doctor` reports the ledger guard as not in
+force.
 */}}
 {{- define "vibey.migrateSecretKey" -}}
 {{- if .Values.dsn.existingSecret -}}
@@ -194,3 +195,23 @@ Usage: include "vibey.surfaceURL" (dict "root" $ "name" "component-name" "port" 
 {{- printf "%s://%s-%s.%s.svc.%s:%v" $scheme (include "vibey.fullname" .root) .name .root.Release.Namespace .root.Values.clusterDomain .port -}}
 {{- end -}}
 
+
+{{/*
+The environment variable a surface database's password reaches the postgres
+container under: VIBEY_DB_PASSWORD_<NAME>, upper-cased, non-alphanumerics as _.
+*/}}
+{{- define "vibey.surfaceDbPasswordEnv" -}}
+{{- printf "VIBEY_DB_PASSWORD_%s" (regexReplaceAll "[^A-Z0-9]" (upper .) "_") -}}
+{{- end -}}
+
+{{/*
+A surface database's own password (postgres.additionalDatabasePasswords), which
+must be set: a surface without one would have no role but the owner to use.
+*/}}
+{{- define "vibey.surfaceDbPassword" -}}
+{{- $password := index .root.Values.postgres.additionalDatabasePasswords .name -}}
+{{- if not $password -}}
+{{- fail (printf "postgres.additionalDatabasePasswords.%s must be set: each surface database has a role of its own (ADR-0055)" .name) -}}
+{{- end -}}
+{{- $password -}}
+{{- end -}}
