@@ -2483,6 +2483,88 @@ them are the reviewer's and the operator's time, not the machine's.
 ```
 <!-- END GENERATED figure:storm-timeline -->
 
+### The storm throughput audit
+
+The operator wanted far more concurrent lanes. An audit on 2026-09-23 asked first why
+the storm could not simply run more, what would raise the yield of the lanes it
+already ran, and which safety controls had to hold before any scale-up. Its record is
+the page *QwenStorm throughput audit* (audit run of 2026-09-23, status updated
+2026-09-24 11:10Z), kept outside the repository; its inputs were the lane run logs
+(`lanes/*/.qwenloop/runs/*/events.jsonl`), the storm's progress log, the model server's
+log and the forge, at `develop` revision `b2f5b267`. The run logs and progress log were
+local operational files, never tracked, and a reboot of the host later on 2026-09-24
+erased them (see the governance account below). Every figure below is the audit's
+unless we say we recomputed it.
+
+**One model slot binds.** Across the 82 run directories on disk, 2,985 model turns were
+recorded, and model calls took 9.68 of the 10.01 hours those runs spanned, 96.7%; tool
+execution and harness overhead were the other 3.3%. The progress log held 41 closed
+lane intervals, and not one overlaps another. We recomputed these figures from the
+local files on 2026-09-24, before the reboot, and they agree. Three things serialised
+the storm, and they stack: the queue script waited for any running lane anywhere on
+the host, sub-doctrine 8.c gives a model on the operator's own hardware one run at a
+time, and the server was configured with one slot. Amdahl's law then bounds what more
+lanes sharing that slot could buy: with 3.3% of lane time outside the model, the
+speed-up is at most $1/0.967 \approx 1.03$. Interleaving lanes would also evict each
+other's cached prompt prefix; the audit put the cost at about 80 s of re-read per
+switch at the median turn of 22,500 tokens. Whether a *second slot* helps is a
+different question, which the calibration below measures. These populations are not
+the evidence ledger's (30 lanes, 70 attempts, 2,606 turns), which consumes the progress
+log and lane results from 2026-09-23T04:40:49Z onward; the audit counts every run
+directory then on disk, and the runs of nine earlier lanes had been deleted and are in
+neither. We report both and reconcile neither to the other.
+
+**Conversion.** The progress log showed 40 lanes started, which we recomputed. Of
+those, 13 had work on `develop` at the audit, 3 of them (#1044, #1053, #1054) through
+the automated path, in which the runner completes and the publish step opens the pull
+request. None reached `develop` with no human step: none of the last 60 merged pull
+requests had a successful required review gate, and the merge train logged *merged 0*
+on every pass, so every merge was made by hand. Ten lanes needed a hand-built pull
+request, eight of them in a single one (#396) that repaired or hand-wrote them where
+the local model fell short. At the runner level, 18 of the 82 runs completed. The
+audit's projection is the point: more lanes multiply this conversion rate and do not
+get around it, and the hand repair it implies is capacity nothing records.
+
+**Declared, not enforced.** Seven controls existed in configuration or documentation
+and were read by nothing, or bound only in a mode not in use: the delegated approver's
+author list (with both gates green, the approver would have readied a stranger's pull
+request); the merge train's trusted authors, which held a stranger's pull request only
+when pull-request automation was off, and it was on; 31 forbidden paths, of which a
+lane could touch up to 19, among them the workflow directory, the canon and the merge
+train itself; the issue text a lane's prompt carried, whose author was never fetched
+and which was followed directly by trusted instructions with no separator; a merge
+fallback that retried with `--admin`, unattended, contrary to 12.d; an environment
+switch for unattended approval that nothing read; and an approver agent that nothing
+called. None was exploited: every one of the 594 queued issues was the operator's. All
+seven were enforced by merged code on 2026-09-24 (#1078, #1079, #1083), with the yield
+fixes the audit ranked beside them: a retry on an empty model reply, the end of 27 of 60
+failed runs (#1077); a lane's commands run in the lane's own environment, after 18 runs
+in 12 lanes had tested the wrong tree (#1080); a per-lane time limit and stall
+watchdog, after one 93-minute stall with no terminal event (#1081); real `search`,
+`find` and `open_file` tools, after 446 calls to tools that did not exist, about 11% of
+model time (#1082); and instruments that report what they measured (#1084). The storm
+had not run since, so at the cutoff the effect of these fixes on yield is unmeasured.
+One control was not settled: the repository's rulesets carry a bypass actor nobody
+declared, and 78 of the last 200 merges went in while the forge reported a review
+still required; who made them, and how, needs the organisation's audit log.
+
+**Most of the audit's first claims were wrong.** Twenty-five agents audited six
+dimensions, and adversarial verifiers then checked the leading claims before anything
+was written up. They refuted 16 of 18. Some corrections were of degree: 29 of 64
+failed runs ending on an empty reply became 27 of 60; 45 calls to nonexistent tools
+became 446; 3.75 lanes an hour from the model alone became 3.20 from the runs on disk.
+Some were of kind: the claimed serialisation point was the wrong line of the queue
+script; a single slot said to be removable with hardware is serialised by code, canon
+and configuration together; a reaper said to abandon lanes without their gates does
+not; and the account of #1090 as a silently truncated prompt was wrong, as the
+exact-head section records. We report this as a finding about method, not a footnote.
+A first pass by capable agents over complete logs was wrong more often than right on
+its headline numbers, and it was the verification step, not the analysis, that made
+the audit usable. It applies to this paper too. The host-benchmark paragraph below
+once reported that the 64k window *generated 16% faster*, and the audit's verifiers
+found decode speed varying from 26 to 34 tokens per second within one allocation, so
+that difference is inside the noise and is no longer claimed.
+
 ### Host hardware benchmarks and context headroom
 
 On 2026-09-22 the storm was paused and the same ten-turn session was replayed against
@@ -2546,9 +2628,12 @@ median of 20,070 tokens, a 99th percentile of 42,979 and a maximum of 49,118.
 [Fig. 26](#fig:host-context) sets those percentiles against the three windows
 considered. A 32k window would have truncated 71 turns; the 128k baseline was never
 reached by any turn; the 64k window chosen covers every recorded turn with a third
-again as headroom, wires 1.3 GB less, and generated 16% faster. That is sub-doctrine
-8.j, fitted to the iron: a setting moves against a number read from this host, and
-the number is recorded beside it.
+again as headroom, and wires 1.3 GB less. In that one sweep it also generated 16%
+faster (32.5 against 28.0 tokens per second), but the throughput audit's verifiers found
+decode speed varying from 26 to 34 tokens per second within a single allocation, so the
+difference is inside the noise and we do not claim it. That is sub-doctrine 8.j, fitted
+to the iron: a setting moves against a number read from this host, and the number is
+recorded beside it.
 
 <!-- BEGIN GENERATED figure:host-context rev:600f3db2883d925f1798f230fea51f729e89ff85 — regenerated by scripts/paper_figures.py -->
 ```latex
@@ -2578,6 +2663,24 @@ the number is recorded beside it.
 \end{figure}
 ```
 <!-- END GENERATED figure:host-context -->
+
+**How many runs at once, per device.** The audit left one question it could not answer:
+sub-doctrine 8.c holds a model on the operator's own hardware to one run at a time,
+while 8.j requires every setting, how many run at once among them, to be fitted to a
+number measured on the machine. On 2026-09-23 the operator ruled
+*measure, then decide*. On 2026-09-24 the ruling was extended, and it is the method we
+report here, not a result. Sweep $N = 1, 2, 3, \dots$ concurrent runs replaying real storm-depth
+turns, and measure throughput, latency, wired memory and fidelity at each $N$, to find
+the ideal $N$. Calibrate every device separately, keyed by a fingerprint of its
+hardware, memory, operating system, server version, model digest and context window.
+Where the evidence is missing or stale, fall back to $N = 1$, and recalibrate
+automatically. And amend 8.c to rule the method, not a number, ratified by the
+operator's merge like every sub-doctrine. The single slot the audit found binding is
+therefore not treated as a law of this host but as the default an unmeasured device
+gets. At the cutoff the sweep for the 24 GB host had not finished and no figure from it
+is claimed.
+
+<!-- TODO(3.0.0-pending: feat/local-slot-benchmark) the sweep's curve for this host (throughput, latency, wired memory and fidelity against N, with the overshoot), the ideal N and its device fingerprint, the tracked evidence file, the ADR number, and the 8.c amendment as ratified -->
 
 ### Field data
 
@@ -2871,6 +2974,62 @@ paper from the day its package was imported until this revision checked it again
 the record. Artifacts are commoditised; correct judgment about artifacts is not, and
 that gap, more than throughput, is where the remaining engineering lies.
 
+**Review before merge is a rate limiter, and it is meant to be.** On 2026-09-24 every
+change for 3.0.0 was sent for an independent review, and merging outran the reviews.
+The 3.0.0 release-gate record (12:22Z) counts seven pull requests merged before or
+during their independent reviews that day; the forge's own times show how long each
+was open, from creation to merge.
+
+| Pull request | Open for |
+|---|---:|
+| #1094, sovereign reviewer | 49 min 44 s |
+| #1095, derived lane | 44 min 6 s |
+| #1100, ledger guard | 35 min 16 s |
+| #1101, cut prompts | 23 min 4 s |
+| #1102, truncated log | 30 s |
+| #1103, lane follow-ups | 1 min 48 s |
+| #1105, push-gate reaper | 3 min 49 s |
+
+Two earlier merges that day, outside that count, had shown the pattern: #1089 merged
+30 s after it was opened and was reviewed afterwards (#1092), and #1092 merged while
+its final review said *not yet* (#1102). The findings did not disappear. Each was
+carried into a new pull request or branch: #1092 for #1089, #1101 for #1094, #1102 for
+#1092, #1103 for #1095, and a follow-up branch for #1100. In the meantime each finding
+was live on `develop`, which a push publishes to the development package index; the
+worst were the two high findings in the ledger guard. Merging ahead of review also let
+two changes that each passed their own gates break `develop` together: #1100 made the
+suite run as a restricted application role, #1103 added a test that needs the owner's
+privileges, and nothing tested the two together before both had landed (CI run
+35998404322 at `600f3db2`: 1 failed, 3,732 passed; the one-line repair is commit
+`bd9161ee`). And it created pressure to repair in place. A later commit on the job
+queue's branch rewrote migration 0015 to make it additive after 0015 had merged, and
+an open pull request (#1106) carries it. #1103 took the other road: it left 0015 as it
+was, because a push to `develop` publishes a build that may already have applied it
+and the migrator refuses a changed checksum, and it recorded the drain instruction and
+the gap in ADR-0054, with a new lint that fails any undocumented column drop. A
+migration that may have been applied is never edited; its correction is a new
+migration or a recorded gap.
+
+The same day supplied a second governance fact, about where work is kept. At about
+09:09 US Eastern time the host rebooted. Everything held only under `/private/tmp`, a
+directory the operating system clears at boot, was lost: the storm's local run logs and
+progress log, from which the audit above was computed, and every worktree kept there,
+with its uncommitted edits, among them the first draft of this very update of the
+paper. What survived is what had been committed and pushed, or tracked: the evidence
+ledger, the benchmark record and every merged pull request. Worktrees moved to a
+persistent directory, and work in progress is now committed and pushed section by
+section. It is sub-doctrine 10.g's argument, observed: evidence that is not durably
+recorded is not evidence for long.
+
+None of this is a claim about anyone's care. It is the finding of this section,
+observed on governance itself. Producing the changes was cheap and fast that day;
+independent judgment about them took tens of minutes each and was the binding input,
+and wherever a merge ran ahead of it the judgment was still paid for, later, as a
+rescue pull request, a red integration branch or a finding shipped to the development
+channel. Review before merge limits the rate of delivery in the same sense the stress
+band limits the rate of generation, and it binds for the same reason: it is the step
+that decides whether the output is correct.
+
 ### Six materials and the modulators of the rate
 
 `vibey-gh` postulates that every dilemma in the practice of software engineering
@@ -3099,11 +3258,18 @@ history. Neither the stress record nor the Qwen pilot measures network state or
 operator availability, so two of the five modulators are named, mapped and unmeasured.
 We do not claim a natural law, and we do not claim that the rate is constant. We claim
 a band, on a substrate, together with the conditions under which the claim would fail,
-and report the Qwen pilot only as a bounded reliability observation.
+and report the Qwen pilot only as a bounded reliability observation. The storm audit
+is narrower still: one storm, one model slot, one host, read from local logs that were
+never tracked and are now gone, and a record kept outside the repository. We
+recomputed its run, turn, model-time and overlap figures and its count of started
+lanes from those logs before they were lost; its conversion, control and refutation
+figures are cited from the audit with its date. The account of merging ahead of review
+covers one day of one project, and it is drawn from the forge's times and the
+release-gate record, not from a controlled comparison.
 
 ```latex
 \begin{plainwords}
-We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally 128 jobs at once. Up to 32 jobs, almost everything finished, and the computer produced about one or two finished pieces of work every minute no matter how many we asked for at once. Past that, jobs began to run out of time, and at 128 most of them failed. The computer was never broken; it was full. Only a person could decide what to do next: ask for less, allow more time, or buy a bigger computer. That is why we say the machine part is cheap and the deciding part is the hard part.
+We pushed one small computer harder and harder, giving it 1, 2, 4, 8 and finally 128 jobs at once. Up to 32 jobs, almost everything finished, and the computer produced about one or two finished pieces of work every minute no matter how many we asked for at once. Past that, jobs began to run out of time, and at 128 most of them failed. The computer was never broken; it was full. Only a person could decide what to do next: ask for less, allow more time, or buy a bigger computer. That is why we say the machine part is cheap and the deciding part is the hard part. Later we checked the busy season of the project's own robot helpers. Nearly all of their time went into waiting for one small brain that could think about one job at a time, so adding more helpers would have bought almost nothing, and not one job made it all the way to the finished pile without a person stepping in. When we double-checked our own first conclusions, most of them turned out to be wrong, which is itself a lesson. On the busiest day, changes were accepted faster than they could be checked, and every problem the checkers later found had to be fixed afterwards. And when the computer restarted, everything kept only in its scratch space vanished, which is why the notebook matters. Checking takes time, and that time is the price of being right.
 \end{plainwords}
 ```
 
