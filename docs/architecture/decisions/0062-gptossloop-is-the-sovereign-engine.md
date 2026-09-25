@@ -1,4 +1,4 @@
-# 0061 — gptossloop is the sovereign engine, and qwenloop is its opt-in Qwen twin
+# 0062 — gptossloop is the sovereign engine, and qwenloop is its opt-in Qwen twin
 
 **Status:** accepted · **Date:** 2026-09-25 · **Cites:** sub-doctrines 8.a, 8.b, 8.c, 8.d, 10.f, 12.c, 12.e · **Related:** ADR-0005, ADR-0015, ADR-0016, ADR-0022, ADR-0027, ADR-0037, ADR-0038, ADR-0059
 

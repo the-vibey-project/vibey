@@ -404,7 +404,7 @@ QWENLOOP = EngineDescriptor(
     auth_env=(),
     # QWENLOOP_BASE_URL also arrives through the adapter's overlay, derived from
     # VIBEY_OLLAMA_URL -- which itself never reaches the session. Its model does not:
-    # qwenloop runs the Qwen model it names itself (ADR-0061) unless QWENLOOP_MODEL says.
+    # qwenloop runs the Qwen model it names itself (ADR-0062) unless QWENLOOP_MODEL says.
     env_passthrough=("QWENLOOP_*",),
     # No attachments or web search: `attach` and `web-search` only echo (qwenloop cli/app.py
     # `_local_equivalent`). A mid-run prompt it does take: the runner adds each pending
@@ -467,7 +467,7 @@ QWENLOOP = EngineDescriptor(
 )
 
 
-# The same runner as qwenloop on this era's default model (ADR-0061): its own binary,
+# The same runner as qwenloop on this era's default model (ADR-0062): its own binary,
 # its own `GPTOSSLOOP_*` settings, and qwenloop's run layout, controls and events,
 # which are the runner package's protocol rather than either engine's name -- both write
 # `.qwenloop/runs/` and end on `QWENLOOP_TASK_FULLY_COMPLETE`. `gptossloop` first
@@ -581,7 +581,7 @@ DEFAULT_DESCRIPTORS: tuple[EngineDescriptor, ...] = (
     AGYLOOP,
 )
 # The local engines, each behind its own feature switch (ADR-0015, ADR-0038): gptossloop
-# on unless switched off, the others opt-in (ADR-0061).
+# on unless switched off, the others opt-in (ADR-0062).
 LOCAL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (GPTOSSLOOP, QWENLOOP, CLAUDELOOP_LOCAL)
 ALL_DESCRIPTORS: tuple[EngineDescriptor, ...] = (*DEFAULT_DESCRIPTORS, *LOCAL_DESCRIPTORS)
 

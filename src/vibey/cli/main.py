@@ -326,23 +326,25 @@ def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
     return LocalEngineSettings.from_toml((root or Path.cwd()) / "vibey.toml", environ=os.environ)
 
 
-async def _passwordless_reach_section() -> None:
-    """`vibey doctor`'s password-less-access line for the app DSN's database: WARN, PASS
-    or UNKNOWN, never a failure (SECURITY.md §5).
+async def _passwordless_reach_section() -> bool:
+    """`vibey doctor`'s password-less-access line for the app DSN's database: FAIL, PASS
+    or UNKNOWN (SECURITY.md §5). False on FAIL: sub-doctrine 10.j (ADR-0061) makes
+    scram-sha-256 the only way in, so a password-less login is a failure, not a choice.
 
     A module-level function because it is `doctor`'s own step, shared by nothing else,
     like `_postgres_status_line` beside it; the check itself is
     `PasswordlessReachProbe`.
     """
-    from vibey.infrastructure.db.passwordless_reach import PasswordlessReachProbe
+    from vibey.infrastructure.db.passwordless_reach import PasswordlessReachProbe, ReachVerdict
 
     name = "db-passwordless"
     dsn = os.environ.get("VIBEY_PG_URL", "").strip()
     if not dsn:
         typer.echo(f"UNKNOWN {name:<20} VIBEY_PG_URL is not set; nothing to check")
-        return
+        return True
     finding = await PasswordlessReachProbe().probe(dsn)
     typer.echo(f"{finding.verdict.mark} {name:<20} {finding.detail}")
+    return finding.verdict is not ReachVerdict.FAIL
 
 
 def _postgres_status_line(status: PostgresStatus) -> str:
@@ -444,7 +446,7 @@ _OLLAMA_MODEL_HELP = (
 )
 _PROVIDERS = ("scripted", "claudeloop", "gptossloop")
 # Old provider names still accepted, each read as the provider it became. `qwenloop` was
-# the sovereign provider on this era's default model, GPT-OSS; since ADR-0061 that is
+# the sovereign provider on this era's default model, GPT-OSS; since ADR-0062 that is
 # gptossloop, and the qwenloop engine runs a Qwen model the provider never did.
 _PROVIDER_ALIASES = {"qwenloop": "gptossloop"}
 # Built from _PROVIDERS so the message both commands print cannot fall behind the list.
@@ -457,7 +459,7 @@ _UNKNOWN_PROVIDER = (
 _PROVIDER_HELP = (
     "DESIGN/DECOMPOSE provider: scripted, claudeloop, or gptossloop (the sovereign one, on "
     "Ollama). Default: gptossloop -- the sovereign default is always on (sub-doctrine 8.b). "
-    "An explicit value always wins; 'qwenloop' is read as gptossloop (ADR-0061)."
+    "An explicit value always wins; 'qwenloop' is read as gptossloop (ADR-0062)."
 )
 
 
@@ -466,7 +468,7 @@ def _resolve_provider(explicit: str | None) -> str:
 
     Sub-doctrine 8.b keeps the sovereign default always on, never needing declaration, so
     with no `--provider` DESIGN and DECOMPOSE run on gptossloop (#322; qwenloop until
-    ADR-0061). Before, they fell back to the scripted fake unless a local engine was
+    ADR-0062). Before, they fell back to the scripted fake unless a local engine was
     switched on. Paid (`claudeloop`) is always a stated choice. An old name is read as the
     provider it became, and said so on stderr. Module-level, like the typer commands that
     share it, so `work` and `worker` cannot disagree.
@@ -477,7 +479,7 @@ def _resolve_provider(explicit: str | None) -> str:
     if renamed is None:
         return explicit
     typer.echo(
-        f"--provider {explicit} is now --provider {renamed} (ADR-0061): the sovereign "
+        f"--provider {explicit} is now --provider {renamed} (ADR-0062): the sovereign "
         f"provider on {DEFAULT_OLLAMA_MODEL}; running {renamed}",
         err=True,
     )
@@ -1457,10 +1459,10 @@ def doctor(
         # (12.e). Beside it: keeping VIBEY_PG_URL out of every model-driven process
         # protects nothing if the database lets the worker's OS user in without it.
         database_ok = await _database_security_section()
-        # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above), which
-        # FAILS for the owner and superusers; reviewers to decide whether to consolidate.
-        await _passwordless_reach_section()
-        if (conformance and not all_ok) or not database_ok:
+        # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above); both
+        # now FAIL (sub-doctrine 10.j, ADR-0061); reviewers to decide whether to consolidate.
+        reach_ok = await _passwordless_reach_section()
+        if (conformance and not all_ok) or not database_ok or not reach_ok:
             raise typer.Exit(1)
 
     async def run_cluster_doctor() -> None:

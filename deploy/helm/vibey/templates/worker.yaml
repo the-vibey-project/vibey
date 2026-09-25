@@ -110,14 +110,14 @@ spec:
             - name: VIBEY_OLLAMA_MODEL
               value: {{ .Values.ollama.model | quote }}
             # gptossloop, the sovereign default engine and on without a switch
-            # (ADR-0061): its openai-compat backend wants the OpenAI base URL, /v1
+            # (ADR-0062): its openai-compat backend wants the OpenAI base URL, /v1
             # included; a base URL alone is what makes `auto` select it.
             - name: GPTOSSLOOP_BASE_URL
               value: {{ printf "%s/v1" $ollamaURL | quote }}
             - name: GPTOSSLOOP_MODEL
               value: {{ .Values.ollama.model | quote }}
             {{- if .Values.ollama.qwenloopFeature }}
-            # qwenloop, the same runner on a Qwen model, opt-in (ADR-0061). The
+            # qwenloop, the same runner on a Qwen model, opt-in (ADR-0062). The
             # one qwenloop switch that reaches a worker (ADR-0015): a project's
             # [features] table never makes it into the record.
             - name: QWENLOOP_BASE_URL

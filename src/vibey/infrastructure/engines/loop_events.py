@@ -208,7 +208,7 @@ LOOP_EVENT_MAP: dict[EngineId, dict[str, EventKind]] = {
 # entry, not a copy that could drift from it (ADR-0038).
 LOOP_EVENT_MAP[EngineId.CLAUDELOOP_LOCAL] = LOOP_EVENT_MAP[EngineId.CLAUDELOOP]
 # gptossloop is the qwenloop runner on GPT-OSS: the same runner writes the same events,
-# so it too reads through qwenloop's one entry (ADR-0061).
+# so it too reads through qwenloop's one entry (ADR-0062).
 LOOP_EVENT_MAP[EngineId.GPTOSSLOOP] = LOOP_EVENT_MAP[EngineId.QWENLOOP]
 
 

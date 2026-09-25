@@ -1,5 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
-"""The one local-engine resolver, and the one local endpoint setting (ADR-0038, ADR-0061)."""
+"""The one local-engine resolver, and the one local endpoint setting (ADR-0038, ADR-0062)."""
 
 from pathlib import Path
 
@@ -49,7 +49,7 @@ def test_there_is_one_switch_per_local_engine_named_after_its_feature_key() -> N
 
 
 def test_only_gptossloop_is_on_by_default() -> None:
-    """ADR-0061: the sovereign default engine ships on; every other local engine is opt-in."""
+    """ADR-0062: the sovereign default engine ships on; every other local engine is opt-in."""
     settings = _settings()
 
     assert settings.enabled_engines == (EngineId.GPTOSSLOOP,)
@@ -90,7 +90,7 @@ def test_only_a_real_boolean_counts_in_the_config() -> None:
 
 
 def test_a_qwenloop_switch_is_told_what_it_now_means() -> None:
-    """ADR-0061: an operator who switched qwenloop on for gpt-oss hears it is Qwen now."""
+    """ADR-0062: an operator who switched qwenloop on for gpt-oss hears it is Qwen now."""
     assert _settings().notices == ()
     assert _settings({QWEN_SWITCH: "1"}).notices == (QWENLOOP_SWITCH_NOTICE,)
     assert _settings(features={"qwenloop": True}).notices == (QWENLOOP_SWITCH_NOTICE,)
@@ -264,7 +264,7 @@ def test_each_runner_reads_its_own_endpoint_variables() -> None:
 
 def test_vibey_ollama_url_becomes_each_runners_openai_compat_endpoint() -> None:
     """gptossloop gets the endpoint and this era's default model; qwenloop gets only the
-    endpoint, and runs the Qwen model it names itself (ADR-0061)."""
+    endpoint, and runs the Qwen model it names itself (ADR-0062)."""
     endpoint = LocalEndpointEnvironment({"VIBEY_OLLAMA_URL": "http://10.0.0.5:11434/"})
 
     assert endpoint.overlay_for(EngineId.GPTOSSLOOP) == {

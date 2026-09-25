@@ -59,7 +59,7 @@ uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines c
   decomposition use live ClaudeLoop calls (`scripted` is for tests).
 - `--provider gptossloop`, the default when no `--provider` is given, is the
   sovereign alternative to the paid DESIGN and decomposition providers
-  (ADR-0027, ADR-0061). It runs the interview and the BUILD decomposition on a
+  (ADR-0027, ADR-0062). It runs the interview and the BUILD decomposition on a
   local model (`GptossloopDesignProvider` and `GptossloopWorkPlanProducer`,
   sharing one Ollama client: the server at `VIBEY_OLLAMA_URL`, default
   `http://127.0.0.1:11434`, and the model `VIBEY_OLLAMA_MODEL` or
@@ -83,7 +83,7 @@ uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines c
   between exactly these two via smooth-weighted round-robin, per job.
 - `gptossloop`, the sovereign local engine, is on by default but is not in
   this allow-list, so it runs no BUILD job here; drop `--engines` to let it
-  run first (ADR-0038, ADR-0061). To add `qwenloop` — the same runner on a
+  run first (ADR-0038, ADR-0062). To add `qwenloop` — the same runner on a
   Qwen model — export `VIBEY_FEATURE_QWENLOOP=1` before both `vibey doctor`
   and `vibey worker`, and name it in `--engines`. `[features] qwenloop = true`
   in `vibey.toml` is honored by `vibey doctor` but not by the worker, which

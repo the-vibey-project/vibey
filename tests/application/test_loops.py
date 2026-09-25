@@ -163,7 +163,7 @@ def test_the_state_the_resolvers_gave_passes_through_untouched() -> None:
 
 
 def test_an_engine_whose_name_changed_meaning_says_what_it_became() -> None:
-    """ADR-0061: qwenloop is the Qwen engine now; the gpt-oss engine is gptossloop."""
+    """ADR-0062: qwenloop is the Qwen engine now; the gpt-oss engine is gptossloop."""
     local = _descriptor(EngineId.QWENLOOP, tier=EngineTier.LOCAL)
 
     (engine,) = LoopCatalog().report([_context(local)]).loops[0].engines

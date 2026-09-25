@@ -178,7 +178,7 @@ def test_gptossloop_request_is_always_allowed() -> None:
 
 
 def test_qwenloop_request_requires_its_feature_and_says_what_it_became() -> None:
-    """ADR-0061: qwenloop is the opt-in Qwen engine now, and the gpt-oss one is gptossloop."""
+    """ADR-0062: qwenloop is the opt-in Qwen engine now, and the gpt-oss one is gptossloop."""
     with pytest.raises(ConfigError, match="features.qwenloop.*gptossloop, on by default"):
         load_config_from_string('[project]\nname = "x"\n\n[engines]\nenabled = ["qwenloop"]\n')
     config = load_config_from_string(

@@ -16,7 +16,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 * **engines:** the local engine that runs GPT-OSS is `gptossloop`, and it ships on; `qwenloop`
   runs Qwen and is off until switched on
-  ([ADR-0061](docs/architecture/decisions/0061-gptossloop-is-the-sovereign-engine.md)).
+  ([ADR-0062](docs/architecture/decisions/0062-gptossloop-is-the-sovereign-engine.md)).
   The engine called `qwenloop` ran `gpt-oss:20b` by default. The runner package now carries two
   console scripts that differ only in who they are: `gptossloop` (GPT-OSS 20B, reads
   `GPTOSSLOOP_BASE_URL`/`_MODEL`/`_API_KEY`/`_CONFIG` and its own config file) and `qwenloop`
@@ -45,6 +45,23 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
     golden profile is `ollama-gpu-gptossloop`, and the CRD's engine enum lists gptossloop.
   - **Canon.** An amendment to sub-doctrine 8.c (`sovereignloop` is what gptossloop and
     qwenloop become) is carried here for the operator's ratification (Article II.3).
+* **db:** every PostgreSQL connection the project configures, documents or installs
+  authenticates with scram-sha-256, local and remote alike: never `trust`, `peer`,
+  `ident`, `md5` or a password in clear. This is sub-doctrine 10.j, drafted for the
+  operator's ratifying merge, with the rationale in ADR-0061.
+  * `SECURITY.md` §7's `pg_hba.conf` lines are now the required configuration.
+  * `vibey doctor`'s `db-passwordless` prints `FAIL` instead of `WARN` and exits 1.
+  * `local-auth` now also fails on an `md5` or `password` rule for the owner or a
+    superuser, and when `password_encryption` is not `scram-sha-256`.
+  * The Helm chart's built-in PostgreSQL reads a declared `pg_hba.conf` (the new
+    `<release>-postgres-hba` ConfigMap, through `hba_file`) and sets
+    `password_encryption=scram-sha-256`, so an existing install follows the rule on its
+    next start.
+  * CI's PostgreSQL services declare `POSTGRES_HOST_AUTH_METHOD` and
+    `POSTGRES_INITDB_ARGS` as scram-sha-256.
+  * `vibey install --postgres` names the `pg_hba.conf` step it leaves to the operator.
+  * Upgrade path: give every role that logs in a password, set the §7 lines and reload.
+    A password in `~/.pgpass` keeps password-less DSNs working.
 * **vibey_gh:** the sovereign review never returns a verdict on a prompt the model did not
   read in full, and names a model that ran out of room (#1090). #1090 read its whole
   31,765-token prompt and ran out of generation room in the 1,004 tokens a 32,768 window left

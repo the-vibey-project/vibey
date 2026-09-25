@@ -262,7 +262,7 @@ class EngineId(StrEnum):
     CLAUDELOOP = "claudeloop"; CODEXLOOP = "codexloop"
     CURSORLOOP = "cursorloop"; AGYLOOP = "agyloop"
     GPTOSSLOOP = "gptossloop"   # the sovereign default: the local runner on GPT-OSS
-    QWENLOOP = "qwenloop"       # the same runner on a Qwen model, opt-in (ADR-0061)
+    QWENLOOP = "qwenloop"       # the same runner on a Qwen model, opt-in (ADR-0062)
     CLAUDELOOP_LOCAL = "claudeloop-local"
 
 
@@ -1167,7 +1167,7 @@ KNOWN_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop",
                  "gptossloop", "qwenloop", "claudeloop-local")
 LOCAL_ENGINE_FEATURES = {"gptossloop": "gptossloop", "qwenloop": "qwenloop",
                          "claudeloop-local": "claudeloop_local"}
-LOCAL_ENGINES_ON_BY_DEFAULT = frozenset({"gptossloop"})   # ADR-0061
+LOCAL_ENGINES_ON_BY_DEFAULT = frozenset({"gptossloop"})   # ADR-0062
 
 class ConfigError(VibeyError):
     def __init__(self, path: str, message: str) -> None: ...
@@ -1213,7 +1213,7 @@ class DeployConfig:
 
 @dataclass(frozen=True, slots=True)
 class FeaturesConfig:
-    gptossloop: bool = True        # on unless switched off (ADR-0061)
+    gptossloop: bool = True        # on unless switched off (ADR-0062)
     qwenloop: bool = False
     claudeloop_local: bool = False
 

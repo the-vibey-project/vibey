@@ -193,7 +193,7 @@ def test_the_document_has_the_contracts_shape_without_a_database() -> None:
 
 
 def test_gptossloop_is_on_by_default_and_switched_off_only_by_saying_so() -> None:
-    """ADR-0061: the sovereign default engine ships on."""
+    """ADR-0062: the sovereign default engine ships on."""
     gptossloop = _engine(_document(), "gptossloop")
 
     assert (gptossloop["binary"], gptossloop["state_dir"]) == ("gptossloop", ".qwenloop")
@@ -392,7 +392,7 @@ def test_gptossloops_model_mirrors_how_the_model_reaches_it() -> None:
 
 
 def test_qwenloops_model_is_its_own_unless_qwenloop_model_names_one() -> None:
-    """ADR-0061: vibey hands qwenloop the endpoint and never this era's default model, so
+    """ADR-0062: vibey hands qwenloop the endpoint and never this era's default model, so
     the model reported is QWENLOOP_MODEL when set and otherwise qwenloop's own choice."""
     nothing = (None, {None}, {QWEN_OWN_CHOICE})
     assert _models("qwenloop") == nothing

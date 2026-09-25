@@ -289,7 +289,7 @@
             ]
           },
           "notes": [
-            "since ADR-0061 qwenloop runs a Qwen model (qwen3:14b unless QWENLOOP_MODEL names another); the gpt-oss engine it used to be is gptossloop"
+            "since ADR-0062 qwenloop runs a Qwen model (qwen3:14b unless QWENLOOP_MODEL names another); the gpt-oss engine it used to be is gptossloop"
           ]
         },
         {

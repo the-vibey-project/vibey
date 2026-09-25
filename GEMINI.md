@@ -98,7 +98,7 @@ Map covers `src/vibey` only. The repo is a uv workspace (ADR-0021) whose other
 tenants keep their own pyproject, version, Python floor, tests and gates
 (ADR-0022): `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}`
 (claudeloop, codexloop, cursorloop, agyloop, gptossloop and qwenloop — one
-package, two engines, ADR-0061 — and vibey-runners-common) and
+package, two engines, ADR-0062 — and vibey-runners-common) and
 `src/vibey_tools/{gh,skills,bootstrap}` (vibey-gh, vibey-skills,
 vibey-bootstrap). Sibling GitHub repos are gone and so are the separate PyPI
 names — the tree ships as one `vibey` distribution (ADR-0037).
@@ -114,11 +114,11 @@ names — the tree ships as one `vibey` distribution (ADR-0037).
   `qwenloop`, the same runner on `qwen3:14b`, off unless
   `VIBEY_FEATURE_QWENLOOP=1` or `[features] qwenloop = true`; and
   `claudeloop-local`, the claudeloop binary on a local backend profile, off unless
-  `VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features] claudeloop_local` (ADR-0061) —
+  `VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features] claudeloop_local` (ADR-0062) —
   are **preferred first** under sub-doctrine 8.a: SWRR runs within the LOCAL tier,
   and the paid pool is the fallback when no local engine is eligible (ADR-0038,
   amending ADR-0015). With no `--provider`, DESIGN and DECOMPOSE run on the
-  sovereign gptossloop providers (ADR-0027, ADR-0038, ADR-0061). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
+  sovereign gptossloop providers (ADR-0027, ADR-0038, ADR-0062). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
 - **Handoff:** when `CreditsExhausted`, vibey verifies brief against no-loss
   gate (10 rules: R1–R10), writes full ledger to receiving worktree, seeds
   next engine.
@@ -188,7 +188,7 @@ automation has no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (61 ADRs: 0001–0060) |
+| ADRs | `docs/architecture/decisions/` (62 ADRs: 0001–0062) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

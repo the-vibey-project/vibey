@@ -10,7 +10,7 @@
 
 This package is an autonomous, local-model session runner, installed as two
 commands — two engines that are the same runner under different names
-(vibey ADR-0061):
+(vibey ADR-0062):
 
 | Engine | Default model on an endpoint | Settings it reads | Config file | In vibey |
 |---|---|---|---|---|
@@ -23,7 +23,7 @@ other's. Everything else is shared: the verbs (`run`, `stop`, `wind-down`,
 `QWENLOOP_TASK_FULLY_COMPLETE` marker, the `qwenloop-verdict` fence, and the
 pinned llama.cpp/vLLM profiles. `qwenloop` asks for `qwen3:14b` rather than
 Qwen2.5-Coder because the runner drives native tool calls, and
-`qwen2.5-coder:14b` on Ollama writes its calls out as text; before ADR-0061 the
+`qwen2.5-coder:14b` on Ollama writes its calls out as text; before ADR-0062 the
 bare `qwenloop` asked for `gpt-oss:20b`, which is now `gptossloop`'s job.
 
 The runner attaches to a server that is already running, such as Ollama (see

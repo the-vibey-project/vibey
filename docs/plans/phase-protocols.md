@@ -172,7 +172,7 @@ DESIGN jobs run in-process on one `DesignProvider`, chosen with
 `vibey work --provider` or `vibey worker --provider`:
 
 - `gptossloop` is the sovereign provider, the preferred way to run and the
-  default when no `--provider` is given (ADR-0027, ADR-0061; `qwenloop` is
+  default when no `--provider` is given (ADR-0027, ADR-0062; `qwenloop` is
   still accepted as its old name), on the Ollama server at `VIBEY_OLLAMA_URL` with the model
   `VIBEY_OLLAMA_MODEL` (or `--ollama-model`). Set `VIBEY_EVIDENCE_DIR` to a
   directory of operator-supplied reading: `design.research` refuses to invent
@@ -186,7 +186,7 @@ DESIGN jobs run in-process on one `DesignProvider`, chosen with
 
 No engine selection happens for any `design.*` job, so no per-stage rotation
 occurs. The ledger records the interviewer as the provider's own engine:
-`gptossloop` for the sovereign provider (ADR-0061), `claudeloop` for the paid
+`gptossloop` for the sovereign provider (ADR-0062), `claudeloop` for the paid
 one. The synthesize job carries `requirement.excluded =
 ["claudeloop"]` for a future selector, but nothing enforces it; the
 synthesizer runs on the same provider as the interviewer.

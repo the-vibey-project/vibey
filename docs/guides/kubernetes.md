@@ -149,6 +149,17 @@ password is `postgres.additionalDatabasePasswords.<name>`; the postgres containe
 it and hands it its database on every start, so an existing install is converted on
 upgrade and no surface pod holds the owner's credentials.
 
+Every connection to the built-in Postgres authenticates with scram-sha-256, local and
+remote alike (sub-doctrine 10.j,
+[ADR-0061](../architecture/decisions/0061-every-postgresql-connection-authenticates-with-scram-sha-256.md)).
+The chart ships the server's `pg_hba.conf` as the `<release>-postgres-hba` ConfigMap and
+points `hba_file` at it on every start, so an install created before this rule follows it
+after an upgrade. It also sets `password_encryption=scram-sha-256`. The method is not a
+value you can change. A managed instance must meet the same rule: require scram-sha-256
+for every role vibey and the surfaces connect as, with no `trust`, `md5` or clear-text
+`password` rule that could match them. See `SECURITY.md` §7 for the lines;
+`vibey doctor --cluster`'s `local-auth` does not pass until they are set.
+
 The `wait-for-postgres` init container is rendered only for the built-in
 Postgres. Against a managed instance the worker connects directly at
 startup, so an unreachable DSN shows up as `CrashLoopBackOff` rather than
@@ -380,7 +391,7 @@ forbidden entry (`VIBEY_*`, `PG*`, a DSN) is refused before the project is creat
 (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop`,
 `qwenloop`, `claudeloop-local`). The worker accepts
 `--provider gptossloop` (chart value `worker.provider`; `qwenloop` is still
-read as gptossloop, ADR-0061) for the sovereign DESIGN provider. That
+read as gptossloop, ADR-0062) for the sovereign DESIGN provider. That
 provider talks to a local Ollama over HTTP rather than running the
 `gptossloop` binary (which the image does ship), so it needs a model server
 the pod can reach: `ollama.enabled` runs one in the release and points the

@@ -49,7 +49,7 @@ in one vendor's chat session.
 | Runs on | macOS / Linux, local. No cloud control plane required. |
 | Language | Python 3.12+ |
 | Queue | PostgreSQL (`FOR UPDATE SKIP LOCKED`) |
-| Engines | [`claudeloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude), [`codexloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex), [`cursorloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor), [`agyloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) — plus the local runner [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) as two engines — `gptossloop`, the sovereign default on GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038, ADR-0061). All five runners ship inside the `vibey` distribution ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)). |
+| Engines | [`claudeloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/claude), [`codexloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex), [`cursorloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor), [`agyloop`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) — plus the local runner [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) as two engines — `gptossloop`, the sovereign default on GPT-OSS 20B (on by default, and the sovereign DESIGN provider), and the opt-in `qwenloop` on Qwen — and `claudeloop-local`, the claudeloop binary on a local backend profile. Local engines are preferred first when switched on (ADR-0015, ADR-0027, ADR-0038, ADR-0062). All five runners ship inside the `vibey` distribution ([ADR-0037](architecture/decisions/0037-one-distribution-one-version.md)). |
 | State dir | `.vibey/` |
 | Env prefix | `VIBEY_` |
 | Done marker | Each loop's own marker (`CLAUDELOOP_TASK_FULLY_COMPLETE`, `QWENLOOP_TASK_FULLY_COMPLETE`, etc.) |
@@ -92,7 +92,7 @@ to the database for a project, and `--cluster` runs the in-cluster preflight
 sovereign default on GPT-OSS 20B — is on unless `VIBEY_FEATURE_GPTOSSLOOP=0`;
 `qwenloop` — the same runner on `qwen3:14b` — needs `VIBEY_FEATURE_QWENLOOP=1`;
 and `claudeloop-local` (claudeloop on a local backend profile) needs
-`VIBEY_FEATURE_CLAUDELOOP_LOCAL=1` (ADR-0061). A switched-on local engine is
+`VIBEY_FEATURE_CLAUDELOOP_LOCAL=1` (ADR-0062). A switched-on local engine is
 **preferred first** for BUILD — a paid engine runs only when no local one is
 eligible — and `vibey doctor` lists it; `vibey doctor` also honours
 `[features] gptossloop = false` / `qwenloop = true` / `claudeloop_local = true`
@@ -153,7 +153,7 @@ vibey answer <gate-id> --choice local_only   # decline deployment → DONE (loca
 DESIGN interview and BUILD decomposition on a local model; pass
 `--provider claudeloop` for the same on a paid engine, or `--provider scripted`
 for the test double. `--provider qwenloop` is still accepted and read as
-gptossloop (ADR-0061).
+gptossloop (ADR-0062).
 `vibey gates` lists every open gate with its id, its prompt, and the exact
 `vibey answer` command that answers it (`vibey gates <project-id>` for one
 project); `vibey projects` lists your projects, their ids, and how many gates
@@ -314,7 +314,7 @@ things those runners deliberately do not do:
 | [Phase protocols](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](https://github.com/the-vibey-project/vibey/blob/main/docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](https://github.com/the-vibey-project/vibey/blob/main/CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (61 ADRs) |
+| [Decision records](https://github.com/the-vibey-project/vibey/blob/main/docs/architecture/decisions/) | Why each hard call was made (62 ADRs) |
 
 ## Status
 
@@ -426,7 +426,7 @@ exist.
 | codexloop | [`src/vibey_runners/codex`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/codex) | The same design retargeted onto OpenAI Codex |
 | cursorloop | [`src/vibey_runners/cursor`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/cursor) | The same design retargeted onto Cursor |
 | agyloop | [`src/vibey_runners/agy`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/agy) | The same design retargeted onto Google Antigravity / Gemini |
-| gptossloop, qwenloop | [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) | The same design on a local model, as two engines over Ollama, llama.cpp or vLLM: `gptossloop` on GPT-OSS 20B — the sovereign default, on by default, and the sovereign DESIGN provider — and the opt-in `qwenloop` on Qwen (`qwen3:14b`); both preferred first when switched on (ADR-0061) |
+| gptossloop, qwenloop | [`src/vibey_runners/qwen`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_runners/qwen) | The same design on a local model, as two engines over Ollama, llama.cpp or vLLM: `gptossloop` on GPT-OSS 20B — the sovereign default, on by default, and the sovereign DESIGN provider — and the opt-in `qwenloop` on Qwen (`qwen3:14b`); both preferred first when switched on (ADR-0062) |
 | vibey-skills | [`src/vibey_tools/skills`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/skills) | The Agent Skills marketplace (a Claude Code plugin marketplace) and its context packets |
 | vibey-gh | [`src/vibey_tools/gh`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/gh) | Provenance fingerprints, derived version bumps, a merge train, and branch realignment; it owns vibey's own release (ADR-0028) |
 | vibey-bootstrap | [`src/vibey_tools/bootstrap`](https://github.com/the-vibey-project/vibey/tree/develop/src/vibey_tools/bootstrap) | Azure bootstrap library for App Configuration, Key Vault, and App Insights integration |

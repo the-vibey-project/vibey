@@ -30,7 +30,7 @@ class EngineId(StrEnum):
     CURSORLOOP = "cursorloop"
     AGYLOOP = "agyloop"
     # The sovereign default engine (8.b, 8.d): the local runner on GPT-OSS, on unless a
-    # project switches it off. What was called qwenloop until ADR-0061, when qwenloop
+    # project switches it off. What was called qwenloop until ADR-0062, when qwenloop
     # became the same runner on the Qwen model its name promises -- opt-in, below.
     GPTOSSLOOP = "gptossloop"
     QWENLOOP = "qwenloop"
@@ -88,7 +88,7 @@ the two."""
 RENAMED_ENGINES: Final[Mapping[EngineId, str]] = MappingProxyType(
     {
         EngineId.QWENLOOP: (
-            "since ADR-0061 qwenloop runs a Qwen model (qwen3:14b unless QWENLOOP_MODEL "
+            "since ADR-0062 qwenloop runs a Qwen model (qwen3:14b unless QWENLOOP_MODEL "
             "names another); the gpt-oss engine it used to be is gptossloop"
         ),
     }

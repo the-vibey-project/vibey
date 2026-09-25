@@ -60,6 +60,10 @@ jobs:
           POSTGRES_USER: vibey
           POSTGRES_PASSWORD: vibey
           POSTGRES_DB: vibey_test
+          # scram-sha-256 for every connection, local and remote -- never trust,
+          # never md5 (sub-doctrine 10.j, ADR-0061).
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
         ports:
           - 5432:5432
         options: >-
@@ -139,6 +143,10 @@ jobs:
           POSTGRES_USER: vibey
           POSTGRES_PASSWORD: vibey
           POSTGRES_DB: vibey_test
+          # scram-sha-256 for every connection, local and remote -- never trust,
+          # never md5 (sub-doctrine 10.j, ADR-0061).
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
         ports:
           - 5432:5432
         options: >-
@@ -183,6 +191,10 @@ jobs:
           POSTGRES_USER: vibey
           POSTGRES_PASSWORD: vibey
           POSTGRES_DB: vibey_test
+          # scram-sha-256 for every connection, local and remote -- never trust,
+          # never md5 (sub-doctrine 10.j, ADR-0061).
+          POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+          POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
         ports:
           - 5432:5432
         options: >-
@@ -871,7 +883,7 @@ jobs:
             *) echo "::error::codex --version printed '$out'; the Dockerfile pins $want"; exit 1 ;;
           esac
 
-      # One distribution, twelve console scripts (ADR-0037, ADR-0061). That is the new product
+      # One distribution, twelve console scripts (ADR-0037, ADR-0062). That is the new product
       # contract, and it is the one the Dockerfile's COPY list can break silently: a
       # package root that never reaches the build context does not fail the build, it
       # just is not there. tests/meta/test_shipped_trees_are_reachable.py catches the

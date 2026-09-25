@@ -71,7 +71,7 @@ describe('CatalogueParser', () => {
     expect(codex?.turns_flag).toBeUndefined();
     expect(codex?.supports_cwd_flag).toBe(false);
     expect(catalogue.loops.flatMap((loop) => loop.engines).some((engine) => engine.repealed)).toBe(false);
-    // ADR-0061: gptossloop is the sovereign default, on unless switched off; qwenloop is its
+    // ADR-0062: gptossloop is the sovereign default, on unless switched off; qwenloop is its
     // opt-in Qwen twin, same runner and protocol, its own settings, and no model from vibey.
     expect(gptossloop).toMatchObject({
       binary: 'gptossloop',
@@ -103,7 +103,7 @@ describe('CatalogueParser', () => {
     ]);
   });
 
-  it('reads on_by_default, and an engine a producer from before ADR-0061 lists as not on by default', () => {
+  it('reads on_by_default, and an engine a producer from before ADR-0062 lists as not on by default', () => {
     const older = parse(
       variant((value) => {
         for (const engine of value.loops[0].engines) {

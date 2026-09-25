@@ -167,7 +167,7 @@ _CLASSIFIERS = {
     EngineId.CODEXLOOP: _classify_codexloop,
     EngineId.CURSORLOOP: _classify_cursorloop,
     EngineId.AGYLOOP: _classify_agyloop,
-    # The same runner, so the same lifecycle states (ADR-0061).
+    # The same runner, so the same lifecycle states (ADR-0062).
     EngineId.GPTOSSLOOP: _classify_qwenloop,
     EngineId.QWENLOOP: _classify_qwenloop,
     EngineId.CLAUDELOOP_LOCAL: _classify_claudeloop,

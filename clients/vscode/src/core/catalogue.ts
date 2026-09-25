@@ -217,7 +217,7 @@ export class CatalogueParser implements CatalogueParserInterface {
       // A producer from before the canon's repeals says nothing: nothing it lists is repealed.
       repealed: Shape.optionalBoolean(engine.repealed, `${where}.repealed`) ?? false,
       switch: Shape.optionalString(engine.switch, `${where}.switch`),
-      // A producer from before ADR-0061 says nothing: then no engine was on by default.
+      // A producer from before ADR-0062 says nothing: then no engine was on by default.
       on_by_default: Shape.optionalBoolean(engine.on_by_default, `${where}.on_by_default`) ?? false,
       cost_per_mtok_in: Shape.number(engine.cost_per_mtok_in, `${where}.cost_per_mtok_in`),
       cost_per_mtok_out: Shape.number(engine.cost_per_mtok_out, `${where}.cost_per_mtok_out`),
@@ -279,7 +279,7 @@ export class CatalogueParser implements CatalogueParserInterface {
 
 /**
  * What the extension runs when vibey cannot say: an older vibey without `vibey loops`, or
- * none at all. sovereignloop with the family's default local runner, gptossloop (ADR-0061),
+ * none at all. sovereignloop with the family's default local runner, gptossloop (ADR-0062),
  * on the configured model, effort auto with no ladder, and only the capabilities the
  * runner's own CLI shows. The run and control shapes are the runner's own
  * (`qwenloop/cli/app.py`), the only engine it knows without vibey.
@@ -292,7 +292,7 @@ export class CatalogueParser implements CatalogueParserInterface {
  * gptossloop ships in the same vibey release as `vibey loops`, so behind a vibey too old
  * for `vibey loops` there is no gptossloop either: the run then says gptossloop cannot be
  * found and that it ships with vibey, which is the whole fix. The older `qwenloop` that
- * ran gpt-oss there is not offered in its place: it reads QWENLOOP_*, and since ADR-0061 a
+ * ran gpt-oss there is not offered in its place: it reads QWENLOOP_*, and since ADR-0062 a
  * program by that name means the Qwen engine.
  */
 export class DegradedCatalogue {
@@ -324,7 +324,7 @@ export class DegradedCatalogue {
         stop: ['stop', '{run_id}', '--cwd', '{cwd}'],
         wind_down: ['wind-down', '{run_id}', '--cwd', '{cwd}'],
         // A runner released before vibey 3.0.0 reads no follow-up, and gptossloop is the
-        // runner's name only since ADR-0061, so every gptossloop does: it gets a prompt box.
+        // runner's name only since ADR-0062, so every gptossloop does: it gets a prompt box.
         prompt: ['prompt', '{run_id}', '{text}', '--cwd', '{cwd}'],
       },
       events: { path: '{cwd}/{state_dir}/runs/{run_id}/events.jsonl', envelope: 'type' },

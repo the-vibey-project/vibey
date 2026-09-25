@@ -66,6 +66,9 @@ data:
   # has its databases -- and everything already in them -- handed over on upgrade.
   01-init-additional-databases.sh: |
     #!/bin/sh
+    # Local connections need a password too (sub-doctrine 10.j, ADR-0061): the
+    # entrypoint exports PGPASSWORD while it initializes, and postStart does not.
+    export PGPASSWORD="${PGPASSWORD:-$POSTGRES_PASSWORD}"
     vibey_surface_roles() {
       psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
         -v role="plane" -v pw="$VIBEY_DB_PASSWORD_PLANE" <<'EOSQL' || return 1
@@ -139,6 +142,32 @@ data:
       exit 1
     fi
     vibey_surface_roles
+
+---
+# Source: vibey/templates/postgres.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vibey-vibey-postgres-hba
+  labels:
+    app.kubernetes.io/name: vibey
+    app.kubernetes.io/instance: vibey
+    app.kubernetes.io/version: "0.1.2"
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vibey-0.3.0
+data:
+  # Every connection authenticates with scram-sha-256, local and remote alike --
+  # never trust, never md5, never a password in clear (sub-doctrine 10.j, ADR-0061;
+  # SECURITY.md §7). The server reads this file on every start through `hba_file`,
+  # so an install initialized before this rule was declared follows it too. It is
+  # deliberately not a value: the method is law, not a preference.
+  pg_hba.conf: |
+    # TYPE  DATABASE  USER  ADDRESS       METHOD
+    local   all       all                 scram-sha-256
+    host    all       all   127.0.0.1/32  scram-sha-256
+    host    all       all   ::1/128       scram-sha-256
+    host    all       all   0.0.0.0/0     scram-sha-256
+    host    all       all   ::/0          scram-sha-256
 
 ---
 # Source: vibey/templates/worker.yaml
@@ -339,10 +368,24 @@ spec:
       containers:
         - name: postgres
           image: postgres:17-alpine
+          # scram-sha-256 and nothing else (sub-doctrine 10.j, ADR-0061): the rules
+          # come from the declared file above, and every password is stored as a
+          # SCRAM verifier.
+          args:
+            - "-c"
+            - "hba_file=/etc/postgresql/vibey/pg_hba.conf"
+            - "-c"
+            - "password_encryption=scram-sha-256"
           ports:
             - containerPort: 5432
               name: postgres
           env:
+            # A fresh data directory's own pg_hba.conf says the same, so nothing
+            # it holds would admit anyone another way.
+            - name: POSTGRES_INITDB_ARGS
+              value: "--auth-local=scram-sha-256 --auth-host=scram-sha-256"
+            - name: POSTGRES_HOST_AUTH_METHOD
+              value: scram-sha-256
             - name: POSTGRES_DB
               value: vibey
             - name: POSTGRES_USER
@@ -369,6 +412,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: hba
+              mountPath: /etc/postgresql/vibey
+              readOnly: true
             - name: init-scripts
               mountPath: /docker-entrypoint-initdb.d
           # Every start, not only the first: an install from before each surface had a
@@ -393,6 +439,9 @@ spec:
               cpu: 100m
               memory: 256Mi
       volumes:
+        - name: hba
+          configMap:
+            name: vibey-vibey-postgres-hba
         - name: init-scripts
           configMap:
             name: vibey-vibey-postgres-init

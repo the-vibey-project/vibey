@@ -80,7 +80,7 @@ profile default --
 profile ollama -- --set ollama.enabled=true
 # The GPU branch and the local-runner worker wiring, narrowed to what they
 # touch: gptossloop as the provider, and qwenloop switched on beside it, so
-# its Qwen model is pulled and handed to it (ADR-0061).
+# its Qwen model is pulled and handed to it (ADR-0062).
 profile ollama-gpu-gptossloop \
   --show-only templates/ollama.yaml --show-only templates/worker.yaml -- \
   --set ollama.enabled=true --set ollama.gpu.enabled=true \

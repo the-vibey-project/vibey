@@ -173,6 +173,9 @@ def test_brew_install_starts_service_and_verifies_it() -> None:
     assert result.changed is True
     assert result.status.ready is True
     assert ("brew", "install", "postgresql@18") in result.commands
+    # A fresh server keeps its package's pg_hba.conf; the install says what 10.j needs.
+    assert "scram-sha-256" in result.detail
+    assert "SECURITY.md §7" in result.detail
     assert ("brew", "services", "start", "postgresql@18") in result.commands
 
 

@@ -29,7 +29,7 @@ export class GitError extends Error {
 export class GitClient implements GitClientInterface {
   /**
    * Where the local runner keeps its run records, in the worktree it runs in: never the work.
-   * gptossloop and qwenloop share it (ADR-0061).
+   * gptossloop and qwenloop share it (ADR-0062).
    */
   static readonly RUN_RECORDS = LocalRunners.PROTOCOL.stateDir;
 

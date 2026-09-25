@@ -65,7 +65,7 @@ ENGINE_API_KEY_ENVS: Mapping[EngineId, tuple[str, ...]] = {
 # the gptossloop provider talks to a local Ollama over HTTP rather than running the
 # `gptossloop` binary (infrastructure/engines/gptossloop_design.py), so neither puts an
 # engine under this check. The keys are the worker's accepted --provider values,
-# `qwenloop` among them as the old name of gptossloop's provider (ADR-0061).
+# `qwenloop` among them as the old name of gptossloop's provider (ADR-0062).
 PROVIDER_ENGINES: Mapping[str, EngineId | None] = {
     "scripted": None,
     "claudeloop": EngineId.CLAUDELOOP,

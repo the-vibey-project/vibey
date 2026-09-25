@@ -70,7 +70,7 @@ Discord = "https://discord.gg/Qvu8aYnVS"
 # distribution that carries them is. `azbootstrap` stays: it is vibey-bootstrap's
 # deprecated pre-4.0 alias, and dropping it here would be a second breaking change
 # smuggled in beside the first one. `gptossloop` is the one script no tenant published
-# before: the qwenloop tenant's second entry point, the same runner on GPT-OSS (ADR-0061).
+# before: the qwenloop tenant's second entry point, the same runner on GPT-OSS (ADR-0062).
 [project.scripts]
 vibey = "vibey.cli.main:app"
 claudeloop = "claudeloop.cli.app:main"

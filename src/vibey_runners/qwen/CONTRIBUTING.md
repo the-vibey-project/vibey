@@ -16,7 +16,7 @@ uv run bandit -q -r src/qwenloop
 ```
 
 The package ships two console scripts over one runner, `gptossloop` and
-`qwenloop` (vibey ADR-0061). They differ only in `RunnerIdentity`: the name,
+`qwenloop` (vibey ADR-0062). They differ only in `RunnerIdentity`: the name,
 the settings prefix and the default model. Keep engine-specific names out of
 shared code; read them from the identity.
 
