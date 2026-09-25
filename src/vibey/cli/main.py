@@ -43,6 +43,7 @@ from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.loops import LOOPS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
+from vibey.cli.sabbath import SABBATH
 from vibey.cli.serve import SERVE
 from vibey.cli.serve import serve as serve_command
 from vibey.cli.status import STATUS_PRESENTER
@@ -226,6 +227,7 @@ def new_project(
     ] = 6_000,
 ) -> None:
     """Create a project and enqueue its first DESIGN interview."""
+    SABBATH.decline_if_resting("new")
 
     async def create() -> tuple[str, str]:
         if skills_context_mode not in {"off", "shadow", "inject"}:
@@ -265,6 +267,14 @@ def new_project(
 
 app.command("serve")(serve_command)
 app.add_typer(hub_app, name="hub")
+
+
+@app.command("sabbath")
+def sabbath_status() -> None:
+    """The Sabbath window on this host (sub-doctrine 8.i): zone, location source, and when
+    the current or next rest ends. Reads only; never held."""
+    for line in SABBATH.status():
+        typer.echo(line)
 
 
 @app.command("projects")
@@ -610,6 +620,7 @@ def work_once(
     ] = None,
 ) -> None:
     """Process one ready DESIGN job; live ClaudeLoop use is explicit and capped."""
+    SABBATH.decline_if_resting("work")
     with guard():
         processed = asyncio.run(
             _work_once(project_id, provider, max_turns, max_dollars, ollama_model)
@@ -1475,7 +1486,18 @@ def doctor(
         reach_ok = await _passwordless_reach_section()
         # A hub listening where vibey.toml does not declare it may is a FAIL (ADR-0067).
         hub_ok = SERVE.exposure_line()
-        if (conformance and not all_ok) or not database_ok or not reach_ok or not hub_ok:
+        # Sub-doctrine 8.i: the window, the zone and where the location came from (10.f).
+        # A host no source could place is a FAIL -- the fallback times then rule.
+        sabbath_lines, sabbath_ok = SABBATH.doctor_lines()
+        for line in sabbath_lines:
+            typer.echo(line)
+        if (
+            (conformance and not all_ok)
+            or not database_ok
+            or not reach_ok
+            or not hub_ok
+            or not sabbath_ok
+        ):
             raise typer.Exit(1)
 
     async def run_cluster_doctor() -> None:
@@ -1918,6 +1940,9 @@ def worker(
             )
 
             count = max(1, min(parallelism, len(adapters) * 2, os.cpu_count() or 1))
+            # 8.i: one gate for every loop. The worker keeps running through the window,
+            # claiming nothing, and claims again on the first poll after it.
+            sabbath = SABBATH.gate()
             loops = [
                 build_full_worker(
                     resources=resources,
@@ -1929,6 +1954,7 @@ def worker(
                     engine_adapters=adapters,
                     allow_list=allow_list,
                     azure_client=azure_client,
+                    sabbath=sabbath,
                 )
                 for i in range(count)
             ]

@@ -84,6 +84,9 @@ markers = [
     # the real thing. Every branch a `network` test touches must also be reached offline,
     # or the floor is a claim rather than a contract.
     "network: leaves the machine (a real package index, a real remote); set VIBEY_GH_NETWORK_TESTS=1 to run",
+    # Every other test runs under a Sabbath guard that never holds (test/conftest.py), so
+    # no result depends on the weekday it runs on; a Sabbath test names its own instant.
+    "sabbath: exercises the real Sabbath guard (sub-doctrine 8.i) rather than the never-resting stub",
 ]
 
 [tool.coverage.run]

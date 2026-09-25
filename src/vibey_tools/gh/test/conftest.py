@@ -46,6 +46,21 @@ def _no_ambient_actions_env(monkeypatch):
         monkeypatch.delenv(name, raising=False)
 
 
+class _NeverResting:
+    """A Sabbath guard that never holds, so a test's outcome does not depend on the day of
+    the week it runs on. Tests of the Sabbath itself opt out with `@pytest.mark.sabbath`."""
+
+    def hold(self, at=None):
+        return None
+
+
+# Module-level rather than a class (vibey ADR-0016): pytest resolves fixtures by name.
+@pytest.fixture(autouse=True)
+def _weekday_independent(request, monkeypatch):
+    if request.node.get_closest_marker("sabbath") is None:
+        monkeypatch.setattr("vibey_gh.cli._sabbath_guard", lambda cfg: _NeverResting())
+
+
 # Module-level rather than a class (vibey ADR-0016) because pytest resolves a fixture by
 # name at conftest module scope.
 @pytest.fixture

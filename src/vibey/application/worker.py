@@ -30,6 +30,7 @@ from vibey.application.interfaces import (
     TelemetrySpan,
     TelemetryTracer,
 )
+from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.observability import StandardLibraryLogger
 from vibey.application.ports import HumanGateRepository, JobRepository
 from vibey.domain.job import ATTEMPTS_EXHAUSTED_GATE_KIND, FailureClass
@@ -74,7 +75,14 @@ class WorkerLoop:
         tracer: TelemetryTracer | None = None,
         metrics: TelemetryMetrics | None = None,
         telemetry_enabled: bool = True,
+        sabbath: SabbathGateInterface | None = None,
     ) -> None:
+        # Sub-doctrine 8.i: from sundown Friday to sundown Saturday this worker claims
+        # nothing. Jobs wait exactly where the queue put them -- paused, not failed (10.f)
+        # -- and the first poll after the window claims again. None keeps no Sabbath, which
+        # only a caller with no host to read (a test harness) may choose.
+        self._sabbath = sabbath
+        self._resting_until: datetime | None = None
         self._jobs = jobs
         self._gates = gates
         self._handler = handler
@@ -93,6 +101,27 @@ class WorkerLoop:
         self._log: Logger = (
             logger if logger is not None else StandardLibraryLogger(__name__, owner=owner)
         )
+
+    def _resting(self) -> bool:
+        """Whether 8.i holds now. Logs the rest once when it begins and once when it ends,
+        not on every poll, so a rested worker is visible without flooding the log."""
+        held = self._sabbath.hold() if self._sabbath is not None else None
+        if held is not None:
+            if self._resting_until != held.resumes:
+                self._resting_until = held.resumes
+                self._log.info(
+                    "sabbath.resting",
+                    owner=self._owner,
+                    resumes=held.resumes.isoformat(),
+                    basis=held.basis,
+                )
+            return True
+        if self._resting_until is not None:
+            self._log.info(
+                "sabbath.ended", owner=self._owner, rested_until=self._resting_until.isoformat()
+            )
+            self._resting_until = None
+        return False
 
     @staticmethod
     def _notification_failure(
@@ -130,6 +159,8 @@ class WorkerLoop:
     async def run_once(self, project_id: UUID) -> bool:
         """Claims and executes at most one job. Returns False if there was
         nothing claimable."""
+        if self._resting():
+            return False
         job = await self._jobs.claim(project_id, owner=self._owner, lease=self._lease)
         if job is None:
             return False
