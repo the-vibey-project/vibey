@@ -24,7 +24,6 @@ and `clear` change them after the project exists. This module is the pure half o
 """
 
 import math
-import unicodedata
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -33,6 +32,7 @@ from operator import attrgetter
 from types import MappingProxyType
 from typing import ClassVar, Final
 
+from vibey.domain.actor_label import ActorLabelPolicy
 from vibey.domain.errors import InvalidBudgetChange
 from vibey.domain.interfaces.budget_caps_interface import (
     BudgetCapHistoryInterface,
@@ -108,8 +108,12 @@ class CapRequest:
 class CapChangePlanner:
     """Refuses what is not a cap, and says what a request changes. Pure."""
 
-    MAX_ACTOR_LENGTH: ClassVar[int] = 200
+    MAX_ACTOR_LENGTH: ClassVar[int] = ActorLabelPolicy.MAX_LENGTH
     """Long enough for any account or tool name; short enough for one line of output."""
+
+    _actors: ClassVar[ActorLabelPolicy] = ActorLabelPolicy(
+        subject="the name a change is recorded under", error=InvalidBudgetChange
+    )
 
     def setting(self, *, max_dollars: object = None, max_turns: object = None) -> CapRequest:
         """A request to set the dollar cap, the turn cap, or both. Raises
@@ -154,24 +158,9 @@ class CapChangePlanner:
 
     def actor(self, label: str | None, *, account: str) -> str:
         """Who a change is recorded as: `label` when the caller names itself, else the
-        account. A label is recorded and printed as given, so it must be one line of
-        visible text: not empty, not over `MAX_ACTOR_LENGTH`, and free of control and
-        formatting characters, which could forge a line of output or reorder one."""
-        if label is None:
-            return account
-        name = label.strip()
-        if not name:
-            raise InvalidBudgetChange("the name a change is recorded under cannot be empty")
-        if len(name) > self.MAX_ACTOR_LENGTH:
-            raise InvalidBudgetChange(
-                f"the name a change is recorded under is over {self.MAX_ACTOR_LENGTH} characters"
-            )
-        if any(unicodedata.category(char).startswith("C") for char in name):
-            raise InvalidBudgetChange(
-                "the name a change is recorded under cannot contain control or formatting "
-                "characters"
-            )
-        return name
+        account. Checked by the family's one actor-label policy
+        (`domain/actor_label.py`), refusing in the budget's own words."""
+        return self._actors.resolve(label, account=account)
 
     @staticmethod
     def dollars(value: object) -> float:

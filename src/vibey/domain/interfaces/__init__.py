@@ -1,4 +1,5 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
+from vibey.domain.interfaces.actor_label_interface import ActorLabelPolicyInterface
 from vibey.domain.interfaces.budget_caps_interface import (
     BudgetCapHistoryInterface,
     CapChangeInterface,
@@ -20,6 +21,7 @@ from vibey.domain.interfaces.correlation_interface import (
     CorrelationIdInterface,
     DeliveryCorrelationInterface,
 )
+from vibey.domain.interfaces.gate_answer_interface import GateAnswerRequestIdsInterface
 from vibey.domain.interfaces.ledger_chain_interface import (
     ChainFindingInterface,
     ChainLinkInterface,
@@ -128,6 +130,8 @@ from vibey.domain.interfaces.value_objects_interface import (
 )
 
 __all__ = [
+    "ActorLabelPolicyInterface",
+    "GateAnswerRequestIdsInterface",
     "BudgetCapHistoryInterface",
     "CapChangeInterface",
     "CapChangePlannerInterface",

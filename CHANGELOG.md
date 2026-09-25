@@ -14,6 +14,14 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### BREAKING CHANGES
 
+* **gates:** a human gate is answered once (compare-and-set on `answered_at IS NULL`).
+  * `vibey answer` on an answered gate exits 3 with `GateAlreadyAnswered` instead of
+    overwriting the first answer; `--request-id` makes a retry of the same answer a no-op.
+  * It records the account that ran it, or `--by NAME`, instead of the literal `cli`, and
+    prints `answered <gate_id> as <name>`.
+  * Each answer appends a `GateAnswered` ledger event (withheld from publication);
+    migration 0018 adds `human_gate.answer_request_id`.
+  * The Kubernetes operator reports a gate answered elsewhere first under `ignoredAnswers`.
 * **db:** every PostgreSQL connection the project configures, documents or installs
   authenticates with scram-sha-256, local and remote alike: never `trust`, `peer`,
   `ident`, `md5` or a password in clear. This is sub-doctrine 10.j, drafted for the

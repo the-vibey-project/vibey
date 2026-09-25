@@ -604,6 +604,7 @@ class HumanGateOrm(VibeyOrmModel, table=True):
     timeout_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     answered_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     answered_by: str | None = Field(default=None, sa_column=Column(Text))
+    answer_request_id: str | None = Field(default=None, sa_column=Column(Text))
 
 
 class ArtifactOrm(VibeyOrmModel, table=True):

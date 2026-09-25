@@ -104,6 +104,8 @@ exists, and a test asserts it (`tests/cli/test_errors_and_logging.py`).
 | `IllegalTransitionError` | The project is not in a phase this command applies to; `vibey status` shows the phase. | |
 | `InvalidSpecError` | Run `vibey design` to finish the spec before building. | |
 | `InvalidPhaseError` | Likely a bug in vibey rather than the project. | |
+| `GateAlreadyAnswered` | A gate is answered once and the first answer stands; the hint names `vibey ledger search --kind GateAnswered` and says a `--request-id` makes a retry of the same answer a no-op. | |
+| `UnknownGate` | No gate has that id; the hint names [`vibey gates`](#vibey-gates-project_id). | |
 
 ## `vibey new NAME`
 
@@ -261,16 +263,15 @@ Answer a parked human gate. Exactly one of the following modes is required
 | `--verdict VALUE` | Review gates: sends `{"verdict": VALUE}` — `accept`, `changes`, `cancel`, `approve`, or `request_changes`. |
 | `--raw JSON` | Any other gate shape, e.g. raising a tripped budget cap: `--raw '{"max_dollars": 25}'` or `--raw '{"max_turns": 50}'`. |
 
+| Option | What it does |
+|---|---|
+| `--by NAME` | the name the answer is recorded under, for a tool that runs the command (the VS Code extension says `vibey-vscode`). Defaults to the account running the command. It is a label for the record, not a permission: the account is always recorded beside it. |
+| `--request-id ID` | names this request so a retry is safe. The same id with the same answer is a no-op once it has landed. Without one, every run is a new request. |
+
 [`vibey gates`](#vibey-gates-project_id) prints, beside each open gate, the
 form that answers it.
 
-Prints `answered <gate_id>`. These exit 2 with a one-line message:
-combining `--defaults` with `--choice`, `--verdict`, or `--raw`; giving no
-mode or more than one; `--raw` that is not valid JSON or not a JSON object.
-A positional item without `=` (`InvalidAnswer`) and an unknown gate id
-(`LookupError`) currently surface as tracebacks, because `answer` is not
-guarded.
-
+Prints `answered <gate_id> as <name>`. The answer is written in a transaction that sets `answered_at` only if it was NULL; of two answers racing for one gate exactly one lands, the first answer stands, and the answer and its `GateAnswered` ledger event are written together. If the same request-id is used again with the same answer it prints `already answered <gate_id> by this request; nothing changed` and exits 0. The command exits 2 with a one-line message when `--defaults` is combined with `--choice`, `--verdict`, or `--raw`; when no mode is given or more than one is given; or when `--raw` is not valid JSON or not a JSON object. Exit 3 produces `Error: …` and a hint, never a traceback: the gate was already answered (`GateAlreadyAnswered`); the same `--request-id` was used with a different answer (also `GateAlreadyAnswered`); no gate exists (`UnknownGate`); the `--by` label is invalid (`InvalidActorLabel`); or the `--request-id` is invalid (`InvalidAnswer`). A positional argument without `=` raises `InvalidAnswer` before connection (this is still exit 3).
 ### Finding a gate id
 
 [`vibey gates`](#vibey-gates-project_id) lists every open gate with its id,

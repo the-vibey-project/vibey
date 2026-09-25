@@ -84,6 +84,7 @@ from vibey.application.interfaces.engines import (
     RotationCursorRepository,
 )
 from vibey.application.interfaces.files import FilesPort
+from vibey.application.interfaces.gate_answer import GateAnswerServiceInterface
 from vibey.application.interfaces.gates import (
     HumanGateRepository,
 )
@@ -264,6 +265,7 @@ __all__ = [
     "PhaseLedger",
     "OpenGateReader",
     "ProjectBudgetServiceInterface",
+    "GateAnswerServiceInterface",
     "ProjectBudgetStore",
     "ProjectLookup",
     "ProjectReader",

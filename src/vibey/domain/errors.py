@@ -52,6 +52,45 @@ class InvalidBudgetChange(VibeyError):
     Nothing was changed and nothing was recorded."""
 
 
+class InvalidActorLabel(VibeyError):
+    """A name a caller gave for the record (`--by`) cannot be recorded: empty, too long,
+    or carrying control or formatting characters. Nothing was changed."""
+
+
+class UnknownGate(VibeyError, LookupError):
+    """No human gate exists with the given id. A `LookupError` too, as the repository
+    raised before gates were answered once, so a caller catching that still does."""
+
+
+class GateAlreadyAnswered(VibeyError):
+    """A gate was answered once already, by another request, so this answer was not
+    recorded (compare-and-set on `answered_at IS NULL`). The first answer stands; a
+    gate is never answered twice. Replaying the SAME request is not this error: it is
+    a no-op that reports the answer already recorded."""
+
+    def __init__(
+        self,
+        gate_id: object,
+        *,
+        answered_by: str | None,
+        answered_at: object,
+        same_request: bool = False,
+    ) -> None:
+        self.gate_id = gate_id
+        self.answered_by = answered_by
+        self.answered_at = answered_at
+        self.same_request = same_request
+        why = (
+            "this request id was already used for a different answer"
+            if same_request
+            else "a different request answered it first"
+        )
+        super().__init__(
+            f"gate {gate_id} was already answered by {answered_by} at {answered_at}; "
+            f"{why}, so this answer was not recorded"
+        )
+
+
 class UnknownProject(VibeyError):
     """No project exists with the given id."""
 
