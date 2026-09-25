@@ -1,6 +1,44 @@
 /* Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)). */
-/* The task panel follows the editor's theme: every colour is one of VS Code's own variables. */
-html, body {
+/*
+ * krypton's task panel, on the design system (ADR-0066). tokens.css, loaded first, is the
+ * generated token sheet: every colour, space, radius, shadow and motion here is one of its
+ * `--v-*` variables. The page sets two attributes on <html>:
+ *   data-theme   light | dark     which of the tokens' two palettes applies;
+ *   data-surface editor | krypton System mode sits on the editor's own surfaces and text, so
+ *                                  the panel is native in any theme; Light and Dark use
+ *                                  krypton's own surfaces, whatever the editor uses.
+ * The identity (accent, state colours, motion, shape) is krypton's in every mode.
+ */
+:root {
+  --k-bg: var(--vscode-editor-background);
+  --k-fg: var(--vscode-foreground);
+  --k-muted: var(--vscode-descriptionForeground);
+  --k-border: var(--vscode-panel-border, var(--v-border-subtle));
+  --k-raised: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  --k-input-bg: var(--vscode-input-background);
+  --k-input-fg: var(--vscode-input-foreground);
+  --k-font: var(--vscode-font-family, var(--v-font-family-ui));
+  --k-font-size: var(--vscode-font-size, 13px);
+  --k-mono: var(--vscode-editor-font-family, var(--v-font-family-mono));
+  --k-mono-size: var(--vscode-editor-font-size, 13px);
+  --k-accent: var(--v-accent-default);
+  --k-on-accent: var(--v-text-on-accent);
+  --k-focus: var(--v-focus-ring);
+}
+:root[data-surface='krypton'] {
+  --k-bg: var(--v-bg-canvas);
+  --k-fg: var(--v-text-primary);
+  --k-muted: var(--v-text-secondary);
+  --k-border: var(--v-border-subtle);
+  --k-raised: var(--v-bg-raised);
+  --k-input-bg: var(--v-bg-surface);
+  --k-input-fg: var(--v-text-primary);
+  --k-font: var(--v-font-family-ui);
+  --k-mono: var(--v-font-family-mono);
+}
+
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -8,135 +46,379 @@ html, body {
 body {
   display: flex;
   flex-direction: column;
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
-  color: var(--vscode-foreground);
-  background: var(--vscode-editor-background);
+  font-family: var(--k-font);
+  font-size: var(--k-font-size);
+  line-height: 1.5;
+  color: var(--k-fg);
+  background: var(--k-bg);
 }
+:root[data-surface='krypton'] body {
+  background:
+    radial-gradient(1200px 420px at 100% -10%, var(--v-effect-glow-1), transparent 60%),
+    radial-gradient(900px 360px at -10% 110%, var(--v-effect-glow-2), transparent 60%),
+    var(--k-bg);
+}
+::selection {
+  background: var(--v-effect-selection);
+}
+
+/* --- The header: the atom, the title, and the state -------------------------------------- */
 header {
   display: flex;
-  align-items: baseline;
-  gap: 1em;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--vscode-panel-border);
+  align-items: center;
+  gap: var(--v-space-3);
+  padding: var(--v-space-3) var(--v-space-4);
+  border-bottom: var(--v-border-width-hairline) solid var(--k-border);
+  background: color-mix(in srgb, var(--k-raised) 70%, transparent);
 }
 h1 {
-  font-size: 1.1em;
+  flex: 1;
+  min-width: 0;
+  font-size: 1.15em;
+  font-weight: 650;
+  letter-spacing: -0.01em;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-#status {
-  color: var(--vscode-descriptionForeground);
+
+/* The krypton atom: a nucleus and two electrons in orbit, which move only while work runs. */
+.mark {
+  position: relative;
+  flex: none;
+  width: 22px;
+  height: 22px;
 }
+.mark .nucleus {
+  position: absolute;
+  inset: 8px;
+  border-radius: var(--v-radius-pill);
+  background: linear-gradient(135deg, var(--v-effect-action-from), var(--v-effect-action-to));
+}
+.mark .orbit {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--v-radius-pill);
+  border: var(--v-border-width-hairline) solid color-mix(in srgb, var(--k-accent) 55%, transparent);
+}
+.mark .orbit.two {
+  inset: 3px;
+  transform: rotate(60deg) scaleY(0.45);
+}
+.mark .orbit::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: var(--v-radius-pill);
+  background: var(--v-state-running);
+}
+body[data-live='true'] .mark .orbit.one {
+  animation: krypton-orbit var(--v-motion-duration-ambient) linear infinite;
+}
+body[data-live='true'] .mark .orbit.two {
+  animation: krypton-orbit-tilted calc(var(--v-motion-duration-ambient) * 0.75) linear infinite;
+}
+body[data-ultra='true'] .mark .orbit::after {
+  background: var(--v-state-ultra);
+}
+@keyframes krypton-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes krypton-orbit-tilted {
+  from {
+    transform: rotate(60deg) scaleY(0.45) rotate(0deg);
+  }
+  to {
+    transform: rotate(60deg) scaleY(0.45) rotate(360deg);
+  }
+}
+
+/* Pills: the state, and ULTRA in its own colour. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--v-space-1);
+  padding: 2px var(--v-space-2);
+  border-radius: var(--v-radius-pill);
+  font-size: 0.85em;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--pill, var(--k-muted));
+  background: color-mix(in srgb, var(--pill, var(--k-muted)) 14%, transparent);
+  border: var(--v-border-width-hairline) solid color-mix(in srgb, var(--pill, var(--k-muted)) 35%, transparent);
+  transition: color var(--v-motion-transition-hover), background var(--v-motion-transition-hover);
+}
+.pill.state::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: var(--v-radius-pill);
+  background: currentColor;
+}
+.pill.state:empty {
+  display: none;
+}
+.pill.state[data-state='queued'],
+.pill.state[data-state='idle'] {
+  --pill: var(--v-state-queued);
+}
+.pill.state[data-state='preparing'],
+.pill.state[data-state='waiting'],
+.pill.state[data-state='running'],
+.pill.state[data-state='finishing'],
+.pill.state[data-state='lane'] {
+  --pill: var(--v-state-running);
+}
+.pill.state[data-state='stopping'] {
+  --pill: var(--v-state-awaiting-human);
+}
+.pill.state[data-state='finished'] {
+  --pill: var(--v-state-succeeded);
+}
+body[data-live='true'] .pill.state::before {
+  animation: krypton-pulse 1.6s var(--v-motion-easing-standard) infinite;
+}
+.pill.ultra {
+  --pill: var(--v-state-ultra);
+  letter-spacing: 0.06em;
+}
+body[data-live='true'] .pill.ultra {
+  animation: krypton-glow var(--v-motion-duration-ambient) var(--v-motion-easing-standard) infinite;
+}
+@keyframes krypton-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
+@keyframes krypton-glow {
+  50% {
+    box-shadow: 0 0 12px 0 color-mix(in srgb, var(--v-state-ultra) 45%, transparent);
+  }
+}
+
+/* UNLIMITED SPEND: shown for as long as a no-cap declaration stands (ADR-0063). */
+#banner {
+  display: flex;
+  align-items: center;
+  gap: var(--v-space-3);
+  padding: var(--v-space-2) var(--v-space-4);
+  color: var(--v-status-warning);
+  background: color-mix(in srgb, var(--v-status-warning) 14%, var(--k-bg));
+  border-bottom: var(--v-border-width-thick) solid var(--v-status-warning);
+}
+#banner .banner-text {
+  flex: 1;
+}
+#banner strong {
+  letter-spacing: 0.08em;
+  margin-right: var(--v-space-2);
+}
+
+/* --- The transcript ---------------------------------------------------------------------- */
 main {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 12px;
+  padding: var(--v-space-3) var(--v-space-4);
 }
 .item {
-  margin: 4px 0;
+  margin: var(--v-space-1) 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  animation: krypton-enter var(--v-motion-duration-base) var(--v-motion-easing-enter) both;
+}
+@keyframes krypton-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 pre.item.assistant {
-  font-family: var(--vscode-editor-font-family);
-  font-size: var(--vscode-editor-font-size);
-  margin: 6px 0;
-}
-.item.tool-call .name {
-  font-weight: 600;
+  font-family: var(--k-mono);
+  font-size: var(--k-mono-size);
+  margin: var(--v-space-2) 0;
+  padding: var(--v-space-2) var(--v-space-3);
+  border-radius: var(--v-radius-md);
+  background: color-mix(in srgb, var(--k-raised) 80%, transparent);
+  border: var(--v-border-width-hairline) solid var(--k-border);
 }
 .item.tool-call {
-  color: var(--vscode-textLink-foreground);
+  color: var(--v-text-link);
+  padding-left: var(--v-space-3);
+  border-left: var(--v-border-width-thick) solid color-mix(in srgb, var(--v-text-link) 45%, transparent);
+}
+.item.tool-call .name {
+  font-weight: 650;
 }
 .item.tool-result {
-  color: var(--vscode-descriptionForeground);
+  color: var(--k-muted);
+  padding-left: var(--v-space-3);
 }
 .item.tool-result.failed,
 .item.notice.error {
-  color: var(--vscode-errorForeground);
+  color: var(--v-status-danger);
 }
 .item.notice.warn {
-  color: var(--vscode-editorWarning-foreground);
+  color: var(--v-status-warning);
+}
+.item.notice.info {
+  color: var(--v-status-info);
 }
 .item.turn {
-  color: var(--vscode-descriptionForeground);
-  font-size: 0.9em;
-  border-top: 1px dashed var(--vscode-panel-border);
-  padding-top: 2px;
+  color: var(--k-muted);
+  font-size: 0.85em;
+  letter-spacing: 0.02em;
+  border-top: var(--v-border-width-hairline) dashed var(--k-border);
+  padding-top: var(--v-space-1);
+  margin-top: var(--v-space-3);
 }
 .item.follow-up {
   font-style: italic;
+  color: var(--k-accent);
 }
+
+/* The designed empty state: a first look that says what to do. */
+main:empty::before {
+  content: 'Describe a task below. It runs on a copy of your folder, so nothing changes until you choose Apply.';
+  display: block;
+  margin: var(--v-space-8) auto;
+  max-width: 34em;
+  text-align: center;
+  color: var(--k-muted);
+}
+
+/* --- The composer ------------------------------------------------------------------------ */
 footer {
   position: relative;
-  border-top: 1px solid var(--vscode-panel-border);
-  padding: 8px 12px;
+  border-top: var(--v-border-width-hairline) solid var(--k-border);
+  padding: var(--v-space-3) var(--v-space-4);
+  background: color-mix(in srgb, var(--k-raised) 60%, transparent);
 }
 textarea {
   box-sizing: border-box;
   width: 100%;
   resize: vertical;
-  font-family: var(--vscode-font-family);
-  font-size: var(--vscode-font-size);
-  color: var(--vscode-input-foreground);
-  background: var(--vscode-input-background);
-  border: 1px solid var(--vscode-input-border, transparent);
-  padding: 6px;
+  font-family: var(--k-font);
+  font-size: var(--k-font-size);
+  color: var(--k-input-fg);
+  background: var(--k-input-bg);
+  border: var(--v-border-width-hairline) solid var(--vscode-input-border, var(--k-border));
+  border-radius: var(--v-radius-md);
+  padding: var(--v-space-2) var(--v-space-3);
+  transition: border-color var(--v-motion-transition-hover), box-shadow var(--v-motion-transition-hover);
 }
-textarea:focus {
-  outline: 1px solid var(--vscode-focusBorder);
+textarea:focus,
+button:focus-visible {
+  outline: none;
+  border-color: var(--k-focus);
+  box-shadow: 0 0 0 var(--v-border-width-focus) color-mix(in srgb, var(--k-focus) 35%, transparent);
+}
+textarea:disabled {
+  opacity: 0.7;
 }
 #buttons {
   display: flex;
-  gap: 8px;
-  margin-top: 6px;
+  flex-wrap: wrap;
+  gap: var(--v-space-2);
+  margin-top: var(--v-space-2);
 }
 button {
-  color: var(--vscode-button-foreground);
-  background: var(--vscode-button-background);
-  border: none;
-  padding: 4px 12px;
+  font-family: var(--k-font);
+  font-size: var(--k-font-size);
+  font-weight: 600;
+  color: var(--k-on-accent);
+  background: linear-gradient(135deg, var(--v-effect-action-from), var(--v-effect-action-to));
+  border: var(--v-border-width-hairline) solid transparent;
+  border-radius: var(--v-radius-pill);
+  padding: var(--v-space-1) var(--v-space-4);
   cursor: pointer;
+  box-shadow: var(--v-elevation-1);
+  transition:
+    transform var(--v-motion-transition-hover),
+    box-shadow var(--v-motion-transition-hover),
+    filter var(--v-motion-transition-hover);
 }
 button:hover {
-  background: var(--vscode-button-hoverBackground);
+  filter: brightness(1.08);
+  box-shadow: var(--v-elevation-2);
+  transform: translateY(-1px);
+}
+button:active {
+  transform: translateY(0);
 }
 button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: default;
+  transform: none;
+  filter: none;
+}
+button.quiet {
+  color: var(--k-fg);
+  background: transparent;
+  border-color: var(--k-border);
+  box-shadow: none;
 }
 button.danger {
-  background: var(--vscode-inputValidation-errorBackground, var(--vscode-errorForeground));
+  color: var(--v-text-on-accent);
+  background: var(--v-status-danger);
 }
 #completions {
   position: absolute;
   bottom: 100%;
-  left: 12px;
-  right: 12px;
+  left: var(--v-space-4);
+  right: var(--v-space-4);
   max-height: 16em;
   overflow-y: auto;
-  margin: 0;
-  padding: 2px 0;
+  margin: 0 0 var(--v-space-1);
+  padding: var(--v-space-1) 0;
   list-style: none;
-  background: var(--vscode-editorSuggestWidget-background);
-  border: 1px solid var(--vscode-editorSuggestWidget-border);
+  background: var(--vscode-editorSuggestWidget-background, var(--k-raised));
+  border: var(--v-border-width-hairline) solid var(--vscode-editorSuggestWidget-border, var(--k-border));
+  border-radius: var(--v-radius-md);
+  box-shadow: var(--v-elevation-3);
+  animation: krypton-enter var(--v-motion-duration-fast) var(--v-motion-easing-enter) both;
 }
 #completions li {
   display: flex;
-  gap: 1em;
-  padding: 2px 8px;
+  gap: var(--v-space-4);
+  padding: var(--v-space-1) var(--v-space-3);
   cursor: pointer;
 }
 #completions li.chosen,
 #completions li:hover {
-  background: var(--vscode-editorSuggestWidget-selectedBackground);
+  background: var(--vscode-editorSuggestWidget-selectedBackground, var(--v-effect-tint-strong));
+}
+#completions .name {
+  font-family: var(--k-mono);
 }
 #completions .description {
-  color: var(--vscode-descriptionForeground);
+  color: var(--k-muted);
 }
 [hidden] {
   display: none !important;
+}
+
+/* Reduced motion, the system's or the editor's: nothing moves that does not have to (the Beauty Bar, item 5). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+body.vscode-reduce-motion *,
+body.vscode-reduce-motion *::before,
+body.vscode-reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
 }

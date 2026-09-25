@@ -18,7 +18,7 @@ import type {
 } from '@vibey/core';
 import { Efforts } from '@vibey/core';
 import type { Effort, EffortSetting, LoopName } from '@vibey/core';
-import type { Environ, PlatformStorageInterface } from '@vibey/core';
+import type { Environ, PlatformStorageInterface, ThemeMode } from '@vibey/core';
 import { LocalRunners } from '@vibey/core';
 import { OllamaEndpoint } from '@vibey/core';
 import { StormHome } from './storage';
@@ -58,6 +58,8 @@ export class Defaults {
     budgetOutputTokensPerTurn: 2000,
     desktopNotifications: false,
     environmentAllow: [],
+    theme: 'system',
+    hubUrl: '',
   };
 
   /** The declared minimum of each numeric setting; a smaller value is raised to it. */
@@ -126,7 +128,15 @@ export class SettingsResolver implements SettingsResolverInterface {
       },
       desktopNotifications: raw.desktopNotifications,
       environmentAllow: raw.environmentAllow.map((entry) => entry.trim()).filter((entry) => entry !== ''),
+      theme: SettingsResolver.theme(raw.theme),
+      hubUrl: raw.hubUrl.trim(),
     };
+  }
+
+  /** `light` or `dark` when named (any case); anything else is `system`, the default the Beauty Bar asks for. */
+  static theme(value: string): ThemeMode {
+    const named = value.trim().toLowerCase();
+    return named === 'light' || named === 'dark' ? named : 'system';
   }
 
   /** The setting when set, else the environment variable when set, else the default. */

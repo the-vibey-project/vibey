@@ -285,7 +285,10 @@ export class TreeItems implements TreeItemsInterface {
         ].join(' · ');
         item.tooltip = `${lane.cwd}\n${lane.eventsPath}`;
         item.contextValue = `vibey.lane.${lane.state}`;
-        item.iconPath = new vscode.ThemeIcon(lane.state === 'running' ? 'sync~spin' : lane.state === 'quiet' ? 'watch' : 'pass');
+        item.iconPath =
+          lane.state === 'running'
+            ? TreeItems.live('vibey.stateRunning')
+            : new vscode.ThemeIcon(lane.state === 'quiet' ? 'watch' : 'pass', new vscode.ThemeColor(lane.state === 'quiet' ? 'vibey.stateQueued' : 'vibey.stateSucceeded'));
         item.command = { command: 'vibey.openLane', title: 'Watch this lane', arguments: [element] };
         return item;
       }
@@ -369,7 +372,14 @@ export class TreeItems implements TreeItemsInterface {
     item.description = [TreeItems.words(run.status), ...(current === undefined ? [] : [`${current.engine} on ${current.model ?? 'its model'}`])].join(' · ');
     item.tooltip = run.workspace === undefined ? run.request.title : `${run.request.title}\n${run.workspace.cwd}${run.workspace.branch === undefined ? '' : `\n${run.workspace.branch}`}`;
     item.contextValue = `vibey.run.${TreeItems.menu(run.status)}`;
-    item.iconPath = new vscode.ThemeIcon(run.status === 'finished' ? 'pass' : run.status === 'queued' ? 'clock' : run.status === 'stopping' ? 'debug-stop' : 'sync~spin');
+    item.iconPath =
+      run.status === 'finished'
+        ? new vscode.ThemeIcon('pass', new vscode.ThemeColor('vibey.stateSucceeded'))
+        : run.status === 'queued'
+          ? new vscode.ThemeIcon('clock', new vscode.ThemeColor('vibey.stateQueued'))
+          : run.status === 'stopping'
+            ? new vscode.ThemeIcon('debug-stop', new vscode.ThemeColor('vibey.stateAwaitingHuman'))
+            : TreeItems.live(this.controller.services.settings.effort === 'ULTRA' ? 'vibey.ultraEffort' : 'vibey.stateRunning');
     item.command = { command: 'vibey.openRunLog', title: 'Open this task', arguments: [element] };
     return item;
   }
@@ -398,6 +408,15 @@ export class TreeItems implements TreeItemsInterface {
     );
     item.command = { command: 'vibey.openRunLog', title: 'Open this task', arguments: [element] };
     return item;
+  }
+
+  /**
+   * A live lane or task moves: a spinning icon in the state's colour from the design tokens.
+   * With the editor's reduced motion on (`workbench.reduceMotion`), it holds still.
+   */
+  static live(colour: string): vscode.ThemeIcon {
+    const reduced = vscode.workspace.getConfiguration('workbench').get<string>('reduceMotion') === 'on';
+    return new vscode.ThemeIcon(reduced ? 'circle-filled' : 'loading~spin', new vscode.ThemeColor(colour));
   }
 
   /** The menu a run's state earns: queued, running, stopping or finished. */

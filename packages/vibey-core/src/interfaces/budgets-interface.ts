@@ -34,6 +34,8 @@ export interface BudgetStoreInterface {
   paid(): PaidDeclaration | undefined;
   /** Declare the paid loop, with a dollar cap, or with none after a second confirmation. */
   declarePaid(cap: { readonly scope: 'day' | 'month'; readonly dollars: number } | { readonly noCap: true; readonly phrase: string }): PaidDeclaration;
+  /** Ends a no-cap declaration at once; false when none stood. */
+  endNoCap(): boolean;
 }
 
 export interface SpendEntry {

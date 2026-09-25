@@ -9,7 +9,7 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { CommandTable, Efforts, NoCapPath, SlashArguments, SlashCommands } from '@vibey/core';
+import { CommandTable, Efforts, HubDiscovery, HubTransport, NoCapPath, SlashArguments, SlashCommands } from '@vibey/core';
 import { Doctor } from '@vibey/core';
 import type { Budget, BudgetCaps, BudgetLoop, BudgetScope } from '@vibey/core';
 import type { EffortSetting, LoopName } from '@vibey/core';
@@ -69,6 +69,10 @@ export class CommandActions implements CommandActionsInterface {
       'vibey.editBudget': (i) => this.editBudget(i),
       'vibey.removeBudget': (i) => this.removeBudget(i),
       'vibey.grantBudget': (i) => this.grantBudget(i),
+      'vibey.endNoCap': (i) => this.endNoCap(i),
+      'vibey.connectHub': (i) => this.connectHub(i),
+      'vibey.disconnectHub': (i) => this.disconnectHub(i),
+      'vibey.chooseTheme': (i) => this.chooseTheme(i),
       'vibey.startOllama': (i) => this.startOllama(i),
       'vibey.pullModel': (i) => this.pullModel(i),
       'vibey.doctor': (i) => this.doctor(i),
@@ -473,6 +477,101 @@ export class CommandActions implements CommandActionsInterface {
     }
     await this.controller.editorSettings.set('effort', effort);
     invocation.say(`Effort: ${effort}.`);
+  }
+
+  // --- Connect & look --------------------------------------------------------------------
+
+  /** Light, Dark or System (the Beauty Bar, item 2); System follows the editor's theme, live. */
+  private async chooseTheme(invocation: Invocation): Promise<void> {
+    const modes = [
+      { label: 'System', value: 'system', detail: "Follow the editor's colour theme, and switch live when it changes." },
+      { label: 'Light', value: 'light', detail: "krypton's own light palette, whatever the editor uses." },
+      { label: 'Dark', value: 'dark', detail: "krypton's own dark palette, whatever the editor uses." },
+    ];
+    const typed = invocation.args?.trim().toLowerCase();
+    const mode = typed
+      ? modes.find((candidate) => candidate.value === typed)
+      : await vscode.window.showQuickPick(modes, { title: 'Choose the theme' });
+    if (mode === undefined) {
+      if (typed) {
+        invocation.say(`"${typed}" is not a theme: say system, light or dark.`);
+      }
+      return;
+    }
+    await this.controller.editorSettings.set('theme', mode.value);
+    invocation.say(`Theme: ${mode.label}.`);
+  }
+
+  /**
+   * Find a hub (this computer first, then an address given), then pair once with its key.
+   * Being on the same network proves nothing (SD-01): the key is checked against the hub
+   * before it is kept, and kept only in the editor's secret storage.
+   */
+  private async connectHub(invocation: Invocation): Promise<void> {
+    const discovery = new HubDiscovery(this.controller.services.http);
+    const given = invocation.args?.trim();
+    const probes = await discovery.probe(discovery.candidates(given ? [given] : []));
+    const live = probes.filter((probe) => probe.live);
+    let url: string | undefined;
+    if (live.length > 0) {
+      const picked = await vscode.window.showQuickPick(
+        [
+          ...live.map((probe) => ({
+            label: `$(radio-tower) ${probe.url}`,
+            url: probe.url,
+            detail: `A vibey hub${probe.apiVersion === undefined ? '' : `, API v${probe.apiVersion}`}. You pair with its key next.`,
+          })),
+          { label: '$(edit) Another address…', url: '', detail: 'A name or address on this network, like studio.local' },
+        ],
+        { title: 'Connect to vibey on this network', placeHolder: 'Choose the hub to pair with' },
+      );
+      if (picked === undefined) {
+        return;
+      }
+      url = picked.url || undefined;
+    }
+    if (url === undefined) {
+      const typed = await vscode.window.showInputBox({
+        title: 'Connect to vibey on this network',
+        prompt: `No hub answered ${given ? `at ${given} or ` : ''}on this computer. Where does vibey serve run? A name or address; the port defaults to ${HubTransport.DEFAULT_PORT}.`,
+        placeHolder: 'studio.local',
+        ignoreFocusOut: true,
+        validateInput: (value) => (HubDiscovery.address(value, HubTransport.DEFAULT_PORT) === '' ? 'A name or address, like studio.local or 10.0.0.5:8765' : undefined),
+      });
+      if (!typed) {
+        return;
+      }
+      url = HubDiscovery.address(typed, HubTransport.DEFAULT_PORT);
+    }
+    const [probe] = await discovery.probe([url]);
+    if (probe === undefined || !probe.live) {
+      invocation.say(`${probe?.problem ?? `Nothing answered at ${url}.`} Start it on the host with vibey serve (and [hub] lan = true to listen on the network).`);
+      return;
+    }
+    const key = await vscode.window.showInputBox({
+      title: `Pair with ${url}`,
+      prompt: probe.offersPairing
+        ? 'Paste the device key the host gave this device when it paired it.'
+        : "Paste the host's key: the content of the hub's token file on the host (vibey serve prints where it is).",
+      password: true,
+      ignoreFocusOut: true,
+    });
+    if (!key?.trim()) {
+      return;
+    }
+    const check = await discovery.checkKey(url, key.trim());
+    if (!check.ok) {
+      invocation.say(`Not paired: ${check.message}`);
+      return;
+    }
+    await this.controller.pairHub(url, key.trim());
+    invocation.say(`Connected to ${url}: ${check.projects} project(s). Projects, gates and budgets now come from the hub; tasks still run on this computer.`);
+  }
+
+  private async disconnectHub(invocation: Invocation): Promise<void> {
+    const url = this.controller.hubUrl;
+    await this.controller.unpairHub();
+    invocation.say(url === undefined ? 'No hub was connected; krypton uses the local vibey.' : `Disconnected from ${url}. krypton uses the local vibey again.`);
   }
 
   private async chooseModel(invocation: Invocation): Promise<void> {
@@ -945,6 +1044,17 @@ export class CommandActions implements CommandActionsInterface {
     }
     this.controller.changed();
     return true;
+  }
+
+  /** ADR-0063, step 6: the way out of unlimited spend is one action, and it binds at once. */
+  private async endNoCap(invocation: Invocation): Promise<void> {
+    const ended = this.controller.services.budgets.endNoCap();
+    this.controller.changed();
+    invocation.say(
+      ended
+        ? 'Unlimited spend has ended. paidloop needs a cap again before it runs.'
+        : 'No unlimited-spend declaration stands; nothing changed.',
+    );
   }
 
   private async dollars(title: string): Promise<number | undefined> {

@@ -160,7 +160,7 @@ export class SequentialIds implements IdSourceInterface {
 
 /** An HTTP client that answers from a table of routes. */
 export class FakeHttp implements HttpClientInterface {
-  readonly requests: { method: string; url: string; body?: unknown }[] = [];
+  readonly requests: { method: string; url: string; body?: unknown; headers?: Readonly<Record<string, string>> }[] = [];
   private readonly routes = new Map<string, HttpResponse | Error | ((body: unknown) => HttpResponse)>();
   lines: string[] = [];
   lineStatus = 200;
@@ -171,12 +171,12 @@ export class FakeHttp implements HttpClientInterface {
     return this;
   }
 
-  get(url: string): Promise<HttpResponse> {
-    return this.answer('GET', url, undefined);
+  get(url: string, _timeoutMs?: number, headers?: Readonly<Record<string, string>>): Promise<HttpResponse> {
+    return this.answer('GET', url, undefined, headers);
   }
 
-  post(url: string, body: unknown): Promise<HttpResponse> {
-    return this.answer('POST', url, body);
+  post(url: string, body: unknown, _timeoutMs?: number, headers?: Readonly<Record<string, string>>): Promise<HttpResponse> {
+    return this.answer('POST', url, body, headers);
   }
 
   async postLines(url: string, body: unknown, onLine: (line: string) => void): Promise<number> {
@@ -190,8 +190,8 @@ export class FakeHttp implements HttpClientInterface {
     return this.lineStatus;
   }
 
-  private async answer(method: string, url: string, body: unknown): Promise<HttpResponse> {
-    this.requests.push({ method, url, body });
+  private async answer(method: string, url: string, body: unknown, headers?: Readonly<Record<string, string>>): Promise<HttpResponse> {
+    this.requests.push({ method, url, body, ...(headers === undefined ? {} : { headers }) });
     const answer = this.routes.get(`${method} ${url}`);
     if (answer === undefined) {
       throw new Error(`connect ECONNREFUSED ${url}`);
