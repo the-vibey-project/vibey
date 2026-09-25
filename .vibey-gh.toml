@@ -23,7 +23,7 @@ kind = "github"
 # every `force-include` source in the root pyproject's `[tool.hatch.build.targets.wheel]`.
 # The invariant is one sentence, and `tests/meta/test_version_paths_cover_every_shipped_tree.py`
 # enforces it: every path that ships must be reachable by some prefix here. Left narrow,
-# a change to claudeloop or vibey_gh derives "nothing to release" and `release.yml`
+# a change to claudeloop or vibey_gh derives "nothing to release" and `vibey-engine.yml`
 # republishes the current version into `skip-existing` -- a green run that publishes
 # nothing.
 #

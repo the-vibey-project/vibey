@@ -36,7 +36,7 @@ HOOKS_DIR = ".githooks"
 GITATTRIBUTES = ".gitattributes"
 UNION_MARKER = "# vibey-gh: append-only files merge instead of conflicting"
 # What a repository without its own copy of the tooling installs it from. `vibey_gh` is a
-# PACKAGE inside the `vibey` distribution, never a project of its own (ADR-0037), so the
+# PACKAGE inside the `vibey-engine` package, never a project of its own (ADR-0037), so the
 # fallback names the distribution and gets `vibey-gh` on PATH out of it. The version that
 # may be pinned to it is that distribution's -- never `vibey_gh.__version__`, which
 # numbers the package and names no release any index can serve.
@@ -46,7 +46,7 @@ UNION_MARKER = "# vibey-gh: append-only files merge instead of conflicting"
 # fallback and the pre-push hook's recovery advice render from that one key: they used to
 # be two literals in two files, and the hook went on naming a retired distribution for as
 # long as nobody happened to read it.
-FALLBACK_DISTRIBUTION = "vibey"
+FALLBACK_DISTRIBUTION = "vibey-engine"
 FALLBACK_PLACEHOLDER = "__VIBEY_GH_FALLBACK_PACKAGE__"
 FALLBACK_INSTALL = f"python -m pip install --quiet {FALLBACK_DISTRIBUTION}\n"
 

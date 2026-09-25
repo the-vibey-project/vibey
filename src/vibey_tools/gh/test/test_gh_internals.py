@@ -1296,18 +1296,18 @@ def test_a_bump_rerenders_every_workflow_whose_pin_the_version_decides(repo):
     from vibey_gh.versioning import apply_version
 
     (repo / "pyproject.toml").write_text(
-        '[project]\nname = "vibey"\nversion = "1.0.0"\n', encoding="utf-8"
+        '[project]\nname = "vibey-engine"\nversion = "1.0.0"\n', encoding="utf-8"
     )
     cfg = GhConfig(root=repo, pin_version=True, version_files=("pyproject.toml",))
     install(cfg, hooks_path=False)
-    assert 'python -m pip install --quiet "vibey==1.0.0"' in (
+    assert 'python -m pip install --quiet "vibey-engine==1.0.0"' in (
         repo / ".github" / "workflows" / "merge-train.yml"
     ).read_text(encoding="utf-8")
 
     written = apply_version(cfg, "1.1.0")
 
     assert ".github/workflows/merge-train.yml" in written
-    assert 'python -m pip install --quiet "vibey==1.1.0"' in (
+    assert 'python -m pip install --quiet "vibey-engine==1.1.0"' in (
         repo / ".github" / "workflows" / "merge-train.yml"
     ).read_text(encoding="utf-8")
     assert installed(cfg, local=False)[0] is True
@@ -1319,7 +1319,7 @@ def test_a_bump_rerenders_nothing_where_the_version_pins_nothing(repo):
     from vibey_gh.versioning import apply_version
 
     (repo / "pyproject.toml").write_text(
-        '[project]\nname = "vibey"\nversion = "1.0.0"\n', encoding="utf-8"
+        '[project]\nname = "vibey-engine"\nversion = "1.0.0"\n', encoding="utf-8"
     )
     cfg = GhConfig(root=repo, version_files=("pyproject.toml",))
     install(cfg, hooks_path=False)
@@ -1332,7 +1332,7 @@ def test_a_bump_rerenders_nothing_when_the_workflows_were_never_deployed(repo):
     from vibey_gh.install import rerender_version_pinned
 
     (repo / "pyproject.toml").write_text(
-        '[project]\nname = "vibey"\nversion = "1.0.0"\n', encoding="utf-8"
+        '[project]\nname = "vibey-engine"\nversion = "1.0.0"\n', encoding="utf-8"
     )
     assert rerender_version_pinned(GhConfig(root=repo, pin_version=True)) == []
 

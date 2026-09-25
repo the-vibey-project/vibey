@@ -54,7 +54,7 @@ Be clear about this before you install anything:
   `engine-auth` as `FAIL` for any of them without a key (see
   [Preflight from inside a pod](#preflight-from-inside-a-pod)).
 - **The operator is implemented, but off by default.** `vibey operator`
-  (`pip install 'vibey[operator]'`) runs kopf handlers that create
+  (`pip install 'vibey-engine[operator]'`) runs kopf handlers that create
   projects and apply `spec.answers` through the same application services
   `vibey new` / `vibey answer` use, then reconcile `VibeyProject` status
   every 15s. The chart does not install it unless you set

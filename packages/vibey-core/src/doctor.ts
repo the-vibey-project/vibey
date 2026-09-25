@@ -44,12 +44,12 @@ export class Doctor implements DoctorInterface {
     const runner = this.deps.runner;
     checks.push(
       await this.program(runner.name, this.deps.settings.raw[runner.pathSetting], 'fail', [
-        `${runner.name} ships with vibey: pip install vibey`,
+        `${runner.name} ships with vibey: pip install vibey-engine`,
         `Or point the vibey.${runner.pathSetting} setting at it.`,
       ]),
     );
     const vibey = await this.program('vibey', this.deps.settings.raw.cliPath, 'warn', [
-      'The Projects, Gates, Loops and Budgets views need vibey: pip install vibey',
+      'The Projects, Gates, Loops and Budgets views need vibey: pip install vibey-engine',
       'Or point the vibey.cliPath setting at it.',
     ]);
     checks.push(vibey);
@@ -128,7 +128,7 @@ export class Doctor implements DoctorInterface {
     return lacking.length === 0
       ? Doctor.check('vibey commands', 'pass', `vibey has ${Doctor.VIBEY_COMMANDS.join(', ')}`)
       : Doctor.check('vibey commands', 'warn', `this vibey lacks ${lacking.join(', ')}; they ship in vibey 3.0.0 (added after 2.1.0)`, [
-          'Point vibey.cliPath at a newer vibey, or install one: pip install --upgrade vibey',
+          'Point vibey.cliPath at a newer vibey, or install one: pip install --upgrade vibey-engine',
         ]);
   }
 

@@ -1,5 +1,5 @@
 ---
-description: The release flow — merge train into develop, vibey-gh promote to main, release.yml publishing (develop to TestPyPI as vibey-dev, main to PyPI), github-release.yml tags, and release-surfaces.yml docs, book and paper. Read before cutting a release.
+description: The release flow — merge train into develop, vibey-gh promote to main, vibey-engine.yml and krypton-app.yml publishing (develop to TestPyPI, main to PyPI), github-release.yml tags, and release-surfaces.yml docs, book and paper. Read before cutting a release.
 alwaysApply: false
 ---
 
@@ -35,8 +35,11 @@ version silently.
 **As of 2026-09-15 none of those packaging definitions exist yet.** The channels
 this repository publishes today are:
 
-- PyPI `vibey` (from `main`) and TestPyPI `vibey-dev` (from `develop`) — `release.yml`.
-  One distribution carries the whole family; there is no second name (ADR-0037)
+- `vibey-engine` on PyPI (from `main`) and on TestPyPI (from `develop`) — `vibey-engine.yml`.
+  It carries the whole engine family (ADR-0037, renamed by ADR-0069)
+- `krypton-app`, the apps and the `krypton` command, on the same two channels —
+  `krypton-app.yml`. Exactly these two packages publish (sub-doctrine 9.e, ADR-0069);
+  no `vibey` package does
 - An OCI release bundle of the exact wheel and sdist at
   `ghcr.io/<owner>/<repo>/python` — `release-surfaces.yml`
 - The documentation site, book and paper — `release-surfaces.yml` (below)
@@ -56,8 +59,8 @@ The workspace tenants (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`,
 `qwenloop` — which ships the `gptossloop` and `qwenloop` scripts — `vibey-gh`,
 `vibey-skills`, `vibey-bootstrap`) are no longer separate
 PyPI distributions. Their source lives in this repository (ADR-0021) and they ship
-inside the `vibey` wheel (ADR-0037), so the workflows below publish `vibey` and
-that one distribution is the whole family. A tenant's own version in its
+inside the `vibey-engine` wheel (ADR-0037, ADR-0069), so `vibey-engine.yml` publishes
+`vibey-engine` and that one package is the whole engine family. A tenant's own version in its
 `pyproject.toml` is an in-tree marker, not a release.
 
 ## Conventional Commits (enforced)
@@ -120,7 +123,7 @@ The order is the implementation's, not a presentation choice. A marker never
 break is a promise about an interface somebody installed and a range that ships
 nothing has no interface to break.
 
-Since the whole tree ships as one distribution (ADR-0037), `content_paths` must
+Since the whole tree ships as one package, `vibey-engine` (ADR-0037, ADR-0069), `content_paths` must
 cover every prefix whose content reaches an installed user: `src/vibey/`, each
 runner's and tool's package root, and the skills marketplace tree. It deliberately
 does *not* cover a tenant's `docs/` or `tests/`, which change nothing a user
@@ -146,12 +149,13 @@ derivation leaves it alone.
    backstops); `vibey-gh merge-train` merges only PRs whose head carries a
    successful `PR automation / gate`. PRs into
    `develop` are squash-merged. Never implement on `main`.
-2. **Every push to `develop` publishes a dev build.** `release.yml` stamps
-   `x.y.z.devN` (`vibey-gh version --dev <run number> --apply`), renames the
-   distribution to `vibey-dev` in the runner only (the `vibey` name on TestPyPI
-   is squatted by an unrelated project), publishes to TestPyPI via OIDC trusted
-   publishing, and `verify-testpypi` installs that exact version and runs
-   `vibey --version`.
+2. **Every push to `develop` publishes a dev build.** `vibey-engine.yml` stamps
+   `x.y.z.devN` (`vibey-gh version --dev <run number> --apply`), checks that the
+   project is named `vibey-engine` (pyproject.toml says so itself; nothing is renamed
+   in the runner), publishes to TestPyPI via OIDC trusted publishing (environment
+   `testpypi`), and `verify-testpypi` installs that exact version and runs
+   `vibey --version`. `krypton-app.yml` does the same for `clients/krypton-app`
+   whenever that tree changes, and its verify job runs `krypton --help`.
 3. **Promotion is automatic.** `promote-to-main.yml` runs after the merge train
    completes (weekly Monday cron backstop; manual dispatch with `dry_run`). It runs
    `vibey-gh promote`, which:
@@ -166,9 +170,10 @@ derivation leaves it alone.
    checks pass, with **rebase** (`promote.DEFAULT_METHOD = "rebase"`; the merge
    train uses rebase for any PR based on `main`). Because `main` is rebase-merged,
    its commits are rewritten copies with new SHAs.
-4. **Every push to `main` publishes to PyPI.** `release.yml` builds the wheel
-   and sdist and publishes `vibey` to PyPI via OIDC trusted publishing
-   (`skip-existing: true`).
+4. **Every push to `main` publishes to PyPI.** `vibey-engine.yml` builds the wheel
+   and sdist and publishes `vibey-engine` to PyPI via OIDC trusted publishing
+   (environment `pypi`, `skip-existing: true`); `krypton-app.yml` publishes
+   `krypton-app` the same way.
 5. **`main` realigns `develop`.** The `realign` job runs `vibey-gh realign`, which
    converges `develop` onto `main` only when the two trees are identical. It skips
    with a notice when `AUTOMERGE_TOKEN` is not set — harmless, since promotion
@@ -245,13 +250,13 @@ After `main` builds:
 
 1. Check the `Release` run in GitHub Actions, then `GitHub Release` and
    `Release surfaces`.
-2. Verify PyPI: https://pypi.org/project/vibey/
+2. Verify PyPI: https://pypi.org/project/vibey-engine/ and https://pypi.org/project/krypton-app/
 3. Install and test:
 
 ```bash
 uv venv --python 3.12
 source .venv/bin/activate
-pip install vibey==x.y.z
+pip install vibey-engine==x.y.z
 vibey --version
 # the bundle is the contract now (ADR-0037): every console script must be there
 for c in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap azbootstrap \
@@ -269,10 +274,10 @@ done
      https://the-vibey-project.github.io/vibey/main/book-print.html
 
 For a `develop` push, the `verify-testpypi` job already installs the dev build.
-On TestPyPI, read the release history of `vibey-dev`, not its "latest" version:
-dev builds (`x.y.z.devN`) are pre-releases, so the project page shows the last
-final version uploaded there (0.1.2) while dev builds such as `0.6.0.dev63` keep
-landing.
+On TestPyPI, read the release history of `vibey-engine` and `krypton-app`, not
+their "latest" version: dev builds (`x.y.z.devN`) are pre-releases, so a project
+page shows the last final version uploaded there while dev builds keep landing.
+(`vibey-dev` is the retired TestPyPI name of the builds before ADR-0069.)
 
 ## Common issues
 
@@ -306,8 +311,10 @@ automatically; add the entry (see "The changelog").
 - `.github/workflows/merge-train.yml` — merges ready PRs (squash into `develop`,
   rebase into `main`).
 - `.github/workflows/promote-to-main.yml` — `vibey-gh promote`.
-- `.github/workflows/release.yml` — `build` on every push to `develop`/`main`;
+- `.github/workflows/vibey-engine.yml` — `build` on every push to `develop`/`main`;
   `testpypi`/`verify-testpypi` on `develop`; `pypi` and `realign` on `main`.
+- `.github/workflows/krypton-app.yml` — `build` (tests and wheel) for
+  `clients/krypton-app`; `testpypi`/`verify-testpypi` on `develop`, `pypi` on `main`.
 - `.github/workflows/github-release.yml` — tag and GitHub Release after a
   successful `Release` on `main`.
 - `.github/workflows/release-surfaces.yml` — after a successful `Release` on

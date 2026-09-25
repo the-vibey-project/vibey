@@ -19,7 +19,7 @@ distribution, which installs every `*loop` runner and every family tool in one
 step (vibey ADR-0037):
 
 ```bash
-pipx install vibey
+pipx install vibey-engine
 ```
 
 [`pipx`](https://pipx.pypa.io) is recommended over a bare `pip install` for
@@ -27,7 +27,7 @@ CLI tools — it isolates the install into its own virtual environment so the
 dependencies never collide with anything else on your system. A plain
 
 ```bash
-pip install vibey
+pip install vibey-engine
 ```
 
 works too, inside whatever virtual environment you're already using. Note that
@@ -54,7 +54,7 @@ claudeloop --version
 claudeloop --help
 ```
 
-If `claudeloop` isn't on your `PATH` after a `pipx install vibey`, run
+If `claudeloop` isn't on your `PATH` after a `pipx install vibey-engine`, run
 `pipx ensurepath` and open a new shell.
 
 ## Project status

@@ -74,7 +74,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey
+            python -m pip install --quiet vibey-engine
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       - name: Dispatch every eligible open issue once
@@ -145,7 +145,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey
+            python -m pip install --quiet vibey-engine
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       # 8.a's probe, same reasoning as pr-automation: a sovereign job scheduled against
@@ -244,7 +244,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet "$self"
           else
-            python -m pip install --quiet vibey
+            python -m pip install --quiet vibey-engine
           fi
           command -v vibey-gh >/dev/null || { echo "::error::vibey-gh is not installed"; exit 1; }
       - name: Mark the solution attempt in progress
@@ -587,7 +587,7 @@ jobs:
           if [ -n "$self" ]; then
             python -m pip install --quiet -e "$self"
           else
-            python -m pip install --quiet vibey
+            python -m pip install --quiet vibey-engine
           fi
       # The issue text arrives through the API and reaches the model as text. Repository
       # code is never checked out here and never executed.

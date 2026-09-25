@@ -19,9 +19,9 @@ Every project-specific decision lives here so the logic beside it can stay gener
 
     [install]
     workflows = []            # omit for all of them; [] for hooks and the CLI only
-    fallback_package = "vibey"  # the distribution a rendered workflow or hook installs
+    fallback_package = "vibey-engine"  # the distribution a rendered workflow or hook installs
                               # this tooling from when the repository has no copy of it
-    pin_version = false       # pin that rendered `pip install vibey` to the exact
+    pin_version = false       # pin that rendered `pip install vibey-engine` to the exact
                               # version that rendered it, instead of the latest release
 
     [issue_automation]
@@ -676,7 +676,7 @@ class RunnersConfig:
     # beat never stales the lane.
     heartbeat_interval_minutes: int = 0
     # The interpreter the timer runs `python -m vibey_gh.cli` with, and the one the clone's
-    # pre-push hook asks for its scope decision. The default is where `uv tool install vibey`
+    # pre-push hook asks for its scope decision. The default is where `uv tool install vibey-engine`
     # puts it on macOS and Linux alike; empty is the one running the install. Either way it,
     # and the vibey_gh it imports, must live outside any temporary directory and any git work
     # tree -- which is why `uv run` inside a checkout cannot be it.
@@ -2266,7 +2266,7 @@ class GhConfig:
     # that `installed()` then reports as drift. One key, because the workflow fallback and
     # the pre-push hook's recovery advice must never name different packages -- they did,
     # and the hook kept telling people to install a distribution that no longer existed.
-    fallback_package: str = "vibey"
+    fallback_package: str = "vibey-engine"
     # Pin every rendered `pip install <fallback_package>` to the exact version that
     # rendered it. False keeps the historical floating install, so upgrading this
     # package changes nothing in an adopting repository until this is turned on.
@@ -2535,7 +2535,7 @@ def load_config(root: Path | None = None, config: Path | None = None) -> GhConfi
         code_paths=tuple(ver.get("code_paths", ("src/",))),
         managed_workflows=(tuple(inst["workflows"]) if "workflows" in inst else None),
         union_merge_paths=tuple(inst.get("union_merge_paths", DEFAULT_UNION_MERGE_PATHS)),
-        fallback_package=_fallback_package(inst.get("fallback_package", "vibey")),
+        fallback_package=_fallback_package(inst.get("fallback_package", "vibey-engine")),
         pin_version=inst.get("pin_version", False),
         self_source=_self_source(inst.get("self_source", ".")),
         integration_branch=br.get("integration", "develop"),

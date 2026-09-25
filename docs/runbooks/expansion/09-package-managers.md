@@ -1,6 +1,6 @@
 # Runbook: package everything, everywhere
 
-> **Status (2026-09-15):** PyPI channel done — `release.yml` publishes `main`
+> **Status (2026-09-15):** PyPI channel done — `vibey-engine.yml` publishes `main`
 > to PyPI by trusted publishing and `develop` to TestPyPI as `vibey-dev`
 > (ADR-0028). Everything else is open. **ADR-0019 supersedes this runbook's
 > channel list and order**; the tables and items below are corrected to it.
@@ -18,7 +18,7 @@ In ADR-0019's order (reach per unit of effort):
 
 | # | Channel | Artifact | Status |
 |---|---|---|---|
-| 0 | PyPI (`pip install vibey`, `uv tool install vibey`), pipx/uvx | sdist + wheel | Done (`release.yml`) |
+| 0 | PyPI (`pip install vibey-engine`, `uv tool install vibey-engine`), pipx/uvx | sdist + wheel | Done (`vibey-engine.yml`) |
 | 1 | OCI image on `ghcr.io` | the image from workstream 05 | Image is built and contract-tested in CI; not pushed. `release-surfaces.yml` pushes only the Python distribution to `ghcr.io/<repo>/python` as an OCI artifact |
 | 2 | Single-file executable (shiv, pex or PyInstaller) | release asset | Open; unblocks 3–8 |
 | 3 | Homebrew | formula in the existing, empty `the-vibey-project/homebrew-tap` | Open |
@@ -32,14 +32,14 @@ In ADR-0019's order (reach per unit of effort):
 
 The loop runners and the family tools are workspace members of this repository
 (ADR-0021) and are **not** published as their own projects: since ADR-0037 they ship
-inside the one `vibey` distribution. Every channel below therefore carries one
+inside the one `vibey-engine` package. Every channel below therefore carries one
 artifact, not ten, and `vibey doctor` works from a single install in each of them.
 
 ## Design
 
 - **Packaging definitions live in this repository** and are published by
   `vibey-gh` release automation (ADR-0017, ADR-0018, ADR-0028), starting
-  from the single-file executable artifact. Today `release.yml` runs on
+  from the single-file executable artifact. Today `vibey-engine.yml` runs on
   pushes to `develop` (dev build to TestPyPI as `vibey-dev`, because
   `vibey` on TestPyPI is not ours) and `main` (PyPI, trusted publishing
   via OIDC, no long-lived token). The fan-out below is still to build:

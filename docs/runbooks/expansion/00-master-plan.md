@@ -32,7 +32,7 @@ do. Where a runbook still says "each repo", read "each workspace member".
 | 06 | Live engine confirmation | Open | claudeloop and agyloop live-proven; codexloop, cursorloop, gptossloop, qwenloop not |
 | 07 | Store submissions | Not started | Blocked on 08 |
 | 08 | Clients | Not started | Blocked on 12's HTTP API |
-| 09 | Package managers | Partial | PyPI publishing via `release.yml`; ADR-0019 now governs channel order |
+| 09 | Package managers | Partial | PyPI publishing via `vibey-engine.yml`; ADR-0019 now governs channel order |
 | 10 | Keep-awake | Not started | No `power` port or adapter |
 | 11 | OpenClaw / Moltbook | Not started | Constrained by sub-doctrine 4.a |
 | 12 | Integration surfaces | Partial | `vibey-gh` projects api/mcp/sdk/webhook (`vibey_gh/surfaces.py`); conductor has a signed outbound `WebhookPublisher` only |
