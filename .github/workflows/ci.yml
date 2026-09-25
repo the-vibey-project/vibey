@@ -754,6 +754,52 @@ jobs:
           raise SystemExit("root automation drift: " + "; ".join(problems) if not ok else 0)
           PY
 
+  vscode-extension:
+    # The VS Code extension (clients/vscode, ADR-0059): its own Node toolchain and checks. It
+    # has no runtime dependency, and none of it enters the image. Not a required check yet: it
+    # becomes one once it has run green on develop (#290).
+    name: VS Code extension (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: clients/vscode
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: clients/vscode/.node-version
+          cache: npm
+          cache-dependency-path: clients/vscode/package-lock.json
+      - name: Install from the lockfile
+        run: npm ci
+      - name: No known high-severity advisory in any dependency
+        run: npm audit --audit-level=high
+      - name: Type-check the extension and its tests
+        run: npm run typecheck
+      - name: Compile, and package.json still agrees with the one command table
+        run: |
+          npm run compile
+          git diff --exit-code -- package.json
+      - name: Unit tests, with the core at 100% of lines, branches, functions and statements
+        run: npm run coverage
+      - name: Smoke test in a real VS Code (Linux, on a virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run smoke
+      - name: Smoke test in a real VS Code
+        if: runner.os != 'Linux'
+        run: npm run smoke
+      - name: Package the .vsix
+        run: npx vsce package --no-dependencies --out vibey-${{ matrix.os }}.vsix
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vibey-vscode-${{ matrix.os }}
+          path: clients/vscode/vibey-${{ matrix.os }}.vsix
+          if-no-files-found: error
+
   image:
     name: Container image (amd64 + arm64)
     runs-on: ubuntu-latest

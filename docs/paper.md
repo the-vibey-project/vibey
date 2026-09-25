@@ -3311,17 +3311,17 @@ in the delivery-estimate ledger, shown in [Fig. 34](#fig:forecast).
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[group style={group size=2 by 1,horizontal sep=1.7cm},vibeyaxis,width=7.9cm,height=4.6cm,
-  xmin=0.5,xmax=10.5,xtick={1,2,3,4,5,6,7,8,9,10},xticklabels={Sep 19,Sep 19,Sep 19,Sep 20,Sep 21,Sep 23,Sep 23,Sep 24,Sep 24,Sep 24},x tick label style={rotate=30,anchor=north east},xlabel={forecast record}]
-\nextgroupplot[title={a. Work units in the tracker},ylabel={units},ymin=0,ymax=889,legend pos=north west]
-\addplot[vibeyred,line width=1pt,mark=*,mark size=1.3pt] coordinates {(1,0) (2,24) (3,24) (4,24) (5,25) (6,708) (7,706) (8,709) (9,710) (10,711)};
+  xmin=0.5,xmax=11.5,xtick={1,2,3,4,5,6,7,8,9,10,11},xticklabels={Sep 19,Sep 19,Sep 19,Sep 20,Sep 21,Sep 23,Sep 23,Sep 24,Sep 24,Sep 24,Sep 25},x tick label style={rotate=30,anchor=north east},xlabel={forecast record}]
+\nextgroupplot[title={a. Work units in the tracker},ylabel={units},ymin=0,ymax=890,legend pos=north west]
+\addplot[vibeyred,line width=1pt,mark=*,mark size=1.3pt] coordinates {(1,0) (2,24) (3,24) (4,24) (5,25) (6,708) (7,706) (8,709) (9,710) (10,711) (11,712)};
 \addlegendentry{remaining}
-\addplot[vibeygreen,line width=1pt,mark=square*,mark size=1.2pt] coordinates {(1,235) (2,235) (3,235) (4,238) (5,247) (6,264) (7,279) (8,340) (9,342) (10,349)};
+\addplot[vibeygreen,line width=1pt,mark=square*,mark size=1.2pt] coordinates {(1,235) (2,235) (3,235) (4,238) (5,247) (6,264) (7,279) (8,340) (9,342) (10,349) (11,351)};
 \addlegendentry{completed}
 \nextgroupplot[title={b. Forecast active days to completion},ylabel={active days},ymin=0,legend pos=north west]
-\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (8,50.05) (9,49.82) (10,48.89) (10,67.71) (9,67.62) (8,67.52) (7,70.60) (6,78.67) (5,3.12) (4,3.00) (3,3.00) (2,3.00) (1,0.00)} -- cycle;
-\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (8,50.05) (9,49.82) (10,48.89)};
+\addplot[fill=vibeyblue!14,draw=none,forget plot] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (8,50.05) (9,49.82) (10,48.89) (11,48.68) (11,67.81) (10,67.71) (9,67.62) (8,67.52) (7,70.60) (6,78.67) (5,3.12) (4,3.00) (3,3.00) (2,3.00) (1,0.00)} -- cycle;
+\addplot[vibeyblue,line width=1pt,mark=*,mark size=1.2pt] coordinates {(1,0.00) (2,1.94) (3,1.94) (4,1.92) (5,2.13) (6,59.00) (7,58.20) (8,50.05) (9,49.82) (10,48.89) (11,48.68)};
 \addlegendentry{$W/r_{\max}$}
-\addplot[vibeyblue!60,line width=1pt,mark=o,mark size=1.2pt] coordinates {(1,0.00) (2,3.00) (3,3.00) (4,3.00) (5,3.12) (6,78.67) (7,70.60) (8,67.52) (9,67.62) (10,67.71)};
+\addplot[vibeyblue!60,line width=1pt,mark=o,mark size=1.2pt] coordinates {(1,0.00) (2,3.00) (3,3.00) (4,3.00) (5,3.12) (6,78.67) (7,70.60) (8,67.52) (9,67.62) (10,67.71) (11,67.81)};
 \addlegendentry{$W/r_{\min}$}
 \end{groupplot}
 \end{tikzpicture}

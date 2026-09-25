@@ -181,8 +181,11 @@ class OllamaChatClient:
         cleaned = base_url.strip().rstrip("/")
         parts = urllib.parse.urlsplit(cleaned)
         if parts.scheme not in _HTTP_SCHEMES or not parts.netloc:
+            # The value is never echoed: a URL can carry `user:token@`, and this message
+            # reaches a terminal, a log and a CI transcript.
             raise ConfigError(
                 OLLAMA_URL_ENV,
-                f"the local model endpoint must be an http(s) URL with a host, got {base_url!r}",
+                "the local model endpoint must be an http(s) URL with a host "
+                "(the value is not shown: a URL can carry credentials)",
             )
         return cleaned

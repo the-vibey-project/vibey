@@ -113,6 +113,16 @@ def test_only_an_http_endpoint_with_a_host_is_accepted(url: str) -> None:
         OllamaChatClient(base_url=url)
 
 
+def test_a_refused_endpoint_is_named_and_never_echoed() -> None:
+    """A URL can carry `user:token@`, and this message reaches a terminal, a log and a CI
+    transcript: it names the variable, never the value."""
+    with pytest.raises(ConfigError) as refused:
+        OllamaChatClient(base_url="ftp://operator:s3cret-token@gpu-box/")
+
+    assert refused.value.path == "VIBEY_OLLAMA_URL"
+    assert "s3cret-token" not in str(refused.value)
+
+
 def test_the_environment_url_is_checked_too() -> None:
     with pytest.raises(ConfigError, match="VIBEY_OLLAMA_URL"):
         OllamaChatClient.from_environment({OLLAMA_URL_ENV: "file:///tmp/ollama"})
