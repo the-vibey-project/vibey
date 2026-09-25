@@ -1,8 +1,30 @@
 # Changelog
 
-All notable changes to the Vibey extension for VS Code.
+All notable changes to krypton, vibey's extension for VS Code.
 
-## Unreleased
+## 0.2.0
+
+- **krypton.** The extension's display name, its activity-bar container, its command category
+  and its chat participant's full name are **krypton** (sub-doctrine 9.e). Command ids,
+  settings and `@vibey` keep their names.
+- **On the design system** ([ADR-0066](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0066-one-design-system-for-every-surface/)).
+  The task panel is rebuilt on the generated token sheet (`media/tokens.css`, copied by
+  `scripts/design/generate.py`) over VS Code's own variables: the krypton atom, state pills,
+  gentle entry motion, a designed empty state, and focus rings from the tokens.
+- **Light, Dark or System** (`vibey.theme`, **krypton: Choose the theme**, `/theme`). System, the
+  default, follows the editor's colour theme live.
+- **A first-run walkthrough**, **Get started with krypton**: five steps to a first result in
+  under a minute.
+- **Live lanes with motion.** Running lanes and tasks spin in the tokens' state colours
+  (`vibey.stateRunning` and four more contributed colours); reduced motion holds them still.
+- **Connect to vibey on this network** (`/connect`), with **Disconnect from the hub**
+  (`/disconnect`) and `vibey.hubUrl`: find a hub, pair once with a key checked against it and
+  kept in secret storage, and read projects, gates and budgets through it. Local mode is
+  unchanged and stays the default.
+- **ULTRA everywhere, and a way out of unlimited spend.** `vibey.effort` offers `ULTRA`; the
+  panel and views show it in its own colour. A standing no-cap declaration shows **UNLIMITED
+  SPEND** in the status bar and every panel, and **End unlimited spend** (`/cap`) ends it in one
+  action.
 
 - **ULTRA, effort without a ceiling** ([ADR-0063](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0063-ultra-effort-without-a-ceiling/)).
   The effort picker, `/effort` and `vibey-vscode --effort` take `ULTRA`. It is shown with a flame

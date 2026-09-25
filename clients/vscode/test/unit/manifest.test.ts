@@ -16,7 +16,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'ut
 describe('the one command table, as this extension contributes it', () => {
   it('is exactly the commands package.json contributes, titles and icons included', () => {
     const contributed = manifest.contributes.commands.map((command) => [command.command, command.title, command.category, command.icon]);
-    const declared = CommandTable.ALL.map((spec) => [spec.id, spec.title, 'Vibey', `$(${spec.icon})`]);
+    const declared = CommandTable.ALL.map((spec) => [spec.id, spec.title, 'krypton', `$(${spec.icon})`]);
     expect(contributed).toEqual(declared);
   });
 
