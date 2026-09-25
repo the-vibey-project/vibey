@@ -1,10 +1,10 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 import { describe, expect, it } from 'vitest';
-import { ArgumentParser, Presenter, UsageError } from '../../src/core/cli-support';
-import type { BatchSummary } from '../../src/core/interfaces/batch-interface';
-import type { RunItem } from '../../src/core/interfaces/run-events-interface';
-import type { RunRecord } from '../../src/core/interfaces/run-interface';
-import { VolatileStorageError } from '../../src/core/storage';
+import { ArgumentParser, Presenter, UsageError } from '../../src/cli-support';
+import type { BatchSummary } from '../../src/interfaces/batch-interface';
+import type { RunItem } from '../../src/interfaces/run-events-interface';
+import type { RunRecord } from '../../src/interfaces/run-interface';
+import { VolatileStorageError } from '../../src/volatile-storage-error';
 
 describe('ArgumentParser', () => {
   const parser = new ArgumentParser(new Set(['json', 'in-place']));

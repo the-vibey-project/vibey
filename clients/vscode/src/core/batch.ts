@@ -30,13 +30,13 @@ import type {
   BatchRunnerInterface,
   BatchSummary,
   RunStarter,
-} from './interfaces/batch-interface';
-import type { GitClientInterface } from './interfaces/git-interface';
-import type { JsonlJournalInterface } from './interfaces/jsonl-interface';
-import type { RunOutcome, RunRecord } from './interfaces/run-interface';
-import type { DurabilityGateInterface } from './interfaces/storage-interface';
-import type { ClockInterface, IdSourceInterface } from './interfaces/support-interface';
-import type { TaskFile, TaskFolderInterface } from './interfaces/task-file-interface';
+} from '@vibey/core';
+import type { GitClientInterface } from '@vibey/core';
+import type { JsonlJournalInterface } from '@vibey/core';
+import type { RunOutcome, RunRecord } from '@vibey/core';
+import type { DurabilityGateInterface } from '@vibey/core';
+import type { ClockInterface, IdSourceInterface } from '@vibey/core';
+import type { TaskFile, TaskFolderInterface } from '@vibey/core';
 
 export interface BatchDependencies {
   readonly folder: TaskFolderInterface;

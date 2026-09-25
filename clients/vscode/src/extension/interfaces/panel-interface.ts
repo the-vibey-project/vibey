@@ -1,7 +1,7 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** The task panel: a task's transcript as it happens, a box to type in, and its buttons. */
-import type { RunItem, RunPatch } from '../../core/interfaces/run-events-interface';
-import type { RunStatus } from '../../core/interfaces/run-interface';
+import type { RunItem, RunPatch } from '@vibey/core';
+import type { RunStatus } from '@vibey/core';
 
 /** What the page sends: a line typed, a button pressed, an image pasted. */
 export type PanelRequest =

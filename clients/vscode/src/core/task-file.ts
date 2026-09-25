@@ -25,9 +25,9 @@ import type {
   TaskFileParserInterface,
   TaskFolderInterface,
   TaskMetadata,
-} from './interfaces/task-file-interface';
-import { Efforts } from './catalogue';
-import type { EffortSetting } from './interfaces/catalogue-interface';
+} from '@vibey/core';
+import { Efforts } from '@vibey/core';
+import type { EffortSetting } from '@vibey/core';
 import { TaskNaming } from './support';
 
 export class TaskFileError extends Error {

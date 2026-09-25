@@ -7,12 +7,12 @@
  */
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { ArgumentParser, Presenter, UsageError } from './core/cli-support';
-import { Doctor } from './core/doctor';
+import { ArgumentParser, Presenter, UsageError } from '@vibey/core';
+import { Doctor } from '@vibey/core';
 import { JsonlJournal } from './core/jsonl';
-import type { BudgetScope } from './core/interfaces/budgets-interface';
-import type { RawSettings } from './core/interfaces/settings-interface';
-import type { TaskRunInterface } from './core/interfaces/run-interface';
+import type { BudgetScope } from '@vibey/core';
+import type { RawSettings } from '@vibey/core';
+import type { TaskRunInterface } from '@vibey/core';
 import { CoreServices } from './core/services';
 
 const USAGE = `vibey-vscode: run tasks on a local model through vibey's loops, from a terminal.

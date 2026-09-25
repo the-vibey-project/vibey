@@ -1,4 +1,4 @@
-# 0067 — The hub: `vibey serve`, one HTTP surface for every Krypton client
+# 0068 — The hub: `vibey serve`, one HTTP surface for every Krypton client
 
 **Status:** proposed · **Date:** 2026-09-25 · **Cites:** SD-01 v1.0; sub-doctrines 10.c, 10.f, 10.g, 10.i, 10.j, 12.c, 12.d, 12.f, 12.j, 8.a, 10.a · **Related:** ADR-0009, ADR-0016, ADR-0017, ADR-0018, ADR-0023, ADR-0054, ADR-0055, ADR-0059, ADR-0065 · **Evidence:** `develop` at `30356862`, read 2026-09-25 · **Delivers:** runbook 12's work item 1; the server side runbook 08 depends on
 

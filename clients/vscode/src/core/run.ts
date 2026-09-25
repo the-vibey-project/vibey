@@ -31,16 +31,16 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { SelectionError } from './catalogue';
+import { SelectionError } from '@vibey/core';
 import { ChildEnvironment, EnvironmentAllowList } from './environment';
-import type { BudgetBreach } from './interfaces/budgets-interface';
-import type { EventEnvelope, Selection } from './interfaces/catalogue-interface';
-import type { EngineCommandInterface } from './interfaces/engine-command-interface';
-import type { ChangedFile } from './interfaces/git-interface';
-import type { RunnerIdentity } from './interfaces/local-runner-interface';
-import type { ChildHandle, ProcessExit } from './interfaces/process-runner-interface';
-import type { Invocation } from './interfaces/qwenloop-interface';
-import type { RunItem, RunPatch } from './interfaces/run-events-interface';
+import type { BudgetBreach } from '@vibey/core';
+import type { EventEnvelope, Selection } from '@vibey/core';
+import type { EngineCommandInterface } from '@vibey/core';
+import type { ChangedFile } from '@vibey/core';
+import type { RunnerIdentity } from '@vibey/core';
+import type { ChildHandle, ProcessExit } from '@vibey/core';
+import type { Invocation } from '@vibey/core';
+import type { RunItem, RunPatch } from '@vibey/core';
 import type {
   AttemptRecord,
   RunHistoryEntry,
@@ -52,10 +52,10 @@ import type {
   RunStatus,
   RunWorkspace,
   TaskRunInterface,
-} from './interfaces/run-interface';
-import type { Disposable } from './interfaces/support-interface';
+} from '@vibey/core';
+import type { Disposable } from '@vibey/core';
 import { JsonlJournal } from './jsonl';
-import { RunTranscript } from './run-events';
+import { RunTranscript } from '@vibey/core';
 import { Emitter } from './support';
 
 /** Where attached files are copied, inside the task's worktree; never committed. */

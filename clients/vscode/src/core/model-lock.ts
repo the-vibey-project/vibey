@@ -15,13 +15,13 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import type { ClockInterface, Disposable } from './interfaces/support-interface';
+import type { ClockInterface, Disposable } from '@vibey/core';
 import type {
   HostFacts,
   LockAttempt,
   LockOwner,
   ModelSlotLockInterface,
-} from './interfaces/model-lock-interface';
+} from '@vibey/core';
 
 export class LocalHost implements HostFacts {
   readonly pid = process.pid;
