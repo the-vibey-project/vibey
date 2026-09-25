@@ -750,6 +750,31 @@ jobs:
           raise SystemExit("root automation drift: " + "; ".join(problems) if not ok else 0)
           PY
 
+  krypton-app:
+    # krypton-app (clients/krypton-app, sub-doctrine 9.e, ADR-0068): the apps' package. It is
+    # outside the uv workspace and publishes from krypton-app.yml; this job runs its suite and
+    # static checks on every change, as every client and package here is run by CI.
+    name: krypton-app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/krypton-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the checkers
+        run: python -m pip install --quiet pytest ruff mypy
+      - name: Lint and format
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Type-check
+        run: mypy src
+      - name: Unit tests
+        run: PYTHONPATH=src python -m pytest -q tests
+
   vibey-core:
     # @vibey/core (packages/vibey-core, ADR-0067): the pure TypeScript every krypton client
     # shares. It is built with no platform types at all, and held to 100% of lines, branches,
