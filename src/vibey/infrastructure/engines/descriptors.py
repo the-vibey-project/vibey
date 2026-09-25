@@ -32,14 +32,60 @@ from vibey.domain.config import ClaudeloopLocalConfig
 from vibey.domain.effort import Effort
 from vibey.domain.engine import (
     Capability,
+    EngineAffordances,
+    EngineControls,
     EngineDescriptor,
     EngineId,
     EngineInvocation,
     EngineTier,
+    EventEnvelope,
+    EventLog,
     IsolationLevel,
+    PluginSystem,
 )
 
 _CLAUDELOOP_ENV = ("CLAUDELOOP_*", "CLAUDE_CODE_*", "CLAUDE_CONFIG_DIR", "ANTHROPIC_*")
+
+# Where every runner in the tree writes a run's events: each one's own run directory,
+# `<cwd>/<state_dir>/runs/<run_id>`, holds its events.jsonl (claudeloop, agyloop,
+# cursorloop and codexloop `infrastructure/rundir.py`, opencodeloop
+# `application/runner.py`, qwenloop `infrastructure/run_store.py`).
+_RUN_EVENTS = "{cwd}/{state_dir}/runs/{run_id}/events.jsonl"
+
+# The evidence for `plugins: skills-context`, the same for every loop.
+_SKILLS_CONTEXT = (
+    "when the project sets skills_context.mode = inject, vibey appends the vibey-skills "
+    "context packet to the plan's text before the run starts (vibey "
+    "application/build_implement_handler.py), whichever engine runs it"
+)
+
+# claudeloop's own vocabulary, shared by claudeloop-local: the same binary.
+_CLAUDELOOP_AFFORDANCES = EngineAffordances(
+    files=True,
+    paste_text=True,
+    plugins=PluginSystem.CLAUDE_PLUGINS,
+    mcp=True,
+    evidence={
+        "files": "it runs in the worktree (`run --cwd`), and `run --add-folder` and "
+        "`--attach` take more (claudeloop cli/commands/run.py)",
+        "paste_text": "`prompt TEXT --now|--at-break` (claudeloop cli/commands/prompt.py); "
+        "the plan itself is text",
+        "plugins": "`run --plugin` becomes the Claude Agent SDK's `plugins` option "
+        "(claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+        "mcp": "`run --connector NAME=JSON|url` becomes the Claude Agent SDK's "
+        "`mcp_servers` (claudeloop cli/commands/run.py; infrastructure/agent/options.py)",
+    },
+)
+# `stop` and `wind-down` take `--run-id` and `--cwd`; `prompt TEXT` needs exactly one of
+# `--now` (immediate) or `--at-break` (claudeloop cli/commands/stop.py,
+# wind_down_cmd.py, prompt.py).
+_CLAUDELOOP_CONTROLS = EngineControls(
+    stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    wind_down=("wind-down", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+)
+# `{"ts", "run_id", "event_type", ..., "payload"}` (claudeloop infrastructure/events.py).
+_CLAUDELOOP_EVENTS = EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.EVENT_TYPE_PAYLOAD)
 
 CLAUDELOOP = EngineDescriptor(
     engine_id=EngineId.CLAUDELOOP,
@@ -95,6 +141,9 @@ CLAUDELOOP = EngineDescriptor(
     cost_per_mtok_out=15.0,
     context_window=200_000,
     base_weight=3,
+    affordances=_CLAUDELOOP_AFFORDANCES,
+    controls=_CLAUDELOOP_CONTROLS,
+    events=_CLAUDELOOP_EVENTS,
 )
 
 CODEXLOOP = EngineDescriptor(
@@ -119,6 +168,9 @@ CODEXLOOP = EngineDescriptor(
             Capability.SAVEPOINTS,
             Capability.UNWIND,
             Capability.STRUCTURED_VERDICT,
+            # Its runner queues a prompt control's text for the next turn
+            # (codexloop application/runner.py `_apply_controls`); see `controls`.
+            Capability.MID_RUN_PROMPT,
             Capability.SNAPSHOT,
             Capability.SANDBOX,
         }
@@ -165,6 +217,29 @@ CODEXLOOP = EngineDescriptor(
     # (create_subprocess_exec(..., cwd=spec.worktree_path)), and codexloop's
     # own bootstrap.py falls back to Path.cwd() when --cwd is absent.
     supports_cwd_flag=False,
+    affordances=EngineAffordances(
+        files=True,
+        paste_text=True,
+        plugins=PluginSystem.SKILLS_CONTEXT,
+        evidence={
+            "files": "it runs in the worktree as its working directory, and its exec argv "
+            "carries `--add-dir` (codexloop infrastructure/agent/argv.py)",
+            "paste_text": "`prompt TEXT --now|--next-turn` (codexloop cli/commands/prompt.py); "
+            "the plan itself is text",
+            "plugins": _SKILLS_CONTEXT,
+        },
+    ),
+    # Like its `run`, none of these takes `--cwd`: each acts on the run under the working
+    # directory it is started in (codexloop cli/commands/stop.py, wind_down_cmd.py,
+    # prompt.py; `prompt` needs exactly one of `--now` or `--next-turn`).
+    controls=EngineControls(
+        stop=("stop", "--run-id", "{run_id}"),
+        wind_down=("wind-down", "--run-id", "{run_id}"),
+        prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}"),
+    ),
+    # The wrapped Codex CLI's own events, flat and keyed `"type"`, and codexloop's
+    # `{"type": "run.verdict", ...}` (codexloop infrastructure/events.py, application/runner.py).
+    events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.TYPE),
 )
 
 CURSORLOOP = EngineDescriptor(
@@ -211,6 +286,29 @@ CURSORLOOP = EngineDescriptor(
     cost_per_mtok_out=10.0,
     context_window=128_000,
     base_weight=2,
+    affordances=EngineAffordances(
+        files=True,
+        paste_text=True,
+        plugins=PluginSystem.SKILLS_CONTEXT,
+        evidence={
+            "files": "it runs in the worktree (`run --cwd`, cursorloop cli/commands/run.py)",
+            "paste_text": "the plan is text (`run --plan`, cursorloop cli/commands/run.py), "
+            "and it is the run's first message",
+            "plugins": _SKILLS_CONTEXT,
+        },
+    ),
+    # `stop` and `wind-down` take `--run-id` and `--cwd` (cursorloop
+    # cli/commands/control_cmds.py), and act only while the run waits between turns. No
+    # prompt: its CLI writes a `prompt` control, but the runner reads its inbox only while
+    # it waits (`_sleep_interruptible`), acts on stop and wind-down alone, and
+    # `FileRunControl.poll` deletes every command it parsed, so a prompt sent that way is
+    # dropped unread (cursorloop application/runner.py, infrastructure/control.py).
+    controls=EngineControls(
+        stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+        wind_down=("wind-down", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    ),
+    # `{"ts", "run_id", "event_type", ..., "payload"}` (cursorloop infrastructure/events.py).
+    events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.EVENT_TYPE_PAYLOAD),
 )
 
 AGYLOOP = EngineDescriptor(
@@ -237,7 +335,10 @@ AGYLOOP = EngineDescriptor(
         {
             Capability.UNWIND,
             Capability.STRUCTURED_VERDICT,
-            Capability.WEB_SEARCH,
+            # Its runner applies a prompt control at the next turn (agyloop
+            # application/runner.py); see `controls`. No WEB_SEARCH: nothing in agyloop's
+            # source searches the web, and its `run` has no `--web-search`.
+            Capability.MID_RUN_PROMPT,
             Capability.SNAPSHOT,
         }
     ),
@@ -266,6 +367,30 @@ AGYLOOP = EngineDescriptor(
     cost_per_mtok_out=2.0,
     context_window=1_000_000,
     base_weight=1,
+    affordances=EngineAffordances(
+        files=True,
+        paste_text=True,
+        plugins=PluginSystem.SKILLS_CONTEXT,
+        mcp=False,
+        evidence={
+            "files": "it runs in the worktree (`run --cwd`), and `run --add-dir` and "
+            "`attach PATH` take more (agyloop cli/commands/run.py, attach_cmd.py)",
+            "paste_text": "`prompt TEXT --now|--at-break` (agyloop cli/commands/prompt.py); "
+            "the plan itself is text",
+            "plugins": _SKILLS_CONTEXT,
+            "mcp": "its agent options are built with `mcp_servers=[]`, always "
+            "(agyloop infrastructure/agent/options.py)",
+        },
+    ),
+    # `stop` and `prompt` take `--run-id` and `--cwd`; `prompt TEXT` needs exactly one of
+    # `--now` or `--at-break` (agyloop cli/commands/stop.py, prompt.py). No wind-down: its
+    # CLI has no such verb (agyloop cli/app.py), and it winds down on its own forecast.
+    controls=EngineControls(
+        stop=("stop", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+        prompt=("prompt", "{text}", "--now", "--run-id", "{run_id}", "--cwd", "{cwd}"),
+    ),
+    # `{"ts", "run_id", "event_type", ..., "payload"}` (agyloop infrastructure/events.py).
+    events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.EVENT_TYPE_PAYLOAD),
 )
 
 OPENCODE = EngineDescriptor(
@@ -318,6 +443,22 @@ OPENCODE = EngineDescriptor(
     context_window=32_768,
     base_weight=1,
     tier=EngineTier.LOCAL,
+    affordances=EngineAffordances(
+        files=True,
+        paste_text=True,
+        plugins=PluginSystem.SKILLS_CONTEXT,
+        evidence={
+            "files": "it runs `opencode run --dir <cwd>` in the worktree "
+            "(opencodeloop infrastructure/opencode_process.py)",
+            "paste_text": "the plan's text is the message it sends "
+            "(opencodeloop infrastructure/opencode_process.py)",
+            "plugins": _SKILLS_CONTEXT,
+        },
+    ),
+    # No controls: opencodeloop's CLI is `doctor`, `run` and `resume` (opencodeloop
+    # cli/app.py), and nothing in it reads the run's `inbox/`.
+    # `{"timestamp", "event_type", ...}`, flat (opencodeloop infrastructure/run_store.py).
+    events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.EVENT_TYPE),
 )
 
 QWENLOOP = EngineDescriptor(
@@ -330,7 +471,13 @@ QWENLOOP = EngineDescriptor(
     # QWENLOOP_BASE_URL and QWENLOOP_MODEL also arrive through the adapter's overlay,
     # derived from VIBEY_OLLAMA_URL -- which itself never reaches the session.
     env_passthrough=("QWENLOOP_*",),
-    capabilities=frozenset(Capability),
+    # No attachments or web search: `attach` and `web-search` only echo (qwenloop cli/app.py
+    # `_local_equivalent`). A mid-run prompt it does take: the runner adds each pending
+    # `prompt` control to the conversation at the next turn boundary (qwenloop
+    # application/runner.py, `take_prompts`); see `controls`. The other claims are not
+    # re-verified here, and `savepoints`, `unwind`, `effort`, `slash` and `sandbox` are
+    # echo-only commands in the same list.
+    capabilities=frozenset(Capability) - {Capability.ATTACHMENTS, Capability.WEB_SEARCH},
     effort_projection={
         Effort.TRIVIAL: EngineInvocation(("--max-turns", "8"), achieved=Effort.TRIVIAL),
         Effort.LOW: EngineInvocation(("--max-turns", "16"), achieved=Effort.LOW),
@@ -349,6 +496,39 @@ QWENLOOP = EngineDescriptor(
     context_window=32_768,
     base_weight=1,
     tier=EngineTier.LOCAL,
+    affordances=EngineAffordances(
+        images=False,
+        files=True,
+        paste_text=True,
+        paste_images=False,
+        plugins=PluginSystem.SKILLS_CONTEXT,
+        mcp=False,
+        evidence={
+            "images": "its model-facing tools are read_file, write_file, edit_file, shell, "
+            "search, find and open_file (qwenloop domain/model.py `CODING_TOOL_NAMES`), and "
+            "every message it sends is text (`ChatMessage.content: str`, same module)",
+            "files": "its file tools read and write paths inside the worktree "
+            "(qwenloop infrastructure/tools.py)",
+            "paste_text": "the plan is text, and is the first message it sends",
+            "paste_images": "every message it sends is text (`ChatMessage.content: str`, "
+            "qwenloop domain/model.py)",
+            "plugins": _SKILLS_CONTEXT,
+            "mcp": "the model is offered only its own fixed tools (qwenloop "
+            "infrastructure/inference.py `_CODING_TOOLS`), and its `connector`, `plugin` "
+            "and `skill` commands only echo (qwenloop cli/app.py)",
+        },
+    ),
+    # Each takes the run id positionally, then `prompt` its text, and `--cwd` (qwenloop
+    # cli/app.py). The runner reads the prompt at the next turn boundary and moves it to
+    # `control/ack`, so it reaches the model once (qwenloop application/runner.py,
+    # infrastructure/run_store.py `take_prompts`).
+    controls=EngineControls(
+        stop=("stop", "{run_id}", "--cwd", "{cwd}"),
+        wind_down=("wind-down", "{run_id}", "--cwd", "{cwd}"),
+        prompt=("prompt", "{run_id}", "{text}", "--cwd", "{cwd}"),
+    ),
+    # Flat, keyed `"type"` (qwenloop application/runner.py, infrastructure/run_store.py).
+    events=EventLog(path=_RUN_EVENTS, envelope=EventEnvelope.TYPE),
 )
 
 
@@ -434,6 +614,10 @@ class ClaudeloopLocalDescriptors:
             base_weight=1,
             tier=EngineTier.LOCAL,
             doctor_args=profile,
+            # The same binary, so the same verbs, run directory and envelope.
+            affordances=CLAUDELOOP.affordances,
+            controls=CLAUDELOOP.controls,
+            events=CLAUDELOOP.events,
         )
 
 

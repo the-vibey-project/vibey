@@ -157,6 +157,32 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   test fails when a gate kind is raised without an entry there. The repositories gain
   `list_all()` and `open_all()`, and the next-step hints, the README, the CLI reference and
   the greeter runbook point at `vibey gates` instead of a `human_gate` query
+* **cli:** `vibey loops [--json]` lists the family's two loops (sub-doctrines 8.b and 8.c):
+  `sovereignloop` (tier local; the default by canon 8.b) and `paidloop` (tier paid; declared
+  only by canon 8.b, with claudeloop as its default). The canon is reported as the canon: the
+  selector does not read a paid declaration yet. For each engine it shows all five efforts:
+  the argv, the effort really achieved, and the model or what chooses it. It also gives the
+  escalation ladder and a by-effort view. qwenloop's model is the one that actually reaches
+  it: `QWENLOOP_MODEL`, else vibey's model only while `VIBEY_OLLAMA_URL` is set, else none.
+  Each engine reports what it can take: images, files, pasted text or images, plugins and
+  MCP. A value is `null` where the runner's own code shows nothing, and `evidence` names the
+  proof wherever it shows something. Each engine also reports its `run` argv template and its
+  `stop`, `wind_down` and `prompt` verbs. A prompt verb is listed only where the runner acts
+  on it, so cursorloop lists none. Tests hold the template to `build_argv`, and
+  read it and every effort flag and control against the runner's own Typer definition. The
+  report adds where the events land, their envelope (one of three), and the environment
+  names the engine reads (names only). The command needs no database and no network. A
+  malformed setting exits 3, naming the setting and never its value. `EngineDescriptor` gains
+  `affordances`, `controls` and `events`, all unknown by default. OpenCode is listed under its
+  descriptor's tier with `repealed: true`, because 8.b repeals it, and is left out of every
+  by-effort view. The document for one fixed environment is committed as
+  `tests/cli/golden/vibey-loops.json`, and the suite fails when the output drifts from it
+* **engines:** capabilities agree with what each runner's code backs, and a test ties them
+  to the facts `vibey loops` shows. codexloop and agyloop claim a mid-run prompt, which they
+  act on. qwenloop declares its `prompt` control, which its runner reads since #1133, and no
+  longer claims attachments or web search. agyloop no longer claims web search. cursorloop no longer declares a `prompt` control, because its
+  runner drops one unread. No job requires these capabilities, so engine selection is
+  unchanged. A refused `VIBEY_OLLAMA_URL` is named without echoing its value
 
 * **vibey_gh:** `vibey-gh slots corpus|calibrate|allowed` measure how many runs of one local
   model fit on a device at once, and `[local_models] concurrent_runs` declares it (sub-doctrines
