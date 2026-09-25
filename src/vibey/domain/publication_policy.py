@@ -157,6 +157,9 @@ WITHHELD_KINDS: Final[frozenset[EventKind]] = frozenset(
         # Who answered a gate, from which account, and what they answered: the answer
         # can carry anything a person typed, and the account is the operator's.
         EventKind.GATE_ANSWERED,
+        # Which devices could reach the hub, and which scopes the host granted them.
+        EventKind.HUB_DEVICE_PAIRED,
+        EventKind.HUB_DEVICE_REVOKED,
         # Queue operations: who reordered which job, and what the reaper did.
         EventKind.JOB_PRIORITY_BUMPED,
         EventKind.JOB_PRIORITY_UNBUMPED,

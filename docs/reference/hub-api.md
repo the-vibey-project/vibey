@@ -62,7 +62,8 @@ carries them.
 
 Every `/api/v1` route and `/api/metrics` needs a principal. On the host, that is the host
 token: `Authorization: Bearer <content of <state_dir>/token>`, which holds every scope.
-(Paired devices, each with its own key and scopes, are the pairing change's.)
+A paired device instead signs every request (see [Pairing](#pairing)) and holds only the
+scopes the host granted it.
 
 | Scope | Permits |
 |---|---|
@@ -76,17 +77,42 @@ Nothing is permitted without a scope. And no scope, ever, can declare paid use, 
 change a cap, change the database DSN, run migrations or touch the canon: no route offers
 them.
 
+## Pairing
+
+Only the host pairs, lists and revokes; a device never can, not even for itself.
+
+| Route | Who | What |
+|---|---|---|
+| `POST /api/v1/pairing/offers` `{"scopes": [...]}` | host | A 6-digit code, valid 120 seconds and spent by the first claim, with the pairing URI `vibey-pair://<host>:<port>?fp=<sha256>&code=<code>&v=1` the QR code carries. At least one scope. |
+| `POST /api/v1/pairing/claim` `{"code", "name"}` | anyone | The device's id, its key (returned this once) and scopes. Rate-limited per address; five wrong codes withdraw every open offer. |
+| `GET /api/v1/devices` | host | The paired devices, never their keys. |
+| `DELETE /api/v1/devices/{id}` | host | Revokes the device at once: its next request is refused. |
+
+A paired device signs each request with four headers: `x-vibey-device` (its id),
+`x-vibey-timestamp` (seconds since the epoch, within 60 of the host's clock),
+`x-vibey-nonce` (never reused) and `x-vibey-signature`, which is `sha256=` and the hex
+HMAC-SHA256, under the device's key, of these lines joined by `\n`: device id, method
+(upper case), path, query, timestamp, nonce, and the hex SHA-256 of the body. A replayed
+nonce, a stale timestamp, a changed method, path, query or body, another device's key or
+a revoked device proves nothing (401). There is no session and no cookie, so each action
+-- a `spend` answer included -- is verified on its own, and there is no ambient credential
+for a cross-site request to ride.
+
+Every pairing and revocation is written to every project's ledger as `HubDevicePaired` /
+`HubDeviceRevoked` (the device's id, name, scopes and who acted -- never its key).
+
 ## Refusals
 
 | Status | Meaning |
 |---|---|
 | 401 | The request proves no principal. Nothing else is said. |
-| 403 | The principal's scopes do not permit it, or the repository does not admit the hub's bump. |
-| 404 | No such project or open gate. |
+| 403 | The principal's scopes do not permit it, a device asked to manage pairings, a pairing code was wrong, spent or expired, or the repository does not admit the hub's bump. |
+| 404 | No such project, open gate or paired device. |
 | 409 | The gate was already answered by another request, or the queue refused the reorder. |
 | 421 | The `Host` header is not one this hub answers (the DNS-rebinding defence). |
 | 422 | The body or a filter is malformed. |
 | 429 | Too many requests (empty body). |
+| 503 | Pairing is not enabled on this hub. |
 
 Every response carries `Content-Security-Policy: default-src 'none'`, `X-Frame-Options:
 DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` and

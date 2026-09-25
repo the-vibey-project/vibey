@@ -100,7 +100,7 @@ The hub arrives in three changes, each reviewable alone:
   `Origin` are checked (cross-site WebSocket hijacking). Lanes are tailed by byte offset,
   only for files the lane scan lists. HTTP polling twins exist for each. The TUI does not
   move to the feed in this change; that is the TUI's own.
-- **Pairing and trust:** mDNS/DNS-SD advertisement of `_vibey._tcp` (the `zeroconf`
+- **Pairing and trust (the third change, decided in ADR-0070):** mDNS/DNS-SD advertisement of `_vibey._tcp` (the `zeroconf`
   package), a self-signed certificate made on first run and stored through `SecretsPort`,
   pairing by QR and 6-digit code (2 minutes), per-device keys, signed requests with nonce
   and timestamp, pairing/grant/revocation as ledger events, revocation immediate, CSRF for
