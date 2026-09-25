@@ -366,11 +366,12 @@ def test_an_explicit_provider_beats_the_sovereign_default_on_work(
     assert job["state"] == "succeeded"
 
 
-def test_an_explicit_opencode_provider_on_work(tmp_path: Path) -> None:
+def test_the_deleted_opencode_provider_is_refused_on_work(tmp_path: Path) -> None:
+    """The OpenCode provider was deleted with its engine (sub-doctrine 8.b)."""
     project_id = asyncio.run(_seed_research(tmp_path))
     res = runner.invoke(app, ["work", str(project_id), "--provider", "opencode"])
-    assert res.exit_code == 0
-    assert "processed one job" in res.output
+    assert res.exit_code != 0
+    assert "provider must be 'scripted', 'claudeloop', or 'qwenloop'" in res.output
 
 
 @pytest.mark.usefixtures("_sovereign_env")
@@ -469,9 +470,7 @@ def test_work_is_sovereign_by_default_with_no_local_switch(tmp_path: Path) -> No
 def test_the_unknown_provider_message_names_every_provider() -> None:
     from vibey.cli.main import _PROVIDERS, _UNKNOWN_PROVIDER
 
-    assert _UNKNOWN_PROVIDER == (
-        "provider must be 'scripted', 'claudeloop', 'qwenloop', or 'opencode'"
-    )
+    assert _UNKNOWN_PROVIDER == "provider must be 'scripted', 'claudeloop', or 'qwenloop'"
     assert all(f"'{name}'" in _UNKNOWN_PROVIDER for name in _PROVIDERS)
 
 
@@ -481,4 +480,4 @@ def test_work_names_every_provider_when_the_provider_is_unknown(tmp_path: Path) 
     res = runner.invoke(app, ["work", str(project_id), "--provider", "bogus"])
 
     assert res.exit_code != 0
-    assert "provider must be 'scripted', 'claudeloop', 'qwenloop', or 'opencode'" in res.output
+    assert "provider must be 'scripted', 'claudeloop', or 'qwenloop'" in res.output

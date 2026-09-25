@@ -427,15 +427,15 @@ Each engine object has these keys:
 | `engine_id`, `binary`, `state_dir`, `done_marker`, `plan_flag`, `supports_cwd_flag`, `base_weight`, `cost_per_mtok_in`, `cost_per_mtok_out` | The engine's descriptor, as declared. |
 | `enabled` | Whether the engine would run right now. A local engine follows its switch. An engine with no switch is `true`: the selector may pick it whenever it is eligible. Being listed is not being selected. |
 | `switch` | The variable that switches a local engine on (`VIBEY_FEATURE_QWENLOOP`, `VIBEY_FEATURE_CLAUDELOOP_LOCAL`), or `null`. |
-| `repealed` | `true` for an engine canon 8.b repeals from both loops (opencode today). It stays listed, and is left out of `by_effort`, so nothing that selects from `by_effort` picks it. `false` for every other engine. |
+| `repealed` | `true` for an engine canon 8.b repeals from both loops while vibey still carries its code; none today, since OpenCode's engine was deleted. Such an engine stays listed, and is left out of `by_effort`, so nothing that selects from `by_effort` picks it. `false` for every other engine. |
 | `default_model` | The model vibey hands the engine, or `null`. For qwenloop this follows how the model actually reaches it. It is `QWENLOOP_MODEL` when set. Otherwise it is vibey's model (`VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`), but only while `VIBEY_OLLAMA_URL` is set, because that is the only path by which vibey's model reaches the session. A worker started with `--ollama-model` hands that model instead, which this command cannot see. Otherwise it is `null`, and qwenloop's own configuration chooses the model. |
 | `efforts` | All five levels, in order. Each has `effort`, `argv` (from the descriptor's projection), `achieved` (the level it really reaches), and `model`. `model` is the value of a `--model` the level passes, else `default_model`, else `null`. `notes` gives the descriptor's own note and, when `model` is `null`, what chooses the model instead (`claudeloop preset high`, `qwenloop's own configuration chooses the model`). |
 | `capabilities` | `images`, `files`, `paste_text`, `paste_images`, `plugins` (`skills-context` or `claude-plugins`), and `mcp`. Each is `true`, `false`, or `null` for unknown, and a menu belongs only beside a value that is not `null`. `evidence` names, for each value that is set, where the runner's own code shows it. `skills-context` applies when the project sets `skills_context.mode = inject`: vibey then appends the vibey-skills context packet to the plan. A local model's own abilities come from Ollama at run time, so an image menu needs both this loop's `images` and the model's `vision`. |
 | `run` | The argv template `build_argv` fills for a run: `{binary}`, `run`, `{plan_flag?}` (only when `plan_flag` is set: put that flag there), `{plan}`, `--run-id`, `{run_id}`, `{effort_argv...}`, and `--cwd {cwd}` when `supports_cwd_flag`. Tests compare it with `build_argv` for every engine at every effort. They also read it, filled in at every effort, against the runner's own `run` definition. |
 | `controls` | `stop`, `wind_down`, and `prompt`: argv templates after the binary, with `{run_id}`, `{cwd}` and `{text}` to fill in. Each is `null` where the runner has no such verb, or does not act on it: cursorloop takes no mid-run prompt, whatever its CLI accepts. A test reads each template against the runner's own Typer definition. |
-| `events` | `path` (`{cwd}/{state_dir}/runs/{run_id}/events.jsonl`) and `envelope`, one of three values: `type` (a top-level `"type"`), `event_type+payload`, or `event_type` (a top-level `"event_type"` with no payload wrapper). |
+| `events` | `path` (`{cwd}/{state_dir}/runs/{run_id}/events.jsonl`) and `envelope`, one of three values: `type` (a top-level `"type"`), `event_type+payload`, or `event_type` (a top-level `"event_type"` with no payload wrapper; no engine writes it today). |
 | `env` | `auth` and `passthrough`: the descriptor's `auth_env` and `env_passthrough`, names only and in declared order. The command never reads a value. |
-| `notes` | A list of strings: anything the canon says otherwise. opencode's descriptor says tier local, and 8.b repeals it from both loops, so it is listed under `sovereignloop` with a note, as the code says. |
+| `notes` | A list of strings: anything the canon says otherwise, such as a note that 8.b repeals an engine the code still lists. Empty for every engine today. |
 
 `by_effort` maps each level to every engine in the loop that is not repealed,
 each with its `engine_id`, `model` and `achieved`. Engines that reach exactly
@@ -460,7 +460,6 @@ What the runners' own code shows today:
 | `codexloop` | files, pasted text, `skills-context`; images and MCP unknown | `--run-id` for each and no `--cwd`: run it in the worktree; `prompt TEXT --now` | `type` |
 | `cursorloop` | files, pasted text, `skills-context`; images and MCP unknown | `stop` and `wind-down` with `--run-id` and `--cwd`. Both act only while the run waits between turns. No prompt: its runner reads its inbox only while it waits, acts on stop and wind-down alone, and drops a prompt unread | `event_type+payload` |
 | `agyloop` | files, pasted text, `skills-context`; no MCP (`mcp_servers=[]`); images unknown | `stop` and `prompt TEXT --now` with `--run-id` and `--cwd`; no wind-down verb | `event_type+payload` |
-| `opencode` | files, pasted text, `skills-context`; images and MCP unknown | none: its CLI is `doctor`, `run`, `resume` | `event_type` |
 | `qwenloop` | files, pasted text, `skills-context`; no images, no pasted images, no MCP (text messages and a fixed tool set) | each takes the run id positionally, with `--cwd`; `prompt RUN_ID TEXT`, which its runner adds to the conversation at the next turn boundary | `type` |
 
 ## `vibey cost [PROJECT_ID]`
@@ -696,7 +695,7 @@ PostgreSQL, run the conformance suite, or run the in-cluster preflight instead.
 | Option | Default | What it does |
 |---|---|---|
 | `--conformance` | off | Run the 9-check conformance suite against each checked engine that is installed. |
-| `--engine ENGINE` | unset | Check one engine: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `opencode`, or `qwenloop`. An unknown name prints `Unknown engine: <name>` and exits 1. |
+| `--engine ENGINE` | unset | Check one engine: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, or `qwenloop`. An unknown name prints `Unknown engine: <name>` and exits 1. |
 | `--record` | off | Persist preflight (and conformance, with `--conformance`) results to `engine_health`. Exits 1 if no project exists. |
 | `--project ID` | latest | Project to record health for, with `--record`. |
 | `--cluster` | off | Run the in-cluster preflight instead of the engine checks — see [Kubernetes guide](../guides/kubernetes.md). |
@@ -704,8 +703,8 @@ PostgreSQL, run the conformance suite, or run the in-cluster preflight instead.
 | `--provider NAME` | `scripted` | With `--cluster`: the worker's own `--provider` (`scripted`, `claudeloop`, or `qwenloop`; chart value `worker.provider`). `claudeloop` adds claudeloop to what `engine-auth` requires. |
 | `--install-postgres` | off | Install and start local PostgreSQL when it is missing or stopped. This is explicit; the default doctor never changes the host. It cannot be combined with `--cluster`. |
 
-With `--engine` unset, doctor checks the five paid engines (`claudeloop`,
-`codexloop`, `cursorloop`, `agyloop`, `opencode`) whether or not they are installed —
+With `--engine` unset, doctor checks the four paid engines (`claudeloop`,
+`codexloop`, `cursorloop`, `agyloop`) whether or not they are installed —
 missing ones print `NOT INSTALLED` — and adds `qwenloop` when
 `VIBEY_FEATURE_QWENLOOP` is truthy or, if that variable is unset,
 `./vibey.toml` in the current directory has `[features] qwenloop = true`.
@@ -811,7 +810,7 @@ every phase for one project.
 
 | Option | Default | What it does |
 |---|---|---|
-| `--engines LIST` | the five paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `opencode`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). A list that matches none of the worker's engines — `--engines qwenloop` with the feature off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)` and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. |
+| `--engines LIST` | the four paid engines | Comma-separated allowlist of engine ids (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `qwenloop`) for engine-driven jobs. An unknown id prints `Invalid engine: ...` and exits 2. `qwenloop` joins the pool only when `VIBEY_FEATURE_QWENLOOP` is on (see below). A list that matches none of the worker's engines — `--engines qwenloop` with the feature off, say — is refused at startup with `--engines <list> matches none of this worker's engines (...)` and exits 2, rather than starting a worker with no engine that would defer every engine-driven job forever. |
 | `--parallelism N` / `-j N` | `1` | Concurrent job loops, 1–16. The effective count is clamped to twice the number of allowed engines and to the CPU count, and is never below 1. |
 | `--once` | off | Process one job and exit (`processed one job` or `no ready job`), instead of running forever. |
 | `--provider {scripted,claudeloop,qwenloop}` | `scripted` | DESIGN and decomposition providers. `scripted` is fully offline. `claudeloop` uses a live session for both DESIGN and decomposition, capped by `--max-turns` / `--max-dollars`. `qwenloop` uses the sovereign local DESIGN provider (reads `$VIBEY_EVIDENCE_DIR`) with scripted decomposition. Any other value exits 2. |

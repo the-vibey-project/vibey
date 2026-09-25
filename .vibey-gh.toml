@@ -50,7 +50,6 @@ content_paths = [
   "src/vibey_runners/cursor/src/",
   "src/vibey_runners/agy/src/",
   "src/vibey_runners/qwen/src/",
-  "src/vibey_runners/opencode/src/",
   "src/vibey_runners/common/src/",
   "src/vibey_tools/gh/vibey_gh/",
   "src/vibey_tools/gh/docs/stylesheets/",
