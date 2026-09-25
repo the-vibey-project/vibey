@@ -605,7 +605,9 @@ the budget brake at a declared cap. A run with no dollar cap parks an
 | `ultra status [PROJECT_ID]` | `--json` | Running or stopped, passes completed, the dollar cap, this cycle's spend and the measured cost per hour (`null`, shown as "unknown", when nothing has been measured). |
 
 Each event records `by`, `account` and `device` (the host's name). These
-commands run only on the host.
+commands run only on the host. `start` after a `stop` does not resume a stopped
+item's chain by itself: the stopped pass ended without a successor, so the next
+pass starts when the item's BUILD job is enqueued again.
 
 ### `vibey budget no-cap` and `vibey budget cap`
 

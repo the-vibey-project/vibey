@@ -32,6 +32,8 @@ class GitCheckpoint:
         staged = await self._executor.execute((*where, "diff", "--cached", "--quiet"))
         if staged.returncode == 0:
             return None
+        # --no-verify: this is vibey's own record of a pass on the item's worktree branch,
+        # never a protected branch; the pass's checks run next as build.verify (12.d).
         await self._run((*where, *_IDENTITY, "commit", "--no-verify", "-m", message))
         return (await self._run((*where, "rev-parse", "HEAD"))).strip()
 

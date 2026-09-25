@@ -66,8 +66,13 @@ class UltraControlService:
             name=project.name,
             active=state.active,
             no_cap_declared=state.no_cap_declared,
-            passes_completed=sum(
-                1 for event in events if event.kind is EventKind.ULTRA_PASS_COMPLETED
+            # Distinct (item, pass): a replayed pass may append its event twice.
+            passes_completed=len(
+                {
+                    (event.payload.get("work_item_id"), event.payload.get("pass"))
+                    for event in events
+                    if event.kind is EventKind.ULTRA_PASS_COMPLETED
+                }
             ),
             max_dollars=budget.max_dollars,
             dollars_spent=budget.dollars_spent,

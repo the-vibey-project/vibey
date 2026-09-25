@@ -131,6 +131,7 @@ async def test_status_counts_passes_and_measures_the_rate() -> None:
     ledger.events[pid] = [
         _event(pid, 1, EventKind.ULTRA_PASS_COMPLETED, {"pass": 1}),
         _event(pid, 2, EventKind.ULTRA_PASS_COMPLETED, {"pass": 2}),
+        _event(pid, 5, EventKind.ULTRA_PASS_COMPLETED, {"pass": 2}),  # a replay
         _event(pid, 3, EventKind.TURN_COMPLETED, {"cost_usd": 2.0}, NOW),
         _event(
             pid,
