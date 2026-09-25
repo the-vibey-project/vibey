@@ -15,6 +15,7 @@ live feed's to tail (`vibey serve`'s lane stream), not this list's.
 """
 
 import json
+import os
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -108,30 +109,54 @@ class LaneScanner:
         path = next((found for found, *_ in self._discover() if str(found) == events_path), None)
         if path is None:
             raise UnknownLane(f"no listed lane writes {events_path}")
-        size = path.stat().st_size
-        start = 0 if after < 0 or after > size else after
-        with path.open("rb") as handle:
+        # Opened without following a symlink, even though `_discover` refused them: the
+        # file could be swapped for one between the scan and the open.
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), "rb") as handle:
+            size = os.fstat(handle.fileno()).st_size
+            start = 0 if after < 0 or after > size else after
             handle.seek(start)
             chunk = handle.read(max_bytes)
         complete = chunk[: chunk.rfind(b"\n") + 1]
+        truncated = not complete and len(chunk) == max_bytes
+        if truncated:
+            # One line longer than a whole read: hand it on in pieces, each marked, so the
+            # offset always moves -- a feed that stops on a long line would never recover.
+            complete = chunk
         lines = [line.decode("utf-8", "replace") for line in complete.splitlines()]
         return {
             "events_path": events_path,
             "from": start,
             "offset": start + len(complete),
             "lines": lines,
+            "truncated": truncated,
         }
 
     def _discover(self) -> list[tuple[Path, LaneEngine, Path, str]]:
         found: list[tuple[Path, LaneEngine, Path, str]] = []
         for root in self._roots:
+            real_root = root.resolve()
             for cwd in (root, *self._children(root)):
                 for engine in self._engines:
                     for run in self._children(cwd / engine.state_dir / "runs"):
                         events = run / "events.jsonl"
-                        if events.is_file():
+                        if self._inside(events, real_root):
                             found.append((events, engine, cwd, run.name))
         return found
+
+    @staticmethod
+    def _inside(events: Path, real_root: Path) -> bool:
+        """True for a regular file that is no symlink and whose real path stays under its
+        root. A lane's worktree is written by an autonomous agent: a link planted at its
+        state directory, its `runs` or its events file must not lead a reader to the
+        host's token or keys."""
+        try:
+            return (
+                events.is_file()
+                and not events.is_symlink()
+                and events.resolve().is_relative_to(real_root)
+            )
+        except OSError:
+            return False
 
     @staticmethod
     def _last_event(lane: dict[str, object]) -> float:

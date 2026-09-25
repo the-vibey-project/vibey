@@ -258,9 +258,54 @@ def test_a_tail_returns_whole_lines_and_the_offset_to_resume_from(tmp_path: Path
         "from": 18,
         "offset": 27,
         "lines": ['{"n": 3}'],
+        "truncated": False,
     }
     assert scanner.tail(str(events), 999)["from"] == 0
     assert scanner.tail(str(events), 0, max_bytes=10)["lines"] == ['{"n": 1}']
+
+
+def test_a_line_longer_than_one_read_still_moves_the_offset(tmp_path: Path) -> None:
+    scanner, events = _scanner(tmp_path)
+    events.write_bytes(b"x" * 25 + b"\nnext\n")
+    first = scanner.tail(str(events), 0, max_bytes=10)
+    assert first["truncated"] is True and first["offset"] == 10 and first["lines"] == ["x" * 10]
+    second = scanner.tail(str(events), 20, max_bytes=10)
+    assert second["truncated"] is False and second["lines"] == ["xxxxx"]
+
+
+def test_a_symlink_never_leads_a_tail_out_of_its_root(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    secret = outside / "token"
+    secret.write_text("the host token\n")
+    linked_file = root / ".qwenloop" / "runs" / "r1" / "events.jsonl"
+    linked_file.parent.mkdir(parents=True)
+    linked_file.symlink_to(secret)
+    (outside / "runs" / "r2").mkdir(parents=True)
+    (outside / "runs" / "r2" / "events.jsonl").write_text("{}\n")
+    lane = root / "lane"
+    lane.mkdir()
+    (lane / ".qwenloop").symlink_to(outside)
+    scanner = LaneScanner(
+        engines=[LaneEngine("qwenloop", ".qwenloop")], roots=[root], now=lambda: 0.0
+    )
+    assert scanner.lanes() == []
+    for path in (str(linked_file), str(lane / ".qwenloop" / "runs" / "r2" / "events.jsonl")):
+        with pytest.raises(UnknownLane):
+            scanner.tail(path, 0)
+
+
+def test_an_unreadable_candidate_is_not_a_lane(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scanner, events = _scanner(tmp_path)
+
+    def broken(self: Path, strict: bool = False) -> Path:
+        raise OSError("gone")
+
+    monkeypatch.setattr(Path, "resolve", broken)
+    assert LaneScanner._inside(events, tmp_path) is False
 
 
 def test_only_a_listed_lane_is_ever_read(tmp_path: Path) -> None:
