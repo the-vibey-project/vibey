@@ -325,6 +325,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **tests:** a test session whose database lock is lost no longer loses its databases to another
+  session's reaper. Each test database's mark now names the process that created it and its
+  machine, and the reaper keeps the database while that process is alive on this machine,
+  whatever its lock says. On 2026-09-24 a patched `asyncio.sleep` ended one session's lock while
+  it ran, and another session's reaper dropped its worker databases: 127 `database ... does not
+  exist` errors in one run. A mark from another machine, or the first mark, still follows the
+  lock alone, and a mark that cannot be read is never dropped.
 * **ci:** the delivery estimate refreshes once an hour, and by hand, instead of on every push,
   pull request and issue event. Its pull request now runs every CI gate: the `[skip ci]` that
   let #1125 merge a ledger record, and break develop's paper-figure check with no check run,

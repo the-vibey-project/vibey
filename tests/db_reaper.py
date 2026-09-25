@@ -8,10 +8,18 @@ teardown. A killed session never tears down, so its databases stay behind: 1,118
 "Held" is measured by the database server itself, never guessed from a name or an age:
 
 - A session takes a session-level advisory lock on its database's key BEFORE it creates the
-  database, marks the database with ``HOLD_MARK``, and keeps the lock on a connection of its
-  own until teardown (``TestDatabaseHold``). PostgreSQL releases the lock the moment that
-  connection ends, a kill included. So a marked database whose lock can be taken is held by
-  no live session.
+  database, marks the database, and keeps the lock on a connection of its own until teardown
+  (``TestDatabaseHold``). PostgreSQL releases the lock the moment that connection ends, a kill
+  included. So a marked database whose lock can be taken is held by no live session.
+- The mark (``HoldMark``, ``vibey-test-hold:v2 pid=<pid> host=<host>``) also names the process
+  that created the database and its machine. A database whose creator is alive on this
+  machine is kept, whatever its lock says: a hold can end while its session still runs (a
+  patched ``asyncio.sleep`` ended one on 2026-09-24, and another session's reaper dropped the
+  live databases). A mark from another machine, or the first mark (``HOLD_MARK_V1``), names no
+  process here, so it follows the lock alone. A hostname that changes during a session makes
+  its mark read as another machine's, which is the lock alone again, never worse.
+- A comment that starts like a mark but cannot be read, such as a malformed or newer mark, is
+  kept: unknown is never dropped.
 - A database without the mark was created by an older harness that took no lock, so a free
   lock proves nothing about it: a run of that harness may still be using it. It is reaped only
   when no other test session runs on this machine, since then none could be holding it.
@@ -36,16 +44,28 @@ import argparse
 import asyncio
 import os
 import re
+import socket
 import subprocess
 import sys
 import threading
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
+from urllib.parse import quote, unquote
 
 import asyncpg
 
-#: Written on every database the harness creates while holding its lock.
-HOLD_MARK = "vibey-test-hold:v1"
+#: Every mark starts with this; a comment that does not is no mark.
+MARK_PREFIX = "vibey-test-hold:"
+#: The first mark, written by harnesses between #1132 and the v2 mark. It names no process.
+HOLD_MARK_V1 = "vibey-test-hold:v1"
+#: The mark that names the process that created the database, and its machine.
+HOLD_MARK_V2 = "vibey-test-hold:v2"
+_MARK_V2 = re.compile(
+    r"vibey-test-hold:v2 pid=(?P<pid>[1-9][0-9]{0,9})"
+    r" host=(?P<host>(?:[A-Za-z0-9._~-]|%[0-9A-F]{2})*)"
+)
+#: The largest pid ``os.kill`` accepts; a larger one would raise OverflowError, not answer.
+_PID_MAX = 2**31 - 1
 #: The advisory-lock namespace for test databases: the first key of the two-key form. The
 #: second is ``hashtext(<database name>)``, computed by the server both times.
 LOCK_NAMESPACE = 0x76746462  # "vtdb"
@@ -121,6 +141,42 @@ class TestDatabaseHold:
             await conn.close()
 
 
+class UnreadableMark(ValueError):
+    """A comment that starts like a mark but cannot be read as one."""
+
+
+@dataclass(frozen=True, slots=True)
+class HoldMark:
+    """The v2 mark: the process that created a test database, and its machine."""
+
+    pid: int
+    host: str
+
+    @classmethod
+    def this_process(cls) -> HoldMark:
+        return cls(os.getpid(), socket.gethostname())
+
+    def text(self) -> str:
+        """The comment to write. The host is percent-encoded, so no quote, space or newline of
+        its own reaches the text: it is safe inside conftest's SQL literal and always reads back."""
+        return f"{HOLD_MARK_V2} pid={self.pid} host={quote(self.host, safe='')}"
+
+    @classmethod
+    def read(cls, comment: str | None) -> HoldMark | None:
+        """The mark in ``comment``: None when it is no mark or the v1 mark, which names no
+        process; ``UnreadableMark`` when it starts like a mark but cannot be read."""
+        if comment is None or not comment.startswith(MARK_PREFIX) or comment == HOLD_MARK_V1:
+            return None
+        match = _MARK_V2.fullmatch(comment)
+        if match is None or int(match["pid"]) > _PID_MAX:
+            raise UnreadableMark(comment)
+        return cls(int(match["pid"]), unquote(match["host"]))
+
+    def pid_on(self, host: str) -> int | None:
+        """The creator's pid, if it was issued on ``host``: a pid is a process only there."""
+        return self.pid if self.host == host else None
+
+
 @dataclass(frozen=True, slots=True)
 class Candidate:
     """One per-worker database, as the server describes it right now."""
@@ -129,6 +185,20 @@ class Candidate:
     marked: bool
     connections: int
     creator_pid: int | None
+    unreadable: bool = False
+
+    @classmethod
+    def from_row(
+        cls, name: str, *, name_pid: int | None, comment: str | None, connections: int, host: str
+    ) -> Candidate:
+        """A database from its name's pid (a serial run's), its comment, and this machine."""
+        marked = comment is not None and comment.startswith(MARK_PREFIX)
+        try:
+            mark = HoldMark.read(comment)
+        except UnreadableMark:
+            return cls(name, marked, connections, name_pid, unreadable=True)
+        creator = mark.pid_on(host) if mark is not None else None
+        return cls(name, marked, connections, name_pid if creator is None else creator)
 
 
 @dataclass(frozen=True, slots=True)
@@ -217,6 +287,8 @@ def decide(
         return Verdict(False, "kept: a live session holds its lock")
     if alive:
         return Verdict(False, f"kept: its creator, pid {candidate.creator_pid}, is alive")
+    if candidate.unreadable:
+        return Verdict(False, "kept: its mark could not be read")
     if candidate.marked:
         return Verdict(True, "dropped: marked, and no session holds its lock")
     if others_running:
@@ -253,8 +325,11 @@ class TestDatabaseReaper:
         alive: Callable[[int], bool] = pid_alive,
         only: Iterable[str] | None = None,
         pattern: re.Pattern[str] = WORKER_DB,
+        host: str | None = None,
     ) -> None:
         self._dsn = admin_dsn(dsn)
+        # A v2 mark's pid is a process only on the machine that wrote it.
+        self._host = socket.gethostname() if host is None else host
         self._sessions = sessions or OtherTestSessions()
         self._alive = alive
         self._only = set(only) if only is not None else None
@@ -266,13 +341,12 @@ class TestDatabaseReaper:
         rows = await conn.fetch(
             """
             SELECT d.datname,
-                   coalesce(shobj_description(d.oid, 'pg_database'), '') = $1 AS marked,
+                   shobj_description(d.oid, 'pg_database') AS comment,
                    (SELECT count(*) FROM pg_stat_activity a WHERE a.datname = d.datname)
                        AS connections
             FROM pg_database d
             ORDER BY d.datname
-            """,
-            HOLD_MARK,
+            """
         )
         found = []
         for row in rows:
@@ -281,8 +355,12 @@ class TestDatabaseReaper:
                 continue
             pid = match.group("pid")
             found.append(
-                Candidate(
-                    row["datname"], row["marked"], row["connections"], int(pid) if pid else None
+                Candidate.from_row(
+                    row["datname"],
+                    name_pid=int(pid) if pid else None,
+                    comment=row["comment"],
+                    connections=row["connections"],
+                    host=self._host,
                 )
             )
         return found

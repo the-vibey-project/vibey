@@ -12,6 +12,8 @@ import asyncio
 import os
 import re
 import socket
+import subprocess
+import sys
 import time
 import uuid
 from collections.abc import Callable, Iterator
@@ -33,6 +35,7 @@ from tests.db_reaper import (
     UnreadableMark,
     admin_dsn,
     decide,
+    pid_alive,
 )
 
 STAGED = re.compile(r"^vibeyreap_test_(?:gw\d+|main)_(?:[0-9a-f]{32}|(?P<pid>\d+)_[0-9a-f]{8})$")
@@ -340,6 +343,70 @@ def test_the_limit_caps_one_runs_drops(staging: _Staging) -> None:
 def test_a_name_outside_the_pattern_is_never_a_candidate(staging: _Staging) -> None:
     name = staging.create(f"vibeyreap_test_template_{uuid.uuid4().hex[:8]}", marked=True)
     assert staging.reap(running=False).dropped == []  # type: ignore[attr-defined]
+    assert staging.exists(name)
+
+
+def test_a_database_whose_creator_lives_here_is_kept_whatever_its_lock_says(
+    staging: _Staging,
+) -> None:
+    """(a) No session holds the lock, but the process the mark names is alive on this machine."""
+    staging.create(_worker_name(), mark=HoldMark.this_process().text())
+    report = staging.reap(running=False, alive=pid_alive)
+    assert report.dropped == []
+    assert report.kept == {f"kept: its creator, pid {os.getpid()}, is alive": 1}
+
+
+def test_a_database_whose_creator_has_exited_is_dropped(staging: _Staging) -> None:
+    """(b) The mark names a process that has exited, and its lock is free."""
+    child = subprocess.Popen([sys.executable, "-c", "pass"])
+    child.wait()
+    assert not pid_alive(child.pid)
+    name = staging.create(_worker_name(), mark=HoldMark(child.pid, socket.gethostname()).text())
+    assert staging.reap(running=True, alive=pid_alive).dropped == [name]
+
+
+def test_a_mark_from_another_machine_follows_the_lock_alone(staging: _Staging) -> None:
+    """(c) The pid is alive here, but it was issued on another machine, so it names nothing."""
+    name = staging.create(
+        _worker_name(), mark=HoldMark(os.getpid(), "another-machine.invalid").text()
+    )
+    assert staging.reap(running=True, alive=pid_alive).dropped == [name]
+
+
+def test_the_first_mark_follows_the_lock_alone(staging: _Staging) -> None:
+    """(d) A v1 mark names no process: held, it is kept; released, it is dropped."""
+    name = _worker_name()
+    hold = TestDatabaseHold(_base_dsn(), name)
+    hold.start()
+    try:
+        staging.create(name, mark=HOLD_MARK_V1)
+        assert staging.reap(running=True, alive=True).dropped == []
+    finally:
+        hold.release()
+    assert staging.reap(running=True, alive=True).dropped == [name]
+
+
+def test_a_hold_that_ends_while_its_session_lives_gives_nothing_away(staging: _Staging) -> None:
+    """(e) The incident of 2026-09-24: a session's hold ended while the session still ran, and
+    another session's reaper dropped its databases. Now the mark keeps them."""
+    name = _worker_name()
+    hold = TestDatabaseHold(_base_dsn(), name)
+    hold.start()
+    try:
+        staging.create(name, mark=HoldMark.this_process().text())
+    finally:
+        hold.release()
+    report = staging.reap(running=False, alive=pid_alive)
+    assert report.dropped == []
+    assert report.kept == {f"kept: its creator, pid {os.getpid()}, is alive": 1}
+    assert staging.exists(name)
+
+
+def test_a_database_whose_mark_cannot_be_read_is_kept(staging: _Staging) -> None:
+    name = staging.create(_worker_name(), mark="vibey-test-hold:v2 pid=unknown host=nowhere")
+    report = staging.reap(running=False)
+    assert report.dropped == []
+    assert report.kept == {"kept: its mark could not be read": 1}
     assert staging.exists(name)
 
 
