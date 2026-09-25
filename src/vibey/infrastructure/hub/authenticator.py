@@ -54,6 +54,9 @@ class LocalTokenAuthenticator:
         if not header.lower().startswith(BEARER):
             return None
         # vibey_bootstrap's constant-time compare (the dogfood rule), not a second one.
+        # Its `verify_api_key_header` is not used: it reads the key from the environment
+        # and passes every request when that is unset -- fail-open, which a key file that
+        # is always there, owner-only, does not need to risk (ADR-0067).
         if compare_secrets(header[len(BEARER) :].strip(), self._token):
             return HOST_PRINCIPAL
         return None

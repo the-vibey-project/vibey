@@ -41,6 +41,7 @@ from vibey.domain.errors import (
     GateAlreadyAnswered,
     InvalidActorLabel,
     InvalidAnswer,
+    PriorityRefused,
     ReorderRefused,
     UnknownGate,
     UnknownProject,
@@ -79,13 +80,15 @@ ERROR_STATUS: Final[tuple[tuple[type[VibeyError], int], ...]] = (
     (UnknownProject, 404),
     (UnknownGate, 404),
     (GateAlreadyAnswered, 409),
+    (PriorityRefused, 403),
     (ReorderRefused, 409),
     (InvalidAnswer, 422),
     (InvalidActorLabel, 422),
     (InvalidLedgerQuery, 422),
 )
-"""How each refusal the service raises reads over HTTP. Order matters only for
-subclasses; none here shares a branch."""
+"""How each refusal the service raises reads over HTTP. The first match wins, so a
+subclass comes before its base: `PriorityRefused` (the host's queue grant does not admit
+the hub) is a 403, every other `ReorderRefused` a 409."""
 
 REFUSED: Final[dict[int | str, dict[str, Any]]] = {
     401: {"description": "The request proves no principal."},

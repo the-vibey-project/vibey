@@ -53,6 +53,7 @@ nav:
   - Reference:
       - CLI: reference/cli.md
       - Configuration: reference/configuration.md
+      - Hub API: reference/hub-api.md
   - Design:
       - The design system: design/README.md
       - Motion: design/motion.md
@@ -125,4 +126,5 @@ nav:
           - "0064 — gptossloop is the sovereign engine, and qwenloop is its opt-in Qwen twin": architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md
           - "0065 — vibey and krypton": architecture/decisions/0065-vibey-and-krypton.md
           - "0066 — One design system for every surface": architecture/decisions/0066-one-design-system-for-every-surface.md
+          - "0067 — The hub: vibey serve": architecture/decisions/0067-the-hub.md
   - Research paper: paper.md
