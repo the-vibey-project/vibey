@@ -75,6 +75,12 @@ export interface BudgetBreach {
   readonly message: string;
 }
 
+/** What a day's or a month's budget has spent so far, and the cap it has used up, if any. */
+export interface BudgetUsage {
+  readonly spent: Readonly<Record<keyof BudgetCaps, number>>;
+  readonly exhausted?: keyof BudgetCaps;
+}
+
 export interface BudgetGuardInterface {
   /** Before a run or an escalation: the first budget its projection would exceed. */
   wouldExceed(context: {
@@ -85,4 +91,6 @@ export interface BudgetGuardInterface {
   }): BudgetBreach | undefined;
   /** While it runs: the first matching budget it has used up. */
   exhausted(context: { readonly loop: string; readonly engineId: string; readonly runId: string }): BudgetBreach | undefined;
+  /** A day or month budget's spend so far, for a view; a per-run budget has no running total. */
+  usage(budget: Budget): BudgetUsage | undefined;
 }

@@ -8,6 +8,12 @@
 export type Effort = 'TRIVIAL' | 'LOW' | 'STANDARD' | 'HIGH' | 'MAX';
 export type LoopName = 'sovereignloop' | 'paidloop';
 
+/**
+ * How an engine writes its events: a top-level `type` (codexloop, qwenloop), `event_type`
+ * with a `payload` (claudeloop, agyloop), or `event_type` beside flat fields (opencodeloop).
+ */
+export type EventEnvelope = 'type' | 'event_type+payload' | 'event_type';
+
 export interface EngineEffort {
   readonly effort: Effort;
   readonly argv: readonly string[];
@@ -38,6 +44,8 @@ export interface CatalogueEngine {
   readonly binary: string;
   readonly state_dir: string;
   readonly enabled: boolean;
+  /** Repealed by the canon (OpenCode, by 8.b): listed for transparency, and never run. */
+  readonly repealed: boolean;
   readonly switch: string | null;
   readonly cost_per_mtok_in: number;
   readonly cost_per_mtok_out: number;
@@ -50,9 +58,10 @@ export interface CatalogueEngine {
   readonly base_weight: number;
   readonly run: readonly string[];
   readonly controls: EngineControls;
-  readonly events: { readonly path: string; readonly envelope: 'type' | 'event_type+payload' };
+  readonly events: { readonly path: string; readonly envelope: EventEnvelope };
   readonly env: { readonly auth: readonly string[]; readonly passthrough: readonly string[] };
-  readonly notes?: string;
+  /** What vibey says about the engine, one line each. */
+  readonly notes?: readonly string[];
   /**
    * The flag that sets a turn limit, when this engine takes one. Not part of the JSON: it is
    * derived from the effort projections, which show it wherever an engine has it.

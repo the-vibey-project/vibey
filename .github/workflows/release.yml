@@ -259,3 +259,37 @@ jobs:
           git config user.name "vibey[bot]"
           git config user.email "adam@matthewsteinberger.com"
           vibey-gh realign
+
+  openvsx:
+    # Declared only (ADR-0059, #290): it publishes the VS Code extension to Open VSX when an
+    # OVSX_PAT secret exists, and otherwise says so and does nothing. Creating that token
+    # needs the operator's Open VSX account; using the extension needs no account.
+    name: Publish the VS Code extension to Open VSX
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    defaults:
+      run:
+        working-directory: clients/vscode
+    steps:
+      - name: Without a token there is nothing to publish
+        if: env.OVSX_PAT == ''
+        run: echo "OVSX_PAT is not set, so the extension is not published to Open VSX."
+      - uses: actions/checkout@v4
+        if: env.OVSX_PAT != ''
+      - uses: actions/setup-node@v4
+        if: env.OVSX_PAT != ''
+        with:
+          node-version-file: clients/vscode/.node-version
+          cache: npm
+          cache-dependency-path: clients/vscode/package-lock.json
+      - name: Build and package
+        if: env.OVSX_PAT != ''
+        run: |
+          npm ci
+          npm run compile
+          npx vsce package --no-dependencies --out vibey.vsix
+      - name: Publish, once per version
+        if: env.OVSX_PAT != ''
+        run: npx ovsx publish vibey.vsix --pat "$OVSX_PAT" --skip-duplicate

@@ -941,12 +941,16 @@ describe('TaskRun', () => {
     expect(await broken.run.execute()).toMatchObject({ outcome: 'error', error: 'EACCES: the lock directory cannot be made' });
   });
 
-  it('sends follow-ups to a running engine, and says plainly when it cannot', async () => {
-    const h = harness();
+  it('sends follow-ups to a running engine that takes them, and says plainly when it cannot', async () => {
+    const qwenloop = engineOf('qwenloop');
+    const prompted = { ...qwenloop, controls: { ...qwenloop.controls, prompt: ['prompt', '{run_id}', '{text}', '--cwd', '{cwd}'] } };
+    const h = harness({ select: () => selection('qwenloop', { engine: prompted }) });
+    expect(h.run.takesFollowUps).toBe(false);
     expect(await h.run.followUp('hello')).toBe('This task is not running, so there is nothing to send a follow-up to.');
     let answer: { code: number | null; error?: string } = { code: 0 };
     h.processes.on(['prompt'], () => answer);
     h.processes.onSpawn = async (child) => {
+      expect(h.run.takesFollowUps).toBe(true);
       expect(await h.run.followUp('   ')).toBe('There is nothing to send.');
       expect(await h.run.followUp(' make it shorter ')).toBeUndefined();
       answer = { code: 3 };
@@ -958,6 +962,17 @@ describe('TaskRun', () => {
     await h.run.execute();
     expect(h.processes.calls[0]?.args).toEqual(['prompt', '--cwd', h.worktree, '--', h.run.runId, 'make it shorter']);
     expect(h.notices()).toContain('Follow-up sent. The model reads it at the start of its next turn.');
+  });
+
+  it('gives no follow-up to an engine whose catalogue declares no prompt', async () => {
+    const h = harness();
+    h.processes.onSpawn = async (child) => {
+      expect(h.run.takesFollowUps).toBe(false);
+      expect(await h.run.followUp('hello')).toBe('qwenloop does not take follow-ups while it runs.');
+      child.exit({ code: 75, signal: null });
+    };
+    await h.run.execute();
+    expect(h.processes.calls).toEqual([]);
   });
 
   it('refuses run records or a worktree on storage a restart empties', async () => {
