@@ -35,9 +35,9 @@ version silently.
 this repository publishes today are:
 
 - `vibey-engine` on PyPI (from `main`) and on TestPyPI (from `develop`) — `vibey-engine.yml`.
-  It carries the whole engine family (ADR-0037, renamed by ADR-0068)
+  It carries the whole engine family (ADR-0037, renamed by ADR-0069)
 - `krypton-app`, the apps and the `krypton` command, on the same two channels —
-  `krypton-app.yml`. Exactly these two packages publish (sub-doctrine 9.e, ADR-0068);
+  `krypton-app.yml`. Exactly these two packages publish (sub-doctrine 9.e, ADR-0069);
   no `vibey` package does
 - An OCI release bundle of the exact wheel and sdist at
   `ghcr.io/<owner>/<repo>/python` — `release-surfaces.yml`
@@ -58,7 +58,7 @@ The workspace tenants (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`,
 `qwenloop` — which ships the `gptossloop` and `qwenloop` scripts — `vibey-gh`,
 `vibey-skills`, `vibey-bootstrap`) are no longer separate
 PyPI distributions. Their source lives in this repository (ADR-0021) and they ship
-inside the `vibey-engine` wheel (ADR-0037, ADR-0068), so `vibey-engine.yml` publishes
+inside the `vibey-engine` wheel (ADR-0037, ADR-0069), so `vibey-engine.yml` publishes
 `vibey-engine` and that one package is the whole engine family. A tenant's own version in its
 `pyproject.toml` is an in-tree marker, not a release.
 
@@ -122,7 +122,7 @@ The order is the implementation's, not a presentation choice. A marker never
 break is a promise about an interface somebody installed and a range that ships
 nothing has no interface to break.
 
-Since the whole tree ships as one package, `vibey-engine` (ADR-0037, ADR-0068), `content_paths` must
+Since the whole tree ships as one package, `vibey-engine` (ADR-0037, ADR-0069), `content_paths` must
 cover every prefix whose content reaches an installed user: `src/vibey/`, each
 runner's and tool's package root, and the skills marketplace tree. It deliberately
 does *not* cover a tenant's `docs/` or `tests/`, which change nothing a user
@@ -276,7 +276,7 @@ For a `develop` push, the `verify-testpypi` job already installs the dev build.
 On TestPyPI, read the release history of `vibey-engine` and `krypton-app`, not
 their "latest" version: dev builds (`x.y.z.devN`) are pre-releases, so a project
 page shows the last final version uploaded there while dev builds keep landing.
-(`vibey-dev` is the retired TestPyPI name of the builds before ADR-0068.)
+(`vibey-dev` is the retired TestPyPI name of the builds before ADR-0069.)
 
 ## Common issues
 

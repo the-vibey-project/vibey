@@ -22,5 +22,5 @@ what you can use instead, and exits with status 1. It never pretends a hub is ru
 
 Published by `.github/workflows/krypton-app.yml` alone: nightly from `develop` to TestPyPI
 (environment `testpypi`), stable from `main` to PyPI (environment `pypi`), by trusted
-publishing. ADR-0068 records why vibey publishes exactly two packages, `vibey-engine` and
+publishing. ADR-0069 records why vibey publishes exactly two packages, `vibey-engine` and
 `krypton-app`.

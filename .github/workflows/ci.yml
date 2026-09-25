@@ -751,7 +751,7 @@ jobs:
           PY
 
   krypton-app:
-    # krypton-app (clients/krypton-app, sub-doctrine 9.e, ADR-0068): the apps' package. It is
+    # krypton-app (clients/krypton-app, sub-doctrine 9.e, ADR-0069): the apps' package. It is
     # outside the uv workspace and publishes from krypton-app.yml; this job runs its suite and
     # static checks on every change, as every client and package here is run by CI.
     name: krypton-app

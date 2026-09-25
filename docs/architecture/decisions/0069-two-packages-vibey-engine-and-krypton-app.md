@@ -1,4 +1,4 @@
-# 0068 — Two packages, vibey-engine and krypton-app
+# 0069 — Two packages, vibey-engine and krypton-app
 
 **Status:** accepted · **Date:** 2026-09-25 · **Supersedes in part:** ADR-0037 (its single `vibey` distribution; its one-wheel-for-the-whole-family decision stands) · **Cites:** sub-doctrine 9.e, 12.c · **Related:** ADR-0028, ADR-0059, ADR-0065 · **Evidence:** `develop` at `30356862`, read 2026-09-25
 

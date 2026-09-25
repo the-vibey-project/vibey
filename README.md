@@ -331,7 +331,7 @@ things those runners deliberately do not do:
 | [Phase protocols](docs/plans/phase-protocols.md) | What all six phases do, turn by turn |
 | [Implementation plan](docs/plans/implementation-plan.md) | Milestone-by-milestone, test-first task breakdown |
 | [CLAUDE.md](CLAUDE.md) | The short facts file every coding agent working on vibey loads first: non-negotiables, layer map, gate commands |
-| [Decision records](docs/architecture/decisions/) | Why each hard call was made (68 ADRs) |
+| [Decision records](docs/architecture/decisions/) | Why each hard call was made (69 ADRs) |
 
 ## Status
 
@@ -377,13 +377,13 @@ Before upgrading:
 
 Every push to `develop` publishes a uniquely versioned dev build (`X.Y.Z.devN`)
 to TestPyPI; every push to `main` publishes to PyPI. Two packages publish, each by its own
-workflow (ADR-0068): `vibey-engine`, the engine family (`vibey-engine.yml`), and
+workflow (ADR-0069): `vibey-engine`, the engine family (`vibey-engine.yml`), and
 `krypton-app`, the apps and the `krypton` command (`krypton-app.yml`).
 After a successful `main` release, `github-release.yml` tags that exact commit
 and creates the matching GitHub Release. Versioning and release are owned by
 the in-tree `vibey-gh`; release-please is retired (ADR-0028). `uv tool install
 vibey-engine` (or `pipx install vibey-engine` / `pip install vibey-engine`) tracks stable
-releases of the engine family (ADR-0037, ADR-0068); `pip install krypton-app` adds the apps.
+releases of the engine family (ADR-0037, ADR-0069); `pip install krypton-app` adds the apps.
 
 ## Formal notes
 

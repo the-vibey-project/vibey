@@ -79,7 +79,7 @@ procedures live in `.agent/rules/`
 - Conventional Commits enforced by pre-commit hook.
 - Never implement on `main`. PRs squash into `develop` via the merge train
   (`vibey-gh merge-train`); `vibey-gh promote` rebase-merges `develop` into
-  `main` (linear history). `develop` → TestPyPI, `main` → PyPI, for `vibey-engine` and `krypton-app` (ADR-0068).
+  `main` (linear history). `develop` → TestPyPI, `main` → PyPI, for `vibey-engine` and `krypton-app` (ADR-0069).
   ADR-0028.
 
 ## Layer map
@@ -101,7 +101,7 @@ tenants keep their own pyproject, version, Python floor, tests and gates
 package, two engines, ADR-0064 — and vibey-runners-common) and
 `src/vibey_tools/{gh,skills,bootstrap}` (vibey-gh, vibey-skills,
 vibey-bootstrap). Sibling GitHub repos are gone and so are the separate PyPI
-names — the tree ships as one `vibey-engine` package (ADR-0037, ADR-0068); the apps ship as `krypton-app`.
+names — the tree ships as one `vibey-engine` package (ADR-0037, ADR-0069); the apps ship as `krypton-app`.
 
 ## Queue and engines
 
@@ -188,7 +188,7 @@ automation has no drift.
 | Data model | `docs/plans/data-model.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| ADRs | `docs/architecture/decisions/` (68 ADRs: 0001–0068) |
+| ADRs | `docs/architecture/decisions/` (69 ADRs: 0001–0069) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion runbooks | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

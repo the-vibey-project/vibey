@@ -16,7 +16,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 * **packaging:** the engine's package is `vibey-engine`, and the apps' package is
   `krypton-app`; no `vibey` package is published any more
-  ([ADR-0068](docs/architecture/decisions/0068-two-packages-vibey-engine-and-krypton-app.md),
+  ([ADR-0069](docs/architecture/decisions/0069-two-packages-vibey-engine-and-krypton-app.md),
   sub-doctrine 9.e). BREAKING for packagers and anyone who pinned `vibey`: install
   `pip install vibey-engine` (or `uv tool install vibey-engine`) instead. The commands and the
   importable packages are unchanged. `pyproject.toml` now names the project `vibey-engine`
@@ -215,6 +215,17 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **hub:** `vibey serve`, the one HTTP API every Krypton client reaches
+  ([ADR-0068](docs/architecture/decisions/0068-the-hub.md)), behind the new `hub` extra
+  (`pip install 'vibey[hub]'`). Projects, status, gates (list and answer, through the
+  one-answer service), loops, budget (read only), queue (list and bump, as the declared source
+  `vibey-hub`), ledger search, lanes and doctor under `/api/v1`, plus `/health/live|ready` and
+  `/api/metrics`, built on `vibey_bootstrap`. Every document is the matching `--json` command's.
+  Loopback by default; a LAN address needs `[hub] lan = true`. Scopes `view`, `answer`, `spend`,
+  `run`, `bump`, deny by default, and none can declare paid use, caps, the DSN, migrations or
+  canon. A `Host` allowlist, no CORS, a strict CSP. The OpenAPI 3.1 document is committed at
+  `docs/reference/hub-api.json` with a drift test. `vibey doctor` gains a `hub-exposure` line
+  that fails on an undeclared exposure.
 * **clients:** `@vibey/core`, the pure TypeScript every krypton client shares, in
   `packages/vibey-core/` ([ADR-0067](docs/architecture/decisions/0067-one-typescript-core-for-every-krypton-client.md)).
   It holds the engine catalogue, run events, the one command table, the gate-answer planner, the

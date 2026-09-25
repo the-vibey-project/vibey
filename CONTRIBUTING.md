@@ -240,7 +240,7 @@ This repository is a uv workspace (ADR-0021). `src/vibey` is the conductor;
 `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}` are the `*loop`
 runners; `src/vibey_tools/{gh,skills,bootstrap}` are vibey-gh, vibey-skills
 and vibey-bootstrap. Each was imported with its history, and each ships inside
-the `vibey-engine` package rather than under its own PyPI name (ADR-0037, ADR-0068).
+the `vibey-engine` package rather than under its own PyPI name (ADR-0037, ADR-0069).
 
 The root gates above cover `src/vibey` only. A tenant keeps every gate it was
 already held to (ADR-0022), run from its own directory with its own command,
