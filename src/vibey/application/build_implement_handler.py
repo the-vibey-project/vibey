@@ -25,8 +25,9 @@ inventory->plan chaining use.
 
 ULTRA (ADR-0063): while the project's ULTRA run is active, every pass runs at
 ``Effort.ULTRA`` and the ladder is not consulted, so it never parks for length. A
-pass that completes is a checkpoint: the engine has committed its work in the
-item's worktree, the handler enqueues the checks (build.verify) as always, records
+pass that completes is a checkpoint: the handler commits the item's worktree (so the
+next pass, which re-creates the worktree from its branch, starts from it), enqueues
+the checks (build.verify) as always, records
 ``UltraPassCompleted`` and enqueues the next pass under its own job key, after the
 checks. The operator's Stop ends the run at the next pass boundary, and the budget
 brake parks it at a declared cap; a run with no dollar cap waits for one unless the
@@ -36,6 +37,7 @@ no-cap declaration stands.
 from collections.abc import Mapping
 from dataclasses import replace
 from datetime import timedelta
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from vibey.application.build_engine_run import BuildLedger, run_and_record
@@ -43,6 +45,7 @@ from vibey.application.build_verify_handler import granted_amount, granted_limit
 from vibey.application.dto import EngineEvent, EnqueueRequest, HumanGateRequest, JobRecord, RunSpec
 from vibey.application.interfaces import (
     BudgetSource,
+    BuildCheckpoint,
     BuildProvisioner,
     BuildWorktrees,
     LedgerReader,
@@ -93,10 +96,12 @@ class BuildImplementHandler:
         correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
         tracer: TelemetryTracer | None = None,
         ultra_ledger: LedgerReader | None = None,
+        checkpoint: BuildCheckpoint | None = None,
         ultra_policy: UltraPolicyInterface = ULTRA_POLICY,
     ) -> None:
         self._correlation = correlation
         self._ultra_ledger = ultra_ledger
+        self._checkpoint = checkpoint
         self._ultra = ultra_policy
         self._worktrees = worktrees
         self._provisioner = provisioner
@@ -171,6 +176,15 @@ class BuildImplementHandler:
         checks the pass just enqueued. Idempotent by the next pass's job key."""
         following = ultra_pass.next()
         key = following.job_key(job.project_id, job.cycle)
+        worktree = outcome.result.get("worktree_path")
+        commit = (
+            await self._checkpoint.commit(
+                Path(str(worktree)),
+                f"chore(ultra): pass {ultra_pass.number} of {ultra_pass.work_item_id}",
+            )
+            if self._checkpoint is not None and worktree is not None
+            else None
+        )
         await self._ledger.record(
             project_id=job.project_id,
             cycle=job.cycle,
@@ -183,6 +197,7 @@ class BuildImplementHandler:
                 payload={
                     "work_item_id": ultra_pass.work_item_id,
                     "pass": ultra_pass.number,
+                    "commit": commit,
                     "next_job_key": key,
                 },
             ),
@@ -422,6 +437,7 @@ class BuildImplementHandler:
         result: dict[str, object] = {"work_item_id": job.work_item_id, "run_id": str(run_id)}
         if ultra:
             result["verify_job_id"] = str(verify.id)
+            result["worktree_path"] = str(worktree_path)
         return Success(result)
 
 

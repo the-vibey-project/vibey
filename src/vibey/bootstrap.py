@@ -134,6 +134,7 @@ from vibey.infrastructure.engines.local_engines import (
 from vibey.infrastructure.engines.loop_process_adapter import LoopProcessAdapter
 from vibey.infrastructure.files.in_memory import InMemoryFiles
 from vibey.infrastructure.files.nextcloud import NextcloudFilesAdapter
+from vibey.infrastructure.git.checkpoint import GitCheckpoint
 from vibey.infrastructure.git.integration_branch import IntegrationBranch
 from vibey.infrastructure.git.worktree_manager import GitWorktreeManager
 from vibey.infrastructure.ledger.full_ledger_writer import write_full_ledger
@@ -500,6 +501,7 @@ def build_full_worker(
             skills_context=skills_context,
             tracer=tracer,
             ultra_ledger=resources.ledger,
+            checkpoint=GitCheckpoint(),
         )
         return _recording(handler, adapter, meter)
 

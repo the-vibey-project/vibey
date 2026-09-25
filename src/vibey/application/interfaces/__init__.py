@@ -26,6 +26,7 @@ from vibey.application.interfaces.budget_source_interface import (
 )
 from vibey.application.interfaces.build import (
     BudgetSource,
+    BuildCheckpoint,
     BuildProvisioner,
     BuildWorktrees,
     GateResult,
@@ -211,6 +212,7 @@ __all__ = [
     "SkillsContextResult",
     "BuildLedger",
     "BuildProvisioner",
+    "BuildCheckpoint",
     "BuildWorktrees",
     "Clock",
     "ConductorPreflightInterface",

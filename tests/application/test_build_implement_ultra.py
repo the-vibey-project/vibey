@@ -78,10 +78,20 @@ NO_CAP = (EventKind.ULTRA_NO_CAP_CHANGED, {"enabled": True})
 CAPPED = BudgetLedger(turns_spent=0, dollars_spent=1.0, max_turns=None, max_dollars=10.0)
 
 
+class FakeCheckpoint:
+    def __init__(self) -> None:
+        self.commits: list[tuple[Path, str]] = []
+
+    async def commit(self, worktree_path: Path, message: str) -> str | None:
+        self.commits.append((worktree_path, message))
+        return "c0ffee"
+
+
 def _handler(
     tmp_path: Path,
     reader: EventsReader | None,
     budget: BudgetLedger | None = CAPPED,
+    checkpoint: FakeCheckpoint | None = None,
 ) -> tuple[BuildImplementHandler, RecordingEngine, FakeLedger, FakeJobRepository]:
     engine = RecordingEngine(descriptor=QWENLOOP, base_dir=tmp_path / "engine")
     ledger = FakeLedger()
@@ -95,6 +105,7 @@ def _handler(
         clock=FixedClock(),
         budget_source=FixedBudget(budget) if budget is not None else None,
         ultra_ledger=reader,
+        checkpoint=checkpoint,
     )
     return handler, engine, ledger, jobs
 
@@ -212,3 +223,12 @@ async def test_the_next_pass_depends_on_the_checks(tmp_path: Path) -> None:
     verify = next(j for j in jobs._jobs.values() if j.kind == "build.verify")
     following = requests[-1]
     assert following.depends_on == (verify.id,)  # type: ignore[attr-defined]
+
+
+async def test_done_is_a_checkpoint_committed_before_the_next_pass(tmp_path: Path) -> None:
+    checkpoint = FakeCheckpoint()
+    handler, _, ledger, _ = _handler(tmp_path, EventsReader(STARTED), checkpoint=checkpoint)
+    await handler.handle(_job(payload={ULTRA_PAYLOAD_KEY: 4}))
+    assert checkpoint.commits == [(tmp_path / "item-1", "chore(ultra): pass 4 of item-1")]
+    [done] = [e for e in ledger.recorded if e.kind == EventKind.ULTRA_PASS_COMPLETED.value]
+    assert done.payload["commit"] == "c0ffee"
