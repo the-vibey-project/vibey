@@ -428,6 +428,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **engines:** the worker's startup preflight and `vibey doctor --record` probe each engine
   with the project's `engine_environment`, so a credential the project declares for opencode
   or agyloop reaches the auth check and the conformance run, not only the session
+* **vibey_gh:** the sovereign heartbeat is honest and no longer skips the pre-push gate
+  (ADR-0060). `vibey-gh sovereign --beat` publishes only while GitHub lists a runner with the
+  lane's label as online (read with the runner's own login) and the model endpoint answers;
+  otherwise it pushes nothing, says why, and the heartbeat goes stale so the gate falls back
+  honestly. It no longer pushes with `--no-verify` or a bare `--force`: the pre-push hook now
+  recognises by its own rule a push that carries no code (`vibey-gh push-scope`: every ref
+  outside `refs/heads/` and `refs/tags/`, every commit the empty tree with no parents), and
+  the previous heartbeat is replaced by compare-and-swap. The timer is declared:
+  `vibey-gh heartbeat install|status|uninstall` (also run by `runner install`/`uninstall`)
+  renders a launchd agent on macOS or a systemd user timer on Linux, and refuses an
+  interpreter, package or log under a temporary directory or inside a git work tree. The
+  hand-written `vibey-local-authority` LaunchAgent that used to publish the heartbeat is
+  retired.
+
 * **queue:** the lease reaper is bounded (ADR-0056, closing ADR-0044 §8's latent gap). An
   expired lease whose attempts are spent is parked with a `delivery_exhausted` gate instead of
   re-readied, so a job that kills its worker on every attempt is no longer claimed forever;
