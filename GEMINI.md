@@ -1,9 +1,8 @@
 # GEMINI.md
 
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
-Orchestrates claudeloop, codexloop, cursorloop, agyloop, and opencode's
-`opencodeloop` (plus opt-in local qwenloop) via PostgreSQL queue with lossless
-handoff. All six runners live in
+Orchestrates claudeloop, codexloop, cursorloop, and agyloop (plus opt-in local
+qwenloop) via PostgreSQL queue with lossless handoff. All five runners live in
 this repository under `src/vibey_runners/`. Facts only —
 procedures live in `.agent/rules/`
 (mirrors of `.claude/skills/` and `.cursor/rules/`).
@@ -96,8 +95,8 @@ domain, application, infrastructure, cli. ADR-0023.
 
 Map covers `src/vibey` only. The repo is a uv workspace (ADR-0021) whose other
 tenants keep their own pyproject, version, Python floor, tests and gates
-(ADR-0022): `src/vibey_runners/{claude,codex,cursor,agy,opencode,qwen,common}`
-(claudeloop, codexloop, cursorloop, agyloop, opencodeloop, qwenloop,
+(ADR-0022): `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}`
+(claudeloop, codexloop, cursorloop, agyloop, qwenloop,
 vibey-runners-common) and
 `src/vibey_tools/{gh,skills,bootstrap}` (vibey-gh, vibey-skills,
 vibey-bootstrap). Sibling GitHub repos are gone and so are the separate PyPI
@@ -106,7 +105,7 @@ names — the tree ships as one `vibey` distribution (ADR-0037).
 ## Queue and engines
 
 - **Queue:** PostgreSQL 17, never SQLite (`FOR UPDATE SKIP LOCKED`, ADR-0002).
-- **Engines:** claudeloop, codexloop, cursorloop, agyloop, opencode — the paid pool,
+- **Engines:** claudeloop, codexloop, cursorloop, agyloop — the paid pool,
   rotated per BUILD job via smooth weighted round robin
   (`SelectingEngineProvider` → `EngineSelector` → `domain/rotation.select()`,
   ADR-0005). Two default-off local engines — `qwenloop`

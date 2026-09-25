@@ -134,8 +134,8 @@ In VS Code's chat, type `@vibey` and your task to run one there, or a command, f
 - **Effort** `auto` starts low and, when an attempt fails, tries again one rung higher on
   vibey's ladder, in the same copy. You can also fix one level, from TRIVIAL to MAX.
 - **Engines and models** are listed by `vibey loops --json`. The extension knows none of them
-  by itself. An engine the canon has repealed (OpenCode, by 8.b) is shown, greyed out, and never
-  runs. With a vibey older than 3.0.0 there is no `vibey loops`. The extension then says so,
+  by itself. An engine the canon has repealed (by 8.b) while vibey still carries its code is
+  shown, greyed out, and never runs. With a vibey older than 3.0.0 there is no `vibey loops`. The extension then says so,
   and runs sovereignloop with qwenloop on gpt-oss:20b.
 
 ## Budgets

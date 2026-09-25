@@ -114,9 +114,14 @@ def test_resume_verb_used_when_session_id_present(descriptor) -> None:  # type: 
     assert argv[2] == "sess-abc123"
 
 
-def test_opencode_resume_keeps_the_vibey_run_id() -> None:
-    from vibey.infrastructure.engines.descriptors import OPENCODE
+def test_a_resume_run_id_flag_keeps_the_vibey_run_id() -> None:
+    """A runner that keeps the provider's session id and vibey's run id apart takes the
+    run id on resume through its descriptor's `resume_run_id_flag`."""
+    from dataclasses import replace
 
+    from vibey.infrastructure.engines.descriptors import QWENLOOP
+
+    descriptor = replace(QWENLOOP, resume_run_id_flag="--run-id")
     spec = RunSpec(
         run_id=RUN_ID,
         worktree_path=Path(WORKTREE),
@@ -125,9 +130,9 @@ def test_opencode_resume_keeps_the_vibey_run_id() -> None:
         isolation=IsolationLevel.WORKTREE,
         session_id="sess-abc123",
     )
-    argv = build_argv(OPENCODE, spec)
+    argv = build_argv(descriptor, spec)
     assert argv[:5] == (
-        "opencodeloop",
+        "qwenloop",
         "resume",
         "sess-abc123",
         "--run-id",

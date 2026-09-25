@@ -115,7 +115,7 @@ def test_the_default_chart_install_passes_although_every_engine_ships() -> None:
     assert check.ok, check.detail
     assert "nothing required" in check.detail
     assert "--provider scripted" in check.detail
-    assert "5 engine binaries on PATH, none with an API key" in check.detail
+    assert "4 engine binaries on PATH, none with an API key" in check.detail
     # The one fact a bare PASS would hide: nothing engine-driven can run.
     assert "no engine-driven (BUILD) job can run" in check.detail
 
@@ -138,16 +138,18 @@ def test_without_an_allow_list_every_key_present_names_no_gap() -> None:
     check = EngineAuthCheck(which=_every_binary).check(_EVERY_KEY)
     assert check.ok
     assert "API key present: agyloop, claudeloop, codexloop, cursorloop" in check.detail
-    assert "without one: opencode" in check.detail
+    assert "without one" not in check.detail
 
 
-def test_without_an_allow_list_can_report_every_engine_keyed() -> None:
-    """The port remains generic when a deployment supplies an OpenCode config secret."""
-    api_key_envs = {**ENGINE_API_KEY_ENVS, EngineId.OPENCODE: ("OPENCODE_CONFIG",)}
+def test_without_an_allow_list_a_deployment_supplied_key_map_is_honoured() -> None:
+    """The port stays generic: a deployment may name its own credential for an engine."""
+    api_key_envs = {**ENGINE_API_KEY_ENVS, EngineId.AGYLOOP: ("AGYLOOP_MOUNTED_KEY",)}
+    environ = {k: v for k, v in _EVERY_KEY.items() if not k.startswith(("GOOGLE", "GEMINI"))}
     check = EngineAuthCheck(which=_every_binary, api_key_envs=api_key_envs).check(
-        {**_EVERY_KEY, "OPENCODE_CONFIG": "mounted"}
+        {**environ, "AGYLOOP_MOUNTED_KEY": "mounted"}
     )
     assert check.ok
+    assert "API key present: agyloop, claudeloop, codexloop, cursorloop" in check.detail
     assert "without one" not in check.detail
 
 

@@ -846,8 +846,8 @@ launch = "qwenloop run"
 health = "curl -sf http://127.0.0.1:11434/api/tags"
 
 [[seats]]
-name = "opencode"
-launch = "opencode"                          # empty health = engage without preflight
+name = "ollama"
+launch = "ollama run qwen2.5-coder"          # empty health = engage without preflight
 ```
 
 | Field | Type / default | Meaning |
@@ -855,7 +855,7 @@ launch = "opencode"                          # empty health = engage without pre
 | `enabled` | boolean / `false` | The operator writes `true` deliberately; the first live handoff should be supervised. |
 | `paid_probe` | string / empty | A shell command whose exit status answers "is the paid lane alive?" — the 296 ms *Credit balance is too low* refusal is exactly what it distinguishes from health. A hang counts as down. |
 | `interval_seconds` | integer / `300` | Loop cadence when run without `--once`. |
-| `seats` | array of tables / qwenloop, then opencode | Each seat is a name, a `launch` command, and an optional `health` preflight, judged by exit status — any agent fits without a code change. |
+| `seats` | array of tables / qwenloop | Each seat is a name, a `launch` command, and an optional `health` preflight, judged by exit status — any agent fits without a code change. |
 
 Seat state (which agent holds the seat, and its pid) lives in
 `~/.local/state/vibey-gh/failover.json`; `--config` and `--state` override both paths.

@@ -69,7 +69,6 @@ PROVIDER_ENGINES: Mapping[str, EngineId | None] = {
     "scripted": None,
     "claudeloop": EngineId.CLAUDELOOP,
     "qwenloop": None,
-    "opencode": EngineId.OPENCODE,
 }
 
 _ALWAYS_RESOLVABLE = frozenset({"localhost"})

@@ -190,20 +190,6 @@ LOOP_EVENT_MAP: dict[EngineId, dict[str, EventKind]] = {
         "capacity.forecast": EventKind.BUDGET_SPENT,
         "finished": EventKind.VERDICT_RENDERED,
     },
-    EngineId.OPENCODE: {
-        "run.started": EventKind.SESSION_SEEDED,
-        "turn.starting": EventKind.TURN_REQUESTED,
-        "text_delta": EventKind.TRANSCRIPT_RECORDED,
-        "tool_result": EventKind.TOOL_INVOKED,
-        "turn.completed": EventKind.TURN_COMPLETED,
-        # The process adapter turns a capacity-shaped provider error
-        # (OpenCode's APIError statusCode) into this
-        # explicit event, the shape build_engine_run's capacity_rejected flag
-        # and the ledger both read. Everything else stays `failed`.
-        "capacity.rejected": EventKind.CAPACITY_REJECTED,
-        "finished": EventKind.VERDICT_RENDERED,
-        "failed": EventKind.VERDICT_RENDERED,
-    },
     EngineId.QWENLOOP: {
         "run.started": EventKind.SESSION_SEEDED,
         # text_delta is one streamed fragment of the model's answer -- many
