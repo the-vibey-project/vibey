@@ -1,0 +1,12 @@
+{
+  "$comment": "Declared only (runbook 07): nothing builds or submits until the EXPO_TOKEN and store secrets exist. Stable is built from main and is the default; nightly from develop with APP_VARIANT=nightly.",
+  "cli": { "version": ">= 16.0.0", "appVersionSource": "local" },
+  "build": {
+    "stable": { "channel": "stable", "env": { "APP_VARIANT": "stable" }, "autoIncrement": true },
+    "nightly": { "channel": "nightly", "distribution": "internal", "env": { "APP_VARIANT": "nightly" }, "autoIncrement": true }
+  },
+  "submit": {
+    "stable": {},
+    "nightly": {}
+  }
+}

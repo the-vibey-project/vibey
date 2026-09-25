@@ -1,0 +1,20 @@
+{
+  "stable": {
+    "channel": "stable",
+    "name": "Krypton",
+    "slug": "krypton",
+    "scheme": "krypton",
+    "iosBundleIdentifier": "org.vibey.krypton",
+    "androidPackage": "org.vibey.krypton",
+    "updateChannel": "stable"
+  },
+  "nightly": {
+    "channel": "nightly",
+    "name": "Krypton Nightly",
+    "slug": "krypton-nightly",
+    "scheme": "krypton-nightly",
+    "iosBundleIdentifier": "org.vibey.krypton.nightly",
+    "androidPackage": "org.vibey.krypton.nightly",
+    "updateChannel": "nightly"
+  }
+}
