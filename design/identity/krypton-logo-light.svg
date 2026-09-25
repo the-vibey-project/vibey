@@ -1,0 +1,282 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1722.5 520" width="1722.5" height="520" role="img" aria-label="Krypton">
+<title>Krypton</title>
+<defs>
+<linearGradient id="vibey-krypton-logo-light-g0" x1="0" y1="0" x2="520" y2="520" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1c2542" stop-opacity="1"/><stop offset="1" stop-color="#080b14" stop-opacity="1"/></linearGradient>
+<radialGradient id="vibey-krypton-logo-light-g1" cx="145.6" cy="114.4" r="322.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.62"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.349"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.155"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.039"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
+<radialGradient id="vibey-krypton-logo-light-g2" cx="447.2" cy="468" r="260" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#57dcff" stop-opacity="0.34"/><stop offset="0.25" stop-color="#57dcff" stop-opacity="0.191"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="0.085"/><stop offset="0.75" stop-color="#57dcff" stop-opacity="0.021"/><stop offset="1" stop-color="#57dcff" stop-opacity="0"/></radialGradient>
+<radialGradient id="vibey-krypton-logo-light-g3" cx="260" cy="260" r="124.64" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.7"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.394"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.175"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.044"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
+<linearGradient id="vibey-krypton-logo-light-g4" x1="55" y1="55" x2="465" y2="465" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g5" x1="55" y1="55" x2="465" y2="465" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g6" x1="55" y1="55" x2="465" y2="465" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g7" x1="55" y1="55" x2="465" y2="465" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g8" x1="244.197" y1="218.368" x2="253.349" y2="227.521" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g9" x1="238.772" y1="290.121" x2="247.925" y2="299.274" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g10" x1="290.923" y1="241.174" x2="300.075" y2="250.326" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g11" x1="219.843" y1="242.035" x2="228.995" y2="251.187" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g12" x1="272.509" y1="289.12" x2="281.661" y2="298.272" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g13" x1="265.523" y1="219.266" x2="274.675" y2="228.418" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g14" x1="223.756" y1="275.137" x2="232.909" y2="284.289" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g15" x1="291.853" y1="262.235" x2="301.005" y2="271.387" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g16" x1="233.309" y1="225.988" x2="242.461" y2="235.141" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g17" x1="251.871" y1="291.824" x2="261.023" y2="300.976" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g18" x1="282.448" y1="231.148" x2="291.6" y2="240.301" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g19" x1="219.347" y1="255.072" x2="228.499" y2="264.224" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g20" x1="281.605" y1="279.882" x2="290.758" y2="289.035" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g21" x1="252.659" y1="219.954" x2="261.812" y2="229.106" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g22" x1="233.659" y1="283.246" x2="242.811" y2="292.398" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g23" x1="290.015" y1="249.653" x2="299.167" y2="258.805" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g24" x1="226.235" y1="236.453" x2="235.387" y2="245.606" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g25" x1="264.068" y1="288.878" x2="273.22" y2="298.031" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g26" x1="271.526" y1="225.147" x2="280.678" y2="234.299" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g27" x1="223.347" y1="266.785" x2="232.499" y2="275.937" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g28" x1="286.507" y1="268.611" x2="295.659" y2="277.763" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g29" x1="241.523" y1="224.946" x2="250.675" y2="234.099" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g30" x1="245.17" y1="287.031" x2="254.322" y2="296.184" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g31" x1="284.099" y1="239.178" x2="293.251" y2="248.33" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g32" x1="223.572" y1="248.095" x2="232.724" y2="257.247" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g33" x1="273.803" y1="282.116" x2="282.956" y2="291.269" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g34" x1="259.864" y1="223.602" x2="269.016" y2="232.754" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g35" x1="230.871" y1="275.711" x2="240.023" y2="284.863" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g36" x1="286.949" y1="257.036" x2="296.101" y2="266.188" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g37" x1="233.467" y1="233.144" x2="242.62" y2="242.296" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g38" x1="256.553" y1="286.396" x2="265.706" y2="295.548" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g39" x1="275.324" y1="232.045" x2="284.476" y2="241.197" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g40" x1="225.25" y1="259.184" x2="234.402" y2="268.337" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g41" x1="279.972" y1="272.861" x2="289.124" y2="282.014" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g42" x1="249.165" y1="226.277" x2="258.317" y2="235.429" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g43" x1="240.504" y1="280.883" x2="249.656" y2="290.035" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g44" x1="283.33" y1="246.82" x2="292.483" y2="255.972" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g45" x1="229.314" y1="243.05" x2="238.466" y2="252.202" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g46" x1="266.2" y1="281.896" x2="275.353" y2="291.048" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g47" x1="265.249" y1="228.921" x2="274.402" y2="238.073" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g48" x1="230.56" y1="268.183" x2="239.713" y2="277.336" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g49" x1="282.065" y1="262.725" x2="291.217" y2="271.877" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g50" x1="240.886" y1="232.321" x2="250.038" y2="241.474" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g51" x1="250.597" y1="281.954" x2="259.75" y2="291.106" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g52" x1="276.637" y1="239.324" x2="285.789" y2="248.476" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g53" x1="229.245" y1="252.998" x2="238.397" y2="262.15" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g54" x1="272.858" y1="274.642" x2="282.01" y2="283.794" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g55" x1="255.549" y1="229.825" x2="264.701" y2="238.977" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g56" x1="238.28" y1="273.956" x2="247.432" y2="283.108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g57" x1="280.227" y1="253.369" x2="289.379" y2="262.521" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g58" x1="236.034" y1="240.407" x2="245.186" y2="249.56" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g59" x1="259.515" y1="279.231" x2="268.668" y2="288.383" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g60" x1="268.286" y1="235.421" x2="277.438" y2="244.573" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g61" x1="232.796" y1="261.388" x2="241.948" y2="270.541" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g62" x1="275.795" y1="266.131" x2="284.948" y2="275.283" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g63" x1="247.768" y1="234.138" x2="256.92" y2="243.291" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g64" x1="246.846" y1="275.921" x2="255.998" y2="285.074" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g65" x1="275.225" y1="246.275" x2="284.377" y2="255.428" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g66" x1="235.039" y1="248.921" x2="244.192" y2="258.073" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g67" x1="265.851" y1="273.621" x2="275.004" y2="282.773" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g68" x1="259.932" y1="235.384" x2="269.084" y2="244.536" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g69" x1="238.926" y1="266.903" x2="248.078" y2="276.055" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g70" x1="274.895" y1="258.044" x2="284.048" y2="267.196" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g71" x1="243.132" y1="240.694" x2="252.284" y2="249.846" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g72" x1="254.56" y1="274.115" x2="263.712" y2="283.267" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g73" x1="268.342" y1="242.568" x2="277.495" y2="251.721" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g74" x1="237.713" y1="256.156" x2="246.866" y2="265.309" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g75" x1="268.585" y1="266.516" x2="277.737" y2="275.668" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g76" x1="253.28" y1="238.88" x2="262.432" y2="248.033" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g77" x1="246.144" y1="268.623" x2="255.297" y2="277.775" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g78" x1="270.629" y1="252.081" x2="279.782" y2="261.233" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g79" x1="242.462" y1="247.912" x2="251.615" y2="257.065" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g80" x1="259.724" y1="269.134" x2="268.877" y2="278.287" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g81" x1="261.243" y1="242.988" x2="270.396" y2="252.14" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g82" x1="243.352" y1="260.407" x2="252.504" y2="269.559" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g83" x1="267.028" y1="259.662" x2="276.18" y2="268.814" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g84" x1="250.075" y1="245.126" x2="259.228" y2="254.278" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g85" x1="252.619" y1="265.856" x2="261.772" y2="275.009" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g86" x1="263.808" y1="250.09" x2="272.961" y2="259.243" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g87" x1="246.573" y1="253.858" x2="255.725" y2="263.011" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g88" x1="260.247" y1="261.715" x2="269.399" y2="270.867" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g89" x1="256.01" y1="248.75" x2="265.162" y2="257.902" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g90" x1="251.597" y1="258.929" x2="260.75" y2="268.082" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g91" x1="258.42" y1="255.424" x2="267.572" y2="264.576" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g128" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g129" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g130" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g131" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g132" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g133" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g134" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g135" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g136" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g137" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g138" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g139" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g140" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g141" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g142" x1="625.25" y1="208" x2="1630.25" y2="358" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="0.5" stop-color="#2f6b9a" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g143" x1="1382" y1="241.75" x2="1464.5" y2="324.25" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="1" stop-color="#2f6b9a" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g144" x1="1382" y1="241.75" x2="1464.5" y2="324.25" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="1" stop-color="#2f6b9a" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g145" x1="1382" y1="241.75" x2="1464.5" y2="324.25" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="1" stop-color="#2f6b9a" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g146" x1="1382" y1="241.75" x2="1464.5" y2="324.25" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="1" stop-color="#2f6b9a" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g147" x1="1413.35" y1="273.1" x2="1433.15" y2="292.9" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9f94e2" stop-opacity="1"/><stop offset="1" stop-color="#6b5bd2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g148" x1="1410.633" y1="277.641" x2="1418.231" y2="285.239" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#bcb5eb" stop-opacity="1"/><stop offset="0.5" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="1" stop-color="#6b5bd2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g149" x1="1424.256" y1="285.468" x2="1431.854" y2="293.067" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9ac3b3" stop-opacity="1"/><stop offset="0.5" stop-color="#1f7a57" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g150" x1="1420.034" y1="272.552" x2="1427.633" y2="280.15" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#bcb5eb" stop-opacity="1"/><stop offset="0.5" stop-color="#6b5bd2" stop-opacity="1"/><stop offset="1" stop-color="#6b5bd2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g151" x1="1415.638" y1="282.693" x2="1423.237" y2="290.292" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9ac3b3" stop-opacity="1"/><stop offset="0.5" stop-color="#1f7a57" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-krypton-logo-light-g152" x1="1422.436" y1="279.201" x2="1430.034" y2="286.799" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9ac3b3" stop-opacity="1"/><stop offset="0.5" stop-color="#1f7a57" stop-opacity="1"/><stop offset="1" stop-color="#1f7a57" stop-opacity="1"/></linearGradient>
+</defs>
+<rect x="0" y="0" width="520" height="520" rx="115.96" fill="url(#vibey-krypton-logo-light-g0)"/>
+<rect x="0" y="0" width="520" height="520" rx="115.96" fill="url(#vibey-krypton-logo-light-g1)"/>
+<rect x="0" y="0" width="520" height="520" rx="115.96" fill="url(#vibey-krypton-logo-light-g2)"/>
+<circle cx="260" cy="260" r="124.64" fill="url(#vibey-krypton-logo-light-g3)"/>
+<ellipse cx="260" cy="260" rx="61.439" ry="61.439" transform="rotate(0 260 260)" fill="none" stroke="url(#vibey-krypton-logo-light-g4)" stroke-width="1.845"/>
+<ellipse cx="260" cy="260" rx="90.159" ry="90.159" transform="rotate(0 260 260)" fill="none" stroke="url(#vibey-krypton-logo-light-g5)" stroke-width="1.845"/>
+<ellipse cx="260" cy="260" rx="138.026" ry="138.026" transform="rotate(0 260 260)" fill="none" stroke="url(#vibey-krypton-logo-light-g6)" stroke-width="1.845"/>
+<ellipse cx="260" cy="260" rx="205.041" ry="205.041" transform="rotate(0 260 260)" fill="none" stroke="url(#vibey-krypton-logo-light-g7)" stroke-width="1.845"/>
+<circle cx="248.773" cy="222.945" r="4.576" fill="url(#vibey-krypton-logo-light-g8)"/>
+<circle cx="243.348" cy="294.698" r="4.576" fill="url(#vibey-krypton-logo-light-g9)"/>
+<circle cx="295.499" cy="245.75" r="4.576" fill="url(#vibey-krypton-logo-light-g10)"/>
+<circle cx="224.419" cy="246.611" r="4.576" fill="url(#vibey-krypton-logo-light-g11)"/>
+<circle cx="277.085" cy="293.696" r="4.576" fill="url(#vibey-krypton-logo-light-g12)"/>
+<circle cx="270.099" cy="223.842" r="4.576" fill="url(#vibey-krypton-logo-light-g13)"/>
+<circle cx="228.333" cy="279.713" r="4.576" fill="url(#vibey-krypton-logo-light-g14)"/>
+<circle cx="296.429" cy="266.811" r="4.576" fill="url(#vibey-krypton-logo-light-g15)"/>
+<circle cx="237.885" cy="230.565" r="4.576" fill="url(#vibey-krypton-logo-light-g16)"/>
+<circle cx="256.447" cy="296.4" r="4.576" fill="url(#vibey-krypton-logo-light-g17)"/>
+<circle cx="287.024" cy="235.724" r="4.576" fill="url(#vibey-krypton-logo-light-g18)"/>
+<circle cx="223.923" cy="259.648" r="4.576" fill="url(#vibey-krypton-logo-light-g19)"/>
+<circle cx="286.182" cy="284.459" r="4.576" fill="url(#vibey-krypton-logo-light-g20)"/>
+<circle cx="257.236" cy="224.53" r="4.576" fill="url(#vibey-krypton-logo-light-g21)"/>
+<circle cx="238.235" cy="287.822" r="4.576" fill="url(#vibey-krypton-logo-light-g22)"/>
+<circle cx="294.591" cy="254.229" r="4.576" fill="url(#vibey-krypton-logo-light-g23)"/>
+<circle cx="230.811" cy="241.03" r="4.576" fill="url(#vibey-krypton-logo-light-g24)"/>
+<circle cx="268.644" cy="293.455" r="4.576" fill="url(#vibey-krypton-logo-light-g25)"/>
+<circle cx="276.102" cy="229.723" r="4.576" fill="url(#vibey-krypton-logo-light-g26)"/>
+<circle cx="227.923" cy="271.361" r="4.576" fill="url(#vibey-krypton-logo-light-g27)"/>
+<circle cx="291.083" cy="273.187" r="4.576" fill="url(#vibey-krypton-logo-light-g28)"/>
+<circle cx="246.099" cy="229.523" r="4.576" fill="url(#vibey-krypton-logo-light-g29)"/>
+<circle cx="249.746" cy="291.607" r="4.576" fill="url(#vibey-krypton-logo-light-g30)"/>
+<circle cx="288.675" cy="243.754" r="4.576" fill="url(#vibey-krypton-logo-light-g31)"/>
+<circle cx="228.148" cy="252.671" r="4.576" fill="url(#vibey-krypton-logo-light-g32)"/>
+<circle cx="278.379" cy="286.693" r="4.576" fill="url(#vibey-krypton-logo-light-g33)"/>
+<circle cx="264.44" cy="228.178" r="4.576" fill="url(#vibey-krypton-logo-light-g34)"/>
+<circle cx="235.447" cy="280.287" r="4.576" fill="url(#vibey-krypton-logo-light-g35)"/>
+<circle cx="291.525" cy="261.612" r="4.576" fill="url(#vibey-krypton-logo-light-g36)"/>
+<circle cx="238.044" cy="237.72" r="4.576" fill="url(#vibey-krypton-logo-light-g37)"/>
+<circle cx="261.129" cy="290.972" r="4.576" fill="url(#vibey-krypton-logo-light-g38)"/>
+<circle cx="279.9" cy="236.621" r="4.576" fill="url(#vibey-krypton-logo-light-g39)"/>
+<circle cx="229.826" cy="263.761" r="4.576" fill="url(#vibey-krypton-logo-light-g40)"/>
+<circle cx="284.548" cy="277.438" r="4.576" fill="url(#vibey-krypton-logo-light-g41)"/>
+<circle cx="253.741" cy="230.853" r="4.576" fill="url(#vibey-krypton-logo-light-g42)"/>
+<circle cx="245.08" cy="285.459" r="4.576" fill="url(#vibey-krypton-logo-light-g43)"/>
+<circle cx="287.907" cy="251.396" r="4.576" fill="url(#vibey-krypton-logo-light-g44)"/>
+<circle cx="233.89" cy="247.626" r="4.576" fill="url(#vibey-krypton-logo-light-g45)"/>
+<circle cx="270.776" cy="286.472" r="4.576" fill="url(#vibey-krypton-logo-light-g46)"/>
+<circle cx="269.826" cy="233.497" r="4.576" fill="url(#vibey-krypton-logo-light-g47)"/>
+<circle cx="235.137" cy="272.759" r="4.576" fill="url(#vibey-krypton-logo-light-g48)"/>
+<circle cx="286.641" cy="267.301" r="4.576" fill="url(#vibey-krypton-logo-light-g49)"/>
+<circle cx="245.462" cy="236.897" r="4.576" fill="url(#vibey-krypton-logo-light-g50)"/>
+<circle cx="255.174" cy="286.53" r="4.576" fill="url(#vibey-krypton-logo-light-g51)"/>
+<circle cx="281.213" cy="243.9" r="4.576" fill="url(#vibey-krypton-logo-light-g52)"/>
+<circle cx="233.821" cy="257.574" r="4.576" fill="url(#vibey-krypton-logo-light-g53)"/>
+<circle cx="277.434" cy="279.218" r="4.576" fill="url(#vibey-krypton-logo-light-g54)"/>
+<circle cx="260.125" cy="234.401" r="4.576" fill="url(#vibey-krypton-logo-light-g55)"/>
+<circle cx="242.856" cy="278.532" r="4.576" fill="url(#vibey-krypton-logo-light-g56)"/>
+<circle cx="284.803" cy="257.945" r="4.576" fill="url(#vibey-krypton-logo-light-g57)"/>
+<circle cx="240.61" cy="244.984" r="4.576" fill="url(#vibey-krypton-logo-light-g58)"/>
+<circle cx="264.091" cy="283.807" r="4.576" fill="url(#vibey-krypton-logo-light-g59)"/>
+<circle cx="272.862" cy="239.997" r="4.576" fill="url(#vibey-krypton-logo-light-g60)"/>
+<circle cx="237.372" cy="265.965" r="4.576" fill="url(#vibey-krypton-logo-light-g61)"/>
+<circle cx="280.372" cy="270.707" r="4.576" fill="url(#vibey-krypton-logo-light-g62)"/>
+<circle cx="252.344" cy="238.715" r="4.576" fill="url(#vibey-krypton-logo-light-g63)"/>
+<circle cx="251.422" cy="280.497" r="4.576" fill="url(#vibey-krypton-logo-light-g64)"/>
+<circle cx="279.801" cy="250.851" r="4.576" fill="url(#vibey-krypton-logo-light-g65)"/>
+<circle cx="239.615" cy="253.497" r="4.576" fill="url(#vibey-krypton-logo-light-g66)"/>
+<circle cx="270.427" cy="278.197" r="4.576" fill="url(#vibey-krypton-logo-light-g67)"/>
+<circle cx="264.508" cy="239.96" r="4.576" fill="url(#vibey-krypton-logo-light-g68)"/>
+<circle cx="243.502" cy="271.479" r="4.576" fill="url(#vibey-krypton-logo-light-g69)"/>
+<circle cx="279.472" cy="262.62" r="4.576" fill="url(#vibey-krypton-logo-light-g70)"/>
+<circle cx="247.708" cy="245.27" r="4.576" fill="url(#vibey-krypton-logo-light-g71)"/>
+<circle cx="259.136" cy="278.691" r="4.576" fill="url(#vibey-krypton-logo-light-g72)"/>
+<circle cx="272.918" cy="247.145" r="4.576" fill="url(#vibey-krypton-logo-light-g73)"/>
+<circle cx="242.29" cy="260.732" r="4.576" fill="url(#vibey-krypton-logo-light-g74)"/>
+<circle cx="273.161" cy="271.092" r="4.576" fill="url(#vibey-krypton-logo-light-g75)"/>
+<circle cx="257.856" cy="243.456" r="4.576" fill="url(#vibey-krypton-logo-light-g76)"/>
+<circle cx="250.72" cy="273.199" r="4.576" fill="url(#vibey-krypton-logo-light-g77)"/>
+<circle cx="275.205" cy="256.657" r="4.576" fill="url(#vibey-krypton-logo-light-g78)"/>
+<circle cx="247.038" cy="252.489" r="4.576" fill="url(#vibey-krypton-logo-light-g79)"/>
+<circle cx="264.3" cy="273.71" r="4.576" fill="url(#vibey-krypton-logo-light-g80)"/>
+<circle cx="265.819" cy="247.564" r="4.576" fill="url(#vibey-krypton-logo-light-g81)"/>
+<circle cx="247.928" cy="264.983" r="4.576" fill="url(#vibey-krypton-logo-light-g82)"/>
+<circle cx="271.604" cy="264.238" r="4.576" fill="url(#vibey-krypton-logo-light-g83)"/>
+<circle cx="254.652" cy="249.702" r="4.576" fill="url(#vibey-krypton-logo-light-g84)"/>
+<circle cx="257.196" cy="270.432" r="4.576" fill="url(#vibey-krypton-logo-light-g85)"/>
+<circle cx="268.384" cy="254.666" r="4.576" fill="url(#vibey-krypton-logo-light-g86)"/>
+<circle cx="251.149" cy="258.434" r="4.576" fill="url(#vibey-krypton-logo-light-g87)"/>
+<circle cx="264.823" cy="266.291" r="4.576" fill="url(#vibey-krypton-logo-light-g88)"/>
+<circle cx="260.586" cy="253.326" r="4.576" fill="url(#vibey-krypton-logo-light-g89)"/>
+<circle cx="256.173" cy="263.505" r="4.576" fill="url(#vibey-krypton-logo-light-g90)"/>
+<circle cx="262.996" cy="260" r="4.576" fill="url(#vibey-krypton-logo-light-g91)"/>
+<circle cx="260" cy="321.438" r="3.485" fill="#f7f8ff"/>
+<circle cx="260" cy="198.561" r="3.485" fill="#f7f8ff"/>
+<circle cx="343.296" cy="294.502" r="3.485" fill="#f7f8ff"/>
+<circle cx="294.502" cy="343.296" r="3.485" fill="#f7f8ff"/>
+<circle cx="225.498" cy="343.296" r="3.485" fill="#f7f8ff"/>
+<circle cx="176.704" cy="294.502" r="3.485" fill="#f7f8ff"/>
+<circle cx="176.704" cy="225.498" r="3.485" fill="#f7f8ff"/>
+<circle cx="225.498" cy="176.704" r="3.485" fill="#f7f8ff"/>
+<circle cx="294.502" cy="176.704" r="3.485" fill="#f7f8ff"/>
+<circle cx="343.296" cy="225.498" r="3.485" fill="#f7f8ff"/>
+<circle cx="398.026" cy="260" r="3.485" fill="#f7f8ff"/>
+<circle cx="389.702" cy="307.208" r="3.485" fill="#f7f8ff"/>
+<circle cx="365.734" cy="348.722" r="3.485" fill="#f7f8ff"/>
+<circle cx="329.013" cy="379.534" r="3.485" fill="#f7f8ff"/>
+<circle cx="283.968" cy="395.93" r="3.485" fill="#f7f8ff"/>
+<circle cx="236.032" cy="395.93" r="3.485" fill="#f7f8ff"/>
+<circle cx="190.987" cy="379.534" r="3.485" fill="#f7f8ff"/>
+<circle cx="154.266" cy="348.722" r="3.485" fill="#f7f8ff"/>
+<circle cx="130.298" cy="307.208" r="3.485" fill="#f7f8ff"/>
+<circle cx="121.974" cy="260" r="3.485" fill="#f7f8ff"/>
+<circle cx="130.298" cy="212.792" r="3.485" fill="#f7f8ff"/>
+<circle cx="154.266" cy="171.278" r="3.485" fill="#f7f8ff"/>
+<circle cx="190.987" cy="140.466" r="3.485" fill="#f7f8ff"/>
+<circle cx="236.032" cy="124.07" r="3.485" fill="#f7f8ff"/>
+<circle cx="283.968" cy="124.07" r="3.485" fill="#f7f8ff"/>
+<circle cx="329.013" cy="140.466" r="3.485" fill="#f7f8ff"/>
+<circle cx="365.734" cy="171.278" r="3.485" fill="#f7f8ff"/>
+<circle cx="389.702" cy="212.792" r="3.485" fill="#f7f8ff"/>
+<circle cx="465.041" cy="260" r="3.485" fill="#f7f8ff"/>
+<circle cx="404.986" cy="404.986" r="3.485" fill="#f7f8ff"/>
+<circle cx="260" cy="465.041" r="3.485" fill="#f7f8ff"/>
+<circle cx="115.014" cy="404.986" r="3.485" fill="#f7f8ff"/>
+<circle cx="54.959" cy="260" r="3.485" fill="#f7f8ff"/>
+<circle cx="115.014" cy="115.014" r="3.485" fill="#f7f8ff"/>
+<circle cx="260" cy="54.959" r="3.485" fill="#f7f8ff"/>
+<circle cx="404.986" cy="115.014" r="3.485" fill="#f7f8ff"/>
+<line x1="625.25" y1="125.5" x2="625.25" y2="358" stroke="url(#vibey-krypton-logo-light-g128)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="733.25" y1="125.5" x2="634.25" y2="247" stroke="url(#vibey-krypton-logo-light-g129)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="667.25" y1="217" x2="739.25" y2="358" stroke="url(#vibey-krypton-logo-light-g130)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="793.25" y1="208" x2="793.25" y2="358" stroke="url(#vibey-krypton-logo-light-g131)" stroke-width="35.25" stroke-linecap="round"/>
+<path d="M793.25 266.5A57 57 0 0 1 871.603 213.651" fill="none" stroke="url(#vibey-krypton-logo-light-g132)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="913.25" y1="208" x2="973.25" y2="358" stroke="url(#vibey-krypton-logo-light-g133)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="1033.25" y1="208" x2="935.75" y2="448" stroke="url(#vibey-krypton-logo-light-g134)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="1087.25" y1="208" x2="1087.25" y2="448" stroke="url(#vibey-krypton-logo-light-g135)" stroke-width="35.25" stroke-linecap="round"/>
+<circle cx="1157.75" cy="283" r="70.5" fill="none" stroke="url(#vibey-krypton-logo-light-g136)" stroke-width="35.25"/>
+<line x1="1285.25" y1="145" x2="1285.25" y2="358" stroke="url(#vibey-krypton-logo-light-g137)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="1240.25" y1="208" x2="1330.25" y2="208" stroke="url(#vibey-krypton-logo-light-g138)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="1558.25" y1="208" x2="1558.25" y2="358" stroke="url(#vibey-krypton-logo-light-g139)" stroke-width="35.25" stroke-linecap="round"/>
+<path d="M1558.25 274A64.5 64.5 0 0 1 1687.25 274" fill="none" stroke="url(#vibey-krypton-logo-light-g140)" stroke-width="35.25" stroke-linecap="round"/>
+<line x1="1687.25" y1="274" x2="1687.25" y2="358" stroke="url(#vibey-krypton-logo-light-g141)" stroke-width="35.25" stroke-linecap="round"/>
+<circle cx="1423.25" cy="283" r="70.5" fill="none" stroke="url(#vibey-krypton-logo-light-g142)" stroke-width="35.25"/>
+<ellipse cx="1423.25" cy="283" rx="16.5" ry="16.5" transform="rotate(0 1423.25 283)" fill="none" stroke="url(#vibey-krypton-logo-light-g143)" stroke-width="2.393"/>
+<ellipse cx="1423.25" cy="283" rx="24.75" ry="24.75" transform="rotate(0 1423.25 283)" fill="none" stroke="url(#vibey-krypton-logo-light-g144)" stroke-width="2.393"/>
+<ellipse cx="1423.25" cy="283" rx="33" ry="33" transform="rotate(0 1423.25 283)" fill="none" stroke="url(#vibey-krypton-logo-light-g145)" stroke-width="2.393"/>
+<ellipse cx="1423.25" cy="283" rx="41.25" ry="41.25" transform="rotate(0 1423.25 283)" fill="none" stroke="url(#vibey-krypton-logo-light-g146)" stroke-width="2.393"/>
+<circle cx="1423.25" cy="283" r="9.9" fill="url(#vibey-krypton-logo-light-g147)"/>
+<circle cx="1414.432" cy="281.44" r="3.799" fill="url(#vibey-krypton-logo-light-g148)"/>
+<circle cx="1428.055" cy="289.267" r="3.799" fill="url(#vibey-krypton-logo-light-g149)"/>
+<circle cx="1423.834" cy="276.351" r="3.799" fill="url(#vibey-krypton-logo-light-g150)"/>
+<circle cx="1419.438" cy="286.492" r="3.799" fill="url(#vibey-krypton-logo-light-g151)"/>
+<circle cx="1426.235" cy="283" r="3.799" fill="url(#vibey-krypton-logo-light-g152)"/>
+<circle cx="1423.25" cy="299.5" r="2.681" fill="#5443b0"/>
+<circle cx="1446.116" cy="292.471" r="2.681" fill="#5443b0"/>
+<circle cx="1400.384" cy="273.529" r="2.681" fill="#5443b0"/>
+<circle cx="1456.25" cy="283" r="2.681" fill="#5443b0"/>
+<circle cx="1390.25" cy="283" r="2.681" fill="#5443b0"/>
+<circle cx="1464.5" cy="283" r="2.681" fill="#5443b0"/>
+<circle cx="1382" cy="283" r="2.681" fill="#5443b0"/>
+</svg>

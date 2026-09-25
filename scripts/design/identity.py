@@ -644,6 +644,79 @@ class Identity:
         shapes += self.atom(p(11.6, -3.7), 1.95 * k, detail="small", palette=pal, mono=mono)
         return Scene(47.4 * k + 2 * pad, 22.4 * k + 2 * pad, shapes, title="vibey")
 
+    def krypton(
+        self, *, palette: Palette | None = None, mono: RGBA | None = None, k: float = 20.0
+    ) -> Scene:
+        """`Krypton`, the apps' name, in the same monoline stroke; its o is the atom."""
+        pal = palette or self.dark
+        w = 2.35 * k
+        pad = w
+        ox, oy = pad, pad + 6.4 * k
+
+        def p(x: float, y: float) -> Point:
+            return (ox + x * k, oy + y * k)
+
+        paint: Paint = mono or Linear(
+            p(0, 0), p(67, 10), (pal.shell_from, pal.shell_to, pal.word_to)
+        )
+        shapes = [
+            # K
+            Shape("capsule", paint, (p(0, -5.5), p(0, 10)), width=w),
+            Shape("capsule", paint, (p(7.2, -5.5), p(0.6, 2.6)), width=w),
+            Shape("capsule", paint, (p(2.8, 0.6), p(7.6, 10)), width=w),
+            # r
+            Shape("capsule", paint, (p(11.2, 0), p(11.2, 10)), width=w),
+            Shape(
+                "arc",
+                paint,
+                (p(15.0, 3.9),),
+                radius=3.8 * k,
+                width=w,
+                extra=(math.radians(180), math.radians(292)),
+            ),
+            # y
+            Shape("capsule", paint, (p(19.2, 0), p(23.2, 10)), width=w),
+            Shape("capsule", paint, (p(27.2, 0), p(20.7, 16)), width=w),
+            # p
+            Shape("capsule", paint, (p(30.8, 0), p(30.8, 16)), width=w),
+            Shape(
+                "arc", paint, (p(35.5, 5),), radius=4.7 * k, width=w, extra=(0.0, math.tau - 1e-6)
+            ),
+            # t
+            Shape("capsule", paint, (p(44.0, -4.2), p(44.0, 10)), width=w),
+            Shape("capsule", paint, (p(41.0, 0), p(47.0, 0)), width=w),
+            # n
+            Shape("capsule", paint, (p(62.2, 0), p(62.2, 10)), width=w),
+            Shape(
+                "arc",
+                paint,
+                (p(66.5, 4.4),),
+                radius=4.3 * k,
+                width=w,
+                extra=(math.radians(180), math.radians(360)),
+            ),
+            Shape("capsule", paint, (p(70.8, 4.4), p(70.8, 10)), width=w),
+        ]
+        # o: a full-weight ring, the p's bowl in size, with the atom inside it.
+        shapes.append(
+            Shape(
+                "arc", paint, (p(53.2, 5),), radius=4.7 * k, width=w, extra=(0.0, math.tau - 1e-6)
+            )
+        )
+        shapes += self.atom(p(53.2, 5), 2.75 * k, detail="small", palette=pal, mono=mono)
+        return Scene(70.8 * k + 2 * pad, 22.4 * k + 2 * pad, shapes, title="Krypton")
+
+    def krypton_lockup(self, *, palette: Palette | None = None) -> Scene:
+        """The apps' logo: the Krypton icon tile beside the Krypton wordmark."""
+        tile_size = 520.0
+        tile = _clip_glows(self._tile(tile_size, tile_size * 0.223), tile_size, tile_size * 0.223)
+        mark = self._mark(tile_size / 2, tile_size / 2, 205)
+        word = self.krypton(palette=palette, k=15.0)
+        dx = tile_size + 70
+        dy = (tile_size - word.height) / 2 + 20
+        moved = [_translate(s, dx, dy) for s in word.shapes]
+        return Scene(dx + word.width, tile_size, tile + mark + moved, title="Krypton")
+
     def lockup(self, *, palette: Palette | None = None) -> Scene:
         """Mark tile and wordmark side by side: the logo. The tile is always night."""
         tile_size = 520.0
@@ -775,6 +848,11 @@ class IdentityEmitter(EmitterInterface):
             "wordmark-ink": i.wordmark(mono=i.print_ink),
             "logo": i.lockup(),
             "logo-light": i.lockup(palette=i.light),
+            "krypton": i.krypton(),
+            "krypton-light": i.krypton(palette=i.light),
+            "krypton-ink": i.krypton(mono=i.print_ink),
+            "krypton-logo": i.krypton_lockup(),
+            "krypton-logo-light": i.krypton_lockup(palette=i.light),
             "icon": i.icon(),
             "icon-medium": i.icon(detail="medium"),
             "icon-small": i.icon(detail="small"),
@@ -785,6 +863,8 @@ class IdentityEmitter(EmitterInterface):
         }
         for name, scene in scenes.items():
             scene.key = f"vibey-{name}"
+            if name.startswith(("icon", "android")):
+                scene.title = "Krypton"  # the app icons are the apps', and the apps are Krypton
         return scenes
 
     #: Scenes that also ship animated: the electrons orbit, and rest under reduced motion.
@@ -797,6 +877,10 @@ class IdentityEmitter(EmitterInterface):
         "logo-light",
         "wordmark",
         "wordmark-light",
+        "krypton",
+        "krypton-light",
+        "krypton-logo",
+        "krypton-logo-light",
     )
 
     def outputs(self) -> dict[Path, bytes]:
