@@ -45,6 +45,19 @@ def _database_security_passes(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(DatabaseSecurityChecks, "run", passing)
 
+    # Whether the app database admits a password-less login depends on the machine too;
+    # the probe is tested on its own (tests/infrastructure/db/test_passwordless_reach.py).
+    from vibey.infrastructure.db.passwordless_reach import (
+        PasswordlessReachFinding,
+        PasswordlessReachProbe,
+        ReachVerdict,
+    )
+
+    async def refused(self: object, dsn: str) -> PasswordlessReachFinding:
+        return PasswordlessReachFinding(ReachVerdict.PASS, "stub")
+
+    monkeypatch.setattr(PasswordlessReachProbe, "probe", refused)
+
 
 @pytest.fixture(autouse=True)
 async def _use_test_database(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2497,7 +2510,7 @@ def test_doctor_record_refuses_a_project_whose_engine_environment_is_forbidden(
 # ── doctor: is the app database reachable with no password at all? ──────────────
 
 
-def test_doctor_warns_when_the_app_database_admits_a_passwordless_login(
+def test_doctor_fails_when_the_app_database_admits_a_passwordless_login(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from unittest.mock import AsyncMock, patch
@@ -2512,7 +2525,7 @@ def test_doctor_warns_when_the_app_database_admits_a_passwordless_login(
 
     async def probe(self, dsn):  # type: ignore[no-untyped-def]
         seen.append(dsn)
-        return PasswordlessReachFinding(ReachVerdict.WARN, "accepts a password-less login")
+        return PasswordlessReachFinding(ReachVerdict.FAIL, "accepts a password-less login")
 
     with (
         patch(
@@ -2523,9 +2536,9 @@ def test_doctor_warns_when_the_app_database_admits_a_passwordless_login(
     ):
         res = runner.invoke(app, ["doctor", "--engine", "claudeloop"])
 
-    # A warning, not a failure: a trusted local database is a choice, said out loud.
-    assert res.exit_code == 0, res.output
-    assert "WARN db-passwordless" in res.output
+    # A failure, not a warning: scram-sha-256 is the only way in (sub-doctrine 10.j).
+    assert res.exit_code == 1, res.output
+    assert "FAIL db-passwordless" in res.output
     assert "accepts a password-less login" in res.output
     assert seen == [os.environ["VIBEY_PG_URL"]]
 

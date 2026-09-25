@@ -326,23 +326,25 @@ def _local_engines_from_toml(root: Path | None = None) -> LocalEngineSettings:
     return LocalEngineSettings.from_toml((root or Path.cwd()) / "vibey.toml", environ=os.environ)
 
 
-async def _passwordless_reach_section() -> None:
-    """`vibey doctor`'s password-less-access line for the app DSN's database: WARN, PASS
-    or UNKNOWN, never a failure (SECURITY.md §5).
+async def _passwordless_reach_section() -> bool:
+    """`vibey doctor`'s password-less-access line for the app DSN's database: FAIL, PASS
+    or UNKNOWN (SECURITY.md §5). False on FAIL: sub-doctrine 10.j (ADR-0061) makes
+    scram-sha-256 the only way in, so a password-less login is a failure, not a choice.
 
     A module-level function because it is `doctor`'s own step, shared by nothing else,
     like `_postgres_status_line` beside it; the check itself is
     `PasswordlessReachProbe`.
     """
-    from vibey.infrastructure.db.passwordless_reach import PasswordlessReachProbe
+    from vibey.infrastructure.db.passwordless_reach import PasswordlessReachProbe, ReachVerdict
 
     name = "db-passwordless"
     dsn = os.environ.get("VIBEY_PG_URL", "").strip()
     if not dsn:
         typer.echo(f"UNKNOWN {name:<20} VIBEY_PG_URL is not set; nothing to check")
-        return
+        return True
     finding = await PasswordlessReachProbe().probe(dsn)
     typer.echo(f"{finding.verdict.mark} {name:<20} {finding.detail}")
+    return finding.verdict is not ReachVerdict.FAIL
 
 
 def _postgres_status_line(status: PostgresStatus) -> str:
@@ -1440,10 +1442,10 @@ def doctor(
         # (12.e). Beside it: keeping VIBEY_PG_URL out of every model-driven process
         # protects nothing if the database lets the worker's OS user in without it.
         database_ok = await _database_security_section()
-        # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above), which
-        # FAILS for the owner and superusers; reviewers to decide whether to consolidate.
-        await _passwordless_reach_section()
-        if (conformance and not all_ok) or not database_ok:
+        # TODO: `db-passwordless` (below) overlaps ADR-0055's `local-auth` (above); both
+        # now FAIL (sub-doctrine 10.j, ADR-0061); reviewers to decide whether to consolidate.
+        reach_ok = await _passwordless_reach_section()
+        if (conformance and not all_ok) or not database_ok or not reach_ok:
             raise typer.Exit(1)
 
     async def run_cluster_doctor() -> None:

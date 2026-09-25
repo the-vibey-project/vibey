@@ -29,6 +29,6 @@ class PasswordlessReachProbeInterface(Protocol):
         ...
 
     async def probe(self, dsn: str) -> "PasswordlessReachFinding":
-        """WARN when any password-less attempt was let in; PASS when attempts were made
+        """FAIL when any password-less attempt was let in (sub-doctrine 10.j); PASS when attempts were made
         and every one was refused; UNKNOWN when none could reach the server."""
         ...
