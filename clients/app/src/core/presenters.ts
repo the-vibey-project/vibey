@@ -13,6 +13,25 @@ import type {
 } from './interfaces/presenters-interface';
 
 export class Presenters implements PresentersInterface {
+  /**
+   * How each gate kind is answered, mirroring `ANSWER_RULES` in src/vibey/cli/gate_answers.py:
+   * `{"verdict": …}` or `{"choice": …}` from a button; every other kind (the interview's
+   * defaults, grants of money, attempts or rounds, free-form answers) is answered on the host.
+   */
+  static readonly ANSWER_KEYS: Readonly<Record<string, 'verdict' | 'choice'>> = {
+    approval: 'verdict',
+    deploy_demo_review: 'verdict',
+    choice: 'choice',
+    deploy_interview: 'choice',
+    deploy_failure_triage: 'choice',
+    deploy_acceptance: 'choice',
+    bus_dead_lettered: 'choice',
+  };
+
+  static answerKey(kind: string): 'verdict' | 'choice' | 'host' {
+    return Presenters.ANSWER_KEYS[kind] ?? 'host';
+  }
+
   /** Gates that spend (hub-api.md, "Who may do what"): answering them needs `spend`. */
   static spends(kind: string): boolean {
     return kind === 'budget_exhausted' || kind.startsWith('deploy_');
@@ -55,6 +74,7 @@ export class Presenters implements PresentersInterface {
       prompt: gate.prompt,
       options: gate.options,
       spends: Presenters.spends(gate.kind),
+      answerKey: Presenters.answerKey(gate.kind),
       due: gate.timeout_at === null ? 'No deadline' : this.due(Date.parse(gate.timeout_at), nowMs),
     }));
   }

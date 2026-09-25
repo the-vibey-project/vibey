@@ -61,8 +61,8 @@ describe('screens', () => {
     const posted = await renderWith(<GatesScreen verify={verify} />, {
       'GET /api/v1/gates': {
         gates: [
-          { gate_id: 'g1', project_id: 'p1', job_id: null, kind: 'review_collect', prompt: 'Ship it?', options: ['accept'], default_answer: null, timeout_at: null },
-          { gate_id: 'g2', project_id: 'p1', job_id: null, kind: 'budget_exhausted', prompt: 'More?', options: ['grant'], default_answer: null, timeout_at: null },
+          { gate_id: 'g1', project_id: 'p1', job_id: null, kind: 'approval', prompt: 'Ship it?', options: ['accept'], default_answer: null, timeout_at: null },
+          { gate_id: 'g2', project_id: 'p1', job_id: null, kind: 'budget_exhausted', prompt: 'More?', options: ['25'], default_answer: null, timeout_at: null },
         ],
       },
       'POST /api/v1/gates/g1/answer': { replayed: false },
@@ -70,9 +70,10 @@ describe('screens', () => {
     await fireEvent.press(await screen.findByText('accept'));
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(JSON.parse(posted[0]!.body).answer).toEqual({ verdict: 'accept' });
-    await fireEvent.press(screen.getByText('grant'));
-    await waitFor(() => expect(verify).toHaveBeenCalled());
-    expect(await screen.findByText('Not confirmed; nothing was sent.')).toBeTruthy();
+    // A grant is answered on the host: no button, nothing sent, no verification asked.
+    expect(screen.queryByText('25')).toBeNull();
+    expect(screen.getAllByText(/Answer this gate on the host/)).toHaveLength(1);
+    expect(verify).not.toHaveBeenCalled();
     expect(posted).toHaveLength(1);
   });
 

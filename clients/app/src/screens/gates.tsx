@@ -28,8 +28,8 @@ function Gate(props: { readonly gate: GateCard; readonly onDone: () => void; rea
       return;
     }
     try {
-      const mode = gate.title.toLowerCase().startsWith('review') ? 'verdict' : 'choice';
-      setMessage(await client!.answer(gate.id, { mode, value }));
+      if (gate.answerKey === 'host') return;
+      setMessage(await client!.answer(gate.id, { mode: gate.answerKey, value }));
       props.onDone();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -43,10 +43,12 @@ function Gate(props: { readonly gate: GateCard; readonly onDone: () => void; rea
         {gate.spends ? <Pill role="ultra">Spends · confirm it is you</Pill> : null}
       </View>
       <Label tone="secondary">{gate.prompt}</Label>
-      {gate.options.map((option) => (
-        <Button key={option} label={option} onPress={() => void choose(option)} />
-      ))}
-      {gate.options.length === 0 ? <Label tone="tertiary">This gate takes a free-form answer: answer it on the host.</Label> : null}
+      {gate.answerKey !== 'host'
+        ? gate.options.map((option) => <Button key={option} label={option} onPress={() => void choose(option)} />)
+        : null}
+      {gate.answerKey === 'host' || gate.options.length === 0 ? (
+        <Label tone="tertiary">Answer this gate on the host: `vibey answer` takes the value it needs.</Label>
+      ) : null}
       {message ? <Notice>{message}</Notice> : null}
     </Card>
   );

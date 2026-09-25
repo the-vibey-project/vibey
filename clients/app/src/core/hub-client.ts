@@ -62,6 +62,7 @@ export class HubClient implements HubClientInterface {
   };
 
   private sequence = 0;
+  private readonly requestIds = new Map<string, string>();
 
   constructor(
     readonly connection: HubConnection,
@@ -145,7 +146,12 @@ export class HubClient implements HubClientInterface {
   }
 
   async answer(gateId: string, answer: GateAnswer): Promise<string> {
-    const body = { answer: HubClient.answerDocument(answer), request_id: this.requestId() };
+    const document = HubClient.answerDocument(answer);
+    // One request id per gate and answer, so a retry after a lost reply is a replay, not a 409.
+    const key = `${gateId}:${JSON.stringify(document)}`;
+    const requestId = this.requestIds.get(key) ?? this.requestId();
+    this.requestIds.set(key, requestId);
+    const body = { answer: document, request_id: requestId };
     const parsed = await this.post(`/api/v1/gates/${encodeURIComponent(gateId)}/answer`, body);
     const replayed = HubClient.isRecord(parsed) && parsed.replayed === true;
     return replayed ? 'Already answered with this answer; nothing changed.' : 'Answered.';

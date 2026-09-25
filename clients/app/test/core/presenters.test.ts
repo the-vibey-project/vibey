@@ -129,6 +129,15 @@ describe('Presenters', () => {
     expect(rows.map((row) => row.role)).toEqual(['success', 'warning', 'danger']);
   });
 
+  it('answers each kind the way vibey answer does, and leaves the rest to the host', () => {
+    expect(Presenters.answerKey('approval')).toBe('verdict');
+    expect(Presenters.answerKey('deploy_demo_review')).toBe('verdict');
+    expect(Presenters.answerKey('choice')).toBe('choice');
+    expect(Presenters.answerKey('deploy_acceptance')).toBe('choice');
+    expect(Presenters.answerKey('budget_exhausted')).toBe('host');
+    expect(Presenters.answerKey('question')).toBe('host');
+  });
+
   it('knows which gates spend', () => {
     expect(Presenters.spends('budget_exhausted')).toBe(true);
     expect(Presenters.spends('deploy_design')).toBe(true);

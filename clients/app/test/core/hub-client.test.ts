@@ -145,6 +145,15 @@ describe('HubClient', () => {
     expect(JSON.parse(calls[1]?.init.body ?? '{}')).toEqual({ answer: { choice: 'yes' }, request_id: 'req-2' });
   });
 
+  it('reuses the request id when the same answer is retried', async () => {
+    const { client, calls } = fakeHub({ 'POST /api/v1/gates/g1/answer': { status: 200, body: {} } });
+    await client.answer('g1', { mode: 'verdict', value: 'accept' });
+    await client.answer('g1', { mode: 'verdict', value: 'accept' });
+    await client.answer('g1', { mode: 'verdict', value: 'changes' });
+    const ids = calls.map((call) => (JSON.parse(call.init.body ?? '{}') as { request_id: string }).request_id);
+    expect(ids).toEqual(['req-1', 'req-1', 'req-2']);
+  });
+
   it('turns every answer mode into what vibey answer --raw takes, or refuses it', () => {
     expect(HubClient.answerDocument({ mode: 'pairs', pairs: { q1: 'yes' }, defaults: false })).toEqual({ q1: 'yes' });
     expect(HubClient.answerDocument({ mode: 'raw', json: '{"max_dollars": 25}' })).toEqual({ max_dollars: 25 });

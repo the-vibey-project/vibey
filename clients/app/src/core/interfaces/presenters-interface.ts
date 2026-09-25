@@ -31,6 +31,8 @@ export interface GateCard {
   readonly options: readonly string[];
   /** A gate that spends money: answering it asks for Face ID, Touch ID or the passcode. */
   readonly spends: boolean;
+  /** Which key a device answers with, or `host` when only the host can answer it. */
+  readonly answerKey: 'verdict' | 'choice' | 'host';
   readonly due: string;
 }
 
