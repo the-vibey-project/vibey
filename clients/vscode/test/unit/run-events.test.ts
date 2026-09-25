@@ -81,6 +81,17 @@ describe('RunTranscript with qwenloop events', () => {
   });
 });
 
+describe('RunTranscript with opencodeloop events (event_type, flat)', () => {
+  it('reads the kind from event_type and the fields beside it', () => {
+    const transcript = new RunTranscript();
+    transcript.accept({ event_type: 'turn.completed', turn: 1, input_tokens: 7 }, 'event_type');
+    transcript.accept({ kind: 'turn.completed' }, 'event_type');
+    expect(transcript.turns).toBe(1);
+    expect(transcript.inputTokens).toBe(7);
+    expect(transcript.items().at(-1)).toMatchObject({ kind: 'notice', text: 'event "(no type)"' });
+  });
+});
+
 describe('RunTranscript with claudeloop events (event_type + payload)', () => {
   it('reads the envelope, the text, the tool, the turn, the reported cost and the finish', () => {
     const transcript = new RunTranscript();

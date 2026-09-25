@@ -83,6 +83,7 @@ class ScriptedRun implements TaskRunInterface {
   workspace: RunWorkspace | undefined;
   readonly current = undefined;
   readonly stopRequestedAt = undefined;
+  readonly takesFollowUps = false;
   readonly budgetBreach = undefined;
   readonly result: Promise<RunRecord>;
   private readonly listeners = new Set<(status: RunStatus) => void>();

@@ -21,10 +21,21 @@ class LocalEndpointEnvironmentInterface(Protocol):
         engine needs none or the operator already set them."""
         ...
 
+    def model_for(self, engine_id: EngineId) -> str | None:
+        """The model `engine_id` runs when it reaches the engine by a path vibey knows:
+        qwenloop's `QWENLOOP_MODEL`, else the one `overlay_for` hands it (only while
+        `VIBEY_OLLAMA_URL` is set); None otherwise. Raises ConfigError for a malformed
+        endpoint setting whenever `overlay_for` would, whatever else is set."""
+        ...
+
 
 @runtime_checkable
 class LocalEngineSettingsInterface(Protocol):
     """Which local engines are switched on for one project, and how each is configured."""
+
+    def switch_for(self, engine_id: EngineId) -> str | None:
+        """The variable that switches `engine_id` on, or None for an engine with no switch."""
+        ...
 
     def enabled(self, engine_id: EngineId) -> bool:
         """The environment switch when it is set at all, else `[features]`."""

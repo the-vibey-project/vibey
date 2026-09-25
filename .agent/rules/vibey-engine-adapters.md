@@ -2,10 +2,12 @@
 
 # vibey engine adapters
 
-Vibey drives five autonomous session runners through six engine ids:
-`claudeloop`, `codexloop`, `cursorloop`, `agyloop` (the paid pool,
-`DEFAULT_DESCRIPTORS`, tier PAID) and two opt-in local engines (tier LOCAL,
-`LOCAL_DESCRIPTORS`): `qwenloop` (`VIBEY_FEATURE_QWENLOOP` / `[features]
+Vibey drives six autonomous session runners through seven engine ids:
+`claudeloop`, `codexloop`, `cursorloop`, `agyloop` (tier PAID) and `opencode`
+(the opencodeloop adapter; its descriptor says tier LOCAL, and canon 8.b repeals
+it from both loops) make up the default pool, `DEFAULT_DESCRIPTORS`; two opt-in
+local engines (tier LOCAL, `LOCAL_DESCRIPTORS`) join them: `qwenloop`
+(`VIBEY_FEATURE_QWENLOOP` / `[features]
 qwenloop`, ADR-0015) and `claudeloop-local` — the claudeloop binary run with a
 local backend profile (`--profile NAME`), switched on by
 `VIBEY_FEATURE_CLAUDELOOP_LOCAL` / `[features] claudeloop_local` (ADR-0038).
@@ -110,12 +112,13 @@ ADR-0031). The packet is recorded as a `vibey_skills_context_packet` artifact.
 ## Engine descriptors
 
 `infrastructure/engines/descriptors.py` defines `CLAUDELOOP`, `CODEXLOOP`,
-`CURSORLOOP`, `AGYLOOP`, `QWENLOOP`, `CLAUDELOOP_LOCAL` — one `EngineDescriptor`
-per engine. claudeloop-local's is *built* from `[engines.claudeloop_local]`
+`CURSORLOOP`, `AGYLOOP`, `OPENCODE`, `QWENLOOP`, `CLAUDELOOP_LOCAL` — one
+`EngineDescriptor` per engine. claudeloop-local's is *built* from `[engines.claudeloop_local]`
 (`profile`, `context_window`, `structured_verdict`) by
 `ClaudeloopLocalDescriptors.build()`; the constant is the default profile `local`.
-`DEFAULT_DESCRIPTORS` is the paid four, `LOCAL_DESCRIPTORS` the two local ones,
-`ALL_DESCRIPTORS` all six, and `BY_ENGINE_ID` maps every `EngineId`. The worker
+`DEFAULT_DESCRIPTORS` is the default pool of five, `LOCAL_DESCRIPTORS` the two
+opt-in local ones, `ALL_DESCRIPTORS` all seven, and `BY_ENGINE_ID` maps every
+`EngineId`. The worker
 adds adapters for the local engines that are switched on through
 `local_engines.py::LocalEngineSettings` — the one resolver bootstrap, `worker`,
 `work` and `doctor` share.
@@ -124,7 +127,11 @@ Each descriptor (`domain/engine.py::EngineDescriptor`) declares:
 - `engine_id`, `binary` — the executable name (e.g., `"claudeloop"`), `min_version`
 - `state_dir` — where runs are stored (e.g., `".claudeloop/"`)
 - `done_marker` — the text signaling completion (e.g., `"CLAUDELOOP_TASK_FULLY_COMPLETE"`)
-- `capabilities` — which features it supports (`savepoints`, `unwind`, etc.)
+- `capabilities` — which features it supports (`savepoints`, `unwind`, etc.). A
+  claim must agree with the facts below (`test_descriptors.py`): `mid_run_prompt`
+  exactly where `controls.prompt` is declared, `attachments` only where `images`
+  or `paste_images` is proven `True`, `web_search` only where the runner's `run`
+  takes `--web-search`
 - `effort_projection` — how vibey's 5-level ladder (`TRIVIAL, LOW, STANDARD, HIGH, MAX`)
   maps to the engine's native flags
 - `auth_env` — environment variables that must be set (empty for qwenloop)
@@ -137,6 +144,18 @@ Each descriptor (`domain/engine.py::EngineDescriptor`) declares:
   `doctor_args` (extra `doctor` arguments; claudeloop-local: `--profile NAME`)
 - `supports_cwd_flag` (default `True`; codexloop: `False`) and `plan_flag`
   (default `None` = positional plan path; cursorloop: `"--plan"`)
+- `affordances` — `EngineAffordances`: `images`, `files`, `paste_text`,
+  `paste_images`, `plugins` (`PluginSystem`) and `mcp`, each `True`, `False` or
+  `None` (unknown, the default). `evidence` names, for every value that is set,
+  where the runner's own code shows it; a set value without evidence fails a
+  test. Never set one from memory or a vendor's marketing
+- `controls` — `EngineControls`: `stop`, `wind_down` and `prompt` as argv
+  templates after the binary (`{run_id}`, `{cwd}`, `{text}`), `None` where the
+  runner has no such verb or does not act on it (cursorloop takes no mid-run
+  prompt, though its CLI writes one). Tests read every template against
+  the runner's own Typer app the way click parses it
+- `events` — `EventLog`: the `path` template of its `events.jsonl` and its
+  `envelope` (`EventEnvelope`: `type`, `event_type+payload`, or `event_type`)
 
 **Effort projection example** (claudeloop, as in `descriptors.py`):
 
@@ -182,10 +201,32 @@ produces the command line — read the real function, it is short. As of
 5. `--cwd <worktree_path>`, only when `descriptor.supports_cwd_flag` (codexloop:
    `False`).
 
-30 golden files under `tests/infrastructure/engines/golden/` (6 engines × 5
+35 golden files under `tests/infrastructure/engines/golden/` (7 engines × 5
 efforts; `test_argv.py` parametrizes over `ALL_DESCRIPTORS`) capture the
 expected argv for each combination — the source of truth for the exact current
 shape.
+
+`argv.py::RUN_ARGV_TEMPLATE` (`RunArgvTemplate`) is `build_argv`'s `run` line with
+its per-run values as placeholders: `{binary}`, `run`, `{plan_flag?}` (only with a
+`plan_flag`), `{plan}`, `--run-id`, `{run_id}`, `{effort_argv...}`, and `--cwd
+{cwd}` when `supports_cwd_flag`. It is what `vibey loops` publishes for a caller
+that starts a runner itself, such as the VS Code extension. Tests compare it with
+`build_argv` for every engine and effort, and read it, filled in at every effort
+and isolation level, against the runner's own `run` definition.
+
+## What `vibey loops` reports
+
+`vibey loops [--json]` (`application/loops.py::LoopCatalog`, `cli/loops.py`) lists
+the two loops of sub-doctrine 8.c, each engine under the loop its tier puts it in,
+with every effort's argv, achieved effort and model, and the descriptor's run
+template, `affordances`, `controls`, `events` and env names (names only). It reads
+the local switches and qwenloop's model through `local_engines.py`, the resolvers
+`vibey doctor` reads. An engine canon 8.b repeals (`REPEALED_FROM_LOOPS`) is listed
+with `repealed: true` and left out of every by-effort view. The document for one
+fixed environment is committed as `tests/cli/golden/vibey-loops.json`: after
+changing a descriptor, regenerate it with
+`VIBEY_UPDATE_GOLDENS=1 uv run pytest tests/cli/test_loops_cli.py -k golden` and
+commit it with the change.
 
 ## Capacity classification
 
@@ -249,5 +290,7 @@ See ADR-0001 (orchestrate, do not reimplement).
 Before:
 - Adding a new engine.
 - Changing effort mappings.
+- Changing what an engine declares it can take, control or emit (`affordances`,
+  `controls`, `events`), or anything `vibey loops` reports.
 - Debugging why rotation is skipping an engine.
 - Updating capacity classification patterns after a vendor API change.
