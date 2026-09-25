@@ -26,7 +26,7 @@ judgement of beauty stays with a person (12.e): the operator's sign-off of the r
 gallery (BB-8) closes the gate, and nothing else does.
 
 The design rationale is in
-[ADR-0065](../architecture/decisions/0062-the-beauty-law-and-its-bar.md).
+[ADR-0062](../architecture/decisions/0062-the-beauty-law-and-its-bar.md).
 
 ---
 

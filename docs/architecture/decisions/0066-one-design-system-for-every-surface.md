@@ -1,4 +1,4 @@
-# 0065 — One design system for every surface
+# 0066 — One design system for every surface
 
 **Status:** proposed · **Date:** 2026-09-25 · **Cites:** sub-doctrines 12.k (the Beauty Law, proposed), 12.c, 12.e, 10.f, 9.b; the Beauty Bar (`docs/design/beauty-bar.md`) · **Related:** ADR-0062, ADR-0016, ADR-0017, ADR-0018, ADR-0023, ADR-0059 · **Evidence:** `develop` at `0a2f856e`, read 2026-09-25
 

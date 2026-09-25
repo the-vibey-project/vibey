@@ -1,6 +1,6 @@
 # 0063 — ULTRA: effort without a ceiling
 
-**Status:** proposed · **Date:** 2026-09-25 · **Cites:** sub-doctrine 8.b as amended by the change that carries this record (*the cap, and the one path to no cap*), awaiting the operator's ratifying merge (Constitution Article II.3); sub-doctrines 8.g, 12.c, 12.d, 12.f and 10.g; Constitution Article III.2 · **Related:** ADR-0005, ADR-0059, ADR-0065 · **Evidence:** `develop` at `0a2f856e`, read 2026-09-25
+**Status:** proposed · **Date:** 2026-09-25 · **Cites:** sub-doctrine 8.b as amended by the change that carries this record (*the cap, and the one path to no cap*), awaiting the operator's ratifying merge (Constitution Article II.3); sub-doctrines 8.g, 12.c, 12.d, 12.f and 10.g; Constitution Article III.2 · **Related:** ADR-0005, ADR-0059, ADR-0062 · **Evidence:** `develop` at `0a2f856e`, read 2026-09-25
 
 **Owes:** this record states a design; no code in the change that carries it implements
 ULTRA. The implementation is the ULTRA lane's, and every item under *Decision* is owed
@@ -66,7 +66,7 @@ What `develop` has at `0a2f856e`:
    flags on their own can show no warning and take no typed phrase, so they are refused,
    and a no-cap declaration made any other way is ignored and reported.
 7. **Every picker shows ULTRA distinctly.** It has its own colour and motion from the design
-   tokens (ADR-0065), on every client and in `vibey loops --json`.
+   tokens (ADR-0062), on every client and in `vibey loops --json`.
 
 ## Consequences
 

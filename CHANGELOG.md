@@ -202,7 +202,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 ### Added
 
 * **design:** one design system for every surface
-  ([ADR-0065](docs/architecture/decisions/0065-one-design-system-for-every-surface.md)).
+  ([ADR-0066](docs/architecture/decisions/0066-one-design-system-for-every-surface.md)).
   `design/tokens/` (DTCG 2025.10) is the single source of colour, type, space, radius,
   elevation, motion and sound events; the docs palette and the paper's palette are one family
   with deliberate dark and light themes, and all 182 declared colour pairs meet WCAG 2.2 AA.
@@ -216,7 +216,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
     every surface a person touches. Nothing ships to a person that is not fully
     comprehensive, current and a joy to use, and the operator's sign-off closes the gate.
     Its checkable bar is [the Beauty Bar](docs/design/beauty-bar.md), and the rationale is
-    [ADR-0065](docs/architecture/decisions/0062-the-beauty-law-and-its-bar.md).
+    [ADR-0062](docs/architecture/decisions/0062-the-beauty-law-and-its-bar.md).
   * Sub-doctrine **8.b** gains *the cap, and the one path to no cap*: paid use carries a
     cap, and a no-cap declaration is lawful only through six warned, typed and recorded
     steps, never from a phone or the web app, and is withdrawn by one action.
@@ -563,6 +563,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   `invalid_completion_claims` — with the run's `turn` and `max_turns`, and `meta.json` records
   `max_turns` and every recording cap. `ChatChunk` gains a `ChatChunkInterface` seam, which
   the runner and the `InferenceServer` port now depend on (ADR-0016)
+
+### Documentation
+
+* **canon:** sub-doctrine 9.e, for the operator's ratification: the project and its engine are
+  **vibey**, and every app and interface a person uses is **krypton**, with the krypton-84 atom
+  as its emblem (ADR-0065). Package and command names are unchanged; the apps publish as their own
+  distribution, `krypton-app` (PyPI from `main`, TestPyPI from `develop`, trusted publishing).
 
 ## [2.0.0] (2026-09-21)
 
