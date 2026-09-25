@@ -12,16 +12,16 @@ from vibey.application.design import DesignEvent, DesignStage
 from vibey.domain import errors
 from vibey.domain.ledger import EventKind, Provenance
 from vibey.domain.spec import ConstraintKind
-from vibey.infrastructure.engines import qwenloop_design as mod
-from vibey.infrastructure.engines.interfaces import (
-    OllamaChatClientInterface,
-    QwenloopDesignProviderInterface,
-)
-from vibey.infrastructure.engines.ollama_chat import OllamaChatClient
-from vibey.infrastructure.engines.qwenloop_design import (
-    QwenloopDesignProvider,
+from vibey.infrastructure.engines import gptossloop_design as mod
+from vibey.infrastructure.engines.gptossloop_design import (
+    GptossloopDesignProvider,
     SovereignResearchUnavailable,
 )
+from vibey.infrastructure.engines.interfaces import (
+    GptossloopDesignProviderInterface,
+    OllamaChatClientInterface,
+)
+from vibey.infrastructure.engines.ollama_chat import OllamaChatClient
 
 SPEC_PAYLOAD = {
     "objective": "publish a heartbeat ref",
@@ -77,11 +77,11 @@ class FakeTransport:
 
 def _provider(
     content: object, evidence_dir: Path | None = None
-) -> tuple[QwenloopDesignProvider, list[dict[str, object]]]:
+) -> tuple[GptossloopDesignProvider, list[dict[str, object]]]:
     """A provider whose shared chat client talks to a fake Ollama."""
     transport = FakeTransport(content)
     chat = OllamaChatClient(transport=transport)
-    return QwenloopDesignProvider(chat=chat, evidence_dir=evidence_dir), transport.sent
+    return GptossloopDesignProvider(chat=chat, evidence_dir=evidence_dir), transport.sent
 
 
 @pytest.mark.asyncio
@@ -167,7 +167,7 @@ async def test_research_refuses_an_empty_summary_from_the_model(tmp_path: Path) 
 async def test_research_refuses_when_no_evidence_file_matches(tmp_path: Path) -> None:
     """It says which file it looked for, in the stem it actually reads: the old message
     named `something unwritten.md`, a file the provider would never have opened."""
-    provider = QwenloopDesignProvider(evidence_dir=tmp_path)
+    provider = GptossloopDesignProvider(evidence_dir=tmp_path)
     with pytest.raises(SovereignResearchUnavailable) as caught:
         await provider.research("something unwritten")
     assert f"No somethingunwritten.md (or .txt) exists in {tmp_path}" in str(caught.value)
@@ -178,7 +178,7 @@ async def test_research_refuses_when_no_evidence_file_matches(tmp_path: Path) ->
 async def test_research_refuses_a_topic_no_file_can_match(tmp_path: Path) -> None:
     """A topic with no letters or digits reduces to no file name at all, so no evidence
     can ever satisfy it -- and the refusal says so rather than asking for a file."""
-    provider = QwenloopDesignProvider(evidence_dir=tmp_path)
+    provider = GptossloopDesignProvider(evidence_dir=tmp_path)
     with pytest.raises(SovereignResearchUnavailable, match="reduces to no usable file name") as c:
         await provider.research("???")
     assert c.value.evidence_name is None
@@ -188,7 +188,7 @@ async def test_research_refuses_a_topic_no_file_can_match(tmp_path: Path) -> Non
 async def test_research_refuses_a_document_with_no_source_line(tmp_path: Path) -> None:
     (tmp_path / "nosource.md").write_text("just some text, no provenance", encoding="utf-8")
     with pytest.raises(SovereignResearchUnavailable, match="no `source:` first line") as caught:
-        await QwenloopDesignProvider(evidence_dir=tmp_path).research("no source")
+        await GptossloopDesignProvider(evidence_dir=tmp_path).research("no source")
     assert caught.value.evidence_name == "nosource.md"
 
 
@@ -196,29 +196,31 @@ async def test_research_refuses_a_document_with_no_source_line(tmp_path: Path) -
 async def test_research_refuses_an_empty_source_or_empty_body(tmp_path: Path) -> None:
     (tmp_path / "emptysource.md").write_text("source: \n\nbody here", encoding="utf-8")
     with pytest.raises(SovereignResearchUnavailable, match="empty source or carries no body"):
-        await QwenloopDesignProvider(evidence_dir=tmp_path).research("empty source")
+        await GptossloopDesignProvider(evidence_dir=tmp_path).research("empty source")
 
     (tmp_path / "emptybody.txt").write_text("source: https://example.test\n\n   ", encoding="utf-8")
     with pytest.raises(SovereignResearchUnavailable, match="empty source or carries no body") as c:
-        await QwenloopDesignProvider(evidence_dir=tmp_path).research("empty body")
+        await GptossloopDesignProvider(evidence_dir=tmp_path).research("empty body")
     assert c.value.evidence_name == "emptybody.txt"
 
 
 def test_the_evidence_directory_comes_from_the_environment(tmp_path: Path) -> None:
     """VIBEY_EVIDENCE_DIR is read in one place, and an empty value counts as unset."""
     chat = OllamaChatClient(transport=FakeTransport({}))
-    configured = QwenloopDesignProvider.from_environment(
+    configured = GptossloopDesignProvider.from_environment(
         {"VIBEY_EVIDENCE_DIR": str(tmp_path)}, chat=chat
     )
     assert configured._evidence_dir == tmp_path
     assert configured._chat is chat
-    assert QwenloopDesignProvider.from_environment({"VIBEY_EVIDENCE_DIR": ""})._evidence_dir is None
-    assert QwenloopDesignProvider.from_environment({})._evidence_dir is None
+    assert (
+        GptossloopDesignProvider.from_environment({"VIBEY_EVIDENCE_DIR": ""})._evidence_dir is None
+    )
+    assert GptossloopDesignProvider.from_environment({})._evidence_dir is None
 
 
 def test_the_provider_meets_its_declared_seams() -> None:
-    provider = QwenloopDesignProvider()
-    assert isinstance(provider, QwenloopDesignProviderInterface)
+    provider = GptossloopDesignProvider()
+    assert isinstance(provider, GptossloopDesignProviderInterface)
     assert isinstance(provider._chat, OllamaChatClientInterface)
 
 
@@ -226,14 +228,14 @@ def test_a_traversal_unsafe_topic_addresses_no_evidence_file(tmp_path: Path) -> 
     """`topic` is model-minted text, never a trusted path component. Reducing it to an
     alnum/-/_ stem means a topic like `../../etc/passwd` cannot walk out of the evidence
     directory — it collapses to a stem that (almost certainly) matches nothing."""
-    provider = QwenloopDesignProvider(evidence_dir=tmp_path)
+    provider = GptossloopDesignProvider(evidence_dir=tmp_path)
     assert provider._evidence_for("../../etc/passwd") is None
     assert provider._evidence_for("   ") is None
 
 
 def test_no_evidence_dir_configured_means_no_evidence(tmp_path: Path) -> None:
     (tmp_path / "topic.md").write_text("source: x\n\nbody", encoding="utf-8")
-    provider = QwenloopDesignProvider()
+    provider = GptossloopDesignProvider()
     assert provider._evidence_for("topic") is None
 
 

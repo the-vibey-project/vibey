@@ -20,7 +20,7 @@ export interface CommandSpec {
   readonly description: string;
   /** A worked example, as the README shows it (doctrine 3: an example for every command). */
   readonly example: string;
-  /** The vibey, qwenloop or Ollama command it wraps, when it wraps one. */
+  /** The vibey, engine or Ollama command it wraps, when it wraps one. */
   readonly wraps?: string;
 }
 

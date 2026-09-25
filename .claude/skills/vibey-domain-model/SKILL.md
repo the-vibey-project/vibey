@@ -173,8 +173,10 @@ engine), effort escalation, phase transition, operator-requested handoff.
 **Wiring:** `application/engine_selector.py::EngineSelector` calls `select()`
 for engine-driven BUILD jobs, through `SelectingEngineProvider` in `bootstrap.py`.
 Candidates come from `engine_health` rows, so an engine without a recorded
-`vibey doctor --conformance --record` pass is never eligible. qwenloop joins only
-when its feature flag is on, as a standby engine (ADR-0015).
+`vibey doctor --conformance --record` pass is never eligible. A local engine joins
+only while its switch is on — gptossloop unless switched off, qwenloop and
+claudeloop-local only when switched on — and is preferred first (ADR-0038,
+ADR-0064).
 
 See ADR-0005 (smooth weighted round robin), ADR-0007 (rotate at boundaries),
 and `domain/rotation.py`.

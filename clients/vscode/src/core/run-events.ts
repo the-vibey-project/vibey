@@ -1,9 +1,9 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
- * qwenloop's events, as `qwenloop/application/runner.py` writes them, turned into what a
- * person reads. Every event yields something: a type this version does not know is shown
- * as such rather than dropped, so a newer qwenloop can never make the view silently lose
- * part of a run. Everything here is data from a model or a tool and is only ever rendered
+ * The local runner's events (gptossloop's or qwenloop's, one runner: `qwenloop/application/
+ * runner.py`), turned into what a person reads. Every event yields something: a type this
+ * version does not know is shown as such rather than dropped, so a newer runner can never
+ * make the view silently lose part of a run. Everything here is data from a model or a tool and is only ever rendered
  * as text (the webview never treats it as HTML). Declared by
  * `interfaces/run-events-interface.ts`.
  */
@@ -16,7 +16,7 @@ import type {
   RunTranscriptInterface,
   Verdict,
 } from './interfaces/run-events-interface';
-import { QwenloopCommand } from './qwenloop';
+import { LocalRunners } from './local-runner';
 
 type EventRecord = Readonly<Record<string, unknown>>;
 
@@ -126,14 +126,14 @@ export class RunTranscript implements RunTranscriptInterface {
         return [
           this.notice(
             'warn',
-            `Turn ${turn ?? '?'}: the model's tool call could not be read, so qwenloop asked again (retry ${RunTranscript.integer(record.retry) ?? '?'}).`,
+            `Turn ${turn ?? '?'}: the model's tool call could not be read, so the runner asked again (retry ${RunTranscript.integer(record.retry) ?? '?'}).`,
           ),
         ];
       case 'turn.empty':
         return [
           record.retrying === true
-            ? this.notice('warn', `Turn ${turn ?? '?'}: the model sent an empty reply, so qwenloop asked again.`)
-            : this.notice('error', `Turn ${turn ?? '?'}: the model sent an empty reply again; qwenloop gave up.`),
+            ? this.notice('warn', `Turn ${turn ?? '?'}: the model sent an empty reply, so the runner asked again.`)
+            : this.notice('error', `Turn ${turn ?? '?'}: the model sent an empty reply again; the runner gave up.`),
         ];
       case 'prompt.received':
         return [this.add({ kind: 'follow-up', text: typeof record.text === 'string' ? record.text : '' })];
@@ -236,7 +236,7 @@ export class RunTranscript implements RunTranscriptInterface {
     };
     const explanation = explanations[reason] ?? `the engine gave the reason "${reason}".`;
     this.failed = { reason, ...(turn === undefined ? {} : { turn }), explanation };
-    return this.notice('error', `qwenloop stopped without finishing: ${explanation}`);
+    return this.notice('error', `The runner stopped without finishing: ${explanation}`);
   }
 
   note(level: NoticeLevel, text: string): RunPatch {
@@ -331,9 +331,12 @@ export class RunTranscript implements RunTranscriptInterface {
 /** `Omit` that keeps a union a union. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
-/** The verdict qwenloop's contract asks for: a ```qwenloop-verdict fence, then the marker. */
+/**
+ * The verdict the local runner's contract asks for, whichever name runs it (gptossloop or
+ * qwenloop): a ```qwenloop-verdict fence, then the done marker.
+ */
 export class VerdictReader {
-  private static readonly FENCE = /```qwenloop-verdict[^\n]*\n([\s\S]*?)```/gi;
+  private static readonly FENCE = new RegExp(`\`\`\`${LocalRunners.PROTOCOL.verdictFence}[^\\n]*\\n([\\s\\S]*?)\`\`\``, 'gi');
 
   static read(text: string): Verdict {
     let body: string | undefined;
@@ -342,7 +345,7 @@ export class VerdictReader {
     }
     return {
       ...(body === undefined ? {} : { text: body }),
-      marker: text.includes(QwenloopCommand.DONE_MARKER),
+      marker: text.includes(LocalRunners.PROTOCOL.doneMarker),
     };
   }
 }

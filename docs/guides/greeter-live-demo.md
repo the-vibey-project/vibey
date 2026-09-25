@@ -56,14 +56,15 @@ uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines c
 ```
 
 - `--provider claudeloop` makes the DESIGN interview and the BUILD
-  decomposition use live ClaudeLoop calls (the default `scripted` provider
-  is for tests).
-- `--provider qwenloop` is the sovereign alternative to the paid DESIGN and
-  decomposition providers (ADR-0027). It runs the interview and the BUILD
-  decomposition on a local model (`QwenloopDesignProvider` and
-  `QwenloopWorkPlanProducer`, sharing one Ollama client: the server at
-  `VIBEY_OLLAMA_URL`, default `http://127.0.0.1:11434`, and the model
-  `VIBEY_OLLAMA_MODEL` or `--ollama-model`, default `qwen2.5-coder:14b`). A
+  decomposition use live ClaudeLoop calls (`scripted` is for tests).
+- `--provider gptossloop`, the default when no `--provider` is given, is the
+  sovereign alternative to the paid DESIGN and decomposition providers
+  (ADR-0027, ADR-0064). It runs the interview and the BUILD decomposition on a
+  local model (`GptossloopDesignProvider` and `GptossloopWorkPlanProducer`,
+  sharing one Ollama client: the server at `VIBEY_OLLAMA_URL`, default
+  `http://127.0.0.1:11434`, and the model `VIBEY_OLLAMA_MODEL` or
+  `--ollama-model`, default `gpt-oss:20b`). `--provider qwenloop` is still
+  accepted and read as gptossloop. A
   local model has no web access, so research reads operator-supplied
   evidence: set `VIBEY_EVIDENCE_DIR` to a directory holding one
   `<topic>.md` per research topic (`prior-art.md`, `libraries.md`,
@@ -75,15 +76,18 @@ uv run --project <vibey-checkout> vibey worker --provider claudeloop --engines c
 
   ```bash
   export VIBEY_EVIDENCE_DIR=~/demos/greeter-evidence
-  uv run --project <vibey-checkout> vibey worker --provider qwenloop --engines claudeloop,agyloop
+  uv run --project <vibey-checkout> vibey worker --provider gptossloop --engines claudeloop,agyloop
   ```
 
 - `--engines claudeloop,agyloop` is the allow-list: BUILD jobs select
   between exactly these two via smooth-weighted round-robin, per job.
-- To add qwenloop to the pool as a local standby engine (ADR-0015), export
-  `VIBEY_FEATURE_QWENLOOP=1` before both `vibey doctor` and `vibey worker`.
-  `[features] qwenloop = true` in `vibey.toml` is honored by `vibey doctor`
-  but not by the worker, which reads the project's stored config.
+- `gptossloop`, the sovereign local engine, is on by default but is not in
+  this allow-list, so it runs no BUILD job here; drop `--engines` to let it
+  run first (ADR-0038, ADR-0064). To add `qwenloop` — the same runner on a
+  Qwen model — export `VIBEY_FEATURE_QWENLOOP=1` before both `vibey doctor`
+  and `vibey worker`, and name it in `--engines`. `[features] qwenloop = true`
+  in `vibey.toml` is honored by `vibey doctor` but not by the worker, which
+  reads the project's stored config.
 - Launch the worker with `uv run` from the vibey checkout (`--project`), not a
   bare `.venv/bin/vibey`. Gate commands (verify, integrate, REVIEW's checks)
   do **not** see vibey's venv: its `bin`, `VIRTUAL_ENV`, `PYTHONPATH` and

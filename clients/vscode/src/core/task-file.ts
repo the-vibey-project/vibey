@@ -1,8 +1,8 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /**
- * Task files for a batch: each `*.md` in a folder is one complete qwenloop plan, run in
+ * Task files for a batch: each `*.md` in a folder is one complete plan for the engine, run in
  * filename order (`01-…`, `02-…`). An optional front-matter block at the very top sets
- * per-task values and is removed before the plan reaches qwenloop:
+ * per-task values and is removed before the plan reaches the engine:
  *
  *   ---
  *   title: "docs(readme): a short, beginner-first front page"

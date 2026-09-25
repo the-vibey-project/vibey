@@ -27,7 +27,13 @@ from vibey.cli.loops import (
 )
 from vibey.cli.main import app
 from vibey.domain.effort import Effort
-from vibey.domain.engine import EngineDescriptor, EngineId, EngineInvocation, EngineTier
+from vibey.domain.engine import (
+    RENAMED_ENGINES,
+    EngineDescriptor,
+    EngineId,
+    EngineInvocation,
+    EngineTier,
+)
 from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.local_engines import LocalEndpointEnvironment, LocalEngineSettings
 
@@ -37,12 +43,15 @@ runner = CliRunner(env={"_TYPER_FORCE_DISABLE_TERMINAL": "1"})
 # into what it reports. `None` unsets it for the call.
 CLEAN: dict[str, str | None] = {
     "VIBEY_PG_URL": None,
+    "VIBEY_FEATURE_GPTOSSLOOP": None,
     "VIBEY_FEATURE_QWENLOOP": None,
     "VIBEY_FEATURE_CLAUDELOOP_LOCAL": None,
     "VIBEY_CLAUDELOOP_LOCAL_PROFILE": None,
     "VIBEY_OLLAMA_URL": None,
     "VIBEY_OLLAMA_MODEL": None,
     "VIBEY_OLLAMA_TIMEOUT": None,
+    "GPTOSSLOOP_MODEL": None,
+    "GPTOSSLOOP_BASE_URL": None,
     "QWENLOOP_MODEL": None,
     "QWENLOOP_BASE_URL": None,
 }
@@ -52,6 +61,7 @@ ENGINE_KEYS = [
     "state_dir",
     "enabled",
     "switch",
+    "on_by_default",
     "repealed",
     "cost_per_mtok_in",
     "cost_per_mtok_out",
@@ -69,14 +79,16 @@ ENGINE_KEYS = [
     "notes",
 ]
 EFFORTS = ["TRIVIAL", "LOW", "STANDARD", "HIGH", "MAX"]
-OWN_CHOICE = "qwenloop's own configuration chooses the model"
+OWN_CHOICE = "gptossloop's own configuration chooses the model"
+QWEN_OWN_CHOICE = "qwenloop's own configuration chooses the model"
 ENDPOINT = {"VIBEY_OLLAMA_URL": "http://127.0.0.1:11434"}
 
 # The golden: the document in one fixed environment -- every variable above cleared, then
-# qwenloop switched on and pointed at a local endpoint -- committed so the VS Code
-# extension's parser is tested against exactly what this command prints (amendment 7).
+# pointed at a local endpoint, so gptossloop (on by default) runs vibey's model and
+# qwenloop (off) its own -- committed so the VS Code extension's parser is tested against
+# exactly what this command prints (amendment 7).
 GOLDEN = Path(__file__).parent / "golden" / "vibey-loops.json"
-GOLDEN_ENVIRONMENT = {"VIBEY_FEATURE_QWENLOOP": "1", **ENDPOINT}
+GOLDEN_ENVIRONMENT = {**ENDPOINT}
 UPDATE_GOLDENS = "VIBEY_UPDATE_GOLDENS"
 
 
@@ -150,6 +162,7 @@ def test_the_document_has_the_contracts_shape_without_a_database() -> None:
         True,
     )
     assert [e["engine_id"] for e in sovereign["engines"]] == [
+        "gptossloop",
         "qwenloop",
         "claudeloop-local",
     ]
@@ -179,6 +192,22 @@ def test_the_document_has_the_contracts_shape_without_a_database() -> None:
             assert list(engine["env"]) == ["auth", "passthrough"]
 
 
+def test_gptossloop_is_on_by_default_and_switched_off_only_by_saying_so() -> None:
+    """ADR-0064: the sovereign default engine ships on."""
+    gptossloop = _engine(_document(), "gptossloop")
+
+    assert (gptossloop["binary"], gptossloop["state_dir"]) == ("gptossloop", ".qwenloop")
+    assert (gptossloop["enabled"], gptossloop["switch"], gptossloop["on_by_default"]) == (
+        True,
+        "VIBEY_FEATURE_GPTOSSLOOP",
+        True,
+    )
+    assert gptossloop["env"] == {"auth": [], "passthrough": ["GPTOSSLOOP_*"]}
+    assert gptossloop["done_marker"] == "QWENLOOP_TASK_FULLY_COMPLETE"
+    assert gptossloop["notes"] == []
+    assert _engine(_document(VIBEY_FEATURE_GPTOSSLOOP="0"), "gptossloop")["enabled"] is False
+
+
 def test_qwenloop_reads_as_the_contract_shows_it() -> None:
     qwenloop = _engine(_document(), "qwenloop")
 
@@ -187,10 +216,15 @@ def test_qwenloop_reads_as_the_contract_shows_it() -> None:
         "argv": ["--max-turns", "8"],
         "achieved": "TRIVIAL",
         "model": None,
-        "notes": OWN_CHOICE,
+        "notes": QWEN_OWN_CHOICE,
     }
     assert (qwenloop["binary"], qwenloop["state_dir"]) == ("qwenloop", ".qwenloop")
-    assert (qwenloop["enabled"], qwenloop["switch"]) == (False, "VIBEY_FEATURE_QWENLOOP")
+    assert (qwenloop["enabled"], qwenloop["switch"], qwenloop["on_by_default"]) == (
+        False,
+        "VIBEY_FEATURE_QWENLOOP",
+        False,
+    )
+    assert qwenloop["notes"] == [RENAMED_ENGINES[EngineId.QWENLOOP]]
     assert qwenloop["repealed"] is False
     assert (qwenloop["cost_per_mtok_in"], qwenloop["cost_per_mtok_out"]) == (0.0, 0.0)
     assert qwenloop["default_model"] is None
@@ -255,6 +289,7 @@ def test_only_a_runner_that_acts_on_a_mid_run_prompt_offers_a_prompt_control() -
         for engine in loop["engines"]
     }
     assert prompts == {
+        "gptossloop": True,
         "qwenloop": True,
         "claudeloop-local": True,
         "claudeloop": True,
@@ -274,7 +309,7 @@ def test_no_engine_is_repealed_since_opencode_was_deleted() -> None:
 
     engines = [engine for loop in document["loops"] for engine in loop["engines"]]
     assert {engine["repealed"] for engine in engines} == {False}
-    assert all(engine["notes"] == [] for engine in engines)
+    assert all(engine["notes"] == [] for engine in engines if engine["engine_id"] != "qwenloop")
     assert "opencode" not in [engine["engine_id"] for engine in engines]
 
 
@@ -282,7 +317,7 @@ def test_a_repealed_engine_is_reported_with_its_note_and_never_offered_by_effort
     """While 8.b repeals an engine whose code is still in the tree, it is listed for
     transparency, with a note, and out of every by-effort view, so neither the extension's
     auto mode nor any other consumer of `by_effort` selects it (amendment 5)."""
-    catalog = LoopCatalog(repealed=frozenset({EngineId.QWENLOOP}))
+    catalog = LoopCatalog(repealed=frozenset({EngineId.QWENLOOP}), renamed={})
     report = catalog.report([EngineContext(descriptor=_unchecked(), enabled=True, run=())])
     note = "sub-doctrine 8.b repeals qwenloop from both loops; reported here as its "
     note += "descriptor says, tier local"
@@ -301,9 +336,11 @@ def test_by_effort_lists_exact_matches_first() -> None:
 
     assert sovereign["by_effort"]["STANDARD"] == [
         {"engine_id": "claudeloop-local", "model": None, "achieved": "STANDARD"},
+        {"engine_id": "gptossloop", "model": None, "achieved": "STANDARD"},
         {"engine_id": "qwenloop", "model": None, "achieved": "STANDARD"},
     ]
     assert sovereign["by_effort"]["MAX"] == [
+        {"engine_id": "gptossloop", "model": None, "achieved": "MAX"},
         {"engine_id": "qwenloop", "model": None, "achieved": "MAX"},
         {"engine_id": "claudeloop-local", "model": None, "achieved": "STANDARD"},
     ]
@@ -323,20 +360,22 @@ def test_claudeloop_local_is_listed_on_the_profile_it_would_run() -> None:
     assert local["switch"] == "VIBEY_FEATURE_CLAUDELOOP_LOCAL"
 
 
-def _models(**env: str) -> tuple[str | None, set[str | None], set[str]]:
-    """qwenloop's default model, every effort's model, and every effort's notes."""
-    qwenloop = _engine(_document(**env), "qwenloop")
-    runs = qwenloop["efforts"]
+def _models(
+    engine_id: str = "gptossloop", **env: str
+) -> tuple[str | None, set[str | None], set[str]]:
+    """A local runner's default model, every effort's model, and every effort's notes."""
+    engine = _engine(_document(**env), engine_id)
+    runs = engine["efforts"]
     return (
-        qwenloop["default_model"],
+        engine["default_model"],
         {run["model"] for run in runs},
         {run["notes"] for run in runs},
     )
 
 
-def test_qwenloops_model_mirrors_how_the_model_reaches_it() -> None:
-    """QWENLOOP_MODEL when set; else vibey's model only while VIBEY_OLLAMA_URL is set,
-    the one path by which it reaches the session; else none, and qwenloop's own
+def test_gptossloops_model_mirrors_how_the_model_reaches_it() -> None:
+    """GPTOSSLOOP_MODEL when set; else vibey's model only while VIBEY_OLLAMA_URL is set,
+    the one path by which it reaches the session; else none, and gptossloop's own
     configuration chooses (amendment 4)."""
     nothing = (None, {None}, {OWN_CHOICE})
     assert _models() == nothing
@@ -347,9 +386,18 @@ def test_qwenloops_model_mirrors_how_the_model_reaches_it() -> None:
         {"qwen3-coder"},
         {""},
     )
-    assert _models(QWENLOOP_MODEL="llama3.3") == ("llama3.3", {"llama3.3"}, {""})
-    assert _models(**ENDPOINT, QWENLOOP_MODEL="llama3.3") == ("llama3.3", {"llama3.3"}, {""})
-    assert _models(**ENDPOINT, QWENLOOP_MODEL="  ") == nothing
+    assert _models(GPTOSSLOOP_MODEL="llama3.3") == ("llama3.3", {"llama3.3"}, {""})
+    assert _models(**ENDPOINT, GPTOSSLOOP_MODEL="llama3.3") == ("llama3.3", {"llama3.3"}, {""})
+    assert _models(**ENDPOINT, GPTOSSLOOP_MODEL="  ") == nothing
+
+
+def test_qwenloops_model_is_its_own_unless_qwenloop_model_names_one() -> None:
+    """ADR-0064: vibey hands qwenloop the endpoint and never this era's default model, so
+    the model reported is QWENLOOP_MODEL when set and otherwise qwenloop's own choice."""
+    nothing = (None, {None}, {QWEN_OWN_CHOICE})
+    assert _models("qwenloop") == nothing
+    assert _models("qwenloop", **ENDPOINT, VIBEY_OLLAMA_MODEL="qwen3-coder") == nothing
+    assert _models("qwenloop", QWENLOOP_MODEL="qwen3:32b") == ("qwen3:32b", {"qwen3:32b"}, {""})
 
 
 def test_environment_names_are_copied_and_never_their_values() -> None:
@@ -384,7 +432,13 @@ def test_the_table_says_what_each_effort_passes_and_how_to_switch_a_local_engine
         "  qwenloop is switched on by VIBEY_FEATURE_QWENLOOP=1, or by its key under [features] "
         "in vibey.toml"
     ) in lines
-    assert not any(line.startswith("  note on ") for line in lines)
+    assert (
+        "  gptossloop is on unless switched off by VIBEY_FEATURE_GPTOSSLOOP=0, or by its key "
+        "under [features] in vibey.toml"
+    ) in lines
+    assert [line for line in lines if line.startswith("  note on ")] == [
+        f"  note on qwenloop: {RENAMED_ENGINES[EngineId.QWENLOOP]}"
+    ]
     assert lines[-1] == (
         "Canon 8.b names claudeloop the paid default; the selector does not apply it yet, and "
         "rotates paid engines by weight. `vibey loops --json` has every engine's full facts."

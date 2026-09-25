@@ -26,7 +26,7 @@ function platform(fixed: [string, string][]): PlatformStorageInterface {
       ['TMPDIR', 'the session temporary directory'],
       ['XDG_RUNTIME_DIR', 'the runtime directory'],
     ],
-    qwenloopConfigPath: () => '/nowhere/config.toml',
+    runnerConfigPath: () => '/nowhere/config.toml',
   };
 }
 
@@ -38,18 +38,21 @@ describe('PlatformStorage', () => {
     expect(() => PlatformStorage.detect('win32')).toThrow('Windows is not supported yet (#1097)');
   });
 
-  it('puts the storm home and qwenloop config where each platform keeps them', () => {
+  it('puts the storm home and each local runner\'s config where each platform keeps them', () => {
     const mac = new MacStorage();
     expect(mac.defaultHome({ HOME: '/Users/me' })).toBe('/Users/me/git/vibey-storm');
-    expect(mac.qwenloopConfigPath({ HOME: '/Users/me' })).toBe('/Users/me/Library/Application Support/qwenloop/config.toml');
+    expect(mac.runnerConfigPath('gptossloop', { HOME: '/Users/me' })).toBe('/Users/me/Library/Application Support/gptossloop/config.toml');
+    expect(mac.runnerConfigPath('qwenloop', { HOME: '/Users/me' })).toBe('/Users/me/Library/Application Support/qwenloop/config.toml');
     expect(mac.defaultHome({})).toBe(path.join(os.homedir(), 'git', 'vibey-storm'));
     expect(mac.fixedVolatile().map(([place]) => place)).toContain('/private/var/folders');
     const linux = new LinuxStorage();
     expect(linux.defaultHome({ HOME: '/home/me' })).toBe('/home/me/.local/share/vibey/storm');
     expect(linux.defaultHome({ HOME: '/home/me', XDG_DATA_HOME: '/data' })).toBe('/data/vibey/storm');
     expect(linux.defaultHome({ HOME: '/home/me', XDG_DATA_HOME: 'relative' })).toBe('/home/me/.local/share/vibey/storm');
-    expect(linux.qwenloopConfigPath({ HOME: '/home/me' })).toBe('/home/me/.config/qwenloop/config.toml');
-    expect(linux.qwenloopConfigPath({ HOME: '/home/me', XDG_CONFIG_HOME: '/cfg' })).toBe('/cfg/qwenloop/config.toml');
+    expect(linux.runnerConfigPath('gptossloop', { HOME: '/home/me' })).toBe('/home/me/.config/gptossloop/config.toml');
+    expect(linux.runnerConfigPath('qwenloop', { HOME: '/home/me' })).toBe('/home/me/.config/qwenloop/config.toml');
+    expect(linux.runnerConfigPath('gptossloop', { HOME: '/home/me', XDG_CONFIG_HOME: '/cfg' })).toBe('/cfg/gptossloop/config.toml');
+    expect(linux.runnerConfigPath('qwenloop', { HOME: '/home/me', XDG_CONFIG_HOME: '/cfg' })).toBe('/cfg/qwenloop/config.toml');
     expect(linux.sessionVolatile().map(([name]) => name)).toEqual(['TMPDIR', 'XDG_RUNTIME_DIR']);
     expect(linux.fixedVolatile().map(([place]) => place)).toContain('/dev/shm');
   });

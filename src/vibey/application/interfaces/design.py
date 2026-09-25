@@ -25,7 +25,7 @@ class DesignProvider(Protocol):
 
         The ledger is append-only and is the project's evidence, so the
         attributed actor has to be the one that actually ran: a sovereign
-        DESIGN on qwenloop may not be recorded as claudeloop. Each provider
+        DESIGN on gptossloop may not be recorded as claudeloop. Each provider
         declares its own identity here -- one declaration beside the
         implementation, rather than a literal repeated at every wiring site --
         and the composition root reads it. `None` is the truthful answer for a

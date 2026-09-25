@@ -19,6 +19,7 @@ import type { ResolvedSettings } from '../../src/core/interfaces/settings-interf
 import type { DurabilityGateInterface, VolatileHit } from '../../src/core/interfaces/storage-interface';
 import type { Disposable } from '../../src/core/interfaces/support-interface';
 import { JsonlJournal, JsonlTail } from '../../src/core/jsonl';
+import { LocalRunners } from '../../src/core/local-runner';
 import { QwenloopCommand, QwenloopRunConfig } from '../../src/core/qwenloop';
 import { ATTACHMENTS_DIRECTORY, RunHistory, TaskRun } from '../../src/core/run';
 import { SettingsResolver } from '../../src/core/settings';
@@ -41,13 +42,15 @@ const ENVIRON = {
   VIBEY_PG_URL: 'postgresql://vibey:secret@localhost/vibey',
   PGPASSWORD: 'secret',
   DATABASE_URL: 'postgres://x',
-  QWENLOOP_DEBUG: '1',
-  QWENLOOP_SNEAKY: 'postgres://u:p@db/x',
+  GPTOSSLOOP_DEBUG: '1',
+  GPTOSSLOOP_SNEAKY: 'postgres://u:p@db/x',
+  QWENLOOP_DEBUG: '2',
+  QWENLOOP_SNEAKY: 'postgres://u:p@db/y',
   ANTHROPIC_API_KEY: 'sk-ant-test',
   AWS_SECRET_ACCESS_KEY: 'not for a model',
 };
 
-/** qwenloop finishing its task in one turn, with its verdict and marker. */
+/** gptossloop finishing its task in one turn, with its verdict and marker. */
 const DONE = [
   { type: 'turn.completed', turn: 1, input_tokens: 1200, output_tokens: 300 },
   { type: 'text_delta', text: `Done.\n\`\`\`qwenloop-verdict\nAdded the line.\n\`\`\`\n${QwenloopCommand.DONE_MARKER}\n` },
@@ -61,7 +64,8 @@ function engineOf(id: string): CatalogueEngine {
 function selection(engineId: string, overrides: Partial<Selection> = {}): Selection {
   const engine = engineOf(engineId);
   const tier = CATALOGUE.loops.find((loop) => loop.engines.includes(engine))?.tier ?? 'local';
-  const qwenloop = engineId === 'qwenloop';
+  // Both names of the local runner project a turn limit for their effort.
+  const runner = engineId === 'gptossloop' || engineId === 'qwenloop';
   return {
     loop: tier === 'local' ? 'sovereignloop' : 'paidloop',
     tier,
@@ -69,9 +73,9 @@ function selection(engineId: string, overrides: Partial<Selection> = {}): Select
     effortSource: 'chosen',
     engine,
     model: engine.default_model,
-    argv: qwenloop ? ['--max-turns', '16'] : [],
-    ...(qwenloop ? { maxTurns: 16 } : {}),
-    maxTurnsSource: qwenloop ? 'effort' : 'none',
+    argv: runner ? ['--max-turns', '16'] : [],
+    ...(runner ? { maxTurns: 16 } : {}),
+    maxTurnsSource: runner ? 'effort' : 'none',
     reason: `${engineId} for this test`,
     ...overrides,
   };
@@ -321,7 +325,7 @@ function harness(options: HarnessOptions = {}) {
   const budgets = new ScriptedBudgets();
   const spend = new RecordingSpend();
   const gate = new Gate();
-  const selector = new ScriptedSelector(options.select ?? (() => selection('qwenloop')));
+  const selector = new ScriptedSelector(options.select ?? (() => selection('gptossloop')));
   const services: RunServices = {
     settings,
     catalogue: CATALOGUE,
@@ -330,6 +334,7 @@ function harness(options: HarnessOptions = {}) {
     git,
     processes,
     runConfig: new QwenloopRunConfig(),
+    runners: LocalRunners.FAMILY,
     userConfig: () => undefined,
     gate,
     tail: new JsonlTail(),
@@ -415,7 +420,7 @@ describe('TaskRun', () => {
     const record = await h.run.execute();
 
     const plan = path.join(h.runDirectory, 'plan.md');
-    const config = path.join(h.runDirectory, 'qwenloop.toml');
+    const config = path.join(h.runDirectory, 'gptossloop.toml');
     const events = path.join(h.worktree, '.qwenloop', 'runs', h.run.runId, 'events.jsonl');
     expect(h.git.calls.slice(0, 3)).toEqual([
       ['toplevel', path.join(h.repository, 'docs')],
@@ -424,7 +429,7 @@ describe('TaskRun', () => {
     ]);
     expect(h.gate.asked).toEqual([{ 'run records': h.runDirectory }, { 'task worktree': h.worktree }]);
     const child = h.processes.children[0] as FakeChildControl;
-    expect(child.command).toBe('/bin/qwenloop');
+    expect(child.command).toBe('/bin/gptossloop');
     expect(child.args).toEqual(['run', plan, '--run-id', h.run.runId, '--max-turns', '16', '--no-desktop-notifications', '--cwd', h.worktree]);
     expect(child.options.cwd).toBe(h.worktree);
     // The allow-list: no DSN, no libpq password, no database address under any name, no key it was not given.
@@ -432,11 +437,13 @@ describe('TaskRun', () => {
       PATH: '/usr/bin:/bin',
       HOME: '/Users/me',
       LANG: 'en_US.UTF-8',
-      QWENLOOP_DEBUG: '1',
+      // gptossloop's own settings pass through; qwenloop's never reach it, and neither does
+      // a database address under a runner's prefix.
+      GPTOSSLOOP_DEBUG: '1',
       OLLAMA_HOST: h.settings.ollama.root,
-      QWENLOOP_BASE_URL: h.settings.ollama.v1,
-      QWENLOOP_MODEL: 'gpt-oss:20b',
-      QWENLOOP_CONFIG: config,
+      GPTOSSLOOP_BASE_URL: h.settings.ollama.v1,
+      GPTOSSLOOP_MODEL: 'gpt-oss:20b',
+      GPTOSSLOOP_CONFIG: config,
     });
     expect(fs.readFileSync(config, 'utf8')).toContain('context_window = 32768\n');
     expect(fs.readFileSync(plan, 'utf8')).toBe('# Add a line to README.md\n\nSay hello to new readers.\n');
@@ -449,7 +456,7 @@ describe('TaskRun', () => {
       exit_code: 0,
       signal: null,
       loop: 'sovereignloop',
-      engine: 'qwenloop',
+      engine: 'gptossloop',
       effort: 'LOW',
       model: 'gpt-oss:20b',
       catalogue: 'vibey',
@@ -478,7 +485,7 @@ describe('TaskRun', () => {
       events_path: events,
       plan_path: plan,
       engine_config: config,
-      argv: ['/bin/qwenloop', ...child.args],
+      argv: ['/bin/gptossloop', ...child.args],
     });
     for (const absent of ['error', 'failure', 'commit_error', 'budget', 'force_stopped_at', 'source', 'context_plugins']) {
       expect(record).not.toHaveProperty(absent);
@@ -489,17 +496,17 @@ describe('TaskRun', () => {
         run_id: h.run.runId,
         loop: 'sovereignloop',
         tier: 'local',
-        engine: 'qwenloop',
+        engine: 'gptossloop',
         model: 'gpt-oss:20b',
         effort: 'LOW',
         effort_source: 'chosen',
         max_turns: 16,
         max_turns_source: 'effort',
-        reason: 'qwenloop for this test',
+        reason: 'gptossloop for this test',
         outcome: 'completed',
         exit_code: 0,
         signal: null,
-        argv: ['/bin/qwenloop', ...child.args],
+        argv: ['/bin/gptossloop', ...child.args],
         events_path: events,
         turns: 1,
       },
@@ -509,22 +516,22 @@ describe('TaskRun', () => {
     expect(h.statuses).toEqual(['preparing', 'waiting', 'running', 'finishing', 'finished']);
     expect(h.lock.purposes).toEqual([`Add a line to README.md (task ${h.run.runId})`]);
     expect(h.lock.released).toBe(1);
-    expect(h.locks).toEqual([['qwenloop', 'local']]);
+    expect(h.locks).toEqual([['gptossloop', 'local']]);
     expect(h.selector.requests).toEqual([
       { loop: 'sovereignloop', effort: 'LOW', engine: 'auto', baseEffort: 'LOW', attempt: 1, resident: ['gpt-oss:20b'], paidDeclared: false },
     ]);
-    expect(h.budgets.asked).toEqual([{ loop: 'sovereignloop', engineId: 'qwenloop', runId: h.run.runId, projected: { turns: 16, dollars: 0 } }]);
+    expect(h.budgets.asked).toEqual([{ loop: 'sovereignloop', engineId: 'gptossloop', runId: h.run.runId, projected: { turns: 16, dollars: 0 } }]);
     expect(h.spend.entries).toEqual([
-      { run_id: h.run.runId, at: '2026-09-24T12:00:00.000Z', loop: 'sovereignloop', engine_id: 'qwenloop', turns: 1, input_tokens: 1200, output_tokens: 300, dollars: 0, minutes: 0 },
+      { run_id: h.run.runId, at: '2026-09-24T12:00:00.000Z', loop: 'sovereignloop', engine_id: 'gptossloop', turns: 1, input_tokens: 1200, output_tokens: 300, dollars: 0, minutes: 0 },
     ]);
     expect(h.notices()).toEqual([
       `Working on a copy: ${h.worktree}, branch ${h.branch}, from HEAD at ${BASE.slice(0, 12)}.`,
-      'Attempt 1: qwenloop for this test.',
-      'qwenloop plans for a 32,768-token window on gpt-oss:20b.',
+      'Attempt 1: gptossloop for this test.',
+      'gptossloop plans for a 32,768-token window on gpt-oss:20b.',
       'The engine reports the task complete at turn 1.',
     ]);
     expect(h.patches.length).toBeGreaterThanOrEqual(h.run.items().length);
-    expect(h.run.current).toEqual({ engine: 'qwenloop', model: 'gpt-oss:20b', effort: 'LOW' });
+    expect(h.run.current).toEqual({ engine: 'gptossloop', model: 'gpt-oss:20b', effort: 'LOW' });
     expect(h.run.workspace).toMatchObject({ mode: 'worktree', branch: h.branch, baseSha: BASE });
     expect(await h.run.execute()).toBe(record);
     expect(await h.run.result).toBe(record);
@@ -685,25 +692,75 @@ describe('TaskRun', () => {
     expect(fs.readFileSync(path.join(ranked.runDirectory, 'plan.md'), 'utf8')).toContain('## Context from vibey-skills (ranked)\n\nranked context\n');
   });
 
-  it("writes qwenloop's window over the person's own config, and asks for its desktop notifications when set", async () => {
+  it("writes gptossloop's window over the person's own gptossloop config, and asks for its desktop notifications when set", async () => {
+    const asked: string[] = [];
     const h = harness({
       settings: { desktopNotifications: true },
-      services: { userConfig: () => ({ path: '/Users/me/.config/qwenloop/config.toml', text: 'context_window = 8192\nidle_timeout_seconds = 90\n' }) },
+      services: {
+        userConfig: (runner) => {
+          asked.push(runner.name);
+          return { path: '/Users/me/.config/gptossloop/config.toml', text: 'context_window = 8192\nidle_timeout_seconds = 90\n' };
+        },
+      },
       request: { contextWindow: 65536 },
-      select: () => selection('qwenloop', { model: null }),
+      select: () => selection('gptossloop', { model: null }),
     });
     h.processes.onSpawn = (child) => child.exit({ code: 75, signal: null });
     await h.run.execute();
-    const config = fs.readFileSync(path.join(h.runDirectory, 'qwenloop.toml'), 'utf8');
+    expect(asked).toEqual(['gptossloop']);
+    const config = fs.readFileSync(path.join(h.runDirectory, 'gptossloop.toml'), 'utf8');
     expect(config).toContain('context_window = 65536');
     expect(config).toContain('idle_timeout_seconds = 90');
     expect(config).not.toContain('8192');
     const child = h.processes.children[0] as FakeChildControl;
     expect(child.args).toContain('--desktop-notifications');
-    expect(child.options.env?.QWENLOOP_MODEL).toBe('gpt-oss:20b');
+    // No model from the catalogue: gptossloop takes vibey.model, whose default is its own.
+    expect(child.options.env?.GPTOSSLOOP_MODEL).toBe('gpt-oss:20b');
+    expect(child.options.env).not.toHaveProperty('QWENLOOP_MODEL');
     expect(h.notices()).toContain(
-      'qwenloop plans for a 65,536-token window on gpt-oss:20b, over your own config at /Users/me/.config/qwenloop/config.toml.',
+      'gptossloop plans for a 65,536-token window on gpt-oss:20b, over your own config at /Users/me/.config/gptossloop/config.toml.',
     );
+  });
+
+  it('binds qwenloop through its own QWENLOOP_* settings and config, and hands it a model only when one is named (ADR-0064)', async () => {
+    const asked: string[] = [];
+    const run = async (model: string | null) => {
+      const h = harness({
+        services: {
+          userConfig: (runner) => {
+            asked.push(runner.name);
+            return runner.name === 'qwenloop' ? { path: '/Users/me/.config/qwenloop/config.toml', text: 'model = "qwen3:14b"\n' } : undefined;
+          },
+        },
+        select: () => selection('qwenloop', { model }),
+      });
+      h.processes.onSpawn = (child) => child.exit({ code: 75, signal: null });
+      await h.run.execute();
+      return { h, child: h.processes.children[0] as FakeChildControl };
+    };
+    const own = await run(null);
+    const config = path.join(own.h.runDirectory, 'qwenloop.toml');
+    expect(own.child.command).toBe('/bin/qwenloop');
+    expect(own.child.args).toContain('--no-desktop-notifications');
+    expect(own.child.options.env).toEqual({
+      PATH: '/usr/bin:/bin',
+      HOME: '/Users/me',
+      LANG: 'en_US.UTF-8',
+      QWENLOOP_DEBUG: '2',
+      OLLAMA_HOST: own.h.settings.ollama.root,
+      QWENLOOP_BASE_URL: own.h.settings.ollama.v1,
+      QWENLOOP_CONFIG: config,
+    });
+    expect(fs.readFileSync(config, 'utf8')).toContain('model = "qwen3:14b"');
+    expect(own.h.notices()).toContain(
+      'qwenloop plans for a 32,768-token window on the model its own config chooses, over your own config at /Users/me/.config/qwenloop/config.toml.',
+    );
+    const named = await run('qwen3:14b');
+    expect(named.child.options.env?.QWENLOOP_MODEL).toBe('qwen3:14b');
+    expect(named.h.notices()).toContain(
+      'qwenloop plans for a 32,768-token window on qwen3:14b, over your own config at /Users/me/.config/qwenloop/config.toml.',
+    );
+    expect(asked).toEqual(['qwenloop', 'qwenloop']);
   });
 
   it('runs a paid engine with its own keys and no local binding, and counts what it says it spent', async () => {
@@ -765,7 +822,7 @@ describe('TaskRun', () => {
     const h = harness({
       request: { effort: 'auto', maxTurns: 60 },
       settings: { maxTurns: 30 },
-      select: (request) => selection('qwenloop', { effort: request.attempt === 1 ? 'LOW' : 'STANDARD', effortSource: 'auto' }),
+      select: (request) => selection('gptossloop', { effort: request.attempt === 1 ? 'LOW' : 'STANDARD', effortSource: 'auto' }),
     });
     h.processes.onSpawn = (child) => {
       spawned += 1;
@@ -780,7 +837,7 @@ describe('TaskRun', () => {
     const record = await h.run.execute();
     expect(h.selector.requests.map((request) => [request.attempt, request.previousEngine, request.taskMaxTurns, request.settingMaxTurns])).toEqual([
       [1, undefined, 60, 30],
-      [2, 'qwenloop', 60, 30],
+      [2, 'gptossloop', 60, 30],
     ]);
     expect(h.git.named('addWorktree')).toHaveLength(1);
     const [first, second] = h.processes.children as FakeChildControl[];
@@ -819,10 +876,10 @@ describe('TaskRun', () => {
       const record = await h.run.execute();
       return [record.outcome, record.error];
     };
-    expect(await outcome({ code: null, signal: null, error: 'spawn /bin/qwenloop ENOENT' })).toEqual(['error', 'qwenloop could not be started: spawn /bin/qwenloop ENOENT']);
+    expect(await outcome({ code: null, signal: null, error: 'spawn /bin/gptossloop ENOENT' })).toEqual(['error', 'gptossloop could not be started: spawn /bin/gptossloop ENOENT']);
     expect(await outcome({ code: 2, signal: null }, 'Traceback...\nqwenloop: error: model not found\n')).toEqual(['error', 'Traceback...\nqwenloop: error: model not found']);
-    expect(await outcome({ code: 2, signal: null })).toEqual(['error', 'qwenloop ended with exit code 2 before its first turn']);
-    expect(await outcome({ code: null, signal: 'SIGKILL' })).toEqual(['error', 'qwenloop ended with signal SIGKILL before its first turn']);
+    expect(await outcome({ code: 2, signal: null })).toEqual(['error', 'gptossloop ended with exit code 2 before its first turn']);
+    expect(await outcome({ code: null, signal: 'SIGKILL' })).toEqual(['error', 'gptossloop ended with signal SIGKILL before its first turn']);
     expect(await outcome({ code: 1, signal: null }, '', [{ type: 'turn.completed', turn: 1 }])).toEqual(['failed', undefined]);
     const long = await outcome({ code: 2, signal: null }, 'x'.repeat(TaskRun.STDERR_TAIL + 500));
     expect(long[1]).toHaveLength(TaskRun.STDERR_TAIL);
@@ -831,12 +888,12 @@ describe('TaskRun', () => {
   it('reports an engine that cannot run before anything starts, and shows a catalogue notice first', async () => {
     const h = harness({
       services: {
-        command: () => 'qwenloop cannot run: not found on PATH. It ships with vibey (pip install vibey), or set vibey.qwenloopPath.',
+        command: () => 'gptossloop cannot run: not found on PATH. It ships with vibey (pip install vibey), or set vibey.gptossloopPath.',
         catalogue: { ...CATALOGUE, notice: 'vibey loops is not available, so the picker is limited.' },
       },
     });
     const record = await h.run.execute();
-    expect(record).toMatchObject({ outcome: 'error', error: expect.stringContaining('qwenloop cannot run') as unknown as string, mode: 'worktree' });
+    expect(record).toMatchObject({ outcome: 'error', error: expect.stringContaining('gptossloop cannot run') as unknown as string, mode: 'worktree' });
     expect(h.processes.children).toEqual([]);
     expect(h.notices()[0]).toBe('vibey loops is not available, so the picker is limited.');
     expect(fs.existsSync(path.join(h.runDirectory, 'result.json'))).toBe(true);
@@ -855,7 +912,7 @@ describe('TaskRun', () => {
     const child = h.processes.children[0] as FakeChildControl;
     expect(record.outcome).toBe('wound-down');
     expect(h.processes.calls).toEqual([
-      { command: '/bin/qwenloop', args: ['stop', h.run.runId, '--cwd', h.worktree], options: { env: child.options.env, timeoutMs: 30_000 } },
+      { command: '/bin/gptossloop', args: ['stop', h.run.runId, '--cwd', h.worktree], options: { env: child.options.env, timeoutMs: 30_000 } },
     ]);
     expect(h.notices()).toContain('Stopping. The model finishes the turn it is on, then the task ends; a slow turn can take a few minutes.');
     expect(h.statuses).toEqual(['preparing', 'waiting', 'running', 'stopping', 'finishing', 'finished']);
@@ -872,7 +929,9 @@ describe('TaskRun', () => {
     };
     expect((await h.run.execute()).outcome).toBe('wound-down');
 
-    const codex = harness({ request: { loop: 'paidloop' }, select: () => selection('codexloop') });
+    // An engine whose catalogue declares no controls at all.
+    const bare = { ...engineOf('codexloop'), controls: { stop: null, wind_down: null, prompt: null } };
+    const codex = harness({ request: { loop: 'paidloop' }, select: () => selection('codexloop', { engine: bare }) });
     codex.processes.onSpawn = async (child) => {
       expect(await codex.run.followUp('hello')).toBe('codexloop does not take follow-ups while it runs.');
       expect(await codex.run.stop()).toBe(
@@ -942,9 +1001,8 @@ describe('TaskRun', () => {
   });
 
   it('sends follow-ups to a running engine that takes them, and says plainly when it cannot', async () => {
-    const qwenloop = engineOf('qwenloop');
-    const prompted = { ...qwenloop, controls: { ...qwenloop.controls, prompt: ['prompt', '{run_id}', '{text}', '--cwd', '{cwd}'] } };
-    const h = harness({ select: () => selection('qwenloop', { engine: prompted }) });
+    // gptossloop takes follow-ups, as vibey's catalogue says.
+    const h = harness();
     expect(h.run.takesFollowUps).toBe(false);
     expect(await h.run.followUp('hello')).toBe('This task is not running, so there is nothing to send a follow-up to.');
     let answer: { code: number | null; error?: string } = { code: 0 };
@@ -965,10 +1023,12 @@ describe('TaskRun', () => {
   });
 
   it('gives no follow-up to an engine whose catalogue declares no prompt', async () => {
-    const h = harness();
+    const gptossloop = engineOf('gptossloop');
+    const silent = { ...gptossloop, controls: { ...gptossloop.controls, prompt: null } };
+    const h = harness({ select: () => selection('gptossloop', { engine: silent }) });
     h.processes.onSpawn = async (child) => {
       expect(h.run.takesFollowUps).toBe(false);
-      expect(await h.run.followUp('hello')).toBe('qwenloop does not take follow-ups while it runs.');
+      expect(await h.run.followUp('hello')).toBe('gptossloop does not take follow-ups while it runs.');
       child.exit({ code: 75, signal: null });
     };
     await h.run.execute();

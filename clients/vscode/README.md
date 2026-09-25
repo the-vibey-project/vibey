@@ -21,8 +21,11 @@ Tick these off once, in this order.
      it once.
    - On Linux, run `curl -fsSL https://ollama.com/install.sh | sh`.
    - Windows is not supported yet ([#1097](https://github.com/the-vibey-project/vibey/issues/1097)).
-4. **vibey**, which brings the two programs the extension drives, `qwenloop` (the local agent)
+4. **vibey**, which brings the two programs the extension drives, `gptossloop` (the local agent)
    and `vibey-skills` (context for plugins): `pip install vibey`. It needs Python 3.12 or newer.
+   The same install brings `qwenloop`, the same agent on a Qwen model, which runs only once you
+   switch it on in vibey
+   ([ADR-0064](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0064-gptossloop-is-the-sovereign-engine/)).
 5. **The model, gpt-oss:20b.** It is about 14 GB, and the extension can download it for you
    (step 4 below). A computer with 16 GB of memory runs it; 24 GB runs it comfortably.
 
@@ -71,9 +74,11 @@ top, choose **Install from VSIX…**, and pick the file.
   setting changes it), on a branch named `vibey/<words>-<id>`, starting from `HEAD` (or from
   `vibey.baseRef`). The extension refuses a storm home on storage your computer empties at
   restart, because the work would be lost.
-- **The model.** On sovereignloop, the default, `qwenloop` runs the task with gpt-oss:20b
-  through Ollama. One task uses the model at a time (`vibey.maxConcurrentRuns`, default 1); the
-  rest wait their turn.
+- **The model.** On sovereignloop, the default, `gptossloop` runs the task with gpt-oss:20b
+  through Ollama. If you switch `qwenloop` on in vibey, it can run tasks too, on the Qwen model
+  its own config names (`qwen3:14b`); each reads only its own settings (`GPTOSSLOOP_*`,
+  `QWENLOOP_*`) and its own config file. One task uses the model at a time
+  (`vibey.maxConcurrentRuns`, default 1); the rest wait their turn.
 - **When it ends.** Finished work is committed on the task's branch with your repository's own
   hooks. The outcome is one of these:
 
@@ -136,7 +141,7 @@ In VS Code's chat, type `@vibey` and your task to run one there, or a command, f
 - **Engines and models** are listed by `vibey loops --json`. The extension knows none of them
   by itself. An engine the canon has repealed (by 8.b) while vibey still carries its code is
   shown, greyed out, and never runs. With a vibey older than 3.0.0 there is no `vibey loops`. The extension then says so,
-  and runs sovereignloop with qwenloop on gpt-oss:20b.
+  and runs sovereignloop with gptossloop on gpt-oss:20b.
 
 ## Budgets
 
@@ -239,7 +244,7 @@ force.
 |---|---|---|---|
 | `vibey.chooseLoop` | Choose the loop (sovereign or paid) | `/loop sovereign|paid` | `/loop sovereign` |
 | `vibey.chooseEffort` | Choose the effort | `/effort auto|TRIVIAL|LOW|STANDARD|HIGH|MAX` | `/effort auto` |
-| `vibey.chooseModel` | Choose the engine and model | `/model auto|<engine>|<engine>/<model>` | `/model qwenloop/gpt-oss:20b` |
+| `vibey.chooseModel` | Choose the engine and model | `/model auto|<engine>|<engine>/<model>` | `/model gptossloop/gpt-oss:20b` |
 | `vibey.showLoops` | Show the loops and engines | `/loops` | `/loops` |
 
 ### Lanes
@@ -293,19 +298,20 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
 | Setting | Default | What it does |
 |---|---|---|
 | `vibey.cliPath` | `""` | The `vibey` program to run. Empty: the first `vibey` on your PATH. **Vibey: Check my setup** prints the one it found and its version. |
-| `vibey.qwenloopPath` | `""` | The `qwenloop` program that runs a task on the local model. Empty: the first `qwenloop` on your PATH. |
+| `vibey.gptossloopPath` | `""` | The `gptossloop` program, the local engine that runs a task on gpt-oss:20b by default. Empty: the first `gptossloop` on your PATH. It ships with vibey (`pip install vibey`). |
+| `vibey.qwenloopPath` | `""` | The `qwenloop` program: the same local runner on a Qwen model, which runs only once vibey switches it on (`VIBEY_FEATURE_QWENLOOP=1`, ADR-0064). Empty: the first `qwenloop` on your PATH. |
 | `vibey.ollamaPath` | `""` | The `ollama` program, used only to start a server with `ollama serve` and to show a download command. Empty: the first `ollama` on your PATH. |
 | `vibey.gitPath` | `""` | The `git` program. Empty: the first `git` on your PATH. |
 | `vibey.vibeySkillsPath` | `""` | The `vibey-skills` program that builds context packets for the **Plugins** menu. Empty: the first `vibey-skills` on your PATH. |
 | `vibey.ollamaUrl` | `""` | Where Ollama listens, in root form without `/v1`. Empty: `$VIBEY_OLLAMA_URL`, else `http://127.0.0.1:11434`. |
 | `vibey.ollamaAppPath` | `"/Applications/Ollama.app"` | macOS only: the Ollama app **Start Ollama** opens when it exists. Otherwise `ollama serve` is started. |
-| `vibey.model` | `""` | The model tasks run on. Empty: `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`. |
+| `vibey.model` | `""` | The model gptossloop tasks run on. Empty: `$VIBEY_OLLAMA_MODEL`, else `gpt-oss:20b`. qwenloop is not handed this: its own config chooses (`qwen3:14b`), unless you name a model with the engine, `qwenloop/qwen3:14b`. |
 | `vibey.loop` | `"sovereignloop"` | Which loop runs tasks. `paidloop` works only after you declare it once (**Choose the loop**), with a daily or monthly dollar budget. |
 | `vibey.effort` | `"auto"` | How hard the engine works (vibey's own effort levels). `auto` starts at **Base effort** and climbs one step each time a task fails, as vibey's escalation ladder does, never past a budget. |
 | `vibey.baseEffort` | `"LOW"` | Where `auto` effort starts: vibey's BUILD phase starts at `LOW`. |
-| `vibey.engine` | `"auto"` | `auto` picks within the loop by effort (preferring a model already loaded). Or name an engine, `qwenloop`, or an engine and model, `qwenloop/gpt-oss:20b`. The engines come from `vibey loops`. |
+| `vibey.engine` | `"auto"` | `auto` picks within the loop by effort (preferring a model already loaded). Or name an engine, `gptossloop`, or an engine and model, `gptossloop/gpt-oss:20b`. The engines come from `vibey loops`. |
 | `vibey.maxTurns` | `0` | The most model turns one task may take, used only when neither the task file (`max_turns`) nor the effort sets one. `0`: none from here. |
-| `vibey.contextWindow` | `32768` | The context window, in tokens, qwenloop assumes (its own `context_window`, default 32768). **Check my setup** warns when Ollama loaded the model with a smaller one, because Ollama then drops the start of long tasks without saying so. |
+| `vibey.contextWindow` | `32768` | The context window, in tokens, the local runner (gptossloop or qwenloop) assumes (its own `context_window`, default 32768). **Check my setup** warns when Ollama loaded the model with a smaller one, because Ollama then drops the start of long tasks without saying so. |
 | `vibey.runInPlace` | `false` | Run tasks directly in the open folder instead of in a separate copy (a git worktree on its own branch). **Off is safer**: with it on, the model edits your files as it goes and there is no Apply or Discard. |
 | `vibey.baseRef` | `""` | The git branch or commit a task's copy starts from. Empty: whatever you have checked out (`HEAD`). |
 | `vibey.stormHome` | `""` | Where task copies, plans and records are kept. Empty: `$VIBEY_STORM_HOME`, else `~/git/vibey-storm` on macOS and `$XDG_DATA_HOME/vibey/storm` (or `~/.local/share/vibey/storm`) on Linux. A folder your computer empties at restart is refused (sub-doctrine 10.h). |
@@ -319,14 +325,14 @@ Change them in **Settings** (search for `vibey`), or in `settings.json`.
 | `vibey.skillsBudget` | `6000` | The token budget of a vibey-skills context packet (vibey's own bounds: 1,000 to 32,000). |
 | `vibey.budgetInputTokensPerTurn` | `20000` | Input tokens per turn assumed when projecting a paid run's cost, until this machine has measured the engine's own. |
 | `vibey.budgetOutputTokensPerTurn` | `2000` | Output tokens per turn assumed when projecting a paid run's cost, until this machine has measured the engine's own. |
-| `vibey.desktopNotifications` | `false` | Let qwenloop send its own desktop notification at every turn. Off: the editor shows progress instead. |
-| `vibey.environment.allow` | `[]` | Extra environment variables (a name, or a prefix ending in `*`) passed to qwenloop and the commands the model runs. vibey's own variables (`VIBEY_*`), PostgreSQL's (`PG*`) and anything named like a database credential are never passed, whatever this says. |
+| `vibey.desktopNotifications` | `false` | Let the local runner (gptossloop or qwenloop) send its own desktop notification at every turn. Off: the editor shows progress instead. |
+| `vibey.environment.allow` | `[]` | Extra environment variables (a name, or a prefix ending in `*`) passed to the engine and the commands the model runs. vibey's own variables (`VIBEY_*`), PostgreSQL's (`PG*`) and anything named like a database credential are never passed, whatever this says. |
 
 ## When something is wrong
 
 - **"vibey was not found", or an older vibey is used.** Another vibey on your PATH may come
-  first. Point `vibey.cliPath` and `vibey.qwenloopPath` at the ones you want. **Vibey: Check my
-  setup** prints the path and version of every program it uses.
+  first. Point `vibey.cliPath` and `vibey.gptossloopPath` (or `vibey.qwenloopPath`) at the
+  ones you want. **Vibey: Check my setup** prints the path and version of every program it uses.
 - **"Ollama is not answering".** Run **Vibey: Start Ollama**. It never starts a second server.
 - **The context window is "unknown".** It is known only once the model is loaded, at the first
   task. If the check later says it is too small, it names the setting to raise.

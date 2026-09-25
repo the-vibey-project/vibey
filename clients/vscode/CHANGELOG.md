@@ -2,6 +2,22 @@
 
 All notable changes to the Vibey extension for VS Code.
 
+## Unreleased
+
+- **gptossloop is the local engine** ([ADR-0064](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0064-gptossloop-is-the-sovereign-engine/)).
+  The runner that used to be called qwenloop ships as two programs: `gptossloop`, which runs
+  gpt-oss:20b and is on by default, and `qwenloop`, the same runner on a Qwen model, which runs
+  only once vibey switches it on. The extension now runs `gptossloop` on sovereignloop, and
+  binds either one through its own settings (`GPTOSSLOOP_*` or `QWENLOOP_*`) and its own config
+  file. qwenloop is handed a model only when you name one (`qwenloop/qwen3:14b`); otherwise its
+  own config chooses. Without `vibey loops`, the fallback offers gptossloop alone, with its
+  follow-up box.
+- **`vibey.gptossloopPath`** names the gptossloop program, and `vibey-vscode --gptossloop PATH`
+  does the same from a terminal. `vibey.qwenloopPath` still names qwenloop. **Check my setup**
+  checks gptossloop.
+- The engine picker's example is now `/model gptossloop/gpt-oss:20b`, and the loops list says
+  when an engine that is on by default has been switched off.
+
 ## 0.1.0
 
 The first release: vibey and a model on your own computer, from the editor.

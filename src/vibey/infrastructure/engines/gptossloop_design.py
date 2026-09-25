@@ -2,13 +2,14 @@
 """The sovereign DESIGN provider: phase one without paid credentials (8.a).
 
 Doctrine 8.a makes the 100% sovereign path the preferred way to run. Until now it could
-not run at all: `EngineId.QWENLOOP` was wired as a BUILD executor, but DESIGN is phase
-one and its only live provider was ClaudeLoop. A project could not be started without
+not run at all: the local engine (then `EngineId.QWENLOOP`, now `EngineId.GPTOSSLOOP`,
+ADR-0064) was wired as a BUILD executor, but DESIGN is phase one and its only live
+provider was ClaudeLoop. A project could not be started without
 paid credit, which makes the "preferred" path the one that cannot go first.
 
 This talks to the local model directly over Ollama's chat API rather than shelling out
-to the `qwenloop` binary. That is deliberate: `qwenloop run` takes a plan file and
-`qwenloop prompt` needs an existing run id, so neither offers the one-shot
+to the `gptossloop` binary. That is deliberate: `gptossloop run` takes a plan file and
+`gptossloop prompt` needs an existing run id, so neither offers the one-shot
 prompt-to-JSON this needs — and going direct buys the property that matters here.
 
 **Constrained decoding.** Ollama compiles the schema to a grammar and zeroes the
@@ -52,7 +53,7 @@ from vibey.infrastructure.engines.ollama_chat import OllamaChatClient
 
 # Re-exported: the refusal moved to the domain so the research handler can catch it
 # without importing infrastructure, and this import path should not break.
-__all__ = ["QwenloopDesignProvider", "SovereignResearchUnavailable"]
+__all__ = ["GptossloopDesignProvider", "SovereignResearchUnavailable"]
 
 QUESTIONS_SCHEMA: dict[str, object] = {
     "type": "object",
@@ -174,12 +175,12 @@ RESEARCH_SYSTEM = (
 )
 
 
-class QwenloopDesignProvider:
+class GptossloopDesignProvider:
     """DESIGN on a local model, over Ollama's chat API with a compiled grammar."""
 
     #: The sovereign path's actor. Doctrine 8.a is only auditable if the
-    #: ledger says qwenloop when qwenloop is what ran.
-    engine_id: EngineId | None = EngineId.QWENLOOP
+    #: ledger says gptossloop when gptossloop's model is what ran (ADR-0064).
+    engine_id: EngineId | None = EngineId.GPTOSSLOOP
 
     def __init__(
         self,
@@ -193,7 +194,7 @@ class QwenloopDesignProvider:
     @classmethod
     def from_environment(
         cls, environ: Mapping[str, str], *, chat: OllamaChatClientInterface | None = None
-    ) -> "QwenloopDesignProvider":
+    ) -> "GptossloopDesignProvider":
         """The provider with its evidence directory read from `VIBEY_EVIDENCE_DIR`.
 
         Unset (or empty) means no evidence directory: research then refuses rather than

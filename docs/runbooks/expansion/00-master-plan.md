@@ -29,7 +29,7 @@ do. Where a runbook still says "each repo", read "each workspace member".
 | 03 | AWS + GCP | Not started | `vibey worker --azure {memory,az}` is the only cloud flag; no `infrastructure/aws` or `infrastructure/gcp` |
 | 04 | Docs scraper | Not started | No `docwatch` module, job kind or migration |
 | 05 | Kubernetes | Landed on minikube | PRs #73, #74, #76 (2026-08-21); CI `Helm install on minikube` job. Open: engines in the image, cloud presets, `server` Deployment, AKS/EKS/GKE runs |
-| 06 | Live engine confirmation | Open | claudeloop and agyloop live-proven; codexloop, cursorloop, qwenloop not |
+| 06 | Live engine confirmation | Open | claudeloop and agyloop live-proven; codexloop, cursorloop, gptossloop, qwenloop not |
 | 07 | Store submissions | Not started | Blocked on 08 |
 | 08 | Clients | Not started | Blocked on 12's HTTP API |
 | 09 | Package managers | Partial | PyPI publishing via `release.yml`; ADR-0019 now governs channel order |
@@ -129,7 +129,7 @@ parallel vibey projects when engine capacity allows.
 
 | Workstream | Needs before live verification |
 |---|---|
-| 06 engines | `CURSOR_API_KEY`; a codexloop session to capture real `events.jsonl` output; for qwenloop, local model weights (llama.cpp or vLLM backend) and `[features] qwenloop = true` |
+| 06 engines | `CURSOR_API_KEY`; a codexloop session to capture real `events.jsonl` output; for gptossloop (on by default), a local Ollama serving `gpt-oss:20b`; for qwenloop, `qwen3:14b` (or llama.cpp / vLLM weights) and `[features] qwenloop = true` |
 | 03 clouds | `az login` + subscription; AWS free-tier account + access key; GCP free-tier project + service-account JSON |
 | 05 k8s | The minikube path already runs in CI (`Helm install on minikube`). Remaining: 03's cloud tenants for AKS/EKS/GKE; LLM API keys for API-key engine mode |
 | 16 runner containers | A registry namespace + `packages:write` token; the same LLM API keys as 05; deploy keys for private target repos |

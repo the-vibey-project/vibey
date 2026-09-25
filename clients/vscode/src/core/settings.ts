@@ -19,15 +19,17 @@ import type {
 import { Efforts } from './catalogue';
 import type { Effort, EffortSetting, LoopName } from './interfaces/catalogue-interface';
 import type { Environ, PlatformStorageInterface } from './interfaces/storage-interface';
+import { LocalRunners } from './local-runner';
 import { OllamaEndpoint } from './ollama';
 import { StormHome } from './storage';
 
 export class Defaults {
-  /** The model qwenloop defaults to (`DEFAULT_ENDPOINT_MODEL`), and this era's default (8.d). */
-  static readonly MODEL = 'gpt-oss:20b';
+  /** The model gptossloop, the default engine, asks for (`DEFAULT_ENDPOINT_MODEL`): this era's default (8.d). */
+  static readonly MODEL = LocalRunners.GPTOSSLOOP.defaultModel as string;
 
   static readonly SETTINGS: RawSettings = {
     cliPath: '',
+    gptossloopPath: '',
     qwenloopPath: '',
     ollamaPath: '',
     gitPath: '',

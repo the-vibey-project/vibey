@@ -29,7 +29,7 @@ export class CommandTable {
       usage: '<task>',
       description: 'Start a task on a copy of your folder; nothing changes until you apply it.',
       example: '/ask add a line to README.md that says how to run the tests',
-      wraps: 'qwenloop run (or the chosen loop engine)',
+      wraps: 'gptossloop run (or the chosen loop engine)',
     },
     {
       id: 'vibey.followUp',
@@ -40,7 +40,7 @@ export class CommandTable {
       usage: '<message>',
       description: 'Send a follow-up to the task that is running; the model reads it at its next turn.',
       example: '/tell keep the heading short',
-      wraps: 'qwenloop prompt',
+      wraps: 'gptossloop prompt (or the running engine\'s)',
     },
     {
       id: 'vibey.runBatch',
@@ -61,7 +61,7 @@ export class CommandTable {
       usage: '[task id]',
       description: 'Ask a task to wind down: it finishes the turn it is on, then ends.',
       example: '/stop',
-      wraps: 'qwenloop stop',
+      wraps: 'gptossloop stop (or the running engine\'s)',
     },
     {
       id: 'vibey.forceStopRun',
@@ -192,8 +192,8 @@ export class CommandTable {
       icon: 'symbol-class',
       slash: 'model',
       usage: 'auto|<engine>|<engine>/<model>',
-      description: 'auto picks by effort within the loop; or name one, such as qwenloop/gpt-oss:20b.',
-      example: '/model qwenloop/gpt-oss:20b',
+      description: 'auto picks by effort within the loop; or name one, such as gptossloop/gpt-oss:20b.',
+      example: '/model gptossloop/gpt-oss:20b',
     },
     {
       id: 'vibey.showLoops',
@@ -386,7 +386,7 @@ export class CommandTable {
       group: 'Doctor',
       icon: 'pulse',
       slash: 'doctor',
-      description: 'Check every piece: the storm home, git, qwenloop, vibey, Ollama, the model and its window.',
+      description: 'Check every piece: the storm home, git, gptossloop, vibey, Ollama, the model and its window.',
       example: '/doctor',
     },
     {

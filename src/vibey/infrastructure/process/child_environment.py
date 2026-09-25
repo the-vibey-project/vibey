@@ -249,7 +249,7 @@ class ChildEnvironment:
         self._python_env = OrchestratorPythonEnv() if python_env is None else python_env
         self._isolate_python_env = isolate_python_env
         self._overlay = dict(overlay or {})
-        # The overlay is vibey's own values (qwenloop's endpoint), not passthrough -- but
+        # The overlay is vibey's own values (a local runner's endpoint), not passthrough -- but
         # the rule under the allow-list binds it too.
         for name in self._overlay:
             if allow.forbidden.forbids(name):

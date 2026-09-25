@@ -5,7 +5,7 @@
  * A reader of a growing record reads everything written since its last read, and the
  * watermark is a byte offset, never a timestamp (sub-doctrine 10.g): lines that share an
  * instant, or arrive late, cannot fall through a byte count. The offset moves only past a
- * complete line, so a line qwenloop is still writing (a torn last line) is read next time,
+ * complete line, so a line an engine is still writing (a torn last line) is read next time,
  * whole. Writers append one line and fsync it before anything else happens, so a crash
  * loses at most the line being written and never reorders what was recorded. Declared by
  * `interfaces/jsonl-interface.ts`.

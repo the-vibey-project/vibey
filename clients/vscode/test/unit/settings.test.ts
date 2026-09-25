@@ -83,7 +83,7 @@ describe('SettingsResolver', () => {
     expect(resolver.resolve({ baseEffort: 'standard' }).baseEffort).toBe('STANDARD');
     expect(resolver.resolve({ baseEffort: 'nope' }).baseEffort).toBe('LOW');
     expect(resolver.resolve({ engine: '  ' }).engine).toBe('auto');
-    expect(resolver.resolve({ engine: 'qwenloop/gpt-oss:20b' }).engine).toBe('qwenloop/gpt-oss:20b');
+    expect(resolver.resolve({ engine: 'gptossloop/gpt-oss:20b' }).engine).toBe('gptossloop/gpt-oss:20b');
   });
 
   it('raises numbers to their minimum, rounds them down, and reads nonsense as the default', () => {

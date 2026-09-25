@@ -19,7 +19,7 @@
  * a task that was stopped, interrupted or hit an infrastructure error runs again, on a new
  * branch, with the earlier worktree left for a person to look at. The base is the one the
  * journal recorded, never resolved again, so every task of one batch starts from the same
- * commit. An infrastructure error (qwenloop missing, Ollama down) or a person's stop halts
+ * commit. An infrastructure error (the engine missing, Ollama down) or a person's stop halts
  * the batch rather than failing every remaining task the same way. Declared by
  * `interfaces/batch-interface.ts`.
  */

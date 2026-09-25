@@ -7,6 +7,7 @@ import type { ResolvedHome } from './storage-interface';
 /** One field per `vibey.*` key in package.json's `contributes.configuration`. */
 export interface RawSettings {
   readonly cliPath: string;
+  readonly gptossloopPath: string;
   readonly qwenloopPath: string;
   readonly ollamaPath: string;
   readonly gitPath: string;

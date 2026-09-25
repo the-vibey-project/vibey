@@ -39,7 +39,7 @@ Each of the four session runners — `claudeloop`, `codexloop`,
 | `codexloop` | `src/vibey_runners/codex` | 0.4.0 | >=3.12 | `codexloop` | `codex` |
 | `cursorloop` | `src/vibey_runners/cursor` | 0.7.0 | >=3.12 | `cursorloop` | `cursor-sdk-bridge` |
 | `agyloop` | `src/vibey_runners/agy` | 0.5.0 | >=3.12 | `agyloop` | `agy` |
-| `qwenloop` | `src/vibey_runners/qwen` | 0.2.0 | >=3.12 | `qwenloop` | none (local llama.cpp / vLLM model) |
+| `qwenloop` | `src/vibey_runners/qwen` | 0.3.0 | >=3.12 | `gptossloop`, `qwenloop` | none (local Ollama / llama.cpp / vLLM model) |
 
 - All five are workspace members of this repository, share vibey's onion
   layout (`domain/application/infrastructure/cli`), and ship inside the one
@@ -107,8 +107,9 @@ What the vibey image holds for each, measured against the tree on
   `--gateway sdk` lane may not need one, which is what its spike should
   confirm.
 
-qwenloop needs no vendor binary or API key, but it needs model weights in
-the image or on a volume, and a GPU for the vLLM profile.
+gptossloop and qwenloop need no vendor binary or API key, but they need
+model weights in the image, on a volume or behind a model server (the chart's
+optional Ollama), and a GPU for the vLLM profile.
 
 Do not add anything to the image until this is settled per runner. It is
 Phase 0.

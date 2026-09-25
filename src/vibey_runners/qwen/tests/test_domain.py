@@ -289,3 +289,21 @@ def test_recording_bounds_must_be_finite_non_negative_integers(key: str, value: 
     # a TOML file can say `inf` or `nan`; a bound either of those is no bound at all
     with pytest.raises(ValueError, match=f"{key} must be a non-negative integer"):
         parser.parse({key: value})
+
+
+def test_the_two_engines_differ_only_in_name_prefix_and_model() -> None:
+    """ADR-0064: one runner, two engines; each derives its own variable names."""
+    from qwenloop.domain.config import GPTOSSLOOP, QWENLOOP
+    from qwenloop.domain.interfaces import RunnerIdentityInterface
+
+    assert isinstance(GPTOSSLOOP, RunnerIdentityInterface)
+    assert (GPTOSSLOOP.name, GPTOSSLOOP.default_model) == ("gptossloop", "gpt-oss:20b")
+    assert (QWENLOOP.name, QWENLOOP.default_model) == ("qwenloop", "qwen3:14b")
+    assert (
+        GPTOSSLOOP.env_config,
+        GPTOSSLOOP.env_base_url,
+        GPTOSSLOOP.env_model,
+        GPTOSSLOOP.env_api_key,
+    ) == ("GPTOSSLOOP_CONFIG", "GPTOSSLOOP_BASE_URL", "GPTOSSLOOP_MODEL", "GPTOSSLOOP_API_KEY")
+    assert QWENLOOP.env_model == "QWENLOOP_MODEL"
+    assert QwenConfigParser(default_model="qwen3:14b").parse({}).model == "qwen3:14b"

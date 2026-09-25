@@ -11,8 +11,11 @@ export interface PlatformStorageInterface {
   fixedVolatile(): ReadonlyArray<readonly [string, string]>;
   /** Environment variables that name this session's own temporary directories. */
   sessionVolatile(): ReadonlyArray<readonly [string, string]>;
-  /** Where qwenloop looks for its config file when QWENLOOP_CONFIG is unset. */
-  qwenloopConfigPath(environ: Environ): string;
+  /**
+   * Where a local runner (`gptossloop`, `qwenloop`) looks for its config file when its own
+   * `<PREFIX>_CONFIG` is unset: platformdirs' user_config_path(runner) / config.toml.
+   */
+  runnerConfigPath(runner: string, environ: Environ): string;
 }
 
 export interface VolatileLocationsInterface {

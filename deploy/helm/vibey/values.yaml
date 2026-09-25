@@ -16,13 +16,15 @@ worker:
   # mid-turn: the pod stops claiming immediately, then drains.
   terminationGracePeriodSeconds: 7200
   parallelism: 2
-  # DESIGN/decompose provider: scripted, claudeloop, or qwenloop. qwenloop
-  # is the sovereign path; with ollama.enabled it talks to the in-cluster
-  # server below.
+  # DESIGN/decompose provider: scripted, claudeloop, or gptossloop.
+  # gptossloop is the sovereign path; with ollama.enabled it talks to the
+  # in-cluster server below. `qwenloop` is still read, as gptossloop
+  # (ADR-0064).
   provider: scripted
-  # Comma-separated engine allow-list (--engines); empty means all. Naming
-  # qwenloop needs the qwenloop feature switched on (ollama.qwenloopFeature,
-  # or VIBEY_FEATURE_QWENLOOP in extraEnv).
+  # Comma-separated engine allow-list (--engines); empty means all.
+  # gptossloop is on unless switched off (VIBEY_FEATURE_GPTOSSLOOP=0 in
+  # extraEnv); naming qwenloop needs its feature switched on
+  # (ollama.qwenloopFeature, or VIBEY_FEATURE_QWENLOOP in extraEnv).
   engines: ""
   # A worker without --project silently binds to whichever project was
   # created last; in a cluster that is a footgun, so the chart requires it
@@ -156,8 +158,9 @@ ollama:
   # ADR-0015, ADR-0027). When enabled, the chart runs it with a volume for
   # its weights, pulls `model` onto that volume with a Job, and points the
   # worker at it: VIBEY_OLLAMA_URL/VIBEY_OLLAMA_MODEL for vibey's own
-  # sovereign providers, QWENLOOP_BASE_URL/QWENLOOP_MODEL for qwenloop's
-  # OpenAI-compatible backend. Off by default: a 20B model wants a node with
+  # sovereign providers, GPTOSSLOOP_BASE_URL/GPTOSSLOOP_MODEL for
+  # gptossloop's OpenAI-compatible backend (and QWENLOOP_* for qwenloop's,
+  # when qwenloopFeature switches it on). Off by default: a 20B model wants a node with
   # the memory (and ideally the GPU) to hold it, and a default install
   # should not assume one.
   enabled: false
@@ -171,16 +174,20 @@ ollama:
     pullPolicy: IfNotPresent
   # The model the pull Job fetches and the worker is told to use: this era's
   # default free model (sub-doctrine 8.d), GPT-OSS 20B -- the one vibey and
-  # qwenloop already default to, so a stock worker and a stock qwenloop agree
-  # without further configuration.
+  # gptossloop already default to, so a stock worker and a stock gptossloop
+  # agree without further configuration.
   model: gpt-oss:20b
-  # OLLAMA_CONTEXT_LENGTH. qwenloop runs a 32K context and Ollama's default
+  # The Qwen model qwenloop runs (ADR-0064): pulled beside `model`, and
+  # handed to qwenloop, only while qwenloopFeature switches qwenloop on.
+  qwenModel: qwen3:14b
+  # OLLAMA_CONTEXT_LENGTH. The local runner runs a 32K context and Ollama's default
   # window is far smaller; empty leaves Ollama's own default in place.
   contextLength: 32768
   service:
     port: 11434
   storage:
-    # gpt-oss:20b is 13.8 GB on disk (MXFP4); this leaves room for a second model.
+    # gpt-oss:20b is 13.8 GB on disk (MXFP4); this leaves room for a second
+    # model, such as qwenModel's qwen3:14b (9.3 GB).
     size: 30Gi
     storageClass: ""
   # gpt-oss:20b at a 32K context: its weights plus KV cache. Measured 13.1 GB
@@ -234,11 +241,11 @@ ollama:
         memory: 64Mi
       limits:
         memory: 256Mi
-  # Also switch on the qwenloop feature in the worker
-  # (VIBEY_FEATURE_QWENLOOP=1, ADR-0015): qwenloop becomes the BUILD
-  # standby and `worker.engines: qwenloop` is accepted. false runs Ollama
-  # for vibey's sovereign DESIGN provider only.
-  qwenloopFeature: true
+  # Also switch on qwenloop in the worker (VIBEY_FEATURE_QWENLOOP=1,
+  # ADR-0015): the same runner as gptossloop on qwenModel, joining the local
+  # tier beside it, and `worker.engines: qwenloop` is accepted. Off on
+  # shipment (ADR-0064): gptossloop, the sovereign default, needs no switch.
+  qwenloopFeature: false
   nodeSelector: {}
   tolerations: []
   affinity: {}

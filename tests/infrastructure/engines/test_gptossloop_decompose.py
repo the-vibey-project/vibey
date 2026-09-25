@@ -10,14 +10,14 @@ import pytest
 from vibey.domain.effort import Effort
 from vibey.domain.spec import AcceptanceCriterion, DesignSpec
 from vibey.infrastructure.engines.design_json import WorkPlanDecoder
-from vibey.infrastructure.engines.interfaces import (
-    OllamaChatClientInterface,
-    QwenloopWorkPlanProducerInterface,
-    WorkPlanDecoderInterface,
-)
-from vibey.infrastructure.engines.qwenloop_decompose import (
+from vibey.infrastructure.engines.gptossloop_decompose import (
     DECOMPOSE_SYSTEM,
-    QwenloopWorkPlanProducer,
+    GptossloopWorkPlanProducer,
+)
+from vibey.infrastructure.engines.interfaces import (
+    GptossloopWorkPlanProducerInterface,
+    OllamaChatClientInterface,
+    WorkPlanDecoderInterface,
 )
 
 
@@ -95,9 +95,9 @@ VALID = {
 }
 
 
-def _producer(answer: dict[str, object]) -> tuple[QwenloopWorkPlanProducer, FakeChat]:
+def _producer(answer: dict[str, object]) -> tuple[GptossloopWorkPlanProducer, FakeChat]:
     chat = FakeChat(answer)
-    return QwenloopWorkPlanProducer(chat=chat), chat
+    return GptossloopWorkPlanProducer(chat=chat), chat
 
 
 @pytest.mark.asyncio
@@ -254,8 +254,8 @@ async def test_an_unknown_dependency_is_named_once() -> None:
 
 
 def test_the_producer_meets_its_declared_seams() -> None:
-    producer = QwenloopWorkPlanProducer()
-    assert isinstance(producer, QwenloopWorkPlanProducerInterface)
+    producer = GptossloopWorkPlanProducer()
+    assert isinstance(producer, GptossloopWorkPlanProducerInterface)
     assert isinstance(producer._chat, OllamaChatClientInterface)
     assert isinstance(producer._decoder, WorkPlanDecoderInterface)
     assert isinstance(producer._decoder, WorkPlanDecoder)

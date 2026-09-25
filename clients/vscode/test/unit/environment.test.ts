@@ -94,7 +94,13 @@ describe('ChildEnvironment', () => {
     const catalogue = JSON.parse(fixture('vibey-loops.json')) as {
       loops: { engines: { engine_id: string; env: { auth: string[]; passthrough: string[] } }[] }[];
     };
-    const hostile = { ...editor, ANTHROPIC_BASE_URL: 'postgres://db.internal/prod', CLAUDE_CONFIG_DIR: '/home/me/.claude' };
+    const hostile = {
+      ...editor,
+      ANTHROPIC_BASE_URL: 'postgres://db.internal/prod',
+      CLAUDE_CONFIG_DIR: '/home/me/.claude',
+      GPTOSSLOOP_API_KEY: 'g',
+      GPTOSSLOOP_BASE_URL: 'postgres://db.internal/prod',
+    };
     for (const engine of catalogue.loops.flatMap((loop) => loop.engines)) {
       const allow = EnvironmentAllowList.MODEL_BASICS.extended([...engine.env.auth, ...engine.env.passthrough], engine.engine_id);
       const built = new ChildEnvironment(allow).build(hostile);
@@ -103,6 +109,16 @@ describe('ChildEnvironment', () => {
         expect(built.ANTHROPIC_API_KEY).toBe('sk-ant');
         expect(built.CLAUDE_CONFIG_DIR).toBe('/home/me/.claude');
         expect(built.ANTHROPIC_BASE_URL).toBeUndefined();
+      }
+      // The two names of the local runner each get their own settings, never the other's.
+      if (engine.engine_id === 'gptossloop') {
+        expect(built.GPTOSSLOOP_API_KEY).toBe('g');
+        expect(built.GPTOSSLOOP_BASE_URL).toBeUndefined();
+        expect(built.QWENLOOP_API_KEY).toBeUndefined();
+      }
+      if (engine.engine_id === 'qwenloop') {
+        expect(built.QWENLOOP_API_KEY).toBe('k');
+        expect(built.GPTOSSLOOP_API_KEY).toBeUndefined();
       }
     }
   });

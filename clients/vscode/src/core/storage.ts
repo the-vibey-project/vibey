@@ -63,7 +63,7 @@ export abstract class PlatformStorage implements PlatformStorageInterface {
   ];
 
   abstract defaultHome(environ: Environ): string;
-  abstract qwenloopConfigPath(environ: Environ): string;
+  abstract runnerConfigPath(runner: string, environ: Environ): string;
 
   fixedVolatile(): ReadonlyArray<readonly [string, string]> {
     return this.fixed;
@@ -107,13 +107,13 @@ export class MacStorage extends PlatformStorage {
     return path.join(PlatformStorage.userHome(environ), 'git', 'vibey-storm');
   }
 
-  /** platformdirs' user_config_path("qwenloop") on macOS. */
-  qwenloopConfigPath(environ: Environ): string {
+  /** platformdirs' user_config_path(runner) on macOS, and the file in it. */
+  runnerConfigPath(runner: string, environ: Environ): string {
     return path.join(
       PlatformStorage.userHome(environ),
       'Library',
       'Application Support',
-      'qwenloop',
+      runner,
       'config.toml',
     );
   }
@@ -136,12 +136,12 @@ export class LinuxStorage extends PlatformStorage {
       : path.join(data, 'vibey', 'storm');
   }
 
-  /** platformdirs' user_config_path("qwenloop") on Linux. */
-  qwenloopConfigPath(environ: Environ): string {
+  /** platformdirs' user_config_path(runner) on Linux, and the file in it. */
+  runnerConfigPath(runner: string, environ: Environ): string {
     const config = LinuxStorage.xdg(environ.XDG_CONFIG_HOME);
     return config === undefined
-      ? path.join(PlatformStorage.userHome(environ), '.config', 'qwenloop', 'config.toml')
-      : path.join(config, 'qwenloop', 'config.toml');
+      ? path.join(PlatformStorage.userHome(environ), '.config', runner, 'config.toml')
+      : path.join(config, runner, 'config.toml');
   }
 
   /** The XDG spec: a relative value is invalid and is ignored. */

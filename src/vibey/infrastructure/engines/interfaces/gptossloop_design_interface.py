@@ -1,7 +1,7 @@
 # Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 """The contract for the sovereign DESIGN provider.
 
-Mirrors `vibey/infrastructure/engines/qwenloop_design.py` (ADR-0016). The runtime seam
+Mirrors `vibey/infrastructure/engines/gptossloop_design.py` (ADR-0016). The runtime seam
 the DESIGN handlers consume is `DesignProvider` in `application/interfaces/design.py`;
 this declares it again beside the class, together with the refusal it owes a caller.
 Interfaces declare; they never consume.
@@ -16,7 +16,7 @@ from vibey.domain.spec import DesignSpec
 
 
 @runtime_checkable
-class QwenloopDesignProviderInterface(Protocol):
+class GptossloopDesignProviderInterface(Protocol):
     engine_id: EngineId | None
 
     async def batch(

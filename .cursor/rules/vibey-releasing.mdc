@@ -53,7 +53,8 @@ library at all -- only a wrapper that fetches the CLI, which is a different
 promise and has to say so. See ADR-0019 for the grouping and the order.
 
 The workspace tenants (`claudeloop`, `codexloop`, `cursorloop`, `agyloop`,
-`qwenloop`, `vibey-gh`, `vibey-skills`, `vibey-bootstrap`) are no longer separate
+`qwenloop` — which ships the `gptossloop` and `qwenloop` scripts — `vibey-gh`,
+`vibey-skills`, `vibey-bootstrap`) are no longer separate
 PyPI distributions. Their source lives in this repository (ADR-0021) and they ship
 inside the `vibey` wheel (ADR-0037), so the workflows below publish `vibey` and
 that one distribution is the whole family. A tenant's own version in its
@@ -254,7 +255,7 @@ pip install vibey==x.y.z
 vibey --version
 # the bundle is the contract now (ADR-0037): every console script must be there
 for c in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap azbootstrap \
-         claudeloop codexloop cursorloop agyloop qwenloop; do
+         claudeloop codexloop cursorloop agyloop gptossloop qwenloop; do
   command -v "$c" >/dev/null || echo "MISSING: $c"
 done
 ```
