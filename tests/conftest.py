@@ -30,7 +30,7 @@ import asyncpg
 import pytest
 from hypothesis import HealthCheck, settings
 
-from tests.db_reaper import HOLD_MARK, BackgroundReap, TestDatabaseHold, TestDatabaseReaper
+from tests.db_reaper import BackgroundReap, HoldMark, TestDatabaseHold, TestDatabaseReaper
 from tests.db_roles import TestDatabaseRoles
 from vibey.infrastructure.db.migrator import apply_migrations, discover_migrations
 
@@ -72,7 +72,8 @@ _BASE_DSN: str | None = None
 _ROLES = TestDatabaseRoles.from_environ(os.environ)
 # This process's hold on its database (tests/db_reaper.py): taken before the database
 # exists, released after it is dropped. A killed session's hold ends with its connection,
-# which is how the reaper tells a leaked database from one in use.
+# which is how the reaper tells a leaked database from one in use. The database's mark names
+# this process too, so a hold that ends while the process lives gives nothing away.
 _HOLD: TestDatabaseHold | None = None
 # The reap of other, dead sessions' databases, run beside this session by its controller.
 _REAP: BackgroundReap | None = None
@@ -143,7 +144,10 @@ async def _setup(base_dsn: str) -> str:
                 await tmpl_conn.close()
 
             # The hold comes first, so this database never exists unheld while its session
-            # is alive; the mark tells the reaper the hold's absence means the session died.
+            # is alive. The mark names this process and machine, so a hold that ends while the
+            # process lives still gives nothing away: the reaper keeps the database until the
+            # process is gone.
+            mark = HoldMark.this_process().text()  # before anything exists, so it cannot fail after
             global _HOLD
             _HOLD = TestDatabaseHold(base_dsn, wdb)
             _HOLD.start()
@@ -158,7 +162,7 @@ async def _setup(base_dsn: str) -> str:
             await conn.execute(
                 f'CREATE DATABASE "{wdb}" TEMPLATE "{_TEMPLATE_DB}"',
             )
-            await conn.execute(f"COMMENT ON DATABASE \"{wdb}\" IS '{HOLD_MARK}'")
+            await conn.execute(f"COMMENT ON DATABASE \"{wdb}\" IS '{mark}'")
         finally:
             await conn.execute(
                 "SELECT pg_advisory_unlock(hashtext($1))",
