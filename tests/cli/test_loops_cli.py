@@ -78,7 +78,7 @@ ENGINE_KEYS = [
     "env",
     "notes",
 ]
-EFFORTS = ["TRIVIAL", "LOW", "STANDARD", "HIGH", "MAX"]
+EFFORTS = ["TRIVIAL", "LOW", "STANDARD", "HIGH", "MAX", "ULTRA"]
 OWN_CHOICE = "gptossloop's own configuration chooses the model"
 QWEN_OWN_CHOICE = "qwenloop's own configuration chooses the model"
 ENDPOINT = {"VIBEY_OLLAMA_URL": "http://127.0.0.1:11434"}

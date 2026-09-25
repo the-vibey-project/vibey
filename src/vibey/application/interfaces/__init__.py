@@ -174,6 +174,10 @@ from vibey.application.interfaces.system import (
     Clock,
 )
 from vibey.application.interfaces.tracker import IssueTrackerPort
+from vibey.application.interfaces.ultra_control import (
+    UltraControlServiceInterface,
+    UltraControlStore,
+)
 from vibey.application.interfaces.visual import (
     VisualInventoryProducer,
     VisualInventoryRepository,
@@ -267,6 +271,8 @@ __all__ = [
     "ProjectBudgetServiceInterface",
     "GateAnswerServiceInterface",
     "ProjectBudgetStore",
+    "UltraControlServiceInterface",
+    "UltraControlStore",
     "ProjectLookup",
     "ProjectReader",
     "ProjectStore",

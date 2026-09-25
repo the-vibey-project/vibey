@@ -126,6 +126,10 @@ CLAUDELOOP = EngineDescriptor(
             ("--preset", "high", "--effort", "high"), achieved=Effort.HIGH
         ),
         Effort.MAX: EngineInvocation(("--preset", "high", "--effort", "max"), achieved=Effort.MAX),
+        # ULTRA (ADR-0063): the top tier, and no `--max-turns` -- vibey passes none.
+        Effort.ULTRA: EngineInvocation(
+            ("--preset", "high", "--effort", "max"), achieved=Effort.ULTRA
+        ),
     },
     session_verb="sessions",
     # --permission-mode is real (confirmed via --help), but its actual value
@@ -192,6 +196,9 @@ CODEXLOOP = EngineDescriptor(
         Effort.STANDARD: EngineInvocation((), achieved=Effort.STANDARD),
         Effort.HIGH: EngineInvocation((), achieved=Effort.STANDARD),
         Effort.MAX: EngineInvocation(
+            (), achieved=Effort.STANDARD, notes="codexloop has no CLI-level effort control"
+        ),
+        Effort.ULTRA: EngineInvocation(
             (), achieved=Effort.STANDARD, notes="codexloop has no CLI-level effort control"
         ),
     },
@@ -266,6 +273,11 @@ CURSORLOOP = EngineDescriptor(
         Effort.STANDARD: EngineInvocation(("--model", "grok-4.5"), achieved=Effort.STANDARD),
         Effort.HIGH: EngineInvocation(("--model", "grok"), achieved=Effort.HIGH),
         Effort.MAX: EngineInvocation(("--model", "grok-xhigh"), achieved=Effort.MAX),
+        Effort.ULTRA: EngineInvocation(
+            ("--model", "grok-xhigh"),
+            achieved=Effort.MAX,
+            notes="cursorloop has no unbounded tier; runs its top model",
+        ),
     },
     session_verb="agents",
     # cursorloop is the only engine whose `run` takes the plan as a flag
@@ -358,6 +370,10 @@ AGYLOOP = EngineDescriptor(
             ("--preset", "high", "--effort", "high"), achieved=Effort.HIGH
         ),
         Effort.MAX: EngineInvocation(("--preset", "high", "--effort", "max"), achieved=Effort.MAX),
+        # ULTRA (ADR-0063): the top tier, and no `--max-turns` -- vibey passes none.
+        Effort.ULTRA: EngineInvocation(
+            ("--preset", "high", "--effort", "max"), achieved=Effort.ULTRA
+        ),
     },
     session_verb="sessions",
     isolation_flags={
@@ -419,6 +435,10 @@ QWENLOOP = EngineDescriptor(
         Effort.STANDARD: EngineInvocation(("--max-turns", "40"), achieved=Effort.STANDARD),
         Effort.HIGH: EngineInvocation(("--max-turns", "64"), achieved=Effort.HIGH),
         Effort.MAX: EngineInvocation(("--max-turns", "96"), achieved=Effort.MAX),
+        # ULTRA (ADR-0063): no `--max-turns`. The runner still ends a session at its own
+        # configured limit, so the adapter re-invokes it pass after pass (the ULTRA
+        # improvement loop, application/build_implement_handler.py) until Stop or a cap.
+        Effort.ULTRA: EngineInvocation((), achieved=Effort.ULTRA),
     },
     session_verb="sessions",
     isolation_flags={
@@ -516,6 +536,7 @@ class ClaudeloopLocalDescriptors:
         Effort.STANDARD: ("medium", Effort.STANDARD),
         Effort.HIGH: ("high", Effort.STANDARD),
         Effort.MAX: ("high", Effort.STANDARD),
+        Effort.ULTRA: ("high", Effort.STANDARD),
     }
     _CAPABILITIES = frozenset(
         {

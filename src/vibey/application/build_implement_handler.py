@@ -22,12 +22,21 @@ On success, enqueues build.verify (task 6.5) against the same worktree, so
 implement never leaves a completed item with no next step queued -- the same
 pattern design_handler.py's follow-up enqueue and visual_handler.py's
 inventory->plan chaining use.
+
+ULTRA (ADR-0063): while the project's ULTRA run is active, every pass runs at
+``Effort.ULTRA`` and the ladder is not consulted, so it never parks for length. A
+pass that completes is a checkpoint: the engine has committed its work in the
+item's worktree, the handler enqueues the checks (build.verify) as always, records
+``UltraPassCompleted`` and enqueues the next pass under its own job key, after the
+checks. The operator's Stop ends the run at the next pass boundary, and the budget
+brake parks it at a declared cap; a run with no dollar cap waits for one unless the
+no-cap declaration stands.
 """
 
 from collections.abc import Mapping
 from dataclasses import replace
 from datetime import timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from vibey.application.build_engine_run import BuildLedger, run_and_record
 from vibey.application.build_verify_handler import granted_amount, granted_limit
@@ -36,26 +45,31 @@ from vibey.application.interfaces import (
     BudgetSource,
     BuildProvisioner,
     BuildWorktrees,
+    LedgerReader,
     SkillsContextCompiler,
     TelemetryTracer,
 )
 from vibey.application.ports import Clock, EngineAdapter, HumanGateRepository, JobRepository
 from vibey.application.wind_down import WindDownOrchestrator
 from vibey.application.worker import Defer, Failure, Outcome, Park, Success
+from vibey.domain.budget import BudgetLedger
 from vibey.domain.correlation import DELIVERY_CORRELATION
 from vibey.domain.effort import (
     BUILD_LADDER_EXHAUSTED,
     PHASE_BASE_EFFORT,
+    Effort,
     effort_for_attempt,
     forces_rotation,
 )
 from vibey.domain.engine import EXIT_CODE_WIND_DOWN, IsolationLevel
 from vibey.domain.errors import EscalationExhausted
 from vibey.domain.interfaces.correlation_interface import DeliveryCorrelationInterface
+from vibey.domain.interfaces.ultra_interface import UltraPassInterface, UltraPolicyInterface
 from vibey.domain.job import FailureClass, idempotency_key
 from vibey.domain.ledger import EventKind
 from vibey.domain.phase import Phase
 from vibey.domain.provision import ProvisionSpec
+from vibey.domain.ultra import ULTRA_PAYLOAD_KEY, ULTRA_POLICY, UltraState, UltraVerdict
 
 _EMPTY_PROVISION_SPEC = ProvisionSpec((), ())
 
@@ -78,8 +92,12 @@ class BuildImplementHandler:
         skills_context: SkillsContextCompiler | None = None,
         correlation: DeliveryCorrelationInterface = DELIVERY_CORRELATION,
         tracer: TelemetryTracer | None = None,
+        ultra_ledger: LedgerReader | None = None,
+        ultra_policy: UltraPolicyInterface = ULTRA_POLICY,
     ) -> None:
         self._correlation = correlation
+        self._ultra_ledger = ultra_ledger
+        self._ultra = ultra_policy
         self._worktrees = worktrees
         self._provisioner = provisioner
         self._engine = engine
@@ -101,8 +119,91 @@ class BuildImplementHandler:
             return Failure(FailureClass.VIBEY, "build.implement job is missing work_item_id")
 
         base_effort = PHASE_BASE_EFFORT[Phase.BUILD]
+        ultra_pass: UltraPassInterface | None = None
+        if self._ultra_ledger is not None:
+            state = self._ultra.state(await self._ultra_ledger.all_for_project(job.project_id))
+            if state.active or ULTRA_PAYLOAD_KEY in job.payload:
+                stopped = await self._ultra_gate(job, state)
+                if stopped is not None:
+                    return stopped
+                ultra_pass = self._ultra.pass_of(job.work_item_id, job.payload)
+        # ULTRA is chosen, never climbed into; and the ladder is not consulted, so an
+        # ULTRA pass never parks for running long.
+        effort = (
+            Effort.ULTRA if ultra_pass is not None else await self._ladder_effort(job, base_effort)
+        )
+        if isinstance(effort, Park):
+            return effort
+
+        outcome = await self._run(job, base_effort, effort, ultra=ultra_pass is not None)
+        if isinstance(outcome, Success) and ultra_pass is not None:
+            await self._next_pass(job, ultra_pass, outcome)
+        return outcome
+
+    async def _ultra_gate(self, job: JobRecord, state: UltraState) -> Outcome | None:
+        """Stop and the missing cap end or park the pass here; the brake parks it in
+        `_run`, exactly as for any BUILD session. `None` runs the pass."""
+        budget = (
+            await self._budget_source.current(job.project_id, job.cycle)
+            if self._budget_source is not None
+            else BudgetLedger(turns_spent=0, dollars_spent=0.0, max_turns=None, max_dollars=None)
+        )
+        verdict = self._ultra.decide(state, budget)
+        if verdict is UltraVerdict.OPERATOR_STOP:
+            return Success({"work_item_id": job.work_item_id, "ultra": "stopped"})
+        if verdict is UltraVerdict.NEEDS_CAP:
+            return Park(
+                HumanGateRequest(
+                    kind="ultra_needs_cap",
+                    prompt=(
+                        "an ULTRA run needs a dollar cap: set one with `vibey budget set "
+                        "--max-cycle-dollars N`, or declare no cap on the host with "
+                        "`vibey budget no-cap`, then answer anything to continue."
+                    ),
+                )
+            )
+        return None
+
+    async def _next_pass(
+        self, job: JobRecord, ultra_pass: UltraPassInterface, outcome: Success
+    ) -> None:
+        """ "Done" is a checkpoint: record the pass, then enqueue the next one after the
+        checks the pass just enqueued. Idempotent by the next pass's job key."""
+        following = ultra_pass.next()
+        key = following.job_key(job.project_id, job.cycle)
+        await self._ledger.record(
+            project_id=job.project_id,
+            cycle=job.cycle,
+            job_id=job.id,
+            engine_id=self._engine.descriptor.engine_id,
+            correlation_id=self._correlation.for_project(job.project_id).value,
+            event=EngineEvent(
+                kind=EventKind.ULTRA_PASS_COMPLETED.value,
+                at=self._clock.now(),
+                payload={
+                    "work_item_id": ultra_pass.work_item_id,
+                    "pass": ultra_pass.number,
+                    "next_job_key": key,
+                },
+            ),
+        )
+        verify_id = outcome.result.get("verify_job_id")
+        await self._jobs.enqueue(
+            EnqueueRequest(
+                project_id=job.project_id,
+                cycle=job.cycle,
+                phase=Phase.BUILD,
+                kind="build.implement",
+                idempotency_key=key,
+                work_item_id=job.work_item_id,
+                payload={**job.payload, ULTRA_PAYLOAD_KEY: following.number},
+                depends_on=(UUID(str(verify_id)),) if verify_id else (job.id,),
+            )
+        )
+
+    async def _ladder_effort(self, job: JobRecord, base_effort: Effort) -> Effort | Park:
         try:
-            effort = effort_for_attempt(base_effort, job.attempts)
+            return effort_for_attempt(base_effort, job.attempts)
         except EscalationExhausted:
             # An answered gate can extend the ladder: further attempts run
             # at the ladder's top effort until the granted bound. Without
@@ -127,8 +228,12 @@ class BuildImplementHandler:
                         ),
                     )
                 )
-            effort = effort_for_attempt(base_effort, BUILD_LADDER_EXHAUSTED)
+            return effort_for_attempt(base_effort, BUILD_LADDER_EXHAUSTED)
 
+    async def _run(
+        self, job: JobRecord, base_effort: Effort, effort: Effort, *, ultra: bool
+    ) -> Outcome:
+        assert job.work_item_id is not None  # checked in handle()
         if self._budget_source is not None:
             budget = await self._budget_source.current(job.project_id, job.cycle)
             if budget.any_exhausted and self._human_gates is not None:
@@ -176,7 +281,7 @@ class BuildImplementHandler:
                     )
 
         previous_engine_id = job.payload.get("previous_engine_id")
-        if previous_engine_id is not None and job.attempts > 1:
+        if previous_engine_id is not None and job.attempts > 1 and not ultra:
             # Clamp: granted attempts past the ladder all sit at its top.
             previous_effort = effort_for_attempt(
                 base_effort, min(job.attempts - 1, BUILD_LADDER_EXHAUSTED)
@@ -299,7 +404,7 @@ class BuildImplementHandler:
                 ),
             )
 
-        await self._jobs.enqueue(
+        verify = await self._jobs.enqueue(
             EnqueueRequest(
                 project_id=job.project_id,
                 cycle=job.cycle,
@@ -314,7 +419,10 @@ class BuildImplementHandler:
                 depends_on=(job.id,),
             )
         )
-        return Success({"work_item_id": job.work_item_id, "run_id": str(run_id)})
+        result: dict[str, object] = {"work_item_id": job.work_item_id, "run_id": str(run_id)}
+        if ultra:
+            result["verify_job_id"] = str(verify.id)
+        return Success(result)
 
 
 # Standing constraints for every engine session. Each line traces to a

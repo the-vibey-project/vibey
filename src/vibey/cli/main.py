@@ -41,6 +41,7 @@ from vibey.cli.ledger_search import PRESENTER, ledger_search
 from vibey.cli.loops import LOOPS
 from vibey.cli.projects import PROJECTS
 from vibey.cli.queue import queue_app
+from vibey.cli.ultra import ultra_app
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
     InvalidAnswer,
@@ -98,6 +99,7 @@ ledger_app.command("export")(ledger_export)
 ledger_app.command("site")(ledger_site)
 app.add_typer(queue_app, name="queue")
 app.add_typer(budget_app, name="budget")
+app.add_typer(ultra_app, name="ultra")
 
 
 def _version_callback(value: bool) -> None:
