@@ -1,0 +1,444 @@
+{
+  "$description": "Tier 2. The dark theme: the docs site's night sky, the default for screens.",
+  "theme": {
+    "dark": {
+      "$type": "color",
+      "bg": {
+        "canvas": {
+          "$value": "{color.night.930}"
+        },
+        "surface": {
+          "$value": "{color.night.900}"
+        },
+        "raised": {
+          "$value": "{color.night.850}"
+        },
+        "overlay": {
+          "$value": "{color.night.825}"
+        },
+        "code": {
+          "$value": "{color.night.925}"
+        }
+      },
+      "border": {
+        "subtle": {
+          "$value": "{color.night.800}"
+        },
+        "strong": {
+          "$value": "{color.night.600}"
+        }
+      },
+      "text": {
+        "primary": {
+          "$value": "{color.slate.30}"
+        },
+        "secondary": {
+          "$value": "{color.slate.200}"
+        },
+        "tertiary": {
+          "$value": "{color.slate.325}"
+        },
+        "link": {
+          "$value": "{color.violet.305}"
+        },
+        "link-hover": {
+          "$value": "{color.cyan.175}"
+        },
+        "on-accent": {
+          "$value": "{color.violet.925}"
+        }
+      },
+      "accent": {
+        "default": {
+          "$value": "{color.violet.425}"
+        },
+        "hover": {
+          "$value": "{color.violet.350}"
+        },
+        "subtle": {
+          "$value": "{color.violet.850}"
+        }
+      },
+      "focus": {
+        "ring": {
+          "$value": "{color.cyan.200}"
+        }
+      },
+      "status": {
+        "success": {
+          "$value": "{color.mint.150}"
+        },
+        "warning": {
+          "$value": "{color.gold.175}"
+        },
+        "danger": {
+          "$value": "{color.red.325}"
+        },
+        "info": {
+          "$value": "{color.cyan.200}"
+        },
+        "ultra": {
+          "$value": "{color.magenta.375}"
+        }
+      },
+      "state": {
+        "queued": {
+          "$value": "{color.slate.325}"
+        },
+        "running": {
+          "$value": "{color.cyan.200}"
+        },
+        "awaiting-human": {
+          "$value": "{color.gold.175}"
+        },
+        "parked": {
+          "$value": "{color.orange.225}"
+        },
+        "succeeded": {
+          "$value": "{color.mint.150}"
+        },
+        "failed": {
+          "$value": "{color.red.325}"
+        },
+        "cancelled": {
+          "$value": "{color.slate.400}"
+        },
+        "ultra": {
+          "$value": "{color.magenta.375}"
+        }
+      },
+      "lane": {
+        "1": {
+          "$value": "{color.violet.425}"
+        },
+        "2": {
+          "$value": "{color.cyan.200}"
+        },
+        "3": {
+          "$value": "{color.mint.150}"
+        },
+        "4": {
+          "$value": "{color.gold.175}"
+        },
+        "5": {
+          "$value": "{color.red.325}"
+        },
+        "6": {
+          "$value": "{color.magenta.375}"
+        },
+        "7": {
+          "$value": "{color.blue.250}"
+        },
+        "8": {
+          "$value": "{color.green.150}"
+        }
+      },
+      "syntax": {
+        "text": {
+          "$value": "{color.slate.125}"
+        },
+        "string": {
+          "$value": "{color.green.175}"
+        },
+        "keyword": {
+          "$value": "{color.violet.300}"
+        },
+        "number": {
+          "$value": "{color.orange.225}"
+        },
+        "title": {
+          "$value": "{color.blue.250}"
+        },
+        "attr": {
+          "$value": "{color.blue.225}"
+        },
+        "builtin": {
+          "$value": "{color.teal.250}"
+        },
+        "comment": {
+          "$value": "{color.slate.425}"
+        },
+        "punct": {
+          "$value": "{color.slate.150}"
+        },
+        "deletion": {
+          "$value": "{color.red.275}"
+        },
+        "addition": {
+          "$value": "{color.green.175}"
+        }
+      },
+      "effect": {
+        "$description": "Translucent washes for glass, glow and grid. Decoration only: never text, never the only carrier of meaning.",
+        "glass": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0314,
+              0.0431,
+              0.0784
+            ],
+            "hex": "#080b14",
+            "alpha": 0.78
+          }
+        },
+        "panel": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0471,
+              0.0667,
+              0.1216
+            ],
+            "hex": "#0c111f",
+            "alpha": 0.66
+          }
+        },
+        "grid": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff",
+            "alpha": 0.035
+          }
+        },
+        "glow-1": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.4392,
+              0.2902,
+              1.0
+            ],
+            "hex": "#704aff",
+            "alpha": 0.2
+          }
+        },
+        "glow-2": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.1922,
+              0.8118,
+              1.0
+            ],
+            "hex": "#31cfff",
+            "alpha": 0.13
+          }
+        },
+        "page-from": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0314,
+              0.0431,
+              0.0784
+            ],
+            "hex": "#080b14"
+          }
+        },
+        "page-mid": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.051,
+              0.0706,
+              0.1333
+            ],
+            "hex": "#0d1222"
+          }
+        },
+        "page-to": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0353,
+              0.051,
+              0.0941
+            ],
+            "hex": "#090d18"
+          }
+        },
+        "heading-from": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff"
+          }
+        },
+        "heading-mid": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.7961,
+              0.7373,
+              1.0
+            ],
+            "hex": "#cbbcff"
+          }
+        },
+        "heading-to": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.5098,
+              0.902,
+              1.0
+            ],
+            "hex": "#82e6ff"
+          }
+        },
+        "hover": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff",
+            "alpha": 0.07
+          }
+        },
+        "tint": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.6157,
+              0.4824,
+              1.0
+            ],
+            "hex": "#9d7bff",
+            "alpha": 0.09
+          }
+        },
+        "tint-strong": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.6157,
+              0.4824,
+              1.0
+            ],
+            "hex": "#9d7bff",
+            "alpha": 0.16
+          }
+        },
+        "card-from": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff",
+            "alpha": 0.055
+          }
+        },
+        "card-to": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff",
+            "alpha": 0.018
+          }
+        },
+        "line": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff",
+            "alpha": 0.1
+          }
+        },
+        "line-bright": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "hex": "#ffffff",
+            "alpha": 0.18
+          }
+        },
+        "shadow": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "hex": "#000000",
+            "alpha": 0.28
+          }
+        },
+        "selection": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.6157,
+              0.4824,
+              1.0
+            ],
+            "hex": "#9d7bff",
+            "alpha": 0.55
+          }
+        },
+        "input": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "hex": "#000000",
+            "alpha": 0.24
+          }
+        },
+        "action-from": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.4627,
+              0.3333,
+              0.8745
+            ],
+            "hex": "#7655df"
+          }
+        },
+        "action-to": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.1843,
+              0.4196,
+              0.6039
+            ],
+            "hex": "#2f6b9a"
+          }
+        }
+      }
+    }
+  }
+}

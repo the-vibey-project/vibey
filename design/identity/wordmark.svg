@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1042 644" width="1042" height="644" role="img" aria-label="vibey">
+<title>vibey</title>
+<defs>
+<linearGradient id="g0" x1="47" y1="167" x2="967" y2="367" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="g1" x1="47" y1="167" x2="967" y2="367" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="g2" x1="47" y1="167" x2="967" y2="367" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="g4" x1="47" y1="167" x2="967" y2="367" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="g5" x1="47" y1="167" x2="967" y2="367" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="g6" x1="47" y1="167" x2="967" y2="367" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="g7" x1="47" y1="167" x2="967" y2="367" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="g8" x1="47" y1="167" x2="967" y2="367" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="g9" x1="47" y1="167" x2="967" y2="367" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+</defs>
+<line x1="47" y1="167" x2="127" y2="367" stroke="url(#g0)" stroke-width="47" stroke-linecap="round"/>
+<line x1="207" y1="167" x2="127" y2="367" stroke="url(#g1)" stroke-width="47" stroke-linecap="round"/>
+<line x1="279" y1="167" x2="279" y2="367" stroke="url(#g2)" stroke-width="47" stroke-linecap="round"/>
+<circle cx="279" cy="95" r="29.14" fill="#75f0c2"/>
+<line x1="351" y1="57" x2="351" y2="367" stroke="url(#g4)" stroke-width="47" stroke-linecap="round"/>
+<path d="M539 267A94 94 0 1 1 539 267" fill="none" stroke="url(#g5)" stroke-width="47" stroke-linecap="round"/>
+<line x1="591" y1="267" x2="771" y2="267" stroke="url(#g6)" stroke-width="47" stroke-linecap="round"/>
+<path d="M749.944 324.851A90 90 0 1 1 771 267" fill="none" stroke="url(#g7)" stroke-width="47" stroke-linecap="round"/>
+<line x1="835" y1="167" x2="915" y2="367" stroke="url(#g8)" stroke-width="47" stroke-linecap="round"/>
+<line x1="995" y1="167" x2="865" y2="487" stroke="url(#g9)" stroke-width="47" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="vibey">
+<title>vibey</title>
+<line x1="192" y1="208" x2="512" y2="768" stroke="#000000" stroke-width="94" stroke-linecap="round"/>
+<line x1="832" y1="208" x2="512" y2="768" stroke="#000000" stroke-width="94" stroke-linecap="round"/>
+<line x1="388" y1="208" x2="636" y2="208" stroke="#000000" stroke-width="77.08" stroke-linecap="round"/>
+<ellipse cx="512" cy="768" rx="172" ry="62" transform="rotate(-16 512 768)" fill="none" stroke="#000000" stroke-width="16.8"/>
+<circle cx="512" cy="768" r="62" fill="#000000"/>
+</svg>

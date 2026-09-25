@@ -1,0 +1,123 @@
+{
+  "$description": "Sound events. Each token's value is the cue's maximum length; the audio files arrive with Lane J in design/sounds/. Every cue is original, under one second, and loudness-normalised to -18 LUFS short-term.",
+  "sound": {
+    "$type": "duration",
+    "gate-needs-you": {
+      "$value": {
+        "value": 700,
+        "unit": "ms"
+      },
+      "$description": "A human gate is waiting: a rising two-note chime, warm, never alarming.",
+      "$extensions": {
+        "dev.vibey": {
+          "file": "design/sounds/gate-needs-you.ogg",
+          "class": "attention"
+        }
+      }
+    },
+    "run-finished": {
+      "$value": {
+        "value": 900,
+        "unit": "ms"
+      },
+      "$description": "A run or phase finished: a bright resolving triad.",
+      "$extensions": {
+        "dev.vibey": {
+          "file": "design/sounds/run-finished.ogg",
+          "class": "success"
+        }
+      }
+    },
+    "ultra-pass-finished": {
+      "$value": {
+        "value": 950,
+        "unit": "ms"
+      },
+      "$description": "An ULTRA improvement pass completed and the next begins: a shimmering upward arpeggio.",
+      "$extensions": {
+        "dev.vibey": {
+          "file": "design/sounds/ultra-pass-finished.ogg",
+          "class": "ultra"
+        }
+      }
+    },
+    "failed": {
+      "$value": {
+        "value": 700,
+        "unit": "ms"
+      },
+      "$description": "A job failed or was parked: a soft falling minor third.",
+      "$extensions": {
+        "dev.vibey": {
+          "file": "design/sounds/failed.ogg",
+          "class": "danger"
+        }
+      }
+    },
+    "parked": {
+      "$value": {
+        "value": 450,
+        "unit": "ms"
+      },
+      "$description": "A job parked for later: a single muted pluck.",
+      "$extensions": {
+        "dev.vibey": {
+          "file": "design/sounds/parked.ogg",
+          "class": "warning"
+        }
+      }
+    },
+    "budget-step": {
+      "$value": {
+        "value": 500,
+        "unit": "ms"
+      },
+      "$description": "A budget threshold was crossed: two even ticks.",
+      "$extensions": {
+        "dev.vibey": {
+          "file": "design/sounds/budget-step.ogg",
+          "class": "warning"
+        }
+      }
+    },
+    "unlimited-spend-reminder": {
+      "$value": {
+        "value": 800,
+        "unit": "ms"
+      },
+      "$description": "The unlimited-budget reminder: a low, patient pulse.",
+      "$extensions": {
+        "dev.vibey": {
+          "file": "design/sounds/unlimited-spend-reminder.ogg",
+          "class": "danger"
+        }
+      }
+    },
+    "device-paired": {
+      "$value": {
+        "value": 600,
+        "unit": "ms"
+      },
+      "$description": "A device paired: a quick two-tone handshake.",
+      "$extensions": {
+        "dev.vibey": {
+          "file": "design/sounds/device-paired.ogg",
+          "class": "success"
+        }
+      }
+    },
+    "tap": {
+      "$value": {
+        "value": 90,
+        "unit": "ms"
+      },
+      "$description": "A UI acknowledgement, used sparingly: a near-silent click.",
+      "$extensions": {
+        "dev.vibey": {
+          "file": "design/sounds/tap.ogg",
+          "class": "neutral"
+        }
+      }
+    }
+  }
+}
