@@ -6,7 +6,7 @@
       "width": 16,
       "height": 16,
       "opaque": false,
-      "scene_sha256": "a406ef1b7b1d298c7d1bc72d206ee6559a770423eb214577ec17ea7295704dff",
+      "scene_sha256": "85f7a18d26455cfe52f6b8e442e37da6fe5666dff3bf28538162fc0ee5f67617",
       "png_sha256": "91d49801d3a525e9d342901186a256c52b3e81b8c877905ebf8ff1a79540b358"
     },
     "design/dist/icons/hicolor/22x22/apps/vibey.png": {
@@ -14,7 +14,7 @@
       "width": 22,
       "height": 22,
       "opaque": false,
-      "scene_sha256": "a406ef1b7b1d298c7d1bc72d206ee6559a770423eb214577ec17ea7295704dff",
+      "scene_sha256": "85f7a18d26455cfe52f6b8e442e37da6fe5666dff3bf28538162fc0ee5f67617",
       "png_sha256": "7267bb7a9684c96bc720c38dea7a82d3ef8365b70431764cb74c7d64a2eb8a6c"
     },
     "design/dist/icons/hicolor/24x24/apps/vibey.png": {
@@ -22,7 +22,7 @@
       "width": 24,
       "height": 24,
       "opaque": false,
-      "scene_sha256": "a406ef1b7b1d298c7d1bc72d206ee6559a770423eb214577ec17ea7295704dff",
+      "scene_sha256": "85f7a18d26455cfe52f6b8e442e37da6fe5666dff3bf28538162fc0ee5f67617",
       "png_sha256": "90b747dabef895cad12546b5eeb6f1e4ac794823924dbe9dee7348b4bef43db6"
     },
     "design/dist/icons/hicolor/32x32/apps/vibey.png": {
@@ -30,7 +30,7 @@
       "width": 32,
       "height": 32,
       "opaque": false,
-      "scene_sha256": "a406ef1b7b1d298c7d1bc72d206ee6559a770423eb214577ec17ea7295704dff",
+      "scene_sha256": "85f7a18d26455cfe52f6b8e442e37da6fe5666dff3bf28538162fc0ee5f67617",
       "png_sha256": "fc740c32af34c8ca736b5c973a6af4433f37040d98f086382999f5d8cefee463"
     },
     "design/dist/icons/hicolor/48x48/apps/vibey.png": {
@@ -38,7 +38,7 @@
       "width": 48,
       "height": 48,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "c33712f1f7d831ddb8a89a15221064ccf47e772dda5528714081eef14e7c6ab1"
     },
     "design/dist/icons/hicolor/64x64/apps/vibey.png": {
@@ -46,7 +46,7 @@
       "width": 64,
       "height": 64,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "290b87e33566982d6fcef5c7a74b6e519833b19b033849b29ea87b06866ea799"
     },
     "design/dist/icons/hicolor/128x128/apps/vibey.png": {
@@ -54,7 +54,7 @@
       "width": 128,
       "height": 128,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "6360a55f166cc2f7304ed7e9761c228aa4eefd4491fee92a48cfeb47377db7be"
     },
     "design/dist/icons/hicolor/256x256/apps/vibey.png": {
@@ -62,7 +62,7 @@
       "width": 256,
       "height": 256,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "df83c48fae57c332f2d5f7b0acf44b2da40b773047995cdfaac8902ac7ae55c1"
     },
     "design/dist/icons/hicolor/512x512/apps/vibey.png": {
@@ -70,7 +70,7 @@
       "width": 512,
       "height": 512,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "76a47f7618e792c0e6eb80a8ddc8ba83df4e417fa5e088c411883380e9f8d4c8"
     },
     "design/dist/icons/macos/vibey.iconset/icon_16x16.png": {
@@ -78,7 +78,7 @@
       "width": 16,
       "height": 16,
       "opaque": false,
-      "scene_sha256": "a406ef1b7b1d298c7d1bc72d206ee6559a770423eb214577ec17ea7295704dff",
+      "scene_sha256": "85f7a18d26455cfe52f6b8e442e37da6fe5666dff3bf28538162fc0ee5f67617",
       "png_sha256": "91d49801d3a525e9d342901186a256c52b3e81b8c877905ebf8ff1a79540b358"
     },
     "design/dist/icons/macos/vibey.iconset/icon_16x16@2x.png": {
@@ -86,7 +86,7 @@
       "width": 32,
       "height": 32,
       "opaque": false,
-      "scene_sha256": "a406ef1b7b1d298c7d1bc72d206ee6559a770423eb214577ec17ea7295704dff",
+      "scene_sha256": "85f7a18d26455cfe52f6b8e442e37da6fe5666dff3bf28538162fc0ee5f67617",
       "png_sha256": "fc740c32af34c8ca736b5c973a6af4433f37040d98f086382999f5d8cefee463"
     },
     "design/dist/icons/macos/vibey.iconset/icon_32x32.png": {
@@ -94,7 +94,7 @@
       "width": 32,
       "height": 32,
       "opaque": false,
-      "scene_sha256": "a406ef1b7b1d298c7d1bc72d206ee6559a770423eb214577ec17ea7295704dff",
+      "scene_sha256": "85f7a18d26455cfe52f6b8e442e37da6fe5666dff3bf28538162fc0ee5f67617",
       "png_sha256": "fc740c32af34c8ca736b5c973a6af4433f37040d98f086382999f5d8cefee463"
     },
     "design/dist/icons/macos/vibey.iconset/icon_32x32@2x.png": {
@@ -102,7 +102,7 @@
       "width": 64,
       "height": 64,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "290b87e33566982d6fcef5c7a74b6e519833b19b033849b29ea87b06866ea799"
     },
     "design/dist/icons/macos/vibey.iconset/icon_128x128.png": {
@@ -110,7 +110,7 @@
       "width": 128,
       "height": 128,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "6360a55f166cc2f7304ed7e9761c228aa4eefd4491fee92a48cfeb47377db7be"
     },
     "design/dist/icons/macos/vibey.iconset/icon_128x128@2x.png": {
@@ -118,7 +118,7 @@
       "width": 256,
       "height": 256,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "df83c48fae57c332f2d5f7b0acf44b2da40b773047995cdfaac8902ac7ae55c1"
     },
     "design/dist/icons/macos/vibey.iconset/icon_256x256.png": {
@@ -126,7 +126,7 @@
       "width": 256,
       "height": 256,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "df83c48fae57c332f2d5f7b0acf44b2da40b773047995cdfaac8902ac7ae55c1"
     },
     "design/dist/icons/macos/vibey.iconset/icon_256x256@2x.png": {
@@ -134,7 +134,7 @@
       "width": 512,
       "height": 512,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "76a47f7618e792c0e6eb80a8ddc8ba83df4e417fa5e088c411883380e9f8d4c8"
     },
     "design/dist/icons/macos/vibey.iconset/icon_512x512.png": {
@@ -142,7 +142,7 @@
       "width": 512,
       "height": 512,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "76a47f7618e792c0e6eb80a8ddc8ba83df4e417fa5e088c411883380e9f8d4c8"
     },
     "design/dist/icons/macos/vibey.iconset/icon_512x512@2x.png": {
@@ -150,7 +150,7 @@
       "width": 1024,
       "height": 1024,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "4f5f1abea178b0f3624df1ada4aac2b981fd9254d73ef22160be58fcced1738a"
     },
     "design/dist/icons/ios/AppIcon-1024.png": {
@@ -158,7 +158,7 @@
       "width": 1024,
       "height": 1024,
       "opaque": true,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "dea272a41c029c50fd27ff2c0fa60255c3e38bc40893ef04fb1140c0b3d7c116"
     },
     "design/dist/icons/android/ic_launcher_foreground.png": {
@@ -166,7 +166,7 @@
       "width": 432,
       "height": 432,
       "opaque": false,
-      "scene_sha256": "b635d4db5ef365049e39690bd68ec26188dac79f9856125a6280aca5d4bf308d",
+      "scene_sha256": "d784cc531fa46c44beac8515a6f3d96a5acf0588db4dc2f57be90b029508a355",
       "png_sha256": "1f642843073654acc29e8b655eadd6c01021f5b811c7bc06b192c0ac10af21c8"
     },
     "design/dist/icons/android/ic_launcher_background.png": {
@@ -174,7 +174,7 @@
       "width": 432,
       "height": 432,
       "opaque": true,
-      "scene_sha256": "1c7dd6d7cf58972ac3596804809e9caaf32eec06eb8e34ac43d283c48b3e471b",
+      "scene_sha256": "1eb47ea7ad9a0da04d8c7c14a1ba03a4ad5394bcf336cc721ae9513611dafdcd",
       "png_sha256": "00e2e0848277f0f839148e294c9a1863efcb71575413c8a73455506b11a0fbed"
     },
     "design/dist/icons/android/ic_launcher_legacy-512.png": {
@@ -182,7 +182,7 @@
       "width": 512,
       "height": 512,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "76a47f7618e792c0e6eb80a8ddc8ba83df4e417fa5e088c411883380e9f8d4c8"
     },
     "design/dist/icons/web/favicon-16.png": {
@@ -190,7 +190,7 @@
       "width": 16,
       "height": 16,
       "opaque": false,
-      "scene_sha256": "a406ef1b7b1d298c7d1bc72d206ee6559a770423eb214577ec17ea7295704dff",
+      "scene_sha256": "85f7a18d26455cfe52f6b8e442e37da6fe5666dff3bf28538162fc0ee5f67617",
       "png_sha256": "91d49801d3a525e9d342901186a256c52b3e81b8c877905ebf8ff1a79540b358"
     },
     "design/dist/icons/web/favicon-32.png": {
@@ -198,7 +198,7 @@
       "width": 32,
       "height": 32,
       "opaque": false,
-      "scene_sha256": "a406ef1b7b1d298c7d1bc72d206ee6559a770423eb214577ec17ea7295704dff",
+      "scene_sha256": "85f7a18d26455cfe52f6b8e442e37da6fe5666dff3bf28538162fc0ee5f67617",
       "png_sha256": "fc740c32af34c8ca736b5c973a6af4433f37040d98f086382999f5d8cefee463"
     },
     "design/dist/icons/web/apple-touch-icon.png": {
@@ -206,7 +206,7 @@
       "width": 180,
       "height": 180,
       "opaque": true,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "2412174ff9150232eff03a275d32ef39d04a6b651c56eb09423434d0e7805ebd"
     },
     "design/dist/icons/web/icon-192.png": {
@@ -214,7 +214,7 @@
       "width": 192,
       "height": 192,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "3f367d0b15b0e35ea00a602f8c732b7558e47510f9882ac1a89c00a95deeb1af"
     },
     "design/dist/icons/web/icon-512.png": {
@@ -222,7 +222,7 @@
       "width": 512,
       "height": 512,
       "opaque": false,
-      "scene_sha256": "a9b50f5641ffec66e46baaa03812fc7ad712f0b9c5b64fc0ce0ff9cc13083380",
+      "scene_sha256": "038a633c91b0d18623e0a1f521fdb6e3572a7bec2f3c7505c0a1f3e76618fb99",
       "png_sha256": "76a47f7618e792c0e6eb80a8ddc8ba83df4e417fa5e088c411883380e9f8d4c8"
     },
     "design/dist/icons/web/social-preview.png": {
@@ -230,7 +230,7 @@
       "width": 1200,
       "height": 630,
       "opaque": true,
-      "scene_sha256": "13d42db9adac3bb4a46fcf37ea69b998eed14bcde1bad086dccfc61c7e41e442",
+      "scene_sha256": "3f6fb33b75c8ac3930e3585285b6309078596df38c4b56b5cb4b71c5af05f085",
       "png_sha256": "db00bec147f64a89e987f56d8553494b19896cbf0ffcc2345dd7428eeefb2b6e"
     }
   }

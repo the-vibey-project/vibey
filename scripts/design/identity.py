@@ -143,6 +143,7 @@ class Scene:
     height: float
     shapes: list[Shape] = field(default_factory=list)
     title: str = "vibey"
+    key: str = "vibey"  # namespaces gradient ids, so two inlined SVGs never share one
 
     # -- SVG ---------------------------------------------------------------------------------
 
@@ -177,10 +178,10 @@ class Scene:
                 for t in (0, 0.25, 0.5, 0.75, 1)
             )
             defs.append(
-                f'<radialGradient id="g{n}" cx="{_num(cx)}" cy="{_num(cy)}" r="{_num(shape.radius)}" '
+                f'<radialGradient id="{self.key}-g{n}" cx="{_num(cx)}" cy="{_num(cy)}" r="{_num(shape.radius)}" '
                 f'gradientUnits="userSpaceOnUse">{stops}</radialGradient>\n'
             )
-            return f"url(#g{n})"
+            return f"url(#{self.key}-g{n})"
         if isinstance(shape.paint, Linear):
             p = shape.paint
             last = len(p.stops) - 1
@@ -189,10 +190,10 @@ class Scene:
                 hx, a = self._svg_colour(c)
                 stops += f'<stop offset="{_num(round(i / last, 4))}" stop-color="{hx}" stop-opacity="{a}"/>'
             defs.append(
-                f'<linearGradient id="g{n}" x1="{_num(p.start[0])}" y1="{_num(p.start[1])}" '
+                f'<linearGradient id="{self.key}-g{n}" x1="{_num(p.start[0])}" y1="{_num(p.start[1])}" '
                 f'x2="{_num(p.end[0])}" y2="{_num(p.end[1])}" gradientUnits="userSpaceOnUse">{stops}</linearGradient>\n'
             )
-            return f"url(#g{n})"
+            return f"url(#{self.key}-g{n})"
         hx, a = self._svg_colour(shape.paint)
         return hx if a == "1" else f"{hx};{a}"
 
@@ -221,6 +222,12 @@ class Scene:
             return f'<circle cx="{_num(cx)}" cy="{_num(cy)}" r="{_num(shape.radius)}" fill="{paint}"/>\n'
         if shape.kind == "arc":
             (cx, cy), (a0, a1) = shape.points[0], shape.extra
+            if (a1 - a0) % math.tau > math.tau - 1e-3 or (a1 - a0) % math.tau < 1e-9:
+                # A closed arc's endpoints coincide, and SVG draws such an arc as nothing.
+                return (
+                    f'<circle cx="{_num(cx)}" cy="{_num(cy)}" r="{_num(shape.radius)}" fill="none" '
+                    f'stroke="{paint}"{stroke_opacity} stroke-width="{_num(shape.width)}"/>\n'
+                )
             sx, sy = cx + shape.radius * math.cos(a0), cy + shape.radius * math.sin(a0)
             ex, ey = cx + shape.radius * math.cos(a1), cy + shape.radius * math.sin(a1)
             large = 1 if ((a1 - a0) % math.tau) > math.pi else 0
@@ -549,7 +556,7 @@ class IdentityEmitter(EmitterInterface):
 
     def scenes(self) -> dict[str, Scene]:
         i = self._identity
-        return {
+        scenes = {
             "mark": i.mark(),
             "mark-mono": i.mark(mono=(0, 0, 0, 1)),
             "wordmark": i.wordmark(),
@@ -561,6 +568,9 @@ class IdentityEmitter(EmitterInterface):
             "android-background": i.adaptive_background(),
             "social": i.social(),
         }
+        for name, scene in scenes.items():
+            scene.key = f"vibey-{name}"
+        return scenes
 
     def outputs(self) -> dict[Path, bytes]:
         return {

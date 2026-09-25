@@ -162,6 +162,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **design:** one design system for every surface
+  ([ADR-0062](docs/architecture/decisions/0062-one-design-system-for-every-surface.md)).
+  `design/tokens/` (DTCG 2025.10) is the single source of colour, type, space, radius,
+  elevation, motion and sound events; the docs palette and the paper's palette are one family
+  with deliberate dark and light themes, and all 182 declared colour pairs meet WCAG 2.2 AA.
+  `scripts/design/generate.py` writes the CSS token layer, TypeScript, GTK CSS, a C header,
+  the paper's TikZ colours and a refined logo, wordmark and full app-icon set. The docs sites'
+  three drifted `vibey.css` variants (and `channel.js`) are replaced by one generated file each,
+  and the site gains a Light / Dark / System switch (System by default).
+
 * **vscode:** a VS Code extension, under `clients/vscode`, that drives vibey and a model on your
   own computer from the editor, with no account and no cloud
   ([ADR-0059](docs/architecture/decisions/0059-the-editor-drives-the-familys-own-loops.md),

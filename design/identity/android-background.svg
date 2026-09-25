@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="vibey">
 <title>vibey</title>
 <defs>
-<linearGradient id="g0" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1c2542" stop-opacity="1"/><stop offset="1" stop-color="#080b14" stop-opacity="1"/></linearGradient>
-<radialGradient id="g1" cx="286.72" cy="225.28" r="634.88" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.62"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.349"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.155"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.039"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
-<radialGradient id="g2" cx="880.64" cy="921.6" r="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#57dcff" stop-opacity="0.34"/><stop offset="0.25" stop-color="#57dcff" stop-opacity="0.191"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="0.085"/><stop offset="0.75" stop-color="#57dcff" stop-opacity="0.021"/><stop offset="1" stop-color="#57dcff" stop-opacity="0"/></radialGradient>
+<linearGradient id="vibey-android-background-g0" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1c2542" stop-opacity="1"/><stop offset="1" stop-color="#080b14" stop-opacity="1"/></linearGradient>
+<radialGradient id="vibey-android-background-g1" cx="286.72" cy="225.28" r="634.88" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.62"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.349"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.155"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.039"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
+<radialGradient id="vibey-android-background-g2" cx="880.64" cy="921.6" r="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#57dcff" stop-opacity="0.34"/><stop offset="0.25" stop-color="#57dcff" stop-opacity="0.191"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="0.085"/><stop offset="0.75" stop-color="#57dcff" stop-opacity="0.021"/><stop offset="1" stop-color="#57dcff" stop-opacity="0"/></radialGradient>
 </defs>
-<rect x="0" y="0" width="1024" height="1024" rx="0" fill="url(#g0)"/>
-<rect x="0" y="0" width="1024" height="1024" rx="0" fill="url(#g1)"/>
-<rect x="0" y="0" width="1024" height="1024" rx="0" fill="url(#g2)"/>
+<rect x="0" y="0" width="1024" height="1024" rx="0" fill="url(#vibey-android-background-g0)"/>
+<rect x="0" y="0" width="1024" height="1024" rx="0" fill="url(#vibey-android-background-g1)"/>
+<rect x="0" y="0" width="1024" height="1024" rx="0" fill="url(#vibey-android-background-g2)"/>
 </svg>
