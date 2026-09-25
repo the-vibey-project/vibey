@@ -269,7 +269,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (66 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (67 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

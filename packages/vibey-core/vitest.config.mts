@@ -11,7 +11,7 @@ export default defineConfig({
     testTimeout: 20000,
     coverage: {
       provider: 'v8',
-      include: ['src/**/*.ts', '../../design/dist/ts/tokens.ts'],
+      include: ['src/**/*.ts', '**/design/dist/ts/tokens.ts'],
       exclude: ['src/interfaces/**', 'src/index.ts'],
       allowExternal: true,
       reporter: ['text', 'text-summary'],
