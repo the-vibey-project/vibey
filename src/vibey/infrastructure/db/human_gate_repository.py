@@ -59,6 +59,10 @@ RETURNING *
 _PROJECT: Final = "SELECT * FROM project WHERE id = $1"
 
 
+def _canonical(answer: Mapping[str, object] | None) -> str:
+    return json.dumps(answer, sort_keys=True, separators=(",", ":"))
+
+
 def _require(row: asyncpg.Record | None, *, context: str) -> asyncpg.Record:
     if row is None:
         raise LookupError(f"{context}: expected a row but got none")
@@ -263,7 +267,10 @@ class PostgresHumanGateRepository:
             raise UnknownGate(f"no gate {gate_id}")
         gate = _row_to_record(stored)
         same_request = gate.answer_request_id == request_id
-        if same_request and gate.answer == given:
+        # Compared as canonical JSON, not Python equality, where `True == 1 == 1.0`: an
+        # answer is a replay only when it is the same document.
+        same_answer = _canonical(gate.answer) == _canonical(given)
+        if same_request and same_answer:
             return GateAnswerOutcome(record=gate, replayed=True)
         raise GateAlreadyAnswered(
             gate_id,

@@ -348,3 +348,36 @@ async def test_the_operator_s_replay_of_an_answer_that_landed_is_a_no_op(
 
     assert again.apply == ((gate.gate_id, {"choice": "a"}),)
     assert again.ignored == ()
+
+
+async def test_a_gate_that_cannot_be_answered_is_reported_and_the_rest_still_apply(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from vibey.domain.errors import WrongPhase
+
+    async with build_app() as resources:
+        project = await handlers.ensure_project(
+            resources, name="demo", spec={"repo": str(tmp_path)}, known_project_id=None
+        )
+        bad = await resources.gates.raise_gate(
+            project.project_id, None, HumanGateRequest(kind="question", prompt="1", options=())
+        )
+        good = await resources.gates.raise_gate(
+            project.project_id, None, HumanGateRequest(kind="question", prompt="2", options=())
+        )
+        real = resources.gate_answers.answer
+
+        async def _refusing(gate_id, answer, **kwargs):  # type: ignore[no-untyped-def]
+            if gate_id == bad.gate_id:
+                raise WrongPhase("phase unknown here")
+            return await real(gate_id, answer, **kwargs)
+
+        monkeypatch.setattr(resources.gate_answers, "answer", _refusing)
+        plan = await handlers.apply_answers(
+            resources,
+            project_id=project.project_id,
+            spec_answers={str(bad.gate_id): {"choice": "a"}, str(good.gate_id): {"choice": "b"}},
+        )
+
+    assert plan.apply == ((good.gate_id, {"choice": "b"}),)
+    assert (str(bad.gate_id), "not answered: phase unknown here") in plan.ignored

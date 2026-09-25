@@ -113,9 +113,9 @@ async def test_another_answer_is_refused_and_the_first_stands(
 
     with pytest.raises(GateAlreadyAnswered, match="a different request answered it first"):
         await gates.answer(gate_id, answer={"verdict": "reject"}, answered_by="mallory")
+    stored = await gates.get(gate_id)
+    assert stored is not None and stored.answer_request_id is not None
     with pytest.raises(GateAlreadyAnswered, match="already used for a different answer"):
-        stored = await gates.get(gate_id)
-        assert stored is not None and stored.answer_request_id is not None
         await gates.answer(
             gate_id,
             answer={"verdict": "reject"},
@@ -282,3 +282,18 @@ def test_a_missing_row_is_a_lookup_error_naming_its_context() -> None:
 
     with pytest.raises(LookupError, match="answer: no project p: expected a row"):
         _require(None, context="answer: no project p")
+
+
+async def test_the_same_request_with_an_answer_only_python_calls_equal_is_refused(
+    migrated_pool: asyncpg.Pool, project_id: UUID
+) -> None:
+    gate_id, _ = await _parked_gate(migrated_pool, project_id)
+    gates = PostgresHumanGateRepository(migrated_pool)
+    await gates.answer_once(
+        gate_id, answer={"ok": True}, answered_by="adam", account="adam", request_id="r"
+    )
+
+    with pytest.raises(GateAlreadyAnswered):
+        await gates.answer_once(
+            gate_id, answer={"ok": 1}, answered_by="adam", account="adam", request_id="r"
+        )

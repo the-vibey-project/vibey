@@ -31,7 +31,7 @@ from vibey.application.operator_projection import (
 )
 from vibey.application.project_kickoff import enqueue_design_interview
 from vibey.bootstrap import AppResources, build_app
-from vibey.domain.errors import GateAlreadyAnswered
+from vibey.domain.errors import GateAlreadyAnswered, VibeyError
 from vibey.infrastructure.build.gate_runner import SubprocessGateRunner
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 
@@ -140,6 +140,11 @@ async def apply_answers(
             )
         except GateAlreadyAnswered as exc:
             refused.append((str(gate_id), f"answered elsewhere first, by {exc.answered_by}"))
+            continue
+        except VibeyError as exc:
+            # One gate that cannot be answered never stops the rest of the spec, and the
+            # reason is reported rather than dropped.
+            refused.append((str(gate_id), f"not answered: {exc}"))
             continue
         applied.append((gate_id, payload))
     return AnswerPlan(apply=tuple(applied), ignored=plan.ignored + tuple(refused))
