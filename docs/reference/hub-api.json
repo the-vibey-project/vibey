@@ -370,6 +370,80 @@
         ]
       }
     },
+    "/api/v1/lanes/tail": {
+      "get": {
+        "operationId": "lane_tail_api_v1_lanes_tail_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "A listed lane's complete lines after a byte offset.",
+        "tags": [
+          "live"
+        ]
+      }
+    },
     "/api/v1/loops": {
       "get": {
         "operationId": "loops_api_v1_loops_get",
@@ -645,6 +719,93 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/ledger/after": {
+      "get": {
+        "operationId": "ledger_after_api_v1_projects__project_id__ledger_after_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "seq",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Seq",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "The request proves no principal."
+          },
+          "403": {
+            "description": "The principal's scopes do not permit this."
+          },
+          "411": {
+            "description": "A body was sent without a Content-Length."
+          },
+          "413": {
+            "description": "The body is larger than the hub reads."
+          },
+          "421": {
+            "description": "The Host header is not one this hub answers."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "Too many requests."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Events after a seq, oldest first: the live feed, for a client that polls.",
+        "tags": [
+          "live"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/queue": {
       "get": {
         "operationId": "queue_api_v1_projects__project_id__queue_get",
@@ -849,7 +1010,7 @@
     },
     "/health/live": {
       "get": {
-        "operationId": "live_health_live_get",
+        "operationId": "live_probe_health_live_get",
         "responses": {
           "200": {
             "content": {
@@ -858,7 +1019,7 @@
                   "additionalProperties": {
                     "type": "string"
                   },
-                  "title": "Response Live Health Live Get",
+                  "title": "Response Live Probe Health Live Get",
                   "type": "object"
                 }
               }

@@ -246,6 +246,8 @@ def test_the_hub_speaks_the_clis_contract_end_to_end(tmp_path: Path) -> None:
         got["ledger"] = await client.get(
             f"/api/v1/projects/{pid}/ledger?kind=GateAnswered&limit=10", headers=auth
         )
+        got["after"] = await client.get(f"/api/v1/projects/{pid}/ledger/after?seq=0", headers=auth)
+        got["tail"] = await client.get("/api/v1/lanes/tail?path=/etc/passwd", headers=auth)
         got["rebinding"] = await client.get(
             "/api/v1/projects", headers={**auth, "host": "attacker.example:8765"}
         )
@@ -282,6 +284,10 @@ def test_the_hub_speaks_the_clis_contract_end_to_end(tmp_path: Path) -> None:
         "ledger", "search", str(pid), "--kind", "GateAnswered", "--limit", "10", "--json"
     )
     assert got["queue"].json()["project_id"] == str(pid)
+    after = got["after"].json()
+    assert after["project_id"] == str(pid) and after["events"]
+    assert [e["seq"] for e in after["events"]] == list(range(1, after["last_seq"] + 1))
+    assert got["tail"].status_code == 404
     assert not (tmp_path / "state" / "serving.json").exists()
 
 
@@ -361,3 +367,8 @@ def test_a_config_or_token_that_cannot_be_used_exits_cleanly(tmp_path: Path) -> 
     with pytest.raises(Exception) as bad:
         asyncio.run(command.run(host=None, port=None))
     assert getattr(bad.value, "exit_code", None) == 2
+
+
+async def test_the_openapi_only_app_never_listens() -> None:
+    with pytest.raises(RuntimeError):
+        await ServeCommand._never_connect()

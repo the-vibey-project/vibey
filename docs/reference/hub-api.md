@@ -37,6 +37,27 @@ Three routes have no single command behind them:
 process is up and whether the database answers. `GET /api/metrics` returns
 `vibey_bootstrap`'s metrics snapshot and needs `view`.
 
+## Live
+
+A ledger feed resumes from a **position**, never a time (sub-doctrine 10.g): the last
+`seq` a client has. Every ledger append announces itself on the database channel
+`vibey_ledger_appended` (migration 0019), and the hub reads every event after the last
+seq it sent, so an announcement that is missed costs latency, never an event.
+
+| Route | What it does |
+|---|---|
+| `WS /api/v1/projects/{project_id}/live?after=N` | Sends `{"project_id", "events", "last_seq"}` pages of events with seq > N, up to 200 at a time until caught up, then one page per append. A quiet feed sends `{"heartbeat": last_seq}` every 25 s. |
+| `GET /api/v1/projects/{project_id}/ledger/after?seq=N&limit=L` | The same page, for a client that polls. |
+| `WS /api/v1/lanes/live?path=P&after=B` | A listed lane's complete lines after byte B, as `{"events_path", "from", "offset", "lines"}`, checked every second. Resume from `offset`. |
+| `GET /api/v1/lanes/tail?path=P&after=B` | The same, once. |
+
+`path` must be the `events_path` of a lane `GET /api/v1/lanes` lists; any other path is
+404, and nothing else is ever opened. A WebSocket is refused (close code 1008) when its
+`Host` or `Origin` is not one the hub answers, or it proves no principal; and the
+principal is checked again before every page, so one revoked while a feed is open is cut
+off at its next message. Events are carried exactly as `vibey ledger search --json`
+carries them.
+
 ## Who may do what
 
 Every `/api/v1` route and `/api/metrics` needs a principal. On the host, that is the host

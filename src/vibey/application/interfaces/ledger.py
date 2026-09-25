@@ -129,6 +129,16 @@ class LedgerReader(Protocol):
 
 
 @runtime_checkable
+class LedgerRangeReader(Protocol):
+    """Reads one project's ledger by position: every event with `from_seq <= seq <=
+    to_seq`, in seq order. The hub's live feed resumes through it (sub-doctrine 10.g)."""
+
+    async def range(
+        self, project_id: UUID, *, from_seq: int, to_seq: int
+    ) -> tuple[LedgerEvent, ...]: ...
+
+
+@runtime_checkable
 class LedgerSearch(Protocol):
     """Searches one project's ledger (sub-doctrine 7.a, the searchable ledger).
 
