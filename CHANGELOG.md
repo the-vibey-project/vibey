@@ -504,7 +504,8 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 * **canon:** sub-doctrine 9.e, for the operator's ratification: the project and its engine are
   **vibey**, and every app and interface a person uses is **Krypton**, with the krypton-84 atom
-  as its emblem (ADR-0062). Package and command names are unchanged.
+  as its emblem (ADR-0062). Package and command names are unchanged; the apps publish as their own
+  distribution, `krypton-app` (PyPI from `main`, TestPyPI from `develop`, trusted publishing).
 
 ## [2.0.0] (2026-09-21)
 

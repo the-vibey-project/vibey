@@ -45,3 +45,11 @@ belongs in the canon, not only in a design file.
 ## Revision before merge
 
 The operator clarified the ruling on 2026-09-25: *"the PROJECT and ENGINE are called \"vibey\", all apps/uis are called \"krypton\""*. Sub-doctrine 9.e states that: vibey names the project and engine, Krypton names every app and interface, and package and command names are unchanged. The VS Code extension's display name changes from "Vibey" to "Krypton" in the client-suite lane that raises the extension to the Beauty Law.
+
+## The `krypton-app` distribution
+
+On 2026-09-25 the operator registered **`krypton-app`** as a trusted publisher on both indexes: repository `the-vibey-project/vibey`, workflow `release.yml`, environment `pypi` on PyPI and `testpypi` on TestPyPI. The apps therefore ship as their own distribution, beside `vibey`, and follow the same channels (ADR-0028):
+- stable from `main` to PyPI;
+- nightly from `develop` to TestPyPI.
+
+`vibey` stays the one distribution of the project and engine (ADR-0037). The client-suite release lane adds the `krypton-app` build and publish jobs to `release.yml`, using the two environments above. Until something is built there is nothing to publish, and no job claims otherwise.
