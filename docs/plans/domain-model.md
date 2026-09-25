@@ -260,7 +260,10 @@ the protocol, not to any one subprocess adapter."""
 
 class EngineId(StrEnum):
     CLAUDELOOP = "claudeloop"; CODEXLOOP = "codexloop"
-    CURSORLOOP = "cursorloop"; AGYLOOP = "agyloop"; QWENLOOP = "qwenloop"
+    CURSORLOOP = "cursorloop"; AGYLOOP = "agyloop"; OPENCODE = "opencode"
+    GPTOSSLOOP = "gptossloop"   # the sovereign default: the local runner on GPT-OSS
+    QWENLOOP = "qwenloop"       # the same runner on a Qwen model, opt-in (ADR-0060)
+    CLAUDELOOP_LOCAL = "claudeloop-local"
 
 
 class Capability(StrEnum):
@@ -1159,8 +1162,12 @@ never touches the filesystem — reading the file is an infrastructure concern.
 ```python
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
-DEFAULT_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop")
-KNOWN_ENGINES = (*DEFAULT_ENGINES, "qwenloop")
+DEFAULT_ENGINES = ("gptossloop", "opencode")   # the sovereign pair, on without declaration
+KNOWN_ENGINES = ("claudeloop", "codexloop", "cursorloop", "agyloop", "opencode",
+                 "gptossloop", "qwenloop", "claudeloop-local")
+LOCAL_ENGINE_FEATURES = {"gptossloop": "gptossloop", "qwenloop": "qwenloop",
+                         "claudeloop-local": "claudeloop_local"}
+LOCAL_ENGINES_ON_BY_DEFAULT = frozenset({"gptossloop"})   # ADR-0060
 
 class ConfigError(VibeyError):
     def __init__(self, path: str, message: str) -> None: ...
@@ -1206,7 +1213,9 @@ class DeployConfig:
 
 @dataclass(frozen=True, slots=True)
 class FeaturesConfig:
+    gptossloop: bool = True        # on unless switched off (ADR-0060)
     qwenloop: bool = False
+    claudeloop_local: bool = False
 
 @dataclass(frozen=True, slots=True)
 class QwenloopConfig:
@@ -1232,20 +1241,23 @@ class VibeyConfig:
 def parse_toml_string(text: str) -> dict[str, Any]: ...   # stdlib tomllib.loads
 
 def parse_config(data: dict[str, Any]) -> VibeyConfig:
-    """Raises ConfigError on the first violation found. `qwenloop` may only
-    be requested (in engines.enabled or any phase's engines list) once
-    features.qwenloop is true; conversely, turning features.qwenloop on
-    without an explicit engines.enabled list adds "qwenloop" to the default
-    engine set automatically."""
+    """Raises ConfigError on the first violation found. A local engine may
+    only be requested (in engines.enabled or any phase's engines list) while
+    its switch is on: `qwenloop` once features.qwenloop is true, `gptossloop`
+    unless features.gptossloop is false. The sovereign pair is added to any
+    engines.enabled list; without an explicit list, every switched-on local
+    engine is added to the default engine set automatically."""
 
 def load_config_from_string(text: str) -> VibeyConfig: ...
     # = parse_config(parse_toml_string(text))
 ```
 
 Config parsing can live in `domain/` because `tomllib` is stdlib. Reading the
-file is `infrastructure/config_loader.py::load_config_from_path`, which also
-applies the `VIBEY_FEATURE_QWENLOOP` override; as of 2026-09-15 it has no
-runtime caller (see `docs/reference/configuration.md`).
+file is `infrastructure/config_loader.py::load_config_from_path`; as of
+2026-09-15 it has no runtime caller (see `docs/reference/configuration.md`). The
+`VIBEY_FEATURE_*` overrides are applied by
+`infrastructure/engines/local_engines.py::LocalEngineSettings`, the one resolver
+the worker, `vibey doctor` and `vibey loops` share.
 
 ---
 

@@ -2,8 +2,9 @@
 
 `vibey`: a queue-based, six-phase conductor for autonomous software delivery.
 Built on PostgreSQL and six `*loop` autonomous session runners (claudeloop,
-codexloop, cursorloop, agyloop, opencode's `opencodeloop`, and the opt-in local
-qwenloop), which live in this
+codexloop, cursorloop, agyloop, opencode's `opencodeloop`, and the local runner
+that ships as two engines: `gptossloop`, the sovereign default on GPT-OSS 20B, and
+the opt-in `qwenloop` on Qwen), which live in this
 repository under `src/vibey_runners/`. It orchestrates design → build → review with
 an optional visual-design interstitial, plus an opt-in Azure deployment stage
 set. One distribution — `pip install vibey` delivers the whole family,
@@ -154,7 +155,8 @@ uv workspace (`[tool.uv.workspace] members = ["src/vibey_runners/*",
 "src/vibey_tools/*"]`, ADR-0021) whose other members are absorbed with history:
 
 - `src/vibey_runners/{claude,codex,cursor,agy,opencode,qwen}` — claudeloop, codexloop,
-  cursorloop, agyloop, opencodeloop, qwenloop; `src/vibey_runners/common` — vibey-runners-common.
+  cursorloop, agyloop, opencodeloop, gptossloop and qwenloop (one package, two
+  engines — ADR-0060); `src/vibey_runners/common` — vibey-runners-common.
 - `src/vibey_tools/gh` — vibey-gh (provenance, merge train, promotion, release,
   and the governance canon under `docs/`); `src/vibey_tools/skills` —
   vibey-skills; `src/vibey_tools/bootstrap` — vibey-bootstrap.
@@ -187,16 +189,19 @@ explicit opt-in; declining deployment records a successful local completion.
   the reason; see ADR-0002.
 - **Engines:** `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, and `opencode`
   (the `opencodeloop` adapter) are the default paid-engine pool (tier PAID).
-  Two default-off local engines (tier LOCAL)
-  join them behind their own switches: `qwenloop` (`VIBEY_FEATURE_QWENLOOP` or
-  `[features] qwenloop`) and `claudeloop-local` — the claudeloop binary on a local
-  backend profile (`VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features]
-  claudeloop_local`). Under sub-doctrine 8.a local engines are **preferred first**:
+  Three local engines (tier LOCAL) join them, each behind its own switch:
+  `gptossloop` — the sovereign default on GPT-OSS 20B, **on by default**, switched
+  off only by `VIBEY_FEATURE_GPTOSSLOOP=0` or `[features] gptossloop = false`;
+  `qwenloop` — the same runner on a Qwen model (`qwen3:14b`), off by default
+  (`VIBEY_FEATURE_QWENLOOP=1` or `[features] qwenloop = true`); and
+  `claudeloop-local` — the claudeloop binary on a local backend profile, off by
+  default (`VIBEY_FEATURE_CLAUDELOOP_LOCAL` or `[features] claudeloop_local`).
+  ADR-0060. Under sub-doctrine 8.a local engines are **preferred first**:
   BUILD selection runs SWRR within the LOCAL tier and falls back to PAID only when
-  no local engine is eligible (ADR-0038, amending ADR-0015's standby). With a local
-  engine on and no `--provider`, DESIGN and DECOMPOSE run on the sovereign
-  providers (`QwenloopDesignProvider`, `QwenloopWorkPlanProducer`; ADR-0027,
-  ADR-0038). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
+  no local engine is eligible (ADR-0038, amending ADR-0015's standby). With no
+  `--provider`, DESIGN and DECOMPOSE run on the sovereign providers
+  (`GptossloopDesignProvider`, `GptossloopWorkPlanProducer`; ADR-0027, ADR-0038,
+  ADR-0060). `VIBEY_OLLAMA_URL` is the one local endpoint setting.
 - **Rotation:** `domain/rotation.py::select()` implements smooth-weighted
   round-robin selection (ADR-0005) and is wired in production: `bootstrap.py`
   builds `EngineSelector`, and BUILD jobs pick their engine per job through
@@ -264,7 +269,7 @@ automation has no drift.
 | Rotation & engines | `docs/plans/rotation-and-engines.md` |
 | Phase protocols | `docs/plans/phase-protocols.md` |
 | Implementation plan | `docs/plans/implementation-plan.md` |
-| System design and why each hard call was made | `docs/architecture/decisions/` (59 ADRs) |
+| System design and why each hard call was made | `docs/architecture/decisions/` (60 ADRs) |
 | User-facing docs | `README.md` Quickstart, `docs/guides/` |
 | Expansion workstreams (JIRA, clouds, k8s, clients, …) | `docs/runbooks/expansion/` (22 runbooks, `00-master-plan.md` first) |
 | Contribution workflow, hooks, branch flow, PR expectations | `CONTRIBUTING.md` |

@@ -37,9 +37,9 @@ def test_a_missing_config_file_is_a_disabled_engine_not_an_error(tmp_path: Path)
     assert cfg.paid_probe == ""
 
 
-def test_the_default_seat_order_is_qwenloop_then_opencode():
+def test_the_default_seat_order_is_gptossloop_then_opencode():
     seats = FailoverConfig().seats
-    assert [seat.name for seat in seats] == ["qwenloop", "opencode"]
+    assert [seat.name for seat in seats] == ["gptossloop", "opencode"]
 
 
 def test_config_loads_seats_probe_and_interval(tmp_path: Path):
@@ -66,7 +66,7 @@ def test_config_drops_incomplete_seats_and_falls_back_to_the_defaults(tmp_path: 
         'enabled = true\n[[seats]]\nname = "nameless"\n[[seats]]\nlaunch = "orphan"\n',
         encoding="utf-8",
     )
-    assert [seat.name for seat in load(where).seats] == ["qwenloop", "opencode"]
+    assert [seat.name for seat in load(where).seats] == ["gptossloop", "opencode"]
 
 
 def test_probe_judges_only_the_exit_status():

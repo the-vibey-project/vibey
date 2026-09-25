@@ -1,25 +1,28 @@
 ---
 name: vibey-engine-adapters
-description: How vibey drives claudeloop, codexloop, cursorloop, agyloop, and the opt-in local engines qwenloop and claudeloop-local — the engine adapter pattern, tiers, argv building, and the conformance suite.
+description: How vibey drives claudeloop, codexloop, cursorloop, agyloop, opencode, and the local engines — gptossloop (the sovereign default), and the opt-in qwenloop and claudeloop-local — the engine adapter pattern, tiers, argv building, and the conformance suite.
 allowed-tools: Read Grep
 ---
 
 # vibey engine adapters
 
-Vibey drives six autonomous session runners through seven engine ids:
+Vibey drives six autonomous session runners through eight engine ids:
 `claudeloop`, `codexloop`, `cursorloop`, `agyloop` (tier PAID) and `opencode`
 (the opencodeloop adapter; its descriptor says tier LOCAL, and canon 8.b repeals
-it from both loops) make up the default pool, `DEFAULT_DESCRIPTORS`; two opt-in
-local engines (tier LOCAL, `LOCAL_DESCRIPTORS`) join them: `qwenloop`
-(`VIBEY_FEATURE_QWENLOOP` / `[features]
-qwenloop`, ADR-0015) and `claudeloop-local` — the claudeloop binary run with a
-local backend profile (`--profile NAME`), switched on by
+it from both loops) make up the default pool, `DEFAULT_DESCRIPTORS`; three
+local engines (tier LOCAL, `LOCAL_DESCRIPTORS`) join them, each behind its own
+switch (ADR-0060): `gptossloop` — the local runner on GPT-OSS 20B, the
+sovereign default, **on** unless `VIBEY_FEATURE_GPTOSSLOOP=0` / `[features]
+gptossloop = false`; `qwenloop` — the same runner on a Qwen model
+(`qwen3:14b`), opt-in by `VIBEY_FEATURE_QWENLOOP=1` / `[features] qwenloop =
+true` (ADR-0015); and `claudeloop-local` — the claudeloop binary run with a
+local backend profile (`--profile NAME`), opt-in by
 `VIBEY_FEATURE_CLAUDELOOP_LOCAL` / `[features] claudeloop_local` (ADR-0038).
 Under sub-doctrine 8.a local engines are **preferred first**: selection runs
 SWRR within the LOCAL tier and falls back to PAID only when no local engine is
-eligible. qwenloop's model is also the sovereign DESIGN/DECOMPOSE provider
-(`qwenloop_design.py`, `qwenloop_decompose.py`, ADR-0027), the default
-`--provider` whenever a local engine is switched on (ADR-0038). The runners' source lives in this
+eligible. gptossloop's model is also the sovereign DESIGN/DECOMPOSE provider
+(`gptossloop_design.py`, `gptossloop_decompose.py`, ADR-0027), the default
+`--provider` (`--provider qwenloop` is read as gptossloop). The runners' source lives in this
 repository under `src/vibey_runners/{claude,codex,cursor,agy,qwen,common}`
 (ADR-0021); vibey drives the installed binaries, not those packages' Python
 APIs. Each has its own CLI surface, effort vocabulary,
@@ -71,8 +74,9 @@ read in `env_passthrough`; do not add a spawn path that passes `env=` itself.
 vibey's own git calls (`infrastructure/git/clean_env.py`) and the `az` adapter
 build their environments the same way, never from a copy.
 `LoopProcessAdapter.env_overlay` is laid over that last (run and preflight alike) —
-how qwenloop gets `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` from the one setting
-`VIBEY_OLLAMA_URL` (`local_engines.py::LocalEndpointEnvironment`).
+how gptossloop gets `GPTOSSLOOP_BASE_URL`/`GPTOSSLOOP_MODEL`, and qwenloop only
+`QWENLOOP_BASE_URL` (never a model), from the one setting `VIBEY_OLLAMA_URL`
+(`local_engines.py::LocalEndpointEnvironment`).
 Preflight runs `<binary> doctor` plus `descriptor.doctor_args`
 (claudeloop-local: `--profile NAME`).
 
@@ -116,12 +120,15 @@ ADR-0031). The packet is recorded as a `vibey_skills_context_packet` artifact.
 ## Engine descriptors
 
 `infrastructure/engines/descriptors.py` defines `CLAUDELOOP`, `CODEXLOOP`,
-`CURSORLOOP`, `AGYLOOP`, `OPENCODE`, `QWENLOOP`, `CLAUDELOOP_LOCAL` — one
+`CURSORLOOP`, `AGYLOOP`, `OPENCODE`, `GPTOSSLOOP`, `QWENLOOP`, `CLAUDELOOP_LOCAL` — one
 `EngineDescriptor` per engine. claudeloop-local's is *built* from `[engines.claudeloop_local]`
 (`profile`, `context_window`, `structured_verdict`) by
 `ClaudeloopLocalDescriptors.build()`; the constant is the default profile `local`.
-`DEFAULT_DESCRIPTORS` is the default pool of five, `LOCAL_DESCRIPTORS` the two
-opt-in local ones, `ALL_DESCRIPTORS` all seven, and `BY_ENGINE_ID` maps every
+`GPTOSSLOOP` is `QWENLOOP` with its own id, binary and `GPTOSSLOOP_*`
+passthrough: one runner, whose run layout (`.qwenloop/runs/`), done marker and
+events both engines share.
+`DEFAULT_DESCRIPTORS` is the default pool of five, `LOCAL_DESCRIPTORS` the three
+local ones, `ALL_DESCRIPTORS` all eight, and `BY_ENGINE_ID` maps every
 `EngineId`. The worker
 adds adapters for the local engines that are switched on through
 `local_engines.py::LocalEngineSettings` — the one resolver bootstrap, `worker`,
@@ -138,13 +145,13 @@ Each descriptor (`domain/engine.py::EngineDescriptor`) declares:
   takes `--web-search`
 - `effort_projection` — how vibey's 5-level ladder (`TRIVIAL, LOW, STANDARD, HIGH, MAX`)
   maps to the engine's native flags
-- `auth_env` — environment variables that must be set (empty for qwenloop)
+- `auth_env` — environment variables that must be set (empty for gptossloop and qwenloop)
 - `env_passthrough` — the variables the engine's runner and vendor CLI read, passed
   to its sessions (a trailing `*` names a prefix); nothing else reaches a session
   unless the project declares it
 - `session_verb`, `isolation_flags` (per `IsolationLevel`)
 - `cost_per_mtok_in`/`cost_per_mtok_out`, `context_window`, `base_weight` (rotation weight)
-- `tier` (`EngineTier.PAID` default, `LOCAL` for qwenloop and claudeloop-local) and
+- `tier` (`EngineTier.PAID` default, `LOCAL` for gptossloop, qwenloop and claudeloop-local) and
   `doctor_args` (extra `doctor` arguments; claudeloop-local: `--profile NAME`)
 - `supports_cwd_flag` (default `True`; codexloop: `False`) and `plan_flag`
   (default `None` = positional plan path; cursorloop: `"--plan"`)
@@ -173,7 +180,7 @@ effort_projection={
 }
 ```
 
-qwenloop projects effort onto `--max-turns` (8, 16, 40, 64, 96).
+gptossloop and qwenloop project effort onto `--max-turns` (8, 16, 40, 64, 96).
 claudeloop-local passes `--profile NAME --preset low|low|medium|high|high` and
 never `--effort`; HIGH and MAX report `achieved=STANDARD`, its honest ceiling.
 
@@ -224,7 +231,8 @@ and isolation level, against the runner's own `run` definition.
 the two loops of sub-doctrine 8.c, each engine under the loop its tier puts it in,
 with every effort's argv, achieved effort and model, and the descriptor's run
 template, `affordances`, `controls`, `events` and env names (names only). It reads
-the local switches and qwenloop's model through `local_engines.py`, the resolvers
+the local switches (and whether each is `on_by_default`) and each local runner's
+model through `local_engines.py`, the resolvers
 `vibey doctor` reads. An engine canon 8.b repeals (`REPEALED_FROM_LOOPS`) is listed
 with `repealed: true` and left out of every by-effort view. The document for one
 fixed environment is committed as `tests/cli/golden/vibey-loops.json`: after

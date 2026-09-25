@@ -34,14 +34,14 @@ subscription login doesn't exist in a cluster.
   real Postgres, a worker drains promptly on SIGTERM).
 - The image carries every runner. ADR-0037 made the one `vibey` wheel
   ship all five, and the Dockerfile copies each package root, so
-  `claudeloop`, `codexloop`, `cursorloop`, `agyloop` and `qwenloop` are on
-  `PATH` in every pod (CI's `image` job asserts all eleven console
-  scripts). The chart still defaults to `--provider scripted` with no
+  `claudeloop`, `codexloop`, `cursorloop`, `agyloop`, `gptossloop` and
+  `qwenloop` are on `PATH` in every pod (CI's `image` job asserts every
+  console script). The chart still defaults to `--provider scripted` with no
   engine keys, and no runner has yet completed a session in-cluster: on a
   laptop they still authenticate via subscription login.
 - `infrastructure/container/runtime.py` holds container runtime helpers;
   `infrastructure/cluster_preflight.py` backs `vibey doctor --cluster` and
-  maps each of the four hosted-model engines (not qwenloop) to the API-key
+  maps each of the four hosted-model engines (not gptossloop or qwenloop) to the API-key
   environment variables it accepts. Its `engine-auth` check judges the
   engines the worker is told to use (`doctor --cluster --engines …
   --provider …`, the worker's own flags), not every binary on `PATH`.

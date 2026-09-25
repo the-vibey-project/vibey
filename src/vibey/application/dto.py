@@ -362,7 +362,7 @@ class BudgetChange:
 class EngineContext:
     """One engine as vibey's own resolvers see it right now: its descriptor, whether it
     would run, the variable that switches it (a local engine has one), the model it runs
-    when vibey chooses that model itself (qwenloop's `VIBEY_OLLAMA_MODEL`), and the argv
+    when vibey chooses that model itself (gptossloop's `VIBEY_OLLAMA_MODEL`), and the argv
     template its `run` is built from (infrastructure/engines/argv.py)."""
 
     descriptor: EngineDescriptor

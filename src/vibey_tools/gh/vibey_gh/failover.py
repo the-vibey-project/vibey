@@ -2,7 +2,7 @@
 """The operator-seat failover engine (#208): paid lane down ⇒ hand the seat to a local agent.
 
 When the paid IDE lane runs out of credit, the operator seat moves — autonomously and
-losslessly — to the first healthy local agent (qwenloop, then opencode, by default), and
+losslessly — to the first healthy local agent (gptossloop, then opencode, by default), and
 moves back the moment the paid lane answers again. Lossless because the seats share one
 working tree and the local-authority loop (#207) keeps both fronts synced the whole time:
 the handoff never appears in git history as anything but uninterrupted work.
@@ -80,7 +80,9 @@ class FailoverConfig:
     interval_seconds: int = 300
     seats: tuple[Seat, ...] = field(
         default_factory=lambda: (
-            Seat(name="qwenloop", launch="qwenloop run"),
+            # The sovereign default engine on GPT-OSS; qwenloop, its opt-in Qwen twin,
+            # is a seat an operator names in the config file (vibey ADR-0060).
+            Seat(name="gptossloop", launch="gptossloop run"),
             Seat(name="opencode", launch="opencode"),
         )
     )

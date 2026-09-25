@@ -15,6 +15,11 @@ uv run pytest -q
 uv run bandit -q -r src/qwenloop
 ```
 
+The package ships two console scripts over one runner, `gptossloop` and
+`qwenloop` (vibey ADR-0060). They differ only in `RunnerIdentity`: the name,
+the settings prefix and the default model. Keep engine-specific names out of
+shared code; read them from the identity.
+
 Keep domain code stdlib-only and free of I/O and async behavior. Never commit
 model weights, local caches, credentials, run artifacts, or evaluation results
 containing private repository data.

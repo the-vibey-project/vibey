@@ -216,7 +216,7 @@ def build_design_worker(
     The DESIGN handlers are told who to attribute by asking the provider that
     was actually composed (`DesignProvider.engine_id`) rather than naming an
     engine here. The ledger is append-only, so an event that names the wrong
-    actor is a correction no one can make: a sovereign run on qwenloop, or a
+    actor is a correction no one can make: a sovereign run on gptossloop, or a
     scripted run with no engine at all, must not be recorded as claudeloop.
     """
     clock = SystemClock()
