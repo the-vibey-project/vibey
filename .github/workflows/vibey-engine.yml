@@ -71,7 +71,7 @@ jobs:
           vibey-gh version --dev "${GITHUB_RUN_NUMBER}" --apply
 
       - name: Publish as vibey-engine
-        # Both indexes carry this distribution as `vibey-engine`: its
+        # Both indexes carry this distribution as `vibey-engine` (sub-doctrine 9.e): its
         # trusted publishers are registered for this workflow file, `vibey-engine.yml`, in
         # the environments `pypi` and `testpypi`. Renamed in the runner only; the
         # importable package and the commands keep their names.
