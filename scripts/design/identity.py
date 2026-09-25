@@ -802,6 +802,14 @@ class IdentityEmitter(EmitterInterface):
     def outputs(self) -> dict[Path, bytes]:
         scenes = self.scenes()
         out = {self._root / f"{name}.svg": scene.svg().encode() for name, scene in scenes.items()}
+        # The editor's activity-bar glyph: 24 units, one colour, and that colour is the theme's.
+        glyph = Scene(
+            24, 24, self._identity.atom((12, 12), 10.6, detail="small", mono=(0, 0, 0, 1))
+        )
+        glyph.key = "vibey-glyph"
+        out[Path("clients/vscode/media/vibey.svg")] = (
+            glyph.svg().replace("#000000", "currentColor").encode()
+        )
         for name in self.ANIMATED:
             svg = scenes[name].svg(orbit_seconds=self._orbit_seconds)
             out[self._root / f"{name}-animated.svg"] = svg.encode()
