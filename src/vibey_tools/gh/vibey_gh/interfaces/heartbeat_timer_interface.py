@@ -27,6 +27,11 @@ class BeatRecordInterface(Protocol):
     def published(self) -> bool: ...
 
     @property
+    def resting_until(self) -> float | None:
+        """While the Sabbath holds (8.i), the epoch second it ends; otherwise None."""
+        ...
+
+    @property
     def reason(self) -> str:
         """Why it published or withheld, including what a refused push said."""
         ...

@@ -72,6 +72,7 @@ from vibey.application.interfaces import (
     VisualInventoryProducer,
     WorkPlanProducer,
 )
+from vibey.application.interfaces.sabbath import SabbathGateInterface
 from vibey.application.interfaces.ultra_control import UltraControlServiceInterface
 from vibey.application.job_dispatcher import JobDispatcher
 from vibey.application.preflight import ConductorPreflight
@@ -392,6 +393,7 @@ def build_full_worker(
     engine_adapters: Mapping[EngineId, EngineAdapter] | None = None,
     allow_list: frozenset[EngineId] | None = None,
     azure_client: AzureClientPort | None = None,
+    sabbath: SabbathGateInterface | None = None,
 ) -> WorkerLoop:
     """The full-phase dispatcher: every job kind vibey enqueues, routed.
 
@@ -688,6 +690,7 @@ def build_full_worker(
         tracer=tracer,
         metrics=metrics,
         telemetry_enabled=telemetry_enabled,
+        sabbath=sabbath,
     )
 
 

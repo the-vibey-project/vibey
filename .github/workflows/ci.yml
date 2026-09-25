@@ -1112,8 +1112,13 @@ jobs:
           test "$restarts" = "0"
 
       - name: Contract - the worker picks up a project created in-cluster
+        # The smoke fixture declares the Sabbath off for this one process
+        # (VIBEY_SABBATH_ENABLED=false): without it `vibey new` lawfully declines
+        # with exit 75 every Friday evening to Saturday evening, and the contract
+        # below would fail on a schedule rather than on a defect.
         run: |
           kubectl exec -n vibey deploy/vibey-vibey-worker -- \
+            env VIBEY_SABBATH_ENABLED=false \
             vibey new demo --repo /work/demo --max-cycles 1
           for _ in $(seq 1 24); do
             kubectl logs -n vibey deployment/vibey-vibey-worker > /tmp/log 2>&1 || true

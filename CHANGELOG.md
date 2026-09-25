@@ -14,6 +14,16 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **sabbath:** the Sabbath, kept where the machine stands
+  ([ADR-0072](docs/architecture/decisions/0072-the-sabbath-kept-where-the-machine-stands.md),
+  sub-doctrine 8.i). From sundown Friday to sundown Saturday the merge train and the promotion
+  stand down visibly (exit 0, "paused, not failed"). Workers claim no lease, and `vibey new` and
+  `vibey work` decline with exit 75. Sundown is computed with the NOAA algorithm for the host's
+  own location: a local override, then CoreLocation or GeoClue, then the zone's reference city,
+  which is coarse and so widened toward rest. The heartbeat keeps beating through the window as
+  "resting until ...". At sundown it writes `SabbathEnded`, re-fires the held workflows and
+  resumes registered lanes. New: `vibey sabbath`, `vibey-gh sabbath status|register-lane|resume`,
+  the `[sabbath]` table, and a location line in `vibey doctor`.
 * **vscode:** krypton 0.2.0, raised to the Beauty Law (12.k): the display name krypton (9.e),
   the task panel on the design tokens with Light, Dark and System, a first-run walkthrough,
   live lanes with motion that respects reduced motion, ULTRA and UNLIMITED SPEND shown

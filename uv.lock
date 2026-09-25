@@ -5780,8 +5780,10 @@ dev = [
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
     { name = "ruff" },
+    { name = "segno" },
     { name = "starlette" },
     { name = "uvicorn" },
+    { name = "zeroconf" },
 ]
 hub = [
     { name = "fastapi" },
@@ -5864,6 +5866,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests", marker = "extra == 'bootstrap-all'", specifier = ">=2.32.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
+    { name = "segno", marker = "extra == 'dev'", specifier = ">=1.6" },
     { name = "segno", marker = "extra == 'hub'", specifier = ">=1.6" },
     { name = "sqlalchemy", marker = "extra == 'bootstrap-all'", specifier = ">=2.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0" },
@@ -5880,6 +5883,7 @@ requires-dist = [
     { name = "urllib3", marker = "extra == 'bootstrap-all'", specifier = ">=2.7.0" },
     { name = "uvicorn", marker = "extra == 'dev'", specifier = ">=0.30" },
     { name = "uvicorn", marker = "extra == 'hub'", specifier = ">=0.30" },
+    { name = "zeroconf", marker = "extra == 'dev'", specifier = ">=0.136" },
     { name = "zeroconf", marker = "extra == 'hub'", specifier = ">=0.136" },
 ]
 provides-extras = ["operator", "skills", "azure", "bootstrap-all", "hub", "voice", "dev"]

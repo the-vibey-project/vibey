@@ -647,6 +647,17 @@ def test_status_is_unhealthy_after_a_withheld_stale_or_impossible_beat(tmp_path,
     assert not healthy and any(expected in line for line in lines), lines
 
 
+def test_a_beat_resting_for_the_sabbath_is_alive_not_dead(tmp_path):
+    """8.i and 10.f: a heartbeat that rests publishes nothing, and is still healthy."""
+    timer, plan = _installed(tmp_path)
+    BeatRecord(10_000.0 - 60, False, "resting for the Sabbath", 10_000.0 + 3600).write(plan.record)
+    lines, healthy = timer.status()
+    assert healthy and any("resting: resting for the Sabbath" in line for line in lines), lines
+    BeatRecord(10_000.0 - 60, False, "rested", 10_000.0 - 1).write(plan.record)
+    lines, healthy = timer.status()
+    assert not healthy and any("withheld: rested" in line for line in lines), lines
+
+
 def test_status_names_drift_and_a_timer_that_is_not_loaded(tmp_path):
     timer, plan = _installed(tmp_path, service=_Service({"print": (113, "")}))
     BeatRecord(10_000.0, True, "ok").write(plan.record)

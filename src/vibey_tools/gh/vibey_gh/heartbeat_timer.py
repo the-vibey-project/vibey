@@ -85,12 +85,21 @@ class BeatRecord:
     at: float
     published: bool
     reason: str
+    # Set while the Sabbath holds (8.i): the epoch second the window closes. A beat that
+    # rests is alive, and `status` must say so rather than read the silence as death.
+    resting_until: float | None = None
 
     def write(self, path: Path) -> None:
         """Atomically: a status read never sees half a record."""
         path.parent.mkdir(parents=True, exist_ok=True)
         partial = path.with_name(f".{path.name}.partial")
-        body = {"at": self.at, "published": self.published, "reason": self.reason}
+        body: dict[str, object] = {
+            "at": self.at,
+            "published": self.published,
+            "reason": self.reason,
+        }
+        if self.resting_until is not None:
+            body["resting_until"] = self.resting_until
         partial.write_text(json.dumps(body) + "\n", encoding="utf-8")
         os.replace(partial, path)
 
@@ -98,8 +107,14 @@ class BeatRecord:
     def read(cls, path: Path) -> BeatRecord | None:
         try:
             body = json.loads(path.read_text(encoding="utf-8"))
-            return cls(float(body["at"]), bool(body["published"]), str(body["reason"]))
-        except (OSError, ValueError, KeyError, TypeError):
+            resting = body.get("resting_until")
+            return cls(
+                float(body["at"]),
+                bool(body["published"]),
+                str(body["reason"]),
+                None if resting is None else float(resting),
+            )
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
             return None
 
 
@@ -570,13 +585,15 @@ class HeartbeatTimer(HeartbeatTimerInterface):
                 f" {record.reason}"
             )
             return [impossible], False
-        outcome = "published" if record.published else "withheld"
+        resting = record.resting_until is not None and record.resting_until > self._clock()
+        outcome = "resting" if resting else ("published" if record.published else "withheld")
         lines = [f"last beat: {age // 60}m{age % 60:02d}s ago, {outcome}: {record.reason}"]
         window = self._fallback.heartbeat_max_age_minutes
         if age > window * 60:
             lines.append(f"the last beat is older than the {window}m window the gate trusts")
             return lines, False
-        return lines, record.published
+        # A beat resting for the Sabbath is alive (8.i, 10.f): healthy, not dead.
+        return lines, record.published or resting
 
     def _installed_python(self, unit: Path, scheduler: str) -> str | None:
         """The interpreter the installed unit runs, so drift is judged against what is on the
