@@ -14,11 +14,30 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "scripts"))
 
-from design.generate import DesignGenerator  # noqa: E402
 
-from design.tokens import Colour, TokenSet  # noqa: E402
+def _load_design() -> tuple[type, type, type]:
+    """Import scripts/design without leaving `scripts/` on sys.path.
+
+    `scripts/interfaces` is a top-level package name other tests' tools also use, so the path
+    and the modules it brought are removed again once the design classes are in hand.
+    """
+    before = set(sys.modules)
+    sys.path.insert(0, str(REPO / "scripts"))
+    try:
+        from design.generate import DesignGenerator  # noqa: PLC0415
+
+        from design.tokens import Colour, TokenSet  # noqa: PLC0415
+    finally:
+        while str(REPO / "scripts") in sys.path:  # generate.py inserts it a second time
+            sys.path.remove(str(REPO / "scripts"))
+        for name in set(sys.modules) - before:
+            if name == "interfaces" or name.startswith(("interfaces.", "design")):
+                del sys.modules[name]
+    return DesignGenerator, Colour, TokenSet
+
+
+DesignGenerator, Colour, TokenSet = _load_design()
 
 GENERATOR = DesignGenerator(REPO)
 
@@ -141,7 +160,10 @@ def test_the_paper_palette_is_the_one_the_paper_always_drew_with() -> None:
         "wash",
         "mist",
     ]
-    sys.path.insert(0, str(REPO / "src/vibey_tools/gh"))
+    import importlib.util  # noqa: PLC0415
+
+    spec = importlib.util.find_spec("vibey_gh.paper")
+    assert spec is not None, "vibey_gh must be importable (it is a workspace member)"
     from vibey_gh import paper  # noqa: PLC0415
 
     lines = [line for line in paper.PREAMBLE if line.startswith(r"\definecolor")]

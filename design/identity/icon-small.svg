@@ -4,14 +4,35 @@
 <linearGradient id="vibey-icon-small-g0" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1c2542" stop-opacity="1"/><stop offset="1" stop-color="#080b14" stop-opacity="1"/></linearGradient>
 <radialGradient id="vibey-icon-small-g1" cx="286.72" cy="225.28" r="634.88" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.62"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.349"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.155"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.039"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
 <radialGradient id="vibey-icon-small-g2" cx="880.64" cy="921.6" r="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#57dcff" stop-opacity="0.34"/><stop offset="0.25" stop-color="#57dcff" stop-opacity="0.191"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="0.085"/><stop offset="0.75" stop-color="#57dcff" stop-opacity="0.021"/><stop offset="1" stop-color="#57dcff" stop-opacity="0"/></radialGradient>
-<linearGradient id="vibey-icon-small-g3" x1="264" y1="284.4" x2="760" y2="656.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
-<linearGradient id="vibey-icon-small-g4" x1="264" y1="284.4" x2="760" y2="656.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-small-g3" x1="92" y1="92" x2="932" y2="932" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-small-g4" x1="92" y1="92" x2="932" y2="932" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-small-g5" x1="92" y1="92" x2="932" y2="932" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-small-g6" x1="92" y1="92" x2="932" y2="932" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-small-g7" x1="411.2" y1="411.2" x2="612.8" y2="612.8" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#bfa9ff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-small-g8" x1="383.534" y1="457.435" x2="460.9" y2="534.802" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-small-g9" x1="522.242" y1="537.131" x2="599.608" y2="614.497" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-small-g10" x1="479.258" y1="405.618" x2="556.625" y2="482.984" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-small-g11" x1="434.501" y1="508.875" x2="511.867" y2="586.242" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-small-g12" x1="503.709" y1="473.317" x2="581.075" y2="550.683" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
 </defs>
 <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-small-g0)"/>
 <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-small-g1)"/>
 <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-small-g2)"/>
-<line x1="264" y1="284.4" x2="512" y2="718.4" stroke="url(#vibey-icon-small-g3)" stroke-width="72.85" stroke-linecap="round"/>
-<line x1="760" y1="284.4" x2="512" y2="718.4" stroke="url(#vibey-icon-small-g4)" stroke-width="72.85" stroke-linecap="round"/>
-<line x1="415.9" y1="284.4" x2="608.1" y2="284.4" stroke="#f7f8ff" stroke-width="59.737" stroke-linecap="round"/>
-<circle cx="512" cy="718.4" r="48.05" fill="#75f0c2"/>
+<ellipse cx="512" cy="512" rx="168" ry="168" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-small-g3)" stroke-width="24.36"/>
+<ellipse cx="512" cy="512" rx="252" ry="252" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-small-g4)" stroke-width="24.36"/>
+<ellipse cx="512" cy="512" rx="336" ry="336" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-small-g5)" stroke-width="24.36"/>
+<ellipse cx="512" cy="512" rx="420" ry="420" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-small-g6)" stroke-width="24.36"/>
+<circle cx="512" cy="512" r="100.8" fill="url(#vibey-icon-small-g7)"/>
+<circle cx="422.217" cy="496.119" r="38.683" fill="url(#vibey-icon-small-g8)"/>
+<circle cx="560.925" cy="575.814" r="38.683" fill="url(#vibey-icon-small-g9)"/>
+<circle cx="517.941" cy="444.301" r="38.683" fill="url(#vibey-icon-small-g10)"/>
+<circle cx="473.184" cy="547.559" r="38.683" fill="url(#vibey-icon-small-g11)"/>
+<circle cx="542.392" cy="512" r="38.683" fill="url(#vibey-icon-small-g12)"/>
+<circle cx="512" cy="680" r="27.3" fill="#f7f8ff"/>
+<circle cx="744.818" cy="608.436" r="27.3" fill="#f7f8ff"/>
+<circle cx="279.182" cy="415.564" r="27.3" fill="#f7f8ff"/>
+<circle cx="848" cy="512" r="27.3" fill="#f7f8ff"/>
+<circle cx="176" cy="512" r="27.3" fill="#f7f8ff"/>
+<circle cx="932" cy="512" r="27.3" fill="#f7f8ff"/>
+<circle cx="92" cy="512" r="27.3" fill="#f7f8ff"/>
 </svg>

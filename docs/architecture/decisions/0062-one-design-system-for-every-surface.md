@@ -53,12 +53,31 @@ tier-2 roles only.
    preamble splices in. The gh tenant installs on its own, so its palette is generated *into*
    the package rather than read from `design/` at runtime. Every output carries a
    "generated, do not edit" header, and the meta test fails on drift (12.e).
-5. **Identity from the same tokens.** The extension's V glyph is refined into a mark (two
-   converging strokes, the queue bar, and the nucleus with its orbit, after sub-doctrine 9.c),
-   a monoline wordmark in the same stroke, a lockup, app-icon masters, Android adaptive
-   layers and a 1200×630 social image, all as SVG in `design/identity/`. PNGs (freedesktop
-   hicolor, a macOS `.iconset` for `iconutil`, iOS 1024 opaque, Android, favicons, social) are
-   drawn by a **standard-library signed-distance renderer** in `scripts/design/identity.py`.
+5. **Identity from the same tokens: the mark is a krypton atom** (operator, 2026-09-25).
+   The extension's V glyph was the starting point; the operator replaced it with the atom
+   alone. Krypton (Z = 36) has exactly four electron shells; the mark is its most abundant
+   isotope, Kr-84: a nucleus of 36 protons and 48 neutrons packed as small lit spheres in two
+   token colours (protons interleaved evenly among neutrons on a sunflower spiral), and four
+   concentric circular shells carrying the Bohr counts 2, 8, 18 and 8. Radii grow as n²
+   (`r = 0.253 + 0.0467 n²` of the outer radius), relaxed from the pure 1 : 4 : 9 : 16 so the
+   84-nucleon cluster fits inside the first shell; electrons are smaller than a nucleon. Each
+   shell's electrons are turned so the whole is balanced (the pair vertical, the octets
+   interleaved). In animated contexts the shells turn at different speeds, outer ones slower,
+   derived from `motion.duration.ambient`, and rest where they are drawn under reduced motion.
+   The same atom is the dot on the i of the monoline wordmark.
+
+   **Levels of detail, because 120 particles cannot be drawn at 16 px:** `full` (every nucleon
+   and electron) from 128 px; `medium` (12 nucleons, 2/4/6/4 electrons) at 48–64 px; `small`
+   (a nucleus blob with five nucleons, four evenly spaced shells, one or two electrons each) at
+   22–32 px and on the i; `tiny` at 16 px keeps **two** shells, because four circles a pixel
+   apart alias into a moiré there (checked by rendering, not assumed). Spacing is relaxed
+   toward even at the smaller levels for legibility.
+
+   SVG masters (mark, atom, wordmark, lockup, each in dark and light palettes, plus animated
+   versions, the app-icon tiers, Android adaptive layers and a 1200×630 social image) live in
+   `design/identity/`. PNGs (freedesktop hicolor, a macOS `.iconset` for `iconutil`, iOS 1024
+   opaque, Android, favicons, social) are drawn by a **standard-library signed-distance
+   renderer** in `scripts/design/identity.py`.
 
 ## Alternatives considered
 

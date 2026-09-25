@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="vibey">
+<title>vibey</title>
+<defs>
+<linearGradient id="vibey-icon-medium-g0" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1c2542" stop-opacity="1"/><stop offset="1" stop-color="#080b14" stop-opacity="1"/></linearGradient>
+<radialGradient id="vibey-icon-medium-g1" cx="286.72" cy="225.28" r="634.88" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.62"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.349"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.155"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.039"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
+<radialGradient id="vibey-icon-medium-g2" cx="880.64" cy="921.6" r="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#57dcff" stop-opacity="0.34"/><stop offset="0.25" stop-color="#57dcff" stop-opacity="0.191"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="0.085"/><stop offset="0.75" stop-color="#57dcff" stop-opacity="0.021"/><stop offset="1" stop-color="#57dcff" stop-opacity="0"/></radialGradient>
+<radialGradient id="vibey-icon-medium-g3" cx="512" cy="512" r="285.12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.7"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.394"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.175"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.044"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
+<linearGradient id="vibey-icon-medium-g4" x1="107" y1="107" x2="917" y2="917" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g5" x1="107" y1="107" x2="917" y2="917" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g6" x1="107" y1="107" x2="917" y2="917" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g7" x1="107" y1="107" x2="917" y2="917" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g8" x1="422.9" y1="422.9" x2="601.1" y2="601.1" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#bfa9ff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g9" x1="514.896" y1="570.863" x2="560.258" y2="616.226" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g10" x1="523.931" y1="415.355" x2="569.293" y2="460.718" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g11" x1="417.52" y1="518.956" x2="462.882" y2="564.319" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g12" x1="558.334" y1="514.523" x2="603.697" y2="559.885" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g13" x1="457.509" y1="428.07" x2="502.871" y2="473.433" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g14" x1="472.639" y1="551.367" x2="518.001" y2="596.729" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g15" x1="539.187" y1="457.597" x2="584.549" y2="502.959" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g16" x1="436.676" y1="480.007" x2="482.038" y2="525.369" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g17" x1="518.005" y1="526.735" x2="563.367" y2="572.097" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g18" x1="492.802" y1="449.625" x2="538.165" y2="494.987" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g19" x1="466.56" y1="510.168" x2="511.922" y2="555.53" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-medium-g20" x1="507.139" y1="489.319" x2="552.501" y2="534.681" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+</defs>
+<rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-medium-g0)"/>
+<rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-medium-g1)"/>
+<rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-medium-g2)"/>
+<circle cx="512" cy="512" r="285.12" fill="url(#vibey-icon-medium-g3)"/>
+<ellipse cx="512" cy="512" rx="145.8" ry="145.8" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-medium-g4)" stroke-width="8.91"/>
+<ellipse cx="512" cy="512" rx="214.65" ry="214.65" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-medium-g5)" stroke-width="8.91"/>
+<ellipse cx="512" cy="512" rx="299.7" ry="299.7" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-medium-g6)" stroke-width="8.91"/>
+<ellipse cx="512" cy="512" rx="405" ry="405" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-medium-g7)" stroke-width="8.91"/>
+<circle cx="512" cy="512" r="89.1" fill="url(#vibey-icon-medium-g8)"/>
+<circle cx="537.577" cy="593.545" r="22.681" fill="url(#vibey-icon-medium-g9)"/>
+<circle cx="546.612" cy="438.036" r="22.681" fill="url(#vibey-icon-medium-g10)"/>
+<circle cx="440.201" cy="541.638" r="22.681" fill="url(#vibey-icon-medium-g11)"/>
+<circle cx="581.015" cy="537.204" r="22.681" fill="url(#vibey-icon-medium-g12)"/>
+<circle cx="480.19" cy="450.751" r="22.681" fill="url(#vibey-icon-medium-g13)"/>
+<circle cx="495.32" cy="574.048" r="22.681" fill="url(#vibey-icon-medium-g14)"/>
+<circle cx="561.868" cy="480.278" r="22.681" fill="url(#vibey-icon-medium-g15)"/>
+<circle cx="459.357" cy="502.688" r="22.681" fill="url(#vibey-icon-medium-g16)"/>
+<circle cx="540.686" cy="549.416" r="22.681" fill="url(#vibey-icon-medium-g17)"/>
+<circle cx="515.484" cy="472.306" r="22.681" fill="url(#vibey-icon-medium-g18)"/>
+<circle cx="489.241" cy="532.849" r="22.681" fill="url(#vibey-icon-medium-g19)"/>
+<circle cx="529.82" cy="512" r="22.681" fill="url(#vibey-icon-medium-g20)"/>
+<circle cx="512" cy="657.8" r="16.2" fill="#f7f8ff"/>
+<circle cx="512" cy="366.2" r="16.2" fill="#f7f8ff"/>
+<circle cx="710.311" cy="594.143" r="16.2" fill="#f7f8ff"/>
+<circle cx="429.857" cy="710.311" r="16.2" fill="#f7f8ff"/>
+<circle cx="313.689" cy="429.857" r="16.2" fill="#f7f8ff"/>
+<circle cx="594.143" cy="313.689" r="16.2" fill="#f7f8ff"/>
+<circle cx="811.7" cy="512" r="16.2" fill="#f7f8ff"/>
+<circle cx="661.85" cy="771.548" r="16.2" fill="#f7f8ff"/>
+<circle cx="362.15" cy="771.548" r="16.2" fill="#f7f8ff"/>
+<circle cx="212.3" cy="512" r="16.2" fill="#f7f8ff"/>
+<circle cx="362.15" cy="252.452" r="16.2" fill="#f7f8ff"/>
+<circle cx="661.85" cy="252.452" r="16.2" fill="#f7f8ff"/>
+<circle cx="917" cy="512" r="16.2" fill="#f7f8ff"/>
+<circle cx="512" cy="917" r="16.2" fill="#f7f8ff"/>
+<circle cx="107" cy="512" r="16.2" fill="#f7f8ff"/>
+<circle cx="512" cy="107" r="16.2" fill="#f7f8ff"/>
+</svg>

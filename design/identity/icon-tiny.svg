@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="vibey">
+<title>vibey</title>
+<defs>
+<linearGradient id="vibey-icon-tiny-g0" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1c2542" stop-opacity="1"/><stop offset="1" stop-color="#080b14" stop-opacity="1"/></linearGradient>
+<radialGradient id="vibey-icon-tiny-g1" cx="286.72" cy="225.28" r="634.88" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.62"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.349"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.155"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.039"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
+<radialGradient id="vibey-icon-tiny-g2" cx="880.64" cy="921.6" r="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#57dcff" stop-opacity="0.34"/><stop offset="0.25" stop-color="#57dcff" stop-opacity="0.191"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="0.085"/><stop offset="0.75" stop-color="#57dcff" stop-opacity="0.021"/><stop offset="1" stop-color="#57dcff" stop-opacity="0"/></radialGradient>
+<linearGradient id="vibey-icon-tiny-g3" x1="82" y1="82" x2="942" y2="942" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-tiny-g4" x1="82" y1="82" x2="942" y2="942" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-tiny-g5" x1="365.8" y1="365.8" x2="658.2" y2="658.2" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#bfa9ff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-tiny-g6" x1="452.47" y1="318.579" x2="593.135" y2="459.244" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-tiny-g7" x1="371.094" y1="506.319" x2="511.759" y2="646.984" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-tiny-g8" x1="496.926" y1="441.668" x2="637.591" y2="582.332" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+</defs>
+<rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-tiny-g0)"/>
+<rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-tiny-g1)"/>
+<rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-tiny-g2)"/>
+<ellipse cx="512" cy="512" rx="266.6" ry="266.6" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-tiny-g3)" stroke-width="55.9"/>
+<ellipse cx="512" cy="512" rx="430" ry="430" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-tiny-g4)" stroke-width="55.9"/>
+<circle cx="512" cy="512" r="146.2" fill="url(#vibey-icon-tiny-g5)"/>
+<circle cx="522.802" cy="388.912" r="70.332" fill="url(#vibey-icon-tiny-g6)"/>
+<circle cx="441.426" cy="576.651" r="70.332" fill="url(#vibey-icon-tiny-g7)"/>
+<circle cx="567.258" cy="512" r="70.332" fill="url(#vibey-icon-tiny-g8)"/>
+<circle cx="909.268" cy="676.554" r="55.9" fill="#f7f8ff"/>
+</svg>

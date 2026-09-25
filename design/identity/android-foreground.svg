@@ -1,14 +1,219 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="vibey">
 <title>vibey</title>
 <defs>
-<radialGradient id="vibey-android-foreground-g0" cx="512" cy="652.8" r="92.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#75f0c2" stop-opacity="0.55"/><stop offset="0.25" stop-color="#75f0c2" stop-opacity="0.309"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="0.138"/><stop offset="0.75" stop-color="#75f0c2" stop-opacity="0.034"/><stop offset="1" stop-color="#75f0c2" stop-opacity="0"/></radialGradient>
-<linearGradient id="vibey-android-foreground-g1" x1="336" y1="344.8" x2="688" y2="608.8" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
-<linearGradient id="vibey-android-foreground-g2" x1="336" y1="344.8" x2="688" y2="608.8" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<radialGradient id="vibey-android-foreground-g0" cx="512" cy="512" r="182.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.7"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.394"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.175"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.044"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
+<linearGradient id="vibey-android-foreground-g1" x1="212" y1="212" x2="812" y2="812" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g2" x1="212" y1="212" x2="812" y2="812" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g3" x1="212" y1="212" x2="812" y2="812" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g4" x1="212" y1="212" x2="812" y2="812" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g5" x1="488.874" y1="451.076" x2="502.267" y2="464.469" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g6" x1="480.935" y1="556.08" x2="494.329" y2="569.474" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g7" x1="557.253" y1="484.45" x2="570.647" y2="497.844" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g8" x1="453.233" y1="485.709" x2="466.627" y2="499.103" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g9" x1="530.306" y1="554.615" x2="543.7" y2="568.008" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g10" x1="520.083" y1="452.389" x2="533.476" y2="465.783" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g11" x1="458.961" y1="534.151" x2="472.354" y2="547.545" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g12" x1="558.614" y1="515.27" x2="572.008" y2="528.664" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g13" x1="472.94" y1="462.227" x2="486.333" y2="475.621" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g14" x1="500.104" y1="558.571" x2="513.498" y2="571.965" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g15" x1="544.851" y1="469.778" x2="558.244" y2="483.172" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g16" x1="452.508" y1="504.788" x2="465.902" y2="518.182" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g17" x1="543.618" y1="541.096" x2="557.011" y2="554.49" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g18" x1="501.258" y1="453.396" x2="514.651" y2="466.79" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g19" x1="473.452" y1="546.019" x2="486.846" y2="559.412" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g20" x1="555.924" y1="496.858" x2="569.318" y2="510.251" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g21" x1="462.587" y1="477.542" x2="475.981" y2="490.935" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g22" x1="517.953" y1="554.261" x2="531.347" y2="567.655" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g23" x1="528.867" y1="460.995" x2="542.261" y2="474.389" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g24" x1="458.361" y1="521.929" x2="471.755" y2="535.323" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g25" x1="550.791" y1="524.601" x2="564.185" y2="537.995" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g26" x1="484.96" y1="460.702" x2="498.353" y2="474.096" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g27" x1="490.298" y1="551.558" x2="503.691" y2="564.951" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g28" x1="547.267" y1="481.528" x2="560.661" y2="494.922" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g29" x1="458.691" y1="494.578" x2="472.084" y2="507.971" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g30" x1="532.2" y1="544.366" x2="545.594" y2="557.759" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g31" x1="511.8" y1="458.734" x2="525.194" y2="472.128" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g32" x1="469.372" y1="534.991" x2="482.766" y2="548.385" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g33" x1="551.438" y1="507.662" x2="564.831" y2="521.056" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g34" x1="473.172" y1="472.698" x2="486.566" y2="486.092" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g35" x1="506.956" y1="550.628" x2="520.35" y2="564.022" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g36" x1="534.425" y1="471.09" x2="547.818" y2="484.484" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g37" x1="461.146" y1="510.806" x2="474.539" y2="524.2" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g38" x1="541.227" y1="530.822" x2="554.621" y2="544.215" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g39" x1="496.144" y1="462.649" x2="509.537" y2="476.043" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g40" x1="483.469" y1="542.56" x2="496.862" y2="555.954" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g41" x1="546.142" y1="492.712" x2="559.536" y2="506.106" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g42" x1="467.093" y1="487.195" x2="480.487" y2="500.588" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g43" x1="521.074" y1="544.043" x2="534.467" y2="557.436" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g44" x1="519.682" y1="466.518" x2="533.076" y2="479.912" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g45" x1="468.918" y1="523.976" x2="482.311" y2="537.369" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g46" x1="544.29" y1="515.988" x2="557.683" y2="529.381" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g47" x1="484.028" y1="471.495" x2="497.422" y2="484.888" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g48" x1="498.24" y1="544.127" x2="511.634" y2="557.521" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g49" x1="536.346" y1="481.743" x2="549.74" y2="495.136" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g50" x1="466.992" y1="501.753" x2="480.386" y2="515.146" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g51" x1="530.816" y1="533.427" x2="544.21" y2="546.821" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g52" x1="505.486" y1="467.841" x2="518.88" y2="481.235" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g53" x1="480.214" y1="532.423" x2="493.608" y2="545.817" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g54" x1="541.6" y1="502.296" x2="554.994" y2="515.69" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g55" x1="476.928" y1="483.328" x2="490.322" y2="496.722" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g56" x1="511.291" y1="540.142" x2="524.684" y2="553.536" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g57" x1="524.125" y1="476.03" x2="537.519" y2="489.424" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g58" x1="472.189" y1="514.032" x2="485.583" y2="527.426" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g59" x1="535.115" y1="520.972" x2="548.509" y2="534.365" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g60" x1="494.099" y1="474.154" x2="507.493" y2="487.547" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g61" x1="492.75" y1="535.299" x2="506.143" y2="548.693" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g62" x1="534.28" y1="491.915" x2="547.674" y2="505.309" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g63" x1="475.472" y1="495.786" x2="488.866" y2="509.18" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g64" x1="520.563" y1="531.933" x2="533.956" y2="545.327" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g65" x1="511.901" y1="475.977" x2="525.294" y2="489.37" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g66" x1="481.159" y1="522.102" x2="494.553" y2="535.495" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g67" x1="533.798" y1="509.137" x2="547.192" y2="522.531" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g68" x1="487.315" y1="483.747" x2="500.709" y2="497.141" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g69" x1="504.038" y1="532.656" x2="517.432" y2="546.05" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g70" x1="524.208" y1="486.49" x2="537.602" y2="499.884" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g71" x1="479.386" y1="506.375" x2="492.779" y2="519.769" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g72" x1="524.563" y1="521.535" x2="537.957" y2="534.929" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g73" x1="502.166" y1="481.093" x2="515.56" y2="494.487" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g74" x1="491.723" y1="524.619" x2="505.117" y2="538.013" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g75" x1="527.555" y1="500.411" x2="540.949" y2="513.805" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g76" x1="486.335" y1="494.311" x2="499.729" y2="507.704" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g77" x1="511.596" y1="525.367" x2="524.99" y2="538.761" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g78" x1="513.819" y1="487.104" x2="527.213" y2="500.498" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g79" x1="487.637" y1="512.595" x2="501.031" y2="525.989" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g80" x1="522.284" y1="511.505" x2="535.678" y2="524.898" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g81" x1="497.476" y1="490.233" x2="510.87" y2="503.627" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g82" x1="501.199" y1="520.57" x2="514.593" y2="533.964" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g83" x1="517.573" y1="497.498" x2="530.967" y2="510.892" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g84" x1="492.35" y1="503.012" x2="505.744" y2="516.406" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g85" x1="512.361" y1="514.509" x2="525.755" y2="527.903" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g86" x1="506.16" y1="495.536" x2="519.554" y2="508.93" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g87" x1="499.703" y1="510.433" x2="513.097" y2="523.827" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-android-foreground-g88" x1="509.688" y1="505.303" x2="523.081" y2="518.697" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
 </defs>
-<circle cx="512" cy="652.8" r="92.4" fill="url(#vibey-android-foreground-g0)"/>
-<line x1="336" y1="344.8" x2="512" y2="652.8" stroke="url(#vibey-android-foreground-g1)" stroke-width="51.7" stroke-linecap="round"/>
-<line x1="688" y1="344.8" x2="512" y2="652.8" stroke="url(#vibey-android-foreground-g2)" stroke-width="51.7" stroke-linecap="round"/>
-<line x1="443.8" y1="344.8" x2="580.2" y2="344.8" stroke="#f7f8ff" stroke-width="42.394" stroke-linecap="round"/>
-<ellipse cx="512" cy="652.8" rx="94.6" ry="34.1" transform="rotate(-16 512 652.8)" fill="none" stroke="#57dcff" stroke-opacity="0.78" stroke-width="9.24"/>
-<circle cx="512" cy="652.8" r="34.1" fill="#75f0c2"/>
+<circle cx="512" cy="512" r="182.4" fill="url(#vibey-android-foreground-g0)"/>
+<ellipse cx="512" cy="512" rx="89.91" ry="89.91" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-android-foreground-g1)" stroke-width="2.7"/>
+<ellipse cx="512" cy="512" rx="131.94" ry="131.94" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-android-foreground-g2)" stroke-width="2.7"/>
+<ellipse cx="512" cy="512" rx="201.99" ry="201.99" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-android-foreground-g3)" stroke-width="2.7"/>
+<ellipse cx="512" cy="512" rx="300.06" ry="300.06" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-android-foreground-g4)" stroke-width="2.7"/>
+<circle cx="495.57" cy="457.773" r="6.697" fill="url(#vibey-android-foreground-g5)"/>
+<circle cx="487.632" cy="562.777" r="6.697" fill="url(#vibey-android-foreground-g6)"/>
+<circle cx="563.95" cy="491.147" r="6.697" fill="url(#vibey-android-foreground-g7)"/>
+<circle cx="459.93" cy="492.406" r="6.697" fill="url(#vibey-android-foreground-g8)"/>
+<circle cx="537.003" cy="561.311" r="6.697" fill="url(#vibey-android-foreground-g9)"/>
+<circle cx="526.779" cy="459.086" r="6.697" fill="url(#vibey-android-foreground-g10)"/>
+<circle cx="465.657" cy="540.848" r="6.697" fill="url(#vibey-android-foreground-g11)"/>
+<circle cx="565.311" cy="521.967" r="6.697" fill="url(#vibey-android-foreground-g12)"/>
+<circle cx="479.637" cy="468.924" r="6.697" fill="url(#vibey-android-foreground-g13)"/>
+<circle cx="506.801" cy="565.268" r="6.697" fill="url(#vibey-android-foreground-g14)"/>
+<circle cx="551.547" cy="476.475" r="6.697" fill="url(#vibey-android-foreground-g15)"/>
+<circle cx="459.205" cy="511.485" r="6.697" fill="url(#vibey-android-foreground-g16)"/>
+<circle cx="550.315" cy="547.793" r="6.697" fill="url(#vibey-android-foreground-g17)"/>
+<circle cx="507.954" cy="460.093" r="6.697" fill="url(#vibey-android-foreground-g18)"/>
+<circle cx="480.149" cy="552.715" r="6.697" fill="url(#vibey-android-foreground-g19)"/>
+<circle cx="562.621" cy="503.554" r="6.697" fill="url(#vibey-android-foreground-g20)"/>
+<circle cx="469.284" cy="484.239" r="6.697" fill="url(#vibey-android-foreground-g21)"/>
+<circle cx="524.65" cy="560.958" r="6.697" fill="url(#vibey-android-foreground-g22)"/>
+<circle cx="535.564" cy="467.692" r="6.697" fill="url(#vibey-android-foreground-g23)"/>
+<circle cx="465.058" cy="528.626" r="6.697" fill="url(#vibey-android-foreground-g24)"/>
+<circle cx="557.488" cy="531.298" r="6.697" fill="url(#vibey-android-foreground-g25)"/>
+<circle cx="491.657" cy="467.399" r="6.697" fill="url(#vibey-android-foreground-g26)"/>
+<circle cx="496.995" cy="558.255" r="6.697" fill="url(#vibey-android-foreground-g27)"/>
+<circle cx="553.964" cy="488.225" r="6.697" fill="url(#vibey-android-foreground-g28)"/>
+<circle cx="465.388" cy="501.275" r="6.697" fill="url(#vibey-android-foreground-g29)"/>
+<circle cx="538.897" cy="551.062" r="6.697" fill="url(#vibey-android-foreground-g30)"/>
+<circle cx="518.497" cy="465.431" r="6.697" fill="url(#vibey-android-foreground-g31)"/>
+<circle cx="476.069" cy="541.688" r="6.697" fill="url(#vibey-android-foreground-g32)"/>
+<circle cx="558.135" cy="514.359" r="6.697" fill="url(#vibey-android-foreground-g33)"/>
+<circle cx="479.869" cy="479.395" r="6.697" fill="url(#vibey-android-foreground-g34)"/>
+<circle cx="513.653" cy="557.325" r="6.697" fill="url(#vibey-android-foreground-g35)"/>
+<circle cx="541.122" cy="477.787" r="6.697" fill="url(#vibey-android-foreground-g36)"/>
+<circle cx="467.843" cy="517.503" r="6.697" fill="url(#vibey-android-foreground-g37)"/>
+<circle cx="547.924" cy="537.519" r="6.697" fill="url(#vibey-android-foreground-g38)"/>
+<circle cx="502.841" cy="469.346" r="6.697" fill="url(#vibey-android-foreground-g39)"/>
+<circle cx="490.165" cy="549.257" r="6.697" fill="url(#vibey-android-foreground-g40)"/>
+<circle cx="552.839" cy="499.409" r="6.697" fill="url(#vibey-android-foreground-g41)"/>
+<circle cx="473.79" cy="493.892" r="6.697" fill="url(#vibey-android-foreground-g42)"/>
+<circle cx="527.77" cy="550.74" r="6.697" fill="url(#vibey-android-foreground-g43)"/>
+<circle cx="526.379" cy="473.215" r="6.697" fill="url(#vibey-android-foreground-g44)"/>
+<circle cx="475.615" cy="530.672" r="6.697" fill="url(#vibey-android-foreground-g45)"/>
+<circle cx="550.987" cy="522.685" r="6.697" fill="url(#vibey-android-foreground-g46)"/>
+<circle cx="490.725" cy="478.191" r="6.697" fill="url(#vibey-android-foreground-g47)"/>
+<circle cx="504.937" cy="550.824" r="6.697" fill="url(#vibey-android-foreground-g48)"/>
+<circle cx="543.043" cy="488.439" r="6.697" fill="url(#vibey-android-foreground-g49)"/>
+<circle cx="473.689" cy="508.449" r="6.697" fill="url(#vibey-android-foreground-g50)"/>
+<circle cx="537.513" cy="540.124" r="6.697" fill="url(#vibey-android-foreground-g51)"/>
+<circle cx="512.183" cy="474.538" r="6.697" fill="url(#vibey-android-foreground-g52)"/>
+<circle cx="486.911" cy="539.12" r="6.697" fill="url(#vibey-android-foreground-g53)"/>
+<circle cx="548.297" cy="508.993" r="6.697" fill="url(#vibey-android-foreground-g54)"/>
+<circle cx="483.625" cy="490.025" r="6.697" fill="url(#vibey-android-foreground-g55)"/>
+<circle cx="517.987" cy="546.839" r="6.697" fill="url(#vibey-android-foreground-g56)"/>
+<circle cx="530.822" cy="482.727" r="6.697" fill="url(#vibey-android-foreground-g57)"/>
+<circle cx="478.886" cy="520.729" r="6.697" fill="url(#vibey-android-foreground-g58)"/>
+<circle cx="541.812" cy="527.668" r="6.697" fill="url(#vibey-android-foreground-g59)"/>
+<circle cx="500.796" cy="480.851" r="6.697" fill="url(#vibey-android-foreground-g60)"/>
+<circle cx="499.446" cy="541.996" r="6.697" fill="url(#vibey-android-foreground-g61)"/>
+<circle cx="540.977" cy="498.612" r="6.697" fill="url(#vibey-android-foreground-g62)"/>
+<circle cx="482.169" cy="502.483" r="6.697" fill="url(#vibey-android-foreground-g63)"/>
+<circle cx="527.26" cy="538.63" r="6.697" fill="url(#vibey-android-foreground-g64)"/>
+<circle cx="518.597" cy="482.674" r="6.697" fill="url(#vibey-android-foreground-g65)"/>
+<circle cx="487.856" cy="528.799" r="6.697" fill="url(#vibey-android-foreground-g66)"/>
+<circle cx="540.495" cy="515.834" r="6.697" fill="url(#vibey-android-foreground-g67)"/>
+<circle cx="494.012" cy="490.444" r="6.697" fill="url(#vibey-android-foreground-g68)"/>
+<circle cx="510.735" cy="539.353" r="6.697" fill="url(#vibey-android-foreground-g69)"/>
+<circle cx="530.905" cy="493.187" r="6.697" fill="url(#vibey-android-foreground-g70)"/>
+<circle cx="486.082" cy="513.072" r="6.697" fill="url(#vibey-android-foreground-g71)"/>
+<circle cx="531.26" cy="528.232" r="6.697" fill="url(#vibey-android-foreground-g72)"/>
+<circle cx="508.863" cy="487.79" r="6.697" fill="url(#vibey-android-foreground-g73)"/>
+<circle cx="498.42" cy="531.316" r="6.697" fill="url(#vibey-android-foreground-g74)"/>
+<circle cx="534.252" cy="507.108" r="6.697" fill="url(#vibey-android-foreground-g75)"/>
+<circle cx="493.032" cy="501.008" r="6.697" fill="url(#vibey-android-foreground-g76)"/>
+<circle cx="518.293" cy="532.064" r="6.697" fill="url(#vibey-android-foreground-g77)"/>
+<circle cx="520.516" cy="493.801" r="6.697" fill="url(#vibey-android-foreground-g78)"/>
+<circle cx="494.334" cy="519.292" r="6.697" fill="url(#vibey-android-foreground-g79)"/>
+<circle cx="528.981" cy="518.202" r="6.697" fill="url(#vibey-android-foreground-g80)"/>
+<circle cx="504.173" cy="496.93" r="6.697" fill="url(#vibey-android-foreground-g81)"/>
+<circle cx="507.896" cy="527.267" r="6.697" fill="url(#vibey-android-foreground-g82)"/>
+<circle cx="524.27" cy="504.195" r="6.697" fill="url(#vibey-android-foreground-g83)"/>
+<circle cx="499.047" cy="509.709" r="6.697" fill="url(#vibey-android-foreground-g84)"/>
+<circle cx="519.058" cy="521.206" r="6.697" fill="url(#vibey-android-foreground-g85)"/>
+<circle cx="512.857" cy="502.233" r="6.697" fill="url(#vibey-android-foreground-g86)"/>
+<circle cx="506.4" cy="517.13" r="6.697" fill="url(#vibey-android-foreground-g87)"/>
+<circle cx="516.385" cy="512" r="6.697" fill="url(#vibey-android-foreground-g88)"/>
+<circle cx="512" cy="601.91" r="5.1" fill="#f7f8ff"/>
+<circle cx="512" cy="422.09" r="5.1" fill="#f7f8ff"/>
+<circle cx="633.897" cy="562.491" r="5.1" fill="#f7f8ff"/>
+<circle cx="562.491" cy="633.897" r="5.1" fill="#f7f8ff"/>
+<circle cx="461.509" cy="633.897" r="5.1" fill="#f7f8ff"/>
+<circle cx="390.103" cy="562.491" r="5.1" fill="#f7f8ff"/>
+<circle cx="390.103" cy="461.509" r="5.1" fill="#f7f8ff"/>
+<circle cx="461.509" cy="390.103" r="5.1" fill="#f7f8ff"/>
+<circle cx="562.491" cy="390.103" r="5.1" fill="#f7f8ff"/>
+<circle cx="633.897" cy="461.509" r="5.1" fill="#f7f8ff"/>
+<circle cx="713.99" cy="512" r="5.1" fill="#f7f8ff"/>
+<circle cx="701.809" cy="581.085" r="5.1" fill="#f7f8ff"/>
+<circle cx="666.733" cy="641.837" r="5.1" fill="#f7f8ff"/>
+<circle cx="612.995" cy="686.928" r="5.1" fill="#f7f8ff"/>
+<circle cx="547.075" cy="710.921" r="5.1" fill="#f7f8ff"/>
+<circle cx="476.925" cy="710.921" r="5.1" fill="#f7f8ff"/>
+<circle cx="411.005" cy="686.928" r="5.1" fill="#f7f8ff"/>
+<circle cx="357.267" cy="641.837" r="5.1" fill="#f7f8ff"/>
+<circle cx="322.191" cy="581.085" r="5.1" fill="#f7f8ff"/>
+<circle cx="310.01" cy="512" r="5.1" fill="#f7f8ff"/>
+<circle cx="322.191" cy="442.915" r="5.1" fill="#f7f8ff"/>
+<circle cx="357.267" cy="382.163" r="5.1" fill="#f7f8ff"/>
+<circle cx="411.005" cy="337.072" r="5.1" fill="#f7f8ff"/>
+<circle cx="476.925" cy="313.079" r="5.1" fill="#f7f8ff"/>
+<circle cx="547.075" cy="313.079" r="5.1" fill="#f7f8ff"/>
+<circle cx="612.995" cy="337.072" r="5.1" fill="#f7f8ff"/>
+<circle cx="666.733" cy="382.163" r="5.1" fill="#f7f8ff"/>
+<circle cx="701.809" cy="442.915" r="5.1" fill="#f7f8ff"/>
+<circle cx="812.06" cy="512" r="5.1" fill="#f7f8ff"/>
+<circle cx="724.174" cy="724.174" r="5.1" fill="#f7f8ff"/>
+<circle cx="512" cy="812.06" r="5.1" fill="#f7f8ff"/>
+<circle cx="299.826" cy="724.174" r="5.1" fill="#f7f8ff"/>
+<circle cx="211.94" cy="512" r="5.1" fill="#f7f8ff"/>
+<circle cx="299.826" cy="299.826" r="5.1" fill="#f7f8ff"/>
+<circle cx="512" cy="211.94" r="5.1" fill="#f7f8ff"/>
+<circle cx="724.174" cy="299.826" r="5.1" fill="#f7f8ff"/>
 </svg>

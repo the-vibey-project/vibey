@@ -4,17 +4,222 @@
 <linearGradient id="vibey-icon-g0" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1c2542" stop-opacity="1"/><stop offset="1" stop-color="#080b14" stop-opacity="1"/></linearGradient>
 <radialGradient id="vibey-icon-g1" cx="286.72" cy="225.28" r="634.88" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.62"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.349"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.155"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.039"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
 <radialGradient id="vibey-icon-g2" cx="880.64" cy="921.6" r="512" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#57dcff" stop-opacity="0.34"/><stop offset="0.25" stop-color="#57dcff" stop-opacity="0.191"/><stop offset="0.5" stop-color="#57dcff" stop-opacity="0.085"/><stop offset="0.75" stop-color="#57dcff" stop-opacity="0.021"/><stop offset="1" stop-color="#57dcff" stop-opacity="0"/></radialGradient>
-<radialGradient id="vibey-icon-g3" cx="512" cy="718.4" r="130.2" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#75f0c2" stop-opacity="0.55"/><stop offset="0.25" stop-color="#75f0c2" stop-opacity="0.309"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="0.138"/><stop offset="0.75" stop-color="#75f0c2" stop-opacity="0.034"/><stop offset="1" stop-color="#75f0c2" stop-opacity="0"/></radialGradient>
-<linearGradient id="vibey-icon-g4" x1="264" y1="284.4" x2="760" y2="656.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
-<linearGradient id="vibey-icon-g5" x1="264" y1="284.4" x2="760" y2="656.4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<radialGradient id="vibey-icon-g3" cx="512" cy="512" r="240.16" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9d7bff" stop-opacity="0.7"/><stop offset="0.25" stop-color="#9d7bff" stop-opacity="0.394"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="0.175"/><stop offset="0.75" stop-color="#9d7bff" stop-opacity="0.044"/><stop offset="1" stop-color="#9d7bff" stop-opacity="0"/></radialGradient>
+<linearGradient id="vibey-icon-g4" x1="117" y1="117" x2="907" y2="907" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g5" x1="117" y1="117" x2="907" y2="907" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g6" x1="117" y1="117" x2="907" y2="907" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g7" x1="117" y1="117" x2="907" y2="907" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b39aff" stop-opacity="1"/><stop offset="1" stop-color="#57dcff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g8" x1="481.55" y1="431.783" x2="499.185" y2="449.418" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g9" x1="471.098" y1="570.039" x2="488.733" y2="587.674" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g10" x1="571.583" y1="475.726" x2="589.218" y2="493.361" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g11" x1="434.624" y1="477.384" x2="452.259" y2="495.019" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g12" x1="536.103" y1="568.109" x2="553.738" y2="585.744" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g13" x1="522.642" y1="433.513" x2="540.277" y2="451.148" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g14" x1="442.165" y1="541.166" x2="459.8" y2="558.801" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g15" x1="573.375" y1="516.306" x2="591.01" y2="533.941" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g16" x1="460.571" y1="446.465" x2="478.206" y2="464.1" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g17" x1="496.337" y1="573.319" x2="513.972" y2="590.954" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g18" x1="555.253" y1="456.407" x2="572.888" y2="474.042" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g19" x1="433.669" y1="502.504" x2="451.304" y2="520.139" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g20" x1="553.63" y1="550.31" x2="571.265" y2="567.945" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g21" x1="497.856" y1="434.838" x2="515.491" y2="452.473" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g22" x1="461.245" y1="556.791" x2="478.88" y2="574.426" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g23" x1="569.833" y1="492.062" x2="587.468" y2="509.697" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g24" x1="446.94" y1="466.63" x2="464.575" y2="484.265" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g25" x1="519.838" y1="567.644" x2="537.473" y2="585.279" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g26" x1="534.208" y1="444.843" x2="551.843" y2="462.478" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g27" x1="441.375" y1="525.073" x2="459.01" y2="542.708" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g28" x1="563.075" y1="528.592" x2="580.71" y2="546.227" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g29" x1="476.397" y1="444.458" x2="494.032" y2="462.093" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g30" x1="483.425" y1="564.084" x2="501.06" y2="581.719" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g31" x1="558.435" y1="471.879" x2="576.07" y2="489.514" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g32" x1="441.809" y1="489.061" x2="459.444" y2="506.696" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g33" x1="538.597" y1="554.615" x2="556.232" y2="572.25" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g34" x1="511.737" y1="441.867" x2="529.372" y2="459.502" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g35" x1="455.873" y1="542.272" x2="473.508" y2="559.907" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g36" x1="563.926" y1="506.288" x2="581.561" y2="523.923" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g37" x1="460.876" y1="460.253" x2="478.511" y2="477.888" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g38" x1="505.359" y1="562.86" x2="522.994" y2="580.495" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g39" x1="541.526" y1="458.135" x2="559.161" y2="475.77" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g40" x1="445.042" y1="510.428" x2="462.677" y2="528.063" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g41" x1="550.482" y1="536.782" x2="568.117" y2="554.417" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g42" x1="491.123" y1="447.021" x2="508.758" y2="464.656" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g43" x1="474.434" y1="552.237" x2="492.069" y2="569.872" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g44" x1="556.954" y1="486.604" x2="574.589" y2="504.239" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g45" x1="452.873" y1="479.34" x2="470.508" y2="496.975" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g46" x1="523.947" y1="554.19" x2="541.582" y2="571.825" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g47" x1="522.115" y1="452.116" x2="539.75" y2="469.751" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g48" x1="455.275" y1="527.768" x2="472.91" y2="545.403" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g49" x1="554.515" y1="517.251" x2="572.15" y2="534.886" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g50" x1="475.17" y1="458.668" x2="492.805" y2="476.303" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g51" x1="493.883" y1="554.301" x2="511.518" y2="571.936" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g52" x1="544.056" y1="472.161" x2="561.691" y2="489.796" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g53" x1="452.74" y1="498.507" x2="470.375" y2="516.143" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g54" x1="536.774" y1="540.213" x2="554.409" y2="557.848" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g55" x1="503.423" y1="453.858" x2="521.058" y2="471.493" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g56" x1="470.149" y1="538.891" x2="487.784" y2="556.526" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g57" x1="550.974" y1="499.223" x2="568.609" y2="516.858" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g58" x1="465.822" y1="474.248" x2="483.457" y2="491.883" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g59" x1="511.066" y1="549.054" x2="528.701" y2="566.689" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g60" x1="527.965" y1="464.64" x2="545.6" y2="482.275" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g61" x1="459.583" y1="514.675" x2="477.218" y2="532.31" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g62" x1="542.435" y1="523.813" x2="560.07" y2="541.448" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g63" x1="488.431" y1="462.169" x2="506.066" y2="479.804" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g64" x1="486.654" y1="542.678" x2="504.289" y2="560.313" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g65" x1="541.336" y1="485.555" x2="558.971" y2="503.19" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g66" x1="463.905" y1="490.652" x2="481.54" y2="508.287" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g67" x1="523.274" y1="538.245" x2="540.909" y2="555.88" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g68" x1="511.869" y1="464.569" x2="529.504" y2="482.204" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g69" x1="471.393" y1="525.301" x2="489.028" y2="542.936" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g70" x1="540.701" y1="508.231" x2="558.336" y2="525.866" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g71" x1="479.498" y1="474.801" x2="497.133" y2="492.436" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g72" x1="501.517" y1="539.197" x2="519.152" y2="556.832" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g73" x1="528.074" y1="478.412" x2="545.709" y2="496.047" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g74" x1="469.058" y1="504.594" x2="486.693" y2="522.229" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g75" x1="528.541" y1="524.555" x2="546.176" y2="542.19" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g76" x1="499.052" y1="471.306" x2="516.687" y2="488.941" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g77" x1="485.302" y1="528.615" x2="502.937" y2="546.25" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g78" x1="532.481" y1="496.741" x2="550.116" y2="514.376" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g79" x1="478.208" y1="488.709" x2="495.843" y2="506.344" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g80" x1="511.469" y1="529.6" x2="529.104" y2="547.235" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g81" x1="514.396" y1="479.221" x2="532.031" y2="496.856" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g82" x1="479.922" y1="512.784" x2="497.557" y2="530.419" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g83" x1="525.541" y1="511.348" x2="543.176" y2="528.983" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g84" x1="492.877" y1="483.34" x2="510.512" y2="500.975" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g85" x1="497.779" y1="523.284" x2="515.414" y2="540.919" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g86" x1="519.338" y1="492.906" x2="536.973" y2="510.541" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g87" x1="486.128" y1="500.166" x2="503.763" y2="517.801" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g88" x1="512.476" y1="515.304" x2="530.111" y2="532.939" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g89" x1="504.311" y1="490.323" x2="521.946" y2="507.958" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#d3c4ff" stop-opacity="1"/><stop offset="0.5" stop-color="#9d7bff" stop-opacity="1"/><stop offset="1" stop-color="#9d7bff" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g90" x1="495.809" y1="509.937" x2="513.444" y2="527.572" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
+<linearGradient id="vibey-icon-g91" x1="508.956" y1="503.182" x2="526.591" y2="520.818" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c1f8e4" stop-opacity="1"/><stop offset="0.5" stop-color="#75f0c2" stop-opacity="1"/><stop offset="1" stop-color="#75f0c2" stop-opacity="1"/></linearGradient>
 </defs>
 <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-g0)"/>
 <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-g1)"/>
 <rect x="0" y="0" width="1024" height="1024" rx="228" fill="url(#vibey-icon-g2)"/>
-<circle cx="512" cy="718.4" r="130.2" fill="url(#vibey-icon-g3)"/>
-<line x1="264" y1="284.4" x2="512" y2="718.4" stroke="url(#vibey-icon-g4)" stroke-width="72.85" stroke-linecap="round"/>
-<line x1="760" y1="284.4" x2="512" y2="718.4" stroke="url(#vibey-icon-g5)" stroke-width="72.85" stroke-linecap="round"/>
-<line x1="415.9" y1="284.4" x2="608.1" y2="284.4" stroke="#f7f8ff" stroke-width="59.737" stroke-linecap="round"/>
-<ellipse cx="512" cy="718.4" rx="133.3" ry="48.05" transform="rotate(-16 512 718.4)" fill="none" stroke="#57dcff" stroke-opacity="0.78" stroke-width="13.02"/>
-<circle cx="512" cy="718.4" r="48.05" fill="#75f0c2"/>
+<circle cx="512" cy="512" r="240.16" fill="url(#vibey-icon-g3)"/>
+<ellipse cx="512" cy="512" rx="118.382" ry="118.382" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-g4)" stroke-width="3.555"/>
+<ellipse cx="512" cy="512" rx="173.721" ry="173.721" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-g5)" stroke-width="3.555"/>
+<ellipse cx="512" cy="512" rx="265.954" ry="265.954" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-g6)" stroke-width="3.555"/>
+<ellipse cx="512" cy="512" rx="395.079" ry="395.079" transform="rotate(0 512 512)" fill="none" stroke="url(#vibey-icon-g7)" stroke-width="3.555"/>
+<circle cx="490.368" cy="440.601" r="8.818" fill="url(#vibey-icon-g8)"/>
+<circle cx="479.915" cy="578.856" r="8.818" fill="url(#vibey-icon-g9)"/>
+<circle cx="580.401" cy="484.543" r="8.818" fill="url(#vibey-icon-g10)"/>
+<circle cx="443.441" cy="486.202" r="8.818" fill="url(#vibey-icon-g11)"/>
+<circle cx="544.92" cy="576.927" r="8.818" fill="url(#vibey-icon-g12)"/>
+<circle cx="531.46" cy="442.33" r="8.818" fill="url(#vibey-icon-g13)"/>
+<circle cx="450.982" cy="549.983" r="8.818" fill="url(#vibey-icon-g14)"/>
+<circle cx="582.193" cy="525.124" r="8.818" fill="url(#vibey-icon-g15)"/>
+<circle cx="469.388" cy="455.283" r="8.818" fill="url(#vibey-icon-g16)"/>
+<circle cx="505.155" cy="582.136" r="8.818" fill="url(#vibey-icon-g17)"/>
+<circle cx="564.071" cy="465.225" r="8.818" fill="url(#vibey-icon-g18)"/>
+<circle cx="442.486" cy="511.322" r="8.818" fill="url(#vibey-icon-g19)"/>
+<circle cx="562.448" cy="559.128" r="8.818" fill="url(#vibey-icon-g20)"/>
+<circle cx="506.673" cy="443.656" r="8.818" fill="url(#vibey-icon-g21)"/>
+<circle cx="470.062" cy="565.609" r="8.818" fill="url(#vibey-icon-g22)"/>
+<circle cx="578.651" cy="500.88" r="8.818" fill="url(#vibey-icon-g23)"/>
+<circle cx="455.757" cy="475.447" r="8.818" fill="url(#vibey-icon-g24)"/>
+<circle cx="528.656" cy="576.461" r="8.818" fill="url(#vibey-icon-g25)"/>
+<circle cx="543.025" cy="453.661" r="8.818" fill="url(#vibey-icon-g26)"/>
+<circle cx="450.193" cy="533.891" r="8.818" fill="url(#vibey-icon-g27)"/>
+<circle cx="571.892" cy="537.409" r="8.818" fill="url(#vibey-icon-g28)"/>
+<circle cx="485.215" cy="453.275" r="8.818" fill="url(#vibey-icon-g29)"/>
+<circle cx="492.243" cy="572.902" r="8.818" fill="url(#vibey-icon-g30)"/>
+<circle cx="567.252" cy="480.696" r="8.818" fill="url(#vibey-icon-g31)"/>
+<circle cx="450.627" cy="497.878" r="8.818" fill="url(#vibey-icon-g32)"/>
+<circle cx="547.414" cy="563.432" r="8.818" fill="url(#vibey-icon-g33)"/>
+<circle cx="520.555" cy="450.685" r="8.818" fill="url(#vibey-icon-g34)"/>
+<circle cx="464.691" cy="551.089" r="8.818" fill="url(#vibey-icon-g35)"/>
+<circle cx="572.744" cy="515.106" r="8.818" fill="url(#vibey-icon-g36)"/>
+<circle cx="469.694" cy="469.07" r="8.818" fill="url(#vibey-icon-g37)"/>
+<circle cx="514.176" cy="571.678" r="8.818" fill="url(#vibey-icon-g38)"/>
+<circle cx="550.343" cy="466.953" r="8.818" fill="url(#vibey-icon-g39)"/>
+<circle cx="453.859" cy="519.246" r="8.818" fill="url(#vibey-icon-g40)"/>
+<circle cx="559.3" cy="545.599" r="8.818" fill="url(#vibey-icon-g41)"/>
+<circle cx="499.94" cy="455.839" r="8.818" fill="url(#vibey-icon-g42)"/>
+<circle cx="483.251" cy="561.055" r="8.818" fill="url(#vibey-icon-g43)"/>
+<circle cx="565.771" cy="495.422" r="8.818" fill="url(#vibey-icon-g44)"/>
+<circle cx="461.69" cy="488.157" r="8.818" fill="url(#vibey-icon-g45)"/>
+<circle cx="532.764" cy="563.007" r="8.818" fill="url(#vibey-icon-g46)"/>
+<circle cx="530.932" cy="460.933" r="8.818" fill="url(#vibey-icon-g47)"/>
+<circle cx="464.092" cy="536.585" r="8.818" fill="url(#vibey-icon-g48)"/>
+<circle cx="563.332" cy="526.068" r="8.818" fill="url(#vibey-icon-g49)"/>
+<circle cx="483.987" cy="467.485" r="8.818" fill="url(#vibey-icon-g50)"/>
+<circle cx="502.7" cy="563.119" r="8.818" fill="url(#vibey-icon-g51)"/>
+<circle cx="552.873" cy="480.979" r="8.818" fill="url(#vibey-icon-g52)"/>
+<circle cx="461.558" cy="507.325" r="8.818" fill="url(#vibey-icon-g53)"/>
+<circle cx="545.592" cy="549.03" r="8.818" fill="url(#vibey-icon-g54)"/>
+<circle cx="512.241" cy="462.675" r="8.818" fill="url(#vibey-icon-g55)"/>
+<circle cx="478.966" cy="547.708" r="8.818" fill="url(#vibey-icon-g56)"/>
+<circle cx="559.791" cy="508.041" r="8.818" fill="url(#vibey-icon-g57)"/>
+<circle cx="474.639" cy="483.066" r="8.818" fill="url(#vibey-icon-g58)"/>
+<circle cx="519.883" cy="557.872" r="8.818" fill="url(#vibey-icon-g59)"/>
+<circle cx="536.782" cy="473.458" r="8.818" fill="url(#vibey-icon-g60)"/>
+<circle cx="468.4" cy="523.493" r="8.818" fill="url(#vibey-icon-g61)"/>
+<circle cx="551.253" cy="532.63" r="8.818" fill="url(#vibey-icon-g62)"/>
+<circle cx="497.248" cy="470.987" r="8.818" fill="url(#vibey-icon-g63)"/>
+<circle cx="495.471" cy="551.495" r="8.818" fill="url(#vibey-icon-g64)"/>
+<circle cx="550.153" cy="494.372" r="8.818" fill="url(#vibey-icon-g65)"/>
+<circle cx="472.722" cy="499.469" r="8.818" fill="url(#vibey-icon-g66)"/>
+<circle cx="532.092" cy="547.063" r="8.818" fill="url(#vibey-icon-g67)"/>
+<circle cx="520.687" cy="473.387" r="8.818" fill="url(#vibey-icon-g68)"/>
+<circle cx="480.211" cy="534.118" r="8.818" fill="url(#vibey-icon-g69)"/>
+<circle cx="549.519" cy="517.048" r="8.818" fill="url(#vibey-icon-g70)"/>
+<circle cx="488.316" cy="483.618" r="8.818" fill="url(#vibey-icon-g71)"/>
+<circle cx="510.335" cy="548.014" r="8.818" fill="url(#vibey-icon-g72)"/>
+<circle cx="536.891" cy="487.23" r="8.818" fill="url(#vibey-icon-g73)"/>
+<circle cx="477.875" cy="513.411" r="8.818" fill="url(#vibey-icon-g74)"/>
+<circle cx="537.359" cy="533.372" r="8.818" fill="url(#vibey-icon-g75)"/>
+<circle cx="507.869" cy="480.123" r="8.818" fill="url(#vibey-icon-g76)"/>
+<circle cx="494.12" cy="537.433" r="8.818" fill="url(#vibey-icon-g77)"/>
+<circle cx="541.298" cy="505.559" r="8.818" fill="url(#vibey-icon-g78)"/>
+<circle cx="487.025" cy="497.527" r="8.818" fill="url(#vibey-icon-g79)"/>
+<circle cx="520.286" cy="538.418" r="8.818" fill="url(#vibey-icon-g80)"/>
+<circle cx="523.213" cy="488.038" r="8.818" fill="url(#vibey-icon-g81)"/>
+<circle cx="488.74" cy="521.602" r="8.818" fill="url(#vibey-icon-g82)"/>
+<circle cx="534.359" cy="520.165" r="8.818" fill="url(#vibey-icon-g83)"/>
+<circle cx="501.695" cy="492.158" r="8.818" fill="url(#vibey-icon-g84)"/>
+<circle cx="506.596" cy="532.101" r="8.818" fill="url(#vibey-icon-g85)"/>
+<circle cx="528.155" cy="501.723" r="8.818" fill="url(#vibey-icon-g86)"/>
+<circle cx="494.946" cy="508.983" r="8.818" fill="url(#vibey-icon-g87)"/>
+<circle cx="521.293" cy="524.122" r="8.818" fill="url(#vibey-icon-g88)"/>
+<circle cx="513.129" cy="499.14" r="8.818" fill="url(#vibey-icon-g89)"/>
+<circle cx="504.627" cy="518.754" r="8.818" fill="url(#vibey-icon-g90)"/>
+<circle cx="517.773" cy="512" r="8.818" fill="url(#vibey-icon-g91)"/>
+<circle cx="512" cy="630.381" r="6.715" fill="#f7f8ff"/>
+<circle cx="512" cy="393.618" r="6.715" fill="#f7f8ff"/>
+<circle cx="672.497" cy="578.48" r="6.715" fill="#f7f8ff"/>
+<circle cx="578.48" cy="672.497" r="6.715" fill="#f7f8ff"/>
+<circle cx="445.52" cy="672.497" r="6.715" fill="#f7f8ff"/>
+<circle cx="351.503" cy="578.48" r="6.715" fill="#f7f8ff"/>
+<circle cx="351.503" cy="445.52" r="6.715" fill="#f7f8ff"/>
+<circle cx="445.52" cy="351.503" r="6.715" fill="#f7f8ff"/>
+<circle cx="578.48" cy="351.503" r="6.715" fill="#f7f8ff"/>
+<circle cx="672.497" cy="445.52" r="6.715" fill="#f7f8ff"/>
+<circle cx="777.954" cy="512" r="6.715" fill="#f7f8ff"/>
+<circle cx="761.915" cy="602.961" r="6.715" fill="#f7f8ff"/>
+<circle cx="715.732" cy="682.952" r="6.715" fill="#f7f8ff"/>
+<circle cx="644.977" cy="742.322" r="6.715" fill="#f7f8ff"/>
+<circle cx="558.182" cy="773.913" r="6.715" fill="#f7f8ff"/>
+<circle cx="465.818" cy="773.913" r="6.715" fill="#f7f8ff"/>
+<circle cx="379.023" cy="742.322" r="6.715" fill="#f7f8ff"/>
+<circle cx="308.268" cy="682.952" r="6.715" fill="#f7f8ff"/>
+<circle cx="262.085" cy="602.961" r="6.715" fill="#f7f8ff"/>
+<circle cx="246.046" cy="512" r="6.715" fill="#f7f8ff"/>
+<circle cx="262.085" cy="421.039" r="6.715" fill="#f7f8ff"/>
+<circle cx="308.268" cy="341.048" r="6.715" fill="#f7f8ff"/>
+<circle cx="379.023" cy="281.678" r="6.715" fill="#f7f8ff"/>
+<circle cx="465.818" cy="250.087" r="6.715" fill="#f7f8ff"/>
+<circle cx="558.182" cy="250.087" r="6.715" fill="#f7f8ff"/>
+<circle cx="644.977" cy="281.678" r="6.715" fill="#f7f8ff"/>
+<circle cx="715.732" cy="341.048" r="6.715" fill="#f7f8ff"/>
+<circle cx="761.915" cy="421.039" r="6.715" fill="#f7f8ff"/>
+<circle cx="907.079" cy="512" r="6.715" fill="#f7f8ff"/>
+<circle cx="791.363" cy="791.363" r="6.715" fill="#f7f8ff"/>
+<circle cx="512" cy="907.079" r="6.715" fill="#f7f8ff"/>
+<circle cx="232.637" cy="791.363" r="6.715" fill="#f7f8ff"/>
+<circle cx="116.921" cy="512" r="6.715" fill="#f7f8ff"/>
+<circle cx="232.637" cy="232.637" r="6.715" fill="#f7f8ff"/>
+<circle cx="512" cy="116.921" r="6.715" fill="#f7f8ff"/>
+<circle cx="791.363" cy="232.637" r="6.715" fill="#f7f8ff"/>
 </svg>
