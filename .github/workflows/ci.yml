@@ -750,9 +750,39 @@ jobs:
           raise SystemExit("root automation drift: " + "; ".join(problems) if not ok else 0)
           PY
 
+  vibey-core:
+    # @vibey/core (packages/vibey-core, ADR-0067): the pure TypeScript every krypton client
+    # shares. It is built with no platform types at all, and held to 100% of lines, branches,
+    # functions and statements, as the extension's core was before it moved there.
+    name: "@vibey/core"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/vibey-core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install the npm workspace from its one lockfile
+        working-directory: .
+        run: npm ci
+      - name: No known high-severity advisory in any dependency
+        working-directory: .
+        run: npm audit --audit-level=high
+      - name: Build with no platform types, and type-check the tests
+        run: |
+          npm run build
+          npm run typecheck
+      - name: Unit tests, at 100% of lines, branches, functions and statements
+        run: npm run coverage
+
   vscode-extension:
     # The VS Code extension (clients/vscode, ADR-0059): its own Node toolchain and checks. It
-    # has no runtime dependency, and none of it enters the image. Not a required check yet: it
+    # has no runtime dependency, and none of it enters the image: @vibey/core travels inside
+    # the .vsix, copied into out/node_modules at compile (ADR-0067). Not a required check yet: it
     # becomes one once it has run green on develop (#290).
     name: VS Code extension (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -767,12 +797,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: clients/vscode/.node-version
+          node-version-file: .node-version
           cache: npm
-          cache-dependency-path: clients/vscode/package-lock.json
-      - name: Install from the lockfile
+          cache-dependency-path: package-lock.json
+      - name: Install the npm workspace from its one lockfile
+        working-directory: .
         run: npm ci
       - name: No known high-severity advisory in any dependency
+        working-directory: .
         run: npm audit --audit-level=high
       - name: Type-check the extension and its tests
         run: npm run typecheck
@@ -788,8 +820,10 @@ jobs:
       - name: Smoke test in a real VS Code
         if: runner.os != 'Linux'
         run: npm run smoke
-      - name: Package the .vsix
-        run: npx vsce package --no-dependencies --out vibey-${{ matrix.os }}.vsix
+      - name: Package the .vsix, and it carries @vibey/core
+        run: |
+          npx vsce package --no-dependencies --out vibey-${{ matrix.os }}.vsix
+          unzip -l vibey-${{ matrix.os }}.vsix | grep -q 'extension/out/node_modules/@vibey/core/dist/packages/vibey-core/src/index.js'
       - uses: actions/upload-artifact@v4
         with:
           name: vibey-vscode-${{ matrix.os }}

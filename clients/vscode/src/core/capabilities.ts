@@ -15,7 +15,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { EngineCapabilities } from './interfaces/catalogue-interface';
+import type { EngineCapabilities } from '@vibey/core';
 import type {
   CapabilitiesInterface,
   CapabilityMenu,
@@ -23,9 +23,9 @@ import type {
   SkillsContextInterface,
   SkillsMarketplaceInterface,
   SkillsPacket,
-} from './interfaces/capabilities-interface';
-import type { Environment, ProcessRunnerInterface } from './interfaces/process-runner-interface';
-import type { IdSourceInterface } from './interfaces/support-interface';
+} from '@vibey/core';
+import type { Environment, ProcessRunnerInterface } from '@vibey/core';
+import type { IdSourceInterface } from '@vibey/core';
 
 export class Capabilities implements CapabilitiesInterface {
   menu(

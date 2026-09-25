@@ -1,5 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** One run at a time on the model, across every process on this computer. */
+import type { AbortSignalLike } from './platform-interface';
 import type { Disposable } from './support-interface';
 
 export interface LockOwner {
@@ -23,7 +24,7 @@ export interface ModelSlotLockInterface {
     purpose: string,
     onWait: (holder: LockOwner | undefined) => void,
     pollMs: number,
-    signal?: AbortSignal,
+    signal?: AbortSignalLike,
   ): Promise<Disposable>;
 }
 

@@ -17,7 +17,7 @@ import type {
   EnvironmentAllowListInterface,
   ForbiddenEnvironmentInterface,
   SourceEnvironment,
-} from './interfaces/environment-interface';
+} from '@vibey/core';
 
 const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 /** A value that is a PostgreSQL address, whatever variable carries it. */

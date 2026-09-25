@@ -15,12 +15,12 @@ import type {
   RawSettings,
   ResolvedSettings,
   SettingsResolverInterface,
-} from './interfaces/settings-interface';
-import { Efforts } from './catalogue';
-import type { Effort, EffortSetting, LoopName } from './interfaces/catalogue-interface';
-import type { Environ, PlatformStorageInterface } from './interfaces/storage-interface';
-import { LocalRunners } from './local-runner';
-import { OllamaEndpoint } from './ollama';
+} from '@vibey/core';
+import { Efforts } from '@vibey/core';
+import type { Effort, EffortSetting, LoopName } from '@vibey/core';
+import type { Environ, PlatformStorageInterface } from '@vibey/core';
+import { LocalRunners } from '@vibey/core';
+import { OllamaEndpoint } from '@vibey/core';
 import { StormHome } from './storage';
 
 export class Defaults {

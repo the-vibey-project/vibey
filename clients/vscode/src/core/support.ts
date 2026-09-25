@@ -9,7 +9,7 @@ import type {
   HtmlTextInterface,
   IdSourceInterface,
   TaskNamingInterface,
-} from './interfaces/support-interface';
+} from '@vibey/core';
 
 export class Emitter<T> implements EmitterInterface<T> {
   private readonly listeners = new Set<(value: T) => void>();

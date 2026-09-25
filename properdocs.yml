@@ -125,4 +125,5 @@ nav:
           - "0064 — gptossloop is the sovereign engine, and qwenloop is its opt-in Qwen twin": architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md
           - "0065 — vibey and krypton": architecture/decisions/0065-vibey-and-krypton.md
           - "0066 — One design system for every surface": architecture/decisions/0066-one-design-system-for-every-surface.md
+          - "0067 — One TypeScript core for every krypton client": architecture/decisions/0067-one-typescript-core-for-every-krypton-client.md
   - Research paper: paper.md

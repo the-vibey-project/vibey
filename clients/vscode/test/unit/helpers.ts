@@ -3,15 +3,15 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import type { HttpClientInterface, HttpResponse } from '../../src/core/interfaces/http-client-interface';
+import type { HttpClientInterface, HttpResponse } from '@vibey/core';
 import type {
   ChildHandle,
   CompletedProcess,
   ProcessExit,
   ProcessRunnerInterface,
   RunOptions,
-} from '../../src/core/interfaces/process-runner-interface';
-import type { ClockInterface, Disposable, IdSourceInterface } from '../../src/core/interfaces/support-interface';
+} from '@vibey/core';
+import type { ClockInterface, Disposable, IdSourceInterface } from '@vibey/core';
 
 /** A fresh directory for one test, resolved through symlinks so paths compare equal. */
 export function scratch(prefix = 'vibey-vscode-'): string {
@@ -215,5 +215,5 @@ export async function settle(times = 5): Promise<void> {
 }
 
 export function fixture(name: string): string {
-  return fs.readFileSync(path.join(__dirname, '..', 'fixtures', name), 'utf8');
+  return fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'packages', 'vibey-core', 'test', 'fixtures', name), 'utf8');
 }

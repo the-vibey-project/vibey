@@ -13,10 +13,10 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { JsonlTailInterface } from './interfaces/jsonl-interface';
-import type { Lane, LaneEngine, LaneTrackerInterface } from './interfaces/lanes-interface';
-import type { RunItem } from './interfaces/run-events-interface';
-import { RunTranscript } from './run-events';
+import type { JsonlTailInterface } from '@vibey/core';
+import type { Lane, LaneEngine, LaneTrackerInterface } from '@vibey/core';
+import type { RunItem } from '@vibey/core';
+import { RunTranscript } from '@vibey/core';
 
 interface Followed {
   readonly engine: LaneEngine;

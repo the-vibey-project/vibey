@@ -9,7 +9,7 @@ import type { BatchSummary } from './interfaces/batch-interface';
 import type { ArgumentParserInterface, ParsedArguments, PresenterInterface } from './interfaces/cli-interface';
 import type { RunItem, RunPatch } from './interfaces/run-events-interface';
 import type { RunOutcome, RunRecord } from './interfaces/run-interface';
-import { VolatileStorageError } from './storage';
+import { VolatileStorageError } from './volatile-storage-error';
 
 export class UsageError extends Error {
   static readonly EXIT_CODE = 2;

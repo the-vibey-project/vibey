@@ -19,8 +19,8 @@ import type {
   QwenloopRunArguments,
   QwenloopRunConfigInterface,
   RunConfigValues,
-} from './interfaces/qwenloop-interface';
-import { LocalRunners } from './local-runner';
+} from '@vibey/core';
+import { LocalRunners } from '@vibey/core';
 
 export class QwenloopCommand implements QwenloopCommandInterface {
   /** The line a run prints when it finished the task, whichever name runs it. */

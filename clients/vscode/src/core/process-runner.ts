@@ -13,7 +13,7 @@ import type {
   ProcessExit,
   ProcessRunnerInterface,
   RunOptions,
-} from './interfaces/process-runner-interface';
+} from '@vibey/core';
 
 export class NodeProcessRunner implements ProcessRunnerInterface {
   run(command: string, args: readonly string[], options: RunOptions = {}): Promise<CompletedProcess> {

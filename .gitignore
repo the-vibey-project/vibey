@@ -32,3 +32,9 @@ src/vibey_tools/*/uv.lock
 # .claude/settings.json keeps its cache inside the sandbox-writable tree, which means
 # every worktree grows a .cache/ that is tooling state, never repository content.
 .cache/
+
+# The npm workspace (root package.json, ADR-0067): its install tree and each package's build.
+/node_modules/
+packages/*/node_modules/
+packages/*/dist/
+packages/*/coverage/

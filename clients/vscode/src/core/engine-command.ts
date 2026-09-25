@@ -5,9 +5,9 @@
  * a placeholder this code does not know is refused rather than guessed at. Declared by
  * `interfaces/engine-command-interface.ts`.
  */
-import type { CatalogueEngine } from './interfaces/catalogue-interface';
-import type { EngineCommandInterface, RunArguments } from './interfaces/engine-command-interface';
-import type { Invocation } from './interfaces/qwenloop-interface';
+import type { CatalogueEngine } from '@vibey/core';
+import type { EngineCommandInterface, RunArguments } from '@vibey/core';
+import type { Invocation } from '@vibey/core';
 
 export class EngineCommand implements EngineCommandInterface {
   constructor(

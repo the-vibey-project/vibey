@@ -280,13 +280,13 @@ jobs:
       - uses: actions/setup-node@v4
         if: env.OVSX_PAT != ''
         with:
-          node-version-file: clients/vscode/.node-version
+          node-version-file: .node-version
           cache: npm
-          cache-dependency-path: clients/vscode/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: Build and package
         if: env.OVSX_PAT != ''
         run: |
-          npm ci
+          npm ci --prefix ../..
           npm run compile
           npx vsce package --no-dependencies --out vibey.vsix
       - name: Publish, once per version

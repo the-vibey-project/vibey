@@ -34,3 +34,5 @@ clients/vscode/out
 clients/vscode/.vscode-test
 clients/vscode/.test-scratch
 clients/vscode/*.vsix
+packages/*/dist
+packages/*/coverage

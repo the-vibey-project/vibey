@@ -1,10 +1,10 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** The extension's state for one window: the core, the tasks it started, and the next task's extras. */
 import type * as vscode from 'vscode';
-import type { CapabilityMenu } from '../../core/interfaces/capabilities-interface';
-import type { Attachment, RunRecord, TaskRunInterface } from '../../core/interfaces/run-interface';
-import type { Lane } from '../../core/interfaces/lanes-interface';
-import type { RunItem } from '../../core/interfaces/run-events-interface';
+import type { CapabilityMenu } from '@vibey/core';
+import type { Attachment, RunRecord, TaskRunInterface } from '@vibey/core';
+import type { Lane } from '@vibey/core';
+import type { RunItem } from '@vibey/core';
 
 /** What the next task takes with it besides its words. */
 export interface NextTask {

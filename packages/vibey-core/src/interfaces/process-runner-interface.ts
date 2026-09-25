@@ -1,6 +1,8 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** How the extension runs other programs: to completion, or as a child it watches. */
 
+import type { SignalName } from './platform-interface';
+
 export type Environment = Readonly<Record<string, string>>;
 
 export interface RunOptions {
@@ -34,7 +36,7 @@ export interface ChildHandle {
   onStderr(listener: (text: string) => void): void;
   /** Resolves once, when the child exits or fails to start. */
   readonly exited: Promise<ProcessExit>;
-  kill(signal?: NodeJS.Signals): boolean;
+  kill(signal?: SignalName): boolean;
 }
 
 export interface ProcessRunnerInterface {

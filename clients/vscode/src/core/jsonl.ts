@@ -17,7 +17,10 @@ import type {
   JsonlJournalInterface,
   JsonlTailInterface,
   TailChunk,
-} from './interfaces/jsonl-interface';
+} from '@vibey/core';
+import { JsonlParse } from '@vibey/core';
+
+export { JsonlParse };
 
 const NEWLINE = 0x0a;
 
@@ -61,25 +64,6 @@ export class JsonlTail implements JsonlTailInterface {
     } finally {
       fs.closeSync(descriptor);
     }
-  }
-}
-
-/** Parsing shared by the tail and the journal. */
-export class JsonlParse {
-  static lines(text: string): { records: unknown[]; malformed: number } {
-    const records: unknown[] = [];
-    let malformed = 0;
-    for (const line of text.split('\n')) {
-      if (!line.trim()) {
-        continue;
-      }
-      try {
-        records.push(JSON.parse(line));
-      } catch {
-        malformed += 1;
-      }
-    }
-    return { records, malformed };
   }
 }
 

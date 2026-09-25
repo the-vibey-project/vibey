@@ -1,6 +1,8 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** The only network the extension uses: the local Ollama server's HTTP API. */
 
+import type { AbortSignalLike } from './platform-interface';
+
 export interface HttpResponse {
   readonly status: number;
   readonly body: string;
@@ -18,6 +20,6 @@ export interface HttpClientInterface {
     url: string,
     body: unknown,
     onLine: (line: string) => void,
-    signal?: AbortSignal,
+    signal?: AbortSignalLike,
   ): Promise<number>;
 }
