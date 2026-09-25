@@ -67,6 +67,7 @@ export until the policy can withhold it (see [Widening or narrowing](#widening-o
     `FileEdited` (diffs);
   - `BudgetSpent` (your spend) and `BudgetCapChanged` (the caps you set with
     `vibey budget`, and the account that set them);
+  - `GateAnswered` (what you answered a gate with, and the account that answered);
   - `CapacityRejected`, `SavePointCreated` and the handoff kinds;
   - the queue's `JobPriorityBumped`, `JobPriorityUnbumped`, `JobPriorityRefused`
     and `QueueReaped`.

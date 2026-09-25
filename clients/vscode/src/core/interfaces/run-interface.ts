@@ -8,6 +8,7 @@ import type { ChangedFile, GitClientInterface } from './git-interface';
 import type { JsonlTailInterface } from './jsonl-interface';
 import type { ModelSlotLockInterface } from './model-lock-interface';
 import type { ProcessRunnerInterface } from './process-runner-interface';
+import type { LocalRunnersInterface, RunnerIdentity } from './local-runner-interface';
 import type { QwenloopRunConfigInterface } from './qwenloop-interface';
 import type { RunFailure, RunItem, RunPatch } from './run-events-interface';
 import type { CatalogueEngine } from './catalogue-interface';
@@ -172,8 +173,10 @@ export interface RunServices {
   readonly git: GitClientInterface;
   readonly processes: ProcessRunnerInterface;
   readonly runConfig: QwenloopRunConfigInterface;
-  /** The person's own qwenloop config file, when they have one. */
-  readonly userConfig: () => { readonly path: string; readonly text: string } | undefined;
+  /** The family's local runner under each name: which engines get its settings bound. */
+  readonly runners: LocalRunnersInterface;
+  /** The person's own config file for a local runner (its `<PREFIX>_CONFIG`, else its platform default), when they have one. */
+  readonly userConfig: (runner: RunnerIdentity) => { readonly path: string; readonly text: string } | undefined;
   readonly gate: DurabilityGateInterface;
   readonly tail: JsonlTailInterface;
   /** The cross-process slot for an engine: all local models share one; each paid engine has its own. */

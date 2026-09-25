@@ -2,18 +2,25 @@
 
 Sub-doctrine 8.a makes the sovereign path the preferred way to run vibey, not the
 fallback. This guide is the operator recipe for doing that on one machine with
-[Ollama](https://ollama.com): the server, the claudeloop profile, the two switches,
+[Ollama](https://ollama.com): the server, the claudeloop profile, the switches,
 and — just as important — what a local model can and cannot carry today.
 
-With a local engine switched on, vibey:
+There are three local engines. `gptossloop` — the local runner on GPT-OSS 20B, the
+sovereign default — is on without any switch. `qwenloop` is the same runner on a
+Qwen model (`qwen3:14b`), and `claudeloop-local` is the claudeloop binary on a local
+backend profile; both are opt-in
+([ADR-0064](../architecture/decisions/0064-gptossloop-is-the-sovereign-engine.md)).
+With its local engines on, vibey:
 
 - **prefers local engines first for BUILD.** Selection runs smooth weighted
-  round-robin within the LOCAL tier (`qwenloop`, `claudeloop-local`) and falls back
-  to the paid engines only when no local engine is eligible
+  round-robin within the LOCAL tier (`gptossloop`, plus `qwenloop` and
+  `claudeloop-local` when switched on) and falls back to the paid engines only when
+  no local engine is eligible
   ([ADR-0038](../architecture/decisions/0038-local-engines-are-preferred-first.md));
 - **runs DESIGN and DECOMPOSE on the local model** when no `--provider` is given
-  (`QwenloopDesignProvider`, `QwenloopWorkPlanProducer`);
-- **costs nothing per token**: both local engines are priced 0/0, and claudeloop
+  (`GptossloopDesignProvider`, `GptossloopWorkPlanProducer`, recorded in the ledger
+  as `gptossloop`);
+- **costs nothing per token**: every local engine is priced 0/0, and claudeloop
   records every local turn at $0.
 
 ## 1. The Ollama server
@@ -46,10 +53,10 @@ ollama pull your-model:tag
 
 ```bash
 export VIBEY_OLLAMA_URL=http://127.0.0.1:11434
-export VIBEY_OLLAMA_MODEL=your-model:tag     # or --ollama-model on work/worker
+export VIBEY_OLLAMA_MODEL=your-model:tag     # or --ollama-model on work/worker; default gpt-oss:20b
 ```
 
-For the Qwen storm profile used while developing this repository, see the
+For the qwenloop storm profile used while developing this repository, see the
 copyable [qwenloop-local.toml](../examples/qwenloop-local.toml) and
 [qwenloop-storm.env.example](../examples/qwenloop-storm.env.example) examples.
 The checked-in storm profile uses `qwen3:14b`, a 32K context window, a 40-turn local budget,
@@ -59,10 +66,16 @@ use macOS's `Ping` sound; `--desktop-notifications` is explicit in the example
 commands even though it is the default.
 
 - The DESIGN and DECOMPOSE providers talk to `<VIBEY_OLLAMA_URL>/api/chat`.
-- qwenloop's process gets `QWENLOOP_BASE_URL=<VIBEY_OLLAMA_URL>/v1` and
-  `QWENLOOP_MODEL=<the model>`, so it attaches to this server instead of starting its
-  own — each only when you have not set it yourself. Without `VIBEY_OLLAMA_URL`,
-  qwenloop keeps its own backend selection.
+- gptossloop's process gets `GPTOSSLOOP_BASE_URL=<VIBEY_OLLAMA_URL>/v1` and
+  `GPTOSSLOOP_MODEL=<the model>` (`--ollama-model`, else `VIBEY_OLLAMA_MODEL`, else
+  `gpt-oss:20b`), so it attaches to this server and runs the providers' model.
+- qwenloop's process gets `QWENLOOP_BASE_URL=<VIBEY_OLLAMA_URL>/v1` only — never a
+  model: it asks for `qwen3:14b` unless `QWENLOOP_MODEL` or its own config names
+  another, so pull that model too.
+- Each variable is set only when you have not set it yourself. Without
+  `VIBEY_OLLAMA_URL`, each runner keeps its own backend selection. gptossloop reads
+  only `GPTOSSLOOP_*` and qwenloop only `QWENLOOP_*`, so naming a model for one never
+  changes the other's.
 - claudeloop-local reads its endpoint from its **profile** (next step), so keep the
   profile's `base_url` equal to `VIBEY_OLLAMA_URL`.
 
@@ -100,12 +113,19 @@ call. A model that fails it cannot do agent work under Claude Code at all.
 ## 4. Switch the local engines on
 
 Each local engine has its own switch. The environment variable wins whenever it is
-set; otherwise `[features]` in the project's config decides.
+set; otherwise `[features]` in the project's config decides; otherwise the engine's
+default applies.
 
-| Engine | Environment | `vibey.toml` |
-|---|---|---|
-| `qwenloop` | `VIBEY_FEATURE_QWENLOOP=1` | `[features] qwenloop = true` |
-| `claudeloop-local` | `VIBEY_FEATURE_CLAUDELOOP_LOCAL=1` | `[features] claudeloop_local = true` |
+| Engine | Default | Environment | `vibey.toml` |
+|---|---|---|---|
+| `gptossloop` | on | `VIBEY_FEATURE_GPTOSSLOOP=0` switches it off | `[features] gptossloop = false` |
+| `qwenloop` | off | `VIBEY_FEATURE_QWENLOOP=1` | `[features] qwenloop = true` |
+| `claudeloop-local` | off | `VIBEY_FEATURE_CLAUDELOOP_LOCAL=1` | `[features] claudeloop_local = true` |
+
+Before ADR-0064 the qwenloop switch turned on the engine that ran `gpt-oss:20b`; that
+engine is now `gptossloop`, on by default. With the qwenloop switch on, `vibey
+worker` and `vibey doctor` print a `note:` saying so — drop the switch unless you
+want Qwen as well.
 
 claudeloop-local's own settings:
 
@@ -126,7 +146,8 @@ alike.
 ```bash
 vibey doctor                                   # lists every switched-on local engine
 vibey doctor --conformance --record --engine claudeloop-local
-vibey doctor --conformance --record --engine qwenloop
+vibey doctor --conformance --record --engine gptossloop
+vibey doctor --conformance --record --engine qwenloop   # when switched on
 ```
 
 `vibey doctor` runs `claudeloop doctor --profile <name>` for claudeloop-local, so the
@@ -143,12 +164,12 @@ claim it cannot prove fails conformance and makes the engine ineligible.
 
 ```bash
 vibey worker                                   # sovereign DESIGN/DECOMPOSE, local-first BUILD
-vibey worker --engines qwenloop,claudeloop-local   # never fall back to a paid engine
+vibey worker --engines gptossloop,claudeloop-local   # never fall back to a paid engine
 ```
 
 - An explicit `--provider` always wins; `claudeloop` (paid) is never a default.
-- Verification still rotates: qwenloop's work is reviewed by claudeloop-local and the
-  other way round. With one local engine in the pool, the review goes to a paid
+- Verification still rotates: gptossloop's work is reviewed by claudeloop-local (or
+  qwenloop) and the other way round. With one local engine in the pool, the review goes to a paid
   engine if one is configured, or the engine reviews its own diff and the ledger says
   so ([ADR-0035](../architecture/decisions/0035-independence-is-the-default-not-an-absolute.md)).
 - A run whose backend cannot serve it — the server down, a model not pulled or out of

@@ -7,8 +7,10 @@
 > `src/vibey_tools/{gh,skills,bootstrap}`, as one uv workspace (ADR-0021); the
 > sibling GitHub repositories no longer exist, so the `~/git/<repo>` checkouts,
 > `git fetch origin` steps and per-repo PR flow below point at nothing. A fifth
-> runner, `qwenloop`, is an opt-in engine (ADR-0015) and the sovereign DESIGN
-> provider (ADR-0027); this runbook does not cover it.
+> runner, `qwenloop`, was an opt-in engine (ADR-0015) and the sovereign DESIGN
+> provider (ADR-0027); since ADR-0064 it ships as two engines, `gptossloop` (the
+> sovereign default on GPT-OSS 20B, and the sovereign DESIGN provider) and
+> `qwenloop` (opt-in, on Qwen). This runbook does not cover either.
 >
 > **Also superseded, 2026-09-18:** every "publishable to TestPyPI and then PyPI"
 > and per-repo publish-order step below assumes five distributions. There is one:

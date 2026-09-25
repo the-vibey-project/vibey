@@ -430,7 +430,7 @@ export class CommandActions implements CommandActionsInterface {
     } else {
       const picked = await vscode.window.showQuickPick(
         [
-          { label: 'sovereignloop', description: 'default', detail: 'Everything runs on this computer: qwenloop on your local model.', loop: 'sovereignloop' as const },
+          { label: 'sovereignloop', description: 'default', detail: 'Everything runs on this computer: gptossloop on your local model.', loop: 'sovereignloop' as const },
           { label: 'paidloop', description: 'declared only', detail: "Claude and other vendors' engines; they bill your own accounts, within your budgets.", loop: 'paidloop' as const },
         ],
         { title: 'Choose the loop' },
@@ -524,7 +524,7 @@ export class CommandActions implements CommandActionsInterface {
     for (const loop of catalogue.loops) {
       output.appendLine(`${loop.loop} (${loop.tier}${loop.default ? ', default' : ''}${loop.declared_only ? ', declared only' : ''})`);
       for (const engine of loop.engines) {
-        const state = engine.repealed ? ' (repealed by 8.b: never runs)' : engine.enabled ? '' : ` (off${engine.switch === null ? '' : `: ${engine.switch}`})`;
+        const state = engine.repealed ? ' (repealed by 8.b: never runs)' : engine.enabled ? '' : ` (off${engine.switch === null ? '' : engine.on_by_default ? `: on by default, switched off by ${engine.switch}` : `: ${engine.switch}`})`;
         output.appendLine(`  ${engine.enabled && !engine.repealed ? '•' : '○'} ${engine.engine_id}${state}  ${engine.efforts.map((entry) => `${entry.effort}→${entry.achieved}${entry.model === null ? '' : ` ${entry.model}`}`).join(', ')}`);
       }
     }

@@ -9,7 +9,8 @@
   "deployment_decision": null,
   "queue_depth": {"ready": 2, "leased": 1, "succeeded": 7},
   "circuits": [
-    {"engine_id": "qwenloop", "installed": true, "version": "0.2.0", "conformance_ok": true, "circuit": "closed", "capacity_state": null, "consecutive_fail": 0, "cost_usd_cycle": 0.0, "selected_count": 5}
+    {"engine_id": "gptossloop", "installed": true, "version": "0.3.0", "conformance_ok": true, "circuit": "closed", "capacity_state": null, "consecutive_fail": 0, "cost_usd_cycle": 0.0, "selected_count": 5},
+    {"engine_id": "qwenloop", "installed": true, "version": "0.3.0", "conformance_ok": true, "circuit": "closed", "capacity_state": null, "consecutive_fail": 0, "cost_usd_cycle": 0.0, "selected_count": 0}
   ],
   "active_worktrees": ["/Users/me/git/greeter/.vibey/worktrees/1"]
 }

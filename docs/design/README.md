@@ -4,7 +4,7 @@
 Every colour, face, size, space, radius, shadow, curve and sound cue that a vibey surface
 uses comes from one place: `design/tokens/`. The docs sites, the paper, the VS Code
 extension and every krypton app read generated forms of those tokens and add no colour of
-their own. The decision is [ADR-0062](../architecture/decisions/0062-one-design-system-for-every-surface.md).
+their own. The decision is [ADR-0065](../architecture/decisions/0065-one-design-system-for-every-surface.md).
 
 ## Two names, one atom
 

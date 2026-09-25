@@ -883,7 +883,7 @@ jobs:
             *) echo "::error::codex --version printed '$out'; the Dockerfile pins $want"; exit 1 ;;
           esac
 
-      # One distribution, eleven console scripts (ADR-0037). That is the new product
+      # One distribution, twelve console scripts (ADR-0037, ADR-0064). That is the new product
       # contract, and it is the one the Dockerfile's COPY list can break silently: a
       # package root that never reaches the build context does not fail the build, it
       # just is not there. tests/meta/test_shipped_trees_are_reachable.py catches the
@@ -893,7 +893,7 @@ jobs:
           docker run --rm --entrypoint sh vibey:ci -c '
             status=0
             for tool in vibey vibey-gh vibey-skills vibe-skills vibey-bootstrap \
-                        azbootstrap claudeloop codexloop cursorloop agyloop qwenloop; do
+                        azbootstrap claudeloop codexloop cursorloop agyloop gptossloop qwenloop; do
               if command -v "$tool" >/dev/null 2>&1; then
                 echo "ok      $tool"
               else
@@ -1043,9 +1043,12 @@ jobs:
           kubectl logs -n vibey deployment/vibey-vibey-worker -c migrate > /tmp/migrate.log 2>&1 || true
           cat /tmp/migrate.log
           grep -q "ledger guard in force: vibey_app" /tmp/migrate.log
+          # Local connections authenticate with scram-sha-256 too (sub-doctrine 10.j,
+          # ADR-0061), so psql inside the pod needs a password. The smoke install uses the
+          # chart's dev defaults, where each role's password is its own name.
           as() {
             kubectl exec -n vibey statefulset/vibey-vibey-postgres -- \
-              psql -U "$1" -d vibey -v ON_ERROR_STOP=1 -c "$2" 2>&1 || true
+              env PGPASSWORD="$1" psql -U "$1" -d vibey -v ON_ERROR_STOP=1 -c "$2" 2>&1 || true
           }
           test "$(as vibey 'SELECT count(*) > 0 FROM event' | grep -c ' t$')" = "1"
           for sql in "UPDATE event SET digest = 'forged'" "DELETE FROM event" "TRUNCATE event"; do

@@ -1,6 +1,6 @@
-# 0062 — One design system for every surface
+# 0065 — One design system for every surface
 
-**Status:** proposed · **Date:** 2026-09-25 · **Cites:** sub-doctrines 12.c, 12.e, 10.f, 9.b; the Beauty Bar (Lane A, `docs/design/beauty-bar.md`, pending) · **Related:** ADR-0016, ADR-0017, ADR-0018, ADR-0023, ADR-0059 · **Evidence:** `develop` at `0a2f856e`, read 2026-09-25
+**Status:** proposed · **Date:** 2026-09-25 · **Cites:** sub-doctrines 12.k (the Beauty Law, proposed), 12.c, 12.e, 10.f, 9.b; the Beauty Bar (`docs/design/beauty-bar.md`) · **Related:** ADR-0062, ADR-0016, ADR-0017, ADR-0018, ADR-0023, ADR-0059 · **Evidence:** `develop` at `0a2f856e`, read 2026-09-25
 
 **Owes:** the advertised ADR count in `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `README.md`
 and `docs/index.md`, and a nav entry in `properdocs.yml`, all done in the change that
@@ -106,6 +106,6 @@ tier-2 roles only.
   one by hand fails the meta test. The source is `design/web/`.
 - Every client lane (F, G, H, I, J) consumes `design/dist/` and adds no colour of its own.
 - **Left open:** the sound files (Lane J, `design/sounds/`); the `.icns` binary itself
-  (`iconutil -c icns design/dist/icons/macos/vibey.iconset` on macOS, at packaging time); the
-  Beauty Bar document this cites (Lane A); and wiring the favicon and social image into
+  (`iconutil -c icns design/dist/icons/macos/vibey.iconset` on macOS, at packaging time); and
+  wiring the favicon and social image into
   `properdocs.yml`'s theme and meta tags (`seo-docs-structured-data`).

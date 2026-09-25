@@ -25,7 +25,7 @@ export interface TaskFile {
   /** sha256 of the file's bytes: with the name, the task's identity in the journal. */
   readonly sha256: string;
   readonly metadata: TaskMetadata;
-  /** What qwenloop is given: the file without its front matter. */
+  /** What the engine is given: the file without its front matter. */
   readonly plan: string;
   /** The front matter's title, else the plan's first line. */
   readonly title: string;

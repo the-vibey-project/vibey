@@ -13,8 +13,13 @@ from qwenloop.domain.model import Backend
 #: own default listen address, with the `/v1` prefix its OpenAI-compatible API lives under.
 DEFAULT_ENDPOINT_BASE_URL = "http://127.0.0.1:11434/v1"
 #: This era's default free model (sub-doctrine 8.d): GPT-OSS 20B, under the name Ollama
-#: gives it. The pinned llama.cpp profiles are a separate choice and keep their own model.
+#: gives it -- the model `gptossloop` asks an endpoint for. The pinned llama.cpp profiles
+#: are a separate choice and keep their own model.
 DEFAULT_ENDPOINT_MODEL = "gpt-oss:20b"
+#: The Qwen model `qwenloop` asks an endpoint for (ADR-0064): Qwen3 14B, under the name
+#: Ollama gives it. Qwen3 rather than Qwen2.5-Coder because this runner drives the model
+#: through native tool calls, and Qwen2.5-Coder 14B on Ollama writes its calls out as text.
+DEFAULT_QWEN_ENDPOINT_MODEL = "qwen3:14b"
 #: How many consecutive empty model replies (no tool call, no text) a run retries before it
 #: fails. One empty reply is a bad turn, not a dead run: 27 of 60 failed QwenStorm runs
 #: ended on the first one. Each retry is a new model call and spends a turn of `max_turns`,
@@ -77,6 +82,54 @@ _TOOL_LIMIT_KEYS = frozenset(item.name for item in fields(ToolLimits))
 
 
 @dataclass(frozen=True, slots=True)
+class RunnerIdentity:
+    """Which engine this process runs as (ADR-0064).
+
+    One runner package carries two engines that differ only in the model they ask for:
+    `gptossloop`, the sovereign default on GPT-OSS, and `qwenloop`, on a Qwen model. Each
+    reads its own settings -- its own config file and its own environment variables -- so
+    naming a model for one never changes the model the other runs.
+    """
+
+    #: The command and the engine id vibey knows it by.
+    name: str
+    #: The prefix of every environment variable it reads: `<PREFIX>_CONFIG`, and so on.
+    env_prefix: str
+    #: The model an OpenAI-compatible endpoint is asked for when nothing names one.
+    default_model: str
+
+    @property
+    def env_config(self) -> str:
+        """Names a config file. Unset: `<user config dir>/<name>/config.toml`."""
+        return f"{self.env_prefix}_CONFIG"
+
+    @property
+    def env_base_url(self) -> str:
+        """The OpenAI-compatible base URL to attach to (`base_url`), `/v1` included."""
+        return f"{self.env_prefix}_BASE_URL"
+
+    @property
+    def env_model(self) -> str:
+        """The model name the endpoint serves (`model`)."""
+        return f"{self.env_prefix}_MODEL"
+
+    @property
+    def env_api_key(self) -> str:
+        """The endpoint's API key: environment only, never a file or a flag."""
+        return f"{self.env_prefix}_API_KEY"
+
+
+#: The sovereign default engine (sub-doctrines 8.b, 8.d): this runner on GPT-OSS 20B.
+GPTOSSLOOP = RunnerIdentity(
+    name="gptossloop", env_prefix="GPTOSSLOOP", default_model=DEFAULT_ENDPOINT_MODEL
+)
+#: The same runner on a Qwen model, the engine its name promises; opt-in in vibey.
+QWENLOOP = RunnerIdentity(
+    name="qwenloop", env_prefix="QWENLOOP", default_model=DEFAULT_QWEN_ENDPOINT_MODEL
+)
+
+
+@dataclass(frozen=True, slots=True)
 class QwenConfig:
     backend: Backend = Backend.AUTO
     portable_profile: str = "qwen2.5-coder-14b-q5-k-m"
@@ -121,11 +174,15 @@ class QwenConfigParser:
     silently leaving the endpoint unconfigured.
     """
 
+    def __init__(self, *, default_model: str = DEFAULT_ENDPOINT_MODEL) -> None:
+        # The model a mapping that names none is given: each engine's own (ADR-0064).
+        self._default_model = default_model
+
     def parse(self, data: Mapping[str, Any]) -> QwenConfig:
         unknown = sorted(set(data) - _KEYS)
         if unknown:
             raise ValueError(f"unknown qwenloop config key(s): {', '.join(unknown)}")
-        defaults = QwenConfig()
+        defaults = QwenConfig(model=self._default_model)
         config = QwenConfig(
             backend=Backend(str(data.get("backend", defaults.backend.value))),
             portable_profile=str(data.get("portable_profile", defaults.portable_profile)),

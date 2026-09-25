@@ -294,13 +294,18 @@ def test_remove_existing_profile_is_recoverable(
 
 
 def test_entry_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each console script runs the one command line as its own engine (ADR-0064)."""
     import qwenloop.cli.app as module
 
-    called: list[bool] = []
-    monkeypatch.setattr(module, "app", lambda: called.append(True))
+    called: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        module, "app", lambda prog_name: called.append((prog_name, module._identity.name))
+    )
+    monkeypatch.setattr(module, "_identity", module._identity)
     assert module._nvidia_vram() == 0
+    module.gptoss_main()
     module.main()
-    assert called == [True]
+    assert called == [("gptossloop", "gptossloop"), ("qwenloop", "qwenloop")]
 
 
 def test_nvidia_vram_probe(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -644,7 +649,10 @@ def test_storm_continues_past_unavailable_repo(
 
 # --- openai-compat endpoint mode (Ollama first) -------------------------------------------
 
-OLLAMA_MODELS = b'{"object": "list", "data": [{"id": "gpt-oss:20b"}, {"id": "qwen2.5-coder:14b"}]}'
+OLLAMA_MODELS = (
+    b'{"object": "list", "data": [{"id": "gpt-oss:20b"}, {"id": "qwen3:14b"}, '
+    b'{"id": "qwen2.5-coder:14b"}]}'
+)
 
 
 class FakeHttp:
@@ -715,10 +723,39 @@ def test_run_attaches_to_the_endpoint_named_by_flag(
     assert isinstance(info, ServerInfo)
     assert (info.backend, info.model, info.owned) == (
         Backend.OPENAI_COMPAT,
-        "gpt-oss:20b",
+        "qwen3:14b",
         False,
     )
     assert http.urls == ["http://127.0.0.1:11434/v1/models"]
+
+
+def test_gptossloop_asks_for_gpt_oss_and_reads_only_its_own_settings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, recording_runner: list[dict[str, object]]
+) -> None:
+    """ADR-0064: the same runner as gptossloop asks an endpoint for gpt-oss:20b and reads
+    GPTOSSLOOP_*; a QWENLOOP_MODEL set for qwenloop never changes what gptossloop runs."""
+    import qwenloop.cli.app as module
+    from qwenloop.domain.config import GPTOSSLOOP
+
+    plan = tmp_path / "plan.md"
+    plan.write_text("do it")
+    http = FakeHttp()
+    monkeypatch.setattr("urllib.request.urlopen", http)
+    monkeypatch.setattr(module, "_identity", GPTOSSLOOP)
+    empty = tmp_path / "gptossloop.toml"
+    empty.write_text("", encoding="utf-8")
+    monkeypatch.setenv("GPTOSSLOOP_CONFIG", str(empty))
+    monkeypatch.delenv("GPTOSSLOOP_MODEL", raising=False)
+    monkeypatch.setenv("GPTOSSLOOP_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("QWENLOOP_MODEL", "qwen3:14b")
+    _no_managed_servers(monkeypatch)
+    result = runner.invoke(app, ["run", str(plan), "--cwd", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    info = recording_runner[0]["server_info"]
+    assert isinstance(info, ServerInfo)
+    assert (info.backend, info.model) == (Backend.OPENAI_COMPAT, "gpt-oss:20b")
+    version = runner.invoke(app, ["--version"])
+    assert version.stdout.startswith("gptossloop ")
 
 
 def test_run_attaches_through_the_environment_with_config_defaults(
@@ -836,8 +873,8 @@ def test_run_fails_loudly_when_the_endpoint_lacks_the_model(
         app, ["run", str(plan), "--cwd", str(tmp_path), "--base-url", "http://h:1/v1"]
     )
     assert result.exit_code == 1
-    assert "qwenloop unavailable: model 'gpt-oss:20b' is not served" in result.stderr
-    assert "ollama pull gpt-oss:20b" in result.stderr
+    assert "qwenloop unavailable: model 'qwen3:14b' is not served" in result.stderr
+    assert "ollama pull qwen3:14b" in result.stderr
 
 
 def test_bad_configuration_exits_2_naming_it(
@@ -908,7 +945,7 @@ def test_doctor_passes_when_the_endpoint_serves_the_model(monkeypatch: pytest.Mo
     assert result.exit_code == 0, result.output
     assert "backend: openai-compat (an OpenAI-compatible endpoint is configured)" in result.stdout
     assert "endpoint: http://127.0.0.1:11434/v1" in result.stdout
-    assert "model: gpt-oss:20b ok" in result.stdout
+    assert "model: qwen3:14b ok" in result.stdout
 
 
 def test_doctor_fails_loudly_when_the_endpoint_is_down(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -919,7 +956,7 @@ def test_doctor_fails_loudly_when_the_endpoint_is_down(monkeypatch: pytest.Monke
     result = runner.invoke(app, ["doctor", "--backend", "openai-compat"])
     assert result.exit_code == 1
     assert "endpoint: http://127.0.0.1:11434/v1" in result.stdout
-    assert "model: gpt-oss:20b unavailable" in result.stdout
+    assert "model: qwen3:14b unavailable" in result.stdout
     assert "qwenloop doctor: openai-compat endpoint" in result.stderr
     assert "is unreachable (Connection refused)" in result.stderr
 

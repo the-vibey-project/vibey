@@ -9,6 +9,7 @@
 import type { Catalogue } from './interfaces/catalogue-interface';
 import type { CheckStatus, DoctorCheck, DoctorInterface } from './interfaces/doctor-interface';
 import type { ForbiddenEnvironmentInterface, SourceEnvironment } from './interfaces/environment-interface';
+import type { RunnerIdentity } from './interfaces/local-runner-interface';
 import type { OllamaAdviceInterface, OllamaProbeInterface, Platform } from './interfaces/ollama-interface';
 import type { Environment, ProcessRunnerInterface } from './interfaces/process-runner-interface';
 import type { ExecutableLocatorInterface, ResolvedSettings } from './interfaces/settings-interface';
@@ -27,6 +28,8 @@ export interface DoctorDependencies {
   readonly environ: SourceEnvironment;
   readonly forbidden: ForbiddenEnvironmentInterface;
   readonly paidDeclared: () => boolean;
+  /** The local runner that runs when nothing chooses another (gptossloop, ADR-0064): its program is checked. */
+  readonly runner: RunnerIdentity;
 }
 
 export class Doctor implements DoctorInterface {
@@ -38,10 +41,11 @@ export class Doctor implements DoctorInterface {
   async run(): Promise<readonly DoctorCheck[]> {
     const checks: DoctorCheck[] = [this.home()];
     checks.push(await this.program('git', this.deps.settings.raw.gitPath, 'fail', ['Install git: https://git-scm.com/downloads']));
+    const runner = this.deps.runner;
     checks.push(
-      await this.program('qwenloop', this.deps.settings.raw.qwenloopPath, 'fail', [
-        'qwenloop ships with vibey: pip install vibey',
-        'Or point the vibey.qwenloopPath setting at it.',
+      await this.program(runner.name, this.deps.settings.raw[runner.pathSetting], 'fail', [
+        `${runner.name} ships with vibey: pip install vibey`,
+        `Or point the vibey.${runner.pathSetting} setting at it.`,
       ]),
     );
     const vibey = await this.program('vibey', this.deps.settings.raw.cliPath, 'warn', [

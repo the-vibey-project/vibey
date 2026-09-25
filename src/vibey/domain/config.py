@@ -22,19 +22,37 @@ from vibey.domain.queue_reap import (
 
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
-# The sovereign default (always on, never needs declaration)
-DEFAULT_ENGINES = ("qwenloop",)
+# The sovereign default (on without declaration; ADR-0064 made it gptossloop, the local
+# runner on GPT-OSS)
+DEFAULT_ENGINES = ("gptossloop",)
 # Local engines, each behind its own `[features]` switch (ADR-0015, ADR-0038). The
 # feature key is the engine id with the hyphen a TOML bare key cannot carry.
-LOCAL_ENGINE_FEATURES = {"qwenloop": "qwenloop", "claudeloop-local": "claudeloop_local"}
+LOCAL_ENGINE_FEATURES = {
+    "gptossloop": "gptossloop",
+    "qwenloop": "qwenloop",
+    "claudeloop-local": "claudeloop_local",
+}
+# The local engines whose switch is on when nothing sets it (ADR-0064): the sovereign
+# default, which a project switches off only by saying so -- `[features] gptossloop =
+# false` or `VIBEY_FEATURE_GPTOSSLOOP=0`. Every other local engine is opt-in.
+LOCAL_ENGINES_ON_BY_DEFAULT = frozenset({"gptossloop"})
 KNOWN_ENGINES = (
     "claudeloop",
     "codexloop",
     "cursorloop",
     "agyloop",
+    "gptossloop",
     "qwenloop",
     "claudeloop-local",
 )
+# Said beside a refused request for an engine whose meaning changed, so the operator who
+# configured the old one learns what it became (ADR-0064).
+_SWITCH_HINTS = {
+    "qwenloop": (
+        " -- qwenloop runs a Qwen model since ADR-0064; the gpt-oss engine it used to be is "
+        "gptossloop, on by default"
+    ),
+}
 DEFAULT_CLAUDELOOP_LOCAL_PROFILE = "local"
 DEFAULT_LOCAL_CONTEXT_WINDOW = 32_768
 
@@ -176,6 +194,9 @@ class TelemetryConfig:
 
 @dataclass(frozen=True, slots=True)
 class FeaturesConfig:
+    # On unless switched off: the sovereign default engine (ADR-0064).
+    gptossloop: bool = True
+    # The same runner on a Qwen model; opt-in.
     qwenloop: bool = False
     claudeloop_local: bool = False
 
@@ -550,13 +571,16 @@ def _parse_budget(data: dict[str, Any]) -> BudgetConfig:
     )
 
 
-def _parse_engines(data: dict[str, Any]) -> EnginesConfig:
+def _parse_engines(data: dict[str, Any], features: FeaturesConfig) -> EnginesConfig:
     table = _optional(data, "engines", "engines", dict, {})
-    enabled = tuple(_optional(table, "enabled", "engines.enabled", list, list(DEFAULT_ENGINES)))
-    # The sovereign defaults are always on (cannot be turned off)
-    for sovereign in DEFAULT_ENGINES:
-        if sovereign not in enabled:
-            enabled = (*enabled, sovereign)
+    # The sovereign default is on without declaration. The one way it leaves the pool is
+    # the declaration its own switch is for (gptossloop's `[features] gptossloop =
+    # false`); nothing else -- an `enabled` list that omits it included -- removes it.
+    sovereign = tuple(engine for engine in DEFAULT_ENGINES if features.enables(engine))
+    enabled = tuple(_optional(table, "enabled", "engines.enabled", list, list(sovereign)))
+    for default in sovereign:
+        if default not in enabled:
+            enabled = (*enabled, default)
     for engine in enabled:
         if engine not in KNOWN_ENGINES:
             raise ConfigError("engines.enabled", f"unknown engine {engine!r}")
@@ -645,6 +669,7 @@ def _parse_telemetry(data: dict[str, Any]) -> TelemetryConfig:
 def _parse_features(data: dict[str, Any]) -> FeaturesConfig:
     table = _optional(data, "features", "features", dict, {})
     return FeaturesConfig(
+        gptossloop=_optional(table, "gptossloop", "features.gptossloop", bool, True),
         qwenloop=_optional(table, "qwenloop", "features.qwenloop", bool, False),
         claudeloop_local=_optional(
             table, "claudeloop_local", "features.claudeloop_local", bool, False
@@ -806,7 +831,7 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
     Raises ConfigError on the first violation found.
     """
     features = _parse_features(data)
-    engines = _parse_engines(data)
+    engines = _parse_engines(data, features)
     phase_engines = (
         *(
             _optional(
@@ -828,10 +853,11 @@ def parse_config(data: dict[str, Any]) -> VibeyConfig:
         ),
     )
     for engine, key in LOCAL_ENGINE_FEATURES.items():
-        if engine == "qwenloop":
-            continue
         if not features.enables(engine) and (engine in engines.enabled or engine in phase_engines):
-            raise ConfigError(f"features.{key}", f"must be true before {engine} can be requested")
+            hint = _SWITCH_HINTS.get(engine, "")
+            raise ConfigError(
+                f"features.{key}", f"must be true before {engine} can be requested{hint}"
+            )
     if "enabled" not in _optional(data, "engines", "engines", dict, {}):
         # An omitted pool is the default pool plus every local engine switched on.
         switched_on = tuple(e for e in LOCAL_ENGINE_FEATURES if features.enables(e))

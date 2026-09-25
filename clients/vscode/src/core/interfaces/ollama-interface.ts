@@ -4,7 +4,7 @@
 export interface OllamaEndpointInterface {
   /** The root form, no `/v1`: `http://127.0.0.1:11434`. What `VIBEY_OLLAMA_URL` holds. */
   readonly root: string;
-  /** The OpenAI-compatible base URL qwenloop attaches to: `<root>/v1`. */
+  /** The OpenAI-compatible base URL the local runner (gptossloop, qwenloop) attaches to: `<root>/v1`. */
   readonly v1: string;
   url(path: string): string;
 }
@@ -33,7 +33,7 @@ export interface OllamaStatus {
 }
 
 export interface OllamaProbeInterface {
-  /** GET /api/version, as qwenloop's own probe asks it. */
+  /** GET /api/version, as the local runner's own probe asks it. */
   version(): Promise<{ readonly version?: string; readonly error?: string }>;
   /** Every model name the server offers: /v1/models, else /api/tags. */
   models(): Promise<{ readonly names: readonly string[]; readonly source: string }>;
