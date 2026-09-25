@@ -64,11 +64,13 @@ default suite needs no engine binaries and no paid accounts: tests marked
 `paid` are deselected unless you ask for them (ADR-0030).
 
 A killed test run cannot drop its databases, so the harness reaps them. Each session holds a
-lock on its database for as long as it lives, and marks the database. At the start of every
-run, the harness drops, in the background, the test databases no live session holds
-(`tests/db_reaper.py`). `uv run python -m tests.db_reaper --dry-run` shows what it would drop.
-`VIBEY_TEST_REAP=0` turns the automatic reap off, and `VIBEY_TEST_REAP_LIMIT` (default 200)
-caps one run's drops.
+lock on its database for as long as it lives, and marks the database with the process that
+created it and that process's machine. At the start of every run, the harness drops, in the
+background, the test databases no live session holds (`tests/db_reaper.py`). A database is kept
+while its lock is held, or while the process its mark names is alive on this machine, so a
+session that loses its lock mid-run still keeps its databases. `uv run python -m
+tests.db_reaper --dry-run` shows what it would drop. `VIBEY_TEST_REAP=0` turns the automatic
+reap off, and `VIBEY_TEST_REAP_LIMIT` (default 200) caps one run's drops.
 
 ### Where your work lives, and how often it is saved
 

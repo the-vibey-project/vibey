@@ -366,6 +366,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Fixed
 
+* **tests:** a test session whose database lock is lost no longer loses its databases to another
+  session's reaper. Each test database's mark now names the process that created it and its
+  machine, and the reaper keeps the database while that process is alive on this machine,
+  whatever its lock says. On 2026-09-24 a patched `asyncio.sleep` ended one session's lock while
+  it ran, and another session's reaper dropped its worker databases: 127 `database ... does not
+  exist` errors in one run. A mark from another machine, or the first mark, still follows the
+  lock alone, and a mark that cannot be read is never dropped.
 * **qwenloop:** a follow-up sent with `qwenloop prompt` now reaches the model: the runner takes
   it at the next turn boundary, once and in the order sent, records `prompt.received`, and moves
   it to `control/ack`. It was written to the control inbox and never read, and control files are
@@ -421,6 +428,20 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 * **engines:** the worker's startup preflight and `vibey doctor --record` probe each engine
   with the project's `engine_environment`, so a credential the project declares for opencode
   or agyloop reaches the auth check and the conformance run, not only the session
+* **vibey_gh:** the sovereign heartbeat is honest and no longer skips the pre-push gate
+  (ADR-0060). `vibey-gh sovereign --beat` publishes only while GitHub lists a runner with the
+  lane's label as online (read with the runner's own login) and the model endpoint answers;
+  otherwise it pushes nothing, says why, and the heartbeat goes stale so the gate falls back
+  honestly. It no longer pushes with `--no-verify` or a bare `--force`: the pre-push hook now
+  recognises by its own rule a push that carries no code (`vibey-gh push-scope`: every ref
+  outside `refs/heads/` and `refs/tags/`, every commit the empty tree with no parents), and
+  the previous heartbeat is replaced by compare-and-swap. The timer is declared:
+  `vibey-gh heartbeat install|status|uninstall` (also run by `runner install`/`uninstall`)
+  renders a launchd agent on macOS or a systemd user timer on Linux, and refuses an
+  interpreter, package or log under a temporary directory or inside a git work tree. The
+  hand-written `vibey-local-authority` LaunchAgent that used to publish the heartbeat is
+  retired.
+
 * **queue:** the lease reaper is bounded (ADR-0056, closing ADR-0044 §8's latent gap). An
   expired lease whose attempts are spent is parked with a `delivery_exhausted` gate instead of
   re-readied, so a job that kills its worker on every attempt is no longer claimed forever;
