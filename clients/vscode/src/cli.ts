@@ -8,6 +8,7 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { ArgumentParser, Presenter, UsageError } from './core/cli-support';
+import { NoCapPath } from './core/budgets';
 import { Doctor } from './core/doctor';
 import { JsonlJournal } from './core/jsonl';
 import type { BudgetScope } from './core/interfaces/budgets-interface';
@@ -24,13 +25,13 @@ const USAGE = `vibey-vscode: run tasks on a local model through vibey's loops, f
   vibey-vscode lanes [--json]              every lane on this computer, now
   vibey-vscode doctor                      check every piece, with paths and versions
   vibey-vscode budget list|add|edit|remove this machine's budgets
-  vibey-vscode declare-paid --daily-dollars N | --monthly-dollars N | --no-cap --confirm-no-cap
+  vibey-vscode declare-paid --daily-dollars N | --monthly-dollars N   (no cap: vibey budget no-cap)
 
 Options:
   --repo DIR            a directory in the git repository (default: here)
   --base REF            what each task's branch starts from (default: HEAD)
   --in-place            edit the repository itself instead of a copy (no Apply/Discard)
-  --loop sovereign|paid --effort auto|TRIVIAL|LOW|STANDARD|HIGH|MAX
+  --loop sovereign|paid --effort auto|TRIVIAL|LOW|STANDARD|HIGH|MAX|ULTRA
   --engine auto|ENGINE|ENGINE/MODEL        --base-effort LEVEL
   --max-turns N  --context-window N  --model NAME  --ollama-url URL
   --storm-home DIR  --gptossloop PATH  --qwenloop PATH  --vibey PATH  --git PATH
@@ -251,15 +252,13 @@ class HeadlessCli {
   }
 
   private declarePaid(services: CoreServices, options: Readonly<Record<string, string | true>>): number {
-    if (options['no-cap'] === true) {
-      services.budgets.declarePaid({ noCap: true, confirmed: options['confirm-no-cap'] === true });
-      process.stdout.write('paidloop declared with no dollar cap (recorded in the budget journal).\n');
-      return 0;
+    if (options['no-cap'] === true || options['confirm-no-cap'] === true) {
+      throw new UsageError(NoCapPath.REFUSED);
     }
     const daily = options['daily-dollars'];
     const monthly = options['monthly-dollars'];
     if (typeof daily !== 'string' && typeof monthly !== 'string') {
-      throw new UsageError('declare-paid needs --daily-dollars N or --monthly-dollars N (or --no-cap --confirm-no-cap)');
+      throw new UsageError('declare-paid needs --daily-dollars N or --monthly-dollars N');
     }
     const scope = typeof daily === 'string' ? 'day' : 'month';
     const dollars = HeadlessCli.number('dollars', (typeof daily === 'string' ? daily : monthly) as string, true);

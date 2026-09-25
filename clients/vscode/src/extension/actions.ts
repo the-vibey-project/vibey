@@ -9,6 +9,8 @@
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { NoCapPath } from '../core/budgets';
+import { Efforts } from '../core/catalogue';
 import { CommandTable, SlashArguments, SlashCommands } from '../core/commands';
 import { Doctor } from '../core/doctor';
 import type { Budget, BudgetCaps, BudgetLoop, BudgetScope } from '../core/interfaces/budgets-interface';
@@ -462,11 +464,11 @@ export class CommandActions implements CommandActionsInterface {
       const picked = await vscode.window.showQuickPick(
         [
           { label: 'auto', detail: "Start at the base effort; a failed attempt climbs vibey's ladder, in the same copy." },
-          ...catalogue.efforts.map((level) => ({ label: level, detail: `Every attempt at ${level}.` })),
+          ...catalogue.efforts.map((level) => Efforts.describe(level)),
         ],
         { title: 'Choose the effort' },
       );
-      effort = picked?.label as EffortSetting | undefined;
+      effort = picked === undefined ? undefined : (Efforts.fromLabel(picked.label) as EffortSetting);
     }
     if (effort === undefined) {
       return;
@@ -919,15 +921,36 @@ export class CommandActions implements CommandActionsInterface {
     }
     const budgets = this.controller.services.budgets;
     if (choice === 'With no cap') {
-      const again = await vscode.window.showWarningMessage(
-        'Really declare paidloop with no dollar cap?',
-        { modal: true, detail: 'Nothing on this computer will stop paid engines from spending. You can add a budget later from the Budgets view.' },
-        'Yes, no cap',
+      // Sub-doctrine 8.b's path (ADR-0063): a warning with the measured cost, the typed
+      // phrase, and a second warning whose default keeps a cap.
+      const rate = this.controller.services.spend.perHour({ loop: 'paidloop' });
+      const first = await vscode.window.showWarningMessage(
+        'UNLIMITED SPEND',
+        { modal: true, detail: NoCapPath.warning(rate) },
+        'I understand',
       );
-      if (again !== 'Yes, no cap') {
+      if (first !== 'I understand') {
         return false;
       }
-      budgets.declarePaid({ noCap: true, confirmed: true });
+      const typed = await vscode.window.showInputBox({
+        title: 'Declare no cap',
+        prompt: `Type "${NoCapPath.PHRASE}" to continue`,
+        ignoreFocusOut: true,
+      });
+      if (!NoCapPath.matches(typed)) {
+        void vscode.window.showInformationMessage('The phrase did not match. Kept the cap.');
+        return false;
+      }
+      const again = await vscode.window.showWarningMessage(
+        NoCapPath.LAST_CHANCE,
+        { modal: true },
+        NoCapPath.KEEP,
+        NoCapPath.DECLARE,
+      );
+      if (again !== NoCapPath.DECLARE) {
+        return false;
+      }
+      budgets.declarePaid({ noCap: true, phrase: typed as string });
     } else {
       const dollars = await this.dollars(choice === 'With a daily cap' ? 'Dollars per day' : 'Dollars per month');
       if (dollars === undefined) {

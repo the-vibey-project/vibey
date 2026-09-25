@@ -2,7 +2,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BudgetError, BudgetGuard, BudgetStore, SpendLedger } from '../../src/core/budgets';
+import { BudgetError, BudgetGuard, BudgetStore, NoCapPath, SpendLedger } from '../../src/core/budgets';
 import { Capabilities, SkillsContext, SkillsMarketplace } from '../../src/core/capabilities';
 import type { EngineCapabilities } from '../../src/core/interfaces/catalogue-interface';
 import type { HostFacts } from '../../src/core/interfaces/model-lock-interface';
@@ -338,19 +338,37 @@ describe('budgets', () => {
     expect(() => store.list()).toThrow(BudgetError);
   });
 
-  it('declares the paid loop with a cap, or with none only after a second confirmation', () => {
+  it('declares the paid loop with a cap, or with none only with the typed phrase', () => {
     const { store, directory } = setup();
-    expect(() => store.declarePaid({ noCap: true, confirmed: false })).toThrow('Declaring the paid loop with no dollar cap needs a second, explicit confirmation.');
+    expect(() => store.declarePaid({ noCap: true, phrase: 'yes' })).toThrow(`Declaring no dollar cap needs the phrase typed exactly: ${NoCapPath.PHRASE}`);
     expect(store.paid()).toBeUndefined();
     const capped = store.declarePaid({ scope: 'month', dollars: 50 });
     expect(capped).toEqual({ declared_at: '2026-09-24T12:00:00.000Z', budget_id: '00000001' });
     expect(store.list()).toEqual([{ id: '00000001', scope: 'month', loop: 'paidloop', caps: { dollars: 50 }, label: 'paid month cap' }]);
     expect(store.paid()).toEqual(capped);
-    const uncapped = store.declarePaid({ noCap: true, confirmed: true });
+    const uncapped = store.declarePaid({ noCap: true, phrase: ` ${NoCapPath.PHRASE}\n` });
     expect(uncapped).toEqual({ declared_at: '2026-09-24T12:00:00.000Z', no_cap_confirmed: true });
     expect(store.paid()).toEqual(uncapped);
     const actions = new JsonlJournal(path.join(directory, 'budget-journal.jsonl')).readAll().records.map((line) => line.action);
     expect(actions).toEqual(['add', 'paid.declared', 'paid.declared']);
+  });
+
+  it('shows the no-cap path the same everywhere: the measured rate, or unknown', () => {
+    expect(NoCapPath.matches(undefined)).toBe(false);
+    expect(NoCapPath.matches('i accept unlimited spending')).toBe(false);
+    expect(NoCapPath.matches(NoCapPath.PHRASE)).toBe(true);
+    expect(NoCapPath.warning(null)).toContain('Measured cost: unknown (nothing measured yet)');
+    expect(NoCapPath.warning(12.5)).toContain('Measured cost: $12.50/h');
+    expect(NoCapPath.REFUSED).toContain('vibey budget no-cap');
+  });
+
+  it('measures dollars per hour of run time, or says it has not', () => {
+    const { spend } = setup();
+    expect(spend.perHour({})).toBeNull();
+    spend.record(entry({ dollars: 0, minutes: 30 }));
+    expect(spend.perHour({})).toBeNull();
+    spend.record(entry({ run_id: 'r2', dollars: 3, minutes: 30 }));
+    expect(spend.perHour({ engineId: 'claudeloop' })).toBe(3);
   });
 
   it('sums spend from a byte-offset watermark, and knows tokens per turn', () => {

@@ -33,7 +33,7 @@ export interface BudgetStoreInterface {
   remove(id: string): Budget;
   paid(): PaidDeclaration | undefined;
   /** Declare the paid loop, with a dollar cap, or with none after a second confirmation. */
-  declarePaid(cap: { readonly scope: 'day' | 'month'; readonly dollars: number } | { readonly noCap: true; readonly confirmed: boolean }): PaidDeclaration;
+  declarePaid(cap: { readonly scope: 'day' | 'month'; readonly dollars: number } | { readonly noCap: true; readonly phrase: string }): PaidDeclaration;
 }
 
 export interface SpendEntry {
@@ -62,6 +62,8 @@ export interface SpendLedgerInterface {
   /** Sums of every entry matching, read from a byte-offset watermark. */
   totals(filter: { readonly runId?: string; readonly loop?: string; readonly engineId?: string; readonly since?: Date }): SpendTotals;
   /** Mean tokens per turn this machine measured for an engine, when it measured any. */
+  /** Measured dollars per hour of run time; null when nothing has been measured. */
+  perHour(filter: { readonly loop?: string; readonly engineId?: string }): number | null;
   perTurn(engineId: string): { readonly input: number; readonly output: number } | undefined;
 }
 

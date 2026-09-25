@@ -4,6 +4,15 @@ All notable changes to the Vibey extension for VS Code.
 
 ## Unreleased
 
+- **ULTRA, effort without a ceiling** ([ADR-0063](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0063-ultra-effort-without-a-ceiling/)).
+  The effort picker, `/effort` and `vibey-vscode --effort` take `ULTRA`. It is shown with a flame
+  and in its own colour (`vibey.ultraEffort`, from the design tokens' `color.state.ultra`), in the
+  picker and the status bar. At ULTRA an engine runs with no turn limit: neither its projection nor
+  `vibey.maxTurns` sets one; only a task's own `max_turns` does.
+- **No cap takes the whole path.** Declaring paidloop with no cap shows the measured cost per hour
+  ("unknown" when nothing is measured), asks for the typed phrase `I accept unlimited spending`,
+  then warns again with **Keep a cap** as the default. `vibey-vscode declare-paid --no-cap
+  --confirm-no-cap` is refused: flags alone never declare no cap.
 - **gptossloop is the local engine** ([ADR-0064](https://the-vibey-project.github.io/vibey/main/architecture/decisions/0064-gptossloop-is-the-sovereign-engine/)).
   The runner that used to be called qwenloop ships as two programs: `gptossloop`, which runs
   gpt-oss:20b and is on by default, and `qwenloop`, the same runner on a Qwen model, which runs
