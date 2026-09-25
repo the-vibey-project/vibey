@@ -1,0 +1,2 @@
+[     372ms] [LOG] All search scripts loaded, building Lunr index... @ http://127.0.0.1:8765/search/worker.js:59
+[     736ms] [LOG] Lunr index built, search ready @ http://127.0.0.1:8765/search/worker.js:87

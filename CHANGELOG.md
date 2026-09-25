@@ -15,7 +15,7 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 ### Features
 
 * **sabbath:** the Sabbath, kept where the machine stands
-  ([ADR-0070](docs/architecture/decisions/0070-the-sabbath-kept-where-the-machine-stands.md),
+  ([ADR-0071](docs/architecture/decisions/0071-the-sabbath-kept-where-the-machine-stands.md),
   sub-doctrine 8.i). From sundown Friday to sundown Saturday the merge train and the promotion
   stand down visibly (exit 0, "paused, not failed"). Workers claim no lease, and `vibey new` and
   `vibey work` decline with exit 75. Sundown is computed with the NOAA algorithm for the host's
@@ -24,6 +24,15 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
   "resting until ...". At sundown it writes `SabbathEnded`, re-fires the held workflows and
   resumes registered lanes. New: `vibey sabbath`, `vibey-gh sabbath status|register-lane|resume`,
   the `[sabbath]` table, and a location line in `vibey doctor`.
+* **failover:** the driver hands off to gptossloop at ULTRA and back after a recorded probe
+  ([ADR-0070](docs/architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)).
+  Claude Code's `StopFailure` hook (`rate_limit`, `billing_error`) runs `vibey driver hook`: a
+  no-loss-gated brief naming the whole transcript by SHA-256 goes into the worktree,
+  `EngineFailedOver` is recorded, and gptossloop starts at ULTRA. `vibey driver probe`, on the
+  launchd or systemd timer `vibey driver timer` writes, hands back to the same session with
+  `claude -p --resume` only after a recorded successful probe. `[failover]` holds every key.
+  `EngineFailoverService` and `PostgresFailoverStore` apply the same policy to a project's jobs
+  (built and tested; not yet wired into the worker).
 
 * **ultra:** ULTRA, effort without a ceiling
   ([ADR-0063](docs/architecture/decisions/0063-ultra-effort-without-a-ceiling.md)). `Effort` gains
@@ -236,6 +245,10 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Added
 
+* **hub:** the live feed. Migration 0019 announces every ledger append on
+  `vibey_ledger_appended` (additive). `WS /api/v1/projects/{id}/live?after=N` resumes after a
+  seq and pages until caught up; `WS /api/v1/lanes/live` tails a listed lane by byte offset;
+  each has an HTTP polling twin. Sockets check Host and Origin and re-authenticate every page.
 * **hub:** `vibey serve`, the one HTTP API every Krypton client reaches
   ([ADR-0068](docs/architecture/decisions/0068-the-hub.md)), behind the new `hub` extra
   (`pip install 'vibey[hub]'`). Projects, status, gates (list and answer, through the

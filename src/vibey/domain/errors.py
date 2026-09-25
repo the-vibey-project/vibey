@@ -95,6 +95,11 @@ class UnknownProject(VibeyError):
     """No project exists with the given id."""
 
 
+class UnknownLane(VibeyError, LookupError):
+    """No listed lane has the given events file. The hub reads only files it found as
+    lanes, so a path that is not one is refused rather than opened (ADR-0067)."""
+
+
 class WrongPhase(VibeyError):
     """The project is not in a phase the requested command applies to."""
 
@@ -215,3 +220,8 @@ class PriorityRefused(ReorderRefused):
         self.requested_by = requested_by
         self.reason = reason
         super().__init__(f"refused: {reason}")
+
+
+class HandbackRefused(VibeyError):
+    """A handback was asked for with no successful probe recorded after the latest
+    failover, or with a failover that names no known engine (ADR-0070)."""

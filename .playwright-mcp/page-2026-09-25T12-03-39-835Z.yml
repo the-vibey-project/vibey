@@ -1,0 +1,1658 @@
+- generic [active] [ref=f7e1]:
+  - banner [ref=f7e2]:
+    - generic [ref=f7e3]:
+      - img "vibey" [ref=f7e4]
+      - group "Theme" [ref=f7e36]:
+        - button "Light" [ref=f7e37] [cursor=pointer]
+        - button "Dark" [pressed] [ref=f7e38] [cursor=pointer]
+        - button "System" [ref=f7e39] [cursor=pointer]
+  - generic [ref=f7e41]:
+    - heading "One design system for every surface" [level=1] [ref=f7e42]: One design systemfor every surface
+    - paragraph [ref=f7e43]:
+      - text: Every colour, face, space, curve and sound cue in vibey comes from
+      - code [ref=f7e44]: design/tokens/
+      - text: "(DTCG 2025.10). This page is built from those tokens: switch the theme above and everything below follows. System is the default and follows your OS live."
+    - generic [ref=f7e45]:
+      - generic [ref=f7e46]:
+        - generic [ref=f7e47]: "182"
+        - text: colour pairs audited
+      - generic [ref=f7e48]:
+        - generic [ref=f7e49]: 182/182
+        - text: meet WCAG 2.2 AA
+      - generic [ref=f7e50]:
+        - generic [ref=f7e51]: 4.50:1
+        - text: tightest pair (light state.cancelled on bg.canvas, needs 4.5)
+      - generic [ref=f7e52]:
+        - generic [ref=f7e53]: "331"
+        - text: tokens
+      - generic [ref=f7e54]:
+        - generic [ref=f7e55]: "3"
+        - text: theme modes
+  - main [ref=f7e56]:
+    - heading "Three modes" [level=2] [ref=f7e57]
+    - paragraph [ref=f7e58]: Light, Dark and System, side by side. The live page follows the switch in the header.
+    - generic [ref=f7e59]:
+      - generic [ref=f7e60]:
+        - generic [ref=f7e61]:
+          - generic [ref=f7e62]: Light
+          - generic [ref=f7e63]: forced
+        - generic [ref=f7e64]:
+          - text: Gate needs you
+          - paragraph [ref=f7e65]: Review the design for greeter before BUILD begins.
+          - generic [ref=f7e66]: Answer
+      - generic [ref=f7e67]:
+        - generic [ref=f7e68]:
+          - generic [ref=f7e69]: Dark
+          - generic [ref=f7e70]: forced
+        - generic [ref=f7e71]:
+          - text: Gate needs you
+          - paragraph [ref=f7e72]: Review the design for greeter before BUILD begins.
+          - generic [ref=f7e73]: Answer
+      - generic [ref=f7e74]:
+        - generic [ref=f7e75]:
+          - generic [ref=f7e76]: System
+          - generic [ref=f7e77]: follows the OS · now light
+        - generic [ref=f7e78]:
+          - text: Gate needs you
+          - paragraph [ref=f7e79]: Review the design for greeter before BUILD begins.
+          - generic [ref=f7e80]: Answer
+    - heading "Identity" [level=2] [ref=f7e81]
+    - paragraph [ref=f7e82]: "The extension's V, refined: two strokes converge on the nucleus, with its orbit, under the queue's bar. Drawn from tokens; rasterised by a stdlib renderer."
+    - generic [ref=f7e83]:
+      - img "vibey" [ref=f7e85]
+      - img "vibey" [ref=f7e118]
+      - img "vibey" [ref=f7e135]
+      - img "vibey" [ref=f7e152]
+    - 'heading "The atom: nucleus, four orbitals at 0°, 45°, 90° and 135°, one electron on each" [level=3] [ref=f7e165]'
+    - generic [ref=f7e166]:
+      - img "vibey" [ref=f7e168]
+      - img "vibey" [ref=f7e180]
+      - img "vibey" [ref=f7e192]
+      - img "vibey" [ref=f7e206]
+    - paragraph [ref=f7e219]: These four orbit gently (one revolution per four ambient beats, from the motion tokens) and rest where they are drawn when your system asks for reduced motion.
+    - heading "Wordmark, with the atom as the dot on the i" [level=3] [ref=f7e220]
+    - generic [ref=f7e221]:
+      - img "vibey" [ref=f7e223]
+      - img "vibey" [ref=f7e241]
+      - img "vibey" [ref=f7e259]
+      - img "vibey" [ref=f7e292]
+    - 'heading "Small sizes: the simplified atom (two orbitals at 16 px, four without electrons at 22–32 px)" [level=3] [ref=f7e324]'
+    - generic [ref=f7e325]:
+      - figure "16px · ×6" [ref=f7e326]:
+        - img "16px icon, magnified" [ref=f7e327]
+      - figure "actual" [ref=f7e329]:
+        - img "16px icon, actual size" [ref=f7e330]
+      - figure "24px · ×6" [ref=f7e332]:
+        - img "24px icon, magnified" [ref=f7e333]
+      - figure "actual" [ref=f7e335]:
+        - img "24px icon, actual size" [ref=f7e336]
+      - figure "32px · ×6" [ref=f7e338]:
+        - img "32px icon, magnified" [ref=f7e339]
+      - figure "actual" [ref=f7e341]:
+        - img "32px icon, actual size" [ref=f7e342]
+      - figure "48px · ×6" [ref=f7e344]:
+        - img "48px icon, magnified" [ref=f7e345]
+      - figure "actual" [ref=f7e347]:
+        - img "48px icon, actual size" [ref=f7e348]
+    - heading "Wordmark at small sizes" [level=3] [ref=f7e350]
+    - generic [ref=f7e351]:
+      - figure "18px tall" [ref=f7e352]:
+        - img "vibey" [ref=f7e354]
+      - figure "28px tall" [ref=f7e372]:
+        - img "vibey" [ref=f7e374]
+      - figure "44px tall" [ref=f7e392]:
+        - img "vibey" [ref=f7e394]
+      - figure "18px tall" [ref=f7e412]:
+        - img "vibey" [ref=f7e414]
+      - figure "28px tall" [ref=f7e432]:
+        - img "vibey" [ref=f7e434]
+      - figure "44px tall" [ref=f7e452]:
+        - img "vibey" [ref=f7e454]
+    - heading "App icons, rendered" [level=3] [ref=f7e472]
+    - generic [ref=f7e473]:
+      - figure "16px" [ref=f7e474]:
+        - img "vibey icon 16px" [ref=f7e475]
+      - figure "32px" [ref=f7e477]:
+        - img "vibey icon 32px" [ref=f7e478]
+      - figure "48px" [ref=f7e480]:
+        - img "vibey icon 48px" [ref=f7e481]
+      - figure "128px" [ref=f7e483]:
+        - img "vibey icon 128px" [ref=f7e484]
+      - figure "1024px" [ref=f7e486]:
+        - img "vibey icon 1024px" [ref=f7e487]
+    - heading "Social preview (1200 × 630)" [level=3] [ref=f7e489]
+    - img "vibey social preview" [ref=f7e491]
+    - heading "Semantic colours" [level=2] [ref=f7e492]
+    - paragraph [ref=f7e493]: What components use. Each chip shows the current theme; codes read light / dark.
+    - heading "Surfaces & borders" [level=3] [ref=f7e494]
+    - generic [ref=f7e495]:
+      - generic [ref=f7e496]:
+        - generic [ref=f7e498]: bg.canvas
+        - code [ref=f7e499]: "#f6f9fc / #080b14"
+      - generic [ref=f7e500]:
+        - generic [ref=f7e502]: bg.surface
+        - code [ref=f7e503]: "#ffffff / #0f1424"
+      - generic [ref=f7e504]:
+        - generic [ref=f7e506]: bg.raised
+        - code [ref=f7e507]: "#eef5fa / #151c33"
+      - generic [ref=f7e508]:
+        - generic [ref=f7e510]: bg.overlay
+        - code [ref=f7e511]: "#ffffff / #1c2542"
+      - generic [ref=f7e512]:
+        - generic [ref=f7e514]: bg.code
+        - code [ref=f7e515]: "#f1f4fa / #080c17"
+      - generic [ref=f7e516]:
+        - generic [ref=f7e518]: border.subtle
+        - code [ref=f7e519]: "#d6e0ea / #252e4b"
+      - generic [ref=f7e520]:
+        - generic [ref=f7e522]: border.strong
+        - code [ref=f7e523]: "#7c8aa0 / #5b6690"
+    - heading "Text, accent & focus" [level=3] [ref=f7e524]
+    - generic [ref=f7e525]:
+      - generic [ref=f7e526]:
+        - generic [ref=f7e528]: text.primary
+        - code [ref=f7e529]: "#17324d / #f7f8ff"
+      - generic [ref=f7e530]:
+        - generic [ref=f7e532]: text.secondary
+        - code [ref=f7e533]: "#3b4d63 / #c6cbda"
+      - generic [ref=f7e534]:
+        - generic [ref=f7e536]: text.tertiary
+        - code [ref=f7e537]: "#56657a / #a7acc2"
+      - generic [ref=f7e538]:
+        - generic [ref=f7e540]: text.link
+        - code [ref=f7e541]: "#5443b0 / #b9a5ff"
+      - generic [ref=f7e542]:
+        - generic [ref=f7e544]: text.link-hover
+        - code [ref=f7e545]: "#2f6b9a / #77e3ff"
+      - generic [ref=f7e546]:
+        - generic [ref=f7e548]: text.on-accent
+        - code [ref=f7e549]: "#ffffff / #0b0620"
+      - generic [ref=f7e550]:
+        - generic [ref=f7e552]: accent.default
+        - code [ref=f7e553]: "#6b5bd2 / #9d7bff"
+      - generic [ref=f7e554]:
+        - generic [ref=f7e556]: accent.hover
+        - code [ref=f7e557]: "#5443b0 / #b39aff"
+      - generic [ref=f7e558]:
+        - generic [ref=f7e560]: accent.subtle
+        - code [ref=f7e561]: "#ece8ff / #231c4d"
+      - generic [ref=f7e562]:
+        - generic [ref=f7e564]: focus.ring
+        - code [ref=f7e565]: "#2f6b9a / #57dcff"
+    - heading "Status — with a distinct ULTRA" [level=3] [ref=f7e566]
+    - generic [ref=f7e567]:
+      - generic [ref=f7e568]:
+        - generic [ref=f7e570]: status.success
+        - code [ref=f7e571]: "#1f7a57 / #75f0c2"
+      - generic [ref=f7e572]:
+        - generic [ref=f7e574]: status.warning
+        - code [ref=f7e575]: "#8a5a00 / #ffc861"
+      - generic [ref=f7e576]:
+        - generic [ref=f7e578]: status.danger
+        - code [ref=f7e579]: "#b24c4c / #ff8a96"
+      - generic [ref=f7e580]:
+        - generic [ref=f7e582]: status.info
+        - code [ref=f7e583]: "#2f6b9a / #57dcff"
+      - generic [ref=f7e584]:
+        - generic [ref=f7e586]: status.ultra
+        - code [ref=f7e587]: "#b0268f / #ff6ad5"
+    - generic [ref=f7e588]: ULTRA · the run that never stops improving
+    - heading "Lane and job states" [level=3] [ref=f7e589]
+    - generic [ref=f7e590]:
+      - generic [ref=f7e591]: queued
+      - generic [ref=f7e593]: running
+      - generic [ref=f7e595]: awaiting-human
+      - generic [ref=f7e597]: parked
+      - generic [ref=f7e599]: succeeded
+      - generic [ref=f7e601]: failed
+      - generic [ref=f7e603]: cancelled
+      - generic [ref=f7e605]: ultra
+    - heading "Lane colours as chart marks (≥ 3:1)" [level=3] [ref=f7e607]
+    - generic [ref=f7e608]:
+      - generic "lane.1" [ref=f7e609]
+      - generic "lane.2" [ref=f7e610]
+      - generic "lane.3" [ref=f7e611]
+      - generic "lane.4" [ref=f7e612]
+      - generic "lane.5" [ref=f7e613]
+      - generic "lane.6" [ref=f7e614]
+      - generic "lane.7" [ref=f7e615]
+      - generic "lane.8" [ref=f7e616]
+    - heading "Every contrast pair" [level=2] [ref=f7e617]
+    - paragraph [ref=f7e618]:
+      - text: All 182 pairs
+      - code [ref=f7e619]: design/contrast.json
+      - text: declares, drawn in their real colours. 4.5:1 for text, 3:1 for controls and chart marks.
+    - heading "Light" [level=3] [ref=f7e620]
+    - generic [ref=f7e621]:
+      - generic [ref=f7e622]:
+        - generic [ref=f7e623]: Aa
+        - generic [ref=f7e624]: text.primaryon bg.canvas
+        - generic [ref=f7e625]:
+          - text: 12.42:1
+          - generic [ref=f7e626]: ≥ 4.5
+      - generic [ref=f7e627]:
+        - generic [ref=f7e628]: Aa
+        - generic [ref=f7e629]: text.primaryon bg.surface
+        - generic [ref=f7e630]:
+          - text: 13.13:1
+          - generic [ref=f7e631]: ≥ 4.5
+      - generic [ref=f7e632]:
+        - generic [ref=f7e633]: Aa
+        - generic [ref=f7e634]: text.primaryon bg.raised
+        - generic [ref=f7e635]:
+          - text: 11.92:1
+          - generic [ref=f7e636]: ≥ 4.5
+      - generic [ref=f7e637]:
+        - generic [ref=f7e638]: Aa
+        - generic [ref=f7e639]: text.primaryon bg.overlay
+        - generic [ref=f7e640]:
+          - text: 13.13:1
+          - generic [ref=f7e641]: ≥ 4.5
+      - generic [ref=f7e642]:
+        - generic [ref=f7e643]: Aa
+        - generic [ref=f7e644]: text.secondaryon bg.canvas
+        - generic [ref=f7e645]:
+          - text: 8.19:1
+          - generic [ref=f7e646]: ≥ 4.5
+      - generic [ref=f7e647]:
+        - generic [ref=f7e648]: Aa
+        - generic [ref=f7e649]: text.secondaryon bg.surface
+        - generic [ref=f7e650]:
+          - text: 8.65:1
+          - generic [ref=f7e651]: ≥ 4.5
+      - generic [ref=f7e652]:
+        - generic [ref=f7e653]: Aa
+        - generic [ref=f7e654]: text.secondaryon bg.raised
+        - generic [ref=f7e655]:
+          - text: 7.86:1
+          - generic [ref=f7e656]: ≥ 4.5
+      - generic [ref=f7e657]:
+        - generic [ref=f7e658]: Aa
+        - generic [ref=f7e659]: text.secondaryon bg.overlay
+        - generic [ref=f7e660]:
+          - text: 8.65:1
+          - generic [ref=f7e661]: ≥ 4.5
+      - generic [ref=f7e662]:
+        - generic [ref=f7e663]: Aa
+        - generic [ref=f7e664]: text.tertiaryon bg.canvas
+        - generic [ref=f7e665]:
+          - text: 5.62:1
+          - generic [ref=f7e666]: ≥ 4.5
+      - generic [ref=f7e667]:
+        - generic [ref=f7e668]: Aa
+        - generic [ref=f7e669]: text.tertiaryon bg.surface
+        - generic [ref=f7e670]:
+          - text: 5.94:1
+          - generic [ref=f7e671]: ≥ 4.5
+      - generic [ref=f7e672]:
+        - generic [ref=f7e673]: Aa
+        - generic [ref=f7e674]: text.tertiaryon bg.raised
+        - generic [ref=f7e675]:
+          - text: 5.39:1
+          - generic [ref=f7e676]: ≥ 4.5
+      - generic [ref=f7e677]:
+        - generic [ref=f7e678]: Aa
+        - generic [ref=f7e679]: text.tertiaryon bg.overlay
+        - generic [ref=f7e680]:
+          - text: 5.94:1
+          - generic [ref=f7e681]: ≥ 4.5
+      - generic [ref=f7e682]:
+        - generic [ref=f7e683]: Aa
+        - generic [ref=f7e684]: text.linkon bg.canvas
+        - generic [ref=f7e685]:
+          - text: 7.08:1
+          - generic [ref=f7e686]: ≥ 4.5
+      - generic [ref=f7e687]:
+        - generic [ref=f7e688]: Aa
+        - generic [ref=f7e689]: text.linkon bg.surface
+        - generic [ref=f7e690]:
+          - text: 7.48:1
+          - generic [ref=f7e691]: ≥ 4.5
+      - generic [ref=f7e692]:
+        - generic [ref=f7e693]: Aa
+        - generic [ref=f7e694]: text.linkon bg.raised
+        - generic [ref=f7e695]:
+          - text: 6.80:1
+          - generic [ref=f7e696]: ≥ 4.5
+      - generic [ref=f7e697]:
+        - generic [ref=f7e698]: Aa
+        - generic [ref=f7e699]: text.linkon bg.overlay
+        - generic [ref=f7e700]:
+          - text: 7.48:1
+          - generic [ref=f7e701]: ≥ 4.5
+      - generic [ref=f7e702]:
+        - generic [ref=f7e703]: Aa
+        - generic [ref=f7e704]: text.link-hoveron bg.canvas
+        - generic [ref=f7e705]:
+          - text: 5.39:1
+          - generic [ref=f7e706]: ≥ 4.5
+      - generic [ref=f7e707]:
+        - generic [ref=f7e708]: Aa
+        - generic [ref=f7e709]: text.link-hoveron bg.surface
+        - generic [ref=f7e710]:
+          - text: 5.69:1
+          - generic [ref=f7e711]: ≥ 4.5
+      - generic [ref=f7e712]:
+        - generic [ref=f7e713]: Aa
+        - generic [ref=f7e714]: text.link-hoveron bg.raised
+        - generic [ref=f7e715]:
+          - text: 5.17:1
+          - generic [ref=f7e716]: ≥ 4.5
+      - generic [ref=f7e717]:
+        - generic [ref=f7e718]: Aa
+        - generic [ref=f7e719]: text.link-hoveron bg.overlay
+        - generic [ref=f7e720]:
+          - text: 5.69:1
+          - generic [ref=f7e721]: ≥ 4.5
+      - generic [ref=f7e722]:
+        - generic [ref=f7e723]: Aa
+        - generic [ref=f7e724]: status.successon bg.canvas
+        - generic [ref=f7e725]:
+          - text: 4.99:1
+          - generic [ref=f7e726]: ≥ 4.5
+      - generic [ref=f7e727]:
+        - generic [ref=f7e728]: Aa
+        - generic [ref=f7e729]: status.successon bg.surface
+        - generic [ref=f7e730]:
+          - text: 5.28:1
+          - generic [ref=f7e731]: ≥ 4.5
+      - generic [ref=f7e732]:
+        - generic [ref=f7e733]: Aa
+        - generic [ref=f7e734]: status.successon bg.raised
+        - generic [ref=f7e735]:
+          - text: 4.79:1
+          - generic [ref=f7e736]: ≥ 4.5
+      - generic [ref=f7e737]:
+        - generic [ref=f7e738]: Aa
+        - generic [ref=f7e739]: status.warningon bg.canvas
+        - generic [ref=f7e740]:
+          - text: 5.61:1
+          - generic [ref=f7e741]: ≥ 4.5
+      - generic [ref=f7e742]:
+        - generic [ref=f7e743]: Aa
+        - generic [ref=f7e744]: status.warningon bg.surface
+        - generic [ref=f7e745]:
+          - text: 5.93:1
+          - generic [ref=f7e746]: ≥ 4.5
+      - generic [ref=f7e747]:
+        - generic [ref=f7e748]: Aa
+        - generic [ref=f7e749]: status.warningon bg.raised
+        - generic [ref=f7e750]:
+          - text: 5.38:1
+          - generic [ref=f7e751]: ≥ 4.5
+      - generic [ref=f7e752]:
+        - generic [ref=f7e753]: Aa
+        - generic [ref=f7e754]: status.dangeron bg.canvas
+        - generic [ref=f7e755]:
+          - text: 4.93:1
+          - generic [ref=f7e756]: ≥ 4.5
+      - generic [ref=f7e757]:
+        - generic [ref=f7e758]: Aa
+        - generic [ref=f7e759]: status.dangeron bg.surface
+        - generic [ref=f7e760]:
+          - text: 5.21:1
+          - generic [ref=f7e761]: ≥ 4.5
+      - generic [ref=f7e762]:
+        - generic [ref=f7e763]: Aa
+        - generic [ref=f7e764]: status.dangeron bg.raised
+        - generic [ref=f7e765]:
+          - text: 4.73:1
+          - generic [ref=f7e766]: ≥ 4.5
+      - generic [ref=f7e767]:
+        - generic [ref=f7e768]: Aa
+        - generic [ref=f7e769]: status.infoon bg.canvas
+        - generic [ref=f7e770]:
+          - text: 5.39:1
+          - generic [ref=f7e771]: ≥ 4.5
+      - generic [ref=f7e772]:
+        - generic [ref=f7e773]: Aa
+        - generic [ref=f7e774]: status.infoon bg.surface
+        - generic [ref=f7e775]:
+          - text: 5.69:1
+          - generic [ref=f7e776]: ≥ 4.5
+      - generic [ref=f7e777]:
+        - generic [ref=f7e778]: Aa
+        - generic [ref=f7e779]: status.infoon bg.raised
+        - generic [ref=f7e780]:
+          - text: 5.17:1
+          - generic [ref=f7e781]: ≥ 4.5
+      - generic [ref=f7e782]:
+        - generic [ref=f7e783]: Aa
+        - generic [ref=f7e784]: status.ultraon bg.canvas
+        - generic [ref=f7e785]:
+          - text: 5.65:1
+          - generic [ref=f7e786]: ≥ 4.5
+      - generic [ref=f7e787]:
+        - generic [ref=f7e788]: Aa
+        - generic [ref=f7e789]: status.ultraon bg.surface
+        - generic [ref=f7e790]:
+          - text: 5.97:1
+          - generic [ref=f7e791]: ≥ 4.5
+      - generic [ref=f7e792]:
+        - generic [ref=f7e793]: Aa
+        - generic [ref=f7e794]: status.ultraon bg.raised
+        - generic [ref=f7e795]:
+          - text: 5.42:1
+          - generic [ref=f7e796]: ≥ 4.5
+      - generic [ref=f7e797]:
+        - generic [ref=f7e798]: Aa
+        - generic [ref=f7e799]: state.queuedon bg.canvas
+        - generic [ref=f7e800]:
+          - text: 5.62:1
+          - generic [ref=f7e801]: ≥ 4.5
+      - generic [ref=f7e802]:
+        - generic [ref=f7e803]: Aa
+        - generic [ref=f7e804]: state.queuedon bg.surface
+        - generic [ref=f7e805]:
+          - text: 5.94:1
+          - generic [ref=f7e806]: ≥ 4.5
+      - generic [ref=f7e807]:
+        - generic [ref=f7e808]: Aa
+        - generic [ref=f7e809]: state.runningon bg.canvas
+        - generic [ref=f7e810]:
+          - text: 5.39:1
+          - generic [ref=f7e811]: ≥ 4.5
+      - generic [ref=f7e812]:
+        - generic [ref=f7e813]: Aa
+        - generic [ref=f7e814]: state.runningon bg.surface
+        - generic [ref=f7e815]:
+          - text: 5.69:1
+          - generic [ref=f7e816]: ≥ 4.5
+      - generic [ref=f7e817]:
+        - generic [ref=f7e818]: Aa
+        - generic [ref=f7e819]: state.awaiting-humanon bg.canvas
+        - generic [ref=f7e820]:
+          - text: 5.61:1
+          - generic [ref=f7e821]: ≥ 4.5
+      - generic [ref=f7e822]:
+        - generic [ref=f7e823]: Aa
+        - generic [ref=f7e824]: state.awaiting-humanon bg.surface
+        - generic [ref=f7e825]:
+          - text: 5.93:1
+          - generic [ref=f7e826]: ≥ 4.5
+      - generic [ref=f7e827]:
+        - generic [ref=f7e828]: Aa
+        - generic [ref=f7e829]: state.parkedon bg.canvas
+        - generic [ref=f7e830]:
+          - text: 5.69:1
+          - generic [ref=f7e831]: ≥ 4.5
+      - generic [ref=f7e832]:
+        - generic [ref=f7e833]: Aa
+        - generic [ref=f7e834]: state.parkedon bg.surface
+        - generic [ref=f7e835]:
+          - text: 6.01:1
+          - generic [ref=f7e836]: ≥ 4.5
+      - generic [ref=f7e837]:
+        - generic [ref=f7e838]: Aa
+        - generic [ref=f7e839]: state.succeededon bg.canvas
+        - generic [ref=f7e840]:
+          - text: 4.99:1
+          - generic [ref=f7e841]: ≥ 4.5
+      - generic [ref=f7e842]:
+        - generic [ref=f7e843]: Aa
+        - generic [ref=f7e844]: state.succeededon bg.surface
+        - generic [ref=f7e845]:
+          - text: 5.28:1
+          - generic [ref=f7e846]: ≥ 4.5
+      - generic [ref=f7e847]:
+        - generic [ref=f7e848]: Aa
+        - generic [ref=f7e849]: state.failedon bg.canvas
+        - generic [ref=f7e850]:
+          - text: 4.93:1
+          - generic [ref=f7e851]: ≥ 4.5
+      - generic [ref=f7e852]:
+        - generic [ref=f7e853]: Aa
+        - generic [ref=f7e854]: state.failedon bg.surface
+        - generic [ref=f7e855]:
+          - text: 5.21:1
+          - generic [ref=f7e856]: ≥ 4.5
+      - generic [ref=f7e857]:
+        - generic [ref=f7e858]: Aa
+        - generic [ref=f7e859]: state.cancelledon bg.canvas
+        - generic [ref=f7e860]:
+          - text: 4.50:1
+          - generic [ref=f7e861]: ≥ 4.5
+      - generic [ref=f7e862]:
+        - generic [ref=f7e863]: Aa
+        - generic [ref=f7e864]: state.cancelledon bg.surface
+        - generic [ref=f7e865]:
+          - text: 4.76:1
+          - generic [ref=f7e866]: ≥ 4.5
+      - generic [ref=f7e867]:
+        - generic [ref=f7e868]: Aa
+        - generic [ref=f7e869]: state.ultraon bg.canvas
+        - generic [ref=f7e870]:
+          - text: 5.65:1
+          - generic [ref=f7e871]: ≥ 4.5
+      - generic [ref=f7e872]:
+        - generic [ref=f7e873]: Aa
+        - generic [ref=f7e874]: state.ultraon bg.surface
+        - generic [ref=f7e875]:
+          - text: 5.97:1
+          - generic [ref=f7e876]: ≥ 4.5
+      - generic [ref=f7e877]:
+        - generic [ref=f7e878]: Aa
+        - generic [ref=f7e879]: text.on-accenton accent.default
+        - generic [ref=f7e880]:
+          - text: 5.18:1
+          - generic [ref=f7e881]: ≥ 4.5
+      - generic [ref=f7e882]:
+        - generic [ref=f7e883]: Aa
+        - generic [ref=f7e884]: text.on-accenton accent.hover
+        - generic [ref=f7e885]:
+          - text: 7.48:1
+          - generic [ref=f7e886]: ≥ 4.5
+      - generic [ref=f7e887]:
+        - generic [ref=f7e888]: Aa
+        - generic [ref=f7e889]: text.primaryon accent.subtle
+        - generic [ref=f7e890]:
+          - text: 10.97:1
+          - generic [ref=f7e891]: ≥ 4.5
+      - generic [ref=f7e892]:
+        - generic [ref=f7e893]: Aa
+        - generic [ref=f7e894]: text.linkon accent.subtle
+        - generic [ref=f7e895]:
+          - text: 6.25:1
+          - generic [ref=f7e896]: ≥ 4.5
+      - generic [ref=f7e897]:
+        - generic [ref=f7e898]: Aa
+        - generic [ref=f7e899]: syntax.texton bg.code
+        - generic [ref=f7e900]:
+          - text: 11.91:1
+          - generic [ref=f7e901]: ≥ 4.5
+      - generic [ref=f7e902]:
+        - generic [ref=f7e903]: Aa
+        - generic [ref=f7e904]: syntax.stringon bg.code
+        - generic [ref=f7e905]:
+          - text: 4.79:1
+          - generic [ref=f7e906]: ≥ 4.5
+      - generic [ref=f7e907]:
+        - generic [ref=f7e908]: Aa
+        - generic [ref=f7e909]: syntax.keywordon bg.code
+        - generic [ref=f7e910]:
+          - text: 6.79:1
+          - generic [ref=f7e911]: ≥ 4.5
+      - generic [ref=f7e912]:
+        - generic [ref=f7e913]: Aa
+        - generic [ref=f7e914]: syntax.numberon bg.code
+        - generic [ref=f7e915]:
+          - text: 5.46:1
+          - generic [ref=f7e916]: ≥ 4.5
+      - generic [ref=f7e917]:
+        - generic [ref=f7e918]: Aa
+        - generic [ref=f7e919]: syntax.titleon bg.code
+        - generic [ref=f7e920]:
+          - text: 5.16:1
+          - generic [ref=f7e921]: ≥ 4.5
+      - generic [ref=f7e922]:
+        - generic [ref=f7e923]: Aa
+        - generic [ref=f7e924]: syntax.attron bg.code
+        - generic [ref=f7e925]:
+          - text: 6.60:1
+          - generic [ref=f7e926]: ≥ 4.5
+      - generic [ref=f7e927]:
+        - generic [ref=f7e928]: Aa
+        - generic [ref=f7e929]: syntax.builtinon bg.code
+        - generic [ref=f7e930]:
+          - text: 4.97:1
+          - generic [ref=f7e931]: ≥ 4.5
+      - generic [ref=f7e932]:
+        - generic [ref=f7e933]: Aa
+        - generic [ref=f7e934]: syntax.commenton bg.code
+        - generic [ref=f7e935]:
+          - text: 4.91:1
+          - generic [ref=f7e936]: ≥ 4.5
+      - generic [ref=f7e937]:
+        - generic [ref=f7e938]: Aa
+        - generic [ref=f7e939]: syntax.puncton bg.code
+        - generic [ref=f7e940]:
+          - text: 7.85:1
+          - generic [ref=f7e941]: ≥ 4.5
+      - generic [ref=f7e942]:
+        - generic [ref=f7e943]: Aa
+        - generic [ref=f7e944]: syntax.deletionon bg.code
+        - generic [ref=f7e945]:
+          - text: 4.73:1
+          - generic [ref=f7e946]: ≥ 4.5
+      - generic [ref=f7e947]:
+        - generic [ref=f7e948]: Aa
+        - generic [ref=f7e949]: syntax.additionon bg.code
+        - generic [ref=f7e950]:
+          - text: 4.79:1
+          - generic [ref=f7e951]: ≥ 4.5
+      - generic [ref=f7e952]:
+        - generic [ref=f7e953]: Aa
+        - generic [ref=f7e954]: border.strongon bg.canvas
+        - generic [ref=f7e955]:
+          - text: 3.31:1
+          - generic [ref=f7e956]: ≥ 3
+      - generic [ref=f7e957]:
+        - generic [ref=f7e958]: Aa
+        - generic [ref=f7e959]: border.strongon bg.surface
+        - generic [ref=f7e960]:
+          - text: 3.50:1
+          - generic [ref=f7e961]: ≥ 3
+      - generic [ref=f7e962]:
+        - generic [ref=f7e963]: Aa
+        - generic [ref=f7e964]: border.strongon bg.raised
+        - generic [ref=f7e965]:
+          - text: 3.18:1
+          - generic [ref=f7e966]: ≥ 3
+      - generic [ref=f7e967]:
+        - generic [ref=f7e968]: Aa
+        - generic [ref=f7e969]: focus.ringon bg.canvas
+        - generic [ref=f7e970]:
+          - text: 5.39:1
+          - generic [ref=f7e971]: ≥ 3
+      - generic [ref=f7e972]:
+        - generic [ref=f7e973]: Aa
+        - generic [ref=f7e974]: focus.ringon bg.surface
+        - generic [ref=f7e975]:
+          - text: 5.69:1
+          - generic [ref=f7e976]: ≥ 3
+      - generic [ref=f7e977]:
+        - generic [ref=f7e978]: Aa
+        - generic [ref=f7e979]: focus.ringon bg.raised
+        - generic [ref=f7e980]:
+          - text: 5.17:1
+          - generic [ref=f7e981]: ≥ 3
+      - generic [ref=f7e982]:
+        - generic [ref=f7e983]: Aa
+        - generic [ref=f7e984]: accent.defaulton bg.canvas
+        - generic [ref=f7e985]:
+          - text: 4.90:1
+          - generic [ref=f7e986]: ≥ 3
+      - generic [ref=f7e987]:
+        - generic [ref=f7e988]: Aa
+        - generic [ref=f7e989]: accent.defaulton bg.surface
+        - generic [ref=f7e990]:
+          - text: 5.18:1
+          - generic [ref=f7e991]: ≥ 3
+      - generic [ref=f7e992]:
+        - generic [ref=f7e993]: Aa
+        - generic [ref=f7e994]: accent.defaulton bg.raised
+        - generic [ref=f7e995]:
+          - text: 4.71:1
+          - generic [ref=f7e996]: ≥ 3
+      - generic [ref=f7e997]:
+        - generic [ref=f7e998]: Aa
+        - generic [ref=f7e999]: lane.1on bg.canvas
+        - generic [ref=f7e1000]:
+          - text: 4.90:1
+          - generic [ref=f7e1001]: ≥ 3
+      - generic [ref=f7e1002]:
+        - generic [ref=f7e1003]: Aa
+        - generic [ref=f7e1004]: lane.1on bg.surface
+        - generic [ref=f7e1005]:
+          - text: 5.18:1
+          - generic [ref=f7e1006]: ≥ 3
+      - generic [ref=f7e1007]:
+        - generic [ref=f7e1008]: Aa
+        - generic [ref=f7e1009]: lane.2on bg.canvas
+        - generic [ref=f7e1010]:
+          - text: 5.39:1
+          - generic [ref=f7e1011]: ≥ 3
+      - generic [ref=f7e1012]:
+        - generic [ref=f7e1013]: Aa
+        - generic [ref=f7e1014]: lane.2on bg.surface
+        - generic [ref=f7e1015]:
+          - text: 5.69:1
+          - generic [ref=f7e1016]: ≥ 3
+      - generic [ref=f7e1017]:
+        - generic [ref=f7e1018]: Aa
+        - generic [ref=f7e1019]: lane.3on bg.canvas
+        - generic [ref=f7e1020]:
+          - text: 3.95:1
+          - generic [ref=f7e1021]: ≥ 3
+      - generic [ref=f7e1022]:
+        - generic [ref=f7e1023]: Aa
+        - generic [ref=f7e1024]: lane.3on bg.surface
+        - generic [ref=f7e1025]:
+          - text: 4.17:1
+          - generic [ref=f7e1026]: ≥ 3
+      - generic [ref=f7e1027]:
+        - generic [ref=f7e1028]: Aa
+        - generic [ref=f7e1029]: lane.4on bg.canvas
+        - generic [ref=f7e1030]:
+          - text: 3.91:1
+          - generic [ref=f7e1031]: ≥ 3
+      - generic [ref=f7e1032]:
+        - generic [ref=f7e1033]: Aa
+        - generic [ref=f7e1034]: lane.4on bg.surface
+        - generic [ref=f7e1035]:
+          - text: 4.13:1
+          - generic [ref=f7e1036]: ≥ 3
+      - generic [ref=f7e1037]:
+        - generic [ref=f7e1038]: Aa
+        - generic [ref=f7e1039]: lane.5on bg.canvas
+        - generic [ref=f7e1040]:
+          - text: 4.93:1
+          - generic [ref=f7e1041]: ≥ 3
+      - generic [ref=f7e1042]:
+        - generic [ref=f7e1043]: Aa
+        - generic [ref=f7e1044]: lane.5on bg.surface
+        - generic [ref=f7e1045]:
+          - text: 5.21:1
+          - generic [ref=f7e1046]: ≥ 3
+      - generic [ref=f7e1047]:
+        - generic [ref=f7e1048]: Aa
+        - generic [ref=f7e1049]: lane.6on bg.canvas
+        - generic [ref=f7e1050]:
+          - text: 5.65:1
+          - generic [ref=f7e1051]: ≥ 3
+      - generic [ref=f7e1052]:
+        - generic [ref=f7e1053]: Aa
+        - generic [ref=f7e1054]: lane.6on bg.surface
+        - generic [ref=f7e1055]:
+          - text: 5.97:1
+          - generic [ref=f7e1056]: ≥ 3
+      - generic [ref=f7e1057]:
+        - generic [ref=f7e1058]: Aa
+        - generic [ref=f7e1059]: lane.7on bg.canvas
+        - generic [ref=f7e1060]:
+          - text: 3.78:1
+          - generic [ref=f7e1061]: ≥ 3
+      - generic [ref=f7e1062]:
+        - generic [ref=f7e1063]: Aa
+        - generic [ref=f7e1064]: lane.7on bg.surface
+        - generic [ref=f7e1065]:
+          - text: 3.99:1
+          - generic [ref=f7e1066]: ≥ 3
+      - generic [ref=f7e1067]:
+        - generic [ref=f7e1068]: Aa
+        - generic [ref=f7e1069]: lane.8on bg.canvas
+        - generic [ref=f7e1070]:
+          - text: 4.50:1
+          - generic [ref=f7e1071]: ≥ 3
+      - generic [ref=f7e1072]:
+        - generic [ref=f7e1073]: Aa
+        - generic [ref=f7e1074]: lane.8on bg.surface
+        - generic [ref=f7e1075]:
+          - text: 4.76:1
+          - generic [ref=f7e1076]: ≥ 3
+    - heading "Dark" [level=3] [ref=f7e1077]
+    - generic [ref=f7e1078]:
+      - generic [ref=f7e1079]:
+        - generic [ref=f7e1080]: Aa
+        - generic [ref=f7e1081]: text.primaryon bg.canvas
+        - generic [ref=f7e1082]:
+          - text: 18.56:1
+          - generic [ref=f7e1083]: ≥ 4.5
+      - generic [ref=f7e1084]:
+        - generic [ref=f7e1085]: Aa
+        - generic [ref=f7e1086]: text.primaryon bg.surface
+        - generic [ref=f7e1087]:
+          - text: 17.30:1
+          - generic [ref=f7e1088]: ≥ 4.5
+      - generic [ref=f7e1089]:
+        - generic [ref=f7e1090]: Aa
+        - generic [ref=f7e1091]: text.primaryon bg.raised
+        - generic [ref=f7e1092]:
+          - text: 15.91:1
+          - generic [ref=f7e1093]: ≥ 4.5
+      - generic [ref=f7e1094]:
+        - generic [ref=f7e1095]: Aa
+        - generic [ref=f7e1096]: text.primaryon bg.overlay
+        - generic [ref=f7e1097]:
+          - text: 14.24:1
+          - generic [ref=f7e1098]: ≥ 4.5
+      - generic [ref=f7e1099]:
+        - generic [ref=f7e1100]: Aa
+        - generic [ref=f7e1101]: text.secondaryon bg.canvas
+        - generic [ref=f7e1102]:
+          - text: 12.13:1
+          - generic [ref=f7e1103]: ≥ 4.5
+      - generic [ref=f7e1104]:
+        - generic [ref=f7e1105]: Aa
+        - generic [ref=f7e1106]: text.secondaryon bg.surface
+        - generic [ref=f7e1107]:
+          - text: 11.31:1
+          - generic [ref=f7e1108]: ≥ 4.5
+      - generic [ref=f7e1109]:
+        - generic [ref=f7e1110]: Aa
+        - generic [ref=f7e1111]: text.secondaryon bg.raised
+        - generic [ref=f7e1112]:
+          - text: 10.40:1
+          - generic [ref=f7e1113]: ≥ 4.5
+      - generic [ref=f7e1114]:
+        - generic [ref=f7e1115]: Aa
+        - generic [ref=f7e1116]: text.secondaryon bg.overlay
+        - generic [ref=f7e1117]:
+          - text: 9.30:1
+          - generic [ref=f7e1118]: ≥ 4.5
+      - generic [ref=f7e1119]:
+        - generic [ref=f7e1120]: Aa
+        - generic [ref=f7e1121]: text.tertiaryon bg.canvas
+        - generic [ref=f7e1122]:
+          - text: 8.73:1
+          - generic [ref=f7e1123]: ≥ 4.5
+      - generic [ref=f7e1124]:
+        - generic [ref=f7e1125]: Aa
+        - generic [ref=f7e1126]: text.tertiaryon bg.surface
+        - generic [ref=f7e1127]:
+          - text: 8.14:1
+          - generic [ref=f7e1128]: ≥ 4.5
+      - generic [ref=f7e1129]:
+        - generic [ref=f7e1130]: Aa
+        - generic [ref=f7e1131]: text.tertiaryon bg.raised
+        - generic [ref=f7e1132]:
+          - text: 7.48:1
+          - generic [ref=f7e1133]: ≥ 4.5
+      - generic [ref=f7e1134]:
+        - generic [ref=f7e1135]: Aa
+        - generic [ref=f7e1136]: text.tertiaryon bg.overlay
+        - generic [ref=f7e1137]:
+          - text: 6.69:1
+          - generic [ref=f7e1138]: ≥ 4.5
+      - generic [ref=f7e1139]:
+        - generic [ref=f7e1140]: Aa
+        - generic [ref=f7e1141]: text.linkon bg.canvas
+        - generic [ref=f7e1142]:
+          - text: 9.26:1
+          - generic [ref=f7e1143]: ≥ 4.5
+      - generic [ref=f7e1144]:
+        - generic [ref=f7e1145]: Aa
+        - generic [ref=f7e1146]: text.linkon bg.surface
+        - generic [ref=f7e1147]:
+          - text: 8.63:1
+          - generic [ref=f7e1148]: ≥ 4.5
+      - generic [ref=f7e1149]:
+        - generic [ref=f7e1150]: Aa
+        - generic [ref=f7e1151]: text.linkon bg.raised
+        - generic [ref=f7e1152]:
+          - text: 7.94:1
+          - generic [ref=f7e1153]: ≥ 4.5
+      - generic [ref=f7e1154]:
+        - generic [ref=f7e1155]: Aa
+        - generic [ref=f7e1156]: text.linkon bg.overlay
+        - generic [ref=f7e1157]:
+          - text: 7.10:1
+          - generic [ref=f7e1158]: ≥ 4.5
+      - generic [ref=f7e1159]:
+        - generic [ref=f7e1160]: Aa
+        - generic [ref=f7e1161]: text.link-hoveron bg.canvas
+        - generic [ref=f7e1162]:
+          - text: 13.31:1
+          - generic [ref=f7e1163]: ≥ 4.5
+      - generic [ref=f7e1164]:
+        - generic [ref=f7e1165]: Aa
+        - generic [ref=f7e1166]: text.link-hoveron bg.surface
+        - generic [ref=f7e1167]:
+          - text: 12.41:1
+          - generic [ref=f7e1168]: ≥ 4.5
+      - generic [ref=f7e1169]:
+        - generic [ref=f7e1170]: Aa
+        - generic [ref=f7e1171]: text.link-hoveron bg.raised
+        - generic [ref=f7e1172]:
+          - text: 11.41:1
+          - generic [ref=f7e1173]: ≥ 4.5
+      - generic [ref=f7e1174]:
+        - generic [ref=f7e1175]: Aa
+        - generic [ref=f7e1176]: text.link-hoveron bg.overlay
+        - generic [ref=f7e1177]:
+          - text: 10.21:1
+          - generic [ref=f7e1178]: ≥ 4.5
+      - generic [ref=f7e1179]:
+        - generic [ref=f7e1180]: Aa
+        - generic [ref=f7e1181]: status.successon bg.canvas
+        - generic [ref=f7e1182]:
+          - text: 14.04:1
+          - generic [ref=f7e1183]: ≥ 4.5
+      - generic [ref=f7e1184]:
+        - generic [ref=f7e1185]: Aa
+        - generic [ref=f7e1186]: status.successon bg.surface
+        - generic [ref=f7e1187]:
+          - text: 13.09:1
+          - generic [ref=f7e1188]: ≥ 4.5
+      - generic [ref=f7e1189]:
+        - generic [ref=f7e1190]: Aa
+        - generic [ref=f7e1191]: status.successon bg.raised
+        - generic [ref=f7e1192]:
+          - text: 12.04:1
+          - generic [ref=f7e1193]: ≥ 4.5
+      - generic [ref=f7e1194]:
+        - generic [ref=f7e1195]: Aa
+        - generic [ref=f7e1196]: status.warningon bg.canvas
+        - generic [ref=f7e1197]:
+          - text: 12.81:1
+          - generic [ref=f7e1198]: ≥ 4.5
+      - generic [ref=f7e1199]:
+        - generic [ref=f7e1200]: Aa
+        - generic [ref=f7e1201]: status.warningon bg.surface
+        - generic [ref=f7e1202]:
+          - text: 11.94:1
+          - generic [ref=f7e1203]: ≥ 4.5
+      - generic [ref=f7e1204]:
+        - generic [ref=f7e1205]: Aa
+        - generic [ref=f7e1206]: status.warningon bg.raised
+        - generic [ref=f7e1207]:
+          - text: 10.99:1
+          - generic [ref=f7e1208]: ≥ 4.5
+      - generic [ref=f7e1209]:
+        - generic [ref=f7e1210]: Aa
+        - generic [ref=f7e1211]: status.dangeron bg.canvas
+        - generic [ref=f7e1212]:
+          - text: 8.73:1
+          - generic [ref=f7e1213]: ≥ 4.5
+      - generic [ref=f7e1214]:
+        - generic [ref=f7e1215]: Aa
+        - generic [ref=f7e1216]: status.dangeron bg.surface
+        - generic [ref=f7e1217]:
+          - text: 8.14:1
+          - generic [ref=f7e1218]: ≥ 4.5
+      - generic [ref=f7e1219]:
+        - generic [ref=f7e1220]: Aa
+        - generic [ref=f7e1221]: status.dangeron bg.raised
+        - generic [ref=f7e1222]:
+          - text: 7.49:1
+          - generic [ref=f7e1223]: ≥ 4.5
+      - generic [ref=f7e1224]:
+        - generic [ref=f7e1225]: Aa
+        - generic [ref=f7e1226]: status.infoon bg.canvas
+        - generic [ref=f7e1227]:
+          - text: 12.25:1
+          - generic [ref=f7e1228]: ≥ 4.5
+      - generic [ref=f7e1229]:
+        - generic [ref=f7e1230]: Aa
+        - generic [ref=f7e1231]: status.infoon bg.surface
+        - generic [ref=f7e1232]:
+          - text: 11.42:1
+          - generic [ref=f7e1233]: ≥ 4.5
+      - generic [ref=f7e1234]:
+        - generic [ref=f7e1235]: Aa
+        - generic [ref=f7e1236]: status.infoon bg.raised
+        - generic [ref=f7e1237]:
+          - text: 10.50:1
+          - generic [ref=f7e1238]: ≥ 4.5
+      - generic [ref=f7e1239]:
+        - generic [ref=f7e1240]: Aa
+        - generic [ref=f7e1241]: status.ultraon bg.canvas
+        - generic [ref=f7e1242]:
+          - text: 7.75:1
+          - generic [ref=f7e1243]: ≥ 4.5
+      - generic [ref=f7e1244]:
+        - generic [ref=f7e1245]: Aa
+        - generic [ref=f7e1246]: status.ultraon bg.surface
+        - generic [ref=f7e1247]:
+          - text: 7.22:1
+          - generic [ref=f7e1248]: ≥ 4.5
+      - generic [ref=f7e1249]:
+        - generic [ref=f7e1250]: Aa
+        - generic [ref=f7e1251]: status.ultraon bg.raised
+        - generic [ref=f7e1252]:
+          - text: 6.64:1
+          - generic [ref=f7e1253]: ≥ 4.5
+      - generic [ref=f7e1254]:
+        - generic [ref=f7e1255]: Aa
+        - generic [ref=f7e1256]: state.queuedon bg.canvas
+        - generic [ref=f7e1257]:
+          - text: 8.73:1
+          - generic [ref=f7e1258]: ≥ 4.5
+      - generic [ref=f7e1259]:
+        - generic [ref=f7e1260]: Aa
+        - generic [ref=f7e1261]: state.queuedon bg.surface
+        - generic [ref=f7e1262]:
+          - text: 8.14:1
+          - generic [ref=f7e1263]: ≥ 4.5
+      - generic [ref=f7e1264]:
+        - generic [ref=f7e1265]: Aa
+        - generic [ref=f7e1266]: state.runningon bg.canvas
+        - generic [ref=f7e1267]:
+          - text: 12.25:1
+          - generic [ref=f7e1268]: ≥ 4.5
+      - generic [ref=f7e1269]:
+        - generic [ref=f7e1270]: Aa
+        - generic [ref=f7e1271]: state.runningon bg.surface
+        - generic [ref=f7e1272]:
+          - text: 11.42:1
+          - generic [ref=f7e1273]: ≥ 4.5
+      - generic [ref=f7e1274]:
+        - generic [ref=f7e1275]: Aa
+        - generic [ref=f7e1276]: state.awaiting-humanon bg.canvas
+        - generic [ref=f7e1277]:
+          - text: 12.81:1
+          - generic [ref=f7e1278]: ≥ 4.5
+      - generic [ref=f7e1279]:
+        - generic [ref=f7e1280]: Aa
+        - generic [ref=f7e1281]: state.awaiting-humanon bg.surface
+        - generic [ref=f7e1282]:
+          - text: 11.94:1
+          - generic [ref=f7e1283]: ≥ 4.5
+      - generic [ref=f7e1284]:
+        - generic [ref=f7e1285]: Aa
+        - generic [ref=f7e1286]: state.parkedon bg.canvas
+        - generic [ref=f7e1287]:
+          - text: 11.53:1
+          - generic [ref=f7e1288]: ≥ 4.5
+      - generic [ref=f7e1289]:
+        - generic [ref=f7e1290]: Aa
+        - generic [ref=f7e1291]: state.parkedon bg.surface
+        - generic [ref=f7e1292]:
+          - text: 10.75:1
+          - generic [ref=f7e1293]: ≥ 4.5
+      - generic [ref=f7e1294]:
+        - generic [ref=f7e1295]: Aa
+        - generic [ref=f7e1296]: state.succeededon bg.canvas
+        - generic [ref=f7e1297]:
+          - text: 14.04:1
+          - generic [ref=f7e1298]: ≥ 4.5
+      - generic [ref=f7e1299]:
+        - generic [ref=f7e1300]: Aa
+        - generic [ref=f7e1301]: state.succeededon bg.surface
+        - generic [ref=f7e1302]:
+          - text: 13.09:1
+          - generic [ref=f7e1303]: ≥ 4.5
+      - generic [ref=f7e1304]:
+        - generic [ref=f7e1305]: Aa
+        - generic [ref=f7e1306]: state.failedon bg.canvas
+        - generic [ref=f7e1307]:
+          - text: 8.73:1
+          - generic [ref=f7e1308]: ≥ 4.5
+      - generic [ref=f7e1309]:
+        - generic [ref=f7e1310]: Aa
+        - generic [ref=f7e1311]: state.failedon bg.surface
+        - generic [ref=f7e1312]:
+          - text: 8.14:1
+          - generic [ref=f7e1313]: ≥ 4.5
+      - generic [ref=f7e1314]:
+        - generic [ref=f7e1315]: Aa
+        - generic [ref=f7e1316]: state.cancelledon bg.canvas
+        - generic [ref=f7e1317]:
+          - text: 6.69:1
+          - generic [ref=f7e1318]: ≥ 4.5
+      - generic [ref=f7e1319]:
+        - generic [ref=f7e1320]: Aa
+        - generic [ref=f7e1321]: state.cancelledon bg.surface
+        - generic [ref=f7e1322]:
+          - text: 6.24:1
+          - generic [ref=f7e1323]: ≥ 4.5
+      - generic [ref=f7e1324]:
+        - generic [ref=f7e1325]: Aa
+        - generic [ref=f7e1326]: state.ultraon bg.canvas
+        - generic [ref=f7e1327]:
+          - text: 7.75:1
+          - generic [ref=f7e1328]: ≥ 4.5
+      - generic [ref=f7e1329]:
+        - generic [ref=f7e1330]: Aa
+        - generic [ref=f7e1331]: state.ultraon bg.surface
+        - generic [ref=f7e1332]:
+          - text: 7.22:1
+          - generic [ref=f7e1333]: ≥ 4.5
+      - generic [ref=f7e1334]:
+        - generic [ref=f7e1335]: Aa
+        - generic [ref=f7e1336]: text.on-accenton accent.default
+        - generic [ref=f7e1337]:
+          - text: 6.32:1
+          - generic [ref=f7e1338]: ≥ 4.5
+      - generic [ref=f7e1339]:
+        - generic [ref=f7e1340]: Aa
+        - generic [ref=f7e1341]: text.on-accenton accent.hover
+        - generic [ref=f7e1342]:
+          - text: 8.47:1
+          - generic [ref=f7e1343]: ≥ 4.5
+      - generic [ref=f7e1344]:
+        - generic [ref=f7e1345]: Aa
+        - generic [ref=f7e1346]: text.primaryon accent.subtle
+        - generic [ref=f7e1347]:
+          - text: 14.74:1
+          - generic [ref=f7e1348]: ≥ 4.5
+      - generic [ref=f7e1349]:
+        - generic [ref=f7e1350]: Aa
+        - generic [ref=f7e1351]: text.linkon accent.subtle
+        - generic [ref=f7e1352]:
+          - text: 7.35:1
+          - generic [ref=f7e1353]: ≥ 4.5
+      - generic [ref=f7e1354]:
+        - generic [ref=f7e1355]: Aa
+        - generic [ref=f7e1356]: syntax.texton bg.code
+        - generic [ref=f7e1357]:
+          - text: 15.10:1
+          - generic [ref=f7e1358]: ≥ 4.5
+      - generic [ref=f7e1359]:
+        - generic [ref=f7e1360]: Aa
+        - generic [ref=f7e1361]: syntax.stringon bg.code
+        - generic [ref=f7e1362]:
+          - text: 13.21:1
+          - generic [ref=f7e1363]: ≥ 4.5
+      - generic [ref=f7e1364]:
+        - generic [ref=f7e1365]: Aa
+        - generic [ref=f7e1366]: syntax.keywordon bg.code
+        - generic [ref=f7e1367]:
+          - text: 9.50:1
+          - generic [ref=f7e1368]: ≥ 4.5
+      - generic [ref=f7e1369]:
+        - generic [ref=f7e1370]: Aa
+        - generic [ref=f7e1371]: syntax.numberon bg.code
+        - generic [ref=f7e1372]:
+          - text: 11.46:1
+          - generic [ref=f7e1373]: ≥ 4.5
+      - generic [ref=f7e1374]:
+        - generic [ref=f7e1375]: Aa
+        - generic [ref=f7e1376]: syntax.titleon bg.code
+        - generic [ref=f7e1377]:
+          - text: 10.41:1
+          - generic [ref=f7e1378]: ≥ 4.5
+      - generic [ref=f7e1379]:
+        - generic [ref=f7e1380]: Aa
+        - generic [ref=f7e1381]: syntax.attron bg.code
+        - generic [ref=f7e1382]:
+          - text: 11.75:1
+          - generic [ref=f7e1383]: ≥ 4.5
+      - generic [ref=f7e1384]:
+        - generic [ref=f7e1385]: Aa
+        - generic [ref=f7e1386]: syntax.builtinon bg.code
+        - generic [ref=f7e1387]:
+          - text: 10.99:1
+          - generic [ref=f7e1388]: ≥ 4.5
+      - generic [ref=f7e1389]:
+        - generic [ref=f7e1390]: Aa
+        - generic [ref=f7e1391]: syntax.commenton bg.code
+        - generic [ref=f7e1392]:
+          - text: 6.42:1
+          - generic [ref=f7e1393]: ≥ 4.5
+      - generic [ref=f7e1394]:
+        - generic [ref=f7e1395]: Aa
+        - generic [ref=f7e1396]: syntax.puncton bg.code
+        - generic [ref=f7e1397]:
+          - text: 14.25:1
+          - generic [ref=f7e1398]: ≥ 4.5
+      - generic [ref=f7e1399]:
+        - generic [ref=f7e1400]: Aa
+        - generic [ref=f7e1401]: syntax.deletionon bg.code
+        - generic [ref=f7e1402]:
+          - text: 9.71:1
+          - generic [ref=f7e1403]: ≥ 4.5
+      - generic [ref=f7e1404]:
+        - generic [ref=f7e1405]: Aa
+        - generic [ref=f7e1406]: syntax.additionon bg.code
+        - generic [ref=f7e1407]:
+          - text: 13.21:1
+          - generic [ref=f7e1408]: ≥ 4.5
+      - generic [ref=f7e1409]:
+        - generic [ref=f7e1410]: Aa
+        - generic [ref=f7e1411]: border.strongon bg.canvas
+        - generic [ref=f7e1412]:
+          - text: 3.51:1
+          - generic [ref=f7e1413]: ≥ 3
+      - generic [ref=f7e1414]:
+        - generic [ref=f7e1415]: Aa
+        - generic [ref=f7e1416]: border.strongon bg.surface
+        - generic [ref=f7e1417]:
+          - text: 3.27:1
+          - generic [ref=f7e1418]: ≥ 3
+      - generic [ref=f7e1419]:
+        - generic [ref=f7e1420]: Aa
+        - generic [ref=f7e1421]: border.strongon bg.raised
+        - generic [ref=f7e1422]:
+          - text: 3.01:1
+          - generic [ref=f7e1423]: ≥ 3
+      - generic [ref=f7e1424]:
+        - generic [ref=f7e1425]: Aa
+        - generic [ref=f7e1426]: focus.ringon bg.canvas
+        - generic [ref=f7e1427]:
+          - text: 12.25:1
+          - generic [ref=f7e1428]: ≥ 3
+      - generic [ref=f7e1429]:
+        - generic [ref=f7e1430]: Aa
+        - generic [ref=f7e1431]: focus.ringon bg.surface
+        - generic [ref=f7e1432]:
+          - text: 11.42:1
+          - generic [ref=f7e1433]: ≥ 3
+      - generic [ref=f7e1434]:
+        - generic [ref=f7e1435]: Aa
+        - generic [ref=f7e1436]: focus.ringon bg.raised
+        - generic [ref=f7e1437]:
+          - text: 10.50:1
+          - generic [ref=f7e1438]: ≥ 3
+      - generic [ref=f7e1439]:
+        - generic [ref=f7e1440]: Aa
+        - generic [ref=f7e1441]: accent.defaulton bg.canvas
+        - generic [ref=f7e1442]:
+          - text: 6.28:1
+          - generic [ref=f7e1443]: ≥ 3
+      - generic [ref=f7e1444]:
+        - generic [ref=f7e1445]: Aa
+        - generic [ref=f7e1446]: accent.defaulton bg.surface
+        - generic [ref=f7e1447]:
+          - text: 5.86:1
+          - generic [ref=f7e1448]: ≥ 3
+      - generic [ref=f7e1449]:
+        - generic [ref=f7e1450]: Aa
+        - generic [ref=f7e1451]: accent.defaulton bg.raised
+        - generic [ref=f7e1452]:
+          - text: 5.39:1
+          - generic [ref=f7e1453]: ≥ 3
+      - generic [ref=f7e1454]:
+        - generic [ref=f7e1455]: Aa
+        - generic [ref=f7e1456]: lane.1on bg.canvas
+        - generic [ref=f7e1457]:
+          - text: 6.28:1
+          - generic [ref=f7e1458]: ≥ 3
+      - generic [ref=f7e1459]:
+        - generic [ref=f7e1460]: Aa
+        - generic [ref=f7e1461]: lane.1on bg.surface
+        - generic [ref=f7e1462]:
+          - text: 5.86:1
+          - generic [ref=f7e1463]: ≥ 3
+      - generic [ref=f7e1464]:
+        - generic [ref=f7e1465]: Aa
+        - generic [ref=f7e1466]: lane.2on bg.canvas
+        - generic [ref=f7e1467]:
+          - text: 12.25:1
+          - generic [ref=f7e1468]: ≥ 3
+      - generic [ref=f7e1469]:
+        - generic [ref=f7e1470]: Aa
+        - generic [ref=f7e1471]: lane.2on bg.surface
+        - generic [ref=f7e1472]:
+          - text: 11.42:1
+          - generic [ref=f7e1473]: ≥ 3
+      - generic [ref=f7e1474]:
+        - generic [ref=f7e1475]: Aa
+        - generic [ref=f7e1476]: lane.3on bg.canvas
+        - generic [ref=f7e1477]:
+          - text: 14.04:1
+          - generic [ref=f7e1478]: ≥ 3
+      - generic [ref=f7e1479]:
+        - generic [ref=f7e1480]: Aa
+        - generic [ref=f7e1481]: lane.3on bg.surface
+        - generic [ref=f7e1482]:
+          - text: 13.09:1
+          - generic [ref=f7e1483]: ≥ 3
+      - generic [ref=f7e1484]:
+        - generic [ref=f7e1485]: Aa
+        - generic [ref=f7e1486]: lane.4on bg.canvas
+        - generic [ref=f7e1487]:
+          - text: 12.81:1
+          - generic [ref=f7e1488]: ≥ 3
+      - generic [ref=f7e1489]:
+        - generic [ref=f7e1490]: Aa
+        - generic [ref=f7e1491]: lane.4on bg.surface
+        - generic [ref=f7e1492]:
+          - text: 11.94:1
+          - generic [ref=f7e1493]: ≥ 3
+      - generic [ref=f7e1494]:
+        - generic [ref=f7e1495]: Aa
+        - generic [ref=f7e1496]: lane.5on bg.canvas
+        - generic [ref=f7e1497]:
+          - text: 8.73:1
+          - generic [ref=f7e1498]: ≥ 3
+      - generic [ref=f7e1499]:
+        - generic [ref=f7e1500]: Aa
+        - generic [ref=f7e1501]: lane.5on bg.surface
+        - generic [ref=f7e1502]:
+          - text: 8.14:1
+          - generic [ref=f7e1503]: ≥ 3
+      - generic [ref=f7e1504]:
+        - generic [ref=f7e1505]: Aa
+        - generic [ref=f7e1506]: lane.6on bg.canvas
+        - generic [ref=f7e1507]:
+          - text: 7.75:1
+          - generic [ref=f7e1508]: ≥ 3
+      - generic [ref=f7e1509]:
+        - generic [ref=f7e1510]: Aa
+        - generic [ref=f7e1511]: lane.6on bg.surface
+        - generic [ref=f7e1512]:
+          - text: 7.22:1
+          - generic [ref=f7e1513]: ≥ 3
+      - generic [ref=f7e1514]:
+        - generic [ref=f7e1515]: Aa
+        - generic [ref=f7e1516]: lane.7on bg.canvas
+        - generic [ref=f7e1517]:
+          - text: 10.48:1
+          - generic [ref=f7e1518]: ≥ 3
+      - generic [ref=f7e1519]:
+        - generic [ref=f7e1520]: Aa
+        - generic [ref=f7e1521]: lane.7on bg.surface
+        - generic [ref=f7e1522]:
+          - text: 9.77:1
+          - generic [ref=f7e1523]: ≥ 3
+      - generic [ref=f7e1524]:
+        - generic [ref=f7e1525]: Aa
+        - generic [ref=f7e1526]: lane.8on bg.canvas
+        - generic [ref=f7e1527]:
+          - text: 13.67:1
+          - generic [ref=f7e1528]: ≥ 3
+      - generic [ref=f7e1529]:
+        - generic [ref=f7e1530]: Aa
+        - generic [ref=f7e1531]: lane.8on bg.surface
+        - generic [ref=f7e1532]:
+          - text: 12.74:1
+          - generic [ref=f7e1533]: ≥ 3
+    - heading "Type" [level=2] [ref=f7e1534]
+    - paragraph [ref=f7e1535]: Inter for every screen, JetBrains Mono for code and lanes, TeX Gyre for print.
+    - generic [ref=f7e1536]:
+      - generic [ref=f7e1537]: display
+      - text: The conductor hums along
+    - generic [ref=f7e1538]:
+      - generic [ref=f7e1539]: headline
+      - text: The conductor hums along
+    - generic [ref=f7e1540]:
+      - generic [ref=f7e1541]: title
+      - text: The conductor hums along
+    - generic [ref=f7e1542]:
+      - generic [ref=f7e1543]: subtitle
+      - text: The conductor hums along
+    - generic [ref=f7e1544]:
+      - generic [ref=f7e1545]: body
+      - text: The conductor hums along
+    - generic [ref=f7e1546]:
+      - generic [ref=f7e1547]: label
+      - text: The conductor hums along
+    - generic [ref=f7e1548]:
+      - generic [ref=f7e1549]: caption
+      - text: The conductor hums along
+    - generic [ref=f7e1550]:
+      - generic [ref=f7e1551]: overline
+      - text: The conductor hums along
+    - generic [ref=f7e1552]:
+      - generic [ref=f7e1553]: code
+      - text: The conductor hums along
+    - heading "Space, radius, elevation" [level=2] [ref=f7e1554]
+    - paragraph [ref=f7e1555]: A 4 px grid; soft layered shadows.
+    - generic [ref=f7e1556]:
+      - generic [ref=f7e1557]:
+        - code [ref=f7e1559]: space.0 · 0px
+        - code [ref=f7e1562]: space.px · 1px
+        - code [ref=f7e1565]: space.0-5 · 2px
+        - code [ref=f7e1568]: space.1 · 4px
+        - code [ref=f7e1571]: space.2 · 8px
+        - code [ref=f7e1574]: space.3 · 12px
+        - code [ref=f7e1577]: space.4 · 16px
+        - code [ref=f7e1580]: space.5 · 20px
+        - code [ref=f7e1583]: space.6 · 24px
+        - code [ref=f7e1586]: space.8 · 32px
+        - code [ref=f7e1589]: space.10 · 40px
+        - code [ref=f7e1592]: space.12 · 48px
+        - code [ref=f7e1595]: space.16 · 64px
+        - code [ref=f7e1598]: space.20 · 80px
+        - code [ref=f7e1601]: space.24 · 96px
+      - generic [ref=f7e1602]:
+        - generic [ref=f7e1603]:
+          - code [ref=f7e1605]: none
+          - code [ref=f7e1607]: xs
+          - code [ref=f7e1609]: sm
+          - code [ref=f7e1611]: md
+          - code [ref=f7e1613]: lg
+          - code [ref=f7e1615]: xl
+          - code [ref=f7e1617]: 2xl
+          - code [ref=f7e1619]: pill
+        - heading "Elevation" [level=3] [ref=f7e1620]
+        - generic [ref=f7e1621]:
+          - code [ref=f7e1623]: elevation.0
+          - code [ref=f7e1625]: elevation.1
+          - code [ref=f7e1627]: elevation.2
+          - code [ref=f7e1629]: elevation.3
+          - code [ref=f7e1631]: elevation.4
+    - heading "Motion" [level=2] [ref=f7e1632]
+    - paragraph [ref=f7e1633]: Each easing, looping. Under reduced motion they stop.
+    - code [ref=f7e1635]: standard
+    - code [ref=f7e1639]: enter
+    - code [ref=f7e1643]: exit
+    - code [ref=f7e1647]: emphasized
+    - code [ref=f7e1651]: linear
+    - heading "Sound events" [level=2] [ref=f7e1654]
+    - paragraph [ref=f7e1655]: Names and length budgets are tokens now; the cues arrive in Lane J.
+    - list [ref=f7e1656]:
+      - listitem [ref=f7e1657]: "gate-needs-you · ≤ 700 ms — A human gate is waiting: a rising two-note chime, warm, never alarming."
+      - listitem [ref=f7e1658]: "run-finished · ≤ 900 ms — A run or phase finished: a bright resolving triad."
+      - listitem [ref=f7e1659]: "ultra-pass-finished · ≤ 950 ms — An ULTRA improvement pass completed and the next begins: a shimmering upward arpeggio."
+      - listitem [ref=f7e1660]: "failed · ≤ 700 ms — A job failed or was parked: a soft falling minor third."
+      - listitem [ref=f7e1661]: "parked · ≤ 450 ms — A job parked for later: a single muted pluck."
+      - listitem [ref=f7e1662]: "budget-step · ≤ 500 ms — A budget threshold was crossed: two even ticks."
+      - listitem [ref=f7e1663]: "unlimited-spend-reminder · ≤ 800 ms — The unlimited-budget reminder: a low, patient pulse."
+      - listitem [ref=f7e1664]: "device-paired · ≤ 600 ms — A device paired: a quick two-tone handshake."
+      - listitem [ref=f7e1665]: "tap · ≤ 90 ms — A UI acknowledgement, used sparingly: a near-silent click."
+    - heading "Primitive palette" [level=2] [ref=f7e1666]
+    - paragraph [ref=f7e1667]: Tier 1. Components never use these directly.
+    - generic [ref=f7e1668]:
+      - generic [ref=f7e1669]:
+        - generic [ref=f7e1671]: night.600
+        - code [ref=f7e1672]: "#5b6690"
+      - generic [ref=f7e1673]:
+        - generic [ref=f7e1675]: night.800
+        - code [ref=f7e1676]: "#252e4b"
+      - generic [ref=f7e1677]:
+        - generic [ref=f7e1679]: night.825
+        - code [ref=f7e1680]: "#1c2542"
+      - generic [ref=f7e1681]:
+        - generic [ref=f7e1683]: night.850
+        - code [ref=f7e1684]: "#151c33"
+      - generic [ref=f7e1685]:
+        - generic [ref=f7e1687]: night.900
+        - code [ref=f7e1688]: "#0f1424"
+      - generic [ref=f7e1689]:
+        - generic [ref=f7e1691]: night.905
+        - code [ref=f7e1692]: "#0d1222"
+      - generic [ref=f7e1693]:
+        - generic [ref=f7e1695]: night.925
+        - code [ref=f7e1696]: "#080c17"
+      - generic [ref=f7e1697]:
+        - generic [ref=f7e1699]: night.930
+        - code [ref=f7e1700]: "#080b14"
+      - generic [ref=f7e1701]:
+        - generic [ref=f7e1703]: slate.0
+        - code [ref=f7e1704]: "#ffffff"
+      - generic [ref=f7e1705]:
+        - generic [ref=f7e1707]: slate.25
+        - code [ref=f7e1708]: "#f6f9fc"
+      - generic [ref=f7e1709]:
+        - generic [ref=f7e1711]: slate.30
+        - code [ref=f7e1712]: "#f7f8ff"
+      - generic [ref=f7e1713]:
+        - generic [ref=f7e1715]: slate.50
+        - code [ref=f7e1716]: "#eef5fa"
+      - generic [ref=f7e1717]:
+        - generic [ref=f7e1719]: slate.55
+        - code [ref=f7e1720]: "#f1f4fa"
+      - generic [ref=f7e1721]:
+        - generic [ref=f7e1723]: slate.125
+        - code [ref=f7e1724]: "#dce2f5"
+      - generic [ref=f7e1725]:
+        - generic [ref=f7e1727]: slate.130
+        - code [ref=f7e1728]: "#d6e0ea"
+      - generic [ref=f7e1729]:
+        - generic [ref=f7e1731]: slate.150
+        - code [ref=f7e1732]: "#d3dcf5"
+      - generic [ref=f7e1733]:
+        - generic [ref=f7e1735]: slate.200
+        - code [ref=f7e1736]: "#c6cbda"
+      - generic [ref=f7e1737]:
+        - generic [ref=f7e1739]: slate.300
+        - code [ref=f7e1740]: "#a7b2c2"
+      - generic [ref=f7e1741]:
+        - generic [ref=f7e1743]: slate.325
+        - code [ref=f7e1744]: "#a7acc2"
+      - generic [ref=f7e1745]:
+        - generic [ref=f7e1747]: slate.400
+        - code [ref=f7e1748]: "#8f96af"
+      - generic [ref=f7e1749]:
+        - generic [ref=f7e1751]: slate.425
+        - code [ref=f7e1752]: "#8b93b0"
+      - generic [ref=f7e1753]:
+        - generic [ref=f7e1755]: slate.475
+        - code [ref=f7e1756]: "#7c8aa0"
+      - generic [ref=f7e1757]:
+        - generic [ref=f7e1759]: slate.550
+        - code [ref=f7e1760]: "#64748b"
+      - generic [ref=f7e1761]:
+        - generic [ref=f7e1763]: slate.575
+        - code [ref=f7e1764]: "#5d6b80"
+      - generic [ref=f7e1765]:
+        - generic [ref=f7e1767]: slate.600
+        - code [ref=f7e1768]: "#56657a"
+      - generic [ref=f7e1769]:
+        - generic [ref=f7e1771]: slate.700
+        - code [ref=f7e1772]: "#3b4d63"
+      - generic [ref=f7e1773]:
+        - generic [ref=f7e1775]: slate.800
+        - code [ref=f7e1776]: "#17324d"
+      - generic [ref=f7e1777]:
+        - generic [ref=f7e1779]: violet.75
+        - code [ref=f7e1780]: "#ece8ff"
+      - generic [ref=f7e1781]:
+        - generic [ref=f7e1783]: violet.300
+        - code [ref=f7e1784]: "#c3a6ff"
+      - generic [ref=f7e1785]:
+        - generic [ref=f7e1787]: violet.305
+        - code [ref=f7e1788]: "#b9a5ff"
+      - generic [ref=f7e1789]:
+        - generic [ref=f7e1791]: violet.350
+        - code [ref=f7e1792]: "#b39aff"
+      - generic [ref=f7e1793]:
+        - generic [ref=f7e1795]: violet.355
+        - code [ref=f7e1796]: "#a89be8"
+      - generic [ref=f7e1797]:
+        - generic [ref=f7e1799]: violet.425
+        - code [ref=f7e1800]: "#9d7bff"
+      - generic [ref=f7e1801]:
+        - generic [ref=f7e1803]: violet.575
+        - code [ref=f7e1804]: "#6b5bd2"
+      - generic [ref=f7e1805]:
+        - generic [ref=f7e1807]: violet.650
+        - code [ref=f7e1808]: "#5443b0"
+      - generic [ref=f7e1809]:
+        - generic [ref=f7e1811]: violet.850
+        - code [ref=f7e1812]: "#231c4d"
+      - generic [ref=f7e1813]:
+        - generic [ref=f7e1815]: violet.925
+        - code [ref=f7e1816]: "#0b0620"
+      - generic [ref=f7e1817]:
+        - generic [ref=f7e1819]: blue.225
+        - code [ref=f7e1820]: "#8fd0ff"
+      - generic [ref=f7e1821]:
+        - generic [ref=f7e1823]: blue.250
+        - code [ref=f7e1824]: "#7cc4ff"
+      - generic [ref=f7e1825]:
+        - generic [ref=f7e1827]: blue.400
+        - code [ref=f7e1828]: "#4fa3d1"
+      - generic [ref=f7e1829]:
+        - generic [ref=f7e1831]: blue.600
+        - code [ref=f7e1832]: "#2f6b9a"
+      - generic [ref=f7e1833]:
+        - generic [ref=f7e1835]: cyan.175
+        - code [ref=f7e1836]: "#77e3ff"
+      - generic [ref=f7e1837]:
+        - generic [ref=f7e1839]: cyan.200
+        - code [ref=f7e1840]: "#57dcff"
+      - generic [ref=f7e1841]:
+        - generic [ref=f7e1843]: cyan.650
+        - code [ref=f7e1844]: "#155e75"
+      - generic [ref=f7e1845]:
+        - generic [ref=f7e1847]: teal.250
+        - code [ref=f7e1848]: "#6fd3c7"
+      - generic [ref=f7e1849]:
+        - generic [ref=f7e1851]: teal.525
+        - code [ref=f7e1852]: "#168a8a"
+      - generic [ref=f7e1853]:
+        - generic [ref=f7e1855]: teal.575
+        - code [ref=f7e1856]: "#0f766e"
+      - generic [ref=f7e1857]:
+        - generic [ref=f7e1859]: mint.150
+        - code [ref=f7e1860]: "#75f0c2"
+      - generic [ref=f7e1861]:
+        - generic [ref=f7e1863]: mint.425
+        - code [ref=f7e1864]: "#2ea97f"
+      - generic [ref=f7e1865]:
+        - generic [ref=f7e1867]: mint.575
+        - code [ref=f7e1868]: "#1f7a57"
+      - generic [ref=f7e1869]:
+        - generic [ref=f7e1871]: green.150
+        - code [ref=f7e1872]: "#c6e36b"
+      - generic [ref=f7e1873]:
+        - generic [ref=f7e1875]: green.175
+        - code [ref=f7e1876]: "#9ae6a0"
+      - generic [ref=f7e1877]:
+        - generic [ref=f7e1879]: green.500
+        - code [ref=f7e1880]: "#3a8f5b"
+      - generic [ref=f7e1881]:
+        - generic [ref=f7e1883]: gold.175
+        - code [ref=f7e1884]: "#ffc861"
+      - generic [ref=f7e1885]:
+        - generic [ref=f7e1887]: gold.300
+        - code [ref=f7e1888]: "#e0a83a"
+      - generic [ref=f7e1889]:
+        - generic [ref=f7e1891]: gold.425
+        - code [ref=f7e1892]: "#c68a19"
+      - generic [ref=f7e1893]:
+        - generic [ref=f7e1895]: gold.500
+        - code [ref=f7e1896]: "#a8720f"
+      - generic [ref=f7e1897]:
+        - generic [ref=f7e1899]: gold.600
+        - code [ref=f7e1900]: "#8a5a00"
+      - generic [ref=f7e1901]:
+        - generic [ref=f7e1903]: orange.225
+        - code [ref=f7e1904]: "#ffb86b"
+      - generic [ref=f7e1905]:
+        - generic [ref=f7e1907]: orange.600
+        - code [ref=f7e1908]: "#9a4f00"
+      - generic [ref=f7e1909]:
+        - generic [ref=f7e1911]: red.275
+        - code [ref=f7e1912]: "#ff9aa8"
+      - generic [ref=f7e1913]:
+        - generic [ref=f7e1915]: red.325
+        - code [ref=f7e1916]: "#ff8a96"
+      - generic [ref=f7e1917]:
+        - generic [ref=f7e1919]: red.375
+        - code [ref=f7e1920]: "#d98a8a"
+      - generic [ref=f7e1921]:
+        - generic [ref=f7e1923]: red.575
+        - code [ref=f7e1924]: "#b24c4c"
+      - generic [ref=f7e1925]:
+        - generic [ref=f7e1927]: magenta.375
+        - code [ref=f7e1928]: "#ff6ad5"
+      - generic [ref=f7e1929]:
+        - generic [ref=f7e1931]: magenta.600
+        - code [ref=f7e1932]: "#b0268f"
+    - heading "The paper's print palette (unchanged)" [level=3] [ref=f7e1933]
+    - generic [ref=f7e1934]:
+      - generic [ref=f7e1935]:
+        - generic [ref=f7e1937]: vibeyink
+        - code [ref=f7e1938]: "#17324d"
+      - generic [ref=f7e1939]:
+        - generic [ref=f7e1941]: vibeyblue
+        - code [ref=f7e1942]: "#2f6b9a"
+      - generic [ref=f7e1943]:
+        - generic [ref=f7e1945]: vibeysky
+        - code [ref=f7e1946]: "#4fa3d1"
+      - generic [ref=f7e1947]:
+        - generic [ref=f7e1949]: vibeyteal
+        - code [ref=f7e1950]: "#168a8a"
+      - generic [ref=f7e1951]:
+        - generic [ref=f7e1953]: vibeymint
+        - code [ref=f7e1954]: "#2ea97f"
+      - generic [ref=f7e1955]:
+        - generic [ref=f7e1957]: vibeygreen
+        - code [ref=f7e1958]: "#3a8f5b"
+      - generic [ref=f7e1959]:
+        - generic [ref=f7e1961]: vibeygold
+        - code [ref=f7e1962]: "#c68a19"
+      - generic [ref=f7e1963]:
+        - generic [ref=f7e1965]: vibeyamber
+        - code [ref=f7e1966]: "#e0a83a"
+      - generic [ref=f7e1967]:
+        - generic [ref=f7e1969]: vibeyred
+        - code [ref=f7e1970]: "#b24c4c"
+      - generic [ref=f7e1971]:
+        - generic [ref=f7e1973]: vibeyrose
+        - code [ref=f7e1974]: "#d98a8a"
+      - generic [ref=f7e1975]:
+        - generic [ref=f7e1977]: vibeyviolet
+        - code [ref=f7e1978]: "#6b5bd2"
+      - generic [ref=f7e1979]:
+        - generic [ref=f7e1981]: vibeylilac
+        - code [ref=f7e1982]: "#a89be8"
+      - generic [ref=f7e1983]:
+        - generic [ref=f7e1985]: vibeygray
+        - code [ref=f7e1986]: "#64748b"
+      - generic [ref=f7e1987]:
+        - generic [ref=f7e1989]: vibeysilver
+        - code [ref=f7e1990]: "#a7b2c2"
+      - generic [ref=f7e1991]:
+        - generic [ref=f7e1993]: vibeyline
+        - code [ref=f7e1994]: "#d6e0ea"
+      - generic [ref=f7e1995]:
+        - generic [ref=f7e1997]: vibeywash
+        - code [ref=f7e1998]: "#eef5fa"
+      - generic [ref=f7e1999]:
+        - generic [ref=f7e2001]: vibeymist
+        - code [ref=f7e2002]: "#f6f9fc"

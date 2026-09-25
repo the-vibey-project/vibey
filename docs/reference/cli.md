@@ -52,7 +52,7 @@ with payloads.
 | `2` | Usage error: a bad global flag (see above); typer's own validation (missing argument, malformed UUID, a value outside an option's minimum or maximum, unknown option); `install` without `--postgres`; `doctor --install-postgres` with `--cluster`; `new --skills-context-mode` outside `off`/`shadow`/`inject`; `answer` mode conflicts or a `--raw` value that is not a JSON object; `worker` with an unknown `--engines` id, an `--engines` list matching none of the worker's engines, an unknown `--provider`, or an unknown `--azure` value; `doctor --cluster` with an unknown `--engines` id or `--provider`; `doctor --engines` or `--provider` without `--cluster`; `doctor --record` whose target project declares a forbidden `engine_environment` entry; `new` whose `vibey.toml` declares a malformed or forbidden `[gates]` or `[engine_environment]` entry. |
 | `3` | Blocked by a domain rule, in a guarded command. Prints `Error: <message>` on stderr, plus a next-step hint for some error types. |
 | `130` | Interrupted with Ctrl-C, in a guarded command (prints `Interrupted.`). |
-| `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0070](../architecture/decisions/0070-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
+| `75` | Resting for the Sabbath (sub-doctrine 8.i, [ADR-0070](../architecture/decisions/0071-the-sabbath-kept-where-the-machine-stands.md)): `new` or `work` declined, said why and when it resumes, and changed nothing. Paused, not failed. |
 
 ### Guarded and unguarded commands
 
@@ -151,7 +151,7 @@ While it runs it keeps `<state_dir>/serving.json` (address, port, process id), w
 ## `vibey sabbath`
 
 Print the Sabbath window on this host (sub-doctrine 8.i,
-[ADR-0070](../architecture/decisions/0070-the-sabbath-kept-where-the-machine-stands.md)):
+[ADR-0070](../architecture/decisions/0071-the-sabbath-kept-where-the-machine-stands.md)):
 whether it is enabled, the zone, where the location came from and how accurate it is, and
 when the current or next rest ends. It only reads, and is never held. From sundown Friday
 to sundown Saturday `vibey new` and `vibey work` decline with exit code `75`, the worker
@@ -663,6 +663,30 @@ declaration in one command: it records `UltraNoCapChanged` with `enabled:
 false`, and sets the key to `false` when the file exists. The worker reads only
 the ledger event. The file records the declaration.
 
+
+## `vibey driver`
+
+The driver's failover and handback ([ADR-0070](../architecture/decisions/0070-failover-to-the-sovereign-engine-and-handback-on-a-recorded-probe.md)).
+The driver is the Claude Code session steering the work. When it hits a usage
+limit or runs out of credit, the work continues on `[failover] target_engine`
+(gptossloop) at `target_effort` (ULTRA). When a probe of the paid model is
+recorded as successful, the work goes back to the same session.
+
+| Subcommand | Option | What it does |
+|---|---|---|
+| `driver hook` | `--config PATH` | The command Claude Code's `StopFailure` hook runs; reads the hook's JSON on stdin. On `error` `rate_limit` or `billing_error` it gates a brief into `<cwd>/.vibey/driver/`, appends `EngineFailedOver` and starts the sovereign engine detached. Any other error is ignored. A second hook for an active failover does nothing. Prints the outcome as JSON; exit 3 when the gate parked it (Claude Code ignores this hook's exit code). |
+| `driver probe` | `--cwd PATH`, `--config PATH` | Run by the timer. When a failover is active and its probe is due, runs `probe_argv` and appends `EngineProbed` (`ok` or not). Only after a recorded `ok` probe: winds the sovereign engine down, gates the return brief (it lists the commits made meanwhile), appends `EngineHandedBack` and resumes the session with `resume_argv` (`claude -p --resume <session-id>`). |
+| `driver status` | `--cwd PATH`, `--config PATH` | The state, read from `<cwd>/.vibey/driver/ledger.jsonl`, as JSON. |
+| `driver timer` | `--out DIR`, `--platform launchd\|systemd`, `--cwd PATH` | Writes a launchd agent (macOS default) or a systemd user service and timer that run `vibey driver probe --cwd <worktree>` every `probe_interval_seconds`, and prints the `launchctl` / `systemctl --user` command that loads it. vibey never loads it for you. |
+| `driver hook-config` | | Prints the `settings.json` block that runs `vibey driver hook` on `StopFailure`, with no matcher. |
+
+Both directions pass the no-loss gate: STRICT up to three times (the brief's
+transcript SHA-256 must equal the transcript's now), then FULL_TRANSCRIPT (the
+transcript is copied into the worktree), then HUMAN: a `PARKED-*.md` brief is
+left in `.vibey/driver/` and nothing is started. `CreditsExhausted` has no
+reset time; a window's reset only schedules the probe, and only a recorded
+successful probe hands back.
+
 ## `vibey ledger`
 
 Bare `vibey ledger` prints help. Subcommand:
@@ -755,7 +779,7 @@ Every option is in the vibey-gh [CLI reference](https://github.com/the-vibey-pro
 ## `vibey-gh sabbath`
 
 The Sabbath as the release tooling keeps it (sub-doctrine 8.i,
-[ADR-0070](../architecture/decisions/0070-the-sabbath-kept-where-the-machine-stands.md)).
+[ADR-0070](../architecture/decisions/0071-the-sabbath-kept-where-the-machine-stands.md)).
 `vibey-gh merge-train` and `vibey-gh promote` stand down inside the window: they print
 the hold, write it to the job summary, and exit 0. `vibey-gh sovereign --beat` keeps
 beating, recording "resting until ...".

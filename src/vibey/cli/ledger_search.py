@@ -95,7 +95,7 @@ class LedgerSearchPresenter:
         document = {
             "project_id": str(project_id),
             "truncated": result.truncated,
-            "events": [self._record(event) for event in result.events],
+            "events": [self.record(event) for event in result.events],
         }
         return json.dumps(document, indent=2, default=str)
 
@@ -119,7 +119,7 @@ class LedgerSearchPresenter:
         )
 
     @staticmethod
-    def _record(event: LedgerEvent) -> dict[str, object]:
+    def record(event: LedgerEvent) -> dict[str, object]:
         return {
             "event_id": str(event.event_id),
             "project_id": str(event.project_id),
