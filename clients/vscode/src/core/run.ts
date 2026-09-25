@@ -31,7 +31,7 @@ import * as path from 'node:path';
 import { SelectionError } from './catalogue';
 import { ChildEnvironment, EnvironmentAllowList } from './environment';
 import type { BudgetBreach } from './interfaces/budgets-interface';
-import type { Selection } from './interfaces/catalogue-interface';
+import type { EventEnvelope, Selection } from './interfaces/catalogue-interface';
 import type { EngineCommandInterface } from './interfaces/engine-command-interface';
 import type { ChangedFile } from './interfaces/git-interface';
 import type { ChildHandle, ProcessExit } from './interfaces/process-runner-interface';
@@ -139,6 +139,10 @@ export class TaskRun implements TaskRunInterface {
 
   get stopRequestedAt(): number | undefined {
     return this.stopAt;
+  }
+
+  get takesFollowUps(): boolean {
+    return this.attempting !== undefined && this.attempting.selection.engine.controls.prompt !== null;
   }
 
   get budgetBreach(): BudgetBreach | undefined {
@@ -484,7 +488,7 @@ export class TaskRun implements TaskRunInterface {
     cwd: string,
     environment: Record<string, string>,
     eventsPath: string,
-    envelope: 'type' | 'event_type+payload',
+    envelope: EventEnvelope,
   ): Promise<ProcessExit> {
     const { clock, settings, processes } = this.services;
     const child = processes.spawn(invocation.command, invocation.args, { cwd, env: environment });
@@ -505,7 +509,7 @@ export class TaskRun implements TaskRunInterface {
     });
   }
 
-  private poll(eventsPath: string, envelope: 'type' | 'event_type+payload'): void {
+  private poll(eventsPath: string, envelope: EventEnvelope): void {
     const { clock, settings, tail } = this.services;
     const chunk = tail.read(eventsPath, this.offset);
     if (chunk.restarted) {

@@ -201,8 +201,8 @@ export class CatalogueParser implements CatalogueParserInterface {
     const events = Shape.record(engine.events, `${where}.events`);
     const env = Shape.record(engine.env, `${where}.env`);
     const envelope = Shape.string(events.envelope, `${where}.events.envelope`);
-    if (envelope !== 'type' && envelope !== 'event_type+payload') {
-      throw new CatalogueError(`${where}.events.envelope`, 'is neither "type" nor "event_type+payload"');
+    if (envelope !== 'type' && envelope !== 'event_type+payload' && envelope !== 'event_type') {
+      throw new CatalogueError(`${where}.events.envelope`, 'is none of "type", "event_type+payload" and "event_type"');
     }
     const efforts = Shape.list(engine.efforts, `${where}.efforts`).map((effort, index) =>
       this.effortEntry(effort, `${where}.efforts[${index}]`),
@@ -213,6 +213,8 @@ export class CatalogueParser implements CatalogueParserInterface {
       binary: Shape.string(engine.binary, `${where}.binary`),
       state_dir: Shape.string(engine.state_dir, `${where}.state_dir`),
       enabled: Shape.boolean(engine.enabled, `${where}.enabled`),
+      // A producer from before the canon's repeals says nothing: nothing it lists is repealed.
+      repealed: Shape.optionalBoolean(engine.repealed, `${where}.repealed`) ?? false,
       switch: Shape.optionalString(engine.switch, `${where}.switch`),
       cost_per_mtok_in: Shape.number(engine.cost_per_mtok_in, `${where}.cost_per_mtok_in`),
       cost_per_mtok_out: Shape.number(engine.cost_per_mtok_out, `${where}.cost_per_mtok_out`),
@@ -244,11 +246,20 @@ export class CatalogueParser implements CatalogueParserInterface {
         auth: Shape.strings(env.auth, `${where}.env.auth`),
         passthrough: Shape.strings(env.passthrough, `${where}.env.passthrough`),
       },
-      ...(typeof engine.notes === 'string' && engine.notes ? { notes: engine.notes } : {}),
+      ...CatalogueParser.notes(engine.notes, `${where}.notes`),
       ...(efforts.some((entry) => entry.argv.includes(DegradedCatalogue.TURNS_FLAG))
         ? { turns_flag: DegradedCatalogue.TURNS_FLAG }
         : {}),
     };
+  }
+
+  /** An engine's notes: a list of lines (a single string from an older producer is one line). */
+  private static notes(value: unknown, where: string): { notes?: readonly string[] } {
+    if (value === undefined || value === null) {
+      return {};
+    }
+    const lines = (typeof value === 'string' ? [value] : Shape.strings(value, where)).filter((line) => line.trim() !== '');
+    return lines.length === 0 ? {} : { notes: lines };
   }
 
   private effortEntry(value: unknown, where: string): EngineEffort {
@@ -279,6 +290,7 @@ export class DegradedCatalogue {
       binary: 'qwenloop',
       state_dir: '.qwenloop',
       enabled: true,
+      repealed: false,
       switch: null,
       cost_per_mtok_in: 0,
       cost_per_mtok_out: 0,
@@ -293,11 +305,13 @@ export class DegradedCatalogue {
       controls: {
         stop: ['stop', '{run_id}', '--cwd', '{cwd}'],
         wind_down: ['wind-down', '{run_id}', '--cwd', '{cwd}'],
-        prompt: ['prompt', '{run_id}', '{text}', '--cwd', '{cwd}'],
+        // A qwenloop released before vibey 3.0.0 reads no follow-up, so without vibey's
+        // word that this one does, there is no prompt box.
+        prompt: null,
       },
       events: { path: '{cwd}/{state_dir}/runs/{run_id}/events.jsonl', envelope: 'type' },
       env: { auth: [], passthrough: ['QWENLOOP_*'] },
-      notes: note,
+      notes: [note],
       turns_flag: DegradedCatalogue.TURNS_FLAG,
     };
     return {
@@ -421,6 +435,9 @@ export class LoopSelector implements LoopSelectorInterface {
         `${engineId} is not an engine of ${loop.loop}; its engines are ${loop.engines.map((candidate) => candidate.engine_id).join(', ')}`,
       );
     }
+    if (engine.repealed) {
+      throw new SelectionError(`${engineId} is repealed by the canon (8.b): it is listed, but it never runs`);
+    }
     if (!engine.enabled) {
       throw new SelectionError(
         `${engineId} is switched off${engine.switch === null ? '' : `; switch it on with ${engine.switch}`}`,
@@ -432,7 +449,10 @@ export class LoopSelector implements LoopSelectorInterface {
   private automatic(loop: CatalogueLoop, effort: Effort, request: SelectionRequest): [CatalogueEngine, string] {
     const enabled = (loop.by_effort[effort] ?? [])
       .map((choice) => ({ choice, engine: loop.engines.find((candidate) => candidate.engine_id === choice.engine_id) }))
-      .filter((pair): pair is { choice: EffortChoice; engine: CatalogueEngine } => pair.engine !== undefined && pair.engine.enabled);
+      .filter(
+        (pair): pair is { choice: EffortChoice; engine: CatalogueEngine } =>
+          pair.engine !== undefined && pair.engine.enabled && !pair.engine.repealed,
+      );
     if (enabled.length === 0) {
       throw new SelectionError(`no engine of ${loop.loop} that is switched on can run at ${effort}`);
     }

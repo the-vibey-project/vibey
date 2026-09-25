@@ -1,5 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** Every lane on this computer, whoever started it, read from the loops' own run stores. */
+import type { EventEnvelope } from './catalogue-interface';
 import type { RunItem } from './run-events-interface';
 
 export type LaneState = 'running' | 'quiet' | 'finished';
@@ -27,7 +28,7 @@ export interface Lane {
 export interface LaneEngine {
   readonly engineId: string;
   readonly stateDir: string;
-  readonly envelope: 'type' | 'event_type+payload';
+  readonly envelope: EventEnvelope;
 }
 
 export interface LaneTrackerInterface {

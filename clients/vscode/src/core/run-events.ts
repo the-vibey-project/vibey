@@ -7,6 +7,7 @@
  * as text (the webview never treats it as HTML). Declared by
  * `interfaces/run-events-interface.ts`.
  */
+import type { EventEnvelope } from './interfaces/catalogue-interface';
 import type {
   NoticeLevel,
   RunFailure,
@@ -19,8 +20,6 @@ import { QwenloopCommand } from './qwenloop';
 
 type EventRecord = Readonly<Record<string, unknown>>;
 
-/** How an engine wraps its events: a top-level `type`, or `event_type` plus a `payload`. */
-export type EventEnvelope = 'type' | 'event_type+payload';
 
 export class RunTranscript implements RunTranscriptInterface {
   /** The longest detail line kept for one tool call or result. */
@@ -159,6 +158,10 @@ export class RunTranscript implements RunTranscriptInterface {
   static normalize(event: EventRecord, envelope: EventEnvelope): [string, EventRecord] {
     if (envelope === 'type') {
       return [typeof event.type === 'string' ? event.type : '', event];
+    }
+    if (envelope === 'event_type') {
+      // opencodeloop's flat records: the kind in `event_type`, its fields beside it.
+      return [typeof event.event_type === 'string' ? event.event_type : '', event];
     }
     const type = [event.event_type, event.kind, event.type].find((value): value is string => typeof value === 'string') ?? '';
     const payload =

@@ -77,7 +77,13 @@ describe('EngineCommand', () => {
   it('builds stop and prompt from their templates, and says when an engine has none', () => {
     const qwenloop = new EngineCommand(engine('qwenloop'), '/bin/qwenloop');
     expect(qwenloop.stop('r1', '/w')?.args).toEqual(['stop', 'r1', '--cwd', '/w']);
-    expect(qwenloop.prompt('r1', '-a dash', '/w')?.args).toEqual(['prompt', '--cwd', '/w', '--', 'r1', '-a dash']);
+    // vibey declares no prompt for a runner that ignores one: no follow-up is ever sent to it.
+    expect(qwenloop.prompt('r1', 'x', '/w')).toBeUndefined();
+    const prompted = new EngineCommand(
+      { ...engine('qwenloop'), controls: { ...engine('qwenloop').controls, prompt: ['prompt', '{run_id}', '{text}', '--cwd', '{cwd}'] } },
+      '/bin/qwenloop',
+    );
+    expect(prompted.prompt('r1', '-a dash', '/w')?.args).toEqual(['prompt', '--cwd', '/w', '--', 'r1', '-a dash']);
     const codex = new EngineCommand(engine('codexloop'), '/bin/codexloop');
     expect(codex.stop('r1', '/w')).toBeUndefined();
     expect(codex.prompt('r1', 'x', '/w')).toBeUndefined();

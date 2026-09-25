@@ -32,3 +32,5 @@
 **/node_modules
 clients/vscode/out
 clients/vscode/.vscode-test
+clients/vscode/.test-scratch
+clients/vscode/*.vsix

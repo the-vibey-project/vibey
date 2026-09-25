@@ -58,7 +58,10 @@ describe('CatalogueParser', () => {
     const codex = catalogue.loops[1]?.engines.find((engine) => engine.engine_id === 'codexloop');
     expect(codex?.turns_flag).toBeUndefined();
     expect(codex?.supports_cwd_flag).toBe(false);
-    expect(catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'opencode')?.notes).toContain('repeals');
+    const opencode = catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'opencode');
+    expect(opencode?.notes?.join(' ')).toContain('repeals');
+    expect(opencode).toMatchObject({ repealed: true, events: { envelope: 'event_type' } });
+    expect(catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'qwenloop')).toMatchObject({ repealed: false, controls: { prompt: null } });
   });
 
   it('accepts paid_default in place of paid_default_engine, and missing optional fields', () => {
@@ -90,8 +93,10 @@ describe('CatalogueParser', () => {
     [
       'events.envelope',
       (value: Record<string, any>) => (value.loops[0].engines[0].events.envelope = 'xml'),
-      'neither "type" nor "event_type+payload"',
+      'is none of "type", "event_type+payload" and "event_type"',
     ],
+    ['notes', (value: Record<string, any>) => (value.loops[0].engines[0].notes = 5), 'is not a list'],
+    ['repealed', (value: Record<string, any>) => (value.loops[0].engines[0].repealed = 'yes'), 'is not true or false'],
     ['capabilities.images', (value: Record<string, any>) => (value.loops[0].engines[0].capabilities.images = 'maybe'), 'is not true or false'],
     ['controls.stop', (value: Record<string, any>) => (value.loops[0].engines[0].controls.stop = [1]), 'is not a string'],
     ['env.auth', (value: Record<string, any>) => (value.loops[0].engines[0].env.auth = 'KEY'), 'is not a list'],
@@ -106,6 +111,64 @@ describe('CatalogueParser', () => {
     const value = typeof change === 'function' && change.length === 0 ? (change as () => unknown)() : variant(change as (value: Record<string, any>) => void);
     expect(() => parse(value)).toThrow(CatalogueError);
     expect(() => parse(value)).toThrow(message);
+  });
+});
+
+describe('the #1131 review amendments', () => {
+  it("reads an engine's notes as lines, from a list or an older producer's single string", () => {
+    const catalogue = parse(
+      variant((value) => {
+        value.loops[0].engines[0].notes = ['first', '  ', 'second'];
+        value.loops[0].engines[1].notes = 'one line';
+        value.loops[0].engines[2].notes = null;
+      }),
+    );
+    expect(catalogue.loops[0]?.engines.map((engine) => engine.notes)).toEqual([['first', 'second'], ['one line'], undefined]);
+  });
+
+  it('reads an engine a producer from before the repeals lists as not repealed', () => {
+    const catalogue = parse(
+      variant((value) => {
+        for (const engine of value.loops[0].engines) {
+          delete engine.repealed;
+        }
+      }),
+    );
+    expect(catalogue.loops[0]?.engines.every((engine) => !engine.repealed)).toBe(true);
+  });
+
+  it('never chooses a repealed engine in auto mode, even where by_effort lists it', () => {
+    const catalogue = parse(
+      variant((value) => {
+        const opencode = value.loops[0].engines.find((engine: Record<string, any>) => engine.engine_id === 'opencode');
+        opencode.enabled = true;
+        opencode.base_weight = 100;
+        opencode.efforts[1].achieved = 'LOW';
+        value.loops[0].by_effort.LOW = [
+          { engine_id: 'opencode', model: null, achieved: 'LOW' },
+          { engine_id: 'qwenloop', model: 'gpt-oss:20b', achieved: 'LOW' },
+        ];
+      }),
+    );
+    const selector = new LoopSelector(catalogue);
+    const picks = [1, 2, 3, 4].map(() => selector.select(request()).engine.engine_id);
+    expect(picks).toEqual(['qwenloop', 'qwenloop', 'qwenloop', 'qwenloop']);
+  });
+
+  it("still works with a vibey that has no `vibey loops`: sovereignloop, qwenloop, and no prompt box", async () => {
+    const older = await new CatalogueSource(
+      async () => {
+        throw new Error('vibey 2.1.0 (/usr/local/bin/vibey) has no "vibey loops" command. It ships in vibey 3.0.0.');
+      },
+      new CatalogueParser(),
+      'gpt-oss:20b',
+    ).load();
+    expect(older).toMatchObject({ source: 'degraded', default_loop: 'sovereignloop' });
+    expect(older.notice).toContain('has no "vibey loops" command');
+    const selection = new LoopSelector(older).select(request({ effort: 'auto', attempt: 1 }));
+    expect(selection).toMatchObject({ loop: 'sovereignloop', tier: 'local', model: 'gpt-oss:20b' });
+    expect(selection.engine).toMatchObject({ engine_id: 'qwenloop', repealed: false, controls: { prompt: null } });
+    expect(selection.engine.notes).toHaveLength(1);
   });
 });
 
@@ -299,7 +362,16 @@ describe('LoopSelector', () => {
     );
     expect(() => selector.select(request({ engine: 'nosuch' }))).toThrow('its engines are qwenloop, claudeloop-local, opencode');
     expect(() => selector.select(request({ engine: 'claudeloop-local' }))).toThrow('switch it on with VIBEY_FEATURE_CLAUDELOOP_LOCAL');
-    expect(() => selector.select(request({ engine: 'opencode' }))).toThrow(/switched off$/);
+    expect(() => selector.select(request({ engine: 'opencode' }))).toThrow('opencode is repealed by the canon (8.b): it is listed, but it never runs');
+    expect(() => selector.select(request({ engine: 'claudeloop-local' }))).toThrow(/switched off; switch it on with /);
+    const noSwitch = new LoopSelector(
+      parse(
+        variant((value) => {
+          value.loops[0].engines[1].switch = null;
+        }),
+      ),
+    );
+    expect(() => noSwitch.select(request({ engine: 'claudeloop-local' }))).toThrow(/^claudeloop-local is switched off$/);
   });
 
   it('says when a loop is missing, and why, and when nothing can run an effort', () => {

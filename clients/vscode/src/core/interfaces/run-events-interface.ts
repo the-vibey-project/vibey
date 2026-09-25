@@ -1,5 +1,6 @@
 // Made with ❤️ by [Vibey](https://the-vibey-project.github.io/vibey/), Developed by [Adam Matthew Steinberger](https://vibewithadam.matthewsteinberger.com/) ([@adammatthewsteinberger](https://github.com/adammatthewsteinberger/)).
 /** A run's events.jsonl, as a person reads it: text, tool calls and results, turns, and the verdict. */
+import type { EventEnvelope } from './catalogue-interface';
 
 export type NoticeLevel = 'info' | 'warn' | 'error';
 
@@ -42,8 +43,8 @@ export interface Verdict {
 }
 
 export interface RunTranscriptInterface {
-  /** One event, in the envelope its engine writes (`type`, or `event_type+payload`). */
-  accept(event: unknown, envelope?: 'type' | 'event_type+payload'): readonly RunPatch[];
+  /** One event, in the envelope its engine writes. */
+  accept(event: unknown, envelope?: EventEnvelope): readonly RunPatch[];
   /** A line from the extension itself (waiting, a hint, an error), in the same stream. */
   note(level: NoticeLevel, text: string): RunPatch;
   items(): readonly RunItem[];

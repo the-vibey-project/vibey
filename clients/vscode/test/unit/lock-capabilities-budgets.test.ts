@@ -382,8 +382,9 @@ describe('budgets', () => {
     const { store, spend, guard } = setup();
     const run = store.add({ scope: 'run', loop: 'any', caps: { turns: 3 } });
     const day = store.add({ scope: 'day', loop: 'paidloop', engine_id: 'claudeloop', caps: { dollars: 2 }, label: 'claude day' });
-    store.add({ scope: 'month', loop: 'sovereignloop', caps: { minutes: 1000 } });
+    const month = store.add({ scope: 'month', loop: 'sovereignloop', caps: { minutes: 1000 } });
     const context = { loop: 'paidloop', engineId: 'claudeloop', runId: 'r1' };
+    expect(guard.usage(month)).toEqual({ spent: { dollars: 0, turns: 0, minutes: 0 } });
     expect(guard.exhausted(context)).toBeUndefined();
     expect(guard.wouldExceed({ ...context, projected: { dollars: 1.9 } })).toBeUndefined();
     expect(guard.wouldExceed({ ...context, projected: { dollars: 2.5, turns: 1 } })).toEqual({
@@ -403,6 +404,10 @@ describe('budgets', () => {
       message: `The per-run budget ${run.id} is used up: 3 turns of 3 turns.`,
     });
     expect(guard.exhausted({ ...context, engineId: 'cursorloop', runId: 'r9' })).toBeUndefined();
+    expect(guard.usage(run)).toBeUndefined();
+    expect(guard.usage(day)).toEqual({ spent: { dollars: 1.5, turns: 3, minutes: 2 } });
+    spend.record(entry({ turns: 0, dollars: 1 }));
+    expect(guard.usage(day)).toEqual({ spent: { dollars: 2.5, turns: 3, minutes: 4 }, exhausted: 'dollars' });
     expect(guard.wouldExceed({ loop: 'sovereignloop', engineId: 'qwenloop', runId: 'r9', projected: { minutes: 2000 } })?.message).toMatch(
       /^The monthly budget \w+ allows 1000 minutes; 0 minutes is spent and this run could take 2000 minutes more\.$/,
     );

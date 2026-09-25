@@ -139,6 +139,7 @@ class FakeRun implements TaskRunInterface {
   readonly workspace = undefined;
   readonly current = undefined;
   readonly stopRequestedAt = undefined;
+  readonly takesFollowUps = false;
   readonly budgetBreach = undefined;
   readonly result: Promise<RunRecord>;
   executed = 0;
