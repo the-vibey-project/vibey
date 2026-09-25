@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Made with love by vibey (https://the-vibey-project.github.io/vibey/). -->
+<component type="desktop-application">
+  <id>@APP_ID@</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>@APP_NAME@</name>
+  <summary>The desktop app for vibey</summary>
+  <description>
+    <p>
+      Krypton shows your vibey projects, the gates waiting on you, the lanes running now,
+      and the loops, engines and budgets behind them. A gate can be answered where it
+      appears, and a notification says when a new one is raised.
+    </p>
+    <p>
+      Krypton finds a vibey hub on your network and pairs with it once, by QR code or a
+      6-digit code. It follows your desktop's light or dark style, or keeps the one you
+      choose.
+    </p>
+  </description>
+  <launchable type="desktop-id">@APP_ID@.desktop</launchable>
+  <url type="homepage">https://the-vibey-project.github.io/vibey/</url>
+  <url type="vcs-browser">https://github.com/the-vibey-project/vibey</url>
+  <developer id="io.github.the_vibey_project">
+    <name>The vibey project</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <releases>
+    <release version="0.1.0" date="2026-09-25">
+      <description>
+        <p>The first Krypton desktop.</p>
+      </description>
+    </release>
+  </releases>
+</component>
