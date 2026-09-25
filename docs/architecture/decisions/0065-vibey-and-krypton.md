@@ -25,10 +25,12 @@ belongs in the canon, not only in a design file.
    entries on the project's identity and craft, says that the project and its
    engine are **vibey**, and every app and interface a person uses is **krypton**.
 2. **The emblem is the krypton atom** (Z = 36, four shells), and the logo mark draws it.
-3. **"vibey" stays the name of what ships.** The distribution, the command and the
-   repository keep their names. The ruling adds a name and renames nothing.
-4. **Nothing beyond the ruling is decided here.** The operator did not say whether
-   releases, branches or builds carry either name, so this record leaves that open.
+3. **The commands and the repository keep their names.** The published packages are
+   `vibey-engine` and `krypton-app` ("Four names, two packages", below); no `vibey`
+   package is published.
+4. **Nothing beyond the ruling is decided here.** Which packages publish, and from which
+   branch to which index, is ruled below. Release names, branch names and build labels
+   are not ruled, and this record leaves them open.
 5. **The name appears where the project describes itself.** `README.md` and
    `docs/index.md` each gain one line naming vibey and krypton and citing 9.e.
 
@@ -36,7 +38,7 @@ belongs in the canon, not only in a design file.
 
 - Readers of the README and the docs home page learn both names, and the logo mark has
   a ratified meaning.
-- Any later use of either name beyond this (release names, build labels, a product surface) needs
+- Any later use of either name beyond this (release names, build labels) needs
   the operator's ruling first. It then amends 9.e or is recorded beside it.
 - The logo artwork itself belongs to the design-system lane. This record fixes the name
   and the emblem, not the drawing.
@@ -44,7 +46,7 @@ belongs in the canon, not only in a design file.
 
 ## Revision before merge
 
-The operator clarified the ruling on 2026-09-25: *"the PROJECT and ENGINE are called \"vibey\", all apps/uis are called \"krypton\""*. Sub-doctrine 9.e states that: vibey names the project and engine, krypton names every app and interface, and package and command names are unchanged. The VS Code extension's display name changes from "Vibey" to "krypton" in the client-suite lane that raises the extension to the Beauty Law.
+The operator clarified the ruling on 2026-09-25: *"the PROJECT and ENGINE are called \"vibey\", all apps/uis are called \"krypton\""*. Sub-doctrine 9.e states that: vibey names the project and engine, krypton names every app and interface, and command names are unchanged. The later ruling on packages is recorded in "Four names, two packages". The VS Code extension's display name changes from "Vibey" to "krypton" in the client-suite lane that raises the extension to the Beauty Law.
 
 ## Four names, two packages
 
@@ -63,7 +65,7 @@ The operator ruled that the canon names exactly four names:
 
 Only the two packages are published, each with its own workflow. Stable releases go from `main` to PyPI and nightly ones from `develop` to TestPyPI (ADR-0028). No `vibey` package is published under the new scheme, since that name is taken on TestPyPI.
 
-This supersedes ADR-0037's single `vibey` distribution. The packaging change itself is its own pull request and ADR; until it lands, publishing continues as today, and nothing claims otherwise.
+This supersedes in part ADR-0037's single `vibey` distribution. The packaging change itself is its own pull request and ADR; until it lands, publishing continues as today, and nothing claims otherwise.
 
 ## Always lowercase
 

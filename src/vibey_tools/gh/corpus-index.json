@@ -66,7 +66,7 @@
   {
    "anchor": "9 — The vibe",
    "document": "docs/doctrines.md",
-   "sha256": "67b36a4d33fd3ae00ae661a34082625846e9eb0607c8d7d230b5f6e5500b5675",
+   "sha256": "20d42fe4aeb1afd24b9ce5c0dbd94db28500266f0c8e4a222890ecb918360f5f",
    "start_line": 433,
    "text_lines": 33
   },
@@ -232,7 +232,7 @@
    "text_lines": 4
   }
  ],
- "corpus_sha256": "a1ecdff9ae58202ad6fc68801439d9a3bfb76c2dcb23da98687ce93eb33a772c",
+ "corpus_sha256": "a041981fb4f1259e2e4544a87a049850bfec576962dbf89e5adf98a6d618071e",
  "documents": [
   "docs/doctrines.md",
   "docs/constitution.md",
