@@ -14,6 +14,13 @@ published as a book — [PDF](https://the-vibey-project.github.io/vibey/main/boo
 
 ### Features
 
+* **desktop:** Krypton desktop, in C17 on GTK 4 and libadwaita
+  ([ADR-0070](docs/architecture/decisions/0070-krypton-desktop-in-c-on-gtk.md)). `clients/desktop`
+  holds a pure-C core, libkryptondesktop: hub documents, the libsoup hub client, gate answers,
+  state, formatting, themes and channels, pairing, and `_vibey._tcp` discovery with Avahi and
+  dns_sd. Thin views sit over it: Projects, Gates (answered in place, with notifications),
+  Lanes, Loops and effort, Budgets, Doctor, Devices and Settings. It has GLib tests under ASan
+  and UBSan, a `desktop` CI job on Ubuntu and Arch, and declared-only packaging.
 * **ultra:** ULTRA, effort without a ceiling
   ([ADR-0063](docs/architecture/decisions/0063-ultra-effort-without-a-ceiling.md)). `Effort` gains
   `ULTRA` after `MAX`; no ladder reaches it. `vibey ultra start|stop|status` runs a project's BUILD

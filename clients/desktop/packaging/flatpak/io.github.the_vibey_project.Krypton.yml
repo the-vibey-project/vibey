@@ -1,0 +1,26 @@
+# Declared only: not submitted to Flathub (see clients/desktop/PACKAGING.md).
+app-id: io.github.the_vibey_project.Krypton
+runtime: org.gnome.Platform
+runtime-version: "48"
+sdk: org.gnome.Sdk
+command: krypton-desktop
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # mDNS discovery of hubs on the network.
+  - --system-talk-name=org.freedesktop.Avahi
+  # The host's hub token, read where the hub keeps it (~/.local/state/vibey/hub).
+  - --filesystem=xdg-state/vibey/hub:ro
+modules:
+  - name: krypton-desktop
+    buildsystem: meson
+    subdir: clients/desktop
+    config-opts:
+      - -Dchannel=stable
+    sources:
+      - type: git
+        url: https://github.com/the-vibey-project/vibey.git
+        branch: main

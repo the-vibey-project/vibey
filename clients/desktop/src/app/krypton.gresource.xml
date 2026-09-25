@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/io/github/the_vibey_project/Krypton">
+    <file alias="style.css">vibey.css</file>
+    <file alias="style-dark.css">vibey-dark.css</file>
+  </gresource>
+</gresources>

@@ -10,11 +10,12 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 CI = ROOT / ".github" / "workflows" / "ci.yml"
-MANIFESTS = ("package.json", "pyproject.toml")
+MANIFESTS = ("package.json", "pyproject.toml", "meson.build")
 
 
 def candidate_directories() -> list[str]:
-    """Each directory under clients/ and packages/ that carries its own manifest."""
+    """Each directory under clients/ and packages/ that carries its own manifest: npm, Python,
+    or Meson (the C desktop app)."""
     found: list[str] = []
     for parent in ("clients", "packages"):
         base = ROOT / parent
@@ -46,6 +47,7 @@ def _jobs() -> dict[str, Any]:
 
 def test_there_is_something_to_check() -> None:
     assert "clients/vscode" in candidate_directories()
+    assert "clients/desktop" in candidate_directories()
     assert "packages/vibey-core" in candidate_directories()
 
 

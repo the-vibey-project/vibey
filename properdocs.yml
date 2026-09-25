@@ -129,4 +129,5 @@ nav:
           - "0067 — One TypeScript core for every krypton client": architecture/decisions/0067-one-typescript-core-for-every-krypton-client.md
           - "0068 — The hub: vibey serve": architecture/decisions/0068-the-hub.md
           - "0069 — Two packages, vibey-engine and krypton-app": architecture/decisions/0069-two-packages-vibey-engine-and-krypton-app.md
+          - "0070 — Krypton desktop in C, on GTK 4 and libadwaita": architecture/decisions/0070-krypton-desktop-in-c-on-gtk.md
   - Research paper: paper.md

@@ -855,6 +855,73 @@ jobs:
           path: clients/vscode/vibey-${{ matrix.os }}.vsix
           if-no-files-found: error
 
+  desktop:
+    # Krypton desktop (clients/desktop): C17 on GTK 4 + libadwaita, built with Meson. The
+    # pure-C core (libkryptondesktop) is tested with GLib's test framework under ASan and
+    # UBSan, and its coverage is gated with gcovr; the GTK views are compiled with
+    # -Werror on every distribution here. Not a required check yet: it becomes one once it
+    # has run green on develop (the same rule as vscode-extension).
+    name: Krypton desktop (${{ matrix.distro }})
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu
+            container: ''
+          - distro: arch
+            container: archlinux:latest
+    defaults:
+      run:
+        working-directory: clients/desktop
+    steps:
+      - name: Toolchain and libraries (Ubuntu)
+        if: matrix.distro == 'ubuntu'
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends meson ninja-build gcovr pkg-config \
+            libglib2.0-dev libjson-glib-dev libsoup-3.0-dev libgtk-4-dev libadwaita-1-dev \
+            libavahi-client-dev libavahi-glib-dev desktop-file-utils appstream
+      - name: Toolchain and libraries (Arch)
+        if: matrix.distro == 'arch'
+        working-directory: /
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git meson ninja pkgconf glib2 json-glib \
+            libsoup3 gtk4 libadwaita avahi desktop-file-utils appstream
+      - uses: actions/checkout@v4
+      - name: Build everything under ASan and UBSan, warnings as errors
+        run: |
+          meson setup build -Db_sanitize=address,undefined -Dgui=enabled \
+            -Dhub_transport=enabled -Ddiscovery=enabled
+          meson compile -C build
+      - name: The core's GLib tests, under the sanitizers
+        env:
+          # LeakSanitizer needs ptrace, which a container job does not get.
+          ASAN_OPTIONS: detect_leaks=${{ matrix.distro == 'ubuntu' && '1' || '0' }}:abort_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: meson test -C build --print-errorlogs
+      - name: The nightly channel builds beside stable, under its own app id
+        run: |
+          meson setup build-nightly -Dchannel=nightly -Dgui=enabled
+          meson compile -C build-nightly
+          grep -q 'io.github.the_vibey_project.Krypton.Nightly' build-nightly/src/app/*.desktop
+      - name: The desktop entry and AppStream metadata validate
+        run: |
+          desktop-file-validate build/src/app/io.github.the_vibey_project.Krypton.desktop
+          appstreamcli validate --no-net --explain build/src/app/io.github.the_vibey_project.Krypton.metainfo.xml
+      - name: Core coverage, gated (gcovr)
+        if: matrix.distro == 'ubuntu'
+        run: |
+          meson setup build-coverage -Db_coverage=true -Dbuildtype=debug -Dgui=disabled \
+            -Dhub_transport=enabled -Ddiscovery=enabled
+          meson test -C build-coverage --print-errorlogs
+          # The mDNS backends need a daemon a runner does not have: they are compiled and
+          # warning-free above, and left out of the measured core.
+          gcovr --root . --filter 'src/core/' --exclude 'src/core/kr-discovery-(avahi|dnssd)\.c' \
+            --fail-under-line 95 --fail-under-branch 80 --print-summary build-coverage
+
   image:
     name: Container image (amd64 + arm64)
     runs-on: ubuntu-latest
