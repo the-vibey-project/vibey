@@ -131,10 +131,21 @@ def test_sovereign_is_the_default_and_claude_the_paid_default() -> None:
     assert PAID_DEFAULT_ENGINE is EngineId.CLAUDELOOP
 
 
-def test_the_canon_repeals_opencode_from_both_loops() -> None:
+def test_the_repealed_opencode_engine_is_deleted_and_nothing_is_left_repealed() -> None:
+    """Canon 8.b repealed OpenCode; its engine and runner are now deleted, so no engine
+    waits between repeal and deletion."""
     from vibey.domain.engine import REPEALED_FROM_LOOPS, EngineId
 
-    assert frozenset({EngineId.OPENCODE}) == REPEALED_FROM_LOOPS
+    assert "opencode" not in {engine.value for engine in EngineId}
+    assert frozenset() == REPEALED_FROM_LOOPS
+
+
+def test_a_stored_opencode_engine_id_still_reads_verbatim() -> None:
+    """Rows written while opencode was an engine stay in the append-only ledger and the
+    shared tables; a reader keeps the text instead of raising on it."""
+    from vibey.domain.engine import ENGINE_ID_PARSER, UnrecognizedEngineId
+
+    assert ENGINE_ID_PARSER.parse("opencode") == UnrecognizedEngineId("opencode")
 
 
 def test_a_descriptor_declares_nothing_it_has_not_shown() -> None:

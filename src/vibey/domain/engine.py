@@ -29,7 +29,6 @@ class EngineId(StrEnum):
     CODEXLOOP = "codexloop"
     CURSORLOOP = "cursorloop"
     AGYLOOP = "agyloop"
-    OPENCODE = "opencode"
     QWENLOOP = "qwenloop"
     # The same claudeloop binary, driven through a named backend profile that
     # points Claude Code at a local model (Ollama) instead of Anthropic. A
@@ -75,9 +74,12 @@ PAID_DEFAULT_ENGINE: Final = EngineId.CLAUDELOOP
 declaration reaches unless it names another. It never makes paid a default over sovereign.
 The selector does not act on it yet: within the paid tier it rotates by weight."""
 
-REPEALED_FROM_LOOPS: Final[frozenset[EngineId]] = frozenset({EngineId.OPENCODE})
-"""Engines 8.b repeals from both loops. Their descriptors are not changed by being named
-here: anything that reports one reports it as the code says, and says the canon differs."""
+REPEALED_FROM_LOOPS: Final[frozenset[EngineId]] = frozenset()
+"""Engines 8.b repeals from both loops while their code is still in the tree. Their
+descriptors are not changed by being named here: anything that reports one reports it as
+the code says, and says the canon differs. Empty since the repealed OpenCode engine and its
+runner were deleted: a repeal ends in deletion, and this set holds only the interval between
+the two."""
 
 
 class PluginSystem(StrEnum):
@@ -222,8 +224,8 @@ class EngineDescriptor:
     plan_flag: str | None = None
     # Optional flag that lets an adapter keep the orchestration run id when
     # resuming a provider session. Most runners derive their state path from
-    # the session id; OpenCode keeps provider session and Vibey run ids
-    # separate, so its wrapper accepts this explicit value.
+    # the session id; a runner that keeps the provider's session id and vibey's
+    # run id apart accepts this explicit value instead.
     resume_run_id_flag: str | None = None
     # Which side of TIER_PREFERENCE the engine sits on. PAID unless the
     # engine runs on the operator's own hardware.

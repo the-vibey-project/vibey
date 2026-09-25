@@ -24,7 +24,6 @@ from vibey.infrastructure.engines.descriptors import (
     CLAUDELOOP,
     CODEXLOOP,
     CURSORLOOP,
-    OPENCODE,
     QWENLOOP,
 )
 
@@ -34,11 +33,9 @@ ALL_EFFORTS = list(Effort)
 # flag (confirmed against real --help output, see descriptors.py's own
 # header comment) and so always produce non-empty argv. codexloop has no
 # CLI-level effort control at all -- see test_codexloop_has_no_cli_level_
-# effort_control below for its own, deliberately different invariant. OpenCode
-# is also deliberately empty because its provider-specific model controls are
-# not a portable effort contract.
+# effort_control below for its own, deliberately different invariant.
 DESCRIPTORS_WITH_REAL_EFFORT_FLAGS = [
-    d for d in ALL_DESCRIPTORS if d.engine_id not in {EngineId.CODEXLOOP, EngineId.OPENCODE}
+    d for d in ALL_DESCRIPTORS if d.engine_id is not EngineId.CODEXLOOP
 ]
 
 
@@ -88,14 +85,6 @@ def test_codexloop_has_no_cli_level_effort_control() -> None:
     assert CODEXLOOP.saturates_at(Effort.STANDARD) is False
     assert CODEXLOOP.saturates_at(Effort.HIGH) is True
     assert CODEXLOOP.saturates_at(Effort.MAX) is True
-
-
-def test_opencode_has_no_portable_cli_effort_control() -> None:
-    from vibey.infrastructure.engines.descriptors import OPENCODE
-
-    assert [OPENCODE.invoke(e).argv for e in ALL_EFFORTS] == [()] * len(ALL_EFFORTS)
-    assert all(OPENCODE.invoke(e).achieved is Effort.STANDARD for e in ALL_EFFORTS)
-    assert OPENCODE.saturates_at(Effort.HIGH)
 
 
 def test_agyloop_uses_real_five_level_effort_flag() -> None:
@@ -186,7 +175,7 @@ def test_the_local_descriptors_are_exactly_the_local_tier() -> None:
     from vibey.infrastructure.engines.descriptors import DEFAULT_DESCRIPTORS, LOCAL_DESCRIPTORS
 
     assert {d.tier for d in LOCAL_DESCRIPTORS} == {EngineTier.LOCAL}
-    assert {d.tier for d in DEFAULT_DESCRIPTORS} == {EngineTier.PAID, EngineTier.LOCAL}
+    assert {d.tier for d in DEFAULT_DESCRIPTORS} == {EngineTier.PAID}
 
 
 # -- what `vibey loops` reports about each engine ---------------------------------------------
@@ -202,7 +191,6 @@ RUNNER_CLI = {
     EngineId.CODEXLOOP: "codexloop.cli.app",
     EngineId.CURSORLOOP: "cursorloop.cli.app",
     EngineId.AGYLOOP: "agyloop.cli.app",
-    EngineId.OPENCODE: "opencodeloop.cli.app",
     EngineId.QWENLOOP: "qwenloop.cli.app",
 }
 VERBS = {"stop": "stop", "wind_down": "wind-down", "prompt": "prompt"}
@@ -336,7 +324,6 @@ def test_the_capabilities_each_runner_shows() -> None:
         "codexloop": (None, True, True, None, skills, None),
         "cursorloop": (None, True, True, None, skills, None),
         "agyloop": (None, True, True, None, skills, False),
-        "opencode": (None, True, True, None, skills, None),
         "qwenloop": (False, True, True, False, skills, False),
         "claudeloop-local": claude,
     }
@@ -380,17 +367,15 @@ def test_the_run_template_and_every_effort_flag_are_ones_the_runner_takes(  # ty
 
 
 def test_a_control_left_undeclared_is_one_the_runner_cannot_take() -> None:
-    """agyloop has no wind-down verb; opencodeloop has no control verb at all. cursorloop's
+    """agyloop has no wind-down verb. cursorloop's
     `prompt` verb exists and is still not declared, because its runner never acts on what
     the verb writes: it reads its inbox only while it waits, acts on stop and wind-down
     alone, and deletes every command it parsed (cursorloop application/runner.py,
     infrastructure/control.py)."""
     assert "wind-down" not in _runner_commands(EngineId.AGYLOOP)
-    assert not {"stop", "wind-down", "prompt"} & set(_runner_commands(EngineId.OPENCODE))
     assert "prompt" in _runner_commands(EngineId.CURSORLOOP)
     assert CURSORLOOP.controls.prompt is None
     assert AGYLOOP.controls.wind_down is None
-    assert OPENCODE.controls == EngineControls()
 
 
 def test_the_controls_each_runner_defines() -> None:
@@ -428,7 +413,6 @@ def test_every_runner_writes_its_events_in_its_own_run_directory() -> None:
         "codexloop": EventLog(path, EventEnvelope.TYPE),
         "cursorloop": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
         "agyloop": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
-        "opencode": EventLog(path, EventEnvelope.EVENT_TYPE),
         "qwenloop": EventLog(path, EventEnvelope.TYPE),
         "claudeloop-local": EventLog(path, EventEnvelope.EVENT_TYPE_PAYLOAD),
     }

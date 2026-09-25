@@ -81,7 +81,6 @@ def test_architecture_doc_example_parses_every_field() -> None:
         "cursorloop",
         "agyloop",
         "qwenloop",
-        "opencode",
     )
     assert config.engines.weights == {
         "claudeloop": 3,
@@ -114,10 +113,7 @@ def test_minimal_config_applies_defaults() -> None:
     assert config.project.name == "tiny"
     assert config.project.max_cycles == 10
     assert config.isolation.level == "worktree"
-    assert config.engines.enabled == (
-        "qwenloop",
-        "opencode",
-    )
+    assert config.engines.enabled == ("qwenloop",)
     assert config.phases.design.effort == "high"
     assert config.phases.build.effort == "low"
     assert config.phases.review.effort == "high"
@@ -286,7 +282,7 @@ def test_both_local_features_join_the_pool_in_order() -> None:
         '[project]\nname = "x"\n\n[features]\nqwenloop = true\nclaudeloop_local = true\n'
     )
 
-    assert config.engines.enabled[-2:] == ("opencode", "claudeloop-local")
+    assert config.engines.enabled[-2:] == ("qwenloop", "claudeloop-local")
 
 
 def test_claudeloop_local_request_requires_its_feature() -> None:
@@ -306,7 +302,7 @@ def test_an_explicit_pool_is_kept_as_written() -> None:
         '[engines]\nenabled = ["claudeloop-local"]\n'
     )
 
-    assert config.engines.enabled == ("claudeloop-local", "qwenloop", "opencode")
+    assert config.engines.enabled == ("claudeloop-local", "qwenloop")
 
 
 @pytest.mark.parametrize(

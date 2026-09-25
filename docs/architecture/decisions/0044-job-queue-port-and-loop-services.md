@@ -2,6 +2,8 @@
 
 **Status:** proposed · **Date:** 2026-09-22 · **Supersedes:** ADR-0002 (its queue-dispatch decision only; its record-store and ledger decisions are restated below and stand) · **Amends:** ADR-0025 (the autoscaling trigger), ADR-0009 (how an answer re-readies a parked job) · **Cites:** sub-doctrines 8.a, 8.b, 8.c, 9.b, 10.e, 10.f, 12.c · **Related:** ADR-0003, ADR-0004, ADR-0016, ADR-0017, ADR-0023, ADR-0024, ADR-0026, ADR-0029, ADR-0037, ADR-0038, ADR-0042, ADR-0043 · **Evidence:** `develop` at `d47c196d`, read 2026-09-22; every `file:line` below is at that commit; the canon is read at `472c5c6b`, the merge of #325 that ratified 8.c and amended 8.b
 
+**Superseded in part** by the change `feat(engines)!: remove the repealed opencodeloop engine` (2026-09-25): the `opencode` engine and its runner `opencodeloop` are deleted, so no `opencode` loop service exists; `qwenloop` is the one loop service enabled by default.
+
 **Owes:** nothing new as conduct — this record is mechanism (ADR-0020), and the conduct
 it implements is ratified: sub-doctrine 8.c (every loop runs once, fed by a queue) and
 8.b's bus default (RabbitMQ), both by the merge of #325 on 2026-09-22. It owes the docs

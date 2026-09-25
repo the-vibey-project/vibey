@@ -99,8 +99,8 @@ panel's page runs no script but its own.
 
 - **sovereignloop** is the default. **paidloop** runs vendors' engines, Claude through
   claudeloop by default, only once you declare it, with a daily or monthly dollar cap or a
-  no-cap declaration you confirm twice. A repealed engine (OpenCode, by canon 8.b) is shown and
-  never runs.
+  no-cap declaration you confirm twice. An engine canon 8.b repeals while vibey still carries
+  its code is shown and never runs.
 - **Effort** `auto` climbs vibey's ladder, one rung per failed attempt, in the same copy.
 - **Budgets**: a vibey project's cycle caps go through `vibey budget`. This computer's own
   lanes have per-run, daily or monthly caps in dollars, turns or minutes, kept in the storm

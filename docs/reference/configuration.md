@@ -287,12 +287,14 @@ Unlike `[budget]` above, this key **is** read at runtime, by
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `enabled` | array of strings | `["claudeloop", "codexloop", "cursorloop", "agyloop", "opencode"]` | Must be a subset of the known engines below. If omitted while `features.qwenloop = true`, `qwenloop` is appended to the default automatically; an explicit list is never extended. |
+| `enabled` | array of strings | `["qwenloop"]` | Must be a subset of the known engines below. `qwenloop`, the sovereign default (sub-doctrine 8.b), is always in the pool: it is appended to an explicit list that leaves it out. If omitted, every local engine whose feature is on is appended too. |
 | `weights` | table of string→int | `{}` | Per-engine weight for smooth weighted round robin ([ADR-0005](../architecture/decisions/0005-smooth-weighted-round-robin.md)). Keys must be known engines; values are not validated. |
 
 Known engine ids: `claudeloop`, `codexloop`, `cursorloop`, `agyloop`,
-`opencode`, and `qwenloop` (valid in `enabled` and `[phases.*].engines` only once
-`features.qwenloop = true`).
+`qwenloop`, and `claudeloop-local` (valid in `enabled` and `[phases.*].engines`
+only once `features.claudeloop_local = true`). `opencode` is no longer an engine:
+its engine and runner were deleted, and a `vibey.toml` that names it is refused
+as an unknown engine.
 
 ## `[phases.design]`, `[phases.build]`, `[phases.review]`
 
@@ -638,7 +640,7 @@ vibey's own `bandit -q -r src/vibey` is enforced for real as gate 6 of
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `security_commands` | array of arrays of non-empty strings | `[]` (no security check runs) | Security checks. There is deliberately no default: any baked-in command names both a tool and a layout, and `bandit -q -r <path that does not exist>` exits 0 — a wrong default reports a passing security check that examined zero files. Configure this to get one. |
-| `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop", "--exclude", ".cursorloop", "--exclude", ".agyloop", "--exclude", ".opencodeloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
+| `code_review_commands` | array of arrays of non-empty strings | `[["ruff", "check", ".", "--exclude", ".vibey", "--exclude", ".claudeloop", "--exclude", ".codexloop", "--exclude", ".cursorloop", "--exclude", ".agyloop"]]` | Code-review checks. The default excludes vibey's own machinery inside the repo — worktrees under `.vibey/` and the engines' state dirs — which are not the product. An explicit `[]` disables the check. |
 
 A malformed `review` object (not an object, a command list that is not a list
 of non-empty string arrays) raises when the worker is built, rather than
@@ -673,7 +675,7 @@ env_allow = ["JAVA_HOME", "GRADLE_*", "TEST_DATABASE_URL"]
 
 An engine session runs model-chosen shell commands, unattended in BUILD and
 DEPLOY_EXECUTE. It never inherits the worker's environment. Every engine process (the
-run, its `--version`, `doctor` and `--help` probes, and the claudeloop and opencode
+run, its `--version`, `doctor` and `--help` probes, and the claudeloop
 DESIGN/DECOMPOSE sessions) starts from an allow-list built by
 `EngineEnvironmentPolicy` (`infrastructure/engines/engine_environment.py`). The
 allow-list has three parts:
@@ -695,7 +697,6 @@ allow-list has three parts:
    | `codexloop` | `OPENAI_API_KEY`, `CODEXLOOP_*`, `CODEX_*`, `OPENAI_*`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT` |
    | `cursorloop` | `CURSOR_API_KEY`, `CURSORLOOP_*`, `CURSOR_*` |
    | `agyloop` | `GOOGLE_API_KEY`, `GEMINI_API_KEY`, `AGYLOOP_*`, `ANTIGRAVITY_*`, `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_GENAI_USE_ENTERPRISE`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` |
-   | `opencode` | `OPENCODELOOP_*`, `OPENCODE_*` |
    | `qwenloop` | `QWENLOOP_*` (plus the `QWENLOOP_BASE_URL`/`QWENLOOP_MODEL` vibey derives from `VIBEY_OLLAMA_URL`) |
 
 3. **What the project declares.** This is the record's `engine_environment` object,
@@ -715,7 +716,6 @@ engine it is declared for. Some things need declaring:
   default credentials under `CLOUDSDK_CONFIG` when the gcloud configuration lives
   somewhere other than `~/.config/gcloud`; declare `CLOUDSDK_CONFIG` too in that
   case.
-- OpenCode needs any provider key its own configuration reads from the environment.
 - claudeloop's GitHub issue import needs `GH_TOKEN` or `GITHUB_TOKEN` for a private
   repository.
 
@@ -738,7 +738,6 @@ project's.
 allow = ["JAVA_HOME"]
 
 [engine_environment.engines]
-opencode = ["OPENROUTER_API_KEY"]
 agyloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]
 "claudeloop-local" = ["GH_TOKEN"]
 ```
@@ -808,7 +807,7 @@ sources = ["storm"]
 env_allow = ["JAVA_HOME"]
 
 [engine_environment.engines]
-opencode = ["OPENROUTER_API_KEY"]
+agyloop = ["GOOGLE_APPLICATION_CREDENTIALS"]
 
 [queue.reap]
 stale_ready_seconds = 900

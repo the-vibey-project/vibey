@@ -2,6 +2,8 @@
 
 **Status:** accepted · **Date:** 2026-09-24 · **Cites:** sub-doctrines 8.b, 8.c, 8.j, 9.b, 10.f, 10.g, 10.h, 12.c, 12.d, 12.e · **Related:** ADR-0005, ADR-0016, ADR-0017, ADR-0018, ADR-0023, ADR-0045, ADR-0055, ADR-0057, ADR-0058 · **Issue:** #290
 
+**Superseded in part** by the change `feat(engines)!: remove the repealed opencodeloop engine` (2026-09-25): the `opencode` engine and its runner are deleted, so `vibey loops` lists no repealed engine today; the extension keeps the rule for any engine 8.b repeals while its code remains.
+
 **Owes:** the advertised ADR count in `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `README.md` and
 `docs/index.md` (`tests/meta/test_adr_counts.py`), a nav entry in `properdocs.yml`, the guide
 `docs/guides/vscode-extension.md` at the top of the Guides nav, and the extension's own README.

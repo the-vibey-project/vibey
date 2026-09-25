@@ -18,7 +18,6 @@ from vibey.infrastructure.engines.descriptors import (
     CLAUDELOOP,
     CODEXLOOP,
     CURSORLOOP,
-    OPENCODE,
     QWENLOOP,
 )
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
@@ -108,7 +107,6 @@ _DECLARED: dict[EngineId, tuple[str, ...]] = {
         "AGYLOOP_*",
         "ANTIGRAVITY_*",
     ),
-    EngineId.OPENCODE: ("OPENCODELOOP_*", "OPENCODE_*"),
     EngineId.QWENLOOP: ("QWENLOOP_*",),
 }
 
@@ -131,7 +129,6 @@ def test_each_engines_declared_variables_admit_what_the_engine_reads() -> None:
     assert policy.allow_list(CODEXLOOP).admits("CODEX_HOME")
     assert policy.allow_list(CURSORLOOP).admits("CURSOR_API_KEY")
     assert policy.allow_list(AGYLOOP).admits("GEMINI_API_KEY")
-    assert policy.allow_list(OPENCODE).admits("OPENCODE_CONFIG")
     assert policy.allow_list(QWENLOOP).admits("QWENLOOP_BASE_URL")
     # ...and not what another engine reads.
     assert not policy.allow_list(QWENLOOP).admits("ANTHROPIC_API_KEY")

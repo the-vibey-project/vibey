@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "vibey-runners-common"
 version = "0.1.0"
-description = "Shared application-layer interfaces and use cases genuinely common to the claudeloop/codexloop/cursorloop/agyloop/opencodeloop session-runner family."
+description = "Shared application-layer interfaces and use cases genuinely common to the claudeloop/codexloop/cursorloop/agyloop session-runner family."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -76,7 +76,6 @@ forbidden_modules = [
     "codexloop",
     "cursorloop",
     "agyloop",
-    "opencodeloop",
     "qwenloop",
 ]
 

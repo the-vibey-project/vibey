@@ -65,7 +65,7 @@ Changelog = "https://github.com/the-vibey-project/vibey/blob/main/CHANGELOG.md"
 Discord = "https://discord.gg/Qvu8aYnVS"
 "Join me" = "https://vibewithadam.matthewsteinberger.com/join-me"
 
-# Twelve console scripts, one install (ADR-0037). Each is the entry point its own tenant
+# Eleven console scripts, one install (ADR-0037). Each is the entry point its own tenant
 # declared while it was published separately; the name and target are unchanged, only the
 # distribution that carries them is. `azbootstrap` stays: it is vibey-bootstrap's
 # deprecated pre-4.0 alias, and dropping it here would be a second breaking change
@@ -77,7 +77,6 @@ codexloop = "codexloop.cli.app:main"
 cursorloop = "cursorloop.cli.app:main"
 agyloop = "agyloop.cli.app:main"
 qwenloop = "qwenloop.cli.app:main"
-opencodeloop = "opencodeloop.cli.app:main"
 vibey-gh = "vibey_gh.cli:main"
 vibey-skills = "vibey_skills.cli:main"
 vibe-skills = "vibey_skills.cli:deprecated_alias_main"
@@ -183,14 +182,14 @@ dev = [
     "kubernetes>=31.0",
 ]
 
-# Eleven importable trees, one wheel (ADR-0037). `packages` rather than `force-include` for
+# Ten importable trees, one wheel (ADR-0037). `packages` rather than `force-include` for
 # every one of them, and the reason is not taste:
 #
 #   * `packages` maps a directory to the top-level name in its LAST path segment, so each
 #     tenant lands under the name it already publishes with no renaming, and every data
 #     file inside it (py.typed markers, vibey_gh's workflow templates, vibey_bootstrap's
 #     contrib/templates, agyloop's API baselines, cursorloop's OpenAPI spec) comes with
-#     it. A force-include would be eleven hand-written path pairs that silently miss whatever
+#     it. A force-include would be ten hand-written path pairs that silently miss whatever
 #     is added next.
 #   * Only a `packages` entry is exposed by an EDITABLE install. `.importlinter` names
 #     `vibey_gh` a root package, so `uv run lint-imports` needs `import vibey_gh` to work
@@ -210,7 +209,6 @@ packages = [
     "src/vibey_runners/cursor/src/cursorloop",
     "src/vibey_runners/agy/src/agyloop",
     "src/vibey_runners/qwen/src/qwenloop",
-    "src/vibey_runners/opencode/src/opencodeloop",
     "src/vibey_runners/common/src/vibey_runners",
     "src/vibey_tools/gh/vibey_gh",
     "src/vibey_tools/bootstrap/vibey_bootstrap",
@@ -219,15 +217,15 @@ packages = [
 
 # Every package root mapped explicitly, and this table is load-bearing rather than
 # redundant. `packages` alone would derive a source prefix from each entry's PARENT, giving
-# eleven prefixes of which one -- plain `src`, from `src/vibey` -- is an ancestor of the other
-# ten. Hatchling sorts its sources and strips the first that matches, and `src/` sorts
+# ten prefixes of which one -- plain `src`, from `src/vibey` -- is an ancestor of the other
+# nine. Hatchling sorts its sources and strips the first that matches, and `src/` sorts
 # before every longer path beginning with it, so `src/vibey_tools/gh/vibey_gh/cli.py` was
 # landing in the wheel as `vibey_tools/gh/vibey_gh/cli.py` and the editable build failed
 # outright on "src/vibey_tools is not a valid Python package". Naming each package's own
 # directory here does two things: it maps the path to the exact distribution name, and it
 # satisfies the guard in hatchling's `sources` that stops `packages` adding the parent
 # prefix at all. `src/vibey/` is not a prefix of `src/vibey_runners/` or `src/vibey_tools/`
-# -- the next character is `_`, not `/` -- so the eleven no longer overlap.
+# -- the next character is `_`, not `/` -- so the ten no longer overlap.
 [tool.hatch.build.targets.wheel.sources]
 "src/vibey" = "vibey"
 "src/vibey_runners/claude/src/claudeloop" = "claudeloop"
@@ -235,7 +233,6 @@ packages = [
 "src/vibey_runners/cursor/src/cursorloop" = "cursorloop"
 "src/vibey_runners/agy/src/agyloop" = "agyloop"
 "src/vibey_runners/qwen/src/qwenloop" = "qwenloop"
-"src/vibey_runners/opencode/src/opencodeloop" = "opencodeloop"
 "src/vibey_runners/common/src/vibey_runners" = "vibey_runners"
 "src/vibey_tools/gh/vibey_gh" = "vibey_gh"
 "src/vibey_tools/bootstrap/vibey_bootstrap" = "vibey_bootstrap"

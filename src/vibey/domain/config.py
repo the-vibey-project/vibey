@@ -22,11 +22,8 @@ from vibey.domain.queue_reap import (
 
 VALID_ISOLATION_LEVELS = ("worktree", "container", "vm")
 VALID_EFFORTS = ("trivial", "low", "standard", "high", "max")
-# The engine id is `opencode` (the provider multiplexer); `opencodeloop` is the
-# wrapper binary and package that adapts it. The canonical id is what config,
-# the CLI and the ledger all speak.
-# The sovereign default pair (always on, never need declaration)
-DEFAULT_ENGINES = ("qwenloop", "opencode")
+# The sovereign default (always on, never needs declaration)
+DEFAULT_ENGINES = ("qwenloop",)
 # Local engines, each behind its own `[features]` switch (ADR-0015, ADR-0038). The
 # feature key is the engine id with the hyphen a TOML bare key cannot carry.
 LOCAL_ENGINE_FEATURES = {"qwenloop": "qwenloop", "claudeloop-local": "claudeloop_local"}
@@ -35,7 +32,6 @@ KNOWN_ENGINES = (
     "codexloop",
     "cursorloop",
     "agyloop",
-    "opencode",
     "qwenloop",
     "claudeloop-local",
 )
@@ -557,8 +553,8 @@ def _parse_budget(data: dict[str, Any]) -> BudgetConfig:
 def _parse_engines(data: dict[str, Any]) -> EnginesConfig:
     table = _optional(data, "engines", "engines", dict, {})
     enabled = tuple(_optional(table, "enabled", "engines.enabled", list, list(DEFAULT_ENGINES)))
-    # The sovereign pair are always-on defaults (cannot be turned off)
-    for sovereign in ("qwenloop", "opencode"):
+    # The sovereign defaults are always on (cannot be turned off)
+    for sovereign in DEFAULT_ENGINES:
         if sovereign not in enabled:
             enabled = (*enabled, sovereign)
     for engine in enabled:

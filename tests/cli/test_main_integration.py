@@ -385,7 +385,7 @@ def test_new_project_stores_the_declared_gate_and_engine_environments(tmp_path: 
         '[gates]\ntimeout_seconds = 600\nenv_allow = ["JAVA_HOME", "GRADLE_*"]\n\n'
         '[engine_environment]\nallow = ["JAVA_HOME"]\n\n'
         "[engine_environment.engines]\n"
-        'opencode = ["OPENROUTER_API_KEY"]\n'
+        'codexloop = ["OPENROUTER_API_KEY"]\n'
         'agyloop = ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"]\n'
     )
 
@@ -404,7 +404,7 @@ def test_new_project_stores_the_declared_gate_and_engine_environments(tmp_path: 
     assert config["engine_environment"] == {
         "allow": ["JAVA_HOME"],
         "engines": {
-            "opencode": ["OPENROUTER_API_KEY"],
+            "codexloop": ["OPENROUTER_API_KEY"],
             "agyloop": ["GOOGLE_APPLICATION_CREDENTIALS", "CLOUDSDK_CONFIG"],
         },
     }

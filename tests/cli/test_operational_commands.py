@@ -1458,7 +1458,7 @@ def test_worker_invalid_engine() -> None:
 def test_worker_invalid_provider() -> None:
     res = runner.invoke(app, ["worker", "--provider", "nonexistent"])
     assert res.exit_code == 2
-    assert "provider must be 'scripted', 'claudeloop', 'qwenloop', or 'opencode'" in res.output
+    assert "provider must be 'scripted', 'claudeloop', or 'qwenloop'" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1711,23 +1711,12 @@ def test_worker_provider_claudeloop_constructs_live_providers(tmp_path: Path) ->
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
-def test_worker_provider_opencode_constructs_live_providers(tmp_path: Path) -> None:
-    """--provider opencode builds the live design provider without any
-    subprocess spawn at construction time."""
-
-    async def seed() -> None:
-        async with build_app() as resources:
-            await resources.projects.create("opencode-prov-proj", tmp_path, max_cycles=1, config={})
-
-    asyncio.run(seed())
-    from unittest.mock import AsyncMock, patch
-
-    with patch("vibey.infrastructure.db.notifier.PostgresJobReadyNotifier") as mock_notifier_cls:
-        mock_notifier_cls.return_value = AsyncMock()
-        res = runner.invoke(app, ["worker", "--once", "--provider", "opencode"])
-    assert res.exit_code == 0, res.output
-    assert "provider=opencode" in res.output
-    assert "no ready job" in res.output
+def test_worker_refuses_the_deleted_opencode_provider() -> None:
+    """The OpenCode provider was deleted with its engine (sub-doctrine 8.b): naming it is
+    refused like any other unknown provider, before anything is built."""
+    res = runner.invoke(app, ["worker", "--once", "--provider", "opencode"])
+    assert res.exit_code == 2
+    assert "provider must be 'scripted', 'claudeloop', or 'qwenloop'" in res.output
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -1860,7 +1849,7 @@ def test_worker_warns_about_engines_without_conformance(tmp_path: Path) -> None:
             assert all(not r.conformance_ok for r in records)
             return len(records)
 
-    assert asyncio.run(check()) == 5
+    assert asyncio.run(check()) == 4  # the default pool: the four paid engines
 
 
 @pytest.mark.usefixtures("_fast_engine_preflight")
@@ -2348,14 +2337,14 @@ def test_recover_with_project(tmp_path: Path) -> None:
 # ── a project's declared engine environment reaches the probes ────────────────
 #
 # `engine_environment` in the project record is how a project hands an engine the
-# credential its own configuration reads -- opencode's provider key, agyloop's Vertex
+# credential its own configuration reads -- a relay's provider key, agyloop's Vertex
 # credentials. `build_full_worker` applied it, but the startup preflight sweep and
 # `vibey doctor --conformance --record --project X` still probed with the DEFAULT
 # policy, so the auth check and the conformance run could not see the credential the
 # real session would get: the engine read "auth FAIL" and never became eligible.
 
 _DECLARED_CREDENTIALS = [
-    (EngineId.OPENCODE, "OPENROUTER_API_KEY"),
+    (EngineId.CODEXLOOP, "OPENROUTER_API_KEY"),
     (EngineId.AGYLOOP, "GOOGLE_APPLICATION_CREDENTIALS"),
 ]
 
@@ -2480,10 +2469,10 @@ def test_doctor_without_record_probes_with_the_default_environment(
         "vibey.infrastructure.engines.loop_process_adapter.LoopProcessAdapter.preflight",
         new=_probe_recorder(probed),
     ):
-        res = runner.invoke(app, ["doctor", "--engine", "opencode"])
+        res = runner.invoke(app, ["doctor", "--engine", "codexloop"])
 
     assert res.exit_code == 0, res.output
-    assert "OPENROUTER_API_KEY" not in probed["opencode"]
+    assert "OPENROUTER_API_KEY" not in probed["codexloop"]
 
 
 def test_doctor_record_refuses_a_project_whose_engine_environment_is_forbidden(
@@ -2499,7 +2488,7 @@ def test_doctor_record_refuses_a_project_whose_engine_environment_is_forbidden(
             )
 
     asyncio.run(seed())
-    res = runner.invoke(app, ["doctor", "--record", "--engine", "opencode"])
+    res = runner.invoke(app, ["doctor", "--record", "--engine", "codexloop"])
 
     assert res.exit_code != 0
     assert "VIBEY_PG_URL" in res.output

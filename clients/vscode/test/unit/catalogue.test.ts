@@ -58,9 +58,7 @@ describe('CatalogueParser', () => {
     const codex = catalogue.loops[1]?.engines.find((engine) => engine.engine_id === 'codexloop');
     expect(codex?.turns_flag).toBeUndefined();
     expect(codex?.supports_cwd_flag).toBe(false);
-    const opencode = catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'opencode');
-    expect(opencode?.notes?.join(' ')).toContain('repeals');
-    expect(opencode).toMatchObject({ repealed: true, events: { envelope: 'event_type' } });
+    expect(catalogue.loops.flatMap((loop) => loop.engines).some((engine) => engine.repealed)).toBe(false);
     expect(catalogue.loops[0]?.engines.find((engine) => engine.engine_id === 'qwenloop')).toMatchObject({ repealed: false, controls: { prompt: null } });
   });
 
@@ -120,10 +118,11 @@ describe('the #1131 review amendments', () => {
       variant((value) => {
         value.loops[0].engines[0].notes = ['first', '  ', 'second'];
         value.loops[0].engines[1].notes = 'one line';
-        value.loops[0].engines[2].notes = null;
+        value.loops[1].engines[0].notes = null;
       }),
     );
-    expect(catalogue.loops[0]?.engines.map((engine) => engine.notes)).toEqual([['first', 'second'], ['one line'], undefined]);
+    expect(catalogue.loops[0]?.engines.map((engine) => engine.notes)).toEqual([['first', 'second'], ['one line']]);
+    expect(catalogue.loops[1]?.engines[0]?.notes).toBeUndefined();
   });
 
   it('reads an engine a producer from before the repeals lists as not repealed', () => {
@@ -140,12 +139,12 @@ describe('the #1131 review amendments', () => {
   it('never chooses a repealed engine in auto mode, even where by_effort lists it', () => {
     const catalogue = parse(
       variant((value) => {
-        const opencode = value.loops[0].engines.find((engine: Record<string, any>) => engine.engine_id === 'opencode');
-        opencode.enabled = true;
-        opencode.base_weight = 100;
-        opencode.efforts[1].achieved = 'LOW';
+        const repealed = value.loops[0].engines.find((engine: Record<string, any>) => engine.engine_id === 'claudeloop-local');
+        repealed.enabled = true;
+        repealed.repealed = true;
+        repealed.base_weight = 100;
         value.loops[0].by_effort.LOW = [
-          { engine_id: 'opencode', model: null, achieved: 'LOW' },
+          { engine_id: 'claudeloop-local', model: null, achieved: 'LOW' },
           { engine_id: 'qwenloop', model: 'gpt-oss:20b', achieved: 'LOW' },
         ];
       }),
@@ -360,9 +359,18 @@ describe('LoopSelector', () => {
     expect(() => selector.select(request({ loop: 'paidloop', paidDeclared: true, engine: 'claudeloop/opus' }))).toThrow(
       'does not take a model by name',
     );
-    expect(() => selector.select(request({ engine: 'nosuch' }))).toThrow('its engines are qwenloop, claudeloop-local, opencode');
+    expect(() => selector.select(request({ engine: 'nosuch' }))).toThrow('its engines are qwenloop, claudeloop-local');
     expect(() => selector.select(request({ engine: 'claudeloop-local' }))).toThrow('switch it on with VIBEY_FEATURE_CLAUDELOOP_LOCAL');
-    expect(() => selector.select(request({ engine: 'opencode' }))).toThrow('opencode is repealed by the canon (8.b): it is listed, but it never runs');
+    const repealed = new LoopSelector(
+      parse(
+        variant((value) => {
+          value.loops[0].engines[1].repealed = true;
+        }),
+      ),
+    );
+    expect(() => repealed.select(request({ engine: 'claudeloop-local' }))).toThrow(
+      'claudeloop-local is repealed by the canon (8.b): it is listed, but it never runs',
+    );
     expect(() => selector.select(request({ engine: 'claudeloop-local' }))).toThrow(/switched off; switch it on with /);
     const noSwitch = new LoopSelector(
       parse(

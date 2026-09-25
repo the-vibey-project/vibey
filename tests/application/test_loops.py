@@ -102,17 +102,19 @@ def test_the_report_names_the_efforts_the_default_loop_the_paid_default_and_the_
 
 
 def test_a_repealed_engine_stays_listed_and_nothing_selects_it_by_effort() -> None:
-    """Canon 8.b repeals OpenCode from both loops: it is listed, for transparency, and left
-    out of every by-effort view, so no consumer of `by_effort` picks it (amendment 5)."""
+    """An engine canon 8.b repeals from both loops, while its code is still in the tree, is
+    listed, for transparency, and left out of every by-effort view, so no consumer of
+    `by_effort` picks it (amendment 5)."""
     engines = [
-        _descriptor(EngineId.OPENCODE, tier=EngineTier.LOCAL),
+        _descriptor(EngineId.CLAUDELOOP_LOCAL, tier=EngineTier.LOCAL),
         _descriptor(EngineId.QWENLOOP, tier=EngineTier.LOCAL),
     ]
+    catalog = LoopCatalog(repealed=frozenset({EngineId.CLAUDELOOP_LOCAL}))
 
-    sovereign = LoopCatalog().report([_context(d) for d in engines]).loops[0]
+    sovereign = catalog.report([_context(d) for d in engines]).loops[0]
 
     assert [(e.descriptor.engine_id, e.repealed) for e in sovereign.engines] == [
-        (EngineId.OPENCODE, True),
+        (EngineId.CLAUDELOOP_LOCAL, True),
         (EngineId.QWENLOOP, False),
     ]
     for effort, choices in sovereign.by_effort.items():
@@ -229,12 +231,22 @@ def test_by_effort_puts_exact_then_higher_then_lower_and_breaks_ties_by_price_th
 
 
 def test_an_engine_the_canon_repeals_is_reported_as_the_code_says_with_a_note() -> None:
-    opencode = _descriptor(EngineId.OPENCODE, tier=EngineTier.LOCAL)
+    local = _descriptor(EngineId.CLAUDELOOP_LOCAL, tier=EngineTier.LOCAL)
+    catalog = LoopCatalog(repealed=frozenset({EngineId.CLAUDELOOP_LOCAL}))
 
-    (engine,) = LoopCatalog().report([_context(opencode)]).loops[0].engines
+    (engine,) = catalog.report([_context(local)]).loops[0].engines
 
     assert engine.repealed is True
     assert engine.notes == (
-        "sub-doctrine 8.b repeals opencode from both loops; reported here as its descriptor "
-        "says, tier local",
+        "sub-doctrine 8.b repeals claudeloop-local from both loops; reported here as its "
+        "descriptor says, tier local",
     )
+
+
+def test_by_default_no_engine_is_repealed() -> None:
+    """The one engine 8.b repealed, OpenCode, is deleted: the default catalogue repeals none."""
+    engines = [_descriptor(engine_id) for engine_id in EngineId]
+
+    report = LoopCatalog().report([_context(d) for d in engines])
+
+    assert not any(engine.repealed for loop in report.loops for engine in loop.engines)

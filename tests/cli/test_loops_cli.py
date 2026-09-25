@@ -150,7 +150,6 @@ def test_the_document_has_the_contracts_shape_without_a_database() -> None:
         True,
     )
     assert [e["engine_id"] for e in sovereign["engines"]] == [
-        "opencode",
         "qwenloop",
         "claudeloop-local",
     ]
@@ -256,7 +255,6 @@ def test_only_a_runner_that_acts_on_a_mid_run_prompt_offers_a_prompt_control() -
         for engine in loop["engines"]
     }
     assert prompts == {
-        "opencode": False,
         "qwenloop": True,
         "claudeloop-local": True,
         "claudeloop": True,
@@ -269,27 +267,33 @@ def test_only_a_runner_that_acts_on_a_mid_run_prompt_offers_a_prompt_control() -
     assert "prompt" not in cursorloop["capabilities"]["evidence"]["paste_text"]
 
 
-def test_opencode_is_reported_as_the_code_says_and_the_canon_is_noted() -> None:
+def test_no_engine_is_repealed_since_opencode_was_deleted() -> None:
+    """Canon 8.b repealed OpenCode, and its engine and runner are deleted, so every engine
+    listed is one that runs, and none carries a note."""
     document = _document()
-    opencode = _engine(document, "opencode")
 
-    assert opencode["repealed"] is True
-    assert opencode["notes"] == [
-        "sub-doctrine 8.b repeals opencode from both loops; reported here as its descriptor "
-        "says, tier local"
-    ]
-    assert opencode["controls"] == {"stop": None, "wind_down": None, "prompt": None}
-    assert opencode["events"]["envelope"] == "event_type"
-    others = [e for loop in document["loops"] for e in loop["engines"] if e is not opencode]
-    assert {engine["repealed"] for engine in others} == {False}
+    engines = [engine for loop in document["loops"] for engine in loop["engines"]]
+    assert {engine["repealed"] for engine in engines} == {False}
+    assert all(engine["notes"] == [] for engine in engines)
+    assert "opencode" not in [engine["engine_id"] for engine in engines]
 
 
-def test_a_repealed_engine_is_never_offered_by_effort() -> None:
-    """Listed for transparency, and out of every by-effort view, so neither the extension's
+def test_a_repealed_engine_is_reported_with_its_note_and_never_offered_by_effort() -> None:
+    """While 8.b repeals an engine whose code is still in the tree, it is listed for
+    transparency, with a note, and out of every by-effort view, so neither the extension's
     auto mode nor any other consumer of `by_effort` selects it (amendment 5)."""
-    for loop in _document()["loops"]:
-        for effort, choices in loop["by_effort"].items():
-            assert "opencode" not in [choice["engine_id"] for choice in choices], effort
+    catalog = LoopCatalog(repealed=frozenset({EngineId.QWENLOOP}))
+    report = catalog.report([EngineContext(descriptor=_unchecked(), enabled=True, run=())])
+    note = "sub-doctrine 8.b repeals qwenloop from both loops; reported here as its "
+    note += "descriptor says, tier local"
+
+    sovereign = json.loads(LoopsPresenter().json(report))["loops"][0]
+    (engine,) = sovereign["engines"]
+
+    assert engine["repealed"] is True
+    assert engine["notes"] == [note]
+    assert f"  note on qwenloop: {note}" in LoopsPresenter().lines(report)
+    assert all(choices == [] for choices in sovereign["by_effort"].values())
 
 
 def test_by_effort_lists_exact_matches_first() -> None:
@@ -380,7 +384,7 @@ def test_the_table_says_what_each_effort_passes_and_how_to_switch_a_local_engine
         "  qwenloop is switched on by VIBEY_FEATURE_QWENLOOP=1, or by its key under [features] "
         "in vibey.toml"
     ) in lines
-    assert any(line.startswith("  note on opencode: sub-doctrine 8.b") for line in lines)
+    assert not any(line.startswith("  note on ") for line in lines)
     assert lines[-1] == (
         "Canon 8.b names claudeloop the paid default; the selector does not apply it yet, and "
         "rotates paid engines by weight. `vibey loops --json` has every engine's full facts."
@@ -503,11 +507,13 @@ def test_the_committed_golden_is_what_the_command_prints_in_its_fixed_environmen
 
 def test_the_golden_shows_every_kind_of_value_a_parser_must_read() -> None:
     """The fixed environment is chosen so the file carries each field both ways: an engine
-    on and one off, a model and none, a switch and none, a repealed engine and the rest."""
+    on and one off, a model and none, a switch and none. `repealed` is false throughout:
+    the one engine 8.b repealed, OpenCode, is deleted, and a repealed engine's shape is
+    held by `test_a_repealed_engine_is_reported_with_its_note_and_never_offered_by_effort`."""
     engines = [e for loop in json.loads(GOLDEN.read_text())["loops"] for e in loop["engines"]]
 
-    for field in ("enabled", "repealed"):
-        assert {engine[field] for engine in engines} == {True, False}, field
+    assert {engine["enabled"] for engine in engines} == {True, False}
+    assert {engine["repealed"] for engine in engines} == {False}
     for field in ("default_model", "switch"):
         values = {engine[field] for engine in engines}
         assert None in values and values - {None}, field

@@ -160,7 +160,7 @@ export class RunTranscript implements RunTranscriptInterface {
       return [typeof event.type === 'string' ? event.type : '', event];
     }
     if (envelope === 'event_type') {
-      // opencodeloop's flat records: the kind in `event_type`, its fields beside it.
+      // Flat records: the kind in `event_type`, its fields beside it.
       return [typeof event.event_type === 'string' ? event.event_type : '', event];
     }
     const type = [event.event_type, event.kind, event.type].find((value): value is string => typeof value === 'string') ?? '';

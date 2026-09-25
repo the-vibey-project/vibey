@@ -69,7 +69,7 @@ from vibey.infrastructure.engines.claudeloop_process import (
     ClaudeLoopProcess,
     SpendRecorder,
 )
-from vibey.infrastructure.engines.descriptors import CLAUDELOOP, OPENCODE
+from vibey.infrastructure.engines.descriptors import CLAUDELOOP
 from vibey.infrastructure.engines.engine_environment import EngineEnvironmentPolicy
 from vibey.infrastructure.engines.local_engines import LocalEngineSettings
 from vibey.infrastructure.engines.ollama_chat import (
@@ -442,7 +442,7 @@ _OLLAMA_MODEL_HELP = (
     "Local model for --provider qwenloop; ignored by the other providers. Default: "
     f"${OLLAMA_MODEL_ENV}, else {DEFAULT_OLLAMA_MODEL}. The server is ${OLLAMA_URL_ENV}."
 )
-_PROVIDERS = ("scripted", "claudeloop", "qwenloop", "opencode")
+_PROVIDERS = ("scripted", "claudeloop", "qwenloop")
 # Built from _PROVIDERS so the message both commands print cannot fall behind the list.
 _UNKNOWN_PROVIDER = (
     "provider must be "
@@ -451,20 +451,20 @@ _UNKNOWN_PROVIDER = (
 )
 # The same for --provider: its default is the one decision both commands must share.
 _PROVIDER_HELP = (
-    "DESIGN/DECOMPOSE provider: scripted, claudeloop, qwenloop (the sovereign one, on "
-    "Ollama), or opencode. Default: qwenloop -- the sovereign pair is always on "
-    "(sub-doctrine 8.b). An explicit value always wins."
+    "DESIGN/DECOMPOSE provider: scripted, claudeloop, or qwenloop (the sovereign one, on "
+    "Ollama). Default: qwenloop -- the sovereign default is always on (sub-doctrine 8.b). "
+    "An explicit value always wins."
 )
 
 
 def _resolve_provider(explicit: str | None) -> str:
     """The provider to run: the operator's explicit choice, else the sovereign default.
 
-    Sub-doctrine 8.b keeps the sovereign pair always on, never needing declaration, so
+    Sub-doctrine 8.b keeps the sovereign default always on, never needing declaration, so
     with no `--provider` DESIGN and DECOMPOSE run on qwenloop (#322). Before, they fell
     back to the scripted fake unless a local engine was switched on. Paid (`claudeloop`)
-    and `opencode` are always a stated choice. Module-level, like the typer commands that
-    share it, so `work` and `worker` cannot disagree.
+    is always a stated choice. Module-level, like the typer commands that share it, so
+    `work` and `worker` cannot disagree.
     """
     return explicit if explicit is not None else "qwenloop"
 
@@ -530,24 +530,6 @@ async def _work_once(
             # decomposer to choose -- `worker` does.
             design_provider = QwenloopDesignProvider.from_environment(
                 os.environ, chat=OllamaChatClient.from_environment(os.environ, model=ollama_model)
-            )
-        elif provider == "opencode":
-            from vibey.infrastructure.engines.opencodeloop_design import OpenCodeLoopDesignProvider
-            from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopProcess
-
-            opencode_process = OpenCodeLoopProcess(
-                executor=AsyncSubprocessExecutor(
-                    EngineEnvironmentPolicy.from_config(project.config).environment(OPENCODE)
-                ),
-                max_turns=max_turns,
-                max_dollars=max_dollars,
-                spend_recorder=_build_spend_recorder(
-                    resources.ledger, project.project_id, project.cycle, project.phase
-                ),
-            )
-            design_provider = OpenCodeLoopDesignProvider(
-                process=opencode_process,
-                worktree_path=project.repo_path,
             )
         else:
             raise UnknownProvider(_UNKNOWN_PROVIDER)
@@ -1380,7 +1362,7 @@ def doctor(
         # project to declare anything, so the defaults; with --record, the target
         # project's `engine_environment`, because the health written to that project must
         # be measured with what its sessions will receive -- a credential it declares
-        # for opencode or agyloop included.
+        # for agyloop included.
         engine_environment = EngineEnvironmentPolicy()
         if record:
             async with build_app() as resources:
@@ -1823,33 +1805,6 @@ def worker(
                 chat = OllamaChatClient.from_environment(os.environ, model=ollama_model)
                 design_provider = QwenloopDesignProvider.from_environment(os.environ, chat=chat)
                 decomposer = QwenloopWorkPlanProducer(chat=chat)
-            elif provider == "opencode":
-                from vibey.infrastructure.engines.opencodeloop_decompose import (
-                    OpenCodeLoopWorkPlanProducer,
-                )
-                from vibey.infrastructure.engines.opencodeloop_design import (
-                    OpenCodeLoopDesignProvider,
-                )
-                from vibey.infrastructure.engines.opencodeloop_process import OpenCodeLoopProcess
-
-                opencode_process = OpenCodeLoopProcess(
-                    executor=AsyncSubprocessExecutor(
-                        EngineEnvironmentPolicy.from_config(project.config).environment(OPENCODE)
-                    ),
-                    max_turns=max_turns,
-                    max_dollars=max_dollars,
-                    spend_recorder=_build_spend_recorder(
-                        resources.ledger, project.project_id, project.cycle, project.phase
-                    ),
-                )
-                design_provider = OpenCodeLoopDesignProvider(
-                    process=opencode_process,
-                    worktree_path=project.repo_path,
-                )
-                decomposer = OpenCodeLoopWorkPlanProducer(
-                    process=opencode_process,
-                    worktree_path=project.repo_path,
-                )
             else:
                 design_provider = ScriptedDesignProvider()
                 decomposer = ScriptedWorkPlanProducer()
@@ -1868,8 +1823,8 @@ def worker(
                 adapters.setdefault(engine_id, local_adapter)
             # The sweep probes each engine's auth, so it must probe with what the engine's
             # sessions will actually receive: the project's `engine_environment` on top of
-            # the defaults. Without it a credential the project declares (opencode's
-            # provider key, agyloop's Vertex credentials) was invisible to the auth check,
+            # the defaults. Without it a credential the project declares (agyloop's
+            # Vertex credentials, say) was invisible to the auth check,
             # and the engine read "auth FAIL" although its sessions would authenticate.
             engine_environment = EngineEnvironmentPolicy.from_config(project.config)
             adapters = {
