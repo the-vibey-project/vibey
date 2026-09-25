@@ -15,7 +15,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { BudgetError, BudgetGuard, BudgetRules, SpendLedger } from '@vibey/core';
+import { BudgetError, BudgetGuard, BudgetRules, NoCapPath, SpendLedger } from '@vibey/core';
 import type { Budget, BudgetStoreInterface, PaidDeclaration } from '@vibey/core';
 import type { JsonlJournalInterface } from '@vibey/core';
 import type { ClockInterface, IdSourceInterface } from '@vibey/core';
@@ -68,12 +68,12 @@ export class BudgetStore implements BudgetStoreInterface {
   }
 
   declarePaid(
-    cap: { readonly scope: 'day' | 'month'; readonly dollars: number } | { readonly noCap: true; readonly confirmed: boolean },
+    cap: { readonly scope: 'day' | 'month'; readonly dollars: number } | { readonly noCap: true; readonly phrase: string },
   ): PaidDeclaration {
     let declaration: PaidDeclaration;
     if ('noCap' in cap) {
-      if (!cap.confirmed) {
-        throw new BudgetError('Declaring the paid loop with no dollar cap needs a second, explicit confirmation.');
+      if (!NoCapPath.matches(cap.phrase)) {
+        throw new BudgetError(`Declaring no dollar cap needs the phrase typed exactly: ${NoCapPath.PHRASE}`);
       }
       declaration = { declared_at: this.clock.now().toISOString(), no_cap_confirmed: true };
     } else {

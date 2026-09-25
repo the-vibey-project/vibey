@@ -19,6 +19,7 @@ import json
 from collections.abc import Callable, Sequence
 from contextlib import AbstractAsyncContextManager
 from datetime import UTC
+from pathlib import Path
 from typing import Annotated, ClassVar, Final
 from uuid import UUID
 
@@ -32,6 +33,7 @@ from vibey.cli.errors import guard
 from vibey.cli.gate_answers import ANY_ANSWER, GateAnswerCommands
 from vibey.cli.interfaces.budget_interface import BudgetCommandInterface, BudgetPresenterInterface
 from vibey.cli.interfaces.gate_answers_interface import GateAnswerCommandsInterface
+from vibey.cli.ultra import ULTRA
 from vibey.domain.budget_caps import CAP_CHANGE_PLANNER, CapField
 from vibey.domain.errors import InvalidBudgetChange
 from vibey.domain.interfaces.budget_caps_interface import (
@@ -402,3 +404,30 @@ def budget_clear(
     """Remove a cap: the project is uncapped for it, as if it had never been set."""
     with guard():
         asyncio.run(BUDGET.clear(project_id, dollars=dollars, turns=turns, both=both, by=by))
+
+
+@budget_app.command("no-cap")
+def budget_no_cap(
+    project_id: ProjectArgument = None,
+    by: ByOption = None,
+    toml: Annotated[
+        Path, typer.Option("--toml", help="The vibey.toml that records the declaration.")
+    ] = Path("vibey.toml"),
+) -> None:
+    """Declare no cap for ULTRA runs: two warnings and a typed phrase, in a terminal on
+    the host (sub-doctrine 8.b). Withdrawn by `vibey budget cap`."""
+    with guard():
+        asyncio.run(ULTRA.no_cap(project_id, by=by, toml=toml))
+
+
+@budget_app.command("cap")
+def budget_cap(
+    project_id: ProjectArgument = None,
+    by: ByOption = None,
+    toml: Annotated[
+        Path, typer.Option("--toml", help="The vibey.toml that records the declaration.")
+    ] = Path("vibey.toml"),
+) -> None:
+    """Withdraw the no-cap declaration: one action, binding at the next ULTRA pass."""
+    with guard():
+        asyncio.run(ULTRA.keep_cap(project_id, by=by, toml=toml))

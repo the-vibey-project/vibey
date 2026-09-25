@@ -46,7 +46,10 @@ DESCRIPTORS_WITH_REAL_EFFORT_FLAGS = [
 @pytest.mark.parametrize("effort", ALL_EFFORTS)
 def test_invoke_covers_every_effort_level(descriptor, effort) -> None:  # type: ignore[no-untyped-def]
     invocation = descriptor.invoke(effort)
-    assert invocation.argv
+    # ULTRA passes no turn limit to a runner whose effort is only a turn limit (ADR-0063).
+    assert invocation.argv or (
+        effort is Effort.ULTRA and "--max-turns" in str(descriptor.invoke(Effort.MAX).argv)
+    )
     assert invocation.achieved <= effort
 
 
@@ -97,7 +100,8 @@ def test_cursorloop_has_no_effort_flag_only_model_ids() -> None:
     for effort in ALL_EFFORTS:
         invocation = CURSORLOOP.invoke(effort)
         assert invocation.argv[0] == "--model"
-        assert invocation.achieved is effort
+        # No unbounded cursor tier: ULTRA runs its top model and says it achieves MAX.
+        assert invocation.achieved is min(effort, Effort.MAX)
 
 
 @pytest.mark.parametrize("descriptor", ALL_DESCRIPTORS, ids=lambda d: d.engine_id.value)
@@ -130,6 +134,7 @@ def test_claudeloop_local_honest_ceiling_is_standard_even_at_max() -> None:
     assert [CLAUDELOOP_LOCAL.invoke(e).achieved for e in ALL_EFFORTS] == [
         Effort.TRIVIAL,
         Effort.LOW,
+        Effort.STANDARD,
         Effort.STANDARD,
         Effort.STANDARD,
         Effort.STANDARD,

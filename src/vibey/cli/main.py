@@ -44,6 +44,7 @@ from vibey.cli.queue import queue_app
 from vibey.cli.serve import SERVE
 from vibey.cli.serve import serve as serve_command
 from vibey.cli.status import STATUS_PRESENTER
+from vibey.cli.ultra import ultra_app
 from vibey.domain.engine import EngineId
 from vibey.domain.errors import (
     InvalidAnswer,
@@ -101,6 +102,7 @@ ledger_app.command("export")(ledger_export)
 ledger_app.command("site")(ledger_site)
 app.add_typer(queue_app, name="queue")
 app.add_typer(budget_app, name="budget")
+app.add_typer(ultra_app, name="ultra")
 
 
 def _version_callback(value: bool) -> None:

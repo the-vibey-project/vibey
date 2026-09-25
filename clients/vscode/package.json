@@ -835,6 +835,18 @@
           }
         ]
       }
+    ],
+    "colors": [
+      {
+        "id": "vibey.ultraEffort",
+        "description": "ULTRA, effort without a ceiling (ADR-0063): the design tokens' color.state.ultra.",
+        "defaults": {
+          "dark": "#ff6ad5",
+          "light": "#b0268f",
+          "highContrast": "#ff6ad5",
+          "highContrastLight": "#b0268f"
+        }
+      }
     ]
   },
   "scripts": {

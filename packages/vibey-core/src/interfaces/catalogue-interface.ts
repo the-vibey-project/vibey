@@ -5,7 +5,8 @@
  * engine's facts of its own.
  */
 
-export type Effort = 'TRIVIAL' | 'LOW' | 'STANDARD' | 'HIGH' | 'MAX';
+/** ULTRA (ADR-0063) is effort without a ceiling: chosen, never climbed into. */
+export type Effort = 'TRIVIAL' | 'LOW' | 'STANDARD' | 'HIGH' | 'MAX' | 'ULTRA';
 export type LoopName = 'sovereignloop' | 'paidloop';
 
 /**
@@ -150,7 +151,7 @@ export interface Selection {
   /** The effort argv with the turn budget applied once. */
   readonly argv: readonly string[];
   readonly maxTurns?: number;
-  readonly maxTurnsSource: 'task' | 'effort' | 'setting' | 'none' | 'not supported by this engine';
+  readonly maxTurnsSource: 'task' | 'effort' | 'setting' | 'none' | 'unbounded' | 'not supported by this engine';
   /** Why this engine and model: what a person reads in the journal. */
   readonly reason: string;
 }

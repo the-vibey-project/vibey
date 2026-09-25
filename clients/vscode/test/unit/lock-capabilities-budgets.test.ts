@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BudgetError, BudgetGuard, BudgetStore, SpendLedger } from '../../src/core/budgets';
+import { NoCapPath } from '@vibey/core';
 import { Capabilities, SkillsContext, SkillsMarketplace } from '../../src/core/capabilities';
 import type { EngineCapabilities } from '@vibey/core';
 import type { HostFacts } from '@vibey/core';
@@ -338,15 +339,15 @@ describe('budgets', () => {
     expect(() => store.list()).toThrow(BudgetError);
   });
 
-  it('declares the paid loop with a cap, or with none only after a second confirmation', () => {
+  it('declares the paid loop with a cap, or with none only with the typed phrase', () => {
     const { store, directory } = setup();
-    expect(() => store.declarePaid({ noCap: true, confirmed: false })).toThrow('Declaring the paid loop with no dollar cap needs a second, explicit confirmation.');
+    expect(() => store.declarePaid({ noCap: true, phrase: 'yes' })).toThrow(`Declaring no dollar cap needs the phrase typed exactly: ${NoCapPath.PHRASE}`);
     expect(store.paid()).toBeUndefined();
     const capped = store.declarePaid({ scope: 'month', dollars: 50 });
     expect(capped).toEqual({ declared_at: '2026-09-24T12:00:00.000Z', budget_id: '00000001' });
     expect(store.list()).toEqual([{ id: '00000001', scope: 'month', loop: 'paidloop', caps: { dollars: 50 }, label: 'paid month cap' }]);
     expect(store.paid()).toEqual(capped);
-    const uncapped = store.declarePaid({ noCap: true, confirmed: true });
+    const uncapped = store.declarePaid({ noCap: true, phrase: ` ${NoCapPath.PHRASE}\n` });
     expect(uncapped).toEqual({ declared_at: '2026-09-24T12:00:00.000Z', no_cap_confirmed: true });
     expect(store.paid()).toEqual(uncapped);
     const actions = new JsonlJournal(path.join(directory, 'budget-journal.jsonl')).readAll().records.map((line) => line.action);

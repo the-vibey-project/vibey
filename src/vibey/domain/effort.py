@@ -13,6 +13,9 @@ class Effort(IntEnum):
     STANDARD = 2
     HIGH = 3
     MAX = 4
+    # Effort without a ceiling (ADR-0063): chosen, never escalated into. No ladder,
+    # triage rule or phase base reaches it; an engine runs it with no turn limit.
+    ULTRA = 5
 
 
 PHASE_BASE_EFFORT: Mapping[Phase, Effort] = {

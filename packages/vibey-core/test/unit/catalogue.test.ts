@@ -310,6 +310,28 @@ describe('LoopSelector', () => {
     expect(selection.reason).toContain('as you chose');
   });
 
+  it('runs ULTRA unbounded: no limit from its projection or the setting, only a task of its own', () => {
+    const selector = new LoopSelector(parse());
+    const ultra = selector.select(request({ effort: 'ULTRA', settingMaxTurns: 30 }));
+    expect(ultra.effort).toBe('ULTRA');
+    expect(ultra.argv).toEqual([]);
+    expect(ultra.maxTurns).toBeUndefined();
+    expect(ultra.maxTurnsSource).toBe('unbounded');
+    const bounded = selector.select(request({ effort: 'ULTRA', taskMaxTurns: 12 }));
+    expect(bounded.argv).toEqual(['--max-turns', '12']);
+    expect(bounded.maxTurnsSource).toBe('task');
+  });
+
+  it('shows ULTRA distinctly in a picker, and reads its label back', () => {
+    expect(Efforts.ALL.at(-1)).toBe('ULTRA');
+    expect(Efforts.describe('ULTRA').label).toBe('$(flame) ULTRA');
+    expect(Efforts.describe('ULTRA').detail).toContain('without a ceiling');
+    expect(Efforts.describe('HIGH')).toEqual({ label: 'HIGH', detail: 'Every attempt at HIGH.' });
+    expect(Efforts.fromLabel('$(flame) ULTRA')).toBe('ULTRA');
+    expect(Efforts.fromLabel('auto')).toBe('auto');
+    expect(Efforts.ULTRA_COLOUR).toEqual({ dark: '#ff6ad5', light: '#b0268f' });
+  });
+
   it('falls back to the setting only when the effort projects no limit, and says when an engine takes none', () => {
     const degraded = new LoopSelector(DegradedCatalogue.sovereign('gpt-oss:20b', 'old vibey'));
     expect(degraded.select(request({ settingMaxTurns: 30 })).argv).toEqual(['--max-turns', '30']);

@@ -26,6 +26,7 @@ from vibey.application.interfaces.budget_source_interface import (
 )
 from vibey.application.interfaces.build import (
     BudgetSource,
+    BuildCheckpoint,
     BuildProvisioner,
     BuildWorktrees,
     GateResult,
@@ -175,6 +176,10 @@ from vibey.application.interfaces.system import (
     Clock,
 )
 from vibey.application.interfaces.tracker import IssueTrackerPort
+from vibey.application.interfaces.ultra_control import (
+    UltraControlServiceInterface,
+    UltraControlStore,
+)
 from vibey.application.interfaces.visual import (
     VisualInventoryProducer,
     VisualInventoryRepository,
@@ -208,6 +213,7 @@ __all__ = [
     "SkillsContextResult",
     "BuildLedger",
     "BuildProvisioner",
+    "BuildCheckpoint",
     "BuildWorktrees",
     "Clock",
     "ConductorPreflightInterface",
@@ -269,6 +275,8 @@ __all__ = [
     "ProjectBudgetServiceInterface",
     "GateAnswerServiceInterface",
     "ProjectBudgetStore",
+    "UltraControlServiceInterface",
+    "UltraControlStore",
     "ProjectLookup",
     "ProjectReader",
     "ProjectStore",

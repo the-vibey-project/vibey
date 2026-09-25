@@ -267,6 +267,7 @@ for the same disclosure.
 | `max_dollars_per_cycle` | float or unset | unset (no cap) | Intended per-cycle spend cap. Not validated. |
 | `max_dollars_total` | float or unset | unset (no cap) | Intended total spend cap across the project's lifetime. Not validated. |
 | `max_turns_per_item` | integer or unset | unset (no cap) | Intended per-work-item turn cap; the implemented cap (`max_cycle_turns`) is per cycle. Not validated. |
+| `ultra_no_cap` | boolean | `false` | Written by `vibey budget no-cap` and `vibey budget cap` as the record of the no-cap declaration for ULTRA runs (ADR-0063). The worker reads the trusted `UltraNoCapChanged` ledger event, never this key: a `true` here with no event behind it declares nothing. |
 
 None of these keys is read at runtime. The live brake is the project's stored
 `max_cycle_dollars` / `max_cycle_turns` (set by `vibey new --max-cycle-dollars`

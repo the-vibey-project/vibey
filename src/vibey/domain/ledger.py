@@ -84,6 +84,19 @@ class EventKind(StrEnum):
     # same transaction as the project config it describes, so the config is the cap the
     # brake enforces and these events are its history. Not spend: nothing counts it.
     BUDGET_CAP_CHANGED = "BudgetCapChanged"
+    # ULTRA (ADR-0063). The operator started or stopped a project's ULTRA run (`vibey
+    # ultra start` / `stop`, from the host): the latest of the two decides whether the
+    # next BUILD pass runs, so Stop binds at the next pass boundary.
+    ULTRA_STARTED = "UltraStarted"
+    ULTRA_STOPPED = "UltraStopped"
+    # One improvement pass of an ULTRA run finished with a done verdict: the work item,
+    # the pass number and the job key of the pass enqueued after it. One per pass, so
+    # a replayed pass is answered by its key and never runs twice.
+    ULTRA_PASS_COMPLETED = "UltraPassCompleted"  # nosec B105 -- an event kind, not a secret
+    # The no-cap declaration changed (`vibey budget no-cap` / `cap`): enabled or not,
+    # who named themselves, the account and the device. The BudgetCapChanged pattern;
+    # only a trusted event counts, so no engine can declare it.
+    ULTRA_NO_CAP_CHANGED = "UltraNoCapChanged"
     # A human gate was answered (`vibey answer`, the Kubernetes operator, any client): the
     # gate, its kind, the answer, the request that answered it, who named themselves and
     # which account ran it. Written in the same transaction as the compare-and-set that

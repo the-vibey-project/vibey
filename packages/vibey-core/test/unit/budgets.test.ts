@@ -2,7 +2,7 @@
 // The budget rules, the spend ledger and the guard, with no file: the journal and the tail are
 // in memory here, and the extension's suite exercises them again over real files.
 import { describe, expect, it } from 'vitest';
-import { BudgetError, BudgetGuard, BudgetRules, SpendLedger } from '../../src/budgets';
+import { BudgetError, BudgetGuard, BudgetRules, NoCapPath, SpendLedger } from '../../src/budgets';
 import type { Budget, BudgetStoreInterface, PaidDeclaration } from '../../src/interfaces/budgets-interface';
 import type { JournalContents, JsonlJournalInterface, JsonlTailInterface, TailChunk } from '../../src/interfaces/jsonl-interface';
 import { FakeClock } from './helpers';
@@ -117,6 +117,16 @@ describe('SpendLedger', () => {
     expect(spend.perTurn('claudeloop')).toEqual({ input: 1000, output: 100 });
   });
 
+  it('measures dollars per hour of run time, or says it has not', () => {
+    const journal = new MemoryJournal();
+    const spend = new SpendLedger(journal, journal);
+    expect(spend.perHour({})).toBeNull();
+    spend.record(entry({ dollars: 0, minutes: 30 }));
+    expect(spend.perHour({})).toBeNull();
+    spend.record(entry({ run_id: 'r2', dollars: 3, minutes: 30 }));
+    expect(spend.perHour({ engineId: 'claudeloop' })).toBe(3);
+  });
+
   it('starts over when the record is replaced by a shorter one', () => {
     const journal = new MemoryJournal();
     const spend = new SpendLedger(journal, journal);
@@ -169,5 +179,18 @@ describe('BudgetGuard', () => {
     expect(store.remove(month.id).caps).toEqual({ minutes: 1 });
     expect(store.paid()).toBeUndefined();
     expect(store.declarePaid().no_cap_confirmed).toBe(true);
+  });
+});
+
+describe('NoCapPath', () => {
+  it('shows the no-cap path the same everywhere: the measured rate, or unknown', () => {
+    expect(NoCapPath.matches(undefined)).toBe(false);
+    expect(NoCapPath.matches('i accept unlimited spending')).toBe(false);
+    expect(NoCapPath.matches(` ${NoCapPath.PHRASE}\n`)).toBe(true);
+    expect(NoCapPath.warning(null)).toContain('Measured cost: unknown (nothing measured yet)');
+    expect(NoCapPath.warning(12.5)).toContain('Measured cost: $12.50/h');
+    expect(NoCapPath.REFUSED).toContain('vibey budget no-cap');
+    expect([NoCapPath.KEEP, NoCapPath.DECLARE]).toEqual(['Keep a cap', 'Declare no cap']);
+    expect(NoCapPath.LAST_CHANCE).toContain('Keep a cap');
   });
 });

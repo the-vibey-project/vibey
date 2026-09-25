@@ -276,6 +276,10 @@ class RecordingSpend implements SpendLedgerInterface {
   perTurn(): { readonly input: number; readonly output: number } | undefined {
     return this.measured;
   }
+
+  perHour(): number | null {
+    return null;
+  }
 }
 
 class Gate implements DurabilityGateInterface {

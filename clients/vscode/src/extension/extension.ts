@@ -46,8 +46,13 @@ export function activate(context: vscode.ExtensionContext): { readonly commands:
   const label = (): void => {
     const running = [...controller.runs.values()].filter((run) => run.status !== 'finished' && run.status !== 'queued').length;
     const waiting = [...controller.runs.values()].filter((run) => run.status === 'queued').length;
-    status.text = `$(sparkle) vibey${running > 0 ? ` · ${running} running` : ''}${waiting > 0 ? ` · ${waiting} waiting` : ''}`;
-    status.tooltip = 'Vibey: every command';
+    // ULTRA is shown distinctly, in its own colour from the design tokens (ADR-0063).
+    const ultra = controller.services.settings.effort === 'ULTRA';
+    status.text = `$(sparkle) vibey${ultra ? ' · $(flame) ULTRA' : ''}${running > 0 ? ` · ${running} running` : ''}${waiting > 0 ? ` · ${waiting} waiting` : ''}`;
+    status.color = ultra ? new vscode.ThemeColor('vibey.ultraEffort') : undefined;
+    status.tooltip = ultra
+      ? 'Vibey: ULTRA effort, with no turn limit. Every command'
+      : 'Vibey: every command';
   };
   label();
   status.show();
